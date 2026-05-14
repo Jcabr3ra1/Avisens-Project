@@ -32,3 +32,7 @@ Avisens-Project/
 ## Proyecto
 
 Desarrollado como proyecto SENA — Cauca, Colombia · 2026
+
+---
+
+> Repositorio oficial de AVISENS. En desarrollo activo.
