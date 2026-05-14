@@ -1,0 +1,44 @@
+.features-grid {
+  margin-top: 3.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.feat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.75rem;
+  transition: all 0.3s;
+  cursor: default;
+}
+
+.feat-card:hover {
+  border-color: rgba(16, 185, 129, 0.35);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 30px rgba(16, 185, 129, 0.08);
+}
+
+.feat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.2rem;
+}
+
+.feat-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin-bottom: 0.45rem;
+}
+
+.feat-desc {
+  font-size: 0.862rem;
+  color: var(--text2);
+  line-height: 1.65;
+}

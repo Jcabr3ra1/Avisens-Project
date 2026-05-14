@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+# No indexar rutas de la app (requieren autenticación)
+Disallow: /dashboard
+Disallow: /monitoreo
+Disallow: /bitacora
+Disallow: /alertas
+Disallow: /finanzas
+Disallow: /inventario
+Disallow: /infraestructura
+Disallow: /crm
+Disallow: /granjas
+Disallow: /usuarios
+
+Sitemap: https://avisens.co/sitemap.xml

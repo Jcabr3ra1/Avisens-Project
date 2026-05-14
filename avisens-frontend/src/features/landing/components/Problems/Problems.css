@@ -1,0 +1,98 @@
+.problems {
+  margin-top: 3.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.problem-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.problem-card:hover {
+  border-color: rgba(16, 185, 129, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.problem-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--success), var(--success3));
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.problem-card:hover::after {
+  opacity: 1;
+}
+
+.prob-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  margin-bottom: 1.2rem;
+  font-size: 1.4rem;
+}
+
+.prob-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.prob-desc {
+  font-size: 0.875rem;
+  color: var(--text2);
+  line-height: 1.65;
+}
+
+.arrow-sep {
+  display: flex;
+  justify-content: center;
+  margin: 0.75rem 0;
+}
+
+.arrow-sep-line {
+  width: 1px;
+  height: 24px;
+  background: linear-gradient(var(--border2), var(--success));
+}
+
+.solution-card {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+}
+
+.sol-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--success2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.3rem;
+}
+
+.sol-text {
+  font-size: 0.875rem;
+  color: var(--text);
+  line-height: 1.6;
+}
