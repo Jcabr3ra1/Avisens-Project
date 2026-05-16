@@ -49,38 +49,44 @@ function Farm3D() {
         <div className="farm-stage">
           <div className="farm-glow" aria-hidden="true" />
 
-          <svg className="farm-sketch" viewBox="0 0 800 360" preserveAspectRatio="none" aria-hidden="true">
+          <svg className="farm-sketch" viewBox="0 0 800 520" preserveAspectRatio="none" aria-hidden="true">
             <defs>
               <linearGradient id="farmSketchGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#10b981" stopOpacity="0" />
-                <stop offset="20%" stopColor="#10b981" stopOpacity="0.6" />
-                <stop offset="80%" stopColor="#34d399" stopOpacity="0.5" />
-                <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
+                <stop offset="15%" stopColor="#10b981" stopOpacity="0.95" />
+                <stop offset="50%" stopColor="#34d399" stopOpacity="1" />
+                <stop offset="85%" stopColor="#10b981" stopOpacity="0.95" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+              </linearGradient>
+              <linearGradient id="farmSketchGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0" />
+                <stop offset="50%" stopColor="#059669" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
               </linearGradient>
             </defs>
             <path
               className="farm-sketch-path"
-              d="M-20,200 C90,160 150,260 240,210 S380,140 470,200 S620,260 720,180 L820,180"
+              d="M-30,460 C100,400 200,500 320,440 S520,330 700,420 L830,400"
               fill="none"
               stroke="url(#farmSketchGrad)"
-              strokeWidth="1.4"
+              strokeWidth="2.5"
               strokeLinecap="round"
             />
             <path
               className="farm-sketch-path-2"
-              d="M-20,220 C90,180 150,280 240,230 S380,160 470,220 S620,280 720,200 L820,200"
+              d="M-30,485 C100,425 200,525 320,465 S520,355 700,445 L830,425"
               fill="none"
-              stroke="rgba(16,185,129,0.22)"
-              strokeWidth="0.8"
+              stroke="url(#farmSketchGrad2)"
+              strokeWidth="1.5"
               strokeLinecap="round"
-              strokeDasharray="2 5"
+              strokeDasharray="3 6"
             />
-            <circle r="3.5" fill="#34d399" className="farm-sketch-dot">
+            <circle r="5" fill="#10b981" className="farm-sketch-dot">
               <animateMotion
-                dur="11s"
+                dur="9s"
                 repeatCount="indefinite"
                 rotate="auto"
-                path="M-20,200 C90,160 150,260 240,210 S380,140 470,200 S620,260 720,180 L820,180"
+                path="M-30,460 C100,400 200,500 320,440 S520,330 700,420 L830,400"
               />
             </circle>
           </svg>
