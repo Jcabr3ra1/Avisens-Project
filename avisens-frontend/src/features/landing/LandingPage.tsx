@@ -18,8 +18,8 @@ function LandingPage() {
       <div className="bg-layer" />
       <div className="grid-layer" />
       <Hero />
-      <Farm3D />
       <Stats />
+      <Farm3D />
       <Sensors />
       <Problems />
       <Features />
