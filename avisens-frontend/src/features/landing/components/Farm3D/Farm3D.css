@@ -1,24 +1,14 @@
 .farm-section {
-  --bone: #f5ecd9;
-  --bone-dim: #d9c89a;
-  --moss: #3fb27f;
-  --moss-deep: #1f6b48;
-  --earth: #0c1410;
-  --earth-mid: #14201a;
-  --earth-soft: #1b2a23;
-  --amber: #d9a441;
-  --rust: #c84e3c;
-
   position: relative;
   padding: 8rem 0 9rem;
   background:
-    radial-gradient(ellipse 70% 50% at 18% 28%, rgba(63, 178, 127, 0.16), transparent 65%),
-    radial-gradient(ellipse 50% 40% at 88% 75%, rgba(217, 164, 65, 0.1), transparent 70%),
-    linear-gradient(180deg, var(--earth) 0%, #0e1813 50%, var(--earth) 100%);
+    radial-gradient(ellipse 70% 50% at 18% 28%, rgba(16, 185, 129, 0.18), transparent 65%),
+    radial-gradient(ellipse 50% 40% at 88% 75%, rgba(52, 211, 153, 0.1), transparent 70%),
+    linear-gradient(180deg, #0a1a14 0%, #123226 50%, #0a1a14 100%);
   overflow: hidden;
   isolation: isolate;
-  color: var(--bone);
-  font-family: 'Fraunces', serif;
+  color: #ecfdf5;
+  font-family: 'Inter', sans-serif;
 }
 
 .farm-grain {
@@ -26,11 +16,11 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.35;
+  opacity: 0.25;
   mix-blend-mode: overlay;
   background-image:
-    radial-gradient(rgba(217, 200, 154, 0.18) 1px, transparent 1px),
-    radial-gradient(rgba(63, 178, 127, 0.12) 1px, transparent 1px);
+    radial-gradient(rgba(167, 243, 208, 0.14) 1px, transparent 1px),
+    radial-gradient(rgba(16, 185, 129, 0.1) 1px, transparent 1px);
   background-size: 3px 3px, 7px 7px;
   background-position: 0 0, 1px 2px;
 }
@@ -49,11 +39,11 @@
   z-index: 3;
   margin-bottom: 4rem;
   padding: 0.7rem 0;
-  border-top: 1px solid rgba(217, 200, 154, 0.15);
-  border-bottom: 1px solid rgba(217, 200, 154, 0.15);
-  background: rgba(12, 20, 16, 0.7);
+  border-top: 1px solid rgba(16, 185, 129, 0.18);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.18);
+  background: rgba(10, 26, 20, 0.72);
   overflow: hidden;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'DM Mono', monospace;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
 }
@@ -73,15 +63,15 @@
   font-size: 0.78rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--bone-dim);
+  color: #9bb3a7;
 }
 
 .farm-ticker-dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--moss);
-  box-shadow: 0 0 8px var(--moss);
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
   flex-shrink: 0;
 }
 
@@ -108,34 +98,32 @@
   align-items: center;
   gap: 0.8rem;
   margin-bottom: 2.2rem;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'DM Mono', monospace;
   font-size: 0.7rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--bone-dim);
+  color: #9bb3a7;
 }
 
 .farm-eyebrow-num {
   font-variant-numeric: tabular-nums;
-  color: var(--bone);
+  color: #ecfdf5;
 }
 
 .farm-eyebrow-line {
   flex: 0 0 40px;
   height: 1px;
-  background: var(--bone-dim);
-  opacity: 0.5;
+  background: rgba(155, 179, 167, 0.5);
 }
 
 .farm-title {
-  font-family: 'Fraunces', serif;
-  font-weight: 400;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
   font-size: clamp(2.4rem, 4.8vw, 3.8rem);
-  line-height: 0.98;
+  line-height: 1.02;
   letter-spacing: -0.025em;
   margin: 0 0 1.8rem;
-  font-variation-settings: 'opsz' 144;
-  color: var(--bone);
+  color: #ecfdf5;
 }
 
 .farm-title-l1 {
@@ -145,32 +133,29 @@
 .farm-title-l2 {
   display: block;
   padding-left: 2.4rem;
-  color: var(--moss);
 }
 
 .farm-title-l2 em {
-  font-style: italic;
-  font-weight: 600;
-  background: linear-gradient(95deg, var(--moss) 0%, var(--bone-dim) 100%);
+  font-style: normal;
+  background: linear-gradient(135deg, #a7f3d0 0%, #34d399 60%, #10b981 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  filter: drop-shadow(0 2px 14px rgba(16, 185, 129, 0.35));
 }
 
 .farm-title-l3 {
   display: block;
   font-size: 0.78em;
-  color: var(--bone-dim);
+  color: #9bb3a7;
   font-weight: 400;
-  font-style: italic;
 }
 
 .farm-lede {
-  font-family: 'Fraunces', serif;
-  font-variation-settings: 'opsz' 14;
+  font-family: 'Inter', sans-serif;
   font-size: 1.02rem;
-  line-height: 1.55;
-  color: rgba(245, 236, 217, 0.72);
+  line-height: 1.65;
+  color: rgba(236, 253, 245, 0.72);
   max-width: 38ch;
   margin: 0 0 2.5rem;
 }
@@ -180,50 +165,50 @@
   align-items: baseline;
   gap: 0.5rem;
   padding: 1rem 1.4rem;
-  background: linear-gradient(160deg, rgba(20, 32, 26, 0.9), rgba(12, 20, 16, 0.9));
-  border: 1px solid rgba(217, 200, 154, 0.15);
-  border-left: 2px solid var(--moss);
+  background: linear-gradient(160deg, rgba(13, 38, 32, 0.92), rgba(10, 26, 20, 0.92));
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-left: 2px solid #10b981;
   position: relative;
+  box-shadow: 0 0 32px rgba(16, 185, 129, 0.12);
 }
 
 .farm-stamp::after {
   content: '';
   position: absolute;
   inset: -1px;
-  border: 1px dashed rgba(217, 200, 154, 0.08);
+  border: 1px dashed rgba(155, 179, 167, 0.12);
   pointer-events: none;
 }
 
 .farm-stamp-label {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'DM Mono', monospace;
   font-size: 0.62rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--bone-dim);
+  color: #9bb3a7;
   margin-right: 0.6rem;
 }
 
 .farm-stamp-num {
-  font-family: 'Fraunces', serif;
-  font-variation-settings: 'opsz' 144;
-  font-weight: 800;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
   font-size: 2.6rem;
-  color: var(--moss);
+  color: #10b981;
   line-height: 0.9;
   font-variant-numeric: tabular-nums;
+  filter: drop-shadow(0 2px 12px rgba(16, 185, 129, 0.4));
 }
 
 .farm-stamp-deno {
-  font-family: 'Fraunces', serif;
+  font-family: 'Space Grotesk', sans-serif;
   font-size: 0.9rem;
-  color: var(--bone-dim);
+  color: #9bb3a7;
 }
 
 .farm-stamp-status {
-  font-family: 'Fraunces', serif;
-  font-style: italic;
+  font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
-  color: var(--moss);
+  color: #10b981;
   margin-left: 0.3rem;
 }
 
@@ -239,8 +224,8 @@
   position: absolute;
   width: 24px;
   height: 24px;
-  border-color: var(--bone-dim);
-  opacity: 0.4;
+  border-color: rgba(155, 179, 167, 0.45);
+  opacity: 0.6;
 }
 
 .farm-corner-tl { top: 0; left: 0; border-top: 1px solid; border-left: 1px solid; }
@@ -258,7 +243,7 @@
 }
 
 .farm-sketch-path {
-  filter: drop-shadow(0 0 6px rgba(63, 178, 127, 0.4));
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.45));
   animation: sketchWobble 9s ease-in-out infinite;
 }
 
@@ -267,7 +252,7 @@
 }
 
 .farm-sketch-dot {
-  filter: drop-shadow(0 0 5px var(--bone));
+  filter: drop-shadow(0 0 6px #a7f3d0);
 }
 
 .farm-perspective {
@@ -287,15 +272,15 @@
   height: 380px;
   margin: 0 auto;
   background:
-    linear-gradient(160deg, rgba(20, 32, 26, 0.88) 0%, rgba(12, 20, 16, 0.92) 100%);
+    linear-gradient(160deg, rgba(13, 38, 32, 0.92) 0%, rgba(10, 26, 20, 0.95) 100%);
   background-image:
-    linear-gradient(rgba(217, 200, 154, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(217, 200, 154, 0.06) 1px, transparent 1px);
+    linear-gradient(rgba(16, 185, 129, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.08) 1px, transparent 1px);
   background-size: 36px 36px;
-  border: 1px solid rgba(217, 200, 154, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.22);
   box-shadow:
-    0 0 100px rgba(63, 178, 127, 0.14) inset,
-    0 40px 80px rgba(0, 0, 0, 0.55);
+    0 0 100px rgba(16, 185, 129, 0.18) inset,
+    0 40px 80px rgba(0, 0, 0, 0.5);
   animation: planeSway 18s ease-in-out infinite;
 }
 
@@ -305,16 +290,16 @@
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(217, 200, 154, 0.04) 47%,
-    rgba(63, 178, 127, 0.22) 50%,
-    rgba(217, 200, 154, 0.04) 53%,
+    rgba(16, 185, 129, 0.06) 47%,
+    rgba(52, 211, 153, 0.28) 50%,
+    rgba(16, 185, 129, 0.06) 53%,
     transparent 100%
   );
   background-size: 100% 220%;
   background-repeat: no-repeat;
   animation: planeScan 8s linear infinite;
   pointer-events: none;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 .galpon {
@@ -325,9 +310,10 @@
 .galpon-body {
   position: absolute;
   inset: 0;
-  background: linear-gradient(160deg, #18302a 0%, #0d1814 100%);
+  background: linear-gradient(160deg, #11302a 0%, #0a1e18 100%);
   border: 1px solid;
-  box-shadow: 0 0 18px rgba(63, 178, 127, 0.22);
+  border-radius: 6px;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.22);
 }
 
 .galpon-ok .galpon-body { animation: glowOk 3.4s ease-in-out infinite; }
@@ -337,7 +323,8 @@
 .galpon-floor {
   position: absolute;
   inset: 0;
-  background-image: repeating-linear-gradient(0deg, rgba(245, 236, 217, 0.03) 0, rgba(245, 236, 217, 0.03) 1px, transparent 1px, transparent 14px);
+  border-radius: 5px;
+  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0, rgba(255, 255, 255, 0.04) 1px, transparent 1px, transparent 14px);
 }
 
 .galpon-score {
@@ -345,13 +332,13 @@
   top: 7px;
   left: 50%;
   transform: translateX(-50%);
-  font-family: 'Fraunces', serif;
-  font-variation-settings: 'opsz' 144;
-  font-weight: 800;
-  font-size: 1rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
   line-height: 1;
-  background: rgba(12, 20, 16, 0.96);
-  border: 1px solid rgba(217, 200, 154, 0.18);
+  background: rgba(10, 26, 20, 0.96);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  border-radius: 4px;
   padding: 3px 8px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -365,25 +352,24 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'DM Mono', monospace;
   font-size: 0.55rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--bone-dim);
+  color: #9bb3a7;
   white-space: nowrap;
 }
 
 .galpon-tag-id {
-  color: var(--bone);
-  font-weight: 600;
+  color: #ecfdf5;
+  font-weight: 500;
 }
 
 .galpon-tag-state {
-  font-style: italic;
   letter-spacing: 0.08em;
   text-transform: lowercase;
-  font-family: 'Fraunces', serif;
-  font-size: 0.65rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.6rem;
 }
 
 .sensor {
@@ -421,9 +407,9 @@
   top: 50px;
   width: 32px;
   height: 1.5px;
-  background-image: linear-gradient(90deg, transparent, var(--moss), transparent);
+  background-image: linear-gradient(90deg, transparent, #34d399, transparent);
   animation: linkH 2.6s linear infinite;
-  filter: drop-shadow(0 0 4px rgba(63, 178, 127, 0.5));
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.5));
 }
 
 .link-v-l {
@@ -431,7 +417,7 @@
   top: 110px;
   width: 1.5px;
   height: 45px;
-  background-image: linear-gradient(180deg, transparent, var(--moss), transparent);
+  background-image: linear-gradient(180deg, transparent, #34d399, transparent);
   animation: linkV 3s linear infinite;
 }
 
@@ -440,7 +426,7 @@
   top: 110px;
   width: 1.5px;
   height: 45px;
-  background-image: linear-gradient(180deg, transparent, var(--amber), transparent);
+  background-image: linear-gradient(180deg, transparent, #f59e0b, transparent);
   animation: linkV 3.4s linear infinite 0.5s;
 }
 
@@ -449,12 +435,12 @@
   top: 200px;
   width: 32px;
   height: 1.5px;
-  background-image: linear-gradient(90deg, transparent, var(--rust), transparent);
+  background-image: linear-gradient(90deg, transparent, #ef4444, transparent);
   animation: linkH 2.2s linear infinite 1s;
-  filter: drop-shadow(0 0 4px rgba(200, 78, 60, 0.5));
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
 }
 
-/* ── Annotation cards (corner specimen labels) ──────────── */
+/* ── Annotation cards ───────────────────────────────────── */
 .annot {
   position: absolute;
   z-index: 5;
@@ -462,12 +448,14 @@
   flex-direction: column;
   gap: 0.18rem;
   padding: 0.7rem 0.95rem;
-  background: rgba(12, 20, 16, 0.88);
-  border: 1px solid rgba(217, 200, 154, 0.16);
+  background: rgba(10, 26, 20, 0.88);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 8px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'DM Mono', monospace;
   min-width: 120px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .annot::before {
@@ -476,7 +464,7 @@
   top: 50%;
   width: 28px;
   height: 1px;
-  background: rgba(217, 200, 154, 0.4);
+  background: rgba(16, 185, 129, 0.45);
 }
 
 .annot-tl { top: 12%; left: 1rem; animation: floatA 6s ease-in-out infinite; }
@@ -495,15 +483,14 @@
   font-size: 0.58rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--bone-dim);
+  color: #9bb3a7;
 }
 
 .annot-val {
-  font-family: 'Fraunces', serif;
-  font-variation-settings: 'opsz' 144;
-  font-weight: 600;
-  font-size: 1.25rem;
-  color: var(--bone);
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #ecfdf5;
   font-variant-numeric: tabular-nums;
   line-height: 1.05;
 }
@@ -511,12 +498,12 @@
 .annot-trend {
   font-size: 0.6rem;
   letter-spacing: 0.06em;
-  color: var(--moss);
+  color: #10b981;
   margin-top: 0.15rem;
 }
 
 .annot-trend.annot-warn {
-  color: var(--amber);
+  color: #f59e0b;
 }
 
 /* ── Footer caption ─────────────────────────────────────── */
@@ -527,15 +514,15 @@
   justify-content: center;
   gap: 0.9rem;
   margin-top: 2.5rem;
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'DM Mono', monospace;
   font-size: 0.7rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--bone-dim);
+  color: #9bb3a7;
 }
 
 .farm-foot-mark {
-  color: var(--moss);
+  color: #10b981;
   font-size: 0.85rem;
   animation: markSpin 8s linear infinite;
 }
@@ -574,18 +561,18 @@
 }
 
 @keyframes glowOk {
-  0%, 100% { box-shadow: 0 0 16px rgba(63, 178, 127, 0.22); }
-  50%      { box-shadow: 0 0 32px rgba(63, 178, 127, 0.5); }
+  0%, 100% { box-shadow: 0 0 16px rgba(16, 185, 129, 0.22); }
+  50%      { box-shadow: 0 0 32px rgba(16, 185, 129, 0.55); }
 }
 
 @keyframes glowWarn {
-  0%, 100% { box-shadow: 0 0 18px rgba(217, 164, 65, 0.25); }
-  50%      { box-shadow: 0 0 36px rgba(217, 164, 65, 0.55); }
+  0%, 100% { box-shadow: 0 0 18px rgba(245, 158, 11, 0.25); }
+  50%      { box-shadow: 0 0 36px rgba(245, 158, 11, 0.6); }
 }
 
 @keyframes glowCrit {
-  0%, 100% { box-shadow: 0 0 22px rgba(200, 78, 60, 0.35); }
-  50%      { box-shadow: 0 0 48px rgba(200, 78, 60, 0.75); }
+  0%, 100% { box-shadow: 0 0 22px rgba(239, 68, 68, 0.35); }
+  50%      { box-shadow: 0 0 48px rgba(239, 68, 68, 0.75); }
 }
 
 @keyframes sensorPulse {

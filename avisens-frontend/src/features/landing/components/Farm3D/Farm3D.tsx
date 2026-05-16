@@ -14,10 +14,10 @@ interface Galpon {
 }
 
 const galpones: Galpon[] = [
-  { id: 1, x: 40, y: 30, w: 160, h: 80, score: 94, color: '#3fb27f', label: 'G1', status: 'ok', sensors: [{ x: 30, y: 25, c: '#3fb27f' }, { x: 130, y: 50, c: '#3fb27f' }] },
-  { id: 2, x: 230, y: 20, w: 160, h: 80, score: 71, color: '#d9a441', label: 'G2', status: 'warn', sensors: [{ x: 40, y: 30, c: '#d9a441' }, { x: 120, y: 55, c: '#d9a441' }] },
-  { id: 3, x: 40, y: 155, w: 160, h: 80, score: 97, color: '#3fb27f', label: 'G3', status: 'ok', sensors: [{ x: 25, y: 35, c: '#3fb27f' }, { x: 135, y: 20, c: '#3fb27f' }] },
-  { id: 4, x: 230, y: 155, w: 160, h: 80, score: 48, color: '#c84e3c', label: 'G4', status: 'crit', sensors: [{ x: 30, y: 30, c: '#c84e3c' }, { x: 120, y: 45, c: '#c84e3c' }] },
+  { id: 1, x: 40, y: 30, w: 160, h: 80, score: 94, color: '#10b981', label: 'G1', status: 'ok', sensors: [{ x: 30, y: 25, c: '#10b981' }, { x: 130, y: 50, c: '#10b981' }] },
+  { id: 2, x: 230, y: 20, w: 160, h: 80, score: 71, color: '#f59e0b', label: 'G2', status: 'warn', sensors: [{ x: 40, y: 30, c: '#f59e0b' }, { x: 120, y: 55, c: '#f59e0b' }] },
+  { id: 3, x: 40, y: 155, w: 160, h: 80, score: 97, color: '#10b981', label: 'G3', status: 'ok', sensors: [{ x: 25, y: 35, c: '#10b981' }, { x: 135, y: 20, c: '#10b981' }] },
+  { id: 4, x: 230, y: 155, w: 160, h: 80, score: 48, color: '#ef4444', label: 'G4', status: 'crit', sensors: [{ x: 30, y: 30, c: '#ef4444' }, { x: 120, y: 45, c: '#ef4444' }] },
 ]
 
 const tickerItems = [
@@ -86,10 +86,10 @@ function Farm3D() {
           <svg className="farm-sketch" viewBox="0 0 800 360" preserveAspectRatio="none" aria-hidden="true">
             <defs>
               <linearGradient id="farmSketchGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#3fb27f" stopOpacity="0" />
-                <stop offset="20%" stopColor="#3fb27f" stopOpacity="0.7" />
-                <stop offset="80%" stopColor="#d9c89a" stopOpacity="0.55" />
-                <stop offset="100%" stopColor="#d9c89a" stopOpacity="0" />
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0" />
+                <stop offset="20%" stopColor="#10b981" stopOpacity="0.7" />
+                <stop offset="80%" stopColor="#a7f3d0" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="#a7f3d0" stopOpacity="0" />
               </linearGradient>
             </defs>
             <path
@@ -104,12 +104,12 @@ function Farm3D() {
               className="farm-sketch-path-2"
               d="M-20,220 C90,180 150,280 240,230 S380,160 470,220 S620,280 720,200 L820,200"
               fill="none"
-              stroke="rgba(217,200,154,0.18)"
+              stroke="rgba(167,243,208,0.22)"
               strokeWidth="0.8"
               strokeLinecap="round"
               strokeDasharray="2 5"
             />
-            <circle r="3.5" fill="#f5ecd9" className="farm-sketch-dot">
+            <circle r="3.5" fill="#a7f3d0" className="farm-sketch-dot">
               <animateMotion
                 dur="11s"
                 repeatCount="indefinite"
