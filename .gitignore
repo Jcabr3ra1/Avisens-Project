@@ -38,5 +38,4 @@ Thumbs.db
 
 # AI tooling
 .agents/
-CLAUDE.md
 .claude/
