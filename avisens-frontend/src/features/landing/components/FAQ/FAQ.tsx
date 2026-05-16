@@ -17,7 +17,7 @@ function FAQ() {
   const ref = useFadeUp()
 
   return (
-    <section id="faq" style={{ background: 'var(--bg3)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+    <section id="faq" className="faq-section">
       <div className="max-w fade-up" ref={ref} style={{ textAlign: 'center' }}>
         <div className="section-label" style={{ justifyContent: 'center' }}>
           FAQ

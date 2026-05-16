@@ -72,7 +72,7 @@ function ChatSection() {
   }
 
   return (
-    <section id="chatbot" style={{ background: 'var(--bg3)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+    <section id="chatbot" className="chat-section">
       <div className="chat-inner fade-up" ref={ref}>
         <div>
           <div className="section-label">Asistente IA</div>

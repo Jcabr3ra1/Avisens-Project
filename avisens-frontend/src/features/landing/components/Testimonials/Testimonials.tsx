@@ -26,31 +26,40 @@ function Testimonials() {
   const ref = useFadeUp()
 
   return (
-    <section>
-      <div className="max-w fade-up" ref={ref} style={{ textAlign: 'center' }}>
-        <div className="section-label" style={{ justifyContent: 'center' }}>
-          Testimonios
+    <section className="testimonials-section" id="testimonials">
+      <div className="max-w fade-up" ref={ref}>
+        <div className="section-headline">
+          <div className="section-label" style={{ justifyContent: 'center' }}>
+            Testimonios
+          </div>
+          <h2 className="section-title">
+            Lo que dicen quienes
+            <br />
+            <span className="grad-text">operan con AVISENS</span>
+          </h2>
+          <p className="section-sub" style={{ margin: '0 auto' }}>
+            Casos de uso reales: menos mortalidad, decisiones más rápidas y alertas que llegan antes del daño.
+          </p>
         </div>
-        <h2 className="section-title">
-          Lo que dicen nuestros
-          <br />
-          <span className="grad-text">clientes</span>
-        </h2>
         <div className="testi-grid">
-          {testimonials.map(({ t, n, r, i }) => (
+          {testimonials.map(({ t, n, r, i }, index) => (
             <div key={n} className="testi-card">
+              <div className="testi-quote" aria-hidden="true">“</div>
               <div className="testi-stars">
                 {[...Array(5)].map((_, x) => (
                   <span key={x}>★</span>
                 ))}
               </div>
-              <div className="testi-text">"{t}"</div>
+              <div className="testi-text">{t}</div>
               <div className="testi-author">
                 <div className="testi-av">{i}</div>
                 <div>
                   <div className="testi-name">{n}</div>
                   <div className="testi-role">{r}</div>
                 </div>
+              </div>
+              <div className="testi-chip">
+                {['Mortalidad -40%', 'Operación simple', 'Alerta crítica'][index]}
               </div>
             </div>
           ))}

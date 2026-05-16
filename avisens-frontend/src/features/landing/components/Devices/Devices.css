@@ -1,3 +1,21 @@
+.devices-section {
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, #edf7f2 0%, #ffffff 48%, #f0f8f4 100%);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.devices-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(120deg, transparent 0 18%, rgba(16, 185, 129, 0.1) 18% 18.4%, transparent 18.4% 100%),
+    linear-gradient(60deg, transparent 0 72%, rgba(245, 158, 11, 0.12) 72% 72.35%, transparent 72.35% 100%);
+}
+
 .devices-inner {
   max-width: 1200px;
   margin: 0 auto;
@@ -12,26 +30,47 @@
 }
 
 .device-card {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(249, 253, 251, 0.92)),
+    var(--card);
+  border: 1px solid rgba(200, 216, 208, 0.84);
   border-radius: 20px;
   padding: 2.5rem 2rem;
   position: relative;
   overflow: hidden;
-  transition: all 0.3s;
+  transition: transform 0.34s ease, box-shadow 0.34s ease, border-color 0.34s ease;
+  box-shadow: 0 18px 50px -38px rgba(10, 40, 28, 0.5);
 }
 
 .device-card:hover {
   border-color: rgba(16, 185, 129, 0.35);
   transform: translateY(-6px);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4), 0 0 40px rgba(16, 185, 129, 0.12);
+  box-shadow: 0 24px 70px -38px rgba(10, 40, 28, 0.55), 0 0 40px rgba(16, 185, 129, 0.12);
 }
 
 .device-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(16, 185, 129, 0.12), transparent 70%);
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, 0.1), transparent 42%),
+    repeating-linear-gradient(90deg, transparent 0 21px, rgba(10, 26, 20, 0.04) 21px 22px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.device-card:hover::before {
+  opacity: 1;
+}
+
+.device-desktop {
+  transform: translateY(-1rem);
+}
+
+.device-mobile,
+.device-tablet {
+  margin-top: 1.2rem;
 }
 
 .device-screen {
@@ -58,13 +97,13 @@
 }
 
 .phone-chrome {
-  background: #0d1a16;
-  border: 2px solid var(--border2);
+  background: linear-gradient(180deg, #0a1a14, #123226);
+  border: 2px solid rgba(167, 243, 208, 0.28);
   border-radius: 28px;
   padding: 14px 8px;
   width: 140px;
   margin: 0 auto;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 16px 48px -28px rgba(10, 40, 28, 0.55);
 }
 
 .phone-notch {
@@ -83,12 +122,12 @@
 }
 
 .desktop-chrome {
-  background: #0d1a16;
-  border: 2px solid var(--border2);
+  background: linear-gradient(180deg, #0a1a14, #123226);
+  border: 2px solid rgba(167, 243, 208, 0.28);
   border-radius: 10px;
   width: 90%;
   margin: 0 auto;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 16px 48px -28px rgba(10, 40, 28, 0.55);
   overflow: hidden;
 }
 
@@ -113,13 +152,13 @@
 }
 
 .tablet-chrome {
-  background: #0d1a16;
-  border: 2px solid var(--border2);
+  background: linear-gradient(180deg, #0a1a14, #123226);
+  border: 2px solid rgba(167, 243, 208, 0.28);
   border-radius: 16px;
   padding: 12px 10px;
   width: 80%;
   margin: 0 auto;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 16px 48px -28px rgba(10, 40, 28, 0.55);
 }
 
 .tablet-cam {
@@ -145,7 +184,8 @@
 
 .mini-kpi {
   flex: 1;
-  background: var(--card);
+  background: linear-gradient(180deg, #ffffff, #f3fbf7);
+  border: 1px solid rgba(200, 216, 208, 0.6);
   border-radius: 4px;
   padding: 4px;
   font-size: 6px;
@@ -183,7 +223,8 @@
 }
 
 .mini-card {
-  background: var(--card);
+  background: linear-gradient(180deg, #ffffff, #f4fbf7);
+  border: 1px solid rgba(200, 216, 208, 0.6);
   border-radius: 4px;
   padding: 4px;
 }
@@ -209,11 +250,20 @@
 }
 
 .device-tag {
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(16, 185, 129, 0.26);
   color: var(--success);
   font-size: 0.7rem;
   font-family: 'DM Mono', monospace;
   padding: 0.2rem 0.6rem;
   border-radius: 6px;
+}
+
+@media (max-width: 920px) {
+  .device-desktop,
+  .device-mobile,
+  .device-tablet {
+    margin-top: 0;
+    transform: none;
+  }
 }

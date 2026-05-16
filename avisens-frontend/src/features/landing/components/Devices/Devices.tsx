@@ -5,7 +5,7 @@ function Devices() {
   const ref = useFadeUp()
 
   return (
-    <section id="devices" style={{ background: 'var(--bg3)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+    <section id="devices" className="devices-section">
       <div className="devices-inner fade-up" ref={ref}>
         <div className="section-label" style={{ justifyContent: 'center' }}>
           Multiplataforma
@@ -23,7 +23,7 @@ function Devices() {
         </div>
         <div className="devices-grid">
           {/* Mobile */}
-          <div className="device-card">
+          <div className="device-card device-mobile">
             <div className="device-screen" style={{ background: 'transparent', border: 'none', padding: '1.5rem 0' }}>
               <div className="phone-chrome">
                 <div className="phone-notch" />
@@ -75,7 +75,7 @@ function Devices() {
           </div>
 
           {/* Desktop */}
-          <div className="device-card">
+          <div className="device-card device-desktop">
             <div className="device-screen" style={{ background: 'transparent', border: 'none', padding: '1rem 0 1.5rem' }}>
               <div className="desktop-chrome">
                 <div className="desktop-bar">
@@ -132,7 +132,7 @@ function Devices() {
           </div>
 
           {/* Tablet */}
-          <div className="device-card">
+          <div className="device-card device-tablet">
             <div className="device-screen" style={{ background: 'transparent', border: 'none', padding: '1.5rem 0' }}>
               <div className="tablet-chrome">
                 <div className="tablet-cam" />

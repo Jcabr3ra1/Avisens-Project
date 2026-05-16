@@ -1,43 +1,159 @@
-.cta-box {
-  max-width: 700px;
-  margin: 0 auto;
-  background: linear-gradient(140deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.04) 100%);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 24px;
-  padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 4rem);
-  position: relative;
+.cta-section {
+  padding-top: clamp(4rem, 8vw, 7rem);
+  background:
+    linear-gradient(180deg, #f0f8f4 0%, #ffffff 100%);
   overflow: hidden;
+}
+
+.cta-box {
+  position: relative;
+  max-width: 900px;
+  margin: 0 auto;
+  overflow: hidden;
+  padding: clamp(3rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+  background:
+    linear-gradient(135deg, rgba(5, 150, 105, 0.94) 0%, rgba(4, 120, 87, 0.9) 58%, rgba(146, 64, 14, 0.78) 100%),
+    url('/assets/farm-hero.png');
+  background-size: cover;
+  background-position: center 62%;
+  border: 1px solid rgba(16, 185, 129, 0.26);
+  border-radius: 24px;
+  color: #ffffff;
   text-align: center;
+  box-shadow: 0 30px 80px -46px rgba(4, 120, 87, 0.72);
 }
 
 .cta-box::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(16, 185, 129, 0.1), transparent 70%);
+  background:
+    linear-gradient(180deg, rgba(4, 30, 22, 0.12) 0%, rgba(4, 30, 22, 0.38) 100%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 56px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.cta-box::after {
+  content: '';
+  position: absolute;
+  inset: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+.cta-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1.25rem;
+  padding: 0.42rem 0.85rem;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  color: #eafff6;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px) saturate(1.4);
+}
+
+.cta-badge::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  background: #a7f3d0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(167, 243, 208, 0.18);
 }
 
 .cta-box h2 {
+  position: relative;
+  max-width: 740px;
+  margin: 0 auto 1rem;
+  color: #ffffff;
   font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-size: clamp(2.2rem, 4.8vw, 3.5rem);
   font-weight: 700;
   letter-spacing: -0.04em;
-  margin-bottom: 1rem;
-  position: relative;
+  line-height: 1.06;
+  text-wrap: balance;
+}
+
+.cta-box .grad-text {
+  background: linear-gradient(135deg, #d1fae5 0%, #ffffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .cta-box p {
-  color: var(--text2);
-  font-size: 1.05rem;
-  margin-bottom: 2rem;
-  line-height: 1.7;
   position: relative;
+  max-width: 620px;
+  margin: 0 auto 2rem;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 1.05rem;
+  line-height: 1.7;
 }
 
 .cta-row {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  flex-wrap: wrap;
   position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+}
+
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 50px;
+  padding: 0.95rem 1.55rem;
+  border-radius: 12px;
+  font-weight: 700;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.cta-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cta-btn-primary {
+  background: #ffffff;
+  color: var(--green-d);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+}
+
+.cta-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+.cta-btn-secondary {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  color: #ffffff;
+  backdrop-filter: blur(12px) saturate(1.4);
+}
+
+.cta-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 560px) {
+  .cta-btn {
+    width: 100%;
+  }
 }

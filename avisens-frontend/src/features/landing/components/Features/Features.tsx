@@ -30,7 +30,7 @@ function Features() {
   const ref = useFadeUp()
 
   return (
-    <section id="features" style={{ background: 'var(--bg3)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+    <section id="features" className="features-section">
       <div className="max-w fade-up" ref={ref}>
         <div className="section-label">Funcionalidades</div>
         <h2 className="section-title">
@@ -42,8 +42,8 @@ function Features() {
           Desde sensores IoT hasta inteligencia artificial — una plataforma completa para el avicultor latinoamericano.
         </p>
         <div className="features-grid">
-          {feats.map(({ icon, color, bg, title, desc }) => (
-            <div key={title} className="feat-card">
+          {feats.map(({ icon, color, bg, title, desc }, index) => (
+            <div key={title} className="feat-card" data-index={`0${index + 1}`}>
               <div className="feat-icon" style={{ background: bg, border: `1px solid ${color}33` }}>
                 <Ic d={icon} size={20} style={{ color }} />
               </div>

@@ -68,7 +68,7 @@ function Pricing() {
   const ref = useFadeUp()
 
   return (
-    <section id="pricing">
+    <section id="pricing" className="pricing-section">
       <div className="max-w fade-up" ref={ref} style={{ textAlign: 'center' }}>
         <div className="section-label" style={{ justifyContent: 'center' }}>
           Precios
@@ -98,26 +98,26 @@ function Pricing() {
               {featured && <div className="pop-badge">MÁS POPULAR</div>}
               <div className="plan-name">{name}</div>
               <div className="plan-desc">{desc}</div>
-              <div className="plan-price" style={{ color: featured ? 'var(--success2)' : 'var(--text)' }}>
+              <div className="plan-price" style={{ color: featured ? 'var(--green-d)' : 'var(--text)' }}>
                 <sup>$</sup>
                 {annual ? a : m}
                 <sub>/mes</sub>
               </div>
               {annual && (
-                <div style={{ fontSize: '0.72rem', color: 'var(--text3)', fontFamily: 'DM Mono', marginTop: '0.25rem' }}>
+                <div className="annual-note">
                   Facturado anualmente
                 </div>
               )}
               <div className="plan-divider" />
               {feats.map(([has, label]) => (
                 <div key={label as string} className={`plan-feat ${!has ? 'off' : ''}`}>
-                  <Ic d={has ? 'M20 6L9 17l-5-5' : 'M18 6L6 18M6 6l12 12'} size={15} style={{ color: has ? '#10b981' : '#4a5e57' }} />
+                  <Ic d={has ? 'M20 6L9 17l-5-5' : 'M18 6L6 18M6 6l12 12'} size={15} style={{ color: has ? '#10b981' : '#a8b8b0' }} />
                   {label as string}
                 </div>
               ))}
               <button className={`plan-cta ${cs}`}>{cta}</button>
               {featured && (
-                <div style={{ marginTop: '0.85rem', fontSize: '0.72rem', color: 'var(--text3)', fontFamily: 'DM Mono' }}>
+                <div className="iot-note">
                   + IoT Add-on: +$25/galpón/mes
                 </div>
               )}

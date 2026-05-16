@@ -26,7 +26,7 @@ function Problems() {
   const ref = useFadeUp()
 
   return (
-    <section>
+    <section id="problems">
       <div className="max-w fade-up" ref={ref}>
         <div className="section-label">El problema real</div>
         <h2 className="section-title">
@@ -38,8 +38,8 @@ function Problems() {
           El 85% de los avicultores en Colombia pierden entre $3,000 y $8,000 USD por año en ineficiencias que la tecnología puede eliminar.
         </p>
         <div className="problems">
-          {problems.map(({ icon, title, desc, sol }) => (
-            <div key={title} className="problem-card">
+          {problems.map(({ icon, title, desc, sol }, index) => (
+            <div key={title} className="problem-card" data-step={`0${index + 1}`}>
               <div className="prob-icon">{icon}</div>
               <div className="prob-title">{title}</div>
               <div className="prob-desc">{desc}</div>
@@ -47,7 +47,7 @@ function Problems() {
                 <div className="arrow-sep-line" />
               </div>
               <div className="solution-card">
-                <div className="sol-tag">✦ Solución AVISENS</div>
+                <div className="sol-tag">Solución AVISENS</div>
                 <div className="sol-text">{sol}</div>
               </div>
             </div>
