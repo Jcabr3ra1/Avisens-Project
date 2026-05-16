@@ -1,41 +1,75 @@
 import './Footer.css'
 
+const footerGroups = [
+  {
+    title: 'Producto',
+    links: [
+      ['Sensores IoT', '#sensores'],
+      ['Health Score', '#health'],
+      ['Funciones', '#features'],
+      ['Planes', '#pricing'],
+    ],
+  },
+  {
+    title: 'Operación',
+    links: [
+      ['Alertas', '#problems'],
+      ['Dispositivos', '#devices'],
+      ['AVIA', '#chatbot'],
+      ['FAQ', '#faq'],
+    ],
+  },
+  {
+    title: 'Contacto',
+    links: [
+      ['Ventas', '#pricing'],
+      ['Soporte', '#faq'],
+      ['WhatsApp', '#chatbot'],
+      ['Ingresar', '/login'],
+    ],
+  },
+]
+
 function Footer() {
   return (
-    <footer>
+    <footer className="site-footer">
       <div className="footer-inner">
+        <div className="footer-callout">
+          <span>AVISENS para granjas conectadas</span>
+          <a href="#pricing">Ver planes</a>
+        </div>
         <div className="footer-top">
           <div className="footer-brand">
-            <img src="/views/avisens/img/logo.png" alt="AVISENS" />
-            <p>Plataforma SaaS de gestión avícola inteligente para granjas en Latinoamérica.</p>
+            <div className="footer-brand-head">
+              <span className="footer-logo-mark">
+                <img src="/views/avisens/img/logo.png" alt="" />
+              </span>
+              <span>
+                <strong>AVISENS</strong>
+                <small>IoT + IA para avicultura</small>
+              </span>
+            </div>
+            <p>
+              Plataforma SaaS para monitorear galpones, anticipar alertas y tomar decisiones con datos vivos de la granja.
+            </p>
+            <div className="footer-meta">
+              <span>Colombia</span>
+              <span>LATAM 2026</span>
+            </div>
           </div>
-          <div>
-            <div className="footer-col-title">Producto</div>
-            <ul className="footer-links">
-              {['Funciones', 'Health Score™', 'Precios', 'Changelog', 'Roadmap'].map((l) => (
-                <li key={l}><a href="#">{l}</a></li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <div className="footer-col-title">Empresa</div>
-            <ul className="footer-links">
-              {['Nosotros', 'Blog', 'Casos de éxito', 'Prensa', 'Trabaja con nosotros'].map((l) => (
-                <li key={l}><a href="#">{l}</a></li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <div className="footer-col-title">Soporte</div>
-            <ul className="footer-links">
-              {['Documentación', 'Centro de ayuda', 'Estado del sistema', 'Contacto', 'WhatsApp'].map((l) => (
-                <li key={l}><a href="#">{l}</a></li>
-              ))}
-            </ul>
-          </div>
+          {footerGroups.map(({ title, links }) => (
+            <div key={title} className="footer-col">
+              <div className="footer-col-title">{title}</div>
+              <ul className="footer-links">
+                {links.map(([label, href]) => (
+                  <li key={label}><a href={href}>{label}</a></li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
         <div className="footer-bottom">
-          <div className="footer-copy">© 2026 AVISENS · Todos los derechos reservados · Colombia</div>
+          <div className="footer-copy">© 2026 AVISENS. Todos los derechos reservados.</div>
           <div className="footer-socials">
             <a href="#" className="soc-btn" aria-label="LinkedIn">
               <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
