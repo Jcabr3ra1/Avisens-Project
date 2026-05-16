@@ -47,6 +47,7 @@ function Farm3D() {
           <div className="fm-sub">4 galpones</div>
         </div>
 
+        <div className="farm-mask-wrap">
         <div className="farm-perspective">
           <div className="farm-plane">
             {galpones.map((g) => (
@@ -141,9 +142,7 @@ function Farm3D() {
             <div style={{ position: 'absolute', left: 200, top: 195, width: 32, height: 1, background: 'linear-gradient(90deg, rgba(16,185,129,0.28), rgba(239,68,68,0.3))' }} />
           </div>
         </div>
-        <div className="farm-fade" />
-        <div className="farm-fade-l" />
-        <div className="farm-fade-r" />
+        </div>
       </div>
       <div style={{ textAlign: 'center', marginTop: '0.5rem', fontFamily: 'DM Mono', fontSize: '0.7rem', color: 'var(--text3)' }}>
         Vista en tiempo real · 4 galpones monitoreados · IoT activo
