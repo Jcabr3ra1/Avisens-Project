@@ -1,51 +1,242 @@
 .farm-section {
   position: relative;
-  padding: 8rem 0 9rem;
+  padding: 7rem 0 8rem;
   background:
-    radial-gradient(ellipse 70% 50% at 18% 28%, rgba(16, 185, 129, 0.18), transparent 65%),
-    radial-gradient(ellipse 50% 40% at 88% 75%, rgba(52, 211, 153, 0.1), transparent 70%),
-    linear-gradient(180deg, #0a1a14 0%, #123226 50%, #0a1a14 100%);
+    radial-gradient(ellipse 60% 50% at 88% 18%, rgba(16, 185, 129, 0.08), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 8% 78%, rgba(52, 211, 153, 0.06), transparent 70%),
+    var(--bg);
   overflow: hidden;
   isolation: isolate;
-  color: #ecfdf5;
+  color: var(--text);
   font-family: 'Inter', sans-serif;
 }
 
-.farm-grain {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.25;
-  mix-blend-mode: overlay;
-  background-image:
-    radial-gradient(rgba(167, 243, 208, 0.14) 1px, transparent 1px),
-    radial-gradient(rgba(16, 185, 129, 0.1) 1px, transparent 1px);
-  background-size: 3px 3px, 7px 7px;
-  background-position: 0 0, 1px 2px;
+/* ── Editorial grid (light) ─────────────────────────────── */
+.farm-grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(560px, 1.3fr);
+  gap: 4rem;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 3rem;
+  align-items: center;
 }
 
-.farm-vignette {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse 110% 80% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+.farm-head {
+  position: relative;
 }
 
-/* ── Ticker tape ────────────────────────────────────────── */
+.farm-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 2rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+.farm-eyebrow-num {
+  font-variant-numeric: tabular-nums;
+  color: var(--green-d);
+  font-weight: 500;
+}
+
+.farm-eyebrow-line {
+  flex: 0 0 40px;
+  height: 1px;
+  background: var(--border2);
+}
+
+.farm-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 4.4vw, 3.4rem);
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  margin: 0 0 1.6rem;
+  color: var(--text);
+}
+
+.farm-title-l1 {
+  display: block;
+}
+
+.farm-title-l2 {
+  display: block;
+  padding-left: 2rem;
+}
+
+.farm-title-l2 em {
+  font-style: normal;
+  background: linear-gradient(135deg, #34d399 0%, #10b981 60%, #059669 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 2px 14px rgba(16, 185, 129, 0.25));
+}
+
+.farm-title-l3 {
+  display: block;
+  font-size: 0.78em;
+  color: var(--text2);
+  font-weight: 400;
+}
+
+.farm-lede {
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--text2);
+  max-width: 40ch;
+  margin: 0 0 2.4rem;
+}
+
+.farm-stamp {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.95rem 1.3rem;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--green);
+  border-radius: 4px;
+  position: relative;
+  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.08);
+}
+
+.farm-stamp::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px dashed rgba(16, 185, 129, 0.15);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.farm-stamp-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-right: 0.6rem;
+}
+
+.farm-stamp-num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 2.4rem;
+  color: var(--green);
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+  filter: drop-shadow(0 2px 10px rgba(16, 185, 129, 0.25));
+}
+
+.farm-stamp-deno {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text3);
+}
+
+.farm-stamp-status {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem;
+  color: var(--green-d);
+  margin-left: 0.3rem;
+  font-weight: 500;
+}
+
+/* ── Dark floating panel ────────────────────────────────── */
+.farm-panel {
+  position: relative;
+  background: linear-gradient(180deg, #0a1a14 0%, #0d2118 100%);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 30px 80px rgba(10, 26, 20, 0.32),
+    0 8px 24px rgba(10, 26, 20, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  animation: fadeUp 0.9s 0.2s ease both;
+}
+
+.farm-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 18% 28%, rgba(16, 185, 129, 0.16), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 88% 78%, rgba(52, 211, 153, 0.1), transparent 70%);
+  z-index: 0;
+}
+
+.farm-panel-chrome {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.14);
+  background: rgba(8, 18, 14, 0.7);
+  font-family: 'DM Mono', monospace;
+}
+
+.farm-panel-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.45);
+}
+
+.farm-panel-dot--amber { background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.45); }
+.farm-panel-dot--red { background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.45); }
+
+.farm-panel-title {
+  margin-left: 0.7rem;
+  font-size: 0.7rem;
+  color: #9bb3a7;
+  letter-spacing: 0.06em;
+}
+
+.farm-panel-pulse {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #ecfdf5;
+}
+
+.farm-panel-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+
+/* ── Ticker tape (inside panel) ─────────────────────────── */
 .farm-ticker {
   position: relative;
-  z-index: 3;
-  margin-bottom: 4rem;
-  padding: 0.7rem 0;
-  border-top: 1px solid rgba(16, 185, 129, 0.18);
-  border-bottom: 1px solid rgba(16, 185, 129, 0.18);
-  background: rgba(10, 26, 20, 0.72);
+  z-index: 2;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.14);
+  background: rgba(8, 18, 14, 0.5);
   overflow: hidden;
   font-family: 'DM Mono', monospace;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
 }
 
 .farm-ticker-track {
@@ -60,7 +251,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: #9bb3a7;
@@ -71,167 +262,30 @@
   height: 5px;
   border-radius: 50%;
   background: #10b981;
-  box-shadow: 0 0 8px #10b981;
+  box-shadow: 0 0 6px #10b981;
   flex-shrink: 0;
 }
 
-/* ── Editorial grid ─────────────────────────────────────── */
-.farm-grid {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(560px, 1.4fr);
-  gap: 4rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 3rem;
-  align-items: start;
-}
-
-.farm-head {
-  padding-top: 2rem;
-  position: relative;
-}
-
-.farm-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  margin-bottom: 2.2rem;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: #9bb3a7;
-}
-
-.farm-eyebrow-num {
-  font-variant-numeric: tabular-nums;
-  color: #ecfdf5;
-}
-
-.farm-eyebrow-line {
-  flex: 0 0 40px;
-  height: 1px;
-  background: rgba(155, 179, 167, 0.5);
-}
-
-.farm-title {
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  font-size: clamp(2.4rem, 4.8vw, 3.8rem);
-  line-height: 1.02;
-  letter-spacing: -0.025em;
-  margin: 0 0 1.8rem;
-  color: #ecfdf5;
-}
-
-.farm-title-l1 {
-  display: block;
-}
-
-.farm-title-l2 {
-  display: block;
-  padding-left: 2.4rem;
-}
-
-.farm-title-l2 em {
-  font-style: normal;
-  background: linear-gradient(135deg, #a7f3d0 0%, #34d399 60%, #10b981 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 2px 14px rgba(16, 185, 129, 0.35));
-}
-
-.farm-title-l3 {
-  display: block;
-  font-size: 0.78em;
-  color: #9bb3a7;
-  font-weight: 400;
-}
-
-.farm-lede {
-  font-family: 'Inter', sans-serif;
-  font-size: 1.02rem;
-  line-height: 1.65;
-  color: rgba(236, 253, 245, 0.72);
-  max-width: 38ch;
-  margin: 0 0 2.5rem;
-}
-
-.farm-stamp {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  padding: 1rem 1.4rem;
-  background: linear-gradient(160deg, rgba(13, 38, 32, 0.92), rgba(10, 26, 20, 0.92));
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-left: 2px solid #10b981;
-  position: relative;
-  box-shadow: 0 0 32px rgba(16, 185, 129, 0.12);
-}
-
-.farm-stamp::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border: 1px dashed rgba(155, 179, 167, 0.12);
-  pointer-events: none;
-}
-
-.farm-stamp-label {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #9bb3a7;
-  margin-right: 0.6rem;
-}
-
-.farm-stamp-num {
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700;
-  font-size: 2.6rem;
-  color: #10b981;
-  line-height: 0.9;
-  font-variant-numeric: tabular-nums;
-  filter: drop-shadow(0 2px 12px rgba(16, 185, 129, 0.4));
-}
-
-.farm-stamp-deno {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 0.9rem;
-  color: #9bb3a7;
-}
-
-.farm-stamp-status {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.9rem;
-  color: #10b981;
-  margin-left: 0.3rem;
-}
-
-/* ── Stage (3D scene + annotations + sketch curve) ──────── */
+/* ── Stage inside dark panel ────────────────────────────── */
 .farm-stage {
   position: relative;
-  padding: 3rem 3rem 4rem;
-  min-height: 520px;
-  animation: fadeUp 0.9s 0.2s ease both;
+  z-index: 2;
+  padding: 2.5rem 2rem 3rem;
+  min-height: 460px;
 }
 
 .farm-corner {
   position: absolute;
-  width: 24px;
-  height: 24px;
-  border-color: rgba(155, 179, 167, 0.45);
-  opacity: 0.6;
+  width: 22px;
+  height: 22px;
+  border-color: rgba(167, 243, 208, 0.4);
+  opacity: 0.7;
 }
 
-.farm-corner-tl { top: 0; left: 0; border-top: 1px solid; border-left: 1px solid; }
-.farm-corner-tr { top: 0; right: 0; border-top: 1px solid; border-right: 1px solid; }
-.farm-corner-bl { bottom: 0; left: 0; border-bottom: 1px solid; border-left: 1px solid; }
-.farm-corner-br { bottom: 0; right: 0; border-bottom: 1px solid; border-right: 1px solid; }
+.farm-corner-tl { top: 1.2rem; left: 1.2rem; border-top: 1px solid; border-left: 1px solid; }
+.farm-corner-tr { top: 1.2rem; right: 1.2rem; border-top: 1px solid; border-right: 1px solid; }
+.farm-corner-bl { bottom: 1.2rem; left: 1.2rem; border-bottom: 1px solid; border-left: 1px solid; }
+.farm-corner-br { bottom: 1.2rem; right: 1.2rem; border-bottom: 1px solid; border-right: 1px solid; }
 
 .farm-sketch {
   position: absolute;
@@ -267,9 +321,9 @@
   transform-style: preserve-3d;
   transform-origin: 50% 50%;
   position: relative;
-  width: 660px;
+  width: 640px;
   max-width: 100%;
-  height: 380px;
+  height: 360px;
   margin: 0 auto;
   background:
     linear-gradient(160deg, rgba(13, 38, 32, 0.92) 0%, rgba(10, 26, 20, 0.95) 100%);
@@ -278,15 +332,17 @@
     linear-gradient(90deg, rgba(16, 185, 129, 0.08) 1px, transparent 1px);
   background-size: 36px 36px;
   border: 1px solid rgba(16, 185, 129, 0.22);
+  border-radius: 8px;
   box-shadow:
     0 0 100px rgba(16, 185, 129, 0.18) inset,
-    0 40px 80px rgba(0, 0, 0, 0.5);
+    0 30px 60px rgba(0, 0, 0, 0.45);
   animation: planeSway 18s ease-in-out infinite;
 }
 
 .farm-scan {
   position: absolute;
   inset: 0;
+  border-radius: 8px;
   background: linear-gradient(
     180deg,
     transparent 0%,
@@ -334,7 +390,7 @@
   transform: translateX(-50%);
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   line-height: 1;
   background: rgba(10, 26, 20, 0.96);
   border: 1px solid rgba(16, 185, 129, 0.18);
@@ -440,47 +496,47 @@
   filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
 }
 
-/* ── Annotation cards ───────────────────────────────────── */
+/* ── Annotations (inside dark panel) ────────────────────── */
 .annot {
   position: absolute;
   z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 0.18rem;
-  padding: 0.7rem 0.95rem;
-  background: rgba(10, 26, 20, 0.88);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 0.65rem 0.9rem;
+  background: rgba(10, 26, 20, 0.85);
+  border: 1px solid rgba(16, 185, 129, 0.18);
   border-radius: 8px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   font-family: 'DM Mono', monospace;
   min-width: 120px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .annot::before {
   content: '';
   position: absolute;
   top: 50%;
-  width: 28px;
+  width: 24px;
   height: 1px;
   background: rgba(16, 185, 129, 0.45);
 }
 
-.annot-tl { top: 12%; left: 1rem; animation: floatA 6s ease-in-out infinite; }
-.annot-tl::before { right: -28px; }
+.annot-tl { top: 14%; left: 2rem; animation: floatA 6s ease-in-out infinite; }
+.annot-tl::before { right: -24px; }
 
-.annot-tr { top: 5%; right: 1rem; animation: floatA 5.4s ease-in-out infinite 0.6s; }
-.annot-tr::before { left: -28px; }
+.annot-tr { top: 8%; right: 2rem; animation: floatA 5.4s ease-in-out infinite 0.6s; }
+.annot-tr::before { left: -24px; }
 
-.annot-bl { bottom: 14%; left: 1rem; animation: floatB 5.8s ease-in-out infinite 0.3s; }
-.annot-bl::before { right: -28px; }
+.annot-bl { bottom: 16%; left: 2rem; animation: floatB 5.8s ease-in-out infinite 0.3s; }
+.annot-bl::before { right: -24px; }
 
-.annot-br { bottom: 8%; right: 1rem; animation: floatB 6.2s ease-in-out infinite 1s; }
-.annot-br::before { left: -28px; }
+.annot-br { bottom: 10%; right: 2rem; animation: floatB 6.2s ease-in-out infinite 1s; }
+.annot-br::before { left: -24px; }
 
 .annot-key {
-  font-size: 0.58rem;
+  font-size: 0.56rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: #9bb3a7;
@@ -489,14 +545,14 @@
 .annot-val {
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: #ecfdf5;
   font-variant-numeric: tabular-nums;
   line-height: 1.05;
 }
 
 .annot-trend {
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   letter-spacing: 0.06em;
   color: #10b981;
   margin-top: 0.15rem;
@@ -506,16 +562,19 @@
   color: #f59e0b;
 }
 
-/* ── Footer caption ─────────────────────────────────────── */
+/* ── Footer caption (inside dark panel) ─────────────────── */
 .farm-foot {
-  grid-column: 1 / -1;
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.9rem;
-  margin-top: 2.5rem;
+  padding: 1rem 1.5rem 1.2rem;
+  border-top: 1px solid rgba(16, 185, 129, 0.14);
+  background: rgba(8, 18, 14, 0.5);
   font-family: 'DM Mono', monospace;
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: #9bb3a7;
@@ -523,7 +582,7 @@
 
 .farm-foot-mark {
   color: #10b981;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   animation: markSpin 8s linear infinite;
 }
 
@@ -610,24 +669,29 @@
   to   { transform: rotate(360deg); }
 }
 
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.7); }
+}
+
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 1000px) {
   .farm-grid {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 2.5rem;
     padding: 0 1.5rem;
   }
 
-  .farm-title-l2 { padding-left: 1.2rem; }
-  .farm-stage { padding: 2rem 1rem 3rem; min-height: 460px; }
+  .farm-title-l2 { padding-left: 1rem; }
+  .farm-stage { padding: 1.5rem 1rem 2.5rem; min-height: 420px; }
   .farm-plane { transform: rotateX(44deg) rotateZ(-4deg) scale(0.85); }
   .annot { min-width: 100px; padding: 0.55rem 0.75rem; }
-  .annot-val { font-size: 1.05rem; }
+  .annot-val { font-size: 1rem; }
 }
 
 @media (max-width: 600px) {
   .farm-section { padding: 5rem 0 6rem; }
   .farm-plane { transform: rotateX(40deg) rotateZ(-3deg) scale(0.6); }
   .annot-tl, .annot-tr { display: none; }
-  .farm-title-l2 { padding-left: 0.6rem; }
+  .farm-title-l2 { padding-left: 0.5rem; }
 }
