@@ -4,20 +4,22 @@ API REST del sistema AVISENS. Maneja la lógica de negocio, autenticación, base
 
 ## Estado
 
-> **En desarrollo** — Esta carpeta se llenará en la Fase 2 del proyecto.
+> **En desarrollo** — Fase 2 del proyecto.
 
-## Stack planeado
+## Stack
 
-- **Runtime:** Node.js
-- **Framework:** Express o NestJS
+- **Lenguaje:** Go
+- **Framework:** Fiber
 - **Base de datos:** PostgreSQL
-- **ORM:** Prisma
+- **ORM:** SQLC + pgx
+- **Caché / Tiempo real:** Redis
 - **Autenticación:** JWT + refresh tokens
+- **Contenedores:** Docker + Docker Compose
 
 ## Endpoints planeados
 
 | Recurso | Descripción |
-|---------|-------------|
+|---|---|
 | `/auth` | Login, registro, refresh token |
 | `/granjas` | CRUD de granjas y galpones |
 | `/lotes` | Gestión de ciclos productivos |
@@ -26,3 +28,10 @@ API REST del sistema AVISENS. Maneja la lógica de negocio, autenticación, base
 | `/inventario` | Stock de insumos |
 | `/finanzas` | Ingresos y egresos |
 | `/usuarios` | Gestión de roles y permisos |
+
+## Correr localmente
+
+```bash
+docker compose up        # levanta PostgreSQL + Redis
+go run cmd/main.go       # corre el servidor
+```
