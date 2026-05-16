@@ -35,3 +35,8 @@ Thumbs.db
 # Cache
 .cache/
 .eslintcache
+
+# AI tooling
+.agents/
+CLAUDE.md
+.claude/
