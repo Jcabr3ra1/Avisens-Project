@@ -14,139 +14,174 @@ interface Galpon {
 }
 
 const galpones: Galpon[] = [
-  { id: 1, x: 40, y: 30, w: 160, h: 80, score: 94, color: '#10b981', label: 'G1', status: 'ok', sensors: [{ x: 30, y: 25, c: '#10b981' }, { x: 130, y: 50, c: '#10b981' }] },
-  { id: 2, x: 230, y: 20, w: 160, h: 80, score: 71, color: '#f59e0b', label: 'G2', status: 'warn', sensors: [{ x: 40, y: 30, c: '#f59e0b' }, { x: 120, y: 55, c: '#f59e0b' }] },
-  { id: 3, x: 40, y: 155, w: 160, h: 80, score: 97, color: '#10b981', label: 'G3', status: 'ok', sensors: [{ x: 25, y: 35, c: '#10b981' }, { x: 135, y: 20, c: '#10b981' }] },
-  { id: 4, x: 230, y: 155, w: 160, h: 80, score: 48, color: '#ef4444', label: 'G4', status: 'crit', sensors: [{ x: 30, y: 30, c: '#ef4444' }, { x: 120, y: 45, c: '#ef4444' }] },
+  { id: 1, x: 40, y: 30, w: 160, h: 80, score: 94, color: '#3fb27f', label: 'G1', status: 'ok', sensors: [{ x: 30, y: 25, c: '#3fb27f' }, { x: 130, y: 50, c: '#3fb27f' }] },
+  { id: 2, x: 230, y: 20, w: 160, h: 80, score: 71, color: '#d9a441', label: 'G2', status: 'warn', sensors: [{ x: 40, y: 30, c: '#d9a441' }, { x: 120, y: 55, c: '#d9a441' }] },
+  { id: 3, x: 40, y: 155, w: 160, h: 80, score: 97, color: '#3fb27f', label: 'G3', status: 'ok', sensors: [{ x: 25, y: 35, c: '#3fb27f' }, { x: 135, y: 20, c: '#3fb27f' }] },
+  { id: 4, x: 230, y: 155, w: 160, h: 80, score: 48, color: '#c84e3c', label: 'G4', status: 'crit', sensors: [{ x: 30, y: 30, c: '#c84e3c' }, { x: 120, y: 45, c: '#c84e3c' }] },
+]
+
+const tickerItems = [
+  'T° 22.4',
+  'H 64%',
+  'CO₂ 412 ppm',
+  'NH₃ 8 ppm',
+  'G1 · 94',
+  'G2 · 71',
+  'G3 · 97',
+  'G4 · 48',
+  'FCR 1.64',
+  'CONSUMO 2.3 kg/d',
+  'MORTALIDAD 0.21%',
+  'AVES 59,500',
+  'UPTIME 99.7%',
+  'CICLO DÍA 31',
 ]
 
 function Farm3D() {
   return (
     <section className="farm-section" id="vista-granja">
-      <svg className="farm-wave" viewBox="0 0 1440 240" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="farmWaveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0" />
-            <stop offset="25%" stopColor="#10b981" stopOpacity="0.55" />
-            <stop offset="50%" stopColor="#34d399" stopOpacity="0.9" />
-            <stop offset="75%" stopColor="#10b981" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="farmWaveGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0" />
-            <stop offset="50%" stopColor="#a7f3d0" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-          </linearGradient>
-        </defs>
+      <div className="farm-grain" aria-hidden="true" />
+      <div className="farm-vignette" aria-hidden="true" />
 
-        <path
-          className="farm-wave-path farm-wave-1"
-          d="M0,140 C240,60 480,220 720,140 C960,60 1200,220 1440,140"
-          fill="none"
-          stroke="url(#farmWaveGrad)"
-          strokeWidth="1.5"
-        />
-        <path
-          className="farm-wave-path farm-wave-2"
-          d="M0,150 C240,90 480,210 720,150 C960,90 1200,210 1440,150"
-          fill="none"
-          stroke="url(#farmWaveGrad2)"
-          strokeWidth="1"
-        />
-        <path
-          className="farm-wave-path farm-wave-3"
-          d="M0,130 C300,180 600,80 900,150 C1100,200 1300,100 1440,140"
-          fill="none"
-          stroke="rgba(16,185,129,0.25)"
-          strokeWidth="0.8"
-          strokeDasharray="3 6"
-        />
-        <circle className="farm-wave-dot" r="4" fill="#a7f3d0">
-          <animateMotion
-            dur="9s"
-            repeatCount="indefinite"
-            path="M0,140 C240,60 480,220 720,140 C960,60 1200,220 1440,140"
-          />
-        </circle>
-      </svg>
-
-      <div className="farm-section-head">
-        <span className="farm-section-tag">
-          <span className="farm-tag-dot" />
-          Vista en tiempo real
-        </span>
-        <h2 className="farm-section-title">
-          Tu granja completa, <span className="farm-gradient-text">en una pantalla</span>
-        </h2>
-        <p className="farm-section-sub">
-          Cada galpón se actualiza solo. Los sensores envían datos cada minuto y el Health Score recalcula la salud del lote sin que muevas un dedo.
-        </p>
+      <div className="farm-ticker" aria-hidden="true">
+        <div className="farm-ticker-track">
+          {[...tickerItems, ...tickerItems, ...tickerItems].map((item, i) => (
+            <span key={i} className="farm-ticker-item">
+              <span className="farm-ticker-dot" />
+              {item}
+            </span>
+          ))}
+        </div>
       </div>
 
-      <div className="farm-scene-wrap">
-        <div className="farm-scene-inner">
-          <div className="float-metric float-metric-tr">
-            <div className="fm-label">Health Score</div>
-            <div className="fm-val" style={{ color: '#10b981' }}>
-              94<span className="fm-unit">/100</span>
+      <div className="farm-grid">
+        <header className="farm-head">
+          <div className="farm-eyebrow">
+            <span className="farm-eyebrow-num">01</span>
+            <span className="farm-eyebrow-line" />
+            <span className="farm-eyebrow-txt">Telemetría en vivo</span>
+          </div>
+          <h2 className="farm-title">
+            <span className="farm-title-l1">La granja,</span>
+            <span className="farm-title-l2"><em>auscultada</em></span>
+            <span className="farm-title-l3">minuto a minuto.</span>
+          </h2>
+          <p className="farm-lede">
+            Cuatro galpones. Doce sensores por galpón. Una sola lectura. AVISENS toma el pulso del lote y lo traduce a una calificación clínica del estado de tus aves.
+          </p>
+          <div className="farm-stamp">
+            <span className="farm-stamp-label">índice clínico — G1</span>
+            <span className="farm-stamp-num">94</span>
+            <span className="farm-stamp-deno">/100</span>
+            <span className="farm-stamp-status">· óptimo</span>
+          </div>
+        </header>
+
+        <div className="farm-stage">
+          <div className="farm-corner farm-corner-tl" />
+          <div className="farm-corner farm-corner-tr" />
+          <div className="farm-corner farm-corner-bl" />
+          <div className="farm-corner farm-corner-br" />
+
+          <svg className="farm-sketch" viewBox="0 0 800 360" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="farmSketchGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#3fb27f" stopOpacity="0" />
+                <stop offset="20%" stopColor="#3fb27f" stopOpacity="0.7" />
+                <stop offset="80%" stopColor="#d9c89a" stopOpacity="0.55" />
+                <stop offset="100%" stopColor="#d9c89a" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path
+              className="farm-sketch-path"
+              d="M-20,200 C90,160 150,260 240,210 S380,140 470,200 S620,260 720,180 L820,180"
+              fill="none"
+              stroke="url(#farmSketchGrad)"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+            />
+            <path
+              className="farm-sketch-path-2"
+              d="M-20,220 C90,180 150,280 240,230 S380,160 470,220 S620,280 720,200 L820,200"
+              fill="none"
+              stroke="rgba(217,200,154,0.18)"
+              strokeWidth="0.8"
+              strokeLinecap="round"
+              strokeDasharray="2 5"
+            />
+            <circle r="3.5" fill="#f5ecd9" className="farm-sketch-dot">
+              <animateMotion
+                dur="11s"
+                repeatCount="indefinite"
+                rotate="auto"
+                path="M-20,200 C90,160 150,260 240,210 S380,140 470,200 S620,260 720,180 L820,180"
+              />
+            </circle>
+          </svg>
+
+          <div className="farm-perspective">
+            <div className="farm-plane">
+              <div className="farm-scan" />
+              {galpones.map((g) => (
+                <div
+                  key={g.id}
+                  className={`galpon galpon-${g.status}`}
+                  style={{ left: g.x, top: g.y, width: g.w, height: g.h, animationDelay: `${g.id * 0.18}s` }}
+                >
+                  <div className="galpon-body" style={{ borderColor: `${g.color}88` }}>
+                    <div className="galpon-floor" />
+                    <div className="galpon-score" style={{ color: g.color }}>
+                      {g.score}
+                    </div>
+                    <div className="galpon-tag">
+                      <span className="galpon-tag-id">{g.label}</span>
+                      <span className="galpon-tag-state">
+                        {g.status === 'crit' ? 'crítico' : g.status === 'warn' ? 'atención' : 'óptimo'}
+                      </span>
+                    </div>
+                  </div>
+                  {g.sensors.map((s, si) => (
+                    <div key={si} className="sensor" style={{ left: s.x, top: s.y }}>
+                      <span className="sensor-dot" style={{ background: s.c, boxShadow: `0 0 10px ${s.c}` }} />
+                      <span className="sensor-ring" style={{ borderColor: s.c, animationDelay: `${si * 0.4}s` }} />
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div className="link link-h-top" />
+              <div className="link link-v-l" />
+              <div className="link link-v-r" />
+              <div className="link link-h-bot" />
             </div>
-            <div className="fm-sub">Galpón 1 · Óptimo</div>
-          </div>
-          <div className="float-metric float-metric-bl">
-            <div className="fm-label">Temperatura</div>
-            <div className="fm-val" style={{ color: '#10b981' }}>22°C</div>
-            <div className="fm-sub">✓ Rango óptimo</div>
-          </div>
-          <div className="float-metric float-metric-tl">
-            <div className="fm-label">FCR</div>
-            <div className="fm-val" style={{ color: '#10b981' }}>1.64</div>
-            <div className="fm-sub">↑ Mejor que objetivo 1.65</div>
-          </div>
-          <div className="float-metric float-metric-br">
-            <div className="fm-label">Aves activas</div>
-            <div className="fm-val">59,500</div>
-            <div className="fm-sub">4 galpones</div>
           </div>
 
-          <div className="farm-mask-wrap">
-            <div className="farm-perspective">
-              <div className="farm-plane">
-                <div className="farm-scan-line" />
-                {galpones.map((g) => (
-                  <div
-                    key={g.id}
-                    className={`galpon galpon-${g.status}`}
-                    style={{ left: g.x, top: g.y, width: g.w, height: g.h, animationDelay: `${g.id * 0.2}s` }}
-                  >
-                    <div className="galpon-body" style={{ borderColor: `${g.color}66` }}>
-                      <div className="galpon-grid" />
-                      <div className="galpon-score" style={{ color: g.color }}>
-                        {g.score}
-                      </div>
-                      <div className="galpon-label">
-                        {g.label} · {g.status === 'crit' ? '⚠ CRÍTICO' : g.status === 'warn' ? '⚡ Atención' : '✓ Óptimo'}
-                      </div>
-                    </div>
-                    {g.sensors.map((s, si) => (
-                      <div key={si} className="sensor-wrap" style={{ left: s.x, top: s.y }}>
-                        <div className="sensor-dot" style={{ background: s.c, boxShadow: `0 0 10px ${s.c}` }} />
-                        <div className="sensor-ping" style={{ background: s.c, animationDelay: `${si * 0.5}s` }} />
-                      </div>
-                    ))}
-                  </div>
-                ))}
-                <div className="data-line data-line-h-top" />
-                <div className="data-line data-line-v-left" />
-                <div className="data-line data-line-v-right" />
-                <div className="data-line data-line-h-bottom" />
-              </div>
-            </div>
+          <div className="annot annot-tl">
+            <span className="annot-key">temp</span>
+            <span className="annot-val">22.4°C</span>
+            <span className="annot-trend">↘ −0.3</span>
+          </div>
+          <div className="annot annot-tr">
+            <span className="annot-key">amoníaco</span>
+            <span className="annot-val">08 ppm</span>
+            <span className="annot-trend annot-warn">↑ +1.2</span>
+          </div>
+          <div className="annot annot-bl">
+            <span className="annot-key">consumo</span>
+            <span className="annot-val">2.31 kg/d</span>
+            <span className="annot-trend">↑ +4%</span>
+          </div>
+          <div className="annot annot-br">
+            <span className="annot-key">aves</span>
+            <span className="annot-val">59,500</span>
+            <span className="annot-trend">04 galpones</span>
           </div>
         </div>
-        <div className="farm-foot">
-          <span className="farm-foot-dot" />
-          Vista en tiempo real · 4 galpones monitoreados · IoT activo
-        </div>
+
+        <footer className="farm-foot">
+          <span className="farm-foot-mark">✦</span>
+          <span>Captura del panel · refresca cada 60 segundos</span>
+          <span className="farm-foot-mark">✦</span>
+        </footer>
       </div>
     </section>
   )

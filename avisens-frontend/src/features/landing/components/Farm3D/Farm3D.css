@@ -1,227 +1,392 @@
 .farm-section {
+  --bone: #f5ecd9;
+  --bone-dim: #d9c89a;
+  --moss: #3fb27f;
+  --moss-deep: #1f6b48;
+  --earth: #0c1410;
+  --earth-mid: #14201a;
+  --earth-soft: #1b2a23;
+  --amber: #d9a441;
+  --rust: #c84e3c;
+
   position: relative;
-  padding: 8rem 2rem 10rem;
+  padding: 8rem 0 9rem;
   background:
-    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(16, 185, 129, 0.12), transparent 60%),
-    linear-gradient(180deg, #0a1a14 0%, #0d2620 50%, #0a1a14 100%);
+    radial-gradient(ellipse 70% 50% at 18% 28%, rgba(63, 178, 127, 0.16), transparent 65%),
+    radial-gradient(ellipse 50% 40% at 88% 75%, rgba(217, 164, 65, 0.1), transparent 70%),
+    linear-gradient(180deg, var(--earth) 0%, #0e1813 50%, var(--earth) 100%);
   overflow: hidden;
   isolation: isolate;
+  color: var(--bone);
+  font-family: 'Fraunces', serif;
 }
 
-.farm-section::before {
-  content: '';
+.farm-grain {
   position: absolute;
   inset: 0;
   z-index: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: overlay;
   background-image:
-    repeating-linear-gradient(120deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 36px);
-  mask-image: linear-gradient(180deg, transparent, #000 25%, #000 80%, transparent);
-  pointer-events: none;
+    radial-gradient(rgba(217, 200, 154, 0.18) 1px, transparent 1px),
+    radial-gradient(rgba(63, 178, 127, 0.12) 1px, transparent 1px);
+  background-size: 3px 3px, 7px 7px;
+  background-position: 0 0, 1px 2px;
 }
 
-.farm-wave {
+.farm-vignette {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 240px;
-  z-index: 1;
+  inset: 0;
+  z-index: 0;
   pointer-events: none;
-  opacity: 0.85;
+  background: radial-gradient(ellipse 110% 80% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
 }
 
-.farm-wave-path {
-  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.35));
-}
-
-.farm-wave-1 {
-  animation: wave-morph-1 8s ease-in-out infinite;
-}
-
-.farm-wave-2 {
-  animation: wave-morph-2 11s ease-in-out infinite;
-}
-
-.farm-wave-3 {
-  animation: wave-dash 4s linear infinite;
-}
-
-.farm-wave-dot {
-  filter: drop-shadow(0 0 6px #a7f3d0);
-}
-
-.farm-section-head {
+/* ── Ticker tape ────────────────────────────────────────── */
+.farm-ticker {
   position: relative;
-  z-index: 2;
-  max-width: 720px;
-  margin: 0 auto 4rem;
-  text-align: center;
+  z-index: 3;
+  margin-bottom: 4rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid rgba(217, 200, 154, 0.15);
+  border-bottom: 1px solid rgba(217, 200, 154, 0.15);
+  background: rgba(12, 20, 16, 0.7);
+  overflow: hidden;
+  font-family: 'IBM Plex Mono', monospace;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
 }
 
-.farm-section-tag {
+.farm-ticker-track {
+  display: inline-flex;
+  white-space: nowrap;
+  gap: 2.5rem;
+  padding-left: 2.5rem;
+  animation: tickerMarch 55s linear infinite;
+}
+
+.farm-ticker-item {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.7rem;
-  color: #34d399;
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  border-radius: 999px;
-  padding: 0.35rem 0.95rem;
-  margin-bottom: 1.4rem;
-  letter-spacing: 0.12em;
+  gap: 0.55rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
+  color: var(--bone-dim);
 }
 
-.farm-tag-dot {
-  width: 6px;
-  height: 6px;
+.farm-ticker-dot {
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 8px #10b981;
-  animation: tag-pulse 1.6s ease-in-out infinite;
+  background: var(--moss);
+  box-shadow: 0 0 8px var(--moss);
+  flex-shrink: 0;
 }
 
-.farm-section-title {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(2rem, 4.5vw, 3rem);
-  font-weight: 700;
-  color: #ecfdf5;
-  margin: 0 0 1.2rem;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+/* ── Editorial grid ─────────────────────────────────────── */
+.farm-grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(560px, 1.4fr);
+  gap: 4rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 3rem;
+  align-items: start;
 }
 
-.farm-gradient-text {
-  background: linear-gradient(135deg, #a7f3d0 0%, #34d399 60%, #10b981 100%);
+.farm-head {
+  padding-top: 2rem;
+  position: relative;
+}
+
+.farm-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 2.2rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+}
+
+.farm-eyebrow-num {
+  font-variant-numeric: tabular-nums;
+  color: var(--bone);
+}
+
+.farm-eyebrow-line {
+  flex: 0 0 40px;
+  height: 1px;
+  background: var(--bone-dim);
+  opacity: 0.5;
+}
+
+.farm-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 400;
+  font-size: clamp(2.4rem, 4.8vw, 3.8rem);
+  line-height: 0.98;
+  letter-spacing: -0.025em;
+  margin: 0 0 1.8rem;
+  font-variation-settings: 'opsz' 144;
+  color: var(--bone);
+}
+
+.farm-title-l1 {
+  display: block;
+}
+
+.farm-title-l2 {
+  display: block;
+  padding-left: 2.4rem;
+  color: var(--moss);
+}
+
+.farm-title-l2 em {
+  font-style: italic;
+  font-weight: 600;
+  background: linear-gradient(95deg, var(--moss) 0%, var(--bone-dim) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 2px 14px rgba(16, 185, 129, 0.35));
 }
 
-.farm-section-sub {
-  color: #9bb3a7;
-  font-size: 1.05rem;
-  line-height: 1.65;
-  max-width: 580px;
-  margin: 0 auto;
+.farm-title-l3 {
+  display: block;
+  font-size: 0.78em;
+  color: var(--bone-dim);
+  font-weight: 400;
+  font-style: italic;
 }
 
-.farm-scene-wrap {
+.farm-lede {
+  font-family: 'Fraunces', serif;
+  font-variation-settings: 'opsz' 14;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: rgba(245, 236, 217, 0.72);
+  max-width: 38ch;
+  margin: 0 0 2.5rem;
+}
+
+.farm-stamp {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 1rem 1.4rem;
+  background: linear-gradient(160deg, rgba(20, 32, 26, 0.9), rgba(12, 20, 16, 0.9));
+  border: 1px solid rgba(217, 200, 154, 0.15);
+  border-left: 2px solid var(--moss);
   position: relative;
-  z-index: 2;
-  margin: 0 auto;
-  width: 100%;
-  max-width: 1000px;
+}
+
+.farm-stamp::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px dashed rgba(217, 200, 154, 0.08);
+  pointer-events: none;
+}
+
+.farm-stamp-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  margin-right: 0.6rem;
+}
+
+.farm-stamp-num {
+  font-family: 'Fraunces', serif;
+  font-variation-settings: 'opsz' 144;
+  font-weight: 800;
+  font-size: 2.6rem;
+  color: var(--moss);
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.farm-stamp-deno {
+  font-family: 'Fraunces', serif;
+  font-size: 0.9rem;
+  color: var(--bone-dim);
+}
+
+.farm-stamp-status {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--moss);
+  margin-left: 0.3rem;
+}
+
+/* ── Stage (3D scene + annotations + sketch curve) ──────── */
+.farm-stage {
+  position: relative;
+  padding: 3rem 3rem 4rem;
+  min-height: 520px;
   animation: fadeUp 0.9s 0.2s ease both;
 }
 
-.farm-scene-inner {
-  position: relative;
-  padding: 2rem 0;
+.farm-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: var(--bone-dim);
+  opacity: 0.4;
+}
+
+.farm-corner-tl { top: 0; left: 0; border-top: 1px solid; border-left: 1px solid; }
+.farm-corner-tr { top: 0; right: 0; border-top: 1px solid; border-right: 1px solid; }
+.farm-corner-bl { bottom: 0; left: 0; border-bottom: 1px solid; border-left: 1px solid; }
+.farm-corner-br { bottom: 0; right: 0; border-bottom: 1px solid; border-right: 1px solid; }
+
+.farm-sketch {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.farm-sketch-path {
+  filter: drop-shadow(0 0 6px rgba(63, 178, 127, 0.4));
+  animation: sketchWobble 9s ease-in-out infinite;
+}
+
+.farm-sketch-path-2 {
+  animation: sketchWobble2 13s ease-in-out infinite;
+}
+
+.farm-sketch-dot {
+  filter: drop-shadow(0 0 5px var(--bone));
 }
 
 .farm-perspective {
-  perspective: 1200px;
+  perspective: 1300px;
   perspective-origin: 50% 35%;
+  position: relative;
+  z-index: 2;
 }
 
 .farm-plane {
-  transform: rotateX(48deg) rotateZ(-6deg);
+  transform: rotateX(46deg) rotateZ(-5deg);
   transform-style: preserve-3d;
   transform-origin: 50% 50%;
   position: relative;
-  width: 720px;
-  height: 420px;
+  width: 660px;
+  max-width: 100%;
+  height: 380px;
   margin: 0 auto;
   background:
-    linear-gradient(160deg, rgba(13, 38, 32, 0.95) 0%, rgba(10, 26, 20, 0.95) 100%);
+    linear-gradient(160deg, rgba(20, 32, 26, 0.88) 0%, rgba(12, 20, 16, 0.92) 100%);
   background-image:
-    linear-gradient(rgba(16, 185, 129, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(16, 185, 129, 0.08) 1px, transparent 1px);
+    linear-gradient(rgba(217, 200, 154, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(217, 200, 154, 0.06) 1px, transparent 1px);
   background-size: 36px 36px;
-  border-radius: 10px;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(217, 200, 154, 0.18);
   box-shadow:
-    0 0 100px rgba(16, 185, 129, 0.18) inset,
-    0 40px 80px rgba(0, 0, 0, 0.45);
-  animation: farm-sway 16s ease-in-out infinite;
+    0 0 100px rgba(63, 178, 127, 0.14) inset,
+    0 40px 80px rgba(0, 0, 0, 0.55);
+  animation: planeSway 18s ease-in-out infinite;
 }
 
-.farm-scan-line {
+.farm-scan {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(16, 185, 129, 0.12) 47%,
-    rgba(52, 211, 153, 0.35) 50%,
-    rgba(16, 185, 129, 0.12) 53%,
+    rgba(217, 200, 154, 0.04) 47%,
+    rgba(63, 178, 127, 0.22) 50%,
+    rgba(217, 200, 154, 0.04) 53%,
     transparent 100%
   );
-  background-size: 100% 200%;
+  background-size: 100% 220%;
   background-repeat: no-repeat;
-  animation: farm-scan 7s linear infinite;
+  animation: planeScan 8s linear infinite;
   pointer-events: none;
-  border-radius: 10px;
-  opacity: 0.75;
+  opacity: 0.7;
 }
 
 .galpon {
   position: absolute;
-  animation: galpon-rise 1.1s ease both;
+  animation: galponRise 1.1s ease both;
 }
 
 .galpon-body {
   position: absolute;
   inset: 0;
-  background: linear-gradient(160deg, #11302a 0%, #0a1e18 100%);
-  border-radius: 8px;
+  background: linear-gradient(160deg, #18302a 0%, #0d1814 100%);
   border: 1px solid;
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.22);
+  box-shadow: 0 0 18px rgba(63, 178, 127, 0.22);
 }
 
-.galpon-ok .galpon-body { animation: galpon-glow-ok 3s ease-in-out infinite; }
-.galpon-warn .galpon-body { animation: galpon-glow-warn 2.2s ease-in-out infinite; }
-.galpon-crit .galpon-body { animation: galpon-glow-crit 1.4s ease-in-out infinite; }
+.galpon-ok .galpon-body { animation: glowOk 3.4s ease-in-out infinite; }
+.galpon-warn .galpon-body { animation: glowWarn 2.4s ease-in-out infinite; }
+.galpon-crit .galpon-body { animation: glowCrit 1.6s ease-in-out infinite; }
 
-.galpon-grid {
+.galpon-floor {
   position: absolute;
   inset: 0;
-  border-radius: 7px;
-  overflow: hidden;
-  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0, rgba(255, 255, 255, 0.04) 1px, transparent 1px, transparent 16px);
+  background-image: repeating-linear-gradient(0deg, rgba(245, 236, 217, 0.03) 0, rgba(245, 236, 217, 0.03) 1px, transparent 1px, transparent 14px);
 }
 
 .galpon-score {
   position: absolute;
-  top: 8px;
+  top: 7px;
   left: 50%;
   transform: translateX(-50%);
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 700;
-  background: rgba(7, 18, 14, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  padding: 2px 8px;
+  font-family: 'Fraunces', serif;
+  font-variation-settings: 'opsz' 144;
+  font-weight: 800;
+  font-size: 1rem;
+  line-height: 1;
+  background: rgba(12, 20, 16, 0.96);
+  border: 1px solid rgba(217, 200, 154, 0.18);
+  padding: 3px 8px;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
-.galpon-label {
+.galpon-tag {
   position: absolute;
-  bottom: 8px;
+  bottom: 7px;
   left: 50%;
   transform: translateX(-50%);
-  font-family: 'DM Mono', monospace;
-  font-size: 0.6rem;
-  color: #9bb3a7;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
   white-space: nowrap;
 }
 
-.sensor-wrap {
+.galpon-tag-id {
+  color: var(--bone);
+  font-weight: 600;
+}
+
+.galpon-tag-state {
+  font-style: italic;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  font-family: 'Fraunces', serif;
+  font-size: 0.65rem;
+}
+
+.sensor {
   position: absolute;
   z-index: 10;
   width: 10px;
@@ -229,222 +394,253 @@
 }
 
 .sensor-dot {
+  display: block;
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  position: relative;
-  animation: sensor-pulse 2s ease-in-out infinite;
+  animation: sensorPulse 2s ease-in-out infinite;
 }
 
-.sensor-ping {
+.sensor-ring {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  inset: 0;
   border-radius: 50%;
-  top: 0;
-  left: 0;
-  opacity: 0.6;
-  animation: ping 2s ease-out infinite;
+  border: 1px solid;
+  opacity: 0;
+  animation: sensorRing 2.2s ease-out infinite;
 }
 
-.data-line {
+.link {
   position: absolute;
   background-size: 200% 200%;
   pointer-events: none;
 }
 
-.data-line-h-top {
+.link-h-top {
   left: 200px;
   top: 50px;
   width: 32px;
   height: 1.5px;
-  background-image: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.9), transparent);
-  animation: data-flow-h 2.5s linear infinite;
-  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.5));
+  background-image: linear-gradient(90deg, transparent, var(--moss), transparent);
+  animation: linkH 2.6s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(63, 178, 127, 0.5));
 }
 
-.data-line-v-left {
+.link-v-l {
   left: 120px;
-  top: 115px;
+  top: 110px;
   width: 1.5px;
-  height: 42px;
-  background-image: linear-gradient(180deg, transparent, rgba(52, 211, 153, 0.7), transparent);
-  animation: data-flow-v 3s linear infinite;
+  height: 45px;
+  background-image: linear-gradient(180deg, transparent, var(--moss), transparent);
+  animation: linkV 3s linear infinite;
 }
 
-.data-line-v-right {
+.link-v-r {
   left: 310px;
-  top: 115px;
+  top: 110px;
   width: 1.5px;
-  height: 42px;
-  background-image: linear-gradient(180deg, transparent, rgba(245, 158, 11, 0.6), transparent);
-  animation: data-flow-v 3.4s linear infinite 0.5s;
+  height: 45px;
+  background-image: linear-gradient(180deg, transparent, var(--amber), transparent);
+  animation: linkV 3.4s linear infinite 0.5s;
 }
 
-.data-line-h-bottom {
+.link-h-bot {
   left: 200px;
-  top: 195px;
+  top: 200px;
   width: 32px;
   height: 1.5px;
-  background-image: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.8), transparent);
-  animation: data-flow-h 2.2s linear infinite 1s;
-  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+  background-image: linear-gradient(90deg, transparent, var(--rust), transparent);
+  animation: linkH 2.2s linear infinite 1s;
+  filter: drop-shadow(0 0 4px rgba(200, 78, 60, 0.5));
 }
 
-.float-metric {
+/* ── Annotation cards (corner specimen labels) ──────────── */
+.annot {
   position: absolute;
-  background: rgba(10, 22, 18, 0.92);
-  border: 1px solid rgba(16, 185, 129, 0.22);
-  border-radius: 12px;
-  padding: 0.7rem 1rem;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  font-family: 'DM Mono', monospace;
-  z-index: 20;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
-  min-width: 130px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  padding: 0.7rem 0.95rem;
+  background: rgba(12, 20, 16, 0.88);
+  border: 1px solid rgba(217, 200, 154, 0.16);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-family: 'IBM Plex Mono', monospace;
+  min-width: 120px;
 }
 
-.float-metric-tr { top: 0.5rem; right: 4%; animation: float 5s ease-in-out infinite; }
-.float-metric-tl { top: 28%; left: 1%; animation: float 6s ease-in-out infinite 0.5s; }
-.float-metric-bl { bottom: 5rem; left: 4%; animation: float2 5.4s ease-in-out infinite; }
-.float-metric-br { bottom: 4.5rem; right: 3%; animation: float2 4.7s ease-in-out infinite 1s; }
+.annot::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 28px;
+  height: 1px;
+  background: rgba(217, 200, 154, 0.4);
+}
 
-.fm-label {
-  font-size: 0.6rem;
-  color: #6a8479;
+.annot-tl { top: 12%; left: 1rem; animation: floatA 6s ease-in-out infinite; }
+.annot-tl::before { right: -28px; }
+
+.annot-tr { top: 5%; right: 1rem; animation: floatA 5.4s ease-in-out infinite 0.6s; }
+.annot-tr::before { left: -28px; }
+
+.annot-bl { bottom: 14%; left: 1rem; animation: floatB 5.8s ease-in-out infinite 0.3s; }
+.annot-bl::before { right: -28px; }
+
+.annot-br { bottom: 8%; right: 1rem; animation: floatB 6.2s ease-in-out infinite 1s; }
+.annot-br::before { left: -28px; }
+
+.annot-key {
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 0.3rem;
+  color: var(--bone-dim);
 }
 
-.fm-val {
-  font-size: 1.15rem;
-  font-weight: 700;
-  font-family: 'Space Grotesk', sans-serif;
-  color: #ecfdf5;
-  line-height: 1;
+.annot-val {
+  font-family: 'Fraunces', serif;
+  font-variation-settings: 'opsz' 144;
+  font-weight: 600;
+  font-size: 1.25rem;
+  color: var(--bone);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
 }
 
-.fm-unit {
-  font-size: 0.65rem;
-  color: #6a8479;
-  font-weight: 500;
-  margin-left: 2px;
+.annot-trend {
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--moss);
+  margin-top: 0.15rem;
 }
 
-.fm-sub {
-  font-size: 0.65rem;
-  color: #6a8479;
-  margin-top: 0.3rem;
+.annot-trend.annot-warn {
+  color: var(--amber);
 }
 
-.farm-mask-wrap {
-  mask-image:
-    linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%),
-    linear-gradient(to bottom, black 0%, black 62%, transparent 100%);
-  mask-composite: intersect;
-  -webkit-mask-image:
-    linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%),
-    linear-gradient(to bottom, black 0%, black 62%, transparent 100%);
-  -webkit-mask-composite: source-in;
-}
-
+/* ── Footer caption ─────────────────────────────────────── */
 .farm-foot {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  text-align: center;
-  margin-top: 1rem;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.72rem;
-  color: #6a8479;
-  letter-spacing: 0.05em;
+  gap: 0.9rem;
+  margin-top: 2.5rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
 }
 
-.farm-foot-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 8px #10b981;
-  animation: tag-pulse 1.6s ease-in-out infinite;
+.farm-foot-mark {
+  color: var(--moss);
+  font-size: 0.85rem;
+  animation: markSpin 8s linear infinite;
 }
 
-@keyframes farm-sway {
-  0%, 100% { transform: rotateX(48deg) rotateZ(-6deg) rotateY(0deg); }
-  25%      { transform: rotateX(46deg) rotateZ(-5deg) rotateY(2.5deg); }
-  50%      { transform: rotateX(49deg) rotateZ(-7deg) rotateY(-1deg); }
-  75%      { transform: rotateX(47deg) rotateZ(-5.5deg) rotateY(1.8deg); }
+/* ── Keyframes ──────────────────────────────────────────── */
+@keyframes tickerMarch {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-33.33%); }
 }
 
-@keyframes farm-scan {
+@keyframes planeSway {
+  0%, 100% { transform: rotateX(46deg) rotateZ(-5deg) rotateY(0deg); }
+  25%      { transform: rotateX(44deg) rotateZ(-4deg) rotateY(2.5deg); }
+  50%      { transform: rotateX(47deg) rotateZ(-6deg) rotateY(-1deg); }
+  75%      { transform: rotateX(45deg) rotateZ(-4.5deg) rotateY(1.8deg); }
+}
+
+@keyframes planeScan {
   0%   { background-position: 0% -50%; }
   100% { background-position: 0% 150%; }
 }
 
-@keyframes galpon-rise {
+@keyframes sketchWobble {
+  0%, 100% { transform: translateY(0); opacity: 0.85; }
+  50%      { transform: translateY(-6px); opacity: 1; }
+}
+
+@keyframes sketchWobble2 {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50%      { transform: translateY(4px) translateX(2px); }
+}
+
+@keyframes galponRise {
   from { opacity: 0; transform: translateY(20px) scale(0.94); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@keyframes galpon-glow-ok {
-  0%, 100% { box-shadow: 0 0 18px rgba(16, 185, 129, 0.2); }
-  50%      { box-shadow: 0 0 32px rgba(16, 185, 129, 0.5); }
+@keyframes glowOk {
+  0%, 100% { box-shadow: 0 0 16px rgba(63, 178, 127, 0.22); }
+  50%      { box-shadow: 0 0 32px rgba(63, 178, 127, 0.5); }
 }
 
-@keyframes galpon-glow-warn {
-  0%, 100% { box-shadow: 0 0 18px rgba(245, 158, 11, 0.25); }
-  50%      { box-shadow: 0 0 36px rgba(245, 158, 11, 0.6); }
+@keyframes glowWarn {
+  0%, 100% { box-shadow: 0 0 18px rgba(217, 164, 65, 0.25); }
+  50%      { box-shadow: 0 0 36px rgba(217, 164, 65, 0.55); }
 }
 
-@keyframes galpon-glow-crit {
-  0%, 100% { box-shadow: 0 0 22px rgba(239, 68, 68, 0.35); }
-  50%      { box-shadow: 0 0 50px rgba(239, 68, 68, 0.75); }
+@keyframes glowCrit {
+  0%, 100% { box-shadow: 0 0 22px rgba(200, 78, 60, 0.35); }
+  50%      { box-shadow: 0 0 48px rgba(200, 78, 60, 0.75); }
 }
 
-@keyframes data-flow-h {
+@keyframes sensorPulse {
+  0%, 100% { opacity: 1; }
+  60%      { opacity: 0.3; }
+}
+
+@keyframes sensorRing {
+  0%   { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+@keyframes linkH {
   0%   { background-position: -100% 0; }
   100% { background-position: 200% 0; }
 }
 
-@keyframes data-flow-v {
+@keyframes linkV {
   0%   { background-position: 0 -100%; }
   100% { background-position: 0 200%; }
 }
 
-@keyframes tag-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.6; transform: scale(0.85); }
+@keyframes floatA {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
 }
 
-@keyframes wave-morph-1 {
-  0%, 100% { d: path("M0,140 C240,60 480,220 720,140 C960,60 1200,220 1440,140"); }
-  50%      { d: path("M0,140 C240,200 480,80 720,150 C960,220 1200,60 1440,140"); }
+@keyframes floatB {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
 }
 
-@keyframes wave-morph-2 {
-  0%, 100% { d: path("M0,150 C240,90 480,210 720,150 C960,90 1200,210 1440,150"); }
-  50%      { d: path("M0,150 C240,210 480,90 720,160 C960,210 1200,90 1440,150"); }
+@keyframes markSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
-@keyframes wave-dash {
-  0%   { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: -36; }
-}
+/* ── Responsive ─────────────────────────────────────────── */
+@media (max-width: 1000px) {
+  .farm-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding: 0 1.5rem;
+  }
 
-@media (max-width: 900px) {
-  .farm-section { padding: 6rem 1rem 7rem; }
-  .farm-plane { transform: rotateX(45deg) rotateZ(-5deg) scale(0.75); }
-  .float-metric { padding: 0.5rem 0.75rem; min-width: 110px; }
-  .fm-val { font-size: 0.95rem; }
-  .farm-wave { height: 160px; }
+  .farm-title-l2 { padding-left: 1.2rem; }
+  .farm-stage { padding: 2rem 1rem 3rem; min-height: 460px; }
+  .farm-plane { transform: rotateX(44deg) rotateZ(-4deg) scale(0.85); }
+  .annot { min-width: 100px; padding: 0.55rem 0.75rem; }
+  .annot-val { font-size: 1.05rem; }
 }
 
 @media (max-width: 600px) {
-  .farm-plane { transform: rotateX(42deg) rotateZ(-4deg) scale(0.55); }
-  .float-metric-tl, .float-metric-tr { display: none; }
+  .farm-section { padding: 5rem 0 6rem; }
+  .farm-plane { transform: rotateX(40deg) rotateZ(-3deg) scale(0.6); }
+  .annot-tl, .annot-tr { display: none; }
+  .farm-title-l2 { padding-left: 0.6rem; }
 }
