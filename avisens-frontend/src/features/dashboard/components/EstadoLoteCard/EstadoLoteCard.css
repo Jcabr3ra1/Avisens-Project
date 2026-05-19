@@ -1,0 +1,17 @@
+.dash-card-foot {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.dash-foot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.dash-foot-label {
+  font-size: 11px;
+  color: var(--text3);
+}

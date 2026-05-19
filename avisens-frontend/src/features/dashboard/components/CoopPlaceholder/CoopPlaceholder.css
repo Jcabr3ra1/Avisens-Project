@@ -1,0 +1,192 @@
+.dash-coop-placeholder {
+  position: relative;
+  width: 100%;
+  min-height: 430px;
+  border-radius: 22px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #f0f7f3 0%, #d5e9dc 100%);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-coop-ambient {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(52, 211, 153, 0.18) 0%, transparent 55%),
+    radial-gradient(circle at 80% 90%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.dash-coop-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(10, 26, 20, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10, 26, 20, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.5;
+  pointer-events: none;
+  mask-image: radial-gradient(circle at 50% 50%, #000 35%, transparent 75%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 35%, transparent 75%);
+}
+
+.dash-coop-content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.dash-coop-emoji {
+  font-size: 64px;
+  line-height: 1;
+  margin-bottom: 12px;
+  animation: dash-coopFloat 6s ease-in-out infinite;
+  filter: drop-shadow(0 12px 16px rgba(10, 26, 20, 0.12));
+}
+
+@keyframes dash-coopFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+.dash-coop-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.dash-coop-meta {
+  font-size: 12.5px;
+  color: var(--text2);
+  margin-top: 4px;
+}
+
+.dash-coop-hint {
+  font-family: 'DM Mono', monospace;
+  font-size: 10.5px;
+  color: var(--text4);
+  margin-top: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.dash-coop-sensors {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 24px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.dash-coop-chip {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+}
+
+.dash-coop-chip-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dash-coop-chip-text { min-width: 0; }
+
+.dash-coop-chip-label {
+  font-size: 10px;
+  color: var(--text3);
+  line-height: 1.1;
+}
+
+.dash-coop-chip-value {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.dash-coop-foot {
+  position: relative;
+  z-index: 5;
+  padding: 0 16px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dash-coop-modes {
+  display: inline-flex;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.dash-coop-mode {
+  border: 0;
+  background: transparent;
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.dash-coop-mode.active {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.dash-coop-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 10.5px;
+  color: var(--text2);
+}
+
+.dash-coop-live .mono {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.dash-coop-live-time {
+  color: var(--text3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-coop-emoji { animation: none; }
+}

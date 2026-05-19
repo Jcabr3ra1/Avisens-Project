@@ -1,0 +1,92 @@
+.dash-galpon-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.dash-galpon-card {
+  flex: 1 1 0;
+  min-width: 200px;
+  text-align: left;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dash-galpon-card.active {
+  border-color: var(--text);
+  box-shadow: 0 6px 16px rgba(10, 26, 20, 0.08);
+}
+
+.dash-galpon-card.empty {
+  opacity: 0.55;
+}
+
+.dash-galpon-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.dash-galpon-card-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dash-galpon-card-title .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 4px;
+}
+
+.dash-galpon-card-code {
+  font-size: 10px;
+  color: var(--text4);
+}
+
+.dash-galpon-card-info {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.dash-galpon-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--danger);
+  font-weight: 500;
+  background: rgba(239, 68, 68, 0.12);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.dash-galpon-add {
+  width: 60px;
+  border-radius: 14px;
+  background: transparent;
+  border: 1.5px dashed var(--border2);
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.dash-galpon-add:hover {
+  border-color: var(--green-d);
+  color: var(--green-d);
+}

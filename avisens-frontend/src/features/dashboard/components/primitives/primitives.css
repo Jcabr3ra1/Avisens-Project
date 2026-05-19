@@ -1,0 +1,80 @@
+/* Card */
+.dash-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+  box-shadow: 0 1px 0 rgba(10, 26, 20, 0.02);
+}
+
+.dash-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(10, 26, 20, 0.06);
+  border-color: var(--border2);
+}
+
+.dash-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.dash-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  letter-spacing: -0.01em;
+}
+
+/* mini button (card actions) */
+.mini-btn {
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 11px;
+  color: var(--text2);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.mini-btn:hover {
+  border-color: var(--border2);
+}
+
+/* Row (label / value pair) */
+.dash-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.dash-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.dash-row-label {
+  color: var(--text3);
+}
+
+.dash-row-value {
+  color: var(--text);
+  font-weight: 500;
+  font-size: 12.5px;
+}
+
+/* positive trend label (compartido por EstadoLoteCard y ContextHeader) */
+.dash-foot-positive {
+  font-size: 11px;
+  color: var(--green-d);
+  font-weight: 500;
+}
