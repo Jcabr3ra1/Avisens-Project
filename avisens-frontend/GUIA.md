@@ -152,6 +152,33 @@ function AppLayout() {
 
 > 🔑 **Regla práctica:** un módulo nuevo de la app interna (ej: `/granjas`) va **dentro** del `<Route element={<PanelLayout />}>` en `routes.tsx`. Así obtiene el sidebar automáticamente, sin tener que importarlo. No lo pongas en `<AppLayout>` (ese es el de la web pública).
 
+### ⚠️ No confundir: `Sidebar` vs `PanelLayout` vs `dashboard`
+
+Tienen nombres parecidos pero son **3 cosas distintas**. Es la confusión más común al entrar:
+
+| Cosa | Qué es | Dónde vive |
+|------|--------|-----------|
+| **`Sidebar`** | El menú lateral en sí (la **pieza**: botones, iconos, logo) | `app/layout/Sidebar/` |
+| **`PanelLayout`** | El **marco** que coloca el sidebar y deja un hueco (`<Outlet/>`) para la página | `app/layout/PanelLayout.tsx` |
+| **`dashboard`** | Una **página** concreta (el panel de `/dashboard`), que se cuelga en ese hueco | `features/dashboard/` |
+
+Analogía del **cuadro con marco**:
+
+```
+┌─────────────────────────────────────────┐
+│  PanelLayout (el MARCO)                  │
+│ ┌─────────┬───────────────────────────┐ │
+│ │ Sidebar │  ← el <Outlet/>: aquí se   │ │
+│ │ (la     │     cuelga la PÁGINA que    │ │
+│ │  pieza) │     toque (DashboardPage,   │ │
+│ │         │     GranjasPage, …)         │ │
+│ └─────────┴───────────────────────────┘ │
+└─────────────────────────────────────────┘
+   ▲ siempre igual    ▲ cambia según la ruta
+```
+
+**¿Por qué `PanelLayout` y no montar el `Sidebar` en cada página?** Porque sin él, cada una de las ~10 páginas internas tendría que importar el `<Sidebar/>`, manejar el estado de colapso y acomodar el flex — copiado y pegado 10 veces. El `PanelLayout` escribe ese envoltorio **una sola vez** y lo comparte con todas. El `Sidebar` es la pieza; el `PanelLayout` la reparte.
+
 ---
 
 ## 5. Anatomía de un feature
@@ -186,10 +213,10 @@ export default AlertasPage
 
 El dashboard es la referencia de cómo se ve un feature "terminado". Su `DashboardPage.tsx`:
 
-- Maneja su estado con `useState` (galpón activo, sidebar colapsado, chat abierto…).
-- Compone sub-componentes propios: `Sidebar`, `Topbar`, `MetricsHub`, `GalponStrip`, `AttentionBar`, `ChatPanel`, etc. (todos en `dashboard/components/`).
-- Lee sus **datos mock** desde `dashboard/model.ts` (`GALPONES`, `GRANJAS`, etc.).
-- Trae **su propio layout** (sidebar + topbar) → por eso no usa `AppLayout`.
+- Maneja su estado con `useState` (galpón activo, chat abierto, métrica activa…).
+- Compone sub-componentes propios: `Topbar`, `MetricsHub`, `GalponStrip`, `AttentionBar`, `ChatPanel`, etc. (todos en `dashboard/components/`).
+- Lee los **datos mock** de granjas/galpones desde `@shared/data/farm` y los suyos propios desde `dashboard/model.tsx`.
+- El **sidebar lo pone el `PanelLayout`**, no el dashboard. La página solo renderiza su contenido (topbar + widgets + chat).
 
 ```
 features/dashboard/
