@@ -23,8 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
-# npm lockfile (el proyecto usa pnpm)
-package-lock.json
+# Lockfiles de otros gestores (el proyecto usa npm → package-lock.json)
+pnpm-lock.yaml
+yarn.lock
 
 # Artefactos de herramientas de IA / docs auxiliares
 skills-lock.json

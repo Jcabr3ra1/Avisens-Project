@@ -4,6 +4,8 @@ Interfaz web del sistema AVISENS. Panel de control para monitoreo de sensores Io
 
 > **Estado:** En desarrollo — Fase 1 (datos mock, sin backend conectado).
 
+> 📖 **¿Nuevo en el proyecto?** Lee la [**Guía del proyecto (GUIA.md)**](./GUIA.md): explica a fondo qué se ha hecho, por qué está hecho así, cómo funcionan las rutas y cómo continuar.
+
 ---
 
 ## Stack
@@ -13,26 +15,26 @@ Interfaz web del sistema AVISENS. Panel de control para monitoreo de sensores Io
 - **Build tool:** Vite 6
 - **Routing:** React Router DOM v7
 - **Estilos:** CSS Vanilla (sin Tailwind, sin CSS-in-JS)
-- **Gestor de paquetes:** **pnpm** (no usar npm ni yarn)
+- **Gestor de paquetes:** **npm** (no usar pnpm ni yarn)
 
 ---
 
 ## Cómo correr el proyecto
 
-> ⚠️ Este proyecto usa **pnpm**. No uses `npm install` — generaría un `package-lock.json` que está intencionalmente ignorado.
+> ⚠️ Este proyecto usa **npm**. El lockfile válido es `package-lock.json`. No uses pnpm ni yarn para no generar lockfiles cruzados.
 
 ```bash
-pnpm install      # instalar dependencias
-pnpm dev          # servidor de desarrollo en http://localhost:5173
+npm install       # instalar dependencias
+npm run dev       # servidor de desarrollo en http://localhost:5173
 ```
 
 ### Otros comandos
 
 ```bash
-pnpm build        # tsc -b && vite build (compilar para producción)
-pnpm lint         # ESLint
-pnpm preview      # previsualizar el build de producción
-pnpm exec tsc --noEmit   # type-check sin compilar (correr antes de cada commit)
+npm run build     # tsc -b && vite build (compilar para producción)
+npm run lint      # ESLint
+npm run preview   # previsualizar el build de producción
+npx tsc --noEmit  # type-check sin compilar (correr antes de cada commit)
 ```
 
 No hay tests configurados todavía.
