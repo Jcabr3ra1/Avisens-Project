@@ -1,28 +1,15 @@
 .features-section {
   overflow: hidden;
   background:
-    linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0 12%, transparent 12% 100%),
-    linear-gradient(225deg, rgba(245, 158, 11, 0.11) 0 14%, transparent 14% 100%),
-    linear-gradient(180deg, #eef8f2 0%, #ffffff 52%, #edf7f2 100%);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-
-.features-section::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image:
-    repeating-linear-gradient(0deg, rgba(10, 26, 20, 0.05) 0 1px, transparent 1px 68px),
-    repeating-linear-gradient(90deg, rgba(10, 26, 20, 0.04) 0 1px, transparent 1px 68px);
-  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    radial-gradient(ellipse 70% 50% at 50% 50%, rgba(16, 185, 129, 0.1), transparent 70%),
+    var(--bg3);
+  isolation: isolate;
 }
 
 .features-grid {
   margin-top: 3.5rem;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1.25rem;
 }
 
@@ -38,6 +25,47 @@
   transition: transform 0.32s ease, box-shadow 0.32s ease, border-color 0.32s ease;
   cursor: default;
   box-shadow: 0 16px 44px -34px rgba(10, 40, 28, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.feat-card-hero {
+  grid-column: span 4;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2rem;
+  align-items: center;
+  padding: 2.25rem 2.5rem;
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(255, 255, 255, 0.96) 50%),
+    var(--card);
+  border-color: rgba(16, 185, 129, 0.32);
+  box-shadow:
+    0 24px 60px -36px rgba(4, 120, 87, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.feat-card-hero .feat-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  margin-bottom: 0;
+}
+
+.feat-card-hero .feat-title {
+  font-size: clamp(1.4rem, 2.4vw, 1.8rem);
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+.feat-card-hero .feat-desc {
+  font-size: 0.98rem;
+  line-height: 1.6;
+  max-width: 720px;
+}
+
+.feat-card-hero::after {
+  height: 5px;
+  transform: scaleX(1);
+  opacity: 0.95;
 }
 
 .feat-card::before {
@@ -96,4 +124,33 @@
   font-size: 0.862rem;
   color: var(--text2);
   line-height: 1.65;
+}
+
+@media (max-width: 1024px) {
+  .features-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .feat-card-hero {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 560px) {
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feat-card-hero {
+    grid-column: span 1;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1.6rem 1.4rem;
+  }
+
+  .feat-card-hero .feat-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+  }
 }

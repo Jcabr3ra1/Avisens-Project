@@ -75,10 +75,10 @@ function Sensors() {
         </div>
 
         <div className="sensors-grid">
-          {profiles[active].map((sensor) => (
-            <article key={sensor.name} className={`sensor-card ${activeTone}`}>
+          {profiles[active].map((sensor, index) => (
+            <article key={sensor.name} className={`sensor-card ${activeTone}${index === 0 ? ' sensor-card-hero' : ''}`}>
               <div className="sc-top">
-                <div className="sc-icon"><Ic d={iconPaths[sensor.icon]} size={22} /></div>
+                <div className="sc-icon"><Ic d={iconPaths[sensor.icon]} size={index === 0 ? 26 : 22} /></div>
                 <div className="sc-status">{sensor.status}</div>
               </div>
               <div className="sc-name">{sensor.name}</div>
@@ -89,8 +89,8 @@ function Sensors() {
                 <div className="sc-bar-marker" style={{ left: `${sensor.level}%` }} />
               </div>
               <div className="sc-spark" aria-hidden="true">
-                {sensor.trend.map((height, index) => (
-                  <div key={`${sensor.name}-${index}`} className="sc-spark-bar" style={{ height: `${height}%` }} />
+                {sensor.trend.map((height, idx) => (
+                  <div key={`${sensor.name}-${idx}`} className="sc-spark-bar" style={{ height: `${height}%` }} />
                 ))}
               </div>
             </article>

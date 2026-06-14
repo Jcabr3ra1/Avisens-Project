@@ -15,15 +15,15 @@ const iconPaths: Record<string, string | string[]> = {
 }
 
 const feats = [
-  { icon: iconPaths.wifi, color: '#e8a020', bg: 'rgba(232,160,32,.2)', title: 'IoT con sensores accesibles', desc: 'Kit ESP32 + sensores desde $15-20 USD por galpón. Sin hardware propietario ni contratos costosos.' },
-  { icon: iconPaths.act, color: '#10b981', bg: 'rgba(16,185,129,.15)', title: 'Health Score™ exclusivo', desc: 'Una métrica de 0-100 que combina todas las variables. Entiende tu granja en un vistazo.' },
-  { icon: iconPaths.zap, color: '#f59e0b', bg: 'rgba(16,185,129,.15)', title: 'Automatización real', desc: 'Reglas que controlan ventiladores, comederos e iluminación según CO₂, temperatura y humedad.' },
-  { icon: iconPaths.chart, color: '#10b981', bg: 'rgba(16,185,129,.15)', title: 'Curvas de crecimiento', desc: 'Compara peso real vs curva estándar Ross 308, Cobb 500 o Hubbard. Detecta desviaciones.' },
-  { icon: iconPaths.dollar, color: '#10b981', bg: 'rgba(16,185,129,.15)', title: 'Panel financiero completo', desc: 'FCR en tiempo real, costo/ave, proyección de ganancias y comparativa de ciclos históricos.' },
-  { icon: iconPaths.phone, color: '#10b981', bg: 'rgba(16,185,129,.15)', title: 'Alertas por WhatsApp', desc: 'El avicultor colombiano vive en WhatsApp. Nosotros también. Alertas críticas directo a tu celular.' },
-  { icon: iconPaths.shield, color: '#f59e0b', bg: 'rgba(16,185,129,.15)', title: 'Trazabilidad de lote', desc: 'Del día 1 al rastro: origen, vacunas, medicamentos, mortalidad. Genera el Pasaporte del Lote en PDF.' },
-  { icon: iconPaths.users, color: '#10b981', bg: 'rgba(16,185,129,.15)', title: 'Multi-rol y multi-granja', desc: '4 roles diferenciados y soporte multi-granja. Escala de 1 a 50 galpones sin cambiar de plataforma.' },
-  { icon: iconPaths.bot, color: '#e8a020', bg: 'rgba(232,160,32,.2)', title: 'Asistente IA AVIA', desc: 'Pregunta en español natural: "¿Cómo está el galpón 2?" y obtén respuestas con tus datos reales.' },
+  { icon: iconPaths.act, color: '#10b981', bg: 'rgba(16,185,129,.15)', title: 'Health Score™ exclusivo', desc: 'Una métrica de 0-100 que combina todas las variables del galpón en un solo número. Entiende el estado de tu granja en un vistazo — sin tablas, sin cálculos, sin tener que ser experto. Ningún competidor en LATAM lo tiene.', hero: true },
+  { icon: iconPaths.wifi, color: '#e8a020', bg: 'rgba(232,160,32,.2)', title: 'IoT con sensores accesibles', desc: 'Kit ESP32 + sensores desde $15-20 USD por galpón. Sin hardware propietario.' },
+  { icon: iconPaths.zap, color: '#f59e0b', bg: 'rgba(16,185,129,.15)', title: 'Automatización real', desc: 'Reglas que controlan ventiladores, comederos e iluminación.' },
+  { icon: iconPaths.chart, color: '#10b981', bg: 'rgba(16,185,129,.15)', title: 'Curvas de crecimiento', desc: 'Compara peso real vs curva estándar Ross 308, Cobb 500 o Hubbard.' },
+  { icon: iconPaths.dollar, color: '#10b981', bg: 'rgba(16,185,129,.15)', title: 'Panel financiero', desc: 'FCR en tiempo real, costo/ave, proyección de ganancias y comparativa de ciclos.' },
+  { icon: iconPaths.phone, color: '#10b981', bg: 'rgba(16,185,129,.15)', title: 'Alertas por WhatsApp', desc: 'Avisos críticos directo a tu celular, donde ya vive el avicultor.' },
+  { icon: iconPaths.shield, color: '#f59e0b', bg: 'rgba(16,185,129,.15)', title: 'Trazabilidad de lote', desc: 'Del día 1 al rastro: vacunas, medicamentos, mortalidad. Pasaporte del Lote en PDF.' },
+  { icon: iconPaths.users, color: '#10b981', bg: 'rgba(16,185,129,.15)', title: 'Multi-rol y multi-granja', desc: '4 roles diferenciados. Escala de 1 a 50 galpones sin cambiar de plataforma.' },
+  { icon: iconPaths.bot, color: '#e8a020', bg: 'rgba(232,160,32,.2)', title: 'Asistente IA AVIA', desc: 'Pregunta en español natural y obtén respuestas con los datos reales de tu granja.' },
 ]
 
 function Features() {
@@ -42,13 +42,15 @@ function Features() {
           Desde sensores IoT hasta inteligencia artificial — una plataforma completa para el avicultor latinoamericano.
         </p>
         <div className="features-grid">
-          {feats.map(({ icon, color, bg, title, desc }, index) => (
-            <div key={title} className="feat-card" data-index={`0${index + 1}`}>
+          {feats.map(({ icon, color, bg, title, desc, hero }, index) => (
+            <div key={title} className={`feat-card${hero ? ' feat-card-hero' : ''}`} data-index={`0${index + 1}`}>
               <div className="feat-icon" style={{ background: bg, border: `1px solid ${color}33` }}>
-                <Ic d={icon} size={20} style={{ color }} />
+                <Ic d={icon} size={hero ? 26 : 20} style={{ color }} />
               </div>
-              <div className="feat-title">{title}</div>
-              <div className="feat-desc">{desc}</div>
+              <div className="feat-body">
+                <div className="feat-title">{title}</div>
+                <div className="feat-desc">{desc}</div>
+              </div>
             </div>
           ))}
         </div>

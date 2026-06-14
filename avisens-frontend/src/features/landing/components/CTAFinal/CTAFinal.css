@@ -1,8 +1,10 @@
 .cta-section {
   padding-top: clamp(4rem, 8vw, 7rem);
   background:
-    linear-gradient(180deg, #f0f8f4 0%, #ffffff 100%);
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(16, 185, 129, 0.08), transparent 70%),
+    var(--bg);
   overflow: hidden;
+  isolation: isolate;
 }
 
 .cta-box {
@@ -13,7 +15,7 @@
   padding: clamp(3rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
   background:
     linear-gradient(135deg, rgba(5, 150, 105, 0.94) 0%, rgba(4, 120, 87, 0.9) 58%, rgba(146, 64, 14, 0.78) 100%),
-    url('/assets/farm-hero.png');
+    url('/assets/farm.png');
   background-size: cover;
   background-position: center 62%;
   border: 1px solid rgba(16, 185, 129, 0.26);

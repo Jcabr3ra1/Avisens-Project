@@ -16,6 +16,8 @@ const GalponStrip = ({ galpones, active, setActive }: Props) => (
         g.status === 'ok' ? 'var(--green)' :
         g.status === 'warn' ? 'var(--amber)' :
         'var(--text4)'
+      const occupancy = g.status === 'empty' ? 0 : Math.min(100, Math.round((g.aves / 20000) * 100))
+
       return (
         <button
           key={g.id}
@@ -37,7 +39,7 @@ const GalponStrip = ({ galpones, active, setActive }: Props) => (
           </div>
           <div className="dash-galpon-card-info">
             <span>
-              {g.status === 'empty' ? 'Sin lote · Limpieza' : `${g.aves.toLocaleString('es-CO')} aves · día ${g.dia}`}
+              {g.status === 'empty' ? 'Sin lote / limpieza' : `${g.aves.toLocaleString('es-CO')} aves / dia ${g.dia}`}
             </span>
             {g.alertas > 0 && (
               <span className="dash-galpon-badge">
@@ -45,10 +47,13 @@ const GalponStrip = ({ galpones, active, setActive }: Props) => (
               </span>
             )}
           </div>
+          <span className="dash-galpon-meter" aria-hidden="true">
+            <span style={{ width: `${occupancy}%`, background: statusColor }} />
+          </span>
         </button>
       )
     })}
-    <button className="dash-galpon-add" title="Añadir galpón">
+    <button className="dash-galpon-add" title="Anadir galpon">
       <IcPlus size={18} />
     </button>
   </div>

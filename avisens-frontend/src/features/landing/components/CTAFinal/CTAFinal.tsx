@@ -20,14 +20,11 @@ function CTAFinal() {
             Únete a los más de 340 avicultores que ya confían en AVISENS.
           </p>
           <div className="cta-row">
-            <a href="#pricing" className="cta-btn cta-btn-primary">
-              Empezar gratis
+            <a href="mailto:contacto@avisens.com" className="cta-btn cta-btn-primary">
+              Contáctanos
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h14M13 5l7 7-7 7" />
               </svg>
-            </a>
-            <a href="mailto:contacto@avisens.com" className="cta-btn cta-btn-secondary">
-              Hablar con ventas
             </a>
           </div>
         </div>

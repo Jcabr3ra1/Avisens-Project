@@ -7,7 +7,7 @@ const footerGroups = [
       ['Sensores IoT', '#sensores'],
       ['Health Score', '#health'],
       ['Funciones', '#features'],
-      ['Planes', '#pricing'],
+      ['Telemetría', '#telemetria'],
     ],
   },
   {
@@ -22,7 +22,7 @@ const footerGroups = [
   {
     title: 'Contacto',
     links: [
-      ['Ventas', '#pricing'],
+      ['Ventas', 'mailto:ventas@avisens.com'],
       ['Soporte', '#faq'],
       ['WhatsApp', '#chatbot'],
       ['Ingresar', '/login'],
@@ -34,10 +34,6 @@ function Footer() {
   return (
     <footer className="site-footer">
       <div className="footer-inner">
-        <div className="footer-callout">
-          <span>AVISENS para granjas conectadas</span>
-          <a href="#pricing">Ver planes</a>
-        </div>
         <div className="footer-top">
           <div className="footer-brand">
             <div className="footer-brand-head">

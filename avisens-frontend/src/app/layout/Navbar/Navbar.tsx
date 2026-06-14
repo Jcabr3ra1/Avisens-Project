@@ -6,7 +6,6 @@ const navItems = [
   ['Sensores', '#sensores'],
   ['Problemas', '#problems'],
   ['Funciones', '#features'],
-  ['Planes', '#pricing'],
   ['FAQ', '#faq'],
 ]
 
@@ -53,7 +52,7 @@ function Navbar() {
 
       <div className="nav-actions">
         <Link to="/login" className="nav-btn nav-btn-ghost">Entrar</Link>
-        <a href="#pricing" className="nav-btn nav-btn-primary">Probar gratis</a>
+        <a href="mailto:contacto@avisens.com" className="nav-btn nav-btn-primary">Contáctanos</a>
         <button
           className="nav-menu-toggle"
           type="button"

@@ -1,21 +1,11 @@
 .chat-section {
   overflow: hidden;
   background:
-    linear-gradient(110deg, rgba(7, 31, 23, 0.96) 0 49%, transparent 49% 100%),
-    linear-gradient(180deg, #eef8f2 0%, #ffffff 100%);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-
-.chat-section::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 54px),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 54px);
-  mask-image: linear-gradient(90deg, #000 0 48%, transparent 62%);
+    radial-gradient(ellipse 50% 60% at 18% 30%, rgba(16, 185, 129, 0.18), transparent 70%),
+    linear-gradient(110deg, #061612 0 49%, transparent 49% 100%),
+    radial-gradient(ellipse 60% 40% at 78% 100%, rgba(16, 185, 129, 0.08), transparent 70%),
+    var(--bg);
+  isolation: isolate;
 }
 
 .chat-inner {
@@ -36,10 +26,12 @@
 .chat-window {
   position: relative;
   background: #ffffff;
-  border: 1px solid rgba(167, 243, 208, 0.46);
+  border: 1px solid rgba(16, 185, 129, 0.28);
   border-radius: 22px;
   overflow: hidden;
-  box-shadow: 0 34px 90px -50px rgba(4, 120, 87, 0.78);
+  box-shadow:
+    0 40px 100px -40px rgba(7, 31, 23, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .chat-window::before {
@@ -247,15 +239,21 @@
 }
 
 .chat-example {
+  position: relative;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
-    rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 14px;
-  padding: 1rem;
+    linear-gradient(180deg, rgba(16, 185, 129, 0.08), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(16, 185, 129, 0.22);
   border-left: 3px solid var(--success);
-  box-shadow: 0 18px 42px -34px rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(10px) saturate(1.35);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 18px 42px -34px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.chat-example:hover {
+  transform: translateX(4px);
+  border-color: rgba(16, 185, 129, 0.45);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.14), rgba(255, 255, 255, 0.04));
 }
 
 .chat-example-q {
@@ -288,14 +286,15 @@
 @media (max-width: 860px) {
   .chat-section {
     background:
-      linear-gradient(180deg, rgba(7, 31, 23, 0.96) 0 52%, transparent 52% 100%),
-      linear-gradient(180deg, #eef8f2 0%, #ffffff 100%);
+      radial-gradient(ellipse 70% 60% at 50% 25%, rgba(16, 185, 129, 0.16), transparent 70%),
+      linear-gradient(180deg, #061612 0 52%, transparent 52% 100%),
+      var(--bg);
   }
 
   .chat-inner > div:first-child {
-    padding: 1.25rem;
-    background: rgba(7, 31, 23, 0.82);
-    border: 1px solid rgba(167, 243, 208, 0.14);
+    padding: 1.5rem;
+    background: rgba(16, 185, 129, 0.06);
+    border: 1px solid rgba(167, 243, 208, 0.18);
     border-radius: 18px;
   }
 }

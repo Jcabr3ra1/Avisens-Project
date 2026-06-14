@@ -21,7 +21,7 @@ const AttentionBar = ({ alertas, tareasHoy, mortalidad, mortalidadTrend, bienest
     <div className={`dash-attention-bar${allClear ? ' all-clear' : ''}`}>
       <div className="dash-attention-bar-label">
         <span className="dash-attention-bar-dot" />
-        {allClear ? 'Todo en orden' : 'Atención hoy'}
+        {allClear ? 'Todo en orden' : 'Atencion hoy'}
       </div>
       <div className="dash-attention-chips">
         <AttentionChip
@@ -29,7 +29,7 @@ const AttentionBar = ({ alertas, tareasHoy, mortalidad, mortalidadTrend, bienest
           icon={<IcAlert size={14} />}
           value={alertas}
           label={alertas === 1 ? 'alerta activa' : 'alertas activas'}
-          meta={alertas > 0 ? '1 alta · 1 media' : 'sin incidencias'}
+          meta={alertas > 0 ? '1 alta / 1 media' : 'sin incidencias'}
           onClick={() => onJump('dash-section-alertas')}
         />
         <AttentionChip
@@ -37,7 +37,7 @@ const AttentionBar = ({ alertas, tareasHoy, mortalidad, mortalidadTrend, bienest
           icon={<IcCal size={14} />}
           value={tareasHoy}
           label="tareas hoy"
-          meta="próxima 14:00"
+          meta="proxima 14:00"
           onClick={() => onJump('dash-section-tareas')}
         />
         <AttentionChip
@@ -45,7 +45,7 @@ const AttentionBar = ({ alertas, tareasHoy, mortalidad, mortalidadTrend, bienest
           icon={<IcHeart size={14} />}
           value={mortalidad}
           label="mortalidad"
-          meta={mortalidadTrend === 'up' ? '↑ vs. ayer' : mortalidadTrend === 'down' ? '↓ vs. ayer' : '= vs. ayer'}
+          meta={mortalidadTrend === 'up' ? 'sube vs. ayer' : mortalidadTrend === 'down' ? 'baja vs. ayer' : 'igual vs. ayer'}
           onClick={() => onJump('dash-section-estado')}
         />
         <AttentionChip

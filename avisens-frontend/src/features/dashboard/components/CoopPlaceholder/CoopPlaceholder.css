@@ -1,192 +1,753 @@
 .dash-coop-placeholder {
-  position: relative;
+  --map-ok: #10b981;
+  --map-warn: #f59e0b;
+  --map-info: #3b82f6;
+  --map-pending: #7a8e84;
+  container-type: inline-size;
   width: 100%;
-  min-height: 430px;
-  border-radius: 22px;
+  border-radius: 24px;
   overflow: hidden;
-  background: linear-gradient(180deg, #f0f7f3 0%, #d5e9dc 100%);
-  border: 1px solid var(--border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  display: flex;
-  flex-direction: column;
+  background: linear-gradient(180deg, #f7fbf5 0%, #e9f3e2 100%);
+  border: 1px solid rgba(16, 44, 35, 0.1);
+  box-shadow: 0 18px 48px rgba(20, 45, 36, 0.12);
+  color: var(--text);
 }
 
-.dash-coop-ambient {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(52, 211, 153, 0.18) 0%, transparent 55%),
-    radial-gradient(circle at 80% 90%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
-  pointer-events: none;
+.dash-coop-top {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.72fr) minmax(360px, 1fr);
+  gap: 14px;
+  padding: 16px 20px 0;
+  align-items: start;
 }
 
-.dash-coop-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(10, 26, 20, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(10, 26, 20, 0.06) 1px, transparent 1px);
-  background-size: 32px 32px;
-  opacity: 0.5;
-  pointer-events: none;
-  mask-image: radial-gradient(circle at 50% 50%, #000 35%, transparent 75%);
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 35%, transparent 75%);
-}
-
-.dash-coop-content {
-  position: relative;
-  z-index: 1;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 24px;
-  text-align: center;
-}
-
-.dash-coop-emoji {
-  font-size: 64px;
-  line-height: 1;
-  margin-bottom: 12px;
-  animation: dash-coopFloat 6s ease-in-out infinite;
-  filter: drop-shadow(0 12px 16px rgba(10, 26, 20, 0.12));
-}
-
-@keyframes dash-coopFloat {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-6px); }
+.dash-coop-kicker {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--green-d);
+  margin-bottom: 8px;
 }
 
 .dash-coop-title {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--text);
+  font-size: clamp(27px, 2.5vw, 38px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #081a14;
 }
 
 .dash-coop-meta {
+  margin-top: 8px;
   font-size: 12.5px;
-  color: var(--text2);
-  margin-top: 4px;
+  color: var(--text3);
 }
 
-.dash-coop-hint {
-  font-family: 'DM Mono', monospace;
-  font-size: 10.5px;
-  color: var(--text4);
-  margin-top: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.dash-coop-sensors {
+.dash-coop-lot {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 24px;
+}
+
+.dash-coop-lot-stat {
+  min-width: 0;
+  min-height: 64px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(16, 44, 35, 0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.dash-coop-lot-stat span {
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-coop-lot-stat strong {
+  font-size: 17px;
+  line-height: 1;
+  color: #081a14;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-coop-lot-stat.tone-warn strong {
+  color: var(--red);
+}
+
+.dash-coop-controls {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px 0;
+  flex-wrap: wrap;
+}
+
+.dash-coop-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(10, 26, 20, 0.05);
+  border: 1px solid rgba(16, 44, 35, 0.08);
+}
+
+.dash-coop-layer {
+  height: 32px;
+  border-radius: 10px;
+  color: var(--text3);
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0 12px;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.dash-coop-layer.active {
+  background: #ffffff;
+  color: #081a14;
+  box-shadow: 0 8px 22px rgba(20, 45, 36, 0.12);
+}
+
+.dash-coop-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 14px;
+  padding: 12px 20px 0;
+  align-items: stretch;
+}
+
+.dash-coop-map {
+  min-width: 0;
+  min-height: 280px;
+  border-radius: 20px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  overflow: hidden;
+}
+
+.dash-coop-stage {
+  position: relative;
   width: 100%;
-  max-width: 360px;
+  max-width: 900px;
+  aspect-ratio: 2.4 / 1;
+  user-select: none;
+}
+
+.dash-coop-illustration-wrap {
+  position: absolute;
+  left: 19%;
+  right: 19%;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.dash-coop-illustration {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 14px 22px rgba(20, 45, 36, 0.14));
+}
+
+.dash-coop-flow {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.9), transparent);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.layer-flujo .dash-coop-flow {
+  opacity: 0.85;
+}
+
+.flow-a { top: 52%; }
+.flow-b { top: 70%; }
+
+.dash-coop-leaders {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  overflow: visible;
+}
+
+.dash-coop-leader {
+  stroke: rgba(16, 44, 35, 0.22);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 4;
+  fill: none;
+  transition: stroke 0.2s, stroke-dasharray 0.2s, stroke-width 0.2s;
+}
+
+.dash-coop-leader.active {
+  stroke-width: 2;
+  stroke-dasharray: 0;
+}
+
+.dash-coop-leader.status-ok.active { stroke: var(--map-ok); }
+.dash-coop-leader.status-warn.active { stroke: var(--map-warn); }
+.dash-coop-leader.status-info.active { stroke: var(--map-info); }
+.dash-coop-leader.status-pending.active { stroke: var(--map-pending); }
+
+.dash-coop-anchor {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2.5px solid var(--node-color, var(--map-info));
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1px rgba(16, 44, 35, 0.1),
+    0 4px 8px rgba(20, 45, 36, 0.18);
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+
+.dash-coop-anchor.status-ok { --node-color: var(--map-ok); }
+.dash-coop-anchor.status-warn { --node-color: var(--map-warn); }
+.dash-coop-anchor.status-info { --node-color: var(--map-info); }
+.dash-coop-anchor.status-pending { --node-color: var(--map-pending); }
+
+.dash-coop-anchor.active {
+  transform: translate(-50%, -50%) scale(1.3);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--node-color) 22%, transparent),
+    0 4px 10px rgba(20, 45, 36, 0.26);
+}
+
+@keyframes coopWarnPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(16, 44, 35, 0.1),
+      0 0 0 0 color-mix(in srgb, var(--map-warn) 40%, transparent),
+      0 4px 8px rgba(20, 45, 36, 0.22);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(16, 44, 35, 0.1),
+      0 0 0 9px color-mix(in srgb, var(--map-warn) 0%, transparent),
+      0 4px 8px rgba(20, 45, 36, 0.22);
+  }
+}
+
+.dash-coop-anchor.status-warn {
+  animation: coopWarnPulse 2.2s ease-in-out infinite;
+}
+
+.dash-coop-callout {
+  position: absolute;
+  width: 17%;
+  min-width: 130px;
+  min-height: 48px;
+  transform: translateY(-50%);
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.97);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(16, 44, 35, 0.1);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 10px 22px rgba(20, 45, 36, 0.14),
+    0 2px 4px rgba(20, 45, 36, 0.06);
+  color: #081a14;
+  cursor: pointer;
+  z-index: 4;
+  text-align: left;
+  transition: transform 0.18s ease, border-color 0.18s, box-shadow 0.18s;
+}
+
+.dash-coop-callout.side-left { left: 0; }
+.dash-coop-callout.side-right { right: 0; }
+
+.dash-coop-callout.status-ok { --node-color: var(--map-ok); }
+.dash-coop-callout.status-warn { --node-color: var(--map-warn); }
+.dash-coop-callout.status-info { --node-color: var(--map-info); }
+.dash-coop-callout.status-pending { --node-color: var(--map-pending); }
+
+.dash-coop-callout:hover,
+.dash-coop-callout.active {
+  border-color: color-mix(in srgb, var(--node-color) 55%, transparent);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 16px 32px rgba(20, 45, 36, 0.22),
+    0 4px 8px rgba(20, 45, 36, 0.08);
+}
+
+.dash-coop-callout.side-left:hover,
+.dash-coop-callout.side-left.active {
+  transform: translateY(-50%) translateX(-3px);
+}
+
+.dash-coop-callout.side-right:hover,
+.dash-coop-callout.side-right.active {
+  transform: translateY(-50%) translateX(3px);
+}
+
+.dash-coop-callout-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--node-color) 14%, #ffffff);
+  color: var(--node-color);
+}
+
+.dash-coop-callout-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dash-coop-callout-label {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-coop-callout-value {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: #081a14;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.layer-alertas .dash-coop-callout:not(.status-warn),
+.layer-alertas .dash-coop-anchor:not(.status-warn),
+.layer-alertas .dash-coop-leader:not(.status-warn) {
+  opacity: 0.42;
+}
+
+.layer-alertas .dash-coop-callout.status-warn {
+  border-color: rgba(245, 158, 11, 0.72);
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.14), 0 14px 28px rgba(20, 45, 36, 0.18);
+}
+
+.dash-coop-inspector {
+  min-width: 0;
+  border-radius: 20px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(16, 44, 35, 0.1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 30px rgba(20, 45, 36, 0.08);
+}
+
+.dash-coop-inspector-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dash-coop-inspector-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 26, 20, 0.06);
+  flex-shrink: 0;
+}
+
+.dash-coop-inspector-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #081a14;
+}
+
+.dash-coop-inspector-zone {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.dash-coop-inspector-value {
+  margin-top: 16px;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.dash-coop-inspector-status {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: rgba(10, 26, 20, 0.05);
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.dash-coop-inspector p {
+  margin-top: 12px;
+  color: var(--text2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.dash-coop-inspector-tools {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+}
+
+.dash-coop-inspector-toggle,
+.dash-coop-inspector-add {
+  height: 36px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.dash-coop-inspector-toggle {
+  padding: 0 12px;
+  background: rgba(10, 26, 20, 0.05);
+  color: var(--text2);
+  border: 1px solid rgba(16, 44, 35, 0.08);
+}
+
+.dash-coop-inspector-toggle svg {
+  transition: transform 0.18s ease;
+}
+
+.dash-coop-inspector-toggle.open svg {
+  transform: rotate(180deg);
+}
+
+.dash-coop-inspector-toggle:hover {
+  background: rgba(10, 26, 20, 0.09);
+  border-color: rgba(16, 44, 35, 0.18);
+}
+
+.dash-coop-inspector-add {
+  background: color-mix(in srgb, var(--map-ok) 12%, #ffffff);
+  color: var(--green-d);
+  border: 1px dashed color-mix(in srgb, var(--map-ok) 48%, transparent);
+}
+
+.dash-coop-inspector-add:hover {
+  background: color-mix(in srgb, var(--map-ok) 22%, #ffffff);
+  border-color: color-mix(in srgb, var(--map-ok) 70%, transparent);
+}
+
+.dash-coop-inspector-add:active {
+  transform: scale(0.98);
+}
+
+.dash-coop-instance-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(247, 250, 245, 0.85);
+  border: 1px solid rgba(16, 44, 35, 0.08);
+  list-style: none;
+}
+
+.dash-coop-instance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: #ffffff;
+  border: 1px solid rgba(16, 44, 35, 0.06);
+}
+
+.dash-coop-instance-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dash-coop-instance-zone {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #081a14;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-coop-instance-label {
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.dash-coop-instance-value {
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+}
+
+.dash-coop-instance.status-ok .dash-coop-instance-value { color: var(--map-ok); }
+.dash-coop-instance.status-warn .dash-coop-instance-value { color: var(--map-warn); }
+.dash-coop-instance.status-info .dash-coop-instance-value { color: var(--map-info); }
+.dash-coop-instance.status-pending .dash-coop-instance-value { color: var(--map-pending); }
+
+.dash-coop-inspector-actions {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.dash-coop-inspector-actions button {
+  min-width: 0;
+  height: 34px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(10, 26, 20, 0.06);
+  color: var(--text2);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.dash-coop-inspector-actions button:first-child {
+  background: #071713;
+  color: #ffffff;
+}
+
+.dash-coop-chip.status-ok .dash-coop-chip-icon,
+.dash-coop-chip.status-ok .dash-coop-chip-value,
+.dash-coop-inspector.status-ok .dash-coop-inspector-icon,
+.dash-coop-inspector.status-ok .dash-coop-inspector-value {
+  color: var(--map-ok);
+}
+
+.dash-coop-chip.status-warn .dash-coop-chip-icon,
+.dash-coop-chip.status-warn .dash-coop-chip-value,
+.dash-coop-inspector.status-warn .dash-coop-inspector-icon,
+.dash-coop-inspector.status-warn .dash-coop-inspector-value {
+  color: var(--map-warn);
+}
+
+.dash-coop-chip.status-info .dash-coop-chip-icon,
+.dash-coop-chip.status-info .dash-coop-chip-value,
+.dash-coop-inspector.status-info .dash-coop-inspector-icon,
+.dash-coop-inspector.status-info .dash-coop-inspector-value {
+  color: var(--map-info);
+}
+
+.dash-coop-chip.status-pending .dash-coop-chip-icon,
+.dash-coop-chip.status-pending .dash-coop-chip-value,
+.dash-coop-inspector.status-pending .dash-coop-inspector-icon,
+.dash-coop-inspector.status-pending .dash-coop-inspector-value {
+  color: var(--map-pending);
+}
+
+.dash-coop-device-strip {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px 20px 18px;
 }
 
 .dash-coop-chip {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(6px);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
+  min-width: 0;
+  border-radius: 14px;
+  padding: 9px 11px;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   text-align: left;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(16, 44, 35, 0.08);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.dash-coop-chip:hover,
+.dash-coop-chip.active {
+  transform: translateY(-1px);
+  background: #ffffff;
+  border-color: rgba(16, 185, 129, 0.32);
 }
 
 .dash-coop-chip-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--bg3);
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(10, 26, 20, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.dash-coop-chip-text { min-width: 0; }
+.dash-coop-chip-text {
+  min-width: 0;
+  flex: 1;
+}
 
 .dash-coop-chip-label {
   font-size: 10px;
   color: var(--text3);
   line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dash-coop-chip-value {
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 800;
   line-height: 1.2;
   margin-top: 2px;
 }
 
-.dash-coop-foot {
-  position: relative;
-  z-index: 5;
-  padding: 0 16px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+@container (max-width: 980px) {
+  .dash-coop-top,
+  .dash-coop-body {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-coop-lot {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dash-coop-inspector {
+    display: grid;
+    grid-template-columns: minmax(160px, 0.9fr) 0.5fr 1fr auto;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .dash-coop-inspector-value,
+  .dash-coop-inspector p,
+  .dash-coop-inspector-tools,
+  .dash-coop-instance-list {
+    margin-top: 0;
+  }
+
+  .dash-coop-inspector-actions {
+    margin-top: 0;
+    padding-top: 0;
+    min-width: 190px;
+  }
+
+  .dash-coop-device-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
-.dash-coop-modes {
-  display: inline-flex;
-  gap: 3px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 3px;
-}
+@container (max-width: 620px) {
+  .dash-coop-top,
+  .dash-coop-controls,
+  .dash-coop-body,
+  .dash-coop-device-strip {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
 
-.dash-coop-mode {
-  border: 0;
-  background: transparent;
-  color: var(--text3);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 5px 12px;
-  border-radius: 999px;
-  cursor: pointer;
-}
+  .dash-coop-lot,
+  .dash-coop-device-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
-.dash-coop-mode.active {
-  background: var(--card);
-  color: var(--text);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
+  .dash-coop-map {
+    min-height: 240px;
+    padding: 4px;
+  }
 
-.dash-coop-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 10.5px;
-  color: var(--text2);
-}
+  .dash-coop-stage {
+    aspect-ratio: 2.2 / 1;
+  }
 
-.dash-coop-live .mono {
-  font-size: 10px;
-  letter-spacing: 0.06em;
-}
+  .dash-coop-illustration-wrap {
+    left: 24%;
+    right: 24%;
+  }
 
-.dash-coop-live-time {
-  color: var(--text3);
-}
+  .dash-coop-callout {
+    width: 22%;
+    min-width: 84px;
+    min-height: 38px;
+    padding: 5px 7px;
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 6px;
+  }
 
-@media (prefers-reduced-motion: reduce) {
-  .dash-coop-emoji { animation: none; }
+  .dash-coop-callout-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+  }
+
+  .dash-coop-callout-label { font-size: 8.5px; }
+  .dash-coop-callout-value { font-size: 11px; }
+
+  .dash-coop-inspector {
+    display: flex;
+  }
 }

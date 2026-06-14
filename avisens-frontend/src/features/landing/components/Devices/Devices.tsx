@@ -22,6 +22,65 @@ function Devices() {
           ● Disponible en iOS · Android · Web
         </div>
         <div className="devices-grid">
+          {/* Desktop — HERO */}
+          <div className="device-card device-desktop device-card-hero">
+            <div className="device-screen" style={{ background: 'transparent', border: 'none', padding: '1rem 0 1.5rem' }}>
+              <div className="desktop-chrome">
+                <div className="desktop-bar">
+                  <div className="d-dot" style={{ background: '#ef4444' }} />
+                  <div className="d-dot" style={{ background: '#f59e0b' }} />
+                  <div className="d-dot" style={{ background: '#10b981' }} />
+                  <div style={{ flex: 1, background: 'var(--bg)', borderRadius: 3, height: 10, marginLeft: 6 }} />
+                </div>
+                <div className="desktop-content">
+                  <div style={{ display: 'flex', gap: 4, minHeight: 80 }}>
+                    <div className="mini-sidebar">
+                      {[true, false, false, false, false].map((a, i) => (
+                        <div key={i} className="mini-s-item" style={{ background: a ? 'var(--success)' : 'var(--border)' }} />
+                      ))}
+                    </div>
+                    <div className="mini-main">
+                      <div className="mini-row">
+                        {[
+                          ['59.5k', 'Aves', '#10b981'],
+                          ['0.8%', 'Mort', '#f59e0b'],
+                          ['1.64', 'FCR', '#f59e0b'],
+                          ['$12.4k', 'ROI', '#10b981'],
+                        ].map(([v, l, c]) => (
+                          <div key={l} className="mini-kpi">
+                            <div style={{ fontSize: 4, color: 'var(--text3)' }}>{l}</div>
+                            <div className="mini-kpi-val" style={{ color: c, fontSize: 8 }}>{v}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
+                        {[94, 71, 97, 48].map((s, i) => {
+                          const c = s > 80 ? '#10b981' : s > 60 ? '#f59e0b' : '#ef4444'
+                          return (
+                            <div key={i} className="mini-card">
+                              <div style={{ fontSize: 4, color: 'var(--text3)', marginBottom: 1 }}>G{i + 1}</div>
+                              <div className="mini-bar" style={{ width: `${s}%`, background: c }} />
+                              <div style={{ fontSize: 7, color: c, fontWeight: 700 }}>{s}</div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="device-body">
+              <div className="device-title">Web App</div>
+              <div className="device-desc">Panel completo para administradores. Dashboards financieros, comparadores de galpones, reportes PDF y gestión de usuarios desde cualquier navegador.</div>
+              <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                {['Chrome', 'Safari', 'Edge'].map((p) => (
+                  <span key={p} className="device-tag">{p}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Mobile */}
           <div className="device-card device-mobile">
             <div className="device-screen" style={{ background: 'transparent', border: 'none', padding: '1.5rem 0' }}>
@@ -69,63 +128,6 @@ function Devices() {
             <div className="device-desc">Optimizada para uso con una mano. Los técnicos de campo registran datos, ven alertas y controlan equipos directamente desde el galpón.</div>
             <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
               {['iOS', 'Android'].map((p) => (
-                <span key={p} className="device-tag">{p}</span>
-              ))}
-            </div>
-          </div>
-
-          {/* Desktop */}
-          <div className="device-card device-desktop">
-            <div className="device-screen" style={{ background: 'transparent', border: 'none', padding: '1rem 0 1.5rem' }}>
-              <div className="desktop-chrome">
-                <div className="desktop-bar">
-                  <div className="d-dot" style={{ background: '#ef4444' }} />
-                  <div className="d-dot" style={{ background: '#f59e0b' }} />
-                  <div className="d-dot" style={{ background: '#10b981' }} />
-                  <div style={{ flex: 1, background: 'var(--bg)', borderRadius: 3, height: 10, marginLeft: 6 }} />
-                </div>
-                <div className="desktop-content">
-                  <div style={{ display: 'flex', gap: 4, minHeight: 80 }}>
-                    <div className="mini-sidebar">
-                      {[true, false, false, false, false].map((a, i) => (
-                        <div key={i} className="mini-s-item" style={{ background: a ? 'var(--success)' : 'var(--border)' }} />
-                      ))}
-                    </div>
-                    <div className="mini-main">
-                      <div className="mini-row">
-                        {[
-                          ['59.5k', 'Aves', '#10b981'],
-                          ['0.8%', 'Mort', '#f59e0b'],
-                          ['1.64', 'FCR', '#f59e0b'],
-                          ['$12.4k', 'ROI', '#10b981'],
-                        ].map(([v, l, c]) => (
-                          <div key={l} className="mini-kpi">
-                            <div style={{ fontSize: 4, color: 'var(--text3)' }}>{l}</div>
-                            <div className="mini-kpi-val" style={{ color: c, fontSize: 8 }}>{v}</div>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
-                        {[94, 71, 97, 48].map((s, i) => {
-                          const c = s > 80 ? '#10b981' : s > 60 ? '#f59e0b' : '#ef4444'
-                          return (
-                            <div key={i} className="mini-card">
-                              <div style={{ fontSize: 4, color: 'var(--text3)', marginBottom: 1 }}>G{i + 1}</div>
-                              <div className="mini-bar" style={{ width: `${s}%`, background: c }} />
-                              <div style={{ fontSize: 7, color: c, fontWeight: 700 }}>{s}</div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="device-title">Web App</div>
-            <div className="device-desc">Panel completo para administradores. Dashboards financieros, comparadores de galpones, reportes PDF y gestión de usuarios desde cualquier navegador.</div>
-            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-              {['Chrome', 'Safari', 'Edge'].map((p) => (
                 <span key={p} className="device-tag">{p}</span>
               ))}
             </div>

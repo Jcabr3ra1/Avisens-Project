@@ -7,7 +7,6 @@ import CoopPlaceholder from './components/CoopPlaceholder/CoopPlaceholder'
 import GalponStrip from './components/GalponStrip/GalponStrip'
 import AttentionBar from './components/AttentionBar/AttentionBar'
 import ContextHeader from './components/ContextHeader/ContextHeader'
-import EstadoLoteCard from './components/EstadoLoteCard/EstadoLoteCard'
 import BottomRow from './components/BottomRow/BottomRow'
 import Sidebar from './components/Sidebar/Sidebar'
 import Topbar from './components/Topbar/Topbar'
@@ -131,10 +130,6 @@ function DashboardPage() {
           <ContextHeader galpon={galpon} />
 
           <div className="dash-grid">
-            <div className="dash-col-left">
-              <EstadoLoteCard galpon={galpon} />
-            </div>
-
             <div className="dash-col-center">
               <CoopPlaceholder galpon={galpon} />
             </div>

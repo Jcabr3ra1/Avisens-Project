@@ -42,25 +42,58 @@ function Ctr({ end, suffix = '', dur = 1600 }: { end: number; suffix?: string; d
 
 function Stats() {
   const stats = [
-    { n: 340, s: '+', l: 'Granjas activas' },
-    { n: 4200000, s: '', l: 'Aves monitoreadas' },
-    { n: 99.7, s: '%', l: 'Uptime garantizado' },
-    { n: 8, s: 'x', l: 'Retorno de inversión' },
+    {
+      n: 340,
+      s: '+',
+      l: 'Granjas activas',
+      d: 'Granjas avícolas en Colombia y la región operan hoy con AVISENS.',
+    },
+    {
+      n: 4200000,
+      s: '',
+      l: 'Aves monitoreadas',
+      d: 'Aves bajo seguimiento continuo en distintos lotes y galpones.',
+    },
+    {
+      n: 99.7,
+      s: '%',
+      l: 'Uptime garantizado',
+      d: 'Disponibilidad del sistema — tus lecturas siempre accesibles.',
+    },
+    {
+      n: 8,
+      s: 'x',
+      l: 'Retorno de inversión',
+      d: 'Promedio medido en producción ganada y pérdidas evitadas.',
+    },
   ]
 
   return (
-    <div className="stats-wrap">
-      <div className="stats-bar">
-        {stats.map(({ n, s, l }, index) => (
-          <div key={l} className="stat-item" data-index={`0${index + 1}`}>
-            <div className="stat-num">
+    <section className="stats-section" id="cifras">
+      <div className="stats-head">
+        <div className="stats-eyebrow">
+          <span className="stats-eyebrow-line" />
+          <span className="stats-eyebrow-txt">AVISENS en cifras</span>
+          <span className="stats-eyebrow-line" />
+        </div>
+        <h2 className="stats-title">
+          Resultados reales en granjas reales.
+        </h2>
+      </div>
+
+      <ul className="stats-grid">
+        {stats.map(({ n, s, l, d }, index) => (
+          <li key={l} className="stat-card">
+            <span className="stat-card-index">0{index + 1}</span>
+            <div className="stat-card-num">
               <Ctr end={n} suffix={s} />
             </div>
-            <div className="stat-label">{l}</div>
-          </div>
+            <div className="stat-card-label">{l}</div>
+            <p className="stat-card-desc">{d}</p>
+          </li>
         ))}
-      </div>
-    </div>
+      </ul>
+    </section>
   )
 }
 

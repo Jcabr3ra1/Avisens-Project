@@ -1,0 +1,134 @@
+.telemetria-section {
+  position: relative;
+  padding: 8rem 0 8rem;
+  background: var(--bg);
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+}
+
+.telemetria-head {
+  position: relative;
+  z-index: 2;
+  max-width: 880px;
+  margin: 0 auto 4rem;
+  padding: 0 1.5rem;
+  text-align: center;
+}
+
+.telemetria-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1.6rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+.telemetria-eyebrow-num {
+  font-variant-numeric: tabular-nums;
+  color: var(--green-d);
+  font-weight: 500;
+}
+
+.telemetria-eyebrow-line {
+  flex: 0 0 40px;
+  height: 1px;
+  background: var(--border2);
+}
+
+.telemetria-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 4.4vw, 3.4rem);
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  margin: 0 0 1.4rem;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.telemetria-title em {
+  font-style: normal;
+  color: var(--green-d);
+  font-weight: 700;
+}
+
+.telemetria-lede {
+  font-size: clamp(0.96rem, 1.25vw, 1.08rem);
+  line-height: 1.7;
+  color: var(--text2);
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.telemetria-features {
+  position: relative;
+  z-index: 2;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  max-width: 1100px;
+  margin: 5rem auto 0;
+  padding: 0 1.5rem;
+}
+
+.telemetria-feature {
+  position: relative;
+  padding: 1.8rem 1.6rem;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(245, 251, 248, 0.84));
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
+}
+
+.telemetria-feature:hover {
+  transform: translateY(-3px);
+  border-color: rgba(16, 185, 129, 0.45);
+  background: linear-gradient(180deg, rgba(236, 253, 245, 0.95), rgba(255, 255, 255, 0.9));
+  box-shadow: 0 14px 28px -18px rgba(4, 120, 87, 0.32);
+}
+
+.telemetria-feature-num {
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  color: var(--green-d);
+  margin-bottom: 1rem;
+}
+
+.telemetria-feature-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 0 0 0.55rem;
+}
+
+.telemetria-feature-desc {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text2);
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .telemetria-section {
+    padding: 5rem 0 5rem;
+  }
+
+  .telemetria-head {
+    margin-bottom: 2.5rem;
+  }
+
+  .telemetria-features {
+    margin-top: 3rem;
+  }
+}

@@ -1,19 +1,9 @@
 .devices-section {
   overflow: hidden;
   background:
-    linear-gradient(180deg, #edf7f2 0%, #ffffff 48%, #f0f8f4 100%);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-
-.devices-section::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    linear-gradient(120deg, transparent 0 18%, rgba(16, 185, 129, 0.1) 18% 18.4%, transparent 18.4% 100%),
-    linear-gradient(60deg, transparent 0 72%, rgba(245, 158, 11, 0.12) 72% 72.35%, transparent 72.35% 100%);
+    radial-gradient(ellipse 70% 50% at 50% 50%, rgba(59, 130, 246, 0.06), transparent 70%),
+    var(--bg3);
+  isolation: isolate;
 }
 
 .devices-inner {
@@ -25,8 +15,42 @@
 .devices-grid {
   margin-top: 4rem;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.5rem;
+}
+
+.device-card.device-card-hero {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: center;
+  padding: 2rem 2.5rem;
+  text-align: left;
+}
+
+.device-card.device-card-hero .device-screen {
+  margin-bottom: 0;
+}
+
+.device-card.device-card-hero .desktop-chrome {
+  width: 100%;
+}
+
+.device-card.device-card-hero .device-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.device-card.device-card-hero .device-title {
+  font-size: 1.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.device-card.device-card-hero .device-desc {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  max-width: 480px;
 }
 
 .device-card {
@@ -64,14 +88,6 @@
   opacity: 1;
 }
 
-.device-desktop {
-  transform: translateY(-1rem);
-}
-
-.device-mobile,
-.device-tablet {
-  margin-top: 1.2rem;
-}
 
 .device-screen {
   width: 100%;
@@ -260,10 +276,19 @@
 }
 
 @media (max-width: 920px) {
-  .device-desktop,
-  .device-mobile,
-  .device-tablet {
-    margin-top: 0;
-    transform: none;
+  .devices-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .device-card.device-card-hero {
+    grid-column: span 1;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .device-card.device-card-hero .device-desc {
+    margin: 0 auto;
   }
 }

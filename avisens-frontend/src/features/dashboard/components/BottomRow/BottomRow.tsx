@@ -27,7 +27,7 @@ const AlertasCard = () => (
       </button>
     </div>
     <AlertItem severity="high" label="Temperatura alta en zona 2" time="15 min" />
-    <AlertItem severity="med"  label="Humedad fuera de rango"     time="42 min" />
+    <AlertItem severity="med" label="Humedad fuera de rango" time="42 min" />
   </Card>
 )
 
@@ -38,15 +38,15 @@ const TareasCard = () => (
         <IcCal size={16} />
       </div>
       <div>
-        <div className="dash-bottom-title">Próximas tareas</div>
+        <div className="dash-bottom-title">Proximas tareas</div>
         <div className="dash-bottom-sub">3 programadas</div>
       </div>
       <button className="mini-btn dash-bottom-cta">
         Calendario <IcChevronRight size={11} />
       </button>
     </div>
-    <TaskItem label="Revisión de bebederos" time="Hoy 14:00"    owner="Carlos M." />
-    <TaskItem label="Pesaje semanal"        time="Mañana 08:00" owner="Andrea P." />
+    <TaskItem label="Revision de bebederos" time="Hoy 14:00" owner="Carlos M." />
+    <TaskItem label="Pesaje semanal" time="Manana 08:00" owner="Andrea P." />
   </Card>
 )
 
@@ -58,13 +58,13 @@ const BienestarCard = () => (
       </div>
       <div>
         <div className="dash-bottom-title">Bienestar del lote</div>
-        <div className="dash-bottom-sub" style={{ color: 'var(--green-d)' }}>Bueno · Sin estrés térmico</div>
+        <div className="dash-bottom-sub" style={{ color: 'var(--green-d)' }}>Bueno / sin estres termico</div>
       </div>
       <button className="mini-btn dash-bottom-cta">
         Detalles <IcChevronRight size={11} />
       </button>
     </div>
-    <div className="dash-wellbeing-label">Score de bienestar (últimos 10 días)</div>
+    <div className="dash-wellbeing-label">Score de bienestar (ultimos 10 dias)</div>
     <Sparkline data={wellbeingTrend} w={290} h={42} color="#10b981" fill="rgba(16, 185, 129, 0.18)" />
   </Card>
 )

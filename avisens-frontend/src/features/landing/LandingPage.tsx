@@ -4,12 +4,10 @@ import Sensors from './components/Sensors/Sensors'
 import Problems from './components/Problems/Problems'
 import Features from './components/Features/Features'
 import HealthScore from './components/HealthScore/HealthScore'
-import Farm3D from './components/Farm3D/Farm3D'
+import Telemetria from './components/Telemetria/Telemetria'
 import Devices from './components/Devices/Devices'
-import Pricing from './components/Pricing/Pricing'
 import ChatSection from './components/ChatSection/ChatSection'
 import FAQ from './components/FAQ/FAQ'
-import CTAFinal from './components/CTAFinal/CTAFinal'
 import './LandingPage.css'
 
 function LandingPage() {
@@ -19,16 +17,14 @@ function LandingPage() {
       <div className="grid-layer" />
       <Hero />
       <Stats />
-      <Farm3D />
+      <Telemetria />
       <Sensors />
       <Problems />
       <Features />
       <HealthScore />
       <Devices />
-      <Pricing />
       <ChatSection />
       <FAQ />
-      <CTAFinal />
     </div>
   )
 }

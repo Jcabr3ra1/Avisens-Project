@@ -1,7 +1,9 @@
 .dash-card-foot {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--border);
+  margin-top: 16px;
+  padding: 14px;
+  border-top: 1px dashed rgba(16, 44, 35, 0.12);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(59, 130, 246, 0.05));
+  border-radius: 16px;
 }
 
 .dash-foot-row {

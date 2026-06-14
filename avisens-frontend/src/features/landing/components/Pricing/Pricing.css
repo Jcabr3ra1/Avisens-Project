@@ -1,9 +1,11 @@
 .pricing-section {
   overflow: hidden;
-  padding-top: clamp(1rem, 2.4vw, 1.75rem);
-  padding-bottom: clamp(3.25rem, 5vw, 4.75rem);
+  padding-top: clamp(3rem, 5vw, 4.5rem);
+  padding-bottom: clamp(4rem, 6vw, 5.5rem);
   background:
-    linear-gradient(180deg, #f6fbf8 0%, #ffffff 46%, #f3faf6 100%);
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(16, 185, 129, 0.08), transparent 70%),
+    var(--bg);
+  isolation: isolate;
 }
 
 .pricing-section .section-title {
@@ -12,14 +14,6 @@
 
 .pricing-section .section-sub {
   line-height: 1.58;
-}
-
-.pricing-section::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.04), transparent 42%);
 }
 
 .pricing-toggle {
