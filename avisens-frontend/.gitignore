@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# npm lockfile (el proyecto usa pnpm)
+package-lock.json
+
+# Artefactos de herramientas de IA / docs auxiliares
+skills-lock.json
+CLAUDE.md
+PROMPT.md
