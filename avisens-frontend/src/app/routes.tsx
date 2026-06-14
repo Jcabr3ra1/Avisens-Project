@@ -1,6 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import AppLayout from './layout/AppLayout'
-import DashboardLayout from './layout/DashboardLayout'
+import PanelLayout from './layout/PanelLayout'
 import LandingPage from '@features/landing/LandingPage'
 import LoginPage from '@features/login/LoginPage'
 import DashboardPage from '@features/dashboard/DashboardPage'
@@ -25,8 +25,8 @@ function AppRoutes() {
         <Route path="/" element={<LandingPage />} />
       </Route>
 
-      {/* App interna — todas comparten el DashboardLayout (sidebar + shell) */}
-      <Route element={<DashboardLayout />}>
+      {/* App interna — todas comparten el PanelLayout (sidebar + shell) */}
+      <Route element={<PanelLayout />}>
         <Route path="/dashboard"       element={<DashboardPage />} />
         <Route path="/crm"             element={<CrmPage />} />
         <Route path="/monitoreo"       element={<MonitoreoPage />} />

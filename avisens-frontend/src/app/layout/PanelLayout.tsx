@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar/Sidebar'
 import { GALPONES } from '@shared/data/farm'
 import { usePauseOnHidden } from '@shared/hooks/usePauseOnHidden'
-import './DashboardLayout.css'
+import './PanelLayout.css'
 
 /**
  * Shell de la aplicación interna: sidebar de navegación + área de contenido.
@@ -12,7 +12,7 @@ import './DashboardLayout.css'
  * <Outlet />. Cada página solo renderiza su propio contenido; el sidebar,
  * el estado de colapso (persistido) y el atajo ⌘B viven aquí, una sola vez.
  */
-function DashboardLayout() {
+function PanelLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
     return window.localStorage.getItem('avisens.sidebarCollapsed') === '1'
@@ -55,4 +55,4 @@ function DashboardLayout() {
   )
 }
 
-export default DashboardLayout
+export default PanelLayout

@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════ */
 /* ═══════════ DashboardPage — contenido propio ═════════ */
 /* El shell (.dash-page / .dash-main / .mono) vive en       */
-/* app/layout/DashboardLayout.css                           */
+/* app/layout/PanelLayout.css                               */
 /* ═══════════════════════════════════════════════════════ */
 .dash-content {
   padding: 22px 30px 44px;

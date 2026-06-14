@@ -107,8 +107,8 @@ Todo el enrutamiento vive en **un solo archivo**: [`src/app/routes.tsx`](./src/a
     <Route path="/" element={<LandingPage />} />
   </Route>
 
-  {/* GRUPO 3 — app interna, todas comparten DashboardLayout (sidebar) */}
-  <Route element={<DashboardLayout />}>
+  {/* GRUPO 3 — app interna, todas comparten PanelLayout (sidebar) */}
+  <Route element={<PanelLayout />}>
     <Route path="/dashboard" element={<DashboardPage />} />
     <Route path="/granjas"   element={<GranjasPage />} />
     {/* ...resto de módulos... */}
@@ -124,9 +124,9 @@ Porque **no todas las pantallas comparten el mismo marco visual**:
 |-------|---------|--------------|-------|
 | **1. Standalone** | `/login` | Ninguno | El login es pantalla completa, sin navbar ni footer. |
 | **2. Con AppLayout** | `/` (landing) | Navbar + Footer + FloatChat | La web pública comparte ese marco en todas sus secciones. |
-| **3. Con DashboardLayout** | `/dashboard`, `/granjas`… | Sidebar de navegación | La app interna comparte el sidebar; no quiere el navbar público. |
+| **3. Con PanelLayout** | `/dashboard`, `/granjas`… | Sidebar de navegación | La app interna comparte el sidebar; no quiere el navbar público. |
 
-> 💡 **¿Por qué dos layouts (`AppLayout` y `DashboardLayout`) y no uno?** Porque son marcos distintos: la web pública lleva navbar + footer de marketing; la app interna lleva un sidebar de navegación. Un solo layout obligaría a llenar el componente de `if` ("si es dashboard muestra sidebar, si no muestra navbar"), justo el acoplamiento que evitamos. Dos layouts pequeños y enfocados > uno grande con condicionales.
+> 💡 **¿Por qué dos layouts (`AppLayout` y `PanelLayout`) y no uno?** Porque son marcos distintos: la web pública lleva navbar + footer de marketing; la app interna lleva un sidebar de navegación. Un solo layout obligaría a llenar el componente de `if` ("si es dashboard muestra sidebar, si no muestra navbar"), justo el acoplamiento que evitamos. Dos layouts pequeños y enfocados > uno grande con condicionales.
 
 ### Cómo funciona el `AppLayout` (Grupo 2)
 
@@ -148,9 +148,9 @@ function AppLayout() {
 }
 ```
 
-`<Outlet />` es "el hueco" donde React Router mete la página que coincide con la URL. Por eso la landing aparece **dentro** del navbar/footer sin tener que importarlos ella misma. El `DashboardLayout` funciona igual: renderiza el `<Sidebar />` + un `<Outlet />` donde entra cada página interna.
+`<Outlet />` es "el hueco" donde React Router mete la página que coincide con la URL. Por eso la landing aparece **dentro** del navbar/footer sin tener que importarlos ella misma. El `PanelLayout` funciona igual: renderiza el `<Sidebar />` + un `<Outlet />` donde entra cada página interna.
 
-> 🔑 **Regla práctica:** un módulo nuevo de la app interna (ej: `/granjas`) va **dentro** del `<Route element={<DashboardLayout />}>` en `routes.tsx`. Así obtiene el sidebar automáticamente, sin tener que importarlo. No lo pongas en `<AppLayout>` (ese es el de la web pública).
+> 🔑 **Regla práctica:** un módulo nuevo de la app interna (ej: `/granjas`) va **dentro** del `<Route element={<PanelLayout />}>` en `routes.tsx`. Así obtiene el sidebar automáticamente, sin tener que importarlo. No lo pongas en `<AppLayout>` (ese es el de la web pública).
 
 ---
 
@@ -295,9 +295,9 @@ Ejemplo: te toca construir **`/granjas`**. Pasos:
 
 5. **Reutiliza shared**: íconos con `@shared/ui/Ic`, formato con `@shared/utils/formato`, hooks si aplican.
 
-6. **El sidebar ya lo tienes gratis.** Tu página se renderiza dentro del `DashboardLayout`, así que el sidebar de navegación aparece solo — no lo importes ni lo montes. Tú solo construyes el contenido de la página. Si quieres que tu módulo salga en el menú lateral, agrega su entrada en `app/layout/Sidebar/navConfig.tsx`.
+6. **El sidebar ya lo tienes gratis.** Tu página se renderiza dentro del `PanelLayout`, así que el sidebar de navegación aparece solo — no lo importes ni lo montes. Tú solo construyes el contenido de la página. Si quieres que tu módulo salga en el menú lateral, agrega su entrada en `app/layout/Sidebar/navConfig.tsx`.
 
-7. **La ruta ya existe** en `routes.tsx` (todos los módulos ya están enrutados dentro del `DashboardLayout`). Solo si agregas un módulo totalmente nuevo tendrías que añadir su `<Route>` dentro de ese bloque.
+7. **La ruta ya existe** en `routes.tsx` (todos los módulos ya están enrutados dentro del `PanelLayout`). Solo si agregas un módulo totalmente nuevo tendrías que añadir su `<Route>` dentro de ese bloque.
 
 ### Checklist antes de cada commit
 
@@ -318,7 +318,7 @@ Navegador abre la URL
         │
         ├── "/login"      → LoginPage                      (sin layout)
         ├── "/"           → AppLayout > LandingPage         (navbar + footer + chat)
-        └── DashboardLayout (sidebar) >
+        └── PanelLayout (sidebar) >
               ├── "/dashboard" → DashboardPage              (topbar + widgets + chat)
               ├── "/granjas"   → GranjasPage  🚧
               ├── "/alertas"   → AlertasPage  🚧   ◄── AQUÍ CONTINÚA EL EQUIPO

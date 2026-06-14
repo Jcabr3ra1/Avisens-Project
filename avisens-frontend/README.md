@@ -59,8 +59,8 @@ src/
 - `routes.tsx` — define 3 grupos de rutas:
   - `/login` → standalone, sin layout
   - `/` → bajo `AppLayout` (Navbar + Footer + FloatChat) — la landing pública
-  - `/dashboard` y demás rutas de app → bajo `DashboardLayout` (Sidebar de navegación)
-- `layout/` — `AppLayout` (Navbar, Footer, FloatChat de la web pública) y `DashboardLayout` (Sidebar + shell de la app interna)
+  - `/dashboard` y demás rutas de app → bajo `PanelLayout` (Sidebar de navegación)
+- `layout/` — `AppLayout` (Navbar, Footer, FloatChat de la web pública) y `PanelLayout` (Sidebar + shell de la app interna)
 
 ### `features/` — módulos de negocio
 
