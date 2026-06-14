@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { IcSparkle, IcSend, IcRefresh } from '../icons/icons'
+import { IcSparkle, IcSend, IcRefresh } from '@shared/ui/icons/icons'
 import { panelIconBtn } from './shared'
 
 type AiMetric = { label: string; value: string; unit: string; delta?: string; deltaPositive?: boolean }

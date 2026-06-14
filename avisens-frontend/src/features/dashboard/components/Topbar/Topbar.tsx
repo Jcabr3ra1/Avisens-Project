@@ -1,7 +1,7 @@
 import {
   IcLeaf, IcChevronDown, IcChevronRight, IcPlus, IcClose,
   IcSearch, IcBell, IcUserCircle, IcSettings,
-} from '../icons/icons'
+} from '@shared/ui/icons/icons'
 import { GRANJAS, QUICK_ACTION_CATALOG, MAX_QUICK_ACTIONS } from '../../model'
 import type { Granja } from '../../model'
 import { useDismissable } from '@shared/hooks/useDismissable'

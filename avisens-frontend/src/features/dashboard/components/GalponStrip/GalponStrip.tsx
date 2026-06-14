@@ -1,4 +1,4 @@
-import { IcAlert, IcPlus } from '../icons/icons'
+import { IcAlert, IcPlus } from '@shared/ui/icons/icons'
 import type { Galpon } from '../../model'
 import './GalponStrip.css'
 

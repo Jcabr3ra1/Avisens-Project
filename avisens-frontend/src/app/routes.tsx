@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import AppLayout from './layout/AppLayout'
+import DashboardLayout from './layout/DashboardLayout'
 import LandingPage from '@features/landing/LandingPage'
 import LoginPage from '@features/login/LoginPage'
 import DashboardPage from '@features/dashboard/DashboardPage'
@@ -24,17 +25,19 @@ function AppRoutes() {
         <Route path="/" element={<LandingPage />} />
       </Route>
 
-      {/* App — sin AppLayout (el dashboard tiene su propio layout) */}
-      <Route path="/dashboard"       element={<DashboardPage />} />
-      <Route path="/crm"             element={<CrmPage />} />
-      <Route path="/monitoreo"       element={<MonitoreoPage />} />
-      <Route path="/bitacora"        element={<BitacoraPage />} />
-      <Route path="/alertas"         element={<AlertasPage />} />
-      <Route path="/finanzas"        element={<FinanzasPage />} />
-      <Route path="/inventario"      element={<InventarioPage />} />
-      <Route path="/infraestructura" element={<InfraestructuraPage />} />
-      <Route path="/usuarios"        element={<UsuariosPage />} />
-      <Route path="/granjas"         element={<GranjasPage />} />
+      {/* App interna — todas comparten el DashboardLayout (sidebar + shell) */}
+      <Route element={<DashboardLayout />}>
+        <Route path="/dashboard"       element={<DashboardPage />} />
+        <Route path="/crm"             element={<CrmPage />} />
+        <Route path="/monitoreo"       element={<MonitoreoPage />} />
+        <Route path="/bitacora"        element={<BitacoraPage />} />
+        <Route path="/alertas"         element={<AlertasPage />} />
+        <Route path="/finanzas"        element={<FinanzasPage />} />
+        <Route path="/inventario"      element={<InventarioPage />} />
+        <Route path="/infraestructura" element={<InfraestructuraPage />} />
+        <Route path="/usuarios"        element={<UsuariosPage />} />
+        <Route path="/granjas"         element={<GranjasPage />} />
+      </Route>
     </Routes>
   )
 }

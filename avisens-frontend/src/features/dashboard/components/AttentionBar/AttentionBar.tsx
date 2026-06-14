@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { IcAlert, IcCal, IcHeart, IcSparkle, IcChevronRight } from '../icons/icons'
+import { IcAlert, IcCal, IcHeart, IcSparkle, IcChevronRight } from '@shared/ui/icons/icons'
 import type { Tone } from '../../model'
 import './AttentionBar.css'
 

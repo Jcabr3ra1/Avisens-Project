@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { IcMic, IcChevronDown, IcPaperclip, IcSend } from '../icons/icons'
+import { IcMic, IcChevronDown, IcPaperclip, IcSend } from '@shared/ui/icons/icons'
 import { Avatar, Bubble, panelIconBtn, panelTextBtn } from './shared'
 import type { Operator } from './shared'
 

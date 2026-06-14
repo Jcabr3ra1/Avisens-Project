@@ -58,9 +58,9 @@ src/
 
 - `routes.tsx` — define 3 grupos de rutas:
   - `/login` → standalone, sin layout
-  - `/` → bajo `AppLayout` (Navbar + Footer + FloatChat) — solo la landing pública
-  - `/dashboard` y demás rutas de app → sin `AppLayout` (cada una trae su propio layout)
-- `layout/` — `Navbar`, `Footer`, `FloatChat` (layout global de la landing)
+  - `/` → bajo `AppLayout` (Navbar + Footer + FloatChat) — la landing pública
+  - `/dashboard` y demás rutas de app → bajo `DashboardLayout` (Sidebar de navegación)
+- `layout/` — `AppLayout` (Navbar, Footer, FloatChat de la web pública) y `DashboardLayout` (Sidebar + shell de la app interna)
 
 ### `features/` — módulos de negocio
 
@@ -79,9 +79,10 @@ features/[nombre]/
 
 - `styles/index.css` — variables CSS globales (tema oscuro), reset, keyframes, utilidades (`.fade-up`, `.grad-text`, `.bg-layer`, `.grid-layer`)
 - `types/index.ts` — interfaces globales (barrel exports)
-- `hooks/useFadeUp.ts` — `IntersectionObserver` que agrega `.visible`; requiere clase `.fade-up` en el elemento
+- `data/farm.ts` — datos mock de granjas y galpones (`GALPONES`, `GRANJAS`)
+- `hooks/` — `useFadeUp`, `useDismissable`, `usePauseOnHidden`
 - `utils/formato.ts` — `formatCurrency`, `formatNumber` (locale `es-CO`)
-- `ui/Ic/Ic.tsx` — componente SVG icon genérico (recibe `d` y `size`)
+- `ui/Ic/Ic.tsx` — icono SVG genérico (recibe `d` y `size`) · `ui/icons/icons.tsx` — catálogo de iconos con nombre
 
 ---
 

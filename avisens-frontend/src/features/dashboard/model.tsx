@@ -1,41 +1,14 @@
 import type { ReactNode } from 'react'
 import {
-  IcGrid, IcLeaf, IcDoc, IcThermo, IcDrop, IcFan, IcSeed, IcCloud,
-  IcAlert, IcCal, IcEgg, IcSettings, IcSparkle, IcHeart,
-  IcEye, IcCoin, IcBox, IcServer, IcUsers, IcUserCircle,
+  IcDoc, IcThermo, IcDrop, IcFan, IcSeed, IcCloud,
+  IcCal, IcEgg, IcSettings, IcSparkle, IcHeart,
   IcScale, IcPhone, IcNote,
-} from './components/icons/icons'
+} from '@shared/ui/icons/icons'
 
-export type GalponStatus = 'ok' | 'warn' | 'empty'
-
-export type Granja = {
-  id: number
-  nombre: string
-  municipio: string
-  galpones: number
-}
-
-export type Galpon = {
-  id: number
-  codigo: string
-  nombre: string
-  aves: number
-  dia: number
-  status: GalponStatus
-  alertas: number
-}
-
-export type NavItem = {
-  path: string
-  label: string
-  icon: ReactNode
-  badge?: number
-}
-
-export type NavSection = {
-  label: string
-  items: NavItem[]
-}
+// Datos de dominio compartidos (granjas/galpones) viven en shared/data.
+// Se re-exportan aquí para que el resto del dashboard los siga importando desde './model'.
+export type { GalponStatus, Granja, Galpon } from '@shared/data/farm'
+export { GRANJAS, GALPONES } from '@shared/data/farm'
 
 export type QuickActionDef = {
   id: string
@@ -101,47 +74,6 @@ export type MetricTab = {
   chartType?: 'bar' | 'area'
   yTicks?: number[]
 }
-
-export const GRANJAS: Granja[] = [
-  { id: 1, nombre: 'Granja Las Palmas', municipio: 'Popayán, Cauca', galpones: 4 },
-  { id: 2, nombre: 'Granja El Cedro',   municipio: 'Cajibío, Cauca', galpones: 2 },
-  { id: 3, nombre: 'Granja San José',   municipio: 'Timbío, Cauca',  galpones: 3 },
-]
-
-export const GALPONES: Galpon[] = [
-  { id: 1, codigo: 'GP-01', nombre: 'Galpón Norte', aves: 18560, dia: 32, status: 'ok',    alertas: 2 },
-  { id: 2, codigo: 'GP-02', nombre: 'Galpón Sur',   aves: 17200, dia: 18, status: 'ok',    alertas: 0 },
-  { id: 3, codigo: 'GP-03', nombre: 'Galpón Este',  aves: 19800, dia: 41, status: 'warn',  alertas: 1 },
-  { id: 4, codigo: 'GP-04', nombre: 'Galpón Oeste', aves: 0,     dia: 0,  status: 'empty', alertas: 0 },
-]
-
-export const NAV_SECTIONS: NavSection[] = [
-  {
-    label: 'Operación',
-    items: [
-      { path: '/dashboard', label: 'Dashboard', icon: <IcGrid  size={16} /> },
-      { path: '/monitoreo', label: 'Monitoreo', icon: <IcEye   size={16} /> },
-      { path: '/bitacora',  label: 'Bitácora',  icon: <IcDoc   size={16} /> },
-      { path: '/alertas',   label: 'Alertas',   icon: <IcAlert size={16} />, badge: 2 },
-    ],
-  },
-  {
-    label: 'Negocio',
-    items: [
-      { path: '/finanzas',   label: 'Finanzas',   icon: <IcCoin size={16} /> },
-      { path: '/inventario', label: 'Inventario', icon: <IcBox  size={16} /> },
-      { path: '/crm',        label: 'CRM',        icon: <IcUsers size={16} /> },
-    ],
-  },
-  {
-    label: 'Administración',
-    items: [
-      { path: '/infraestructura', label: 'Infraestructura', icon: <IcServer     size={16} /> },
-      { path: '/granjas',         label: 'Granjas',         icon: <IcLeaf       size={16} /> },
-      { path: '/usuarios',        label: 'Usuarios',        icon: <IcUserCircle size={16} /> },
-    ],
-  },
-]
 
 /**
  * Catálogo de accesos rápidos del topbar.

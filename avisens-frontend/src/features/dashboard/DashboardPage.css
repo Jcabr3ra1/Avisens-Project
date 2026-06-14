@@ -1,54 +1,8 @@
 /* ═══════════════════════════════════════════════════════ */
-/* ════════════ DashboardPage — layout global ═══════════ */
+/* ═══════════ DashboardPage — contenido propio ═════════ */
+/* El shell (.dash-page / .dash-main / .mono) vive en       */
+/* app/layout/DashboardLayout.css                           */
 /* ═══════════════════════════════════════════════════════ */
-.dash-page {
-  --dash-bg: #edf3f0;
-  --dash-surface: rgba(255, 255, 255, 0.84);
-  --dash-surface-strong: #ffffff;
-  --dash-ink: #071713;
-  --dash-muted: #60736b;
-  --dash-line: rgba(16, 44, 35, 0.1);
-  --dash-shadow: 0 18px 48px rgba(20, 45, 36, 0.12);
-  min-height: 100vh;
-  display: flex;
-  background:
-    linear-gradient(135deg, rgba(16, 185, 129, 0.12), transparent 34%),
-    linear-gradient(315deg, rgba(59, 130, 246, 0.08), transparent 32%),
-    var(--dash-bg);
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  position: relative;
-  isolation: isolate;
-}
-
-.dash-page::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(10, 26, 20, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(10, 26, 20, 0.03) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 72%);
-  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent 72%);
-}
-
-.mono {
-  font-family: 'DM Mono', monospace;
-  font-feature-settings: 'tnum';
-}
-
-/* ─── Main column ─── */
-.dash-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-}
-
 .dash-content {
   padding: 22px 30px 44px;
   display: flex;
@@ -81,35 +35,6 @@
 
 .dash-col-center {
   min-width: 0;
-}
-
-/* ─── Shared status pulse (Sidebar + ContextHeader) ─── */
-.dash-status-pulse {
-  position: relative;
-  display: inline-flex;
-  width: 7px;
-  height: 7px;
-}
-
-.dash-status-pulse .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 4px;
-  background: var(--green);
-}
-
-.dash-status-pulse .ring {
-  position: absolute;
-  inset: -3px;
-  border-radius: 10px;
-  border: 1.5px solid var(--green);
-  opacity: 0.5;
-  animation: dash-pulseRing 1.8s ease-out infinite;
-}
-
-@keyframes dash-pulseRing {
-  0%   { transform: scale(0.9); opacity: 0.6; }
-  100% { transform: scale(2.2); opacity: 0; }
 }
 
 /* ═══════════════════════════════════════════════════════ */
@@ -213,10 +138,6 @@
 }
 
 @media (max-width: 620px) {
-  .dash-page {
-    display: block;
-  }
-
   .dash-content {
     padding-top: 14px;
     padding-bottom: 116px;
@@ -229,16 +150,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .dash-chat-fab-pulse,
-  .dash-chat-fab,
-  .dash-status-pulse .ring {
+  .dash-chat-fab {
     animation: none;
   }
 }
 
 /* ─── Pausa animaciones cuando la pestaña no es visible (ahorra batería) ─── */
-body[data-tab-hidden="true"] .dash-status-pulse .ring,
 body[data-tab-hidden="true"] .dash-list-pulse .ring,
-body[data-tab-hidden="true"] .dash-side-status::before,
 body[data-tab-hidden="true"] .dash-vent-fan,
 body[data-tab-hidden="true"] .dash-chat-fab,
 body[data-tab-hidden="true"] .dash-chat-fab-pulse,

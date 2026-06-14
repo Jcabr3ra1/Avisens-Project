@@ -1,6 +1,6 @@
 import { Sparkline } from '../charts/charts'
 import { Card, CardTitle, Row } from '../primitives/primitives'
-import { IcRefresh } from '../icons/icons'
+import { IcRefresh } from '@shared/ui/icons/icons'
 import { flockTrend } from '../../model'
 import type { Galpon } from '../../model'
 import './EstadoLoteCard.css'

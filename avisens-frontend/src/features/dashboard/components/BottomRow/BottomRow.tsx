@@ -1,6 +1,6 @@
 import { Sparkline } from '../charts/charts'
 import { Card } from '../primitives/primitives'
-import { IcAlert, IcCal, IcHeart, IcChevronRight } from '../icons/icons'
+import { IcAlert, IcCal, IcHeart, IcChevronRight } from '@shared/ui/icons/icons'
 import { wellbeingTrend } from '../../model'
 import './BottomRow.css'
 

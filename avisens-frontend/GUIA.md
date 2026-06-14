@@ -107,10 +107,12 @@ Todo el enrutamiento vive en **un solo archivo**: [`src/app/routes.tsx`](./src/a
     <Route path="/" element={<LandingPage />} />
   </Route>
 
-  {/* GRUPO 3 — app interna, SIN AppLayout (cada página trae su propio layout) */}
-  <Route path="/dashboard" element={<DashboardPage />} />
-  <Route path="/granjas"   element={<GranjasPage />} />
-  {/* ...resto de módulos... */}
+  {/* GRUPO 3 — app interna, todas comparten DashboardLayout (sidebar) */}
+  <Route element={<DashboardLayout />}>
+    <Route path="/dashboard" element={<DashboardPage />} />
+    <Route path="/granjas"   element={<GranjasPage />} />
+    {/* ...resto de módulos... */}
+  </Route>
 </Routes>
 ```
 
@@ -122,7 +124,9 @@ Porque **no todas las pantallas comparten el mismo marco visual**:
 |-------|---------|--------------|-------|
 | **1. Standalone** | `/login` | Ninguno | El login es pantalla completa, sin navbar ni footer. |
 | **2. Con AppLayout** | `/` (landing) | Navbar + Footer + FloatChat | La web pública comparte ese marco en todas sus secciones. |
-| **3. App interna** | `/dashboard`, `/granjas`… | El suyo propio | El dashboard tiene **su propio** sidebar + topbar; no quiere el navbar público. |
+| **3. Con DashboardLayout** | `/dashboard`, `/granjas`… | Sidebar de navegación | La app interna comparte el sidebar; no quiere el navbar público. |
+
+> 💡 **¿Por qué dos layouts (`AppLayout` y `DashboardLayout`) y no uno?** Porque son marcos distintos: la web pública lleva navbar + footer de marketing; la app interna lleva un sidebar de navegación. Un solo layout obligaría a llenar el componente de `if` ("si es dashboard muestra sidebar, si no muestra navbar"), justo el acoplamiento que evitamos. Dos layouts pequeños y enfocados > uno grande con condicionales.
 
 ### Cómo funciona el `AppLayout` (Grupo 2)
 
@@ -144,9 +148,9 @@ function AppLayout() {
 }
 ```
 
-`<Outlet />` es "el hueco" donde React Router mete la página que coincide con la URL. Por eso la landing aparece **dentro** del navbar/footer sin tener que importarlos ella misma.
+`<Outlet />` es "el hueco" donde React Router mete la página que coincide con la URL. Por eso la landing aparece **dentro** del navbar/footer sin tener que importarlos ella misma. El `DashboardLayout` funciona igual: renderiza el `<Sidebar />` + un `<Outlet />` donde entra cada página interna.
 
-> 🔑 **Regla práctica:** un módulo nuevo del Grupo 3 (ej: `/granjas`) **NO** va dentro de `<AppLayout>`. Va suelto, como `/dashboard`. Si quieres que comparta el sidebar del dashboard, ese sidebar tendría que extraerse a un layout reutilizable (ver [§8](#8-cómo-continuar-implementar-un-módulo-placeholder)).
+> 🔑 **Regla práctica:** un módulo nuevo de la app interna (ej: `/granjas`) va **dentro** del `<Route element={<DashboardLayout />}>` en `routes.tsx`. Así obtiene el sidebar automáticamente, sin tener que importarlo. No lo pongas en `<AppLayout>` (ese es el de la web pública).
 
 ---
 
@@ -189,16 +193,17 @@ El dashboard es la referencia de cómo se ve un feature "terminado". Su `Dashboa
 
 ```
 features/dashboard/
-├── DashboardPage.tsx        ← orquesta todo
+├── DashboardPage.tsx        ← orquesta el contenido (topbar + widgets + chat)
 ├── DashboardPage.css
-├── model.ts                 ← datos mock + tipos (GALPONES, GRANJAS, MetricId…)
+├── model.tsx                ← datos mock + tipos del dashboard (MetricId, tonos…)
 └── components/
-    ├── Sidebar/             ├── MetricsHub/        ├── charts/
-    ├── Topbar/              ├── GalponStrip/       ├── chat/
-    ├── AttentionBar/        ├── ContextHeader/     ├── icons/
+    ├── Topbar/              ├── GalponStrip/       ├── charts/
+    ├── AttentionBar/        ├── ContextHeader/     ├── chat/
     ├── BottomRow/           ├── CoopPlaceholder/   └── primitives/
-    └── EstadoLoteCard/
+    ├── MetricsHub/          └── EstadoLoteCard/
 ```
+
+> El **Sidebar** ya no vive aquí: es navegación del shell, así que se movió a `app/layout/Sidebar/`. Los **iconos** se movieron a `shared/ui/icons/` (los usan muchos componentes) y los **datos de granjas/galpones** a `shared/data/farm.ts` (los usa el dashboard y el sidebar).
 
 > Cuando implementes un módulo nuevo, **copia este patrón**: página que orquesta + componentes en `components/` + datos en `model.ts`.
 
@@ -210,14 +215,17 @@ Aquí vive lo que usan varios features. **No le agregues cosas de un solo módul
 
 ```
 shared/
-├── styles/index.css     ← ⭐ el tema global: variables CSS, reset, animaciones, utilidades
-├── types/index.ts       ← interfaces compartidas (Galpon, ChatMessage, Plan, FaqItem…)
+├── styles/index.css       ← ⭐ el tema global: variables CSS, reset, animaciones, utilidades
+├── types/index.ts         ← interfaces compartidas (ChatMessage, Plan, FaqItem…)
+├── data/farm.ts           ← datos mock de granjas y galpones (GALPONES, GRANJAS)
 ├── hooks/
-│   ├── useFadeUp.ts        ← anima elementos al hacer scroll (necesita clase .fade-up)
-│   ├── useDismissable.ts   ← cerrar menús/popovers al click afuera
-│   └── usePauseOnHidden.ts ← pausa animaciones cuando la pestaña no está visible
-├── ui/Ic/Ic.tsx         ← componente de ícono SVG genérico (recibe `d` y `size`)
-└── utils/formato.ts     ← formatCurrency / formatNumber (locale es-CO)
+│   ├── useFadeUp.ts          ← anima elementos al hacer scroll (necesita clase .fade-up)
+│   ├── useDismissable.ts     ← cerrar menús/popovers al click afuera
+│   └── usePauseOnHidden.ts   ← pausa animaciones cuando la pestaña no está visible
+├── ui/
+│   ├── Ic/Ic.tsx          ← ícono SVG genérico (recibe `d` y `size`)
+│   └── icons/icons.tsx    ← catálogo de iconos con nombre (IcGrid, IcAlert, …)
+└── utils/formato.ts       ← formatCurrency / formatNumber (locale es-CO)
 ```
 
 ### El tema (`shared/styles/index.css`)
@@ -287,9 +295,9 @@ Ejemplo: te toca construir **`/granjas`**. Pasos:
 
 5. **Reutiliza shared**: íconos con `@shared/ui/Ic`, formato con `@shared/utils/formato`, hooks si aplican.
 
-6. **¿Necesitas el sidebar/topbar del dashboard en tu módulo?** Hoy ese layout vive *dentro* de `features/dashboard/`. Si varios módulos de la app interna deben compartirlo, lo correcto es **extraer ese layout a un componente reutilizable** (ej. `app/layout/DashboardLayout.tsx`) y envolver las rutas del Grupo 3 con él — igual que se hace con `AppLayout` en la landing. Coordínalo con el equipo antes, porque toca `routes.tsx`.
+6. **El sidebar ya lo tienes gratis.** Tu página se renderiza dentro del `DashboardLayout`, así que el sidebar de navegación aparece solo — no lo importes ni lo montes. Tú solo construyes el contenido de la página. Si quieres que tu módulo salga en el menú lateral, agrega su entrada en `app/layout/Sidebar/navConfig.tsx`.
 
-7. **La ruta ya existe** en `routes.tsx` (todos los módulos ya están enrutados). Solo si agregas un módulo totalmente nuevo tendrías que añadir su `<Route>`.
+7. **La ruta ya existe** en `routes.tsx` (todos los módulos ya están enrutados dentro del `DashboardLayout`). Solo si agregas un módulo totalmente nuevo tendrías que añadir su `<Route>` dentro de ese bloque.
 
 ### Checklist antes de cada commit
 
@@ -308,12 +316,13 @@ Navegador abre la URL
         │
    index.html → main.tsx → App.tsx (BrowserRouter) → routes.tsx
         │
-        ├── "/login"      → LoginPage            (sin layout)
-        ├── "/"           → AppLayout > LandingPage   (navbar + footer + chat)
-        └── "/dashboard"  → DashboardPage         (su propio sidebar + topbar)
-            "/granjas"    → GranjasPage  🚧
-            "/alertas"    → AlertasPage  🚧   ◄── AQUÍ CONTINÚA EL EQUIPO
-            ...
+        ├── "/login"      → LoginPage                      (sin layout)
+        ├── "/"           → AppLayout > LandingPage         (navbar + footer + chat)
+        └── DashboardLayout (sidebar) >
+              ├── "/dashboard" → DashboardPage              (topbar + widgets + chat)
+              ├── "/granjas"   → GranjasPage  🚧
+              ├── "/alertas"   → AlertasPage  🚧   ◄── AQUÍ CONTINÚA EL EQUIPO
+              └── ...
 
 Cada Page vive en  features/[modulo]/
    usa componentes propios de   features/[modulo]/components/

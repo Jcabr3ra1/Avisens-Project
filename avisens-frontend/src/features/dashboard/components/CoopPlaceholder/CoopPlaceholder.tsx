@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   IcAlert, IcChevronDown, IcDrop, IcFan, IcPlus, IcRefresh, IcSeed, IcSettings, IcThermo, IcWind,
-} from '../icons/icons'
+} from '@shared/ui/icons/icons'
 import type { Galpon } from '../../model'
 import './CoopPlaceholder.css'
 

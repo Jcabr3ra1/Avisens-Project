@@ -1,4 +1,4 @@
-import { IcFan } from '../icons/icons'
+import { IcFan } from '@shared/ui/icons/icons'
 import { BarChart, AreaChart, RadialGauge } from '../charts/charts'
 import { METRIC_TABS, TONE_HEX, TONE_VAR, TONE_LABEL } from '../../model'
 import type { MetricId, MetricTab, Tone } from '../../model'

@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
-import { IcEgg, IcSidebar } from '../icons/icons'
-import { NAV_SECTIONS } from '../../model'
+import { IcEgg, IcSidebar } from '@shared/ui/icons/icons'
+import { NAV_SECTIONS } from './navConfig'
 import './Sidebar.css'
 
 type Props = {

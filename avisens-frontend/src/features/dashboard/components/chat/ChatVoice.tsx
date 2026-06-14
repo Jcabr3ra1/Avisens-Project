@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { IcMic, IcMicOff, IcSparkle, IcStop, IcSettings } from '../icons/icons'
+import { IcMic, IcMicOff, IcSparkle, IcStop, IcSettings } from '@shared/ui/icons/icons'
 import { panelIconBtn } from './shared'
 
 type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking'

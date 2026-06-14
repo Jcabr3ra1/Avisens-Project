@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { IcChat, IcClose, IcUsers, IcSparkle, IcMic } from '../icons/icons'
+import { IcChat, IcClose, IcUsers, IcSparkle, IcMic } from '@shared/ui/icons/icons'
 import { panelIconBtn } from './shared'
 import ChatTeam from './ChatTeam'
 import ChatAi from './ChatAi'
