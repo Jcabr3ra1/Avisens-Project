@@ -11,15 +11,15 @@ API REST del sistema AVISENS. Maneja la lógica de negocio, autenticación, base
 - **Lenguaje:** TypeScript
 - **Runtime:** Node.js
 - **Framework:** [NestJS](https://nestjs.com/) (arquitectura modular, inyección de dependencias)
-- **Base de datos:** MongoDB (NoSQL)
-- **ODM:** Mongoose
+- **Base de datos:** PostgreSQL (relacional)
+- **ORM:** [Prisma](https://www.prisma.io/) (type-safe, migraciones)
 - **Autenticación:** JWT + refresh tokens (con `@nestjs/jwt` + Passport)
 - **Validación:** `class-validator` + `class-transformer` (DTOs)
 - **Documentación de API:** Swagger (`@nestjs/swagger`)
 - **Gestor de paquetes:** **npm** (igual que el frontend)
-- **Contenedores:** Docker + Docker Compose (para MongoDB)
+- **Contenedores:** Docker + Docker Compose (para PostgreSQL)
 
-> **¿Por qué este stack?** Mismo lenguaje que el frontend (TypeScript) → el equipo es productivo desde el día 1 y se pueden compartir tipos. NestJS impone una estructura limpia por capas, en la misma línea ordenada del frontend. Es el stack **MERN** (Mongo · Nest · React · Node), de los más usados y demandados hoy.
+> **¿Por qué este stack?** Mismo lenguaje que el frontend (TypeScript) → el equipo es productivo desde el día 1 y se pueden compartir tipos. NestJS impone una estructura limpia por capas, en la misma línea ordenada del frontend. **PostgreSQL** encaja perfecto con el modelo de datos (muy relacional: 39 entidades, 57 FKs) y **Prisma** lo hace type-safe y fácil de migrar. Stack moderno y muy demandado.
 
 ---
 
@@ -35,30 +35,38 @@ npm i -g @nestjs/cli
 nest new . --package-manager npm
 
 # 3. Dependencias clave del proyecto
-npm i @nestjs/mongoose mongoose @nestjs/config
+npm i @nestjs/config
 npm i @nestjs/jwt @nestjs/passport passport passport-jwt
 npm i class-validator class-transformer
 npm i @nestjs/swagger
+
+# 4. Prisma (ORM)
+npm i @prisma/client
+npm i -D prisma
+npx prisma init      # crea prisma/schema.prisma y el .env
 ```
 
-Luego crea un `.env` (ver [Variables de entorno](#variables-de-entorno)) y levanta MongoDB con Docker.
+Luego define los modelos en `prisma/schema.prisma`, ajusta el `.env` (ver [Variables de entorno](#variables-de-entorno)) y levanta PostgreSQL con Docker.
 
 ---
 
 ## Cómo correr localmente
 
 ```bash
-docker compose up -d     # levanta MongoDB en un contenedor
-npm run start:dev        # servidor en modo watch (http://localhost:3000)
+docker compose up -d        # levanta PostgreSQL en un contenedor
+npx prisma migrate dev      # aplica las migraciones a la base
+npm run start:dev           # servidor en modo watch (http://localhost:3000)
 ```
 
 ### Otros comandos
 
 ```bash
-npm run build            # compila a JavaScript (dist/)
-npm run start:prod       # corre el build de producción
-npm run lint             # ESLint
-npm run test             # pruebas unitarias (Jest)
+npm run build               # compila a JavaScript (dist/)
+npm run start:prod          # corre el build de producción
+npm run lint                # ESLint
+npm run test                # pruebas unitarias (Jest)
+npx prisma studio           # explorador visual de la base de datos
+npx prisma migrate dev      # crear/aplicar una migración nueva
 ```
 
 ---
@@ -68,20 +76,24 @@ npm run test             # pruebas unitarias (Jest)
 Igual que el frontend (Screaming Architecture), el backend se organiza **por dominio de negocio**, no por tipo técnico. Cada módulo de NestJS agrupa todo lo suyo:
 
 ```
+prisma/
+└── schema.prisma           ← TODO el modelo de datos (tablas + relaciones)
+
 src/
 ├── main.ts                 ← punto de entrada (bootstrap)
 ├── app.module.ts           ← módulo raíz (importa los demás)
 ├── common/                 ← guards, pipes, filtros, decoradores compartidos
-├── config/                 ← configuración (env, conexión a Mongo)
+├── prisma/                 ← PrismaService (cliente de base de datos inyectable)
 └── modules/
-    ├── auth/               ← login, registro, JWT, roles
-    ├── usuarios/
+    ├── auth/               ← login, registro, JWT, RBAC  (rol Administrador)
+    ├── usuarios/           ← CRUD de usuarios, roles, permisos, auditoría
     ├── granjas/            ← granjas y galpones
-    ├── lotes/              ← ciclos productivos
-    ├── sensores/           ← datos IoT (time series)
+    ├── lotes/              ← ciclos productivos (bitácora)
+    ├── sensores/           ← datos IoT y mediciones
     ├── alertas/
     ├── inventario/
-    └── finanzas/
+    ├── finanzas/
+    └── chatbot/            ← prospectos, cotizaciones (CRM)
 ```
 
 Cada módulo sigue el patrón estándar de NestJS:
@@ -90,12 +102,11 @@ Cada módulo sigue el patrón estándar de NestJS:
 modules/granjas/
 ├── granjas.module.ts       ← declara el módulo
 ├── granjas.controller.ts   ← define las rutas (endpoints HTTP)
-├── granjas.service.ts      ← la lógica de negocio
-├── schemas/granja.schema.ts← el modelo de Mongoose (documento Mongo)
+├── granjas.service.ts      ← la lógica de negocio (usa PrismaService)
 └── dto/                    ← objetos de entrada/salida validados (create, update)
 ```
 
-Flujo de una petición: **Controller** (recibe HTTP) → **Service** (lógica) → **Schema/Mongoose** (lee/escribe en Mongo).
+Flujo de una petición: **Controller** (recibe HTTP) → **Service** (lógica) → **Prisma** (lee/escribe en PostgreSQL). Las tablas y relaciones se definen una sola vez en `prisma/schema.prisma`.
 
 ---
 
@@ -103,8 +114,8 @@ Flujo de una petición: **Controller** (recibe HTTP) → **Service** (lógica) �
 
 | Recurso | Descripción |
 |---|---|
-| `/auth` | Login, registro, refresh token |
-| `/usuarios` | Gestión de roles y permisos (RBAC) |
+| `/auth` | Login, registro, refresh token, MFA admin |
+| `/usuarios` | CRUD de usuarios, roles y permisos (RBAC) + auditoría |
 | `/granjas` | CRUD de granjas y galpones |
 | `/lotes` | Gestión de ciclos productivos |
 | `/sensores` | Datos IoT en tiempo real |
@@ -116,14 +127,14 @@ La documentación interactiva (Swagger) quedará en `http://localhost:3000/docs`
 
 ---
 
-## Modelado de datos en MongoDB
+## Modelo de datos
 
-Como es NoSQL, hay que decidir conscientemente entre **embeber** o **referenciar**:
+El diseño completo (39 entidades, 57 FKs) está documentado en `Documentacion avisens/` y se traduce **1:1** a `prisma/schema.prisma`. Como es relacional:
 
-- **Embeber** (documento dentro de otro): cuando los datos se leen siempre juntos y no crecen sin límite. Ej.: la dirección dentro de una granja.
-- **Referenciar** (guardar el `_id` de otro documento): cuando son entidades con vida propia o relaciones N:N. Ej.: un `lote` referencia su `galpon`; una `cotización` referencia su `cliente`.
-
-Para los **datos de sensores** (temperatura, humedad, CO₂, NH₃ en el tiempo), usar **Time Series Collections** de MongoDB (nativas desde la v5.0), optimizadas para series de tiempo.
+- Las **llaves foráneas** se declaran como relaciones de Prisma (`@relation`).
+- Las **tablas puente N:M** (`roles_permisos`, `usuarios_galpones`, `alertas_canales`…) se modelan como tablas explícitas.
+- Los **campos calculados** (mortalidad acumulada, FCR, días de autonomía…) **no se guardan**: se derivan en consultas/servicios. Ya están marcados como ELIMINADOS en el diagrama.
+- Los snapshots JSON (`bitacora_auditoria.datos_antes/datos_despues`) usan el tipo **`Json`** de Postgres (`jsonb`).
 
 ---
 
@@ -133,7 +144,7 @@ Crear un archivo `.env` en la raíz (no se commitea):
 
 ```env
 PORT=3000
-MONGODB_URI=mongodb://localhost:27017/avisens
+DATABASE_URL="postgresql://avisens:avisens@localhost:5432/avisens?schema=public"
 JWT_SECRET=cambia-esto-por-un-secreto-largo
 JWT_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=otro-secreto-distinto
@@ -153,11 +164,12 @@ Habilitar **CORS** en `main.ts` para permitir el origen del frontend (`http://lo
 
 ---
 
-## Checklist para arrancar mañana
+## Checklist para arrancar
 
-- [ ] `nest new .` e instalar dependencias clave
-- [ ] `docker compose up -d` con MongoDB
-- [ ] Configurar conexión a Mongo (`@nestjs/mongoose` + `MONGODB_URI`)
-- [ ] Crear el módulo `auth` (registro + login + JWT) — base de todo lo demás
+- [ ] `nest new .` e instalar dependencias clave + Prisma
+- [ ] `docker compose up -d` con PostgreSQL
+- [ ] Traducir el diagrama a `prisma/schema.prisma` (empezar por el módulo de autenticación)
+- [ ] `npx prisma migrate dev` para crear las tablas
+- [ ] Crear el módulo `auth` (registro + login + JWT + RBAC) — base de todo lo demás
 - [ ] Crear el primer módulo de dominio (`granjas`) como plantilla del resto
 - [ ] Habilitar Swagger y CORS
