@@ -1,3 +1,7 @@
+// AttentionBar.tsx — Barra de atención del dashboard
+// Resume qué necesita atención hoy: alertas, tareas, mortalidad, bienestar
+// Cada chip es clickable y salta a la sección correspondiente
+// Textos campesinos: "Hay cosas pendientes", "las aves están bien"
 import type { ReactNode } from 'react'
 import { IcAlert, IcCal, IcHeart, IcSparkle, IcChevronRight } from '@shared/ui/icons/icons'
 import type { Tone } from '../../model'
@@ -21,7 +25,7 @@ const AttentionBar = ({ alertas, tareasHoy, mortalidad, mortalidadTrend, bienest
     <div className={`dash-attention-bar${allClear ? ' all-clear' : ''}`}>
       <div className="dash-attention-bar-label">
         <span className="dash-attention-bar-dot" />
-        {allClear ? 'Todo en orden' : 'Atencion hoy'}
+        {allClear ? 'Todo en orden hoy' : 'Hay cosas pendientes'}
       </div>
       <div className="dash-attention-chips">
         <AttentionChip
@@ -29,7 +33,7 @@ const AttentionBar = ({ alertas, tareasHoy, mortalidad, mortalidadTrend, bienest
           icon={<IcAlert size={14} />}
           value={alertas}
           label={alertas === 1 ? 'alerta activa' : 'alertas activas'}
-          meta={alertas > 0 ? '1 alta / 1 media' : 'sin incidencias'}
+          meta={alertas > 0 ? '1 urgente / 1 moderada' : 'todo tranquilo'}
           onClick={() => onJump('dash-section-alertas')}
         />
         <AttentionChip
@@ -37,7 +41,7 @@ const AttentionBar = ({ alertas, tareasHoy, mortalidad, mortalidadTrend, bienest
           icon={<IcCal size={14} />}
           value={tareasHoy}
           label="tareas hoy"
-          meta="proxima 14:00"
+          meta="la próxima a las 14:00"
           onClick={() => onJump('dash-section-tareas')}
         />
         <AttentionChip
@@ -45,7 +49,7 @@ const AttentionBar = ({ alertas, tareasHoy, mortalidad, mortalidadTrend, bienest
           icon={<IcHeart size={14} />}
           value={mortalidad}
           label="mortalidad"
-          meta={mortalidadTrend === 'up' ? 'sube vs. ayer' : mortalidadTrend === 'down' ? 'baja vs. ayer' : 'igual vs. ayer'}
+          meta={mortalidadTrend === 'up' ? 'subió desde ayer' : mortalidadTrend === 'down' ? 'bajó desde ayer' : 'igual que ayer'}
           onClick={() => onJump('dash-section-estado')}
         />
         <AttentionChip
@@ -53,7 +57,7 @@ const AttentionBar = ({ alertas, tareasHoy, mortalidad, mortalidadTrend, bienest
           icon={<IcSparkle size={14} />}
           value={bienestar}
           label="bienestar"
-          meta={bienestar >= 75 ? 'bueno' : bienestar >= 60 ? 'regular' : 'bajo'}
+          meta={bienestar >= 75 ? 'las aves están bien' : bienestar >= 60 ? 'revisar condiciones' : 'aves estresadas'}
           onClick={() => onJump('dash-section-bienestar')}
         />
       </div>

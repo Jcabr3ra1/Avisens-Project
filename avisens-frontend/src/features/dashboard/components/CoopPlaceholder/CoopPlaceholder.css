@@ -1,753 +1,179 @@
-.dash-coop-placeholder {
-  --map-ok: #10b981;
-  --map-warn: #f59e0b;
-  --map-info: #3b82f6;
-  --map-pending: #7a8e84;
-  container-type: inline-size;
-  width: 100%;
-  border-radius: 24px;
-  overflow: hidden;
-  background: linear-gradient(180deg, #f7fbf5 0%, #e9f3e2 100%);
-  border: 1px solid rgba(16, 44, 35, 0.1);
-  box-shadow: 0 18px 48px rgba(20, 45, 36, 0.12);
-  color: var(--text);
-}
+/* ══════════════════════════════════════ */
+/* ═══ Galpón 3D Isométrico ═══════════ */
+/* ══════════════════════════════════════ */
+.coop { container-type: inline-size; width: 100%; border-radius: 18px; overflow: hidden; background: #fff; border: 1.5px solid rgba(16,185,129,0.15); box-shadow: 0 1px 2px rgba(10,40,28,0.04), 0 8px 24px rgba(10,40,28,0.06); }
 
-.dash-coop-top {
-  display: grid;
-  grid-template-columns: minmax(220px, 0.72fr) minmax(360px, 1fr);
-  gap: 14px;
-  padding: 16px 20px 0;
-  align-items: start;
-}
+.coop-header { display: grid; grid-template-columns: minmax(200px,.55fr) minmax(280px,1fr); gap: 16px; padding: 20px 24px 16px; align-items: start; border-bottom: 1px solid var(--border); }
+.coop-kicker { font-family: 'DM Mono',monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--green-d); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.coop-kicker::before { content:''; width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+.coop-title { font-family: 'Space Grotesk',sans-serif; font-size: clamp(22px,2.2vw,30px); line-height: 1.05; font-weight: 700; letter-spacing: -.03em; color: var(--text); }
+.coop-meta { margin-top: 5px; font-size: 12.5px; color: var(--text3); }
+.coop-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; }
+.coop-stat { min-height: 56px; border-radius: 12px; padding: 8px 12px; background: var(--bg-tint); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between; }
+.coop-stat span { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; }
+.coop-stat strong { font-size: 16px; line-height: 1; color: var(--text); }
+.coop-stat.tone-warn strong { color: var(--danger); }
 
-.dash-coop-kicker {
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--green-d);
-  margin-bottom: 8px;
-}
+.coop-legend { display: flex; align-items: center; gap: 14px; padding: 8px 24px; background: var(--bg-tint); border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text3); flex-wrap: wrap; }
+.coop-legend-title { font-weight: 600; color: var(--text2); }
+.coop-legend-item { display: flex; align-items: center; gap: 5px; }
+.coop-legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.coop-legend-sep { flex: 1; }
+.coop-legend-hint { font-style: italic; color: var(--text4); font-size: 10px; }
 
-.dash-coop-title {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(27px, 2.5vw, 38px);
-  line-height: 1;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  color: #081a14;
-}
+.coop-body { display: grid; grid-template-columns: minmax(0,1fr) 270px; align-items: stretch; }
 
-.dash-coop-meta {
-  margin-top: 8px;
-  font-size: 12.5px;
-  color: var(--text3);
-}
-
-.dash-coop-lot {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.dash-coop-lot-stat {
-  min-width: 0;
-  min-height: 64px;
-  border-radius: 14px;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(16, 44, 35, 0.08);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.dash-coop-lot-stat span {
-  font-size: 10px;
-  color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dash-coop-lot-stat strong {
-  font-size: 17px;
-  line-height: 1;
-  color: #081a14;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dash-coop-lot-stat.tone-warn strong {
-  color: var(--red);
-}
-
-.dash-coop-controls {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 20px 0;
-  flex-wrap: wrap;
-}
-
-.dash-coop-toolbar {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 14px;
-  background: rgba(10, 26, 20, 0.05);
-  border: 1px solid rgba(16, 44, 35, 0.08);
-}
-
-.dash-coop-layer {
-  height: 32px;
-  border-radius: 10px;
-  color: var(--text3);
-  font-size: 11.5px;
-  font-weight: 800;
-  cursor: pointer;
-  padding: 0 12px;
-  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-}
-
-.dash-coop-layer.active {
-  background: #ffffff;
-  color: #081a14;
-  box-shadow: 0 8px 22px rgba(20, 45, 36, 0.12);
-}
-
-.dash-coop-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
-  gap: 14px;
-  padding: 12px 20px 0;
-  align-items: stretch;
-}
-
-.dash-coop-map {
-  min-width: 0;
-  min-height: 280px;
-  border-radius: 20px;
-  background: transparent;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  overflow: hidden;
-}
-
-.dash-coop-stage {
+/* ══════ ESCENA ══════ */
+.coop-scene {
   position: relative;
-  width: 100%;
-  max-width: 900px;
-  aspect-ratio: 2.4 / 1;
+  min-height: 460px;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 70%, rgba(16,185,129,0.06), transparent),
+    linear-gradient(180deg, #e4efe8 0%, #d0e2d6 60%, #c5dac0 100%);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  touch-action: none;
   user-select: none;
+  cursor: grab;
 }
+.coop-scene:active { cursor: grabbing; }
 
-.dash-coop-illustration-wrap {
+.coop-scene::after {
+  content: '';
   position: absolute;
-  left: 19%;
-  right: 19%;
-  top: 0;
   bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(180deg, transparent, rgba(192,212,200,0.4));
   pointer-events: none;
 }
 
-.dash-coop-illustration {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-  filter: drop-shadow(0 14px 22px rgba(20, 45, 36, 0.14));
+/* Controles */
+.coop-ctrl {
+  position: absolute; top: 12px; right: 12px; z-index: 20;
+  display: flex; gap: 2px; padding: 3px;
+  background: rgba(255,255,255,.92); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 2px 8px rgba(10,40,28,.08);
+  backdrop-filter: blur(8px);
+}
+.coop-ctrl button {
+  width: 28px; height: 28px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: var(--text2); cursor: pointer;
+  transition: all .15s;
+}
+.coop-ctrl button:hover { background: #ecfdf5; color: var(--green-d); }
+.coop-ctrl-reset { border-left: 1px solid var(--border) !important; border-right: 1px solid var(--border) !important; margin: 0 2px; }
+
+.coop-zoom-badge {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  z-index: 20; padding: 3px 10px; background: rgba(10,26,20,.75);
+  color: #fff; font-size: 10px; border-radius: 99px; pointer-events: none;
 }
 
-.dash-coop-flow {
-  position: absolute;
-  left: 22%;
-  right: 22%;
-  height: 3px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.9), transparent);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 1;
+/* SVG isométrico */
+.coop-iso {
+  width: 100%; height: 100%; min-height: 460px;
+  transition: transform .18s ease-out;
+  transform-origin: center 55%;
+  filter: drop-shadow(0 8px 20px rgba(10,40,28,0.08));
 }
 
-.layer-flujo .dash-coop-flow {
-  opacity: 0.85;
+/* Ventiladores girando */
+.coop-iso-fan { animation: fanSpin 2s linear infinite; transform-origin: center; }
+@keyframes fanSpin { from { transform: rotate(0) } to { transform: rotate(360deg) } }
+
+/* ══════ SENSORES ══════ */
+.coop-point {
+  position: absolute; transform: translate(-50%,-50%); z-index: 10;
+  cursor: pointer; background: none; border: none; padding: 0;
+  display: flex; align-items: center; gap: 3px;
 }
-
-.flow-a { top: 52%; }
-.flow-b { top: 70%; }
-
-.dash-coop-leaders {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 2;
-  overflow: visible;
+.coop-point-core {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--pt-color);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--pt-color); box-shadow: 0 2px 8px rgba(10,40,28,.15);
+  transition: all .2s ease; position: relative; z-index: 2;
 }
-
-.dash-coop-leader {
-  stroke: rgba(16, 44, 35, 0.22);
-  stroke-width: 1.5;
-  stroke-dasharray: 3 4;
-  fill: none;
-  transition: stroke 0.2s, stroke-dasharray 0.2s, stroke-width 0.2s;
+.coop-point:hover .coop-point-core { transform: scale(1.15); box-shadow: 0 4px 14px rgba(10,40,28,.2); }
+.coop-point.active .coop-point-core {
+  transform: scale(1.2); background: var(--pt-color); color: #fff;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--pt-color) 40%, transparent),
+              0 0 0 4px color-mix(in srgb, var(--pt-color) 15%, transparent);
 }
-
-.dash-coop-leader.active {
-  stroke-width: 2;
-  stroke-dasharray: 0;
+.coop-point-tag {
+  background: #fff; border: 1px solid var(--border); border-radius: 6px;
+  padding: 2px 6px; white-space: nowrap; pointer-events: none;
+  box-shadow: 0 1px 4px rgba(10,40,28,.06); z-index: 3;
 }
-
-.dash-coop-leader.status-ok.active { stroke: var(--map-ok); }
-.dash-coop-leader.status-warn.active { stroke: var(--map-warn); }
-.dash-coop-leader.status-info.active { stroke: var(--map-info); }
-.dash-coop-leader.status-pending.active { stroke: var(--map-pending); }
-
-.dash-coop-anchor {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #ffffff;
-  border: 2.5px solid var(--node-color, var(--map-info));
-  transform: translate(-50%, -50%);
-  z-index: 3;
-  pointer-events: none;
-  box-shadow:
-    0 0 0 1px rgba(16, 44, 35, 0.1),
-    0 4px 8px rgba(20, 45, 36, 0.18);
-  transition: transform 0.18s, box-shadow 0.18s;
+.coop-point-tag b { font-family: 'Space Grotesk',sans-serif; font-size: 11px; font-weight: 700; color: var(--pt-color); }
+.coop-point-tag small { font-size: 8px; color: var(--text3); margin-left: 1px; }
+.coop-point.active .coop-point-tag { background: var(--pt-color); border-color: var(--pt-color); }
+.coop-point.active .coop-point-tag b { color: #fff; }
+.coop-point.active .coop-point-tag small { color: rgba(255,255,255,.8); }
+.coop-point-ping {
+  position: absolute; inset: -4px; border-radius: 50%;
+  border: 2px solid var(--pt-color); animation: sping 2s ease-out infinite;
+  pointer-events: none; z-index: 1;
 }
+@keyframes sping { 0%{transform:scale(.8);opacity:.7} 100%{transform:scale(2);opacity:0} }
 
-.dash-coop-anchor.status-ok { --node-color: var(--map-ok); }
-.dash-coop-anchor.status-warn { --node-color: var(--map-warn); }
-.dash-coop-anchor.status-info { --node-color: var(--map-info); }
-.dash-coop-anchor.status-pending { --node-color: var(--map-pending); }
+/* ══════ INSPECTOR ══════ */
+.coop-inspector { padding: 20px 18px; background: #fff; display: flex; flex-direction: column; border-left: 4px solid var(--ins-color); }
+.coop-ins-head { display: flex; align-items: center; gap: 10px; }
+.coop-ins-icon { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--ins-color) 10%, #fff); color: var(--ins-color); flex-shrink: 0; border: 1px solid color-mix(in srgb, var(--ins-color) 20%, transparent); }
+.coop-ins-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.coop-ins-zone { margin-top: 2px; font-size: 11px; color: var(--text3); }
+.coop-ins-reading { margin-top: 14px; display: flex; align-items: baseline; gap: 3px; }
+.coop-ins-value { font-size: 30px; font-weight: 700; letter-spacing: -.04em; line-height: 1; color: var(--ins-color); }
+.coop-ins-unit { font-size: 14px; color: var(--text3); font-weight: 500; }
+.coop-ins-badge { margin-top: 8px; display: inline-flex; align-items: center; gap: 5px; width: fit-content; border-radius: 99px; padding: 4px 10px; font-size: 11px; font-weight: 600; }
+.coop-ins-badge[data-status="ok"] { background: #ecfdf5; color: #059669; }
+.coop-ins-badge[data-status="warn"] { background: #fef3c7; color: #92400e; }
+.coop-ins-badge[data-status="crit"] { background: #fee2e2; color: #991b1b; }
+.coop-ins-badge[data-status="info"] { background: #eff6ff; color: #1d4ed8; }
+.coop-ins-gauge { margin-top: 12px; padding: 8px 10px; background: var(--bg-tint); border: 1px solid var(--border); border-radius: 8px; }
+.coop-ins-gauge-track { position: relative; height: 5px; background: #dde3df; border-radius: 99px; overflow: visible; }
+.coop-ins-gauge-ideal { position: absolute; top: -1px; height: calc(100% + 2px); background: linear-gradient(90deg, rgba(16,185,129,.25), rgba(16,185,129,.35)); border-radius: 99px; }
+.coop-ins-gauge-marker { position: absolute; top: -5px; width: 13px; height: 13px; border-radius: 50%; background: #fff; border: 2.5px solid var(--ins-color); box-shadow: 0 1px 4px rgba(0,0,0,.15); transform: translateX(-50%); transition: left .6s cubic-bezier(.16,1,.3,1); z-index: 2; }
+.coop-ins-gauge-labels { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-family: 'DM Mono',monospace; font-size: 8.5px; color: var(--text4); }
+.coop-ins-gauge-ideal-label { font-size: 8px; color: var(--green-d); font-weight: 600; background: #ecfdf5; padding: 1px 5px; border-radius: 3px; }
+.coop-ins-note { margin-top: 12px; color: var(--text2); font-size: 12.5px; line-height: 1.55; font-style: italic; }
+.coop-ins-actions { margin-top: auto; display: flex; gap: 6px; padding-top: 12px; }
+.coop-ins-btn { height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 0 10px; font-size: 11px; font-weight: 600; background: var(--bg-tint); color: var(--text2); border: 1px solid var(--border); cursor: pointer; transition: all .15s; white-space: nowrap; }
+.coop-ins-btn.primary { background: var(--green-d); color: #fff; border-color: var(--green-d); }
+.coop-ins-btn:hover { transform: translateY(-1px); }
+.coop-ins-link { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 6px; padding: 5px; border-radius: 6px; font-size: 11px; font-weight: 600; color: var(--green-d); background: none; border: none; cursor: pointer; }
+.coop-ins-link:hover { background: #ecfdf5; }
 
-.dash-coop-anchor.active {
-  transform: translate(-50%, -50%) scale(1.3);
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--node-color) 22%, transparent),
-    0 4px 10px rgba(20, 45, 36, 0.26);
-}
+/* ══════ TIRA ══════ */
+.coop-strip { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 18px 14px; border-top: 1px solid var(--border); background: var(--bg-tint); }
+.coop-chip { border-radius: 7px; padding: 5px 8px; display: flex; align-items: center; gap: 5px; background: #fff; border: 1px solid var(--border); cursor: pointer; transition: all .2s; flex: 0 0 auto; font-size: 0; }
+.coop-chip:hover { border-color: var(--chip-color); }
+.coop-chip.active { border-color: var(--chip-color); background: color-mix(in srgb, var(--chip-color) 6%, #fff); box-shadow: 0 0 0 2px color-mix(in srgb, var(--chip-color) 10%, transparent); }
+.coop-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--chip-color); flex-shrink: 0; }
+.coop-chip-icon { width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: var(--chip-color); flex-shrink: 0; }
+.coop-chip-val { font-size: 11px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.coop-chip-val small { font-size: 8px; color: var(--text3); font-weight: 500; margin-left: 1px; }
+.coop-chip-name { font-size: 9px; color: var(--text3); white-space: nowrap; }
 
-@keyframes coopWarnPulse {
-  0%, 100% {
-    box-shadow:
-      0 0 0 1px rgba(16, 44, 35, 0.1),
-      0 0 0 0 color-mix(in srgb, var(--map-warn) 40%, transparent),
-      0 4px 8px rgba(20, 45, 36, 0.22);
-  }
-  50% {
-    box-shadow:
-      0 0 0 1px rgba(16, 44, 35, 0.1),
-      0 0 0 9px color-mix(in srgb, var(--map-warn) 0%, transparent),
-      0 4px 8px rgba(20, 45, 36, 0.22);
-  }
-}
-
-.dash-coop-anchor.status-warn {
-  animation: coopWarnPulse 2.2s ease-in-out infinite;
-}
-
-.dash-coop-callout {
-  position: absolute;
-  width: 17%;
-  min-width: 130px;
-  min-height: 48px;
-  transform: translateY(-50%);
-  border-radius: 14px;
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  background: rgba(255, 255, 255, 0.97);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(16, 44, 35, 0.1);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 10px 22px rgba(20, 45, 36, 0.14),
-    0 2px 4px rgba(20, 45, 36, 0.06);
-  color: #081a14;
-  cursor: pointer;
-  z-index: 4;
-  text-align: left;
-  transition: transform 0.18s ease, border-color 0.18s, box-shadow 0.18s;
-}
-
-.dash-coop-callout.side-left { left: 0; }
-.dash-coop-callout.side-right { right: 0; }
-
-.dash-coop-callout.status-ok { --node-color: var(--map-ok); }
-.dash-coop-callout.status-warn { --node-color: var(--map-warn); }
-.dash-coop-callout.status-info { --node-color: var(--map-info); }
-.dash-coop-callout.status-pending { --node-color: var(--map-pending); }
-
-.dash-coop-callout:hover,
-.dash-coop-callout.active {
-  border-color: color-mix(in srgb, var(--node-color) 55%, transparent);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.95) inset,
-    0 16px 32px rgba(20, 45, 36, 0.22),
-    0 4px 8px rgba(20, 45, 36, 0.08);
-}
-
-.dash-coop-callout.side-left:hover,
-.dash-coop-callout.side-left.active {
-  transform: translateY(-50%) translateX(-3px);
-}
-
-.dash-coop-callout.side-right:hover,
-.dash-coop-callout.side-right.active {
-  transform: translateY(-50%) translateX(3px);
-}
-
-.dash-coop-callout-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 11px;
-  display: grid;
-  place-items: center;
-  background: color-mix(in srgb, var(--node-color) 14%, #ffffff);
-  color: var(--node-color);
-}
-
-.dash-coop-callout-text {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.dash-coop-callout-label {
-  font-size: 9.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text3);
-  font-weight: 800;
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dash-coop-callout-value {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
-  color: #081a14;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.layer-alertas .dash-coop-callout:not(.status-warn),
-.layer-alertas .dash-coop-anchor:not(.status-warn),
-.layer-alertas .dash-coop-leader:not(.status-warn) {
-  opacity: 0.42;
-}
-
-.layer-alertas .dash-coop-callout.status-warn {
-  border-color: rgba(245, 158, 11, 0.72);
-  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.14), 0 14px 28px rgba(20, 45, 36, 0.18);
-}
-
-.dash-coop-inspector {
-  min-width: 0;
-  border-radius: 20px;
-  padding: 16px;
-  background: #ffffff;
-  border: 1px solid rgba(16, 44, 35, 0.1);
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 12px 30px rgba(20, 45, 36, 0.08);
-}
-
-.dash-coop-inspector-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.dash-coop-inspector-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 13px;
-  display: grid;
-  place-items: center;
-  background: rgba(10, 26, 20, 0.06);
-  flex-shrink: 0;
-}
-
-.dash-coop-inspector-label {
-  font-size: 13px;
-  font-weight: 800;
-  color: #081a14;
-}
-
-.dash-coop-inspector-zone {
-  margin-top: 2px;
-  font-size: 11px;
-  color: var(--text3);
-}
-
-.dash-coop-inspector-value {
-  margin-top: 16px;
-  font-size: 32px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1;
-}
-
-.dash-coop-inspector-status {
-  margin-top: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  border-radius: 999px;
-  padding: 6px 9px;
-  background: rgba(10, 26, 20, 0.05);
-  color: var(--text2);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.dash-coop-inspector p {
-  margin-top: 12px;
-  color: var(--text2);
-  font-size: 12.5px;
-  line-height: 1.5;
-}
-
-.dash-coop-inspector-tools {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 8px;
-}
-
-.dash-coop-inspector-toggle,
-.dash-coop-inspector-add {
-  height: 36px;
-  border-radius: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 11.5px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
-}
-
-.dash-coop-inspector-toggle {
-  padding: 0 12px;
-  background: rgba(10, 26, 20, 0.05);
-  color: var(--text2);
-  border: 1px solid rgba(16, 44, 35, 0.08);
-}
-
-.dash-coop-inspector-toggle svg {
-  transition: transform 0.18s ease;
-}
-
-.dash-coop-inspector-toggle.open svg {
-  transform: rotate(180deg);
-}
-
-.dash-coop-inspector-toggle:hover {
-  background: rgba(10, 26, 20, 0.09);
-  border-color: rgba(16, 44, 35, 0.18);
-}
-
-.dash-coop-inspector-add {
-  background: color-mix(in srgb, var(--map-ok) 12%, #ffffff);
-  color: var(--green-d);
-  border: 1px dashed color-mix(in srgb, var(--map-ok) 48%, transparent);
-}
-
-.dash-coop-inspector-add:hover {
-  background: color-mix(in srgb, var(--map-ok) 22%, #ffffff);
-  border-color: color-mix(in srgb, var(--map-ok) 70%, transparent);
-}
-
-.dash-coop-inspector-add:active {
-  transform: scale(0.98);
-}
-
-.dash-coop-instance-list {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 12px;
-  background: rgba(247, 250, 245, 0.85);
-  border: 1px solid rgba(16, 44, 35, 0.08);
-  list-style: none;
-}
-
-.dash-coop-instance {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 7px 9px;
-  border-radius: 9px;
-  background: #ffffff;
-  border: 1px solid rgba(16, 44, 35, 0.06);
-}
-
-.dash-coop-instance-info {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.dash-coop-instance-zone {
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #081a14;
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dash-coop-instance-label {
-  font-size: 10px;
-  color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.dash-coop-instance-value {
-  font-size: 12.5px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  flex-shrink: 0;
-}
-
-.dash-coop-instance.status-ok .dash-coop-instance-value { color: var(--map-ok); }
-.dash-coop-instance.status-warn .dash-coop-instance-value { color: var(--map-warn); }
-.dash-coop-instance.status-info .dash-coop-instance-value { color: var(--map-info); }
-.dash-coop-instance.status-pending .dash-coop-instance-value { color: var(--map-pending); }
-
-.dash-coop-inspector-actions {
-  margin-top: auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding-top: 12px;
-}
-
-.dash-coop-inspector-actions button {
-  min-width: 0;
-  height: 34px;
-  border-radius: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: rgba(10, 26, 20, 0.06);
-  color: var(--text2);
-  font-size: 11.5px;
-  font-weight: 800;
-}
-
-.dash-coop-inspector-actions button:first-child {
-  background: #071713;
-  color: #ffffff;
-}
-
-.dash-coop-chip.status-ok .dash-coop-chip-icon,
-.dash-coop-chip.status-ok .dash-coop-chip-value,
-.dash-coop-inspector.status-ok .dash-coop-inspector-icon,
-.dash-coop-inspector.status-ok .dash-coop-inspector-value {
-  color: var(--map-ok);
-}
-
-.dash-coop-chip.status-warn .dash-coop-chip-icon,
-.dash-coop-chip.status-warn .dash-coop-chip-value,
-.dash-coop-inspector.status-warn .dash-coop-inspector-icon,
-.dash-coop-inspector.status-warn .dash-coop-inspector-value {
-  color: var(--map-warn);
-}
-
-.dash-coop-chip.status-info .dash-coop-chip-icon,
-.dash-coop-chip.status-info .dash-coop-chip-value,
-.dash-coop-inspector.status-info .dash-coop-inspector-icon,
-.dash-coop-inspector.status-info .dash-coop-inspector-value {
-  color: var(--map-info);
-}
-
-.dash-coop-chip.status-pending .dash-coop-chip-icon,
-.dash-coop-chip.status-pending .dash-coop-chip-value,
-.dash-coop-inspector.status-pending .dash-coop-inspector-icon,
-.dash-coop-inspector.status-pending .dash-coop-inspector-value {
-  color: var(--map-pending);
-}
-
-.dash-coop-device-strip {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-  padding: 10px 20px 18px;
-}
-
-.dash-coop-chip {
-  min-width: 0;
-  border-radius: 14px;
-  padding: 9px 11px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  text-align: left;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(16, 44, 35, 0.08);
-  color: var(--text);
-  cursor: pointer;
-  transition: transform 0.15s, border-color 0.15s, background 0.15s;
-}
-
-.dash-coop-chip:hover,
-.dash-coop-chip.active {
-  transform: translateY(-1px);
-  background: #ffffff;
-  border-color: rgba(16, 185, 129, 0.32);
-}
-
-.dash-coop-chip-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 10px;
-  background: rgba(10, 26, 20, 0.06);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.dash-coop-chip-text {
-  min-width: 0;
-  flex: 1;
-}
-
-.dash-coop-chip-label {
-  font-size: 10px;
-  color: var(--text3);
-  line-height: 1.1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dash-coop-chip-value {
-  font-size: 12.5px;
-  font-weight: 800;
-  line-height: 1.2;
-  margin-top: 2px;
-}
-
+/* ══════ Responsive ══════ */
 @container (max-width: 980px) {
-  .dash-coop-top,
-  .dash-coop-body {
-    grid-template-columns: 1fr;
-  }
-
-  .dash-coop-lot {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .dash-coop-inspector {
-    display: grid;
-    grid-template-columns: minmax(160px, 0.9fr) 0.5fr 1fr auto;
-    align-items: center;
-    gap: 14px;
-  }
-
-  .dash-coop-inspector-value,
-  .dash-coop-inspector p,
-  .dash-coop-inspector-tools,
-  .dash-coop-instance-list {
-    margin-top: 0;
-  }
-
-  .dash-coop-inspector-actions {
-    margin-top: 0;
-    padding-top: 0;
-    min-width: 190px;
-  }
-
-  .dash-coop-device-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+  .coop-header { grid-template-columns: 1fr; }
+  .coop-body { grid-template-columns: 1fr; }
+  .coop-scene { border-right: none; border-bottom: 1px solid var(--border); }
+  .coop-inspector { border-left: none; border-top: 4px solid var(--ins-color); }
 }
-
 @container (max-width: 620px) {
-  .dash-coop-top,
-  .dash-coop-controls,
-  .dash-coop-body,
-  .dash-coop-device-strip {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-
-  .dash-coop-lot,
-  .dash-coop-device-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dash-coop-map {
-    min-height: 240px;
-    padding: 4px;
-  }
-
-  .dash-coop-stage {
-    aspect-ratio: 2.2 / 1;
-  }
-
-  .dash-coop-illustration-wrap {
-    left: 24%;
-    right: 24%;
-  }
-
-  .dash-coop-callout {
-    width: 22%;
-    min-width: 84px;
-    min-height: 38px;
-    padding: 5px 7px;
-    grid-template-columns: 24px minmax(0, 1fr);
-    gap: 6px;
-  }
-
-  .dash-coop-callout-icon {
-    width: 24px;
-    height: 24px;
-    border-radius: 8px;
-  }
-
-  .dash-coop-callout-label { font-size: 8.5px; }
-  .dash-coop-callout-value { font-size: 11px; }
-
-  .dash-coop-inspector {
-    display: flex;
-  }
+  .coop-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .coop-scene { min-height: 320px; }
+  .coop-iso { min-height: 320px; }
+  .coop-legend-hint { display: none; }
+  .coop-point-tag { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coop-point-ping, .coop-iso-fan { animation: none; }
+  .coop-kicker::before { animation: none; }
 }

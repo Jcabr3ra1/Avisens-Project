@@ -1,3 +1,6 @@
+// GalponStrip.tsx — Tira horizontal de cards de galpones
+// Muestra los 4 galpones de la granja con semáforo de estado
+// Al hacer click selecciona el galpón y actualiza todo el dashboard
 import { IcAlert, IcPlus } from '@shared/ui/icons/icons'
 import type { Galpon } from '../../model'
 import './GalponStrip.css'
@@ -39,7 +42,7 @@ const GalponStrip = ({ galpones, active, setActive }: Props) => (
           </div>
           <div className="dash-galpon-card-info">
             <span>
-              {g.status === 'empty' ? 'Sin lote / limpieza' : `${g.aves.toLocaleString('es-CO')} aves / dia ${g.dia}`}
+              {g.status === 'empty' ? 'Vacío · en limpieza' : `${g.aves.toLocaleString('es-CO')} aves · día ${g.dia}`}
             </span>
             {g.alertas > 0 && (
               <span className="dash-galpon-badge">
@@ -53,7 +56,7 @@ const GalponStrip = ({ galpones, active, setActive }: Props) => (
         </button>
       )
     })}
-    <button className="dash-galpon-add" title="Anadir galpon">
+    <button className="dash-galpon-add" title="Agregar galpón">
       <IcPlus size={18} />
     </button>
   </div>

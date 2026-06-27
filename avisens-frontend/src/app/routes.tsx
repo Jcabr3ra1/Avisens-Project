@@ -1,3 +1,6 @@
+// routes.tsx — Define TODAS las rutas de la aplicación
+// Hay 3 grupos: standalone (login), público (landing) e interno (dashboard + módulos)
+// Cada grupo usa un layout diferente (sin layout, AppLayout, PanelLayout)
 import { Routes, Route } from 'react-router-dom'
 import AppLayout from './layout/AppLayout'
 import PanelLayout from './layout/PanelLayout'
@@ -17,15 +20,16 @@ import GranjasPage from '@features/granjas/GranjasPage'
 function AppRoutes() {
   return (
     <Routes>
-      {/* Página standalone — sin Navbar ni Footer */}
+      {/* GRUPO 1: Standalone — pantalla completa sin layout */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Páginas públicas con layout */}
+      {/* GRUPO 2: Web pública — con Navbar + Footer + FloatChat */}
       <Route element={<AppLayout />}>
         <Route path="/" element={<LandingPage />} />
       </Route>
 
-      {/* App interna — todas comparten el PanelLayout (sidebar + shell) */}
+      {/* GRUPO 3: App interna — con Sidebar lateral (PanelLayout) */}
+      {/* Todas las páginas internas comparten el mismo sidebar */}
       <Route element={<PanelLayout />}>
         <Route path="/dashboard"       element={<DashboardPage />} />
         <Route path="/crm"             element={<CrmPage />} />

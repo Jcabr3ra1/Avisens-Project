@@ -1,3 +1,7 @@
+// BottomRow.tsx — Fila inferior del dashboard con 3 cards:
+// 1. Alertas activas (con puntos pulsantes rojo/amarillo)
+// 2. Pendientes de hoy (tareas programadas con hora y responsable)
+// 3. ¿Cómo están las aves? (sparkline de bienestar últimos 10 días)
 import { Sparkline } from '../charts/charts'
 import { Card } from '../primitives/primitives'
 import { IcAlert, IcCal, IcHeart, IcChevronRight } from '@shared/ui/icons/icons'
@@ -20,14 +24,14 @@ const AlertasCard = () => (
       </div>
       <div>
         <div className="dash-bottom-title">Alertas activas</div>
-        <div className="dash-bottom-sub">2 sin resolver</div>
+        <div className="dash-bottom-sub">2 por atender</div>
       </div>
       <button className="mini-btn dash-bottom-cta">
         Ver todas <IcChevronRight size={11} />
       </button>
     </div>
-    <AlertItem severity="high" label="Temperatura alta en zona 2" time="15 min" />
-    <AlertItem severity="med" label="Humedad fuera de rango" time="42 min" />
+    <AlertItem severity="high" label="Temperatura alta en la zona del centro" time="15 min" />
+    <AlertItem severity="med" label="Humedad por encima de lo normal" time="42 min" />
   </Card>
 )
 
@@ -38,15 +42,15 @@ const TareasCard = () => (
         <IcCal size={16} />
       </div>
       <div>
-        <div className="dash-bottom-title">Proximas tareas</div>
-        <div className="dash-bottom-sub">3 programadas</div>
+        <div className="dash-bottom-title">Pendientes de hoy</div>
+        <div className="dash-bottom-sub">3 tareas programadas</div>
       </div>
       <button className="mini-btn dash-bottom-cta">
         Calendario <IcChevronRight size={11} />
       </button>
     </div>
-    <TaskItem label="Revision de bebederos" time="Hoy 14:00" owner="Carlos M." />
-    <TaskItem label="Pesaje semanal" time="Manana 08:00" owner="Andrea P." />
+    <TaskItem label="Revisar los bebederos" time="Hoy 14:00" owner="Carlos M." />
+    <TaskItem label="Pesaje semanal del lote" time="Mañana 08:00" owner="Andrea P." />
   </Card>
 )
 
@@ -57,14 +61,14 @@ const BienestarCard = () => (
         <IcHeart size={16} />
       </div>
       <div>
-        <div className="dash-bottom-title">Bienestar del lote</div>
-        <div className="dash-bottom-sub" style={{ color: 'var(--green-d)' }}>Bueno / sin estres termico</div>
+        <div className="dash-bottom-title">¿Cómo están las aves?</div>
+        <div className="dash-bottom-sub" style={{ color: 'var(--green-d)' }}>Bien · sin estrés por calor</div>
       </div>
       <button className="mini-btn dash-bottom-cta">
         Detalles <IcChevronRight size={11} />
       </button>
     </div>
-    <div className="dash-wellbeing-label">Score de bienestar (ultimos 10 dias)</div>
+    <div className="dash-wellbeing-label">Bienestar del lote (últimos 10 días)</div>
     <Sparkline data={wellbeingTrend} w={290} h={42} color="#10b981" fill="rgba(16, 185, 129, 0.18)" />
   </Card>
 )
