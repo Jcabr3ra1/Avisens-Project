@@ -1,12 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { isAxiosError } from 'axios'
+import { login } from '@shared/api'
 import './LoginForm.css'
-
-const DEMO_USERS = [
-  { rol: 'Administrador', nombre: 'Don Carlos', email: 'admin@avisens.co', init: 'DC', color: '#a78bfa', desc: 'Dueño de granja' },
-  { rol: 'Supervisor', nombre: 'Camila', email: 'camila@laspalmas.co', init: 'CM', color: '#10b981', desc: 'Supervisa galpones' },
-  { rol: 'Operario', nombre: 'Edison', email: 'edison@avisens.co', init: 'ER', color: '#22d3ee', desc: 'Trabaja en campo' },
-]
 
 function LoginForm() {
   const navigate = useNavigate()
@@ -17,7 +13,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
 
@@ -27,21 +23,22 @@ function LoginForm() {
     }
 
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      await login({ email, password })
       navigate('/dashboard')
-    }, 900)
-  }
-
-  function handleQuickAccess(demoEmail: string) {
-    setEmail(demoEmail)
-    setPassword('demo1234')
-    setError('')
-    setLoading(true)
-    setTimeout(() => {
+    } catch (err) {
+      if (isAxiosError(err) && err.response) {
+        setError(
+          err.response.status === 401
+            ? 'Correo o contraseña incorrectos.'
+            : 'No se pudo iniciar sesión. Intente de nuevo.',
+        )
+      } else {
+        setError('No se pudo conectar con el servidor.')
+      }
+    } finally {
       setLoading(false)
-      navigate('/dashboard')
-    }, 700)
+    }
   }
 
   return (
@@ -135,30 +132,6 @@ function LoginForm() {
           {loading ? <span className="lf-spinner" aria-hidden="true" /> : 'Entrar a mi granja'}
         </button>
       </form>
-
-      <div className="lf-divider">
-        <span>Probar sin registrarse</span>
-      </div>
-
-      <div className="lf-demo-grid">
-        {DEMO_USERS.map(u => (
-          <button
-            key={u.email}
-            className="lf-demo-btn"
-            onClick={() => handleQuickAccess(u.email)}
-            disabled={loading}
-          >
-            <span className="lf-demo-avatar" style={{ background: u.color + '18', color: u.color }}>
-              {u.init}
-            </span>
-            <span className="lf-demo-copy">
-              <span className="lf-demo-nombre">{u.nombre}</span>
-              <span className="lf-demo-rol">{u.rol}</span>
-              <span className="lf-demo-desc">{u.desc}</span>
-            </span>
-          </button>
-        ))}
-      </div>
 
       <p className="lf-back">
         <Link to="/">← Volver al inicio</Link>
