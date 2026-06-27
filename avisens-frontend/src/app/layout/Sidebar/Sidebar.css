@@ -1,9 +1,8 @@
 .dash-sidebar {
   width: 268px;
   flex-shrink: 0;
-  background:
-    linear-gradient(180deg, rgba(9, 30, 24, 0.98), rgba(7, 23, 19, 0.98)),
-    #071713;
+  background: #ffffff;
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 16px 0;
@@ -12,7 +11,7 @@
   height: 100vh;
   overflow: hidden;
   transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-  box-shadow: 18px 0 48px rgba(7, 23, 19, 0.18);
+  box-shadow: 4px 0 24px rgba(10, 40, 28, 0.06);
 }
 
 .dash-sidebar::before {
@@ -21,11 +20,7 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 28px 28px;
-  opacity: 0.28;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.03) 0%, transparent 40%);
 }
 
 .dash-side-blob {
@@ -54,14 +49,18 @@
 .dash-workspace-logo {
   width: 38px;
   height: 38px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #facc15 0%, #22c55e 52%, #0f766e 100%);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
   flex-shrink: 0;
-  box-shadow: 0 10px 24px rgba(16, 185, 129, 0.28);
+  overflow: hidden;
+}
+
+.dash-workspace-logo-img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
 }
 
 .dash-workspace-name {
@@ -70,16 +69,16 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1;
-  color: #ffffff;
+  color: var(--text);
 }
 
 .dash-sidebar-toggle {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.72);
+  background: var(--bg-tint);
+  border: 1px solid var(--border);
+  color: var(--text3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -89,9 +88,9 @@
 }
 
 .dash-sidebar-toggle:hover {
-  border-color: rgba(52, 211, 153, 0.42);
-  color: #ffffff;
-  background: rgba(16, 185, 129, 0.16);
+  border-color: var(--green);
+  color: var(--green-d);
+  background: #ecfdf5;
 }
 
 .dash-sidebar-toggle:active {
@@ -127,7 +126,7 @@
   font-family: 'DM Mono', monospace;
   font-size: 9.5px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.38);
+  color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.14em;
   padding: 0 12px 7px;
@@ -140,7 +139,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.12) 0%, transparent 100%);
+  background: linear-gradient(90deg, var(--border) 0%, transparent 100%);
 }
 
 .dash-side-item {
@@ -150,7 +149,7 @@
   gap: 11px;
   padding: 10px 12px;
   border-radius: 12px;
-  color: rgba(255, 255, 255, 0.64);
+  color: var(--text2);
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
@@ -159,15 +158,15 @@
 }
 
 .dash-side-item:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: #ffffff;
+  background: var(--bg-tint);
+  color: var(--text);
 }
 
 .dash-side-item.active {
-  background: linear-gradient(90deg, rgba(16, 185, 129, 0.22) 0%, rgba(59, 130, 246, 0.12) 100%);
-  color: #ffffff;
+  background: linear-gradient(90deg, #ecfdf5 0%, rgba(16, 185, 129, 0.08) 100%);
+  color: var(--green-dd);
   font-weight: 600;
-  box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.15);
 }
 
 .dash-side-accent {
@@ -182,8 +181,8 @@
 }
 
 .dash-side-item.active .dash-side-accent {
-  background: #34d399;
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.62);
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
 }
 
 .dash-side-item-icon {
@@ -193,16 +192,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.48);
+  color: var(--text3);
   transition: color 0.15s;
 }
 
 .dash-side-item:hover .dash-side-item-icon {
-  color: #ffffff;
+  color: var(--text);
 }
 
 .dash-side-item.active .dash-side-item-icon {
-  color: #a7f3d0;
+  color: var(--green-d);
 }
 
 .dash-side-item-icon-dot {
@@ -214,7 +213,7 @@
   height: 7px;
   border-radius: 50%;
   background: var(--warning);
-  border: 2px solid #071713;
+  border: 2px solid #ffffff;
 }
 
 .dash-side-item-label {
@@ -224,7 +223,7 @@
 
 .dash-side-badge {
   background: var(--warning);
-  color: #071713;
+  color: #ffffff;
   font-size: 10px;
   font-weight: 700;
   font-family: 'DM Mono', monospace;
@@ -237,8 +236,8 @@
 .dash-side-status {
   margin: 16px 14px 10px;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.075);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--bg-tint);
+  border: 1px solid var(--border);
   border-radius: 16px;
   position: relative;
   z-index: 1;
@@ -252,7 +251,7 @@
   left: -50%;
   width: 200%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.68), transparent);
+  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.5), transparent);
   animation: dash-sweep 4s ease-in-out infinite;
 }
 
@@ -271,7 +270,7 @@
 .dash-side-status-title {
   font-size: 11.5px;
   font-weight: 600;
-  color: #a7f3d0;
+  color: var(--green-d);
   letter-spacing: -0.005em;
 }
 
@@ -291,13 +290,13 @@
   font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.02em;
-  color: #ffffff;
+  color: var(--text);
   line-height: 1;
 }
 
 .dash-side-stat-lbl {
   font-size: 9.5px;
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -332,7 +331,7 @@
 }
 
 .dash-page.sidebar-collapsed .dash-side-section-label::after {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--border);
   margin: 0;
 }
 
@@ -385,7 +384,7 @@
   left: calc(100% + 8px);
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(10, 22, 18, 0.95);
+  background: var(--text);
   color: #ffffff;
   font-size: 11.5px;
   font-weight: 500;
@@ -433,7 +432,7 @@
     z-index: 40;
     flex-direction: row;
     padding: 8px 10px;
-    box-shadow: 0 -18px 40px rgba(7, 23, 19, 0.2);
+    box-shadow: 0 -18px 40px rgba(26, 22, 18, 0.2);
   }
 
   .dash-side-header,

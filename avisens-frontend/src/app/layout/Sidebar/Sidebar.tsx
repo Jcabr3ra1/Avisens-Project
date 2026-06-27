@@ -1,5 +1,9 @@
+// Sidebar.tsx — Menú lateral del dashboard
+// Muestra la navegación principal con 3 secciones: Día a día, Plata y cuentas, Configuración
+// Incluye panel de estado ("Todo conectado") con galpones, aves y alertas
+// Se colapsa con ⌘B, en móvil se convierte en bottom navigation
 import { NavLink } from 'react-router-dom'
-import { IcEgg, IcSidebar } from '@shared/ui/icons/icons'
+import { IcSidebar } from '@shared/ui/icons/icons'
 import { NAV_SECTIONS } from './navConfig'
 import './Sidebar.css'
 
@@ -18,10 +22,10 @@ const Sidebar = ({ collapsed, onToggle, galponesActivos, totalAves, totalAlertas
     <div className="dash-side-header">
       <div className="dash-side-brand">
         <div className="dash-workspace-logo">
-          <IcEgg size={18} />
+          <img src="/views/avisens/img/logo.png" alt="AVISENS" className="dash-workspace-logo-img" />
         </div>
         <div className="dash-workspace-name">
-          avisens<span style={{ color: 'var(--green)' }}>.</span>
+          AVISENS
         </div>
       </div>
       <button
@@ -65,7 +69,7 @@ const Sidebar = ({ collapsed, onToggle, galponesActivos, totalAves, totalAlertas
           <span className="dot" />
           <span className="ring" />
         </span>
-        <span className="dash-side-status-title">Sistema en línea</span>
+        <span className="dash-side-status-title">Todo conectado</span>
       </div>
       <div className="dash-side-status-stats">
         <div className="dash-side-stat">
