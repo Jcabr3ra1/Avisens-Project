@@ -1,0 +1,118 @@
+{
+  "info": {
+    "name": "Avisens API",
+    "description": "Colección para probar la API de Avisens.\n\nFlujo: 1) ejecuta 'Login' (guarda los tokens automáticamente en las variables de la colección). 2) usa cualquier endpoint de 'usuarios': el token se adjunta solo.\n\nCredenciales de prueba: admin@avisens.com / Admin1234!",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "pm.collectionVariables.set('accessToken', data.access_token);",
+                  "pm.collectionVariables.set('refreshToken', data.refresh_token);",
+                  "pm.test('login ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@avisens.com\",\n  \"password\": \"Admin1234!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data = pm.response.json();",
+                  "pm.collectionVariables.set('accessToken', data.access_token);",
+                  "pm.collectionVariables.set('refreshToken', data.refresh_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{refreshToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/refresh", "host": ["{{baseUrl}}"], "path": ["auth", "refresh"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{refreshToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Listar usuarios",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/usuarios", "host": ["{{baseUrl}}"], "path": ["usuarios"] }
+          }
+        },
+        {
+          "name": "Crear usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/usuarios", "host": ["{{baseUrl}}"], "path": ["usuarios"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre_completo\": \"Maria Lopez\",\n  \"cedula\": \"1098765432\",\n  \"email\": \"maria@granja.com\",\n  \"password\": \"Maria1234\",\n  \"telefono\": \"3001234567\",\n  \"rol_id\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "Obtener usuario por id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/usuarios/1", "host": ["{{baseUrl}}"], "path": ["usuarios", "1"] }
+          }
+        },
+        {
+          "name": "Desactivar usuario",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/usuarios/2", "host": ["{{baseUrl}}"], "path": ["usuarios", "2"] }
+          }
+        }
+      ]
+    }
+  ]
+}

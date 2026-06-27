@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -14,6 +15,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
+import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 
 @ApiTags('usuarios')
 @ApiBearerAuth()
@@ -39,6 +41,15 @@ export class UsuariosController {
   @ApiOperation({ summary: 'Obtener un usuario por ID (solo Admin)' })
   obtener(@Param('id', ParseIntPipe) id: number) {
     return this.usuariosService.obtener(id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar un usuario (solo Admin)' })
+  actualizar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateUsuarioDto,
+  ) {
+    return this.usuariosService.actualizar(id, dto);
   }
 
   @Delete(':id')
