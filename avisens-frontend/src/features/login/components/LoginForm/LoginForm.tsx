@@ -1,12 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { isAxiosError } from 'axios'
+import { login } from '@shared/api'
 import './LoginForm.css'
-
-const DEMO_USERS = [
-  { rol: 'Administrador', email: 'admin@avisens.co',        init: 'AA', color: '#a78bfa' },
-  { rol: 'Usuario',       email: 'carlos@laspalmas.co',     init: 'CM', color: '#10b981' },
-  { rol: 'Operario',      email: 'juan@avisens.co',         init: 'JR', color: '#22d3ee' },
-]
 
 function LoginForm() {
   const navigate = useNavigate()
@@ -17,31 +13,37 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  // Lógica central de login contra el backend.
+  async function doLogin(correo: string, clave: string) {
     setError('')
 
-    if (!email || !password) {
+    if (!correo || !clave) {
       setError('Completa todos los campos.')
       return
     }
 
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      await login({ email: correo, password: clave })
       navigate('/dashboard')
-    }, 900)
+    } catch (err) {
+      if (isAxiosError(err) && err.response) {
+        setError(
+          err.response.status === 401
+            ? 'Correo o contraseña incorrectos.'
+            : 'No se pudo iniciar sesión. Intenta de nuevo.',
+        )
+      } else {
+        setError('No se pudo conectar con el servidor.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
-  function handleQuickAccess(demoEmail: string) {
-    setEmail(demoEmail)
-    setPassword('demo1234')
-    setError('')
-    setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
-      navigate('/dashboard')
-    }, 700)
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    doLogin(email, password)
   }
 
   return (
@@ -49,7 +51,7 @@ function LoginForm() {
       <div className="lf-header">
         <span className="lf-kicker">Acceso seguro</span>
         <h1 className="lf-title">Bienvenido de nuevo</h1>
-        <p className="lf-sub">Ingresa con tu cuenta AVISENS o usa un perfil de prueba.</p>
+        <p className="lf-sub">Ingresa con tu cuenta AVISENS.</p>
       </div>
 
       <form className="lf-form" onSubmit={handleSubmit} noValidate>
@@ -135,29 +137,6 @@ function LoginForm() {
           {loading ? <span className="lf-spinner" aria-hidden="true" /> : 'Iniciar sesión'}
         </button>
       </form>
-
-      <div className="lf-divider">
-        <span>Acceso rápido de prueba</span>
-      </div>
-
-      <div className="lf-demo-grid">
-        {DEMO_USERS.map(u => (
-          <button
-            key={u.email}
-            className="lf-demo-btn"
-            onClick={() => handleQuickAccess(u.email)}
-            disabled={loading}
-          >
-            <span className="lf-demo-avatar" style={{ background: u.color + '22', color: u.color }}>
-              {u.init}
-            </span>
-            <span className="lf-demo-copy">
-              <span className="lf-demo-rol">{u.rol}</span>
-              <span className="lf-demo-email">{u.email}</span>
-            </span>
-          </button>
-        ))}
-      </div>
 
       <p className="lf-back">
         <Link to="/">Volver al inicio</Link>

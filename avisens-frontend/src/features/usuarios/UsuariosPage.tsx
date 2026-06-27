@@ -1,9 +1,319 @@
+import { useEffect, useState, type FormEvent } from 'react'
+import { isAxiosError } from 'axios'
+import {
+  listarUsuarios,
+  crearUsuario,
+  actualizarUsuario,
+  desactivarUsuario,
+  type Usuario,
+  type CrearUsuarioPayload,
+} from '@shared/api'
 import './UsuariosPage.css'
 
+// El backend no expone un endpoint de roles, así que los listamos aquí.
+// Coinciden con los insertados en database/init/01-init.sql.
+const ROLES = [
+  { id: 1, nombre: 'Administrador' },
+  { id: 2, nombre: 'Propietario' },
+  { id: 3, nombre: 'Operario' },
+]
+
+const FORM_INICIAL: CrearUsuarioPayload = {
+  nombre_completo: '',
+  cedula: '',
+  email: '',
+  password: '',
+  telefono: '',
+  rol_id: 2,
+}
+
+// Traduce un error de axios a un mensaje legible para el usuario.
+function mensajeError(err: unknown, fallback: string): string {
+  if (isAxiosError(err) && err.response) {
+    if (err.response.status === 403) {
+      return 'No tienes permisos: esta sección requiere rol Administrador.'
+    }
+    const data = err.response.data as { message?: string | string[] }
+    if (data?.message) {
+      return Array.isArray(data.message) ? data.message.join(', ') : data.message
+    }
+  }
+  return fallback
+}
+
 function UsuariosPage() {
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
+
+  const [modalAbierto, setModalAbierto] = useState(false)
+  // null = creando un usuario nuevo; un id = editando ese usuario.
+  const [editandoId, setEditandoId] = useState<number | null>(null)
+  const [form, setForm] = useState<CrearUsuarioPayload>(FORM_INICIAL)
+  const [guardando, setGuardando] = useState(false)
+  const [errorForm, setErrorForm] = useState('')
+
+  const modoEdicion = editandoId !== null
+
+  async function cargarUsuarios() {
+    setCargando(true)
+    setError('')
+    try {
+      setUsuarios(await listarUsuarios())
+    } catch (err) {
+      setError(mensajeError(err, 'No se pudieron cargar los usuarios.'))
+    } finally {
+      setCargando(false)
+    }
+  }
+
+  useEffect(() => {
+    cargarUsuarios()
+  }, [])
+
+  function abrirCrear() {
+    setEditandoId(null)
+    setForm(FORM_INICIAL)
+    setErrorForm('')
+    setModalAbierto(true)
+  }
+
+  function abrirEditar(u: Usuario) {
+    setEditandoId(u.id)
+    setForm({
+      nombre_completo: u.nombre_completo,
+      cedula: u.cedula,
+      email: u.email,
+      password: '', // vacío = no cambiar la contraseña
+      telefono: u.telefono ?? '',
+      rol_id: u.rol.id,
+    })
+    setErrorForm('')
+    setModalAbierto(true)
+  }
+
+  function actualizarCampo<K extends keyof CrearUsuarioPayload>(
+    campo: K,
+    valor: CrearUsuarioPayload[K],
+  ) {
+    setForm((prev) => ({ ...prev, [campo]: valor }))
+  }
+
+  async function handleGuardar(e: FormEvent) {
+    e.preventDefault()
+    setErrorForm('')
+    setGuardando(true)
+    try {
+      const telefono = form.telefono?.trim() || undefined
+      if (modoEdicion && editandoId !== null) {
+        // En edición solo mandamos la contraseña si el campo no quedó vacío.
+        const { password, ...resto } = form
+        await actualizarUsuario(editandoId, {
+          ...resto,
+          telefono,
+          ...(password ? { password } : {}),
+        })
+      } else {
+        await crearUsuario({ ...form, telefono })
+      }
+      setModalAbierto(false)
+      await cargarUsuarios()
+    } catch (err) {
+      setErrorForm(
+        mensajeError(err, `No se pudo ${modoEdicion ? 'actualizar' : 'crear'} el usuario.`),
+      )
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  async function handleDesactivar(u: Usuario) {
+    if (!window.confirm(`¿Desactivar a ${u.nombre_completo}?`)) return
+    try {
+      await desactivarUsuario(u.id)
+      await cargarUsuarios()
+    } catch (err) {
+      setError(mensajeError(err, 'No se pudo desactivar el usuario.'))
+    }
+  }
+
+  async function handleActivar(u: Usuario) {
+    try {
+      await actualizarUsuario(u.id, { activo: true })
+      await cargarUsuarios()
+    } catch (err) {
+      setError(mensajeError(err, 'No se pudo activar el usuario.'))
+    }
+  }
+
   return (
-    <div className="page-container">
-      <h1>Usuarios y Roles</h1>
+    <div className="page-container usuarios">
+      <header className="usuarios-head">
+        <div>
+          <h1 className="usuarios-title">Usuarios y Roles</h1>
+          <p className="usuarios-sub">Gestiona las cuentas que acceden al sistema.</p>
+        </div>
+        <button className="btn-primary" onClick={abrirCrear}>
+          + Nuevo usuario
+        </button>
+      </header>
+
+      {error && <div className="usuarios-alert" role="alert">{error}</div>}
+
+      <div className="usuarios-card">
+        {cargando ? (
+          <p className="usuarios-empty">Cargando usuarios…</p>
+        ) : usuarios.length === 0 ? (
+          <p className="usuarios-empty">No hay usuarios registrados.</p>
+        ) : (
+          <table className="usuarios-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Cédula</th>
+                <th>Teléfono</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th aria-label="Acciones"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {usuarios.map((u) => (
+                <tr key={u.id} className={u.activo ? '' : 'is-inactive'}>
+                  <td>{u.nombre_completo}</td>
+                  <td>{u.email}</td>
+                  <td>{u.cedula}</td>
+                  <td>{u.telefono ?? '—'}</td>
+                  <td><span className="rol-badge">{u.rol.nombre}</span></td>
+                  <td>
+                    <span className={`estado-badge ${u.activo ? 'activo' : 'inactivo'}`}>
+                      {u.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td className="col-acciones">
+                    <button className="btn-ghost-sm" onClick={() => abrirEditar(u)}>
+                      Editar
+                    </button>
+                    {u.activo ? (
+                      <button
+                        className="btn-danger-ghost"
+                        onClick={() => handleDesactivar(u)}
+                      >
+                        Desactivar
+                      </button>
+                    ) : (
+                      <button
+                        className="btn-success-ghost"
+                        onClick={() => handleActivar(u)}
+                      >
+                        Activar
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {modalAbierto && (
+        <div className="modal-overlay" onClick={() => setModalAbierto(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">
+              {modoEdicion ? 'Editar usuario' : 'Nuevo usuario'}
+            </h2>
+
+            <form className="modal-form" onSubmit={handleGuardar}>
+              <label className="campo">
+                <span>Nombre completo</span>
+                <input
+                  value={form.nombre_completo}
+                  onChange={(e) => actualizarCampo('nombre_completo', e.target.value)}
+                  required
+                />
+              </label>
+
+              <div className="campo-fila">
+                <label className="campo">
+                  <span>Cédula</span>
+                  <input
+                    value={form.cedula}
+                    onChange={(e) => actualizarCampo('cedula', e.target.value)}
+                    required
+                  />
+                </label>
+                <label className="campo">
+                  <span>Teléfono <em>(opcional)</em></span>
+                  <input
+                    value={form.telefono}
+                    onChange={(e) => actualizarCampo('telefono', e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <label className="campo">
+                <span>Correo electrónico</span>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => actualizarCampo('email', e.target.value)}
+                  required
+                />
+              </label>
+
+              <div className="campo-fila">
+                <label className="campo">
+                  <span>
+                    Contraseña{' '}
+                    <em>{modoEdicion ? '(vacío = sin cambio)' : '(mín. 8)'}</em>
+                  </span>
+                  <input
+                    type="password"
+                    minLength={8}
+                    placeholder={modoEdicion ? '••••••••' : ''}
+                    value={form.password}
+                    onChange={(e) => actualizarCampo('password', e.target.value)}
+                    required={!modoEdicion}
+                  />
+                </label>
+                <label className="campo">
+                  <span>Rol</span>
+                  <select
+                    value={form.rol_id}
+                    onChange={(e) => actualizarCampo('rol_id', Number(e.target.value))}
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r.id} value={r.id}>{r.nombre}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {errorForm && <p className="modal-error" role="alert">{errorForm}</p>}
+
+              <div className="modal-acciones">
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => setModalAbierto(false)}
+                  disabled={guardando}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary" disabled={guardando}>
+                  {guardando
+                    ? 'Guardando…'
+                    : modoEdicion
+                      ? 'Guardar cambios'
+                      : 'Crear usuario'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

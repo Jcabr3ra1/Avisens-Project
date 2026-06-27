@@ -225,92 +225,6 @@
   animation: spin 0.7s linear infinite;
 }
 
-.lf-divider {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 1.05rem 0 0.8rem;
-  color: var(--text3);
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.lf-divider::before,
-.lf-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-.lf-demo-grid {
-  display: grid;
-  gap: 0.55rem;
-  margin-bottom: 1.05rem;
-}
-
-.lf-demo-btn {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.66rem 0.72rem;
-  background: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-}
-
-.lf-demo-btn:hover:not(:disabled) {
-  background: var(--card-h);
-  border-color: var(--green);
-  box-shadow: 0 12px 28px -22px rgba(10, 40, 28, 0.45);
-  transform: translateY(-1px);
-}
-
-.lf-demo-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.lf-demo-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.lf-demo-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.12rem;
-}
-
-.lf-demo-rol {
-  color: var(--text);
-  font-size: 0.86rem;
-  font-weight: 700;
-}
-
-.lf-demo-email {
-  overflow: hidden;
-  color: var(--text3);
-  font-size: 0.76rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .lf-back {
   text-align: center;
   font-size: 0.84rem;
@@ -335,38 +249,13 @@
   }
 }
 
-@media (min-width: 921px) {
-  .lf-demo-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .lf-demo-btn {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 0.45rem;
-    min-height: 82px;
-    padding: 0.65rem 0.45rem;
-    text-align: center;
-  }
-
-  .lf-demo-copy {
-    align-items: center;
-  }
-
-  .lf-demo-email {
-    display: none;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .lf-card,
   .lf-spinner {
     animation: none;
   }
 
-  .lf-btn-primary:hover:not(:disabled),
-  .lf-demo-btn:hover:not(:disabled) {
+  .lf-btn-primary:hover:not(:disabled) {
     transform: none;
   }
 }
