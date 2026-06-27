@@ -23,11 +23,11 @@
 .navbar[data-scrolled="true"] {
   top: 0;
   min-height: 64px;
-  background: transparent;
-  border-color: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid rgba(225, 237, 229, 0.6);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: 0 4px 20px rgba(10, 40, 28, 0.06);
 }
 
 .nav-logo {
@@ -104,49 +104,50 @@
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 0.18rem;
+  gap: 0.25rem;
   list-style: none;
   margin: 0 auto;
-  padding: 0.28rem;
-  border-radius: 999px;
-  background: transparent;
-  border: 0;
-  transition: background 0.35s ease, border-color 0.35s ease;
+  padding: 0.3rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
 .navbar[data-scrolled="true"] .nav-links {
-  background: transparent;
-  border-color: transparent;
+  background: var(--bg-tint);
+  border-color: var(--border);
+  box-shadow: 0 2px 8px rgba(10, 40, 28, 0.04);
+  backdrop-filter: none;
 }
 
 .nav-links a {
   position: relative;
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
-  padding: 0 0.82rem;
-  border-radius: 999px;
-  color: rgba(255, 255, 255, 0.92);
+  min-height: 36px;
+  padding: 0 1rem;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.9);
   text-decoration: none;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 600;
-  text-shadow: none;
   transition: color 0.25s ease, background 0.25s ease;
 }
 
 .nav-links a:hover {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .navbar[data-scrolled="true"] .nav-links a {
-  color: #164735;
-  text-shadow: none;
+  color: var(--text2);
 }
 
 .navbar[data-scrolled="true"] .nav-links a:hover {
   color: var(--green-d);
-  background: rgba(16, 185, 129, 0.08);
+  background: #ecfdf5;
 }
 
 .nav-actions {

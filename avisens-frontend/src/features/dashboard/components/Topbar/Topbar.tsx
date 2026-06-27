@@ -54,7 +54,7 @@ const Topbar = ({
               <IcLeaf size={14} />
             </span>
             <div className="dash-granja-text">
-              <div className="dash-granja-label">Granja activa</div>
+              <div className="dash-granja-label">Su granja</div>
               <div className="dash-granja-name">
                 {granja.nombre} <IcChevronDown size={11} />
               </div>
@@ -62,7 +62,7 @@ const Topbar = ({
           </button>
           {granjaOpen && (
             <div className="dash-granja-dropdown" role="listbox">
-              <div className="dash-dropdown-label">Tus granjas</div>
+              <div className="dash-dropdown-label">Sus granjas</div>
               {GRANJAS.map((g) => (
                 <button
                   key={g.id}
@@ -87,7 +87,7 @@ const Topbar = ({
               ))}
               <div className="dash-dropdown-divider">
                 <button className="dash-dropdown-add">
-                  <IcPlus size={14} /> Añadir granja
+                  <IcPlus size={14} /> Agregar otra granja
                 </button>
               </div>
             </div>
@@ -103,7 +103,7 @@ const Topbar = ({
           title={`Buscar o ejecutar comando (${cmdKey}+K)`}
         >
           <IcSearch size={15} />
-          <span className="dash-cmdbar-placeholder">Buscar galpón, alerta, lote…</span>
+          <span className="dash-cmdbar-placeholder">¿Qué necesita buscar?</span>
           <span className="dash-cmdbar-kbd mono">{cmdKey}K</span>
         </button>
       </div>
@@ -211,7 +211,7 @@ const Topbar = ({
                 </div>
               </div>
               <button className="dash-profile-item">
-                <IcUserCircle size={14} /> Mi perfil
+                <IcUserCircle size={14} /> Mi cuenta
               </button>
               <button className="dash-profile-item">
                 <IcSettings size={14} /> Preferencias

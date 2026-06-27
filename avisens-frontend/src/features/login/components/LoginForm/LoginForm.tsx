@@ -13,25 +13,25 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
 
-  // Lógica central de login contra el backend.
-  async function doLogin(correo: string, clave: string) {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
     setError('')
 
-    if (!correo || !clave) {
-      setError('Completa todos los campos.')
+    if (!email || !password) {
+      setError('Por favor complete todos los campos.')
       return
     }
 
     setLoading(true)
     try {
-      await login({ email: correo, password: clave })
+      await login({ email, password })
       navigate('/dashboard')
     } catch (err) {
       if (isAxiosError(err) && err.response) {
         setError(
           err.response.status === 401
             ? 'Correo o contraseña incorrectos.'
-            : 'No se pudo iniciar sesión. Intenta de nuevo.',
+            : 'No se pudo iniciar sesión. Intente de nuevo.',
         )
       } else {
         setError('No se pudo conectar con el servidor.')
@@ -41,17 +41,12 @@ function LoginForm() {
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    doLogin(email, password)
-  }
-
   return (
     <div className="lf-card">
       <div className="lf-header">
-        <span className="lf-kicker">Acceso seguro</span>
-        <h1 className="lf-title">Bienvenido de nuevo</h1>
-        <p className="lf-sub">Ingresa con tu cuenta AVISENS.</p>
+        <span className="lf-kicker">Ingreso seguro</span>
+        <h1 className="lf-title">Bienvenido a AVISENS</h1>
+        <p className="lf-sub">Entre con su cuenta o use un perfil de prueba para conocer la plataforma.</p>
       </div>
 
       <form className="lf-form" onSubmit={handleSubmit} noValidate>
@@ -66,7 +61,7 @@ function LoginForm() {
               id="email"
               className="lf-input"
               type="email"
-              placeholder="usuario@granja.co"
+              placeholder="su.correo@granja.co"
               value={email}
               onChange={e => setEmail(e.target.value)}
               autoComplete="email"
@@ -128,18 +123,18 @@ function LoginForm() {
               checked={remember}
               onChange={e => setRemember(e.target.checked)}
             />
-            <span>Recordarme</span>
+            <span>Recordarme en este equipo</span>
           </label>
-          <a className="lf-link" href="#recuperar">¿Olvidaste tu contraseña?</a>
+          <a className="lf-link" href="#recuperar">¿Olvidó su contraseña?</a>
         </div>
 
         <button className="lf-btn-primary" type="submit" disabled={loading} aria-busy={loading}>
-          {loading ? <span className="lf-spinner" aria-hidden="true" /> : 'Iniciar sesión'}
+          {loading ? <span className="lf-spinner" aria-hidden="true" /> : 'Entrar a mi granja'}
         </button>
       </form>
 
       <p className="lf-back">
-        <Link to="/">Volver al inicio</Link>
+        <Link to="/">← Volver al inicio</Link>
       </p>
     </div>
   )
