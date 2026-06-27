@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { isAxiosError } from 'axios'
-import { login } from '@shared/api'
 import './LoginForm.css'
+
+const DEMO_USERS = [
+  { rol: 'Administrador', nombre: 'Don Carlos', email: 'admin@avisens.co', init: 'DC', color: '#a78bfa', desc: 'Dueño de granja' },
+  { rol: 'Supervisor', nombre: 'Camila', email: 'camila@laspalmas.co', init: 'CM', color: '#10b981', desc: 'Supervisa galpones' },
+  { rol: 'Operario', nombre: 'Edison', email: 'edison@avisens.co', init: 'ER', color: '#22d3ee', desc: 'Trabaja en campo' },
+]
 
 function LoginForm() {
   const navigate = useNavigate()
@@ -13,45 +17,39 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
 
-  // Lógica central de login contra el backend.
-  async function doLogin(correo: string, clave: string) {
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
     setError('')
 
-    if (!correo || !clave) {
-      setError('Completa todos los campos.')
+    if (!email || !password) {
+      setError('Por favor complete todos los campos.')
       return
     }
 
     setLoading(true)
-    try {
-      await login({ email: correo, password: clave })
-      navigate('/dashboard')
-    } catch (err) {
-      if (isAxiosError(err) && err.response) {
-        setError(
-          err.response.status === 401
-            ? 'Correo o contraseña incorrectos.'
-            : 'No se pudo iniciar sesión. Intenta de nuevo.',
-        )
-      } else {
-        setError('No se pudo conectar con el servidor.')
-      }
-    } finally {
+    setTimeout(() => {
       setLoading(false)
-    }
+      navigate('/dashboard')
+    }, 900)
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    doLogin(email, password)
+  function handleQuickAccess(demoEmail: string) {
+    setEmail(demoEmail)
+    setPassword('demo1234')
+    setError('')
+    setLoading(true)
+    setTimeout(() => {
+      setLoading(false)
+      navigate('/dashboard')
+    }, 700)
   }
 
   return (
     <div className="lf-card">
       <div className="lf-header">
-        <span className="lf-kicker">Acceso seguro</span>
-        <h1 className="lf-title">Bienvenido de nuevo</h1>
-        <p className="lf-sub">Ingresa con tu cuenta AVISENS.</p>
+        <span className="lf-kicker">Ingreso seguro</span>
+        <h1 className="lf-title">Bienvenido a AVISENS</h1>
+        <p className="lf-sub">Entre con su cuenta o use un perfil de prueba para conocer la plataforma.</p>
       </div>
 
       <form className="lf-form" onSubmit={handleSubmit} noValidate>
@@ -66,7 +64,7 @@ function LoginForm() {
               id="email"
               className="lf-input"
               type="email"
-              placeholder="usuario@granja.co"
+              placeholder="su.correo@granja.co"
               value={email}
               onChange={e => setEmail(e.target.value)}
               autoComplete="email"
@@ -128,18 +126,42 @@ function LoginForm() {
               checked={remember}
               onChange={e => setRemember(e.target.checked)}
             />
-            <span>Recordarme</span>
+            <span>Recordarme en este equipo</span>
           </label>
-          <a className="lf-link" href="#recuperar">¿Olvidaste tu contraseña?</a>
+          <a className="lf-link" href="#recuperar">¿Olvidó su contraseña?</a>
         </div>
 
         <button className="lf-btn-primary" type="submit" disabled={loading} aria-busy={loading}>
-          {loading ? <span className="lf-spinner" aria-hidden="true" /> : 'Iniciar sesión'}
+          {loading ? <span className="lf-spinner" aria-hidden="true" /> : 'Entrar a mi granja'}
         </button>
       </form>
 
+      <div className="lf-divider">
+        <span>Probar sin registrarse</span>
+      </div>
+
+      <div className="lf-demo-grid">
+        {DEMO_USERS.map(u => (
+          <button
+            key={u.email}
+            className="lf-demo-btn"
+            onClick={() => handleQuickAccess(u.email)}
+            disabled={loading}
+          >
+            <span className="lf-demo-avatar" style={{ background: u.color + '18', color: u.color }}>
+              {u.init}
+            </span>
+            <span className="lf-demo-copy">
+              <span className="lf-demo-nombre">{u.nombre}</span>
+              <span className="lf-demo-rol">{u.rol}</span>
+              <span className="lf-demo-desc">{u.desc}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
       <p className="lf-back">
-        <Link to="/">Volver al inicio</Link>
+        <Link to="/">← Volver al inicio</Link>
       </p>
     </div>
   )
