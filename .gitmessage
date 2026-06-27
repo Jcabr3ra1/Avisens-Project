@@ -1,0 +1,13 @@
+# <tipo>(<alcance>): <descripción corta en español>
+#
+# Tipos: feat | fix | docs | style | refactor | test | chore | perf | ci | revert
+#
+# Ejemplos:
+#   feat(auth): agregar login con Google OAuth
+#   fix(api): corregir error al consultar sensores vacíos
+#   chore: actualizar dependencias de frontend
+#
+# Reglas:
+#   - Descripción en minúsculas, sin punto al final
+#   - Máximo 72 caracteres en esta línea
+#   - Cuerpo (abajo) para explicar el POR QUÉ si es necesario
