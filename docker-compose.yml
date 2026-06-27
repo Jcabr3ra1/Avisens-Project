@@ -1,0 +1,67 @@
+# Orquestación completa de Avisens: base de datos, backend y frontend.
+#
+# Levantar todo:   docker compose up --build
+# Apagar:          docker compose down
+# Apagar + borrar la base de datos: docker compose down -v
+#
+# Acceso una vez arriba:
+#   - Frontend (nginx):     http://localhost:8080
+#   - Backend / Swagger:    http://localhost:3000/docs
+#   - PostgreSQL:           localhost:5432  (usuario/clave: avisens)
+
+services:
+  # ----- Base de datos PostgreSQL -----
+  database:
+    build: ./database
+    container_name: avisens-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: avisens
+      POSTGRES_PASSWORD: avisens
+      POSTGRES_DB: avisens
+    ports:
+      - "5432:5432"
+    volumes:
+      - avisens_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U avisens -d avisens"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ----- Backend NestJS -----
+  backend:
+    build: ./avisens-backend
+    container_name: avisens-backend
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      # 'database' es el nombre del servicio: dentro de la red de Docker
+      # reemplaza a 'localhost'.
+      DATABASE_URL: "postgresql://avisens:avisens@database:5432/avisens?schema=public"
+      JWT_SECRET: cambia-esto-por-un-secreto-largo-y-aleatorio
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_SECRET: otro-secreto-distinto-tambien-largo
+      JWT_REFRESH_EXPIRES_IN: 7d
+      PORT: 3000
+    ports:
+      - "3000:3000"
+
+  # ----- Frontend React + nginx -----
+  frontend:
+    build:
+      context: ./avisens-frontend
+      args:
+        # El navegador pega a /api y nginx lo reenvía al backend
+        VITE_API_URL: /api
+    container_name: avisens-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  avisens_pg_data:
