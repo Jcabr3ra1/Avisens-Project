@@ -37,99 +37,7 @@
   min-width: 0;
 }
 
-/* ═══════════════════════════════════════════════════════ */
-/* ════════════════════ CHAT FAB ════════════════════════ */
-/* ═══════════════════════════════════════════════════════ */
-.dash-chat-fab {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 58px;
-  height: 58px;
-  border-radius: 18px;
-  border: 0;
-  background: linear-gradient(135deg, #0f766e 0%, #16a34a 64%, #84cc16 100%);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow:
-    0 18px 38px rgba(5, 150, 105, 0.28),
-    0 4px 8px rgba(10, 26, 20, 0.12),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.1);
-  z-index: 30;
-  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.2s,
-              background 0.2s;
-  animation: fab-in 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-@keyframes fab-in {
-  from { opacity: 0; transform: scale(0.5) translateY(20px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.dash-chat-fab:hover {
-  transform: translateY(-2px) scale(1.03);
-  box-shadow:
-    0 18px 40px rgba(5, 150, 105, 0.34),
-    0 6px 12px rgba(10, 26, 20, 0.16),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.1);
-}
-
-.dash-chat-fab:active {
-  transform: translateY(0) scale(0.96);
-}
-
-.dash-chat-fab.active {
-  background: linear-gradient(135deg, #0a1612 0%, #17352a 100%);
-  box-shadow:
-    0 10px 24px rgba(10, 26, 20, 0.32),
-    0 4px 8px rgba(10, 26, 20, 0.16);
-}
-
-.dash-chat-fab-badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  background: #ef4444;
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-  font-family: 'DM Mono', monospace;
-  border-radius: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2.5px solid var(--bg);
-  z-index: 2;
-}
-
-.dash-chat-fab-pulse {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 2px solid rgba(52, 211, 153, 0.6);
-  animation: fab-pulse 1.8s ease-out infinite;
-  pointer-events: none;
-}
-
-@keyframes fab-pulse {
-  0%   { transform: scale(1);   opacity: 0.7; }
-  100% { transform: scale(1.4); opacity: 0;   }
-}
-
 @media (max-width: 860px) {
-  .dash-chat-fab {
-    bottom: 16px;
-    right: 16px;
-    width: 52px;
-    height: 52px;
-  }
   .dash-content {
     padding-left: 14px;
     padding-right: 14px;
@@ -143,25 +51,12 @@
     padding-bottom: 116px;
   }
 
-  .dash-chat-fab {
-    bottom: 86px;
-  }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .dash-chat-fab-pulse,
-  .dash-chat-fab {
-    animation: none;
-  }
-}
-
-/* ─── Pausa animaciones cuando la pestaña no es visible (ahorra batería) ─── */
+/* ─── Pausa animaciones cuando la pestaña no es visible ─── */
 body[data-tab-hidden="true"] .dash-list-pulse .ring,
 body[data-tab-hidden="true"] .dash-vent-fan,
-body[data-tab-hidden="true"] .dash-chat-fab,
-body[data-tab-hidden="true"] .dash-chat-fab-pulse,
 body[data-tab-hidden="true"] .dash-attention-bar-dot,
-body[data-tab-hidden="true"] .dash-coop-emoji,
 body[data-tab-hidden="true"] .dash-metrics-hub-body {
   animation-play-state: paused !important;
 }

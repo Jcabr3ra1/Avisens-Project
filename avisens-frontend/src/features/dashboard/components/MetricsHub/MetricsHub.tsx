@@ -1,3 +1,7 @@
+// MetricsHub.tsx — Panel de métricas ambientales del galpón
+// 5 tabs: Temperatura, Humedad, Ventilación, Alimento, Agua
+// Cada tab muestra valor actual, estado, min/prom/max y gráfico de 24h
+// El tab de ventilación tiene gauge radial con ventilador girando y control manual
 import { IcFan } from '@shared/ui/icons/icons'
 import { BarChart, AreaChart, RadialGauge } from '../charts/charts'
 import { METRIC_TABS, TONE_HEX, TONE_VAR, TONE_LABEL } from '../../model'
@@ -136,7 +140,7 @@ const VentilacionBody = ({ speed, setSpeed, mode, setMode }: VentilacionBodyProp
       <div className="dash-metrics-hub-head">
         <div>
           <div className="dash-metrics-hub-title">Ventilación</div>
-          <div className="dash-metrics-hub-sub">Modo {mode.toLowerCase()} · 6 fans · zona única</div>
+          <div className="dash-metrics-hub-sub">En modo {mode.toLowerCase()} · 6 extractores prendidos</div>
         </div>
         <StatusPill tone={tone}>{mode}</StatusPill>
       </div>
@@ -156,12 +160,12 @@ const VentilacionBody = ({ speed, setSpeed, mode, setMode }: VentilacionBodyProp
             <div className="mono dash-vent-hub-value">
               {speed}<span className="dash-vent-hub-unit">%</span>
             </div>
-            <div className="dash-vent-hub-label">Velocidad actual</div>
+            <div className="dash-vent-hub-label">Velocidad de los extractores</div>
           </div>
         </div>
 
         <div className="dash-vent-hub-right">
-          <div className="dash-vent-hub-section-label">Modo de operación</div>
+          <div className="dash-vent-hub-section-label">¿Cómo quiere que funcionen?</div>
           <div className="dash-vent-modes">
             {(['Auto', 'Manual', 'Apagado'] as const).map((m) => (
               <button
@@ -179,7 +183,7 @@ const VentilacionBody = ({ speed, setSpeed, mode, setMode }: VentilacionBodyProp
             ))}
           </div>
 
-          <div className="dash-vent-hub-section-label">Velocidad manual</div>
+          <div className="dash-vent-hub-section-label">Ajustar velocidad a mano</div>
           <input
             type="range"
             min={0}
@@ -193,9 +197,9 @@ const VentilacionBody = ({ speed, setSpeed, mode, setMode }: VentilacionBodyProp
             aria-label="Velocidad de ventilación"
           />
           <div className="dash-vent-hub-stats">
-            <HubStat label="Consumo" value="1.4 kW" />
-            <HubStat label="Caudal"  value="62 m³/h" />
-            <HubStat label="Última"  value="hace 2s" />
+            <HubStat label="Gasto eléctrico" value="1.4 kW" />
+            <HubStat label="Aire que mueven"  value="62 m³/h" />
+            <HubStat label="Última lectura"  value="hace 2s" />
           </div>
         </div>
       </div>
