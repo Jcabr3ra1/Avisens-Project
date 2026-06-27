@@ -1,0 +1,67 @@
+title AVISENS · Módulo Usuario
+
+// ============================================================
+// MÓDULO USUARIO — la cuenta de la persona y su acceso
+// ============================================================
+
+usuarios [icon: user, color: cyan] {
+  id integer pk
+  rol_id integer fk          // -> roles (Módulo Admin)
+  nombre_completo string
+  cedula string unique
+  email string unique
+  password_hash string
+  telefono string
+  huella_voz_url string
+  pin_voz_hash string
+  activo bool
+  fecha_creacion datetime
+}
+
+// Estado de seguridad/acceso (1:1 con usuario)
+seguridad_cuenta [icon: shield-off, color: cyan] {
+  id integer pk
+  usuario_id integer fk
+  intentos_fallidos integer
+  bloqueado_hasta datetime
+  fecha_ultimo_login datetime
+  fecha_ultimo_cambio_password datetime
+}
+
+// Refresh tokens / sesiones activas (JWT + refresh)
+sesiones [icon: log-in, color: cyan] {
+  id integer pk
+  usuario_id integer fk
+  refresh_token_hash string
+  ip_origen string
+  user_agent string
+  expira_en datetime
+  revocada bool
+  fecha_creacion datetime
+}
+
+// Tokens para "olvide mi contrasena"
+recuperaciones_password [icon: rotate-ccw, color: cyan] {
+  id integer pk
+  usuario_id integer fk
+  token_hash string
+  expira_en datetime
+  usado bool
+  fecha_creacion datetime
+}
+
+
+// ============================================================
+// RELACIONES (LLAVES FORÁNEAS)
+// ============================================================
+seguridad_cuenta.usuario_id > usuarios.id
+sesiones.usuario_id > usuarios.id
+recuperaciones_password.usuario_id > usuarios.id
+
+// FK hacia el Módulo Admin (descomentar si unes los diagramas):
+// usuarios.rol_id > roles.id
+
+
+// ============================================================
+// FIN — Módulo Usuario: 4 tablas
+// ============================================================
