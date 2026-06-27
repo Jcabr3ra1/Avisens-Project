@@ -3,7 +3,6 @@
 // Es la primera pantalla que ve el administrador después de iniciar sesión.
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { IcClose } from '@shared/ui/icons/icons'
 import ChatPanel from './components/chat/ChatPanel'          // Panel lateral de chat (Equipo, IA, Voz)
 import MetricsHub from './components/MetricsHub/MetricsHub'  // Panel de métricas (temperatura, humedad, etc.)
 import CoopPlaceholder from './components/CoopPlaceholder/CoopPlaceholder' // Galpón 3D isométrico

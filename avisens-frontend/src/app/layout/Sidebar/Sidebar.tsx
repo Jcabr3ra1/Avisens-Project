@@ -3,7 +3,7 @@
 // Incluye panel de estado ("Todo conectado") con galpones, aves y alertas
 // Se colapsa con ⌘B, en móvil se convierte en bottom navigation
 import { NavLink } from 'react-router-dom'
-import { IcEgg, IcSidebar } from '@shared/ui/icons/icons'
+import { IcSidebar } from '@shared/ui/icons/icons'
 import { NAV_SECTIONS } from './navConfig'
 import './Sidebar.css'
 
