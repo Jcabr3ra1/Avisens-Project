@@ -39,3 +39,10 @@ Thumbs.db
 # AI tooling
 .agents/
 .claude/
+CLAUDE.md
+
+# Documentación local (no se versiona)
+Documentacion avisens/
+
+# Módulo descartado
+avisens-api-gateway/
