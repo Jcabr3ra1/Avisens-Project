@@ -101,3 +101,21 @@ VALUES (
     'admin@avisens.com',
     '$2b$12$PAVxbo4LH9jxr0WJAzlPZuud/RWKn8kf5FTmgNWYDdRWMdJGjkloe'
 );
+
+-- Cuentas de prueba por rol (contraseñas: Dueno1234 / Operario1234)
+INSERT INTO "usuarios" ("rol_id", "nombre_completo", "cedula", "email", "password_hash")
+VALUES
+(
+    (SELECT "id" FROM "roles" WHERE "nombre" = 'Propietario'),
+    'Don Carlos (Dueño)',
+    '1000000002',
+    'dueno@avisens.com',
+    '$2b$12$6bJhLvWYlOjERAwz/6DUKO9iy4nZjvj57GDkZ4cHIzKCTs1dOVvFO'
+),
+(
+    (SELECT "id" FROM "roles" WHERE "nombre" = 'Operario'),
+    'Edison (Operario)',
+    '1000000003',
+    'operario@avisens.com',
+    '$2b$12$oN1r4jDu/Djg9bz6uNHJX.iMEzMB4iuqlmsNWZdK4da1jMK5VVN.m'
+);
