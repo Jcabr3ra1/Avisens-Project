@@ -4,18 +4,25 @@
 // Se colapsa con ⌘B, en móvil se convierte en bottom navigation
 import { NavLink } from 'react-router-dom'
 import { IcSidebar } from '@shared/ui/icons/icons'
-import { NAV_SECTIONS } from './navConfig'
+import { NAV_SECTIONS, itemVisible } from './navConfig'
 import './Sidebar.css'
 
 type Props = {
   collapsed: boolean
   onToggle: () => void
+  rol: string | null
   galponesActivos: number
   totalAves: number
   totalAlertas: number
 }
 
-const Sidebar = ({ collapsed, onToggle, galponesActivos, totalAves, totalAlertas }: Props) => (
+const Sidebar = ({ collapsed, onToggle, rol, galponesActivos, totalAves, totalAlertas }: Props) => {
+  // Cada rol solo ve los menús permitidos; las secciones que quedan vacías se ocultan.
+  const secciones = NAV_SECTIONS
+    .map((sec) => ({ ...sec, items: sec.items.filter((item) => itemVisible(item, rol)) }))
+    .filter((sec) => sec.items.length > 0)
+
+  return (
   <aside className="dash-sidebar">
     <div className="dash-side-blob" />
 
@@ -39,7 +46,7 @@ const Sidebar = ({ collapsed, onToggle, galponesActivos, totalAves, totalAlertas
     </div>
 
     <nav className="dash-side-nav" aria-label="Navegación principal">
-      {NAV_SECTIONS.map((sec) => (
+      {secciones.map((sec) => (
         <div className="dash-side-section" key={sec.label}>
           <div className="dash-side-section-label">{sec.label}</div>
           {sec.items.map((item) => (
@@ -92,6 +99,7 @@ const Sidebar = ({ collapsed, onToggle, galponesActivos, totalAves, totalAlertas
       </div>
     </div>
   </aside>
-)
+  )
+}
 
 export default Sidebar

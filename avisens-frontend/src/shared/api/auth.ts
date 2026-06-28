@@ -1,5 +1,5 @@
 import { api } from './client'
-import { clearTokens, getRefreshToken, setTokens } from './tokens'
+import { clearTokens, getRefreshToken, setTokens, setUsuario } from './tokens'
 import type { LoginPayload, LoginResponse } from './types'
 
 // Funciones de autenticación contra el módulo `auth` del backend.
@@ -7,6 +7,7 @@ import type { LoginPayload, LoginResponse } from './types'
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
   const { data } = await api.post<LoginResponse>('/auth/login', payload)
   setTokens(data.access_token, data.refresh_token)
+  setUsuario(data.usuario) // guardamos el usuario (y su rol) para las vistas por rol
   return data
 }
 
