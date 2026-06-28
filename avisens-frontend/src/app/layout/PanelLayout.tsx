@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar/Sidebar'
+import { puedeAcceder } from './Sidebar/navConfig'
+import { getAccessToken, getRol } from '@shared/api'
 import { GALPONES } from '@shared/data/farm'
 import { usePauseOnHidden } from '@shared/hooks/usePauseOnHidden'
 import './PanelLayout.css'
@@ -18,6 +20,7 @@ function PanelLayout() {
     return window.localStorage.getItem('avisens.sidebarCollapsed') === '1'
   })
 
+  const location = useLocation()
   usePauseOnHidden()
 
   useEffect(() => {
@@ -39,11 +42,23 @@ function PanelLayout() {
   const totalAlertas = GALPONES.reduce((acc, g) => acc + g.alertas, 0)
   const galponesActivos = GALPONES.filter((g) => g.status !== 'empty').length
 
+  const rol = getRol()
+
+  // Guardia 1: sin sesión iniciada -> al login.
+  if (!getAccessToken()) {
+    return <Navigate to="/login" replace />
+  }
+  // Guardia 2: el rol no tiene permiso para esta ruta -> al dashboard.
+  if (!puedeAcceder(location.pathname, rol)) {
+    return <Navigate to="/dashboard" replace />
+  }
+
   return (
     <div className={`dash-page${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed((v) => !v)}
+        rol={rol}
         galponesActivos={galponesActivos}
         totalAves={totalAves}
         totalAlertas={totalAlertas}
