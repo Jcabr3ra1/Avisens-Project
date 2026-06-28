@@ -15,7 +15,7 @@ const ROL_OPERARIO = 'Operario';
 // Quién hace la petición. Su rol decide el alcance:
 // - Administrador: gestiona todos los usuarios.
 // - Propietario: solo gestiona Operarios.
-type Solicitante = { rol: string };
+type Solicitante = { id: number; rol: string };
 
 const USUARIO_SELECT = {
   id: true,
@@ -158,12 +158,20 @@ export class UsuariosService {
     });
   }
 
-  async desactivar(id: number, solicitante: Solicitante) {
+  async eliminar(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante); // valida existencia y alcance
-    return this.prisma.usuario.update({
-      where: { id },
-      data: { activo: false },
-      select: { id: true, activo: true },
-    });
+    if (id === solicitante.id) {
+      throw new ForbiddenException('No puedes eliminar tu propia cuenta');
+    }
+
+    // Borrado permanente: primero los datos relacionados (sesiones y
+    // seguridad tienen FK ON DELETE RESTRICT), luego el usuario.
+    await this.prisma.$transaction([
+      this.prisma.sesion.deleteMany({ where: { usuario_id: id } }),
+      this.prisma.seguridadCuenta.deleteMany({ where: { usuario_id: id } }),
+      this.prisma.usuario.delete({ where: { id } }),
+    ]);
+
+    return { id, eliminado: true };
   }
 }

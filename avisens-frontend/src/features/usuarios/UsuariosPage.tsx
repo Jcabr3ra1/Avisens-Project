@@ -4,7 +4,7 @@ import {
   listarUsuarios,
   crearUsuario,
   actualizarUsuario,
-  desactivarUsuario,
+  eliminarUsuario,
   getRol,
   type Usuario,
   type CrearUsuarioPayload,
@@ -53,6 +53,9 @@ function UsuariosPage() {
   const [form, setForm] = useState<CrearUsuarioPayload>(FORM_INICIAL)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
+
+  // Menú de acciones (⋯) abierto: guarda la fila y dónde dibujarlo.
+  const [menu, setMenu] = useState<{ user: Usuario; top: number; left: number } | null>(null)
 
   const modoEdicion = editandoId !== null
 
@@ -135,23 +138,34 @@ function UsuariosPage() {
     }
   }
 
-  async function handleDesactivar(u: Usuario) {
-    if (!window.confirm(`¿Desactivar a ${u.nombre_completo}?`)) return
+  // Interruptor de Estado: enciende/apaga la cuenta (borrado lógico).
+  async function handleToggleActivo(u: Usuario) {
     try {
-      await desactivarUsuario(u.id)
+      await actualizarUsuario(u.id, { activo: !u.activo })
       await cargarUsuarios()
     } catch (err) {
-      setError(mensajeError(err, 'No se pudo desactivar el usuario.'))
+      setError(mensajeError(err, 'No se pudo cambiar el estado del usuario.'))
     }
   }
 
-  async function handleActivar(u: Usuario) {
+  // Borrado permanente (con confirmación).
+  async function handleEliminar(u: Usuario) {
+    const ok = window.confirm(
+      `¿Eliminar PERMANENTEMENTE a ${u.nombre_completo}?\nEsta acción no se puede deshacer.`,
+    )
+    if (!ok) return
     try {
-      await actualizarUsuario(u.id, { activo: true })
+      await eliminarUsuario(u.id)
       await cargarUsuarios()
     } catch (err) {
-      setError(mensajeError(err, 'No se pudo activar el usuario.'))
+      setError(mensajeError(err, 'No se pudo eliminar el usuario.'))
     }
+  }
+
+  // Abre el menú ⋯ justo debajo del botón que se pulsó.
+  function abrirMenu(e: React.MouseEvent, u: Usuario) {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setMenu({ user: u, top: r.bottom + 4, left: r.right - 152 })
   }
 
   return (
@@ -199,29 +213,26 @@ function UsuariosPage() {
                   <td>{u.telefono ?? '—'}</td>
                   <td><span className="rol-badge">{u.rol.nombre}</span></td>
                   <td>
-                    <span className={`estado-badge ${u.activo ? 'activo' : 'inactivo'}`}>
+                    <label className="switch" title={u.activo ? 'Desactivar' : 'Activar'}>
+                      <input
+                        type="checkbox"
+                        checked={u.activo}
+                        onChange={() => handleToggleActivo(u)}
+                      />
+                      <span className="switch-slider" />
+                    </label>
+                    <span className={`estado-text ${u.activo ? 'activo' : 'inactivo'}`}>
                       {u.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
                   <td className="col-acciones">
-                    <button className="btn-ghost-sm" onClick={() => abrirEditar(u)}>
-                      Editar
+                    <button
+                      className="btn-kebab"
+                      onClick={(e) => (menu?.user.id === u.id ? setMenu(null) : abrirMenu(e, u))}
+                      aria-label="Acciones"
+                    >
+                      ⋯
                     </button>
-                    {u.activo ? (
-                      <button
-                        className="btn-danger-ghost"
-                        onClick={() => handleDesactivar(u)}
-                      >
-                        Desactivar
-                      </button>
-                    ) : (
-                      <button
-                        className="btn-success-ghost"
-                        onClick={() => handleActivar(u)}
-                      >
-                        Activar
-                      </button>
-                    )}
                   </td>
                 </tr>
               ))}
@@ -229,6 +240,26 @@ function UsuariosPage() {
           </table>
         )}
       </div>
+
+      {menu && (
+        <>
+          <div className="menu-overlay" onClick={() => setMenu(null)} />
+          <div className="menu-dropdown" style={{ top: menu.top, left: menu.left }}>
+            <button
+              className="menu-item"
+              onClick={() => { const u = menu.user; setMenu(null); abrirEditar(u) }}
+            >
+              Editar
+            </button>
+            <button
+              className="menu-item menu-item-danger"
+              onClick={() => { const u = menu.user; setMenu(null); handleEliminar(u) }}
+            >
+              Eliminar
+            </button>
+          </div>
+        </>
+      )}
 
       {modalAbierto && (
         <div className="modal-overlay" onClick={() => setModalAbierto(false)}>

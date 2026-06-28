@@ -2,7 +2,7 @@ import { api } from './client'
 import type { ActualizarUsuarioPayload, CrearUsuarioPayload, Usuario } from './types'
 
 // Funciones del módulo `usuarios` del backend.
-// Todas requieren un access token de un usuario con rol Administrador.
+// Requieren sesión: el Admin gestiona a todos; el Propietario, solo operarios.
 
 export async function listarUsuarios(): Promise<Usuario[]> {
   const { data } = await api.get<Usuario[]>('/usuarios')
@@ -27,7 +27,8 @@ export async function actualizarUsuario(
   return data
 }
 
-export async function desactivarUsuario(id: number): Promise<{ id: number; activo: boolean }> {
-  const { data } = await api.delete<{ id: number; activo: boolean }>(`/usuarios/${id}`)
+// Borrado permanente del usuario.
+export async function eliminarUsuario(id: number): Promise<{ id: number; eliminado: boolean }> {
+  const { data } = await api.delete<{ id: number; eliminado: boolean }>(`/usuarios/${id}`)
   return data
 }

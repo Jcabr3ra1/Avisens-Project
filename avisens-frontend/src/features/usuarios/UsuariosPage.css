@@ -212,6 +212,130 @@
   color: var(--text3);
 }
 
+/* ---- Interruptor de estado (activo/inactivo) ---- */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  inset: 0;
+  background: #cbd5e1;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+.switch-slider::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.switch input:checked + .switch-slider {
+  background: var(--green);
+}
+
+.switch input:checked + .switch-slider::before {
+  transform: translateX(16px);
+}
+
+.estado-text {
+  vertical-align: middle;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.estado-text.activo {
+  color: var(--green-d);
+}
+
+.estado-text.inactivo {
+  color: var(--text3);
+}
+
+/* ---- Botón de acciones (⋯) y su menú ---- */
+.btn-kebab {
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-kebab:hover {
+  background: var(--card-h);
+  border-color: var(--green);
+}
+
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.menu-dropdown {
+  position: fixed;
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 150px;
+  padding: 0.3rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.3);
+}
+
+.menu-item {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  text-align: left;
+  font-size: 0.86rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  background: var(--card-h);
+}
+
+.menu-item-danger {
+  color: var(--red);
+}
+
+.menu-item-danger:hover {
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+}
+
 /* ---- Modal ---- */
 .modal-overlay {
   position: fixed;

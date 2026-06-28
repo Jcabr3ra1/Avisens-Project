@@ -63,8 +63,8 @@ export class UsuariosController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Desactivar un usuario' })
-  desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
-    return this.usuariosService.desactivar(id, req.user);
+  @ApiOperation({ summary: 'Eliminar un usuario (borrado permanente)' })
+  eliminar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.usuariosService.eliminar(id, req.user);
   }
 }
