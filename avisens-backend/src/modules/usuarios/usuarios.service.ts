@@ -1,76 +1,91 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 
+const ROL_PROPIETARIO = 'Propietario';
+const ROL_OPERARIO = 'Operario';
+
+// Quién hace la petición. Su rol decide el alcance:
+// - Administrador: gestiona todos los usuarios.
+// - Propietario: solo gestiona Operarios.
+type Solicitante = { rol: string };
+
+const USUARIO_SELECT = {
+  id: true,
+  nombre_completo: true,
+  email: true,
+  cedula: true,
+  telefono: true,
+  activo: true,
+  fecha_creacion: true,
+  rol: { select: { id: true, nombre: true } },
+} as const;
+
 @Injectable()
 export class UsuariosService {
   constructor(private prisma: PrismaService) {}
 
-  async crear(dto: CreateUsuarioDto) {
+  private esPropietario(solicitante: Solicitante): boolean {
+    return solicitante.rol === ROL_PROPIETARIO;
+  }
+
+  async crear(dto: CreateUsuarioDto, solicitante: Solicitante) {
     const existe = await this.prisma.usuario.findFirst({
       where: { OR: [{ email: dto.email }, { cedula: dto.cedula }] },
     });
     if (existe) throw new ConflictException('Email o cédula ya registrado');
 
-    const rol = await this.prisma.rol.findUnique({ where: { id: dto.rol_id } });
-    if (!rol) throw new NotFoundException('Rol no encontrado');
+    // Un Propietario solo puede crear Operarios (ignora el rol que mande).
+    let rolId = dto.rol_id;
+    if (this.esPropietario(solicitante)) {
+      const rolOperario = await this.prisma.rol.findUnique({
+        where: { nombre: ROL_OPERARIO },
+      });
+      if (!rolOperario) throw new NotFoundException('Rol Operario no encontrado');
+      rolId = rolOperario.id;
+    } else {
+      const rol = await this.prisma.rol.findUnique({ where: { id: dto.rol_id } });
+      if (!rol) throw new NotFoundException('Rol no encontrado');
+    }
 
     const password_hash = await bcrypt.hash(dto.password, 12);
 
-    const usuario = await this.prisma.usuario.create({
+    return this.prisma.usuario.create({
       data: {
         nombre_completo: dto.nombre_completo,
         cedula: dto.cedula,
         email: dto.email,
         password_hash,
         telefono: dto.telefono,
-        rol_id: dto.rol_id,
+        rol_id: rolId,
       },
-      select: {
-        id: true,
-        nombre_completo: true,
-        email: true,
-        cedula: true,
-        telefono: true,
-        activo: true,
-        fecha_creacion: true,
-        rol: { select: { id: true, nombre: true } },
-      },
+      select: USUARIO_SELECT,
     });
-
-    return usuario;
   }
 
-  async listar() {
+  async listar(solicitante: Solicitante) {
     return this.prisma.usuario.findMany({
-      select: {
-        id: true,
-        nombre_completo: true,
-        email: true,
-        cedula: true,
-        telefono: true,
-        activo: true,
-        fecha_creacion: true,
-        rol: { select: { id: true, nombre: true } },
-      },
+      // El Propietario solo ve Operarios; el Admin ve todos.
+      where: this.esPropietario(solicitante)
+        ? { rol: { nombre: ROL_OPERARIO } }
+        : undefined,
+      select: USUARIO_SELECT,
       orderBy: { fecha_creacion: 'desc' },
     });
   }
 
-  async obtener(id: number) {
+  async obtener(id: number, solicitante: Solicitante) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id },
       select: {
-        id: true,
-        nombre_completo: true,
-        email: true,
-        cedula: true,
-        telefono: true,
-        activo: true,
-        fecha_creacion: true,
-        rol: { select: { id: true, nombre: true } },
+        ...USUARIO_SELECT,
         seguridad_cuenta: {
           select: {
             intentos_fallidos: true,
@@ -81,12 +96,22 @@ export class UsuariosService {
       },
     });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
+    if (this.esPropietario(solicitante) && usuario.rol.nombre !== ROL_OPERARIO) {
+      throw new ForbiddenException('Solo puedes gestionar operarios');
+    }
     return usuario;
   }
 
-  async actualizar(id: number, dto: UpdateUsuarioDto) {
-    const usuario = await this.prisma.usuario.findUnique({ where: { id } });
+  async actualizar(id: number, dto: UpdateUsuarioDto, solicitante: Solicitante) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id },
+      include: { rol: true },
+    });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    if (this.esPropietario(solicitante) && usuario.rol.nombre !== ROL_OPERARIO) {
+      throw new ForbiddenException('Solo puedes gestionar operarios');
+    }
 
     // Si cambia email o cédula, verificar que no choquen con otro usuario.
     const cambiaEmail = dto.email && dto.email !== usuario.email;
@@ -104,7 +129,11 @@ export class UsuariosService {
       if (conflicto) throw new ConflictException('Email o cédula ya registrado');
     }
 
-    if (dto.rol_id) {
+    // El Propietario no puede cambiar el rol (el operario sigue siendo operario).
+    let rolId = dto.rol_id;
+    if (this.esPropietario(solicitante)) {
+      rolId = undefined;
+    } else if (dto.rol_id) {
       const rol = await this.prisma.rol.findUnique({ where: { id: dto.rol_id } });
       if (!rol) throw new NotFoundException('Rol no encontrado');
     }
@@ -121,25 +150,16 @@ export class UsuariosService {
         cedula: dto.cedula,
         email: dto.email,
         telefono: dto.telefono,
-        rol_id: dto.rol_id,
+        rol_id: rolId,
         activo: dto.activo,
         password_hash,
       },
-      select: {
-        id: true,
-        nombre_completo: true,
-        email: true,
-        cedula: true,
-        telefono: true,
-        activo: true,
-        fecha_creacion: true,
-        rol: { select: { id: true, nombre: true } },
-      },
+      select: USUARIO_SELECT,
     });
   }
 
-  async desactivar(id: number) {
-    await this.obtener(id);
+  async desactivar(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante); // valida existencia y alcance
     return this.prisma.usuario.update({
       where: { id },
       data: { activo: false },

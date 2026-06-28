@@ -5,6 +5,7 @@ import {
   crearUsuario,
   actualizarUsuario,
   desactivarUsuario,
+  getRol,
   type Usuario,
   type CrearUsuarioPayload,
 } from '@shared/api'
@@ -31,7 +32,7 @@ const FORM_INICIAL: CrearUsuarioPayload = {
 function mensajeError(err: unknown, fallback: string): string {
   if (isAxiosError(err) && err.response) {
     if (err.response.status === 403) {
-      return 'No tienes permisos: esta sección requiere rol Administrador.'
+      return 'No tienes permisos para esta acción.'
     }
     const data = err.response.data as { message?: string | string[] }
     if (data?.message) {
@@ -55,6 +56,12 @@ function UsuariosPage() {
 
   const modoEdicion = editandoId !== null
 
+  // El Propietario solo gestiona operarios; el Admin gestiona todos los roles.
+  const esPropietario = getRol() === 'Propietario'
+  const rolesDisponibles = esPropietario
+    ? ROLES.filter((r) => r.nombre === 'Operario')
+    : ROLES
+
   async function cargarUsuarios() {
     setCargando(true)
     setError('')
@@ -73,7 +80,8 @@ function UsuariosPage() {
 
   function abrirCrear() {
     setEditandoId(null)
-    setForm(FORM_INICIAL)
+    // Para el Dueño, el rol por defecto (y único) es Operario.
+    setForm({ ...FORM_INICIAL, rol_id: esPropietario ? 3 : FORM_INICIAL.rol_id })
     setErrorForm('')
     setModalAbierto(true)
   }
@@ -150,11 +158,15 @@ function UsuariosPage() {
     <div className="page-container usuarios">
       <header className="usuarios-head">
         <div>
-          <h1 className="usuarios-title">Usuarios y Roles</h1>
-          <p className="usuarios-sub">Gestiona las cuentas que acceden al sistema.</p>
+          <h1 className="usuarios-title">{esPropietario ? 'Operarios' : 'Usuarios y Roles'}</h1>
+          <p className="usuarios-sub">
+            {esPropietario
+              ? 'Gestiona los operarios de tu granja.'
+              : 'Gestiona las cuentas que acceden al sistema.'}
+          </p>
         </div>
         <button className="btn-primary" onClick={abrirCrear}>
-          + Nuevo usuario
+          + {esPropietario ? 'Nuevo operario' : 'Nuevo usuario'}
         </button>
       </header>
 
@@ -222,7 +234,9 @@ function UsuariosPage() {
         <div className="modal-overlay" onClick={() => setModalAbierto(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h2 className="modal-title">
-              {modoEdicion ? 'Editar usuario' : 'Nuevo usuario'}
+              {modoEdicion
+                ? esPropietario ? 'Editar operario' : 'Editar usuario'
+                : esPropietario ? 'Nuevo operario' : 'Nuevo usuario'}
             </h2>
 
             <form className="modal-form" onSubmit={handleGuardar}>
@@ -283,8 +297,9 @@ function UsuariosPage() {
                   <select
                     value={form.rol_id}
                     onChange={(e) => actualizarCampo('rol_id', Number(e.target.value))}
+                    disabled={esPropietario}
                   >
-                    {ROLES.map((r) => (
+                    {rolesDisponibles.map((r) => (
                       <option key={r.id} value={r.id}>{r.nombre}</option>
                     ))}
                   </select>
