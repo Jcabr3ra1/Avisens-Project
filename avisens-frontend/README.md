@@ -4,7 +4,7 @@ Interfaz web del sistema AVISENS. Panel de control para monitoreo de sensores Io
 
 > **Estado:** En desarrollo — Fase 1 (datos mock, sin backend conectado).
 
-> 📖 **¿Nuevo en el proyecto?** Lee la [**Guía del proyecto (GUIA.md)**](./GUIA.md): explica a fondo qué se ha hecho, por qué está hecho así, cómo funcionan las rutas y cómo continuar.
+> 📖 **¿Nuevo en el proyecto?** Lee la [**Guía del proyecto (GUIA.md)**](./docs/GUIA.md): explica a fondo qué se ha hecho, por qué está hecho así, cómo funcionan las rutas y cómo continuar.
 
 ---
 
