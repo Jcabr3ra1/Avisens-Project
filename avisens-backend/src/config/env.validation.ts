@@ -22,6 +22,9 @@ class EnvironmentVariables {
   @IsNumberString()
   @IsOptional()
   PORT: string;
+
+  @IsString()
+  CORS_ORIGIN: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {
