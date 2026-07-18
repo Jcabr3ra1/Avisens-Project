@@ -29,7 +29,11 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter(), new PrismaExceptionFilter());
 
   app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true, // convierte el payload a instancias tipadas (y query -> número)
+    }),
   );
 
   const swaggerConfig = new DocumentBuilder()

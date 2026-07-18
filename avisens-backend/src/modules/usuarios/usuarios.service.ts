@@ -8,6 +8,8 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { paginate } from '../../common/pagination/paginate';
 
 const ROL_PROPIETARIO = 'Propietario';
 const ROL_OPERARIO = 'Operario';
@@ -68,15 +70,25 @@ export class UsuariosService {
     });
   }
 
-  async listar(solicitante: Solicitante) {
-    return this.prisma.usuario.findMany({
-      // El Propietario solo ve Operarios; el Admin ve todos.
-      where: this.esPropietario(solicitante)
-        ? { rol: { nombre: ROL_OPERARIO } }
-        : undefined,
-      select: USUARIO_SELECT,
-      orderBy: { fecha_creacion: 'desc' },
-    });
+  async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
+    // El Propietario solo ve Operarios; el Admin ve todos.
+    const where = this.esPropietario(solicitante)
+      ? { rol: { nombre: ROL_OPERARIO } }
+      : undefined;
+
+    // Una transacción para que el conteo y la página salgan del mismo snapshot.
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.usuario.findMany({
+        where,
+        select: USUARIO_SELECT,
+        orderBy: { fecha_creacion: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.usuario.count({ where }),
+    ]);
+
+    return paginate(data, total, page, limit);
   }
 
   async obtener(id: number, solicitante: Solicitante) {

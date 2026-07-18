@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 // El usuario autenticado que adjunta la estrategia JWT.
 interface AuthRequest extends Request {
@@ -41,9 +43,9 @@ export class UsuariosController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar usuarios (Admin: todos · Propietario: operarios)' })
-  listar(@Req() req: AuthRequest) {
-    return this.usuariosService.listar(req.user);
+  @ApiOperation({ summary: 'Listar usuarios paginado (Admin: todos · Propietario: operarios)' })
+  listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
+    return this.usuariosService.listar(req.user, paginacion);
   }
 
   @Get(':id')
