@@ -37,10 +37,8 @@ export class UsuariosService {
   }
 
   async crear(dto: CreateUsuarioDto, solicitante: Solicitante) {
-    const existe = await this.prisma.usuario.findFirst({
-      where: { OR: [{ email: dto.email }, { cedula: dto.cedula }] },
-    });
-    if (existe) throw new ConflictException('Email o cédula ya registrado');
+    // No pre-validamos duplicados: la restricción unique de email/cedula + el
+    // PrismaExceptionFilter devuelven 409 automáticamente si ya existe.
 
     // Un Propietario solo puede crear Operarios (ignora el rol que mande).
     let rolId = dto.rol_id;

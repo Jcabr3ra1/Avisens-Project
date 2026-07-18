@@ -5,6 +5,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import helmet from 'helmet';
 
 async function bootstrap() {
@@ -22,7 +23,10 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.useGlobalFilters(new HttpExceptionFilter());
+  // Nest evalúa los filtros globales en orden inverso al registro: el último
+  // registrado se prueba primero. Por eso el catch-all (@Catch()) va primero y
+  // el específico de Prisma va de último, para que gane con los errores Pxxxx.
+  app.useGlobalFilters(new HttpExceptionFilter(), new PrismaExceptionFilter());
 
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
