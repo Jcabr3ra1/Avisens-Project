@@ -1,14 +1,29 @@
 import { plainToInstance } from 'class-transformer';
-import { IsString, IsNumberString, IsOptional, validateSync } from 'class-validator';
+import {
+  IsString,
+  IsNumberString,
+  IsOptional,
+  IsIn,
+  MinLength,
+  validateSync,
+} from 'class-validator';
 
 class EnvironmentVariables {
+  @IsIn(['development', 'production', 'test'])
+  @IsOptional()
+  NODE_ENV: string;
+
   @IsString()
   DATABASE_URL: string;
 
+  // Los secretos JWT deben ser largos: un secreto corto es adivinable por
+  // fuerza bruta y permitiría falsificar tokens de sesión.
   @IsString()
+  @MinLength(32)
   JWT_SECRET: string;
 
   @IsString()
+  @MinLength(32)
   JWT_REFRESH_SECRET: string;
 
   @IsString()

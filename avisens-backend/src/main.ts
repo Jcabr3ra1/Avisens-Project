@@ -36,6 +36,10 @@ async function bootstrap() {
     .build();
   SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, swaggerConfig));
 
+  // Escucha SIGTERM/SIGINT para apagarse ordenadamente: termina las peticiones
+  // en curso y dispara OnModuleDestroy (Prisma cierra sus conexiones).
+  app.enableShutdownHooks();
+
   await app.listen(process.env.PORT ?? 3000);
   console.log(`Servidor corriendo en http://localhost:${process.env.PORT ?? 3000}`);
   console.log(`Swagger en http://localhost:${process.env.PORT ?? 3000}/docs`);
