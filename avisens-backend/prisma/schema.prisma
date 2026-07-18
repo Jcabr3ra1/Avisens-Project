@@ -10,7 +10,6 @@ model Rol {
   id             Int      @id @default(autoincrement())
   nombre         String   @unique
   descripcion    String?
-  requiere_mfa   Boolean  @default(false)
   activo         Boolean  @default(true)
   fecha_creacion DateTime @default(now())
 

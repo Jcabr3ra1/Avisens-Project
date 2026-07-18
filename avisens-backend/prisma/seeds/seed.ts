@@ -13,17 +13,17 @@ async function main() {
     prisma.rol.upsert({
       where: { nombre: 'Administrador' },
       update: {},
-      create: { nombre: 'Administrador', descripcion: 'Control total del sistema', requiere_mfa: false },
+      create: { nombre: 'Administrador', descripcion: 'Control total del sistema' },
     }),
     prisma.rol.upsert({
       where: { nombre: 'Propietario' },
       update: {},
-      create: { nombre: 'Propietario', descripcion: 'Gestiona sus granjas', requiere_mfa: false },
+      create: { nombre: 'Propietario', descripcion: 'Gestiona sus granjas' },
     }),
     prisma.rol.upsert({
       where: { nombre: 'Operario' },
       update: {},
-      create: { nombre: 'Operario', descripcion: 'Registra datos de su galpón', requiere_mfa: false },
+      create: { nombre: 'Operario', descripcion: 'Registra datos de su galpón' },
     }),
   ]);
 
