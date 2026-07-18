@@ -63,8 +63,14 @@ export class UsuariosController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar un usuario (borrado permanente)' })
-  eliminar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
-    return this.usuariosService.eliminar(id, req.user);
+  @ApiOperation({ summary: 'Desactivar un usuario (borrado suave, revoca sesiones)' })
+  desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.usuariosService.desactivar(id, req.user);
+  }
+
+  @Delete(':id/permanente')
+  @ApiOperation({ summary: 'Eliminar un usuario de forma permanente (casos legales)' })
+  eliminarPermanente(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.usuariosService.eliminarPermanente(id, req.user);
   }
 }

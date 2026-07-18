@@ -156,14 +156,33 @@ export class UsuariosService {
     });
   }
 
-  async eliminar(id: number, solicitante: Solicitante) {
+  async desactivar(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante); // valida existencia y alcance
+    if (id === solicitante.id) {
+      throw new ForbiddenException('No puedes desactivar tu propia cuenta');
+    }
+
+    // Borrado suave: la cuenta queda inactiva y se revocan sus sesiones para
+    // cerrarle el acceso de inmediato. Los datos y el rastro se conservan.
+    await this.prisma.$transaction([
+      this.prisma.sesion.updateMany({
+        where: { usuario_id: id, revocada: false },
+        data: { revocada: true },
+      }),
+      this.prisma.usuario.update({ where: { id }, data: { activo: false } }),
+    ]);
+
+    return { id, activo: false };
+  }
+
+  async eliminarPermanente(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante); // valida existencia y alcance
     if (id === solicitante.id) {
       throw new ForbiddenException('No puedes eliminar tu propia cuenta');
     }
 
-    // Borrado permanente: primero los datos relacionados (sesiones y
-    // seguridad tienen FK ON DELETE RESTRICT), luego el usuario.
+    // Borrado permanente (casos legales): primero los datos relacionados
+    // (sesiones y seguridad tienen FK ON DELETE RESTRICT), luego el usuario.
     await this.prisma.$transaction([
       this.prisma.sesion.deleteMany({ where: { usuario_id: id } }),
       this.prisma.seguridadCuenta.deleteMany({ where: { usuario_id: id } }),
