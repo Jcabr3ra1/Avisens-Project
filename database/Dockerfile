@@ -1,7 +1,10 @@
 # Imagen de la base de datos PostgreSQL para Avisens.
-# Parte de la imagen oficial y carga el esquema inicial automáticamente:
-# todo script en /docker-entrypoint-initdb.d se ejecuta UNA sola vez, cuando
-# el volumen de datos está vacío (primer arranque).
+#
+# El esquema lo administra ÚNICAMENTE Prisma: el backend ejecuta
+# `prisma migrate deploy` al arrancar (ver avisens-backend/docker-entrypoint.sh).
+# Por eso aquí ya NO hay scripts de creación de tablas.
+#
+# Este Dockerfile queda como punto de extensión para configuración a nivel de
+# servidor que Prisma no maneja; por ejemplo, cuando implementemos las series de
+# tiempo de `mediciones` habrá que habilitar la extensión TimescaleDB.
 FROM postgres:16-alpine
-
-COPY init/ /docker-entrypoint-initdb.d/

@@ -18,8 +18,10 @@ async function bootstrap() {
   // del cliente y el throttler limite por cliente, no por el proxy.
   app.set('trust proxy', 1);
 
+  // Si CORS_ORIGIN no está definido, `true` refleja el origen de la petición
+  // (permite cualquier origen con credenciales, cómodo en desarrollo).
   app.enableCors({
-    origin: config.get<string>('CORS_ORIGIN'),
+    origin: config.get<string>('CORS_ORIGIN') ?? true,
     credentials: true,
   });
 

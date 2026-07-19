@@ -38,7 +38,10 @@ class EnvironmentVariables {
   @IsOptional()
   PORT: string;
 
+  // Opcional: si no se define, main.ts refleja el origen de la petición
+  // (útil en desarrollo). En producción conviene fijar el dominio del frontend.
   @IsString()
+  @IsOptional()
   CORS_ORIGIN: string;
 }
 
