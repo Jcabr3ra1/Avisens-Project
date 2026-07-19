@@ -57,6 +57,7 @@ model Usuario {
   rol              Rol               @relation(fields: [rol_id], references: [id])
   seguridad_cuenta SeguridadCuenta?
   sesiones         Sesion[]
+  granjas          Granja[]
 
   @@map("usuarios")
 }
@@ -87,4 +88,26 @@ model Sesion {
   usuario Usuario @relation(fields: [usuario_id], references: [id])
 
   @@map("sesiones")
+}
+
+// ---------------------------------------------------------------------------
+// EP-04 · Monitoreo ambiental
+// ---------------------------------------------------------------------------
+
+model Granja {
+  id             Int      @id @default(autoincrement())
+  propietario_id Int
+  nombre         String
+  direccion      String?
+  municipio      String?
+  departamento   String?
+  latitud        Float?
+  longitud       Float?
+  area_total_m2  Float?
+  activa         Boolean  @default(true)
+  fecha_creacion DateTime @default(now())
+
+  propietario Usuario @relation(fields: [propietario_id], references: [id])
+
+  @@map("granjas")
 }
