@@ -1,4 +1,4 @@
-package com.project.avisens
+package com.project.avisens.sample
 
 fun sayHello(to: String): String =
     "Hello, $to!"

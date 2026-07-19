@@ -1,4 +1,4 @@
-package com.project.avisens
+package com.project.avisens.sample
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image

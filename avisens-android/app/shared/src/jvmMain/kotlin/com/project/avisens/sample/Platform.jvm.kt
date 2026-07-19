@@ -1,4 +1,4 @@
-package com.project.avisens
+package com.project.avisens.sample
 
 class JVMPlatform: Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"

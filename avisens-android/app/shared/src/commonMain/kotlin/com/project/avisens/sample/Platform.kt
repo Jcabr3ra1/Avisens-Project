@@ -1,4 +1,4 @@
-package com.project.avisens
+package com.project.avisens.sample
 
 interface Platform {
     val name: String

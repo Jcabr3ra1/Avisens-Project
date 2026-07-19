@@ -1,4 +1,4 @@
-package com.project.avisens
+package com.project.avisens.sample
 
 class Greeting {
     private val platform = getPlatform()
