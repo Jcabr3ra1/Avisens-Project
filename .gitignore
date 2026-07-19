@@ -46,5 +46,10 @@ CLAUDE.md
 # NO se suben al repo.
 docs/fuentes/
 
+# Herramientas personales (no se versionan)
+# Colección de Bruno para probar la API y guía personal del backend.
+bruno/
+docs/guia-backend.html
+
 # Módulo descartado
 avisens-api-gateway/
