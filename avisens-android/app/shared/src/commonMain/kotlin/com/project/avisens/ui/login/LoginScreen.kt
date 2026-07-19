@@ -1,4 +1,4 @@
-package com.project.avisens.ui
+package com.project.avisens.ui.login
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,24 +20,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.project.avisens.data.auth.AuthRepository
-import com.project.avisens.data.auth.TokenStorageEnMemoria
-import com.project.avisens.data.remote.ApiResultado
-import com.project.avisens.data.remote.AvisensApi
-import com.project.avisens.data.remote.AvisensError
-import com.project.avisens.data.remote.crearHttpClient
+import com.project.avisens.core.network.ApiResultado
+import com.project.avisens.core.network.AvisensError
+import com.project.avisens.di.ServiceLocator
 import kotlinx.coroutines.launch
 
-// Pantalla mínima de login conectada al AuthRepository real.
-// baseUrl por defecto = localhost (escritorio). En emulador Android usar 10.0.2.2.
+// Pantalla mínima de login. Obtiene el repositorio del ServiceLocator (no lo
+// construye ella misma). baseUrl por defecto = localhost (escritorio);
+// en emulador Android usar 10.0.2.2.
 @Composable
 fun LoginScreen(baseUrl: String = "http://localhost:3000/") {
     val scope = rememberCoroutineScope()
-    // Un solo TokenStorage compartido entre el cliente y el repositorio.
-    val repo = remember(baseUrl) {
-        val storage = TokenStorageEnMemoria()
-        AuthRepository(AvisensApi(crearHttpClient(storage, baseUrl)), storage)
-    }
+    val repo = remember(baseUrl) { ServiceLocator.authRepository(baseUrl) }
 
     var email by remember { mutableStateOf("admin@avisens.com") }
     var password by remember { mutableStateOf("Admin1234!") }

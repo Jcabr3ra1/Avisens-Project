@@ -1,6 +1,6 @@
-package com.project.avisens.data.remote
+package com.project.avisens.core.network
 
-import com.project.avisens.data.auth.TokenStorage
+import com.project.avisens.data.local.TokenStorage
 import com.project.avisens.data.remote.dto.RefreshRequest
 import com.project.avisens.data.remote.dto.TokensResponse
 import io.ktor.client.HttpClient

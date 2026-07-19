@@ -1,4 +1,4 @@
-package com.project.avisens.data.auth
+package com.project.avisens.data.local
 
 // Contrato para guardar los JWT. La implementación real debe usar almacenamiento
 // seguro por plataforma (EncryptedSharedPreferences en Android, Keychain en iOS).

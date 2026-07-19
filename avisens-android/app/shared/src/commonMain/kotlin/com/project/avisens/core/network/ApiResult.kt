@@ -1,4 +1,4 @@
-package com.project.avisens.data.remote
+package com.project.avisens.core.network
 
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException

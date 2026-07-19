@@ -2,7 +2,7 @@ package com.project.avisens
 
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import com.project.avisens.ui.LoginScreen
+import com.project.avisens.ui.login.LoginScreen
 
 fun main() = application {
     Window(

@@ -1,10 +1,11 @@
-package com.project.avisens.data.auth
+package com.project.avisens.data.repository
 
-import com.project.avisens.data.remote.ApiResultado
+import com.project.avisens.core.network.ApiResultado
+import com.project.avisens.core.network.ejecutar
+import com.project.avisens.data.local.TokenStorage
 import com.project.avisens.data.remote.AvisensApi
 import com.project.avisens.data.remote.dto.LoginRequest
 import com.project.avisens.data.remote.dto.UsuarioResumen
-import com.project.avisens.data.remote.ejecutar
 
 // La UI habla con el repositorio, no con la API directamente.
 class AuthRepository(
