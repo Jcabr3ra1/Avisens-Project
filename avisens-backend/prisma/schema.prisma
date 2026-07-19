@@ -107,7 +107,30 @@ model Granja {
   activa         Boolean  @default(true)
   fecha_creacion DateTime @default(now())
 
-  propietario Usuario @relation(fields: [propietario_id], references: [id])
+  propietario Usuario   @relation(fields: [propietario_id], references: [id])
+  galpones    Galpon[]
 
   @@map("granjas")
+}
+
+model Galpon {
+  id                 Int       @id @default(autoincrement())
+  granja_id          Int
+  codigo             String // "galpon1" — coincide con el prefijo del topic MQTT
+  nombre             String
+  capacidad_aves     Int?
+  ancho_metros       Float?
+  largo_metros       Float?
+  orientacion        String?
+  tipo_techo         String?
+  plano_url          String?
+  activo             Boolean   @default(true)
+  fecha_construccion DateTime? @db.Date
+
+  granja Granja @relation(fields: [granja_id], references: [id])
+
+  // El código se repite entre granjas (cada una tiene su "galpon1"), pero es
+  // único dentro de una misma granja.
+  @@unique([granja_id, codigo])
+  @@map("galpones")
 }
