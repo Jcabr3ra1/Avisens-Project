@@ -128,9 +128,32 @@ model Galpon {
   fecha_construccion DateTime? @db.Date
 
   granja Granja @relation(fields: [granja_id], references: [id])
+  dispositivo Dispositivo[]
 
   // El código se repite entre granjas (cada una tiene su "galpon1"), pero es
   // único dentro de una misma granja.
   @@unique([granja_id, codigo])
   @@map("galpones")
+}
+
+// ---------------------------------------------------------------------------
+// EP-04 · Dispositivos (nodos ESP32 que agrupan sensores en un galpón)
+// ---------------------------------------------------------------------------
+
+model Dispositivo {
+  id               Int       @id @default(autoincrement())
+  galpon_id        Int
+  mac_address      String    @unique
+  codigo_topic     String    @unique
+  nombre           String
+  version_firmware String?
+  estado           String    @default("offline")
+  ip_local         String?
+  ultima_conexion  DateTime?
+  activo           Boolean   @default(true)
+  fecha_creacion   DateTime  @default(now())
+
+  galpon Galpon @relation(fields: [galpon_id], references: [id])
+
+  @@map("dispositivos")
 }
