@@ -27,7 +27,9 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       case 'P2002': {
         // Índice único violado: meta.target trae la(s) columna(s) en conflicto.
         status = HttpStatus.CONFLICT;
-        const target = (exception.meta?.target as string[] | undefined)?.join(', ');
+        const target = (exception.meta?.target as string[] | undefined)?.join(
+          ', ',
+        );
         message = target
           ? `Ya existe un registro con ese valor en: ${target}`
           : 'El registro ya existe';

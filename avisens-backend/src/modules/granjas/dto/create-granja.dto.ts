@@ -29,14 +29,20 @@ export class CreateGranjaDto {
   @IsOptional()
   departamento?: string;
 
-  @ApiPropertyOptional({ example: 6.1553, description: 'Latitud GPS (-90 a 90)' })
+  @ApiPropertyOptional({
+    example: 6.1553,
+    description: 'Latitud GPS (-90 a 90)',
+  })
   @IsNumber()
   @Min(-90)
   @Max(90)
   @IsOptional()
   latitud?: number;
 
-  @ApiPropertyOptional({ example: -75.3739, description: 'Longitud GPS (-180 a 180)' })
+  @ApiPropertyOptional({
+    example: -75.3739,
+    description: 'Longitud GPS (-180 a 180)',
+  })
   @IsNumber()
   @Min(-180)
   @Max(180)
@@ -51,7 +57,8 @@ export class CreateGranjaDto {
 
   @ApiPropertyOptional({
     example: 3,
-    description: 'ID del propietario. Solo lo usa el Administrador; el Propietario se asigna a sí mismo.',
+    description:
+      'ID del propietario. Solo lo usa el Administrador; el Propietario se asigna a sí mismo.',
   })
   @IsInt()
   @IsOptional()

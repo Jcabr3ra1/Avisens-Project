@@ -12,7 +12,6 @@ import type { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { RefreshDto } from './dto/refresh.dto';
 
 interface AuthRequest extends Request {
   user: { sub: number; email: string; refresh_token: string };
@@ -35,7 +34,11 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt-refresh'))
   @ApiOperation({ summary: 'Renovar access token con refresh token' })
   refresh(@Req() req: AuthRequest) {
-    return this.authService.refresh(req.user.sub, req.user.email, req.user.refresh_token);
+    return this.authService.refresh(
+      req.user.sub,
+      req.user.email,
+      req.user.refresh_token,
+    );
   }
 
   @Post('logout')

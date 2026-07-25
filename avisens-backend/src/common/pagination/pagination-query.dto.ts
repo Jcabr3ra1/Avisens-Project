@@ -5,14 +5,23 @@ import { IsInt, IsOptional, Max, Min } from 'class-validator';
 // DTO reutilizable para paginar cualquier listado. @Type convierte el query
 // param (texto) a número; requiere transform: true en el ValidationPipe global.
 export class PaginationQueryDto {
-  @ApiPropertyOptional({ default: 1, minimum: 1, description: 'Número de página' })
+  @ApiPropertyOptional({
+    default: 1,
+    minimum: 1,
+    description: 'Número de página',
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @IsOptional()
   page: number = 1;
 
-  @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100, description: 'Elementos por página' })
+  @ApiPropertyOptional({
+    default: 20,
+    minimum: 1,
+    maximum: 100,
+    description: 'Elementos por página',
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)
