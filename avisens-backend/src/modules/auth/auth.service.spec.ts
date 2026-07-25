@@ -29,7 +29,12 @@ describe('AuthService', () => {
   // Mock de Prisma: solo los métodos que usa el servicio.
   const prisma = {
     usuario: { findUnique: jest.fn() },
-    sesion: { create: jest.fn(), findMany: jest.fn(), update: jest.fn() },
+    sesion: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+      deleteMany: jest.fn(),
+    },
     seguridadCuenta: { upsert: jest.fn() },
   };
   const jwt = { signAsync: jest.fn() };
@@ -63,33 +68,45 @@ describe('AuthService', () => {
     it('rechaza (401) si el usuario no existe', async () => {
       prisma.usuario.findUnique.mockResolvedValue(null);
 
-      await expect(service.login({ email: 'x@x.com', password: '123456' }))
-        .rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.login({ email: 'x@x.com', password: '123456' }),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('rechaza (401) si el usuario está inactivo', async () => {
-      prisma.usuario.findUnique.mockResolvedValue(usuarioFalso({ activo: false }));
+      prisma.usuario.findUnique.mockResolvedValue(
+        usuarioFalso({ activo: false }),
+      );
 
-      await expect(service.login({ email: 'test@avisens.com', password: '123456' }))
-        .rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.login({ email: 'test@avisens.com', password: '123456' }),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('rechaza (403) si la cuenta está bloqueada', async () => {
       const enUnaHora = new Date(Date.now() + 60 * 60 * 1000);
       prisma.usuario.findUnique.mockResolvedValue(
-        usuarioFalso({ seguridad_cuenta: { id: 1, intentos_fallidos: 5, bloqueado_hasta: enUnaHora } }),
+        usuarioFalso({
+          seguridad_cuenta: {
+            id: 1,
+            intentos_fallidos: 5,
+            bloqueado_hasta: enUnaHora,
+          },
+        }),
       );
 
-      await expect(service.login({ email: 'test@avisens.com', password: '123456' }))
-        .rejects.toThrow(ForbiddenException);
+      await expect(
+        service.login({ email: 'test@avisens.com', password: '123456' }),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('rechaza (401) y registra el intento si la contraseña es incorrecta', async () => {
       prisma.usuario.findUnique.mockResolvedValue(usuarioFalso());
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      await expect(service.login({ email: 'test@avisens.com', password: 'mala' }))
-        .rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.login({ email: 'test@avisens.com', password: 'mala' }),
+      ).rejects.toThrow(UnauthorizedException);
 
       // El efecto secundario importa: debe quedar registrado el fallo.
       expect(prisma.seguridadCuenta.upsert).toHaveBeenCalled();
@@ -99,7 +116,10 @@ describe('AuthService', () => {
       prisma.usuario.findUnique.mockResolvedValue(usuarioFalso());
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      const resultado = await service.login({ email: 'test@avisens.com', password: 'buena' });
+      const resultado = await service.login({
+        email: 'test@avisens.com',
+        password: 'buena',
+      });
 
       expect(resultado.access_token).toBe('un-token');
       expect(resultado.refresh_token).toBe('un-token');
@@ -110,6 +130,7 @@ describe('AuthService', () => {
         rol: 'Operario',
       });
       expect(prisma.sesion.create).toHaveBeenCalled();
+      expect(prisma.sesion.deleteMany).toHaveBeenCalled(); // limpieza de sesiones vencidas
       expect(prisma.seguridadCuenta.upsert).toHaveBeenCalled(); // reseteo de intentos
     });
   });
@@ -122,7 +143,11 @@ describe('AuthService', () => {
       (bcrypt.compare as jest.Mock).mockResolvedValue(true); // el token coincide
       prisma.usuario.findUnique.mockResolvedValue(usuarioFalso());
 
-      const tokens = await service.refresh(1, 'test@avisens.com', 'token-valido');
+      const tokens = await service.refresh(
+        1,
+        'test@avisens.com',
+        'token-valido',
+      );
 
       expect(tokens.access_token).toBe('un-token');
       expect(tokens.refresh_token).toBe('un-token');
@@ -138,16 +163,18 @@ describe('AuthService', () => {
       ]);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false); // no coincide
 
-      await expect(service.refresh(1, 'test@avisens.com', 'token-malo'))
-        .rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.refresh(1, 'test@avisens.com', 'token-malo'),
+      ).rejects.toThrow(UnauthorizedException);
       expect(prisma.sesion.update).not.toHaveBeenCalled();
     });
 
     it('rechaza (401) si no hay sesiones activas', async () => {
       prisma.sesion.findMany.mockResolvedValue([]);
 
-      await expect(service.refresh(1, 'test@avisens.com', 'cualquier-token'))
-        .rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.refresh(1, 'test@avisens.com', 'cualquier-token'),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('rechaza (401) si el usuario quedó inactivo', async () => {
@@ -155,10 +182,13 @@ describe('AuthService', () => {
         { id: 10, refresh_token_hash: 'hash-de-la-sesion' },
       ]);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      prisma.usuario.findUnique.mockResolvedValue(usuarioFalso({ activo: false }));
+      prisma.usuario.findUnique.mockResolvedValue(
+        usuarioFalso({ activo: false }),
+      );
 
-      await expect(service.refresh(1, 'test@avisens.com', 'token-valido'))
-        .rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.refresh(1, 'test@avisens.com', 'token-valido'),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 

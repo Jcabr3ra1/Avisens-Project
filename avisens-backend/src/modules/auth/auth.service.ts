@@ -33,7 +33,10 @@ export class AuthService {
       throw new ForbiddenException('Cuenta bloqueada temporalmente');
     }
 
-    const passwordOk = await bcrypt.compare(dto.password, usuario.password_hash);
+    const passwordOk = await bcrypt.compare(
+      dto.password,
+      usuario.password_hash,
+    );
 
     if (!passwordOk) {
       await this.registrarIntentoFallido(usuario.id, seguridad);
@@ -42,7 +45,21 @@ export class AuthService {
 
     await this.resetearIntentosFallidos(usuario.id);
 
-    const tokens = await this.generarTokens(usuario.id, usuario.email, usuario.rol.nombre);
+    const tokens = await this.generarTokens(
+      usuario.id,
+      usuario.email,
+      usuario.rol.nombre,
+    );
+
+    // Higiene: borra las sesiones vencidas o revocadas del usuario. Si no,
+    // crecen sin límite y refresh/logout (que comparan con bcrypt sesión por
+    // sesión) se vuelven cada vez más lentos.
+    await this.prisma.sesion.deleteMany({
+      where: {
+        usuario_id: usuario.id,
+        OR: [{ expira_en: { lt: new Date() } }, { revocada: true }],
+      },
+    });
 
     await this.prisma.sesion.create({
       data: {
@@ -68,7 +85,11 @@ export class AuthService {
 
   async refresh(userId: number, email: string, refreshToken: string) {
     const sesiones = await this.prisma.sesion.findMany({
-      where: { usuario_id: userId, revocada: false, expira_en: { gt: new Date() } },
+      where: {
+        usuario_id: userId,
+        revocada: false,
+        expira_en: { gt: new Date() },
+      },
     });
 
     const sesionValida = await Promise.any(
@@ -90,7 +111,11 @@ export class AuthService {
 
     if (!usuario || !usuario.activo) throw new UnauthorizedException();
 
-    const tokens = await this.generarTokens(usuario.id, usuario.email, usuario.rol.nombre);
+    const tokens = await this.generarTokens(
+      usuario.id,
+      usuario.email,
+      usuario.rol.nombre,
+    );
 
     await this.prisma.sesion.update({
       where: { id: sesionValida.id },
@@ -106,7 +131,10 @@ export class AuthService {
     });
 
     for (const sesion of sesiones) {
-      const match = await bcrypt.compare(refreshToken, sesion.refresh_token_hash);
+      const match = await bcrypt.compare(
+        refreshToken,
+        sesion.refresh_token_hash,
+      );
       if (match) {
         await this.prisma.sesion.update({
           where: { id: sesion.id },
@@ -139,13 +167,16 @@ export class AuthService {
     seguridad: { id: number; intentos_fallidos: number } | null,
   ) {
     const intentos = (seguridad?.intentos_fallidos ?? 0) + 1;
-    const bloqueado_hasta = intentos >= 5
-      ? new Date(Date.now() + 15 * 60 * 1000)
-      : null;
+    const bloqueado_hasta =
+      intentos >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
 
     await this.prisma.seguridadCuenta.upsert({
       where: { usuario_id: userId },
-      create: { usuario_id: userId, intentos_fallidos: intentos, bloqueado_hasta },
+      create: {
+        usuario_id: userId,
+        intentos_fallidos: intentos,
+        bloqueado_hasta,
+      },
       update: { intentos_fallidos: intentos, bloqueado_hasta },
     });
   }
@@ -153,8 +184,16 @@ export class AuthService {
   private async resetearIntentosFallidos(userId: number) {
     await this.prisma.seguridadCuenta.upsert({
       where: { usuario_id: userId },
-      create: { usuario_id: userId, intentos_fallidos: 0, fecha_ultimo_login: new Date() },
-      update: { intentos_fallidos: 0, bloqueado_hasta: null, fecha_ultimo_login: new Date() },
+      create: {
+        usuario_id: userId,
+        intentos_fallidos: 0,
+        fecha_ultimo_login: new Date(),
+      },
+      update: {
+        intentos_fallidos: 0,
+        bloqueado_hasta: null,
+        fecha_ultimo_login: new Date(),
+      },
     });
   }
 }
