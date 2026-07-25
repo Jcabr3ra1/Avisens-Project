@@ -46,6 +46,9 @@ services:
       JWT_REFRESH_SECRET: otro-secreto-distinto-tambien-largo
       JWT_REFRESH_EXPIRES_IN: 7d
       PORT: 3000
+      # Dominio desde el que el navegador carga el frontend (nginx). Obligatoria
+      # en producción: sin ella la app no arranca (evita CORS abierto).
+      CORS_ORIGIN: "http://localhost:8080"
     ports:
       - "3000:3000"
 
