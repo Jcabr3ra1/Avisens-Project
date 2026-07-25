@@ -10,6 +10,7 @@ import { HealthModule } from './modules/health/health.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
+import { SensoresModule } from './modules/sensores/sensores.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
     GranjasModule,
     GalponesModule,
     DispositivosModule,
+    SensoresModule,
     HealthModule,
   ],
   providers: [

@@ -87,6 +87,8 @@ model Sesion {
 
   usuario Usuario @relation(fields: [usuario_id], references: [id])
 
+  // Postgres no indexa las FKs automáticamente; el refresh busca por usuario.
+  @@index([usuario_id])
   @@map("sesiones")
 }
 
@@ -110,6 +112,8 @@ model Granja {
   propietario Usuario   @relation(fields: [propietario_id], references: [id])
   galpones    Galpon[]
 
+  // El alcance por rol filtra siempre por dueño: granja.propietario_id = X.
+  @@index([propietario_id])
   @@map("granjas")
 }
 
@@ -129,6 +133,7 @@ model Galpon {
 
   granja Granja @relation(fields: [granja_id], references: [id])
   dispositivo Dispositivo[]
+  sensores Sensor[]
 
   // El código se repite entre granjas (cada una tiene su "galpon1"), pero es
   // único dentro de una misma granja.
@@ -153,7 +158,41 @@ model Dispositivo {
   activo           Boolean   @default(true)
   fecha_creacion   DateTime  @default(now())
 
-  galpon Galpon @relation(fields: [galpon_id], references: [id])
+  galpon   Galpon   @relation(fields: [galpon_id], references: [id])
+  sensores Sensor[]
 
+  // Consulta frecuente: "dispositivos del galpón X". (Galpon no necesita esto:
+  // su @@unique([granja_id, codigo]) ya indexa granja_id como prefijo.)
+  @@index([galpon_id])
   @@map("dispositivos")
+}
+
+// ---------------------------------------------------------------------------
+// EP-04 · Sensores (miden una variable ambiental y reportan vía un dispositivo)
+// ---------------------------------------------------------------------------
+
+model Sensor {
+  id                 Int       @id @default(autoincrement())
+  galpon_id          Int
+  dispositivo_id     Int
+  codigo             String    @unique
+  tipo               String
+  unidad_medida      String
+  modelo             String?
+  fabricante         String?
+  coordenada_x       Float?
+  coordenada_y       Float?
+  altura_metros      Float?
+  fecha_instalacion  DateTime? @db.Date
+  ultima_calibracion DateTime? @db.Date
+  proxima_calibracion DateTime? @db.Date
+  estado             String    @default("activo")
+
+  galpon      Galpon      @relation(fields: [galpon_id], references: [id])
+  dispositivo Dispositivo @relation(fields: [dispositivo_id], references: [id])
+
+  // Consultas frecuentes: "sensores del galpón X" y "sensores del nodo Y".
+  @@index([galpon_id])
+  @@index([dispositivo_id])
+  @@map("sensores")
 }
