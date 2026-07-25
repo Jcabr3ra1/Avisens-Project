@@ -245,3 +245,22 @@ model UmbralAmbiental {
   @@index([galpon_id, variable, semana_vida, vigente])
   @@map("umbrales_ambientales")
 }
+
+// ---------------------------------------------------------------------------
+// EP-07 · Proveedores (entidad global: quien suministra insumos, pollitos, etc.)
+// ---------------------------------------------------------------------------
+
+model Proveedor {
+  id               Int      @id @default(autoincrement())
+  nombre           String
+  nit              String   @unique
+  tipo_proveedor   String?
+  contacto_persona String?
+  telefono         String?
+  email            String?
+  direccion        String?
+  activo           Boolean  @default(true)
+  fecha_creacion   DateTime @default(now())
+
+  @@map("proveedores")
+}

@@ -13,6 +13,7 @@ import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
 import { SensoresModule } from './modules/sensores/sensores.module';
 import { MedicionesModule } from './modules/mediciones/mediciones.module';
 import { UmbralesModule } from './modules/umbrales/umbrales.module';
+import { ProveedoresModule } from './modules/proveedores/proveedores.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { UmbralesModule } from './modules/umbrales/umbrales.module';
     SensoresModule,
     MedicionesModule,
     UmbralesModule,
+    ProveedoresModule,
     HealthModule,
   ],
   providers: [
