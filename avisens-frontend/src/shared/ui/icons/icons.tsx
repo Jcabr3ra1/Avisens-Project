@@ -268,6 +268,14 @@ export const IcEye = (p: P) => (
   </Icon>
 )
 
+export const IcEyeOff = (p: P) => (
+  <Icon {...p}>
+    <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c6 0 10 7 10 7a17.9 17.9 0 0 1-3.13 4.14M6.6 6.6C3.7 8.4 2 12 2 12s4 7 10 7a10.4 10.4 0 0 0 5.4-1.6" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.24 4.24" />
+    <path d="M2 2l20 20" />
+  </Icon>
+)
+
 export const IcCoin = (p: P) => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="8.5" />
@@ -331,5 +339,46 @@ export const IcNote = (p: P) => (
     <path d="M16 4.5v4h4" />
     <path d="M8 13h7" />
     <path d="M8 16.5h5" />
+  </Icon>
+)
+
+export const IcPin = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 21s-7-6.5-7-11.5a7 7 0 0 1 14 0C19 14.5 12 21 12 21z" />
+    <circle cx="12" cy="9.5" r="2.4" />
+  </Icon>
+)
+
+export const IcCheck = (p: P) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8 12.5l2.5 2.5L16 9.5" />
+  </Icon>
+)
+
+export const IcFlame = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 21c-3 0-5.5-2.2-5.5-5.3 0-2.7 1.7-4.6 2.8-7 .4 1.9 1.5 2.7 2.3 2-1-2.2.2-4.7 2.1-6.7.1 2.8 1.8 4 3 6 .9 1.5 1.3 3 1.3 4.7 0 3.4-2.5 6.3-6 6.3Z" />
+  </Icon>
+)
+
+export const IcSnowflake = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 3v18M4.8 7.5l14.4 9M4.8 16.5l14.4-9" />
+  </Icon>
+)
+
+export const IcHome = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 11.5 12 4l8 7.5" />
+    <path d="M6 10v9.5a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V10" />
+    <path d="M10 20v-5h4v5" />
+  </Icon>
+)
+
+export const IcClock = (p: P) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7v5l3.5 2" />
   </Icon>
 )

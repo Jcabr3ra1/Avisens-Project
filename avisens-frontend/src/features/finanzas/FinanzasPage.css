@@ -1,1 +1,70 @@
-/* FinanzasPage */
+/* FinanzasPage — Módulo de Finanzas (EP-07) */
+
+.fin-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1.6rem;
+  padding-bottom: 1.2rem; border-bottom: 1px solid rgba(16,44,35,0.07);
+}
+.fin-title { font-size: 1.75rem; font-weight: 800; color: var(--dash-ink); margin: 0; letter-spacing: -0.03em; }
+.fin-sub   { font-size: 0.85rem; color: var(--text3); margin: 0.2rem 0 0; }
+
+/* ─── Tarjetas de resumen ────────────────────────────────────────────────── */
+.fin-resumen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.6rem; }
+
+.fin-card-resumen {
+  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 20px; padding: 1.2rem 1.4rem;
+  box-shadow: 0 6px 24px rgba(10,40,28,0.07);
+  backdrop-filter: blur(8px);
+  display: flex; flex-direction: column; gap: 0.3rem;
+  position: relative; overflow: hidden;
+}
+/* Línea de acento izquierda */
+.fin-card-resumen::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px; border-radius: 0 3px 3px 0;
+}
+.fin-card-resumen--ingreso::before  { background: linear-gradient(180deg,var(--green),var(--green-d)); }
+.fin-card-resumen--egreso::before   { background: linear-gradient(180deg,var(--red),var(--danger3)); }
+.fin-card-resumen--positivo::before { background: linear-gradient(180deg,var(--green),var(--green-d)); }
+.fin-card-resumen--negativo::before { background: linear-gradient(180deg,var(--red),var(--danger3)); }
+
+.fin-resumen-label { font-size: 0.75rem; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; }
+.fin-resumen-valor { font-size: 1.4rem; font-weight: 800; color: var(--dash-ink); font-variant-numeric: tabular-nums; }
+
+/* ─── Filtros ────────────────────────────────────────────────────────────── */
+.fin-filtros { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.1rem; flex-wrap: wrap; }
+.fin-filtro-grupo { display: flex; gap: 0.3rem; background: rgba(7,23,19,0.032); border: 1px solid rgba(16,44,35,0.07); border-radius: 12px; padding: 0.3rem; }
+.fin-filtro-btn { padding: 0.45rem 0.9rem; background: transparent; border: none; border-radius: 9px; font-size: 0.85rem; font-weight: 600; cursor: pointer; color: var(--text3); transition: background 0.15s, color 0.15s; }
+.fin-filtro-btn--activo { background: #fff; color: var(--dash-ink); box-shadow: 0 2px 6px rgba(10,40,28,0.08); }
+.fin-select { padding: 0.45rem 0.8rem; border: 1px solid rgba(16,44,35,0.12); border-radius: 10px; background: rgba(255,255,255,0.7); color: var(--text); font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
+.fin-select:focus { border-color: var(--green); background: #fff; }
+
+/* ─── Tabla ──────────────────────────────────────────────────────────────── */
+.fin-tabla-card {
+  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 20px; box-shadow: 0 6px 24px rgba(10,40,28,0.07);
+  backdrop-filter: blur(8px); overflow: hidden;
+}
+.fin-vacio  { padding: 3rem 2rem; text-align: center; color: var(--text3); }
+.fin-tabla  { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.fin-tabla th { padding: 0.8rem 1.1rem; background: rgba(7,23,19,0.032); border-bottom: 1px solid rgba(16,44,35,0.08); text-align: left; font-size: 0.71rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); }
+.fin-tabla td { padding: 0.85rem 1.1rem; border-bottom: 1px solid rgba(16,44,35,0.055); vertical-align: middle; }
+.fin-tabla tbody tr:last-child td { border-bottom: none; }
+.fin-tabla tbody tr:hover td { background: rgba(16,185,129,0.035); }
+
+.fin-tipo-badge          { padding: 0.18rem 0.6rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; }
+.fin-tipo-badge--ingreso { background: rgba(16,185,129,0.13); color: var(--green-dd); }
+.fin-tipo-badge--egreso  { background: rgba(239,68,68,0.12);  color: var(--red); }
+.fin-categoria  { font-size: 0.82rem; color: var(--text2); }
+.fin-desc       { max-width: 280px; font-size: 0.85rem; }
+.fin-lote-badge { padding: 0.14rem 0.55rem; background: rgba(7,23,19,0.05); border-radius: 7px; font-size: 0.78rem; font-family: 'DM Mono', monospace; }
+.fin-monto          { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.fin-monto--ingreso { color: var(--green-d); }
+.fin-monto--egreso  { color: var(--red); }
+
+@media (max-width: 700px) {
+  .fin-resumen { grid-template-columns: 1fr; }
+  .fin-header  { flex-direction: column; }
+  .fin-title   { font-size: 1.4rem; }
+}

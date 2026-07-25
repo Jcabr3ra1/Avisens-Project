@@ -7,12 +7,13 @@
 // - 11 sensores clicables con inspector lateral
 // - Se gira arrastrando el mouse o con botones ← →
 // - Zoom con botones + / −
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import {
   IcAlert, IcDrop, IcFan, IcRefresh, IcSeed, IcSettings, IcThermo, IcWind, IcChevronRight, IcPlus,
 } from '@shared/ui/icons/icons'
 import type { Galpon } from '../../model'
+import type { Sensor as SensorReal } from '../../../monitoreo/data'
 import './CoopPlaceholder.css'
 
 type DeviceStatus = 'ok' | 'warn' | 'crit' | 'info'
@@ -22,7 +23,11 @@ type SensorPoint = {
   x: number; y: number; note: string; min: number; max: number; ideal: [number, number]
 }
 
-const SENSORS: SensorPoint[] = [
+// Plantilla base: posiciones, zonas e ideales del plano. Temperatura y humedad
+// se actualizan con los sensores reales del galpón (ver construirSensores);
+// extractores, comederos, bebederos y puerta siguen siendo ilustrativos porque
+// todavía no hay telemetría de equipos en el mock (ver módulo Infraestructura).
+const SENSORS_BASE: SensorPoint[] = [
   { id: 't1', label: 'Temperatura', type: 'temp', zone: 'Zona 1 · Entrada', value: '28.4', numValue: 28.4, unit: '°C', status: 'ok', x: 22, y: 52, note: 'Temperatura estable, las aves están cómodas.', min: 20, max: 38, ideal: [25, 29] },
   { id: 't2', label: 'Temperatura', type: 'temp', zone: 'Zona 2 · Centro', value: '29.8', numValue: 29.8, unit: '°C', status: 'warn', x: 50, y: 50, note: 'Subió 1.4°C en 18 min. Hay que prender más ventiladores.', min: 20, max: 38, ideal: [25, 29] },
   { id: 't3', label: 'Temperatura', type: 'temp', zone: 'Zona 3 · Salida', value: '27.6', numValue: 27.6, unit: '°C', status: 'ok', x: 78, y: 52, note: 'Todo bien, dentro del rango para esta semana.', min: 20, max: 38, ideal: [25, 29] },
@@ -43,7 +48,46 @@ const ic = (t: SensorPoint['type'], s = 15): ReactNode => {
   const C = m[t]; return <C size={s} />
 }
 
-const CoopPlaceholder = ({ galpon }: { galpon: Galpon }) => {
+// Traduce el estado de Monitoreo (optimo/advertencia/critico/offline) al
+// vocabulario visual del plano (ok/warn/crit/info).
+const ESTADO_A_STATUS: Record<string, DeviceStatus> = {
+  optimo: 'ok', advertencia: 'warn', critico: 'crit', offline: 'info',
+}
+function notaTemperatura(estado: string, valor: number): string {
+  if (estado === 'critico')     return `Temperatura crítica (${valor}°C). Revisa la ventilación de inmediato.`
+  if (estado === 'advertencia') return `Temperatura fuera del rango ideal (${valor}°C). Vigílala de cerca.`
+  return 'Temperatura estable, dentro del rango ideal.'
+}
+function notaHumedad(estado: string, valor: number): string {
+  if (estado === 'critico')     return `Humedad crítica (${valor}%). Revisa cortinas y ventilación.`
+  if (estado === 'advertencia') return `Humedad fuera del rango ideal (${valor}%). Vigila el estado de la cama.`
+  return 'Humedad estable, dentro del rango ideal.'
+}
+
+// Reemplaza los puntos de temperatura y humedad de la plantilla con la
+// lectura REAL del galpón (Monitoreo) — así el plano deja de mostrar
+// siempre los mismos números sin importar qué galpón se esté viendo.
+// Extractores/comederos/bebederos/puerta siguen ilustrativos (sin telemetría real todavía).
+function construirSensores(reales: SensorReal[]): SensorPoint[] {
+  const temp = reales.find(s => s.variable === 'temperatura')
+  const hum  = reales.find(s => s.variable === 'humedad')
+  return SENSORS_BASE.map(s => {
+    if (s.type === 'temp' && temp) {
+      return { ...s, value: String(temp.valor), numValue: temp.valor,
+        status: ESTADO_A_STATUS[temp.estado] ?? 'info', note: notaTemperatura(temp.estado, temp.valor) }
+    }
+    if (s.type === 'humid' && hum) {
+      return { ...s, value: String(hum.valor), numValue: hum.valor,
+        status: ESTADO_A_STATUS[hum.estado] ?? 'info', note: notaHumedad(hum.estado, hum.valor) }
+    }
+    return s
+  })
+}
+
+type Props = { galpon: Galpon; sensores?: SensorReal[]; mortalidadPct?: number; pesoKg?: number }
+
+const CoopPlaceholder = ({ galpon, sensores = [], mortalidadPct, pesoKg }: Props) => {
+  const SENSORS = useMemo(() => construirSensores(sensores), [sensores])
   const [activeId, setActiveId] = useState('t2')
   const active = SENSORS.find(s => s.id === activeId) ?? SENSORS[0]
   const gp = active.max > 0 ? Math.min(100, Math.max(0, ((active.numValue - active.min) / (active.max - active.min)) * 100)) : 0
@@ -62,7 +106,9 @@ const CoopPlaceholder = ({ galpon }: { galpon: Galpon }) => {
   }, [])
   const onM = useCallback((e: React.PointerEvent) => {
     if (!drag.current) return
-    setRotY(r => Math.max(-40, Math.min(40, r + (e.clientX - lx.current) * 0.35)))
+    // Sensibilidad reducida (0.18 vs 0.35) y rango más corto (±22°) para que
+    // rotateY se vea natural — girar demasiado distorsiona el isométrico
+    setRotY(r => Math.max(-22, Math.min(22, r + (e.clientX - lx.current) * 0.18)))
     lx.current = e.clientX
   }, [])
   const onU = useCallback(() => { drag.current = false }, [])
@@ -78,8 +124,8 @@ const CoopPlaceholder = ({ galpon }: { galpon: Galpon }) => {
         <div className="coop-stats">
           <CS label="Día" value={galpon.dia || 0} />
           <CS label="Aves" value={galpon.aves.toLocaleString('es-CO')} />
-          <CS label="Mortalidad" value="2.1%" tone="warn" />
-          <CS label="Peso" value="1.42 kg" />
+          <CS label="Mortalidad" value={mortalidadPct != null ? `${mortalidadPct}%` : '—'} tone={mortalidadPct != null && mortalidadPct > 3 ? 'warn' : 'default'} />
+          <CS label="Peso" value={pesoKg != null ? `${pesoKg} kg` : '—'} />
         </div>
       </div>
 
@@ -95,7 +141,7 @@ const CoopPlaceholder = ({ galpon }: { galpon: Galpon }) => {
       <div className="coop-body">
         <div className="coop-scene" onPointerDown={onD} onPointerMove={onM} onPointerUp={onU} onPointerLeave={onU}>
           <div className="coop-ctrl">
-            <button type="button" onClick={() => setRotY(r => Math.max(-40, r - 12))}>
+            <button type="button" onClick={() => setRotY(r => Math.max(-22, r - 8))}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
             <button type="button" onClick={() => setZoom(z => Math.min(2.5, z + 0.3))}>
@@ -107,14 +153,16 @@ const CoopPlaceholder = ({ galpon }: { galpon: Galpon }) => {
             <button type="button" onClick={() => setZoom(z => Math.max(0.7, z - 0.3))}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
-            <button type="button" onClick={() => setRotY(r => Math.min(40, r + 12))}>
+            <button type="button" onClick={() => setRotY(r => Math.min(22, r + 8))}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>
           </div>
           {zoom !== 1 && <div className="coop-zoom-badge mono">{Math.round(zoom * 100)}%</div>}
 
           {/* Galpón SVG isométrico */}
-          <svg className="coop-iso" viewBox="0 0 800 520" style={{ transform: `scale(${zoom}) rotate(${rotY}deg)` }}>
+          {/* rotateY: gira horizontalmente como si rodearas el galpón (eje vertical).
+               rotate() antiguo giraba en el eje Z (como papel plano = horrible) */}
+          <svg className="coop-iso" viewBox="0 0 800 520" style={{ transform: `scale(${zoom}) rotateY(${rotY}deg)` }}>
             <defs>
               <linearGradient id="gFloor" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#d6e5dc" />
@@ -251,7 +299,7 @@ const CoopPlaceholder = ({ galpon }: { galpon: Galpon }) => {
                 onClick={() => setActiveId(s.id)}>
                 <span className="coop-point-core">{ic(s.type, 12)}</span>
                 <span className="coop-point-tag"><b>{s.value}</b><small>{s.unit}</small></span>
-                {s.status === 'warn' && <span className="coop-point-ping" />}
+                {(s.status === 'warn' || s.status === 'crit') && <span className="coop-point-ping" />}
               </button>
             )
           })}
@@ -263,7 +311,7 @@ const CoopPlaceholder = ({ galpon }: { galpon: Galpon }) => {
             <div><div className="coop-ins-name">{active.label}</div><div className="coop-ins-zone">{active.zone}</div></div>
           </div>
           <div className="coop-ins-reading"><span className="coop-ins-value mono">{active.value}</span><span className="coop-ins-unit">{active.unit}</span></div>
-          <div className="coop-ins-badge" data-status={active.status}>{active.status === 'warn' && <IcAlert size={12} />}{SL[active.status]}</div>
+          <div className="coop-ins-badge" data-status={active.status}>{(active.status === 'warn' || active.status === 'crit') && <IcAlert size={12} />}{SL[active.status]}</div>
           {active.max > 1 && (
             <div className="coop-ins-gauge">
               <div className="coop-ins-gauge-track">

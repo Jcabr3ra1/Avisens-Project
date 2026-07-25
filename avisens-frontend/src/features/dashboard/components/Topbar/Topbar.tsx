@@ -5,7 +5,17 @@ import {
 import { GRANJAS, QUICK_ACTION_CATALOG, MAX_QUICK_ACTIONS } from '../../model'
 import type { Granja } from '../../model'
 import { useDismissable } from '@shared/hooks/useDismissable'
+// getUsuario lee la sesión guardada en localStorage por el login — EP-03 HU-17
+import { getUsuario } from '@shared/api'
 import './Topbar.css'
+
+// Genera las iniciales del nombre completo (máximo 2 letras)
+// Ej: "Don Carlos Dueño" → "DC", "Edison" → "ED"
+function getIniciales(nombre: string): string {
+  const partes = nombre.trim().split(/\s+/)
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase()
+  return (partes[0][0] + partes[1][0]).toUpperCase()
+}
 
 type Props = {
   granja: Granja
@@ -38,6 +48,13 @@ const Topbar = ({
 
   const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform)
   const cmdKey = isMac ? '⌘' : 'Ctrl'
+
+  // Lee el usuario logueado desde localStorage (guardado en el login — EP-03 HU-17)
+  const usuarioActual = getUsuario()
+  const nombreUsuario = usuarioActual?.nombre ?? 'Usuario'
+  const rolUsuario    = usuarioActual?.rol    ?? ''
+  const emailUsuario  = usuarioActual?.email  ?? ''
+  const iniciales     = getIniciales(nombreUsuario)
 
   return (
     <header className="dash-topbar">
@@ -188,13 +205,14 @@ const Topbar = ({
             aria-haspopup="menu"
             aria-expanded={profileOpen}
           >
+            {/* Iniciales generadas del nombre real del usuario logueado */}
             <div className="dash-topbar-profile-avatar">
-              <span>JM</span>
+              <span>{iniciales}</span>
               <span className="dash-topbar-profile-online" />
             </div>
             <div className="dash-topbar-profile-info">
-              <div className="dash-topbar-profile-name">Juan Méndez</div>
-              <div className="dash-topbar-profile-rol">Administrador</div>
+              <div className="dash-topbar-profile-name">{nombreUsuario}</div>
+              <div className="dash-topbar-profile-rol">{rolUsuario}</div>
             </div>
             <IcChevronDown size={12} className="dash-topbar-profile-chevron" />
           </button>
@@ -202,12 +220,12 @@ const Topbar = ({
             <div className="dash-topbar-profile-dropdown">
               <div className="dash-topbar-profile-card">
                 <div className="dash-topbar-profile-card-avatar">
-                  <span>JM</span>
+                  <span>{iniciales}</span>
                   <span className="dash-topbar-profile-online" />
                 </div>
                 <div className="dash-topbar-profile-card-info">
-                  <div className="dash-topbar-profile-card-name">Juan Méndez</div>
-                  <div className="dash-topbar-profile-card-email">juanjaller7@gmail.com</div>
+                  <div className="dash-topbar-profile-card-name">{nombreUsuario}</div>
+                  <div className="dash-topbar-profile-card-email">{emailUsuario}</div>
                 </div>
               </div>
               <button className="dash-profile-item">

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { isAxiosError } from 'axios'
 import {
   listarUsuarios,
@@ -9,6 +9,7 @@ import {
   type Usuario,
   type CrearUsuarioPayload,
 } from '@shared/api'
+import { IcUsers, IcSearch, IcEye, IcEyeOff } from '@shared/ui/icons/icons'
 import './UsuariosPage.css'
 
 // El backend no expone un endpoint de roles, así que los listamos aquí.
@@ -57,6 +58,12 @@ function UsuariosPage() {
   // Menú de acciones (⋯) abierto: guarda la fila y dónde dibujarlo.
   const [menu, setMenu] = useState<{ user: Usuario; top: number; left: number } | null>(null)
 
+  // Búsqueda por nombre, correo o cédula (filtro en el cliente).
+  const [busqueda, setBusqueda] = useState('')
+
+  // Mostrar/ocultar el texto de la contraseña en el formulario.
+  const [mostrarPassword, setMostrarPassword] = useState(false)
+
   const modoEdicion = editandoId !== null
 
   // El Propietario solo gestiona operarios; el Admin gestiona todos los roles.
@@ -64,6 +71,23 @@ function UsuariosPage() {
   const rolesDisponibles = esPropietario
     ? ROLES.filter((r) => r.nombre === 'Operario')
     : ROLES
+
+  // Cifras del resumen — cuentan sobre TODOS los usuarios, sin filtrar por búsqueda.
+  const totalUsuarios  = usuarios.length
+  const totalActivos   = usuarios.filter((u) => u.activo).length
+  const totalPropietarios = usuarios.filter((u) => u.rol.nombre === 'Propietario').length
+  const totalOperarios    = usuarios.filter((u) => u.rol.nombre === 'Operario').length
+
+  // Lista filtrada por el término de búsqueda (nombre, correo o cédula).
+  const usuariosFiltrados = useMemo(() => {
+    const q = busqueda.trim().toLowerCase()
+    if (!q) return usuarios
+    return usuarios.filter((u) =>
+      u.nombre_completo.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      u.cedula.toLowerCase().includes(q),
+    )
+  }, [usuarios, busqueda])
 
   async function cargarUsuarios() {
     setCargando(true)
@@ -86,6 +110,7 @@ function UsuariosPage() {
     // Para el Dueño, el rol por defecto (y único) es Operario.
     setForm({ ...FORM_INICIAL, rol_id: esPropietario ? 3 : FORM_INICIAL.rol_id })
     setErrorForm('')
+    setMostrarPassword(false)
     setModalAbierto(true)
   }
 
@@ -100,6 +125,7 @@ function UsuariosPage() {
       rol_id: u.rol.id,
     })
     setErrorForm('')
+    setMostrarPassword(false)
     setModalAbierto(true)
   }
 
@@ -184,13 +210,65 @@ function UsuariosPage() {
         </button>
       </header>
 
+      {/* ── Resumen de cifras ─────────────────────────────────────────────── */}
+      <div className="usuarios-resumen">
+        <div className="usuarios-stat">
+          <span className="usuarios-stat-valor">{totalUsuarios}</span>
+          <span className="usuarios-stat-label">{esPropietario ? 'Operarios' : 'Total'}</span>
+        </div>
+        <div className="usuarios-stat usuarios-stat--activo">
+          <span className="usuarios-stat-valor">{totalActivos}</span>
+          <span className="usuarios-stat-label">Activos</span>
+        </div>
+        {!esPropietario && (
+          <>
+            <div className="usuarios-stat">
+              <span className="usuarios-stat-valor">{totalPropietarios}</span>
+              <span className="usuarios-stat-label">Propietarios</span>
+            </div>
+            <div className="usuarios-stat">
+              <span className="usuarios-stat-valor">{totalOperarios}</span>
+              <span className="usuarios-stat-label">Operarios</span>
+            </div>
+          </>
+        )}
+      </div>
+
       {error && <div className="usuarios-alert" role="alert">{error}</div>}
 
       <div className="usuarios-card">
+        {/* ── Buscador ─────────────────────────────────────────────────────── */}
+        {!cargando && usuarios.length > 0 && (
+          <div className="usuarios-toolbar">
+            <label className="usuarios-search">
+              <IcSearch size={15} />
+              <input
+                type="text"
+                placeholder="Buscar por nombre, correo o cédula…"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+              />
+            </label>
+            <span className="usuarios-toolbar-count">
+              {usuariosFiltrados.length} de {usuarios.length}
+            </span>
+          </div>
+        )}
+
         {cargando ? (
           <p className="usuarios-empty">Cargando usuarios…</p>
         ) : usuarios.length === 0 ? (
-          <p className="usuarios-empty">No hay usuarios registrados.</p>
+          <div className="usuarios-vacio">
+            <IcUsers size={32} />
+            <p className="usuarios-vacio-titulo">No hay usuarios registrados.</p>
+            <p className="usuarios-vacio-sub">Crea el primero con el botón de arriba.</p>
+          </div>
+        ) : usuariosFiltrados.length === 0 ? (
+          <div className="usuarios-vacio">
+            <IcSearch size={28} />
+            <p className="usuarios-vacio-titulo">Sin resultados para "{busqueda}"</p>
+            <p className="usuarios-vacio-sub">Prueba con otro nombre, correo o cédula.</p>
+          </div>
         ) : (
           <table className="usuarios-table">
             <thead>
@@ -205,13 +283,13 @@ function UsuariosPage() {
               </tr>
             </thead>
             <tbody>
-              {usuarios.map((u) => (
+              {usuariosFiltrados.map((u) => (
                 <tr key={u.id} className={u.activo ? '' : 'is-inactive'}>
                   <td>{u.nombre_completo}</td>
                   <td>{u.email}</td>
                   <td>{u.cedula}</td>
                   <td>{u.telefono ?? '—'}</td>
-                  <td><span className="rol-badge">{u.rol.nombre}</span></td>
+                  <td><span className={`rol-badge rol-badge--${u.rol.nombre.toLowerCase()}`}>{u.rol.nombre}</span></td>
                   <td>
                     <label className="switch" title={u.activo ? 'Desactivar' : 'Activar'}>
                       <input
@@ -314,14 +392,25 @@ function UsuariosPage() {
                     Contraseña{' '}
                     <em>{modoEdicion ? '(vacío = sin cambio)' : '(mín. 8)'}</em>
                   </span>
-                  <input
-                    type="password"
-                    minLength={8}
-                    placeholder={modoEdicion ? '••••••••' : ''}
-                    value={form.password}
-                    onChange={(e) => actualizarCampo('password', e.target.value)}
-                    required={!modoEdicion}
-                  />
+                  <div className="campo-password">
+                    <input
+                      type={mostrarPassword ? 'text' : 'password'}
+                      minLength={8}
+                      placeholder={modoEdicion ? '••••••••' : ''}
+                      value={form.password}
+                      onChange={(e) => actualizarCampo('password', e.target.value)}
+                      required={!modoEdicion}
+                    />
+                    <button
+                      type="button"
+                      className="campo-password-toggle"
+                      onClick={() => setMostrarPassword((v) => !v)}
+                      aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                      title={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    >
+                      {mostrarPassword ? <IcEyeOff size={16} /> : <IcEye size={16} />}
+                    </button>
+                  </div>
                 </label>
                 <label className="campo">
                   <span>Rol</span>

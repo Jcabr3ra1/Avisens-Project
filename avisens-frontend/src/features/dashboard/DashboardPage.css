@@ -1,62 +1,396 @@
-/* ═══════════════════════════════════════════════════════ */
-/* ═══════════ DashboardPage — contenido propio ═════════ */
-/* El shell (.dash-page / .dash-main / .mono) vive en       */
-/* app/layout/PanelLayout.css                               */
-/* ═══════════════════════════════════════════════════════ */
-.dash-content {
-  padding: 22px 30px 44px;
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* ════════ DashboardPage — Mi galpón  ══════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Página ─────────────────────────────────────────────────────────────── */
+.db-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 1540px;
-  width: 100%;
-  margin: 0 auto;
+  gap: 1rem;
+  height: 100%;
 }
 
-/* ─── Main grid (col-left + col-center) ─── */
-.dash-grid {
+/* ─── Hero: banner oscuro con saludo, tabs de galpón y KPIs ──────────────── */
+/* Mismo lenguaje visual del Panel Admin — degradado verde oscuro + puntos    */
+.db-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 1.8rem 2rem 1.6rem;
+  background: linear-gradient(135deg, #071713 0%, #0a2218 40%, #0e5234 100%);
+  border-radius: 24px;
+  box-shadow: 0 20px 56px rgba(5,40,20,0.38), 0 0 0 1px rgba(16,185,129,0.14);
+}
+.db-hero-pattern { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.db-hero-top, .db-hero-tabs-row, .db-hero-kpis, .db-hero-vacio { position: relative; z-index: 1; }
+
+.db-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+.db-hero-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.67rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(52,211,153,0.65);
+  margin: 0 0 0.4rem;
+}
+.db-hero-eyebrow-code { color: rgba(255,255,255,0.3); }
+.db-hero-title-row { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+.db-hero-title {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.db-hero-estado {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.73rem; font-weight: 700;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.75);
+}
+.db-hero-estado-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.db-hero-estado--optimo      { color: #6ee7b7; background: rgba(16,185,129,0.16); border-color: rgba(16,185,129,0.3); }
+.db-hero-estado--advertencia,
+.db-hero-estado--preparacion { color: #fcd34d; background: rgba(245,158,11,0.16); border-color: rgba(245,158,11,0.3); }
+.db-hero-estado--critico,
+.db-hero-estado--mantenimiento { color: #fca5a5; background: rgba(239,68,68,0.18);  border-color: rgba(239,68,68,0.32); }
+.db-hero-estado--offline,
+.db-hero-estado--vacio       { color: rgba(255,255,255,0.55); }
+.db-hero-fecha { font-size: 0.73rem; color: rgba(255,255,255,0.32); text-transform: capitalize; white-space: nowrap; margin-top: 0.2rem; }
+
+/* Selector de granja — el dueño puede tener más de una */
+.db-hero-granja-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.9rem; }
+.db-hero-granja-label {
+  font-family: 'DM Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+}
+.db-hero-granja-select {
+  appearance: none; -webkit-appearance: none;
+  background: rgba(255,255,255,0.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.6rem center;
+  background-size: 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  color: #fff; font-family: inherit;
+  font-size: 0.82rem; font-weight: 700;
+  padding: 0.4rem 1.9rem 0.4rem 0.75rem;
+  border-radius: 8px; cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.db-hero-granja-select:hover  { background-color: rgba(255,255,255,0.14); }
+.db-hero-granja-select:focus  { outline: none; border-color: rgba(16,185,129,0.5); }
+.db-hero-granja-select option { color: #111; }
+
+/* Tabs de galpón + botón agregar, sobre el fondo oscuro */
+.db-hero-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.3rem;
+}
+.db-hero-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.db-hero-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.85rem;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: rgba(255,255,255,0.6);
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.db-hero-tab:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.db-hero-tab--activo {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(16,185,129,0.45);
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.14);
+}
+.db-hero-tab--vacio { opacity: 0.55; }
+.db-hero-tab-txt  { font-size: 0.82rem; font-weight: 700; }
+.db-hero-tab-code { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: rgba(255,255,255,0.35); }
+.db-tab-warn {
+  width: 16px; height: 16px;
+  background: var(--red);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.db-hero-tab-add {
+  width: 30px; height: 30px;
+  background: rgba(255,255,255,0.05);
+  border: 1.5px dashed rgba(255,255,255,0.2);
+  border-radius: 50%;
+  color: rgba(255,255,255,0.5);
+  font-size: 1.15rem;
+  font-weight: 300;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  align-self: center;
+}
+.db-hero-tab-add:hover { border-color: var(--green); color: #6ee7b7; background: rgba(16,185,129,0.1); }
+
+/* Botón nuevo galpón — variante clara sobre el hero oscuro */
+.db-hero-btn-nuevo {
+  padding: 0.5rem 1rem;
+  background: rgba(255,255,255,0.95);
+  color: #0a2218; border: none; border-radius: 10px;
+  font-size: 0.84rem; font-weight: 700; cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.db-hero-btn-nuevo:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.25); }
+
+/* KPIs productivos del galpón activo — auto-fit: se reacomodan solos según el ancho */
+.db-hero-kpis {
   display: grid;
-  gap: 20px;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 0.7rem;
 }
-
-@media (min-width: 980px) {
-  .dash-grid {
-    grid-template-columns: minmax(0, 1fr);
-    align-items: stretch;
-  }
-}
-
-.dash-col-left {
+.db-hero-kpi {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 0.15rem;
+  padding: 0.8rem 0.9rem;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+.db-hero-kpi:hover { background: rgba(255,255,255,0.11); border-color: rgba(255,255,255,0.18); transform: translateY(-2px); }
+.db-hero-kpi-icon  { color: rgba(255,255,255,0.45); margin-bottom: 0.3rem; }
+.db-hero-kpi-value { font-size: 1.25rem; font-weight: 800; color: #fff; line-height: 1; font-variant-numeric: tabular-nums; }
+.db-hero-kpi-label { font-size: 0.68rem; color: rgba(255,255,255,0.4); }
+.db-hero-kpi-sub    { font-size: 0.66rem; font-weight: 700; font-style: normal; margin-top: 0.1rem; }
+
+.db-hero-vacio { font-size: 0.85rem; color: rgba(255,255,255,0.45); margin: 0; }
+
+/* ─── Punto de estado ────────────────────────────────────────────────────── */
+.db-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.db-dot--optimo      { background: var(--green); box-shadow: 0 0 5px rgba(16,185,129,0.5); }
+.db-dot--advertencia,
+.db-dot--preparacion { background: var(--warning); }
+.db-dot--critico,
+.db-dot--mantenimiento { background: var(--red); box-shadow: 0 0 5px rgba(239,68,68,0.5); }
+.db-dot--offline,
+.db-dot--vacio       { background: var(--text4); }
+
+/* ─── Layout vertical: el plano del galpón es lo más importante de la página ─ */
+/* y necesita todo el ancho posible — por eso NO se parte en columnas nunca.  */
+.db-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
 }
 
-.dash-col-center {
+/* ─── Sensores en la columna izquierda ───────────────────────────────────── */
+.db-sensores-wrap {
+  background: rgba(255,255,255,0.84);
+  border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(10,40,28,0.06);
+  backdrop-filter: blur(8px);
+}
+.db-sensores-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.7rem 1rem;
+  background: rgba(7,23,19,0.025);
+  border-bottom: 1px solid rgba(16,44,35,0.07);
+}
+.db-kicker {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--green-d); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+}
+.db-kicker::before {
+  content: ''; width: 12px; height: 2px;
+  background: var(--green); border-radius: 2px; display: inline-block;
+}
+.db-kicker-hint { font-size: 0.75rem; color: var(--text4); }
+
+.db-sensores-list { display: flex; flex-direction: column; }
+
+/* Fila de sensor compacta */
+.db-sensor-row {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.7rem 1rem;
+  background: transparent; border: none;
+  border-bottom: 1px solid rgba(16,44,35,0.055);
+  font-family: inherit; text-align: left; cursor: default;
+  transition: background 0.15s;
+  width: 100%;
+}
+.db-sensor-row:last-child { border-bottom: none; }
+.db-sensor-row--clickable { cursor: pointer; }
+.db-sensor-row--clickable:hover { background: rgba(16,185,129,0.04); }
+.db-sensor-row--activo    { background: rgba(16,185,129,0.06) !important; }
+.db-sensor-row--critico   { background: rgba(239,68,68,0.04); }
+.db-sensor-row--advertencia { background: rgba(245,158,11,0.04); }
+
+.db-sensor-icon  { font-size: 1.1rem; flex-shrink: 0; width: 24px; text-align: center; }
+.db-sensor-nombre { font-size: 0.84rem; font-weight: 600; color: var(--dash-ink); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-sensor-valor { font-family: 'DM Mono', monospace; font-size: 0.82rem; color: var(--text2); white-space: nowrap; }
+
+.db-sensor-badge { font-size: 0.72rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 999px; white-space: nowrap; }
+.db-sensor-badge--optimo      { background: rgba(16,185,129,0.12); color: var(--green-dd); }
+.db-sensor-badge--advertencia { background: rgba(245,158,11,0.12); color: var(--warning3); }
+.db-sensor-badge--critico     { background: rgba(239,68,68,0.12);  color: var(--red); }
+.db-sensor-badge--offline     { background: rgba(100,116,139,0.1); color: var(--text3); }
+
+.db-sensor-arrow { color: rgba(16,185,129,0.4); font-size: 1rem; font-weight: 700; margin-left: auto; }
+
+/* ─── Sin lote activo ────────────────────────────────────────────────────── */
+.db-sin-lote {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.5rem; padding: 2rem;
+  background: rgba(255,255,255,0.5);
+  border: 1.5px dashed rgba(16,44,35,0.1); border-radius: 16px;
+  text-align: center;
+}
+.db-sin-lote svg { color: var(--text4); }
+.db-sin-lote p    { font-size: 0.85rem; color: var(--text3); margin: 0; }
+
+/* ─── Columna derecha: 3D ────────────────────────────────────────────────── */
+.db-col-right {
   min-width: 0;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
-@media (max-width: 860px) {
-  .dash-content {
-    padding-left: 14px;
-    padding-right: 14px;
-    gap: 14px;
-  }
+/* El CoopPlaceholder tiene su propio header — lo ocultamos porque
+   la info ya aparece en la sección de KPIs justo arriba */
+.db-col-right .coop-header { display: none; }
+.db-3d-vacio {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 0.75rem;
+  height: 320px;
+  background: rgba(255,255,255,0.5);
+  border: 1.5px dashed rgba(16,44,35,0.1); border-radius: 16px;
+  text-align: center; color: var(--text3);
+}
+.db-3d-vacio svg { color: var(--text4); }
+.db-3d-vacio p    { font-size: 0.88rem; max-width: 240px; margin: 0; }
+
+/* ─── Modal ──────────────────────────────────────────────────────────────── */
+.db-modal-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+  background: rgba(7,20,14,0.55); backdrop-filter: blur(4px);
+}
+.db-modal-card {
+  width: 100%; max-width: 420px;
+  background: rgba(255,255,255,0.98); border: 1px solid rgba(16,44,35,0.1);
+  border-radius: 20px; padding: 1.6rem;
+  box-shadow: 0 32px 80px rgba(7,20,14,0.35);
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.db-modal-titulo { font-size: 1.15rem; font-weight: 800; color: var(--dash-ink); margin: 0; }
+.db-modal-desc   { font-size: 0.84rem; color: var(--text3); margin: 0; }
+.db-modal-form   { display: flex; flex-direction: column; gap: 0.85rem; }
+.db-modal-error  { font-size: 0.84rem; color: var(--red); margin: 0; }
+.db-modal-acciones { display: flex; justify-content: flex-end; gap: 0.6rem; }
+
+.db-campo        { display: flex; flex-direction: column; gap: 0.3rem; }
+.db-campo > span { font-size: 0.84rem; font-weight: 600; color: var(--text); }
+.db-campo > span em { font-style: normal; font-weight: 400; color: var(--text3); }
+.db-campo input  {
+  padding: 0.65rem 0.85rem; border: 1px solid rgba(16,44,35,0.12);
+  border-radius: 10px; background: rgba(7,23,19,0.02); color: var(--text);
+  font-size: 0.9rem; font-family: inherit; outline: none;
+  transition: border-color 0.2s;
+}
+.db-campo input:focus { border-color: var(--green); background: #fff; }
+.db-btn-cancelar {
+  padding: 0.6rem 1.1rem; background: transparent;
+  border: 1px solid rgba(16,44,35,0.14); border-radius: 10px;
+  font-size: 0.88rem; font-weight: 600; cursor: pointer;
+}
+.db-btn-cancelar:hover { background: rgba(7,23,19,0.04); }
+.db-btn-confirmar {
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, var(--green), var(--green-d));
+  color: #fff; border: none; border-radius: 10px;
+  font-size: 0.88rem; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+}
+.db-btn-confirmar:hover { box-shadow: 0 6px 18px rgba(16,185,129,0.38); }
+
+/* ─── Barra de salud del lote ────────────────────────────────────────────── */
+/* Score 0-100 compuesto — diferenciador único de Avisens                    */
+.db-salud-bar {
+  background: rgba(255,255,255,0.84);
+  border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  box-shadow: 0 3px 12px rgba(10,40,28,0.06);
+  backdrop-filter: blur(6px);
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.db-salud-bar-head {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.db-salud-label { font-size: 0.75rem; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.07em; }
+.db-salud-tag   { padding: 0.18rem 0.6rem; border-radius: 999px; font-size: 0.74rem; font-weight: 700; }
+
+/* Pista de la barra */
+.db-salud-track {
+  height: 8px;
+  background: rgba(10,26,20,0.07);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.db-salud-fill {
+  height: 100%; border-radius: 999px;
+  transition: width 0.7s cubic-bezier(0.16,1,0.3,1);
+}
+.db-salud-bar-foot {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.db-salud-hint  { font-size: 0.71rem; color: var(--text4); }
+.db-salud-score { font-size: 1.1rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.db-salud-score small { font-size: 0.68rem; color: var(--text3); font-weight: 500; }
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .db-hero-top      { flex-direction: column; gap: 0.6rem; }
+  .db-hero-tabs-row { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 480px) {
+  .db-hero          { padding: 1.4rem 1.2rem; border-radius: 18px; }
+  .db-hero-title    { font-size: 1.5rem; }
+  .db-hero-granja-select { max-width: 100%; }
+  .db-hero-btn-nuevo { width: 100%; }
+  .db-modal-card    { padding: 1.2rem; }
 }
 
-@media (max-width: 620px) {
-  .dash-content {
-    padding-top: 14px;
-    padding-bottom: 116px;
-  }
-
-}
-
-/* ─── Pausa animaciones cuando la pestaña no es visible ─── */
+/* ─── Clases legacy (AVIA mascot, etc.) ──────────────────────────────────── */
+.dash-content { padding: 22px 30px 44px; display: flex; flex-direction: column; gap: 20px; max-width: 1540px; width: 100%; margin: 0 auto; }
+.dash-grid    { display: grid; gap: 20px; grid-template-columns: 1fr; }
+.dash-col-left  { display: flex; flex-direction: column; gap: 20px; }
+.dash-col-center { min-width: 0; }
 body[data-tab-hidden="true"] .dash-list-pulse .ring,
 body[data-tab-hidden="true"] .dash-vent-fan,
 body[data-tab-hidden="true"] .dash-attention-bar-dot,
-body[data-tab-hidden="true"] .dash-metrics-hub-body {
-  animation-play-state: paused !important;
-}
+body[data-tab-hidden="true"] .dash-metrics-hub-body { animation-play-state: paused !important; }

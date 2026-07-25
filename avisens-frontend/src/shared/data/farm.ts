@@ -31,9 +31,12 @@ export const GRANJAS: Granja[] = [
   { id: 3, nombre: 'Granja San José',   municipio: 'Timbío, Cauca',  galpones: 3 },
 ]
 
+// `status` y `alertas` deben coincidir con los sensores en advertencia/crítico
+// de `features/monitoreo/data.tsx` (GP-01: temp + NH₃ advertencia · GP-02: temp +
+// humedad advertencia · GP-03: temperatura crítica + CO₂ y NH₃ advertencia · GP-04: vacío).
 export const GALPONES: Galpon[] = [
-  { id: 1, codigo: 'GP-01', nombre: 'Galpón Norte', aves: 18560, dia: 32, status: 'ok',    alertas: 2 },
-  { id: 2, codigo: 'GP-02', nombre: 'Galpón Sur',   aves: 17200, dia: 18, status: 'ok',    alertas: 0 },
-  { id: 3, codigo: 'GP-03', nombre: 'Galpón Este',  aves: 19800, dia: 41, status: 'warn',  alertas: 1 },
+  { id: 1, codigo: 'GP-01', nombre: 'Galpón Norte', aves: 18560, dia: 32, status: 'warn',  alertas: 2 },
+  { id: 2, codigo: 'GP-02', nombre: 'Galpón Sur',   aves: 17200, dia: 18, status: 'warn',  alertas: 2 },
+  { id: 3, codigo: 'GP-03', nombre: 'Galpón Este',  aves: 19800, dia: 41, status: 'warn',  alertas: 3 },
   { id: 4, codigo: 'GP-04', nombre: 'Galpón Oeste', aves: 0,     dia: 0,  status: 'empty', alertas: 0 },
 ]

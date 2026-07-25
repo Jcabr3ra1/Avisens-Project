@@ -1,1 +1,82 @@
-/* InfraestructuraPage */
+/* InfraestructuraPage — Módulo de Infraestructura (EP-08) */
+
+.inf-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1.6rem;
+  padding-bottom: 1.2rem; border-bottom: 1px solid rgba(16,44,35,0.07);
+}
+.inf-title  { font-size: 1.75rem; font-weight: 800; color: var(--dash-ink); margin: 0; letter-spacing: -0.03em; }
+.inf-sub    { font-size: 0.85rem; color: var(--text3); margin: 0.2rem 0 0; }
+.inf-alertas { display: flex; gap: 0.5rem; }
+.inf-alerta  { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.28rem 0.75rem; border-radius: 999px; font-size: 0.76rem; font-weight: 700; }
+.inf-alerta--falla { background: rgba(239,68,68,0.12);  color: var(--red); }
+.inf-alerta--mto   { background: rgba(245,158,11,0.12); color: var(--warning3); }
+.inf-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.inf-dot--falla { background: var(--red); box-shadow: 0 0 5px rgba(239,68,68,0.5); }
+.inf-dot--mto   { background: var(--warning); }
+
+.inf-tabs    { display: flex; gap: 0.3rem; margin-bottom: 1.3rem; background: rgba(7,23,19,0.032); border: 1px solid rgba(16,44,35,0.07); border-radius: 14px; padding: 0.35rem; width: fit-content; }
+.inf-tab     { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1.1rem; background: transparent; border: none; border-radius: 10px; font-size: 0.86rem; font-weight: 600; color: var(--text3); cursor: pointer; transition: background 0.15s, color 0.15s; }
+.inf-tab:hover    { background: rgba(255,255,255,0.6); color: var(--text2); }
+.inf-tab--activo  { background: #fff; color: var(--dash-ink); box-shadow: 0 2px 8px rgba(10,40,28,0.08); }
+
+/* ─── Tarjetas de galpones ───────────────────────────────────────────────── */
+.inf-galpones    { display: flex; flex-direction: column; gap: 1rem; }
+.inf-galpon-card {
+  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 20px; padding: 1.2rem 1.4rem;
+  box-shadow: 0 6px 24px rgba(10,40,28,0.06); backdrop-filter: blur(8px);
+}
+.inf-galpon-head   { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+.inf-galpon-codigo { font-family: 'DM Mono', monospace; font-size: 0.8rem; background: rgba(7,23,19,0.05); padding: 0.2rem 0.5rem; border-radius: 6px; color: var(--text3); }
+.inf-galpon-nombre { font-weight: 700; font-size: 1rem; color: var(--dash-ink); }
+.inf-galpon-area   { font-size: 0.84rem; color: var(--text3); margin-left: auto; }
+.inf-galpon-cap    { font-size: 0.84rem; color: var(--text3); }
+.inf-zonas         { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.inf-zona-badge    { padding: 0.22rem 0.7rem; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.18); border-radius: 8px; font-size: 0.78rem; font-weight: 600; color: var(--green-d); }
+.inf-ubicacion     { display: flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; color: var(--text3); margin: 0; }
+
+/* ─── Selector de galpón para equipos ───────────────────────────────────── */
+.inf-selector { display: flex; gap: 0.4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.inf-selector-btn { padding: 0.45rem 0.9rem; background: rgba(255,255,255,0.7); border: 1px solid rgba(16,44,35,0.1); border-radius: 10px; font-size: 0.84rem; font-weight: 600; cursor: pointer; backdrop-filter: blur(4px); transition: all 0.15s; }
+.inf-selector-btn:hover       { border-color: rgba(16,185,129,0.25); }
+.inf-selector-btn--activo     { border-color: rgba(16,185,129,0.35); background: rgba(16,185,129,0.07); color: var(--green-dd); }
+
+/* ─── Tabla de equipos ───────────────────────────────────────────────────── */
+.inf-tabla-card {
+  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 20px; box-shadow: 0 6px 24px rgba(10,40,28,0.07);
+  backdrop-filter: blur(8px); overflow: hidden;
+}
+.inf-tabla  { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+.inf-tabla th { padding: 0.8rem 1rem; background: rgba(7,23,19,0.032); border-bottom: 1px solid rgba(16,44,35,0.08); text-align: left; font-size: 0.71rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); }
+.inf-tabla td { padding: 0.8rem 1rem; border-bottom: 1px solid rgba(16,44,35,0.055); vertical-align: middle; }
+.inf-tabla tbody tr:last-child td { border-bottom: none; }
+.inf-tabla tbody tr:hover td { background: rgba(16,185,129,0.035); }
+
+.inf-fila--falla         td:first-child { border-left: 3px solid var(--red); }
+.inf-fila--mantenimiento td:first-child { border-left: 3px solid var(--warning); }
+
+.inf-codigo { font-family: 'DM Mono', monospace; font-size: 0.8rem; background: rgba(7,23,19,0.05); padding: 0.12rem 0.45rem; border-radius: 6px; }
+.inf-tipo   { white-space: nowrap; }
+.inf-tipo-icon { display: inline-flex; color: var(--text3); vertical-align: middle; }
+.inf-obs    { color: var(--text3); font-size: 0.78rem; }
+
+.inf-vida-wrap { height: 5px; background: rgba(10,26,20,0.07); border-radius: 999px; overflow: hidden; margin-bottom: 3px; width: 80px; }
+.inf-vida-barra { height: 100%; border-radius: 999px; transition: width 0.5s; }
+.inf-vida-barra--ok          { background: linear-gradient(90deg,var(--green-l),var(--green-d)); }
+.inf-vida-barra--advertencia { background: linear-gradient(90deg,var(--warning2),var(--warning3)); }
+.inf-vida-barra--critico     { background: linear-gradient(90deg,var(--danger2),var(--danger3)); }
+
+.inf-estado-badge              { padding: 0.18rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+.inf-estado-badge--activo      { background: rgba(16,185,129,0.13); color: var(--green-dd); }
+.inf-estado-badge--falla       { background: rgba(239,68,68,0.13);  color: var(--red); }
+.inf-estado-badge--mantenimiento { background: rgba(245,158,11,0.13); color: var(--warning3); }
+.inf-estado-badge--inactivo    { background: rgba(100,116,139,0.12); color: var(--text3); }
+
+/* ─── Responsive: celular ────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .inf-header  { flex-direction: column; }
+  .inf-title   { font-size: 1.4rem; }
+  .inf-galpon-area { margin-left: 0; width: 100%; }
+}

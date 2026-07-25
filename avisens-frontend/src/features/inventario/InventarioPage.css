@@ -1,1 +1,88 @@
-/* InventarioPage */
+/* InventarioPage — Módulo de Inventario (EP-07) */
+
+.inv-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1.6rem;
+  padding-bottom: 1.2rem; border-bottom: 1px solid rgba(16,44,35,0.07);
+}
+.inv-title  { font-size: 1.75rem; font-weight: 800; color: var(--dash-ink); margin: 0; letter-spacing: -0.03em; }
+.inv-sub    { font-size: 0.85rem; color: var(--text3); margin: 0.2rem 0 0; }
+.inv-alertas { display: flex; gap: 0.5rem; }
+.inv-alerta  { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.28rem 0.75rem; border-radius: 999px; font-size: 0.76rem; font-weight: 700; }
+.inv-alerta--critico { background: rgba(239,68,68,0.12);  color: var(--red); }
+.inv-alerta--bajo    { background: rgba(245,158,11,0.12); color: var(--warning3); }
+
+.inv-tabs    { display: flex; gap: 0.3rem; margin-bottom: 1.3rem; background: rgba(7,23,19,0.032); border: 1px solid rgba(16,44,35,0.07); border-radius: 14px; padding: 0.35rem; width: fit-content; }
+.inv-tab     { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1.1rem; background: transparent; border: none; border-radius: 10px; font-size: 0.86rem; font-weight: 600; color: var(--text3); cursor: pointer; transition: background 0.15s, color 0.15s; }
+.inv-tab:hover    { background: rgba(255,255,255,0.6); color: var(--text2); }
+.inv-tab--activo  { background: #fff; color: var(--dash-ink); box-shadow: 0 2px 8px rgba(10,40,28,0.08); }
+
+/* ─── Grid de tarjetas de insumos ────────────────────────────────────────── */
+.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+
+.inv-insumo-card {
+  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 20px; padding: 1.2rem 1.3rem;
+  box-shadow: 0 6px 24px rgba(10,40,28,0.07);
+  backdrop-filter: blur(8px);
+  display: flex; flex-direction: column; gap: 0.7rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.inv-insumo-card:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(10,40,28,0.1); }
+.inv-insumo-card--critico { border-color: rgba(239,68,68,0.25); }
+.inv-insumo-card--bajo    { border-color: rgba(245,158,11,0.25); }
+
+.inv-insumo-head   { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+.inv-insumo-nombre { font-weight: 700; font-size: 0.92rem; color: var(--dash-ink); }
+.inv-cat-badge     { padding: 0.14rem 0.55rem; background: rgba(7,23,19,0.05); border-radius: 7px; font-size: 0.72rem; font-weight: 600; color: var(--text3); flex-shrink: 0; }
+
+.inv-insumo-stock        { display: flex; align-items: baseline; gap: 0.3rem; }
+.inv-insumo-stock strong { font-size: 1.7rem; font-weight: 800; color: var(--dash-ink); line-height: 1; font-variant-numeric: tabular-nums; }
+.inv-insumo-stock span   { font-size: 0.86rem; color: var(--text3); }
+
+/* Barra de stock con gradiente */
+.inv-stock-barra-wrap { height: 6px; background: rgba(10,26,20,0.07); border-radius: 999px; overflow: hidden; }
+.inv-stock-barra      { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
+.inv-stock-barra--ok      { background: linear-gradient(90deg,var(--green-l),var(--green-d)); }
+.inv-stock-barra--bajo    { background: linear-gradient(90deg,var(--warning2),var(--warning3)); }
+.inv-stock-barra--critico { background: linear-gradient(90deg,var(--danger2),var(--danger3)); }
+
+.inv-insumo-info   { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text3); }
+.inv-insumo-footer { display: flex; justify-content: space-between; align-items: center; }
+.inv-proveedor     { font-size: 0.78rem; color: var(--text3); }
+
+.inv-estado-badge          { padding: 0.18rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+.inv-estado-badge--ok      { background: rgba(16,185,129,0.13); color: var(--green-dd); }
+.inv-estado-badge--bajo    { background: rgba(245,158,11,0.13); color: var(--warning3); }
+.inv-estado-badge--critico { background: rgba(239,68,68,0.13);  color: var(--red); }
+
+/* ─── Tabla de proveedores ───────────────────────────────────────────────── */
+.inv-tabla-card {
+  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 20px; box-shadow: 0 6px 24px rgba(10,40,28,0.07);
+  backdrop-filter: blur(8px); overflow: hidden;
+}
+.inv-tabla  { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.inv-tabla th { padding: 0.8rem 1.1rem; background: rgba(7,23,19,0.032); border-bottom: 1px solid rgba(16,44,35,0.08); text-align: left; font-size: 0.71rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); }
+.inv-tabla td { padding: 0.85rem 1.1rem; border-bottom: 1px solid rgba(16,44,35,0.055); vertical-align: top; }
+.inv-tabla tbody tr:last-child td { border-bottom: none; }
+.inv-tabla tbody tr:hover td { background: rgba(16,185,129,0.035); }
+
+.inv-contacto { color: var(--text3); font-size: 0.8rem; }
+.inv-catalogo { max-width: 220px; font-size: 0.82rem; color: var(--text2); }
+
+.inv-cal-badge           { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.18rem 0.65rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; }
+.inv-cal-badge--verde    { background: rgba(16,185,129,0.13); color: var(--green-dd); }
+.inv-cal-badge--amarillo { background: rgba(245,158,11,0.13); color: var(--warning3); }
+.inv-cal-badge--rojo     { background: rgba(239,68,68,0.13);  color: var(--red); }
+
+.inv-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.inv-dot--critico, .inv-dot--rojo     { background: var(--red); box-shadow: 0 0 5px rgba(239,68,68,0.5); }
+.inv-dot--bajo,    .inv-dot--amarillo { background: var(--warning); }
+.inv-dot--verde                       { background: var(--green); box-shadow: 0 0 5px rgba(16,185,129,0.5); }
+
+/* ─── Responsive: celular ────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .inv-header { flex-direction: column; }
+  .inv-title  { font-size: 1.4rem; }
+}

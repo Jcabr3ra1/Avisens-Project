@@ -1,0 +1,225 @@
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* ════════ features.css — Sistema de diseño para páginas de módulos ════════ */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* Este archivo define el lenguaje visual de las páginas de features.          */
+/* Se importa globalmente desde main.tsx y aplica sobre .page-container.       */
+/* Los patrones siguen el mismo glass-morphism del Dashboard (PanelLayout).    */
+
+/* ─── Contenedor base de página ──────────────────────────────────────────── */
+/* Mejora el padding y agrega max-width para pantallas muy anchas */
+.page-container {
+  padding: 28px 32px 52px;
+  max-width: 1440px;
+  color: var(--dash-ink);
+}
+@media (max-width: 640px) {
+  .page-container { padding: 16px 14px 32px; }
+}
+
+/* ─── Tablas: scroll horizontal en vez de romper el layout en celular ────── */
+/* :has() deja marcar como "ventana con scroll" al contenedor directo de
+   cualquier tabla, sin tener que tocar el CSS particular de cada página. */
+@media (max-width: 700px) {
+  .page-container table { min-width: 560px; }
+  .page-container div:has(> table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ─── Kicker: etiqueta decorativa sobre el título (DM Mono en verde) ─────── */
+.fp-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--green-d);
+  margin-bottom: 0.35rem;
+}
+.fp-kicker::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  background: var(--green);
+  border-radius: 2px;
+}
+
+/* ─── Card glass — estilo principal de tarjetas en features ──────────────── */
+/* Misma filosofía del Dashboard: fondo semi-transparente + blur + sombra verde*/
+.fp-card {
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(16, 44, 35, 0.09);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(10, 40, 28, 0.07);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+/* ─── Card interactiva — versión con hover ───────────────────────────────── */
+.fp-card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.fp-card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 44px rgba(10, 40, 28, 0.11);
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+/* ─── Separador de sección ───────────────────────────────────────────────── */
+.fp-divider {
+  height: 1px;
+  background: rgba(16, 44, 35, 0.07);
+  margin: 1.4rem 0;
+}
+
+/* ─── Cabecera de tabla ──────────────────────────────────────────────────── */
+/* Header de tabla unificado con fondo sutil */
+.fp-thead th {
+  padding: 0.8rem 1rem;
+  background: rgba(7, 23, 19, 0.032);
+  border-bottom: 1px solid rgba(16, 44, 35, 0.08);
+  text-align: left;
+  font-size: 0.71rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+/* ─── Filas de tabla ─────────────────────────────────────────────────────── */
+.fp-tbody td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(16, 44, 35, 0.055);
+  color: var(--dash-ink);
+  font-size: 0.88rem;
+  vertical-align: middle;
+}
+.fp-tbody tr:last-child td { border-bottom: none; }
+.fp-tbody tr:hover td { background: rgba(16, 185, 129, 0.035); }
+
+/* ─── Tabs con underline activo ──────────────────────────────────────────── */
+.fp-tabs {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 1.2rem;
+  background: rgba(7, 23, 19, 0.032);
+  border: 1px solid rgba(16, 44, 35, 0.07);
+  border-radius: 14px;
+  padding: 0.35rem;
+  width: fit-content;
+}
+.fp-tab {
+  position: relative;
+  padding: 0.5rem 1.1rem;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text3);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.fp-tab:hover { background: rgba(255,255,255,0.6); color: var(--text2); }
+.fp-tab--activo {
+  background: #fff;
+  color: var(--dash-ink);
+  box-shadow: 0 2px 8px rgba(10, 40, 28, 0.08);
+}
+
+/* ─── Badge de estado (semáforo) ─────────────────────────────────────────── */
+.fp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fp-badge--verde    { background: rgba(16,185,129,0.13); color: var(--green-dd); }
+.fp-badge--rojo     { background: rgba(239,68,68,0.13);  color: var(--red); }
+.fp-badge--amarillo { background: rgba(245,158,11,0.13); color: var(--warning3); }
+.fp-badge--gris     { background: rgba(100,116,139,0.12); color: var(--text3); }
+.fp-badge--azul     { background: rgba(59,130,246,0.13); color: var(--blue); }
+
+/* ─── Barra de progreso base ─────────────────────────────────────────────── */
+.fp-bar-wrap {
+  height: 5px;
+  background: rgba(10,26,20,0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.fp-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+.fp-bar--verde    { background: linear-gradient(90deg, var(--green-l), var(--green-d)); }
+.fp-bar--rojo     { background: linear-gradient(90deg, var(--danger2), var(--danger3)); }
+.fp-bar--amarillo { background: linear-gradient(90deg, var(--warning2), var(--warning3)); }
+
+/* ─── Select / input de filtro ───────────────────────────────────────────── */
+.fp-select, .fp-input {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid rgba(16,44,35,0.12);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.7);
+  color: var(--text);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.fp-select:focus, .fp-input:focus {
+  border-color: var(--green);
+  background: #fff;
+}
+
+/* ─── Botones primario / ghost ───────────────────────────────────────────── */
+.fp-btn-primary {
+  padding: 0.6rem 1.1rem;
+  background: linear-gradient(135deg, var(--green), var(--green-d));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.fp-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16,185,129,0.38); }
+.fp-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+.fp-btn-ghost {
+  padding: 0.6rem 1.1rem;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid rgba(16,44,35,0.14);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.fp-btn-ghost:hover { background: rgba(255,255,255,0.8); border-color: var(--green); }
+
+/* ─── Estado vacío ───────────────────────────────────────────────────────── */
+.fp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3.5rem 2rem;
+  text-align: center;
+}
+.fp-empty-icon { font-size: 2.8rem; line-height: 1; filter: grayscale(0.2); }
+.fp-empty-title { font-size: 1rem; font-weight: 700; color: var(--text2); margin: 0; }
+.fp-empty-sub   { font-size: 0.85rem; color: var(--text3); margin: 0; }
