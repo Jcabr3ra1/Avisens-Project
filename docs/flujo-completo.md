@@ -79,6 +79,7 @@ flowchart TD
         OP --> M3[(EP-05 Alertas<br/>alertas, evidencias)]
         OP --> M4[(EP-07 Finanzas/Inventario<br/>movimientos, inventario)]
         OP --> M5[(EP-08 Infraestructura<br/>equipos, mantenimientos)]
+        OP --> M6[(EP-02 Asistente de voz<br/>comandos_voz)]
     end
 
     M1 --> L[(bitacora_auditoria<br/>INSERT — toda acción queda registrada)]
@@ -86,6 +87,7 @@ flowchart TD
     M3 --> L
     M4 --> L
     M5 --> L
+    M6 --> L
 
     %% Flujo recuperar contraseña
     F1 -. ¿Olvidó contraseña? .-> R1[(recuperaciones_password<br/>INSERT token)]

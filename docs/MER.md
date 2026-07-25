@@ -1,11 +1,13 @@
 # MER Avisens v1.2 — Normalizado
 
-> Modelo Entidad-Relación de referencia del proyecto. **42 entidades, 65 relaciones FK.**
+> Modelo Entidad-Relación de referencia del proyecto. **44 entidades, 67 relaciones FK.**
 > Notación de [Eraser](https://eraser.io). Esta es la fuente de verdad del modelo de datos:
 > las tablas de la base de datos se construyen a partir de este documento, no al revés.
 >
 > El backend implementa el modelo **de forma incremental**, módulo por módulo (EP-xx).
-> Estado de implementación: EP-03 (Autenticación) ✅ · resto pendiente.
+> Estado de implementación: EP-03 (Autenticación) ✅ · EP-04 en curso
+> (granjas, galpones, dispositivos, sensores ✅ · mediciones pendiente) ·
+> EP-02 (Asistente de voz) pendiente.
 
 ```
 title AVISENS v1.2 — Normalizado
@@ -92,6 +94,27 @@ interacciones_chatbot [icon: message-square, color: yellow] {
 
 
 // ============================================================
+// EP-02 · ASISTENTE DE VOZ (purple)
+// ============================================================
+
+// Registro de cada comando de voz ejecutado por un operario en un galpón.
+// modo_conexion + sincronizado soportan el trabajo offline en campo.
+comandos_voz [icon: mic, color: purple] {
+  id integer pk
+  usuario_id integer fk
+  galpon_id integer fk
+  tipo_comando string
+  comando_texto string
+  accion_ejecutada string
+  confianza_nlu number
+  requiere_clarificacion bool
+  modo_conexion string
+  sincronizado bool
+  fecha_ejecucion datetime
+}
+
+
+// ============================================================
 // EP-03 · AUTENTICACIÓN Y ROLES (cyan)
 // ============================================================
 
@@ -126,6 +149,8 @@ usuarios [icon: user, color: cyan] {
   password_hash string
   telefono string
   foto_url string
+  huella_voz_url string
+  pin_voz_hash string
   activo bool
   fecha_creacion datetime
 }
@@ -214,6 +239,8 @@ dispositivos [icon: cpu, color: green] {
   fecha_creacion datetime
 }
 
+// codigo es único POR GRANJA (unique compuesto granja_id+codigo en la BD):
+// cada granja tiene su propio "galpon1".
 galpones [icon: package, color: green] {
   id integer pk
   granja_id integer fk
@@ -229,6 +256,10 @@ galpones [icon: package, color: green] {
   fecha_construccion date
 }
 
+// zona_id se materializa en la BD cuando se construya zonas_galpon (EP-08).
+// estado hace de borrado suave: activo | inactivo | mantenimiento | falla.
+// Regla de coherencia (validada en backend): el dispositivo del sensor debe
+// pertenecer al mismo galpón que el sensor.
 sensores [icon: thermometer, color: green] {
   id integer pk
   galpon_id integer fk
@@ -248,6 +279,8 @@ sensores [icon: thermometer, color: green] {
   estado string
 }
 
+// En la BD la PK será compuesta (id, fecha_hora): TimescaleDB exige que la
+// columna de partición temporal haga parte de toda PK/unique de la hypertable.
 mediciones [icon: activity, color: green] {
   id bigint pk
   sensor_id integer fk
@@ -612,6 +645,10 @@ cotizaciones.prospecto_id > prospectos.id
 cotizaciones_sensores.cotizacion_id > cotizaciones.id
 interacciones_chatbot.prospecto_id > prospectos.id
 
+// EP-02 Asistente de voz
+comandos_voz.usuario_id > usuarios.id
+comandos_voz.galpon_id > galpones.id
+
 // EP-03 Autenticación
 usuarios.rol_id > roles.id
 roles_permisos.rol_id > roles.id
@@ -685,6 +722,6 @@ mantenimientos_repuestos.insumo_id > inventario_insumos.id
 
 
 // ================================================================
-// FIN — 42 entidades, 65 relaciones FK
+// FIN — 44 entidades, 67 relaciones FK
 // ================================================================
 ```
