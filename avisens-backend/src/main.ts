@@ -8,6 +8,18 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import helmet from 'helmet';
 
+// BigInt no es serializable a JSON de forma nativa (JSON.stringify lo rechaza).
+// Le enseñamos a emitirse como string: el id de mediciones es BigInt y JS no
+// puede representar enteros tan grandes como number sin perder precisión.
+declare global {
+  interface BigInt {
+    toJSON(): string;
+  }
+}
+BigInt.prototype.toJSON = function (this: bigint): string {
+  return this.toString();
+};
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);

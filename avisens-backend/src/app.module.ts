@@ -11,6 +11,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
 import { SensoresModule } from './modules/sensores/sensores.module';
+import { MedicionesModule } from './modules/mediciones/mediciones.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { SensoresModule } from './modules/sensores/sensores.module';
     GalponesModule,
     DispositivosModule,
     SensoresModule,
+    MedicionesModule,
     HealthModule,
   ],
   providers: [

@@ -188,6 +188,7 @@ model Sensor {
   proxima_calibracion DateTime? @db.Date
   estado             String    @default("activo")
 
+  mediciones Medicion[]
   galpon      Galpon      @relation(fields: [galpon_id], references: [id])
   dispositivo Dispositivo @relation(fields: [dispositivo_id], references: [id])
 
@@ -195,4 +196,25 @@ model Sensor {
   @@index([galpon_id])
   @@index([dispositivo_id])
   @@map("sensores")
+}
+
+// ---------------------------------------------------------------------------
+// EP-04 · Mediciones (serie de tiempo: una lectura de un sensor en un instante)
+// ---------------------------------------------------------------------------
+
+model Medicion {
+  id         BigInt   @default(autoincrement())
+  sensor_id  Int
+  fecha_hora DateTime @default(now())
+  valor      Float
+  calidad    String   @default("ok")
+
+  sensor Sensor @relation(fields: [sensor_id], references: [id])
+
+  // PK compuesta (id, fecha_hora): TimescaleDB exigirá que la columna de
+  // partición temporal haga parte de la PK cuando convirtamos a hypertable.
+  @@id([id, fecha_hora])
+  // La consulta reina será "lecturas del sensor X entre dos fechas".
+  @@index([sensor_id, fecha_hora])
+  @@map("mediciones")
 }
