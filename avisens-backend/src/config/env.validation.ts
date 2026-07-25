@@ -56,5 +56,14 @@ export function validateEnv(config: Record<string, unknown>) {
     throw new Error(`Variables de entorno inválidas:\n${errors.toString()}`);
   }
 
+  // En producción CORS_ORIGIN es obligatoria: sin ella main.ts reflejaría
+  // cualquier origen CON credenciales (cómodo en desarrollo, grave en prod).
+  // Mejor no arrancar que arrancar abierto.
+  if (validated.NODE_ENV === 'production' && !validated.CORS_ORIGIN) {
+    throw new Error(
+      'CORS_ORIGIN es obligatoria en producción (dominio del frontend)',
+    );
+  }
+
   return validated;
 }
