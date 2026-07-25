@@ -12,6 +12,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
 import { SensoresModule } from './modules/sensores/sensores.module';
 import { MedicionesModule } from './modules/mediciones/mediciones.module';
+import { UmbralesModule } from './modules/umbrales/umbrales.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { MedicionesModule } from './modules/mediciones/mediciones.module';
     DispositivosModule,
     SensoresModule,
     MedicionesModule,
+    UmbralesModule,
     HealthModule,
   ],
   providers: [

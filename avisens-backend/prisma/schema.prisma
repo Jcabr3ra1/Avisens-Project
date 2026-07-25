@@ -134,6 +134,7 @@ model Galpon {
   granja Granja @relation(fields: [granja_id], references: [id])
   dispositivo Dispositivo[]
   sensores Sensor[]
+  umbrales UmbralAmbiental[]
 
   // El código se repite entre granjas (cada una tiene su "galpon1"), pero es
   // único dentro de una misma granja.
@@ -217,4 +218,30 @@ model Medicion {
   // La consulta reina será "lecturas del sensor X entre dos fechas".
   @@index([sensor_id, fecha_hora])
   @@map("mediciones")
+}
+
+// ---------------------------------------------------------------------------
+// EP-04 · Umbrales ambientales (rango aceptable por variable/semana; versionado)
+// ---------------------------------------------------------------------------
+
+model UmbralAmbiental {
+  id             Int      @id @default(autoincrement())
+  galpon_id      Int
+  variable       String
+  semana_vida    Int
+  valor_minimo   Float
+  valor_maximo   Float
+  unidad         String
+  criticidad     String
+  vigente        Boolean  @default(true)
+  version        Int      @default(1)
+  fecha_creacion DateTime @default(now())
+
+  galpon Galpon @relation(fields: [galpon_id], references: [id])
+
+  // No puede haber dos veces la misma versión de un mismo umbral.
+  @@unique([galpon_id, variable, semana_vida, version])
+  // Consulta reina: el umbral VIGENTE de un galpón para una variable y semana.
+  @@index([galpon_id, variable, semana_vida, vigente])
+  @@map("umbrales_ambientales")
 }
