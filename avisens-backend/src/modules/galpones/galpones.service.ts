@@ -8,8 +8,7 @@ import { CreateGalponDto } from './dto/create-galpon.dto';
 import { UpdateGalponDto } from './dto/update-galpon.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-
-const ROL_PROPIETARIO = 'Propietario';
+import { ROLES } from '../../common/roles';
 
 // Quién hace la petición. Su rol decide el alcance:
 // - Administrador: gestiona todos los galpones.
@@ -36,16 +35,23 @@ export class GalponesService {
   constructor(private prisma: PrismaService) {}
 
   private esPropietario(solicitante: Solicitante): boolean {
-    return solicitante.rol === ROL_PROPIETARIO;
+    return solicitante.rol === ROLES.PROPIETARIO;
   }
 
   // Verifica que la granja exista y, si el solicitante es Propietario, que sea
   // suya. Se usa al crear o al mover un galpón entre granjas.
   private async validarGranja(granjaId: number, solicitante: Solicitante) {
-    const granja = await this.prisma.granja.findUnique({ where: { id: granjaId } });
+    const granja = await this.prisma.granja.findUnique({
+      where: { id: granjaId },
+    });
     if (!granja) throw new NotFoundException('Granja no encontrada');
-    if (this.esPropietario(solicitante) && granja.propietario_id !== solicitante.id) {
-      throw new ForbiddenException('Solo puedes gestionar galpones de tus propias granjas');
+    if (
+      this.esPropietario(solicitante) &&
+      granja.propietario_id !== solicitante.id
+    ) {
+      throw new ForbiddenException(
+        'Solo puedes gestionar galpones de tus propias granjas',
+      );
     }
   }
 
@@ -103,7 +109,9 @@ export class GalponesService {
       this.esPropietario(solicitante) &&
       galpon.granja.propietario_id !== solicitante.id
     ) {
-      throw new ForbiddenException('Solo puedes gestionar galpones de tus propias granjas');
+      throw new ForbiddenException(
+        'Solo puedes gestionar galpones de tus propias granjas',
+      );
     }
     return galpon;
   }

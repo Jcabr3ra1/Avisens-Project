@@ -8,8 +8,7 @@ import { CreateDispositivoDto } from './dto/create-dispositivo.dto';
 import { UpdateDispositivoDto } from './dto/update-dispositivo.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-
-const ROL_PROPIETARIO = 'Propietario';
+import { ROLES } from '../../common/roles';
 
 // Quién hace la petición. Su rol decide el alcance:
 // - Administrador: gestiona todos los dispositivos.
@@ -48,7 +47,7 @@ export class DispositivosService {
   constructor(private prisma: PrismaService) {}
 
   private esPropietario(solicitante: Solicitante): boolean {
-    return solicitante.rol === ROL_PROPIETARIO;
+    return solicitante.rol === ROLES.PROPIETARIO;
   }
 
   // Verifica que el galpón exista y, si el solicitante es Propietario, que la
@@ -174,7 +173,7 @@ export class DispositivosService {
   async activar(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante); // valida existencia y alcance
     await this.prisma.dispositivo.update({
-      where: {id },
+      where: { id },
       data: { activo: true },
     });
     return { id, activo: true };

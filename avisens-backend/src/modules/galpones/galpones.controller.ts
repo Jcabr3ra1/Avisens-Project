@@ -16,6 +16,7 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { ROLES } from '../../common/roles';
 import { GalponesService } from './galpones.service';
 import { CreateGalponDto } from './dto/create-galpon.dto';
 import { UpdateGalponDto } from './dto/update-galpon.dto';
@@ -31,7 +32,7 @@ interface AuthRequest extends Request {
 @UseGuards(JwtAuthGuard, RolesGuard)
 // Admin gestiona todos; Propietario solo los de sus granjas (el alcance se
 // aplica en el servicio según el rol del solicitante).
-@Roles('Administrador', 'Propietario')
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
 @Controller('galpones')
 export class GalponesController {
   constructor(private galponesService: GalponesService) {}
@@ -43,7 +44,10 @@ export class GalponesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar galpones paginado (Admin: todos · Propietario: los de sus granjas)' })
+  @ApiOperation({
+    summary:
+      'Listar galpones paginado (Admin: todos · Propietario: los de sus granjas)',
+  })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.galponesService.listar(req.user, paginacion);
   }
@@ -71,8 +75,13 @@ export class GalponesController {
   }
 
   @Delete(':id/permanente')
-  @ApiOperation({ summary: 'Eliminar un galpón de forma permanente (casos legales)' })
-  eliminarPermanente(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+  @ApiOperation({
+    summary: 'Eliminar un galpón de forma permanente (casos legales)',
+  })
+  eliminarPermanente(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+  ) {
     return this.galponesService.eliminarPermanente(id, req.user);
   }
 }

@@ -16,6 +16,7 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { ROLES } from '../../common/roles';
 import { GranjasService } from './granjas.service';
 import { CreateGranjaDto } from './dto/create-granja.dto';
 import { UpdateGranjaDto } from './dto/update-granja.dto';
@@ -31,19 +32,24 @@ interface AuthRequest extends Request {
 @UseGuards(JwtAuthGuard, RolesGuard)
 // Admin gestiona todas; Propietario solo las suyas (el alcance se aplica en el
 // servicio según el rol del solicitante).
-@Roles('Administrador', 'Propietario')
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
 @Controller('granjas')
 export class GranjasController {
   constructor(private granjasService: GranjasService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear una granja (Admin: para cualquier propietario · Propietario: para sí mismo)' })
+  @ApiOperation({
+    summary:
+      'Crear una granja (Admin: para cualquier propietario · Propietario: para sí mismo)',
+  })
   crear(@Body() dto: CreateGranjaDto, @Req() req: AuthRequest) {
     return this.granjasService.crear(dto, req.user);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar granjas paginado (Admin: todas · Propietario: las suyas)' })
+  @ApiOperation({
+    summary: 'Listar granjas paginado (Admin: todas · Propietario: las suyas)',
+  })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.granjasService.listar(req.user, paginacion);
   }
@@ -71,8 +77,13 @@ export class GranjasController {
   }
 
   @Delete(':id/permanente')
-  @ApiOperation({ summary: 'Eliminar una granja de forma permanente (casos legales)' })
-  eliminarPermanente(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+  @ApiOperation({
+    summary: 'Eliminar una granja de forma permanente (casos legales)',
+  })
+  eliminarPermanente(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+  ) {
     return this.granjasService.eliminarPermanente(id, req.user);
   }
 }

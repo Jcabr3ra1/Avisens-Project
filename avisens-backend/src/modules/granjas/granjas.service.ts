@@ -9,8 +9,7 @@ import { CreateGranjaDto } from './dto/create-granja.dto';
 import { UpdateGranjaDto } from './dto/update-granja.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-
-const ROL_PROPIETARIO = 'Propietario';
+import { ROLES } from '../../common/roles';
 
 // Quién hace la petición. Su rol decide el alcance:
 // - Administrador: gestiona todas las granjas.
@@ -36,7 +35,7 @@ export class GranjasService {
   constructor(private prisma: PrismaService) {}
 
   private esPropietario(solicitante: Solicitante): boolean {
-    return solicitante.rol === ROL_PROPIETARIO;
+    return solicitante.rol === ROLES.PROPIETARIO;
   }
 
   async crear(dto: CreateGranjaDto, solicitante: Solicitante) {
@@ -46,12 +45,15 @@ export class GranjasService {
       propietarioId = solicitante.id;
     } else {
       if (!dto.propietario_id) {
-        throw new BadRequestException('Debe indicar el propietario de la granja');
+        throw new BadRequestException(
+          'Debe indicar el propietario de la granja',
+        );
       }
       const propietario = await this.prisma.usuario.findUnique({
         where: { id: dto.propietario_id },
       });
-      if (!propietario) throw new NotFoundException('Propietario no encontrado');
+      if (!propietario)
+        throw new NotFoundException('Propietario no encontrado');
       propietarioId = dto.propietario_id;
     }
 
@@ -97,7 +99,10 @@ export class GranjasService {
       select: GRANJA_SELECT,
     });
     if (!granja) throw new NotFoundException('Granja no encontrada');
-    if (this.esPropietario(solicitante) && granja.propietario.id !== solicitante.id) {
+    if (
+      this.esPropietario(solicitante) &&
+      granja.propietario.id !== solicitante.id
+    ) {
       throw new ForbiddenException('Solo puedes gestionar tus propias granjas');
     }
     return granja;
@@ -114,7 +119,8 @@ export class GranjasService {
       const propietario = await this.prisma.usuario.findUnique({
         where: { id: dto.propietario_id },
       });
-      if (!propietario) throw new NotFoundException('Propietario no encontrado');
+      if (!propietario)
+        throw new NotFoundException('Propietario no encontrado');
     }
 
     return this.prisma.granja.update({

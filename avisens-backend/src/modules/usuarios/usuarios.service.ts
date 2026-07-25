@@ -10,9 +10,7 @@ import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-
-const ROL_PROPIETARIO = 'Propietario';
-const ROL_OPERARIO = 'Operario';
+import { ROLES } from '../../common/roles';
 
 // Quién hace la petición. Su rol decide el alcance:
 // - Administrador: gestiona todos los usuarios.
@@ -35,7 +33,7 @@ export class UsuariosService {
   constructor(private prisma: PrismaService) {}
 
   private esPropietario(solicitante: Solicitante): boolean {
-    return solicitante.rol === ROL_PROPIETARIO;
+    return solicitante.rol === ROLES.PROPIETARIO;
   }
 
   async crear(dto: CreateUsuarioDto, solicitante: Solicitante) {
@@ -46,12 +44,15 @@ export class UsuariosService {
     let rolId = dto.rol_id;
     if (this.esPropietario(solicitante)) {
       const rolOperario = await this.prisma.rol.findUnique({
-        where: { nombre: ROL_OPERARIO },
+        where: { nombre: ROLES.OPERARIO },
       });
-      if (!rolOperario) throw new NotFoundException('Rol Operario no encontrado');
+      if (!rolOperario)
+        throw new NotFoundException('Rol Operario no encontrado');
       rolId = rolOperario.id;
     } else {
-      const rol = await this.prisma.rol.findUnique({ where: { id: dto.rol_id } });
+      const rol = await this.prisma.rol.findUnique({
+        where: { id: dto.rol_id },
+      });
       if (!rol) throw new NotFoundException('Rol no encontrado');
     }
 
@@ -73,7 +74,7 @@ export class UsuariosService {
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
     // El Propietario solo ve Operarios; el Admin ve todos.
     const where = this.esPropietario(solicitante)
-      ? { rol: { nombre: ROL_OPERARIO } }
+      ? { rol: { nombre: ROLES.OPERARIO } }
       : undefined;
 
     // Una transacción para que el conteo y la página salgan del mismo snapshot.
@@ -106,20 +107,30 @@ export class UsuariosService {
       },
     });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
-    if (this.esPropietario(solicitante) && usuario.rol.nombre !== ROL_OPERARIO) {
+    if (
+      this.esPropietario(solicitante) &&
+      usuario.rol.nombre !== ROLES.OPERARIO
+    ) {
       throw new ForbiddenException('Solo puedes gestionar operarios');
     }
     return usuario;
   }
 
-  async actualizar(id: number, dto: UpdateUsuarioDto, solicitante: Solicitante) {
+  async actualizar(
+    id: number,
+    dto: UpdateUsuarioDto,
+    solicitante: Solicitante,
+  ) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id },
       include: { rol: true },
     });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
 
-    if (this.esPropietario(solicitante) && usuario.rol.nombre !== ROL_OPERARIO) {
+    if (
+      this.esPropietario(solicitante) &&
+      usuario.rol.nombre !== ROLES.OPERARIO
+    ) {
       throw new ForbiddenException('Solo puedes gestionar operarios');
     }
 
@@ -136,7 +147,8 @@ export class UsuariosService {
           ],
         },
       });
-      if (conflicto) throw new ConflictException('Email o cédula ya registrado');
+      if (conflicto)
+        throw new ConflictException('Email o cédula ya registrado');
     }
 
     // El Propietario no puede cambiar el rol (el operario sigue siendo operario).
@@ -144,7 +156,9 @@ export class UsuariosService {
     if (this.esPropietario(solicitante)) {
       rolId = undefined;
     } else if (dto.rol_id) {
-      const rol = await this.prisma.rol.findUnique({ where: { id: dto.rol_id } });
+      const rol = await this.prisma.rol.findUnique({
+        where: { id: dto.rol_id },
+      });
       if (!rol) throw new NotFoundException('Rol no encontrado');
     }
 

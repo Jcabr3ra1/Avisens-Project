@@ -16,6 +16,7 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { ROLES } from '../../common/roles';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
@@ -31,19 +32,23 @@ interface AuthRequest extends Request {
 @UseGuards(JwtAuthGuard, RolesGuard)
 // Admin gestiona a todos; Propietario solo a sus operarios (el alcance se
 // aplica en el servicio según el rol del solicitante).
-@Roles('Administrador', 'Propietario')
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
 @Controller('usuarios')
 export class UsuariosController {
   constructor(private usuariosService: UsuariosService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear un usuario (Admin: cualquiera · Propietario: operarios)' })
+  @ApiOperation({
+    summary: 'Crear un usuario (Admin: cualquiera · Propietario: operarios)',
+  })
   crear(@Body() dto: CreateUsuarioDto, @Req() req: AuthRequest) {
     return this.usuariosService.crear(dto, req.user);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Listar usuarios paginado (Admin: todos · Propietario: operarios)' })
+  @ApiOperation({
+    summary: 'Listar usuarios paginado (Admin: todos · Propietario: operarios)',
+  })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.usuariosService.listar(req.user, paginacion);
   }
@@ -65,14 +70,21 @@ export class UsuariosController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Desactivar un usuario (borrado suave, revoca sesiones)' })
+  @ApiOperation({
+    summary: 'Desactivar un usuario (borrado suave, revoca sesiones)',
+  })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.usuariosService.desactivar(id, req.user);
   }
 
   @Delete(':id/permanente')
-  @ApiOperation({ summary: 'Eliminar un usuario de forma permanente (casos legales)' })
-  eliminarPermanente(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+  @ApiOperation({
+    summary: 'Eliminar un usuario de forma permanente (casos legales)',
+  })
+  eliminarPermanente(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+  ) {
     return this.usuariosService.eliminarPermanente(id, req.user);
   }
 }
