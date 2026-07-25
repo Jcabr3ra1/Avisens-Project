@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getDatabase } from 'firebase/database'
+import { getDatabase, type Database } from 'firebase/database'
 
 // Conexión a Firebase Realtime Database — usada únicamente para las lecturas
 // en vivo de los sensores (ESP32 → Firebase → esta app). Todo lo demás del
@@ -15,7 +15,21 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-const firebaseApp = initializeApp(firebaseConfig)
+// Firebase es una función SECUNDARIA (solo lecturas en vivo). Si falta la
+// configuración —por ejemplo, un clon del repo sin las variables VITE_FIREBASE_*—
+// NO inicializamos: la app sigue funcionando sin lecturas en vivo, en lugar de
+// caerse entera con un "FIREBASE FATAL ERROR" y dejar la pantalla en blanco.
+const firebaseConfigurado = Boolean(
+  firebaseConfig.databaseURL && firebaseConfig.projectId,
+)
 
-// Instancia de la Realtime Database, lista para usar con `ref()` / `onValue()`.
-export const rtdb = getDatabase(firebaseApp)
+export const rtdb: Database | null = firebaseConfigurado
+  ? getDatabase(initializeApp(firebaseConfig))
+  : null
+
+if (!firebaseConfigurado) {
+  console.warn(
+    '[Firebase] Sin configuración (VITE_FIREBASE_*): las lecturas en vivo de ' +
+      'sensores quedan deshabilitadas; el resto de la app funciona normal.',
+  )
+}

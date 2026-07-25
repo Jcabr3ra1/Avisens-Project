@@ -85,6 +85,13 @@ export function useLecturasVivas(codigoGalpon: string): LecturasPorVariable {
       return
     }
 
+    // Sin Firebase configurado no hay lecturas en vivo: el galpón muestra su
+    // dato de ejemplo (mock), igual que los galpones sin ESP32 real.
+    if (!rtdb) {
+      setLecturas({})
+      return
+    }
+
     const sensoresRef = ref(rtdb, 'sensores')
     const detener = onValue(sensoresRef, (snapshot) => {
       const cruda = (snapshot.val() ?? {}) as LecturaCrudaEsp32
