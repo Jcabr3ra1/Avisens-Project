@@ -93,13 +93,14 @@ INSERT INTO "roles" ("nombre", "descripcion", "requiere_mfa") VALUES
     ('Propietario',   'Gestiona sus granjas',      false),
     ('Operario',      'Registra datos de su galpón', false);
 
+-- Cuenta del administrador del sistema (contraseña: Admin1234!)
 INSERT INTO "usuarios" ("rol_id", "nombre_completo", "cedula", "email", "password_hash")
 VALUES (
     (SELECT "id" FROM "roles" WHERE "nombre" = 'Administrador'),
     'Administrador Avisens',
     '0000000000',
     'admin@avisens.com',
-    '$2b$12$PAVxbo4LH9jxr0WJAzlPZuud/RWKn8kf5FTmgNWYDdRWMdJGjkloe'
+    '$2b$12$39xfW9I2Hy4FjV.iJtlpsePsG1nt/WP4XAaVufwcm3U70JR6UG3Iq'
 );
 
 -- Cuentas de prueba por rol (contraseñas: Dueno1234 / Operario1234)

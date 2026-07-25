@@ -9,9 +9,11 @@ type Props = {
   galpones: Galpon[]
   active: number
   setActive: (id: number) => void
+  // Callback que abre el modal de agregar galpón desde el padre
+  onAdd: () => void
 }
 
-const GalponStrip = ({ galpones, active, setActive }: Props) => (
+const GalponStrip = ({ galpones, active, setActive, onAdd }: Props) => (
   <div className="dash-galpon-strip">
     {galpones.map((g) => {
       const on = g.id === active
@@ -56,7 +58,8 @@ const GalponStrip = ({ galpones, active, setActive }: Props) => (
         </button>
       )
     })}
-    <button className="dash-galpon-add" title="Agregar galpón">
+    {/* Botón para agregar nuevo galpón — abre el modal del padre */}
+    <button className="dash-galpon-add" title="Agregar galpón" onClick={onAdd}>
       <IcPlus size={18} />
     </button>
   </div>

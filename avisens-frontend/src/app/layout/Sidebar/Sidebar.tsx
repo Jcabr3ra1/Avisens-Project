@@ -2,9 +2,11 @@
 // Muestra la navegación principal con 3 secciones: Día a día, Plata y cuentas, Configuración
 // Incluye panel de estado ("Todo conectado") con galpones, aves y alertas
 // Se colapsa con ⌘B, en móvil se convierte en bottom navigation
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { IcSidebar } from '@shared/ui/icons/icons'
 import { NAV_SECTIONS, itemVisible } from './navConfig'
+// getUsuario lee la sesión del localStorage; logout la revoca en el backend (EP-03 HU-17)
+import { getUsuario, logout } from '@shared/api'
 import './Sidebar.css'
 
 type Props = {
@@ -17,7 +19,18 @@ type Props = {
 }
 
 const Sidebar = ({ collapsed, onToggle, rol, galponesActivos, totalAves, totalAlertas }: Props) => {
-  // Cada rol solo ve los menús permitidos; las secciones que quedan vacías se ocultan.
+  const navigate = useNavigate()
+
+  // Datos del usuario logueado para el pie del sidebar (EP-03 HU-17)
+  const usuario = getUsuario()
+
+  // Cierra la sesión: revoca el refresh token en el backend y limpia localStorage
+  async function handleLogout() {
+    await logout()
+    navigate('/login')
+  }
+
+  // Cada rol solo ve los menús permitidos; las secciones vacías se ocultan
   const secciones = NAV_SECTIONS
     .map((sec) => ({ ...sec, items: sec.items.filter((item) => itemVisible(item, rol)) }))
     .filter((sec) => sec.items.length > 0)
@@ -49,27 +62,34 @@ const Sidebar = ({ collapsed, onToggle, rol, galponesActivos, totalAves, totalAl
       {secciones.map((sec) => (
         <div className="dash-side-section" key={sec.label}>
           <div className="dash-side-section-label">{sec.label}</div>
-          {sec.items.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              data-label={item.label}
-              className={({ isActive }) => `dash-side-item${isActive ? ' active' : ''}`}
-              end
-            >
-              <span className="dash-side-accent" />
-              <span className="dash-side-item-icon">
-                {item.icon}
-                {item.badge ? <span className="dash-side-item-icon-dot" /> : null}
-              </span>
-              <span className="dash-side-item-label">{item.label}</span>
-              {item.badge ? <span className="dash-side-badge">{item.badge}</span> : null}
-            </NavLink>
-          ))}
+          {sec.items.map((item) => {
+            // El badge de "Alertas" no es un número fijo — es la misma cuenta
+            // en vivo que muestra el panel de estado de abajo y la página de
+            // Alertas, para que nunca se vean números distintos entre sí.
+            const badge = item.path === '/alertas' ? totalAlertas : item.badge
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                data-label={item.label}
+                className={({ isActive }) => `dash-side-item${isActive ? ' active' : ''}`}
+                end
+              >
+                <span className="dash-side-accent" />
+                <span className="dash-side-item-icon">
+                  {item.icon}
+                  {badge ? <span className="dash-side-item-icon-dot" /> : null}
+                </span>
+                <span className="dash-side-item-label">{item.label}</span>
+                {badge ? <span className="dash-side-badge">{badge}</span> : null}
+              </NavLink>
+            )
+          })}
         </div>
       ))}
     </nav>
 
+    {/* ── Estadísticas del sistema ──────────────────────────────────────── */}
     <div className="dash-side-status">
       <div className="dash-side-status-head">
         <span className="dash-status-pulse">
@@ -97,6 +117,35 @@ const Sidebar = ({ collapsed, onToggle, rol, galponesActivos, totalAves, totalAl
           <span className="dash-side-stat-lbl">alertas</span>
         </div>
       </div>
+    </div>
+
+    {/* ── Usuario logueado + cerrar sesión (EP-03 HU-17) ───────────────── */}
+    <div className="dash-side-user">
+      <div className="dash-side-user-info">
+        {/* Iniciales del nombre como avatar */}
+        <div className="dash-side-user-avatar">
+          {usuario?.nombre
+            ? usuario.nombre.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase()
+            : '?'}
+        </div>
+        <div className="dash-side-user-text">
+          <span className="dash-side-user-name">{usuario?.nombre ?? 'Usuario'}</span>
+          <span className="dash-side-user-rol">{usuario?.rol ?? ''}</span>
+        </div>
+      </div>
+      <button
+        className="dash-side-logout"
+        onClick={handleLogout}
+        title="Cerrar sesión"
+        aria-label="Cerrar sesión"
+      >
+        {/* Ícono de salida (flecha hacia afuera) */}
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
+      </button>
     </div>
   </aside>
   )

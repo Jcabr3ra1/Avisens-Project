@@ -1,0 +1,437 @@
+/* ════════ AdminPage — Panel del Administrador de Avisens ══════════════════ */
+
+/* ─── Hero oscuro: banner principal con gradiente verde ──────────────────── */
+.admin-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 2rem 2.4rem 1.8rem;
+  background: linear-gradient(135deg,
+    #071713 0%,
+    #0a2218 40%,
+    #0e5234 100%
+  );
+  border-radius: 24px;
+  margin-bottom: 1.4rem;
+  box-shadow:
+    0 20px 56px rgba(5,40,20,0.38),
+    0 0 0 1px rgba(16,185,129,0.14);
+}
+/* Glow radial superior derecho */
+.admin-hero::after {
+  content: '';
+  position: absolute;
+  right: -80px; top: -100px;
+  width: 420px; height: 360px;
+  background: radial-gradient(circle, rgba(16,185,129,0.22) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+/* Glow radial inferior izquierdo */
+.admin-hero::before {
+  content: '';
+  position: absolute;
+  left: 20%; bottom: -60px;
+  width: 280px; height: 220px;
+  background: radial-gradient(circle, rgba(5,150,105,0.14) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Patrón decorativo de puntos — SVG absoluto que cubre todo el hero */
+.admin-hero-pattern {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Todo el contenido del hero por encima de los decorados */
+.admin-hero-top,
+.admin-hero-kpis { position: relative; z-index: 1; }
+
+/* Cabecera: eyebrow + título a la izquierda, estado + fecha a la derecha */
+.admin-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+}
+.admin-hero-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.67rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(52,211,153,0.65);
+  margin: 0 0 0.35rem;
+}
+.admin-hero-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+.admin-hero-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+/* Badge "Sistema operativo" con punto pulsante */
+.admin-hero-status {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.3rem 0.75rem;
+  background: rgba(16,185,129,0.14);
+  border: 1px solid rgba(16,185,129,0.28);
+  border-radius: 999px;
+  font-size: 0.73rem; font-weight: 600;
+  color: rgba(52,211,153,0.9);
+}
+/* Punto verde con animación de pulso */
+.admin-hero-pulse {
+  width: 7px; height: 7px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: admin-pulse 2.2s ease-out infinite;
+}
+@keyframes admin-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(16,185,129,0.6); }
+  70%  { box-shadow: 0 0 0 6px rgba(16,185,129,0);   }
+  100% { box-shadow: 0 0 0 0   rgba(16,185,129,0);   }
+}
+.admin-hero-fecha {
+  font-size: 0.73rem;
+  color: rgba(255,255,255,0.3);
+  text-transform: capitalize;
+}
+
+/* ─── KPIs dentro del hero ────────────────────────────────────────────────── */
+.admin-hero-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.8rem;
+}
+.admin-hero-kpi {
+  position: relative;
+  padding: 1rem 1.1rem 0.55rem;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  backdrop-filter: blur(6px);
+  overflow: hidden;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+  cursor: default;
+}
+.admin-hero-kpi:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.2);
+  transform: translateY(-2px);
+}
+.admin-hero-kpi-top {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 0.55rem;
+}
+.admin-hero-kpi-icon { color: rgba(255,255,255,0.5); }
+.admin-hero-kpi-valor {
+  display: block;
+  font-size: 1.7rem; font-weight: 800;
+  color: #fff; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 0.15rem;
+}
+.admin-hero-kpi-label {
+  display: block;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.42);
+}
+/* Sub-etiqueta factual (reemplaza el delta inventado — dato real derivado) */
+.admin-hero-kpi-sub {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.66rem; font-weight: 600;
+  font-style: normal;
+  color: rgba(52,211,153,0.85);
+}
+
+/* ─── Fila media (2 columnas) ─────────────────────────────────────────────── */
+.admin-mid-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.4rem;
+}
+
+/* ─── Tarjeta glass genérica ─────────────────────────────────────────────── */
+.admin-card {
+  background: rgba(255,255,255,0.86);
+  border: 1px solid rgba(16,44,35,0.08);
+  border-radius: 20px;
+  box-shadow: 0 6px 24px rgba(10,40,28,0.06);
+  backdrop-filter: blur(10px);
+  padding: 1.4rem 1.5rem;
+}
+.admin-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.15rem;
+}
+.admin-card-title {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.9rem; font-weight: 700; color: var(--dash-ink);
+}
+.admin-card-sub { font-size: 0.79rem; color: var(--text3); margin: 0.1rem 0 1.1rem; }
+.admin-card-link {
+  display: flex; align-items: center; gap: 0.2rem;
+  background: none; border: none; cursor: pointer;
+  font-size: 0.76rem; color: var(--green-d); font-weight: 600;
+  padding: 0.25rem 0.5rem; border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+.admin-card-link:hover { background: rgba(16,185,129,0.09); }
+
+/* ─── Embudo CRM (barras centradas = forma de embudo visual) ─────────────── */
+.admin-funnel { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
+
+.admin-funnel-row { display: flex; align-items: center; gap: 0.8rem; }
+
+.admin-funnel-meta {
+  width: 96px; flex-shrink: 0; text-align: right;
+  display: flex; flex-direction: column; gap: 0.04rem;
+}
+.admin-funnel-label { font-size: 0.8rem; font-weight: 700; color: var(--text2); }
+.admin-funnel-desc  { font-size: 0.67rem; color: var(--text3); }
+
+/* Pista centrada: barras centradas crean el efecto de embudo */
+.admin-funnel-track {
+  flex: 1;
+  height: 14px;
+  background: rgba(16,44,35,0.05);
+  border-radius: 99px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+.admin-funnel-bar {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+.admin-funnel-count {
+  width: 28px; flex-shrink: 0;
+  font-size: 0.83rem; font-weight: 800;
+  text-align: right; font-variant-numeric: tabular-nums;
+}
+
+/* Pie del CRM: tasa de conversión + barra de progreso */
+.admin-crm-footer {
+  display: flex; flex-direction: column; gap: 0.45rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(16,44,35,0.07);
+  font-size: 0.78rem; color: var(--text3);
+}
+.admin-crm-conv { display: flex; align-items: center; gap: 0.6rem; }
+.admin-crm-conv-track {
+  flex: 1; height: 5px;
+  background: rgba(16,44,35,0.06);
+  border-radius: 99px; overflow: hidden;
+}
+.admin-crm-conv-bar {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, #34d399, #10b981, #059669);
+  border-radius: 99px;
+  max-width: 100%;
+}
+.admin-crm-conv strong {
+  font-size: 0.92rem; color: #059669; white-space: nowrap; font-weight: 800;
+}
+
+/* ─── Contadores de usuarios (API real) ──────────────────────────────────── */
+.admin-act-counters {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem; margin-bottom: 1rem;
+}
+.admin-act-counter {
+  display: flex; flex-direction: column; align-items: center;
+  background: rgba(7,23,19,0.03);
+  border: 1px solid rgba(16,44,35,0.07);
+  border-radius: 12px; padding: 0.65rem 0.4rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+.admin-act-counter:hover {
+  background: rgba(7,23,19,0.05);
+  border-color: rgba(16,44,35,0.12);
+}
+.admin-act-counter strong {
+  font-size: 1.25rem; font-weight: 800; color: var(--dash-ink); line-height: 1;
+}
+.admin-act-counter span { font-size: 0.67rem; color: var(--text3); margin-top: 0.15rem; }
+.admin-act-counter--activo strong { color: #059669; }
+
+/* ─── Feed de actividad reciente ─────────────────────────────────────────── */
+.admin-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.admin-feed-vacio { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--text3); text-align: center; padding: 1rem 0; }
+
+.admin-feed-item {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(16,44,35,0.05);
+}
+.admin-feed-item:last-child { border-bottom: none; }
+
+.admin-feed-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+/* Verde = Propietario, Azul = Operario */
+.admin-feed-avatar--p { background: linear-gradient(135deg,#059669,#10b981); }
+.admin-feed-avatar--o { background: linear-gradient(135deg,#2563eb,#60a5fa); }
+
+.admin-feed-info   { flex: 1; min-width: 0; }
+.admin-feed-nombre {
+  display: block; font-size: 0.84rem; font-weight: 600; color: var(--dash-ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.admin-feed-meta   { display: block; font-size: 0.73rem; color: var(--text3); }
+.admin-feed-hace   { font-size: 0.71rem; color: var(--text3); white-space: nowrap; flex-shrink: 0; }
+
+/* ─── Estado de módulos con anillos de progreso ───────────────────────────── */
+.admin-modulos { margin-bottom: 1.4rem; }
+
+.admin-modulos-legend {
+  display: flex; align-items: center; gap: 1rem;
+  font-size: 0.72rem; color: var(--text3);
+}
+.admin-modulos-legend span { display: flex; align-items: center; gap: 0.35rem; }
+
+.admin-modulos-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.admin-modulo {
+  display: flex; align-items: center; gap: 0.65rem;
+  padding: 0.9rem 0.95rem;
+  background: rgba(7,23,19,0.025);
+  border: 1px solid rgba(16,44,35,0.07);
+  border-radius: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+.admin-modulo:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(10,40,28,0.08);
+}
+.admin-modulo--activo   { border-color: rgba(16,185,129,0.15); }
+.admin-modulo--progreso { border-color: rgba(245,158,11,0.15); }
+.admin-modulo--planeado { border-color: rgba(16,44,35,0.07); }
+
+.admin-modulo-info { flex: 1; min-width: 0; }
+.admin-modulo-ep   {
+  display: block; font-size: 0.62rem; font-weight: 700;
+  color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em;
+}
+.admin-modulo-nombre {
+  display: block; font-size: 0.8rem; font-weight: 600;
+  color: var(--dash-ink); margin-top: 0.08rem;
+}
+.admin-modulo-badge {
+  flex-shrink: 0; font-size: 0.61rem; font-weight: 700;
+  padding: 0.22rem 0.58rem; border-radius: 99px; white-space: nowrap;
+}
+.admin-modulo-badge--activo   { background: rgba(16,185,129,0.12); color: #059669; }
+.admin-modulo-badge--progreso { background: rgba(245,158,11,0.12);  color: #d97706; }
+.admin-modulo-badge--planeado { background: rgba(100,116,139,0.1);  color: #64748b; }
+
+/* ─── Puntos de estado (leyenda) ─────────────────────────────────────────── */
+.admin-dot {
+  display: inline-block; width: 7px; height: 7px;
+  border-radius: 50%; flex-shrink: 0;
+}
+.admin-dot--activo   { background: #10b981; box-shadow: 0 0 0 2.5px rgba(16,185,129,0.22); }
+.admin-dot--progreso { background: #f59e0b; box-shadow: 0 0 0 2.5px rgba(245,158,11,0.22); }
+.admin-dot--planeado { background: #94a3b8; }
+
+/* ─── Acciones rápidas (3 tarjetas) ──────────────────────────────────────── */
+.admin-acciones {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+}
+.admin-accion {
+  position: relative;
+  display: flex; align-items: center; gap: 1rem;
+  padding: 1.45rem 1.5rem;
+  background: rgba(255,255,255,0.86);
+  border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 22px;
+  box-shadow: 0 6px 24px rgba(10,40,28,0.06);
+  backdrop-filter: blur(10px);
+  text-align: left; cursor: pointer;
+  transition: transform 0.22s, box-shadow 0.22s, border-color 0.22s;
+  overflow: hidden;
+}
+/* Degradado de acento que aparece en hover */
+.admin-accion::before {
+  content: ''; position: absolute; inset: 0;
+  opacity: 0; transition: opacity 0.22s;
+}
+.admin-accion--verde::before   { background: linear-gradient(135deg,rgba(16,185,129,0.07),transparent 55%); }
+.admin-accion--azul::before    { background: linear-gradient(135deg,rgba(59,130,246,0.07),transparent 55%); }
+.admin-accion--naranja::before { background: linear-gradient(135deg,rgba(245,158,11,0.07),transparent 55%); }
+
+.admin-accion:hover               { transform: translateY(-5px); box-shadow: 0 22px 52px rgba(10,40,28,0.12); }
+.admin-accion:hover::before       { opacity: 1; }
+.admin-accion--verde:hover        { border-color: rgba(16,185,129,0.3); }
+.admin-accion--azul:hover         { border-color: rgba(59,130,246,0.3); }
+.admin-accion--naranja:hover      { border-color: rgba(245,158,11,0.3); }
+
+/* Etiqueta de épica en la esquina */
+.admin-accion-ep {
+  position: absolute; top: 0.8rem; right: 1.1rem;
+  font-size: 0.62rem; font-weight: 700;
+  color: var(--text3); letter-spacing: 0.07em;
+}
+.admin-accion-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 50px; height: 50px; border-radius: 15px;
+  flex-shrink: 0; position: relative;
+}
+.admin-accion--verde   .admin-accion-icon { background: rgba(16,185,129,0.12); color: #059669; }
+.admin-accion--azul    .admin-accion-icon { background: rgba(59,130,246,0.12); color: #2563eb; }
+.admin-accion--naranja .admin-accion-icon { background: rgba(245,158,11,0.12); color: #d97706; }
+
+.admin-accion-text {
+  flex: 1; min-width: 0; position: relative;
+  display: flex; flex-direction: column; gap: 0.3rem;
+}
+.admin-accion-text strong { font-size: 0.95rem; font-weight: 700; color: var(--dash-ink); }
+.admin-accion-text span   { font-size: 0.8rem; color: var(--text3); line-height: 1.45; }
+
+.admin-accion-arrow {
+  position: relative; color: var(--text3); flex-shrink: 0;
+  transition: transform 0.22s, color 0.22s;
+}
+.admin-accion:hover .admin-accion-arrow { transform: translateX(4px); color: var(--green-d); }
+
+/* ─── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .admin-modulos-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 900px) {
+  .admin-hero-kpis { grid-template-columns: repeat(2, 1fr); }
+  .admin-mid-row   { grid-template-columns: 1fr; }
+  .admin-acciones  { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .admin-hero               { padding: 1.5rem 1.4rem; }
+  .admin-hero-top           { flex-direction: column; gap: 0.8rem; }
+  .admin-hero-badges        { flex-direction: row; align-items: center; }
+  .admin-hero-title         { font-size: 1.55rem; }
+  .admin-hero-kpis          { grid-template-columns: 1fr 1fr; }
+  .admin-act-counters       { grid-template-columns: repeat(2, 1fr); }
+  .admin-modulos-grid       { grid-template-columns: 1fr; }
+  .admin-acciones           { grid-template-columns: 1fr; }
+  .admin-modulos-legend     { flex-wrap: wrap; gap: 0.5rem; }
+}

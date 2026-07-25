@@ -460,6 +460,14 @@
     justify-content: center;
     padding: 10px;
   }
+
+  /* El pie (avatar + nombre + cerrar sesión) no cabe junto a los íconos de
+     navegación en la barra de 68px — se deja solo el botón de salir. */
+  .dash-side-user {
+    margin: 0; padding: 0; border: none; background: none;
+    flex-shrink: 0;
+  }
+  .dash-side-user-info { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -467,3 +475,91 @@
     animation: none;
   }
 }
+
+/* ─── Pie del sidebar: usuario logueado + cerrar sesión (EP-03 HU-17) ─────── */
+.dash-side-user {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 10px 14px;
+  margin: 4px 10px 0;
+  border-top: 1px solid rgba(16, 44, 35, 0.07);
+  border-radius: 12px;
+  background: rgba(7, 23, 19, 0.025);
+}
+
+/* Información del usuario (avatar + nombre + rol) */
+.dash-side-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Círculo con iniciales del nombre */
+.dash-side-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--green), var(--green-d));
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.dash-side-user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dash-side-user-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-side-user-rol {
+  font-size: 0.68rem;
+  color: var(--text3);
+  font-weight: 500;
+}
+
+/* Botón de cerrar sesión */
+.dash-side-logout {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 44, 35, 0.1);
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.dash-side-logout:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--red);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+/* En sidebar colapsado el nombre se oculta pero el avatar y el botón quedan */
+.sidebar-collapsed .dash-side-user-text { display: none; }
+.sidebar-collapsed .dash-side-user { justify-content: center; gap: 0; }
+.sidebar-collapsed .dash-side-user-info { flex: none; }

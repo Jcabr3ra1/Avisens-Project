@@ -1,1 +1,597 @@
-/* CrmPage */
+/* ════════ CrmPage — CRM de Prospectos (EP-01) ══════════════════════════════ */
+
+/* ─── Hero oscuro con métricas y flujo de embudo ─────────────────────────── */
+.crm-hero {
+  background: linear-gradient(135deg, #071713 0%, #0a2218 50%, #0d3522 100%);
+  border-radius: 22px; padding: 1.8rem 2rem 1.5rem;
+  margin-bottom: 1.4rem; position: relative; overflow: hidden;
+  box-shadow: 0 16px 48px rgba(5,30,18,0.32), 0 0 0 1px rgba(16,185,129,0.1);
+}
+/* Brillo radial inferior izquierdo */
+.crm-hero::before {
+  content: ''; position: absolute; bottom: -80px; left: -60px;
+  width: 300px; height: 300px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%);
+}
+/* Brillo radial superior derecho */
+.crm-hero::after {
+  content: ''; position: absolute; top: -60px; right: -40px;
+  width: 220px; height: 220px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(52,211,153,0.07) 0%, transparent 70%);
+}
+
+/* Fila superior: título + badge */
+.crm-hero-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1.4rem; position: relative; z-index: 1;
+}
+.crm-hero-info { flex: 1; }
+.crm-hero-kicker {
+  display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: rgba(52,211,153,0.65); margin-bottom: 0.3rem;
+}
+.crm-hero-title {
+  font-size: 1.7rem; font-weight: 800; color: #fff; margin: 0;
+  letter-spacing: -0.03em; line-height: 1.1;
+}
+.crm-hero-sub {
+  font-size: 0.82rem; color: rgba(255,255,255,0.45); margin: 0.25rem 0 0;
+}
+.crm-hero-urgente-badge {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  flex-shrink: 0; padding: 0.4rem 1rem;
+  background: rgba(239,68,68,0.18); color: #fca5a5;
+  border: 1px solid rgba(239,68,68,0.28);
+  border-radius: 999px; font-size: 0.82rem; font-weight: 700;
+  animation: crm-urgente-pulse 2s ease-in-out infinite; white-space: nowrap;
+}
+@keyframes crm-urgente-pulse {
+  0%, 100% { box-shadow: 0 0 0 0   rgba(239,68,68,0.3); }
+  50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0);   }
+}
+
+/* Fila de métricas del pipeline */
+.crm-hero-stats {
+  display: flex; align-items: stretch; position: relative; z-index: 1;
+  background: rgba(255,255,255,0.055); border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08); overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+.crm-hero-stat {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.12rem;
+  padding: 0.75rem 0.8rem;
+}
+.crm-hero-stat-val {
+  font-size: 1.45rem; font-weight: 800; color: #fff; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.crm-hero-stat-lbl {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.28rem;
+  font-size: 0.68rem; color: rgba(255,255,255,0.42); white-space: nowrap;
+}
+.crm-hero-stat-sep {
+  width: 1px; flex-shrink: 0;
+  background: rgba(255,255,255,0.07); margin: 0.5rem 0;
+}
+
+/* Flujo visual del embudo (frío → tibio → caliente → cliente) */
+.crm-hero-funnel {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.5rem; flex-wrap: wrap; position: relative; z-index: 1;
+}
+.crm-hero-funnel-stage {
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+.crm-hero-funnel-stage:hover { background: rgba(255,255,255,0.1); }
+.crm-hero-funnel-cnt {
+  font-size: 1.3rem; font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.crm-hero-funnel-lbl {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  font-size: 0.7rem; color: rgba(255,255,255,0.5); white-space: nowrap;
+}
+/* Rango de puntaje de la etapa */
+.crm-hero-funnel-rango {
+  font-size: 0.62rem; color: rgba(255,255,255,0.28); white-space: nowrap;
+}
+/* Total de aves en la etapa */
+.crm-hero-funnel-aves {
+  display: inline-flex; align-items: center; gap: 0.22rem;
+  font-size: 0.62rem; color: rgba(52,211,153,0.45); white-space: nowrap;
+}
+.crm-hero-funnel-sep {
+  font-size: 1.4rem; color: rgba(255,255,255,0.18); line-height: 1;
+  user-select: none; align-self: center;
+}
+/* Descartados como nota al margen, separados del flujo principal */
+.crm-hero-funnel-desc {
+  display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+  padding: 0.4rem 0.8rem;
+  border-left: 1px solid rgba(255,255,255,0.07);
+  margin-left: 0.4rem; opacity: 0.45;
+  font-size: 0.68rem; color: rgba(255,255,255,0.4);
+}
+
+/* (Pipeline cards eliminadas — info integrada en el embudo del hero) */
+
+/* ─── Barra de herramientas ──────────────────────────────────────────────── */
+.crm-toolbar {
+  display: flex; align-items: center; gap: 0.75rem;
+  margin-bottom: 1.15rem; flex-wrap: wrap;
+}
+.crm-search {
+  flex: 1; min-width: 220px;
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  background: rgba(255,255,255,0.86); border: 1px solid rgba(16,44,35,0.1);
+  border-radius: 12px; backdrop-filter: blur(6px);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.crm-search:focus-within {
+  border-color: var(--green); box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
+}
+.crm-search-icon  { color: var(--text3); flex-shrink: 0; }
+.crm-search-input {
+  flex: 1; background: none; border: none; outline: none;
+  font-size: 0.86rem; font-family: inherit; color: var(--dash-ink); min-width: 0;
+}
+.crm-search-input::placeholder { color: var(--text3); }
+.crm-search-clear {
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(16,44,35,0.07); border: none; cursor: pointer;
+  color: var(--text3); flex-shrink: 0; transition: background 0.15s;
+}
+.crm-search-clear:hover { background: rgba(16,44,35,0.13); }
+
+.crm-vista-toggle {
+  display: flex; background: rgba(7,23,19,0.035);
+  border: 1px solid rgba(16,44,35,0.08); border-radius: 10px; padding: 0.28rem;
+}
+.crm-vista-btn {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.4rem 0.85rem; border-radius: 8px; border: none;
+  font-size: 0.83rem; font-weight: 600; color: var(--text3);
+  cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap;
+}
+.crm-vista-btn:hover { color: var(--text2); }
+.crm-vista-btn--activo {
+  background: #fff; color: var(--dash-ink);
+  box-shadow: 0 2px 8px rgba(10,40,28,0.08);
+}
+
+/* ─── Kanban: swimlane horizontal (una fila por etapa) ───────────────────── */
+.crm-kanban {
+  display: flex; flex-direction: column; gap: 0.55rem;
+}
+
+/* Lane = fila completa de una etapa */
+.crm-kanban-lane {
+  display: flex; flex-direction: row; align-items: stretch;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(16,44,35,0.08);
+  border-left: 4px solid transparent; /* color de etapa via inline style */
+  border-radius: 16px; overflow: hidden;
+  box-shadow: 0 2px 10px rgba(10,40,28,0.04);
+  backdrop-filter: blur(8px);
+  min-height: 96px;
+  transition: box-shadow 0.2s;
+}
+.crm-kanban-lane:hover {
+  box-shadow: 0 4px 20px rgba(10,40,28,0.08);
+}
+
+/* Tint de fondo sutil por etapa */
+.crm-kanban-lane--caliente   { background: rgba(255,255,255,0.9); }
+.crm-kanban-lane--tibio      { background: rgba(255,255,255,0.9); }
+.crm-kanban-lane--frio       { background: rgba(255,255,255,0.9); }
+.crm-kanban-lane--cerrado    { background: rgba(255,255,255,0.9); }
+.crm-kanban-lane--descartado { background: rgba(248,250,249,0.9); opacity: 0.75; }
+
+/* Panel lateral izquierdo — encabezado fijo de la etapa */
+.crm-kanban-head {
+  width: 140px; flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: flex-start;
+  justify-content: center; gap: 0.3rem;
+  padding: 0.9rem 1rem;
+  background: rgba(7,23,19,0.018);
+  border-right: 1px solid rgba(16,44,35,0.07);
+}
+.crm-kanban-head-emoji {
+  display: inline-flex; color: var(--text2);
+}
+.crm-kanban-head-title {
+  font-size: 0.82rem; font-weight: 700; color: var(--dash-ink); line-height: 1.1;
+}
+.crm-kanban-count {
+  font-size: 0.72rem; font-weight: 800;
+  padding: 0.12rem 0.5rem; border-radius: 999px;
+}
+/* Total de aves en la etapa */
+.crm-kanban-aves {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  font-size: 0.66rem; color: var(--text3); margin-top: 0.1rem;
+}
+
+/* Área de cards — desplazamiento horizontal */
+.crm-kanban-body {
+  flex: 1; display: flex; flex-direction: row;
+  align-items: flex-start; gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  overflow-x: auto; overflow-y: visible;
+  /* Scrollbar discreta */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(16,44,35,0.12) transparent;
+}
+.crm-kanban-body::-webkit-scrollbar { height: 4px; }
+.crm-kanban-body::-webkit-scrollbar-track { background: transparent; }
+.crm-kanban-body::-webkit-scrollbar-thumb { background: rgba(16,44,35,0.12); border-radius: 99px; }
+
+/* Cards: ancho fijo para consistencia en el lane */
+.crm-kcard { min-width: 210px; max-width: 210px; flex-shrink: 0; }
+
+/* Estado vacío del lane */
+.crm-kanban-vacio {
+  display: flex; align-items: center;
+  padding: 0.5rem 0.8rem; min-width: 120px;
+  border: 1.5px dashed rgba(16,44,35,0.09);
+  border-radius: 10px; align-self: center;
+}
+.crm-kanban-vacio p {
+  font-size: 0.76rem; color: var(--text3); margin: 0;
+}
+
+/* ─── Tarjeta de lead en el Kanban ───────────────────────────────────────── */
+.crm-kcard {
+  width: 100%; display: flex; flex-direction: column; gap: 0;
+  background: rgba(255,255,255,0.92);
+  border-top: 1px solid rgba(16,44,35,0.07);
+  border-right: 1px solid rgba(16,44,35,0.07);
+  border-bottom: 1px solid rgba(16,44,35,0.07);
+  border-left: 3px solid transparent; /* semáforo de urgencia */
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 1px 6px rgba(10,40,28,0.06), 0 4px 14px rgba(10,40,28,0.04);
+  backdrop-filter: blur(8px);
+  text-align: left; cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  appearance: none;
+}
+.crm-kcard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 16px rgba(10,40,28,0.1), 0 10px 32px rgba(10,40,28,0.08);
+}
+.crm-kcard:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+/* Pulso suave en leads calientes vencidos */
+.crm-kcard--urgente {
+  animation: crm-hot-pulse 2.8s ease-in-out infinite;
+}
+@keyframes crm-hot-pulse {
+  0%, 100% { box-shadow: 0 1px 6px rgba(10,40,28,0.06), 0 4px 14px rgba(10,40,28,0.04); }
+  50%       { box-shadow: 0 4px 14px rgba(239,68,68,0.2), 0 0 0 2px rgba(239,68,68,0.07); }
+}
+
+/* ─── Cabecera: avatar · nombre · donut (todo en flex row) ─────────────────── */
+.crm-kcard-head {
+  display: flex; align-items: center; gap: 0.65rem;
+  padding: 0.85rem 0.9rem 0.7rem;
+}
+.crm-kcard-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 800; color: #fff; flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.crm-kcard-ident { min-width: 0; flex: 1; }
+.crm-kcard-nombre {
+  display: block; font-size: 0.84rem; font-weight: 700; color: var(--dash-ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25;
+}
+.crm-kcard-granja {
+  display: block; font-size: 0.71rem; color: var(--text3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
+}
+/* Donut como flex-item normal — no flota encima de nada */
+.crm-kcard-donut { flex-shrink: 0; }
+
+/* ─── Cuerpo: municipio + stats + dolor ───────────────────────────────────── */
+.crm-kcard-body {
+  display: flex; flex-direction: column; gap: 0.45rem;
+  padding: 0 0.9rem 0.7rem;
+}
+
+/* Municipio */
+.crm-kcard-muni {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-size: 0.71rem; color: var(--text3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Stats físicas (galpones + aves) */
+.crm-kcard-stats { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+.crm-kcard-stat {
+  display: inline-flex; align-items: center; gap: 0.28rem;
+  font-size: 0.7rem; color: var(--text2);
+  background: rgba(7,23,19,0.04); border: 1px solid rgba(16,44,35,0.07);
+  padding: 0.12rem 0.45rem; border-radius: 6px; white-space: nowrap;
+}
+/* Aves con acento verde — es la métrica más importante en agro */
+.crm-kcard-stat--aves {
+  background: rgba(16,185,129,0.07); border-color: rgba(16,185,129,0.18);
+  color: #059669; font-weight: 700;
+}
+
+/* Solo 1 dolor visible — más de uno satura */
+.crm-kcard-dolores { display: flex; gap: 0.3rem; align-items: center; }
+.crm-kcard-dolor {
+  font-size: 0.64rem; padding: 0.1rem 0.45rem;
+  background: rgba(245,158,11,0.08); color: #b45309;
+  border: 1px solid rgba(245,158,11,0.18); border-radius: 6px;
+  white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+}
+.crm-kcard-dolor--extra {
+  font-size: 0.62rem; color: var(--text3);
+  background: rgba(7,23,19,0.05); border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 6px; padding: 0.1rem 0.4rem; white-space: nowrap;
+}
+
+/* ─── Pie: días de urgencia + llamada siempre visible ────────────────────── */
+.crm-kcard-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.5rem 0.9rem;
+  border-top: 1px solid rgba(16,44,35,0.06);
+  background: rgba(7,23,19,0.018);
+}
+.crm-kcard-dias {
+  display: inline-flex; align-items: center; gap: 0.28rem;
+  font-size: 0.7rem; font-weight: 600;
+}
+/* Botón de llamada siempre visible — importante para uso en campo con tablet */
+.crm-kcard-call {
+  display: inline-flex; align-items: center; gap: 0.28rem;
+  font-size: 0.69rem; font-weight: 700; text-decoration: none;
+  color: #059669; padding: 0.22rem 0.6rem; border-radius: 7px;
+  background: rgba(16,185,129,0.09); border: 1px solid rgba(16,185,129,0.18);
+  transition: background 0.15s, transform 0.1s;
+  line-height: 1;
+}
+.crm-kcard-call:hover {
+  background: rgba(16,185,129,0.18); transform: none;
+}
+.crm-kcard-call:active { transform: scale(0.96); }
+
+/* ─── Filtros (vista Lista) ───────────────────────────────────────────────── */
+.crm-filtros {
+  display: flex; gap: 0.3rem; margin-bottom: 1.1rem; flex-wrap: wrap;
+  background: rgba(7,23,19,0.032); border: 1px solid rgba(16,44,35,0.07);
+  border-radius: 14px; padding: 0.35rem; width: fit-content;
+}
+.crm-filtro {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.45rem 0.9rem; background: transparent; border: none;
+  border-radius: 10px; font-size: 0.84rem; font-weight: 600;
+  cursor: pointer; color: var(--text3); transition: background 0.15s, color 0.15s;
+}
+.crm-filtro:hover   { background: rgba(255,255,255,0.6); color: var(--text2); }
+.crm-filtro--activo { background: #fff; color: var(--dash-ink); box-shadow: 0 2px 8px rgba(10,40,28,0.08); }
+
+/* ─── Tabla de leads (vista Lista) ───────────────────────────────────────── */
+.crm-tabla-card {
+  background: rgba(255,255,255,0.86); border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 20px; box-shadow: 0 6px 24px rgba(10,40,28,0.07);
+  backdrop-filter: blur(8px); overflow: hidden; overflow-x: auto;
+}
+.crm-tabla { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+.crm-tabla th {
+  padding: 0.8rem 1rem; background: rgba(7,23,19,0.032);
+  border-bottom: 1px solid rgba(16,44,35,0.08);
+  text-align: left; font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); white-space: nowrap;
+}
+.crm-tabla td { padding: 0.82rem 1rem; border-bottom: 1px solid rgba(16,44,35,0.055); vertical-align: middle; }
+.crm-tabla tbody tr:last-child td { border-bottom: none; }
+.crm-tabla tbody tr { cursor: pointer; transition: background 0.12s; }
+.crm-tabla tbody tr:hover td { background: rgba(16,185,129,0.032); }
+
+/* Acento de color en la primera celda según estado */
+.crm-fila--caliente   td:first-child { border-left: 3px solid #ef4444; }
+.crm-fila--tibio      td:first-child { border-left: 3px solid #f59e0b; }
+.crm-fila--cerrado    td:first-child { border-left: 3px solid #10b981; }
+.crm-fila--frio       td:first-child { border-left: 3px solid #3b82f6; }
+.crm-fila--descartado               { opacity: 0.52; }
+
+.crm-fila-nombre-wrap { display: flex; align-items: center; gap: 0.6rem; }
+.crm-fila-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.68rem; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.crm-rol { display: block; color: var(--text3); font-size: 0.76rem; }
+
+/* Badge de días en la tabla */
+.crm-tabla-dias { font-size: 0.82rem; font-weight: 700; }
+
+/* Barra de puntaje en la tabla */
+.crm-puntaje { display: flex; align-items: center; gap: 0.5rem; }
+.crm-puntaje-num { font-weight: 800; font-size: 0.93rem; color: var(--dash-ink); min-width: 18px; }
+.crm-puntaje-barra-wrap { flex: 1; height: 5px; background: rgba(10,26,20,0.07); border-radius: 999px; overflow: hidden; min-width: 50px; }
+.crm-puntaje-barra { height: 100%; border-radius: 999px; transition: width 0.4s; }
+.crm-puntaje-barra--caliente   { background: linear-gradient(90deg,#f87171,#ef4444); }
+.crm-puntaje-barra--tibio      { background: linear-gradient(90deg,#fbbf24,#f59e0b); }
+.crm-puntaje-barra--frio       { background: linear-gradient(90deg,#60a5fa,#3b82f6); }
+.crm-puntaje-barra--descartado { background: var(--text4); }
+.crm-puntaje-barra--cerrado    { background: linear-gradient(90deg,#34d399,#10b981); }
+
+/* Badges de estado */
+.crm-estado-badge            { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.18rem 0.6rem; border-radius: 999px; font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
+.crm-estado-badge--caliente  { background: rgba(239,68,68,0.12);   color: #dc2626; }
+.crm-estado-badge--tibio     { background: rgba(245,158,11,0.12);  color: #d97706; }
+.crm-estado-badge--frio      { background: rgba(59,130,246,0.12);  color: #2563eb; }
+.crm-estado-badge--descartado{ background: rgba(100,116,139,0.1);  color: var(--text3); }
+.crm-estado-badge--cerrado   { background: rgba(16,185,129,0.12);  color: #059669; }
+
+/* Estado vacío de búsqueda */
+.crm-vacio {
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  padding: 3rem 2rem; text-align: center;
+}
+.crm-vacio-emoji { display: inline-flex; color: var(--text4); }
+.crm-vacio p     { font-size: 0.88rem; color: var(--text3); margin: 0; }
+
+/* ─── Panel de detalle (slide-in desde la derecha) ───────────────────────── */
+.crm-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(7,20,14,0.42); backdrop-filter: blur(3px);
+  animation: crm-fade 0.2s ease;
+}
+@keyframes crm-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.crm-detalle {
+  position: fixed; right: 0; top: 0; bottom: 0; z-index: 61;
+  width: 390px; max-width: 100vw;
+  background: rgba(255,255,255,0.98); border-left: 1px solid rgba(16,44,35,0.1);
+  box-shadow: -20px 0 60px rgba(7,20,14,0.2);
+  display: flex; flex-direction: column; overflow: hidden;
+  animation: crm-slidein 0.26s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes crm-slidein {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+/* Cabecera del panel */
+.crm-detalle-head {
+  display: flex; align-items: center; gap: 0.85rem;
+  padding: 1.3rem 1.4rem; border-bottom: 3px solid transparent; flex-shrink: 0;
+}
+.crm-detalle-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.crm-detalle-ident  { flex: 1; min-width: 0; }
+.crm-detalle-nombre {
+  font-size: 1.1rem; font-weight: 800; color: var(--dash-ink); margin: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.crm-detalle-rol {
+  font-size: 0.78rem; color: var(--text3); display: block; margin-top: 0.1rem;
+}
+.crm-detalle-cerrar {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 9px; border: none;
+  background: rgba(16,44,35,0.06); color: var(--text3);
+  cursor: pointer; flex-shrink: 0; transition: background 0.15s;
+}
+.crm-detalle-cerrar:hover { background: rgba(16,44,35,0.12); color: var(--dash-ink); }
+
+/* Cuerpo scrollable */
+.crm-detalle-body {
+  flex: 1; overflow-y: auto; padding: 1.2rem 1.4rem;
+  display: flex; flex-direction: column; gap: 0;
+}
+
+/* Filas de dato */
+.crm-det-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.75rem; padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(16,44,35,0.05);
+}
+.crm-det-row:last-child { border-bottom: none; }
+.crm-det-lbl  { font-size: 0.78rem; color: var(--text3); font-weight: 500; flex-shrink: 0; }
+.crm-det-val  { font-size: 0.84rem; color: var(--dash-ink); font-weight: 500; text-align: right; }
+.crm-det-badge {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-size: 0.76rem; font-weight: 700; padding: 0.2rem 0.6rem;
+  border-radius: 999px; white-space: nowrap;
+}
+.crm-det-score-wrap { display: flex; align-items: baseline; gap: 0.25rem; }
+.crm-det-score-wrap strong { font-size: 1.1rem; font-weight: 800; }
+.crm-det-score-max   { font-size: 0.8rem; color: var(--text3); }
+.crm-det-score-rango { font-size: 0.74rem; color: var(--text3); }
+
+/* Separador interno */
+.crm-det-sep { height: 1px; background: rgba(16,44,35,0.06); margin: 0.65rem 0; }
+
+/* Título de sección */
+.crm-det-section {
+  font-size: 0.69rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.09em; color: var(--text3); margin: 0.4rem 0 0.3rem;
+}
+
+/* Chips de dolores en el detalle */
+.crm-det-dolores { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.3rem 0; }
+.crm-det-dolor-chip {
+  font-size: 0.75rem; padding: 0.25rem 0.6rem;
+  background: rgba(245,158,11,0.1); color: #b45309;
+  border: 1px solid rgba(245,158,11,0.22); border-radius: 8px;
+}
+
+/* Links de contacto */
+.crm-det-link {
+  font-size: 0.84rem; color: var(--green-d); font-weight: 600;
+  text-decoration: none; transition: color 0.15s;
+}
+.crm-det-link:hover { color: var(--green-dd); text-decoration: underline; }
+.crm-det-link--truncate {
+  max-width: 200px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; display: inline-block;
+}
+
+/* Acciones del panel */
+.crm-detalle-acciones {
+  display: flex; gap: 0.6rem; flex-shrink: 0;
+  padding: 1rem 1.4rem 1.4rem; border-top: 1px solid rgba(16,44,35,0.07);
+}
+.crm-det-btn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.7rem 1.1rem; border-radius: 12px;
+  font-size: 0.86rem; font-weight: 700; text-decoration: none;
+  cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.crm-det-btn--primary {
+  flex: 1; justify-content: center;
+  background: linear-gradient(135deg, var(--green), var(--green-d));
+  color: #fff; border: none;
+  box-shadow: 0 4px 12px rgba(16,185,129,0.28);
+}
+.crm-det-btn--primary:hover {
+  transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16,185,129,0.38);
+}
+.crm-det-btn--ghost {
+  background: transparent; color: var(--text2);
+  border: 1px solid rgba(16,44,35,0.14);
+}
+.crm-det-btn--ghost:hover { background: rgba(7,23,19,0.04); border-color: rgba(16,44,35,0.22); }
+
+/* ─── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .crm-hero-stats { flex-wrap: wrap; }
+  .crm-hero-stat-sep { display: none; }
+  .crm-hero-stat { min-width: 45%; }
+  /* En pantallas medianas el head lateral se achica */
+  .crm-kanban-head { width: 120px; padding: 0.75rem 0.8rem; }
+}
+@media (max-width: 700px) {
+  .crm-hero { padding: 1.4rem 1.3rem 1.2rem; }
+  .crm-hero-title { font-size: 1.4rem; }
+  .crm-toolbar { flex-direction: column; align-items: stretch; }
+  .crm-vista-toggle { align-self: flex-start; }
+  /* En móvil el head lateral se hace más compacto */
+  .crm-kanban-head { width: 100px; padding: 0.6rem 0.7rem; }
+  .crm-kcard { min-width: 185px; max-width: 185px; }
+}
+@media (max-width: 500px) {
+  .crm-hero-top { flex-direction: column; }
+  .crm-detalle { width: 100vw; }
+  .crm-hero-funnel-stage { padding: 0.45rem 0.7rem; }
+  .crm-kanban-head { width: 88px; }
+  .crm-kanban-head-title { font-size: 0.74rem; }
+}

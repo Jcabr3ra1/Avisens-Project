@@ -88,6 +88,11 @@
   .dash-page {
     display: block;
   }
+  /* El sidebar se vuelve una barra fija de 68px al fondo — sin este espacio,
+     tapa el final del contenido de cada página en el celular. */
+  .dash-main {
+    padding-bottom: 78px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

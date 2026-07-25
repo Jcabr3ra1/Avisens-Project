@@ -1,1 +1,78 @@
-/* GranjasPage */
+/* GranjasPage — Módulo de Granjas (EP-08) */
+
+.grj-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1.6rem;
+  padding-bottom: 1.2rem; border-bottom: 1px solid rgba(16,44,35,0.07);
+}
+.grj-title  { font-size: 1.75rem; font-weight: 800; color: var(--dash-ink); margin: 0; letter-spacing: -0.03em; }
+.grj-sub    { font-size: 0.85rem; color: var(--text3); margin: 0.2rem 0 0; }
+
+/* ─── Resumen global ─────────────────────────────────────────────────────── */
+.grj-resumen { display: flex; gap: 1rem; margin-bottom: 1.8rem; flex-wrap: wrap; }
+.grj-stat {
+  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 18px; padding: 1rem 1.3rem;
+  box-shadow: 0 4px 16px rgba(10,40,28,0.06); backdrop-filter: blur(6px);
+  display: flex; flex-direction: column; gap: 0.1rem; min-width: 110px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.grj-stat:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(10,40,28,0.09); }
+.grj-stat-valor { font-size: 1.7rem; font-weight: 800; color: var(--dash-ink); line-height: 1; font-variant-numeric: tabular-nums; }
+.grj-stat-label { font-size: 0.76rem; color: var(--text3); }
+
+/* ─── Lista de granjas ───────────────────────────────────────────────────── */
+.grj-lista { display: flex; flex-direction: column; gap: 1rem; }
+
+.grj-card {
+  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 20px; box-shadow: 0 6px 24px rgba(10,40,28,0.07);
+  backdrop-filter: blur(8px); overflow: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.grj-card:hover { box-shadow: 0 14px 40px rgba(10,40,28,0.1); border-color: rgba(16,185,129,0.2); }
+
+.grj-card-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 1.1rem 1.4rem; text-align: left; cursor: pointer;
+  background: transparent; border: none; gap: 1rem;
+  transition: background 0.15s;
+}
+.grj-card-head:hover { background: rgba(16,185,129,0.03); }
+
+.grj-card-info  { display: flex; flex-direction: column; gap: 0.2rem; }
+.grj-nombre     { font-weight: 700; font-size: 1.02rem; color: var(--dash-ink); }
+.grj-ubicacion  { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; color: var(--text3); }
+.grj-ubicacion svg { flex-shrink: 0; }
+.grj-card-meta  { display: flex; align-items: center; gap: 1rem; font-size: 0.84rem; color: var(--text3); margin-left: auto; }
+.grj-chevron    { font-size: 0.7rem; color: var(--text4); }
+
+/* ─── Tabla de galpones ──────────────────────────────────────────────────── */
+.grj-galpones { border-top: 1px solid rgba(16,44,35,0.07); overflow-x: auto; }
+.grj-tabla  { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+.grj-tabla th { padding: 0.75rem 1.1rem; background: rgba(7,23,19,0.025); border-bottom: 1px solid rgba(16,44,35,0.08); text-align: left; font-size: 0.71rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); }
+.grj-tabla td { padding: 0.75rem 1.1rem; border-bottom: 1px solid rgba(16,44,35,0.055); }
+.grj-tabla tbody tr:last-child td { border-bottom: none; }
+.grj-tabla tbody tr:hover td { background: rgba(16,185,129,0.03); }
+
+.grj-fila--vacio        td { opacity: 0.6; }
+.grj-fila--mantenimiento td { opacity: 0.7; }
+
+.grj-estado                    { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+.grj-estado--activo            { color: var(--green-d); }
+.grj-estado--vacio             { color: var(--text3); }
+.grj-estado--preparacion       { color: var(--warning3); }
+.grj-estado--mantenimiento     { color: var(--red); }
+
+.grj-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.grj-dot--activo        { background: var(--green); box-shadow: 0 0 5px rgba(16,185,129,0.5); }
+.grj-dot--vacio         { background: var(--text4); }
+.grj-dot--preparacion   { background: var(--warning); }
+.grj-dot--mantenimiento { background: var(--red); box-shadow: 0 0 5px rgba(239,68,68,0.5); }
+
+/* ─── Responsive: celular ────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .grj-title    { font-size: 1.4rem; }
+  .grj-card-head { flex-wrap: wrap; }
+  .grj-card-meta { margin-left: 0; width: 100%; justify-content: space-between; }
+}

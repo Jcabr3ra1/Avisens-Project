@@ -24,8 +24,17 @@ function LoginForm() {
 
     setLoading(true)
     try {
-      await login({ email, password })
-      navigate('/dashboard')
+      // Hacemos login y recibimos el objeto con el rol del usuario
+      const respuesta = await login({ email, password })
+
+      // Redirigimos según el rol:
+      //   - Administrador → /admin  (panel de gestión del sistema)
+      //   - Propietario / Operario → /dashboard  (vista operativa de galpones)
+      if (respuesta.usuario.rol === 'Administrador') {
+        navigate('/admin')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (err) {
       if (isAxiosError(err) && err.response) {
         setError(

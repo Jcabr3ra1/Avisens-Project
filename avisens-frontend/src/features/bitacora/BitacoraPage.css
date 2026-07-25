@@ -1,1 +1,92 @@
-/* BitacoraPage */
+/* BitacoraPage — Módulo de Bitácora Productiva (EP-06) */
+
+.bit-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1.6rem;
+  padding-bottom: 1.2rem; border-bottom: 1px solid rgba(16,44,35,0.07);
+}
+.bit-title { font-size: 1.75rem; font-weight: 800; color: var(--dash-ink); margin: 0; letter-spacing: -0.03em; }
+.bit-sub   { font-size: 0.85rem; color: var(--text3); margin: 0.2rem 0 0; }
+
+.bit-select {
+  padding: 0.5rem 0.8rem; border: 1px solid rgba(16,44,35,0.12);
+  border-radius: 10px; background: rgba(255,255,255,0.7); color: var(--text);
+  font-size: 0.88rem; outline: none; backdrop-filter: blur(4px);
+  transition: border-color 0.2s, background 0.2s;
+}
+.bit-select:focus { border-color: var(--green); background: #fff; }
+
+/* ─── Tabs ───────────────────────────────────────────────────────────────── */
+.bit-tabs { display: flex; gap: 0.3rem; margin-bottom: 1.3rem; background: rgba(7,23,19,0.032); border: 1px solid rgba(16,44,35,0.07); border-radius: 14px; padding: 0.35rem; width: fit-content; flex-wrap: wrap; }
+.bit-tab  { position: relative; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1.1rem; background: transparent; border: none; border-radius: 10px; font-size: 0.86rem; font-weight: 600; color: var(--text3); cursor: pointer; transition: background 0.15s, color 0.15s; }
+.bit-tab:hover    { background: rgba(255,255,255,0.6); color: var(--text2); }
+.bit-tab--activo  { background: #fff; color: var(--dash-ink); box-shadow: 0 2px 8px rgba(10,40,28,0.08); }
+
+/* ─── Tarjeta de contenido ───────────────────────────────────────────────── */
+.bit-card {
+  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 20px; box-shadow: 0 6px 24px rgba(10,40,28,0.07);
+  backdrop-filter: blur(8px); overflow: hidden;
+}
+.bit-card-desc { padding: 1rem 1.1rem 0; font-size: 0.85rem; color: var(--text3); }
+.bit-vacio     { padding: 3rem 2rem; text-align: center; color: var(--text3); }
+
+/* ─── Tabla ──────────────────────────────────────────────────────────────── */
+.bit-tabla { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.bit-tabla th { padding: 0.8rem 1.1rem; background: rgba(7,23,19,0.032); border-bottom: 1px solid rgba(16,44,35,0.08); text-align: left; font-size: 0.71rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); }
+.bit-tabla td { padding: 0.85rem 1.1rem; border-bottom: 1px solid rgba(16,44,35,0.055); color: var(--dash-ink); vertical-align: middle; }
+.bit-tabla tbody tr:last-child td { border-bottom: none; }
+.bit-tabla tbody tr:hover td      { background: rgba(16,185,129,0.035); }
+
+/* ─── Resumen de la curva de peso ────────────────────────────────────────── */
+.bit-curva-resumen {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.6rem;
+  padding: 1rem 1.1rem 0;
+}
+.bit-curva-stat {
+  background: rgba(7,23,19,0.028);
+  border: 1px solid rgba(16,44,35,0.07);
+  border-radius: 10px;
+  padding: 0.6rem 0.85rem;
+  display: flex; flex-direction: column; gap: 0.1rem;
+}
+.bit-curva-stat > span   { font-size: 0.7rem; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.bit-curva-stat > strong { font-size: 0.95rem; font-weight: 800; color: var(--dash-ink); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 600px) {
+  .bit-curva-resumen { grid-template-columns: 1fr 1fr; }
+  .bit-header  { flex-direction: column; align-items: stretch; }
+  .bit-title   { font-size: 1.4rem; }
+  .bit-select  { width: 100%; }
+}
+
+/* ─── Gráfica SVG de curva de peso ───────────────────────────────────────── */
+.bit-chart-wrap {
+  padding: 1rem 1.1rem 0.5rem;
+  border-bottom: 1px solid rgba(16,44,35,0.06);
+}
+.bit-chart-leyenda {
+  display: flex; gap: 1.2rem; flex-wrap: wrap;
+  padding: 0.6rem 0 0.4rem;
+  font-size: 0.78rem; color: var(--text3);
+}
+.bit-chart-item   { display: flex; align-items: center; gap: 0.4rem; }
+/* Línea de muestra en la leyenda */
+.bit-chart-linea  { display: inline-block; width: 22px; height: 2.5px; border-radius: 2px; }
+.bit-chart-linea--real { background: #3b82f6; }
+.bit-chart-linea--obj  { background: #10b981; border-top: 2.5px dashed #10b981; background: transparent; }
+/* Cuadrado de zona óptima */
+.bit-chart-zona {
+  display: inline-block; width: 14px; height: 14px;
+  border-radius: 3px; background: rgba(16,185,129,0.15);
+  border: 1px solid rgba(16,185,129,0.3);
+}
+
+.bit-tipo-badge    { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; font-weight: 600; text-transform: capitalize; color: var(--text2); }
+.bit-obs           { font-size: 0.82rem; color: var(--text2); max-width: 260px; }
+.bit-fila-alerta td { background: rgba(245,158,11,0.05); }
+.bit-desv          { display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 700; }
+.bit-desv--neg { color: var(--red); }
+.bit-desv--pos { color: var(--green-d); }

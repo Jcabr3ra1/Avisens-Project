@@ -1,11 +1,17 @@
-// routes.tsx — Define TODAS las rutas de la aplicación
-// Hay 3 grupos: standalone (login), público (landing) e interno (dashboard + módulos)
-// Cada grupo usa un layout diferente (sin layout, AppLayout, PanelLayout)
+// routes.tsx — Define TODAS las rutas de la aplicación.
+// Hay 3 grupos: standalone (login), público (landing) e interno (panel + módulos).
+// Cada grupo usa un layout diferente (sin layout, AppLayout, PanelLayout).
+//
+// Rutas internas por rol:
+//   /admin      → solo Administrador (AdminPage)
+//   /dashboard  → Propietario y Operario (DashboardPage operativo)
+//   resto       → según permisos definidos en navConfig.tsx
 import { Routes, Route } from 'react-router-dom'
 import AppLayout from './layout/AppLayout'
 import PanelLayout from './layout/PanelLayout'
 import LandingPage from '@features/landing/LandingPage'
 import LoginPage from '@features/login/LoginPage'
+import AdminPage from '@features/admin/AdminPage'          // Panel exclusivo del Administrador
 import DashboardPage from '@features/dashboard/DashboardPage'
 import CrmPage from '@features/crm/CrmPage'
 import MonitoreoPage from '@features/monitoreo/MonitoreoPage'
@@ -29,9 +35,15 @@ function AppRoutes() {
       </Route>
 
       {/* GRUPO 3: App interna — con Sidebar lateral (PanelLayout) */}
-      {/* Todas las páginas internas comparten el mismo sidebar */}
+      {/* PanelLayout verifica sesión y permisos antes de renderizar cada página */}
       <Route element={<PanelLayout />}>
+        {/* Panel del Administrador — solo accesible con rol 'Administrador' */}
+        <Route path="/admin"           element={<AdminPage />} />
+
+        {/* Dashboard operativo — para Propietario y Operario */}
         <Route path="/dashboard"       element={<DashboardPage />} />
+
+        {/* Módulos del sistema — acceso según navConfig.tsx */}
         <Route path="/crm"             element={<CrmPage />} />
         <Route path="/monitoreo"       element={<MonitoreoPage />} />
         <Route path="/bitacora"        element={<BitacoraPage />} />

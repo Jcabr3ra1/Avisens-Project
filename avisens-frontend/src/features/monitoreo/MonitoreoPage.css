@@ -1,1 +1,165 @@
-/* MonitoreoPage */
+/* MonitoreoPage — Módulo de Monitoreo Ambiental (EP-04) */
+
+.mon-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1.6rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid rgba(16,44,35,0.07);
+}
+.mon-title { font-size: 1.75rem; font-weight: 800; color: var(--dash-ink); margin: 0; letter-spacing: -0.03em; }
+.mon-sub   { font-size: 0.85rem; color: var(--text3); margin: 0.2rem 0 0; }
+
+.mon-resumen { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.mon-badge   { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.28rem 0.75rem; border-radius: 999px; font-size: 0.76rem; font-weight: 700; }
+.mon-badge--critico     { background: rgba(239,68,68,0.12);  color: var(--red); }
+.mon-badge--advertencia { background: rgba(245,158,11,0.12); color: var(--warning3); }
+.mon-badge--optimo      { background: rgba(16,185,129,0.12); color: var(--green-dd); }
+
+/* ─── Selector de galpones ───────────────────────────────────────────────── */
+.mon-selector { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.mon-tab {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(16,44,35,0.1);
+  border-radius: 12px;
+  font-size: 0.84rem; font-weight: 600; cursor: pointer;
+  transition: all 0.15s ease;
+  backdrop-filter: blur(6px);
+}
+.mon-tab:hover { background: rgba(255,255,255,0.9); border-color: rgba(16,185,129,0.25); }
+.mon-tab--activo {
+  border-color: rgba(16,185,129,0.35);
+  background: rgba(16,185,129,0.07);
+  color: var(--green-dd);
+  box-shadow: 0 3px 10px rgba(16,185,129,0.12);
+}
+.mon-tab small { font-weight: 400; color: var(--text3); }
+
+.mon-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.mon-dot--optimo      { background: var(--green); box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+.mon-dot--advertencia { background: var(--warning); }
+.mon-dot--critico     { background: var(--red); box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+.mon-dot--offline     { background: var(--text4); }
+
+.mon-lote-info { font-size: 0.88rem; color: var(--text2); margin-bottom: 1.2rem; }
+.mon-sin-lote  { color: var(--text3); }
+
+/* ─── Galpón offline ─────────────────────────────────────────────────────── */
+.mon-offline-msg {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.75rem; padding: 4rem 2rem; color: var(--text3); text-align: center;
+  background: rgba(255,255,255,0.5); border-radius: 20px;
+  border: 1.5px dashed rgba(16,44,35,0.1);
+}
+.mon-offline-msg svg { color: var(--text4); }
+
+/* ─── Tarjetas de sensores ───────────────────────────────────────────────── */
+.mon-sensores {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 1rem; margin-bottom: 2rem;
+}
+
+.mon-sensor-card {
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(16, 44, 35, 0.09);
+  border-radius: 20px;
+  padding: 1.1rem 1.2rem;
+  display: flex; flex-direction: column; gap: 0.7rem;
+  box-shadow: 0 6px 24px rgba(10, 40, 28, 0.06);
+  backdrop-filter: blur(8px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  /* Las tarjetas son botones — quitamos estilos default de button */
+  text-align: left; cursor: default;
+  font-family: inherit; font-size: inherit; color: inherit;
+  width: 100%;
+}
+/* Tarjeta interactiva (sensor con señal) */
+.mon-sensor-card--clickable {
+  cursor: pointer;
+  position: relative;
+}
+.mon-sensor-card--clickable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(10,40,28,0.11);
+  border-color: rgba(16,185,129,0.3);
+}
+/* Tarjeta seleccionada (panel abierto) */
+.mon-sensor-card--activo {
+  border-color: rgba(16,185,129,0.5) !important;
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.15), 0 16px 40px rgba(10,40,28,0.1) !important;
+  transform: translateY(-3px);
+}
+/* Indicador "›" de que se puede interactuar */
+.mon-sensor-hint {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.8rem;
+  font-size: 1.1rem;
+  color: rgba(16,185,129,0.4);
+  font-weight: 700;
+  transition: opacity 0.2s, transform 0.2s;
+  opacity: 0;
+}
+.mon-sensor-card--clickable:hover .mon-sensor-hint { opacity: 1; transform: translateX(2px); }
+
+/* Tinte de borde y fondo según estado */
+.mon-sensor-card--critico {
+  border-color: rgba(239,68,68,0.3);
+  background: linear-gradient(135deg, rgba(239,68,68,0.05), rgba(255,255,255,0.88));
+}
+.mon-sensor-card--advertencia {
+  border-color: rgba(245,158,11,0.3);
+  background: linear-gradient(135deg, rgba(245,158,11,0.05), rgba(255,255,255,0.88));
+}
+.mon-sensor-card--offline { opacity: 0.5; }
+
+.mon-sensor-icon   { font-size: 1.7rem; line-height: 1; }
+.mon-sensor-info   { display: flex; flex-direction: column; gap: 0.1rem; }
+.mon-sensor-nombre { font-weight: 700; font-size: 0.88rem; color: var(--dash-ink); }
+.mon-sensor-zona   { font-size: 0.75rem; color: var(--text3); }
+
+.mon-sensor-valor        { display: flex; align-items: baseline; gap: 0.25rem; }
+.mon-sensor-valor strong { font-size: 1.9rem; font-weight: 800; color: var(--dash-ink); line-height: 1; }
+.mon-sensor-valor small  { font-size: 0.86rem; color: var(--text3); }
+.mon-offline-txt         { font-size: 1.9rem; color: var(--text4); }
+
+.mon-barra-wrap { height: 5px; background: rgba(10,26,20,0.07); border-radius: 999px; overflow: hidden; }
+.mon-barra      { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
+.mon-sensor-card--optimo      .mon-barra { background: linear-gradient(90deg,var(--green-l),var(--green-d)); }
+.mon-sensor-card--advertencia .mon-barra { background: linear-gradient(90deg,var(--warning2),var(--warning3)); }
+.mon-sensor-card--critico     .mon-barra { background: linear-gradient(90deg,var(--danger2),var(--danger3)); }
+
+.mon-sensor-footer { display: flex; justify-content: space-between; align-items: center; }
+.mon-estado-badge  { padding: 0.18rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+.mon-estado-badge--optimo      { background: rgba(16,185,129,0.13); color: var(--green-dd); }
+.mon-estado-badge--advertencia { background: rgba(245,158,11,0.13); color: var(--warning3); }
+.mon-estado-badge--critico     { background: rgba(239,68,68,0.13);  color: var(--red); }
+.mon-estado-badge--offline     { background: rgba(100,116,139,0.12); color: var(--text3); }
+.mon-ultima { font-size: 0.71rem; color: var(--text4); }
+
+/* ─── Tabla de umbrales ──────────────────────────────────────────────────── */
+.mon-section       { margin-top: 2rem; padding: 0; }
+.mon-section-title { font-size: 1rem; font-weight: 700; color: var(--dash-ink); margin: 0 0 0.2rem; }
+.mon-section-sub   { font-size: 0.82rem; color: var(--text3); margin: 0 0 0.9rem; }
+
+.mon-tabla-card {
+  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
+  border-radius: 20px; box-shadow: 0 6px 24px rgba(10,40,28,0.06);
+  backdrop-filter: blur(8px); overflow: hidden;
+}
+.mon-tabla-head, .mon-tabla-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 0.5rem; padding: 0.75rem 1.1rem; }
+.mon-tabla-head { background: rgba(7,23,19,0.032); border-bottom: 1px solid rgba(16,44,35,0.08); font-size: 0.71rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); }
+.mon-tabla-row  { font-size: 0.88rem; border-bottom: 1px solid rgba(16,44,35,0.055); }
+.mon-tabla-row:last-child { border-bottom: none; }
+.mon-tabla-row:hover      { background: rgba(16,185,129,0.035); }
+
+/* ─── Responsive: celular ────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .mon-header { flex-direction: column; }
+  .mon-title  { font-size: 1.4rem; }
+  .mon-tabla-head, .mon-tabla-row { grid-template-columns: 1.6fr 1fr 1fr; font-size: 0.78rem; padding: 0.65rem 0.8rem; }
+  /* La unidad se puede leer junto al valor mín/máx; se oculta la columna para que quepa */
+  .mon-tabla-head span:last-child, .mon-tabla-row span:last-child { display: none; }
+}
