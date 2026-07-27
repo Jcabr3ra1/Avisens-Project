@@ -1,15 +1,10 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMedicionDto } from './dto/create-medicion.dto';
 import { QueryMedicionesDto } from './dto/query-mediciones.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { ROLES } from '../../common/roles';
-
-type Solicitante = { id: number; rol: string };
+import { esPropietario, verificarDueno } from '../../common/acceso';
+import type { Solicitante } from '../../common/acceso';
 
 const MEDICION_SELECT = {
   id: true,
@@ -23,10 +18,6 @@ const MEDICION_SELECT = {
 export class MedicionesService {
   constructor(private prisma: PrismaService) {}
 
-  private esPropietario(solicitante: Solicitante): boolean {
-    return solicitante.rol === ROLES.PROPIETARIO;
-  }
-
   // Valida que el sensor exista y, si es Propietario, que sea de sus galpones.
   private async validarSensor(sensorId: number, solicitante: Solicitante) {
     const sensor = await this.prisma.sensor.findUnique({
@@ -37,14 +28,11 @@ export class MedicionesService {
       },
     });
     if (!sensor) throw new NotFoundException('Sensor no encontrado');
-    if (
-      this.esPropietario(solicitante) &&
-      sensor.galpon.granja.propietario_id !== solicitante.id
-    ) {
-      throw new ForbiddenException(
-        'Solo puedes gestionar mediciones de tus propios sensores',
-      );
-    }
+    verificarDueno(
+      solicitante,
+      sensor.galpon.granja.propietario_id,
+      'Solo puedes gestionar mediciones de tus propios sensores',
+    );
   }
 
   async registrar(dto: CreateMedicionDto, solicitante: Solicitante) {
@@ -79,7 +67,7 @@ export class MedicionesService {
             }
           : undefined,
       // El Propietario solo ve mediciones de sensores de sus granjas.
-      sensor: this.esPropietario(solicitante)
+      sensor: esPropietario(solicitante)
         ? { galpon: { granja: { propietario_id: solicitante.id } } }
         : undefined,
     };

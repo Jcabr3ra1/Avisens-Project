@@ -11,11 +11,8 @@ import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
 import { ROLES } from '../../common/roles';
-
-// Quién hace la petición. Su rol decide el alcance:
-// - Administrador: gestiona todos los usuarios.
-// - Propietario: solo gestiona Operarios.
-type Solicitante = { id: number; rol: string };
+import { esPropietario } from '../../common/acceso';
+import type { Solicitante } from '../../common/acceso';
 
 const USUARIO_SELECT = {
   id: true,
@@ -32,17 +29,13 @@ const USUARIO_SELECT = {
 export class UsuariosService {
   constructor(private prisma: PrismaService) {}
 
-  private esPropietario(solicitante: Solicitante): boolean {
-    return solicitante.rol === ROLES.PROPIETARIO;
-  }
-
   async crear(dto: CreateUsuarioDto, solicitante: Solicitante) {
     // No pre-validamos duplicados: la restricción unique de email/cedula + el
     // PrismaExceptionFilter devuelven 409 automáticamente si ya existe.
 
     // Un Propietario solo puede crear Operarios (ignora el rol que mande).
     let rolId = dto.rol_id;
-    if (this.esPropietario(solicitante)) {
+    if (esPropietario(solicitante)) {
       const rolOperario = await this.prisma.rol.findUnique({
         where: { nombre: ROLES.OPERARIO },
       });
@@ -73,7 +66,7 @@ export class UsuariosService {
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
     // El Propietario solo ve Operarios; el Admin ve todos.
-    const where = this.esPropietario(solicitante)
+    const where = esPropietario(solicitante)
       ? { rol: { nombre: ROLES.OPERARIO } }
       : undefined;
 
@@ -107,10 +100,7 @@ export class UsuariosService {
       },
     });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
-    if (
-      this.esPropietario(solicitante) &&
-      usuario.rol.nombre !== ROLES.OPERARIO
-    ) {
+    if (esPropietario(solicitante) && usuario.rol.nombre !== ROLES.OPERARIO) {
       throw new ForbiddenException('Solo puedes gestionar operarios');
     }
     return usuario;
@@ -127,10 +117,7 @@ export class UsuariosService {
     });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
 
-    if (
-      this.esPropietario(solicitante) &&
-      usuario.rol.nombre !== ROLES.OPERARIO
-    ) {
+    if (esPropietario(solicitante) && usuario.rol.nombre !== ROLES.OPERARIO) {
       throw new ForbiddenException('Solo puedes gestionar operarios');
     }
 
@@ -153,7 +140,7 @@ export class UsuariosService {
 
     // El Propietario no puede cambiar el rol (el operario sigue siendo operario).
     let rolId = dto.rol_id;
-    if (this.esPropietario(solicitante)) {
+    if (esPropietario(solicitante)) {
       rolId = undefined;
     } else if (dto.rol_id) {
       const rol = await this.prisma.rol.findUnique({

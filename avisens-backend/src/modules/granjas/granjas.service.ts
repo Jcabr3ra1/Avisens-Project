@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,12 +8,8 @@ import { CreateGranjaDto } from './dto/create-granja.dto';
 import { UpdateGranjaDto } from './dto/update-granja.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { ROLES } from '../../common/roles';
-
-// Quién hace la petición. Su rol decide el alcance:
-// - Administrador: gestiona todas las granjas.
-// - Propietario: solo gestiona las granjas de las que es dueño.
-type Solicitante = { id: number; rol: string };
+import { esPropietario, verificarDueno } from '../../common/acceso';
+import type { Solicitante } from '../../common/acceso';
 
 const GRANJA_SELECT = {
   id: true,
@@ -34,14 +29,10 @@ const GRANJA_SELECT = {
 export class GranjasService {
   constructor(private prisma: PrismaService) {}
 
-  private esPropietario(solicitante: Solicitante): boolean {
-    return solicitante.rol === ROLES.PROPIETARIO;
-  }
-
   async crear(dto: CreateGranjaDto, solicitante: Solicitante) {
     // El Propietario se asigna a sí mismo; el Admin debe indicar un dueño válido.
     let propietarioId: number;
-    if (this.esPropietario(solicitante)) {
+    if (esPropietario(solicitante)) {
       propietarioId = solicitante.id;
     } else {
       if (!dto.propietario_id) {
@@ -74,7 +65,7 @@ export class GranjasService {
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
     // El Propietario solo ve sus granjas; el Admin ve todas.
-    const where = this.esPropietario(solicitante)
+    const where = esPropietario(solicitante)
       ? { propietario_id: solicitante.id }
       : undefined;
 
@@ -99,12 +90,11 @@ export class GranjasService {
       select: GRANJA_SELECT,
     });
     if (!granja) throw new NotFoundException('Granja no encontrada');
-    if (
-      this.esPropietario(solicitante) &&
-      granja.propietario.id !== solicitante.id
-    ) {
-      throw new ForbiddenException('Solo puedes gestionar tus propias granjas');
-    }
+    verificarDueno(
+      solicitante,
+      granja.propietario.id,
+      'Solo puedes gestionar tus propias granjas',
+    );
     return granja;
   }
 
@@ -113,7 +103,7 @@ export class GranjasService {
 
     // El Propietario no puede reasignar el dueño; el Admin sí, validando que exista.
     let propietarioId = dto.propietario_id;
-    if (this.esPropietario(solicitante)) {
+    if (esPropietario(solicitante)) {
       propietarioId = undefined;
     } else if (dto.propietario_id) {
       const propietario = await this.prisma.usuario.findUnique({

@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,13 +8,8 @@ import { CreateSensorDto } from './dto/create-sensor.dto';
 import { UpdateSensorDto } from './dto/update-sensor.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { ROLES } from '../../common/roles';
-
-// Quién hace la petición. Su rol decide el alcance:
-// - Administrador: gestiona todos los sensores.
-// - Propietario: solo los de galpones de sus propias granjas.
-
-type Solicitante = { id: number; rol: string };
+import { esPropietario, verificarDueno } from '../../common/acceso';
+import type { Solicitante } from '../../common/acceso';
 
 const SENSOR_SELECT = {
   id: true,
@@ -57,10 +51,6 @@ const SENSOR_SELECT = {
 export class SensoresService {
   constructor(private prisma: PrismaService) {}
 
-  private esPropietario(solicitante: Solicitante): boolean {
-    return solicitante.rol === ROLES.PROPIETARIO;
-  }
-
   // Verifica que el galpón exista y, si el solicitante es Propietario, que la
   // granja de ese galpón sea suya. Se usa al crear o al mover de galpón.
   private async validarGalpon(galponId: number, solicitante: Solicitante) {
@@ -78,14 +68,11 @@ export class SensoresService {
     if (!galpon) {
       throw new NotFoundException('Galpón no encontrado');
     }
-    if (
-      this.esPropietario(solicitante) &&
-      galpon.granja.propietario_id !== solicitante.id
-    ) {
-      throw new ForbiddenException(
-        'Solo puedes gestionar sensores de tus propios galpones',
-      );
-    }
+    verificarDueno(
+      solicitante,
+      galpon.granja.propietario_id,
+      'Solo puedes gestionar sensores de tus propios galpones',
+    );
   }
 
   // El sensor guarda galpon_id Y dispositivo_id, pero el dispositivo ya vive
@@ -144,7 +131,7 @@ export class SensoresService {
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
     // El Propietario solo ve sensores de galpones de sus granjas.
-    const where = this.esPropietario(solicitante)
+    const where = esPropietario(solicitante)
       ? { galpon: { granja: { propietario_id: solicitante.id } } }
       : undefined;
 
@@ -168,14 +155,11 @@ export class SensoresService {
       select: SENSOR_SELECT,
     });
     if (!sensor) throw new NotFoundException('Sensor no encontrado');
-    if (
-      this.esPropietario(solicitante) &&
-      sensor.galpon.granja.propietario_id !== solicitante.id
-    ) {
-      throw new ForbiddenException(
-        'Solo puedes gestionar sensores de tus propios galpones',
-      );
-    }
+    verificarDueno(
+      solicitante,
+      sensor.galpon.granja.propietario_id,
+      'Solo puedes gestionar sensores de tus propios galpones',
+    );
     return sensor;
   }
 

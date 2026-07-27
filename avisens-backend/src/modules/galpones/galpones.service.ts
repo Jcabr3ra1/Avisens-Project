@@ -1,19 +1,11 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGalponDto } from './dto/create-galpon.dto';
 import { UpdateGalponDto } from './dto/update-galpon.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { ROLES } from '../../common/roles';
-
-// Quién hace la petición. Su rol decide el alcance:
-// - Administrador: gestiona todos los galpones.
-// - Propietario: solo los galpones de granjas de las que es dueño.
-type Solicitante = { id: number; rol: string };
+import { esPropietario, verificarDueno } from '../../common/acceso';
+import type { Solicitante } from '../../common/acceso';
 
 const GALPON_SELECT = {
   id: true,
@@ -34,10 +26,6 @@ const GALPON_SELECT = {
 export class GalponesService {
   constructor(private prisma: PrismaService) {}
 
-  private esPropietario(solicitante: Solicitante): boolean {
-    return solicitante.rol === ROLES.PROPIETARIO;
-  }
-
   // Verifica que la granja exista y, si el solicitante es Propietario, que sea
   // suya. Se usa al crear o al mover un galpón entre granjas.
   private async validarGranja(granjaId: number, solicitante: Solicitante) {
@@ -45,14 +33,11 @@ export class GalponesService {
       where: { id: granjaId },
     });
     if (!granja) throw new NotFoundException('Granja no encontrada');
-    if (
-      this.esPropietario(solicitante) &&
-      granja.propietario_id !== solicitante.id
-    ) {
-      throw new ForbiddenException(
-        'Solo puedes gestionar galpones de tus propias granjas',
-      );
-    }
+    verificarDueno(
+      solicitante,
+      granja.propietario_id,
+      'Solo puedes gestionar galpones de tus propias granjas',
+    );
   }
 
   async crear(dto: CreateGalponDto, solicitante: Solicitante) {
@@ -81,7 +66,7 @@ export class GalponesService {
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
     // El Propietario solo ve galpones de sus granjas; el Admin ve todos.
-    const where = this.esPropietario(solicitante)
+    const where = esPropietario(solicitante)
       ? { granja: { propietario_id: solicitante.id } }
       : undefined;
 
@@ -105,14 +90,11 @@ export class GalponesService {
       select: GALPON_SELECT,
     });
     if (!galpon) throw new NotFoundException('Galpón no encontrado');
-    if (
-      this.esPropietario(solicitante) &&
-      galpon.granja.propietario_id !== solicitante.id
-    ) {
-      throw new ForbiddenException(
-        'Solo puedes gestionar galpones de tus propias granjas',
-      );
-    }
+    verificarDueno(
+      solicitante,
+      galpon.granja.propietario_id,
+      'Solo puedes gestionar galpones de tus propias granjas',
+    );
     return galpon;
   }
 

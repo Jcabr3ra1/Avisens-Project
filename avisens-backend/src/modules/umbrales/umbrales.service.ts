@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,9 +9,8 @@ import { CreateUmbralDto } from './dto/create-umbral.dto';
 import { RevisarUmbralDto } from './dto/revisar-umbral.dto';
 import { QueryUmbralesDto } from './dto/query-umbrales.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { ROLES } from '../../common/roles';
-
-type Solicitante = { id: number; rol: string };
+import { esPropietario, verificarDueno } from '../../common/acceso';
+import type { Solicitante } from '../../common/acceso';
 
 const UMBRAL_SELECT = {
   id: true,
@@ -39,24 +37,17 @@ const UMBRAL_SELECT = {
 export class UmbralesService {
   constructor(private prisma: PrismaService) {}
 
-  private esPropietario(solicitante: Solicitante): boolean {
-    return solicitante.rol === ROLES.PROPIETARIO;
-  }
-
   private async validarGalpon(galponId: number, solicitante: Solicitante) {
     const galpon = await this.prisma.galpon.findUnique({
       where: { id: galponId },
       select: { id: true, granja: { select: { propietario_id: true } } },
     });
     if (!galpon) throw new NotFoundException('Galpón no encontrado');
-    if (
-      this.esPropietario(solicitante) &&
-      galpon.granja.propietario_id !== solicitante.id
-    ) {
-      throw new ForbiddenException(
-        'Solo puedes gestionar umbrales de tus propios galpones',
-      );
-    }
+    verificarDueno(
+      solicitante,
+      galpon.granja.propietario_id,
+      'Solo puedes gestionar umbrales de tus propios galpones',
+    );
   }
 
   async crear(dto: CreateUmbralDto, solicitante: Solicitante) {
@@ -98,14 +89,11 @@ export class UmbralesService {
       select: UMBRAL_SELECT,
     });
     if (!umbral) throw new NotFoundException('Umbral no encontrado');
-    if (
-      this.esPropietario(solicitante) &&
-      umbral.galpon.granja.propietario_id !== solicitante.id
-    ) {
-      throw new ForbiddenException(
-        'Solo puedes gestionar umbrales de tus propios galpones',
-      );
-    }
+    verificarDueno(
+      solicitante,
+      umbral.galpon.granja.propietario_id,
+      'Solo puedes gestionar umbrales de tus propios galpones',
+    );
     return umbral;
   }
 
@@ -149,7 +137,7 @@ export class UmbralesService {
       variable,
       // Por defecto solo los vigentes; con incluir_historico se ven todas las versiones.
       vigente: incluir_historico ? undefined : true,
-      galpon: this.esPropietario(solicitante)
+      galpon: esPropietario(solicitante)
         ? { granja: { propietario_id: solicitante.id } }
         : undefined,
     };
