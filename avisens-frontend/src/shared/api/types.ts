@@ -1,6 +1,20 @@
 // Tipos de las peticiones y respuestas de la API de Avisens.
 // Coinciden con los DTOs y los `select` del backend NestJS.
 
+// Forma estándar de un listado paginado del backend: { data, meta }. TODAS las
+// rutas de listado (usuarios, granjas, galpones, sensores, proveedores…)
+// devuelven esto — nunca un array plano. Al consumirlas hay que desempaquetar
+// `.data`, o el componente reventará al hacer `.filter(...)` sobre el objeto.
+export interface PaginatedResponse<T> {
+  data: T[]
+  meta: {
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+  }
+}
+
 export interface RolResumen {
   id: number
   nombre: string
