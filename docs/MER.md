@@ -279,8 +279,10 @@ sensores [icon: thermometer, color: green] {
   estado string
 }
 
-// En la BD la PK será compuesta (id, fecha_hora): TimescaleDB exige que la
-// columna de partición temporal haga parte de toda PK/unique de la hypertable.
+// `mediciones` es una tabla normal de Postgres. Se exploró TimescaleDB
+// (hypertable) pero se revirtió para poder desplegar en hosts gestionados
+// (Supabase) que no ofrecen esa extensión; a la escala del proyecto no se
+// necesita. La PK compuesta (id, fecha_hora) quedó como está (inofensiva).
 mediciones [icon: activity, color: green] {
   id bigint pk
   sensor_id integer fk

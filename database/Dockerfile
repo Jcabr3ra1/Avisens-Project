@@ -4,8 +4,8 @@
 # `prisma migrate deploy` al arrancar (ver avisens-backend/docker-entrypoint.sh).
 # Por eso aquí ya NO hay scripts de creación de tablas.
 #
-# Imagen con la extensión TimescaleDB para las series de tiempo de `mediciones`
-# (hypertable). Está basada en PostgreSQL 16, así que es compatible con el resto
-# del esquema que administra Prisma. La extensión y la conversión a hypertable
-# se aplican vía migración SQL (ver prisma/migrations/..._convertir_mediciones_hypertable).
-FROM timescale/timescaledb:latest-pg16
+# PostgreSQL 16 estándar. Se usó TimescaleDB para `mediciones`, pero se revirtió
+# a Postgres normal para poder desplegar en hosts gestionados (Supabase) que no
+# ofrecen esa extensión. A la escala del proyecto no se necesita partición por
+# tiempo; `mediciones` es una tabla normal (con PK compuesta, inofensiva).
+FROM postgres:16-alpine

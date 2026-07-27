@@ -1,6 +1,3 @@
--- DropIndex
-DROP INDEX "mediciones_fecha_hora_idx";
-
 -- CreateTable
 CREATE TABLE "umbrales_ambientales" (
     "id" SERIAL NOT NULL,
