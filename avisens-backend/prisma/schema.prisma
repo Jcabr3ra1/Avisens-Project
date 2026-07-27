@@ -262,5 +262,31 @@ model Proveedor {
   activo           Boolean  @default(true)
   fecha_creacion   DateTime @default(now())
 
+  insumos InventarioInsumo[]
+
   @@map("proveedores")
+}
+
+// ---------------------------------------------------------------------------
+// EP-07 · Inventario de insumos (stock de alimento, medicamentos, vacunas…)
+// ---------------------------------------------------------------------------
+
+model InventarioInsumo {
+  id                    Int       @id @default(autoincrement())
+  nombre                String
+  tipo                  String?
+  unidad_medida         String
+  stock_actual          Float     @default(0)
+  stock_minimo          Float     @default(0)
+  precio_unitario_cop   Float?
+  proveedor_habitual_id Int?
+  ubicacion_almacen     String?
+  fecha_vencimiento     DateTime? @db.Date
+  activo                Boolean   @default(true)
+  fecha_actualizacion   DateTime  @default(now()) @updatedAt
+
+  proveedor_habitual Proveedor? @relation(fields: [proveedor_habitual_id], references: [id])
+
+  @@index([proveedor_habitual_id])
+  @@map("inventario_insumos")
 }

@@ -14,6 +14,7 @@ import { SensoresModule } from './modules/sensores/sensores.module';
 import { MedicionesModule } from './modules/mediciones/mediciones.module';
 import { UmbralesModule } from './modules/umbrales/umbrales.module';
 import { ProveedoresModule } from './modules/proveedores/proveedores.module';
+import { InsumosModule } from './modules/insumos/insumos.module';
 
 @Module({
   imports: [
@@ -33,9 +34,10 @@ import { ProveedoresModule } from './modules/proveedores/proveedores.module';
     GalponesModule,
     DispositivosModule,
     SensoresModule,
+    ProveedoresModule,
+    InsumosModule,
     MedicionesModule,
     UmbralesModule,
-    ProveedoresModule,
     HealthModule,
   ],
   providers: [
