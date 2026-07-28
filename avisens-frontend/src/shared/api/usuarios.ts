@@ -34,8 +34,11 @@ export async function actualizarUsuario(
   return data
 }
 
-// Borrado permanente del usuario.
+// Borrado permanente del usuario. Usa la ruta /permanente: el DELETE simple del
+// backend solo DESACTIVA (borrado suave). Para eso ya está el interruptor de
+// Estado; este "Eliminar" quita al usuario de verdad. Falla (400) si tiene
+// datos asociados (p. ej. granjas), y el backend impide borrar tu propia cuenta.
 export async function eliminarUsuario(id: number): Promise<{ id: number; eliminado: boolean }> {
-  const { data } = await api.delete<{ id: number; eliminado: boolean }>(`/usuarios/${id}`)
+  const { data } = await api.delete<{ id: number; eliminado: boolean }>(`/usuarios/${id}/permanente`)
   return data
 }
