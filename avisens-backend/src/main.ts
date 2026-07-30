@@ -72,4 +72,4 @@ async function bootstrap() {
   );
   console.log(`Swagger en http://localhost:${process.env.PORT ?? 3000}/docs`);
 }
-bootstrap();
+void bootstrap();
