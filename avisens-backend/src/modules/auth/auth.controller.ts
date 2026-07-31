@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
@@ -24,6 +25,9 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  // Límite estricto: 5 intentos por minuto por IP para frenar la fuerza bruta
+  // de credenciales (el throttle global de 100/min es demasiado laxo aquí).
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Iniciar sesión' })
   login(@Body() dto: LoginDto, @Req() req: Request) {
     return this.authService.login(dto, req.ip, req.headers['user-agent']);
