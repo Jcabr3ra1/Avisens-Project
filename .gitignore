@@ -36,6 +36,12 @@ Thumbs.db
 .cache/
 .eslintcache
 
+# Cobertura de pruebas (generada por jest)
+coverage/
+
+# autoskills: skills locales de terceros, no se versionan
+skills-lock.json
+
 # AI tooling
 .agents/
 .claude/
