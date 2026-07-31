@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -66,10 +66,11 @@ async function bootstrap() {
   // en curso y dispara OnModuleDestroy (Prisma cierra sus conexiones).
   app.enableShutdownHooks();
 
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(
-    `Servidor corriendo en http://localhost:${process.env.PORT ?? 3000}`,
-  );
-  console.log(`Swagger en http://localhost:${process.env.PORT ?? 3000}/docs`);
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
+
+  const logger = new Logger('Bootstrap');
+  logger.log(`Servidor corriendo en http://localhost:${port}`);
+  logger.log(`Swagger en http://localhost:${port}/docs`);
 }
 void bootstrap();
