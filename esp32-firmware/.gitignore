@@ -1,0 +1,6 @@
+# Carpeta de compilación de PlatformIO (basura generada, no se versiona)
+.pio/
+
+# Configuración local con credenciales reales (WiFi, tokens). Cada quien copia
+# config.example.h → config.h y pone sus valores. NUNCA se sube a git.
+include/config.h
