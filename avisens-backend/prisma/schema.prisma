@@ -155,6 +155,9 @@ model Dispositivo {
   version_firmware String?
   estado           String    @default("offline")
   ip_local         String?
+  // Secreto que el ESP32 manda en el header X-Device-Token de POST /ingest.
+  // Nunca se expone en los listados; solo al crear el dispositivo o al regenerarlo.
+  token_ingesta    String?   @unique
   ultima_conexion  DateTime?
   activo           Boolean   @default(true)
   fecha_creacion   DateTime  @default(now())

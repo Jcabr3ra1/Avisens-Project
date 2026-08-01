@@ -77,6 +77,17 @@ export class DispositivosController {
     return this.dispositivosService.activar(id, req.user);
   }
 
+  @Post(':id/token')
+  @ApiOperation({
+    summary: 'Regenerar y revelar el token de ingesta del dispositivo',
+  })
+  regenerarToken(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.dispositivosService.regenerarToken(id, req.user);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Desactivar un dispositivo (borrado suave)' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {

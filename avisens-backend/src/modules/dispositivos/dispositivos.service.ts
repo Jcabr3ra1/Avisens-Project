@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDispositivoDto } from './dto/create-dispositivo.dto';
 import { UpdateDispositivoDto } from './dto/update-dispositivo.dto';
@@ -61,12 +62,21 @@ export class DispositivosService {
     );
   }
 
+  // Genera un secreto aleatorio para autenticar al dispositivo en POST /ingest.
+  private generarToken(): string {
+    return randomBytes(24).toString('hex');
+  }
+
   async crear(dto: CreateDispositivoDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
 
+    // Al crear se genera el token de ingesta y se REVELA una sola vez (no vuelve
+    // a salir en los listados). El firmware del ESP32 lo guarda en su config.h.
+    const token = this.generarToken();
+
     // mac_address y codigo_topic son únicos: si se repiten, la restricción de
     // Prisma + el PrismaExceptionFilter devuelven 409 automáticamente.
-    return this.prisma.dispositivo.create({
+    const dispositivo = await this.prisma.dispositivo.create({
       data: {
         galpon_id: dto.galpon_id,
         mac_address: dto.mac_address,
@@ -74,9 +84,24 @@ export class DispositivosService {
         nombre: dto.nombre,
         version_firmware: dto.version_firmware,
         ip_local: dto.ip_local,
+        token_ingesta: token,
       },
       select: DISPOSITIVO_SELECT,
     });
+
+    return { ...dispositivo, token_ingesta: token };
+  }
+
+  // Regenera el token del dispositivo (por si se filtró o al aprovisionar uno
+  // ya existente). Lo revela una sola vez, aquí.
+  async regenerarToken(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante); // valida existencia y alcance
+    const token = this.generarToken();
+    await this.prisma.dispositivo.update({
+      where: { id },
+      data: { token_ingesta: token },
+    });
+    return { id, token_ingesta: token };
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {

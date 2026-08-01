@@ -15,6 +15,7 @@ import { MedicionesModule } from './modules/mediciones/mediciones.module';
 import { UmbralesModule } from './modules/umbrales/umbrales.module';
 import { ProveedoresModule } from './modules/proveedores/proveedores.module';
 import { InsumosModule } from './modules/insumos/insumos.module';
+import { IngestModule } from './modules/ingest/ingest.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { InsumosModule } from './modules/insumos/insumos.module';
     InsumosModule,
     MedicionesModule,
     UmbralesModule,
+    IngestModule,
     HealthModule,
   ],
   providers: [
