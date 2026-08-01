@@ -22,6 +22,12 @@
 #define MQTT_HOST     "192.168.1.100"
 #define MQTT_PORT     1883
 
+// ── Códigos de los sensores ─────────────────────────────────────────────────
+// Deben coincidir EXACTAMENTE con el campo `codigo` de la tabla `sensores` del
+// backend (ese es el puente físico↔BD; el backend resuelve codigo → sensor_id).
+#define CODIGO_SENSOR_TEMP "TEMP-G1-01"
+#define CODIGO_SENSOR_HUM  "HUM-G1-01"
+
 // ── Pines (AJUSTA a tu cableado real) ───────────────────────────────────────
 #define PIN_DHT       4     // Sensor DHT22 (temperatura + humedad)
 #define PIN_RELE      26    // Pin IN del relé que comanda el ventilador

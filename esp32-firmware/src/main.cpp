@@ -12,6 +12,7 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <HTTPClient.h>
 #include <DHT.h>
 #include "config.h"
 
@@ -73,19 +74,32 @@ void enviarLectura(float temperatura, float humedad) {
                 DEVICE_CODIGO_TOPIC, temperatura, humedad,
                 ventiladorEncendido ? "on" : "off");
 
-  // ── OPCIÓN A: MQTT (librería PubSubClient) ──
-  //   client.publish("galpon1/sensor/temperatura", String(temperatura).c_str());
-  //   client.publish("galpon1/sensor/humedad",     String(humedad).c_str());
-  //
-  // ── OPCIÓN B: HTTP (librería HTTPClient) ──
-  //   HTTPClient http;
-  //   http.begin(BACKEND_URL);
-  //   http.addHeader("Content-Type", "application/json");
-  //   http.addHeader("X-Device-Token", DEVICE_TOKEN);
-  //   String body = "{\"codigo\":\"TEMP-G1-01\",\"valor\":" +
-  //                 String(temperatura) + "}";
-  //   http.POST(body);
-  //   http.end();
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("[HTTP] Sin WiFi, se omite el envio");
+    return;
+  }
+
+  // Lote con las dos lecturas del DHT (temperatura y humedad) en un solo POST.
+  // El backend identifica cada sensor por su CÓDIGO, no por un id numérico.
+  String body = "{\"lecturas\":[";
+  body += "{\"codigo\":\"" + String(CODIGO_SENSOR_TEMP) +
+          "\",\"valor\":" + String(temperatura, 1) + "},";
+  body += "{\"codigo\":\"" + String(CODIGO_SENSOR_HUM) +
+          "\",\"valor\":" + String(humedad, 1) + "}";
+  body += "]}";
+
+  HTTPClient http;
+  http.begin(BACKEND_URL);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("X-Device-Token", DEVICE_TOKEN);  // autentica al dispositivo
+
+  int codigo = http.POST(body);
+  if (codigo > 0) {
+    Serial.printf("[HTTP] %d %s\n", codigo, http.getString().c_str());
+  } else {
+    Serial.printf("[HTTP] Error: %s\n", http.errorToString(codigo).c_str());
+  }
+  http.end();
 }
 
 // ── Setup / loop ────────────────────────────────────────────────────────────
