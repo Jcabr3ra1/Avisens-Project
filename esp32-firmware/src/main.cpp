@@ -97,6 +97,11 @@ void setup() {
   pinMode(PIN_RELE, OUTPUT);
   digitalWrite(PIN_RELE, RELE_APAGADO);  // arranca apagado por seguridad
 
+  // Pull-up interna en la línea de datos del DHT: hace de reemplazo cuando falta
+  // la resistencia externa de 10 kOhm (típico en el sensor "pelado" de 4 patas).
+  // Sin un nivel alto en reposo, el DHT no responde y la lectura sale NaN.
+  pinMode(PIN_DHT, INPUT_PULLUP);
+
   dht.begin();
   conectarWiFi();
 }
