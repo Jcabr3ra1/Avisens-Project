@@ -96,6 +96,9 @@ export const NAV_SECTIONS: NavSection[] = [
       // EP-08 HU-34-37: Galpones, sensores, actuadores y mantenimiento → Admin y Propietario
       { path: '/infraestructura', label: 'Equipos',     icon: <IcServer     size={16} />, roles: [ROL_ADMIN, ROL_PROPIETARIO] },
 
+      // EP-08: página de prueba del CRUD real de sensores contra la API.
+      { path: '/sensores',        label: 'Sensores API', icon: <IcEye       size={16} />, roles: [ROL_ADMIN, ROL_PROPIETARIO] },
+
       // EP-08: Granjas es del Propietario (gestiona sus propias granjas).
       // El Admin no tiene granjas propias — su módulo de EP-08 es Equipos/Infraestructura.
       { path: '/granjas',         label: 'Mis granjas', icon: <IcLeaf       size={16} />, roles: [ROL_PROPIETARIO] },

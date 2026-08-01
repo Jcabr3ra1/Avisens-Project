@@ -22,6 +22,7 @@ import InventarioPage from '@features/inventario/InventarioPage'
 import InfraestructuraPage from '@features/infraestructura/InfraestructuraPage'
 import UsuariosPage from '@features/usuarios/UsuariosPage'
 import GranjasPage from '@features/granjas/GranjasPage'
+import SensoresPage from '@features/sensores/SensoresPage'
 
 function AppRoutes() {
   return (
@@ -53,6 +54,7 @@ function AppRoutes() {
         <Route path="/infraestructura" element={<InfraestructuraPage />} />
         <Route path="/usuarios"        element={<UsuariosPage />} />
         <Route path="/granjas"         element={<GranjasPage />} />
+        <Route path="/sensores"        element={<SensoresPage />} />
       </Route>
     </Routes>
   )
