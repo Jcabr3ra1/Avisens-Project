@@ -1,6 +1,10 @@
 # Carpeta de compilación de PlatformIO (basura generada, no se versiona)
 .pio/
 
+# Config de IDE generada por `pio project init --ide vscode`: trae rutas
+# absolutas de esta máquina (~/.platformio/...), no sirve para el equipo.
+.vscode/
+
 # Configuración local con credenciales reales (WiFi, tokens). Cada quien copia
 # config.example.h → config.h y pone sus valores. NUNCA se sube a git.
 include/config.h
