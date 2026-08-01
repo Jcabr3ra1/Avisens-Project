@@ -125,3 +125,24 @@ export interface CrearSensorPayload {
 export type ActualizarSensorPayload = Partial<CrearSensorPayload> & {
   estado?: string
 }
+
+// ----- Mediciones -----
+
+export interface Medicion {
+  // `id` es BigInt en el backend, por eso llega como string (no cabe en number).
+  id: string
+  sensor_id: number
+  fecha_hora: string
+  valor: number
+  calidad: string
+}
+
+// Filtros de GET /mediciones. Todo opcional; el backend pagina y ordena por
+// fecha_hora descendente (lo más reciente primero).
+export interface MedicionesQuery {
+  sensor_id?: number
+  desde?: string
+  hasta?: string
+  page?: number
+  limit?: number
+}

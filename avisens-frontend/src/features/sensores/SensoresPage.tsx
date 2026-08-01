@@ -10,6 +10,7 @@ import {
   type Sensor,
   type CrearSensorPayload,
 } from '@shared/api'
+import { MedicionesVivas } from './MedicionesVivas'
 import './SensoresPage.css'
 
 // Página de PRUEBA del backend de sensores (EP-08). Pensada para que el equipo
@@ -327,6 +328,9 @@ function SensoresPage() {
           </div>
         )}
       </div>
+
+      {/* ── Mediciones en vivo (ESP32 → /ingest → backend) ──────────────── */}
+      <MedicionesVivas sensores={sensores} />
     </div>
   )
 }
