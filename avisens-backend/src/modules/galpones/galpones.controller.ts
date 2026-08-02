@@ -22,7 +22,6 @@ import { CreateGalponDto } from './dto/create-galpon.dto';
 import { UpdateGalponDto } from './dto/update-galpon.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
-// El usuario autenticado que adjunta la estrategia JWT.
 interface AuthRequest extends Request {
   user: { id: number; email: string; rol: string };
 }
@@ -30,8 +29,6 @@ interface AuthRequest extends Request {
 @ApiTags('galpones')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-// Admin gestiona todos; Propietario solo los de sus granjas (el alcance se
-// aplica en el servicio según el rol del solicitante).
 @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
 @Controller('galpones')
 export class GalponesController {

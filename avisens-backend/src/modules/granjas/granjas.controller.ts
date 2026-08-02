@@ -22,7 +22,6 @@ import { CreateGranjaDto } from './dto/create-granja.dto';
 import { UpdateGranjaDto } from './dto/update-granja.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
-// El usuario autenticado que adjunta la estrategia JWT.
 interface AuthRequest extends Request {
   user: { id: number; email: string; rol: string };
 }
@@ -30,8 +29,6 @@ interface AuthRequest extends Request {
 @ApiTags('granjas')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-// Admin gestiona todas; Propietario solo las suyas (el alcance se aplica en el
-// servicio según el rol del solicitante).
 @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
 @Controller('granjas')
 export class GranjasController {

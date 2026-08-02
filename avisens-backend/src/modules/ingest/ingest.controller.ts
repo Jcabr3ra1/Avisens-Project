@@ -20,8 +20,6 @@ export class IngestController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  // Autenticación por token de dispositivo (header X-Device-Token), NO por JWT:
-  // el ESP32 no inicia sesión como una persona.
   @UseGuards(DeviceTokenGuard)
   @ApiOperation({
     summary: 'Ingesta de lecturas desde un dispositivo (ESP32) por token',

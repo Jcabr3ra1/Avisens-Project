@@ -4,7 +4,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @ApiTags('health')
-@SkipThrottle() // los balanceadores sondean seguido; no aplicar rate limit
+@SkipThrottle()
 @Controller('health')
 export class HealthController {
   constructor(private prisma: PrismaService) {}
@@ -13,7 +13,6 @@ export class HealthController {
   @ApiOperation({ summary: 'Estado del servicio y de la base de datos' })
   async check() {
     try {
-      // Ping real a Postgres: si responde, la BD está arriba.
       await this.prisma.$queryRaw`SELECT 1`;
     } catch {
       throw new ServiceUnavailableException({ status: 'error', db: 'down' });

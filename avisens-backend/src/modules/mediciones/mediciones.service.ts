@@ -18,7 +18,6 @@ const MEDICION_SELECT = {
 export class MedicionesService {
   constructor(private prisma: PrismaService) {}
 
-  // Valida que el sensor exista y, si es Propietario, que sea de sus galpones.
   private async validarSensor(sensorId: number, solicitante: Solicitante) {
     const sensor = await this.prisma.sensor.findUnique({
       where: { id: sensorId },
@@ -52,7 +51,6 @@ export class MedicionesService {
   async listar(query: QueryMedicionesDto, solicitante: Solicitante) {
     const { sensor_id, desde, hasta, page, limit } = query;
 
-    // Si se filtra por un sensor, validamos existencia y alcance.
     if (sensor_id) {
       await this.validarSensor(sensor_id, solicitante);
     }
@@ -66,7 +64,7 @@ export class MedicionesService {
               lte: hasta ? new Date(hasta) : undefined,
             }
           : undefined,
-      // El Propietario solo ve mediciones de sensores de sus granjas.
+
       sensor: esPropietario(solicitante)
         ? { galpon: { granja: { propietario_id: solicitante.id } } }
         : undefined,

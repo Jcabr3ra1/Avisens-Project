@@ -30,7 +30,6 @@ export class GranjasService {
   constructor(private prisma: PrismaService) {}
 
   async crear(dto: CreateGranjaDto, solicitante: Solicitante) {
-    // El Propietario se asigna a sí mismo; el Admin debe indicar un dueño válido.
     let propietarioId: number;
     if (esPropietario(solicitante)) {
       propietarioId = solicitante.id;
@@ -64,12 +63,10 @@ export class GranjasService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    // El Propietario solo ve sus granjas; el Admin ve todas.
     const where = esPropietario(solicitante)
       ? { propietario_id: solicitante.id }
       : undefined;
 
-    // Una transacción para que el conteo y la página salgan del mismo snapshot.
     const [data, total] = await this.prisma.$transaction([
       this.prisma.granja.findMany({
         where,
@@ -99,9 +96,8 @@ export class GranjasService {
   }
 
   async actualizar(id: number, dto: UpdateGranjaDto, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
 
-    // El Propietario no puede reasignar el dueño; el Admin sí, validando que exista.
     let propietarioId = dto.propietario_id;
     if (esPropietario(solicitante)) {
       propietarioId = undefined;
@@ -131,19 +127,15 @@ export class GranjasService {
   }
 
   async desactivar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
 
-    // Borrado suave: la granja queda inactiva pero se conservan sus datos y su
-    // historial (galpones, mediciones, etc. seguirán colgando de ella).
     await this.prisma.granja.update({ where: { id }, data: { activa: false } });
     return { id, activa: false };
   }
 
   async eliminarPermanente(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
 
-    // Borrado permanente (casos legales). Si la granja tiene galpones asociados,
-    // la FK ON DELETE RESTRICT lo impedirá y el PrismaExceptionFilter devuelve 400.
     await this.prisma.granja.delete({ where: { id } });
     return { id, eliminado: true };
   }

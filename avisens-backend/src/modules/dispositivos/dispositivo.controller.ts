@@ -22,7 +22,6 @@ import { CreateDispositivoDto } from './dto/create-dispositivo.dto';
 import { UpdateDispositivoDto } from './dto/update-dispositivo.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
-// El usuario autenticado que adjunta la estrategia JWT.
 interface AuthRequest extends Request {
   user: {
     id: number;
@@ -34,8 +33,6 @@ interface AuthRequest extends Request {
 @ApiTags('dispositivos')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-// Admin gestiona todos; Propietario solo los de sus galpones (el alcance se
-// aplica en el servicio según el rol del solicitante).
 @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
 @Controller('dispositivos')
 export class DispositivosController {

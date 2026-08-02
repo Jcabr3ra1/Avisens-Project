@@ -2,8 +2,6 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
-// DTO reutilizable para paginar cualquier listado. @Type convierte el query
-// param (texto) a número; requiere transform: true en el ValidationPipe global.
 export class PaginationQueryDto {
   @ApiPropertyOptional({
     default: 1,
@@ -25,7 +23,7 @@ export class PaginationQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100) // tope para que nadie pida 1 millón de filas de golpe
+  @Max(100)
   @IsOptional()
   limit: number = 20;
 }

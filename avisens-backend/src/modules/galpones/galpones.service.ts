@@ -26,8 +26,6 @@ const GALPON_SELECT = {
 export class GalponesService {
   constructor(private prisma: PrismaService) {}
 
-  // Verifica que la granja exista y, si el solicitante es Propietario, que sea
-  // suya. Se usa al crear o al mover un galpón entre granjas.
   private async validarGranja(granjaId: number, solicitante: Solicitante) {
     const granja = await this.prisma.granja.findUnique({
       where: { id: granjaId },
@@ -43,8 +41,6 @@ export class GalponesService {
   async crear(dto: CreateGalponDto, solicitante: Solicitante) {
     await this.validarGranja(dto.granja_id, solicitante);
 
-    // El par (granja_id, codigo) es único: si se repite, la restricción de
-    // Prisma + el PrismaExceptionFilter devuelven 409 automáticamente.
     return this.prisma.galpon.create({
       data: {
         granja_id: dto.granja_id,
@@ -65,7 +61,6 @@ export class GalponesService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    // El Propietario solo ve galpones de sus granjas; el Admin ve todos.
     const where = esPropietario(solicitante)
       ? { granja: { propietario_id: solicitante.id } }
       : undefined;
@@ -99,9 +94,8 @@ export class GalponesService {
   }
 
   async actualizar(id: number, dto: UpdateGalponDto, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance actual
+    await this.obtener(id, solicitante);
 
-    // Si se mueve a otra granja, validar que exista y que el solicitante pueda usarla.
     if (dto.granja_id) {
       await this.validarGranja(dto.granja_id, solicitante);
     }
@@ -128,18 +122,15 @@ export class GalponesService {
   }
 
   async desactivar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
 
-    // Borrado suave: el galpón queda inactivo pero conserva su historial.
     await this.prisma.galpon.update({ where: { id }, data: { activo: false } });
     return { id, activo: false };
   }
 
   async eliminarPermanente(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
 
-    // Borrado permanente (casos legales). Si el galpón tiene dispositivos o
-    // sensores asociados, la FK ON DELETE RESTRICT lo impedirá (400 vía filtro).
     await this.prisma.galpon.delete({ where: { id } });
     return { id, eliminado: true };
   }

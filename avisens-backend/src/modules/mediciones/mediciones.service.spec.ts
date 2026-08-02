@@ -21,7 +21,6 @@ describe('MedicionesService', () => {
 
   const dtoRegistrar = { sensor_id: 1, valor: 27.5 };
 
-  // Lee el `where` con el que se llamó a findMany.
   const whereDe = (mock: jest.Mock): Record<string, unknown> => {
     const calls = mock.mock.calls as Array<
       [{ where: Record<string, unknown> }]
@@ -38,7 +37,6 @@ describe('MedicionesService', () => {
     }).compile();
     service = module.get<MedicionesService>(MedicionesService);
 
-    // Por defecto el sensor 1 es del propietario 5.
     prisma.sensor.findUnique.mockResolvedValue({
       id: 1,
       galpon: { granja: { propietario_id: 5 } },

@@ -10,7 +10,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 describe('UmbralesService', () => {
   let service: UmbralesService;
 
-  // Mock de Prisma: solo los métodos que usa el servicio.
   const prisma = {
     galpon: { findUnique: jest.fn() },
     umbralAmbiental: {
@@ -58,7 +57,6 @@ describe('UmbralesService', () => {
     }).compile();
     service = module.get<UmbralesService>(UmbralesService);
 
-    // Por defecto el galpón 1 pertenece al propietario 5.
     prisma.galpon.findUnique.mockResolvedValue({
       id: 1,
       granja: { propietario_id: 5 },
@@ -100,7 +98,7 @@ describe('UmbralesService', () => {
   describe('revisar', () => {
     it('jubila el vigente y crea la versión siguiente en una transacción', async () => {
       prisma.umbralAmbiental.findUnique.mockResolvedValue(umbralVigente);
-      // $transaction en forma callback: ejecuta el callback con el propio mock.
+
       prisma.$transaction.mockImplementation(
         (cb: (tx: typeof prisma) => unknown) => cb(prisma),
       );
@@ -109,14 +107,13 @@ describe('UmbralesService', () => {
 
       await service.revisar(10, { valor_maximo: 35 }, admin);
 
-      // 1) jubila el anterior
       expect(prisma.umbralAmbiental.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 10 },
           data: { vigente: false },
         }),
       );
-      // 2) crea la v2: sube version, queda vigente, aplica el cambio y COPIA lo demás
+
       const calls = prisma.umbralAmbiental.create.mock.calls as Array<
         [{ data: Record<string, unknown> }]
       >;

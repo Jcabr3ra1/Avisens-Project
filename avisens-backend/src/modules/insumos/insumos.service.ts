@@ -9,8 +9,6 @@ import { paginate } from '../../common/pagination/paginate';
 export class InsumosService {
   constructor(private prisma: PrismaService) {}
 
-  // Si se indica un proveedor habitual, verificar que exista (mensaje claro
-  // en vez de dejar reventar la FK).
   private async validarProveedor(proveedorId?: number) {
     if (proveedorId === undefined) return;
     const proveedor = await this.prisma.proveedor.findUnique({

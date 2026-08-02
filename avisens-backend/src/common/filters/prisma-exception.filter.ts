@@ -8,9 +8,6 @@ import {
 import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 
-// Traduce los errores conocidos de Prisma (con código Pxxxx) a respuestas HTTP
-// correctas, una sola vez para toda la app. Así los servicios no repiten a mano
-// chequeos como "el email ya existe".
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(PrismaExceptionFilter.name);
@@ -25,7 +22,6 @@ export class PrismaExceptionFilter implements ExceptionFilter {
 
     switch (exception.code) {
       case 'P2002': {
-        // Índice único violado: meta.target trae la(s) columna(s) en conflicto.
         status = HttpStatus.CONFLICT;
         const target = (exception.meta?.target as string[] | undefined)?.join(
           ', ',
@@ -46,8 +42,6 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         break;
       }
       default:
-        // Código de Prisma no mapeado: lo tratamos como fallo inesperado y lo
-        // registramos para poder diagnosticarlo.
         this.logger.error(`Prisma ${exception.code}: ${exception.message}`);
     }
 

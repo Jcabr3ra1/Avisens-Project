@@ -25,8 +25,6 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  // Límite estricto: 5 intentos por minuto por IP para frenar la fuerza bruta
-  // de credenciales (el throttle global de 100/min es demasiado laxo aquí).
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Iniciar sesión' })
   login(@Body() dto: LoginDto, @Req() req: Request) {

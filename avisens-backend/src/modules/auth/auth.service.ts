@@ -51,9 +51,6 @@ export class AuthService {
       usuario.rol.nombre,
     );
 
-    // Higiene: borra las sesiones vencidas o revocadas del usuario. Si no,
-    // crecen sin límite y refresh/logout (que comparan con bcrypt sesión por
-    // sesión) se vuelven cada vez más lentos.
     await this.prisma.sesion.deleteMany({
       where: {
         usuario_id: usuario.id,

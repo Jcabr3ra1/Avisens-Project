@@ -22,9 +22,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    // Normalizamos a un envoltorio único: siempre un `message` string, y un
-    // `errors` opcional (lista) solo para la validación. Así todos los clientes
-    // (web y móvil) consumen la misma forma.
     let message = 'Error interno del servidor';
     let errors: string[] | undefined;
 
@@ -35,7 +32,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       } else if (respuesta && typeof respuesta === 'object') {
         const detalle = (respuesta as { message?: unknown }).message;
         if (Array.isArray(detalle)) {
-          errors = detalle as string[]; // errores de class-validator
+          errors = detalle as string[];
           message = 'Error de validación';
         } else if (typeof detalle === 'string') {
           message = detalle;
@@ -43,8 +40,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
       }
     }
 
-    // Solo registramos fallos inesperados (no los HttpException controlados,
-    // como 401/404/409, que son comportamiento normal y solo harían ruido).
     if (!(exception instanceof HttpException)) {
       this.logger.error(
         `${request.method} ${request.url}`,

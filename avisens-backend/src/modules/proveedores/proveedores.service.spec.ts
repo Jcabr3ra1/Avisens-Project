@@ -3,8 +3,6 @@ import { NotFoundException } from '@nestjs/common';
 import { ProveedoresService } from './proveedores.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
-// Entidad global sin alcance por rol: el riesgo aquí es el guard de existencia
-// (404) ANTES de mutar, para no actualizar/borrar un id inexistente.
 describe('ProveedoresService', () => {
   let service: ProveedoresService;
 

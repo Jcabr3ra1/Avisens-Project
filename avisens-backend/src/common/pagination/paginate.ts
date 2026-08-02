@@ -1,5 +1,3 @@
-// Forma estándar de una respuesta paginada, para que todos los listados del
-// backend devuelvan lo mismo y el frontend sepa cuántas páginas hay.
 export interface PaginatedResult<T> {
   data: T[];
   meta: {

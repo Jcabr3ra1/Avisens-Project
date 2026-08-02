@@ -3,9 +3,6 @@ import { NotFoundException } from '@nestjs/common';
 import { InsumosService } from './insumos.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
-// El riesgo propio de insumos es `validarProveedor`: si se referencia un
-// proveedor habitual inexistente debe cortar con 404 ANTES de crear/actualizar,
-// y si no se indica proveedor no debe consultarlo.
 describe('InsumosService', () => {
   let service: InsumosService;
 

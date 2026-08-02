@@ -30,10 +30,6 @@ export class UsuariosService {
   constructor(private prisma: PrismaService) {}
 
   async crear(dto: CreateUsuarioDto, solicitante: Solicitante) {
-    // No pre-validamos duplicados: la restricción unique de email/cedula + el
-    // PrismaExceptionFilter devuelven 409 automáticamente si ya existe.
-
-    // Un Propietario solo puede crear Operarios (ignora el rol que mande).
     let rolId = dto.rol_id;
     if (esPropietario(solicitante)) {
       const rolOperario = await this.prisma.rol.findUnique({
@@ -65,12 +61,10 @@ export class UsuariosService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    // El Propietario solo ve Operarios; el Admin ve todos.
     const where = esPropietario(solicitante)
       ? { rol: { nombre: ROLES.OPERARIO } }
       : undefined;
 
-    // Una transacción para que el conteo y la página salgan del mismo snapshot.
     const [data, total] = await this.prisma.$transaction([
       this.prisma.usuario.findMany({
         where,
@@ -121,7 +115,6 @@ export class UsuariosService {
       throw new ForbiddenException('Solo puedes gestionar operarios');
     }
 
-    // Si cambia email o cédula, verificar que no choquen con otro usuario.
     const cambiaEmail = dto.email && dto.email !== usuario.email;
     const cambiaCedula = dto.cedula && dto.cedula !== usuario.cedula;
     if (cambiaEmail || cambiaCedula) {
@@ -138,7 +131,6 @@ export class UsuariosService {
         throw new ConflictException('Email o cédula ya registrado');
     }
 
-    // El Propietario no puede cambiar el rol (el operario sigue siendo operario).
     let rolId = dto.rol_id;
     if (esPropietario(solicitante)) {
       rolId = undefined;
@@ -149,7 +141,6 @@ export class UsuariosService {
       if (!rol) throw new NotFoundException('Rol no encontrado');
     }
 
-    // Solo re-hashear si llega una contraseña nueva.
     const password_hash = dto.password
       ? await bcrypt.hash(dto.password, 12)
       : undefined;
@@ -170,13 +161,11 @@ export class UsuariosService {
   }
 
   async desactivar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
     if (id === solicitante.id) {
       throw new ForbiddenException('No puedes desactivar tu propia cuenta');
     }
 
-    // Borrado suave: la cuenta queda inactiva y se revocan sus sesiones para
-    // cerrarle el acceso de inmediato. Los datos y el rastro se conservan.
     await this.prisma.$transaction([
       this.prisma.sesion.updateMany({
         where: { usuario_id: id, revocada: false },
@@ -189,13 +178,11 @@ export class UsuariosService {
   }
 
   async eliminarPermanente(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
     if (id === solicitante.id) {
       throw new ForbiddenException('No puedes eliminar tu propia cuenta');
     }
 
-    // Borrado permanente (casos legales): primero los datos relacionados
-    // (sesiones y seguridad tienen FK ON DELETE RESTRICT), luego el usuario.
     await this.prisma.$transaction([
       this.prisma.sesion.deleteMany({ where: { usuario_id: id } }),
       this.prisma.seguridadCuenta.deleteMany({ where: { usuario_id: id } }),

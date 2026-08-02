@@ -5,15 +5,11 @@ import { UpdateProveedorDto } from './dto/update-proveedor.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
 
-// El proveedor es una entidad global (no pertenece a un propietario), así que
-// aquí NO hay alcance por rol: es un CRUD directo. El control de quién puede
-// escribir vs. leer se aplica en el controller con @Roles por método.
 @Injectable()
 export class ProveedoresService {
   constructor(private prisma: PrismaService) {}
 
   crear(dto: CreateProveedorDto) {
-    // nit es único: si se repite, el PrismaExceptionFilter devuelve 409.
     return this.prisma.proveedor.create({
       data: {
         nombre: dto.nombre,
@@ -46,7 +42,7 @@ export class ProveedoresService {
   }
 
   async actualizar(id: number, dto: UpdateProveedorDto) {
-    await this.obtener(id); // valida existencia
+    await this.obtener(id);
     return this.prisma.proveedor.update({
       where: { id },
       data: {
@@ -64,7 +60,7 @@ export class ProveedoresService {
 
   async desactivar(id: number) {
     await this.obtener(id);
-    // Borrado suave: conserva el histórico (compras, movimientos) que lo referencie.
+
     await this.prisma.proveedor.update({
       where: { id },
       data: { activo: false },
@@ -83,7 +79,7 @@ export class ProveedoresService {
 
   async eliminarPermanente(id: number) {
     await this.obtener(id);
-    // Si tiene compras/movimientos asociados, la FK ON DELETE RESTRICT lo impedirá.
+
     await this.prisma.proveedor.delete({ where: { id } });
     return { id, eliminado: true };
   }

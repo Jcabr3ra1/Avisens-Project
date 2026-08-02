@@ -23,8 +23,6 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 @ApiTags('proveedores')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-// Por defecto (lecturas): Admin y Propietario. Las escrituras las restringe
-// cada método a Administrador con @Roles (que sobreescribe al de la clase).
 @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
 @Controller('proveedores')
 export class ProveedoresController {

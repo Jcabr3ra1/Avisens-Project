@@ -53,7 +53,6 @@ export class UmbralesService {
   async crear(dto: CreateUmbralDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
 
-    // No puede haber dos umbrales vigentes para el mismo galpón+variable+semana.
     const existente = await this.prisma.umbralAmbiental.findFirst({
       where: {
         galpon_id: dto.galpon_id,
@@ -105,8 +104,6 @@ export class UmbralesService {
       );
     }
 
-    // Atómico: jubilar el vigente y crear la versión nueva. Si algo falla, no
-    // queda ni un galpón sin umbral vigente ni dos vigentes a la vez.
     return this.prisma.$transaction(async (tx) => {
       await tx.umbralAmbiental.update({
         where: { id: actual.id },
@@ -135,7 +132,7 @@ export class UmbralesService {
     const where = {
       galpon_id,
       variable,
-      // Por defecto solo los vigentes; con incluir_historico se ven todas las versiones.
+
       vigente: incluir_historico ? undefined : true,
       galpon: esPropietario(solicitante)
         ? { granja: { propietario_id: solicitante.id } }

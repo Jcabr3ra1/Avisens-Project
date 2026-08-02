@@ -25,7 +25,7 @@ const SENSOR_SELECT = {
   ultima_calibracion: true,
   proxima_calibracion: true,
   estado: true,
-  // Subimos dos niveles para saber de quién es: sensor → galpón → granja.
+
   galpon: {
     select: {
       id: true,
@@ -51,8 +51,6 @@ const SENSOR_SELECT = {
 export class SensoresService {
   constructor(private prisma: PrismaService) {}
 
-  // Verifica que el galpón exista y, si el solicitante es Propietario, que la
-  // granja de ese galpón sea suya. Se usa al crear o al mover de galpón.
   private async validarGalpon(galponId: number, solicitante: Solicitante) {
     const galpon = await this.prisma.galpon.findUnique({
       where: { id: galponId },
@@ -75,10 +73,6 @@ export class SensoresService {
     );
   }
 
-  // El sensor guarda galpon_id Y dispositivo_id, pero el dispositivo ya vive
-  // en un galpón: si no coinciden, quedaría el dato corrupto "sensor en
-  // galpón 1 reportando por un nodo del galpón 2". La FK no detecta eso;
-  // esta validación sí.
   private async validarDispositivoEnGalpon(
     dispositivoId: number,
     galponId: number,
@@ -101,8 +95,6 @@ export class SensoresService {
     await this.validarGalpon(dto.galpon_id, solicitante);
     await this.validarDispositivoEnGalpon(dto.dispositivo_id, dto.galpon_id);
 
-    // codigo es único: si se repite, la restricción de Prisma + el
-    // PrismaExceptionFilter devuelven 409 automáticamente.
     return this.prisma.sensor.create({
       data: {
         galpon_id: dto.galpon_id,
@@ -130,7 +122,6 @@ export class SensoresService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    // El Propietario solo ve sensores de galpones de sus granjas.
     const where = esPropietario(solicitante)
       ? { galpon: { granja: { propietario_id: solicitante.id } } }
       : undefined;
@@ -164,17 +155,12 @@ export class SensoresService {
   }
 
   async actualizar(id: number, dto: UpdateSensorDto, solicitante: Solicitante) {
-    // Valida existencia y alcance actual; además nos da el galpón y el
-    // dispositivo vigentes para verificar la coherencia del cambio.
     const actual = await this.obtener(id, solicitante);
 
-    // Si se mueve de galpón, validar que exista y que el solicitante pueda usarlo.
     if (dto.galpon_id) {
       await this.validarGalpon(dto.galpon_id, solicitante);
     }
 
-    // La pareja (galpón, dispositivo) resultante debe ser coherente aunque
-    // solo cambie una de las dos partes.
     const galponFinal = dto.galpon_id ?? actual.galpon.id;
     const dispositivoFinal = dto.dispositivo_id ?? actual.dispositivo.id;
     if (dto.galpon_id || dto.dispositivo_id) {
@@ -210,10 +196,8 @@ export class SensoresService {
   }
 
   async desactivar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
 
-    // Borrado suave vía estado (el MER no da `activo` al sensor): queda
-    // inactivo pero conserva su historial de mediciones.
     await this.prisma.sensor.update({
       where: { id },
       data: { estado: 'inactivo' },
@@ -222,7 +206,7 @@ export class SensoresService {
   }
 
   async activar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
     await this.prisma.sensor.update({
       where: { id },
       data: { estado: 'activo' },
@@ -231,10 +215,8 @@ export class SensoresService {
   }
 
   async eliminarPermanente(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
 
-    // Borrado permanente (casos legales). Cuando exista `mediciones`, la FK
-    // ON DELETE RESTRICT lo impedirá si el sensor tiene historial (400 vía filtro).
     await this.prisma.sensor.delete({ where: { id } });
     return { id, eliminado: true };
   }

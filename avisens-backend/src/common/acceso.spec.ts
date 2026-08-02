@@ -1,8 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import { esPropietario, verificarDueno } from './acceso';
 
-// El helper de alcance lo usan los 7 módulos con dueño: si se rompe aquí, se
-// rompe el aislamiento entre propietarios en todo el sistema. Por eso se prueba.
 describe('acceso', () => {
   const admin = { id: 1, rol: 'Administrador' };
   const propietario = { id: 5, rol: 'Propietario' };

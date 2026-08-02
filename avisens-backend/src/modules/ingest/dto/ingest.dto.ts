@@ -10,8 +10,6 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-// Una lectura de un sensor. El dispositivo se identifica por el CÓDIGO del
-// sensor (ej. TEMP-G1-01), nunca por un id numérico de la BD.
 export class LecturaDto {
   @ApiProperty({
     example: 'TEMP-G1-01',
@@ -34,8 +32,6 @@ export class LecturaDto {
   calidad?: string;
 }
 
-// Cuerpo de POST /ingest: un lote de lecturas del ciclo. El DHT22 manda
-// temperatura y humedad en un solo POST, por eso es un arreglo.
 export class IngestDto {
   @ApiProperty({
     type: [LecturaDto],

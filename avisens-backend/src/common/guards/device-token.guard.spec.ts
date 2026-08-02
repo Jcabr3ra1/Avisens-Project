@@ -8,8 +8,6 @@ describe('DeviceTokenGuard', () => {
 
   const prisma = { dispositivo: { findUnique: jest.fn() } };
 
-  // Arma un ExecutionContext falso con los headers dados y devuelve también el
-  // `req` para inspeccionar lo que el guard le adjunta.
   const contextoCon = (headers: Record<string, unknown>) => {
     const req: Record<string, unknown> = { headers };
     const ctx = {

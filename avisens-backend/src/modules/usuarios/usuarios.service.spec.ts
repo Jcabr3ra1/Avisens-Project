@@ -8,14 +8,11 @@ import * as bcrypt from 'bcrypt';
 import { UsuariosService } from './usuarios.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
-// Mockeamos bcrypt: hashear con cost 12 es lento y no es lo que probamos aquí.
-// Solo verificamos que la contraseña PASA por el hash, nunca en texto plano.
 jest.mock('bcrypt');
 
 describe('UsuariosService', () => {
   let service: UsuariosService;
 
-  // Mock de Prisma: solo los métodos que toca el servicio.
   const prisma = {
     rol: { findUnique: jest.fn() },
     usuario: {
@@ -45,7 +42,6 @@ describe('UsuariosService', () => {
     rol_id: 2,
   };
 
-  // Lee el `data` con el que se llamó a un mock de escritura (create/update).
   const dataDe = (mock: jest.Mock): Record<string, unknown> => {
     const calls = mock.mock.calls as Array<[{ data: Record<string, unknown> }]>;
     return calls[0][0].data;
@@ -60,7 +56,6 @@ describe('UsuariosService', () => {
     }).compile();
     service = module.get<UsuariosService>(UsuariosService);
 
-    // Defaults sanos: sin conflictos, transacción que devuelve página vacía.
     hashMock.mockResolvedValue('hash_fake');
     prisma.usuario.findFirst.mockResolvedValue(null);
     prisma.$transaction.mockResolvedValue([[], 0]);
@@ -70,10 +65,9 @@ describe('UsuariosService', () => {
 
   describe('crear', () => {
     it('un Propietario siempre crea Operarios, ignorando el rol_id que mande', async () => {
-      prisma.rol.findUnique.mockResolvedValue({ id: 3 }); // el rol Operario
+      prisma.rol.findUnique.mockResolvedValue({ id: 3 });
       prisma.usuario.create.mockResolvedValue({ id: 99 });
 
-      // Manda rol_id de Admin (1); debe quedar como Operario (3) de todos modos.
       await service.crear({ ...dtoCrear, rol_id: 1 }, propietario);
 
       expect(prisma.rol.findUnique).toHaveBeenCalledWith({
@@ -175,7 +169,7 @@ describe('UsuariosService', () => {
         cedula: '123',
         rol: { nombre: 'Operario' },
       });
-      prisma.usuario.findFirst.mockResolvedValue({ id: 99 }); // ya existe
+      prisma.usuario.findFirst.mockResolvedValue({ id: 99 });
 
       await expect(
         service.actualizar(20, { email: 'nuevo@x.com' }, admin),

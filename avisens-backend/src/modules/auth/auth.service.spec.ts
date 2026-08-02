@@ -6,11 +6,8 @@ import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
-// Reemplazamos bcrypt entero por mocks: las pruebas no deben gastar tiempo
-// hasheando de verdad, y así controlamos si compare() da true o false.
 jest.mock('bcrypt');
 
-// Construye un usuario de prueba; cada test sobreescribe lo que necesite.
 function usuarioFalso(overrides: Record<string, unknown> = {}) {
   return {
     id: 1,
@@ -26,7 +23,7 @@ function usuarioFalso(overrides: Record<string, unknown> = {}) {
 
 describe('AuthService', () => {
   let service: AuthService;
-  // Mock de Prisma: solo los métodos que usa el servicio.
+
   const prisma = {
     usuario: { findUnique: jest.fn() },
     sesion: {
@@ -41,8 +38,6 @@ describe('AuthService', () => {
   const config = { getOrThrow: jest.fn(), get: jest.fn() };
 
   beforeEach(async () => {
-    // TestingModule: el mismo contenedor de inyección de Nest, pero con
-    // nuestras dependencias falsas en vez de las reales.
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -54,14 +49,12 @@ describe('AuthService', () => {
 
     service = module.get<AuthService>(AuthService);
 
-    // Valores por defecto de los mocks para el camino feliz.
     jwt.signAsync.mockResolvedValue('un-token');
     config.getOrThrow.mockReturnValue('secreto');
     config.get.mockReturnValue('15m');
     (bcrypt.hash as jest.Mock).mockResolvedValue('hash-refresh');
   });
 
-  // Limpia el historial de llamadas entre pruebas para que no se contaminen.
   afterEach(() => jest.clearAllMocks());
 
   describe('login', () => {
@@ -108,7 +101,6 @@ describe('AuthService', () => {
         service.login({ email: 'test@avisens.com', password: 'mala' }),
       ).rejects.toThrow(UnauthorizedException);
 
-      // El efecto secundario importa: debe quedar registrado el fallo.
       expect(prisma.seguridadCuenta.upsert).toHaveBeenCalled();
     });
 
@@ -130,8 +122,8 @@ describe('AuthService', () => {
         rol: 'Operario',
       });
       expect(prisma.sesion.create).toHaveBeenCalled();
-      expect(prisma.sesion.deleteMany).toHaveBeenCalled(); // limpieza de sesiones vencidas
-      expect(prisma.seguridadCuenta.upsert).toHaveBeenCalled(); // reseteo de intentos
+      expect(prisma.sesion.deleteMany).toHaveBeenCalled();
+      expect(prisma.seguridadCuenta.upsert).toHaveBeenCalled();
     });
   });
 
@@ -140,7 +132,7 @@ describe('AuthService', () => {
       prisma.sesion.findMany.mockResolvedValue([
         { id: 10, refresh_token_hash: 'hash-de-la-sesion' },
       ]);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true); // el token coincide
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       prisma.usuario.findUnique.mockResolvedValue(usuarioFalso());
 
       const tokens = await service.refresh(
@@ -151,7 +143,7 @@ describe('AuthService', () => {
 
       expect(tokens.access_token).toBe('un-token');
       expect(tokens.refresh_token).toBe('un-token');
-      // Debe rotar el hash de esa sesión concreta.
+
       expect(prisma.sesion.update).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: 10 } }),
       );
@@ -161,7 +153,7 @@ describe('AuthService', () => {
       prisma.sesion.findMany.mockResolvedValue([
         { id: 10, refresh_token_hash: 'hash-de-la-sesion' },
       ]);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false); // no coincide
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(
         service.refresh(1, 'test@avisens.com', 'token-malo'),
@@ -198,7 +190,7 @@ describe('AuthService', () => {
         { id: 1, refresh_token_hash: 'hash-a' },
         { id: 2, refresh_token_hash: 'hash-b' },
       ]);
-      // La primera sesión no coincide, la segunda sí.
+
       (bcrypt.compare as jest.Mock)
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(true);

@@ -19,7 +19,7 @@ const DISPOSITIVO_SELECT = {
   ultima_conexion: true,
   activo: true,
   fecha_creacion: true,
-  // Subimos dos niveles para saber de quién es: dispositivo → galpón → granja.
+
   galpon: {
     select: {
       id: true,
@@ -38,8 +38,6 @@ const DISPOSITIVO_SELECT = {
 export class DispositivosService {
   constructor(private prisma: PrismaService) {}
 
-  // Verifica que el galpón exista y, si el solicitante es Propietario, que la
-  // granja de ese galpón sea suya. Se usa al crear o al mover de galpón.
   private async validarGalpon(galponId: number, solicitante: Solicitante) {
     const galpon = await this.prisma.galpon.findUnique({
       where: { id: galponId },
@@ -62,7 +60,6 @@ export class DispositivosService {
     );
   }
 
-  // Genera un secreto aleatorio para autenticar al dispositivo en POST /ingest.
   private generarToken(): string {
     return randomBytes(24).toString('hex');
   }
@@ -70,12 +67,8 @@ export class DispositivosService {
   async crear(dto: CreateDispositivoDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
 
-    // Al crear se genera el token de ingesta y se REVELA una sola vez (no vuelve
-    // a salir en los listados). El firmware del ESP32 lo guarda en su config.h.
     const token = this.generarToken();
 
-    // mac_address y codigo_topic son únicos: si se repiten, la restricción de
-    // Prisma + el PrismaExceptionFilter devuelven 409 automáticamente.
     const dispositivo = await this.prisma.dispositivo.create({
       data: {
         galpon_id: dto.galpon_id,
@@ -92,10 +85,8 @@ export class DispositivosService {
     return { ...dispositivo, token_ingesta: token };
   }
 
-  // Regenera el token del dispositivo (por si se filtró o al aprovisionar uno
-  // ya existente). Lo revela una sola vez, aquí.
   async regenerarToken(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
     const token = this.generarToken();
     await this.prisma.dispositivo.update({
       where: { id },
@@ -105,7 +96,6 @@ export class DispositivosService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    // El Propietario solo ve dispositivos de galpones de sus granjas.
     const where = esPropietario(solicitante)
       ? { galpon: { granja: { propietario_id: solicitante.id } } }
       : undefined;
@@ -143,9 +133,8 @@ export class DispositivosService {
     dto: UpdateDispositivoDto,
     solicitante: Solicitante,
   ) {
-    await this.obtener(id, solicitante); // valida existencia y alcance actual
+    await this.obtener(id, solicitante);
 
-    // Si se mueve a otro galpón, validar que exista y que el solicitante pueda usarlo.
     if (dto.galpon_id) {
       await this.validarGalpon(dto.galpon_id, solicitante);
     }
@@ -166,9 +155,8 @@ export class DispositivosService {
   }
 
   async desactivar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
 
-    // Borrado suave: el dispositivo queda inactivo pero conserva su historial.
     await this.prisma.dispositivo.update({
       where: { id },
       data: { activo: false },
@@ -177,7 +165,7 @@ export class DispositivosService {
   }
 
   async activar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
     await this.prisma.dispositivo.update({
       where: { id },
       data: { activo: true },
@@ -186,10 +174,8 @@ export class DispositivosService {
   }
 
   async eliminarPermanente(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante); // valida existencia y alcance
+    await this.obtener(id, solicitante);
 
-    // Borrado permanente (casos legales). Si el dispositivo tiene sensores
-    // asociados, la FK ON DELETE RESTRICT lo impedirá (400 vía filtro).
     await this.prisma.dispositivo.delete({ where: { id } });
     return { id, eliminado: true };
   }

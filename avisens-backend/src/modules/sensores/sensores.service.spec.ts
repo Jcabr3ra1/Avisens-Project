@@ -44,8 +44,6 @@ describe('SensoresService', () => {
     }).compile();
     service = module.get<SensoresService>(SensoresService);
 
-    // Escenario coherente por defecto: el galpón 1 es del propietario 5 y el
-    // dispositivo 10 vive en ese mismo galpón. Cada test rompe lo que necesita.
     prisma.galpon.findUnique.mockResolvedValue({
       id: 1,
       granja: { propietario_id: 5 },
@@ -66,7 +64,6 @@ describe('SensoresService', () => {
     });
 
     it('rechaza (400) si el dispositivo pertenece a otro galpón', async () => {
-      // El nodo 10 está en el galpón 2, pero el sensor se pide para el galpón 1.
       prisma.dispositivo.findUnique.mockResolvedValue({ id: 10, galpon_id: 2 });
 
       await expect(service.crear(dtoCrear, admin)).rejects.toThrow(
@@ -149,8 +146,6 @@ describe('SensoresService', () => {
 
   describe('actualizar', () => {
     it('al mover solo el dispositivo, valida coherencia contra el galpón actual', async () => {
-      // Sensor vive en el galpón 1; se intenta asignarle el nodo 9, que está
-      // en el galpón 2. Aunque el galpón del sensor no cambie, debe rechazarse.
       prisma.sensor.findUnique.mockResolvedValue({
         id: 1,
         galpon: { id: 1, granja: { propietario_id: 5 } },

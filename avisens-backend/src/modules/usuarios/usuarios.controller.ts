@@ -22,7 +22,6 @@ import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
-// El usuario autenticado que adjunta la estrategia JWT.
 interface AuthRequest extends Request {
   user: { id: number; email: string; rol: string };
 }
@@ -30,8 +29,6 @@ interface AuthRequest extends Request {
 @ApiTags('usuarios')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-// Admin gestiona a todos; Propietario solo a sus operarios (el alcance se
-// aplica en el servicio según el rol del solicitante).
 @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
 @Controller('usuarios')
 export class UsuariosController {
