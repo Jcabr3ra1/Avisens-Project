@@ -215,8 +215,9 @@ model Medicion {
 
   sensor Sensor @relation(fields: [sensor_id], references: [id])
 
-  // PK compuesta (id, fecha_hora): TimescaleDB exigirá que la columna de
-  // partición temporal haga parte de la PK cuando convirtamos a hypertable.
+  // PK compuesta (id, fecha_hora): deja la tabla lista para particionar por
+  // rango de fecha si el histórico crece mucho (Postgres exige que la columna
+  // de partición forme parte de la PK).
   @@id([id, fecha_hora])
   // La consulta reina será "lecturas del sensor X entre dos fechas".
   @@index([sensor_id, fecha_hora])
