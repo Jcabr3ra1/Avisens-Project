@@ -1,175 +1,167 @@
 # AVISENS — Backend
 
-API REST del sistema AVISENS. Maneja la lógica de negocio, autenticación, base de datos y comunicación con dispositivos IoT.
+API REST del sistema **Avisens**: monitoreo ambiental IoT de granjas avícolas.
+Gestiona usuarios y roles, granjas/galpones, los nodos ESP32 y sus sensores, la
+ingesta de mediciones en tiempo real, y el inventario de insumos.
 
-> **Estado:** Por iniciar — Fase 2. Este README deja definido el stack y la estructura para arrancar la implementación.
-
----
-
-## Stack
-
-- **Lenguaje:** TypeScript
-- **Runtime:** Node.js
-- **Framework:** [NestJS](https://nestjs.com/) (arquitectura modular, inyección de dependencias)
-- **Base de datos:** PostgreSQL (relacional)
-- **ORM:** [Prisma](https://www.prisma.io/) (type-safe, migraciones)
-- **Autenticación:** JWT + refresh tokens (con `@nestjs/jwt` + Passport)
-- **Validación:** `class-validator` + `class-transformer` (DTOs)
-- **Documentación de API:** Swagger (`@nestjs/swagger`)
-- **Gestor de paquetes:** **npm** (igual que el frontend)
-- **Contenedores:** Docker + Docker Compose (para PostgreSQL)
-
-> **¿Por qué este stack?** Mismo lenguaje que el frontend (TypeScript) → el equipo es productivo desde el día 1 y se pueden compartir tipos. NestJS impone una estructura limpia por capas, en la misma línea ordenada del frontend. **PostgreSQL** encaja perfecto con el modelo de datos (muy relacional: 39 entidades, 57 FKs) y **Prisma** lo hace type-safe y fácil de migrar. Stack moderno y muy demandado.
+**Stack:** NestJS · TypeScript · Prisma · PostgreSQL · JWT + Passport · Swagger · Docker
 
 ---
 
-## Primer arranque (una sola vez)
+## Arquitectura
 
-Cuando empieces la implementación, inicializa el proyecto NestJS dentro de esta carpeta:
+API REST **por capas**. Cada petición atraviesa esta cadena antes de tocar la
+base de datos:
 
-```bash
-# 1. Instalar el CLI de NestJS (global)
-npm i -g @nestjs/cli
+```
+Petición HTTP
+   │
+   ▼
+Guards        JwtAuthGuard (¿quién eres?) → RolesGuard (¿tu rol puede?)
+   │           · o DeviceTokenGuard para la ingesta del ESP32
+   ▼
+ValidationPipe  valida el body contra su DTO (400 si no cumple)
+   │
+   ▼
+Controller    recibe la petición y delega — sin lógica
+   │
+   ▼
+Service       lógica de negocio + alcance por dueño (acceso.ts)
+   │
+   ▼
+PrismaService  → PostgreSQL
 
-# 2. Generar el proyecto en esta carpeta
-nest new . --package-manager npm
-
-# 3. Dependencias clave del proyecto
-npm i @nestjs/config
-npm i @nestjs/jwt @nestjs/passport passport passport-jwt
-npm i class-validator class-transformer
-npm i @nestjs/swagger
-
-# 4. Prisma (ORM)
-npm i @prisma/client
-npm i -D prisma
-npx prisma init      # crea prisma/schema.prisma y el .env
+Cualquier error → filtros globales → respuesta JSON uniforme con su código HTTP.
 ```
 
-Luego define los modelos en `prisma/schema.prisma`, ajusta el `.env` (ver [Variables de entorno](#variables-de-entorno)) y levanta PostgreSQL con Docker.
+### Control de acceso (dos niveles)
+
+1. **Por rol** — `RolesGuard` + el decorador `@Roles(...)`: quién puede entrar a
+   cada módulo (`Administrador`, `Propietario`, `Operario`).
+2. **Por dueño** — en cada servicio, los ayudantes `esPropietario()` y
+   `verificarDueno()` de `common/acceso.ts`: un **Propietario solo ve/toca lo que
+   cuelga de sus granjas**; un **Administrador** ve todo. El filtro sube por las
+   relaciones hasta `granja.propietario_id`.
 
 ---
 
-## Cómo correr localmente
-
-```bash
-docker compose up -d        # levanta PostgreSQL en un contenedor
-npx prisma migrate dev      # aplica las migraciones a la base
-npm run start:dev           # servidor en modo watch (http://localhost:3000)
-```
-
-### Otros comandos
-
-```bash
-npm run build               # compila a JavaScript (dist/)
-npm run start:prod          # corre el build de producción
-npm run lint                # ESLint
-npm run test                # pruebas unitarias (Jest)
-npx prisma studio           # explorador visual de la base de datos
-npx prisma migrate dev      # crear/aplicar una migración nueva
-```
-
----
-
-## Arquitectura — modular por dominio
-
-Igual que el frontend (Screaming Architecture), el backend se organiza **por dominio de negocio**, no por tipo técnico. Cada módulo de NestJS agrupa todo lo suyo:
+## Estructura
 
 ```
 prisma/
-└── schema.prisma           ← TODO el modelo de datos (tablas + relaciones)
+├── schema.prisma          modelo de datos completo (tablas + relaciones)
+├── migrations/            historial de migraciones (SQL versionado)
+└── seeds/                 datos iniciales (roles, admin)
 
 src/
-├── main.ts                 ← punto de entrada (bootstrap)
-├── app.module.ts           ← módulo raíz (importa los demás)
-├── common/                 ← guards, pipes, filtros, decoradores compartidos
-├── prisma/                 ← PrismaService (cliente de base de datos inyectable)
-└── modules/
-    ├── auth/               ← login, registro, JWT, RBAC  (rol Administrador)
-    ├── usuarios/           ← CRUD de usuarios, roles, permisos, auditoría
-    ├── granjas/            ← granjas y galpones
-    ├── lotes/              ← ciclos productivos (bitácora)
-    ├── sensores/           ← datos IoT y mediciones
-    ├── alertas/
-    ├── inventario/
-    ├── finanzas/
-    └── chatbot/            ← prospectos, cotizaciones (CRM)
+├── main.ts                bootstrap: seguridad, validación, filtros, Swagger
+├── app.module.ts          módulo raíz: enchufa todos los módulos
+├── prisma/                PrismaService (cliente de BD, inyectable y @Global)
+├── common/                lo transversal, reutilizado por todos los módulos
+│   ├── acceso.ts          esPropietario() / verificarDueno() — el alcance por dueño
+│   ├── guards/            JwtAuthGuard, RolesGuard, DeviceTokenGuard
+│   ├── decorators/        @Roles(...)
+│   ├── filters/           traducen errores (HTTP y Prisma) a JSON uniforme
+│   ├── pagination/        DTO de paginación + helper paginate()
+│   └── roles.ts           nombres de rol como constante (evita typos)
+└── modules/               una carpeta por dominio de negocio
 ```
 
-Cada módulo sigue el patrón estándar de NestJS:
+Cada módulo sigue **el mismo patrón** (si entiendes uno, los entiendes todos):
 
 ```
-modules/granjas/
-├── granjas.module.ts       ← declara el módulo
-├── granjas.controller.ts   ← define las rutas (endpoints HTTP)
-├── granjas.service.ts      ← la lógica de negocio (usa PrismaService)
-└── dto/                    ← objetos de entrada/salida validados (create, update)
+modules/sensores/
+├── sensores.module.ts       declara y enchufa el módulo
+├── sensores.controller.ts   define las rutas (thin: recibe y delega)
+├── sensores.service.ts      la lógica de negocio + el alcance por rol
+├── sensores.service.spec.ts pruebas de la lógica riesgosa
+└── dto/                      contratos de entrada validados (create, update)
 ```
 
-Flujo de una petición: **Controller** (recibe HTTP) → **Service** (lógica) → **Prisma** (lee/escribe en PostgreSQL). Las tablas y relaciones se definen una sola vez en `prisma/schema.prisma`.
+### Módulos
 
----
-
-## Endpoints planeados
-
-| Recurso | Descripción |
+| Módulo | Qué gestiona |
 |---|---|
-| `/auth` | Login, registro, refresh token, MFA admin |
-| `/usuarios` | CRUD de usuarios, roles y permisos (RBAC) + auditoría |
-| `/granjas` | CRUD de granjas y galpones |
-| `/lotes` | Gestión de ciclos productivos |
-| `/sensores` | Datos IoT en tiempo real |
-| `/alertas` | Alertas y notificaciones |
-| `/inventario` | Stock de insumos |
-| `/finanzas` | Ingresos y egresos |
-
-La documentación interactiva (Swagger) quedará en `http://localhost:3000/docs`.
+| `auth` | Login, JWT + refresh token, sesiones y bloqueo por intentos fallidos |
+| `usuarios` | Usuarios y roles (RBAC) |
+| `granjas` | Granjas de un propietario |
+| `galpones` | Galpones de una granja |
+| `dispositivos` | Nodos ESP32 (con su token de ingesta) |
+| `sensores` | Sensores ambientales de un galpón |
+| `mediciones` | Lecturas de los sensores (serie de tiempo) |
+| `umbrales` | Rangos aceptables por variable/semana, versionados |
+| `proveedores` | Proveedores de insumos |
+| `insumos` | Inventario de insumos (stock) |
+| `ingest` | Ingesta de lecturas desde el ESP32 (auth por token de dispositivo) |
+| `health` | Chequeo de estado del servicio |
 
 ---
 
-## Modelo de datos
+## Cómo correr
 
-El diseño completo (39 entidades, 57 FKs) está documentado en `Documentacion avisens/` y se traduce **1:1** a `prisma/schema.prisma`. Como es relacional:
+Requiere Docker (para PostgreSQL) y Node.js.
 
-- Las **llaves foráneas** se declaran como relaciones de Prisma (`@relation`).
-- Las **tablas puente N:M** (`roles_permisos`, `usuarios_galpones`, `alertas_canales`…) se modelan como tablas explícitas.
-- Los **campos calculados** (mortalidad acumulada, FCR, días de autonomía…) **no se guardan**: se derivan en consultas/servicios. Ya están marcados como ELIMINADOS en el diagrama.
-- Los snapshots JSON (`bitacora_auditoria.datos_antes/datos_despues`) usan el tipo **`Json`** de Postgres (`jsonb`).
+```bash
+npm install
+cp .env.example .env          # y ajusta los valores (ver más abajo)
+docker compose up -d database # levanta PostgreSQL
+npm run db:migrate            # aplica las migraciones
+npm run seed                  # datos iniciales (roles + usuario admin)
+npm run start:dev             # servidor con recarga → http://localhost:3000
+```
+
+- **API:** `http://localhost:3000`
+- **Swagger (documentación interactiva):** `http://localhost:3000/docs`
+
+> El proyecto completo (BD + backend + frontend) también se levanta desde la raíz
+> del repo con `docker compose up --build`.
+
+---
+
+## Cómo probar (calidad)
+
+Los tres gates que deben pasar antes de dar por terminado un cambio:
+
+```bash
+npx tsc --noEmit    # tipos (compila sin errores)
+npm run lint        # ESLint (cero warnings)
+npm run test        # Jest (pruebas unitarias)
+npm run test:cov    # + cobertura
+```
+
+Las pruebas cubren la **lógica riesgosa** (alcance por rol, autenticación,
+validaciones, transacciones), no el 100 % por el 100 %. El CI de GitHub Actions
+hace cumplir estos gates en cada push y Pull Request.
 
 ---
 
 ## Variables de entorno
 
-Crear un archivo `.env` en la raíz (no se commitea):
+En un archivo `.env` (no se versiona). Ver `.env.example`:
 
 ```env
 PORT=3000
 DATABASE_URL="postgresql://avisens:avisens@localhost:5432/avisens?schema=public"
-JWT_SECRET=cambia-esto-por-un-secreto-largo
+JWT_SECRET=...              # secreto del access token
 JWT_EXPIRES_IN=15m
-JWT_REFRESH_SECRET=otro-secreto-distinto
+JWT_REFRESH_SECRET=...      # secreto del refresh token (distinto)
 JWT_REFRESH_EXPIRES_IN=7d
+CORS_ORIGIN=http://localhost:8080
 ```
 
----
-
-## Conexión con el frontend
-
-El frontend (`avisens-frontend`) consumirá esta API. Por convención del proyecto:
-
-- Cada feature del frontend pondrá sus llamadas en `features/[nombre]/services/`.
-- La configuración del cliente HTTP (base URL = este backend) irá en `shared/services/`.
-
-Habilitar **CORS** en `main.ts` para permitir el origen del frontend (`http://localhost:5173`).
+La configuración se valida al arrancar: si falta un secreto, la app no inicia.
 
 ---
 
-## Checklist para arrancar
+## Convenciones
 
-- [ ] `nest new .` e instalar dependencias clave + Prisma
-- [ ] `docker compose up -d` con PostgreSQL
-- [ ] Traducir el diagrama a `prisma/schema.prisma` (empezar por el módulo de autenticación)
-- [ ] `npx prisma migrate dev` para crear las tablas
-- [ ] Crear el módulo `auth` (registro + login + JWT + RBAC) — base de todo lo demás
-- [ ] Crear el primer módulo de dominio (`granjas`) como plantilla del resto
-- [ ] Habilitar Swagger y CORS
+- **Controlador tonto, servicio inteligente:** las rutas solo reciben y delegan;
+  toda la lógica vive en los servicios.
+- **Todo dato de entrada pasa por un DTO** validado con `class-validator`.
+- **Los listados se paginan** con el `PaginationQueryDto` común y devuelven
+  `{ data, meta }`.
+- **Nunca se expone de más:** cada consulta usa un `select` explícito (p. ej. el
+  `password_hash` del usuario jamás sale en una respuesta).
+- **Los errores no se manejan a mano** en cada servicio: los filtros globales
+  traducen las excepciones (incluidas las de Prisma) a respuestas uniformes.
+- **Commits** en español siguiendo Conventional Commits.
