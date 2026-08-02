@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { DispositivosController } from './dispositivo.controller';
+import { DispositivosController } from './dispositivos.controller';
 import { DispositivosService } from './dispositivos.service';
 
 @Module({
