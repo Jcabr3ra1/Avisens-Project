@@ -13,6 +13,7 @@ describe('GalponesService', () => {
       findMany: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
     },
     granja: { findUnique: jest.fn() },
     $transaction: jest.fn(),
@@ -111,6 +112,61 @@ describe('GalponesService', () => {
       await expect(service.obtener(1, propietario)).rejects.toThrow(
         ForbiddenException,
       );
+    });
+  });
+
+  describe('actualizar', () => {
+    it('actualiza cuando el galpón es del solicitante', async () => {
+      prisma.galpon.findUnique.mockResolvedValue({
+        id: 1,
+        granja: { propietario_id: 5 },
+      });
+      prisma.galpon.update.mockResolvedValue({ id: 1 });
+
+      await service.actualizar(1, { nombre: 'Nuevo nombre' }, propietario);
+
+      expect(prisma.galpon.update).toHaveBeenCalled();
+    });
+
+    it('al mover a otra granja, re-valida que la nueva sea suya (403)', async () => {
+      prisma.galpon.findUnique.mockResolvedValue({
+        id: 1,
+        granja: { propietario_id: 5 },
+      });
+      prisma.granja.findUnique.mockResolvedValue({
+        id: 9,
+        propietario_id: 999,
+      });
+
+      await expect(
+        service.actualizar(1, { granja_id: 9 }, propietario),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.galpon.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('desactivar / eliminarPermanente', () => {
+    beforeEach(() => {
+      prisma.galpon.findUnique.mockResolvedValue({
+        id: 1,
+        granja: { propietario_id: 5 },
+      });
+    });
+
+    it('desactiva (borrado suave) cuando es dueño', async () => {
+      prisma.galpon.update.mockResolvedValue({ id: 1 });
+
+      const res = await service.desactivar(1, propietario);
+
+      expect(res).toEqual({ id: 1, activo: false });
+    });
+
+    it('elimina permanentemente cuando es dueño', async () => {
+      prisma.galpon.delete.mockResolvedValue({ id: 1 });
+
+      const res = await service.eliminarPermanente(1, propietario);
+
+      expect(res).toEqual({ id: 1, eliminado: true });
     });
   });
 });

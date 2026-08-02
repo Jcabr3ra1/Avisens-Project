@@ -13,6 +13,7 @@ describe('DispositivosService', () => {
       findMany: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
     },
     galpon: { findUnique: jest.fn() },
     $transaction: jest.fn(),
@@ -136,6 +137,69 @@ describe('DispositivosService', () => {
         ForbiddenException,
       );
       expect(prisma.dispositivo.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('actualizar', () => {
+    it('actualiza cuando el dispositivo es del solicitante', async () => {
+      prisma.dispositivo.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { granja: { propietario_id: 5 } },
+      });
+      prisma.dispositivo.update.mockResolvedValue({ id: 1 });
+
+      await service.actualizar(1, { nombre: 'Nuevo' }, propietario);
+
+      expect(prisma.dispositivo.update).toHaveBeenCalled();
+    });
+
+    it('al mover a otro galpón, re-valida que el nuevo sea suyo (403)', async () => {
+      prisma.dispositivo.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { granja: { propietario_id: 5 } },
+      });
+      prisma.galpon.findUnique.mockResolvedValue({
+        id: 9,
+        granja: { propietario_id: 999 },
+      });
+
+      await expect(
+        service.actualizar(1, { galpon_id: 9 }, propietario),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.dispositivo.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('activar / desactivar / eliminarPermanente', () => {
+    beforeEach(() => {
+      prisma.dispositivo.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { granja: { propietario_id: 5 } },
+      });
+    });
+
+    it('desactiva (borrado suave) cuando es dueño', async () => {
+      prisma.dispositivo.update.mockResolvedValue({ id: 1 });
+
+      const res = await service.desactivar(1, propietario);
+
+      expect(res).toEqual({ id: 1, activo: false });
+    });
+
+    it('activa cuando es dueño', async () => {
+      prisma.dispositivo.update.mockResolvedValue({ id: 1 });
+
+      const res = await service.activar(1, propietario);
+
+      expect(res).toEqual({ id: 1, activo: true });
+    });
+
+    it('elimina permanentemente cuando es dueño', async () => {
+      prisma.dispositivo.delete.mockResolvedValue({ id: 1 });
+
+      const res = await service.eliminarPermanente(1, propietario);
+
+      expect(res).toEqual({ id: 1, eliminado: true });
     });
   });
 });

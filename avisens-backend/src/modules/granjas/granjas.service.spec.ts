@@ -17,6 +17,7 @@ describe('GranjasService', () => {
       findMany: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
     },
     usuario: { findUnique: jest.fn() },
     $transaction: jest.fn(),
@@ -114,6 +115,58 @@ describe('GranjasService', () => {
       await expect(service.obtener(1, propietario)).rejects.toThrow(
         ForbiddenException,
       );
+    });
+  });
+
+  describe('actualizar', () => {
+    it('actualiza cuando la granja es del propietario', async () => {
+      prisma.granja.findUnique.mockResolvedValue({
+        id: 1,
+        propietario: { id: 5 },
+      });
+      prisma.granja.update.mockResolvedValue({ id: 1 });
+
+      await service.actualizar(1, { nombre: 'Nuevo' }, propietario);
+
+      expect(prisma.granja.update).toHaveBeenCalled();
+    });
+
+    it('un Admin que reasigna a un propietario inexistente recibe 404', async () => {
+      prisma.granja.findUnique.mockResolvedValue({
+        id: 1,
+        propietario: { id: 5 },
+      });
+      prisma.usuario.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.actualizar(1, { propietario_id: 99 }, admin),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.granja.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('desactivar / eliminarPermanente', () => {
+    beforeEach(() => {
+      prisma.granja.findUnique.mockResolvedValue({
+        id: 1,
+        propietario: { id: 5 },
+      });
+    });
+
+    it('desactiva (borrado suave) cuando es dueño', async () => {
+      prisma.granja.update.mockResolvedValue({ id: 1 });
+
+      const res = await service.desactivar(1, propietario);
+
+      expect(res).toEqual({ id: 1, activa: false });
+    });
+
+    it('elimina permanentemente cuando es dueño', async () => {
+      prisma.granja.delete.mockResolvedValue({ id: 1 });
+
+      const res = await service.eliminarPermanente(1, propietario);
+
+      expect(res).toEqual({ id: 1, eliminado: true });
     });
   });
 });
