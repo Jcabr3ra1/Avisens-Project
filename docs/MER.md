@@ -441,6 +441,7 @@ registros_mortalidad [icon: alert-circle, color: blue] {
   fecha date
   cantidad_aves integer
   causa_presuntiva string
+  disposicion string
   alerta_generada bool
   usuario_id integer fk
   metodo_registro string
@@ -466,11 +467,26 @@ eventos_sanitarios [icon: plus-square, color: blue] {
   lote_id integer fk
   insumo_id integer fk
   tipo string
+  diagnostico string
   producto string
   dosis string
   via_aplicacion string
   cantidad_aves integer
   fecha date
+  usuario_id integer fk
+  metodo_registro string
+  observaciones string
+  fecha_registro datetime
+}
+
+registros_plagas [icon: bug, color: blue] {
+  id integer pk
+  lote_id integer fk
+  fecha date
+  tipo_plaga string
+  descripcion string
+  control_aplicado string
+  insumo_id integer fk
   usuario_id integer fk
   metodo_registro string
   observaciones string
@@ -700,6 +716,9 @@ consumos_diarios.usuario_id > usuarios.id
 eventos_sanitarios.lote_id > lotes.id
 eventos_sanitarios.insumo_id > inventario_insumos.id
 eventos_sanitarios.usuario_id > usuarios.id
+registros_plagas.lote_id > lotes.id
+registros_plagas.insumo_id > inventario_insumos.id
+registros_plagas.usuario_id > usuarios.id
 
 // EP-07 Finanzas e inventario
 ordenes_compra.proveedor_id > proveedores.id
