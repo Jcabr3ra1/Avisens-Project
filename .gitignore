@@ -8,6 +8,8 @@ dist/
 build/
 .next/
 out/
+# Cliente de Prisma generado (se regenera con `prisma generate`)
+generated/
 
 # Environment variables
 .env
@@ -55,8 +57,8 @@ docs/fuentes/
 ~$*
 
 # Herramientas personales (no se versionan)
-# Colección de Bruno para probar la API y guía personal del backend.
-bruno/
+# Colección de Postman para probar la API y guía personal del backend.
+postman/
 docs/guia-backend.html
 
 # Módulo descartado
