@@ -20,8 +20,8 @@ model Rol {
 }
 
 model Permiso {
-  id          Int    @id @default(autoincrement())
-  codigo      String @unique
+  id          Int     @id @default(autoincrement())
+  codigo      String  @unique
   modulo      String
   descripcion String?
   activo      Boolean @default(true)
@@ -44,17 +44,17 @@ model RolPermiso {
 }
 
 model Usuario {
-  id               Int      @id @default(autoincrement())
-  rol_id           Int
-  nombre_completo  String
-  cedula           String   @unique
-  email            String   @unique
-  password_hash    String
-  telefono         String?
-  activo           Boolean  @default(true)
-  fecha_creacion   DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  rol_id          Int
+  nombre_completo String
+  cedula          String   @unique
+  email           String   @unique
+  password_hash   String
+  telefono        String?
+  activo          Boolean  @default(true)
+  fecha_creacion  DateTime @default(now())
 
-  rol              Rol               @relation(fields: [rol_id], references: [id])
+  rol              Rol              @relation(fields: [rol_id], references: [id])
   seguridad_cuenta SeguridadCuenta?
   sesiones         Sesion[]
   granjas          Granja[]
@@ -63,12 +63,12 @@ model Usuario {
 }
 
 model SeguridadCuenta {
-  id                            Int       @id @default(autoincrement())
-  usuario_id                    Int       @unique
-  intentos_fallidos             Int       @default(0)
-  bloqueado_hasta               DateTime?
-  fecha_ultimo_login            DateTime?
-  fecha_ultimo_cambio_password  DateTime?
+  id                           Int       @id @default(autoincrement())
+  usuario_id                   Int       @unique
+  intentos_fallidos            Int       @default(0)
+  bloqueado_hasta              DateTime?
+  fecha_ultimo_login           DateTime?
+  fecha_ultimo_cambio_password DateTime?
 
   usuario Usuario @relation(fields: [usuario_id], references: [id])
 
@@ -109,7 +109,7 @@ model Granja {
   activa         Boolean  @default(true)
   fecha_creacion DateTime @default(now())
 
-  propietario Usuario   @relation(fields: [propietario_id], references: [id])
+  propietario Usuario  @relation(fields: [propietario_id], references: [id])
   galpones    Galpon[]
 
   // El alcance por rol filtra siempre por dueño: granja.propietario_id = X.
@@ -131,10 +131,11 @@ model Galpon {
   activo             Boolean   @default(true)
   fecha_construccion DateTime? @db.Date
 
-  granja Granja @relation(fields: [granja_id], references: [id])
+  granja      Granja            @relation(fields: [granja_id], references: [id])
   dispositivo Dispositivo[]
-  sensores Sensor[]
-  umbrales UmbralAmbiental[]
+  sensores    Sensor[]
+  umbrales    UmbralAmbiental[]
+  lotes       Lote[]
 
   // El código se repite entre granjas (cada una tiene su "galpon1"), pero es
   // único dentro de una misma granja.
@@ -176,23 +177,23 @@ model Dispositivo {
 // ---------------------------------------------------------------------------
 
 model Sensor {
-  id                 Int       @id @default(autoincrement())
-  galpon_id          Int
-  dispositivo_id     Int
-  codigo             String    @unique
-  tipo               String
-  unidad_medida      String
-  modelo             String?
-  fabricante         String?
-  coordenada_x       Float?
-  coordenada_y       Float?
-  altura_metros      Float?
-  fecha_instalacion  DateTime? @db.Date
-  ultima_calibracion DateTime? @db.Date
+  id                  Int       @id @default(autoincrement())
+  galpon_id           Int
+  dispositivo_id      Int
+  codigo              String    @unique
+  tipo                String
+  unidad_medida       String
+  modelo              String?
+  fabricante          String?
+  coordenada_x        Float?
+  coordenada_y        Float?
+  altura_metros       Float?
+  fecha_instalacion   DateTime? @db.Date
+  ultima_calibracion  DateTime? @db.Date
   proxima_calibracion DateTime? @db.Date
-  estado             String    @default("activo")
+  estado              String    @default("activo")
 
-  mediciones Medicion[]
+  mediciones  Medicion[]
   galpon      Galpon      @relation(fields: [galpon_id], references: [id])
   dispositivo Dispositivo @relation(fields: [dispositivo_id], references: [id])
 
@@ -267,6 +268,7 @@ model Proveedor {
   fecha_creacion   DateTime @default(now())
 
   insumos InventarioInsumo[]
+  lotes   Lote[]
 
   @@map("proveedores")
 }
@@ -293,4 +295,48 @@ model InventarioInsumo {
 
   @@index([proveedor_habitual_id])
   @@map("inventario_insumos")
+}
+
+// ---------------------------------------------------------------------------
+// EP-06 · Lotes (grupo de aves que entra junto y se cria como una unidad)
+// ---------------------------------------------------------------------------
+
+model Lote {
+  id                     Int       @id @default(autoincrement())
+  galpon_id              Int
+  proveedor_id           Int
+  codigo                 String    @unique
+  fecha_ingreso          DateTime  @db.Date
+  cantidad_inicial       Int
+  raza                   String?
+  sexo                   String?
+  costo_pollito_unitario Float?
+  presupuesto_total_cop  Float?
+  fecha_salida_estimada  DateTime? @db.Date
+  fecha_salida_real      DateTime? @db.Date
+  estado                 String    @default("activo")
+
+  galpon    Galpon    @relation(fields: [galpon_id], references: [id])
+  proveedor Proveedor @relation(fields: [proveedor_id], references: [id])
+
+  @@index([galpon_id, estado])
+  @@map("lotes")
+}
+
+// ---------------------------------------------------------------------------
+// EP-06 · Tipos de alimento (catálogo de alimentos por marca y etapa de vida)
+// ---------------------------------------------------------------------------
+
+model TipoAlimento {
+  id                       Int     @id @default(autoincrement())
+  nombre                   String
+  marca                    String?
+  etapa                    String?
+  presentacion             String?
+  dia_inicio               Int?
+  dia_fin                  Int?
+  consumo_total_esperado_g Float?
+  activo                   Boolean @default(true)
+
+  @@map("tipos_alimento")
 }
