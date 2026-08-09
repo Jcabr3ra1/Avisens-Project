@@ -61,5 +61,12 @@ docs/fuentes/
 postman/
 docs/guia-backend.html
 
+# Documentos nuevos de docs/ que NO se suben (generados / de trabajo).
+# Nota: los .md ya versionados (MER.md, flujo-completo.md, etc.) siguen en git.
+docs/consumo-api-frontend.docx
+docs/rutas-postman.docx
+docs/guia-tecnologias-backend.html
+docs/despliegue-railway.md
+
 # Módulo descartado
 avisens-api-gateway/
