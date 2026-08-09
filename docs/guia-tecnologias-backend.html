@@ -1,0 +1,1191 @@
+<title>Backend de Avisens &#8212; Gu&#237;a de estudio del stack</title>
+<style>
+  :root {
+    --bg: #FAF7F1;
+    --surface: #FFFFFF;
+    --surface-2: #F1ECE1;
+    --ink: #211E19;
+    --ink-soft: #57514791;
+    --ink-soft-solid: #5C554A;
+    --muted: #8A8275;
+    --border: #E6DECF;
+    --accent: #C0741A;
+    --accent-strong: #A5610F;
+    --accent-soft: #F5E7CE;
+    --good: #2E7D57;
+    --good-soft: #DEEEE4;
+    --code-ink: #8a4b06;
+    --code-bg: #26221C;
+    --code-fg: #ECE5D9;
+    --code-comment: #A79E8A;
+    --code-kw: #E7A948;
+
+    --font-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
+
+    --maxw: 860px;
+    --prosew: 680px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16140F;
+      --surface: #201D17;
+      --surface-2: #29251E;
+      --ink: #F1EBE0;
+      --ink-soft: #c3baaa;
+      --ink-soft-solid: #C3BAAA;
+      --muted: #8E8676;
+      --border: #332E25;
+      --accent: #E7A948;
+      --accent-strong: #F0BB6B;
+      --accent-soft: #3A2C16;
+      --good: #62BE8D;
+      --good-soft: #1D3529;
+      --code-ink: #E7A948;
+    }
+  }
+
+  :root[data-theme="light"] {
+    --bg: #FAF7F1;
+    --surface: #FFFFFF;
+    --surface-2: #F1ECE1;
+    --ink: #211E19;
+    --ink-soft: #5C554A;
+    --ink-soft-solid: #5C554A;
+    --muted: #8A8275;
+    --border: #E6DECF;
+    --accent: #C0741A;
+    --accent-strong: #A5610F;
+    --accent-soft: #F5E7CE;
+    --good: #2E7D57;
+    --good-soft: #DEEEE4;
+    --code-ink: #8a4b06;
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #16140F;
+    --surface: #201D17;
+    --surface-2: #29251E;
+    --ink: #F1EBE0;
+    --ink-soft: #C3BAAA;
+    --ink-soft-solid: #C3BAAA;
+    --muted: #8E8676;
+    --border: #332E25;
+    --accent: #E7A948;
+    --accent-strong: #F0BB6B;
+    --accent-soft: #3A2C16;
+    --good: #62BE8D;
+    --good-soft: #1D3529;
+    --code-ink: #E7A948;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+
+  /* ---------- Hero ---------- */
+  header.hero {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 72px 24px 40px;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+    font-weight: 600;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(2.1rem, 6vw, 3.3rem);
+    line-height: 1.04;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0 0 20px;
+  }
+  h1 .hl { color: var(--accent); }
+  .lede {
+    font-size: 1.14rem;
+    color: var(--ink-soft-solid);
+    max-width: var(--prosew);
+    margin: 0;
+    text-wrap: pretty;
+  }
+  .meta {
+    margin-top: 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+  .meta span {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--ink-soft-solid);
+    padding: 5px 11px;
+    border-radius: 999px;
+  }
+
+  /* ---------- Sections ---------- */
+  section { margin-top: 60px; }
+  .prose { max-width: var(--prosew); }
+  h2 {
+    font-family: var(--font-display);
+    font-size: 1.62rem;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  .section-tag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+  h3 {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  p { margin: 0 0 16px; }
+  .prose p { color: var(--ink-soft-solid); }
+  strong { color: var(--ink); font-weight: 650; }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    color: var(--code-ink);
+    padding: 2px 6px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+  }
+
+  /* ---------- Callout NestJS vs Next ---------- */
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 14px;
+    padding: 26px 28px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .callout .flag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin: 0 0 12px;
+  }
+  .vs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 18px;
+  }
+  .vs .card {
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 16px 18px;
+    background: var(--surface-2);
+  }
+  .vs .card .name { font-family: var(--font-mono); font-weight: 600; font-size: 0.98rem; margin-bottom: 4px; }
+  .vs .card .desc { font-size: 0.92rem; color: var(--ink-soft-solid); }
+  .vs .no .name { color: var(--muted); }
+  .vs .yes { border-color: var(--accent); background: var(--accent-soft); }
+  .vs .yes .name { color: var(--accent-strong); }
+  .tag-yes, .tag-no {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .tag-yes { background: var(--good); color: #fff; }
+  .tag-no { background: var(--muted); color: #fff; }
+
+  /* ---------- Layers diagram ---------- */
+  .layers {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .layer {
+    position: relative;
+    border-radius: 13px;
+    padding: 20px 22px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .layer .lname {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 1.08rem;
+    letter-spacing: -0.01em;
+  }
+  .layer .lrole { color: var(--ink-soft-solid); font-size: 0.95rem; }
+  .layer.top    { margin-left: 0;   background: var(--accent-soft); border-color: var(--accent); }
+  .layer.top .lname { color: var(--accent-strong); }
+  .layer.mid    { }
+  .layer.base   { background: var(--surface-2); }
+  .layer .depth {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-left: auto;
+  }
+  .stack-note {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 2px 0;
+  }
+
+  /* ---------- Tech grid ---------- */
+  .group-title {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 34px 0 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .group-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+    gap: 14px;
+  }
+  .tech {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    padding: 20px;
+    transition: border-color 0.18s ease, transform 0.18s ease;
+  }
+  .tech:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .tech .tname {
+    font-family: var(--font-mono);
+    font-weight: 650;
+    font-size: 1rem;
+    margin-bottom: 3px;
+    color: var(--ink);
+  }
+  .tech .tpkg {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .tech .twhat { font-size: 0.93rem; color: var(--ink-soft-solid); margin-bottom: 12px; }
+  .tech .tstudy {
+    font-size: 0.83rem;
+    border-top: 1px dashed var(--border);
+    padding-top: 11px;
+    color: var(--ink-soft-solid);
+  }
+  .tech .tstudy b {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 3px;
+    font-weight: 600;
+  }
+
+  /* ---------- Roadmap ---------- */
+  .road { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+  .step {
+    display: flex;
+    gap: 18px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: baseline;
+  }
+  .step:last-child { border-bottom: none; }
+  .step .num {
+    font-family: var(--font-mono);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 40px;
+    font-variant-numeric: tabular-nums;
+  }
+  .step .body h3 { margin-bottom: 3px; }
+  .step .body p { margin: 0; color: var(--ink-soft-solid); font-size: 0.94rem; }
+
+  /* ---------- Glossary ---------- */
+  .gloss { display: grid; gap: 12px; margin-top: 8px; }
+  .gloss dt {
+    font-family: var(--font-mono);
+    font-weight: 650;
+    color: var(--ink);
+    font-size: 0.94rem;
+  }
+  .gloss dd { margin: 3px 0 0; color: var(--ink-soft-solid); font-size: 0.95rem; }
+  .gloss > div {
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+  }
+
+  /* ---------- Summary ---------- */
+  .summary {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 16px;
+    padding: 30px 32px;
+    margin-top: 20px;
+  }
+  .summary .flag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin: 0 0 12px;
+  }
+  .summary p {
+    font-size: 1.16rem;
+    line-height: 1.55;
+    color: var(--ink);
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  /* ---------- Part divider ---------- */
+  .part-divider {
+    margin: 88px 0 12px;
+    padding: 34px 0 6px;
+    border-top: 2px solid var(--accent);
+  }
+  .part-divider .pd-label {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin: 0 0 10px;
+  }
+  .part-divider h2 { font-size: clamp(1.8rem, 4.5vw, 2.5rem); margin: 0 0 12px; }
+  .part-divider p { color: var(--ink-soft-solid); max-width: var(--prosew); margin: 0; font-size: 1.08rem; }
+
+  /* ---------- Code blocks ---------- */
+  .codeblock { margin-top: 26px; }
+  .filename {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--muted);
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .filename::before { content: "\25B8"; color: var(--accent); }
+  .code {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    margin: 0;
+    -webkit-font-smoothing: auto;
+  }
+  .code pre {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.7;
+    tab-size: 2;
+  }
+  .code .c  { color: var(--code-comment); font-style: italic; }
+  .code .k  { color: var(--code-kw); }
+  .annot {
+    margin: 16px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .annot li {
+    list-style: none;
+    padding-left: 22px;
+    position: relative;
+    color: var(--ink-soft-solid);
+    font-size: 0.93rem;
+  }
+  .annot li::before { content: "\2192"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+  .annot li code { font-size: 0.84em; }
+
+  /* ---------- Routes table ---------- */
+  .routes-wrap { overflow-x: auto; margin-top: 8px; }
+  .routes { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  .routes th, .routes td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .routes th {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .routes td.verb { font-family: var(--font-mono); font-weight: 700; color: var(--accent); }
+  .routes td.path { font-family: var(--font-mono); color: var(--ink); }
+  .subhead {
+    font-family: var(--font-display);
+    font-size: 1.14rem;
+    margin: 30px 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .subhead .n {
+    display: inline-block;
+    font-family: var(--font-mono);
+    color: var(--accent);
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
+  /* ---------- Folder tree ---------- */
+  .tree .code pre { line-height: 1.75; }
+  .tree .code .f { color: var(--code-kw); }
+
+  footer {
+    max-width: var(--maxw);
+    margin: 72px auto 0;
+    padding: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-family: var(--font-mono);
+  }
+
+  @media (max-width: 560px) {
+    body { font-size: 16px; }
+    .vs { grid-template-columns: 1fr; }
+    .layer .depth { margin-left: 0; width: 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  /* ---------- TOC / sidebar ---------- */
+  html { scroll-behavior: smooth; }
+  [id] { scroll-margin-top: 84px; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  .toc {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; gap: 8px; align-items: center;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    padding: 10px 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 0.74rem;
+  }
+  .toc::-webkit-scrollbar { height: 0; }
+  .toc .toc-group-label { display: none; }
+  .toc a {
+    white-space: nowrap; text-decoration: none;
+    color: var(--ink-soft-solid);
+    padding: 5px 10px; border-radius: 8px;
+    border: 1px solid var(--border);
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .toc a:hover { color: var(--accent); border-color: var(--accent); }
+  .toc a.active { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+  @media (min-width: 1300px) {
+    .toc {
+      position: fixed; top: 0; left: 20px;
+      height: 100vh; width: 190px;
+      flex-direction: column; align-items: stretch; justify-content: flex-start;
+      gap: 2px; overflow-y: auto; overflow-x: hidden;
+      padding: 88px 0 40px;
+      background: transparent; border-bottom: none;
+    }
+    .toc .toc-group-label {
+      display: block;
+      font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--accent); font-weight: 700;
+      margin: 18px 0 6px; padding: 0 12px;
+    }
+    .toc .toc-group-label:first-child { margin-top: 0; }
+    .toc a {
+      border: none; border-left: 2px solid transparent; border-radius: 0;
+      padding: 6px 12px; color: var(--muted);
+    }
+    .toc a:hover { border-left-color: var(--accent); background: var(--surface-2); color: var(--accent); }
+    .toc a.active { border: none; border-left: 2px solid var(--accent); background: var(--surface-2); color: var(--accent); }
+  }
+</style>
+
+<nav class="toc" aria-label="Secciones">
+  <span class="toc-group-label">Parte 1 &#183; Conceptos</span>
+  <a href="#vs">NestJS vs Next</a>
+  <a href="#capas">Las 3 capas</a>
+  <a href="#tecnologias">Tecnolog&#237;as</a>
+  <a href="#estado">Estado real</a>
+  <a href="#ruta">Ruta de estudio</a>
+  <a href="#glosario">Glosario</a>
+  <span class="toc-group-label">Parte 2 &#183; Estructura</span>
+  <a href="#estructura">Estructura</a>
+  <a href="#modulo">Un m&#243;dulo por dentro</a>
+  <a href="#peticion">Viaje de una petici&#243;n</a>
+  <a href="#codigo">C&#243;digo real</a>
+  <a href="#probar">Probar la API</a>
+  <a href="#resumen">Resumen</a>
+</nav>
+
+<header class="hero">
+  <p class="eyebrow">Avisens &#183; Proyecto SENA &#183; Backend</p>
+  <h1>El <span class="hl">stack del backend</span>, explicado para estudiar</h1>
+  <p class="lede">Una gu&#237;a corta para que el equipo entienda con qu&#233; est&#225; hecho el servidor de Avisens: qu&#233; es cada tecnolog&#237;a, para qu&#233; sirve y por d&#243;nde empezar a estudiarla. Sin relleno &#8212; solo lo que usamos de verdad.</p>
+  <div class="meta">
+    <span>NestJS + TypeScript</span>
+    <span>Prisma + PostgreSQL</span>
+    <span>Corre sobre Node.js</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="part-divider" id="p2" id="p1" style="border-top:none; margin-top:40px; padding-top:0;">
+    <p class="pd-label">Parte 1 &#8212; Conceptos</p>
+    <h2>Qu&#233; es cada cosa y por qu&#233;</h2>
+    <p>Primero lo esencial: entender el vocabulario y las tecnolog&#237;as antes de mirar una sola l&#237;nea de c&#243;digo.</p>
+  </div>
+
+  <!-- ================= NestJS vs Next ================= -->
+  <section id="vs">
+    <div class="callout">
+      <p class="flag">&#9888; Aclaraci&#243;n #1 &#8212; la confusi&#243;n m&#225;s com&#250;n</p>
+      <h2>Es NestJS, no Next.js</h2>
+      <p style="color:var(--ink-soft-solid); margin-top:8px;">Se parecen por el nombre y much&#237;sima gente los mezcla, pero viven en mundos distintos: uno es del backend y el otro del frontend.</p>
+      <div class="vs">
+        <div class="card yes">
+          <span class="tag-yes">&#10003; LO USAMOS</span>
+          <div class="name">NestJS</div>
+          <div class="desc">Framework de <strong>backend</strong> (el servidor / la API). Es el nuestro.</div>
+        </div>
+        <div class="card no">
+          <span class="tag-no">&#10005; NO LO USAMOS</span>
+          <div class="name">Next.js</div>
+          <div class="desc">Framework de <strong>frontend</strong> (interfaces con React). No est&#225; en el proyecto.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Capas ================= -->
+  <section id="capas">
+    <p class="section-tag">C&#243;mo est&#225; montado</p>
+    <h2>Las 3 capas del backend</h2>
+    <div class="prose">
+      <p>Nada de esto vive solo: cada capa <strong>corre sobre</strong> la de abajo. Entender este orden es lo que m&#225;s ayuda a que todo lo dem&#225;s tenga sentido.</p>
+    </div>
+    <div class="layers">
+      <div class="layer top">
+        <span class="lname">NestJS</span>
+        <span class="lrole">nuestro framework &#8212; le da estructura (m&#243;dulos, controllers, services, guards)</span>
+        <span class="depth">Lo que escribimos</span>
+      </div>
+      <p class="stack-note">&#9650; corre sobre &#9650;</p>
+      <div class="layer mid">
+        <span class="lname">Express</span>
+        <span class="lrole">servidor HTTP &#8212; recibe y responde las peticiones web</span>
+        <span class="depth">Por debajo</span>
+      </div>
+      <p class="stack-note">&#9650; corre sobre &#9650;</p>
+      <div class="layer base">
+        <span class="lname">Node.js</span>
+        <span class="lrole">el motor (runtime) que ejecuta el c&#243;digo en el servidor</span>
+        <span class="depth">La base de todo</span>
+      </div>
+    </div>
+    <div class="prose" style="margin-top:22px;">
+      <p><strong>La idea clave:</strong> <code>Node.js</code> no es un framework &#8212; es el <strong>entorno donde todo corre</strong>. NestJS, Express, Prisma&#8230; todos son librer&#237;as que viven <em>dentro</em> de Node. Es como el motor de un carro: sin &#233;l, las dem&#225;s partes no arrancan.</p>
+    </div>
+  </section>
+
+  <!-- ================= Tecnolog&#237;as ================= -->
+  <section id="tecnologias">
+    <p class="section-tag">El inventario</p>
+    <h2>Todas las tecnolog&#237;as, una por una</h2>
+    <div class="prose">
+      <p>Agrupadas por para qu&#233; sirven. Cada tarjeta trae <strong>qu&#233; es</strong> y <strong>qu&#233; buscar</strong> para empezar a estudiarla.</p>
+    </div>
+
+    <p class="group-title">N&#250;cleo</p>
+    <div class="grid">
+      <div class="tech">
+        <div class="tname">Node.js</div>
+        <div class="tpkg">runtime</div>
+        <div class="twhat">JavaScript naci&#243; para correr dentro del navegador. <strong>Node.js</strong> es el programa que lo saca de ah&#237; y lo deja correr en un servidor, como cualquier lenguaje de backend. Es el "motor" que ejecuta nuestro c&#243;digo: cuando arrancamos el proyecto, es Node quien lo pone a andar. Todo lo dem&#225;s (NestJS, Prisma&#8230;) son librer&#237;as que corren <em>dentro</em> de Node.</div>
+        <div class="tstudy"><b>En Avisens</b>Es la base de todo. Sin Node, nada del backend arranca.</div>
+      </div>
+      <div class="tech">
+        <div class="tname">NestJS</div>
+        <div class="tpkg">@nestjs/core</div>
+        <div class="twhat">El <strong>framework</strong> que le da forma al backend. En vez de armar el servidor a mano, impone una estructura clara: el c&#243;digo se divide en <strong>m&#243;dulos</strong>, y cada m&#243;dulo tiene un <strong>controller</strong> (las rutas) y un <strong>service</strong> (la l&#243;gica). Usa "decoradores" &#8212;las l&#237;neas con <code>@</code>&#8212; para marcar qu&#233; es cada cosa. Es lo m&#225;s importante de dominar del proyecto.</div>
+        <div class="tstudy"><b>En Avisens</b>Cada recurso (granjas, sensores, mediciones&#8230;) es un m&#243;dulo de NestJS.</div>
+      </div>
+      <div class="tech">
+        <div class="tname">TypeScript</div>
+        <div class="tpkg">lenguaje</div>
+        <div class="twhat">Es <strong>JavaScript pero con "tipos"</strong>: t&#250; declaras que una variable es un n&#250;mero, un texto, etc. As&#237; el editor te avisa de los errores <em>mientras escribes</em>, antes de correr el programa. En un proyecto grande evita much&#237;simos bugs tontos y hace el c&#243;digo m&#225;s f&#225;cil de entender.</div>
+        <div class="tstudy"><b>En Avisens</b>Todo el backend est&#225; escrito en TypeScript.</div>
+      </div>
+      <div class="tech">
+        <div class="tname">Express</div>
+        <div class="tpkg">@nestjs/platform-express</div>
+        <div class="twhat">Es la librer&#237;a que realmente <strong>escucha las peticiones HTTP</strong> (cuando el navegador o el ESP32 le "hablan" al servidor) y manda las respuestas. Es muy popular pero minimalista. NestJS lo usa por debajo, as&#237; que casi nunca lo tocamos directo: trabajamos sobre NestJS y &#233;l se encarga de Express.</div>
+        <div class="tstudy"><b>En Avisens</b>Es el motor HTTP invisible que corre bajo NestJS.</div>
+      </div>
+    </div>
+
+    <p class="group-title">Base de datos</p>
+    <div class="grid">
+      <div class="tech">
+        <div class="tname">Prisma ORM</div>
+        <div class="tpkg">@prisma/client</div>
+        <div class="twhat">Un <strong>ORM</strong> es un traductor entre tu c&#243;digo y la base de datos. En vez de escribir SQL a mano, escribes <code>prisma.granja.findMany()</code> y Prisma genera el SQL por ti. Adem&#225;s, defines <strong>todas las tablas en un solo archivo</strong> (<code>schema.prisma</code>) y &#233;l se encarga de crearlas en la base de datos.</div>
+        <div class="tstudy"><b>En Avisens</b>El <code>schema.prisma</code> define las tablas del modelo de datos (el MER).</div>
+      </div>
+      <div class="tech">
+        <div class="tname">PostgreSQL</div>
+        <div class="tpkg">v&#237;a Supabase</div>
+        <div class="twhat">La <strong>base de datos relacional</strong> donde se guarda todo de forma permanente: usuarios, granjas, cada medici&#243;n de los sensores&#8230; "Relacional" significa que los datos viven en <strong>tablas conectadas entre s&#237;</strong> (una granja tiene galpones, un galp&#243;n tiene sensores). <strong>Supabase</strong> es un servicio que nos aloja esa base de datos en la nube, lista para usar.</div>
+        <div class="tstudy"><b>En Avisens</b>Guarda absolutamente todo; corre alojada en Supabase.</div>
+      </div>
+    </div>
+
+    <p class="group-title">Seguridad y autenticaci&#243;n</p>
+    <div class="grid">
+      <div class="tech">
+        <div class="tname">JWT</div>
+        <div class="tpkg">@nestjs/jwt</div>
+        <div class="twhat">Cuando un usuario inicia sesi&#243;n, el servidor le entrega un <strong>token</strong>: una cadena firmada que prueba qui&#233;n es. En cada petici&#243;n siguiente, el usuario manda ese token en lugar de la contrase&#241;a, y el servidor lo verifica para saber qui&#233;n es <strong>sin volver a consultar la base de datos</strong>. JWT significa <em>JSON Web Token</em>.</div>
+        <div class="tstudy"><b>En Avisens</b>Protege las rutas privadas; cada petici&#243;n trae su token.</div>
+      </div>
+      <div class="tech">
+        <div class="tname">Passport</div>
+        <div class="tpkg">passport-jwt</div>
+        <div class="twhat">Es la librer&#237;a que se encarga de <strong>leer y validar</strong> esos tokens dentro de NestJS. Define la "estrategia" de autenticaci&#243;n: de d&#243;nde saca el token (de la cabecera de la petici&#243;n), c&#243;mo lo verifica y a qu&#233; usuario representa. Trabaja de la mano con JWT.</div>
+        <div class="tstudy"><b>En Avisens</b>Valida el token en cada ruta protegida (el <code>JwtAuthGuard</code>).</div>
+      </div>
+      <div class="tech">
+        <div class="tname">Bcrypt</div>
+        <div class="tpkg">bcrypt</div>
+        <div class="twhat">Las contrase&#241;as <strong>nunca</strong> se guardan tal cual. Bcrypt las convierte en un <strong>hash</strong>: un texto irreversible del que <em>no</em> se puede recuperar la contrase&#241;a original. Al iniciar sesi&#243;n se comparan los hashes, no las contrase&#241;as. As&#237;, si alguien robara la base de datos, no ver&#237;a ninguna clave real.</div>
+        <div class="tstudy"><b>En Avisens</b>Hashea la contrase&#241;a de cada usuario antes de guardarla.</div>
+      </div>
+      <div class="tech">
+        <div class="tname">Helmet</div>
+        <div class="tpkg">helmet</div>
+        <div class="twhat">Un <strong>middleware</strong> (c&#243;digo que se ejecuta antes de responder) que a&#241;ade autom&#225;ticamente varias <strong>cabeceras de seguridad</strong> a las respuestas HTTP. Esas cabeceras le indican al navegador c&#243;mo comportarse de forma segura y bloquean varios ataques web comunes. Se activa con una sola l&#237;nea.</div>
+        <div class="tstudy"><b>En Avisens</b>Se activa al arrancar el servidor, en <code>main.ts</code>.</div>
+      </div>
+      <div class="tech">
+        <div class="tname">Throttler</div>
+        <div class="tpkg">@nestjs/throttler</div>
+        <div class="twhat"><strong>Rate limiting</strong>: limita cu&#225;ntas peticiones puede hacer una misma persona en un periodo de tiempo. Sirve para frenar abusos, ataques de <em>fuerza bruta</em> contra el login (probar mil contrase&#241;as seguidas) o que alguien sature el servidor a punta de peticiones.</div>
+        <div class="tstudy"><b>En Avisens</b>Protege sobre todo el inicio de sesi&#243;n.</div>
+      </div>
+    </div>
+
+    <p class="group-title">Validaci&#243;n, documentaci&#243;n y config</p>
+    <div class="grid">
+      <div class="tech">
+        <div class="tname">class-validator</div>
+        <div class="tpkg">+ class-transformer</div>
+        <div class="twhat">Validan los datos que entran a la API. En los <strong>DTOs</strong> pones decoradores (<code>@IsString</code>, <code>@IsEmail</code>, <code>@Min</code>&#8230;) y estas librer&#237;as revisan <strong>autom&#225;ticamente</strong> que todo cumpla antes de que tu l&#243;gica lo toque. Si algo est&#225; mal, devuelven un error <code>400</code> solitas. <em>class-transformer</em> adem&#225;s convierte los datos al tipo correcto (ej. el <code>"5"</code> de la URL a n&#250;mero).</div>
+        <div class="tstudy"><b>En Avisens</b>Cada DTO (como <code>CreateGranjaDto</code>) usa estos decoradores.</div>
+      </div>
+      <div class="tech">
+        <div class="tname">Swagger</div>
+        <div class="tpkg">@nestjs/swagger</div>
+        <div class="twhat">Genera <strong>autom&#225;ticamente</strong> una p&#225;gina web con la documentaci&#243;n de la API, a partir de tus controllers y DTOs. Ah&#237; cualquiera puede ver todas las rutas, qu&#233; reciben y qu&#233; devuelven, y hasta <strong>probarlas en vivo</strong> desde el navegador, sin instalar nada.</div>
+        <div class="tstudy"><b>En Avisens</b>Disponible en <code>/docs</code> cuando el servidor corre.</div>
+      </div>
+      <div class="tech">
+        <div class="tname">Config + dotenv</div>
+        <div class="tpkg">@nestjs/config</div>
+        <div class="twhat">Los secretos y configuraciones (la clave de la base de datos, los secretos de JWT&#8230;) <strong>no</strong> se escriben en el c&#243;digo: van en un archivo <code>.env</code> que no se sube al repositorio. Estas librer&#237;as leen ese archivo y ponen esos valores a disposici&#243;n del c&#243;digo de forma segura.</div>
+        <div class="tstudy"><b>En Avisens</b><code>DATABASE_URL</code>, <code>JWT_SECRET</code>, etc. viven en el <code>.env</code>.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= En uso vs planeado ================= -->
+  <section id="estado">
+    <p class="section-tag">Estado real</p>
+    <h2>Lo que todav&#237;a no est&#225;</h2>
+    <div class="prose">
+      <p>Para no confundir: estas dos aparecen en algunos documentos, pero <strong>a&#250;n no est&#225;n instaladas</strong>. Son mejoras planeadas, no algo que ya funcione hoy.</p>
+    </div>
+    <div class="grid">
+      <div class="tech" style="opacity:0.9;">
+        <span class="tag-no">&#128284; PLANEADO</span>
+        <div class="tname" style="margin-top:8px;">Socket.io</div>
+        <div class="twhat">Comunicaci&#243;n en tiempo real hacia el frontend. Hoy el IoT reporta por HTTP normal.</div>
+      </div>
+      <div class="tech" style="opacity:0.9;">
+        <span class="tag-no">&#128284; PLANEADO</span>
+        <div class="tname" style="margin-top:8px;">Nodemailer</div>
+        <div class="twhat">Env&#237;o de correos (por ejemplo, para notificaciones o recuperar contrase&#241;a). A&#250;n no implementado.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Ruta de estudio ================= -->
+  <section id="ruta">
+    <p class="section-tag">Por d&#243;nde empezar</p>
+    <h2>Ruta de estudio sugerida</h2>
+    <div class="prose">
+      <p>En orden. Cada tema se apoya en el anterior &#8212; no te saltes pasos.</p>
+    </div>
+    <div class="road">
+      <div class="step">
+        <span class="num">1</span>
+        <div class="body">
+          <h3>Qu&#233; es Node.js y un backend</h3>
+          <p>Entender la base: qu&#233; hace un servidor y por qu&#233; existe Node.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="num">2</span>
+        <div class="body">
+          <h3>Qu&#233; es una API REST</h3>
+          <p>C&#243;mo el frontend le pide datos al backend (GET, POST, etc.).</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="num">3</span>
+        <div class="body">
+          <h3>NestJS: m&#243;dulos, controllers y services</h3>
+          <p>El coraz&#243;n del proyecto. Aqu&#237; es donde vive casi todo nuestro c&#243;digo.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="num">4</span>
+        <div class="body">
+          <h3>Qu&#233; es un ORM y c&#243;mo funciona Prisma</h3>
+          <p>C&#243;mo guardamos y leemos datos de PostgreSQL sin SQL a mano.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="num">5</span>
+        <div class="body">
+          <h3>Autenticaci&#243;n con JWT</h3>
+          <p>C&#243;mo protegemos las rutas y sabemos qui&#233;n es cada usuario.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Glosario ================= -->
+  <section id="glosario">
+    <p class="section-tag">Palabras que van a escuchar</p>
+    <h2>Mini glosario</h2>
+    <dl class="gloss">
+      <div>
+        <dt>Runtime</dt>
+        <dd>El programa que ejecuta el c&#243;digo. En nuestro caso, Node.js.</dd>
+      </div>
+      <div>
+        <dt>Framework</dt>
+        <dd>Un conjunto de reglas y herramientas que dan estructura al proyecto. NestJS es el nuestro.</dd>
+      </div>
+      <div>
+        <dt>ORM</dt>
+        <dd>Traductor entre el c&#243;digo y la base de datos. Prisma es nuestro ORM.</dd>
+      </div>
+      <div>
+        <dt>API REST</dt>
+        <dd>La forma en que el frontend le pide y env&#237;a datos al backend por internet.</dd>
+      </div>
+      <div>
+        <dt>Endpoint</dt>
+        <dd>Una direcci&#243;n concreta de la API (ej. <code>/granjas</code>) que responde a una petici&#243;n.</dd>
+      </div>
+      <div>
+        <dt>Middleware / Guard</dt>
+        <dd>C&#243;digo que se ejecuta antes de una petici&#243;n, por ejemplo para revisar si el usuario tiene permiso.</dd>
+      </div>
+      <div>
+        <dt>DTO</dt>
+        <dd>El "molde" que define y valida qu&#233; datos puede recibir un endpoint.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <!-- ================= PARTE 2 ================= -->
+  <div class="part-divider">
+    <p class="pd-label">Parte 2 &#8212; Estructura y c&#243;digo</p>
+    <h2>C&#243;mo est&#225; armado y c&#243;mo se escribe</h2>
+    <p>Ahora lo concreto: la organizaci&#243;n de carpetas y pedacitos de c&#243;digo <strong>real</strong> del backend, explicados para que puedas mostr&#225;rselos al equipo.</p>
+  </div>
+
+  <!-- ---- Estructura de carpetas ---- -->
+  <section id="estructura">
+    <p class="section-tag">La organizaci&#243;n</p>
+    <h2>Estructura de carpetas</h2>
+    <div class="prose">
+      <p>Todo vive dentro de <code>src/</code>. La idea de fondo: <strong>un m&#243;dulo por cada recurso</strong> (granjas, sensores, mediciones&#8230;), y una carpeta <code>common/</code> con lo que se comparte entre todos.</p>
+    </div>
+    <div class="tree codeblock">
+      <p class="filename">avisens-backend/src</p>
+      <div class="code"><pre><span class="f">src/</span>
+&#9500;&#9472; main.ts              <span class="c">// arranca el servidor (el punto de entrada)</span>
+&#9500;&#9472; app.module.ts        <span class="c">// registra TODOS los modulos</span>
+&#9500;&#9472; <span class="f">prisma/</span>              <span class="c">// la conexion a la base de datos</span>
+&#9500;&#9472; <span class="f">common/</span>             <span class="c">// codigo compartido por todos los modulos</span>
+&#9474;  &#9500;&#9472; <span class="f">guards/</span>          <span class="c">// login (JWT) y control de roles</span>
+&#9474;  &#9500;&#9472; acceso.ts         <span class="c">// la regla "cada quien maneja lo suyo"</span>
+&#9474;  &#9492;&#9472; <span class="f">pagination/</span>      <span class="c">// paginacion reutilizable</span>
+&#9492;&#9472; <span class="f">modules/</span>            <span class="c">// un modulo por cada recurso del sistema</span>
+   &#9500;&#9472; <span class="f">auth/</span>            <span class="c">// login y tokens</span>
+   &#9500;&#9472; <span class="f">granjas/</span>
+   &#9500;&#9472; <span class="f">galpones/</span>
+   &#9500;&#9472; <span class="f">dispositivos/</span>
+   &#9500;&#9472; <span class="f">sensores/</span>
+   &#9500;&#9472; <span class="f">mediciones/</span>
+   &#9492;&#9472; ...</pre></div>
+    </div>
+  </section>
+
+  <!-- ---- Patr&#243;n de un m&#243;dulo ---- -->
+  <section id="modulo">
+    <p class="section-tag">El patr&#243;n que se repite</p>
+    <h2>C&#243;mo es un m&#243;dulo por dentro</h2>
+    <div class="prose">
+      <p><strong>Todos</strong> los m&#243;dulos siguen la misma estructura de 4 piezas. Si entiendes uno, los entiendes todos. Aqu&#237; el ejemplo de <code>granjas</code>:</p>
+    </div>
+    <div class="tree codeblock">
+      <p class="filename">modules/granjas</p>
+      <div class="code"><pre><span class="f">granjas/</span>
+&#9500;&#9472; granjas.module.ts       <span class="c">// une las piezas</span>
+&#9500;&#9472; granjas.controller.ts   <span class="c">// las rutas (HTTP)</span>
+&#9500;&#9472; granjas.service.ts      <span class="c">// la logica de negocio</span>
+&#9492;&#9472; <span class="f">dto/</span>                    <span class="c">// validacion de los datos que entran</span>
+   &#9500;&#9472; create-granja.dto.ts
+   &#9492;&#9472; update-granja.dto.ts</pre></div>
+    </div>
+    <dl class="gloss" style="margin-top:22px;">
+      <div>
+        <dt>module</dt>
+        <dd>Une el controller y el service, y registra el m&#243;dulo en la aplicaci&#243;n.</dd>
+      </div>
+      <div>
+        <dt>controller</dt>
+        <dd>Define las rutas HTTP (GET, POST, PATCH&#8230;). Solo <strong>enruta</strong> &#8212; no tiene l&#243;gica.</dd>
+      </div>
+      <div>
+        <dt>service</dt>
+        <dd>La <strong>l&#243;gica de negocio</strong>: decide qu&#233; se puede hacer y habla con la base de datos.</dd>
+      </div>
+      <div>
+        <dt>dto/</dt>
+        <dd>El "molde" que valida los datos de entrada de cada ruta antes de procesarlos.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <!-- ---- Viaje de una petici&#243;n ---- -->
+  <section id="peticion">
+    <p class="section-tag">Qu&#233; pasa en cada petici&#243;n</p>
+    <h2>El viaje de una petici&#243;n</h2>
+    <div class="prose">
+      <p>Cuando llega una petici&#243;n (por ejemplo <code>POST /granjas</code>), pasa por esta cadena <strong>en orden</strong>. Cada eslab&#243;n puede detenerla si algo falla:</p>
+    </div>
+    <div class="road">
+      <div class="step">
+        <span class="num">1</span>
+        <div class="body"><h3>Guards &#8212; &#191;qui&#233;n eres?</h3><p>Revisan que traigas un token v&#225;lido (login) y el rol correcto. Si no &#8594; error <code>401</code> o <code>403</code>.</p></div>
+      </div>
+      <div class="step">
+        <span class="num">2</span>
+        <div class="body"><h3>DTO &#8212; &#191;los datos vienen bien?</h3><p>Valida el cuerpo de la petici&#243;n. Si un campo falta o es inv&#225;lido &#8594; error <code>400</code>.</p></div>
+      </div>
+      <div class="step">
+        <span class="num">3</span>
+        <div class="body"><h3>Controller &#8212; enruta</h3><p>Recibe la petici&#243;n ya validada y llama al m&#233;todo correcto del service.</p></div>
+      </div>
+      <div class="step">
+        <span class="num">4</span>
+        <div class="body"><h3>Service &#8212; la l&#243;gica</h3><p>Aplica las reglas de negocio y el <strong>alcance por rol</strong> (un Propietario solo ve lo suyo).</p></div>
+      </div>
+      <div class="step">
+        <span class="num">5</span>
+        <div class="body"><h3>Prisma &#8212; la base de datos</h3><p>Lee o escribe en PostgreSQL y devuelve el resultado.</p></div>
+      </div>
+      <div class="step">
+        <span class="num">6</span>
+        <div class="body"><h3>Respuesta</h3><p>Vuelve al cliente como <strong>JSON</strong>, con su c&#243;digo de estado.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---- C&#243;digo real ---- -->
+  <section id="codigo">
+    <p class="section-tag">C&#243;digo real, explicado</p>
+    <h2>Los archivos, con c&#243;digo de verdad</h2>
+    <div class="prose">
+      <p>Fragmentos reales del m&#243;dulo <code>granjas</code>. Cada bloque trae el c&#243;digo y, debajo, la explicaci&#243;n de lo importante.</p>
+    </div>
+
+    <div class="codeblock">
+      <p class="filename">granjas.module.ts &#8212; une las piezas</p>
+      <div class="code"><pre><span class="k">@Module</span>({
+  controllers: [GranjasController],  <span class="c">// las rutas</span>
+  providers:   [GranjasService],     <span class="c">// la logica</span>
+})
+export class GranjasModule {}</pre></div>
+      <ul class="annot">
+        <li>El <code>@Module</code> es como el "&#237;ndice" del m&#243;dulo: le dice a NestJS qu&#233; controller y qu&#233; service lo forman.</li>
+        <li>Es el archivo m&#225;s corto, pero es el que conecta todo.</li>
+      </ul>
+    </div>
+
+    <div class="codeblock">
+      <p class="filename">dto/create-granja.dto.ts &#8212; el molde que valida</p>
+      <div class="code"><pre>export class CreateGranjaDto {
+  <span class="k">@IsString</span>()                 <span class="c">// debe ser texto</span>
+  nombre: string;             <span class="c">// obligatorio (no lleva ?)</span>
+
+  <span class="k">@IsNumber</span>()
+  <span class="k">@Min</span>(-90) <span class="k">@Max</span>(90)          <span class="c">// latitud valida entre -90 y 90</span>
+  <span class="k">@IsOptional</span>()               <span class="c">// puede faltar</span>
+  latitud?: number;
+
+  <span class="k">@IsInt</span>()
+  <span class="k">@IsOptional</span>()
+  propietario_id?: number;    <span class="c">// solo lo usa el Administrador</span>
+}</pre></div>
+      <ul class="annot">
+        <li>Un <strong>DTO</strong> define y valida los datos que entran. Los decoradores (<code>@IsString</code>, <code>@Min</code>&#8230;) hacen la validaci&#243;n <strong>autom&#225;tica</strong>.</li>
+        <li>Si alguien manda una latitud de <code>200</code>, la API la rechaza sola (error <code>400</code>) antes de tocar la l&#243;gica.</li>
+        <li>El <code>?</code> marca los campos <strong>opcionales</strong>; los que no lo tienen son obligatorios.</li>
+      </ul>
+    </div>
+
+    <div class="codeblock">
+      <p class="filename">granjas.controller.ts &#8212; las rutas</p>
+      <div class="code"><pre><span class="k">@UseGuards</span>(JwtAuthGuard, RolesGuard)        <span class="c">// exige login + rol</span>
+<span class="k">@Roles</span>(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+<span class="k">@Controller</span>('granjas')                      <span class="c">// ruta base: /granjas</span>
+export class GranjasController {
+  constructor(private granjasService: GranjasService) {}
+
+  <span class="k">@Post</span>()                                   <span class="c">// POST /granjas</span>
+  crear(<span class="k">@Body</span>() dto: CreateGranjaDto, <span class="k">@Req</span>() req) {
+    return this.granjasService.crear(dto, req.user);
+  }
+
+  <span class="k">@Get</span>(':id')                               <span class="c">// GET /granjas/5</span>
+  obtener(<span class="k">@Param</span>('id', ParseIntPipe) id: number, <span class="k">@Req</span>() req) {
+    return this.granjasService.obtener(id, req.user);
+  }
+}</pre></div>
+      <ul class="annot">
+        <li>El controller <strong>solo enruta</strong>: recibe la petici&#243;n y delega en el service. No tiene l&#243;gica de negocio.</li>
+        <li><code>@UseGuards</code> + <code>@Roles</code> protegen <strong>todas</strong> las rutas del controller a la vez.</li>
+        <li><code>@Body</code> saca el cuerpo, <code>@Param</code> saca el id de la URL, <code>@Req</code> da acceso al usuario logueado. <code>ParseIntPipe</code> convierte el id de texto a n&#250;mero.</li>
+      </ul>
+    </div>
+
+    <div class="codeblock">
+      <p class="filename">granjas.service.ts &#8212; la l&#243;gica y el alcance por rol</p>
+      <div class="code"><pre><span class="k">@Injectable</span>()
+export class GranjasService {
+  constructor(private prisma: PrismaService) {}   <span class="c">// habla con la BD</span>
+
+  async listar(solicitante, { page, limit }) {
+    <span class="c">// un Propietario SOLO ve sus granjas; un Admin las ve todas</span>
+    const where = esPropietario(solicitante)
+      ? { propietario_id: solicitante.id }
+      : undefined;
+
+    return this.prisma.granja.findMany({ where, take: limit });
+  }
+
+  async obtener(id, solicitante) {
+    const granja = await this.prisma.granja.findUnique({ where: { id } });
+    if (!granja) throw new NotFoundException('Granja no encontrada');  <span class="c">// 404</span>
+    verificarDueno(solicitante, granja.propietario.id, 'No es tuya');  <span class="c">// 403</span>
+    return granja;
+  }
+}</pre></div>
+      <ul class="annot">
+        <li>Aqu&#237; <strong>s&#237;</strong> vive la l&#243;gica. El service decide qu&#233; puede ver y hacer cada usuario.</li>
+        <li>El <strong>alcance por rol</strong> es la l&#237;nea clave: si es Propietario, filtra por <code>propietario_id</code>; si es Admin, no filtra nada.</li>
+        <li>Lanza excepciones que NestJS traduce a c&#243;digos HTTP: <code>NotFoundException</code> &#8594; 404, <code>ForbiddenException</code> &#8594; 403.</li>
+      </ul>
+    </div>
+
+    <div class="codeblock">
+      <p class="filename">common/acceso.ts &#8212; la regla de seguridad, en un solo lugar</p>
+      <div class="code"><pre>export function esPropietario(solicitante) {
+  return solicitante.rol === ROLES.PROPIETARIO;
+}
+
+export function verificarDueno(solicitante, propietarioId, mensaje) {
+  <span class="c">// un Propietario no puede tocar lo que no es suyo</span>
+  if (esPropietario(solicitante) &amp;&amp; propietarioId !== solicitante.id) {
+    throw new ForbiddenException(mensaje);   <span class="c">// 403</span>
+  }
+}</pre></div>
+      <ul class="annot">
+        <li>Estas dos funciones centralizan la regla m&#225;s importante del sistema: <strong>"cada quien maneja lo suyo"</strong>.</li>
+        <li>Se reutilizan en <strong>todos</strong> los m&#243;dulos (granjas, galpones, dispositivos&#8230;). Un solo sitio, sin repetir la regla en cada archivo.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ---- De la ruta al JSON ---- -->
+  <section id="probar">
+    <p class="section-tag">C&#243;mo se prueba la API</p>
+    <h2>De la ruta al JSON: d&#243;nde vive cada cosa</h2>
+    <div class="prose">
+      <p>Al probar la API en <strong>Bruno</strong> (o Postman) siempre surgen tres preguntas: <strong>&#191;d&#243;nde escribo los m&#233;todos?</strong>, <strong>&#191;cu&#225;l es la ruta?</strong> y <strong>&#191;qu&#233; JSON mando?</strong>. Cada una tiene su archivo &#8212; y entender esto es la mitad del trabajo.</p>
+    </div>
+
+    <p class="subhead"><span class="n">1.</span>Los m&#233;todos (POST, GET, DELETE&#8230;) viven en el <em>controller</em></p>
+    <div class="prose"><p>Cada m&#233;todo se marca con un decorador que indica su verbo HTTP. Lo que va dentro (<code>:id</code>, <code>permanente</code>) completa la ruta.</p></div>
+    <div class="codeblock">
+      <p class="filename">granjas.controller.ts</p>
+      <div class="code"><pre><span class="k">@Controller</span>('granjas')          <span class="c">// ruta base: /granjas</span>
+export class GranjasController {
+  <span class="k">@Post</span>()                       <span class="c">// POST   /granjas</span>
+  <span class="k">@Get</span>()                        <span class="c">// GET    /granjas</span>
+  <span class="k">@Get</span>(':id')                   <span class="c">// GET    /granjas/5</span>
+  <span class="k">@Patch</span>(':id')                 <span class="c">// PATCH  /granjas/5</span>
+  <span class="k">@Delete</span>(':id')                <span class="c">// DELETE /granjas/5</span>
+}</pre></div>
+    </div>
+
+    <p class="subhead"><span class="n">2.</span>La ruta = base + controller + m&#233;todo</p>
+    <div class="prose"><p>Se arma juntando tres partes. Con el servidor corriendo en el puerto 3000, as&#237; quedan las URLs para Bruno:</p></div>
+    <div class="routes-wrap">
+      <table class="routes">
+        <thead><tr><th>Acci&#243;n</th><th>Verbo</th><th>URL</th></tr></thead>
+        <tbody>
+          <tr><td>Crear</td><td class="verb">POST</td><td class="path">http://localhost:3000/granjas</td></tr>
+          <tr><td>Listar</td><td class="verb">GET</td><td class="path">http://localhost:3000/granjas</td></tr>
+          <tr><td>Ver una</td><td class="verb">GET</td><td class="path">http://localhost:3000/granjas/5</td></tr>
+          <tr><td>Desactivar</td><td class="verb">DELETE</td><td class="path">http://localhost:3000/granjas/5</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="annot">
+      <li><strong>Truco:</strong> no hay que adivinar. Con el servidor corriendo, abre <code>http://localhost:3000/docs</code> (Swagger) y ver&#225;s <strong>todas las rutas listadas solas</strong>, con su verbo y listas para probar.</li>
+    </ul>
+
+    <p class="subhead"><span class="n">3.</span>El JSON que mandas lo define el <em>DTO</em></p>
+    <div class="prose"><p>Cada propiedad de la clase DTO es una clave del JSON. Las que llevan <code>?</code> son opcionales; las dem&#225;s, obligatorias.</p></div>
+    <div class="codeblock">
+      <p class="filename">dto/create-granja.dto.ts &#8212; define el molde del JSON</p>
+      <div class="code"><pre>export class CreateGranjaDto {
+  <span class="k">@IsString</span>()        nombre: string;      <span class="c">// obligatorio</span>
+  <span class="k">@IsOptional</span>()      direccion?: string;  <span class="c">// opcional</span>
+  <span class="k">@IsOptional</span>()      latitud?: number;    <span class="c">// opcional</span>
+}</pre></div>
+    </div>
+    <div class="codeblock">
+      <p class="filename">&#8230;entonces en Bruno mandas este JSON</p>
+      <div class="code"><pre>{
+  "nombre": "Granja La Esperanza",
+  "direccion": "Vereda El Progreso km 4",
+  "latitud": 6.1553
+}</pre></div>
+    </div>
+    <ul class="annot">
+      <li>Si omites un campo obligatorio (como <code>nombre</code>), la API responde <code>400</code> sola, gracias a class-validator.</li>
+      <li>En resumen: <strong>controller</strong> = d&#243;nde y qu&#233; ruta &#183; <strong>Swagger</strong> = d&#243;nde las ves &#183; <strong>DTO</strong> = qu&#233; JSON mandas.</li>
+    </ul>
+  </section>
+
+  <!-- ================= Resumen ================= -->
+  <section id="resumen">
+    <div class="summary">
+      <p class="flag">&#9733; El resumen en una frase</p>
+      <p>El backend corre sobre <strong>Node.js</strong>, usando <strong>NestJS</strong> como framework (que se apoya en <strong>Express</strong>), con <strong>Prisma</strong> como ORM sobre <strong>PostgreSQL (Supabase)</strong>, autenticaci&#243;n con <strong>JWT + Passport</strong>, contrase&#241;as con <strong>Bcrypt</strong>, validaci&#243;n con <strong>class-validator</strong> y documentaci&#243;n con <strong>Swagger</strong>.</p>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  Avisens &#183; Gu&#237;a de estudio del stack de backend &#183; para el equipo
+</footer>
+
+<script>
+(function(){
+  var links = [].slice.call(document.querySelectorAll('.toc a'));
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var targets = Object.keys(map)
+    .map(function(id){ return document.getElementById(id); })
+    .filter(Boolean);
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(a){ a.classList.remove('active'); });
+        var a = map[e.target.id];
+        if(a){ a.classList.add('active'); }
+      }
+    });
+  }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+  targets.forEach(function(t){ obs.observe(t); });
+})();
+</script>
