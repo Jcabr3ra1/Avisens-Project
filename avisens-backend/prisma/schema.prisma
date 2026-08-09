@@ -58,6 +58,11 @@ model Usuario {
   seguridad_cuenta SeguridadCuenta?
   sesiones         Sesion[]
   granjas          Granja[]
+  pesajes          Pesaje[]
+  registros_mortalidad RegistroMortalidad[]
+  eventos_sanitarios   EventoSanitario[]
+  consumos_diarios     ConsumoDiario[]
+  registros_plagas     RegistroPlaga[]
 
   @@map("usuarios")
 }
@@ -291,7 +296,9 @@ model InventarioInsumo {
   activo                Boolean   @default(true)
   fecha_actualizacion   DateTime  @default(now()) @updatedAt
 
-  proveedor_habitual Proveedor? @relation(fields: [proveedor_habitual_id], references: [id])
+  proveedor_habitual Proveedor?        @relation(fields: [proveedor_habitual_id], references: [id])
+  eventos_sanitarios EventoSanitario[]
+  registros_plagas   RegistroPlaga[]
 
   @@index([proveedor_habitual_id])
   @@map("inventario_insumos")
@@ -319,6 +326,12 @@ model Lote {
   galpon    Galpon    @relation(fields: [galpon_id], references: [id])
   proveedor Proveedor @relation(fields: [proveedor_id], references: [id])
 
+  pesajes Pesaje[]
+  registros_mortalidad RegistroMortalidad[]
+  eventos_sanitarios   EventoSanitario[]
+  consumos_diarios     ConsumoDiario[]
+  registros_plagas     RegistroPlaga[]
+
   @@index([galpon_id, estado])
   @@map("lotes")
 }
@@ -338,5 +351,136 @@ model TipoAlimento {
   consumo_total_esperado_g Float?
   activo                   Boolean @default(true)
 
+  consumos_diarios ConsumoDiario[]
+
   @@map("tipos_alimento")
+}
+
+// ---------------------------------------------------------------------------
+// EP-06 · Pesajes (peso promedio del lote por fecha; seguimiento de crecimiento)
+// ---------------------------------------------------------------------------
+model Pesaje {
+  id                    Int      @id @default(autoincrement())
+  lote_id               Int
+  fecha                 DateTime @db.Date
+  peso_promedio_g       Float
+  cantidad_aves_pesadas Int?
+  peso_minimo_g         Float?
+  peso_maximo_g         Float?
+  peso_objetivo_g       Float?
+  alerta_generada       Boolean  @default(false)
+  usuario_id            Int
+  metodo_registro       String?
+  observaciones         String?
+  fecha_registro        DateTime @default(now())
+
+  lote    Lote    @relation(fields: [lote_id], references: [id])
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@index([lote_id])
+  @@map("pesajes")
+}
+
+// ---------------------------------------------------------------------------
+// EP-06 · Registros de mortalidad (aves muertas por lote, causa y disposición)
+// ---------------------------------------------------------------------------
+model RegistroMortalidad {
+  id      Int @id @default(autoincrement())
+  lote_id Int
+  fecha DateTime @db.Date
+  cantidad_aves Int
+  causa_presuntiva String?
+  disposicion String?
+  alerta_generada Boolean @default(false)
+  usuario_id      Int
+  metodo_registro String?
+  observaciones   String?
+  fecha_registro  DateTime @default(now())
+
+  lote    Lote    @relation(fields: [lote_id], references: [id])
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@index([lote_id])
+  @@map("registros_mortalidad")
+
+}
+
+// ---------------------------------------------------------------------------
+// EP-06 · Eventos sanitarios (vacunas, tratamientos y diagnosticos por lote)
+// ---------------------------------------------------------------------------
+model EventoSanitario {
+  id              Int      @id @default(autoincrement())
+  lote_id         Int
+  // Insumo del inventario (vacuna/medicamento). Opcional: un diagnostico o una
+  // revision no siempre gasta un insumo.
+  insumo_id       Int?
+  tipo            String // vacunacion | medicacion | tratamiento | diagnostico | revision
+  diagnostico     String?
+  producto        String?
+  dosis           String?
+  via_aplicacion  String?
+  // A cuantas aves se aplico. Opcional: a veces es a todo el lote sin conteo.
+  cantidad_aves   Int?
+  fecha           DateTime @db.Date
+  usuario_id      Int
+  metodo_registro String?
+  observaciones   String?
+  fecha_registro  DateTime @default(now())
+
+  lote    Lote              @relation(fields: [lote_id], references: [id])
+  insumo  InventarioInsumo? @relation(fields: [insumo_id], references: [id])
+  usuario Usuario           @relation(fields: [usuario_id], references: [id])
+
+  @@index([lote_id])
+  @@map("eventos_sanitarios")
+}
+
+// ---------------------------------------------------------------------------
+// EP-06 · Consumos diarios (alimento en kg + agua en litros por lote y dia)
+// ---------------------------------------------------------------------------
+model ConsumoDiario {
+  id               Int      @id @default(autoincrement())
+  lote_id          Int
+  // Que alimento se consumio. Opcional: a veces solo se registra agua.
+  tipo_alimento_id Int?
+  usuario_id       Int
+  fecha            DateTime @db.Date
+  alimento_kg      Float?
+  agua_litros      Float?
+  // La activa el motor de alertas (EP-05); por ahora queda en false.
+  alerta_agua_baja Boolean  @default(false)
+  metodo_registro  String?
+  fecha_registro   DateTime @default(now())
+
+  lote          Lote          @relation(fields: [lote_id], references: [id])
+  tipo_alimento TipoAlimento? @relation(fields: [tipo_alimento_id], references: [id])
+  usuario       Usuario       @relation(fields: [usuario_id], references: [id])
+
+  @@index([lote_id])
+  @@map("consumos_diarios")
+}
+
+// ---------------------------------------------------------------------------
+// EP-06 · Registros de plagas (plagas detectadas en el lote y su control)
+// ---------------------------------------------------------------------------
+model RegistroPlaga {
+  id               Int      @id @default(autoincrement())
+  lote_id          Int
+  // Insumo usado para el control (opcional: puede ser control fisico/manual).
+  insumo_id        Int?
+  usuario_id       Int
+  fecha            DateTime @db.Date
+  tipo_plaga       String
+  descripcion      String?
+  control_aplicado String?
+  metodo_registro  String?
+  observaciones    String?
+  fecha_registro   DateTime @default(now())
+
+  lote    Lote              @relation(fields: [lote_id], references: [id])
+  insumo  InventarioInsumo? @relation(fields: [insumo_id], references: [id])
+  usuario Usuario           @relation(fields: [usuario_id], references: [id])
+
+  @@index([lote_id])
+  @@map("registros_plagas")
 }

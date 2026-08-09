@@ -17,6 +17,11 @@ import { ProveedoresModule } from './modules/proveedores/proveedores.module';
 import { InsumosModule } from './modules/insumos/insumos.module';
 import { IngestModule } from './modules/ingest/ingest.module';
 import { LotesModule } from './modules/lotes/lotes.module';
+import { PesajesModule } from './modules/pesajes/pesajes.module';
+import { RegistrosMortalidadModule } from './modules/registros-mortalidad/registros-mortalidad.module';
+import { EventosSanitariosModule } from './modules/eventos-sanitarios/eventos-sanitarios.module';
+import { ConsumosDiariosModule } from './modules/consumos-diarios/consumos-diarios.module';
+import { RegistrosPlagasModule } from './modules/registros-plagas/registros-plagas.module';
 
 @Module({
   imports: [
@@ -42,6 +47,11 @@ import { LotesModule } from './modules/lotes/lotes.module';
     UmbralesModule,
     IngestModule,
     LotesModule,
+    PesajesModule,
+    RegistrosMortalidadModule,
+    EventosSanitariosModule,
+    ConsumosDiariosModule,
+    RegistrosPlagasModule,
     HealthModule,
   ],
   providers: [
