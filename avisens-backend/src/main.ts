@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -24,6 +24,13 @@ async function bootstrap() {
   app.use(helmet());
 
   app.set('trust proxy', 1);
+
+  // Versionado por URI: todas las rutas quedan bajo /v1 por defecto. Los
+  // controllers marcados como VERSION_NEUTRAL (health, ingest) quedan sin /v1.
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
+  });
 
   app.enableCors({
     origin: config.get<string>('CORS_ORIGIN') ?? true,
