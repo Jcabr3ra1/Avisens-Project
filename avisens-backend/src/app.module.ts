@@ -22,6 +22,7 @@ import { RegistrosMortalidadModule } from './modules/registros-mortalidad/regist
 import { EventosSanitariosModule } from './modules/eventos-sanitarios/eventos-sanitarios.module';
 import { ConsumosDiariosModule } from './modules/consumos-diarios/consumos-diarios.module';
 import { RegistrosPlagasModule } from './modules/registros-plagas/registros-plagas.module';
+import { TiposAlimentoModule } from './modules/tipos-alimento/tipos-alimento.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { RegistrosPlagasModule } from './modules/registros-plagas/registros-plag
     EventosSanitariosModule,
     ConsumosDiariosModule,
     RegistrosPlagasModule,
+    TiposAlimentoModule,
     HealthModule,
   ],
   providers: [
