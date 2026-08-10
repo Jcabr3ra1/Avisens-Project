@@ -67,6 +67,8 @@ docs/consumo-api-frontend.docx
 docs/rutas-postman.docx
 docs/guia-tecnologias-backend.html
 docs/despliegue-railway.md
+docs/flujo-pruebas-avisens.md
+docs/flujo-pruebas-avisens.docx
 
 # Módulo descartado
 avisens-api-gateway/
