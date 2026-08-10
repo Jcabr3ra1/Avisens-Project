@@ -2,22 +2,28 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Dependencias para compilar módulos nativos (bcrypt usa node-gyp)
+# Habilitar pnpm (viene incluido con Node via corepack).
+RUN corepack enable
+
+# Dependencias para compilar modulos nativos (bcrypt usa node-gyp).
 RUN apk add --no-cache python3 make g++
 
-# Instalar dependencias con la lockfile (incluye dev: necesitamos nest y prisma)
-COPY package*.json ./
-RUN npm ci
+# Instalar dependencias con la lockfile (incluye dev: necesitamos nest y prisma).
+# El postinstall genera el cliente Prisma, que necesita el schema y una
+# DATABASE_URL de relleno (prisma generate NO se conecta a la base).
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml prisma.config.ts ./
+COPY prisma ./prisma
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" \
+    pnpm install --frozen-lockfile
 
-# Copiar el código, generar el cliente de Prisma y compilar a dist/.
-# `prisma generate` no se conecta a la base de datos, pero prisma.config.ts exige
-# que DATABASE_URL exista; le pasamos un valor de relleno solo para este paso.
+# Copiar el resto del codigo y compilar a dist/.
 COPY . .
-RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" npx prisma generate
-RUN npm run build
+RUN pnpm run build
 
-# Eliminar dependencias de desarrollo (el cliente Prisma ya quedó generado)
-RUN npm prune --omit=dev
+# Eliminar dependencias de desarrollo. --ignore-scripts evita re-ejecutar el
+# postinstall (prisma generate), que ya corrio en el install y necesitaria
+# DATABASE_URL; el cliente Prisma ya quedo generado.
+RUN pnpm prune --prod --ignore-scripts
 
 # ---------- Etapa 2: runtime ----------
 FROM node:22-alpine AS runner

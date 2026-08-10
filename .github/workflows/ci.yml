@@ -23,29 +23,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.17.0
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: avisens-backend/package-lock.json
+          cache: pnpm
+          cache-dependency-path: avisens-backend/pnpm-lock.yaml
 
+      # El postinstall genera el cliente Prisma; prisma.config.ts exige
+      # DATABASE_URL (generate no se conecta a la base).
       - name: Instalar dependencias
-        run: npm ci
-
-      - name: Generar cliente de Prisma
-        # prisma.config.ts exige DATABASE_URL; generate no se conecta a la base.
-        run: npx prisma generate
+        run: pnpm install --frozen-lockfile
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
 
       - name: Typecheck (tsc)
-        run: npx tsc --noEmit
+        run: pnpm exec tsc --noEmit
 
       - name: Lint (eslint, cero warnings)
-        run: npx eslint src --max-warnings 0
+        run: pnpm exec eslint src --max-warnings 0
 
       - name: Pruebas + cobertura (jest)
-        run: npx jest --coverage --coverageReporters=text-summary
+        run: pnpm exec jest --coverage --coverageReporters=text-summary
 
   frontend:
     name: Frontend · build

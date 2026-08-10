@@ -1,0 +1,43 @@
+# Configuracion de pnpm. Controla que dependencias pueden ejecutar scripts de
+# instalacion (build nativo / generacion de cliente). pnpm v11 BLOQUEA todos por
+# defecto como defensa contra scripts maliciosos en la cadena de suministro;
+# aqui aprobamos solo los necesarios y dejamos el resto en false a proposito
+# (ej: @scarf/scarf es telemetria, no se necesita).
+allowBuilds:
+  bcrypt: true
+  prisma: true
+  '@prisma/engines': true
+  esbuild: true
+  unrs-resolver: true
+  '@scarf/scarf': false
+minimumReleaseAgeExclude:
+  - '@hono/node-server@1.19.13 || 2.0.5'
+  - brace-expansion@1.1.16 || 1.1.17 || 1.1.18 || 2.1.2 || 2.1.3 || 2.1.4 || 5.0.7 || 5.0.8 || 5.0.9
+  - js-yaml@3.15.1 || 4.3.0 || 4.3.1 || 5.2.2
+  - fast-uri@3.1.3 || 3.1.4 || 3.1.5
+  - valibot@1.4.2
+  - hono@4.12.34
+overrides:
+  '@hono/node-server@<1.19.13': ^1.19.13
+  '@hono/node-server@<2.0.5': ^2.0.5
+  brace-expansion@<1.1.16: ^1.1.16
+  brace-expansion@<1.1.17: ^1.1.17
+  brace-expansion@<1.1.18: ^1.1.18
+  brace-expansion@>=2.0.0 <2.1.2: ^2.1.2
+  brace-expansion@>=2.0.0 <2.1.3: ^2.1.3
+  brace-expansion@>=2.0.0 <2.1.4: ^2.1.4
+  brace-expansion@>=3.0.0 <5.0.7: ^5.0.7
+  brace-expansion@>=4.0.0 <5.0.8: ^5.0.8
+  brace-expansion@>=4.0.0 <5.0.9: ^5.0.9
+  fast-uri@>=3.0.0 <3.1.3: ^3.1.3
+  fast-uri@>=3.0.0 <3.1.5: ^3.1.5
+  fast-uri@>=3.0.0 <=3.1.3: ^3.1.4
+  hono@<4.12.34: ^4.12.34
+  hono@>=3.8.0 <4.12.34: ^4.12.34
+  hono@>=4.12.0 <4.12.34: ^4.12.34
+  hono@>=4.7.0 <4.12.34: ^4.12.34
+  js-yaml@>=3.0.0 <3.15.1: ^3.15.1
+  js-yaml@>=4.0.0 <4.3.0: ^4.3.0
+  js-yaml@>=4.0.0 <4.3.1: ^4.3.1
+  js-yaml@>=5.0.0 <=5.2.1: ^5.2.2
+  valibot@<=1.4.1: ^1.4.2
