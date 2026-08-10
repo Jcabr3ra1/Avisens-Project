@@ -32,8 +32,12 @@ async function bootstrap() {
     defaultVersion: '1',
   });
 
+  // CORS_ORIGIN admite varios dominios separados por coma (ej. la web y el panel).
+  // Sin valor (solo dev) se permite cualquier origen; en produccion es obligatorio
+  // (lo valida env.validation).
+  const corsOrigin = config.get<string>('CORS_ORIGIN');
   app.enableCors({
-    origin: config.get<string>('CORS_ORIGIN') ?? true,
+    origin: corsOrigin ? corsOrigin.split(',').map((o) => o.trim()) : true,
     credentials: true,
   });
 
@@ -47,17 +51,21 @@ async function bootstrap() {
     }),
   );
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Avisens API')
-    .setDescription('API REST del sistema AVISENS')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  SwaggerModule.setup(
-    'docs',
-    app,
-    SwaggerModule.createDocument(app, swaggerConfig),
-  );
+  // Swagger solo se expone fuera de produccion: en prod no publicamos el esquema
+  // completo de la API (no dar pistas del backend a atacantes).
+  if (config.get<string>('NODE_ENV') !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Avisens API')
+      .setDescription('API REST del sistema AVISENS')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    SwaggerModule.setup(
+      'docs',
+      app,
+      SwaggerModule.createDocument(app, swaggerConfig),
+    );
+  }
 
   app.enableShutdownHooks();
 
