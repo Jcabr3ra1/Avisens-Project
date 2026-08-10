@@ -6,6 +6,7 @@ import {
   Post,
   Req,
   UseGuards,
+  VERSION_NEUTRAL,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DeviceTokenGuard } from '../../common/guards/device-token.guard';
@@ -14,7 +15,7 @@ import { IngestService } from './ingest.service';
 import { IngestDto } from './dto/ingest.dto';
 
 @ApiTags('ingest')
-@Controller('ingest')
+@Controller({ path: 'ingest', version: VERSION_NEUTRAL })
 export class IngestController {
   constructor(private ingestService: IngestService) {}
 
