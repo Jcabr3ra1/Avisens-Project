@@ -6,6 +6,10 @@ datasource db {
   provider = "postgresql"
 }
 
+// ---------------------------------------------------------------------------
+// Autenticacion y roles
+// ---------------------------------------------------------------------------
+
 model Rol {
   id             Int      @id @default(autoincrement())
   nombre         String   @unique
@@ -54,11 +58,11 @@ model Usuario {
   activo          Boolean  @default(true)
   fecha_creacion  DateTime @default(now())
 
-  rol              Rol              @relation(fields: [rol_id], references: [id])
-  seguridad_cuenta SeguridadCuenta?
-  sesiones         Sesion[]
-  granjas          Granja[]
-  pesajes          Pesaje[]
+  rol                  Rol                  @relation(fields: [rol_id], references: [id])
+  seguridad_cuenta     SeguridadCuenta?
+  sesiones             Sesion[]
+  granjas              Granja[]
+  pesajes              Pesaje[]
   registros_mortalidad RegistroMortalidad[]
   eventos_sanitarios   EventoSanitario[]
   consumos_diarios     ConsumoDiario[]
@@ -98,7 +102,7 @@ model Sesion {
 }
 
 // ---------------------------------------------------------------------------
-// EP-04 · Monitoreo ambiental
+// Monitoreo ambiental
 // ---------------------------------------------------------------------------
 
 model Granja {
@@ -149,7 +153,7 @@ model Galpon {
 }
 
 // ---------------------------------------------------------------------------
-// EP-04 · Dispositivos (nodos ESP32 que agrupan sensores en un galpón)
+// Dispositivos (nodos ESP32 que agrupan sensores en un galpon)
 // ---------------------------------------------------------------------------
 
 model Dispositivo {
@@ -178,7 +182,7 @@ model Dispositivo {
 }
 
 // ---------------------------------------------------------------------------
-// EP-04 · Sensores (miden una variable ambiental y reportan vía un dispositivo)
+// Sensores (miden una variable ambiental y reportan via un dispositivo)
 // ---------------------------------------------------------------------------
 
 model Sensor {
@@ -209,7 +213,7 @@ model Sensor {
 }
 
 // ---------------------------------------------------------------------------
-// EP-04 · Mediciones (serie de tiempo: una lectura de un sensor en un instante)
+// Mediciones (serie de tiempo: una lectura de un sensor en un instante)
 // ---------------------------------------------------------------------------
 
 model Medicion {
@@ -231,7 +235,7 @@ model Medicion {
 }
 
 // ---------------------------------------------------------------------------
-// EP-04 · Umbrales ambientales (rango aceptable por variable/semana; versionado)
+// Umbrales ambientales (rango aceptable por variable/semana; versionado)
 // ---------------------------------------------------------------------------
 
 model UmbralAmbiental {
@@ -257,7 +261,7 @@ model UmbralAmbiental {
 }
 
 // ---------------------------------------------------------------------------
-// EP-07 · Proveedores (entidad global: quien suministra insumos, pollitos, etc.)
+// Proveedores (entidad global: quien suministra insumos, pollitos, etc.)
 // ---------------------------------------------------------------------------
 
 model Proveedor {
@@ -279,7 +283,7 @@ model Proveedor {
 }
 
 // ---------------------------------------------------------------------------
-// EP-07 · Inventario de insumos (stock de alimento, medicamentos, vacunas…)
+// Inventario de insumos (stock de alimento, medicamentos, vacunas…)
 // ---------------------------------------------------------------------------
 
 model InventarioInsumo {
@@ -305,7 +309,7 @@ model InventarioInsumo {
 }
 
 // ---------------------------------------------------------------------------
-// EP-06 · Lotes (grupo de aves que entra junto y se cria como una unidad)
+// Lotes (grupo de aves que entra junto y se cria como una unidad)
 // ---------------------------------------------------------------------------
 
 model Lote {
@@ -326,7 +330,7 @@ model Lote {
   galpon    Galpon    @relation(fields: [galpon_id], references: [id])
   proveedor Proveedor @relation(fields: [proveedor_id], references: [id])
 
-  pesajes Pesaje[]
+  pesajes              Pesaje[]
   registros_mortalidad RegistroMortalidad[]
   eventos_sanitarios   EventoSanitario[]
   consumos_diarios     ConsumoDiario[]
@@ -337,7 +341,7 @@ model Lote {
 }
 
 // ---------------------------------------------------------------------------
-// EP-06 · Tipos de alimento (catálogo de alimentos por marca y etapa de vida)
+// Tipos de alimento (catalogo de alimentos por marca y etapa de vida)
 // ---------------------------------------------------------------------------
 
 model TipoAlimento {
@@ -357,8 +361,9 @@ model TipoAlimento {
 }
 
 // ---------------------------------------------------------------------------
-// EP-06 · Pesajes (peso promedio del lote por fecha; seguimiento de crecimiento)
+// Pesajes (peso promedio del lote por fecha; seguimiento de crecimiento)
 // ---------------------------------------------------------------------------
+
 model Pesaje {
   id                    Int      @id @default(autoincrement())
   lote_id               Int
@@ -382,32 +387,33 @@ model Pesaje {
 }
 
 // ---------------------------------------------------------------------------
-// EP-06 · Registros de mortalidad (aves muertas por lote, causa y disposición)
+// Registros de mortalidad (aves muertas por lote, causa y disposicion)
 // ---------------------------------------------------------------------------
+
 model RegistroMortalidad {
-  id      Int @id @default(autoincrement())
-  lote_id Int
-  fecha DateTime @db.Date
-  cantidad_aves Int
+  id               Int      @id @default(autoincrement())
+  lote_id          Int
+  fecha            DateTime @db.Date
+  cantidad_aves    Int
   causa_presuntiva String?
-  disposicion String?
-  alerta_generada Boolean @default(false)
-  usuario_id      Int
-  metodo_registro String?
-  observaciones   String?
-  fecha_registro  DateTime @default(now())
+  disposicion      String?
+  alerta_generada  Boolean  @default(false)
+  usuario_id       Int
+  metodo_registro  String?
+  observaciones    String?
+  fecha_registro   DateTime @default(now())
 
   lote    Lote    @relation(fields: [lote_id], references: [id])
   usuario Usuario @relation(fields: [usuario_id], references: [id])
 
   @@index([lote_id])
   @@map("registros_mortalidad")
-
 }
 
 // ---------------------------------------------------------------------------
-// EP-06 · Eventos sanitarios (vacunas, tratamientos y diagnosticos por lote)
+// Eventos sanitarios (vacunas, tratamientos y diagnosticos por lote)
 // ---------------------------------------------------------------------------
+
 model EventoSanitario {
   id              Int      @id @default(autoincrement())
   lote_id         Int
@@ -436,8 +442,9 @@ model EventoSanitario {
 }
 
 // ---------------------------------------------------------------------------
-// EP-06 · Consumos diarios (alimento en kg + agua en litros por lote y dia)
+// Consumos diarios (alimento en kg + agua en litros por lote y dia)
 // ---------------------------------------------------------------------------
+
 model ConsumoDiario {
   id               Int      @id @default(autoincrement())
   lote_id          Int
@@ -447,7 +454,7 @@ model ConsumoDiario {
   fecha            DateTime @db.Date
   alimento_kg      Float?
   agua_litros      Float?
-  // La activa el motor de alertas (EP-05); por ahora queda en false.
+  // La activa el motor de alertas; por ahora queda en false.
   alerta_agua_baja Boolean  @default(false)
   metodo_registro  String?
   fecha_registro   DateTime @default(now())
@@ -461,8 +468,9 @@ model ConsumoDiario {
 }
 
 // ---------------------------------------------------------------------------
-// EP-06 · Registros de plagas (plagas detectadas en el lote y su control)
+// Registros de plagas (plagas detectadas en el lote y su control)
 // ---------------------------------------------------------------------------
+
 model RegistroPlaga {
   id               Int      @id @default(autoincrement())
   lote_id          Int
