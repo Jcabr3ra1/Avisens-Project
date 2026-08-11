@@ -67,6 +67,12 @@ export class GranjasController {
     return this.granjasService.actualizar(id, dto, req.user);
   }
 
+  @Patch(':id/activar')
+  @ApiOperation({ summary: 'Activar una granja' })
+  activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.granjasService.activar(id, req.user);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Desactivar una granja (borrado suave)' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {

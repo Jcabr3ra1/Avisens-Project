@@ -65,6 +65,12 @@ export class GalponesController {
     return this.galponesService.actualizar(id, dto, req.user);
   }
 
+  @Patch(':id/activar')
+  @ApiOperation({ summary: 'Activar un galpón' })
+  activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.galponesService.activar(id, req.user);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Desactivar un galpón (borrado suave)' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {

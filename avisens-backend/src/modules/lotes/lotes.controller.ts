@@ -69,6 +69,12 @@ export class LotesController {
     return this.lotesService.actualizar(id, dto, req.user);
   }
 
+  @Patch(':id/activar')
+  @ApiOperation({ summary: 'Activar un lote' })
+  activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.lotesService.activar(id, req.user);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Desactivar un lote (borrado suave)' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {

@@ -133,6 +133,13 @@ export class GranjasService {
     return { id, activa: false };
   }
 
+  async activar(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+
+    await this.prisma.granja.update({ where: { id }, data: { activa: true } });
+    return { id, activa: true };
+  }
+
   async eliminarPermanente(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
