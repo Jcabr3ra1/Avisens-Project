@@ -67,6 +67,7 @@ model Usuario {
   eventos_sanitarios   EventoSanitario[]
   consumos_diarios     ConsumoDiario[]
   registros_plagas     RegistroPlaga[]
+  auditorias           BitacoraAuditoria[]
 
   @@map("usuarios")
 }
@@ -491,4 +492,27 @@ model RegistroPlaga {
 
   @@index([lote_id])
   @@map("registros_plagas")
+}
+
+// ---------------------------------------------------------------------------
+// Bitacora de auditoria (quien hizo que, cuando y desde donde)
+// ---------------------------------------------------------------------------
+
+model BitacoraAuditoria {
+  id               Int      @id @default(autoincrement())
+  usuario_id       Int?
+  accion           String
+  entidad_afectada String
+  registro_id      Int?
+  datos_antes      Json?
+  datos_despues    Json?
+  ip_origen        String?
+  user_agent       String?
+  fecha_hora       DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([entidad_afectada, registro_id])
+  @@map("bitacora_auditoria")
 }
