@@ -1,13 +1,14 @@
 # MER Avisens v1.2 — Normalizado
 
-> Modelo Entidad-Relación de referencia del proyecto. **44 entidades, 67 relaciones FK.**
-> Notación de [Eraser](https://eraser.io). Esta es la fuente de verdad del modelo de datos:
-> las tablas de la base de datos se construyen a partir de este documento, no al revés.
+> Modelo Entidad-Relación de referencia del proyecto. **55 entidades** (45 base +
+> 10 de la capa de inteligencia). Notación de [Eraser](https://eraser.io). Esta es
+> la fuente de verdad del modelo de datos: las tablas se construyen a partir de
+> este documento, no al revés.
 >
 > ## ✅ MODELO COMPLETO EN EL SCHEMA (2026-08-11)
-> Las **44 tablas** del MER ya están creadas en `prisma/schema.prisma` y en la base
-> de datos (migración `20260811021138_completar_modelo_mer`). El modelo de datos
-> quedó **terminado**.
+> Las **55 tablas** ya están creadas en `prisma/schema.prisma` y en la base de datos
+> (migraciones `..._completar_modelo_mer` y `..._capa_inteligencia_ia`). El modelo
+> quedó **terminado**, incluida la capa de inteligencia para la evolución futura.
 >
 > Los **módulos** (endpoints) se construyen aparte, de forma incremental:
 > - ✅ **Con módulo:** auth, granjas, galpones, dispositivos, sensores, mediciones,
@@ -16,6 +17,10 @@
 > - 🔜 **Tabla lista, sin módulo aún:** chatbot (EP-01), voz (EP-02), alertas (EP-05),
 >   finanzas/compras (EP-07), zonas/equipos/mantenimiento (EP-08), recuperaciones y
 >   usuarios_galpones (EP-03).
+> - 🧠 **Roadmap (capa de inteligencia, EP-09):** organizaciones (SaaS), indicadores_lote
+>   (KPIs), modelos_ml, predicciones, recomendaciones, conversaciones_ia + mensajes_ia
+>   (copiloto), analisis_bioacustico, analisis_vision, clima. Se llenan por jobs/IA,
+>   no por CRUD. Ver la hoja "Cómo construir la IA" del Excel.
 
 ```
 title AVISENS v1.2 — Normalizado
@@ -660,6 +665,132 @@ mantenimientos_repuestos [icon: package-2, color: gray] {
 
 
 // ============================================================
+// EP-09 · CAPA DE INTELIGENCIA Y EVOLUCIÓN (roadmap · teal)
+// Tablas modeladas para el futuro (predecir / recomendar / IA / SaaS).
+// Se llenan por JOBS y servicios de IA, no por CRUD manual. Ver la hoja
+// "Cómo construir la IA" del Excel de tablas.
+// ============================================================
+
+organizaciones [icon: building, color: teal] {
+  id integer pk
+  nombre string
+  nit string unique
+  plan string
+  activa bool
+  fecha_creacion datetime
+}
+
+indicadores_lote [icon: activity, color: teal] {
+  id integer pk
+  lote_id integer fk
+  fecha date
+  dia_vida integer
+  peso_promedio_g number
+  fcr number
+  epef number
+  uniformidad_pct number
+  mortalidad_acumulada_pct number
+  consumo_acumulado_g number
+  calculado_en datetime
+}
+
+modelos_ml [icon: cpu, color: teal] {
+  id integer pk
+  nombre string
+  tipo string
+  objetivo string
+  version string
+  framework string
+  metricas string
+  activo bool
+  fecha_entrenamiento datetime
+  fecha_creacion datetime
+}
+
+predicciones [icon: trending-up, color: teal] {
+  id integer pk
+  lote_id integer fk
+  modelo_id integer fk
+  tipo string
+  horizonte_dias integer
+  valor_predicho number
+  unidad string
+  confianza number
+  fecha_objetivo date
+  datos_entrada string
+  fecha_generacion datetime
+}
+
+recomendaciones [icon: check-circle, color: teal] {
+  id integer pk
+  lote_id integer fk
+  galpon_id integer fk
+  prediccion_id integer fk
+  tipo string
+  titulo string
+  descripcion string
+  accion_sugerida string
+  prioridad string
+  estado string
+  usuario_id integer fk
+  fecha_generacion datetime
+  fecha_resolucion datetime
+}
+
+conversaciones_ia [icon: message-circle, color: teal] {
+  id integer pk
+  usuario_id integer fk
+  titulo string
+  contexto string
+  fecha_inicio datetime
+  fecha_ultimo_mensaje datetime
+}
+
+mensajes_ia [icon: message-square, color: teal] {
+  id integer pk
+  conversacion_id integer fk
+  rol string
+  contenido string
+  tokens integer
+  fecha datetime
+}
+
+analisis_bioacustico [icon: mic, color: teal] {
+  id integer pk
+  galpon_id integer fk
+  lote_id integer fk
+  modelo_id integer fk
+  fecha_hora datetime
+  indicador string
+  valor number
+  audio_url string
+  interpretacion string
+}
+
+analisis_vision [icon: eye, color: teal] {
+  id integer pk
+  galpon_id integer fk
+  lote_id integer fk
+  modelo_id integer fk
+  fecha_hora datetime
+  tipo_analisis string
+  resultado string
+  imagen_url string
+}
+
+clima [icon: cloud, color: teal] {
+  id integer pk
+  granja_id integer fk
+  fecha_hora datetime
+  temperatura number
+  humedad number
+  precipitacion number
+  viento_kmh number
+  fuente string
+}
+
+
+// ============================================================
 // RELACIONES (LLAVES FORÁNEAS)
 // ============================================================
 
@@ -749,8 +880,27 @@ mantenimientos.tecnico_id > usuarios.id
 mantenimientos_repuestos.mantenimiento_id > mantenimientos.id
 mantenimientos_repuestos.insumo_id > inventario_insumos.id
 
+// EP-09 Capa de inteligencia
+usuarios.organizacion_id > organizaciones.id
+indicadores_lote.lote_id > lotes.id
+predicciones.lote_id > lotes.id
+predicciones.modelo_id > modelos_ml.id
+recomendaciones.lote_id > lotes.id
+recomendaciones.galpon_id > galpones.id
+recomendaciones.prediccion_id > predicciones.id
+recomendaciones.usuario_id > usuarios.id
+conversaciones_ia.usuario_id > usuarios.id
+mensajes_ia.conversacion_id > conversaciones_ia.id
+analisis_bioacustico.galpon_id > galpones.id
+analisis_bioacustico.lote_id > lotes.id
+analisis_bioacustico.modelo_id > modelos_ml.id
+analisis_vision.galpon_id > galpones.id
+analisis_vision.lote_id > lotes.id
+analisis_vision.modelo_id > modelos_ml.id
+clima.granja_id > granjas.id
+
 
 // ================================================================
-// FIN — 44 entidades, 67 relaciones FK
+// FIN — 55 entidades (45 base + 10 capa de inteligencia)
 // ================================================================
 ```
