@@ -50,6 +50,7 @@ model RolPermiso {
 model Usuario {
   id              Int      @id @default(autoincrement())
   rol_id          Int
+  organizacion_id Int?
   nombre_completo String
   cedula          String   @unique
   email           String   @unique
@@ -83,6 +84,9 @@ model Usuario {
   movimientos_financieros MovimientoFinanciero[]
   movimientos_inventario  MovimientoInventario[]
   mantenimientos          Mantenimiento[]
+  organizacion            Organizacion?          @relation(fields: [organizacion_id], references: [id])
+  recomendaciones         Recomendacion[]
+  conversaciones_ia       ConversacionIa[]
 
   @@map("usuarios")
 }
@@ -137,6 +141,7 @@ model Granja {
   propietario      Usuario          @relation(fields: [propietario_id], references: [id])
   galpones         Galpon[]
   politicas_alerta PoliticaAlerta[]
+  clima            Clima[]
 
   // El alcance por rol filtra siempre por dueño: granja.propietario_id = X.
   @@index([propietario_id])
@@ -157,16 +162,19 @@ model Galpon {
   activo             Boolean   @default(true)
   fecha_construccion DateTime? @db.Date
 
-  granja            Granja            @relation(fields: [granja_id], references: [id])
-  dispositivo       Dispositivo[]
-  sensores          Sensor[]
-  umbrales          UmbralAmbiental[]
-  lotes             Lote[]
-  usuarios_galpones UsuarioGalpon[]
-  comandos_voz      ComandoVoz[]
-  zonas             ZonaGalpon[]
-  alertas           Alerta[]
-  equipos           Equipo[]
+  granja               Granja                @relation(fields: [granja_id], references: [id])
+  dispositivo          Dispositivo[]
+  sensores             Sensor[]
+  umbrales             UmbralAmbiental[]
+  lotes                Lote[]
+  usuarios_galpones    UsuarioGalpon[]
+  comandos_voz         ComandoVoz[]
+  zonas                ZonaGalpon[]
+  alertas              Alerta[]
+  equipos              Equipo[]
+  recomendaciones      Recomendacion[]
+  analisis_bioacustico AnalisisBioacustico[]
+  analisis_vision      AnalisisVision[]
 
   // El código se repite entre granjas (cada una tiene su "galpon1"), pero es
   // único dentro de una misma granja.
@@ -368,6 +376,11 @@ model Lote {
   ordenes_compra          OrdenCompra[]
   movimientos_financieros MovimientoFinanciero[]
   movimientos_inventario  MovimientoInventario[]
+  predicciones            Prediccion[]
+  recomendaciones         Recomendacion[]
+  indicadores             IndicadorLote[]
+  analisis_bioacustico    AnalisisBioacustico[]
+  analisis_vision         AnalisisVision[]
 
   @@index([galpon_id, estado])
   @@map("lotes")
@@ -1023,4 +1036,206 @@ model MantenimientoRepuesto {
 
   @@index([mantenimiento_id])
   @@map("mantenimientos_repuestos")
+}
+
+// ---------------------------------------------------------------------------
+// Organizaciones (multi-tenant / SaaS: agrupa usuarios por cliente/empresa)
+// ---------------------------------------------------------------------------
+model Organizacion {
+  id             Int      @id @default(autoincrement())
+  nombre         String
+  nit            String?  @unique
+  plan           String   @default("free")
+  activa         Boolean  @default(true)
+  fecha_creacion DateTime @default(now())
+
+  usuarios Usuario[]
+
+  @@map("organizaciones")
+}
+
+// ---------------------------------------------------------------------------
+// Indicadores del lote (KPIs historicos: FCR, EPEF, uniformidad por fecha)
+// ---------------------------------------------------------------------------
+model IndicadorLote {
+  id                       Int      @id @default(autoincrement())
+  lote_id                  Int
+  fecha                    DateTime @db.Date
+  dia_vida                 Int?
+  peso_promedio_g          Float?
+  fcr                      Float?
+  epef                     Float?
+  uniformidad_pct          Float?
+  mortalidad_acumulada_pct Float?
+  consumo_acumulado_g      Float?
+  calculado_en             DateTime @default(now())
+
+  lote Lote @relation(fields: [lote_id], references: [id])
+
+  @@index([lote_id])
+  @@map("indicadores_lote")
+}
+
+// ---------------------------------------------------------------------------
+// Modelos de ML (registro de modelos, versiones y metricas)
+// ---------------------------------------------------------------------------
+model ModeloMl {
+  id                  Int       @id @default(autoincrement())
+  nombre              String
+  tipo                String?
+  objetivo            String?
+  version             String?
+  framework           String?
+  metricas            Json?
+  activo              Boolean   @default(true)
+  fecha_entrenamiento DateTime?
+  fecha_creacion      DateTime  @default(now())
+
+  predicciones         Prediccion[]
+  analisis_bioacustico AnalisisBioacustico[]
+  analisis_vision      AnalisisVision[]
+
+  @@map("modelos_ml")
+}
+
+// ---------------------------------------------------------------------------
+// Predicciones (salidas del modelo: peso futuro, FCR, riesgo de mortalidad)
+// ---------------------------------------------------------------------------
+model Prediccion {
+  id               Int       @id @default(autoincrement())
+  lote_id          Int?
+  modelo_id        Int?
+  tipo             String
+  horizonte_dias   Int?
+  valor_predicho   Float?
+  unidad           String?
+  confianza        Float?
+  fecha_objetivo   DateTime? @db.Date
+  datos_entrada    Json?
+  fecha_generacion DateTime  @default(now())
+
+  lote            Lote?           @relation(fields: [lote_id], references: [id])
+  modelo          ModeloMl?       @relation(fields: [modelo_id], references: [id])
+  recomendaciones Recomendacion[]
+
+  @@index([lote_id])
+  @@map("predicciones")
+}
+
+// ---------------------------------------------------------------------------
+// Recomendaciones (lo que la IA sugiere hacer, con su estado)
+// ---------------------------------------------------------------------------
+model Recomendacion {
+  id               Int       @id @default(autoincrement())
+  lote_id          Int?
+  galpon_id        Int?
+  prediccion_id    Int?
+  tipo             String?
+  titulo           String
+  descripcion      String?
+  accion_sugerida  String?
+  prioridad        String    @default("media")
+  estado           String    @default("pendiente")
+  usuario_id       Int?
+  fecha_generacion DateTime  @default(now())
+  fecha_resolucion DateTime?
+
+  lote       Lote?       @relation(fields: [lote_id], references: [id])
+  galpon     Galpon?     @relation(fields: [galpon_id], references: [id])
+  prediccion Prediccion? @relation(fields: [prediccion_id], references: [id])
+  usuario    Usuario?    @relation(fields: [usuario_id], references: [id])
+
+  @@index([lote_id])
+  @@map("recomendaciones")
+}
+
+// ---------------------------------------------------------------------------
+// Copiloto IA (conversaciones y mensajes del asistente para el granjero)
+// ---------------------------------------------------------------------------
+model ConversacionIa {
+  id                   Int       @id @default(autoincrement())
+  usuario_id           Int
+  titulo               String?
+  contexto             Json?
+  fecha_inicio         DateTime  @default(now())
+  fecha_ultimo_mensaje DateTime?
+
+  usuario  Usuario     @relation(fields: [usuario_id], references: [id])
+  mensajes MensajeIa[]
+
+  @@index([usuario_id])
+  @@map("conversaciones_ia")
+}
+
+model MensajeIa {
+  id              Int      @id @default(autoincrement())
+  conversacion_id Int
+  rol             String
+  contenido       String
+  tokens          Int?
+  fecha           DateTime @default(now())
+
+  conversacion ConversacionIa @relation(fields: [conversacion_id], references: [id])
+
+  @@index([conversacion_id])
+  @@map("mensajes_ia")
+}
+
+// ---------------------------------------------------------------------------
+// Sensado avanzado (analisis por sonido y por imagen del ave)
+// ---------------------------------------------------------------------------
+model AnalisisBioacustico {
+  id             Int      @id @default(autoincrement())
+  galpon_id      Int
+  lote_id        Int?
+  modelo_id      Int?
+  fecha_hora     DateTime @default(now())
+  indicador      String?
+  valor          Float?
+  audio_url      String?
+  interpretacion String?
+
+  galpon Galpon    @relation(fields: [galpon_id], references: [id])
+  lote   Lote?     @relation(fields: [lote_id], references: [id])
+  modelo ModeloMl? @relation(fields: [modelo_id], references: [id])
+
+  @@index([galpon_id])
+  @@map("analisis_bioacustico")
+}
+
+model AnalisisVision {
+  id            Int      @id @default(autoincrement())
+  galpon_id     Int
+  lote_id       Int?
+  modelo_id     Int?
+  fecha_hora    DateTime @default(now())
+  tipo_analisis String?
+  resultado     Json?
+  imagen_url    String?
+
+  galpon Galpon    @relation(fields: [galpon_id], references: [id])
+  lote   Lote?     @relation(fields: [lote_id], references: [id])
+  modelo ModeloMl? @relation(fields: [modelo_id], references: [id])
+
+  @@index([galpon_id])
+  @@map("analisis_vision")
+}
+
+// ---------------------------------------------------------------------------
+// Clima (datos meteorologicos externos como contexto de la granja)
+// ---------------------------------------------------------------------------
+model Clima {
+  id            Int      @id @default(autoincrement())
+  granja_id     Int
+  fecha_hora    DateTime @default(now())
+  temperatura   Float?
+  humedad       Float?
+  precipitacion Float?
+  viento_kmh    Float?
+  fuente        String?
+
+  granja Granja @relation(fields: [granja_id], references: [id])
+
+  @@index([granja_id])
+  @@map("clima")
 }
