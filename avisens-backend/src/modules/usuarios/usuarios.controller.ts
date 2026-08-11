@@ -66,6 +66,12 @@ export class UsuariosController {
     return this.usuariosService.actualizar(id, dto, req.user);
   }
 
+  @Patch(':id/activar')
+  @ApiOperation({ summary: 'Activar un usuario' })
+  activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.usuariosService.activar(id, req.user);
+  }
+
   @Delete(':id')
   @ApiOperation({
     summary: 'Desactivar un usuario (borrado suave, revoca sesiones)',

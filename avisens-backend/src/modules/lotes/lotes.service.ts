@@ -156,6 +156,15 @@ export class LotesService {
     });
   }
 
+  async activar(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+    return this.prisma.lote.update({
+      where: { id },
+      data: { estado: 'activo' },
+      select: LOTE_SELECT,
+    });
+  }
+
   async eliminarPermanente(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 

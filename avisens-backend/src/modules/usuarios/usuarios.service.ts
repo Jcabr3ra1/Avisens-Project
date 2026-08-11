@@ -177,6 +177,13 @@ export class UsuariosService {
     return { id, activo: false };
   }
 
+  async activar(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+
+    await this.prisma.usuario.update({ where: { id }, data: { activo: true } });
+    return { id, activo: true };
+  }
+
   async eliminarPermanente(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
     if (id === solicitante.id) {

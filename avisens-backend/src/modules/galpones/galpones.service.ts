@@ -128,6 +128,13 @@ export class GalponesService {
     return { id, activo: false };
   }
 
+  async activar(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+
+    await this.prisma.galpon.update({ where: { id }, data: { activo: true } });
+    return { id, activo: true };
+  }
+
   async eliminarPermanente(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
