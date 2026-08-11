@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { paginate } from '../../common/pagination/paginate';
 
 export interface EventoAuditoria {
   usuario_id?: number | null;
@@ -37,5 +39,17 @@ export class AuditoriaService {
     } catch (error) {
       this.logger.error('No se pudo registrar la auditoria', error as Error);
     }
+  }
+
+  async listar({ page, limit }: PaginationQueryDto) {
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.bitacoraAuditoria.findMany({
+        orderBy: { fecha_hora: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.bitacoraAuditoria.count(),
+    ]);
+    return paginate(data, total, page, limit);
   }
 }
