@@ -23,6 +23,7 @@ import { EventosSanitariosModule } from './modules/eventos-sanitarios/eventos-sa
 import { ConsumosDiariosModule } from './modules/consumos-diarios/consumos-diarios.module';
 import { RegistrosPlagasModule } from './modules/registros-plagas/registros-plagas.module';
 import { TiposAlimentoModule } from './modules/tipos-alimento/tipos-alimento.module';
+import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { TiposAlimentoModule } from './modules/tipos-alimento/tipos-alimento.mod
     ConsumosDiariosModule,
     RegistrosPlagasModule,
     TiposAlimentoModule,
+    AuditoriaModule,
     HealthModule,
   ],
   providers: [
