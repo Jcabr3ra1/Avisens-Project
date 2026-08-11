@@ -740,7 +740,7 @@ model ComandoVoz {
 // ---------------------------------------------------------------------------
 model CurvaObjetivo {
   id                  Int     @id @default(autoincrement())
-  sexo                String?
+  sexo                String
   dia                 Int
   peso_esperado_g     Float?
   consumo_diario_g    Float?
@@ -750,6 +750,7 @@ model CurvaObjetivo {
   temperatura_min     Float?
   temperatura_max     Float?
 
+  @@unique([sexo, dia])
   @@map("curvas_objetivo")
 }
 
