@@ -55,19 +55,34 @@ model Usuario {
   email           String   @unique
   password_hash   String
   telefono        String?
+  foto_url        String?
+  huella_voz_url  String?
+  pin_voz_hash    String?
   activo          Boolean  @default(true)
   fecha_creacion  DateTime @default(now())
 
-  rol                  Rol                  @relation(fields: [rol_id], references: [id])
-  seguridad_cuenta     SeguridadCuenta?
-  sesiones             Sesion[]
-  granjas              Granja[]
-  pesajes              Pesaje[]
-  registros_mortalidad RegistroMortalidad[]
-  eventos_sanitarios   EventoSanitario[]
-  consumos_diarios     ConsumoDiario[]
-  registros_plagas     RegistroPlaga[]
-  auditorias           BitacoraAuditoria[]
+  rol                     Rol                    @relation(fields: [rol_id], references: [id])
+  seguridad_cuenta        SeguridadCuenta?
+  sesiones                Sesion[]
+  granjas                 Granja[]
+  pesajes                 Pesaje[]
+  registros_mortalidad    RegistroMortalidad[]
+  eventos_sanitarios      EventoSanitario[]
+  consumos_diarios        ConsumoDiario[]
+  registros_plagas        RegistroPlaga[]
+  auditorias              BitacoraAuditoria[]
+  recuperaciones          RecuperacionPassword[]
+  usuarios_galpones       UsuarioGalpon[]
+  prospectos_asesorados   Prospecto[]
+  comandos_voz            ComandoVoz[]
+  accionamientos          AccionamientoEquipo[]
+  alertas_responsable     Alerta[]               @relation("AlertaResponsable")
+  alertas_escalado        Alerta[]               @relation("AlertaEscalado")
+  evidencias_alertas      EvidenciaAlerta[]
+  ordenes_compra          OrdenCompra[]
+  movimientos_financieros MovimientoFinanciero[]
+  movimientos_inventario  MovimientoInventario[]
+  mantenimientos          Mantenimiento[]
 
   @@map("usuarios")
 }
@@ -119,8 +134,9 @@ model Granja {
   activa         Boolean  @default(true)
   fecha_creacion DateTime @default(now())
 
-  propietario Usuario  @relation(fields: [propietario_id], references: [id])
-  galpones    Galpon[]
+  propietario      Usuario          @relation(fields: [propietario_id], references: [id])
+  galpones         Galpon[]
+  politicas_alerta PoliticaAlerta[]
 
   // El alcance por rol filtra siempre por dueño: granja.propietario_id = X.
   @@index([propietario_id])
@@ -141,11 +157,16 @@ model Galpon {
   activo             Boolean   @default(true)
   fecha_construccion DateTime? @db.Date
 
-  granja      Granja            @relation(fields: [granja_id], references: [id])
-  dispositivo Dispositivo[]
-  sensores    Sensor[]
-  umbrales    UmbralAmbiental[]
-  lotes       Lote[]
+  granja            Granja            @relation(fields: [granja_id], references: [id])
+  dispositivo       Dispositivo[]
+  sensores          Sensor[]
+  umbrales          UmbralAmbiental[]
+  lotes             Lote[]
+  usuarios_galpones UsuarioGalpon[]
+  comandos_voz      ComandoVoz[]
+  zonas             ZonaGalpon[]
+  alertas           Alerta[]
+  equipos           Equipo[]
 
   // El código se repite entre granjas (cada una tiene su "galpon1"), pero es
   // único dentro de una misma granja.
@@ -190,6 +211,7 @@ model Sensor {
   id                  Int       @id @default(autoincrement())
   galpon_id           Int
   dispositivo_id      Int
+  zona_id             Int?
   codigo              String    @unique
   tipo                String
   unidad_medida       String
@@ -206,6 +228,8 @@ model Sensor {
   mediciones  Medicion[]
   galpon      Galpon      @relation(fields: [galpon_id], references: [id])
   dispositivo Dispositivo @relation(fields: [dispositivo_id], references: [id])
+  zona        ZonaGalpon? @relation(fields: [zona_id], references: [id])
+  alertas     Alerta[]
 
   // Consultas frecuentes: "sensores del galpón X" y "sensores del nodo Y".
   @@index([galpon_id])
@@ -277,8 +301,10 @@ model Proveedor {
   activo           Boolean  @default(true)
   fecha_creacion   DateTime @default(now())
 
-  insumos InventarioInsumo[]
-  lotes   Lote[]
+  insumos                 InventarioInsumo[]
+  lotes                   Lote[]
+  ordenes_compra          OrdenCompra[]
+  movimientos_financieros MovimientoFinanciero[]
 
   @@map("proveedores")
 }
@@ -301,9 +327,11 @@ model InventarioInsumo {
   activo                Boolean   @default(true)
   fecha_actualizacion   DateTime  @default(now()) @updatedAt
 
-  proveedor_habitual Proveedor?        @relation(fields: [proveedor_habitual_id], references: [id])
-  eventos_sanitarios EventoSanitario[]
-  registros_plagas   RegistroPlaga[]
+  proveedor_habitual       Proveedor?              @relation(fields: [proveedor_habitual_id], references: [id])
+  eventos_sanitarios       EventoSanitario[]
+  registros_plagas         RegistroPlaga[]
+  movimientos_inventario   MovimientoInventario[]
+  mantenimientos_repuestos MantenimientoRepuesto[]
 
   @@index([proveedor_habitual_id])
   @@map("inventario_insumos")
@@ -331,11 +359,15 @@ model Lote {
   galpon    Galpon    @relation(fields: [galpon_id], references: [id])
   proveedor Proveedor @relation(fields: [proveedor_id], references: [id])
 
-  pesajes              Pesaje[]
-  registros_mortalidad RegistroMortalidad[]
-  eventos_sanitarios   EventoSanitario[]
-  consumos_diarios     ConsumoDiario[]
-  registros_plagas     RegistroPlaga[]
+  pesajes                 Pesaje[]
+  registros_mortalidad    RegistroMortalidad[]
+  eventos_sanitarios      EventoSanitario[]
+  consumos_diarios        ConsumoDiario[]
+  registros_plagas        RegistroPlaga[]
+  alertas                 Alerta[]
+  ordenes_compra          OrdenCompra[]
+  movimientos_financieros MovimientoFinanciero[]
+  movimientos_inventario  MovimientoInventario[]
 
   @@index([galpon_id, estado])
   @@map("lotes")
@@ -515,4 +547,480 @@ model BitacoraAuditoria {
   @@index([usuario_id])
   @@index([entidad_afectada, registro_id])
   @@map("bitacora_auditoria")
+}
+
+// ---------------------------------------------------------------------------
+// Recuperaciones de password (tokens para restablecer la contrasena)
+// ---------------------------------------------------------------------------
+model RecuperacionPassword {
+  id             Int      @id @default(autoincrement())
+  usuario_id     Int
+  token_hash     String
+  expira_en      DateTime
+  usado          Boolean  @default(false)
+  fecha_creacion DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@map("recuperaciones_password")
+}
+
+// ---------------------------------------------------------------------------
+// Usuarios por galpon (asigna operarios a galpones especificos)
+// ---------------------------------------------------------------------------
+model UsuarioGalpon {
+  id               Int      @id @default(autoincrement())
+  usuario_id       Int
+  galpon_id        Int
+  rol_asignacion   String?
+  fecha_asignacion DateTime @default(now())
+  activa           Boolean  @default(true)
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+  galpon  Galpon  @relation(fields: [galpon_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([galpon_id])
+  @@map("usuarios_galpones")
+}
+
+// ---------------------------------------------------------------------------
+// Chatbot de cotizacion (matriz de calificacion, prospectos y cotizaciones)
+// ---------------------------------------------------------------------------
+model MatrizCalificacion {
+  id               Int      @id @default(autoincrement())
+  bloque           String
+  codigo_pregunta  String
+  opcion_respuesta String
+  puntaje          Int
+  descripcion      String?
+  activa           Boolean  @default(true)
+  fecha_creacion   DateTime @default(now())
+
+  respuestas RespuestaChatbot[]
+
+  @@map("matriz_calificacion")
+}
+
+model Prospecto {
+  id                         Int       @id @default(autoincrement())
+  sesion_id                  String    @unique
+  nombre                     String?
+  municipio                  String?
+  rol_prospecto              String?
+  tipo_produccion            String?
+  telefono                   String?
+  email                      String?
+  canal_origen               String?
+  contacto_decisor           String?
+  fecha_callback             DateTime?
+  estado                     String    @default("nuevo")
+  asesor_asignado_id         Int?
+  ip_origen                  String?
+  user_agent                 String?
+  consentimiento_habeas_data Boolean   @default(false)
+  fecha_inicio               DateTime  @default(now())
+  fecha_finalizacion         DateTime?
+
+  asesor        Usuario?             @relation(fields: [asesor_asignado_id], references: [id])
+  respuestas    RespuestaChatbot[]
+  cotizaciones  Cotizacion[]
+  interacciones InteraccionChatbot[]
+
+  @@index([asesor_asignado_id])
+  @@map("prospectos")
+}
+
+model RespuestaChatbot {
+  id               Int      @id @default(autoincrement())
+  prospecto_id     Int
+  matriz_id        Int?
+  bloque           String?
+  codigo_pregunta  String?
+  pregunta_texto   String?
+  respuesta_texto  String?
+  puntaje_obtenido Int?
+  fecha_respuesta  DateTime @default(now())
+
+  prospecto Prospecto           @relation(fields: [prospecto_id], references: [id])
+  matriz    MatrizCalificacion? @relation(fields: [matriz_id], references: [id])
+
+  @@index([prospecto_id])
+  @@map("respuestas_chatbot")
+}
+
+model Cotizacion {
+  id               Int       @id @default(autoincrement())
+  prospecto_id     Int
+  codigo           String?
+  plan_recomendado String?
+  numero_galpones  Int?
+  numero_aves      Int?
+  valor_total_cop  Float?
+  url_pdf          String?
+  canal_envio      String?
+  estado           String    @default("generada")
+  fecha_generacion DateTime  @default(now())
+  fecha_envio      DateTime?
+
+  prospecto Prospecto          @relation(fields: [prospecto_id], references: [id])
+  sensores  CotizacionSensor[]
+
+  @@index([prospecto_id])
+  @@map("cotizaciones")
+}
+
+model CotizacionSensor {
+  id            Int    @id @default(autoincrement())
+  cotizacion_id Int
+  tipo_sensor   String
+  cantidad      Int
+
+  cotizacion Cotizacion @relation(fields: [cotizacion_id], references: [id])
+
+  @@index([cotizacion_id])
+  @@map("cotizaciones_sensores")
+}
+
+model InteraccionChatbot {
+  id               Int      @id @default(autoincrement())
+  prospecto_id     Int
+  tipo             String?
+  mensaje          String?
+  intent_detectado String?
+  confianza_nlu    Float?
+  fecha_hora       DateTime @default(now())
+
+  prospecto Prospecto @relation(fields: [prospecto_id], references: [id])
+
+  @@index([prospecto_id])
+  @@map("interacciones_chatbot")
+}
+
+// ---------------------------------------------------------------------------
+// Asistente de voz (comandos de voz ejecutados en campo, con soporte offline)
+// ---------------------------------------------------------------------------
+model ComandoVoz {
+  id                     Int      @id @default(autoincrement())
+  usuario_id             Int
+  galpon_id              Int
+  tipo_comando           String?
+  comando_texto          String?
+  accion_ejecutada       String?
+  confianza_nlu          Float?
+  requiere_clarificacion Boolean  @default(false)
+  modo_conexion          String?
+  sincronizado           Boolean  @default(true)
+  fecha_ejecucion        DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+  galpon  Galpon  @relation(fields: [galpon_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([galpon_id])
+  @@map("comandos_voz")
+}
+
+// ---------------------------------------------------------------------------
+// Curvas objetivo (metas de peso/consumo por dia y sexo, guia de crecimiento)
+// ---------------------------------------------------------------------------
+model CurvaObjetivo {
+  id                  Int     @id @default(autoincrement())
+  sexo                String?
+  dia                 Int
+  peso_esperado_g     Float?
+  consumo_diario_g    Float?
+  consumo_acumulado_g Float?
+  fcr_objetivo        Float?
+  etapa_alimentacion  String?
+  temperatura_min     Float?
+  temperatura_max     Float?
+
+  @@map("curvas_objetivo")
+}
+
+// ---------------------------------------------------------------------------
+// Accionamientos de equipos (historial de encendido/apagado, manual o automatico)
+// ---------------------------------------------------------------------------
+model AccionamientoEquipo {
+  id            Int       @id @default(autoincrement())
+  equipo_id     Int
+  alerta_id     Int?
+  origen        String?
+  estado        String?
+  valor_disparo Float?
+  usuario_id    Int?
+  fecha_inicio  DateTime  @default(now())
+  fecha_fin     DateTime?
+
+  equipo  Equipo   @relation(fields: [equipo_id], references: [id])
+  alerta  Alerta?  @relation(fields: [alerta_id], references: [id])
+  usuario Usuario? @relation(fields: [usuario_id], references: [id])
+
+  @@index([equipo_id])
+  @@map("accionamientos_equipos")
+}
+
+// ---------------------------------------------------------------------------
+// Alertas (deteccion de condiciones fuera de umbral y su seguimiento)
+// ---------------------------------------------------------------------------
+model PoliticaAlerta {
+  id                       Int      @id @default(autoincrement())
+  granja_id                Int
+  criticidad               String
+  nivel_escalamiento       Int?
+  canal                    String?
+  tiempo_max_respuesta_seg Int?
+  verificado               Boolean  @default(false)
+  activa                   Boolean  @default(true)
+  fecha_actualizacion      DateTime @default(now()) @updatedAt
+
+  granja Granja @relation(fields: [granja_id], references: [id])
+
+  @@index([granja_id])
+  @@map("politicas_alerta")
+}
+
+model Alerta {
+  id                Int       @id @default(autoincrement())
+  galpon_id         Int
+  lote_id           Int?
+  sensor_id         Int?
+  tipo              String
+  criticidad        String
+  valor_detectado   Float?
+  valor_umbral      Float?
+  mensaje           String?
+  estado            String    @default("abierta")
+  responsable_id    Int?
+  escalado_a_id     Int?
+  accion_correctiva String?
+  fecha_creacion    DateTime  @default(now())
+  fecha_aceptacion  DateTime?
+  fecha_cierre      DateTime?
+
+  galpon         Galpon                @relation(fields: [galpon_id], references: [id])
+  lote           Lote?                 @relation(fields: [lote_id], references: [id])
+  sensor         Sensor?               @relation(fields: [sensor_id], references: [id])
+  responsable    Usuario?              @relation("AlertaResponsable", fields: [responsable_id], references: [id])
+  escalado_a     Usuario?              @relation("AlertaEscalado", fields: [escalado_a_id], references: [id])
+  canales        AlertaCanal[]
+  evidencias     EvidenciaAlerta[]
+  accionamientos AccionamientoEquipo[]
+
+  @@index([galpon_id])
+  @@index([lote_id])
+  @@map("alertas")
+}
+
+model AlertaCanal {
+  id           Int       @id @default(autoincrement())
+  alerta_id    Int
+  canal        String?
+  estado_envio String?
+  fecha_envio  DateTime?
+
+  alerta Alerta @relation(fields: [alerta_id], references: [id])
+
+  @@index([alerta_id])
+  @@map("alertas_canales")
+}
+
+model EvidenciaAlerta {
+  id             Int      @id @default(autoincrement())
+  alerta_id      Int
+  tipo_evidencia String?
+  archivo_url    String?
+  comentario     String?
+  usuario_id     Int?
+  tamano_bytes   Int?
+  fecha_subida   DateTime @default(now())
+
+  alerta  Alerta   @relation(fields: [alerta_id], references: [id])
+  usuario Usuario? @relation(fields: [usuario_id], references: [id])
+
+  @@index([alerta_id])
+  @@map("evidencias_alertas")
+}
+
+// ---------------------------------------------------------------------------
+// Compras y finanzas (ordenes de compra, categorias y movimientos)
+// ---------------------------------------------------------------------------
+model OrdenCompra {
+  id                        Int       @id @default(autoincrement())
+  proveedor_id              Int
+  lote_id                   Int?
+  codigo                    String    @unique
+  fecha_pedido              DateTime? @db.Date
+  fecha_entrega_estimada    DateTime? @db.Date
+  fecha_entrega_real        DateTime? @db.Date
+  valor_total_cop           Float?
+  estado                    String    @default("pendiente")
+  calificacion_cumplimiento Float?
+  calificacion_calidad      Float?
+  calificacion_tiempo       Float?
+  usuario_id                Int
+  fecha_registro            DateTime  @default(now())
+
+  proveedor Proveedor @relation(fields: [proveedor_id], references: [id])
+  lote      Lote?     @relation(fields: [lote_id], references: [id])
+  usuario   Usuario   @relation(fields: [usuario_id], references: [id])
+
+  @@index([proveedor_id])
+  @@map("ordenes_compra")
+}
+
+model CategoriaFinanciera {
+  id          Int     @id @default(autoincrement())
+  nombre      String
+  tipo        String?
+  descripcion String?
+  activo      Boolean @default(true)
+
+  movimientos MovimientoFinanciero[]
+
+  @@map("categorias_financieras")
+}
+
+model MovimientoFinanciero {
+  id              Int      @id @default(autoincrement())
+  lote_id         Int?
+  categoria_id    Int
+  proveedor_id    Int?
+  tipo            String?
+  valor_cop       Float
+  fecha           DateTime @db.Date
+  descripcion     String?
+  numero_factura  String?
+  comprobante_url String?
+  metodo_pago     String?
+  usuario_id      Int
+  fecha_registro  DateTime @default(now())
+
+  lote      Lote?               @relation(fields: [lote_id], references: [id])
+  categoria CategoriaFinanciera @relation(fields: [categoria_id], references: [id])
+  proveedor Proveedor?          @relation(fields: [proveedor_id], references: [id])
+  usuario   Usuario             @relation(fields: [usuario_id], references: [id])
+
+  @@index([lote_id])
+  @@index([categoria_id])
+  @@map("movimientos_financieros")
+}
+
+model MovimientoInventario {
+  id               Int      @id @default(autoincrement())
+  insumo_id        Int
+  lote_id          Int?
+  tipo_movimiento  String?
+  cantidad         Float
+  unidad_medida    String?
+  motivo           String?
+  comprobante_url  String?
+  stock_resultante Float?
+  usuario_id       Int
+  fecha_movimiento DateTime @default(now())
+
+  insumo  InventarioInsumo @relation(fields: [insumo_id], references: [id])
+  lote    Lote?            @relation(fields: [lote_id], references: [id])
+  usuario Usuario          @relation(fields: [usuario_id], references: [id])
+
+  @@index([insumo_id])
+  @@index([lote_id])
+  @@map("movimientos_inventario")
+}
+
+// ---------------------------------------------------------------------------
+// Infraestructura y mantenimiento (zonas, equipos y su mantenimiento)
+// ---------------------------------------------------------------------------
+model ZonaGalpon {
+  id                  Int     @id @default(autoincrement())
+  galpon_id           Int
+  codigo              String?
+  nombre              String
+  tipo_zona           String?
+  coordenada_x_inicio Float?
+  coordenada_y_inicio Float?
+  coordenada_x_fin    Float?
+  coordenada_y_fin    Float?
+  color_visualizacion String?
+  activa              Boolean @default(true)
+
+  galpon   Galpon   @relation(fields: [galpon_id], references: [id])
+  sensores Sensor[]
+  equipos  Equipo[]
+
+  @@index([galpon_id])
+  @@map("zonas_galpon")
+}
+
+model Equipo {
+  id                Int       @id @default(autoincrement())
+  galpon_id         Int
+  zona_id           Int?
+  codigo            String    @unique
+  nombre            String
+  tipo              String?
+  es_actuador       Boolean   @default(false)
+  modelo            String?
+  fabricante        String?
+  serial            String?
+  fecha_compra      DateTime? @db.Date
+  fecha_instalacion DateTime? @db.Date
+  vida_util_horas   Int?
+  horas_operacion   Int?      @default(0)
+  estado_actual     String    @default("operativo")
+  modo_operacion    String?
+  coordenada_x      Float?
+  coordenada_y      Float?
+  costo_cop         Float?
+
+  galpon         Galpon                @relation(fields: [galpon_id], references: [id])
+  zona           ZonaGalpon?           @relation(fields: [zona_id], references: [id])
+  accionamientos AccionamientoEquipo[]
+  mantenimientos Mantenimiento[]
+
+  @@index([galpon_id])
+  @@map("equipos")
+}
+
+model Mantenimiento {
+  id                    Int       @id @default(autoincrement())
+  equipo_id             Int
+  tipo                  String?
+  fecha_programada      DateTime? @db.Date
+  fecha_ejecucion       DateTime? @db.Date
+  duracion_horas        Float?
+  tecnico_responsable   String?
+  tecnico_id            Int?
+  descripcion           String?
+  costo_cop             Float?
+  causa_falla           String?
+  tiempo_inactivo_horas Float?
+  estado                String    @default("programado")
+  evidencia_url         String?
+  observaciones         String?
+  fecha_registro        DateTime  @default(now())
+
+  equipo    Equipo                  @relation(fields: [equipo_id], references: [id])
+  tecnico   Usuario?                @relation(fields: [tecnico_id], references: [id])
+  repuestos MantenimientoRepuesto[]
+
+  @@index([equipo_id])
+  @@map("mantenimientos")
+}
+
+model MantenimientoRepuesto {
+  id               Int     @id @default(autoincrement())
+  mantenimiento_id Int
+  insumo_id        Int
+  descripcion      String?
+  cantidad         Float?
+  costo_cop        Float?
+
+  mantenimiento Mantenimiento    @relation(fields: [mantenimiento_id], references: [id])
+  insumo        InventarioInsumo @relation(fields: [insumo_id], references: [id])
+
+  @@index([mantenimiento_id])
+  @@map("mantenimientos_repuestos")
 }

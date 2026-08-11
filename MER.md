@@ -4,10 +4,18 @@
 > Notación de [Eraser](https://eraser.io). Esta es la fuente de verdad del modelo de datos:
 > las tablas de la base de datos se construyen a partir de este documento, no al revés.
 >
-> El backend implementa el modelo **de forma incremental**, módulo por módulo (EP-xx).
-> Estado de implementación: EP-03 (Autenticación) ✅ · EP-04 en curso
-> (granjas, galpones, dispositivos, sensores ✅ · mediciones pendiente) ·
-> EP-02 (Asistente de voz) pendiente.
+> ## ✅ MODELO COMPLETO EN EL SCHEMA (2026-08-11)
+> Las **44 tablas** del MER ya están creadas en `prisma/schema.prisma` y en la base
+> de datos (migración `20260811021138_completar_modelo_mer`). El modelo de datos
+> quedó **terminado**.
+>
+> Los **módulos** (endpoints) se construyen aparte, de forma incremental:
+> - ✅ **Con módulo:** auth, granjas, galpones, dispositivos, sensores, mediciones,
+>   umbrales, proveedores, insumos, tipos_alimento, lotes, pesajes, mortalidad,
+>   eventos sanitarios, consumos, plagas, auditoría.
+> - 🔜 **Tabla lista, sin módulo aún:** chatbot (EP-01), voz (EP-02), alertas (EP-05),
+>   finanzas/compras (EP-07), zonas/equipos/mantenimiento (EP-08), recuperaciones y
+>   usuarios_galpones (EP-03).
 
 ```
 title AVISENS v1.2 — Normalizado
