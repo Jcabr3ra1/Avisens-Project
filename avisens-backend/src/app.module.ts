@@ -24,6 +24,7 @@ import { ConsumosDiariosModule } from './modules/consumos-diarios/consumos-diari
 import { RegistrosPlagasModule } from './modules/registros-plagas/registros-plagas.module';
 import { TiposAlimentoModule } from './modules/tipos-alimento/tipos-alimento.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
+import { CurvasObjetivoModule } from './modules/curvas-objetivo/curvas-objetivo.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { AuditoriaModule } from './modules/auditoria/auditoria.module';
     RegistrosPlagasModule,
     TiposAlimentoModule,
     AuditoriaModule,
+    CurvasObjetivoModule,
     HealthModule,
   ],
   providers: [

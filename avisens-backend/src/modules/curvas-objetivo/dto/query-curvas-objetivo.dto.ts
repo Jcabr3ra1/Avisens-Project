@@ -1,0 +1,13 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsIn, IsOptional } from 'class-validator';
+import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto';
+
+export class QueryCurvasObjetivoDto extends PaginationQueryDto {
+  @ApiPropertyOptional({
+    example: 'macho',
+    description: 'Filtrar por sexo: macho | hembra',
+  })
+  @IsIn(['macho', 'hembra'])
+  @IsOptional()
+  sexo?: string;
+}
