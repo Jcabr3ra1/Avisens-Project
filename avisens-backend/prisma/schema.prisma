@@ -1073,6 +1073,7 @@ model IndicadorLote {
 
   lote Lote @relation(fields: [lote_id], references: [id])
 
+  @@unique([lote_id, fecha])
   @@index([lote_id])
   @@map("indicadores_lote")
 }
