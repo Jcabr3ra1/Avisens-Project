@@ -32,22 +32,28 @@ describe('CurvasObjetivoService', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('crear', () => {
-    it('crea cuando la combinacion sexo+dia no existe', async () => {
+    it('crea cuando la combinacion marca+sexo+dia no existe', async () => {
       prisma.curvaObjetivo.findUnique.mockResolvedValue(null);
       prisma.curvaObjetivo.create.mockResolvedValue({ id: 1 });
-      await service.crear({ sexo: 'macho', dia: 21, peso_esperado_g: 1035 });
+      await service.crear({
+        marca: 'italcol',
+        sexo: 'macho',
+        dia: 21,
+        peso_esperado_g: 1035,
+      });
       expect(prisma.curvaObjetivo.create).toHaveBeenCalled();
     });
 
-    it('lanza Conflict cuando ya existe sexo+dia', async () => {
+    it('lanza Conflict cuando ya existe marca+sexo+dia', async () => {
       prisma.curvaObjetivo.findUnique.mockResolvedValue({
         id: 9,
+        marca: 'italcol',
         sexo: 'macho',
         dia: 21,
       });
-      await expect(service.crear({ sexo: 'macho', dia: 21 })).rejects.toThrow(
-        ConflictException,
-      );
+      await expect(
+        service.crear({ marca: 'italcol', sexo: 'macho', dia: 21 }),
+      ).rejects.toThrow(ConflictException);
       expect(prisma.curvaObjetivo.create).not.toHaveBeenCalled();
     });
   });
@@ -63,6 +69,7 @@ describe('CurvasObjetivoService', () => {
     it('actualiza el mismo punto sin verificar unica', async () => {
       prisma.curvaObjetivo.findUnique.mockResolvedValue({
         id: 1,
+        marca: 'italcol',
         sexo: 'macho',
         dia: 21,
       });
@@ -77,6 +84,7 @@ describe('CurvasObjetivoService', () => {
     it('borra fisicamente el punto', async () => {
       prisma.curvaObjetivo.findUnique.mockResolvedValue({
         id: 1,
+        marca: 'italcol',
         sexo: 'macho',
         dia: 21,
       });
