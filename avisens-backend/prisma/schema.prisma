@@ -358,6 +358,7 @@ model Lote {
   cantidad_inicial       Int
   raza                   String?
   sexo                   String?
+  marca_alimento         String?
   costo_pollito_unitario Float?
   presupuesto_total_cop  Float?
   fecha_salida_estimada  DateTime? @db.Date
