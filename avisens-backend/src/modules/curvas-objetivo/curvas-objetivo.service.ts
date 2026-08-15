@@ -14,9 +14,11 @@ export class CurvasObjetivoService {
   constructor(private prisma: PrismaService) {}
 
   async crear(dto: CreateCurvaObjetivoDto) {
-    await this.verificarUnica(dto.sexo, dto.dia);
+    await this.verificarUnica(dto.marca, dto.sexo, dto.dia);
     return this.prisma.curvaObjetivo.create({
       data: {
+        marca: dto.marca,
+        fuente: dto.fuente,
         sexo: dto.sexo,
         dia: dto.dia,
         peso_esperado_g: dto.peso_esperado_g,
@@ -30,12 +32,15 @@ export class CurvasObjetivoService {
     });
   }
 
-  async listar({ sexo, page, limit }: QueryCurvasObjetivoDto) {
-    const where = sexo ? { sexo } : undefined;
+  async listar({ marca, sexo, page, limit }: QueryCurvasObjetivoDto) {
+    const where = {
+      ...(marca ? { marca } : {}),
+      ...(sexo ? { sexo } : {}),
+    };
     const [data, total] = await this.prisma.$transaction([
       this.prisma.curvaObjetivo.findMany({
         where,
-        orderBy: [{ sexo: 'asc' }, { dia: 'asc' }],
+        orderBy: [{ marca: 'asc' }, { sexo: 'asc' }, { dia: 'asc' }],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -52,14 +57,17 @@ export class CurvasObjetivoService {
 
   async actualizar(id: number, dto: UpdateCurvaObjetivoDto) {
     const actual = await this.obtener(id);
+    const marca = dto.marca ?? actual.marca;
     const sexo = dto.sexo ?? actual.sexo;
     const dia = dto.dia ?? actual.dia;
-    if (sexo !== actual.sexo || dia !== actual.dia) {
-      await this.verificarUnica(sexo, dia, id);
+    if (marca !== actual.marca || sexo !== actual.sexo || dia !== actual.dia) {
+      await this.verificarUnica(marca, sexo, dia, id);
     }
     return this.prisma.curvaObjetivo.update({
       where: { id },
       data: {
+        marca: dto.marca,
+        fuente: dto.fuente,
         sexo: dto.sexo,
         dia: dto.dia,
         peso_esperado_g: dto.peso_esperado_g,
@@ -79,13 +87,18 @@ export class CurvasObjetivoService {
     return { id, eliminado: true };
   }
 
-  private async verificarUnica(sexo: string, dia: number, exceptoId?: number) {
+  private async verificarUnica(
+    marca: string,
+    sexo: string,
+    dia: number,
+    exceptoId?: number,
+  ) {
     const existente = await this.prisma.curvaObjetivo.findUnique({
-      where: { sexo_dia: { sexo, dia } },
+      where: { marca_sexo_dia: { marca, sexo, dia } },
     });
     if (existente && existente.id !== exceptoId) {
       throw new ConflictException(
-        `Ya existe un punto de curva para sexo ${sexo} y dia ${dia}`,
+        `Ya existe un punto de curva para la marca ${marca}, sexo ${sexo} y dia ${dia}`,
       );
     }
   }
