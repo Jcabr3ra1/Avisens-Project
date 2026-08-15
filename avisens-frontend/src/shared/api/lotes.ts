@@ -10,6 +10,7 @@ export interface Lote {
   cantidad_inicial: number
   raza: string | null
   sexo: string | null
+  marca_alimento: string | null
   costo_pollito_unitario: number | null
   presupuesto_total_cop: number | null
   fecha_salida_estimada: string | null
@@ -25,6 +26,7 @@ export interface CrearLotePayload {
   cantidad_inicial: number
   raza?: string
   sexo?: string
+  marca_alimento?: string
   costo_pollito_unitario?: number
   presupuesto_total_cop?: number
   fecha_salida_estimada?: string

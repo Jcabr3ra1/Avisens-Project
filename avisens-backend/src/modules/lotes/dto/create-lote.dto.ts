@@ -59,6 +59,15 @@ export class CreateLoteDto {
   sexo?: string;
 
   @ApiPropertyOptional({
+    example: 'italcol',
+    description:
+      'Marca de alimento del lote: italcol | solla | contegral | finca',
+  })
+  @IsString()
+  @IsOptional()
+  marca_alimento?: string;
+
+  @ApiPropertyOptional({
     example: 1200,
     description: 'Costo unitario de cada pollito (COP)',
   })
