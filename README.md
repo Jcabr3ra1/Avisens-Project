@@ -1,87 +1,123 @@
 # AVISENS — Gestión Avícola Inteligente
 
-**AVISENS** (Sistema Automatizado de Gestión y Monitoreo Avícola) es una plataforma SaaS integral para la gestión, monitoreo y automatización de granjas avícolas en Colombia y Latinoamérica.
+**AVISENS** (Sistema Automatizado de Gestión y Monitoreo Avícola) es una plataforma para la gestión, monitoreo e inteligencia de granjas avícolas de pollo de engorde en Colombia y Latinoamérica.
 
 ## ¿Qué problema resuelve?
 
-Los avicultores colombianos enfrentan alta mortalidad de aves por falta de monitoreo ambiental continuo, registros manuales propensos a errores, poca visibilidad financiera del ciclo productivo y procesos comerciales lentos. AVISENS automatiza todo ese flujo — desde la captación de clientes hasta el mantenimiento predictivo de infraestructura — con el objetivo de reducir la mortalidad avícola del 3% al 0,72%.
+Los avicultores colombianos enfrentan alta mortalidad de aves por falta de monitoreo ambiental continuo, registros manuales propensos a errores y poca visibilidad de la eficiencia del ciclo productivo. AVISENS lleva ese flujo a lo digital — registrar → medir → **predecir** → recomendar — con el objetivo de reducir la mortalidad avícola y mejorar la conversión alimenticia (FCR).
 
-## ¿Para quién es?
+## Roles del sistema
 
 | Rol | Descripción |
 |-----|-------------|
-| Administrador | Gestiona CRM, dashboards, reportes financieros y usuarios |
-| Usuario / Supervisor | Monitorea el estado ambiental y consolida reportes del ciclo productivo |
-| Operario | Registra bitácora y gestiona alertas en campo, principalmente por voz |
+| **Administrador** | Control total: usuarios, catálogos, curvas de referencia y auditoría |
+| **Propietario** | Gestiona sus granjas, galpones, lotes y ve sus indicadores |
+| **Operario** | Registra la bitácora del día (pesajes, consumos, mortalidad) en su galpón |
 
-## Módulos
+El alcance por rol se aplica en el servidor: cada Propietario solo ve y gestiona **sus** propios datos.
 
-| Módulo | Descripción |
-|--------|-------------|
-| Chatbot de cotización | Califica prospectos, genera cotizaciones en PDF y administra el pipeline de ventas |
-| Asistente de voz AVIA | Registro de bitácora y consultas ambientales por voz, manos libres, con soporte offline |
-| Monitoreo ambiental | Dashboards en tiempo real de temperatura, humedad, CO₂ y NH₃ con sensores IoT |
-| Motor de alertas | Alertas multicanal (push, correo, WhatsApp) con escalamiento automático por jerarquía |
-| Bitácora productiva | Registro digital de peso del lote, mortalidad y consumo por ciclo |
-| Finanzas e inventario | Costos por ciclo, gestión de insumos, proveedores y reporte financiero |
-| Mantenimiento predictivo | Mapa digital de la granja, seguimiento de equipos críticos y predicción de fallas |
-| Autenticación y roles | JWT, MFA para administradores y control de acceso basado en roles (RBAC) |
-
-## Estructura del Proyecto
+## Estructura del repositorio
 
 ```
 Avisens-Project/
-├── avisens-frontend/     ← Aplicación web (React 19 + TypeScript + Vite)
-├── avisens-android/      ← App multiplataforma (Kotlin Multiplatform + Compose)
-├── avisens-backend/      ← API REST (Go + Fiber) — en desarrollo
-└── avisens-api-gateway/  ← API Gateway — fase futura
+├── avisens-backend/    ← API REST (NestJS 11 + Prisma 7 + PostgreSQL)
+├── avisens-frontend/   ← Aplicación web (React 19 + TypeScript + Vite)
+├── avisens-android/    ← App móvil (Kotlin Multiplatform + Compose)
+├── esp32-firmware/     ← Firmware de los sensores IoT (ESP32 + PlatformIO)
+├── database/           ← Scripts e init de la base de datos
+├── postman/            ← Colección Postman para probar la API (local, ignorada)
+└── docker-compose.yml  ← PostgreSQL + backend + frontend
 ```
 
-## Tecnologías
+## Stack tecnológico
 
 | Capa | Tecnología |
 |------|------------|
-| Frontend web | React 19, TypeScript, Vite, Tailwind CSS |
-| App móvil / escritorio | Kotlin Multiplatform, Compose Multiplatform |
-| Plataformas móviles | Android, iOS |
-| Backend | Go, Fiber, PostgreSQL, Redis |
-| Autenticación | JWT + refresh tokens |
-| IoT | ESP32, sensores de temperatura / humedad / CO₂ / NH₃ |
-| Contenedores | Docker + Docker Compose |
+| **Backend** | NestJS 11, Prisma 7, PostgreSQL, TypeScript, pnpm |
+| **Autenticación** | JWT (access + refresh), RBAC por rol, rate limiting, CORS, Helmet/CSP |
+| **Frontend web** | React 19, TypeScript, Vite, axios |
+| **App móvil** | Kotlin Multiplatform, Compose Multiplatform (Android) |
+| **IoT** | ESP32 + PlatformIO → MQTT → backend (sensores de temperatura, humedad, CO₂, NH₃) |
+| **Contenedores** | Docker + Docker Compose |
+| **Despliegue** | Railway (backend en producción) |
+
+## Módulos del backend (implementados)
+
+La API está versionada bajo **`/v1`** y documentada con **Swagger** (`/docs` en desarrollo).
+
+| Área | Módulos |
+|------|---------|
+| **Autenticación** | `auth` (login, refresh, logout), `usuarios` (RBAC) |
+| **Estructura** | `granjas`, `galpones`, `lotes` |
+| **Monitoreo IoT** | `dispositivos`, `sensores`, `mediciones`, `umbrales`, `ingest` (ESP32 por token) |
+| **Catálogos** | `proveedores`, `insumos`, `tipos-alimento` |
+| **Bitácora productiva** | `pesajes`, `consumos-diarios`, `registros-mortalidad`, `eventos-sanitarios`, `registros-plagas` |
+| **Auditoría** | `auditoria` (log automático de acciones sensibles) |
+| **Inteligencia (Fase 1)** | `indicadores` (KPIs **FCR / EPEF** / mortalidad, job `@Cron` diario), `curvas-objetivo` (curva de referencia por marca de alimento) |
+
+### Capa de inteligencia — roadmap (EP-09)
+
+De *registrar y medir* a *predecir y recomendar*, por fases:
+
+1. **KPIs** — indicadores productivos del lote (FCR, EPEF…). ✅ *hecho*
+2. **Clima** — job que trae el clima externo como contexto. *en curso*
+3. **Predicciones (ML)** — servicio Python que predice peso, FCR y riesgo de mortalidad.
+4. **Recomendaciones** — acciones sugeridas a partir de los datos.
+5. **Copiloto IA + voz** · **6. Bioacústica / visión** · **7. SaaS multi-organización**.
 
 ## Correr localmente
 
-**Frontend web**
+### Backend (NestJS + PostgreSQL)
+
+```bash
+# 1. Levantar PostgreSQL (desde la raíz del repo)
+docker compose up -d database
+
+# 2. Configurar y arrancar el backend
+cd avisens-backend
+cp .env.example .env          # completa DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET, ADMIN_*
+pnpm install
+pnpm prisma migrate deploy    # aplica el esquema
+pnpm run seed                 # crea roles, admin y las curvas de referencia
+pnpm start:dev                # http://localhost:3000  (Swagger en /docs)
+```
+
+> Genera secretos JWT fuertes con `openssl rand -base64 48`. Nunca subas el `.env`.
+
+### Frontend web (React + Vite)
+
 ```bash
 cd avisens-frontend
+cp .env.example .env          # VITE_API_URL apuntando al backend
 npm install
 npm run dev
 ```
 
-**Backend**
-```bash
-cd avisens-backend
-docker compose up        # levanta PostgreSQL + Redis
-go run cmd/main.go
-```
+### App Android (Kotlin Multiplatform)
 
-**App Android**
 ```bash
 cd avisens-android
-./gradlew :app:androidApp:assembleDebug
+./gradlew :app:assembleDebug
 ```
 
-**App Desktop**
+### Firmware ESP32 (PlatformIO)
+
 ```bash
-cd avisens-android
-./gradlew :app:desktopApp:run
+cd esp32-firmware
+pio run                       # compilar
+pio run -t upload             # cargar al dispositivo
 ```
+
+## Calidad
+
+Todo cambio debe **demostrar que funciona** antes de considerarse terminado: pruebas de la lógica riesgosa (`jest`), *gates* en verde (`tsc --noEmit` + `eslint` + `jest` en backend, `build` en frontend) y una demo real de la ruta. El **CI de GitHub Actions** hace cumplir estos gates en cada push y Pull Request.
+
+Flujo de trabajo: **GitHub Flow** — rama por funcionalidad → Pull Request → CI en verde → *squash merge*. Nunca push directo a `main`.
 
 ## Proyecto
 
-Desarrollado como proyecto SENA — Cauca, Colombia · 2026
-
-Cumple con la **Ley 1581 de 2012** de Protección de Datos Personales de Colombia.
+Desarrollado como proyecto de formación **SENA** — Colombia · 2026.
+Diseñado para cumplir la **Ley 1581 de 2012** de Protección de Datos Personales de Colombia.
 
 ---
 
