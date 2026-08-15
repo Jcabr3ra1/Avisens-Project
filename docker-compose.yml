@@ -41,6 +41,7 @@ services:
       # 'database' es el nombre del servicio: dentro de la red de Docker
       # reemplaza a 'localhost'.
       DATABASE_URL: "postgresql://avisens:avisens@database:5432/avisens?schema=public"
+      NODE_ENV: development
       JWT_SECRET: cambia-esto-por-un-secreto-largo-y-aleatorio
       JWT_EXPIRES_IN: 15m
       JWT_REFRESH_SECRET: otro-secreto-distinto-tambien-largo
