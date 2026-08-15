@@ -1,5 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- Pantalla Inicio -->
+    <color name="bg_app">#E8F2EC</color>
+    <color name="farm_card_top">#1F5C42</color>
+    <color name="farm_card_bottom">#0E3B29</color>
+    <color name="green_button">#2F8B5E</color>
+    <color name="green_accent">#2E9E6B</color>
+    <color name="text_primary">#1A1A1A</color>
+    <color name="text_secondary">#9A9A9A</color>
+    <color name="white">#FFFFFF</color>
+    <color name="pill_overlay">#26FFFFFF</color>
+    <color name="orange_badge_bg">#FCEBD0</color>
+    <color name="orange_badge_text">#D98C1F</color>
+    <color name="dot_orange">#F0A93B</color>
+    <color name="dot_green">#4CAF50</color>
+    <color name="progress_track">#E4E4E4</color>
+    <color name="progress_fill">#F0A93B</color>
+    <color name="nav_selected">#1F5C42</color>
+    <color name="nav_unselected">#AEB4B1</color>
+
+    <!-- Pantalla Monitoreo ambiental -->
+    <color name="tab_container_bg">#EDEDED</color>
+    <color name="tab_selected_bg">#FFFFFF</color>
+    <color name="tab_text_selected">#1A1A1A</color>
+    <color name="tab_text_unselected">#9A9A9A</color>
+
+    <color name="ring_track">#EAEAEA</color>
+
+    <color name="gauge_orange">#E08A2E</color>
+    <color name="gauge_green">#3E8E5B</color>
+    <color name="gauge_red">#B23B33</color>
+
+    <color name="badge_orange_bg">#FBEBD3</color>
+    <color name="badge_orange_text">#C87F1F</color>
+    <color name="badge_green_bg">#DCEFE1</color>
+    <color name="badge_green_text">#2E8B57</color>
+    <color name="badge_red_bg">#F6DEDC</color>
+    <color name="badge_red_text">#B23B33</color>
+
+    <color name="thermometer_red">#D2483F</color>
+    <color name="water_blue">#3E8FDE</color>
+
+    <color name="bg_main">#F1F8F4</color>
+
+    <!-- Pantalla Alertas-->
+
+    <color name="red_alert">#E53935</color>
+    <color name="orange_alert">#E69B2D</color>
+
+    <color name="brown_button">#8A5A16</color>
+
+    <!-- Pantalla Notificaciones-->
+    <color name="switch_green">#299B72</color>
+    <color name="switch_green_dark">#218460</color>
+    <color name="switch_off">#D5DEDA</color>
+    <color name="switch_thumb">#FFFFFF</color>
+
+
+
+    <color name="black">#000000</color>
 </resources>

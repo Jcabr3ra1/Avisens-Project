@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- GRANJAS -->
+    <string-array name="granjas">
+        <item>Granja Las Palmas</item>
+        <item>Granja El Roble</item>
+        <item>Granja San José</item>
+        <item>Granja Buenavista</item>
+    </string-array>
+
+    <!-- MARCAS ALIMENTO -->
+    <string-array name="marcas_alimento">
+        <item>Seleccionar alimento</item>
+        <item>Italcol S.A</item>
+        <item>Solla S.A</item>
+        <item>Contegral</item>
+    </string-array>
+
+    <!-- LINEAS ALIMENTO -->
+    <string-array name="lineas_alimento">
+        <item>Seleccionar línea</item>
+        <item>Iniciación</item>
+        <item>Crecimiento</item>
+        <item>Engorde</item>
+    </string-array>
+
+    <!-- CAUSAS MUERTE -->
+    <string-array name="causas_muerte">
+        <item>Seleccionar causa</item>
+        <item>Golpe de calor</item>
+        <item>Aplastamiento</item>
+        <item>Problemas respiratorios</item>
+        <item>Enfermedad</item>
+        <item>Debilidad o bajo desarrollo</item>
+        <item>Muerte súbita</item>
+        <item>Problemas digestivos</item>
+        <item>Otra</item>
+    </string-array>
+
+    <!-- CAUSAS ENFERMEDAD -->
+    <string-array name="causas_enfermedad">
+        <item>Seleccionar enfermedad</item>
+        <item>Problemas respiratorios</item>
+        <item>Coccidiosis</item>
+        <item>Problemas digestivos</item>
+        <item>Problemas locomotores</item>
+        <item>Infección bacteriana</item>
+        <item>Infección viral</item>
+        <item>Parasitismo</item>
+        <item>Otra</item>
+    </string-array>
+
+    <!-- CATEGORÍAS DE INSUMOS -->
+    <string-array name="categorias_insumo">
+        <item>Seleccionar categoría</item>
+        <item>Alimento</item>
+        <item>Medicamento</item>
+    </string-array>
+
+    <!-- UNIDADES ALIMENTO -->
+    <string-array name="unidades_alimento">
+        <item>Seleccionar unidad</item>
+        <item>Kg</item>
+        <item>Bultos</item>
+        <item>Toneladas</item>
+    </string-array>
+
+    <!-- UNIDADES MEDICAMENTO -->
+    <string-array name="unidades_medicamento">
+        <item>Seleccionar unidad</item>
+        <item>Unidades</item>
+        <item>Frascos</item>
+        <item>Cajas</item>
+        <item>Litros</item>
+    </string-array>
+
+</resources>
