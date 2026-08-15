@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#EAF4EF"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- ========================================= -->
+        <!-- BOTÓN CERRAR -->
+        <!-- ========================================= -->
+
+        <ImageButton
+            android:id="@+id/btnCerrarPerfil"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginBottom="8dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="Cerrar perfil"
+            android:padding="8dp"
+            android:src="@drawable/ic_close"
+            app:tint="#66736D" />
+
+        <!-- ========================================= -->
+        <!-- ENCABEZADO -->
+        <!-- ========================================= -->
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Mi perfil"
+            android:textColor="#18231F"
+            android:textSize="25sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Gestiona tu información personal"
+            android:textColor="#66736D"
+            android:textSize="14sp" />
+
+        <!-- ========================================= -->
+        <!-- TARJETA PERFIL -->
+        <!-- ========================================= -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_card_white"
+            android:elevation="2dp"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- AVATAR + NOMBRE -->
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/txtInicialPerfil"
+                    android:layout_width="58dp"
+                    android:layout_height="58dp"
+                    android:background="@drawable/bg_avatar_perfil"
+                    android:gravity="center"
+                    android:text="C"
+                    android:textColor="@android:color/white"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/txtNombrePerfil"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Cristian Lubo"
+                        android:textColor="#18231F"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Información personal"
+                        android:textColor="#89948F"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- ========================================= -->
+            <!-- DIVISOR -->
+            <!-- ========================================= -->
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="6dp"
+                android:background="#E3EAE6" />
+
+            <!-- ========================================= -->
+            <!-- NOMBRE -->
+            <!-- ========================================= -->
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingVertical="12dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Nombre completo"
+                        android:textColor="#89948F"
+                        android:textSize="11sp" />
+
+                    <EditText
+                        android:id="@+id/edtNombrePerfil"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:background="@android:color/transparent"
+                        android:enabled="false"
+                        android:padding="0dp"
+                        android:text="Cristian Lubo"
+                        android:textColor="#26332E"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btnEditarNombre"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_edit_profile_button"
+                    android:contentDescription="Editar nombre"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_edit"
+                    app:tint="#2E9B6F" />
+
+            </LinearLayout>
+
+            <!-- ========================================= -->
+            <!-- CORREO -->
+            <!-- ========================================= -->
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingVertical="12dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Correo electrónico"
+                        android:textColor="#89948F"
+                        android:textSize="11sp" />
+
+                    <EditText
+                        android:id="@+id/edtCorreoPerfil"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:background="@android:color/transparent"
+                        android:enabled="false"
+                        android:inputType="textEmailAddress"
+                        android:padding="0dp"
+                        android:text="cristian@ejemplo.com"
+                        android:textColor="#26332E"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btnEditarCorreo"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_edit_profile_button"
+                    android:contentDescription="Editar correo"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_edit"
+                    app:tint="#2E9B6F" />
+
+            </LinearLayout>
+
+            <!-- ========================================= -->
+            <!-- TELÉFONO -->
+            <!-- ========================================= -->
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingVertical="12dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Teléfono"
+                        android:textColor="#89948F"
+                        android:textSize="11sp" />
+
+                    <EditText
+                        android:id="@+id/edtTelefonoPerfil"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:background="@android:color/transparent"
+                        android:enabled="false"
+                        android:inputType="phone"
+                        android:padding="0dp"
+                        android:text="300 000 0000"
+                        android:textColor="#26332E"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btnEditarTelefono"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_edit_profile_button"
+                    android:contentDescription="Editar teléfono"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_edit"
+                    app:tint="#2E9B6F" />
+
+            </LinearLayout>
+
+            <!-- ========================================= -->
+            <!-- GUARDAR CAMBIOS -->
+            <!-- ========================================= -->
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGuardarPerfil"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="14dp"
+                android:text="Guardar cambios"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                app:backgroundTint="#2E9B6F"
+                app:cornerRadius="25dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
