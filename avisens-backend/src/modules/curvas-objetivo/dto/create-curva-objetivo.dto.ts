@@ -2,13 +2,31 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateCurvaObjetivoDto {
-  @ApiProperty({ example: 'macho', description: 'Sexo: macho | hembra' })
-  @IsIn(['macho', 'hembra'])
+  @ApiProperty({
+    example: 'italcol',
+    description: 'Marca de alimento: italcol | solla | contegral | finca',
+  })
+  @IsString()
+  marca: string;
+
+  @ApiProperty({
+    example: 'macho',
+    description: 'Sexo: macho | hembra | mixto',
+  })
+  @IsIn(['macho', 'hembra', 'mixto'])
   sexo: string;
 
   @ApiProperty({ example: 21, description: 'Dia de vida del pollo' })
   @IsInt()
   dia: number;
+
+  @ApiPropertyOptional({
+    example: 'italcol',
+    description: 'Fuente del dato: manual de la marca, cobb500, ross308, etc.',
+  })
+  @IsString()
+  @IsOptional()
+  fuente?: string;
 
   @ApiPropertyOptional({
     example: 1035,

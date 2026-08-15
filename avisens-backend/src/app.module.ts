@@ -24,11 +24,14 @@ import { ConsumosDiariosModule } from './modules/consumos-diarios/consumos-diari
 import { RegistrosPlagasModule } from './modules/registros-plagas/registros-plagas.module';
 import { TiposAlimentoModule } from './modules/tipos-alimento/tipos-alimento.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
+import { IndicadoresModule } from './modules/indicadores/indicadores.module';
 import { CurvasObjetivoModule } from './modules/curvas-objetivo/curvas-objetivo.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot({
       throttlers: [
         {
@@ -57,6 +60,7 @@ import { CurvasObjetivoModule } from './modules/curvas-objetivo/curvas-objetivo.
     RegistrosPlagasModule,
     TiposAlimentoModule,
     AuditoriaModule,
+    IndicadoresModule,
     CurvasObjetivoModule,
     HealthModule,
   ],
