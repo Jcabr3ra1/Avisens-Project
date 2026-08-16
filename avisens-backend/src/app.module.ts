@@ -28,6 +28,7 @@ import { IndicadoresModule } from './modules/indicadores/indicadores.module';
 import { CurvasObjetivoModule } from './modules/curvas-objetivo/curvas-objetivo.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClimaModule } from './modules/clima/clima.module';
+import { AlertasModule } from './modules/alertas/alertas.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { ClimaModule } from './modules/clima/clima.module';
     IndicadoresModule,
     CurvasObjetivoModule,
     ClimaModule,
+    AlertasModule,
     HealthModule,
   ],
   providers: [
