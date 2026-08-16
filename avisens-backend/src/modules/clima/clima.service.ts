@@ -5,53 +5,53 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ConfigService } from '@nestjs/config';
 import { verificarDueno, Solicitante } from '../../common/acceso';
 
-interface OpenWeatherResp {
-  main?: { temp?: number; humidity?: number };
-  wind?: { speed?: number };
-  rain?: { '1h'?: number };
+interface OpenMeteoResp {
+  current?: {
+    temperature_2m?: number;
+    relative_humidity_2m?: number;
+    wind_speed_10m?: number;
+    precipitation?: number;
+  };
 }
 @Injectable()
 export class ClimaService {
   private readonly logger = new Logger(ClimaService.name);
 
-  constructor(
-    private prisma: PrismaService,
-    private config: ConfigService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   async traerClimaDeGranja(granja: {
     id: number;
     latitud: number | null;
     longitud: number | null;
   }) {
-    const apiKey = this.config.get<string>('OPENWEATHER_KEY');
-    if (!apiKey || granja.latitud == null || granja.longitud == null) {
+    if (granja.latitud == null || granja.longitud == null) {
       return null;
     }
 
     const url =
-      `https://api.openweathermap.org/data/2.5/weather` +
-      `?lat=${granja.latitud}&lon=${granja.longitud}` +
-      `&appid=${apiKey}&units=metric`;
+      `https://api.open-meteo.com/v1/forecast` +
+      `?latitude=${granja.latitud}&longitude=${granja.longitud}` +
+      `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation` +
+      `&wind_speed_unit=kmh`;
 
     const respuesta = await fetch(url);
     if (!respuesta.ok) {
       this.logger.warn(`Clima no disponible para granja ${granja.id}`);
       return null;
     }
-    const d = (await respuesta.json()) as OpenWeatherResp;
+    const d = (await respuesta.json()) as OpenMeteoResp;
+    const actual = d.current;
 
     return this.prisma.clima.create({
       data: {
         granja_id: granja.id,
-        temperatura: d.main?.temp,
-        humedad: d.main?.humidity,
-        viento_kmh: d.wind?.speed != null ? d.wind.speed * 3.6 : null,
-        precipitacion: d.rain?.['1h'] ?? null,
-        fuente: 'openweather',
+        temperatura: actual?.temperature_2m,
+        humedad: actual?.relative_humidity_2m,
+        viento_kmh: actual?.wind_speed_10m ?? null,
+        precipitacion: actual?.precipitation ?? null,
+        fuente: 'open-meteo',
       },
     });
   }
