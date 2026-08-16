@@ -14,6 +14,7 @@ const LOTE_SELECT = {
   cantidad_inicial: true,
   raza: true,
   sexo: true,
+  marca_alimento: true,
   costo_pollito_unitario: true,
   presupuesto_total_cop: true,
   fecha_salida_estimada: true,
@@ -69,6 +70,7 @@ export class LotesService {
         cantidad_inicial: dto.cantidad_inicial,
         raza: dto.raza,
         sexo: dto.sexo,
+        marca_alimento: dto.marca_alimento,
         costo_pollito_unitario: dto.costo_pollito_unitario,
         presupuesto_total_cop: dto.presupuesto_total_cop,
         fecha_salida_estimada: dto.fecha_salida_estimada
@@ -134,6 +136,7 @@ export class LotesService {
         cantidad_inicial: dto.cantidad_inicial,
         raza: dto.raza,
         sexo: dto.sexo,
+        marca_alimento: dto.marca_alimento,
         costo_pollito_unitario: dto.costo_pollito_unitario,
         presupuesto_total_cop: dto.presupuesto_total_cop,
         fecha_salida_estimada: dto.fecha_salida_estimada

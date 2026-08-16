@@ -21,7 +21,22 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
 
-  app.use(helmet());
+  const enProduccion = config.get<string>('NODE_ENV') === 'production';
+  app.use(
+    helmet({
+      contentSecurityPolicy: enProduccion
+        ? undefined
+        : {
+            directives: {
+              defaultSrc: [`'self'`],
+              scriptSrc: [`'self'`, `'unsafe-inline'`],
+              styleSrc: [`'self'`, `'unsafe-inline'`],
+              imgSrc: [`'self'`, 'data:'],
+              connectSrc: [`'self'`],
+            },
+          },
+    }),
+  );
 
   app.set('trust proxy', 1);
 
