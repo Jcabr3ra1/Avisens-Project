@@ -29,6 +29,7 @@ import { CurvasObjetivoModule } from './modules/curvas-objetivo/curvas-objetivo.
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClimaModule } from './modules/clima/clima.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
+import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-alerta.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { AlertasModule } from './modules/alertas/alertas.module';
     ClimaModule,
     AlertasModule,
     HealthModule,
+    PoliticasAlertaModule,
   ],
   providers: [
     {
