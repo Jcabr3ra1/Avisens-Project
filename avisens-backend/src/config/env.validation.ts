@@ -39,10 +39,6 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   CORS_ORIGIN: string;
-
-  @IsString()
-  @IsOptional()
-  OPENWEATHER_KEY: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

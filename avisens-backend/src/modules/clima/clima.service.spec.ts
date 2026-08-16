@@ -4,7 +4,6 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { ClimaService } from './clima.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ROLES } from '../../common/roles';
@@ -23,20 +22,12 @@ describe('ClimaService', () => {
     },
   };
 
-  const config = {
-    get: jest.fn(),
-  };
-
   const admin: Solicitante = { id: 1, rol: ROLES.ADMINISTRADOR };
   const propietario: Solicitante = { id: 5, rol: ROLES.PROPIETARIO };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        ClimaService,
-        { provide: PrismaService, useValue: prisma },
-        { provide: ConfigService, useValue: config },
-      ],
+      providers: [ClimaService, { provide: PrismaService, useValue: prisma }],
     }).compile();
     service = module.get<ClimaService>(ClimaService);
   });
@@ -93,19 +84,7 @@ describe('ClimaService', () => {
       jest.restoreAllMocks();
     });
 
-    it('devuelve null sin OPENWEATHER_KEY', async () => {
-      config.get.mockReturnValue(undefined);
-      const r = await service.traerClimaDeGranja({
-        id: 1,
-        latitud: 6.2,
-        longitud: -75.5,
-      });
-      expect(r).toBeNull();
-      expect(prisma.clima.create).not.toHaveBeenCalled();
-    });
-
     it('devuelve null cuando la granja no tiene coordenadas', async () => {
-      config.get.mockReturnValue('api-key');
       const r = await service.traerClimaDeGranja({
         id: 1,
         latitud: null,
@@ -115,8 +94,7 @@ describe('ClimaService', () => {
       expect(prisma.clima.create).not.toHaveBeenCalled();
     });
 
-    it('devuelve null cuando OpenWeather responde con error', async () => {
-      config.get.mockReturnValue('api-key');
+    it('devuelve null cuando Open-Meteo responde con error', async () => {
       global.fetch = jest.fn().mockResolvedValue({ ok: false });
       const r = await service.traerClimaDeGranja({
         id: 1,
@@ -127,14 +105,16 @@ describe('ClimaService', () => {
       expect(prisma.clima.create).not.toHaveBeenCalled();
     });
 
-    it('guarda el clima y convierte el viento de m/s a km/h', async () => {
-      config.get.mockReturnValue('api-key');
+    it('guarda el clima mapeando los campos de Open-Meteo', async () => {
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue({
-          main: { temp: 28.5, humidity: 70 },
-          wind: { speed: 10 },
-          rain: { '1h': 2.5 },
+          current: {
+            temperature_2m: 23.1,
+            relative_humidity_2m: 60,
+            wind_speed_10m: 6,
+            precipitation: 0,
+          },
         }),
       });
       prisma.clima.create.mockResolvedValue({ id: 1 });
@@ -148,17 +128,21 @@ describe('ClimaService', () => {
       expect(prisma.clima.create).toHaveBeenCalledWith({
         data: {
           granja_id: 3,
-          temperatura: 28.5,
-          humedad: 70,
-          viento_kmh: 36,
-          precipitacion: 2.5,
-          fuente: 'openweather',
+          temperatura: 23.1,
+          humedad: 60,
+          viento_kmh: 6,
+          precipitacion: 0,
+          fuente: 'open-meteo',
         },
       });
     });
   });
 
   describe('traerAhora', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('lanza NotFound cuando la granja no existe', async () => {
       prisma.granja.findUnique.mockResolvedValue(null);
       await expect(service.traerAhora(99, admin)).rejects.toThrow(
@@ -185,7 +169,7 @@ describe('ClimaService', () => {
         latitud: 6.2,
         longitud: -75.5,
       });
-      config.get.mockReturnValue(undefined);
+      global.fetch = jest.fn().mockResolvedValue({ ok: false });
       await expect(service.traerAhora(1, admin)).rejects.toThrow(
         BadRequestException,
       );
@@ -198,10 +182,9 @@ describe('ClimaService', () => {
         latitud: 6.2,
         longitud: -75.5,
       });
-      config.get.mockReturnValue('api-key');
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
-        json: jest.fn().mockResolvedValue({ main: { temp: 25 } }),
+        json: jest.fn().mockResolvedValue({ current: { temperature_2m: 25 } }),
       });
       prisma.clima.create.mockResolvedValue({ id: 7, temperatura: 25 });
       const r = await service.traerAhora(1, admin);
