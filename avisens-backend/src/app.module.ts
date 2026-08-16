@@ -27,6 +27,7 @@ import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { IndicadoresModule } from './modules/indicadores/indicadores.module';
 import { CurvasObjetivoModule } from './modules/curvas-objetivo/curvas-objetivo.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-alerta.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     IndicadoresModule,
     CurvasObjetivoModule,
     HealthModule,
+    PoliticasAlertaModule,
   ],
   providers: [
     {
