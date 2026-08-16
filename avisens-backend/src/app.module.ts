@@ -27,6 +27,7 @@ import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { IndicadoresModule } from './modules/indicadores/indicadores.module';
 import { CurvasObjetivoModule } from './modules/curvas-objetivo/curvas-objetivo.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ClimaModule } from './modules/clima/clima.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuditoriaModule,
     IndicadoresModule,
     CurvasObjetivoModule,
+    ClimaModule,
     HealthModule,
   ],
   providers: [
