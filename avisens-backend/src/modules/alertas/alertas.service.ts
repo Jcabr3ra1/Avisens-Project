@@ -1,5 +1,6 @@
 // alertas.service.ts
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAlertasDto } from './dto/create-alertas.dto';
 import { UpdateAlertasDto } from './dto/update-alertas.dto';
@@ -142,56 +143,15 @@ export class AlertasService {
     return sensor;
   }
 
-  /**
-   * VALIDAR USUARIO - CORREGIDO
-   * Maneja correctamente el caso donde organizacion_id puede ser null
-   */
-  private async validarUsuario(userId: number, solicitante: Solicitante) {
+  private async validarUsuario(userId: number) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        nombre_completo: true,
-        email: true,
-        rol_id: true,
-        organizacion_id: true,
-        rol: {
-          select: {
-            nombre: true,
-          },
-        },
-      },
+      select: { id: true, nombre_completo: true, email: true },
     });
 
     if (!usuario) {
       throw new NotFoundException(`Usuario con ID ${userId} no encontrado`);
     }
-
-    // Si el usuario es ADMINISTRADOR, puede asignar cualquier usuario
-    if (solicitante.rol === 'ADMINISTRADOR') {
-      return usuario;
-    }
-
-    // Si es PROPIETARIO, validar que pertenece a la misma organización
-    // IMPORTANTE: manejar el caso donde organizacion_id es null
-    if (solicitante.id && usuario.organizacion_id) {
-      if (usuario.organizacion_id !== solicitante.id) {
-        throw new ForbiddenException(
-          'No puedes asignar usuarios de otra organización'
-        );
-      }
-    } else if (solicitante.id && !usuario.organizacion_id) {
-      // El solicitante tiene organización pero el usuario no
-      throw new ForbiddenException(
-        'El usuario no pertenece a ninguna organización'
-      );
-    } else if (!solicitante.id && usuario.organizacion_id) {
-      // El solicitante no tiene organización pero el usuario sí
-      throw new ForbiddenException(
-        'No puedes asignar usuarios de organizaciones'
-      );
-    }
-    // Si ambos no tienen organización, permitir (caso usuarios sin organización)
 
     return usuario;
   }
@@ -273,12 +233,15 @@ export class AlertasService {
   /**
    * ACTUALIZAR ALERTA - CORREGIDO
    */
-  async actualizar(id: number, dto: UpdateAlertasDto, solicitante: Solicitante) {
+  async actualizar(
+    id: number,
+    dto: UpdateAlertasDto,
+    solicitante: Solicitante,
+  ) {
     // Verificar que existe y el usuario tiene acceso
     await this.obtener(id, solicitante);
 
-    // Construir objeto data dinámicamente
-    const data: any = {};
+    const data: Prisma.AlertaUncheckedUpdateInput = {};
 
     // Validar y asignar responsable_id
     if (dto.responsable_id !== undefined) {
@@ -287,7 +250,7 @@ export class AlertasService {
         data.responsable_id = null;
       } else {
         // Validar que el usuario existe
-        await this.validarUsuario(dto.responsable_id, solicitante);
+        await this.validarUsuario(dto.responsable_id);
         data.responsable_id = dto.responsable_id;
       }
     }
@@ -299,7 +262,7 @@ export class AlertasService {
         data.escalado_a_id = null;
       } else {
         // Validar que el usuario existe
-        await this.validarUsuario(dto.escalado_a_id, solicitante);
+        await this.validarUsuario(dto.escalado_a_id);
         data.escalado_a_id = dto.escalado_a_id;
       }
     }
@@ -314,7 +277,9 @@ export class AlertasService {
     }
 
     if (dto.fecha_aceptacion !== undefined) {
-      data.fecha_aceptacion = dto.fecha_aceptacion ? new Date(dto.fecha_aceptacion) : null;
+      data.fecha_aceptacion = dto.fecha_aceptacion
+        ? new Date(dto.fecha_aceptacion)
+        : null;
     }
 
     if (dto.fecha_cierre !== undefined) {
@@ -347,7 +312,11 @@ export class AlertasService {
     });
   }
 
-  async cerrar(id: number, dto: { accion_correctiva: string }, solicitante: Solicitante) {
+  async cerrar(
+    id: number,
+    dto: { accion_correctiva: string },
+    solicitante: Solicitante,
+  ) {
     await this.obtener(id, solicitante);
 
     return this.prisma.alerta.update({
@@ -363,9 +332,9 @@ export class AlertasService {
 
   async escalar(id: number, escalado_a_id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
-    
+
     // Validar que el usuario a escalar existe
-    await this.validarUsuario(escalado_a_id, solicitante);
+    await this.validarUsuario(escalado_a_id);
 
     return this.prisma.alerta.update({
       where: { id },
@@ -413,7 +382,11 @@ export class AlertasService {
     };
   }
 
-  async obtenerPorGalpon(galponId: number, solicitante: Solicitante, paginacion: PaginationQueryDto) {
+  async obtenerPorGalpon(
+    galponId: number,
+    solicitante: Solicitante,
+    paginacion: PaginationQueryDto,
+  ) {
     const { page, limit } = paginacion;
 
     await this.validarGalpon(galponId, solicitante);
@@ -434,7 +407,11 @@ export class AlertasService {
     return paginate(data, total, page, limit);
   }
 
-  async obtenerPorLote(loteId: number, solicitante: Solicitante, paginacion: PaginationQueryDto) {
+  async obtenerPorLote(
+    loteId: number,
+    solicitante: Solicitante,
+    paginacion: PaginationQueryDto,
+  ) {
     const { page, limit } = paginacion;
 
     await this.validarLote(loteId, solicitante);

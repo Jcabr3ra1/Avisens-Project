@@ -59,24 +59,7 @@ export class CreateAlertasDto {
     example: 'Temperatura por encima del umbral permitido',
     description: 'Mensaje descriptivo de la alerta',
   })
-
   @IsString()
   @IsOptional()
   mensaje?: string;
-
-  @ApiProperty({
-  example: '1',
-  description: 'se encendieron los extractores'
-    
-})
-
-@IsString()
-accion_correctiva: string;
-
-
-@ApiProperty({})
-
-@IsNumber()
-escalado_a_id: Number;
-
 }

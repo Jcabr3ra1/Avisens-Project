@@ -46,8 +46,9 @@ export class AlertasController {
   }
 
   @Get()
-  @ApiOperation({ 
-    summary: 'Listar alertas paginado (Admin: todas · Propietario: sus granjas)' 
+  @ApiOperation({
+    summary:
+      'Listar alertas paginado (Admin: todas · Propietario: sus granjas)',
   })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.alertasService.listar(req.user, paginacion);
