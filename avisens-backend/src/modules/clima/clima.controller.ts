@@ -3,6 +3,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -34,5 +35,17 @@ export class ClimaController {
     @Req() req: AuthRequest,
   ) {
     return this.clima.listar(granjaId, req.user);
+  }
+
+  @Post('traer')
+  @Roles(ROLES.ADMINISTRADOR)
+  @ApiOperation({
+    summary: 'Traer y guardar el clima de una granja ahora mismo',
+  })
+  traerAhora(
+    @Param('granjaId', ParseIntPipe) granjaId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.clima.traerAhora(granjaId, req.user);
   }
 }

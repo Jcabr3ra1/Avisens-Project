@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClimaService } from './clima.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -151,6 +155,57 @@ describe('ClimaService', () => {
           fuente: 'openweather',
         },
       });
+    });
+  });
+
+  describe('traerAhora', () => {
+    it('lanza NotFound cuando la granja no existe', async () => {
+      prisma.granja.findUnique.mockResolvedValue(null);
+      await expect(service.traerAhora(99, admin)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('lanza Forbidden cuando el propietario no es dueno', async () => {
+      prisma.granja.findUnique.mockResolvedValue({
+        id: 1,
+        propietario_id: 999,
+        latitud: 6.2,
+        longitud: -75.5,
+      });
+      await expect(service.traerAhora(1, propietario)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('lanza BadRequest cuando no se pudo traer el clima', async () => {
+      prisma.granja.findUnique.mockResolvedValue({
+        id: 1,
+        propietario_id: admin.id,
+        latitud: 6.2,
+        longitud: -75.5,
+      });
+      config.get.mockReturnValue(undefined);
+      await expect(service.traerAhora(1, admin)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('devuelve la lectura cuando el fetch fue exitoso', async () => {
+      prisma.granja.findUnique.mockResolvedValue({
+        id: 1,
+        propietario_id: admin.id,
+        latitud: 6.2,
+        longitud: -75.5,
+      });
+      config.get.mockReturnValue('api-key');
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ main: { temp: 25 } }),
+      });
+      prisma.clima.create.mockResolvedValue({ id: 7, temperatura: 25 });
+      const r = await service.traerAhora(1, admin);
+      expect(r).toEqual({ id: 7, temperatura: 25 });
     });
   });
 });

@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { verificarDueno, Solicitante } from '../../common/acceso';
@@ -71,5 +76,31 @@ export class ClimaService {
       orderBy: { fecha_hora: 'desc' },
       take: 48,
     });
+  }
+  async traerAhora(granjaId: number, solicitante: Solicitante) {
+    const granja = await this.prisma.granja.findUnique({
+      where: { id: granjaId },
+      select: {
+        id: true,
+        propietario_id: true,
+        latitud: true,
+        longitud: true,
+      },
+    });
+    if (!granja) throw new NotFoundException('Granja no encontrada');
+
+    verificarDueno(
+      solicitante,
+      granja.propietario_id,
+      'Solo puedes traer el clima de tus propias granjas',
+    );
+
+    const lectura = await this.traerClimaDeGranja(granja);
+    if (!lectura) {
+      throw new BadRequestException(
+        'No se pudo traer el clima (revisa OPENWEATHER_KEY y las coordenadas de la granja)',
+      );
+    }
+    return lectura;
   }
 }

@@ -50,6 +50,9 @@ services:
       # Dominio desde el que el navegador carga el frontend (nginx). Obligatoria
       # en producción: sin ella la app no arranca (evita CORS abierto).
       CORS_ORIGIN: "http://localhost:8080"
+      # Clave de OpenWeather para el modulo de clima. Se toma del entorno del host
+      # (o de un .env junto a este compose) para no versionar el secreto.
+      OPENWEATHER_KEY: ${OPENWEATHER_KEY:-}
       # Crea el usuario admin del seed al arrancar (idempotente). Así quien haga
       # `docker compose up` obtiene la base lista sin correr nada a mano.
       RUN_SEED: "true"
