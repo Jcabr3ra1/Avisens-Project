@@ -32,7 +32,7 @@ const POLITICAS_ALERTA_SELECT = {
 } as const;
 
 const CRITICIDADES_VALIDAS = ['Baja', 'Media', 'Alta'];
-const CANALES_VALIDOS = ['whatsApp', 'Email', 'SMS'];
+const CANALES_VALIDOS = ['WhatsApp', 'Email', 'SMS'];
 
 @Injectable()
 export class PoliticasAlertaService {
@@ -54,7 +54,7 @@ export class PoliticasAlertaService {
     verificarDueno(
       solicitante,
       granja.propietario_id,
-      'Solo puedes gestionar polïticas de alertas de tus propias granjas',
+      'Solo puedes gestionar politicas de alertas de tus propias granjas',
     );
   }
 
@@ -69,7 +69,7 @@ export class PoliticasAlertaService {
       !CRITICIDADES_VALIDAS.includes(dto.criticidad)
     ) {
       throw new BadRequestException(
-        'La criticidad debe ser: Bajsa, Media o Alta',
+        'La criticidad debe ser: Baja, Media o Alta',
       );
     }
 
@@ -82,7 +82,7 @@ export class PoliticasAlertaService {
       dto.tiempo_max_respuesta_seg <= 0
     ) {
       throw new BadRequestException(
-        'El tiempo máximo de repuesta debe ser mayor que cero',
+        'El tiempo máximo de respuesta debe ser mayor que cero',
       );
     }
 
