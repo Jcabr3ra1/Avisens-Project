@@ -1,0 +1,31 @@
+meta {
+  name: [Admin · Propietario]  Crear un umbral (versión 1, vigente)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/umbrales
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+{
+  "galpon_id": 1,
+  "variable": "temperatura",
+  "semana_vida": 1,
+  "valor_minimo": 30,
+  "valor_maximo": 33,
+  "unidad": "°C",
+  "criticidad": "alta"
+}
+}

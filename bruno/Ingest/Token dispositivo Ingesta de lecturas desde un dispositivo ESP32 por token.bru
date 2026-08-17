@@ -1,0 +1,29 @@
+meta {
+  name: [Token dispositivo]  Ingesta de lecturas desde un dispositivo (ESP32) por token
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/ingest
+  body: json
+  auth: none
+}
+
+headers {
+  X-Device-Token: {{device_token}}
+  Content-Type: application/json
+}
+
+body:json {
+{
+  "lecturas": [
+    {
+      "codigo": "TEMP-G1-01",
+      "valor": 24.8,
+      "calidad": "ok"
+    }
+  ],
+  "ip_local": "192.168.1.42"
+}
+}

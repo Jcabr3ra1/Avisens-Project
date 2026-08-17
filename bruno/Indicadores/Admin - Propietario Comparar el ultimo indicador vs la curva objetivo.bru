@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Comparar el ultimo indicador vs la curva objetivo
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/indicadores/1/comparacion
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

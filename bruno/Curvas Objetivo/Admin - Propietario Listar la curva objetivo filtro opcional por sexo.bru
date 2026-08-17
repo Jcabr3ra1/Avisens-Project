@@ -1,0 +1,22 @@
+meta {
+  name: [Admin · Propietario]  Listar la curva objetivo (filtro opcional por sexo)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/curvas-objetivo?marca=italcol&sexo=macho&page=1&limit=50
+  body: none
+  auth: bearer
+}
+
+params:query {
+  marca: italcol
+  sexo: macho
+  page: 1
+  limit: 50
+}
+
+auth:bearer {
+  token: {{token}}
+}

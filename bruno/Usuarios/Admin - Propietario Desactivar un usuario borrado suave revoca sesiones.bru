@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Desactivar un usuario (borrado suave, revoca sesiones)
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/v1/usuarios/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

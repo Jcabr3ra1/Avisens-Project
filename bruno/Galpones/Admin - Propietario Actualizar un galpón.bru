@@ -1,0 +1,35 @@
+meta {
+  name: [Admin · Propietario]  Actualizar un galpón
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/galpones/1
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+{
+  "granja_id": 1,
+  "codigo": "galpon1",
+  "nombre": "Galpón Norte",
+  "capacidad_aves": 5000,
+  "ancho_metros": 12.5,
+  "largo_metros": 80,
+  "orientacion": "norte-sur",
+  "tipo_techo": "zinc",
+  "plano_url": "https://.../plano.pdf",
+  "fecha_construccion": "2024-03-15",
+  "activo": true
+}
+}

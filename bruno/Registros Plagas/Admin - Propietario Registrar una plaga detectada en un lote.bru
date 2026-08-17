@@ -1,0 +1,32 @@
+meta {
+  name: [Admin · Propietario]  Registrar una plaga detectada en un lote
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/registros-plagas
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+{
+  "lote_id": 1,
+  "fecha": "2026-08-09",
+  "tipo_plaga": "roedores",
+  "insumo_id": 1,
+  "descripcion": "Presencia de ratones en el area de alimento",
+  "control_aplicado": "Cebos y sellado de accesos",
+  "metodo_registro": "manual",
+  "observaciones": "Revisar de nuevo en 3 dias"
+}
+}
