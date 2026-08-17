@@ -1,0 +1,33 @@
+meta {
+  name: [Admin · Propietario]  Actualizar una granja
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/granjas/1
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+{
+  "nombre": "Granja La Esperanza",
+  "direccion": "Vereda El Progreso km 4",
+  "municipio": "Rionegro",
+  "departamento": "Antioquia",
+  "latitud": 6.1553,
+  "longitud": -75.3739,
+  "area_total_m2": 5000,
+  "propietario_id": 3,
+  "activa": true
+}
+}

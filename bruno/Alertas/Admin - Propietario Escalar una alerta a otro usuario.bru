@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Escalar una alerta a otro usuario
+  type: http
+  seq: 10
+}
+
+patch {
+  url: {{baseUrl}}/v1/alertas/1/escalar/2
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

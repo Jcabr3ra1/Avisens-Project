@@ -1,0 +1,20 @@
+meta {
+  name: [Admin · Propietario]  Alertas de un lote
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/v1/alertas/lote/1?page=1&limit=10
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 10
+}
+
+auth:bearer {
+  token: {{token}}
+}

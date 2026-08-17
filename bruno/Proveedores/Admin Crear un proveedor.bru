@@ -1,0 +1,31 @@
+meta {
+  name: [Admin]  Crear un proveedor
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/proveedores
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+{
+  "nombre": "Alimentos del Campo S.A.S",
+  "nit": "900123456-7",
+  "tipo_proveedor": "alimento",
+  "contacto_persona": "Juan Pérez",
+  "telefono": "3001234567",
+  "email": "ventas@alimentos.com",
+  "direccion": "Calle 10 #20-30, Bogotá"
+}
+}

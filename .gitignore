@@ -55,9 +55,11 @@ docs/
 # Temporales de Office (Word deja estos archivos mientras un .docx está abierto).
 ~$*
 
-# Herramientas personales (no se versionan)
-# Colección de Postman para probar la API y guía personal del backend.
-postman/
+# Coleccion de Bruno para probar la API. SI se versiona (trabajo en equipo).
+# Bruno guarda los valores de las variables "secret" (tokens) en este archivo
+# local, que NO se versiona:
+bruno/environments/.env
+.env.bruno
 
 # Módulo descartado
 avisens-api-gateway/

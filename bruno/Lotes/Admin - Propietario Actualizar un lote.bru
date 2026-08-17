@@ -1,0 +1,27 @@
+meta {
+  name: [Admin · Propietario]  Actualizar un lote
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/lotes/1
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+{
+  "cantidad_inicial": 4980,
+  "estado": "finalizado",
+  "fecha_salida_real": "2026-11-01"
+}
+}

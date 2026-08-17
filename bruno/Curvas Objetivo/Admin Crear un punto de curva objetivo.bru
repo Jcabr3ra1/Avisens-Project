@@ -1,0 +1,31 @@
+meta {
+  name: [Admin]  Crear un punto de curva objetivo
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/curvas-objetivo
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+{
+  "marca": "solla",
+  "sexo": "mixto",
+  "dia": 21,
+  "peso_esperado_g": 780,
+  "fcr_objetivo": null,
+  "etapa_alimentacion": "iniciacion",
+  "fuente": "solla-clima-calido"
+}
+}

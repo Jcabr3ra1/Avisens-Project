@@ -1,0 +1,15 @@
+meta {
+  name: [Admin]  Eliminar un punto de curva de forma permanente
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/v1/curvas-objetivo/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

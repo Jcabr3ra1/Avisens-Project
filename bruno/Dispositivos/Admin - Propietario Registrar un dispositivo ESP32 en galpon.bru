@@ -1,0 +1,30 @@
+meta {
+  name: [Admin · Propietario]  Registrar un dispositivo (ESP32) en galpon
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/dispositivos
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+{
+  "galpon_id": 1,
+  "mac_address": "A4:CF:12:8B:00:1A",
+  "codigo_topic": "galpon1",
+  "nombre": "Nodo entrada norte",
+  "version_firmware": "1.0.3",
+  "ip_local": "192.168.1.42"
+}
+}

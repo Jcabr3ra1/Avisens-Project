@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Obtener una política por ID
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/politicas-alerta/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

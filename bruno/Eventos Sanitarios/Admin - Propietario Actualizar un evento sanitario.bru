@@ -1,0 +1,26 @@
+meta {
+  name: [Admin · Propietario]  Actualizar un evento sanitario
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/eventos-sanitarios/1
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+{
+  "dosis": "1 ml por ave",
+  "observaciones": "Corrección de dosis"
+}
+}

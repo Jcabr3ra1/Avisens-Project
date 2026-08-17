@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Jubilar un umbral (vigente=false, sin reemplazo)
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/v1/umbrales/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

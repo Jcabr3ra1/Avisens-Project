@@ -1,0 +1,30 @@
+meta {
+  name: [Admin · Propietario]  Crear un usuario (Admin: cualquiera · Propietario: operarios)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/usuarios
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+{
+  "nombre_completo": "María López",
+  "cedula": "1098765432",
+  "email": "maria@granja.com",
+  "password": "contraseña123",
+  "telefono": "3001234567",
+  "rol_id": 2
+}
+}

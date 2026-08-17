@@ -1,0 +1,31 @@
+meta {
+  name: [Admin · Propietario]  Registrar una mortalidad de un lote
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/registros-mortalidad
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+{
+  "lote_id": 1,
+  "fecha": "2026-08-08",
+  "cantidad_aves": 12,
+  "causa_presuntiva": "Golpe de calor",
+  "disposicion": "Incineración",
+  "metodo_registro": "manual",
+  "observaciones": "Concentradas en la esquina norte"
+}
+}
