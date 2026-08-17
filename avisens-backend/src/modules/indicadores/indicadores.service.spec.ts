@@ -11,7 +11,8 @@ describe('IndicadoresService · calcularParaLote', () => {
     pesaje: { findFirst: jest.fn() },
     consumoDiario: { aggregate: jest.fn() },
     registroMortalidad: { aggregate: jest.fn() },
-    indicadorLote: { upsert: jest.fn() },
+    indicadorLote: { upsert: jest.fn(), findFirst: jest.fn() },
+    curvaObjetivo: { findFirst: jest.fn() },
   };
 
   const guardadoDe = (mock: jest.Mock): Record<string, unknown> => {
@@ -86,5 +87,96 @@ describe('IndicadoresService · calcularParaLote', () => {
     await expect(service.calcularParaLote(99)).rejects.toThrow(
       NotFoundException,
     );
+  });
+});
+
+describe('IndicadoresService · compararConCurva', () => {
+  let service: IndicadoresService;
+
+  const prisma = {
+    lote: { findUnique: jest.fn() },
+    indicadorLote: { findFirst: jest.fn() },
+    curvaObjetivo: { findFirst: jest.fn() },
+  };
+
+  const admin = { id: 1, rol: 'Administrador' };
+
+  const loteConDueno = {
+    galpon: { granja: { propietario_id: 1 } },
+    sexo: 'macho',
+    marca_alimento: 'italcol',
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        IndicadoresService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get<IndicadoresService>(IndicadoresService);
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  it('lanza NotFound cuando no hay indicadores calculados', async () => {
+    prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+    prisma.indicadorLote.findFirst.mockResolvedValue(null);
+    await expect(service.compararConCurva(1, admin)).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('devuelve sin_referencia cuando no hay curva para la marca y sexo', async () => {
+    prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+    prisma.indicadorLote.findFirst.mockResolvedValue({
+      dia_vida: 21,
+      peso_promedio_g: 1000,
+      fcr: 1.2,
+    });
+    prisma.curvaObjetivo.findFirst.mockResolvedValue(null);
+
+    const r = await service.compararConCurva(1, admin);
+    expect(r.veredicto).toBe('sin_referencia');
+    expect(r.objetivo).toBeNull();
+  });
+
+  it('veredicto por_debajo cuando el peso real esta bajo la curva', async () => {
+    prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+    prisma.indicadorLote.findFirst.mockResolvedValue({
+      dia_vida: 21,
+      peso_promedio_g: 900,
+      fcr: 1.3,
+    });
+    prisma.curvaObjetivo.findFirst.mockResolvedValue({
+      dia: 21,
+      peso_esperado_g: 1035,
+      fcr_objetivo: 1.18,
+    });
+
+    const r = await service.compararConCurva(1, admin);
+    expect(r.veredicto).toBe('por_debajo');
+    expect(r.desvio_peso_pct as number).toBeCloseTo(-13.04, 1);
+    expect(r.desvio_fcr as number).toBeCloseTo(0.12, 2);
+    expect(r.real).toEqual({ peso_promedio_g: 900, fcr: 1.3 });
+    expect(r.objetivo).toEqual({ peso_esperado_g: 1035, fcr_objetivo: 1.18 });
+  });
+
+  it('veredicto en_objetivo cuando el peso esta dentro del umbral', async () => {
+    prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+    prisma.indicadorLote.findFirst.mockResolvedValue({
+      dia_vida: 21,
+      peso_promedio_g: 1035,
+      fcr: 1.18,
+    });
+    prisma.curvaObjetivo.findFirst.mockResolvedValue({
+      dia: 21,
+      peso_esperado_g: 1035,
+      fcr_objetivo: 1.18,
+    });
+
+    const r = await service.compararConCurva(1, admin);
+    expect(r.veredicto).toBe('en_objetivo');
+    expect(r.desvio_peso_pct as number).toBeCloseTo(0, 5);
   });
 });
