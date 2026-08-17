@@ -75,6 +75,7 @@ model Usuario {
   recuperaciones          RecuperacionPassword[]
   usuarios_galpones       UsuarioGalpon[]
   prospectos_asesorados   Prospecto[]
+  solicitudes_pqrs        SolicitudPqrs[]
   comandos_voz            ComandoVoz[]
   accionamientos          AccionamientoEquipo[]
   alertas_responsable     Alerta[]               @relation("AlertaResponsable")
@@ -621,7 +622,12 @@ model Prospecto {
   id                         Int       @id @default(autoincrement())
   sesion_id                  String    @unique
   nombre                     String?
+  nombre_granja              String?
+  documento                  String?
   municipio                  String?
+  departamento               String?
+  area_granja_m2             Float?
+  area_galpon_m2             Float?
   rol_prospecto              String?
   tipo_produccion            String?
   telefono                   String?
@@ -629,6 +635,8 @@ model Prospecto {
   canal_origen               String?
   contacto_decisor           String?
   fecha_callback             DateTime?
+  puntaje_total              Int?
+  clasificacion              String?
   estado                     String    @default("nuevo")
   asesor_asignado_id         Int?
   ip_origen                  String?
@@ -641,6 +649,7 @@ model Prospecto {
   respuestas    RespuestaChatbot[]
   cotizaciones  Cotizacion[]
   interacciones InteraccionChatbot[]
+  solicitudes   SolicitudPqrs[]
 
   @@index([asesor_asignado_id])
   @@map("prospectos")
@@ -710,6 +719,27 @@ model InteraccionChatbot {
 
   @@index([prospecto_id])
   @@map("interacciones_chatbot")
+}
+
+model SolicitudPqrs {
+  id              Int       @id @default(autoincrement())
+  prospecto_id    Int
+  categoria       String
+  codigo_pregunta String?
+  asunto          String?
+  mensaje         String?
+  respuesta       String?
+  estado          String    @default("abierta")
+  responsable_id  Int?
+  fecha_creacion  DateTime  @default(now())
+  fecha_cierre    DateTime?
+
+  prospecto   Prospecto @relation(fields: [prospecto_id], references: [id])
+  responsable Usuario?  @relation(fields: [responsable_id], references: [id])
+
+  @@index([prospecto_id])
+  @@index([responsable_id])
+  @@map("solicitudes_pqrs")
 }
 
 // ---------------------------------------------------------------------------

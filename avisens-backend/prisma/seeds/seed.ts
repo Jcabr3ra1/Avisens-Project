@@ -269,10 +269,153 @@ async function sembrarCurvasObjetivo() {
   }
 }
 
+const MATRIZ_CALIFICACION = [
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A8',
+    opcion_respuesta: '<1000',
+    puntaje: 0,
+    descripcion: 'Escala de la operacion (HU-03)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A8',
+    opcion_respuesta: '1000-5000',
+    puntaje: 2,
+    descripcion: 'Escala de la operacion (HU-03)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A8',
+    opcion_respuesta: '5000-10000',
+    puntaje: 3,
+    descripcion: 'Escala de la operacion (HU-03)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A8',
+    opcion_respuesta: '>10000',
+    puntaje: 4,
+    descripcion: 'Escala de la operacion (HU-03)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A16',
+    opcion_respuesta: 'Sí, más de una vez',
+    puntaje: 3,
+    descripcion: 'Dolor declarado (HU-02)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A16',
+    opcion_respuesta: 'Una vez',
+    puntaje: 2,
+    descripcion: 'Dolor declarado (HU-02)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A16',
+    opcion_respuesta: 'No',
+    puntaje: 0,
+    descripcion: 'Dolor declarado (HU-02)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A16',
+    opcion_respuesta: 'No sé la causa',
+    puntaje: 0,
+    descripcion: 'Dolor declarado (HU-02)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A18',
+    opcion_respuesta: 'Compra directa',
+    puntaje: 3,
+    descripcion: 'Presupuesto y adquisicion (HU-04)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A18',
+    opcion_respuesta: 'Suscripción',
+    puntaje: 3,
+    descripcion: 'Presupuesto y adquisicion (HU-04)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A18',
+    opcion_respuesta: 'Lo que sea más conveniente',
+    puntaje: 1,
+    descripcion: 'Presupuesto y adquisicion (HU-04)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A18',
+    opcion_respuesta: 'No sé',
+    puntaje: 0,
+    descripcion: 'Presupuesto y adquisicion (HU-04)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A9',
+    opcion_respuesta:
+      'Sí, está construido y se encuentra en buenas condiciones',
+    puntaje: 1,
+    descripcion: 'Infraestructura habilitante (HU-03)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A11',
+    opcion_respuesta: 'Eléctrico estable',
+    puntaje: 1,
+    descripcion: 'Infraestructura habilitante (HU-03)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A13',
+    opcion_respuesta: 'Sí, estable',
+    puntaje: 1,
+    descripcion: 'Infraestructura habilitante (HU-03)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A19',
+    opcion_respuesta: 'Sí, ya tengo cotizaciones',
+    puntaje: 3,
+    descripcion: 'Urgencia y competencia (HU-05)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A19',
+    opcion_respuesta: 'Estoy mirando opciones',
+    puntaje: 1,
+    descripcion: 'Urgencia y competencia (HU-05)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A19',
+    opcion_respuesta: 'Solo AVISENS',
+    puntaje: 0,
+    descripcion: 'Urgencia y competencia (HU-05)',
+  },
+  {
+    bloque: 'A',
+    codigo_pregunta: 'A19',
+    opcion_respuesta: 'No sé qué más existe',
+    puntaje: 0,
+    descripcion: 'Urgencia y competencia (HU-05)',
+  },
+];
+
+async function sembrarMatrizCalificacion() {
+  await prisma.matrizCalificacion.deleteMany();
+  await prisma.matrizCalificacion.createMany({ data: MATRIZ_CALIFICACION });
+}
+
 async function main() {
   const rolAdmin = await sembrarRoles();
   await sembrarAdmin(rolAdmin.id);
   await sembrarCurvasObjetivo();
+  await sembrarMatrizCalificacion();
   console.log('Seed completado');
 }
 
