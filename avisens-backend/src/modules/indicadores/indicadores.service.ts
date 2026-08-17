@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { verificarDueno, Solicitante } from '../../common/acceso';
 
 const PESO_INICIAL_G = 42;
+const UMBRAL_DESVIO_PCT = 5;
 
 @Injectable()
 export class IndicadoresService {
@@ -114,5 +115,79 @@ export class IndicadoresService {
       where: { lote_id: loteId },
       orderBy: { fecha: 'asc' },
     });
+  }
+
+  async compararConCurva(loteId: number, solicitante: Solicitante) {
+    await this.verificarPropiedad(loteId, solicitante);
+
+    const lote = await this.prisma.lote.findUnique({
+      where: { id: loteId },
+      select: { sexo: true, marca_alimento: true },
+    });
+    if (!lote) throw new NotFoundException('Lote no encontrado');
+
+    const indicador = await this.prisma.indicadorLote.findFirst({
+      where: { lote_id: loteId },
+      orderBy: { fecha: 'desc' },
+    });
+    if (!indicador || indicador.dia_vida == null) {
+      throw new NotFoundException(
+        'No hay indicadores calculados para este lote todavia',
+      );
+    }
+
+    const curva = await this.prisma.curvaObjetivo.findFirst({
+      where: {
+        marca: lote.marca_alimento ?? 'italcol',
+        sexo: lote.sexo ?? 'mixto',
+        dia: { lte: indicador.dia_vida },
+      },
+      orderBy: { dia: 'desc' },
+    });
+    if (!curva) {
+      return {
+        dia_vida: indicador.dia_vida,
+        veredicto: 'sin_referencia',
+        mensaje: 'No hay curva objetivo para la marca y sexo de este lote',
+        real: {
+          peso_promedio_g: indicador.peso_promedio_g,
+          fcr: indicador.fcr,
+        },
+        objetivo: null,
+      };
+    }
+    let desvioPesoPct: number | null = null;
+    let veredicto = 'sin_datos';
+    if (indicador.peso_promedio_g != null && curva.peso_esperado_g != null) {
+      desvioPesoPct =
+        ((indicador.peso_promedio_g - curva.peso_esperado_g) /
+          curva.peso_esperado_g) *
+        100;
+
+      if (desvioPesoPct < -UMBRAL_DESVIO_PCT) veredicto = 'por_debajo';
+      else if (desvioPesoPct > UMBRAL_DESVIO_PCT) veredicto = 'por_encima';
+      else veredicto = 'en_objetivo';
+    }
+
+    const desvioFcr =
+      indicador.fcr != null && curva.fcr_objetivo != null
+        ? indicador.fcr - curva.fcr_objetivo
+        : null;
+
+    return {
+      dia_vida: indicador.dia_vida,
+      dia_curva: curva.dia,
+      veredicto,
+      real: {
+        peso_promedio_g: indicador.peso_promedio_g,
+        fcr: indicador.fcr,
+      },
+      objetivo: {
+        peso_esperado_g: curva.peso_esperado_g,
+        fcr_objetivo: curva.fcr_objetivo,
+      },
+      desvio_peso_pct: desvioPesoPct,
+      desvio_fcr: desvioFcr,
+    };
   }
 }

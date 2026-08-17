@@ -38,6 +38,17 @@ export class IndicadoresController {
     return this.indicadoresService.calcular(loteId, req.user);
   }
 
+  @Get(':loteId/comparacion')
+  @ApiOperation({
+    summary: 'Comparar el ultimo indicador del lote contra la curva objetivo',
+  })
+  comparar(
+    @Param('loteId', ParseIntPipe) loteId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.indicadoresService.compararConCurva(loteId, req.user);
+  }
+
   @Get(':loteId')
   @ApiOperation({ summary: 'Listar el historico de indicadores de un lote' })
   listar(
