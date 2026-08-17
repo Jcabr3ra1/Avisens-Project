@@ -407,8 +407,18 @@ const MATRIZ_CALIFICACION = [
 ];
 
 async function sembrarMatrizCalificacion() {
-  await prisma.matrizCalificacion.deleteMany();
-  await prisma.matrizCalificacion.createMany({ data: MATRIZ_CALIFICACION });
+  for (const fila of MATRIZ_CALIFICACION) {
+    await prisma.matrizCalificacion.upsert({
+      where: {
+        codigo_pregunta_opcion_respuesta: {
+          codigo_pregunta: fila.codigo_pregunta,
+          opcion_respuesta: fila.opcion_respuesta,
+        },
+      },
+      update: fila,
+      create: fila,
+    });
+  }
 }
 
 async function main() {
