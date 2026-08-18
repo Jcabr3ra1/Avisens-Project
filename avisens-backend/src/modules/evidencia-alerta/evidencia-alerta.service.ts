@@ -164,7 +164,7 @@ export class EvidenciaAlertaService {
     });
   }
 
-  async eliminado(id: number, solicitante: Solicitante) {
+  async eliminar(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
     await this.prisma.evidenciaAlerta.delete({
