@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#EAF4EF">
+
+    <!-- =====================================================
+         CONTENIDO PRINCIPAL
+         ===================================================== -->
+
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- =================================================
+                 BOTÓN ATRÁS
+                 ================================================= -->
+
+            <ImageButton
+                android:id="@+id/btnVolver"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginBottom="28dp"
+                android:background="@drawable/bg_spinner_granja"
+                android:contentDescription="Volver"
+                android:padding="12dp"
+                android:src="@drawable/ic_arrow_back"
+                android:tint="#145C42" />
+
+            <!-- =================================================
+                 TÍTULO
+                 ================================================= -->
+
+            <TextView
+                android:id="@+id/txtTitulo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Recuperar contraseña"
+                android:textColor="#17231F"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+            <!-- =================================================
+                 DESCRIPCIÓN
+                 ================================================= -->
+
+            <TextView
+                android:id="@+id/txtDescripcion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="28dp"
+                android:text="Ingresa tu correo electrónico y te enviaremos instrucciones para recuperar el acceso a tu cuenta."
+                android:textColor="#66736D"
+                android:textSize="15sp"
+                android:lineSpacingExtra="3dp" />
+
+            <!-- =================================================
+                 TARJETA DEL FORMULARIO
+                 ================================================= -->
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card_white"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- CORREO -->
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Correo electrónico"
+                    android:textColor="#26332E"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/edtCorreo"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_edittext"
+                    android:hint="Ingresa tu correo"
+                    android:inputType="textEmailAddress"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:textColor="#26332E"
+                    android:textColorHint="#98A49F"
+                    android:textSize="15sp" />
+
+                <!-- INFORMACIÓN -->
+
+                <TextView
+                    android:id="@+id/txtInfo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:text="Asegúrate de utilizar el correo asociado a tu cuenta de Avisens."
+                    android:textColor="#7A8580"
+                    android:textSize="13sp" />
+
+                <!-- BOTÓN -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEnviarCorreo"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="24dp"
+                    android:text="Enviar"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="#2E9B6F"
+                    app:cornerRadius="10dp"
+                    app:strokeWidth="0dp" />
+
+            </LinearLayout>
+
+
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

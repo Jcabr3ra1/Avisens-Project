@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/dialogContainer"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="32dp"
+    android:paddingEnd="32dp"
+    android:paddingTop="24dp"
+    android:paddingBottom="22dp"
+    android:background="@drawable/bg_dialog_gestion_galpon">
+
+    <!-- ========================================== -->
+    <!-- TÍTULO -->
+    <!-- ========================================== -->
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Gestión Galpón"
+        android:textColor="#18211D"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="30dp" />
+
+    <!-- ========================================== -->
+    <!-- NOMBRE GALPÓN -->
+    <!-- ========================================== -->
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nombre Galpón"
+        android:textColor="#18211D"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="10dp" />
+
+    <EditText
+        android:id="@+id/edtNombreGalpon"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_input_galpon"
+        android:hint="Ej: Granja Kotlin"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:textColor="@color/black"
+        android:textColorHint="#91A09A"
+        android:textSize="11sp"
+        android:singleLine="true"
+        android:layout_marginBottom="24dp" />
+
+    <!-- ========================================== -->
+    <!-- CANTIDAD POLLOS -->
+    <!-- ========================================== -->
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Cantidad Pollos"
+        android:textColor="#18211D"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="10dp" />
+
+    <EditText
+        android:id="@+id/edtCantidadPollos"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_input_galpon"
+        android:hint="Ej: 500"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:textColor="@color/black"
+        android:textColorHint="#91A09A"
+        android:textSize="11sp"
+        android:inputType="number"
+        android:singleLine="true"
+        android:layout_marginBottom="24dp" />
+
+    <!-- ========================================== -->
+    <!-- MARCA ALIMENTO -->
+    <!-- ========================================== -->
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Marca Alimento"
+        android:textColor="@color/text_primary"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:layout_marginTop="18dp" />
+
+    <Spinner
+        android:id="@+id/spinnerMarcaAlimento"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_spinner_galpon"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:textColor="@color/black"
+        android:spinnerMode="dropdown" />
+
+    <!-- ========================================== -->
+    <!-- LÍNEAS -->
+    <!-- ========================================== -->
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Líneas"
+        android:textColor="@color/text_primary"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:layout_marginTop="18dp" />
+
+    <Spinner
+        android:id="@+id/spinnerLineas"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_spinner_galpon"
+        android:paddingStart="14dp"
+        android:textColor="@color/black"
+        android:paddingEnd="14dp"
+        android:layout_marginBottom="30dp"
+        android:spinnerMode="dropdown" />
+
+    <!-- ========================================== -->
+    <!-- BOTONES -->
+    <!-- ========================================== -->
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <!-- CANCELAR -->
+
+
+        <!-- CREAR LOTE -->
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancelarGalpon"
+            android:layout_width="151dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="40"
+            android:text="Cancelar"
+            android:textAllCaps="false"
+            android:textColor="#26332E"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/white"
+            app:cornerRadius="10dp"
+            app:rippleColor="#E8F3ED"
+            app:strokeColor="#DDE5E0"
+            app:strokeWidth="1dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCrearLote"
+            android:layout_width="150dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="6dp"
+            android:text="Crear Lote"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:backgroundTint="@null"
+            android:background="@drawable/bg_boton_verde"
+            app:cornerRadius="10dp"
+            app:strokeWidth="0dp"
+            app:rippleColor="#24845D" />
+
+    </LinearLayout>
+
+</LinearLayout>
