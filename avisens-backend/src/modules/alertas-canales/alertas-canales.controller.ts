@@ -1,4 +1,6 @@
 // alertas-canales.controller.ts
+// REVISION (Juan): hay errores de formato Prettier en este archivo. Se arreglan
+// solos con:  pnpm exec eslint "src/modules/alertas-canales/**/*.ts" --fix
 import {
   Body,
   Controller,

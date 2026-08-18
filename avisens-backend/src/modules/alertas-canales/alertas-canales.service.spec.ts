@@ -1,4 +1,12 @@
 // alertas-canales.service.spec.ts
+// ============================================================================
+// REVISION (Juan) — el CI falla por estos puntos (arreglar antes de mergear):
+//  1) Los imports de DTO de abajo usan ".dto" (correcto), pero los ARCHIVOS
+//     estan como "-dto.ts". Renombralos a ".dto.ts" y se resuelven.
+//  2) Variables sin usar: otroPropietario, dtoActualizar, whereDe.
+//  3) Linea ~350: no espiar el metodo privado 'obtenerCanalConValidacion'.
+//  4) Formato Prettier: correr  pnpm exec eslint "src/modules/alertas-canales/**/*.ts" --fix
+// ============================================================================
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AlertasCanalesService } from './alertas-canales.service';
@@ -30,6 +38,8 @@ describe('AlertasCanalesService', () => {
   // Usuarios de prueba
   const admin = { id: 1, rol: 'Administrador', organizacion_id: 1 };
   const propietario = { id: 5, rol: 'Propietario', organizacion_id: 1 };
+  // REVISION (Juan): 'otroPropietario' se declara pero no se usa (eslint falla).
+  // Usalo en un test de acceso ajeno, o borralo.
   const otroPropietario = { id: 10, rol: 'Propietario', organizacion_id: 2 };
 
   // DTOs de prueba
@@ -39,11 +49,12 @@ describe('AlertasCanalesService', () => {
     estado_envio: 'pendiente',
   };
 
+  // REVISION (Juan): 'dtoActualizar' declarado pero no usado (eslint falla).
   const dtoActualizar: UpdateAlertasCanalesDto = {
     estado_envio: 'enviado',
   };
 
-  // Helper para extraer where
+  // REVISION (Juan): 'whereDe' declarado pero no usado (eslint falla). Usalo o borralo.
   const whereDe = (mock: jest.Mock): Record<string, unknown> => {
     const calls = mock.mock.calls as Array<[{ where: Record<string, unknown> }]>;
     return calls[0]?.[0]?.where || {};
@@ -347,6 +358,10 @@ describe('AlertasCanalesService', () => {
     it('debería retornar el registro actual si no hay datos para actualizar', async () => {
       const dto = {};
       const expectedResult = { id: 1 };
+      // REVISION (Juan): no se puede espiar 'obtenerCanalConValidacion' porque es
+      // un metodo PRIVADO del service (tsc falla: no esta en keyof publico). Mejor
+      // mockear prisma.alertaCanal.findUnique para que el metodo real corra y
+      // devuelva expectedResult. Evita tambien el 'as any'.
       jest.spyOn(service, 'obtenerCanalConValidacion').mockResolvedValue(expectedResult as any);
 
       const result = await service.actualizar(1, dto, propietario);
