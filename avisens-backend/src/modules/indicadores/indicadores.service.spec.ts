@@ -180,3 +180,87 @@ describe('IndicadoresService · compararConCurva', () => {
     expect(r.desvio_peso_pct as number).toBeCloseTo(0, 5);
   });
 });
+
+describe('IndicadoresService · generarAlertaDesvio', () => {
+  let service: IndicadoresService;
+
+  const prisma = {
+    lote: { findUnique: jest.fn() },
+    indicadorLote: { findFirst: jest.fn() },
+    curvaObjetivo: { findFirst: jest.fn() },
+    alerta: { findFirst: jest.fn(), create: jest.fn() },
+  };
+
+  const lote = {
+    galpon: { granja: { propietario_id: 1 } },
+    galpon_id: 7,
+    sexo: 'macho',
+    marca_alimento: 'italcol',
+  };
+
+  const curvaDia21 = { dia: 21, peso_esperado_g: 1035, fcr_objetivo: 1.18 };
+
+  const ponerPorDebajo = () => {
+    prisma.lote.findUnique.mockResolvedValue(lote);
+    prisma.indicadorLote.findFirst.mockResolvedValue({
+      dia_vida: 21,
+      peso_promedio_g: 900,
+      fcr: 1.3,
+    });
+    prisma.curvaObjetivo.findFirst.mockResolvedValue(curvaDia21);
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        IndicadoresService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get<IndicadoresService>(IndicadoresService);
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  it('no genera alerta cuando el lote no va por debajo', async () => {
+    prisma.lote.findUnique.mockResolvedValue(lote);
+    prisma.indicadorLote.findFirst.mockResolvedValue({
+      dia_vida: 21,
+      peso_promedio_g: 1035,
+      fcr: 1.18,
+    });
+    prisma.curvaObjetivo.findFirst.mockResolvedValue(curvaDia21);
+
+    const r = await service.generarAlertaDesvio(1);
+    expect(r).toBeNull();
+    expect(prisma.alerta.create).not.toHaveBeenCalled();
+  });
+
+  it('no duplica si ya existe una alerta de desvio abierta', async () => {
+    ponerPorDebajo();
+    prisma.alerta.findFirst.mockResolvedValue({ id: 99 });
+
+    const r = await service.generarAlertaDesvio(1);
+    expect(r).toBeNull();
+    expect(prisma.alerta.create).not.toHaveBeenCalled();
+  });
+
+  it('crea la alerta cuando va por debajo y no hay una abierta', async () => {
+    ponerPorDebajo();
+    prisma.alerta.findFirst.mockResolvedValue(null);
+    prisma.alerta.create.mockResolvedValue({ id: 1 });
+
+    await service.generarAlertaDesvio(1);
+
+    expect(prisma.alerta.create).toHaveBeenCalledTimes(1);
+    const calls = prisma.alerta.create.mock.calls as Array<
+      [{ data: Record<string, unknown> }]
+    >;
+    expect(calls[0][0].data).toMatchObject({
+      galpon_id: 7,
+      lote_id: 1,
+      tipo: 'desvio_peso',
+      criticidad: 'media',
+    });
+  });
+});

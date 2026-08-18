@@ -1,9 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { verificarDueno, Solicitante } from '../../common/acceso';
+import { ROLES } from '../../common/roles';
 
 const PESO_INICIAL_G = 42;
 const UMBRAL_DESVIO_PCT = 5;
+const ALERTA_TIPO_DESVIO = 'desvio_peso';
+const SISTEMA: Solicitante = { id: 0, rol: ROLES.ADMINISTRADOR };
 
 @Injectable()
 export class IndicadoresService {
@@ -189,5 +192,36 @@ export class IndicadoresService {
       desvio_peso_pct: desvioPesoPct,
       desvio_fcr: desvioFcr,
     };
+  }
+
+  async generarAlertaDesvio(loteId: number) {
+    const comparacion = await this.compararConCurva(loteId, SISTEMA);
+    if (comparacion.veredicto !== 'por_debajo') {
+      return null;
+    }
+    const lote = await this.prisma.lote.findUnique({
+      where: { id: loteId },
+      select: { galpon_id: true },
+    });
+    if (!lote) return null;
+
+    const yaExiste = await this.prisma.alerta.findFirst({
+      where: {
+        lote_id: loteId,
+        tipo: ALERTA_TIPO_DESVIO,
+        estado: 'abierta',
+      },
+    });
+    if (yaExiste) return null;
+    const desvio = comparacion.desvio_peso_pct?.toFixed(1) ?? '?';
+    return this.prisma.alerta.create({
+      data: {
+        galpon_id: lote.galpon_id,
+        lote_id: loteId,
+        tipo: ALERTA_TIPO_DESVIO,
+        criticidad: 'media',
+        mensaje: `El lote va ${desvio}% por debajo de la curva objetivo (dia ${comparacion.dia_vida})`,
+      },
+    });
   }
 }
