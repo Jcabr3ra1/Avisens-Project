@@ -1,0 +1,19 @@
+# Overrides SOLO para desarrollo local. Docker Compose lo carga automaticamente
+# encima de docker-compose.yml al hacer `docker compose up`.
+# Da hot-reload: al editar el codigo, el servicio se recarga sin `--build`.
+# En produccion NO se usa (se levanta solo el base: `docker compose -f docker-compose.yml up`).
+services:
+  # Backend NestJS en modo watch (nest --watch). Usa la etapa `dev` del Dockerfile.
+  backend:
+    build:
+      target: dev
+    command: sh -c "pnpm prisma migrate deploy && pnpm run start:dev"
+    volumes:
+      - ./avisens-backend:/app
+      - /app/node_modules
+
+  # Microservicio Python con uvicorn --reload.
+  ml:
+    volumes:
+      - ./avisens-ml:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload

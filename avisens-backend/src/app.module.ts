@@ -32,6 +32,7 @@ import { AlertasModule } from './modules/alertas/alertas.module';
 import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-alerta.module';
 import { AlertasCanalesModule } from './modules/alertas-canales/alertas-canales.module';
 import { MovimientosFinancierosModule } from './modules/movimientos-financieros/movimientos-financieros.module';
+import { PrediccionesModule } from './modules/predicciones/predicciones.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { MovimientosFinancierosModule } from './modules/movimientos-financieros/
     PoliticasAlertaModule,
     AlertasCanalesModule,
     MovimientosFinancierosModule,
+    PrediccionesModule,
   ],
   providers: [
     {
