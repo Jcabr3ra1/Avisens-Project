@@ -21,8 +21,8 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ROLES } from '../../common/roles';
 import { AlertasCanalesService } from './alertas-canales.service';
-import { CreateAlertasCanalesDto } from './dto/create-alertas-canales-dto';
-import { UpdateAlertasCanalesDto } from './dto/update-alertas-canales-dto';
+import { CreateAlertasCanalesDto } from './dto/create-alertas-canales.dto';
+import { UpdateAlertasCanalesDto } from './dto/update-alertas-canales.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {

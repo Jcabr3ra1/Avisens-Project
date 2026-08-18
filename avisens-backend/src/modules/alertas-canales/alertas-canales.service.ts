@@ -1,10 +1,14 @@
 // alertas-canales.service.ts
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 // REVISION (Juan): tras renombrar los DTOs a ".dto.ts", cambiar estos imports a
 // './dto/create-alertas-canales.dto' y './dto/update-alertas-canales.dto'.
-import { CreateAlertasCanalesDto } from './dto/create-alertas-canales-dto';
-import { UpdateAlertasCanalesDto } from './dto/update-alertas-canales-dto';
+import { CreateAlertasCanalesDto } from './dto/create-alertas-canales.dto';
+import { UpdateAlertasCanalesDto } from './dto/update-alertas-canales.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
 import { esPropietario, verificarDueno } from '../../common/acceso';
@@ -83,12 +87,15 @@ export class AlertasCanalesService {
 
     if (existente) {
       throw new ForbiddenException(
-        `Ya existe un registro para el canal "${canal}" en esta alerta`
+        `Ya existe un registro para el canal "${canal}" en esta alerta`,
       );
     }
   }
 
-  private async obtenerCanalConValidacion(id: number, solicitante: Solicitante) {
+  private async obtenerCanalConValidacion(
+    id: number,
+    solicitante: Solicitante,
+  ) {
     const alertaCanal = await this.prisma.alertaCanal.findUnique({
       where: { id },
       select: ALERTA_CANAL_SELECT,
@@ -362,9 +369,15 @@ export class AlertasCanalesService {
 
     const [total, enviados, pendientes, fallidos] = await Promise.all([
       this.prisma.alertaCanal.count({ where }),
-      this.prisma.alertaCanal.count({ where: { ...where, estado_envio: 'enviado' } }),
-      this.prisma.alertaCanal.count({ where: { ...where, estado_envio: 'pendiente' } }),
-      this.prisma.alertaCanal.count({ where: { ...where, estado_envio: 'fallido' } }),
+      this.prisma.alertaCanal.count({
+        where: { ...where, estado_envio: 'enviado' },
+      }),
+      this.prisma.alertaCanal.count({
+        where: { ...where, estado_envio: 'pendiente' },
+      }),
+      this.prisma.alertaCanal.count({
+        where: { ...where, estado_envio: 'fallido' },
+      }),
     ]);
 
     return {

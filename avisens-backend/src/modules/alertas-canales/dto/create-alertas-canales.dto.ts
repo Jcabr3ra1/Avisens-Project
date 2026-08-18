@@ -26,7 +26,8 @@ export class CreateAlertasCanalesDto {
   // rompe la validacion (rechazaria "sms"). Ademas falta @IsOptional() (canal es
   // opcional en el schema). Debe quedar: @IsString() + @IsOptional().
   @IsString()
-  @IsPositive()
+  @IsOptional()
+
   canal?: string;
 
   @ApiPropertyOptional({
@@ -35,8 +36,8 @@ export class CreateAlertasCanalesDto {
   })
   // REVISION (Juan): estado_envio es un STRING (ej. "enviado"), no un numero.
   // @IsInt() y @IsPositive() estan mal: deben ser @IsString() + @IsOptional().
-  @IsInt()
-  @IsPositive()
+  @IsString()
+  @IsOptional()
   estado_envio?: string;
 
   @ApiPropertyOptional({
