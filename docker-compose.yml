@@ -70,5 +70,13 @@ services:
     ports:
       - "8080:80"
 
+  # ----- Microservicio de ML (predicciones) en Python -----
+  ml:
+    build: ./avisens-ml
+    container_name: avisens-ml
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+
 volumes:
   avisens_pg_data:
