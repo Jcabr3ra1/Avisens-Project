@@ -421,11 +421,31 @@ async function sembrarMatrizCalificacion() {
   }
 }
 
+const CATEGORIAS_FINANCIERAS = [
+  { nombre: 'Venta de aves', tipo: 'ingreso' },
+  { nombre: 'Compra de pollitos', tipo: 'egreso' },
+  { nombre: 'Compra de alimento', tipo: 'egreso' },
+  { nombre: 'Sanidad y vacunas', tipo: 'egreso' },
+  { nombre: 'Servicios e insumos', tipo: 'egreso' },
+];
+
+async function sembrarCategoriasFinancieras() {
+  for (const categoria of CATEGORIAS_FINANCIERAS) {
+    const existente = await prisma.categoriaFinanciera.findFirst({
+      where: { nombre: categoria.nombre },
+    });
+    if (!existente) {
+      await prisma.categoriaFinanciera.create({ data: categoria });
+    }
+  }
+}
+
 async function main() {
   const rolAdmin = await sembrarRoles();
   await sembrarAdmin(rolAdmin.id);
   await sembrarCurvasObjetivo();
   await sembrarMatrizCalificacion();
+  await sembrarCategoriasFinancieras();
   console.log('Seed completado');
 }
 

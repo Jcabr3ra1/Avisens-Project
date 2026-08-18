@@ -224,4 +224,53 @@ export class IndicadoresService {
       },
     });
   }
+
+  async kpisFinancieros(loteId: number, solicitante: Solicitante) {
+    await this.verificarPropiedad(loteId, solicitante);
+
+    const lote = await this.prisma.lote.findUnique({
+      where: { id: loteId },
+      select: { cantidad_inicial: true },
+    });
+    if (!lote) throw new NotFoundException('Lote no encontrado');
+
+    const indicador = await this.prisma.indicadorLote.findFirst({
+      where: { lote_id: loteId },
+      orderBy: { fecha: 'desc' },
+      select: { peso_promedio_g: true, mortalidad_acumulada_pct: true },
+    });
+
+    const egresos = await this.prisma.movimientoFinanciero.aggregate({
+      where: { lote_id: loteId, tipo: 'egreso' },
+      _sum: { valor_cop: true },
+    });
+    const ingresos = await this.prisma.movimientoFinanciero.aggregate({
+      where: { lote_id: loteId, tipo: 'ingreso' },
+      _sum: { valor_cop: true },
+    });
+
+    const costoTotal = egresos._sum.valor_cop ?? 0;
+    const ingresoTotal = ingresos._sum.valor_cop ?? 0;
+    const margen = ingresoTotal - costoTotal;
+
+    const avesVivas =
+      lote.cantidad_inicial *
+      (1 - (indicador?.mortalidad_acumulada_pct ?? 0) / 100);
+    const kgProducidos =
+      indicador?.peso_promedio_g != null
+        ? (indicador.peso_promedio_g / 1000) * avesVivas
+        : 0;
+
+    const costoPorKg = kgProducidos > 0 ? costoTotal / kgProducidos : null;
+    const roiPct = costoTotal > 0 ? (margen / costoTotal) * 100 : null;
+    return {
+      lote_id: loteId,
+      costo_total_cop: costoTotal,
+      ingreso_total_cop: ingresoTotal,
+      margen_cop: margen,
+      kg_producidos: Math.round(kgProducidos),
+      costo_por_kg_cop: costoPorKg,
+      roi_pct: roiPct,
+    };
+  }
 }

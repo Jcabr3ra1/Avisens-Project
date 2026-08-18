@@ -264,3 +264,65 @@ describe('IndicadoresService · generarAlertaDesvio', () => {
     });
   });
 });
+
+describe('IndicadoresService · kpisFinancieros', () => {
+  let service: IndicadoresService;
+
+  const prisma = {
+    lote: { findUnique: jest.fn() },
+    indicadorLote: { findFirst: jest.fn() },
+    movimientoFinanciero: { aggregate: jest.fn() },
+  };
+
+  const admin = { id: 1, rol: 'Administrador' };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        IndicadoresService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get<IndicadoresService>(IndicadoresService);
+    prisma.lote.findUnique.mockResolvedValue({
+      galpon: { granja: { propietario_id: 1 } },
+      cantidad_inicial: 1000,
+    });
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  it('calcula costo total, margen y costo por kg', async () => {
+    prisma.indicadorLote.findFirst.mockResolvedValue({
+      peso_promedio_g: 2000,
+      mortalidad_acumulada_pct: 5,
+    });
+    prisma.movimientoFinanciero.aggregate
+      .mockResolvedValueOnce({ _sum: { valor_cop: 5000000 } })
+      .mockResolvedValueOnce({ _sum: { valor_cop: 8000000 } });
+
+    const r = await service.kpisFinancieros(1, admin);
+
+    // aves_vivas = 1000 * (1 - 0.05) = 950 ; kg = 2 * 950 = 1900
+    expect(r.costo_total_cop).toBe(5000000);
+    expect(r.ingreso_total_cop).toBe(8000000);
+    expect(r.margen_cop).toBe(3000000);
+    expect(r.kg_producidos).toBe(1900);
+    expect(r.costo_por_kg_cop as number).toBeCloseTo(2631.58, 1);
+    expect(r.roi_pct as number).toBeCloseTo(60, 1);
+  });
+
+  it('costo_por_kg null cuando no hay indicador (sin kg producidos)', async () => {
+    prisma.indicadorLote.findFirst.mockResolvedValue(null);
+    prisma.movimientoFinanciero.aggregate
+      .mockResolvedValueOnce({ _sum: { valor_cop: 1000000 } })
+      .mockResolvedValueOnce({ _sum: { valor_cop: null } });
+
+    const r = await service.kpisFinancieros(1, admin);
+
+    expect(r.costo_total_cop).toBe(1000000);
+    expect(r.ingreso_total_cop).toBe(0);
+    expect(r.kg_producidos).toBe(0);
+    expect(r.costo_por_kg_cop).toBeNull();
+  });
+});

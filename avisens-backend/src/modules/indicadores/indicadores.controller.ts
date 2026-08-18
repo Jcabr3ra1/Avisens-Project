@@ -49,6 +49,17 @@ export class IndicadoresController {
     return this.indicadoresService.compararConCurva(loteId, req.user);
   }
 
+  @Get(':loteId/finanzas')
+  @ApiOperation({
+    summary: 'KPIs financieros del lote (costo/kg, margen, ROI)',
+  })
+  kpisFinancieros(
+    @Param('loteId', ParseIntPipe) loteId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.indicadoresService.kpisFinancieros(loteId, req.user);
+  }
+
   @Post(':loteId/alerta-desvio')
   @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
