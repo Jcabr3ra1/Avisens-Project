@@ -1,0 +1,30 @@
+meta {
+  name: [Admin · Propietario]  Registrar movimiento
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/movimientos-financieros
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "categoria_id": 3,
+    "tipo": "egreso",
+    "valor_cop": 3000000,
+    "fecha": "2026-08-10",
+    "lote_id": 1,
+    "descripcion": "Compra de alimento"
+  }
+}
