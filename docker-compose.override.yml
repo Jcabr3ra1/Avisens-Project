@@ -1,0 +1,8 @@
+# Override LOCAL (no versionar) — este equipo ya tiene un PostgreSQL nativo
+# de Windows escuchando en el puerto 5432, así que el contenedor de la base
+# de datos se expone en 5433 para no chocar. Docker Compose lo mezcla
+# automáticamente con docker-compose.yml.
+services:
+  database:
+    ports:
+      - "5433:5432"

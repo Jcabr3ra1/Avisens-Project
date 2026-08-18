@@ -3,20 +3,26 @@ import type { PaginatedResponse } from './types'
 
 export interface Dispositivo {
   id: number
-  galpon_id: number
+  mac_address: string
   codigo_topic: string
   nombre: string
-  modelo: string | null
-  firmware_version: string | null
+  version_firmware: string | null
+  estado: string
+  ip_local: string | null
+  ultima_conexion: string | null
   activo: boolean
+  fecha_creacion: string
+  // El backend anida la granja — no manda un `galpon_id` plano.
+  galpon: { id: number; nombre: string; granja: { id: number; propietario_id: number } }
 }
 
 export interface CrearDispositivoPayload {
   galpon_id: number
+  mac_address: string
   codigo_topic: string
   nombre: string
-  modelo?: string
-  firmware_version?: string
+  version_firmware?: string
+  ip_local?: string
 }
 
 export type ActualizarDispositivoPayload = Partial<CrearDispositivoPayload> & {
