@@ -1,6 +1,3 @@
-// alertas-canales.controller.ts
-// REVISION (Juan): hay errores de formato Prettier en este archivo. Se arreglan
-// solos con:  pnpm exec eslint "src/modules/alertas-canales/**/*.ts" --fix
 import {
   Body,
   Controller,
@@ -49,7 +46,8 @@ export class AlertasCanalesController {
 
   @Get()
   @ApiOperation({
-    summary: 'Listar canales de alertas paginado (Admin: todos · Propietario: sus alertas)',
+    summary:
+      'Listar canales de alertas paginado (Admin: todos · Propietario: sus alertas)',
   })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.alertasCanalesService.listar(req.user, paginacion);
@@ -106,7 +104,11 @@ export class AlertasCanalesController {
     @Body('estado') estado: string,
     @Req() req: AuthRequest,
   ) {
-    return this.alertasCanalesService.actualizarEstadoEnvio(id, estado, req.user);
+    return this.alertasCanalesService.actualizarEstadoEnvio(
+      id,
+      estado,
+      req.user,
+    );
   }
 
   // ============================================================
@@ -114,13 +116,19 @@ export class AlertasCanalesController {
   // ============================================================
 
   @Get('alerta/:alertaId')
-  @ApiOperation({ summary: 'Obtener todos los canales de una alerta específica' })
+  @ApiOperation({
+    summary: 'Obtener todos los canales de una alerta específica',
+  })
   obtenerPorAlerta(
     @Param('alertaId', ParseIntPipe) alertaId: number,
     @Query() paginacion: PaginationQueryDto,
     @Req() req: AuthRequest,
   ) {
-    return this.alertasCanalesService.obtenerPorAlerta(alertaId, req.user, paginacion);
+    return this.alertasCanalesService.obtenerPorAlerta(
+      alertaId,
+      req.user,
+      paginacion,
+    );
   }
 
   // ============================================================

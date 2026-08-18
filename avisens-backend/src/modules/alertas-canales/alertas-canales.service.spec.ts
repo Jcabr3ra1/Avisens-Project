@@ -1,23 +1,15 @@
-// alertas-canales.service.spec.ts
-// ============================================================================
-// REVISION (Juan) — el CI falla por estos puntos (arreglar antes de mergear):
-//  1) Los imports de DTO de abajo usan ".dto" (correcto), pero los ARCHIVOS
-//     estan como "-dto.ts". Renombralos a ".dto.ts" y se resuelven.
-//  2) Variables sin usar: otroPropietario, dtoActualizar, whereDe.
-//  3) Linea ~350: no espiar el metodo privado 'obtenerCanalConValidacion'.
-//  4) Formato Prettier: correr  pnpm exec eslint "src/modules/alertas-canales/**/*.ts" --fix
-// ============================================================================
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AlertasCanalesService } from './alertas-canales.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ROLES } from '../../common/roles';
+import type { Solicitante } from '../../common/acceso';
 import { CreateAlertasCanalesDto } from './dto/create-alertas-canales.dto';
 import { UpdateAlertasCanalesDto } from './dto/update-alertas-canales.dto';
 
 describe('AlertasCanalesService', () => {
   let service: AlertasCanalesService;
 
-  // Mock de Prisma
   const prisma = {
     alertaCanal: {
       create: jest.fn(),
@@ -35,30 +27,36 @@ describe('AlertasCanalesService', () => {
     $transaction: jest.fn(),
   };
 
-  // Usuarios de prueba
-  const admin = { id: 1, rol: 'Administrador', organizacion_id: 1 };
-  const propietario = { id: 5, rol: 'Propietario', organizacion_id: 1 };
-  // REVISION (Juan): 'otroPropietario' se declara pero no se usa (eslint falla).
-  // Usalo en un test de acceso ajeno, o borralo.
-  const otroPropietario = { id: 10, rol: 'Propietario', organizacion_id: 2 };
+  const admin: Solicitante = { id: 1, rol: ROLES.ADMINISTRADOR };
+  const propietario: Solicitante = { id: 5, rol: ROLES.PROPIETARIO };
 
-  // DTOs de prueba
+  const canalDelPropietario = {
+    id: 1,
+    alerta_id: 1,
+    canal: 'sms',
+    estado_envio: 'pendiente',
+    fecha_envio: null,
+    alerta: { galpon: { granja: { propietario_id: 5 } } },
+  };
+
+  const canalAjeno = {
+    id: 1,
+    alerta: { galpon: { granja: { propietario_id: 999 } } },
+  };
+
   const dtoCrear: CreateAlertasCanalesDto = {
     alerta_id: 1,
     canal: 'sms',
     estado_envio: 'pendiente',
   };
 
-  // REVISION (Juan): 'dtoActualizar' declarado pero no usado (eslint falla).
-  const dtoActualizar: UpdateAlertasCanalesDto = {
-    estado_envio: 'enviado',
+  const argDe = (mock: jest.Mock): Record<string, unknown> => {
+    const calls = mock.mock.calls as Array<[Record<string, unknown>]>;
+    return calls[0]?.[0] ?? {};
   };
 
-  // REVISION (Juan): 'whereDe' declarado pero no usado (eslint falla). Usalo o borralo.
-  const whereDe = (mock: jest.Mock): Record<string, unknown> => {
-    const calls = mock.mock.calls as Array<[{ where: Record<string, unknown> }]>;
-    return calls[0]?.[0]?.where || {};
-  };
+  const dataDe = (mock: jest.Mock): Record<string, unknown> =>
+    (argDe(mock).data as Record<string, unknown>) ?? {};
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -72,89 +70,50 @@ describe('AlertasCanalesService', () => {
 
     service = module.get<AlertasCanalesService>(AlertasCanalesService);
 
-    // Configurar defaults
     prisma.$transaction.mockResolvedValue([[], 0]);
-
-    // Alerta por defecto del propietario 5
     prisma.alerta.findUnique.mockResolvedValue({
       id: 1,
-      galpon: {
-        granja: {
-          propietario_id: 5,
-        },
-      },
+      galpon: { granja: { propietario_id: 5 } },
     });
-
-    // Canal por defecto
-    prisma.alertaCanal.findUnique.mockResolvedValue({
-      id: 1,
-      alerta_id: 1,
-      canal: 'sms',
-      estado_envio: 'pendiente',
-      fecha_envio: null,
-      alerta: {
-        galpon: {
-          granja: {
-            propietario_id: 5,
-          },
-        },
-      },
-    });
-
-    // Canal duplicado por defecto (no existe)
+    prisma.alertaCanal.findUnique.mockResolvedValue(canalDelPropietario);
     prisma.alertaCanal.findFirst.mockResolvedValue(null);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  afterEach(() => jest.clearAllMocks());
 
-  // ============================================================
-  // TESTS: CREAR
-  // ============================================================
   describe('crear', () => {
-    it('debería crear un canal cuando la alerta es del propietario', async () => {
-      const expectedResult = { id: 1, ...dtoCrear };
-      prisma.alertaCanal.create.mockResolvedValue(expectedResult);
+    it('crea un canal cuando la alerta es del propietario', async () => {
+      const esperado = { id: 1, ...dtoCrear };
+      prisma.alertaCanal.create.mockResolvedValue(esperado);
 
       const result = await service.crear(dtoCrear, propietario);
 
-      expect(prisma.alertaCanal.create).toHaveBeenCalled();
-      expect(prisma.alertaCanal.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            alerta_id: 1,
-            canal: 'sms',
-            estado_envio: 'pendiente',
-          }),
-        })
-      );
-      expect(result).toEqual(expectedResult);
+      expect(dataDe(prisma.alertaCanal.create)).toMatchObject({
+        alerta_id: 1,
+        canal: 'sms',
+        estado_envio: 'pendiente',
+      });
+      expect(result).toEqual(esperado);
     });
 
-    it('debería usar "pendiente" como estado por defecto si no se envía', async () => {
-      const dtoSinEstado = { alerta_id: 1, canal: 'email' };
+    it('usa "pendiente" como estado por defecto si no se envia', async () => {
+      const dtoSinEstado: CreateAlertasCanalesDto = {
+        alerta_id: 1,
+        canal: 'email',
+      };
       prisma.alertaCanal.create.mockResolvedValue({ id: 1 });
 
       await service.crear(dtoSinEstado, propietario);
 
-      expect(prisma.alertaCanal.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            estado_envio: 'pendiente',
-          }),
-        })
-      );
+      expect(dataDe(prisma.alertaCanal.create)).toMatchObject({
+        estado_envio: 'pendiente',
+      });
     });
 
-    it('debería rechazar (403) si la alerta no es del propietario', async () => {
+    it('rechaza (403) si la alerta no es del propietario', async () => {
       prisma.alerta.findUnique.mockResolvedValue({
         id: 1,
-        galpon: {
-          granja: {
-            propietario_id: 999,
-          },
-        },
+        galpon: { granja: { propietario_id: 999 } },
       });
 
       await expect(service.crear(dtoCrear, propietario)).rejects.toThrow(
@@ -163,7 +122,7 @@ describe('AlertasCanalesService', () => {
       expect(prisma.alertaCanal.create).not.toHaveBeenCalled();
     });
 
-    it('debería rechazar (404) si la alerta no existe', async () => {
+    it('rechaza (404) si la alerta no existe', async () => {
       prisma.alerta.findUnique.mockResolvedValue(null);
 
       await expect(service.crear(dtoCrear, admin)).rejects.toThrow(
@@ -172,7 +131,7 @@ describe('AlertasCanalesService', () => {
       expect(prisma.alertaCanal.create).not.toHaveBeenCalled();
     });
 
-    it('debería rechazar (403) si ya existe un canal duplicado', async () => {
+    it('rechaza (403) si ya existe un canal duplicado', async () => {
       prisma.alertaCanal.findFirst.mockResolvedValue({ id: 2 });
 
       await expect(service.crear(dtoCrear, propietario)).rejects.toThrow(
@@ -182,86 +141,45 @@ describe('AlertasCanalesService', () => {
     });
   });
 
-  // ============================================================
-  // TESTS: LISTAR
-  // ============================================================
   describe('listar', () => {
-    it('debería listar solo canales de sus alertas si es Propietario', async () => {
+    it('lista solo los canales de sus alertas si es Propietario', async () => {
       await service.listar(propietario, { page: 1, limit: 10 });
 
-      const findManyCalls = prisma.alertaCanal.findMany.mock.calls;
-      expect(findManyCalls.length).toBeGreaterThan(0);
-      const where = findManyCalls[0]?.[0]?.where;
-      expect(where).toEqual({
-        alerta: {
-          galpon: {
-            granja: {
-              propietario_id: 5,
-            },
-          },
-        },
+      expect(argDe(prisma.alertaCanal.findMany).where).toEqual({
+        alerta: { galpon: { granja: { propietario_id: 5 } } },
       });
     });
 
-    it('debería listar todos los canales si es Admin', async () => {
+    it('lista todos los canales si es Admin', async () => {
       await service.listar(admin, { page: 1, limit: 10 });
 
-      const findManyCalls = prisma.alertaCanal.findMany.mock.calls;
-      expect(findManyCalls.length).toBeGreaterThan(0);
-      const where = findManyCalls[0]?.[0]?.where;
-      expect(where).toEqual({});
+      expect(argDe(prisma.alertaCanal.findMany).where).toEqual({});
     });
 
-    it('debería usar $transaction para consistencia', async () => {
+    it('usa $transaction para la consistencia', async () => {
       await service.listar(admin, { page: 1, limit: 10 });
-
       expect(prisma.$transaction).toHaveBeenCalled();
     });
 
-    it('debería paginar correctamente', async () => {
+    it('pagina correctamente', async () => {
       await service.listar(admin, { page: 2, limit: 5 });
 
-      expect(prisma.alertaCanal.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          skip: 5,
-          take: 5,
-        })
-      );
+      expect(argDe(prisma.alertaCanal.findMany)).toMatchObject({
+        skip: 5,
+        take: 5,
+      });
     });
   });
 
-  // ============================================================
-  // TESTS: OBTENER
-  // ============================================================
   describe('obtener', () => {
-    it('debería obtener un canal por ID', async () => {
-      const expectedResult = {
-        id: 1,
-        alerta_id: 1,
-        canal: 'sms',
-        estado_envio: 'pendiente',
-      };
-      prisma.alertaCanal.findUnique.mockResolvedValue({
-        ...expectedResult,
-        alerta: {
-          galpon: {
-            granja: {
-              propietario_id: 5,
-            },
-          },
-        },
-      });
-
+    it('obtiene un canal por ID', async () => {
       const result = await service.obtener(1, propietario);
 
       expect(result).toBeDefined();
-      expect(prisma.alertaCanal.findUnique).toHaveBeenCalledWith({
-        where: { id: 1 },
-        select: expect.any(Object),
-      });
+      expect(argDe(prisma.alertaCanal.findUnique).where).toEqual({ id: 1 });
     });
 
-    it('debería rechazar (404) si el canal no existe', async () => {
+    it('rechaza (404) si el canal no existe', async () => {
       prisma.alertaCanal.findUnique.mockResolvedValue(null);
 
       await expect(service.obtener(1, admin)).rejects.toThrow(
@@ -269,118 +187,69 @@ describe('AlertasCanalesService', () => {
       );
     });
 
-    it('debería rechazar (403) si el canal es de alerta ajena', async () => {
-      prisma.alertaCanal.findUnique.mockResolvedValue({
-        id: 1,
-        alerta: {
-          galpon: {
-            granja: {
-              propietario_id: 999,
-            },
-          },
-        },
-      });
+    it('rechaza (403) si el canal es de una alerta ajena', async () => {
+      prisma.alertaCanal.findUnique.mockResolvedValue(canalAjeno);
 
       await expect(service.obtener(1, propietario)).rejects.toThrow(
         ForbiddenException,
       );
     });
 
-    it('debería permitir a Admin ver cualquier canal', async () => {
-      prisma.alertaCanal.findUnique.mockResolvedValue({
-        id: 1,
-        alerta: {
-          galpon: {
-            granja: {
-              propietario_id: 999,
-            },
-          },
-        },
-      });
+    it('permite a Admin ver cualquier canal', async () => {
+      prisma.alertaCanal.findUnique.mockResolvedValue(canalAjeno);
 
       const result = await service.obtener(1, admin);
       expect(result).toBeDefined();
     });
   });
 
-  // ============================================================
-  // TESTS: ACTUALIZAR
-  // ============================================================
   describe('actualizar', () => {
-    it('debería actualizar un canal', async () => {
-      const dto = { estado_envio: 'enviado' };
+    it('actualiza un canal', async () => {
+      const dto: UpdateAlertasCanalesDto = { estado_envio: 'enviado' };
       prisma.alertaCanal.update.mockResolvedValue({ id: 1, ...dto });
 
       const result = await service.actualizar(1, dto, propietario);
 
-      expect(prisma.alertaCanal.update).toHaveBeenCalled();
-      expect(prisma.alertaCanal.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 1 },
-          data: expect.objectContaining({
-            estado_envio: 'enviado',
-          }),
-        })
-      );
+      expect(argDe(prisma.alertaCanal.update).where).toEqual({ id: 1 });
+      expect(dataDe(prisma.alertaCanal.update)).toMatchObject({
+        estado_envio: 'enviado',
+      });
       expect(result).toBeDefined();
     });
 
-    it('debería convertir fecha_envio a Date si se envía', async () => {
-      const dto = { fecha_envio: '2024-01-15T12:00:00Z' };
+    it('convierte fecha_envio a Date si se envia', async () => {
+      const dto: UpdateAlertasCanalesDto = {
+        fecha_envio: '2024-01-15T12:00:00Z',
+      };
       prisma.alertaCanal.update.mockResolvedValue({ id: 1 });
 
       await service.actualizar(1, dto, propietario);
 
-      expect(prisma.alertaCanal.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            fecha_envio: expect.any(Date),
-          }),
-        })
+      expect(dataDe(prisma.alertaCanal.update).fecha_envio).toBeInstanceOf(
+        Date,
       );
     });
 
-    it('debería permitir establecer fecha_envio como null', async () => {
-      const dto = { fecha_envio: null as any };
+    it('permite establecer fecha_envio como null', async () => {
+      const dto = { fecha_envio: null } as unknown as UpdateAlertasCanalesDto;
       prisma.alertaCanal.update.mockResolvedValue({ id: 1 });
 
       await service.actualizar(1, dto, propietario);
 
-      expect(prisma.alertaCanal.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            fecha_envio: null,
-          }),
-        })
-      );
+      expect(dataDe(prisma.alertaCanal.update).fecha_envio).toBeNull();
     });
 
-    it('debería retornar el registro actual si no hay datos para actualizar', async () => {
-      const dto = {};
-      const expectedResult = { id: 1 };
-      // REVISION (Juan): no se puede espiar 'obtenerCanalConValidacion' porque es
-      // un metodo PRIVADO del service (tsc falla: no esta en keyof publico). Mejor
-      // mockear prisma.alertaCanal.findUnique para que el metodo real corra y
-      // devuelva expectedResult. Evita tambien el 'as any'.
-      jest.spyOn(service, 'obtenerCanalConValidacion').mockResolvedValue(expectedResult as any);
+    it('retorna el registro actual si no hay datos para actualizar', async () => {
+      prisma.alertaCanal.findUnique.mockResolvedValue(canalDelPropietario);
 
-      const result = await service.actualizar(1, dto, propietario);
+      const result = await service.actualizar(1, {}, propietario);
 
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(canalDelPropietario);
       expect(prisma.alertaCanal.update).not.toHaveBeenCalled();
     });
 
-    it('debería rechazar (403) si el canal es de alerta ajena', async () => {
-      prisma.alertaCanal.findUnique.mockResolvedValue({
-        id: 1,
-        alerta: {
-          galpon: {
-            granja: {
-              propietario_id: 999,
-            },
-          },
-        },
-      });
+    it('rechaza (403) si el canal es de una alerta ajena', async () => {
+      prisma.alertaCanal.findUnique.mockResolvedValue(canalAjeno);
 
       await expect(
         service.actualizar(1, { estado_envio: 'enviado' }, propietario),
@@ -389,24 +258,8 @@ describe('AlertasCanalesService', () => {
     });
   });
 
-  // ============================================================
-  // TESTS: MARCAR COMO ENVIADO
-  // ============================================================
   describe('marcarComoEnviado', () => {
-    beforeEach(() => {
-      prisma.alertaCanal.findUnique.mockResolvedValue({
-        id: 1,
-        alerta: {
-          galpon: {
-            granja: {
-              propietario_id: 5,
-            },
-          },
-        },
-      });
-    });
-
-    it('debería marcar como enviado cuando es dueño', async () => {
+    it('marca como enviado cuando es dueno', async () => {
       prisma.alertaCanal.update.mockResolvedValue({
         id: 1,
         estado_envio: 'enviado',
@@ -416,28 +269,14 @@ describe('AlertasCanalesService', () => {
       const result = await service.marcarComoEnviado(1, propietario);
 
       expect(result).toBeDefined();
-      expect(prisma.alertaCanal.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 1 },
-          data: expect.objectContaining({
-            estado_envio: 'enviado',
-            fecha_envio: expect.any(Date),
-          }),
-        })
-      );
+      expect(argDe(prisma.alertaCanal.update).where).toEqual({ id: 1 });
+      const data = dataDe(prisma.alertaCanal.update);
+      expect(data.estado_envio).toBe('enviado');
+      expect(data.fecha_envio).toBeInstanceOf(Date);
     });
 
-    it('debería rechazar (403) si el canal es de alerta ajena', async () => {
-      prisma.alertaCanal.findUnique.mockResolvedValue({
-        id: 1,
-        alerta: {
-          galpon: {
-            granja: {
-              propietario_id: 999,
-            },
-          },
-        },
-      });
+    it('rechaza (403) si el canal es de una alerta ajena', async () => {
+      prisma.alertaCanal.findUnique.mockResolvedValue(canalAjeno);
 
       await expect(service.marcarComoEnviado(1, propietario)).rejects.toThrow(
         ForbiddenException,
@@ -446,24 +285,8 @@ describe('AlertasCanalesService', () => {
     });
   });
 
-  // ============================================================
-  // TESTS: MARCAR COMO FALLIDO
-  // ============================================================
   describe('marcarComoFallido', () => {
-    beforeEach(() => {
-      prisma.alertaCanal.findUnique.mockResolvedValue({
-        id: 1,
-        alerta: {
-          galpon: {
-            granja: {
-              propietario_id: 5,
-            },
-          },
-        },
-      });
-    });
-
-    it('debería marcar como fallido cuando es dueño', async () => {
+    it('marca como fallido cuando es dueno', async () => {
       prisma.alertaCanal.update.mockResolvedValue({
         id: 1,
         estado_envio: 'fallido',
@@ -472,27 +295,14 @@ describe('AlertasCanalesService', () => {
       const result = await service.marcarComoFallido(1, propietario);
 
       expect(result).toBeDefined();
-      expect(prisma.alertaCanal.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 1 },
-          data: expect.objectContaining({
-            estado_envio: 'fallido',
-          }),
-        })
-      );
+      expect(argDe(prisma.alertaCanal.update).where).toEqual({ id: 1 });
+      expect(dataDe(prisma.alertaCanal.update)).toMatchObject({
+        estado_envio: 'fallido',
+      });
     });
 
-    it('debería rechazar (403) si el canal es de alerta ajena', async () => {
-      prisma.alertaCanal.findUnique.mockResolvedValue({
-        id: 1,
-        alerta: {
-          galpon: {
-            granja: {
-              propietario_id: 999,
-            },
-          },
-        },
-      });
+    it('rechaza (403) si el canal es de una alerta ajena', async () => {
+      prisma.alertaCanal.findUnique.mockResolvedValue(canalAjeno);
 
       await expect(service.marcarComoFallido(1, propietario)).rejects.toThrow(
         ForbiddenException,
@@ -501,42 +311,21 @@ describe('AlertasCanalesService', () => {
     });
   });
 
-  // ============================================================
-  // TESTS: ACTUALIZAR ESTADO
-  // ============================================================
   describe('actualizarEstadoEnvio', () => {
-    beforeEach(() => {
-      prisma.alertaCanal.findUnique.mockResolvedValue({
-        id: 1,
-        alerta: {
-          galpon: {
-            granja: {
-              propietario_id: 5,
-            },
-          },
-        },
-      });
-    });
-
-    it('debería actualizar el estado a "en_proceso"', async () => {
+    it('actualiza el estado a "en_proceso"', async () => {
       prisma.alertaCanal.update.mockResolvedValue({
         id: 1,
         estado_envio: 'en_proceso',
       });
 
-      const result = await service.actualizarEstadoEnvio(1, 'en_proceso', propietario);
+      await service.actualizarEstadoEnvio(1, 'en_proceso', propietario);
 
-      expect(result).toBeDefined();
-      expect(prisma.alertaCanal.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            estado_envio: 'en_proceso',
-          }),
-        })
-      );
+      expect(dataDe(prisma.alertaCanal.update)).toMatchObject({
+        estado_envio: 'en_proceso',
+      });
     });
 
-    it('debería establecer fecha_envio cuando estado es "enviado"', async () => {
+    it('establece fecha_envio cuando el estado es "enviado"', async () => {
       prisma.alertaCanal.update.mockResolvedValue({
         id: 1,
         estado_envio: 'enviado',
@@ -545,17 +334,12 @@ describe('AlertasCanalesService', () => {
 
       await service.actualizarEstadoEnvio(1, 'enviado', propietario);
 
-      expect(prisma.alertaCanal.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            estado_envio: 'enviado',
-            fecha_envio: expect.any(Date),
-          }),
-        })
-      );
+      const data = dataDe(prisma.alertaCanal.update);
+      expect(data.estado_envio).toBe('enviado');
+      expect(data.fecha_envio).toBeInstanceOf(Date);
     });
 
-    it('debería NO establecer fecha_envio cuando estado no es "enviado"', async () => {
+    it('NO establece fecha_envio cuando el estado no es "enviado"', async () => {
       prisma.alertaCanal.update.mockResolvedValue({
         id: 1,
         estado_envio: 'fallido',
@@ -563,60 +347,47 @@ describe('AlertasCanalesService', () => {
 
       await service.actualizarEstadoEnvio(1, 'fallido', propietario);
 
-      expect(prisma.alertaCanal.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.not.objectContaining({
-            fecha_envio: expect.anything(),
-          }),
-        })
+      expect(dataDe(prisma.alertaCanal.update)).not.toHaveProperty(
+        'fecha_envio',
       );
     });
   });
 
-  // ============================================================
-  // TESTS: OBTENER POR ALERTA
-  // ============================================================
   describe('obtenerPorAlerta', () => {
-    it('debería obtener todos los canales de una alerta', async () => {
-      const expectedData = [
+    it('obtiene todos los canales de una alerta', async () => {
+      const data = [
         { id: 1, alerta_id: 1, canal: 'sms' },
         { id: 2, alerta_id: 1, canal: 'email' },
       ];
-      prisma.$transaction.mockResolvedValue([expectedData, 2]);
+      prisma.$transaction.mockResolvedValue([data, 2]);
 
-      const result = await service.obtenerPorAlerta(1, propietario, { page: 1, limit: 10 });
+      const result = await service.obtenerPorAlerta(1, propietario, {
+        page: 1,
+        limit: 10,
+      });
 
-      expect(result.data).toEqual(expectedData);
+      expect(result.data).toEqual(data);
       expect(result.meta.total).toBe(2);
-      expect(prisma.alertaCanal.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { alerta_id: 1 },
-        })
-      );
+      expect(argDe(prisma.alertaCanal.findMany).where).toEqual({
+        alerta_id: 1,
+      });
     });
 
-    it('debería rechazar (403) si la alerta no es del propietario', async () => {
+    it('rechaza (403) si la alerta no es del propietario', async () => {
       prisma.alerta.findUnique.mockResolvedValue({
         id: 1,
-        galpon: {
-          granja: {
-            propietario_id: 999,
-          },
-        },
+        galpon: { granja: { propietario_id: 999 } },
       });
 
       await expect(
-        service.obtenerPorAlerta(1, propietario, { page: 1, limit: 10 })
+        service.obtenerPorAlerta(1, propietario, { page: 1, limit: 10 }),
       ).rejects.toThrow(ForbiddenException);
       expect(prisma.alertaCanal.findMany).not.toHaveBeenCalled();
     });
   });
 
-  // ============================================================
-  // TESTS: ELIMINAR
-  // ============================================================
   describe('eliminar', () => {
-    it('debería eliminar un canal cuando es dueño', async () => {
+    it('elimina un canal cuando es dueno', async () => {
       prisma.alertaCanal.delete.mockResolvedValue({ id: 1 });
 
       const result = await service.eliminar(1, propietario);
@@ -627,17 +398,8 @@ describe('AlertasCanalesService', () => {
       });
     });
 
-    it('debería rechazar (403) si el canal es de alerta ajena', async () => {
-      prisma.alertaCanal.findUnique.mockResolvedValue({
-        id: 1,
-        alerta: {
-          galpon: {
-            granja: {
-              propietario_id: 999,
-            },
-          },
-        },
-      });
+    it('rechaza (403) si el canal es de una alerta ajena', async () => {
+      prisma.alertaCanal.findUnique.mockResolvedValue(canalAjeno);
 
       await expect(service.eliminar(1, propietario)).rejects.toThrow(
         ForbiddenException,
@@ -646,32 +408,22 @@ describe('AlertasCanalesService', () => {
     });
   });
 
-  // ============================================================
-  // TESTS: ELIMINAR POR ALERTA
-  // ============================================================
   describe('eliminarPorAlerta', () => {
-    it('debería eliminar todos los canales de una alerta', async () => {
+    it('elimina todos los canales de una alerta', async () => {
       prisma.alertaCanal.deleteMany.mockResolvedValue({ count: 3 });
 
       const result = await service.eliminarPorAlerta(1, propietario);
 
-      expect(result).toEqual({
-        alerta_id: 1,
-        eliminados: 3,
-      });
+      expect(result).toEqual({ alerta_id: 1, eliminados: 3 });
       expect(prisma.alertaCanal.deleteMany).toHaveBeenCalledWith({
         where: { alerta_id: 1 },
       });
     });
 
-    it('debería rechazar (403) si la alerta no es del propietario', async () => {
+    it('rechaza (403) si la alerta no es del propietario', async () => {
       prisma.alerta.findUnique.mockResolvedValue({
         id: 1,
-        galpon: {
-          granja: {
-            propietario_id: 999,
-          },
-        },
+        galpon: { granja: { propietario_id: 999 } },
       });
 
       await expect(service.eliminarPorAlerta(1, propietario)).rejects.toThrow(
@@ -681,16 +433,13 @@ describe('AlertasCanalesService', () => {
     });
   });
 
-  // ============================================================
-  // TESTS: ESTADÍSTICAS
-  // ============================================================
   describe('obtenerEstadisticas', () => {
-    it('debería calcular estadísticas correctamente para Propietario', async () => {
+    it('calcula estadisticas para Propietario', async () => {
       prisma.alertaCanal.count
-        .mockResolvedValueOnce(10)  // total
-        .mockResolvedValueOnce(6)   // enviados
-        .mockResolvedValueOnce(2)   // pendientes
-        .mockResolvedValueOnce(2);  // fallidos
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(6)
+        .mockResolvedValueOnce(2)
+        .mockResolvedValueOnce(2);
 
       const stats = await service.obtenerEstadisticas(propietario);
 
@@ -703,12 +452,12 @@ describe('AlertasCanalesService', () => {
       });
     });
 
-    it('debería calcular estadísticas correctamente para Admin', async () => {
+    it('calcula estadisticas para Admin', async () => {
       prisma.alertaCanal.count
-        .mockResolvedValueOnce(20)  // total
-        .mockResolvedValueOnce(15)  // enviados
-        .mockResolvedValueOnce(3)   // pendientes
-        .mockResolvedValueOnce(2);  // fallidos
+        .mockResolvedValueOnce(20)
+        .mockResolvedValueOnce(15)
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(2);
 
       const stats = await service.obtenerEstadisticas(admin);
 
@@ -721,12 +470,12 @@ describe('AlertasCanalesService', () => {
       });
     });
 
-    it('debería devolver tasa_exito = 0 cuando no hay total', async () => {
+    it('devuelve tasa_exito = 0 cuando no hay total', async () => {
       prisma.alertaCanal.count
-        .mockResolvedValueOnce(0)   // total
-        .mockResolvedValueOnce(0)   // enviados
-        .mockResolvedValueOnce(0)   // pendientes
-        .mockResolvedValueOnce(0);  // fallidos
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0);
 
       const stats = await service.obtenerEstadisticas(admin);
 

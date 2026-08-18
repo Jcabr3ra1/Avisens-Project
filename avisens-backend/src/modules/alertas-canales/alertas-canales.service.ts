@@ -5,8 +5,6 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-// REVISION (Juan): tras renombrar los DTOs a ".dto.ts", cambiar estos imports a
-// './dto/create-alertas-canales.dto' y './dto/update-alertas-canales.dto'.
 import { CreateAlertasCanalesDto } from './dto/create-alertas-canales.dto';
 import { UpdateAlertasCanalesDto } from './dto/update-alertas-canales.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';

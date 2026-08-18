@@ -1,5 +1,3 @@
-// REVISION (Juan): RENOMBRAR este archivo a "update-alertas-canales.dto.ts"
-// (con PUNTO, no guion), igual que el create. El spec lo importa como ".dto".
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, IsDateString } from 'class-validator';
 
