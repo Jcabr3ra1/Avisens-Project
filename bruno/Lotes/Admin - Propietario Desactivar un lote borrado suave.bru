@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Desactivar un lote (borrado suave)
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/v1/lotes/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

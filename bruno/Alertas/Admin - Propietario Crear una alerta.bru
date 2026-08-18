@@ -1,0 +1,32 @@
+meta {
+  name: [Admin · Propietario]  Crear una alerta
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/v1/alertas
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "galpon_id": 1,
+    "tipo": "temperatura_alta",
+    "criticidad": "critica",
+    "lote_id": 1,
+    "sensor_id": 1,
+    "valor_detectado": 34.5,
+    "valor_umbral": 32,
+    "mensaje": "Temperatura por encima del umbral permitido"
+  }
+}

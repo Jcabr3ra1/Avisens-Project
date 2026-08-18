@@ -1,0 +1,31 @@
+meta {
+  name: [Público]  Renovar access token con refresh token
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/auth/refresh
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "refresh_token": "{{refresh_token}}"
+  }
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body && body.access_token) {
+    bru.setEnvVar("token", body.access_token);
+  }
+  if (body && body.refresh_token) {
+    bru.setEnvVar("refresh_token", body.refresh_token);
+  }
+}

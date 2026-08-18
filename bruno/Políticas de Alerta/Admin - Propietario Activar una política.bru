@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Activar una política
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/v1/politicas-alerta/1/activar
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

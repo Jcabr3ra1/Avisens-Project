@@ -20,9 +20,16 @@ RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" \
 COPY . .
 RUN pnpm run build
 
-# Eliminar dependencias de desarrollo. --ignore-scripts evita re-ejecutar el
-# postinstall (prisma generate), que ya corrio en el install y necesitaria
-# DATABASE_URL; el cliente Prisma ya quedo generado.
+# ---------- Etapa dev: hot-reload (nest --watch) ----------
+# Conserva las dev-deps (nest CLI) y el codigo fuente. Solo se usa en local via
+# docker-compose.override.yml; produccion NO usa esta etapa.
+FROM builder AS dev
+CMD ["pnpm", "run", "start:dev"]
+
+# ---------- Etapa prune: dependencias de produccion ----------
+# --ignore-scripts evita re-ejecutar el postinstall (prisma generate), que ya
+# corrio en el install; el cliente Prisma ya quedo generado.
+FROM builder AS pruned
 RUN pnpm prune --prod --ignore-scripts
 
 # ---------- Etapa 2: runtime ----------
@@ -32,7 +39,7 @@ ENV NODE_ENV=production
 
 # Copiar solo lo necesario para ejecutar la app.
 # prisma/ y prisma.config.ts se necesitan para correr `migrate deploy` al arrancar.
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=pruned /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts

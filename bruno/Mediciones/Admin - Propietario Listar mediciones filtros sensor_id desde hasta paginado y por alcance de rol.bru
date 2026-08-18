@@ -1,0 +1,23 @@
+meta {
+  name: [Admin · Propietario]  Listar mediciones (filtros: sensor_id, desde, hasta) paginado y por alcance de rol
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/mediciones?page=1&limit=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 20
+  sensor_id: 1
+  desde: 2026-07-01T00:00:00Z
+  hasta: 2026-07-31T23:59:59Z
+}
+
+auth:bearer {
+  token: {{token}}
+}

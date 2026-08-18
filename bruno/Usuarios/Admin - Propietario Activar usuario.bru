@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Activar usuario
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/v1/usuarios/1/activar
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

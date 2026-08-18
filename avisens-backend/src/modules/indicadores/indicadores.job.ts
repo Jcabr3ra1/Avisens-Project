@@ -18,10 +18,12 @@ export class IndicadoresJob {
       where: { estado: 'activo' },
       select: { id: true },
     });
-    this.logger.log(`Calculando indicadores de ${lotes.length} lotes activos`);
+
+    this.logger.log(`Procesando ${lotes.length} lotes activos`);
     for (const lote of lotes) {
       await this.indicadores.calcularParaLote(lote.id);
+      await this.indicadores.generarAlertaDesvio(lote.id);
     }
-    this.logger.log('Indicadores diarios calculados');
+    this.logger.log('Indicadores y alertas de desvio procesados');
   }
 }

@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Eliminar un dispositivo de forma permanente (casos legales)
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/v1/dispositivos/1/permanente
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

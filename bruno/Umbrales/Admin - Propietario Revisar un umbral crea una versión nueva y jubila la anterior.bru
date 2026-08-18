@@ -1,0 +1,28 @@
+meta {
+  name: [Admin · Propietario]  Revisar un umbral: crea una versión nueva y jubila la anterior
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/umbrales/1/revisar
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "valor_minimo": 29.5,
+    "valor_maximo": 32.5,
+    "unidad": "°C",
+    "criticidad": "critica"
+  }
+}

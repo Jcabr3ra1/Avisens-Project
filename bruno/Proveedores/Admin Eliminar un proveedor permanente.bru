@@ -1,0 +1,15 @@
+meta {
+  name: [Admin]  Eliminar un proveedor permanente
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/v1/proveedores/1/permanente
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

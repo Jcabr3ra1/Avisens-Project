@@ -1,0 +1,23 @@
+meta {
+  name: [Admin · Propietario]  Listar umbrales (por defecto solo vigentes; incluir_historico para todos)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/umbrales?page=1&limit=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 20
+  galpon_id: 1
+  variable: 
+  incluir_historico: False
+}
+
+auth:bearer {
+  token: {{token}}
+}

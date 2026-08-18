@@ -1,0 +1,25 @@
+meta {
+  name: [Admin · Propietario]  Cerrar una alerta
+  type: http
+  seq: 9
+}
+
+patch {
+  url: {{baseUrl}}/v1/alertas/1/cerrar
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "accion_correctiva": "Se encendieron los extractores"
+  }
+}

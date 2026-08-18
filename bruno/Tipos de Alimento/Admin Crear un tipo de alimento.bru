@@ -1,0 +1,31 @@
+meta {
+  name: [Admin]  Crear un tipo de alimento
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/tipos-alimento
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "nombre": "Iniciación Purina",
+    "marca": "Purina",
+    "etapa": "iniciacion",
+    "presentacion": "migaja",
+    "dia_inicio": 1,
+    "dia_fin": 10,
+    "consumo_total_esperado_g": 900
+  }
+}

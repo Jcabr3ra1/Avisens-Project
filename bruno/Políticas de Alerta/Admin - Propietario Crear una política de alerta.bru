@@ -1,0 +1,31 @@
+meta {
+  name: [Admin · Propietario]  Crear una política de alerta
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/politicas-alerta
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "granja_id": 1,
+    "criticidad": "Alta",
+    "nivel_escalamiento": 2,
+    "canal": "WhatsApp",
+    "tiempo_max_respuesta_seg": 900,
+    "verificado": false,
+    "activa": true
+  }
+}

@@ -1,0 +1,30 @@
+meta {
+  name: [Admin · Propietario]  Actualizar una alerta
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/v1/alertas/1
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "estado": "en_proceso",
+    "accion_correctiva": "Se ajustó la ventilación",
+    "responsable_id": 2,
+    "escalado_a_id": 3,
+    "fecha_aceptacion": "2026-08-16T10:30:00Z",
+    "fecha_cierre": "2026-08-16T14:00:00Z"
+  }
+}

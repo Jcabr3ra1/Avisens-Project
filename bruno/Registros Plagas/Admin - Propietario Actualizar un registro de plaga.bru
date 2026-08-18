@@ -1,0 +1,26 @@
+meta {
+  name: [Admin · Propietario]  Actualizar un registro de plaga
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/registros-plagas/1
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "control_aplicado": "Refuerzo de cebos",
+    "observaciones": "Corrección"
+  }
+}

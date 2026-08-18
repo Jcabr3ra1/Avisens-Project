@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Últimas 48 lecturas de clima de una granja
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/granjas/1/clima
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

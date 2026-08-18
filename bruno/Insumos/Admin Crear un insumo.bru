@@ -1,0 +1,33 @@
+meta {
+  name: [Admin]  Crear un insumo
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/insumos
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "nombre": "Alimento iniciación",
+    "tipo": "alimento",
+    "unidad_medida": "kg",
+    "stock_actual": 100,
+    "stock_minimo": 20,
+    "precio_unitario_cop": 2500,
+    "proveedor_habitual_id": 1,
+    "ubicacion_almacen": "Bodega A",
+    "fecha_vencimiento": "2026-12-31"
+  }
+}

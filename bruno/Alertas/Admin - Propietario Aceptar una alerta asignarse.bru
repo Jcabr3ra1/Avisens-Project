@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Aceptar una alerta (asignarse)
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/v1/alertas/1/aceptar
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
