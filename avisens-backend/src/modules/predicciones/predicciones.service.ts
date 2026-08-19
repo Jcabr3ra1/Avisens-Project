@@ -67,11 +67,14 @@ export class PrediccionesService {
       lote.cantidad_inicial,
     );
 
+    const consumo = await this.consumoProyectado(loteId, inicio);
+
     return {
       lote_id: loteId,
       pesajes_usados: pesajesParaMl.length,
       ...prediccion,
       mortalidad_proyectada_pct: mortalidad?.mortalidad_proyectada_pct ?? null,
+      consumo_proyectado_kg: consumo?.consumo_proyectado_kg ?? null,
     };
   }
 
@@ -110,6 +113,40 @@ export class PrediccionesService {
 
     return (await respuesta.json()) as {
       mortalidad_proyectada_pct: number;
+      dia_faena: number;
+    };
+  }
+  private async consumoProyectado(loteId: number, inicio: number) {
+    const registros = await this.prisma.consumoDiario.findMany({
+      where: { lote_id: loteId },
+      orderBy: { fecha: 'asc' },
+      select: { fecha: true, alimento_kg: true },
+    });
+
+    let acumulado = 0;
+    const porDia = new Map<number, number>();
+    for (const r of registros) {
+      acumulado += r.alimento_kg ?? 0;
+      const dia = Math.round(
+        (r.fecha.getTime() - inicio) / (1000 * 60 * 60 * 24),
+      );
+      porDia.set(dia, acumulado);
+    }
+
+    const consumosParaMl = [...porDia.entries()].map(
+      ([dia, consumo_acum_kg]) => ({ dia, consumo_acum_kg }),
+    );
+    if (consumosParaMl.length < 3) return null;
+
+    const respuesta = await fetch(`${ML_URL}/predecir-consumo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ consumos: consumosParaMl }),
+    });
+    if (!respuesta.ok) return null;
+
+    return (await respuesta.json()) as {
+      consumo_proyectado_kg: number;
       dia_faena: number;
     };
   }

@@ -32,9 +32,23 @@ def predecir_mortalidad(mortalidades, dia_faena):
     modelo = np.poly1d(coeficientes)
     proyectada = float(modelo(dia_faena))
 
-
     proyectada = max(0.0, min(100.0, proyectada))
     return {
         "mortalidad_proyectada_pct": round(proyectada, 2),
+        "dia_faena": dia_faena,
+    }
+
+
+def predecir_consumo(consumos, dia_faena):
+    dias = np.array([c["dia"] for c in consumos])
+    kg = np.array([c["consumo_acum_kg"] for c in consumos])
+
+    coeficientes = np.polyfit(dias, kg, 2)
+    modelo = np.poly1d(coeficientes)
+    proyectado = float(modelo(dia_faena))
+    proyectado = max(0.0, proyectado)
+
+    return {
+        "consumo_proyectado_kg": round(proyectado, 2),
         "dia_faena": dia_faena,
     }

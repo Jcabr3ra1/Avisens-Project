@@ -12,6 +12,7 @@ describe('PrediccionesService', () => {
     lote: { findUnique: jest.fn() },
     pesaje: { findMany: jest.fn() },
     registroMortalidad: { findMany: jest.fn() },
+    consumoDiario: { findMany: jest.fn() },
   };
 
   const admin: Solicitante = { id: 1, rol: ROLES.ADMINISTRADOR };
@@ -40,6 +41,7 @@ describe('PrediccionesService', () => {
     prisma.lote.findUnique.mockResolvedValue(loteConDueno);
     prisma.pesaje.findMany.mockResolvedValue(tresPesajes);
     prisma.registroMortalidad.findMany.mockResolvedValue([]);
+    prisma.consumoDiario.findMany.mockResolvedValue([]);
   });
 
   afterEach(() => jest.restoreAllMocks());
@@ -150,5 +152,91 @@ describe('PrediccionesService', () => {
 
     const r = await service.predecir(1, admin);
     expect(r.mortalidad_proyectada_pct).toBeNull();
+  });
+  it('incluye el consumo proyectado cuando hay 3+ registros', async () => {
+    prisma.consumoDiario.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), alimento_kg: 165 },
+      { fecha: new Date('2026-07-15'), alimento_kg: 355 },
+      { fecha: new Date('2026-07-22'), alimento_kg: 610 },
+    ]);
+    global.fetch = jest.fn((url: string) => {
+      const body = url.includes('predecir-consumo')
+        ? { consumo_proyectado_kg: 4550.75, dia_faena: 42 }
+        : {
+            peso_proyectado_faena_g: 3256,
+            dia_faena: 42,
+            dias_al_objetivo: 37,
+            peso_objetivo_g: 2500,
+          };
+      return Promise.resolve({
+        ok: true,
+        json: jest.fn().mockResolvedValue(body),
+      });
+    }) as unknown as typeof fetch;
+
+    const r = await service.predecir(1, admin);
+
+    expect(r).toMatchObject({
+      peso_proyectado_faena_g: 3256,
+      consumo_proyectado_kg: 4550.75,
+    });
+  });
+
+  it('acumula el consumo diario y deduplica los dias repetidos', async () => {
+    prisma.consumoDiario.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), alimento_kg: 100 },
+      { fecha: new Date('2026-07-08'), alimento_kg: 65 },
+      { fecha: new Date('2026-07-15'), alimento_kg: 355 },
+      { fecha: new Date('2026-07-22'), alimento_kg: null },
+      { fecha: new Date('2026-07-22'), alimento_kg: 610 },
+    ]);
+    const fetchMock = jest.fn((url: string) => {
+      const body = url.includes('predecir-consumo')
+        ? { consumo_proyectado_kg: 4550.75, dia_faena: 42 }
+        : {
+            peso_proyectado_faena_g: 3256,
+            dia_faena: 42,
+            dias_al_objetivo: 37,
+            peso_objetivo_g: 2500,
+          };
+      return Promise.resolve({
+        ok: true,
+        json: jest.fn().mockResolvedValue(body),
+      });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await service.predecir(1, admin);
+
+    const calls = fetchMock.mock.calls as unknown as Array<
+      [string, { body: string }]
+    >;
+    const llamada = calls.find(([url]) => url.includes('predecir-consumo'));
+    const body = JSON.parse(llamada![1].body) as {
+      consumos: Array<{ dia: number; consumo_acum_kg: number }>;
+    };
+    expect(body.consumos).toEqual([
+      { dia: 7, consumo_acum_kg: 165 },
+      { dia: 14, consumo_acum_kg: 520 },
+      { dia: 21, consumo_acum_kg: 1130 },
+    ]);
+  });
+
+  it('deja el consumo en null cuando hay menos de 3 registros', async () => {
+    prisma.consumoDiario.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), alimento_kg: 165 },
+    ]);
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        peso_proyectado_faena_g: 3256,
+        dia_faena: 42,
+        dias_al_objetivo: 37,
+        peso_objetivo_g: 2500,
+      }),
+    });
+
+    const r = await service.predecir(1, admin);
+    expect(r.consumo_proyectado_kg).toBeNull();
   });
 });

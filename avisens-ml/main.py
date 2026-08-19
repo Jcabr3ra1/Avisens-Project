@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from prediccion import predecir, predecir_mortalidad
+from prediccion import predecir, predecir_mortalidad, predecir_consumo
 
 
 class Pesaje(BaseModel):
@@ -24,6 +24,16 @@ class PeticionMortalidad(BaseModel):
     dia_faena: int = 42
 
 
+class Consumo(BaseModel):
+    dia: int
+    consumo_acum_kg: float
+
+
+class PeticionConsumo(BaseModel):
+    consumos: list[Consumo]
+    dia_faena: int = 42
+
+
 app = FastAPI(title="Avisens ML")
 
 
@@ -37,7 +47,13 @@ def predecir_endpoint(peticion: PeticionPrediccion):
     pesajes = [p.model_dump() for p in peticion.pesajes]
     return predecir(pesajes, peticion.dia_faena, peticion.peso_objetivo_g)
 
+
 @app.post("/predecir-mortalidad")
 def predecir_mortalidad_endpoint(peticion: PeticionMortalidad):
     datos = [m.model_dump() for m in peticion.mortalidades]
     return predecir_mortalidad(datos, peticion.dia_faena)
+
+@app.post("/predecir-consumo")
+def predecir_consumo_endpoint(peticion: PeticionConsumo):
+    datos = [c.model_dump() for c in peticion.consumos]
+    return predecir_consumo(datos, peticion.dia_faena)
