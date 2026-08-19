@@ -6,5 +6,6 @@ import { IndicadoresJob } from './indicadores.job';
 @Module({
   controllers: [IndicadoresController],
   providers: [IndicadoresService, IndicadoresJob],
+  exports: [IndicadoresService],
 })
 export class IndicadoresModule {}
