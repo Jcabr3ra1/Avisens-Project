@@ -12,10 +12,16 @@ services:
       - "5433:5432"
 
   # Backend NestJS en modo watch (nest --watch). Usa la etapa `dev` del Dockerfile.
+  # Al arrancar: migra la base + siembra roles y admin (idempotente), para que
+  # cualquier compañero tenga login listo sin correr nada a mano.
   backend:
     build:
       target: dev
-    command: sh -c "pnpm prisma migrate deploy && pnpm run start:dev"
+    command: sh -c "pnpm prisma migrate deploy && pnpm run seed && pnpm run start:dev"
+    environment:
+      # Admin de DESARROLLO local (no es prod). El seed lo crea con estas vars.
+      ADMIN_EMAIL: admin@avisens.com
+      ADMIN_PASSWORD: Avisens2026!
     volumes:
       - ./avisens-backend:/app
       - /app/node_modules
