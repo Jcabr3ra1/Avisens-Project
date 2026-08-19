@@ -13,6 +13,7 @@ describe('PrediccionesService', () => {
     pesaje: { findMany: jest.fn() },
     registroMortalidad: { findMany: jest.fn() },
     consumoDiario: { findMany: jest.fn() },
+    curvaObjetivo: { findFirst: jest.fn() },
   };
 
   const admin: Solicitante = { id: 1, rol: ROLES.ADMINISTRADOR };
@@ -31,6 +32,7 @@ describe('PrediccionesService', () => {
   ];
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PrediccionesService,
@@ -42,6 +44,7 @@ describe('PrediccionesService', () => {
     prisma.pesaje.findMany.mockResolvedValue(tresPesajes);
     prisma.registroMortalidad.findMany.mockResolvedValue([]);
     prisma.consumoDiario.findMany.mockResolvedValue([]);
+    prisma.curvaObjetivo.findFirst.mockResolvedValue(null);
   });
 
   afterEach(() => jest.restoreAllMocks());
@@ -238,5 +241,183 @@ describe('PrediccionesService', () => {
 
     const r = await service.predecir(1, admin);
     expect(r.consumo_proyectado_kg).toBeNull();
+  });
+  it('calcula el FCR proyectado a partir del consumo y la mortalidad', async () => {
+    prisma.consumoDiario.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), alimento_kg: 165 },
+      { fecha: new Date('2026-07-15'), alimento_kg: 355 },
+      { fecha: new Date('2026-07-22'), alimento_kg: 610 },
+    ]);
+    prisma.registroMortalidad.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), cantidad_aves: 10 },
+      { fecha: new Date('2026-07-15'), cantidad_aves: 5 },
+      { fecha: new Date('2026-07-22'), cantidad_aves: 5 },
+    ]);
+    global.fetch = jest.fn((url: string) => {
+      let body: Record<string, number | null>;
+      if (url.includes('predecir-consumo')) {
+        body = { consumo_proyectado_kg: 4550.75, dia_faena: 42 };
+      } else if (url.includes('predecir-mortalidad')) {
+        body = { mortalidad_proyectada_pct: 3.5, dia_faena: 42 };
+      } else {
+        body = {
+          peso_proyectado_faena_g: 3661,
+          dia_faena: 42,
+          dias_al_objetivo: 35,
+          peso_objetivo_g: 2500,
+        };
+      }
+      return Promise.resolve({
+        ok: true,
+        json: jest.fn().mockResolvedValue(body),
+      });
+    }) as unknown as typeof fetch;
+
+    const r = await service.predecir(1, admin);
+
+    expect(r.fcr_proyectado).toBeCloseTo(1.3, 2);
+  });
+
+  it('deja el FCR en null cuando no hay consumo proyectado', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        peso_proyectado_faena_g: 3661,
+        dia_faena: 42,
+        dias_al_objetivo: 35,
+        peso_objetivo_g: 2500,
+      }),
+    });
+
+    const r = await service.predecir(1, admin);
+    expect(r.consumo_proyectado_kg).toBeNull();
+    expect(r.fcr_proyectado).toBeNull();
+  });
+
+  it('deja el FCR en null cuando la ganancia proyectada no es positiva', async () => {
+    prisma.consumoDiario.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), alimento_kg: 165 },
+      { fecha: new Date('2026-07-15'), alimento_kg: 355 },
+      { fecha: new Date('2026-07-22'), alimento_kg: 610 },
+    ]);
+    global.fetch = jest.fn((url: string) => {
+      const body = url.includes('predecir-consumo')
+        ? { consumo_proyectado_kg: 4550.75, dia_faena: 42 }
+        : {
+            peso_proyectado_faena_g: 40,
+            dia_faena: 42,
+            dias_al_objetivo: null,
+            peso_objetivo_g: 2500,
+          };
+      return Promise.resolve({
+        ok: true,
+        json: jest.fn().mockResolvedValue(body),
+      });
+    }) as unknown as typeof fetch;
+
+    const r = await service.predecir(1, admin);
+    expect(r.fcr_proyectado).toBeNull();
+  });
+  const curvaFaena = {
+    dia: 42,
+    marca: 'italcol',
+    sexo: 'macho',
+    peso_esperado_g: 3100,
+    fcr_objetivo: 1.57,
+  };
+
+  const mockMlCompleto = () =>
+    jest.fn((url: string) => {
+      let body: Record<string, number | null>;
+      if (url.includes('predecir-consumo')) {
+        body = { consumo_proyectado_kg: 4550.75, dia_faena: 42 };
+      } else if (url.includes('predecir-mortalidad')) {
+        body = { mortalidad_proyectada_pct: 3.5, dia_faena: 42 };
+      } else {
+        body = {
+          peso_proyectado_faena_g: 3661,
+          dia_faena: 42,
+          dias_al_objetivo: 35,
+          peso_objetivo_g: 2500,
+        };
+      }
+      return Promise.resolve({
+        ok: true,
+        json: jest.fn().mockResolvedValue(body),
+      });
+    }) as unknown as typeof fetch;
+
+  const sembrarSerieCompleta = () => {
+    prisma.consumoDiario.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), alimento_kg: 165 },
+      { fecha: new Date('2026-07-15'), alimento_kg: 355 },
+      { fecha: new Date('2026-07-22'), alimento_kg: 610 },
+    ]);
+    prisma.registroMortalidad.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), cantidad_aves: 10 },
+      { fecha: new Date('2026-07-15'), cantidad_aves: 5 },
+      { fecha: new Date('2026-07-22'), cantidad_aves: 5 },
+    ]);
+  };
+
+  it('compara la proyeccion contra la curva objetivo de la marca', async () => {
+    sembrarSerieCompleta();
+    prisma.curvaObjetivo.findFirst.mockResolvedValue(curvaFaena);
+    global.fetch = mockMlCompleto();
+
+    const r = await service.predecir(1, admin);
+
+    expect(r.comparacion_objetivo).toMatchObject({
+      dia_curva: 42,
+      marca: 'italcol',
+      peso_esperado_g: 3100,
+      fcr_objetivo: 1.57,
+      veredicto_peso: 'por_encima',
+      veredicto_fcr: 'mejor_que_objetivo',
+    });
+  });
+
+  it('busca la curva sin distinguir mayusculas en marca y sexo', async () => {
+    sembrarSerieCompleta();
+    prisma.lote.findUnique.mockResolvedValue({
+      ...loteConDueno,
+      sexo: 'Macho',
+      marca_alimento: 'Italcol',
+    });
+    prisma.curvaObjetivo.findFirst.mockResolvedValue(curvaFaena);
+    global.fetch = mockMlCompleto();
+
+    await service.predecir(1, admin);
+
+    const llamadas = prisma.curvaObjetivo.findFirst.mock.calls as Array<
+      [{ where: Record<string, { equals: string; mode: string }> }]
+    >;
+    const where = llamadas[0][0].where;
+    expect(where.marca).toEqual({ equals: 'Italcol', mode: 'insensitive' });
+    expect(where.sexo).toEqual({ equals: 'Macho', mode: 'insensitive' });
+  });
+
+  it('marca el FCR como peor_que_objetivo cuando supera la curva', async () => {
+    sembrarSerieCompleta();
+    prisma.curvaObjetivo.findFirst.mockResolvedValue({
+      ...curvaFaena,
+      fcr_objetivo: 1.1,
+    });
+    global.fetch = mockMlCompleto();
+
+    const r = await service.predecir(1, admin);
+
+    expect(r.comparacion_objetivo).toMatchObject({
+      veredicto_fcr: 'peor_que_objetivo',
+    });
+  });
+
+  it('deja la comparacion en null cuando no hay curva para el lote', async () => {
+    sembrarSerieCompleta();
+    prisma.curvaObjetivo.findFirst.mockResolvedValue(null);
+    global.fetch = mockMlCompleto();
+
+    const r = await service.predecir(1, admin);
+    expect(r.comparacion_objetivo).toBeNull();
   });
 });
