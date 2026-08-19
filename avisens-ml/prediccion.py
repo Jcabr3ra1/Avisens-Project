@@ -22,3 +22,19 @@ def predecir(pesajes, dia_faena, peso_objetivo_g):
         "dias_al_objetivo": dias_al_objetivo,
         "peso_objetivo_g": peso_objetivo_g,
     }
+
+
+def predecir_mortalidad(mortalidades, dia_faena):
+    dias = np.array([m["dia"] for m in mortalidades])
+    pct = np.array([m["mortalidad_pct"] for m in mortalidades])
+
+    coeficientes = np.polyfit(dias, pct, 2)
+    modelo = np.poly1d(coeficientes)
+    proyectada = float(modelo(dia_faena))
+
+
+    proyectada = max(0.0, min(100.0, proyectada))
+    return {
+        "mortalidad_proyectada_pct": round(proyectada, 2),
+        "dia_faena": dia_faena,
+    }

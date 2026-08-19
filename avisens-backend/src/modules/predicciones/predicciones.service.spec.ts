@@ -11,6 +11,7 @@ describe('PrediccionesService', () => {
   const prisma = {
     lote: { findUnique: jest.fn() },
     pesaje: { findMany: jest.fn() },
+    registroMortalidad: { findMany: jest.fn() },
   };
 
   const admin: Solicitante = { id: 1, rol: ROLES.ADMINISTRADOR };
@@ -18,6 +19,7 @@ describe('PrediccionesService', () => {
 
   const loteConDueno = {
     fecha_ingreso: new Date('2026-07-01'),
+    cantidad_inicial: 1000,
     galpon: { granja: { propietario_id: 5 } },
   };
 
@@ -37,6 +39,7 @@ describe('PrediccionesService', () => {
     service = module.get<PrediccionesService>(PrediccionesService);
     prisma.lote.findUnique.mockResolvedValue(loteConDueno);
     prisma.pesaje.findMany.mockResolvedValue(tresPesajes);
+    prisma.registroMortalidad.findMany.mockResolvedValue([]);
   });
 
   afterEach(() => jest.restoreAllMocks());
@@ -100,5 +103,52 @@ describe('PrediccionesService', () => {
       { dia: 14, peso: 500 },
       { dia: 21, peso: 1000 },
     ]);
+  });
+
+  it('incluye la mortalidad proyectada cuando hay 3+ registros', async () => {
+    prisma.registroMortalidad.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), cantidad_aves: 10 },
+      { fecha: new Date('2026-07-15'), cantidad_aves: 5 },
+      { fecha: new Date('2026-07-22'), cantidad_aves: 5 },
+    ]);
+    global.fetch = jest.fn((url: string) => {
+      const body = url.includes('predecir-mortalidad')
+        ? { mortalidad_proyectada_pct: 4.4, dia_faena: 42 }
+        : {
+            peso_proyectado_faena_g: 3256,
+            dia_faena: 42,
+            dias_al_objetivo: 37,
+            peso_objetivo_g: 2500,
+          };
+      return Promise.resolve({
+        ok: true,
+        json: jest.fn().mockResolvedValue(body),
+      });
+    }) as unknown as typeof fetch;
+
+    const r = await service.predecir(1, admin);
+
+    expect(r).toMatchObject({
+      peso_proyectado_faena_g: 3256,
+      mortalidad_proyectada_pct: 4.4,
+    });
+  });
+
+  it('deja la mortalidad en null cuando hay menos de 3 registros', async () => {
+    prisma.registroMortalidad.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), cantidad_aves: 10 },
+    ]);
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        peso_proyectado_faena_g: 3256,
+        dia_faena: 42,
+        dias_al_objetivo: 37,
+        peso_objetivo_g: 2500,
+      }),
+    });
+
+    const r = await service.predecir(1, admin);
+    expect(r.mortalidad_proyectada_pct).toBeNull();
   });
 });
