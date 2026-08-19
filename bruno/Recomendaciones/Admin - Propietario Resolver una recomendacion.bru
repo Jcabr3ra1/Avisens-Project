@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario]  Resolver una recomendacion
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/v1/recomendaciones/1/resolver
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

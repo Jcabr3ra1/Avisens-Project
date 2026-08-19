@@ -33,6 +33,7 @@ import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-ale
 import { AlertasCanalesModule } from './modules/alertas-canales/alertas-canales.module';
 import { MovimientosFinancierosModule } from './modules/movimientos-financieros/movimientos-financieros.module';
 import { PrediccionesModule } from './modules/predicciones/predicciones.module';
+import { RecomendacionesModule } from './modules/recomendaciones/recomendaciones.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { PrediccionesModule } from './modules/predicciones/predicciones.module';
     AlertasCanalesModule,
     MovimientosFinancierosModule,
     PrediccionesModule,
+    RecomendacionesModule,
   ],
   providers: [
     {
