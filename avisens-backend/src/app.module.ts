@@ -33,6 +33,7 @@ import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-ale
 import { AlertasCanalesModule } from './modules/alertas-canales/alertas-canales.module';
 import { MovimientosFinancierosModule } from './modules/movimientos-financieros/movimientos-financieros.module';
 import { PrediccionesModule } from './modules/predicciones/predicciones.module';
+import { CopilotoModule } from './modules/copiloto/copiloto.module';
 import { RecomendacionesModule } from './modules/recomendaciones/recomendaciones.module';
 
 @Module({
@@ -77,6 +78,7 @@ import { RecomendacionesModule } from './modules/recomendaciones/recomendaciones
     MovimientosFinancierosModule,
     PrediccionesModule,
     RecomendacionesModule,
+    CopilotoModule,
   ],
   providers: [
     {

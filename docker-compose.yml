@@ -53,6 +53,10 @@ services:
       # Crea el usuario admin del seed al arrancar (idempotente). Así quien haga
       # `docker compose up` obtiene la base lista sin correr nada a mano.
       RUN_SEED: "true"
+      # Copiloto IA. La key NO va escrita aqui: Docker Compose la lee del .env
+      # de la raiz (que esta en .gitignore) para no versionar el secreto.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-haiku-4-5}
     ports:
       - "3000:3000"
 

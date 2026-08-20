@@ -5,5 +5,6 @@ import { LotesService } from './lotes.service';
 @Module({
   controllers: [LotesController],
   providers: [LotesService],
+  exports: [LotesService],
 })
 export class LotesModule {}
