@@ -30,6 +30,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClimaModule } from './modules/clima/clima.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
 import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-alerta.module';
+import { AlertasCanalesModule } from './modules/alertas-canales/alertas-canales.module';
+import { MovimientosFinancierosModule } from './modules/movimientos-financieros/movimientos-financieros.module';
+import { PrediccionesModule } from './modules/predicciones/predicciones.module';
 
 @Module({
   imports: [
@@ -69,6 +72,9 @@ import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-ale
     AlertasModule,
     HealthModule,
     PoliticasAlertaModule,
+    AlertasCanalesModule,
+    MovimientosFinancierosModule,
+    PrediccionesModule,
   ],
   providers: [
     {
