@@ -35,7 +35,7 @@ import { MovimientosFinancierosModule } from './modules/movimientos-financieros/
 import { PrediccionesModule } from './modules/predicciones/predicciones.module';
 import { CopilotoModule } from './modules/copiloto/copiloto.module';
 import { RecomendacionesModule } from './modules/recomendaciones/recomendaciones.module';
-
+import { ChatbotModule } from './modules/chatbot/chatbot.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -79,6 +79,7 @@ import { RecomendacionesModule } from './modules/recomendaciones/recomendaciones
     PrediccionesModule,
     RecomendacionesModule,
     CopilotoModule,
+    ChatbotModule,
   ],
   providers: [
     {

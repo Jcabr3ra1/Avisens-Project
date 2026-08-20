@@ -601,6 +601,32 @@ model UsuarioGalpon {
 }
 
 // ---------------------------------------------------------------------------
+// Preguntas del chatbot (el flujo vive en datos: agregar o reordenar una
+// pregunta NO requiere desplegar, es una fila)
+// ---------------------------------------------------------------------------
+model PreguntaChatbot {
+  id              Int      @id @default(autoincrement())
+  codigo          String   @unique
+  bloque          String
+  orden           Int
+  texto           String
+  tipo            String
+  opciones        Json?
+  campo_prospecto String?
+  puntua          Boolean  @default(false)
+  obligatoria     Boolean  @default(true)
+  siguiente       String?
+  saltos          Json?
+  activa          Boolean  @default(true)
+  fecha_creacion  DateTime @default(now())
+
+  respuestas RespuestaChatbot[]
+
+  @@index([bloque, orden])
+  @@map("preguntas_chatbot")
+}
+
+// ---------------------------------------------------------------------------
 // Chatbot de cotizacion (matriz de calificacion, prospectos y cotizaciones)
 // ---------------------------------------------------------------------------
 model MatrizCalificacion {
@@ -639,6 +665,7 @@ model Prospecto {
   puntaje_total              Int?
   clasificacion              String?
   estado                     String    @default("nuevo")
+  pregunta_actual            String?
   asesor_asignado_id         Int?
   ip_origen                  String?
   user_agent                 String?
@@ -659,6 +686,7 @@ model Prospecto {
 model RespuestaChatbot {
   id               Int      @id @default(autoincrement())
   prospecto_id     Int
+  pregunta_id      Int?
   matriz_id        Int?
   bloque           String?
   codigo_pregunta  String?
@@ -668,6 +696,7 @@ model RespuestaChatbot {
   fecha_respuesta  DateTime @default(now())
 
   prospecto Prospecto           @relation(fields: [prospecto_id], references: [id])
+  pregunta  PreguntaChatbot?    @relation(fields: [pregunta_id], references: [id])
   matriz    MatrizCalificacion? @relation(fields: [matriz_id], references: [id])
 
   @@index([prospecto_id])

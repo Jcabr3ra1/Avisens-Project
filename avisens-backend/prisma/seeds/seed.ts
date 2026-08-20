@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const adapter = new PrismaPg({
@@ -42,7 +42,7 @@ async function sembrarAdmin(rolAdminId: number) {
   if (!email && !password) {
     console.warn(
       'ADMIN_EMAIL / ADMIN_PASSWORD no definidos: no se crea administrador ' +
-        '(solo se sembraron los roles).',
+      '(solo se sembraron los roles).',
     );
     return;
   }
@@ -406,6 +406,309 @@ const MATRIZ_CALIFICACION = [
   },
 ];
 
+const PREGUNTAS_CHATBOT = [
+  {
+    codigo: 'A1',
+    bloque: 'A',
+    orden: 1,
+    texto: '¿Autorizas el tratamiento de tus datos personales (habeas data)?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: 'consentimiento_habeas_data',
+    puntua: false,
+    siguiente: 'A2',
+    saltos: { No: 'FIN' },
+  },
+  {
+    codigo: 'A2',
+    bloque: 'A',
+    orden: 2,
+    texto: '¿Cual es tu nombre completo?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'nombre',
+    puntua: false,
+    siguiente: 'A3',
+    saltos: null,
+  },
+  {
+    codigo: 'A3',
+    bloque: 'A',
+    orden: 3,
+    texto: '¿Cual es tu numero de documento?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'documento',
+    puntua: false,
+    siguiente: 'A4',
+    saltos: null,
+  },
+  {
+    codigo: 'A4',
+    bloque: 'A',
+    orden: 4,
+    texto: '¿A que numero de telefono te podemos contactar?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'telefono',
+    puntua: false,
+    siguiente: 'A5',
+    saltos: null,
+  },
+  {
+    codigo: 'A5',
+    bloque: 'A',
+    orden: 5,
+    texto: '¿Cual es tu correo electronico?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'email',
+    puntua: false,
+    siguiente: 'A6',
+    saltos: null,
+  },
+  {
+    codigo: 'A6',
+    bloque: 'A',
+    orden: 6,
+    texto: '¿Como se llama tu granja?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'nombre_granja',
+    puntua: false,
+    siguiente: 'A7',
+    saltos: null,
+  },
+  {
+    codigo: 'A7',
+    bloque: 'A',
+    orden: 7,
+    texto: '¿En que municipio esta ubicada?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'municipio',
+    puntua: false,
+    siguiente: 'A8',
+    saltos: null,
+  },
+  {
+    codigo: 'A8',
+    bloque: 'A',
+    orden: 8,
+    texto: '¿Cuantas aves manejas por ciclo?',
+    tipo: 'opcion_unica',
+    opciones: ['<1000', '1000-5000', '5000-10000', '>10000'],
+    campo_prospecto: null,
+    puntua: true,
+    siguiente: 'A9',
+    saltos: null,
+  },
+  {
+    codigo: 'A9',
+    bloque: 'A',
+    orden: 9,
+    texto: '¿Ya tienes el galpon construido?',
+    tipo: 'opcion_unica',
+    opciones: [
+      'Sí, está construido y se encuentra en buenas condiciones',
+      'Sí, pero necesita adecuaciones',
+      'No, aun no lo construyo',
+    ],
+    campo_prospecto: null,
+    puntua: true,
+    siguiente: 'A10',
+    saltos: null,
+  },
+  {
+    codigo: 'A10',
+    bloque: 'A',
+    orden: 10,
+    texto: '¿Cuantos metros cuadrados tiene el galpon?',
+    tipo: 'numero',
+    opciones: null,
+    campo_prospecto: 'area_galpon_m2',
+    puntua: false,
+    siguiente: 'A11',
+    saltos: null,
+  },
+  {
+    codigo: 'A11',
+    bloque: 'A',
+    orden: 11,
+    texto: '¿Que tipo de suministro electrico tienes en la granja?',
+    tipo: 'opcion_unica',
+    opciones: [
+      'Eléctrico estable',
+      'Eléctrico con cortes frecuentes',
+      'Planta electrica',
+      'No tengo energia en el galpon',
+    ],
+    campo_prospecto: null,
+    puntua: true,
+    siguiente: 'A12',
+    saltos: null,
+  },
+  {
+    codigo: 'A12',
+    bloque: 'A',
+    orden: 12,
+    texto: '¿Cuantos metros cuadrados tiene la granja en total?',
+    tipo: 'numero',
+    opciones: null,
+    campo_prospecto: 'area_granja_m2',
+    puntua: false,
+    siguiente: 'A13',
+    saltos: null,
+  },
+  {
+    codigo: 'A13',
+    bloque: 'A',
+    orden: 13,
+    texto: '¿Tienes conexion a internet en la granja?',
+    tipo: 'opcion_unica',
+    opciones: ['Sí, estable', 'Sí, pero intermitente', 'No'],
+    campo_prospecto: null,
+    puntua: true,
+    siguiente: 'A14',
+    saltos: null,
+  },
+
+  {
+    codigo: 'A14',
+    bloque: 'A',
+    orden: 14,
+    texto: '¿Cual es tu rol en la granja?',
+    tipo: 'opcion_unica',
+    opciones: ['Propietario', 'Administrador', 'Galponero', 'Otro'],
+    campo_prospecto: 'rol_prospecto',
+    puntua: false,
+    siguiente: 'A15',
+    saltos: null,
+  },
+  {
+    codigo: 'A15',
+    bloque: 'A',
+    orden: 15,
+    texto: '¿Que tipo de produccion manejas?',
+    tipo: 'opcion_unica',
+    opciones: ['Pollo de engorde', 'Ponedoras', 'Ambas'],
+    campo_prospecto: 'tipo_produccion',
+    puntua: false,
+    siguiente: 'A16',
+    saltos: null,
+  },
+  {
+    codigo: 'A16',
+    bloque: 'A',
+    orden: 16,
+    texto: '¿Has perdido aves por problemas de temperatura, humedad o ventilacion?',
+    tipo: 'opcion_unica',
+    opciones: ['Sí, más de una vez', 'Una vez', 'No', 'No sé la causa'],
+    campo_prospecto: null,
+    puntua: true,
+    siguiente: 'A17',
+    saltos: null,
+  },
+  {
+    codigo: 'A17',
+    bloque: 'A',
+    orden: 17,
+    texto: '¿Eres tu quien decide las compras de la granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    puntua: false,
+    siguiente: 'A18',
+    saltos: null,
+  },
+  {
+    codigo: 'A18',
+    bloque: 'A',
+    orden: 18,
+    texto: '¿Como preferirias adquirir el sistema?',
+    tipo: 'opcion_unica',
+    opciones: [
+      'Compra directa',
+      'Suscripción',
+      'Lo que sea más conveniente',
+      'No sé',
+    ],
+    campo_prospecto: null,
+    puntua: true,
+    siguiente: 'A19',
+    saltos: null,
+  },
+  {
+    codigo: 'A19',
+    bloque: 'A',
+    orden: 19,
+    texto: '¿Has mirado otras opciones en el mercado?',
+    tipo: 'opcion_unica',
+    opciones: [
+      'Sí, ya tengo cotizaciones',
+      'Estoy mirando opciones',
+      'Solo AVISENS',
+      'No sé qué más existe',
+    ],
+    campo_prospecto: null,
+    puntua: true,
+    siguiente: 'FIN',
+    saltos: null,
+  },
+
+  {
+    codigo: 'B1',
+    bloque: 'B',
+    orden: 1,
+    texto: '¿Que tipo de solicitud quieres radicar?',
+    tipo: 'opcion_unica',
+    opciones: ['Petición', 'Queja', 'Reclamo', 'Sugerencia', 'Felicitación'],
+    campo_prospecto: null,
+    puntua: false,
+    siguiente: 'B2',
+    saltos: null,
+  },
+  {
+    codigo: 'B2',
+    bloque: 'B',
+    orden: 2,
+    texto: '¿Cual es el asunto?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: null,
+    puntua: false,
+    siguiente: 'B3',
+    saltos: null,
+  },
+  {
+    codigo: 'B3',
+    bloque: 'B',
+    orden: 3,
+    texto: 'Cuentanos con detalle que sucedio',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: null,
+  },
+];
+
+async function sembrarPreguntasChatbot() {
+  for (const pregunta of PREGUNTAS_CHATBOT) {
+    const datos = {
+      ...pregunta,
+      opciones: pregunta.opciones ?? Prisma.DbNull,
+      saltos: pregunta.saltos ?? Prisma.DbNull,
+    };
+    await prisma.preguntaChatbot.upsert({
+      where: { codigo: pregunta.codigo },
+      update: datos,
+      create: datos,
+    });
+  }
+}
+
 async function sembrarMatrizCalificacion() {
   for (const fila of MATRIZ_CALIFICACION) {
     await prisma.matrizCalificacion.upsert({
@@ -445,6 +748,8 @@ async function main() {
   await sembrarAdmin(rolAdmin.id);
   await sembrarCurvasObjetivo();
   await sembrarMatrizCalificacion();
+  await sembrarMatrizCalificacion();
+  await sembrarPreguntasChatbot();
   await sembrarCategoriasFinancieras();
   console.log('Seed completado');
 }
