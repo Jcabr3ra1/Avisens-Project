@@ -420,4 +420,64 @@ describe('PrediccionesService', () => {
     const r = await service.predecir(1, admin);
     expect(r.comparacion_objetivo).toBeNull();
   });
+  it('corta la llamada al servicio ML con un timeout', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        peso_proyectado_faena_g: 3661,
+        dia_faena: 42,
+        dias_al_objetivo: 35,
+        peso_objetivo_g: 2500,
+      }),
+    });
+    global.fetch = fetchMock;
+
+    await service.predecir(1, admin);
+
+    const llamadas = fetchMock.mock.calls as Array<
+      [string, { signal?: AbortSignal }]
+    >;
+    const opciones = llamadas[0][1];
+    expect(opciones.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('lanza BadRequest cuando el servicio ML se cuelga y aborta', async () => {
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(
+        Object.assign(new Error('timeout'), { name: 'TimeoutError' }),
+      );
+
+    await expect(service.predecir(1, admin)).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('deja mortalidad y consumo en null cuando esas llamadas al ML se cuelgan', async () => {
+    sembrarSerieCompleta();
+    global.fetch = jest.fn((url: string) => {
+      if (
+        url.includes('predecir-mortalidad') ||
+        url.includes('predecir-consumo')
+      ) {
+        return Promise.reject(new Error('timeout'));
+      }
+      return Promise.resolve({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          peso_proyectado_faena_g: 3661,
+          dia_faena: 42,
+          dias_al_objetivo: 35,
+          peso_objetivo_g: 2500,
+        }),
+      });
+    }) as unknown as typeof fetch;
+
+    const r = await service.predecir(1, admin);
+
+    expect(r.peso_proyectado_faena_g).toBe(3661);
+    expect(r.mortalidad_proyectada_pct).toBeNull();
+    expect(r.consumo_proyectado_kg).toBeNull();
+    expect(r.fcr_proyectado).toBeNull();
+  });
 });
