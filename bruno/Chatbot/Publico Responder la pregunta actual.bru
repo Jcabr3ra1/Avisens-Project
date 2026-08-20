@@ -1,0 +1,55 @@
+meta {
+  name: [Público]  Responder la pregunta actual
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/chatbot/responder
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "sesion_id": "{{sesion_chatbot}}",
+    "respuesta": "Sí"
+  }
+}
+
+docs {
+  Responde la pregunta que el motor tiene marcada en `prospecto.pregunta_actual`.
+  Corre primero "Iniciar conversacion" para llenar `sesion_chatbot`.
+
+  El flujo del bloque A (19 preguntas) en orden, con una respuesta valida:
+    A1  Sí
+    A2  Pedro Ramirez          A3  91234567
+    A4  3001234567             A5  pedro@granja.com
+    A6  Avicola El Progreso    A7  Lebrija
+    A8  >10000                 (4 pts)
+    A9  Sí, está construido y se encuentra en buenas condiciones   (1 pt)
+    A10 1200,5                 (acepta coma decimal)
+    A11 Eléctrico estable      (1 pt)
+    A12 5000
+    A13 Sí, estable            (1 pt)
+    A14 Propietario            A15 Pollo de engorde
+    A16 Sí, más de una vez     (3 pts)
+    A17 Sí
+    A18 Compra directa         (3 pts)
+    A19 Sí, ya tengo cotizaciones  (3 pts)  -> FIN
+
+  Ese recorrido da 16/16 -> clasificacion "caliente".
+  Enrutamiento: 12-16 caliente · 7-11 tibio · 0-6 frio.
+
+  OJO: las opciones deben ir con tilde EXACTAMENTE como estan en
+  `matriz_calificacion`, o el puntaje no se encuentra.
+
+  Si respondes "No" en A1 (habeas data), la conversacion salta a FIN.
+
+  Errores: 400 respuesta invalida (te lista las opciones) · 400 conversacion
+  ya terminada · 404 sesion inexistente · 429 mas de 30 por minuto.
+}

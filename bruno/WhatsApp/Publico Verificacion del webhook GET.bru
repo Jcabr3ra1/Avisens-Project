@@ -1,0 +1,31 @@
+meta {
+  name: [Público]  Verificacion del webhook (GET)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=avisens-webhook-2026&hub.challenge=1158201444
+  body: none
+  auth: none
+}
+
+params:query {
+  hub.mode: subscribe
+  hub.verify_token: avisens-webhook-2026
+  hub.challenge: 1158201444
+}
+
+docs {
+  Esto es lo que hace Meta UNA sola vez, cuando le das a "Verificar y guardar" en
+  el panel (WhatsApp > Configuracion de produccion > Configurar Webhooks).
+
+  Debe devolver el valor de hub.challenge EN CRUDO (1158201444, sin comillas ni
+  JSON) con HTTP 200. Por eso el controller usa @Res() y res.send(): si Nest lo
+  serializara devolveria "1158201444" entre comillas y Meta rechazaria la
+  verificacion. Es el motivo n.1 por el que ese boton falla.
+
+  Con un verify_token distinto devuelve 403.
+
+  El token tiene que ser el mismo de WHATSAPP_VERIFY_TOKEN en el .env.
+}
