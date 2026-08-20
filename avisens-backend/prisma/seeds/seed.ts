@@ -694,6 +694,76 @@ const PREGUNTAS_CHATBOT = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// !!! PRECIOS PROVISIONALES !!!
+// Estos valores NO son los precios reales de Avisens. Se pusieron para poder
+// construir y demostrar el modulo de cotizacion (2026-08-20). ANTES de mostrar
+// una cotizacion a un cliente real o en la sustentacion, reemplazarlos por la
+// lista de precios oficial. Se cambian en la tabla catalogo_sensores, sin
+// desplegar: basta editar aqui y re-correr el seed.
+// ---------------------------------------------------------------------------
+const CATALOGO_SENSORES = [
+  {
+    tipo_sensor: 'nodo_esp32',
+    nombre: 'Nodo de control ESP32',
+    descripcion: 'Concentra los sensores del galpon y reporta por MQTT',
+    precio_unitario_cop: 250000,
+    cobertura_m2: null,
+    obligatorio: true,
+  },
+  {
+    tipo_sensor: 'temperatura_humedad',
+    nombre: 'Sensor de temperatura y humedad',
+    descripcion: 'Mide el ambiente del galpon; uno cada 120 m2',
+    precio_unitario_cop: 180000,
+    cobertura_m2: 120,
+    obligatorio: true,
+  },
+  {
+    tipo_sensor: 'amoniaco',
+    nombre: 'Sensor de amoniaco (NH3)',
+    descripcion: 'Detecta acumulacion por mala ventilacion o cama humeda',
+    precio_unitario_cop: 320000,
+    cobertura_m2: null,
+    obligatorio: true,
+  },
+  {
+    tipo_sensor: 'nivel_agua',
+    nombre: 'Sensor de nivel de agua',
+    descripcion: 'Vigila el consumo de agua, el primer aviso de enfermedad',
+    precio_unitario_cop: 150000,
+    cobertura_m2: null,
+    obligatorio: true,
+  },
+  {
+    tipo_sensor: 'co2',
+    nombre: 'Sensor de dioxido de carbono',
+    descripcion: 'Opcional: control fino de la ventilacion',
+    precio_unitario_cop: 450000,
+    cobertura_m2: null,
+    obligatorio: false,
+  },
+  {
+    tipo_sensor: 'luminosidad',
+    nombre: 'Sensor de luminosidad',
+    descripcion: 'Opcional: programas de luz; uno cada 300 m2',
+    precio_unitario_cop: 90000,
+    cobertura_m2: 300,
+    obligatorio: false,
+  },
+];
+
+async function sembrarCatalogoSensores() {
+  for (const sensor of CATALOGO_SENSORES) {
+    const datos = { ...sensor, cobertura_m2: sensor.cobertura_m2 ?? null };
+    await prisma.catalogoSensor.upsert({
+      where: { tipo_sensor: sensor.tipo_sensor },
+      update: datos,
+      create: datos,
+    });
+  }
+}
+
 async function sembrarPreguntasChatbot() {
   for (const pregunta of PREGUNTAS_CHATBOT) {
     const datos = {
@@ -751,6 +821,8 @@ async function main() {
   await sembrarMatrizCalificacion();
   await sembrarPreguntasChatbot();
   await sembrarCategoriasFinancieras();
+  await sembrarPreguntasChatbot();
+  await sembrarCatalogoSensores();
   console.log('Seed completado');
 }
 

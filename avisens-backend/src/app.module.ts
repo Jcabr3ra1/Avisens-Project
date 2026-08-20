@@ -37,6 +37,8 @@ import { CopilotoModule } from './modules/copiloto/copiloto.module';
 import { RecomendacionesModule } from './modules/recomendaciones/recomendaciones.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { ProspectosModule } from './modules/prospectos/prospectos.module';
+import { CotizacionesModule } from './modules/cotizaciones/cotizaciones.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -82,6 +84,7 @@ import { ProspectosModule } from './modules/prospectos/prospectos.module';
     CopilotoModule,
     ChatbotModule,
     ProspectosModule,
+    CotizacionesModule,
   ],
   providers: [
     {

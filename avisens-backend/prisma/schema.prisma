@@ -1304,3 +1304,22 @@ model Clima {
   @@index([granja_id])
   @@map("clima")
 }
+
+// ---------------------------------------------------------------------------
+// Catalogo de sensores (precios y cobertura para cotizar; los precios viven en
+// datos para poder actualizarlos sin desplegar)
+// ---------------------------------------------------------------------------
+model CatalogoSensor {
+  id                  Int      @id @default(autoincrement())
+  tipo_sensor         String   @unique
+  nombre              String
+  descripcion         String?
+  precio_unitario_cop Float
+  cobertura_m2        Float?
+  obligatorio         Boolean  @default(true)
+  activo              Boolean  @default(true)
+  fecha_actualizacion DateTime @updatedAt
+
+  @@map("catalogo_sensores")
+}
+
