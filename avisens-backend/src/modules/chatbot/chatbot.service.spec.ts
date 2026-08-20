@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ChatbotNluService } from './chatbot.nlu.service';
 
 describe('ChatbotService', () => {
   let service: ChatbotService;
@@ -12,6 +13,8 @@ describe('ChatbotService', () => {
     respuestaChatbot: { create: jest.fn(), aggregate: jest.fn() },
     matrizCalificacion: { findUnique: jest.fn() },
   };
+
+  const nlu = { interpretar: jest.fn() };
 
   const datosDe = (mock: jest.Mock, indice = 0) =>
     (mock.mock.calls as Array<[{ data: Record<string, unknown> }]>)[indice][0]
@@ -44,7 +47,11 @@ describe('ChatbotService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ChatbotService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        ChatbotService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: ChatbotNluService, useValue: nlu },
+      ],
     }).compile();
     service = module.get<ChatbotService>(ChatbotService);
 
@@ -52,6 +59,7 @@ describe('ChatbotService', () => {
     prisma.prospecto.update.mockResolvedValue(enCurso);
     prisma.respuestaChatbot.create.mockResolvedValue({});
     prisma.preguntaChatbot.findFirst.mockResolvedValue(pregunta({}));
+    nlu.interpretar.mockResolvedValue(null);
   });
 
   describe('iniciar', () => {
@@ -242,6 +250,73 @@ describe('ChatbotService', () => {
       expect(datos.estado).toBe('calificado');
       expect(datos.pregunta_actual).toBe('FIN');
       expect(datos.asesor_asignado_id).toBeUndefined();
+    });
+  });
+  describe('NLU', () => {
+    const responder = (respuesta: string) =>
+      service.responder({ sesion_id: enCurso.sesion_id, respuesta });
+
+    it('usa la opcion interpretada cuando el NLU traduce texto libre', async () => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'A8',
+          tipo: 'opcion_unica',
+          opciones: ['<1000', '5000-10000'],
+          puntua: true,
+          siguiente: 'A9',
+        }),
+      );
+      nlu.interpretar.mockResolvedValue('5000-10000');
+      prisma.matrizCalificacion.findUnique.mockResolvedValue({ puntaje: 3 });
+
+      await responder('como ocho mil pollos');
+
+      expect(prisma.matrizCalificacion.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            codigo_pregunta_opcion_respuesta: {
+              codigo_pregunta: 'A8',
+              opcion_respuesta: '5000-10000',
+            },
+          },
+        }),
+      );
+      expect(datosDe(prisma.respuestaChatbot.create).respuesta_texto).toBe(
+        '5000-10000',
+      );
+    });
+
+    it('sigue el salto usando la respuesta interpretada, no el texto libre', async () => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ saltos: { No: 'FIN' } }),
+      );
+      nlu.interpretar.mockResolvedValue('No');
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: null },
+      });
+
+      const r = await responder('no gracias, prefiero no dar mis datos');
+
+      expect(r.finalizado).toBe(true);
+    });
+
+    it('valida igual lo que devuelve el NLU: no confia en el modelo', async () => {
+      nlu.interpretar.mockResolvedValue('Quiza');
+
+      await expect(responder('tal vez')).rejects.toThrow(
+        /Respuesta no valida para A1/,
+      );
+      expect(prisma.respuestaChatbot.create).not.toHaveBeenCalled();
+    });
+
+    it('usa el texto original cuando el NLU no esta disponible', async () => {
+      nlu.interpretar.mockResolvedValue(null);
+
+      await responder('Sí');
+
+      expect(datosDe(prisma.respuestaChatbot.create).respuesta_texto).toBe(
+        'Sí',
+      );
     });
   });
 });

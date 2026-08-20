@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { IniciarChatDto } from './dto/iniciar-chat.dto';
 import { ResponderChatDto } from './dto/responder-chat.dto';
+import { ChatbotNluService } from './chatbot.nlu.service';
 
 const PRIMERA_PREGUNTA = 'A1';
 const FIN = 'FIN';
@@ -16,7 +17,10 @@ const UMBRAL_TIBIO = 7;
 
 @Injectable()
 export class ChatbotService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private nlu: ChatbotNluService,
+  ) {}
 
   async iniciar(dto: IniciarChatDto) {
     const prospecto = await this.prisma.prospecto.create({
@@ -50,9 +54,13 @@ export class ChatbotService {
     }
 
     const pregunta = await this.obtenerPregunta(prospecto.pregunta_actual);
-    const valor = this.validarRespuesta(pregunta, dto.respuesta);
+
+    const interpretada = await this.nlu.interpretar(pregunta, dto.respuesta);
+    const respuesta = interpretada ?? dto.respuesta;
+
+    const valor = this.validarRespuesta(pregunta, respuesta);
     const puntaje = pregunta.puntua
-      ? await this.puntajeDe(pregunta.codigo, dto.respuesta)
+      ? await this.puntajeDe(pregunta.codigo, respuesta)
       : null;
 
     await this.prisma.respuestaChatbot.create({
@@ -62,20 +70,20 @@ export class ChatbotService {
         bloque: pregunta.bloque,
         codigo_pregunta: pregunta.codigo,
         pregunta_texto: pregunta.texto,
-        respuesta_texto: dto.respuesta,
+        respuesta_texto: respuesta,
         puntaje_obtenido: puntaje,
       },
     });
 
     const saltos = pregunta.saltos as Record<string, string> | null;
-    const siguiente = saltos?.[dto.respuesta] ?? pregunta.siguiente ?? FIN;
+    const siguiente = saltos?.[respuesta] ?? pregunta.siguiente ?? FIN;
 
     const datosProspecto: Record<string, unknown> = {
       pregunta_actual: siguiente,
     };
     if (pregunta.campo_prospecto) {
       datosProspecto[pregunta.campo_prospecto] =
-        pregunta.tipo === 'si_no' ? dto.respuesta === 'Sí' : valor;
+        pregunta.tipo === 'si_no' ? respuesta === 'Sí' : valor;
     }
 
     await this.prisma.prospecto.update({
