@@ -36,6 +36,7 @@ import { PrediccionesModule } from './modules/predicciones/predicciones.module';
 import { CopilotoModule } from './modules/copiloto/copiloto.module';
 import { RecomendacionesModule } from './modules/recomendaciones/recomendaciones.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
+import { ProspectosModule } from './modules/prospectos/prospectos.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -80,6 +81,7 @@ import { ChatbotModule } from './modules/chatbot/chatbot.module';
     RecomendacionesModule,
     CopilotoModule,
     ChatbotModule,
+    ProspectosModule,
   ],
   providers: [
     {

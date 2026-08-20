@@ -1,0 +1,28 @@
+meta {
+  name: [Admin]  Ver un prospecto con sus respuestas
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/prospectos/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Trae el prospecto completo, sus datos de contacto, el asesor asignado y TODAS las
+  respuestas del cuestionario con el puntaje de cada una.
+
+  Es lo que el vendedor lee antes de llamar: ahi ve, por ejemplo, que perdio aves por
+  calor (A16, 3 pts) y que ya tiene cotizaciones de la competencia (A19, 3 pts).
+
+  NO devuelve `sesion_id`. Ese id es la CREDENCIAL con la que se continua la
+  conversacion; si saliera aqui, un asesor podria seguir respondiendo el cuestionario
+  haciendose pasar por el prospecto. Se excluye con `omit` de Prisma, asi que ni
+  siquiera sale de la base.
+}
