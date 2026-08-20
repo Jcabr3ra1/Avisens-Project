@@ -23,16 +23,19 @@ export class ChatbotService {
   ) {}
 
   async iniciar(dto: IniciarChatDto) {
+    const canal = dto.canal_origen ?? 'web';
+    const primera = await this.primeraVisible(PRIMERA_PREGUNTA, canal);
+
     const prospecto = await this.prisma.prospecto.create({
       data: {
         sesion_id: randomUUID(),
-        canal_origen: dto.canal_origen ?? 'web',
-        pregunta_actual: PRIMERA_PREGUNTA,
+        canal_origen: canal,
+        pregunta_actual: primera,
         estado: 'en_proceso',
       },
     });
 
-    const pregunta = await this.obtenerPregunta(PRIMERA_PREGUNTA);
+    const pregunta = await this.obtenerPregunta(primera);
 
     return {
       sesion_id: prospecto.sesion_id,
@@ -76,12 +79,16 @@ export class ChatbotService {
     });
 
     const saltos = pregunta.saltos as Record<string, string> | null;
-    const siguiente = saltos?.[respuesta] ?? pregunta.siguiente ?? FIN;
+    const candidato = saltos?.[respuesta] ?? pregunta.siguiente ?? FIN;
+    const siguiente = await this.primeraVisible(
+      candidato,
+      prospecto.canal_origen,
+    );
 
     const datosProspecto: Record<string, unknown> = {
       pregunta_actual: siguiente,
     };
-    if (pregunta.campo_prospecto) {
+    if (pregunta.campo_prospecto && valor !== '') {
       datosProspecto[pregunta.campo_prospecto] =
         pregunta.tipo === 'si_no' ? respuesta === 'Sí' : valor;
     }
@@ -114,6 +121,25 @@ export class ChatbotService {
       },
     });
     return fila?.puntaje ?? 0;
+  }
+
+  private async primeraVisible(codigo: string, canal: string | null) {
+    let actual = codigo;
+    for (let saltos = 0; saltos < 50; saltos++) {
+      if (actual === FIN) return FIN;
+      const pregunta = await this.prisma.preguntaChatbot.findFirst({
+        where: { codigo: actual, activa: true },
+        select: { omitir_si_canal: true, siguiente: true },
+      });
+      if (!pregunta) return FIN;
+      // Solo se omite si la pregunta declara un canal Y es el del prospecto.
+      // Con `!==` a secas, dos null se consideraban distintos y la saltaba.
+      const omitir =
+        !!pregunta.omitir_si_canal && pregunta.omitir_si_canal === canal;
+      if (!omitir) return actual;
+      actual = pregunta.siguiente ?? FIN;
+    }
+    return FIN;
   }
 
   private async obtenerPregunta(codigo: string) {

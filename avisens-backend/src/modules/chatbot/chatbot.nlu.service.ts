@@ -13,7 +13,8 @@ mas conservadora. Nunca inventes una opcion que no este en la lista.`;
 const INSTRUCCIONES_DATO = `Extraes un dato concreto de lo que escribio un avicultor
 colombiano en un chatbot. Devuelve SOLO el dato pedido, limpio: sin la frase que lo
 rodea, sin muletillas, sin comillas y sin puntos de miles en los documentos o
-telefonos. Si el dato no aparece en el texto, devuelve el texto tal cual.`;
+telefonos. Si el dato NO aparece en el texto, devuelve una cadena vacia:
+es preferible dejar el campo sin llenar que guardar la frase entera.`;
 
 @Injectable()
 export class ChatbotNluService {

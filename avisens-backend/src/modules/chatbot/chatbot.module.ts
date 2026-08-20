@@ -6,5 +6,6 @@ import { ChatbotNluService } from './chatbot.nlu.service';
 @Module({
   controllers: [ChatbotController],
   providers: [ChatbotService, ChatbotNluService],
+  exports: [ChatbotService],
 })
 export class ChatbotModule {}

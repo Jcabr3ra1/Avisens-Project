@@ -38,7 +38,8 @@ import { RecomendacionesModule } from './modules/recomendaciones/recomendaciones
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { ProspectosModule } from './modules/prospectos/prospectos.module';
 import { CotizacionesModule } from './modules/cotizaciones/cotizaciones.module';
-
+import { BullModule } from '@nestjs/bullmq';
+import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -50,6 +51,18 @@ import { CotizacionesModule } from './modules/cotizaciones/cotizaciones.module';
           limit: 100,
         },
       ],
+    }),
+    BullModule.forRoot({
+      connection: {
+        host: process.env.REDIS_HOST ?? 'localhost',
+        port: Number(process.env.REDIS_PORT ?? 6379),
+      },
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      },
     }),
     PrismaModule,
     AuthModule,
@@ -85,6 +98,7 @@ import { CotizacionesModule } from './modules/cotizaciones/cotizaciones.module';
     ChatbotModule,
     ProspectosModule,
     CotizacionesModule,
+    WhatsappModule,
   ],
   providers: [
     {
@@ -93,4 +107,4 @@ import { CotizacionesModule } from './modules/cotizaciones/cotizaciones.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

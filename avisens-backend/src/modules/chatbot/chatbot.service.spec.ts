@@ -131,9 +131,12 @@ describe('ChatbotService', () => {
     });
 
     it('sigue el camino normal cuando la respuesta no tiene salto', async () => {
+      const a2 = pregunta({ codigo: 'A2', tipo: 'texto_libre' });
       prisma.preguntaChatbot.findFirst
         .mockResolvedValueOnce(pregunta({ saltos: { No: 'FIN' } }))
-        .mockResolvedValueOnce(pregunta({ codigo: 'A2', tipo: 'texto_libre' }));
+        // primeraVisible consulta el candidato antes de servirlo
+        .mockResolvedValueOnce(a2)
+        .mockResolvedValueOnce(a2);
 
       const r = await responder('Sí');
 
@@ -317,6 +320,70 @@ describe('ChatbotService', () => {
       expect(datosDe(prisma.respuestaChatbot.create).respuesta_texto).toBe(
         'Sí',
       );
+    });
+  });
+  describe('preguntas omitidas por canal', () => {
+    it('no omite una pregunta que no declara canal', async () => {
+      prisma.prospecto.create.mockResolvedValue({ id: 1, sesion_id: 'u' });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ omitir_si_canal: null }),
+      );
+
+      const r = await service.iniciar({ canal_origen: 'whatsapp' });
+
+      expect(r.pregunta?.codigo).toBe('A1');
+    });
+
+    it('salta la pregunta cuando el canal coincide', async () => {
+      prisma.prospecto.create.mockResolvedValue({ id: 1, sesion_id: 'u' });
+      const a4 = pregunta({
+        codigo: 'A4',
+        omitir_si_canal: 'whatsapp',
+        siguiente: 'A5',
+      });
+      const a5 = pregunta({ codigo: 'A5', omitir_si_canal: null });
+      prisma.preguntaChatbot.findFirst
+        .mockResolvedValueOnce(a4)
+        .mockResolvedValueOnce(a5)
+        .mockResolvedValueOnce(a5);
+
+      const r = await service.iniciar({ canal_origen: 'whatsapp' });
+
+      expect(r.pregunta?.codigo).toBe('A5');
+      expect(datosDe(prisma.prospecto.create).pregunta_actual).toBe('A5');
+    });
+
+    it('no salta esa misma pregunta en otro canal', async () => {
+      prisma.prospecto.create.mockResolvedValue({ id: 1, sesion_id: 'u' });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ codigo: 'A4', omitir_si_canal: 'whatsapp' }),
+      );
+
+      const r = await service.iniciar({ canal_origen: 'web' });
+
+      expect(r.pregunta?.codigo).toBe('A4');
+    });
+
+    it('no guarda en el prospecto una respuesta vacia', async () => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'A4',
+          tipo: 'texto_libre',
+          opciones: null,
+          campo_prospecto: 'telefono',
+          omitir_si_canal: null,
+        }),
+      );
+      nlu.interpretar.mockResolvedValue('   ');
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'pues no se, tal vez',
+      });
+
+      const datos = datosDe(prisma.prospecto.update);
+      expect(datos.telefono).toBeUndefined();
+      expect(datos.pregunta_actual).toBeDefined();
     });
   });
 });

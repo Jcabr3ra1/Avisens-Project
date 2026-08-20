@@ -615,6 +615,7 @@ model PreguntaChatbot {
   campo_prospecto String?
   puntua          Boolean  @default(false)
   obligatoria     Boolean  @default(true)
+  omitir_si_canal String?
   siguiente       String?
   saltos          Json?
   activa          Boolean  @default(true)
@@ -1322,4 +1323,3 @@ model CatalogoSensor {
 
   @@map("catalogo_sensores")
 }
-
