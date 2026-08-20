@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { verificarDueno, Solicitante } from '../../common/acceso';
 import { ROLES } from '../../common/roles';
 
-const PESO_INICIAL_G = 42;
+export const PESO_INICIAL_G = 42;
 const UMBRAL_DESVIO_PCT = 5;
 const ALERTA_TIPO_DESVIO = 'desvio_peso';
 const SISTEMA: Solicitante = { id: 0, rol: ROLES.ADMINISTRADOR };
@@ -141,8 +141,11 @@ export class IndicadoresService {
 
     const curva = await this.prisma.curvaObjetivo.findFirst({
       where: {
-        marca: lote.marca_alimento ?? 'italcol',
-        sexo: lote.sexo ?? 'mixto',
+        marca: {
+          equals: lote.marca_alimento ?? 'italcol',
+          mode: 'insensitive',
+        },
+        sexo: { equals: lote.sexo ?? 'mixto', mode: 'insensitive' },
         dia: { lte: indicador.dia_vida },
       },
       orderBy: { dia: 'desc' },

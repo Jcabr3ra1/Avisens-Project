@@ -1,0 +1,35 @@
+meta {
+  name: [Admin · Propietario]  Continuar la conversacion
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/copiloto/preguntar
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "pregunta": "¿Y cuanto va a pesar a la faena?",
+    "conversacion_id": {{conversacion_id}}
+  }
+}
+
+docs {
+  Continua el hilo abierto por la peticion anterior. Corre primero
+  "Preguntar al copiloto (nueva conversacion)" para que el script llene
+  la variable `conversacion_id`.
+
+  Sirve para comprobar la memoria: la pregunta no menciona ningun lote,
+  Claude debe deducirlo del historial de la conversacion.
+}

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Estado presionado: gradiente un poco más oscuro -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="0"
+                android:startColor="#187E4F"
+                android:endColor="#0CA279" />
+            <corners android:radius="14dp" />
+        </shape>
+    </item>
+
+    <!-- Estado normal -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="0"
+                android:startColor="#1E9E63"
+                android:endColor="#0FBF8F" />
+            <corners android:radius="14dp" />
+        </shape>
+    </item>
+
+</selector>
