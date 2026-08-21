@@ -9,7 +9,7 @@ export class ListarProspectosDto extends PaginationQueryDto {
     description: 'Filtra por clasificacion: caliente | tibio | frio',
   })
   @IsString()
-  @IsIn(['caliente', 'tibio', 'frio'])
+  @IsIn(['caliente', 'tibio', 'frio', 'sin_consentimiento'])
   @IsOptional()
   clasificacion?: string;
 
@@ -18,7 +18,14 @@ export class ListarProspectosDto extends PaginationQueryDto {
     description: 'Filtra por estado: nuevo | en_proceso | calificado | cerrado',
   })
   @IsString()
-  @IsIn(['nuevo', 'en_proceso', 'calificado', 'asignado', 'cerrado'])
+  @IsIn([
+    'nuevo',
+    'en_proceso',
+    'calificado',
+    'asignado',
+    'cerrado',
+    'sin_consentimiento',
+  ])
   @IsOptional()
   estado?: string;
 
