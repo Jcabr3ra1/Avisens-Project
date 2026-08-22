@@ -37,25 +37,24 @@ export class WhatsappService {
     for (const entrada of entradas) {
       for (const cambio of entrada.changes ?? []) {
         const valor = cambio.value as {
-          contacts?: Array<{ wa_id?: string }>;
+          contacts?: Array<{ wa_id?: string; user_id?: string }>;
           messages?: Array<{
             id: string;
             from?: string;
+            from_user_id?: string;
             type: string;
             text?: { body: string };
           }>;
         };
-        const respaldo = valor?.contacts?.[0]?.wa_id;
+        const contacto = valor?.contacts?.[0];
+        const respaldo = contacto?.wa_id ?? contacto?.user_id;
         for (const m of valor?.messages ?? []) {
           if (m.type !== 'text' || !m.text?.body) continue;
 
-          const de = m.from ?? respaldo;
+          const de = m.from ?? m.from_user_id ?? respaldo;
           if (!de) {
             this.logger.warn(
               `Mensaje ${m.id} sin remitente: se descarta para no engancharlo a otra conversacion`,
-            );
-            this.logger.warn(
-              `Carga sin remitente: ${JSON.stringify(valor).slice(0, 1500)}`,
             );
             continue;
           }
