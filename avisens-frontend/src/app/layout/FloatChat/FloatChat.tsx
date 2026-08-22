@@ -30,9 +30,12 @@ type ErrorChat = {
 }
 
 function mensajeBackend(data: unknown): string {
-  const message = (data as { message?: string | string[] } | undefined)?.message
-  if (Array.isArray(message)) return message.join(', ')
-  return typeof message === 'string' ? message : ''
+  const cuerpo = data as { message?: string | string[]; errors?: string[] } | undefined
+  const message = Array.isArray(cuerpo?.message)
+    ? cuerpo.message.join(', ')
+    : cuerpo?.message ?? ''
+  const errors = Array.isArray(cuerpo?.errors) ? cuerpo.errors.join(', ') : ''
+  return [message, errors].filter(Boolean).join(': ')
 }
 
 function traducirError(err: unknown, fallback: string): ErrorChat {
@@ -86,6 +89,7 @@ function FloatChat() {
   const [iniciado, setIniciado] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const autoAbierto = useRef(false)
 
   const aplicar = useCallback((respuesta: RespuestaChatbot, cuenta: boolean) => {
     if (cuenta) setRespondidas((n) => n + 1)
@@ -171,6 +175,17 @@ function FloatChat() {
     e.preventDefault()
     void enviar(texto)
   }
+
+  // El botón "Probar chatbot" del panel abre /?chat=1: deja el asistente
+  // desplegado y con la conversación ya iniciada. El ref evita que StrictMode
+  // gaste dos veces el límite de 5 inicios por minuto.
+  useEffect(() => {
+    if (autoAbierto.current) return
+    if (!new URLSearchParams(window.location.search).has('chat')) return
+    autoAbierto.current = true
+    setOpen(true)
+    void iniciar()
+  }, [iniciar])
 
   useEffect(() => {
     const caja = scrollRef.current
