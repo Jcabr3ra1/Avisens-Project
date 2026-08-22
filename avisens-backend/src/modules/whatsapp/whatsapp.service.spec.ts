@@ -55,6 +55,68 @@ describe('WhatsappService', () => {
       expect(cola.add).not.toHaveBeenCalled();
     });
 
+    it('usa from_user_id cuando el remitente oculta su telefono con nombre de usuario', async () => {
+      await service.encolarEntrantes({
+        object: 'whatsapp_business_account',
+        entry: [
+          {
+            id: '1',
+            changes: [
+              {
+                value: {
+                  contacts: [
+                    {
+                      profile: { name: 'Juan Jaller', username: 'Jjall3r' },
+                      user_id: 'CO.1639897497563370',
+                    },
+                  ],
+                  messages: [
+                    {
+                      from_user_id: 'CO.1639897497563370',
+                      id: 'wamid.USERNAME',
+                      type: 'text',
+                      text: { body: 'Hola' },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      });
+
+      const [, datos] = argsDe(cola.add) as [string, { de: string }];
+      expect(datos.de).toBe('CO.1639897497563370');
+    });
+
+    it('cae al user_id del contacto si el mensaje no trae ningun remitente', async () => {
+      await service.encolarEntrantes({
+        object: 'whatsapp_business_account',
+        entry: [
+          {
+            id: '1',
+            changes: [
+              {
+                value: {
+                  contacts: [{ user_id: 'CO.877155788811553' }],
+                  messages: [
+                    {
+                      id: 'wamid.SOLO_CONTACTO',
+                      type: 'text',
+                      text: { body: 'Hola' },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      });
+
+      const [, datos] = argsDe(cola.add) as [string, { de: string }];
+      expect(datos.de).toBe('CO.877155788811553');
+    });
+
     it('cae al wa_id del contacto cuando el mensaje no trae from', async () => {
       const sinFrom = {
         id: 'wamid.SIN_FROM',
