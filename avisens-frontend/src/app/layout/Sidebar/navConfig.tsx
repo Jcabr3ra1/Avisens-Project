@@ -89,8 +89,9 @@ export const NAV_SECTIONS: NavSection[] = [
       // EP-01 HU-08: Leads y pipeline del chatbot de cotizaciones → solo Admin
       { path: '/crm',        label: 'Clientes', icon: <IcUsers size={16} />, roles: [ROL_ADMIN] },
 
-      // EP-01: demo web del chatbot de calificación dentro de la landing.
-      { path: '/#chatbot',   label: 'Probar chatbot', icon: <IcChat size={16} />, roles: [ROL_ADMIN], nuevaPestana: true },
+      // EP-01: demo web del chatbot. `chat=1` abre el asistente flotante ya
+      // iniciado; el hash deja a la vista la sección que lo explica.
+      { path: '/?chat=1#chatbot', label: 'Probar chatbot', icon: <IcChat size={16} />, roles: [ROL_ADMIN], nuevaPestana: true },
     ],
   },
   {
