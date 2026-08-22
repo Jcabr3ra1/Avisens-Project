@@ -21,6 +21,7 @@ export class WhatsappService {
 
   async encolarEntrantes(cuerpo: unknown) {
     for (const mensaje of this.extraer(cuerpo)) {
+      this.logger.log(`Entrante ${mensaje.wamid} de ${mensaje.de}`);
       await this.cola.add('entrante', mensaje as unknown as TrabajoMensaje, {
         jobId: mensaje.wamid,
       });
@@ -36,16 +37,27 @@ export class WhatsappService {
     for (const entrada of entradas) {
       for (const cambio of entrada.changes ?? []) {
         const valor = cambio.value as {
+          contacts?: Array<{ wa_id?: string }>;
           messages?: Array<{
             id: string;
-            from: string;
+            from?: string;
             type: string;
             text?: { body: string };
           }>;
         };
+        const respaldo = valor?.contacts?.[0]?.wa_id;
         for (const m of valor?.messages ?? []) {
           if (m.type !== 'text' || !m.text?.body) continue;
-          mensajes.push({ de: m.from, texto: m.text.body, wamid: m.id });
+
+          const de = m.from ?? respaldo;
+          if (!de) {
+            this.logger.warn(
+              `Mensaje ${m.id} sin remitente: se descarta para no engancharlo a otra conversacion`,
+            );
+            continue;
+          }
+
+          mensajes.push({ de, texto: m.text.body, wamid: m.id });
         }
       }
     }
@@ -67,7 +79,13 @@ export class WhatsappService {
   private async encolarSalida(destino: string, texto: string) {
     await this.cola.add('saliente', { destino, texto });
   }
+
   async responder(entrante: MensajeEntrante) {
+    if (!entrante.de) {
+      this.logger.warn(`Mensaje ${entrante.wamid} sin remitente: se ignora`);
+      return;
+    }
+
     const abierto = await this.prisma.prospecto.findFirst({
       where: {
         telefono: entrante.de,

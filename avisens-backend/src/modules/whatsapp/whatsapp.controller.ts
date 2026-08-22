@@ -6,11 +6,13 @@ import {
   Post,
   Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { WhatsappService } from './whatsapp.service';
+import { FirmaMetaGuard } from './firma-meta.guard';
 
 @ApiExcludeController()
 @Controller('whatsapp')
@@ -33,6 +35,7 @@ export class WhatsappController {
   }
 
   @Post('webhook')
+  @UseGuards(FirmaMetaGuard)
   @HttpCode(200)
   @Throttle({ default: { limit: 300, ttl: 60000 } })
   async recibir(@Body() cuerpo: unknown) {

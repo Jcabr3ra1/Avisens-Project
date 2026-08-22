@@ -43,6 +43,46 @@ describe('WhatsappService', () => {
   });
 
   describe('encolarEntrantes', () => {
+    it('descarta el mensaje sin remitente en vez de encolarlo', async () => {
+      const sinFrom = {
+        id: 'wamid.SIN_FROM',
+        type: 'text',
+        text: { body: 'Hola' },
+      };
+
+      await service.encolarEntrantes(webhook([sinFrom]));
+
+      expect(cola.add).not.toHaveBeenCalled();
+    });
+
+    it('cae al wa_id del contacto cuando el mensaje no trae from', async () => {
+      const sinFrom = {
+        id: 'wamid.SIN_FROM',
+        type: 'text',
+        text: { body: 'Hola' },
+      };
+
+      await service.encolarEntrantes({
+        object: 'whatsapp_business_account',
+        entry: [
+          {
+            id: '1',
+            changes: [
+              {
+                value: {
+                  contacts: [{ wa_id: '573009998877' }],
+                  messages: [sinFrom],
+                },
+              },
+            ],
+          },
+        ],
+      });
+
+      const [, datos] = argsDe(cola.add) as [string, { de: string }];
+      expect(datos.de).toBe('573009998877');
+    });
+
     it('encola con el wamid como jobId para que un reintento de Meta no duplique', async () => {
       await service.encolarEntrantes(webhook([texto('wamid.ABC', 'hola')]));
 
@@ -184,6 +224,15 @@ describe('WhatsappService', () => {
 
       const [, datos] = argsDe(cola.add) as [string, { texto: string }];
       expect(datos.texto).toMatch(/Respuesta no valida para A8/);
+    });
+  });
+
+  describe('responder', () => {
+    it('ignora el mensaje sin remitente y no toca la base', async () => {
+      await service.responder({ de: '', texto: 'Hola', wamid: 'wamid.X' });
+
+      expect(prisma.prospecto.findFirst).not.toHaveBeenCalled();
+      expect(cola.add).not.toHaveBeenCalled();
     });
   });
 });
