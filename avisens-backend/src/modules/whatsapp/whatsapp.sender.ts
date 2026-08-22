@@ -9,7 +9,7 @@ export class WhatsappSender {
   private readonly logger = new Logger(WhatsappSender.name);
 
   async enviarTexto(destino: string, texto: string): Promise<boolean> {
-    if (PROVEDOR !== 'meta') {
+    if (PROVEDOR === 'simulado') {
       this.logger.log(`[SIMULADO] -> ${destino}: ${texto}`);
       return true;
     }
