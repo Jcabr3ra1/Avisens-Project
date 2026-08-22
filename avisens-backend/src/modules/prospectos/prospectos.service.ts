@@ -85,12 +85,12 @@ export class ProspectosService {
       );
     }
 
-    const asesor = await this.prisma.usuario.findFirst({
+    const admin = await this.prisma.usuario.findFirst({
       where: { id: asesorId, activo: true },
       select: { id: true, nombre_completo: true },
     });
-    if (!asesor) {
-      throw new NotFoundException('El asesor no existe o esta inactivo');
+    if (!admin) {
+      throw new NotFoundException('El administrador no existe o esta inactivo');
     }
 
     await this.prisma.prospecto.update({
@@ -101,7 +101,8 @@ export class ProspectosService {
     return {
       prospecto_id: id,
       clasificacion: prospecto.clasificacion,
-      asesor: asesor.nombre_completo,
+      admin: admin.nombre_completo,
+      asesor: admin.nombre_completo,
       estado: 'asignado',
     };
   }

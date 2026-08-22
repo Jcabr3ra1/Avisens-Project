@@ -52,11 +52,12 @@ export class ProspectosController {
   }
 
   @Patch(':id/asignar')
-  @ApiOperation({ summary: 'Asignar un asesor a un prospecto calificado' })
+  @ApiOperation({ summary: 'Asignar un administrador a un prospecto calificado' })
   asignar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AsignarAsesorDto,
   ) {
-    return this.prospectosService.asignar(id, dto.asesor_id);
+    const adminId = dto.admin_id ?? dto.asesor_id;
+    return this.prospectosService.asignar(id, adminId);
   }
 }
