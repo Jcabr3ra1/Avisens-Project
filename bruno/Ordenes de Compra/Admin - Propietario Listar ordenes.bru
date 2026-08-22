@@ -1,0 +1,14 @@
+meta {
+  name: [Admin · Propietario] Listar ordenes
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/ordenes-compra?page=1&limit=10
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
