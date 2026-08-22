@@ -63,3 +63,7 @@ bruno/environments/.env
 
 # Módulo descartado
 avisens-api-gateway/
+
+# Python (microservicio ml) — cache de bytecode, se regenera solo
+__pycache__/
+*.pyc

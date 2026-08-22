@@ -180,3 +180,149 @@ describe('IndicadoresService · compararConCurva', () => {
     expect(r.desvio_peso_pct as number).toBeCloseTo(0, 5);
   });
 });
+
+describe('IndicadoresService · generarAlertaDesvio', () => {
+  let service: IndicadoresService;
+
+  const prisma = {
+    lote: { findUnique: jest.fn() },
+    indicadorLote: { findFirst: jest.fn() },
+    curvaObjetivo: { findFirst: jest.fn() },
+    alerta: { findFirst: jest.fn(), create: jest.fn() },
+  };
+
+  const lote = {
+    galpon: { granja: { propietario_id: 1 } },
+    galpon_id: 7,
+    sexo: 'macho',
+    marca_alimento: 'italcol',
+  };
+
+  const curvaDia21 = { dia: 21, peso_esperado_g: 1035, fcr_objetivo: 1.18 };
+
+  const ponerPorDebajo = () => {
+    prisma.lote.findUnique.mockResolvedValue(lote);
+    prisma.indicadorLote.findFirst.mockResolvedValue({
+      dia_vida: 21,
+      peso_promedio_g: 900,
+      fcr: 1.3,
+    });
+    prisma.curvaObjetivo.findFirst.mockResolvedValue(curvaDia21);
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        IndicadoresService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get<IndicadoresService>(IndicadoresService);
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  it('no genera alerta cuando el lote no va por debajo', async () => {
+    prisma.lote.findUnique.mockResolvedValue(lote);
+    prisma.indicadorLote.findFirst.mockResolvedValue({
+      dia_vida: 21,
+      peso_promedio_g: 1035,
+      fcr: 1.18,
+    });
+    prisma.curvaObjetivo.findFirst.mockResolvedValue(curvaDia21);
+
+    const r = await service.generarAlertaDesvio(1);
+    expect(r).toBeNull();
+    expect(prisma.alerta.create).not.toHaveBeenCalled();
+  });
+
+  it('no duplica si ya existe una alerta de desvio abierta', async () => {
+    ponerPorDebajo();
+    prisma.alerta.findFirst.mockResolvedValue({ id: 99 });
+
+    const r = await service.generarAlertaDesvio(1);
+    expect(r).toBeNull();
+    expect(prisma.alerta.create).not.toHaveBeenCalled();
+  });
+
+  it('crea la alerta cuando va por debajo y no hay una abierta', async () => {
+    ponerPorDebajo();
+    prisma.alerta.findFirst.mockResolvedValue(null);
+    prisma.alerta.create.mockResolvedValue({ id: 1 });
+
+    await service.generarAlertaDesvio(1);
+
+    expect(prisma.alerta.create).toHaveBeenCalledTimes(1);
+    const calls = prisma.alerta.create.mock.calls as Array<
+      [{ data: Record<string, unknown> }]
+    >;
+    expect(calls[0][0].data).toMatchObject({
+      galpon_id: 7,
+      lote_id: 1,
+      tipo: 'desvio_peso',
+      criticidad: 'media',
+    });
+  });
+});
+
+describe('IndicadoresService · kpisFinancieros', () => {
+  let service: IndicadoresService;
+
+  const prisma = {
+    lote: { findUnique: jest.fn() },
+    indicadorLote: { findFirst: jest.fn() },
+    movimientoFinanciero: { aggregate: jest.fn() },
+  };
+
+  const admin = { id: 1, rol: 'Administrador' };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        IndicadoresService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get<IndicadoresService>(IndicadoresService);
+    prisma.lote.findUnique.mockResolvedValue({
+      galpon: { granja: { propietario_id: 1 } },
+      cantidad_inicial: 1000,
+    });
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  it('calcula costo total, margen y costo por kg', async () => {
+    prisma.indicadorLote.findFirst.mockResolvedValue({
+      peso_promedio_g: 2000,
+      mortalidad_acumulada_pct: 5,
+    });
+    prisma.movimientoFinanciero.aggregate
+      .mockResolvedValueOnce({ _sum: { valor_cop: 5000000 } })
+      .mockResolvedValueOnce({ _sum: { valor_cop: 8000000 } });
+
+    const r = await service.kpisFinancieros(1, admin);
+
+    // aves_vivas = 1000 * (1 - 0.05) = 950 ; kg = 2 * 950 = 1900
+    expect(r.costo_total_cop).toBe(5000000);
+    expect(r.ingreso_total_cop).toBe(8000000);
+    expect(r.margen_cop).toBe(3000000);
+    expect(r.kg_producidos).toBe(1900);
+    expect(r.costo_por_kg_cop as number).toBeCloseTo(2631.58, 1);
+    expect(r.roi_pct as number).toBeCloseTo(60, 1);
+  });
+
+  it('costo_por_kg null cuando no hay indicador (sin kg producidos)', async () => {
+    prisma.indicadorLote.findFirst.mockResolvedValue(null);
+    prisma.movimientoFinanciero.aggregate
+      .mockResolvedValueOnce({ _sum: { valor_cop: 1000000 } })
+      .mockResolvedValueOnce({ _sum: { valor_cop: null } });
+
+    const r = await service.kpisFinancieros(1, admin);
+
+    expect(r.costo_total_cop).toBe(1000000);
+    expect(r.ingreso_total_cop).toBe(0);
+    expect(r.kg_producidos).toBe(0);
+    expect(r.costo_por_kg_cop).toBeNull();
+  });
+});

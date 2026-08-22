@@ -30,7 +30,16 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClimaModule } from './modules/clima/clima.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
 import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-alerta.module';
-
+import { AlertasCanalesModule } from './modules/alertas-canales/alertas-canales.module';
+import { MovimientosFinancierosModule } from './modules/movimientos-financieros/movimientos-financieros.module';
+import { PrediccionesModule } from './modules/predicciones/predicciones.module';
+import { CopilotoModule } from './modules/copiloto/copiloto.module';
+import { RecomendacionesModule } from './modules/recomendaciones/recomendaciones.module';
+import { ChatbotModule } from './modules/chatbot/chatbot.module';
+import { ProspectosModule } from './modules/prospectos/prospectos.module';
+import { CotizacionesModule } from './modules/cotizaciones/cotizaciones.module';
+import { BullModule } from '@nestjs/bullmq';
+import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -42,6 +51,20 @@ import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-ale
           limit: 100,
         },
       ],
+    }),
+    BullModule.forRoot({
+      connection: process.env.REDIS_URL
+        ? { url: process.env.REDIS_URL }
+        : {
+            host: process.env.REDIS_HOST ?? 'localhost',
+            port: Number(process.env.REDIS_PORT ?? 6379),
+          },
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      },
     }),
     PrismaModule,
     AuthModule,
@@ -69,6 +92,15 @@ import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-ale
     AlertasModule,
     HealthModule,
     PoliticasAlertaModule,
+    AlertasCanalesModule,
+    MovimientosFinancierosModule,
+    PrediccionesModule,
+    RecomendacionesModule,
+    CopilotoModule,
+    ChatbotModule,
+    ProspectosModule,
+    CotizacionesModule,
+    WhatsappModule,
   ],
   providers: [
     {

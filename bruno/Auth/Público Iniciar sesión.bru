@@ -22,11 +22,11 @@ body:json {
 }
 
 script:post-response {
-  const res = res.getBody();
-  if (res && res.access_token) {
-    bru.setEnvVar("token", res.access_token);
+  const body = res.getBody();
+  if (body && body.access_token) {
+    bru.setEnvVar("token", body.access_token);
   }
-  if (res && res.refresh_token) {
-    bru.setEnvVar("refresh_token", res.refresh_token);
+  if (body && body.refresh_token) {
+    bru.setEnvVar("refresh_token", body.refresh_token);
   }
 }

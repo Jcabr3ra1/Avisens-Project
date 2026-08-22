@@ -1,9 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { verificarDueno, Solicitante } from '../../common/acceso';
+import { ROLES } from '../../common/roles';
 
-const PESO_INICIAL_G = 42;
+export const PESO_INICIAL_G = 42;
 const UMBRAL_DESVIO_PCT = 5;
+const ALERTA_TIPO_DESVIO = 'desvio_peso';
+const SISTEMA: Solicitante = { id: 0, rol: ROLES.ADMINISTRADOR };
 
 @Injectable()
 export class IndicadoresService {
@@ -138,8 +141,11 @@ export class IndicadoresService {
 
     const curva = await this.prisma.curvaObjetivo.findFirst({
       where: {
-        marca: lote.marca_alimento ?? 'italcol',
-        sexo: lote.sexo ?? 'mixto',
+        marca: {
+          equals: lote.marca_alimento ?? 'italcol',
+          mode: 'insensitive',
+        },
+        sexo: { equals: lote.sexo ?? 'mixto', mode: 'insensitive' },
         dia: { lte: indicador.dia_vida },
       },
       orderBy: { dia: 'desc' },
@@ -188,6 +194,86 @@ export class IndicadoresService {
       },
       desvio_peso_pct: desvioPesoPct,
       desvio_fcr: desvioFcr,
+    };
+  }
+
+  async generarAlertaDesvio(loteId: number) {
+    const comparacion = await this.compararConCurva(loteId, SISTEMA);
+    if (comparacion.veredicto !== 'por_debajo') {
+      return null;
+    }
+    const lote = await this.prisma.lote.findUnique({
+      where: { id: loteId },
+      select: { galpon_id: true },
+    });
+    if (!lote) return null;
+
+    const yaExiste = await this.prisma.alerta.findFirst({
+      where: {
+        lote_id: loteId,
+        tipo: ALERTA_TIPO_DESVIO,
+        estado: 'abierta',
+      },
+    });
+    if (yaExiste) return null;
+    const desvio = comparacion.desvio_peso_pct?.toFixed(1) ?? '?';
+    return this.prisma.alerta.create({
+      data: {
+        galpon_id: lote.galpon_id,
+        lote_id: loteId,
+        tipo: ALERTA_TIPO_DESVIO,
+        criticidad: 'media',
+        mensaje: `El lote va ${desvio}% por debajo de la curva objetivo (dia ${comparacion.dia_vida})`,
+      },
+    });
+  }
+
+  async kpisFinancieros(loteId: number, solicitante: Solicitante) {
+    await this.verificarPropiedad(loteId, solicitante);
+
+    const lote = await this.prisma.lote.findUnique({
+      where: { id: loteId },
+      select: { cantidad_inicial: true },
+    });
+    if (!lote) throw new NotFoundException('Lote no encontrado');
+
+    const indicador = await this.prisma.indicadorLote.findFirst({
+      where: { lote_id: loteId },
+      orderBy: { fecha: 'desc' },
+      select: { peso_promedio_g: true, mortalidad_acumulada_pct: true },
+    });
+
+    const egresos = await this.prisma.movimientoFinanciero.aggregate({
+      where: { lote_id: loteId, tipo: 'egreso' },
+      _sum: { valor_cop: true },
+    });
+    const ingresos = await this.prisma.movimientoFinanciero.aggregate({
+      where: { lote_id: loteId, tipo: 'ingreso' },
+      _sum: { valor_cop: true },
+    });
+
+    const costoTotal = egresos._sum.valor_cop ?? 0;
+    const ingresoTotal = ingresos._sum.valor_cop ?? 0;
+    const margen = ingresoTotal - costoTotal;
+
+    const avesVivas =
+      lote.cantidad_inicial *
+      (1 - (indicador?.mortalidad_acumulada_pct ?? 0) / 100);
+    const kgProducidos =
+      indicador?.peso_promedio_g != null
+        ? (indicador.peso_promedio_g / 1000) * avesVivas
+        : 0;
+
+    const costoPorKg = kgProducidos > 0 ? costoTotal / kgProducidos : null;
+    const roiPct = costoTotal > 0 ? (margen / costoTotal) * 100 : null;
+    return {
+      lote_id: loteId,
+      costo_total_cop: costoTotal,
+      ingreso_total_cop: ingresoTotal,
+      margen_cop: margen,
+      kg_producidos: Math.round(kgProducidos),
+      costo_por_kg_cop: costoPorKg,
+      roi_pct: roiPct,
     };
   }
 }

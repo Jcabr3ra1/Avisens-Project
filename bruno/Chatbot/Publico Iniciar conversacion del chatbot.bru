@@ -1,0 +1,43 @@
+meta {
+  name: [Público]  Iniciar conversacion del chatbot
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/chatbot/iniciar
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "canal_origen": "web"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201 || res.getStatus() === 200) {
+    bru.setEnvVar("sesion_chatbot", res.getBody().sesion_id);
+  }
+}
+
+docs {
+  Ruta PUBLICA: no lleva token. Un prospecto no tiene cuenta.
+
+  Crea una fila en `prospectos` con un `sesion_id` UUID y devuelve la primera
+  pregunta (A1, el habeas data). El script guarda el `sesion_id` en la variable
+  de entorno `sesion_chatbot` para encadenar las respuestas.
+
+  `canal_origen` acepta solo "web" o "whatsapp" (lista blanca).
+
+  Limite: 5 por minuto — cada llamada crea un prospecto, es la superficie mas
+  expuesta del backend.
+
+  La respuesta siempre trae la misma forma:
+    sesion_id, pregunta, finalizado, puntaje_total, clasificacion
+}

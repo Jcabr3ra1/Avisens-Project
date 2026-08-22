@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#EAF4EF">
+
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- =================================================
+                 TARJETA PRINCIPAL
+                 ================================================= -->
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card_white"
+                android:elevation="2dp"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:padding="28dp">
+
+                <!-- =================================================
+                     ICONO
+                     ================================================= -->
+
+                <ImageView
+                    android:id="@+id/imgCodigo"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:layout_marginBottom="24dp"
+                    android:background="@drawable/bg_icon_success"
+                    android:contentDescription="Código de verificación"
+                    android:padding="18dp"
+                    android:src="@drawable/ic_email_check"
+                    android:tint="#2E9B6F" />
+
+                <!-- =================================================
+                     TITULO
+                     ================================================= -->
+
+                <TextView
+                    android:id="@+id/txtTituloCodigo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="Verificar código"
+                    android:textColor="#17231F"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
+
+                <!-- =================================================
+                     DESCRIPCION
+                     ================================================= -->
+
+                <TextView
+                    android:id="@+id/txtDescripcionCodigo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center"
+                    android:lineSpacingExtra="4dp"
+                    android:text="Hemos enviado un código de 6 dígitos a tu correo electrónico. Ingresa el código para continuar."
+                    android:textColor="#66736D"
+                    android:textSize="15sp" />
+
+                <!-- =================================================
+                     CODIGO
+                     ================================================= -->
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="28dp"
+                    android:text="Código de verificación"
+                    android:textColor="#26332E"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/edtCodigo"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_edittext"
+                    android:gravity="center"
+                    android:hint="000000"
+                    android:inputType="number"
+                    android:maxLength="6"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:textColor="#26332E"
+                    android:textColorHint="#98A49F"
+                    android:textSize="22sp"
+                    android:letterSpacing="0.25" />
+
+                <!-- =================================================
+                     REENVIAR CODIGO
+                     ================================================= -->
+
+                <TextView
+                    android:id="@+id/txtReenviarCodigo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:gravity="center"
+                    android:text="¿No recibiste el código? Reenviar código"
+                    android:textColor="#2E9B6F"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true" />
+
+                <!-- =================================================
+                     BOTON VERIFICAR
+                     ================================================= -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnVerificarCodigo"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="24dp"
+                    android:text="Verificar código"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="#2E9B6F"
+                    app:cornerRadius="10dp"
+                    app:strokeWidth="0dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -28,6 +28,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+  
+  # ----- Redis (cola de trabajos en segundo plano) -----
+  # Lo usa BullMQ para los mensajes de WhatsApp: el webhook encola y responde 200
+  # de inmediato; el procesado real ocurre aparte y sobrevive a un reinicio.
+  redis:
+    image: redis:7-alpine
+    container_name: avisens-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - avisens_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   # ----- Backend NestJS -----
   backend:
@@ -36,6 +52,8 @@ services:
     restart: unless-stopped
     depends_on:
       database:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     environment:
       # 'database' es el nombre del servicio: dentro de la red de Docker
@@ -53,6 +71,21 @@ services:
       # Crea el usuario admin del seed al arrancar (idempotente). Así quien haga
       # `docker compose up` obtiene la base lista sin correr nada a mano.
       RUN_SEED: "true"
+      # Copiloto IA. La key NO va escrita aqui: Docker Compose la lee del .env
+      # de la raiz (que esta en .gitignore) para no versionar el secreto.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-haiku-4-5}
+      # Redis para la cola de BullMQ. 'redis' es el nombre del servicio: dentro
+      # de la red de Docker reemplaza a 'localhost'.
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # WhatsApp Cloud API. 'simulado' por defecto a proposito: si alguien
+      # despliega sin configurar nada, NO manda mensajes reales por accidente.
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-simulado}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v25.0}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN}
     ports:
       - "3000:3000"
 
@@ -70,5 +103,14 @@ services:
     ports:
       - "8080:80"
 
+  # ----- Microservicio de ML (predicciones) en Python -----
+  ml:
+    build: ./avisens-ml
+    container_name: avisens-ml
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+
 volumes:
   avisens_pg_data:
+  avisens_redis_data:

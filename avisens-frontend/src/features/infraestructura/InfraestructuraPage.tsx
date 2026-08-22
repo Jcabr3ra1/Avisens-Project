@@ -1,50 +1,114 @@
 // InfraestructuraPage.tsx — Módulo de Infraestructura (EP-08 HU-34 a HU-37).
-// Muestra galpones con sus zonas, tabla de equipos/sensores y estado de mantenimiento.
+// Muestra galpones y el estado físico de sus sensores/dispositivos IoT.
+// Consume /granjas, /galpones, /sensores y /dispositivos. El backend no modela
+// "zonas" dentro de un galpón ni equipos físicos (extractor, bebedero,
+// comedero...) con ciclos de mantenimiento — solo sensores y dispositivos ESP32
+// con sus fechas de calibración, así que esta pantalla se recortó a eso.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { isAxiosError } from 'axios'
 import {
-  GALPONES_INFRA,
-  EQUIPOS_MOCK,
-  type Equipo,
-  type EstadoEquipo,
-} from './data'
+  listarGranjas,
+  listarGalpones,
+  listarSensores,
+  listarDispositivos,
+  type Granja,
+  type Galpon,
+  type Sensor,
+  type Dispositivo,
+} from '@shared/api'
 import {
-  IcPin, IcBox, IcSettings,
-  IcThermo, IcDrop, IcCloud, IcWind, IcFan, IcSeed, IcSun,
+  IcPin, IcBox, IcSettings, IcServer,
+  IcThermo, IcDrop, IcCloud, IcWind, IcSun,
 } from '@shared/ui/icons/icons'
 import './InfraestructuraPage.css'
 
-// Ícono + etiqueta legible por tipo de equipo
-const TIPO_INFO: Record<Equipo['tipo'], { icon: ReactNode; label: string }> = {
-  sensor_temp: { icon: <IcThermo size={13} />, label: 'Temp.' },
-  sensor_hum:  { icon: <IcDrop   size={13} />, label: 'Hum.' },
-  sensor_co2:  { icon: <IcCloud  size={13} />, label: 'CO₂' },
-  sensor_nh3:  { icon: <IcWind   size={13} />, label: 'NH₃' },
-  extractor:   { icon: <IcFan    size={13} />, label: 'Extractor' },
-  bebedero:    { icon: <IcDrop   size={13} />, label: 'Bebedero' },
-  comedero:    { icon: <IcSeed   size={13} />, label: 'Comedero' },
-  lampara:     { icon: <IcSun    size={13} />, label: 'Lámpara' },
-  nebulizador: { icon: <IcCloud  size={13} />, label: 'Nebulizador' },
+// Ícono aproximado según el texto libre de `sensor.tipo` (el backend no lo
+// restringe a un enum, así que se infiere por coincidencia de texto).
+function iconoTipoSensor(tipo: string): ReactNode {
+  const t = tipo.toLowerCase()
+  if (t.includes('temp'))            return <IcThermo size={13} />
+  if (t.includes('hum'))             return <IcDrop   size={13} />
+  if (t.includes('co2') || t.includes('gas')) return <IcCloud size={13} />
+  if (t.includes('nh3') || t.includes('amon')) return <IcWind size={13} />
+  if (t.includes('luz') || t.includes('lum'))  return <IcSun  size={13} />
+  return <IcSettings size={13} />
+}
+
+// % de vida útil de calibración transcurrida entre última y próxima calibración
+function vidaUtilPct(sensor: Sensor): number | null {
+  if (!sensor.ultima_calibracion || !sensor.proxima_calibracion) return null
+  const inicio = new Date(sensor.ultima_calibracion).getTime()
+  const fin    = new Date(sensor.proxima_calibracion).getTime()
+  if (fin <= inicio) return null
+  const pct = ((Date.now() - inicio) / (fin - inicio)) * 100
+  return Math.min(100, Math.max(0, Math.round(pct)))
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 function InfraestructuraPage() {
-  // Galpón seleccionado para ver sus equipos
-  const [galponId, setGalponId] = useState<number>(1)
+  const [granjas, setGranjas] = useState<Granja[]>([])
+  const [galpones, setGalpones] = useState<Galpon[]>([])
+  const [sensores, setSensores] = useState<Sensor[]>([])
+  const [dispositivos, setDispositivos] = useState<Dispositivo[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState('')
+
+  // Galpón seleccionado para ver sus sensores/dispositivos
+  const [galponId, setGalponId] = useState<number | null>(null)
 
   // Pestaña: 'galpones' o 'equipos'
   const [tab, setTab] = useState<'galpones' | 'equipos'>('galpones')
 
-  // Galpón activo
-  const galpon = GALPONES_INFRA.find(g => g.id === galponId)!
+  useEffect(() => {
+    let activo = true
 
-  // Equipos del galpón seleccionado
-  const equiposGalpon = EQUIPOS_MOCK.filter(e => e.galpon === galpon.codigo)
+    async function cargar() {
+      try {
+        const [granjasData, galponesData, sensoresData, dispositivosData] = await Promise.all([
+          listarGranjas(),
+          listarGalpones(),
+          listarSensores(),
+          listarDispositivos(),
+        ])
+        if (!activo) return
+        setGranjas(granjasData)
+        setGalpones(galponesData)
+        setSensores(sensoresData)
+        setDispositivos(dispositivosData)
+        setGalponId((actual) => actual ?? galponesData[0]?.id ?? null)
+        setError('')
+      } catch (err) {
+        if (!activo) return
+        setError(
+          isAxiosError(err) && err.response?.status === 403
+            ? 'No tienes permisos para ver infraestructura.'
+            : 'No se pudo cargar la infraestructura.',
+        )
+      } finally {
+        if (activo) setCargando(false)
+      }
+    }
+
+    cargar()
+    return () => { activo = false }
+  }, [])
+
+  const sensoresGalpon = sensores.filter(s => s.galpon.id === galponId)
+  const dispositivosGalpon = dispositivos.filter(d => d.galpon.id === galponId)
 
   // Contadores para alertas de mantenimiento
-  const enFalla    = EQUIPOS_MOCK.filter(e => e.estado === 'falla').length
-  const proximoMto = EQUIPOS_MOCK.filter(e => e.vidaUtilPct >= 95).length
+  const inactivos  = sensores.filter(s => s.estado === 'inactivo').length
+  const proximoMto = sensores.filter(s => (vidaUtilPct(s) ?? 0) >= 95).length
+
+  if (cargando) {
+    return (
+      <div className="page-container inf-page">
+        <p className="inf-vacio">Cargando infraestructura…</p>
+      </div>
+    )
+  }
 
   return (
     <div className="page-container inf-page">
@@ -53,60 +117,71 @@ function InfraestructuraPage() {
       <header className="inf-header">
         <div>
           <h1 className="inf-title">Infraestructura</h1>
-          <p className="inf-sub">Galpones, zonas, sensores y mantenimiento de equipos</p>
+          <p className="inf-sub">Galpones, sensores y dispositivos IoT</p>
         </div>
 
         {/* Alertas de equipos */}
         <div className="inf-alertas">
-          {enFalla > 0    && <span className="inf-alerta inf-alerta--falla"><span className="inf-dot inf-dot--falla" /> {enFalla} en falla</span>}
-          {proximoMto > 0 && <span className="inf-alerta inf-alerta--mto"><span className="inf-dot inf-dot--mto" /> {proximoMto} próximo mto.</span>}
+          {inactivos > 0   && <span className="inf-alerta inf-alerta--falla"><span className="inf-dot inf-dot--falla" /> {inactivos} inactivo{inactivos > 1 ? 's' : ''}</span>}
+          {proximoMto > 0  && <span className="inf-alerta inf-alerta--mto"><span className="inf-dot inf-dot--mto" /> {proximoMto} próximo mto.</span>}
         </div>
       </header>
+
+      {error && <div className="inf-alert-error" role="alert">{error}</div>}
 
       {/* ── Pestañas ────────────────────────────────────────────────────────── */}
       <div className="inf-tabs">
         <button className={`inf-tab${tab === 'galpones' ? ' inf-tab--activo' : ''}`} onClick={() => setTab('galpones')}>
-          <IcBox size={14} /> Galpones y zonas
+          <IcBox size={14} /> Galpones
         </button>
         <button className={`inf-tab${tab === 'equipos' ? ' inf-tab--activo' : ''}`} onClick={() => setTab('equipos')}>
-          <IcSettings size={14} /> Equipos y sensores
+          <IcSettings size={14} /> Sensores y dispositivos
         </button>
       </div>
 
       {/* ── Pestaña: Galpones (HU-34) ────────────────────────────────────────── */}
       {tab === 'galpones' && (
-        <div className="inf-galpones">
-          {GALPONES_INFRA.map(g => (
-            <div key={g.id} className="inf-galpon-card">
-              {/* Cabecera del galpón */}
-              <div className="inf-galpon-head">
-                <span className="inf-galpon-codigo">{g.codigo}</span>
-                <span className="inf-galpon-nombre">{g.nombre}</span>
-                <span className="inf-galpon-area">{g.areaM2.toLocaleString()} m²</span>
-                <span className="inf-galpon-cap">{g.capacidadAves.toLocaleString()} aves</span>
-              </div>
+        galpones.length === 0 ? (
+          <p className="inf-vacio">No hay galpones registrados todavía.</p>
+        ) : (
+          <div className="inf-galpones">
+            {galpones.map(g => {
+              const granja = granjas.find(gr => gr.id === g.granja.id)
+              const areaM2 = g.ancho_metros && g.largo_metros ? g.ancho_metros * g.largo_metros : null
+              return (
+                <div key={g.id} className="inf-galpon-card">
+                  <div className="inf-galpon-head">
+                    <span className="inf-galpon-codigo">{g.codigo}</span>
+                    <span className="inf-galpon-nombre">{g.nombre}</span>
+                    {areaM2 && <span className="inf-galpon-area">{areaM2.toLocaleString()} m²</span>}
+                    {g.capacidad_aves && <span className="inf-galpon-cap">{g.capacidad_aves.toLocaleString()} aves</span>}
+                  </div>
 
-              {/* Zonas del galpón */}
-              <div className="inf-zonas">
-                {g.zonas.map(z => (
-                  <span key={z.codigo} className="inf-zona-badge">
-                    {z.nombre} · {z.areaM2} m²
-                  </span>
-                ))}
-              </div>
+                  {/* Características físicas reales del galpón */}
+                  <div className="inf-zonas">
+                    {g.orientacion && <span className="inf-zona-badge">Orientación {g.orientacion}</span>}
+                    {g.tipo_techo && <span className="inf-zona-badge">Techo {g.tipo_techo}</span>}
+                    {!g.activo && <span className="inf-zona-badge">Inactivo</span>}
+                  </div>
 
-              <p className="inf-ubicacion"><IcPin size={13} /> {g.ubicacion}</p>
-            </div>
-          ))}
-        </div>
+                  {granja && (
+                    <p className="inf-ubicacion">
+                      <IcPin size={13} /> {granja.nombre} · {granja.municipio ?? '—'}, {granja.departamento ?? '—'}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )
       )}
 
-      {/* ── Pestaña: Equipos y sensores (HU-35, HU-36, HU-37) ──────────────── */}
+      {/* ── Pestaña: Sensores y dispositivos (HU-35, HU-36, HU-37) ──────────── */}
       {tab === 'equipos' && (
         <>
-          {/* Selector de galpón para filtrar equipos */}
+          {/* Selector de galpón para filtrar */}
           <div className="inf-selector">
-            {GALPONES_INFRA.map(g => (
+            {galpones.map(g => (
               <button
                 key={g.id}
                 className={`inf-selector-btn${g.id === galponId ? ' inf-selector-btn--activo' : ''}`}
@@ -121,14 +196,22 @@ function InfraestructuraPage() {
             <table className="inf-tabla">
               <thead>
                 <tr>
-                  <th>Código</th><th>Tipo</th><th>Nombre</th><th>Zona</th>
-                  <th>Vida útil</th><th>Último mto.</th><th>Próximo mto.</th><th>Estado</th>
+                  <th>Código</th><th>Tipo</th><th>Modelo</th>
+                  <th>Vida útil calibración</th><th>Próx. calibración</th><th>Estado</th>
                 </tr>
               </thead>
               <tbody>
-                {equiposGalpon.map(e => (
-                  <FilaEquipo key={e.id} equipo={e} />
+                {sensoresGalpon.map(s => (
+                  <FilaSensor key={s.id} sensor={s} />
                 ))}
+                {dispositivosGalpon.map(d => (
+                  <FilaDispositivo key={`disp-${d.id}`} dispositivo={d} />
+                ))}
+                {sensoresGalpon.length === 0 && dispositivosGalpon.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="inf-vacio">Este galpón no tiene sensores ni dispositivos registrados.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -138,40 +221,48 @@ function InfraestructuraPage() {
   )
 }
 
-// ─── Sub-componente: fila de equipo ──────────────────────────────────────────
-function FilaEquipo({ equipo }: { equipo: Equipo }) {
-  // Colores y etiquetas por estado del equipo
-  const etiquetaEstado: Record<EstadoEquipo, string> = {
-    activo:        'Activo',
-    falla:         'Falla',
-    mantenimiento: 'En mto.',
-    inactivo:      'Inactivo',
-  }
-
-  // Color de la barra de vida útil según porcentaje
-  const colorVida = equipo.vidaUtilPct >= 95 ? 'critico' : equipo.vidaUtilPct >= 75 ? 'advertencia' : 'ok'
+// ─── Sub-componente: fila de sensor ──────────────────────────────────────────
+function FilaSensor({ sensor }: { sensor: Sensor }) {
+  const pct = vidaUtilPct(sensor)
+  const colorVida = pct === null ? 'ok' : pct >= 95 ? 'critico' : pct >= 75 ? 'advertencia' : 'ok'
 
   return (
-    <tr className={`inf-fila inf-fila--${equipo.estado}`}>
-      <td><code className="inf-codigo">{equipo.codigo}</code></td>
-      <td className="inf-tipo"><span className="inf-tipo-icon">{TIPO_INFO[equipo.tipo].icon}</span> {TIPO_INFO[equipo.tipo].label}</td>
+    <tr className={`inf-fila inf-fila--${sensor.estado}`}>
+      <td><code className="inf-codigo">{sensor.codigo}</code></td>
+      <td className="inf-tipo"><span className="inf-tipo-icon">{iconoTipoSensor(sensor.tipo)}</span> {sensor.tipo}</td>
+      <td>{sensor.modelo ?? '—'}{sensor.fabricante && <><br /><small className="inf-obs">{sensor.fabricante}</small></>}</td>
       <td>
-        {equipo.nombre}
-        {equipo.observacion && <><br /><small className="inf-obs">{equipo.observacion}</small></>}
+        {pct === null ? '—' : (
+          <>
+            <div className="inf-vida-wrap">
+              <div className={`inf-vida-barra inf-vida-barra--${colorVida}`} style={{ width: `${pct}%` }} />
+            </div>
+            <small>{pct}%</small>
+          </>
+        )}
       </td>
-      <td>{equipo.zona}</td>
+      <td>{sensor.proxima_calibracion ?? '—'}</td>
       <td>
-        {/* Barra de vida útil */}
-        <div className="inf-vida-wrap">
-          <div className={`inf-vida-barra inf-vida-barra--${colorVida}`} style={{ width: `${equipo.vidaUtilPct}%` }} />
-        </div>
-        <small>{equipo.vidaUtilPct}%</small>
+        <span className={`inf-estado-badge inf-estado-badge--${sensor.estado}`}>
+          {sensor.estado === 'activo' ? 'Activo' : 'Inactivo'}
+        </span>
       </td>
-      <td>{equipo.ultimoMantenimiento}</td>
-      <td>{equipo.proximoMantenimiento}</td>
+    </tr>
+  )
+}
+
+// ─── Sub-componente: fila de dispositivo (nodo ESP32) ────────────────────────
+function FilaDispositivo({ dispositivo }: { dispositivo: Dispositivo }) {
+  return (
+    <tr className={`inf-fila inf-fila--${dispositivo.activo ? 'activo' : 'inactivo'}`}>
+      <td><code className="inf-codigo">{dispositivo.codigo_topic}</code></td>
+      <td className="inf-tipo"><span className="inf-tipo-icon"><IcServer size={13} /></span> Dispositivo</td>
+      <td>{dispositivo.nombre}<br /><small className="inf-obs">{dispositivo.mac_address}</small></td>
+      <td>—</td>
+      <td>{dispositivo.version_firmware ?? '—'}</td>
       <td>
-        <span className={`inf-estado-badge inf-estado-badge--${equipo.estado}`}>
-          {etiquetaEstado[equipo.estado]}
+        <span className={`inf-estado-badge inf-estado-badge--${dispositivo.activo ? 'activo' : 'inactivo'}`}>
+          {dispositivo.activo ? 'Activo' : 'Inactivo'}
         </span>
       </td>
     </tr>
