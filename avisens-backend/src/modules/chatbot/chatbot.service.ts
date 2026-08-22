@@ -14,6 +14,7 @@ const FIN = 'FIN';
 
 const UMBRAL_CALIENTE = 12;
 const UMBRAL_TIBIO = 7;
+const SIN_CONSENTIMIENTO = 'sin_consentimiento';
 
 @Injectable()
 export class ChatbotService {
@@ -198,6 +199,34 @@ export class ChatbotService {
       where: { prospecto_id: prospectoId },
       _sum: { puntaje_obtenido: true },
     });
+
+    const datos = await this.prisma.prospecto.findUnique({
+      where: { id: prospectoId },
+      select: { consentimiento_habeas_data: true },
+    });
+
+    // Quien no autoriza el tratamiento de datos no es un prospecto frio: no es
+    // un prospecto. No entra a la cola comercial ni se le puede llamar.
+    if (!datos?.consentimiento_habeas_data) {
+      const cerrado = await this.prisma.prospecto.update({
+        where: { id: prospectoId },
+        data: {
+          estado: SIN_CONSENTIMIENTO,
+          pregunta_actual: FIN,
+          fecha_finalizacion: new Date(),
+        },
+      });
+
+      return {
+        sesion_id: cerrado.sesion_id,
+        pregunta: null as ReturnType<
+          ChatbotService['formatearPregunta']
+        > | null,
+        finalizado: true,
+        puntaje_total: null as number | null,
+        clasificacion: SIN_CONSENTIMIENTO as string | null,
+      };
+    }
 
     const puntaje = suma._sum.puntaje_obtenido ?? 0;
     const clasificacion =

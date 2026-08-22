@@ -42,6 +42,7 @@ describe('ChatbotService', () => {
     id: 7,
     sesion_id: '3f8a1c22-0b5e-4a71-9f3d-6c2b8e1d4a90',
     pregunta_actual: 'A1',
+    consentimiento_habeas_data: true,
   };
 
   beforeEach(async () => {
@@ -384,6 +385,51 @@ describe('ChatbotService', () => {
       const datos = datosDe(prisma.prospecto.update);
       expect(datos.telefono).toBeUndefined();
       expect(datos.pregunta_actual).toBeDefined();
+    });
+  });
+  describe('sin consentimiento de habeas data', () => {
+    it('no clasifica como frio a quien no autorizo sus datos', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue({
+        ...enCurso,
+        consentimiento_habeas_data: false,
+      });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ saltos: { No: 'FIN' } }),
+      );
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: null },
+      });
+
+      const r = await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'No',
+      });
+
+      expect(r.finalizado).toBe(true);
+      expect(r.clasificacion).toBe('sin_consentimiento');
+      expect(r.puntaje_total).toBeNull();
+
+      const datos = ultimosDatos(prisma.prospecto.update);
+      expect(datos.estado).toBe('sin_consentimiento');
+      expect(datos.puntaje_total).toBeUndefined();
+    });
+
+    it('clasifica normalmente a quien si autorizo', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue(enCurso);
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ siguiente: 'FIN' }),
+      );
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: 14 },
+      });
+
+      const r = await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Sí',
+      });
+
+      expect(r.clasificacion).toBe('caliente');
+      expect(ultimosDatos(prisma.prospecto.update).estado).toBe('calificado');
     });
   });
 });
