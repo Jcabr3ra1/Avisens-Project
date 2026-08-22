@@ -1,15 +1,13 @@
-// accionamientos-equipos.service.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { AccionamientosEquiposService } from './accionamientos-equipos.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateAccionamientoEquipoDto } from './dto/create-accionamiento-equipo.dto';
-import { UpdateAccionamientoEquipoDto } from './dto/update-accionamiento-equipo.dto';
+import { CreateAccionamientoEquipoDto } from './dto/create-accionamientos-equipos.dto';
+import { UpdateAccionamientoEquipoDto } from './dto/update-accionamientos-equipos.dto';
 
 describe('AccionamientosEquiposService', () => {
   let service: AccionamientosEquiposService;
 
-  // Mock de Prisma
   const prisma = {
     accionamientoEquipo: {
       create: jest.fn(),
@@ -29,12 +27,9 @@ describe('AccionamientosEquiposService', () => {
     $transaction: jest.fn(),
   };
 
-  // Usuarios de prueba
   const admin = { id: 1, rol: 'Administrador', organizacion_id: 1 };
   const propietario = { id: 5, rol: 'Propietario', organizacion_id: 1 };
-  const otroPropietario = { id: 10, rol: 'Propietario', organizacion_id: 2 };
 
-  // DTOs de prueba
   const dtoCrear: CreateAccionamientoEquipoDto = {
     equipo_id: 1,
     alerta_id: 1,
@@ -43,14 +38,20 @@ describe('AccionamientosEquiposService', () => {
     valor_disparo: 31.5,
   };
 
-  const dtoCerrar: UpdateAccionamientoEquipoDto = {
-    estado: 'apagado',
+  const dataDe = (mock: jest.Mock): Record<string, unknown> => {
+    const calls = mock.mock.calls as Array<[{ data: Record<string, unknown> }]>;
+    return calls[0][0].data;
   };
 
-  // Helper para extraer where
   const whereDe = (mock: jest.Mock): Record<string, unknown> => {
-    const calls = mock.mock.calls as Array<[{ where: Record<string, unknown> }]>;
-    return calls[0]?.[0]?.where || {};
+    const calls = mock.mock.calls as Array<
+      [{ where: Record<string, unknown> }]
+    >;
+    return calls[0][0].where;
+  };
+
+  const dtoCerrar: UpdateAccionamientoEquipoDto = {
+    estado: 'apagado',
   };
 
   beforeEach(async () => {
@@ -65,10 +66,8 @@ describe('AccionamientosEquiposService', () => {
 
     service = module.get<AccionamientosEquiposService>(AccionamientosEquiposService);
 
-    // Configurar defaults
     prisma.$transaction.mockResolvedValue([[], 0]);
 
-    // Equipo por defecto (es_actuador = true)
     prisma.equipo.findUnique.mockResolvedValue({
       id: 1,
       nombre: 'Ventilador Norte',
@@ -80,7 +79,6 @@ describe('AccionamientosEquiposService', () => {
       },
     });
 
-    // Alerta por defecto
     prisma.alerta.findUnique.mockResolvedValue({
       id: 1,
       galpon: {
@@ -90,7 +88,6 @@ describe('AccionamientosEquiposService', () => {
       },
     });
 
-    // Accionamiento por defecto
     prisma.accionamientoEquipo.findUnique.mockResolvedValue({
       id: 1,
       equipo_id: 1,
@@ -125,9 +122,6 @@ describe('AccionamientosEquiposService', () => {
     jest.clearAllMocks();
   });
 
-  // ============================================================
-  // TESTS: CREAR
-  // ============================================================
   describe('crear', () => {
     it('debería crear un accionamiento cuando el equipo es actuador y es del propietario', async () => {
       const expectedResult = { id: 1, ...dtoCrear };
@@ -136,17 +130,13 @@ describe('AccionamientosEquiposService', () => {
       const result = await service.crear(dtoCrear, propietario);
 
       expect(prisma.accionamientoEquipo.create).toHaveBeenCalled();
-      expect(prisma.accionamientoEquipo.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            equipo_id: 1,
-            alerta_id: 1,
-            origen: 'automatico',
-            estado: 'encendido',
-            valor_disparo: 31.5,
-          }),
-        })
-      );
+      expect(dataDe(prisma.accionamientoEquipo.create)).toMatchObject({
+        equipo_id: 1,
+        alerta_id: 1,
+        origen: 'automatico',
+        estado: 'encendido',
+        valor_disparo: 31.5,
+      });
       expect(result).toEqual(expectedResult);
     });
 
@@ -156,13 +146,9 @@ describe('AccionamientosEquiposService', () => {
 
       await service.crear(dtoSinOrigen, propietario);
 
-      expect(prisma.accionamientoEquipo.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            origen: 'automatico',
-          }),
-        })
-      );
+      expect(dataDe(prisma.accionamientoEquipo.create)).toMatchObject({
+        origen: 'automatico',
+      });
     });
 
     it('debería usar "encendido" como estado por defecto', async () => {
@@ -171,13 +157,9 @@ describe('AccionamientosEquiposService', () => {
 
       await service.crear(dtoSinEstado, propietario);
 
-      expect(prisma.accionamientoEquipo.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            estado: 'encendido',
-          }),
-        })
-      );
+      expect(dataDe(prisma.accionamientoEquipo.create)).toMatchObject({
+        estado: 'encendido',
+      });
     });
 
     it('debería establecer usuario_id = null si origen es "automatico"', async () => {
@@ -186,13 +168,9 @@ describe('AccionamientosEquiposService', () => {
 
       await service.crear(dtoAutomatico, propietario);
 
-      expect(prisma.accionamientoEquipo.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            usuario_id: null,
-          }),
-        })
-      );
+      expect(dataDe(prisma.accionamientoEquipo.create)).toMatchObject({
+        usuario_id: null,
+      });
     });
 
     it('debería establecer usuario_id = solicitante.id si origen NO es "automatico"', async () => {
@@ -201,13 +179,9 @@ describe('AccionamientosEquiposService', () => {
 
       await service.crear(dtoManual, propietario);
 
-      expect(prisma.accionamientoEquipo.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            usuario_id: 5,
-          }),
-        })
-      );
+      expect(dataDe(prisma.accionamientoEquipo.create)).toMatchObject({
+        usuario_id: 5,
+      });
     });
 
     it('debería rechazar (404) si el equipo no existe', async () => {
@@ -281,17 +255,11 @@ describe('AccionamientosEquiposService', () => {
     });
   });
 
-  // ============================================================
-  // TESTS: LISTAR
-  // ============================================================
   describe('listar', () => {
     it('debería listar solo accionamientos de sus equipos si es Propietario', async () => {
       await service.listar(propietario, { page: 1, limit: 10 });
 
-      const findManyCalls = prisma.accionamientoEquipo.findMany.mock.calls;
-      expect(findManyCalls.length).toBeGreaterThan(0);
-      const where = findManyCalls[0]?.[0]?.where;
-      expect(where).toEqual({
+      expect(whereDe(prisma.accionamientoEquipo.findMany)).toEqual({
         equipo: {
           galpon: {
             granja: {
@@ -305,10 +273,7 @@ describe('AccionamientosEquiposService', () => {
     it('debería listar todos los accionamientos si es Admin', async () => {
       await service.listar(admin, { page: 1, limit: 10 });
 
-      const findManyCalls = prisma.accionamientoEquipo.findMany.mock.calls;
-      expect(findManyCalls.length).toBeGreaterThan(0);
-      const where = findManyCalls[0]?.[0]?.where;
-      expect(where).toEqual({});
+      expect(whereDe(prisma.accionamientoEquipo.findMany)).toEqual({});
     });
 
     it('debería usar $transaction para consistencia', async () => {
@@ -339,18 +304,12 @@ describe('AccionamientosEquiposService', () => {
     });
   });
 
-  // ============================================================
-  // TESTS: OBTENER
-  // ============================================================
   describe('obtener', () => {
     it('debería obtener un accionamiento por ID', async () => {
       const result = await service.obtener(1, propietario);
 
       expect(result).toBeDefined();
-      expect(prisma.accionamientoEquipo.findUnique).toHaveBeenCalledWith({
-        where: { id: 1 },
-        select: expect.any(Object),
-      });
+      expect(whereDe(prisma.accionamientoEquipo.findUnique)).toEqual({ id: 1 });
     });
 
     it('debería rechazar (404) si el accionamiento no existe', async () => {
@@ -395,9 +354,6 @@ describe('AccionamientosEquiposService', () => {
     });
   });
 
-  // ============================================================
-  // TESTS: CERRAR
-  // ============================================================
   describe('cerrar', () => {
     it('debería cerrar un accionamiento y sumar horas_operacion', async () => {
       const fechaInicio = new Date('2026-08-12T09:15:00Z');
@@ -428,20 +384,18 @@ describe('AccionamientosEquiposService', () => {
         horas_operacion: 0.83,
       });
 
-      const result = await service.cerrar(1, dtoCerrar, propietario);
+      const result = await service.cerrar(
+        1,
+        { ...dtoCerrar, fecha_fin: fechaFin.toISOString() },
+        propietario,
+      );
 
       expect(result).toBeDefined();
       expect(result.horas_operacion_agregadas).toBeCloseTo(0.83, 2);
-      expect(prisma.equipo.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: 1 },
-          data: {
-            horas_operacion: {
-              increment: expect.any(Number),
-            },
-          },
-        })
-      );
+      expect(whereDe(prisma.equipo.update)).toEqual({ id: 1 });
+      expect(dataDe(prisma.equipo.update)).toEqual({
+        horas_operacion: { increment: 0.83 },
+      });
     });
 
     it('debería rechazar (400) si el accionamiento ya está cerrado', async () => {
@@ -505,20 +459,13 @@ describe('AccionamientosEquiposService', () => {
 
       await service.cerrar(1, { estado: 'apagado' }, propietario);
 
-      expect(prisma.accionamientoEquipo.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            estado: 'apagado',
-            fecha_fin: expect.any(Date),
-          }),
-        })
-      );
+      expect(dataDe(prisma.accionamientoEquipo.update)).toMatchObject({
+        estado: 'apagado',
+        fecha_fin: expect.any(Date) as Date,
+      });
     });
   });
 
-  // ============================================================
-  // TESTS: OBTENER POR EQUIPO
-  // ============================================================
   describe('obtenerPorEquipo', () => {
     it('debería obtener todos los accionamientos de un equipo', async () => {
       const expectedData = [
@@ -559,9 +506,6 @@ describe('AccionamientosEquiposService', () => {
     });
   });
 
-  // ============================================================
-  // TESTS: OBTENER POR ALERTA
-  // ============================================================
   describe('obtenerPorAlerta', () => {
     it('debería obtener todos los accionamientos de una alerta', async () => {
       const expectedData = [
@@ -601,9 +545,6 @@ describe('AccionamientosEquiposService', () => {
     });
   });
 
-  // ============================================================
-  // TESTS: ELIMINAR
-  // ============================================================
   describe('eliminar', () => {
     it('debería eliminar un accionamiento cuando es dueño', async () => {
       prisma.accionamientoEquipo.delete.mockResolvedValue({ id: 1 });
@@ -635,9 +576,6 @@ describe('AccionamientosEquiposService', () => {
     });
   });
 
-  // ============================================================
-  // TESTS: ESTADÍSTICAS
-  // ============================================================
   describe('obtenerEstadisticas', () => {
     it('debería calcular estadísticas correctamente para Propietario', async () => {
       prisma.accionamientoEquipo.count

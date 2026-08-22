@@ -1,4 +1,3 @@
-// accionamientos-equipos.controller.ts
 import {
   Body,
   Controller,
@@ -18,7 +17,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ROLES } from '../../common/roles';
-import {AccionamientosEquiposService} from './accionamiento-equipo.service'
+import {AccionamientosEquiposService} from './accionamientos-equipos.service'
 import { CreateAccionamientoEquipoDto } from './dto/create-accionamientos-equipos.dto';
 import { UpdateAccionamientoEquipoDto } from './dto/update-accionamientos-equipos.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
@@ -34,10 +33,6 @@ interface AuthRequest extends Request {
 @Controller('accionamientos-equipos')
 export class AccionamientosEquiposController {
   constructor(private accionamientosService: AccionamientosEquiposService) {}
-
-  // ============================================================
-  // CRUD BÁSICO
-  // ============================================================
 
   @Post()
   @ApiOperation({
@@ -81,10 +76,6 @@ export class AccionamientosEquiposController {
     return this.accionamientosService.eliminar(id, req.user);
   }
 
-  // ============================================================
-  // FILTROS POR RELACIÓN
-  // ============================================================
-
   @Get('equipo/:equipoId')
   @ApiOperation({ summary: 'Obtener accionamientos por equipo' })
   obtenerPorEquipo(
@@ -104,10 +95,6 @@ export class AccionamientosEquiposController {
   ) {
     return this.accionamientosService.obtenerPorAlerta(alertaId, req.user, paginacion);
   }
-
-  // ============================================================
-  // ESTADÍSTICAS
-  // ============================================================
 
   @Get('estadisticas/resumen')
   @ApiOperation({ summary: 'Obtener estadísticas de accionamientos' })

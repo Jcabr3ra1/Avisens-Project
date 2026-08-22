@@ -1,5 +1,8 @@
-// accionamientos-equipos.service.ts
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAccionamientoEquipoDto } from './dto/create-accionamientos-equipos.dto';
 import { UpdateAccionamientoEquipoDto } from './dto/update-accionamientos-equipos.dto';
@@ -61,10 +64,6 @@ const ACCIONAMIENTO_SELECT = {
 @Injectable()
 export class AccionamientosEquiposService {
   constructor(private prisma: PrismaService) {}
-
-  // ============================================================
-  // VALIDACIONES PRIVADAS
-  // ============================================================
 
   private async validarEquipoActuador(equipoId: number, solicitante: Solicitante) {
     const equipo = await this.prisma.equipo.findUnique({
@@ -157,10 +156,6 @@ export class AccionamientosEquiposService {
     return horasRedondeadas;
   }
 
-  // ============================================================
-  // MÉTODOS PÚBLICOS
-  // ============================================================
-
   async crear(dto: CreateAccionamientoEquipoDto, solicitante: Solicitante) {
     await this.validarEquipoActuador(dto.equipo_id, solicitante);
 
@@ -168,21 +163,17 @@ export class AccionamientosEquiposService {
       await this.validarAlerta(dto.alerta_id, solicitante);
     }
 
-    const data: any = {
+    const data = {
       equipo_id: dto.equipo_id,
-      origen: dto.origen || 'automatico',
-      estado: dto.estado || 'encendido',
+      origen: dto.origen ?? 'automatico',
+      estado: dto.estado ?? 'encendido',
       usuario_id: dto.origen === 'automatico' ? null : solicitante.id,
       fecha_inicio: dto.fecha_inicio ? new Date(dto.fecha_inicio) : new Date(),
+      ...(dto.alerta_id ? { alerta_id: dto.alerta_id } : {}),
+      ...(dto.valor_disparo !== undefined
+        ? { valor_disparo: dto.valor_disparo }
+        : {}),
     };
-
-    if (dto.alerta_id) {
-      data.alerta_id = dto.alerta_id;
-    }
-
-    if (dto.valor_disparo !== undefined) {
-      data.valor_disparo = dto.valor_disparo;
-    }
 
     return this.prisma.accionamientoEquipo.create({
       data,
@@ -228,18 +219,23 @@ export class AccionamientosEquiposService {
       throw new BadRequestException('Este accionamiento ya está cerrado');
     }
 
-    const data: any = {
-      fecha_fin: new Date(),
-    };
+    const fechaFin = dto.fecha_fin ? new Date(dto.fecha_fin) : new Date();
 
-    if (dto.estado) {
-      data.estado = dto.estado;
+    if (fechaFin < accionamiento.fecha_inicio) {
+      throw new BadRequestException(
+        'La fecha de cierre no puede ser anterior al inicio del accionamiento',
+      );
     }
+
+    const data = {
+      fecha_fin: fechaFin,
+      ...(dto.estado ? { estado: dto.estado } : {}),
+    };
 
     const horas = await this.actualizarHorasOperacionEquipo(
       accionamiento.equipo_id,
       accionamiento.fecha_inicio,
-      data.fecha_fin,
+      fechaFin,
     );
 
     const result = await this.prisma.accionamientoEquipo.update({

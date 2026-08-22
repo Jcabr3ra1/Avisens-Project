@@ -1,0 +1,20 @@
+meta {
+  name: [Admin · Propietario]  Obtener accionamientos por equipo
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/v1/accionamientos-equipos/equipo/1?page=1&limit=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 20
+}
+
+auth:bearer {
+  token: {{token}}
+}

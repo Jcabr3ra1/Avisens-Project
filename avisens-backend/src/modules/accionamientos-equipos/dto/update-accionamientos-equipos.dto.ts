@@ -1,6 +1,6 @@
-// dto/update-accionamiento-equipo.dto.ts
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsDateString, IsString } from 'class-validator';
+import { IsOptional, IsDateString, IsIn, IsString } from 'class-validator';
+import { ESTADOS_ACCIONAMIENTO } from './create-accionamientos-equipos.dto';
 
 export class UpdateAccionamientoEquipoDto {
   @ApiPropertyOptional({
@@ -16,6 +16,7 @@ export class UpdateAccionamientoEquipoDto {
     description: 'Estado final del accionamiento: encendido | apagado',
   })
   @IsString()
+  @IsIn(ESTADOS_ACCIONAMIENTO)
   @IsOptional()
   estado?: string;
 }

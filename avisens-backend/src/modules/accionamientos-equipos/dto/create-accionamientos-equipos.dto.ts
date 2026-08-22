@@ -1,4 +1,3 @@
-// dto/create-accionamiento-equipo.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsInt,
@@ -9,6 +8,15 @@ import {
   IsDateString,
   IsString,
 } from 'class-validator';
+
+export const ORIGENES_ACCIONAMIENTO = [
+  'manual',
+  'automatico',
+  'voz',
+  'programado',
+] as const;
+
+export const ESTADOS_ACCIONAMIENTO = ['encendido', 'apagado'] as const;
 
 export class CreateAccionamientoEquipoDto {
   @ApiProperty({
@@ -30,9 +38,11 @@ export class CreateAccionamientoEquipoDto {
 
   @ApiPropertyOptional({
     example: 'automatico',
-    description: 'Origen del accionamiento: manual | automatico | voz | programado',
+    description:
+      'Origen del accionamiento: manual | automatico | voz | programado',
   })
   @IsString()
+  @IsIn(ORIGENES_ACCIONAMIENTO)
   @IsOptional()
   origen?: string;
 
@@ -41,6 +51,7 @@ export class CreateAccionamientoEquipoDto {
     description: 'Estado del accionamiento: encendido | apagado',
   })
   @IsString()
+  @IsIn(ESTADOS_ACCIONAMIENTO)
   @IsOptional()
   estado?: string;
 

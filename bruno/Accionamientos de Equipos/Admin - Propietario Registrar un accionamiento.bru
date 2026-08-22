@@ -1,0 +1,29 @@
+meta {
+  name: [Admin · Propietario]  Registrar el accionamiento de un actuador
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/accionamientos-equipos
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "equipo_id": 1,
+    "alerta_id": 1,
+    "origen": "automatico",
+    "estado": "encendido",
+    "valor_disparo": 31.5
+  }
+}

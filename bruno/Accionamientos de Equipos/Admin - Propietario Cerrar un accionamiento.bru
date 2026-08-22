@@ -1,0 +1,25 @@
+meta {
+  name: [Admin · Propietario]  Cerrar un accionamiento y sumar horas de operación
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/accionamientos-equipos/1/cerrar
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "estado": "apagado"
+  }
+}
