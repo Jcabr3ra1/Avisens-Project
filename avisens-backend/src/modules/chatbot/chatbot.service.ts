@@ -10,6 +10,8 @@ import { ResponderChatDto } from './dto/responder-chat.dto';
 import { ChatbotNluService } from './chatbot.nlu.service';
 
 const PRIMERA_PREGUNTA = 'A1';
+const PRIMERA_PREGUNTA_PQRS = 'B1';
+const RUTA_PQRS = 'general';
 const FIN = 'FIN';
 
 const UMBRAL_CALIENTE = 12;
@@ -25,7 +27,11 @@ export class ChatbotService {
 
   async iniciar(dto: IniciarChatDto) {
     const canal = dto.canal_origen ?? 'web';
-    const primera = await this.primeraVisible(PRIMERA_PREGUNTA, canal);
+    // La ruta la escoge el usuario: cotizacion califica al prospecto (bloque A)
+    // y general radica una solicitud PQRS (bloque B, sin puntaje).
+    const primeraCodigo =
+      dto.ruta === RUTA_PQRS ? PRIMERA_PREGUNTA_PQRS : PRIMERA_PREGUNTA;
+    const primera = await this.primeraVisible(primeraCodigo, canal);
 
     const prospecto = await this.prisma.prospecto.create({
       data: {
@@ -199,6 +205,54 @@ export class ChatbotService {
       where: { prospecto_id: prospectoId },
       _sum: { puntaje_obtenido: true },
     });
+
+    const respuestas = await this.prisma.respuestaChatbot.findMany({
+      where: { prospecto_id: prospectoId },
+      orderBy: { id: 'asc' },
+      select: {
+        bloque: true,
+        codigo_pregunta: true,
+        respuesta_texto: true,
+      },
+    });
+
+    // Ruta PQRS (bloque B): no hay puntaje ni clasificacion comercial; la
+    // solicitud queda radicada con su categoria, asunto y detalle.
+    const esPqrs = respuestas.some((r) => r.bloque === 'B');
+
+    if (esPqrs) {
+      const porCodigo = new Map(
+        respuestas.map((r) => [r.codigo_pregunta, r.respuesta_texto]),
+      );
+      await this.prisma.solicitudPqrs.create({
+        data: {
+          prospecto_id: prospectoId,
+          categoria: porCodigo.get('B1') ?? 'Petición',
+          asunto: porCodigo.get('B2'),
+          mensaje: porCodigo.get('B3'),
+          estado: 'abierta',
+        },
+      });
+
+      const cerrado = await this.prisma.prospecto.update({
+        where: { id: prospectoId },
+        data: {
+          estado: 'pqrs',
+          pregunta_actual: FIN,
+          fecha_finalizacion: new Date(),
+        },
+      });
+
+      return {
+        sesion_id: cerrado.sesion_id,
+        pregunta: null as ReturnType<
+          ChatbotService['formatearPregunta']
+        > | null,
+        finalizado: true,
+        puntaje_total: null as number | null,
+        clasificacion: 'pqrs' as string | null,
+      };
+    }
 
     const datos = await this.prisma.prospecto.findUnique({
       where: { id: prospectoId },

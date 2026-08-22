@@ -5,6 +5,7 @@ import {
   responderPregunta,
   type PreguntaChatbot,
   type RespuestaChatbot,
+  type RutaChat,
 } from '@shared/api/chatbot'
 import { IcAlert, IcRefresh, IcSend, IcSparkle } from '@shared/ui/icons/icons'
 import Ic from '@shared/ui/Ic/Ic'
@@ -87,6 +88,7 @@ function FloatChat() {
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<ErrorChat | null>(null)
   const [iniciado, setIniciado] = useState(false)
+  const [porElegirRuta, setPorElegirRuta] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const autoAbierto = useRef(false)
@@ -96,6 +98,7 @@ function FloatChat() {
 
     if (respuesta.finalizado) {
       const sinConsentimiento = respuesta.clasificacion === SIN_CONSENTIMIENTO
+      const esPqrs = respuesta.clasificacion === 'pqrs'
       setPregunta(null)
       setResultado({
         puntaje: respuesta.puntaje_total,
@@ -107,7 +110,9 @@ function FloatChat() {
           autor: 'bot',
           texto: sinConsentimiento
             ? 'Entendido, cerramos aquí. No quedaste registrado como prospecto y no guardamos ningún dato personal tuyo.'
-            : 'Listo. Con eso tengo todo lo necesario para orientar tu cotización.',
+            : esPqrs
+              ? '¡Listo! Tu solicitud quedó radicada. Un asesor del equipo la revisará y te contactará.'
+              : 'Listo. Con eso tengo todo lo necesario para orientar tu cotización.',
         },
       ])
       return
@@ -120,7 +125,7 @@ function FloatChat() {
     }
   }, [])
 
-  const iniciar = useCallback(async () => {
+  const iniciar = useCallback(async (ruta: RutaChat = 'cotizacion') => {
     setEnviando(true)
     setError(null)
     setMensajes([])
@@ -129,9 +134,10 @@ function FloatChat() {
     setResultado(null)
     setRespondidas(0)
     setTexto('')
+    setPorElegirRuta(false)
 
     try {
-      const respuesta = await iniciarConversacion('web')
+      const respuesta = await iniciarConversacion('web', ruta)
       setSesionId(respuesta.sesion_id)
       setIniciado(true)
       aplicar(respuesta, false)
@@ -142,6 +148,17 @@ function FloatChat() {
       setEnviando(false)
     }
   }, [aplicar])
+
+  const abrirConMenu = useCallback(() => {
+    setMensajes([])
+    setSesionId(null)
+    setPregunta(null)
+    setResultado(null)
+    setRespondidas(0)
+    setTexto('')
+    setError(null)
+    setPorElegirRuta(true)
+  }, [])
 
   const enviar = useCallback(async (respuesta: string) => {
     const valor = respuesta.trim()
@@ -167,7 +184,7 @@ function FloatChat() {
   }, [aplicar, enviando, resultado, sesionId])
 
   function toggleChat() {
-    if (!open && !iniciado && !enviando) void iniciar()
+    if (!open && !iniciado && !enviando && !porElegirRuta) abrirConMenu()
     setOpen((actual) => !actual)
   }
 
@@ -184,7 +201,7 @@ function FloatChat() {
     if (!new URLSearchParams(window.location.search).has('chat')) return
     autoAbierto.current = true
     setOpen(true)
-    void iniciar()
+    void iniciar('cotizacion')
   }, [iniciar])
 
   useEffect(() => {
@@ -199,8 +216,8 @@ function FloatChat() {
   const progreso = Math.min(respondidas, TOTAL_PREGUNTAS)
   const opciones = pregunta?.opciones ?? []
   const estado = resultado
-    ? resultado.clasificacion === SIN_CONSENTIMIENTO
-      ? 'Conversación cerrada'
+    ? resultado.clasificacion === SIN_CONSENTIMIENTO || resultado.clasificacion === 'pqrs'
+      ? 'Conversación terminada'
       : 'Conversación terminada'
     : enviando
       ? 'Escribiendo'
@@ -225,7 +242,7 @@ function FloatChat() {
           <button
             type="button"
             className="float-chat-reset"
-            onClick={iniciar}
+            onClick={() => abrirConMenu()}
             disabled={enviando}
             aria-label="Reiniciar conversación"
             title="Reiniciar conversación"
@@ -242,6 +259,14 @@ function FloatChat() {
         </div>
 
         <div className="float-chat-msgs" ref={scrollRef}>
+          {porElegirRuta ? (
+            <div className="float-msg bot">
+              <div className="float-msg-bub">
+                ¡Hola! Soy AVIA. ¿En qué te puedo ayudar hoy?
+              </div>
+            </div>
+          ) : null}
+
           {mensajes.map((mensaje, i) => (
             <div key={`${mensaje.autor}-${i}`} className={`float-msg ${mensaje.autor}`}>
               <div className="float-msg-bub">{mensaje.texto}</div>
@@ -264,6 +289,11 @@ function FloatChat() {
                 <span>Conversación cerrada</span>
                 <p>Sin tratamiento de datos. Puedes reiniciar cuando quieras.</p>
               </div>
+            ) : resultado.clasificacion === 'pqrs' ? (
+              <div className="float-result float-result--cerrado">
+                <span>Solicitud radicada</span>
+                <p>Tu solicitud PQRS quedó registrada. Pronto te contactaremos.</p>
+              </div>
             ) : (
               <div className="float-result">
                 <span>Resultado</span>
@@ -281,14 +311,23 @@ function FloatChat() {
             <IcAlert size={15} />
             <span>{error.texto}</span>
             {error.reiniciar ? (
-              <button type="button" onClick={iniciar} disabled={enviando}>
+              <button type="button" onClick={() => void iniciar('cotizacion')} disabled={enviando}>
                 Reintentar
               </button>
             ) : null}
           </div>
         ) : null}
 
-        {opciones.length > 0 && !resultado ? (
+          {porElegirRuta && !enviando ? (
+            <div className="float-chat-options">
+              <button type="button" onClick={() => void iniciar('cotizacion')}>
+                Quiero una cotización
+              </button>
+              <button type="button" onClick={() => void iniciar('general')}>
+                Preguntas generales (PQRS)
+              </button>
+            </div>
+          ) : opciones.length > 0 && !resultado ? (
           <div className="float-chat-options">
             {opciones.map((opcion) => (
               <button
@@ -310,12 +349,12 @@ function FloatChat() {
             placeholder={placeholder}
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            disabled={enviando || !sesionId || resultado !== null}
+            disabled={enviando || !sesionId || resultado !== null || porElegirRuta}
           />
           <button
             type="submit"
             className="float-chat-send-btn"
-            disabled={enviando || !sesionId || !texto.trim() || resultado !== null}
+            disabled={enviando || !sesionId || !texto.trim() || resultado !== null || porElegirRuta}
             aria-label="Enviar"
           >
             <IcSend size={17} />

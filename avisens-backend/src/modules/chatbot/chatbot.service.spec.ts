@@ -10,8 +10,9 @@ describe('ChatbotService', () => {
   const prisma = {
     prospecto: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     preguntaChatbot: { findFirst: jest.fn() },
-    respuestaChatbot: { create: jest.fn(), aggregate: jest.fn() },
+    respuestaChatbot: { create: jest.fn(), aggregate: jest.fn(), findMany: jest.fn() },
     matrizCalificacion: { findUnique: jest.fn() },
+    solicitudPqrs: { create: jest.fn() },
   };
 
   const nlu = { interpretar: jest.fn() };
@@ -59,6 +60,8 @@ describe('ChatbotService', () => {
     prisma.prospecto.findUnique.mockResolvedValue(enCurso);
     prisma.prospecto.update.mockResolvedValue(enCurso);
     prisma.respuestaChatbot.create.mockResolvedValue({});
+    prisma.respuestaChatbot.findMany.mockResolvedValue([]);
+    prisma.solicitudPqrs.create.mockResolvedValue({});
     prisma.preguntaChatbot.findFirst.mockResolvedValue(pregunta({}));
     nlu.interpretar.mockResolvedValue(null);
   });
@@ -430,6 +433,85 @@ describe('ChatbotService', () => {
 
       expect(r.clasificacion).toBe('caliente');
       expect(ultimosDatos(prisma.prospecto.update).estado).toBe('calificado');
+    });
+  });
+
+  describe('rutas: cotizacion (bloque A) vs general (bloque B)', () => {
+    it('por defecto arranca en la ruta de cotizacion (A1)', async () => {
+      prisma.prospecto.create.mockResolvedValue({ id: 1, sesion_id: 'u' });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(pregunta({}));
+
+      const r = await service.iniciar({});
+
+      expect(r.pregunta?.codigo).toBe('A1');
+    });
+
+    it('con ruta general arranca en B1 (PQRS)', async () => {
+      prisma.prospecto.create.mockResolvedValue({ id: 1, sesion_id: 'u' });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ codigo: 'B1', bloque: 'B', tipo: 'opcion_unica' }),
+      );
+
+      const r = await service.iniciar({ ruta: 'general' });
+
+      expect(r.pregunta?.codigo).toBe('B1');
+      expect(datosDe(prisma.prospecto.create).pregunta_actual).toBe('B1');
+    });
+
+    it('radica una SolicitudPqrs al terminar el bloque B, sin puntaje comercial', async () => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'B3',
+          bloque: 'B',
+          tipo: 'texto_libre',
+          siguiente: 'FIN',
+        }),
+      );
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: null },
+      });
+      prisma.respuestaChatbot.findMany.mockResolvedValue([
+        { bloque: 'B', codigo_pregunta: 'B1', respuesta_texto: 'Sugerencia' },
+        { bloque: 'B', codigo_pregunta: 'B2', respuesta_texto: 'Los sensores' },
+        { bloque: 'B', codigo_pregunta: 'B3', respuesta_texto: 'Detalle largo' },
+      ]);
+
+      const r = await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Detalle largo',
+      });
+
+      expect(r.finalizado).toBe(true);
+      expect(r.clasificacion).toBe('pqrs');
+      expect(r.puntaje_total).toBeNull();
+      expect(prisma.solicitudPqrs.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          data: expect.objectContaining({
+            categoria: 'Sugerencia',
+            asunto: 'Los sensores',
+            mensaje: 'Detalle largo',
+            estado: 'abierta',
+          }),
+        }),
+      );
+      expect(ultimosDatos(prisma.prospecto.update).estado).toBe('pqrs');
+    });
+
+    it('la ruta de cotizacion no radica PQRS', async () => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ siguiente: 'FIN' }),
+      );
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: 12 },
+      });
+      prisma.respuestaChatbot.findMany.mockResolvedValue([
+        { bloque: 'A', codigo_pregunta: 'A8', respuesta_texto: '>10000' },
+      ]);
+
+      await service.responder({ sesion_id: enCurso.sesion_id, respuesta: 'Sí' });
+
+      expect(prisma.solicitudPqrs.create).not.toHaveBeenCalled();
     });
   });
 });
