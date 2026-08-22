@@ -54,6 +54,9 @@ export class WhatsappService {
             this.logger.warn(
               `Mensaje ${m.id} sin remitente: se descarta para no engancharlo a otra conversacion`,
             );
+            this.logger.warn(
+              `Carga sin remitente: ${JSON.stringify(valor).slice(0, 1500)}`,
+            );
             continue;
           }
 
