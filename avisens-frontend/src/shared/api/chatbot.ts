@@ -2,6 +2,8 @@ import { api } from './client'
 
 export type CanalOrigen = 'web' | 'whatsapp'
 
+export type RutaChat = 'cotizacion' | 'general'
+
 export type TipoPregunta = 'opcion_unica' | 'texto_libre' | 'numero' | 'si_no'
 
 export interface PreguntaChatbot {
@@ -21,9 +23,11 @@ export interface RespuestaChatbot {
 
 export async function iniciarConversacion(
   canal_origen: CanalOrigen = 'web',
+  ruta: RutaChat = 'cotizacion',
 ): Promise<RespuestaChatbot> {
   const { data } = await api.post<RespuestaChatbot>('/chatbot/iniciar', {
     canal_origen,
+    ruta,
   })
   return data
 }

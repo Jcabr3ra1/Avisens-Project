@@ -10,4 +10,15 @@ export class IniciarChatDto {
   @IsIn(['web', 'whatsapp'])
   @IsOptional()
   canal_origen?: string;
+
+  @ApiPropertyOptional({
+    example: 'cotizacion',
+    enum: ['cotizacion', 'general'],
+    description:
+      'Ruta del chat: cotizacion lleva al bloque A (calificacion) y general al bloque B (PQRS)',
+  })
+  @IsString()
+  @IsIn(['cotizacion', 'general'])
+  @IsOptional()
+  ruta?: string;
 }
