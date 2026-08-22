@@ -1,0 +1,25 @@
+meta {
+  name: [Admin · Propietario]  Actualizar una evidencia
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/v1/evidencias-alerta/1
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "comentario": "Se corrigió la descripción de la evidencia"
+  }
+}

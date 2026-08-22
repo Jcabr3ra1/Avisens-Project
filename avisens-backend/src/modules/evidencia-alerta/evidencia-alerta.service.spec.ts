@@ -18,9 +18,11 @@ describe('EvidenciaAlertaService', () => {
     evidenciaAlerta: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      count: jest.fn(),
       create: jest.fn(),
       delete: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   const administrador: Solicitante = {
@@ -103,6 +105,68 @@ describe('EvidenciaAlertaService', () => {
       );
 
       expect(prisma.evidenciaAlerta.create).toHaveBeenCalled();
+    });
+  });
+
+  describe('obtener', () => {
+    it('deja al administrador ver la evidencia de una granja ajena', async () => {
+      prisma.evidenciaAlerta.findUnique.mockResolvedValue({
+        id: 7,
+        alerta: {
+          galpon: {
+            granja: { propietario_id: 999 },
+          },
+        },
+      });
+
+      const evidencia = await service.obtener(7, administrador);
+
+      expect(evidencia).toEqual(expect.objectContaining({ id: 7 }));
+    });
+
+    it('le niega al propietario la evidencia de una granja ajena', async () => {
+      prisma.evidenciaAlerta.findUnique.mockResolvedValue({
+        id: 7,
+        alerta: {
+          galpon: {
+            granja: { propietario_id: 999 },
+          },
+        },
+      });
+
+      await expect(service.obtener(7, propietario)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+  });
+
+  describe('listar', () => {
+    it('acota el listado del propietario a sus propias granjas', async () => {
+      prisma.$transaction.mockResolvedValue([[], 0]);
+
+      await service.listar(propietario, { page: 1, limit: 10 });
+
+      expect(prisma.evidenciaAlerta.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            alerta: {
+              galpon: {
+                granja: { propietario_id: propietario.id },
+              },
+            },
+          },
+        }),
+      );
+    });
+
+    it('no le pone filtro de granja al administrador', async () => {
+      prisma.$transaction.mockResolvedValue([[], 0]);
+
+      await service.listar(administrador, { page: 1, limit: 10 });
+
+      expect(prisma.evidenciaAlerta.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: undefined }),
+      );
     });
   });
 

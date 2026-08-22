@@ -1,11 +1,10 @@
-import { Optional } from '@nestjs/common';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsString } from 'class-validator';
 
 export class CreateEvidenciaAlertaDto {
   @ApiProperty({
     example: 1,
-    description: 'ID de la alerta ala que pertenece la evidencia',
+    description: 'ID de la alerta a la que pertenece la evidencia',
   })
   @IsInt()
   alerta_id: number;
@@ -23,15 +22,15 @@ export class CreateEvidenciaAlertaDto {
     description: 'URL del archivo almacenado',
   })
   @IsString()
-  @Optional()
+  @IsOptional()
   archivo_url?: string;
 
   @ApiPropertyOptional({
-    example: 'Se adjunto fotografía del sensor afectado',
+    example: 'Se adjuntó fotografía del sensor afectado',
     description: 'Comentario asociado a la evidencia',
   })
   @IsString()
-  @Optional()
+  @IsOptional()
   comentario?: string;
 
   @ApiPropertyOptional({
