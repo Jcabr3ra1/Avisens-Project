@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   ParseIntPipe,
   Patch,
@@ -31,6 +32,17 @@ export class ProspectosController {
   })
   listar(@Query() dto: ListarProspectosDto) {
     return this.prospectosService.listar(dto);
+  }
+
+  @Get('exportar')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="prospectos.csv"')
+  @ApiOperation({
+    summary:
+      'Exportar prospectos a CSV (respeta los mismos filtros del listado)',
+  })
+  exportar(@Query() dto: ListarProspectosDto) {
+    return this.prospectosService.exportarCsv(dto);
   }
 
   @Get(':id')

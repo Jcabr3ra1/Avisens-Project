@@ -105,4 +105,54 @@ export class ProspectosService {
       estado: 'asignado',
     };
   }
+
+  async exportarCsv(dto: ListarProspectosDto) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { page: _page, limit: _limit, ...filtros } = dto;
+    const where: Prisma.ProspectoWhereInput = {
+      ...(filtros.clasificacion ? { clasificacion: filtros.clasificacion } : {}),
+      ...(filtros.estado ? { estado: filtros.estado } : {}),
+      ...(filtros.sin_asignar ? { asesor_asignado_id: null } : {}),
+    };
+
+    const filas = await this.prisma.prospecto.findMany({
+      where,
+      select: PROSPECTO_LISTA,
+      orderBy: [{ puntaje_total: 'desc' }, { fecha_inicio: 'desc' }],
+    });
+
+    const encabezados = [
+      'id',
+      'nombre',
+      'nombre_granja',
+      'telefono',
+      'municipio',
+      'canal_origen',
+      'puntaje_total',
+      'clasificacion',
+      'estado',
+      'asesor_asignado_id',
+      'fecha_inicio',
+      'fecha_finalizacion',
+    ];
+
+    const escapar = (valor: unknown) => {
+      if (valor == null) return '';
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      const texto = valor instanceof Date ? valor.toISOString() : String(valor);
+      return /[",\n;]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
+    };
+
+    // BOM inicial para que Excel respete los acentos al abrir el archivo.
+    const lineas = [
+      '\ufeff' + encabezados.join(','),
+      ...filas.map((fila) =>
+        encabezados
+          .map((c) => escapar((fila as Record<string, unknown>)[c]))
+          .join(','),
+      ),
+    ];
+
+    return lineas.join('\n');
+  }
 }
