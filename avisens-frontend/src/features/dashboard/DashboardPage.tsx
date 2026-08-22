@@ -3,56 +3,36 @@
 //   · Hero con saludo, tabs de galpón y KPIs productivos
 //   · Debajo: salud del lote, galpón 3D interactivo y sensores ambientales
 //   · Mascota AVIA (se trabaja más adelante)
+//
+// Consume el hook compartido useMonitoreoAmbiental (galpones/sensores reales)
+// más /granjas y /indicadores — el EPEF, FCR y mortalidad ya no se inventan
+// con una fórmula basada en el día del lote: son los que calcula el backend
+// a partir de los pesajes, consumos y registros de mortalidad reales.
 
 import { useState, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-  GALPONES_MONITOREO,
-  ICONOS_VARIABLE,
-  type Sensor,
-  type EstadoSensor,
-} from '../monitoreo/data'
-import { GRANJAS_DETALLE } from '../granjas/data'
+  useMonitoreoAmbiental,
+  type SensorVista,
+  type EstadoSensorVista,
+  type GalponMonitoreoVista,
+} from '@shared/hooks/useMonitoreoAmbiental'
+import { iconoSensor } from '@shared/ui/sensorIcon'
 import { SensorDetail } from '../monitoreo/SensorDetail'
 import AviaMascot      from './components/AviaMascot/AviaMascot'
 import ChatPanel       from './components/chat/ChatPanel'
 import CoopPlaceholder from './components/CoopPlaceholder/CoopPlaceholder'
-import type { Galpon } from '@shared/data/farm'
-import { getUsuario }  from '@shared/api'
-import { useLecturasVivas } from '@shared/hooks/useLecturasVivas'
-import { calcularEstadoSensor, formatearHace, idAlertaSensor } from '@shared/utils/sensores'
+import type { Galpon as GalponFarmShape } from '@shared/data/farm'
+import { listarGranjas, calcularIndicadores, getUsuario } from '@shared/api'
+import type { Granja, IndicadorLote } from '@shared/api'
 import { alertaFueVista } from '@shared/utils/alertasVistas'
 import { IcEgg, IcCal, IcAlert, IcChart, IcScale, IcLeaf, IcHeart, IcBox, IcServer } from '@shared/ui/icons/icons'
 import './DashboardPage.css'
 
-// ─── Vista unificada de galpón: junta Granjas (dueño de la verdad de qué      ─
-// galpones existen y su estado) con Monitoreo (sensores, cuando los tiene).   ─
-// Así "Mi galpón" muestra las 3 granjas del dueño, no solo la primera.        ─
-type GalponVista = {
-  id: number; codigo: string; nombre: string
-  granjaId: number
-  estado: 'activo' | 'vacio' | 'preparacion' | 'mantenimiento'
-  aves: number; diaVida: number
-  sensores: Sensor[]
-}
-
-const GALPONES_VISTA: GalponVista[] = GRANJAS_DETALLE.flatMap(granja =>
-  granja.galpones.map(g => ({
-    id: g.id, codigo: g.codigo, nombre: g.nombre, granjaId: granja.id,
-    estado: g.estado, aves: g.avesActuales, diaVida: g.diaVida,
-    sensores: GALPONES_MONITOREO.find(m => m.codigo === g.codigo)?.sensores ?? [],
-  })),
-)
-
 // ─── Mensajes y colores por estado del galpón (mismo vocabulario de Granjas) ─
 const ESTADO_BADGE_LABEL: Record<string, string> = {
-  critico: 'Alerta crítica', advertencia: 'Advertencia', optimo: 'Todo bien',
-  vacio: 'Vacío', preparacion: 'En preparación', mantenimiento: 'En mantenimiento',
-}
-const MENSAJE_SIN_LOTE: Record<string, string> = {
-  vacio: 'Galpón vacío. Asígnale un lote para comenzar el monitoreo.',
-  preparacion: 'Este galpón está en preparación para el próximo lote.',
-  mantenimiento: 'Este galpón está en mantenimiento. Los sensores se reactivan cuando vuelva a operar.',
+  critico: 'Alerta crítica', advertencia: 'Advertencia', optimo: 'Todo bien', vacio: 'Vacío',
 }
 
 // ─── Paleta del hero (tonos claros para fondo oscuro con degradado) ───────────
@@ -68,7 +48,6 @@ const HERO_GRIS  = 'rgba(255,255,255,0.45)'
 // ═══════════════════════════════════════════════════════════════════════════ //
 
 // ─── Barra de salud del lote (score 0–100) ────────────────────────────────────
-// Único en Avisens: combina EPEF, alertas y estado ambiental en un solo índice.
 function SaludBar({ score }: { score: number }) {
   const { color, label } =
     score >= 88 ? { color: '#10b981', label: 'Excelente' } :
@@ -96,7 +75,6 @@ function SaludBar({ score }: { score: number }) {
 }
 
 // ─── Umbrales de calidad para EPEF y FCR (Manual Italcol + estándar industria) ─
-// EPEF: European Production Efficiency Factor. ≥320 excelente · 270-319 bueno · <220 malo
 function epefEstado(epef: number) {
   return (
     epef >= 320 ? { color: HERO_VERDE, label: 'Excelente' } :
@@ -106,7 +84,6 @@ function epefEstado(epef: number) {
                   { color: HERO_GRIS,  label: '—'         }
   )
 }
-// FCR: Feed Conversion Ratio — kg alimento / kg peso ganado. <1.65 excelente · >2.00 malo
 function fcrEstado(fcr: number) {
   return (
     fcr > 0 && fcr < 1.65 ? { color: HERO_VERDE, label: 'Excelente' } :
@@ -134,7 +111,7 @@ function HeroKpi({ icon, label, value, sub, color }: HeroKpiProps) {
 }
 
 // ─── Calcula el score de salud del lote (0–100) ────────────────────────────────
-function calcSalud(galpon: { sensores: Sensor[] }, alertas: number, epef: number): number {
+function calcSalud(galpon: { sensores: SensorVista[] }, alertas: number, epef: number): number {
   let score = 100
   score -= galpon.sensores.filter(s => s.estado === 'critico').length     * 18
   score -= galpon.sensores.filter(s => s.estado === 'advertencia').length * 8
@@ -148,76 +125,77 @@ function calcSalud(galpon: { sensores: Sensor[] }, alertas: number, epef: number
 // ═══════════════════════════════════════════════════════════════════════════ //
 
 function DashboardPage() {
-  const [galpones, setGalpones] = useState<GalponVista[]>(GALPONES_VISTA)
-  const [granjaId, setGranjaId] = useState<number>(GRANJAS_DETALLE[0]!.id)
-  const [galponId, setGalponId] = useState<number>(GALPONES_VISTA[0]!.id)
-  const [sensorActivo, setSensorActivo] = useState<Sensor | null>(null)
+  const navigate = useNavigate()
+  const { galpones, cargando, error } = useMonitoreoAmbiental()
+  const [granjas, setGranjas] = useState<Granja[]>([])
+  const [granjaId, setGranjaId] = useState<number | null>(null)
+  const [galponId, setGalponId] = useState<number | null>(null)
+  const [sensorActivo, setSensorActivo] = useState<SensorVista | null>(null)
   const [chatOpen,     setChatOpen]     = useState(false)
   const [unread,       setUnread]       = useState(3)
-  const [modalAbierto, setModalAbierto] = useState(false)
-  const [formGalpon,   setFormGalpon]   = useState({ codigo: '', nombre: '' })
-  const [errorGalpon,  setErrorGalpon]  = useState('')
+  const [indicador,    setIndicador]    = useState<IndicadorLote | null>(null)
 
-  // Referencia para scroll al contenido al cambiar de tab
   const contentRef = useRef<HTMLDivElement>(null)
 
-  // ── Fusión con el sensor real de GP-01 ───────────────────────────────────
-  // GP-01 es el único galpón con un ESP32 conectado (ver Monitoreo/Alertas).
-  // Aquí se aplica la misma fusión: si ya llegó un valor real de Firebase
-  // para una variable, reemplaza el de ejemplo (mock) y se recalcula su
-  // estado — así "Mi galpón" nunca muestra una temperatura distinta a la que
-  // ya se ve en Sensores o en Alertas para el mismo galpón.
-  const lecturasVivasGP01 = useLecturasVivas('GP-01')
-  const galponesConVivo = galpones.map(g => {
-    if (g.codigo !== 'GP-01') return g
-    return {
-      ...g,
-      sensores: g.sensores.map(s => {
-        const vivo = lecturasVivasGP01[s.variable]
-        if (!vivo || s.estado === 'offline') return s
-        const valor = Math.round(vivo.valor * 10) / 10
-        return { ...s, valor, estado: calcularEstadoSensor(valor, s.minUmbral, s.maxUmbral), ultimaLectura: formatearHace(vivo.ts) }
-      }),
-    }
-  })
+  useEffect(() => {
+    listarGranjas().then(setGranjas).catch(() => {})
+  }, [])
 
-  // ── Datos de la granja y el galpón seleccionados ─────────────────────────
-  const galponesGranja = galponesConVivo.filter(g => g.granjaId === granjaId)
-  const galpon   = galponesGranja.find(g => g.id === galponId) ?? galponesGranja[0] ?? galponesConVivo[0]!
-  const aves     = galpon.aves
-  const alertas  = galpon.sensores.filter(s => s.estado === 'critico' || s.estado === 'advertencia').length
+  // Selecciona la primera granja/galpón en cuanto llegan los datos
+  useEffect(() => {
+    if (granjaId === null && granjas.length > 0) setGranjaId(granjas[0].id)
+  }, [granjaId, granjas])
+  useEffect(() => {
+    if (galponId === null && galpones.length > 0) setGalponId(galpones[0].id)
+  }, [galponId, galpones])
+
+  const galponesGranja = galpones.filter(g => g.granjaId === granjaId)
+  const galpon = galponesGranja.find(g => g.id === galponId) ?? galponesGranja[0] ?? galpones[0] ?? null
+
+  const tieneActivo = galpon?.loteActivo != null
+  const aves = galpon?.loteActivo?.cantidad_inicial ?? 0
+  const alertas = galpon ? galpon.sensores.filter(s => s.estado === 'critico' || s.estado === 'advertencia').length : 0
   // Cuántas de esas alertas el usuario todavía NO ha visto en la página de
-  // Alertas — solo estas hacen que el avatar AVIA avise. Una vez las mira
-  // ahí, deja de insistir con ellas (aunque sigan contando en el KPI de
-  // arriba, que muestra el total real, visto o no).
-  const alertasNoVistas = galpon.sensores
-    .filter(s => s.estado === 'critico' || s.estado === 'advertencia')
-    .filter(s => !alertaFueVista(idAlertaSensor(galpon.id, s.variable)))
-    .length
-  const tieneActivo = galpon.estado === 'activo'
-  const galponFarm: Galpon = {
+  // Alertas — solo estas hacen que el avatar AVIA avise (usa el mismo id de
+  // sensor que AlertasPage, así que nunca se desincronizan).
+  const alertasNoVistas = galpon
+    ? galpon.sensores
+        .filter(s => s.estado === 'critico' || s.estado === 'advertencia')
+        .filter(s => !alertaFueVista(s.id))
+        .length
+    : 0
+
+  const galponFarm: GalponFarmShape | null = galpon ? {
     id: galpon.id, codigo: galpon.codigo, nombre: galpon.nombre,
     aves, dia: galpon.diaVida,
     status: !tieneActivo ? 'empty' : alertas > 0 ? 'warn' : 'ok',
     alertas,
-  }
+  } : null
 
-  // ── Efectos ────────────────────────────────────────────────────────────────
+  // ── Indicadores reales del lote activo (FCR/EPEF/mortalidad) ─────────────
+  // Se calculan en el backend a partir de pesajes, consumos y mortalidad
+  // reales — si el lote todavía no tiene bitácora registrada, vienen en null.
+  useEffect(() => {
+    const loteId = galpon?.loteActivo?.id
+    if (!loteId) { setIndicador(null); return }
+    let activo = true
+    calcularIndicadores(loteId)
+      .then((d) => { if (activo) setIndicador(d) })
+      .catch(() => { if (activo) setIndicador(null) })
+    return () => { activo = false }
+  }, [galpon?.loteActivo?.id])
+
   useEffect(() => { if (chatOpen) setUnread(0) }, [chatOpen])
   useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setChatOpen(false); setModalAbierto(false) }
-    }
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setChatOpen(false) }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [])
 
-  // ── Cambiar de galpón / granja ────────────────────────────────────────────
   function seleccionarGalpon(id: number) {
     setGalponId(id)
     setSensorActivo(null)
   }
-
   function cambiarGranja(id: number) {
     setGranjaId(id)
     const primero = galpones.find(g => g.granjaId === id)
@@ -225,75 +203,58 @@ function DashboardPage() {
     setSensorActivo(null)
   }
 
-  // ── Agregar galpón (a la granja que se está viendo) ──────────────────────
-  function handleAgregarGalpon(e: { preventDefault(): void }) {
-    e.preventDefault()
-    setErrorGalpon('')
-    const nombre = formGalpon.nombre.trim()
-    if (!nombre) { setErrorGalpon('El nombre es obligatorio.'); return }
-    const codigo = formGalpon.codigo.trim().toUpperCase() || `GP-N${galponesGranja.length + 1}`
-    if (galpones.some(g => g.codigo === codigo)) {
-      setErrorGalpon('Ya existe un galpón con ese código.'); return
-    }
-    const nuevo: GalponVista = {
-      id: Date.now(), codigo, nombre: `Galpón ${nombre}`, granjaId,
-      estado: 'vacio', aves: 0, diaVida: 0, sensores: [],
-    }
-    setGalpones(prev => [...prev, nuevo])
-    setFormGalpon({ codigo: '', nombre: '' })
-    setModalAbierto(false)
-    setGalponId(nuevo.id)
-  }
+  const estado = tieneActivo && galpon ? estadoGlobal(galpon) : 'vacio'
 
-  // Estado del badge: si tiene lote activo, refleja los sensores; si no, la
-  // etapa del galpón (vacío / preparación / mantenimiento — igual que Granjas)
-  const estado = tieneActivo ? estadoGlobal(galpon) : galpon.estado
-
-  // ── Métricas productivas (diferenciadoras vs competencia) ──────────────────
-  // EPEF = (Viabilidad% × Peso promedio kg × 100) / (Días × FCR)
-  // FCR  = kg alimento / kg peso ganado (Conversión Alimenticia)
-  // Fuente: Manual Italcol + estándar industria avícola colombiana
-  const avesIniciales = tieneActivo && aves > 0 ? Math.round(aves / 0.982) : 0
-  const viabilidad    = avesIniciales > 0 ? +((aves / avesIniciales) * 100).toFixed(1) : 0
-  // Peso promedio estimado según la curva Ross 308 (g → kg)
-  const pesoKg        = tieneActivo ? +(0.042 + galpon.diaVida * 0.0448).toFixed(2) : 0
-  // FCR mock basado en el día del lote (mejora con el tiempo)
-  const fcr           = tieneActivo && galpon.diaVida >= 10
-    ? +(1.62 + galpon.diaVida * 0.0048).toFixed(2)
-    : 0
-  // EPEF: ≥350 excelente, 280-349 bueno, 200-279 regular, <200 malo
-  const epef = tieneActivo && fcr > 0
-    ? Math.round((viabilidad * pesoKg * 100) / (galpon.diaVida * fcr))
+  // ── Métricas productivas reales (FCR/EPEF/mortalidad vienen de /indicadores) ─
+  const fcr           = indicador?.fcr ?? 0
+  const epef          = indicador?.epef ?? 0
+  const mortalidad    = indicador?.mortalidad_acumulada_pct ?? 0
+  const pesoKg        = indicador?.peso_promedio_g ? +(indicador.peso_promedio_g / 1000).toFixed(2) : 0
+  // Viabilidad = % de aves que siguen vivas = 100% − mortalidad acumulada
+  const viabilidad    = indicador?.mortalidad_acumulada_pct != null
+    ? +(100 - indicador.mortalidad_acumulada_pct).toFixed(1)
     : 0
 
-  // Mortalidad acumulada mock — crece lento con el día y se estabiliza.
-  // EP-06 HU-27: alerta si supera 0.5% diario o 3% acumulado
-  const mortalidad = tieneActivo ? Math.min(4.5, +(0.3 + galpon.diaVida * 0.021).toFixed(1)) : 0
+  const saludScore = tieneActivo && galpon ? calcSalud(galpon, alertas, epef) : 0
 
-  // ── Score de salud del lote (0–100) ──────────────────────────────────────
-  // Unique de Avisens — combina EPEF, alertas, sensores y mortalidad
-  const saludScore = tieneActivo ? calcSalud(galpon, alertas, epef) : 0
-
-  // ── Estado visual de los tiles del hero ──────────────────────────────────
   const epefInfo = epefEstado(epef)
   const fcrInfo   = fcrEstado(fcr)
   const alertaColor = alertas === 0 ? HERO_VERDE
-    : galpon.sensores.some(s => s.estado === 'critico') ? HERO_ROJO : HERO_AMBAR
+    : (galpon?.sensores.some(s => s.estado === 'critico') ?? false) ? HERO_ROJO : HERO_AMBAR
   const viabilidadColor = viabilidad === 0 ? HERO_GRIS
     : viabilidad >= 98 ? HERO_VERDE : viabilidad >= 96 ? HERO_AMBAR : HERO_ROJO
   const mortalidadColor = mortalidad === 0 ? HERO_GRIS
     : mortalidad <= 2 ? HERO_VERDE : mortalidad <= 3 ? HERO_AMBAR : HERO_ROJO
 
-  // ── Usuario logueado y fecha para el saludo del hero ─────────────────────
   const usuario  = getUsuario()
   const fechaHoy = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  if (cargando) {
+    return (
+      <div className="page-container db-page">
+        <p className="db-cargando">Cargando tu galpón…</p>
+      </div>
+    )
+  }
+
+  if (!galpon || !galponFarm) {
+    return (
+      <div className="page-container db-page">
+        {error && <div className="db-alert-error" role="alert">{error}</div>}
+        <div className="db-3d-vacio">
+          <IcBox size={40} />
+          <p>Todavía no tienes granjas ni galpones registrados.</p>
+          <button className="db-btn-confirmar" onClick={() => navigate('/granjas')}>Ir a Mis Granjas</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="page-container db-page">
 
       {/* ── HERO: banner oscuro con saludo, tabs de galpón y KPIs ───────────── */}
       <div className="db-hero">
-        {/* Patrón decorativo de puntos — capa SVG posicionada en absoluto */}
         <svg className="db-hero-pattern" aria-hidden="true">
           <defs>
             <pattern id="db-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
@@ -303,7 +264,6 @@ function DashboardPage() {
           <rect width="100%" height="100%" fill="url(#db-dots)" />
         </svg>
 
-        {/* Encabezado: saludo + estado del galpón activo | fecha */}
         <div className="db-hero-top">
           <div>
             <p className="db-hero-eyebrow">Mi galpón <span className="db-hero-eyebrow-code">{galpon.codigo}</span></p>
@@ -319,28 +279,32 @@ function DashboardPage() {
         </div>
 
         {/* Selector de granja — el dueño puede tener más de una */}
-        <div className="db-hero-granja-row">
-          <span className="db-hero-granja-label">Su granja</span>
-          <select
-            className="db-hero-granja-select"
-            value={granjaId}
-            onChange={(e) => cambiarGranja(Number(e.target.value))}
-          >
-            {GRANJAS_DETALLE.map(g => (
-              <option key={g.id} value={g.id}>{g.nombre} · {g.galpones.length} galpones</option>
-            ))}
-          </select>
-        </div>
+        {granjas.length > 0 && (
+          <div className="db-hero-granja-row">
+            <span className="db-hero-granja-label">Su granja</span>
+            <select
+              className="db-hero-granja-select"
+              value={granjaId ?? ''}
+              onChange={(e) => cambiarGranja(Number(e.target.value))}
+            >
+              {granjas.map(g => (
+                <option key={g.id} value={g.id}>
+                  {g.nombre} · {galpones.filter(x => x.granjaId === g.id).length} galpones
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
-        {/* Tabs de galpón + botón agregar, sobre el fondo oscuro */}
+        {/* Tabs de galpón */}
         <div className="db-hero-tabs-row">
           <div className="db-hero-tabs">
             {galponesGranja.map(g => {
-              const est = g.estado === 'activo' ? estadoGlobal(g) : g.estado
+              const est = g.loteActivo ? estadoGlobal(g) : 'vacio'
               return (
                 <button
                   key={g.id}
-                  className={`db-hero-tab${g.id === galpon.id ? ' db-hero-tab--activo' : ''}${g.estado !== 'activo' ? ' db-hero-tab--vacio' : ''}`}
+                  className={`db-hero-tab${g.id === galpon.id ? ' db-hero-tab--activo' : ''}${!g.loteActivo ? ' db-hero-tab--vacio' : ''}`}
                   onClick={() => seleccionarGalpon(g.id)}
                 >
                   <span className={`db-dot db-dot--${est}`} />
@@ -350,9 +314,8 @@ function DashboardPage() {
                 </button>
               )
             })}
-            <button className="db-hero-tab-add" onClick={() => setModalAbierto(true)} title="Agregar galpón">+</button>
           </div>
-          <button className="db-hero-btn-nuevo" onClick={() => setModalAbierto(true)}>
+          <button className="db-hero-btn-nuevo" onClick={() => navigate('/granjas')}>
             + Nuevo galpón
           </button>
         </div>
@@ -369,9 +332,7 @@ function DashboardPage() {
             <HeroKpi icon={<IcLeaf  size={16} />} label="Viabilidad"    value={viabilidad > 0 ? `${viabilidad}%` : '—'} color={viabilidadColor} />
           </div>
         ) : (
-          <p className="db-hero-vacio">
-            {MENSAJE_SIN_LOTE[galpon.estado] ?? 'Este galpón no tiene un lote activo.'}
-          </p>
+          <p className="db-hero-vacio">Galpón vacío. Asígnale un lote desde Mis Granjas para comenzar el monitoreo.</p>
         )}
       </div>
 
@@ -384,7 +345,7 @@ function DashboardPage() {
         {/* ② GALPÓN 3D — ocupa todo el ancho, grande */}
         <div className="db-col-right">
           {tieneActivo
-            ? <CoopPlaceholder galpon={galponFarm} sensores={galpon.sensores} mortalidadPct={mortalidad} pesoKg={pesoKg} />
+            ? <CoopPlaceholder galpon={galponFarm} sensores={galpon.sensores} mortalidadPct={mortalidad || undefined} pesoKg={pesoKg || undefined} />
             : (
               <div className="db-3d-vacio">
                 <IcBox size={40} />
@@ -414,7 +375,6 @@ function DashboardPage() {
           </div>
         )}
 
-        {/* Sin lote activo */}
         {!tieneActivo && (
           <div className="db-sin-lote">
             <IcServer size={32} />
@@ -426,15 +386,12 @@ function DashboardPage() {
       {/* ── Panel detalle sensor ─────────────────────────────────────────────── */}
       <SensorDetail
         sensor={sensorActivo}
-        galpon={galpon.nombre}
+        galponNombre={galpon.nombre}
         diaVida={galpon.diaVida}
         onClose={() => setSensorActivo(null)}
       />
 
       {/* ── Mascota AVIA ─────────────────────────────────────────────────────── */}
-      {/* Solo avisa de alertas que el usuario no ha visto todavía en la
-          página de Alertas — una vez las mira ahí, AVIA deja de insistir,
-          aunque el KPI de arriba siga mostrando el total real. */}
       <AviaMascot
         message={alertasNoVistas > 0 ? `${alertasNoVistas} alerta${alertasNoVistas > 1 ? 's' : ''} sin revisar` : 'Todo en orden en el galpón'}
         messageType={alertasNoVistas > 0 ? 'warn' : 'ok'}
@@ -445,45 +402,15 @@ function DashboardPage() {
         onToggle={() => setChatOpen(o => !o)}
       />
       <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
-
-      {/* ── Modal agregar galpón ─────────────────────────────────────────────── */}
-      {modalAbierto && (
-        <div className="db-modal-overlay" onClick={() => setModalAbierto(false)}>
-          <div className="db-modal-card" onClick={e => e.stopPropagation()}>
-            <h2 className="db-modal-titulo">Agregar galpón</h2>
-            <p className="db-modal-desc">
-              Se agrega a <strong>{GRANJAS_DETALLE.find(g => g.id === granjaId)?.nombre}</strong>,
-              arranca vacío. Luego le asignas un lote.
-            </p>
-            <form className="db-modal-form" onSubmit={handleAgregarGalpon}>
-              <label className="db-campo">
-                <span>Nombre <em>(obligatorio)</em></span>
-                <input autoFocus placeholder="Ej: Sur, Norte, Cedro…"
-                  value={formGalpon.nombre} onChange={e => setFormGalpon(p => ({ ...p, nombre: e.target.value }))} />
-              </label>
-              <label className="db-campo">
-                <span>Código <em>(opcional)</em></span>
-                <input placeholder="Ej: GP-05" value={formGalpon.codigo} maxLength={8}
-                  onChange={e => setFormGalpon(p => ({ ...p, codigo: e.target.value }))} />
-              </label>
-              {errorGalpon && <p className="db-modal-error">{errorGalpon}</p>}
-              <div className="db-modal-acciones">
-                <button type="button" className="db-btn-cancelar" onClick={() => setModalAbierto(false)}>Cancelar</button>
-                <button type="submit" className="db-btn-confirmar">Agregar galpón</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
 // ─── Fila de sensor compacta (columna izquierda) ──────────────────────────────
-type SensorRowProps = { sensor: Sensor; activo: boolean; onClick: () => void }
+type SensorRowProps = { sensor: SensorVista; activo: boolean; onClick: () => void }
 function SensorRow({ sensor, activo, onClick }: SensorRowProps) {
-  const etiqueta: Record<EstadoSensor, string> = {
-    optimo: 'Óptimo', advertencia: 'Advertencia', critico: 'Crítico', offline: 'Sin señal',
+  const etiqueta: Record<EstadoSensorVista, string> = {
+    optimo: 'Óptimo', advertencia: 'Advertencia', critico: 'Crítico', sin_umbral: 'Sin umbral', offline: 'Sin señal',
   }
   return (
     <button
@@ -491,10 +418,10 @@ function SensorRow({ sensor, activo, onClick }: SensorRowProps) {
       onClick={onClick}
       disabled={sensor.estado === 'offline'}
     >
-      <span className="db-sensor-icon">{ICONOS_VARIABLE[sensor.variable]}</span>
-      <span className="db-sensor-nombre">{sensor.etiqueta}</span>
+      <span className="db-sensor-icon">{iconoSensor(sensor.tipo, 16)}</span>
+      <span className="db-sensor-nombre">{sensor.tipo}</span>
       <span className="db-sensor-valor">
-        {sensor.estado === 'offline' ? '—' : `${sensor.valor} ${sensor.unidad}`}
+        {sensor.valor === null ? '—' : `${sensor.valor} ${sensor.unidad}`}
       </span>
       <span className={`db-sensor-badge db-sensor-badge--${sensor.estado}`}>
         {etiqueta[sensor.estado]}
@@ -505,8 +432,8 @@ function SensorRow({ sensor, activo, onClick }: SensorRowProps) {
 }
 
 // ─── Estado global del galpón (según sus sensores) ─────────────────────────────
-function estadoGlobal(g: { diaVida: number; sensores: Sensor[] }): EstadoSensor {
-  if (g.diaVida === 0 || g.sensores.length === 0) return 'offline'
+function estadoGlobal(g: GalponMonitoreoVista): EstadoSensorVista {
+  if (!g.loteActivo || g.sensores.length === 0) return 'offline'
   if (g.sensores.some(s => s.estado === 'critico'))     return 'critico'
   if (g.sensores.some(s => s.estado === 'advertencia')) return 'advertencia'
   return 'optimo'

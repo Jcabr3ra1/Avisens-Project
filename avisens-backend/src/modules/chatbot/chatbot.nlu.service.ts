@@ -7,8 +7,15 @@ const TIMEOUT_MS = 8000;
 
 const INSTRUCCIONES_OPCION = `Interpretas lo que responde un avicultor colombiano en un
 chatbot de cotizacion. Traduce su respuesta libre a la opcion valida que mejor la
-representa. Si la respuesta es ambigua o no corresponde a ninguna opcion, elige la
-mas conservadora. Nunca inventes una opcion que no este en la lista.`;
+representa.
+
+Marca entendido=false si el texto NO permite deducir una opcion con confianza
+razonable: texto sin sentido, una pregunta de vuelta, o algo que no tiene relacion
+con lo que se pregunto. En ese caso el sistema le repite la pregunta al usuario, que
+es mucho mejor que elegir por el. NO adivines: una respuesta incomprensible no es un
+"no".
+
+Nunca inventes una opcion que no este en la lista.`;
 
 const INSTRUCCIONES_DATO = `Extraes un dato concreto de lo que escribio un avicultor
 colombiano en un chatbot. Devuelve SOLO el dato pedido, limpio: sin la frase que lo
@@ -39,6 +46,11 @@ export class ChatbotNluService {
         ? { valor: { type: 'number' } }
         : { valor: { type: 'string' } };
 
+    const propiedades = {
+      ...esquema,
+      entendido: { type: 'boolean' },
+    };
+
     const instrucciones = esOpcion ? INSTRUCCIONES_OPCION : INSTRUCCIONES_DATO;
 
     try {
@@ -56,8 +68,8 @@ export class ChatbotNluService {
               strict: true,
               input_schema: {
                 type: 'object',
-                properties: esquema,
-                required: ['valor'],
+                properties: propiedades,
+                required: ['valor', 'entendido'],
                 additionalProperties: false,
               },
             },
@@ -75,7 +87,19 @@ export class ChatbotNluService {
       const bloque = respuesta.content.find((b) => b.type === 'tool_use');
       if (!bloque || bloque.type !== 'tool_use') return null;
 
-      const { valor } = bloque.input as { valor: string | number };
+      const { valor, entendido } = bloque.input as {
+        valor: string | number;
+        entendido: boolean;
+      };
+
+      if (!entendido) {
+        this.logger.log(`NLU: no entendio "${textoLibre}"`);
+        // En texto libre se deja pasar vacio (el motor no escribe el campo y el
+        // flujo avanza). En opciones y numeros se devuelve null: el texto crudo
+        // llega a validarRespuesta, que rechaza con las opciones validas dentro.
+        return pregunta.tipo === 'texto_libre' ? '' : null;
+      }
+
       this.logger.log(`NLU: "${textoLibre}" -> ${String(valor)}`);
       return String(valor);
     } catch (e) {

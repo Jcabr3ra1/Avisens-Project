@@ -33,6 +33,12 @@
   border: 1.5px dashed rgba(16,44,35,0.1);
 }
 .ale-vacio svg { color: var(--green-d); }
+.ale-vacio-txt { padding: 2rem; text-align: center; color: var(--text3); font-size: 0.87rem; }
+.ale-alert-error {
+  border-radius: 8px; padding: 0.6rem 0.85rem; font-size: 0.85rem; margin: 0 0 1.2rem;
+  background: color-mix(in srgb, var(--danger, #ef4444) 12%, transparent);
+  border: 1px solid var(--danger, #ef4444); color: var(--danger, #ef4444);
+}
 
 /* ─── Lista y tarjeta de alerta ──────────────────────────────────────────── */
 .ale-lista { display: flex; flex-direction: column; gap: 0.9rem; }

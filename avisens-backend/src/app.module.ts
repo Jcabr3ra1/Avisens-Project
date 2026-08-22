@@ -31,6 +31,9 @@ import { ClimaModule } from './modules/clima/clima.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
 import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-alerta.module';
 import { AlertasCanalesModule } from './modules/alertas-canales/alertas-canales.module';
+import { EvidenciaAlertaModule } from './modules/evidencia-alerta/evidencia-alerta.module';
+import { AccionamientosEquiposModule } from './modules/accionamientos-equipos/accionamientos-equipos.module';
+import { OrdenesCompraModule } from './modules/ordenes-compra/ordenes-compra.module';
 import { MovimientosFinancierosModule } from './modules/movimientos-financieros/movimientos-financieros.module';
 import { PrediccionesModule } from './modules/predicciones/predicciones.module';
 import { CopilotoModule } from './modules/copiloto/copiloto.module';
@@ -93,6 +96,9 @@ import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
     HealthModule,
     PoliticasAlertaModule,
     AlertasCanalesModule,
+    EvidenciaAlertaModule,
+    AccionamientosEquiposModule,
+    OrdenesCompraModule,
     MovimientosFinancierosModule,
     PrediccionesModule,
     RecomendacionesModule,

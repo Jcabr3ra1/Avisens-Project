@@ -1,8 +1,16 @@
 # Overrides SOLO para desarrollo local. Docker Compose lo carga automaticamente
 # encima de docker-compose.yml al hacer `docker compose up`.
-# Da hot-reload: al editar el codigo, el servicio se recarga sin `--build`.
-# En produccion NO se usa (se levanta solo el base: `docker compose -f docker-compose.yml up`).
+#  - Hot-reload: al editar el codigo, el servicio se recarga sin `--build`.
+#  - La base se expone en el puerto 5433 del host (evita chocar con un
+#    PostgreSQL nativo escuchando en 5432). La app no se afecta: se conecta por
+#    la red interna de Docker (database:5432).
+# En produccion NO se usa (se levanta solo el base:
+# `docker compose -f docker-compose.yml up`).
 services:
+  database:
+    ports:
+      - "5433:5432"
+
   # Backend NestJS en modo watch (nest --watch). Usa la etapa `dev` del Dockerfile.
   # Al arrancar: migra la base + siembra roles y admin (idempotente), para que
   # cualquier compañero tenga login listo sin correr nada a mano.
