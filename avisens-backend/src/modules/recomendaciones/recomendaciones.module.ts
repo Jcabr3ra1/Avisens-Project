@@ -7,5 +7,6 @@ import { RecomendacionesService } from './recomendaciones.service';
   imports: [IndicadoresModule],
   controllers: [RecomendacionesController],
   providers: [RecomendacionesService],
+  exports: [RecomendacionesService],
 })
 export class RecomendacionesModule {}

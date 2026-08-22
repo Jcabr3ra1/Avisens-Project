@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const adapter = new PrismaPg({
@@ -406,6 +406,403 @@ const MATRIZ_CALIFICACION = [
   },
 ];
 
+const PREGUNTAS_CHATBOT = [
+  {
+    codigo: 'A1',
+    bloque: 'A',
+    orden: 1,
+    texto: '¿Autorizas el tratamiento de tus datos personales (habeas data)?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: 'consentimiento_habeas_data',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A2',
+    saltos: { No: 'FIN' },
+  },
+  {
+    codigo: 'A2',
+    bloque: 'A',
+    orden: 2,
+    texto: '¿Cual es tu nombre completo?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'nombre',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A3',
+    saltos: null,
+  },
+  {
+    codigo: 'A3',
+    bloque: 'A',
+    orden: 3,
+    texto: '¿Cual es tu numero de documento?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'documento',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A4',
+    saltos: null,
+  },
+  {
+    codigo: 'A4',
+    bloque: 'A',
+    orden: 4,
+    texto: '¿A que numero de telefono te podemos contactar?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'telefono',
+    puntua: false,
+    // Por WhatsApp el numero ya llega en el webhook: no se pregunta.
+    omitir_si_canal: 'whatsapp',
+    siguiente: 'A5',
+    saltos: null,
+  },
+  {
+    codigo: 'A5',
+    bloque: 'A',
+    orden: 5,
+    texto: '¿Cual es tu correo electronico?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'email',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A6',
+    saltos: null,
+  },
+  {
+    codigo: 'A6',
+    bloque: 'A',
+    orden: 6,
+    texto: '¿Como se llama tu granja?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'nombre_granja',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A7',
+    saltos: null,
+  },
+  {
+    codigo: 'A7',
+    bloque: 'A',
+    orden: 7,
+    texto: '¿En que municipio esta ubicada?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'municipio',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A8',
+    saltos: null,
+  },
+  {
+    codigo: 'A8',
+    bloque: 'A',
+    orden: 8,
+    texto: '¿Cuantas aves manejas por ciclo?',
+    tipo: 'opcion_unica',
+    opciones: ['<1000', '1000-5000', '5000-10000', '>10000'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: true,
+    siguiente: 'A9',
+    saltos: null,
+  },
+  {
+    codigo: 'A9',
+    bloque: 'A',
+    orden: 9,
+    texto: '¿Ya tienes el galpon construido?',
+    tipo: 'opcion_unica',
+    opciones: [
+      'Sí, está construido y se encuentra en buenas condiciones',
+      'Sí, pero necesita adecuaciones',
+      'No, aun no lo construyo',
+    ],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: true,
+    siguiente: 'A10',
+    saltos: null,
+  },
+  {
+    codigo: 'A10',
+    bloque: 'A',
+    orden: 10,
+    texto: '¿Cuantos metros cuadrados tiene el galpon?',
+    tipo: 'numero',
+    opciones: null,
+    campo_prospecto: 'area_galpon_m2',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A11',
+    saltos: null,
+  },
+  {
+    codigo: 'A11',
+    bloque: 'A',
+    orden: 11,
+    texto: '¿Que tipo de suministro electrico tienes en la granja?',
+    tipo: 'opcion_unica',
+    opciones: [
+      'Eléctrico estable',
+      'Eléctrico con cortes frecuentes',
+      'Planta electrica',
+      'No tengo energia en el galpon',
+    ],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: true,
+    siguiente: 'A12',
+    saltos: null,
+  },
+  {
+    codigo: 'A12',
+    bloque: 'A',
+    orden: 12,
+    texto: '¿Cuantos metros cuadrados tiene la granja en total?',
+    tipo: 'numero',
+    opciones: null,
+    campo_prospecto: 'area_granja_m2',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A13',
+    saltos: null,
+  },
+  {
+    codigo: 'A13',
+    bloque: 'A',
+    orden: 13,
+    texto: '¿Tienes conexion a internet en la granja?',
+    tipo: 'opcion_unica',
+    opciones: ['Sí, estable', 'Sí, pero intermitente', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: true,
+    siguiente: 'A14',
+    saltos: null,
+  },
+
+  {
+    codigo: 'A14',
+    bloque: 'A',
+    orden: 14,
+    texto: '¿Cual es tu rol en la granja?',
+    tipo: 'opcion_unica',
+    opciones: ['Propietario', 'Administrador', 'Galponero', 'Otro'],
+    campo_prospecto: 'rol_prospecto',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A15',
+    saltos: null,
+  },
+  {
+    codigo: 'A15',
+    bloque: 'A',
+    orden: 15,
+    texto: '¿Que tipo de produccion manejas?',
+    tipo: 'opcion_unica',
+    opciones: ['Pollo de engorde', 'Ponedoras', 'Ambas'],
+    campo_prospecto: 'tipo_produccion',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A16',
+    saltos: null,
+  },
+  {
+    codigo: 'A16',
+    bloque: 'A',
+    orden: 16,
+    texto:
+      '¿Has perdido aves por problemas de temperatura, humedad o ventilacion?',
+    tipo: 'opcion_unica',
+    opciones: ['Sí, más de una vez', 'Una vez', 'No', 'No sé la causa'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: true,
+    siguiente: 'A17',
+    saltos: null,
+  },
+  {
+    codigo: 'A17',
+    bloque: 'A',
+    orden: 17,
+    texto: '¿Eres tu quien decide las compras de la granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A18',
+    saltos: null,
+  },
+  {
+    codigo: 'A18',
+    bloque: 'A',
+    orden: 18,
+    texto: '¿Como preferirias adquirir el sistema?',
+    tipo: 'opcion_unica',
+    opciones: [
+      'Compra directa',
+      'Suscripción',
+      'Lo que sea más conveniente',
+      'No sé',
+    ],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: true,
+    siguiente: 'A19',
+    saltos: null,
+  },
+  {
+    codigo: 'A19',
+    bloque: 'A',
+    orden: 19,
+    texto: '¿Has mirado otras opciones en el mercado?',
+    tipo: 'opcion_unica',
+    opciones: [
+      'Sí, ya tengo cotizaciones',
+      'Estoy mirando opciones',
+      'Solo AVISENS',
+      'No sé qué más existe',
+    ],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: true,
+    siguiente: 'FIN',
+    saltos: null,
+  },
+
+  {
+    codigo: 'B1',
+    bloque: 'B',
+    orden: 1,
+    texto: '¿Que tipo de solicitud quieres radicar?',
+    tipo: 'opcion_unica',
+    opciones: ['Petición', 'Queja', 'Reclamo', 'Sugerencia', 'Felicitación'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'B2',
+    saltos: null,
+  },
+  {
+    codigo: 'B2',
+    bloque: 'B',
+    orden: 2,
+    texto: '¿Cual es el asunto?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'B3',
+    saltos: null,
+  },
+  {
+    codigo: 'B3',
+    bloque: 'B',
+    orden: 3,
+    texto: 'Cuentanos con detalle que sucedio',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: null,
+  },
+];
+
+// ---------------------------------------------------------------------------
+// !!! PRECIOS PROVISIONALES !!!
+// Estos valores NO son los precios reales de Avisens. Se pusieron para poder
+// construir y demostrar el modulo de cotizacion (2026-08-20). ANTES de mostrar
+// una cotizacion a un cliente real o en la sustentacion, reemplazarlos por la
+// lista de precios oficial. Se cambian en la tabla catalogo_sensores, sin
+// desplegar: basta editar aqui y re-correr el seed.
+// ---------------------------------------------------------------------------
+const CATALOGO_SENSORES = [
+  {
+    tipo_sensor: 'nodo_esp32',
+    nombre: 'Nodo de control ESP32',
+    descripcion: 'Concentra los sensores del galpon y reporta por MQTT',
+    precio_unitario_cop: 250000,
+    cobertura_m2: null,
+    obligatorio: true,
+  },
+  {
+    tipo_sensor: 'temperatura_humedad',
+    nombre: 'Sensor de temperatura y humedad',
+    descripcion: 'Mide el ambiente del galpon; uno cada 120 m2',
+    precio_unitario_cop: 180000,
+    cobertura_m2: 120,
+    obligatorio: true,
+  },
+  {
+    tipo_sensor: 'amoniaco',
+    nombre: 'Sensor de amoniaco (NH3)',
+    descripcion: 'Detecta acumulacion por mala ventilacion o cama humeda',
+    precio_unitario_cop: 320000,
+    cobertura_m2: null,
+    obligatorio: true,
+  },
+  {
+    tipo_sensor: 'nivel_agua',
+    nombre: 'Sensor de nivel de agua',
+    descripcion: 'Vigila el consumo de agua, el primer aviso de enfermedad',
+    precio_unitario_cop: 150000,
+    cobertura_m2: null,
+    obligatorio: true,
+  },
+  {
+    tipo_sensor: 'co2',
+    nombre: 'Sensor de dioxido de carbono',
+    descripcion: 'Opcional: control fino de la ventilacion',
+    precio_unitario_cop: 450000,
+    cobertura_m2: null,
+    obligatorio: false,
+  },
+  {
+    tipo_sensor: 'luminosidad',
+    nombre: 'Sensor de luminosidad',
+    descripcion: 'Opcional: programas de luz; uno cada 300 m2',
+    precio_unitario_cop: 90000,
+    cobertura_m2: 300,
+    obligatorio: false,
+  },
+];
+
+async function sembrarCatalogoSensores() {
+  for (const sensor of CATALOGO_SENSORES) {
+    const datos = { ...sensor, cobertura_m2: sensor.cobertura_m2 ?? null };
+    await prisma.catalogoSensor.upsert({
+      where: { tipo_sensor: sensor.tipo_sensor },
+      update: datos,
+      create: datos,
+    });
+  }
+}
+
+async function sembrarPreguntasChatbot() {
+  for (const pregunta of PREGUNTAS_CHATBOT) {
+    const datos = {
+      ...pregunta,
+      opciones: pregunta.opciones ?? Prisma.DbNull,
+      saltos: pregunta.saltos ?? Prisma.DbNull,
+    };
+    await prisma.preguntaChatbot.upsert({
+      where: { codigo: pregunta.codigo },
+      update: datos,
+      create: datos,
+    });
+  }
+}
+
 async function sembrarMatrizCalificacion() {
   for (const fila of MATRIZ_CALIFICACION) {
     await prisma.matrizCalificacion.upsert({
@@ -440,12 +837,165 @@ async function sembrarCategoriasFinancieras() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Datos de demostracion. Solo se siembran con SEED_DEMO=true, para no meter
+// lotes ficticios en una base con datos reales. Las fechas son relativas a hoy
+// para que la demo siempre se vea actual.
+// ---------------------------------------------------------------------------
+function hace(dias: number) {
+  const f = new Date();
+  f.setUTCDate(f.getUTCDate() - dias);
+  f.setUTCHours(0, 0, 0, 0);
+  return f;
+}
+
+const DIAS_MEDIDOS = [7, 14, 21, 28];
+
+const LOTES_DEMO = [
+  {
+    codigo: 'L-DEMO-01',
+    galpon_codigo: 'GD-01',
+    galpon_nombre: 'Galpon 1 (demo)',
+    cantidad_inicial: 1000,
+    // Sigue la curva Italcol (211/535/1035/1681): peso en objetivo y buena conversion.
+    pesos_g: [205, 540, 1040, 1690],
+    // Incrementos DIARIOS, no acumulados: suman 2199 kg, el consumo del manual.
+    alimento_kg: [164, 387, 667, 981],
+    muertes: [8, 4, 3, 3],
+  },
+  {
+    codigo: 'L-DEMO-02',
+    galpon_codigo: 'GD-02',
+    galpon_nombre: 'Galpon 2 (demo)',
+    cantidad_inicial: 1000,
+    // Lote CON PROBLEMAS: ~20% por debajo de la curva. Dispara la alerta de
+    // desvio y las recomendaciones. Come parecido pero crece menos: peor FCR.
+    pesos_g: [180, 450, 850, 1350],
+    alimento_kg: [170, 400, 700, 1000],
+    muertes: [20, 25, 30, 35],
+  },
+];
+
+async function sembrarDatosDemo() {
+  if (process.env.SEED_DEMO !== 'true') return;
+
+  const admin = await prisma.usuario.findFirst({ orderBy: { id: 'asc' } });
+  if (!admin) {
+    console.log('Seed demo omitido: no hay usuario admin');
+    return;
+  }
+
+  const proveedor = await prisma.proveedor.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
+      nombre: 'Incubadora Santander (demo)',
+      nit: '900123456-1',
+      tipo_proveedor: 'pollitos',
+    },
+  });
+
+  let granja = await prisma.granja.findFirst({
+    where: { nombre: 'Granja La Esperanza (demo)' },
+  });
+  granja ??= await prisma.granja.create({
+    data: {
+      propietario_id: admin.id,
+      nombre: 'Granja La Esperanza (demo)',
+      municipio: 'Piedecuesta',
+      departamento: 'Santander',
+    },
+  });
+
+  const ingreso = hace(28);
+
+  for (const demo of LOTES_DEMO) {
+    const galpon = await prisma.galpon.upsert({
+      where: {
+        granja_id_codigo: {
+          granja_id: granja.id,
+          codigo: demo.galpon_codigo,
+        },
+      },
+      update: {},
+      create: {
+        granja_id: granja.id,
+        codigo: demo.galpon_codigo,
+        nombre: demo.galpon_nombre,
+        capacidad_aves: 1200,
+        largo_metros: 60,
+        ancho_metros: 20,
+      },
+    });
+
+    const lote = await prisma.lote.upsert({
+      where: { codigo: demo.codigo },
+      update: { fecha_ingreso: ingreso },
+      create: {
+        galpon_id: galpon.id,
+        proveedor_id: proveedor.id,
+        codigo: demo.codigo,
+        fecha_ingreso: ingreso,
+        cantidad_inicial: demo.cantidad_inicial,
+        raza: 'Cobb 500',
+        sexo: 'macho',
+        marca_alimento: 'italcol',
+        costo_pollito_unitario: 1800,
+        estado: 'activo',
+      },
+    });
+
+    // Se rehacen las series completas: asi re-sembrar no duplica registros.
+    await prisma.pesaje.deleteMany({ where: { lote_id: lote.id } });
+    await prisma.consumoDiario.deleteMany({ where: { lote_id: lote.id } });
+    await prisma.registroMortalidad.deleteMany({ where: { lote_id: lote.id } });
+
+    await prisma.pesaje.createMany({
+      data: DIAS_MEDIDOS.map((dia, i) => ({
+        lote_id: lote.id,
+        usuario_id: admin.id,
+        fecha: hace(28 - dia),
+        peso_promedio_g: demo.pesos_g[i],
+        cantidad_aves_pesadas: 50,
+        metodo_registro: 'manual',
+      })),
+    });
+
+    await prisma.consumoDiario.createMany({
+      data: DIAS_MEDIDOS.map((dia, i) => ({
+        lote_id: lote.id,
+        usuario_id: admin.id,
+        fecha: hace(28 - dia),
+        alimento_kg: demo.alimento_kg[i],
+        agua_litros: demo.alimento_kg[i] * 1.8,
+        metodo_registro: 'manual',
+      })),
+    });
+
+    await prisma.registroMortalidad.createMany({
+      data: DIAS_MEDIDOS.map((dia, i) => ({
+        lote_id: lote.id,
+        usuario_id: admin.id,
+        fecha: hace(28 - dia),
+        cantidad_aves: demo.muertes[i],
+        causa_presuntiva: 'sin determinar',
+        metodo_registro: 'manual',
+      })),
+    });
+
+    console.log(`Demo: lote ${demo.codigo} sembrado (id ${lote.id})`);
+  }
+}
+
 async function main() {
   const rolAdmin = await sembrarRoles();
   await sembrarAdmin(rolAdmin.id);
   await sembrarCurvasObjetivo();
   await sembrarMatrizCalificacion();
+  await sembrarPreguntasChatbot();
   await sembrarCategoriasFinancieras();
+  await sembrarCatalogoSensores();
+  await sembrarDatosDemo();
   console.log('Seed completado');
 }
 

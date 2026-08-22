@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -10,9 +11,12 @@ import { PESO_INICIAL_G } from '../indicadores/indicadores.service';
 const ML_URL = process.env.ML_URL ?? 'http://ml:8000';
 const UMBRAL_DESVIO_PCT = 5;
 const UMBRAL_DESVIO_FCR = 0.05;
+const ML_TIMEOUT_MS = 5000;
 
 @Injectable()
 export class PrediccionesService {
+  private readonly logger = new Logger(PrediccionesService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async predecir(loteId: number, solicitante: Solicitante) {
@@ -50,13 +54,11 @@ export class PrediccionesService {
       peso: p.peso_promedio_g,
     }));
 
-    const respuesta = await fetch(`${ML_URL}/predecir`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pesajes: pesajesParaMl }),
+    const respuesta = await this.llamarMl('/predecir', {
+      pesajes: pesajesParaMl,
     });
 
-    if (!respuesta.ok) {
+    if (!respuesta?.ok) {
       throw new BadRequestException('El servicio de prediccion no respondio');
     }
 
@@ -126,12 +128,10 @@ export class PrediccionesService {
 
     if (mortalidadesParaMl.length < 3) return null;
 
-    const respuesta = await fetch(`${ML_URL}/predecir-mortalidad`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mortalidades: mortalidadesParaMl }),
+    const respuesta = await this.llamarMl('/predecir-mortalidad', {
+      mortalidades: mortalidadesParaMl,
     });
-    if (!respuesta.ok) return null;
+    if (!respuesta?.ok) return null;
 
     return (await respuesta.json()) as {
       mortalidad_proyectada_pct: number;
@@ -160,12 +160,10 @@ export class PrediccionesService {
     );
     if (consumosParaMl.length < 3) return null;
 
-    const respuesta = await fetch(`${ML_URL}/predecir-consumo`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ consumos: consumosParaMl }),
+    const respuesta = await this.llamarMl('/predecir-consumo', {
+      consumos: consumosParaMl,
     });
-    if (!respuesta.ok) return null;
+    if (!respuesta?.ok) return null;
 
     return (await respuesta.json()) as {
       consumo_proyectado_kg: number;
@@ -240,5 +238,18 @@ export class PrediccionesService {
       desvio_fcr: desvioFcr,
       veredicto_fcr: veredictoFcr,
     };
+  }
+  private async llamarMl(ruta: string, cuerpo: unknown) {
+    try {
+      return await fetch(`${ML_URL}${ruta}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuerpo),
+        signal: AbortSignal.timeout(ML_TIMEOUT_MS),
+      });
+    } catch {
+      this.logger.warn(`El servicio ML no respondio en ${ML_TIMEOUT_MS}ms`);
+      return null;
+    }
   }
 }
