@@ -512,4 +512,64 @@ describe('WhatsappService', () => {
       expect(texto).not.toMatch(/estamos generando/);
     });
   });
+
+  describe('resumen de la cotizacion en el cierre', () => {
+    const mensaje = { de: '573001112233', texto: 'Sí', wamid: 'wamid.COT' };
+
+    const cerrarCon = async (r: Record<string, unknown>) => {
+      prisma.prospecto.findFirst.mockResolvedValue({ sesion_id: 'uuid-9' });
+      chatbot.responder.mockResolvedValue({
+        finalizado: true,
+        pregunta: null,
+        ...r,
+      });
+
+      await service.responder(mensaje);
+
+      const [, datos] = argsDe(cola.add) as [string, { texto: string }];
+      return datos.texto;
+    };
+
+    const COTIZACION = {
+      codigo: 'COT-9-XYZ',
+      plan_recomendado: 'Profesional',
+      numero_galpones: 4,
+      valor_total_cop: 7360000,
+    };
+
+    it('incluye codigo, plan y valor formateado', async () => {
+      const texto = await cerrarCon({
+        clasificacion: 'caliente',
+        accion_siguiente: 'VISITA_PRESENCIAL',
+        cotizacion: COTIZACION,
+      });
+
+      expect(texto).toMatch(/COT-9-XYZ/);
+      expect(texto).toMatch(/Profesional/);
+      expect(texto).toMatch(/7\.360\.000/);
+      expect(texto).toMatch(/visita técnica/);
+    });
+
+    it('cierra igual si la cotizacion no se pudo generar', async () => {
+      const texto = await cerrarCon({
+        clasificacion: 'tibio',
+        accion_siguiente: 'DEMO_REMOTA',
+        cotizacion: null,
+      });
+
+      expect(texto).toMatch(/demostración remota/);
+      expect(texto).not.toMatch(/Cotización/);
+    });
+
+    it('al callback no le promete cotizacion, porque no se le genera', async () => {
+      const texto = await cerrarCon({
+        clasificacion: 'caliente',
+        accion_siguiente: 'CALLBACK_DECISOR',
+        cotizacion: null,
+      });
+
+      expect(texto).toMatch(/dentro de 48 horas/);
+      expect(texto).not.toMatch(/estamos generando/);
+    });
+  });
 });

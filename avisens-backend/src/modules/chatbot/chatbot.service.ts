@@ -1,10 +1,12 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
 import { IniciarChatDto } from './dto/iniciar-chat.dto';
 import { ResponderChatDto } from './dto/responder-chat.dto';
 
@@ -43,8 +45,11 @@ const MENSAJES_TRANSICION: Record<string, string> = {
 
 @Injectable()
 export class ChatbotService {
+  private readonly logger = new Logger(ChatbotService.name);
+
   constructor(
     private prisma: PrismaService,
+    private cotizaciones: CotizacionesService,
   ) {}
 
   async iniciar(dto: IniciarChatDto) {
@@ -528,6 +533,30 @@ export class ChatbotService {
       puntaje_total: puntaje as number | null,
       clasificacion: clasificacion as string | null,
       accion_siguiente: accion as string | null,
+      cotizacion: decide ? await this.generarCotizacion(prospecto.id) : null,
     };
+  }
+
+  private async generarCotizacion(prospectoId: number) {
+    try {
+      const c = await this.cotizaciones.generar(prospectoId, {});
+      this.logger.log(
+        `Cotizacion ${c.codigo} generada para el prospecto ${prospectoId}`,
+      );
+      return {
+        codigo: c.codigo,
+        plan_recomendado: c.plan_recomendado,
+        numero_galpones: c.numero_galpones,
+        valor_total_cop: c.valor_total_cop,
+      };
+    } catch (e) {
+      // Una cotizacion fallida no puede tumbar el cierre: el prospecto ya
+      // quedo calificado y un asesor puede generarla a mano.
+      const mensaje = e instanceof Error ? e.message : 'error desconocido';
+      this.logger.error(
+        `No se pudo generar la cotizacion del prospecto ${prospectoId}: ${mensaje}`,
+      );
+      return null;
+    }
   }
 }

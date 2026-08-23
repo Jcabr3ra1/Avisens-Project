@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
 
 describe('ChatbotService', () => {
   let service: ChatbotService;
@@ -13,6 +14,8 @@ describe('ChatbotService', () => {
     matrizCalificacion: { findUnique: jest.fn() },
     solicitudPqrs: { create: jest.fn() },
   };
+
+  const cotizaciones = { generar: jest.fn() };
 
   const datosDe = (mock: jest.Mock, indice = 0) =>
     (mock.mock.calls as Array<[{ data: Record<string, unknown> }]>)[indice][0]
@@ -45,10 +48,17 @@ describe('ChatbotService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    cotizaciones.generar.mockResolvedValue({
+      codigo: 'COT-1-ABC',
+      plan_recomendado: 'Profesional',
+      numero_galpones: 2,
+      valor_total_cop: 8000000,
+    });
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ChatbotService,
         { provide: PrismaService, useValue: prisma },
+        { provide: CotizacionesService, useValue: cotizaciones },
       ],
     }).compile();
     service = module.get<ChatbotService>(ChatbotService);
@@ -672,6 +682,57 @@ describe('ChatbotService', () => {
       const datos = ultimosDatos(prisma.prospecto.update);
       expect(datos.puntaje_total).toBeUndefined();
       expect(datos.accion_siguiente).toBeUndefined();
+    });
+  });
+
+  describe('cotizacion automatica al cerrar', () => {
+    const cerrar = async (respuestas: Array<[string, string]>, puntaje = 13) => {
+      // El flujo pasa por la pantalla de confirmacion antes de cerrar.
+      prisma.prospecto.findUnique.mockResolvedValue({
+        ...enCurso,
+        pregunta_actual: 'CONFIRMAR',
+      });
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: puntaje },
+      });
+      prisma.respuestaChatbot.findMany.mockResolvedValue(
+        respuestas.map(([codigo, texto]) => ({
+          bloque: 'A',
+          codigo_pregunta: codigo,
+          respuesta_texto: texto,
+        })),
+      );
+
+      return service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Sí',
+      });
+    };
+
+    it('la genera sola cuando el prospecto queda calificado', async () => {
+      const r = await cerrar([['A20', 'Sí']]);
+
+      expect(cotizaciones.generar).toHaveBeenCalledWith(enCurso.id, {});
+      expect(r.cotizacion).toEqual(
+        expect.objectContaining({ codigo: 'COT-1-ABC' }),
+      );
+    });
+
+    it('no la genera para quien queda en callback: no se le prometio', async () => {
+      const r = await cerrar([['A20', 'No']]);
+
+      expect(cotizaciones.generar).not.toHaveBeenCalled();
+      expect(r.cotizacion).toBeNull();
+    });
+
+    it('un fallo al cotizar no tumba el cierre de la conversacion', async () => {
+      cotizaciones.generar.mockRejectedValue(new Error('catalogo vacio'));
+
+      const r = await cerrar([['A20', 'Sí']]);
+
+      expect(r.finalizado).toBe(true);
+      expect(r.clasificacion).toBe('caliente');
+      expect(r.cotizacion).toBeNull();
     });
   });
 });
