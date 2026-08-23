@@ -12,9 +12,18 @@ import {
 const FIN = 'FIN';
 const HORAS_INACTIVIDAD = Number(process.env.WHATSAPP_HORAS_INACTIVIDAD ?? 24);
 const DESPEDIDA =
-  'No recibimos tu respuesta, asi que cerramos esta conversacion por ahora. ' +
-  'Cuando quieras retomar tu cotizacion escribenos de nuevo y seguimos donde ' +
-  'quedamos. Gracias por tu interes en Avisens.';
+  'No recibimos tu respuesta, así que cerramos esta conversación por ahora.\n\n' +
+  'Cuando quieras retomarla escríbenos de nuevo y con gusto te atendemos. ' +
+  'Gracias por tu interés en AVISENS.';
+
+const CIERRE_COTIZACION =
+  '¡Listo! Con esto tenemos lo necesario para preparar tu cotización.\n\n' +
+  'Un asesor de AVISENS se comunicará contigo pronto. Gracias por tu tiempo.';
+
+const CIERRE_PQRS =
+  '¡Listo! Tu solicitud quedó radicada.\n\n' +
+  'Le haremos seguimiento y te responderemos por este mismo medio. ' +
+  'Gracias por escribirnos.';
 
 @Injectable()
 export class WhatsappService {
@@ -76,7 +85,7 @@ export class WhatsappService {
   private formatear(
     pregunta: { texto: string; opciones: string[] | null } | null,
   ): string {
-    if (!pregunta) return 'Conversacion finalizada.';
+    if (!pregunta) return 'Conversación finalizada.';
     if (!pregunta.opciones?.length) return pregunta.texto;
 
     const opciones = pregunta.opciones
@@ -125,12 +134,12 @@ export class WhatsappService {
     try {
       const pregunta = await this.chatbot.preguntaActual(sesionId);
       if (pregunta) {
-        return `No te entendi.\n\n${this.formatear(pregunta)}`;
+        return `No te entendí. Elige una de estas opciones:\n\n${this.formatear(pregunta)}`;
       }
     } catch {
       this.logger.warn(`No se pudo releer la pregunta de ${sesionId}`);
     }
-    return 'No te entendi. Intenta de nuevo, por favor.';
+    return 'No te entendí. ¿Puedes intentarlo de nuevo, por favor?';
   }
 
   private async encolarSalida(destino: string, texto: string) {
@@ -170,7 +179,9 @@ export class WhatsappService {
       });
 
       const texto = r.finalizado
-        ? `Listo, gracias. Un asesor de Avisens se comunicara contigo pronto.`
+        ? r.clasificacion === 'pqrs'
+          ? CIERRE_PQRS
+          : CIERRE_COTIZACION
         : this.formatear(r.pregunta);
 
       await this.encolarSalida(entrante.de, texto);

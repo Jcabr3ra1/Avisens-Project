@@ -8,7 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { IniciarChatDto } from './dto/iniciar-chat.dto';
 import { ResponderChatDto } from './dto/responder-chat.dto';
 
-const PRIMERA_PREGUNTA = 'A1';
+const PRIMERA_PREGUNTA = 'M1';
 const PRIMERA_PREGUNTA_PQRS = 'B1';
 const RUTA_PQRS = 'general';
 const FIN = 'FIN';
