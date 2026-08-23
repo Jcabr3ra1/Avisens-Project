@@ -618,4 +618,59 @@ describe('ChatbotService', () => {
       expect(datos.senal_caliente).toBe(false);
     });
   });
+
+  describe('bloque B: consultas frecuentes y radicacion', () => {
+    const cerrarB = async (respuestas: Array<[string, string]>) => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ codigo: 'BP1', bloque: 'B', siguiente: 'FIN' }),
+      );
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: null },
+      });
+      prisma.respuestaChatbot.findMany.mockResolvedValue(
+        respuestas.map(([codigo, texto]) => ({
+          bloque: 'B',
+          codigo_pregunta: codigo,
+          respuesta_texto: texto,
+        })),
+      );
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Sí',
+      });
+    };
+
+    it('una consulta atendida no genera ticket', async () => {
+      await cerrarB([['B1', 'Petición']]);
+
+      expect(prisma.solicitudPqrs.create).not.toHaveBeenCalled();
+      expect(ultimosDatos(prisma.prospecto.update).estado).toBe(
+        'consulta_atendida',
+      );
+    });
+
+    it('radica solo cuando la persona pidio registrar el caso', async () => {
+      await cerrarB([
+        ['B1', 'Reclamo'],
+        ['B2', 'Sensores sin datos'],
+        ['B3', 'Llevan dos dias sin reportar'],
+      ]);
+
+      expect(prisma.solicitudPqrs.create).toHaveBeenCalled();
+      const datos = datosDe(prisma.solicitudPqrs.create);
+      expect(datos.categoria).toBe('Reclamo');
+      expect(datos.asunto).toBe('Sensores sin datos');
+      expect(datos.estado).toBe('abierta');
+      expect(ultimosDatos(prisma.prospecto.update).estado).toBe('pqrs');
+    });
+
+    it('no puntua ni clasifica comercialmente una consulta', async () => {
+      await cerrarB([['B1', 'Queja'], ['B2', 'x'], ['B3', 'y']]);
+
+      const datos = ultimosDatos(prisma.prospecto.update);
+      expect(datos.puntaje_total).toBeUndefined();
+      expect(datos.accion_siguiente).toBeUndefined();
+    });
+  });
 });
