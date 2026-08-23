@@ -6,7 +6,7 @@ import { WhatsappService } from './whatsapp.service';
 export class WhatsappInactividadJob {
   constructor(private whatsapp: WhatsappService) {}
 
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_MINUTE)
   async cerrarConversacionesSinRespuesta() {
     await this.whatsapp.cerrarInactivas();
   }

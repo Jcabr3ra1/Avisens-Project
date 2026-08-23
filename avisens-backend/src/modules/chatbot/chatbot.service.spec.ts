@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
 
 describe('ChatbotService', () => {
   let service: ChatbotService;
@@ -9,10 +10,12 @@ describe('ChatbotService', () => {
   const prisma = {
     prospecto: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     preguntaChatbot: { findFirst: jest.fn() },
-    respuestaChatbot: { create: jest.fn(), aggregate: jest.fn(), findMany: jest.fn() },
+    respuestaChatbot: { create: jest.fn(), aggregate: jest.fn(), findMany: jest.fn(), count: jest.fn() },
     matrizCalificacion: { findUnique: jest.fn() },
     solicitudPqrs: { create: jest.fn() },
   };
+
+  const cotizaciones = { generar: jest.fn() };
 
   const datosDe = (mock: jest.Mock, indice = 0) =>
     (mock.mock.calls as Array<[{ data: Record<string, unknown> }]>)[indice][0]
@@ -45,10 +48,17 @@ describe('ChatbotService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    cotizaciones.generar.mockResolvedValue({
+      codigo: 'COT-1-ABC',
+      plan_recomendado: 'Profesional',
+      numero_galpones: 2,
+      valor_total_cop: 8000000,
+    });
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ChatbotService,
         { provide: PrismaService, useValue: prisma },
+        { provide: CotizacionesService, useValue: cotizaciones },
       ],
     }).compile();
     service = module.get<ChatbotService>(ChatbotService);
@@ -57,6 +67,7 @@ describe('ChatbotService', () => {
     prisma.prospecto.update.mockResolvedValue(enCurso);
     prisma.respuestaChatbot.create.mockResolvedValue({});
     prisma.respuestaChatbot.findMany.mockResolvedValue([]);
+    prisma.respuestaChatbot.count.mockResolvedValue(0);
     prisma.solicitudPqrs.create.mockResolvedValue({});
     prisma.preguntaChatbot.findFirst.mockResolvedValue(pregunta({}));
   });
@@ -117,7 +128,7 @@ describe('ChatbotService', () => {
 
     it('sigue el salto cuando la respuesta tiene uno definido', async () => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ saltos: { No: 'FIN' } }),
+        pregunta({ bloque: 'B', saltos: { No: 'FIN' } }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: 3 },
@@ -216,7 +227,7 @@ describe('ChatbotService', () => {
   describe('clasificacion al finalizar', () => {
     const finalizarCon = async (puntos: number | null) => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ siguiente: 'FIN' }),
+        pregunta({ bloque: 'B', siguiente: 'FIN' }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: puntos },
@@ -295,7 +306,7 @@ describe('ChatbotService', () => {
 
     it('sigue el salto usando la opcion resuelta, no lo que tecleo el usuario', async () => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ saltos: { No: 'FIN' } }),
+        pregunta({ bloque: 'B', saltos: { No: 'FIN' } }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: null },
@@ -389,7 +400,7 @@ describe('ChatbotService', () => {
         consentimiento_habeas_data: false,
       });
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ saltos: { No: 'FIN' } }),
+        pregunta({ bloque: 'B', saltos: { No: 'FIN' } }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: null },
@@ -412,7 +423,7 @@ describe('ChatbotService', () => {
     it('clasifica normalmente a quien si autorizo', async () => {
       prisma.prospecto.findUnique.mockResolvedValue(enCurso);
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ siguiente: 'FIN' }),
+        pregunta({ bloque: 'B', siguiente: 'FIN' }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: 14 },
@@ -492,7 +503,7 @@ describe('ChatbotService', () => {
 
     it('la ruta de cotizacion no radica PQRS', async () => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ siguiente: 'FIN' }),
+        pregunta({ bloque: 'B', siguiente: 'FIN' }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: 12 },
@@ -513,7 +524,7 @@ describe('ChatbotService', () => {
       puntaje: number,
     ) => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ siguiente: 'FIN' }),
+        pregunta({ bloque: 'B', siguiente: 'FIN' }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: puntaje },
@@ -671,6 +682,57 @@ describe('ChatbotService', () => {
       const datos = ultimosDatos(prisma.prospecto.update);
       expect(datos.puntaje_total).toBeUndefined();
       expect(datos.accion_siguiente).toBeUndefined();
+    });
+  });
+
+  describe('cotizacion automatica al cerrar', () => {
+    const cerrar = async (respuestas: Array<[string, string]>, puntaje = 13) => {
+      // El flujo pasa por la pantalla de confirmacion antes de cerrar.
+      prisma.prospecto.findUnique.mockResolvedValue({
+        ...enCurso,
+        pregunta_actual: 'CONFIRMAR',
+      });
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: puntaje },
+      });
+      prisma.respuestaChatbot.findMany.mockResolvedValue(
+        respuestas.map(([codigo, texto]) => ({
+          bloque: 'A',
+          codigo_pregunta: codigo,
+          respuesta_texto: texto,
+        })),
+      );
+
+      return service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Sí',
+      });
+    };
+
+    it('la genera sola cuando el prospecto queda calificado', async () => {
+      const r = await cerrar([['A20', 'Sí']]);
+
+      expect(cotizaciones.generar).toHaveBeenCalledWith(enCurso.id, {});
+      expect(r.cotizacion).toEqual(
+        expect.objectContaining({ codigo: 'COT-1-ABC' }),
+      );
+    });
+
+    it('no la genera para quien queda en callback: no se le prometio', async () => {
+      const r = await cerrar([['A20', 'No']]);
+
+      expect(cotizaciones.generar).not.toHaveBeenCalled();
+      expect(r.cotizacion).toBeNull();
+    });
+
+    it('un fallo al cotizar no tumba el cierre de la conversacion', async () => {
+      cotizaciones.generar.mockRejectedValue(new Error('catalogo vacio'));
+
+      const r = await cerrar([['A20', 'Sí']]);
+
+      expect(r.finalizado).toBe(true);
+      expect(r.clasificacion).toBe('caliente');
+      expect(r.cotizacion).toBeNull();
     });
   });
 });

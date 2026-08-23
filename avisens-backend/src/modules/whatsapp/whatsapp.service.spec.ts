@@ -248,7 +248,7 @@ describe('WhatsappService', () => {
       });
     });
 
-    it('numera las opciones porque en whatsapp no hay desplegables', async () => {
+    it('envia botones interactivos cuando las opciones son cortas', async () => {
       prisma.prospecto.findFirst.mockResolvedValue({ sesion_id: 'uuid-9' });
       chatbot.responder.mockResolvedValue({
         finalizado: false,
@@ -261,8 +261,62 @@ describe('WhatsappService', () => {
 
       await service.responder(entrante);
 
+      const [, datos] = argsDe(cola.add) as [
+        string,
+        { texto: string; botones?: Array<{ id: string; titulo: string }> },
+      ];
+      expect(datos.texto).toBe('¿Cuantas aves?');
+      expect(datos.botones).toEqual([
+        { id: 'btn_1', titulo: '<1000' },
+        { id: 'btn_2', titulo: '>10000' },
+      ]);
+    });
+
+    it('envia lista interactiva cuando hay mas de 3 opciones cortas', async () => {
+      prisma.prospecto.findFirst.mockResolvedValue({ sesion_id: 'uuid-9' });
+      chatbot.responder.mockResolvedValue({
+        finalizado: false,
+        pregunta: {
+          codigo: 'A7',
+          texto: '¿Cuantas aves por galpon?',
+          opciones: ['<1000', '1000-5000', '5000-10000', '>10000'],
+        },
+      });
+
+      await service.responder(entrante);
+
+      const [, datos] = argsDe(cola.add) as [
+        string,
+        {
+          texto: string;
+          lista?: { boton: string; filas: Array<{ id: string; titulo: string }> };
+        },
+      ];
+      expect(datos.texto).toBe('¿Cuantas aves por galpon?');
+      expect(datos.lista?.boton).toBe('Ver opciones');
+      expect(datos.lista?.filas).toHaveLength(4);
+      expect(datos.lista?.filas[0]).toEqual({ id: 'opt_1', titulo: '<1000' });
+    });
+
+    it('cae a texto numerado cuando las opciones son muy largas', async () => {
+      prisma.prospecto.findFirst.mockResolvedValue({ sesion_id: 'uuid-9' });
+      chatbot.responder.mockResolvedValue({
+        finalizado: false,
+        pregunta: {
+          codigo: 'A9',
+          texto: '¿Estado del galpon?',
+          opciones: [
+            'Esta opcion es demasiado larga para boton o lista',
+            'Otra opcion muy larga que no cabe',
+          ],
+        },
+      });
+
+      await service.responder(entrante);
+
       const [, datos] = argsDe(cola.add) as [string, { texto: string }];
-      expect(datos.texto).toBe('¿Cuantas aves?\n\n1. <1000\n2. >10000');
+      expect(datos.texto).toMatch(/1\. Esta opcion es demasiado larga/);
+      expect(datos.texto).toMatch(/2\. Otra opcion muy larga/);
     });
 
     it('manda el cierre cuando la conversacion termina', async () => {
@@ -297,7 +351,6 @@ describe('WhatsappService', () => {
       const [, datos] = argsDe(cola.add) as [string, { texto: string }];
       expect(datos.texto).not.toMatch(/Respuesta no valida/);
       expect(datos.texto).toMatch(/¿Cuantas aves maneja la granja\?/);
-      expect(datos.texto).toMatch(/1\. <1000/);
     });
   });
 
@@ -330,10 +383,8 @@ describe('WhatsappService', () => {
       });
 
       const salida = cola.add.mock.calls.at(-1) as [string, { texto: string }];
-      expect(salida[1].texto).toBe(
-        'No te entendí. Elige una de estas opciones:\n\n' +
-          '¿Autorizas el tratamiento de tus datos personales?\n\n1. Sí\n2. No',
-      );
+      expect(salida[1].texto).toMatch(/No te entendí/);
+      expect(salida[1].texto).toMatch(/¿Autorizas el tratamiento/);
     });
 
     it('usa un aviso generico si no puede releer la pregunta', async () => {
@@ -348,9 +399,8 @@ describe('WhatsappService', () => {
       });
 
       const salida = cola.add.mock.calls.at(-1) as [string, { texto: string }];
-      expect(salida[1].texto).toBe(
-        'No te entendí. ¿Puedes intentarlo de nuevo, por favor?',
-      );
+      expect(salida[1].texto).toMatch(/No te entendí/);
+      expect(salida[1].texto).toMatch(/intentarlo de nuevo/);
     });
   });
 
@@ -459,6 +509,66 @@ describe('WhatsappService', () => {
     it('a quien no autoriza no se le habla de cotizacion', async () => {
       const texto = await cerrarCon({ clasificacion: 'sin_consentimiento' });
       expect(texto).toMatch(/no podemos continuar con la cotización/);
+      expect(texto).not.toMatch(/estamos generando/);
+    });
+  });
+
+  describe('resumen de la cotizacion en el cierre', () => {
+    const mensaje = { de: '573001112233', texto: 'Sí', wamid: 'wamid.COT' };
+
+    const cerrarCon = async (r: Record<string, unknown>) => {
+      prisma.prospecto.findFirst.mockResolvedValue({ sesion_id: 'uuid-9' });
+      chatbot.responder.mockResolvedValue({
+        finalizado: true,
+        pregunta: null,
+        ...r,
+      });
+
+      await service.responder(mensaje);
+
+      const [, datos] = argsDe(cola.add) as [string, { texto: string }];
+      return datos.texto;
+    };
+
+    const COTIZACION = {
+      codigo: 'COT-9-XYZ',
+      plan_recomendado: 'Profesional',
+      numero_galpones: 4,
+      valor_total_cop: 7360000,
+    };
+
+    it('incluye codigo, plan y valor formateado', async () => {
+      const texto = await cerrarCon({
+        clasificacion: 'caliente',
+        accion_siguiente: 'VISITA_PRESENCIAL',
+        cotizacion: COTIZACION,
+      });
+
+      expect(texto).toMatch(/COT-9-XYZ/);
+      expect(texto).toMatch(/Profesional/);
+      expect(texto).toMatch(/7\.360\.000/);
+      expect(texto).toMatch(/visita técnica/);
+    });
+
+    it('cierra igual si la cotizacion no se pudo generar', async () => {
+      const texto = await cerrarCon({
+        clasificacion: 'tibio',
+        accion_siguiente: 'DEMO_REMOTA',
+        cotizacion: null,
+      });
+
+      expect(texto).toMatch(/demostración remota/);
+      expect(texto).not.toMatch(/Cotización/);
+    });
+
+    it('al callback no le promete cotizacion, porque no se le genera', async () => {
+      const texto = await cerrarCon({
+        clasificacion: 'caliente',
+        accion_siguiente: 'CALLBACK_DECISOR',
+        cotizacion: null,
+      });
+
+      expect(texto).toMatch(/dentro de 48 horas/);
       expect(texto).not.toMatch(/estamos generando/);
     });
   });

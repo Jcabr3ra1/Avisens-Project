@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { OpcionInteractiva, TrabajoMensaje } from './whatsapp.tipos';
 
 const PROVEDOR = process.env.WHATSAPP_PROVIDER ?? 'simulado';
 const VERSION = process.env.WHATSAPP_API_VERSION ?? 'v25.0';
@@ -17,8 +18,17 @@ export class WhatsappSender {
   }
 
   async enviarTexto(destino: string, texto: string): Promise<boolean> {
+    return this.enviar({ destino, texto });
+  }
+
+  async enviar(trabajo: TrabajoMensaje): Promise<boolean> {
     if (PROVEDOR === 'simulado') {
-      this.logger.log(`[SIMULADO] -> ${destino}: ${texto}`);
+      const tipo = trabajo.botones
+        ? `botones[${trabajo.botones.length}]`
+        : trabajo.lista
+          ? `lista[${trabajo.lista.filas.length}]`
+          : 'texto';
+      this.logger.log(`[SIMULADO] -> ${trabajo.destino} (${tipo}): ${trabajo.texto}`);
       return true;
     }
 
@@ -31,6 +41,10 @@ export class WhatsappSender {
       return false;
     }
 
+    await this.enviarTyping(phoneId, token, trabajo.destino);
+
+    const payload = this.construirPayload(trabajo);
+
     try {
       const respuesta = await fetch(
         `https://graph.facebook.com/${VERSION}/${phoneId}/messages`,
@@ -40,12 +54,7 @@ export class WhatsappSender {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            messaging_product: 'whatsapp',
-            ...this.destinatario(destino),
-            type: 'text',
-            text: { preview_url: false, body: texto },
-          }),
+          body: JSON.stringify(payload),
           signal: AbortSignal.timeout(TIMEOUT_MS),
         },
       );
@@ -62,5 +71,82 @@ export class WhatsappSender {
       this.logger.error(`No se pudo enviar a WhatsApp: ${mensaje}`);
       return false;
     }
+  }
+
+  private async enviarTyping(phoneId: string, token: string, destino: string) {
+    try {
+      await fetch(
+        `https://graph.facebook.com/${VERSION}/${phoneId}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            ...this.destinatario(destino),
+            type: 'reaction',
+            reaction: { emoji: '', message_id: '' },
+          }),
+          signal: AbortSignal.timeout(3000),
+        },
+      );
+    } catch {
+      // Silenciar errores de typing indicator - es opcional y no debe bloquear el envío
+    }
+  }
+
+  private construirPayload(trabajo: TrabajoMensaje): Record<string, unknown> {
+    const base = {
+      messaging_product: 'whatsapp',
+      ...this.destinatario(trabajo.destino),
+    };
+
+    if (trabajo.botones?.length) {
+      return {
+        ...base,
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: { text: trabajo.texto },
+          action: {
+            buttons: trabajo.botones.map((b: OpcionInteractiva) => ({
+              type: 'reply',
+              reply: { id: b.id, title: b.titulo },
+            })),
+          },
+        },
+      };
+    }
+
+    if (trabajo.lista?.filas.length) {
+      return {
+        ...base,
+        type: 'interactive',
+        interactive: {
+          type: 'list',
+          body: { text: trabajo.texto },
+          action: {
+            button: trabajo.lista.boton,
+            sections: [
+              {
+                title: 'Opciones',
+                rows: trabajo.lista.filas.map((f: OpcionInteractiva) => ({
+                  id: f.id,
+                  title: f.titulo,
+                })),
+              },
+            ],
+          },
+        },
+      };
+    }
+
+    return {
+      ...base,
+      type: 'text',
+      text: { preview_url: false, body: trabajo.texto },
+    };
   }
 }
