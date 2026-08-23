@@ -331,7 +331,8 @@ describe('WhatsappService', () => {
 
       const salida = cola.add.mock.calls.at(-1) as [string, { texto: string }];
       expect(salida[1].texto).toBe(
-        'No te entendi.\n\n¿Autorizas el tratamiento de tus datos personales?\n\n1. Sí\n2. No',
+        'No te entendí. Elige una de estas opciones:\n\n' +
+          '¿Autorizas el tratamiento de tus datos personales?\n\n1. Sí\n2. No',
       );
     });
 
@@ -347,7 +348,9 @@ describe('WhatsappService', () => {
       });
 
       const salida = cola.add.mock.calls.at(-1) as [string, { texto: string }];
-      expect(salida[1].texto).toBe('No te entendi. Intenta de nuevo, por favor.');
+      expect(salida[1].texto).toBe(
+        'No te entendí. ¿Puedes intentarlo de nuevo, por favor?',
+      );
     });
   });
 
@@ -376,7 +379,7 @@ describe('WhatsappService', () => {
       ];
       expect(nombre).toBe('saliente');
       expect(trabajo.destino).toBe('573001112233');
-      expect(trabajo.texto).toMatch(/cerramos esta conversacion/);
+      expect(trabajo.texto).toMatch(/cerramos esta conversación/);
     });
 
     it('cierra igual al prospecto sin telefono, pero no le encola nada', async () => {

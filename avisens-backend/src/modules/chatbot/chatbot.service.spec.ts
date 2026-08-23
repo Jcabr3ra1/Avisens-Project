@@ -62,13 +62,13 @@ describe('ChatbotService', () => {
   });
 
   describe('iniciar', () => {
-    it('crea el prospecto con un sesion_id UUID y arranca en A1', async () => {
+    it('crea el prospecto con un sesion_id UUID y arranca en el menu M1', async () => {
       prisma.prospecto.create.mockResolvedValue({ id: 1, sesion_id: 'uuid-x' });
 
       const r = await service.iniciar({});
       const datos = datosDe(prisma.prospecto.create);
 
-      expect(datos.pregunta_actual).toBe('A1');
+      expect(datos.pregunta_actual).toBe('M1');
       expect(datos.estado).toBe('en_proceso');
       expect(datos.canal_origen).toBe('web');
       expect(datos.sesion_id).toMatch(
