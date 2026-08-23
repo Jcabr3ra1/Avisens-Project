@@ -24,6 +24,7 @@ export class ListarProspectosDto extends PaginationQueryDto {
     'calificado',
     'asignado',
     'cerrado',
+    'abandonado',
     'sin_consentimiento',
   ])
   @IsOptional()
