@@ -12,12 +12,19 @@ services:
       - "5433:5432"
 
   # Backend NestJS en modo watch (nest --watch). Usa la etapa `dev` del Dockerfile.
-  # Al arrancar: migra la base + siembra roles y admin (idempotente), para que
-  # cualquier compañero tenga login listo sin correr nada a mano.
+  # Al arrancar: regenera el cliente Prisma + migra la base + siembra roles y
+  # admin (idempotente), para que cualquier compañero tenga login listo sin
+  # correr nada a mano.
+  #
+  # El `prisma generate` es imprescindible aqui: el cliente se genera al
+  # construir la imagen, pero /app/node_modules es un volumen anonimo que
+  # sobrevive a los reinicios. Sin esta linea, cualquier cambio en
+  # schema.prisma deja el contenedor con el cliente viejo y el arranque falla
+  # con errores de tipos que no aparecen en el host.
   backend:
     build:
       target: dev
-    command: sh -c "pnpm prisma migrate deploy && pnpm run seed && pnpm run start:dev"
+    command: sh -c "pnpm prisma generate && pnpm prisma migrate deploy && pnpm run seed && pnpm run start:dev"
     environment:
       # Admin de DESARROLLO local (no es prod). El seed lo crea con estas vars.
       ADMIN_EMAIL: admin@avisens.com
