@@ -446,7 +446,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'consentimiento_habeas_data',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A2B',
+    siguiente: 'A2',
     saltos: { 'No autorizo': 'FIN' },
   },
   {
@@ -485,7 +485,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'documento',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A2',
+    siguiente: 'C1',
     saltos: null,
   },
   {
@@ -786,7 +786,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'C1',
+    siguiente: 'A2B',
     saltos: { No: 'A21' },
   },
   {
@@ -800,7 +800,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'contacto_decisor',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'C1',
+    siguiente: 'A2B',
     saltos: null,
   },
 
