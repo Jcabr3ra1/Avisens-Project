@@ -232,6 +232,12 @@ export class WhatsappService {
   private cierre(r: {
     clasificacion: string | null;
     accion_siguiente?: string | null;
+    cotizacion?: {
+      codigo: string | null;
+      plan_recomendado: string;
+      numero_galpones: number;
+      valor_total_cop: number;
+    } | null;
   }): string {
     if (r.clasificacion === 'pqrs') return CIERRE_PQRS;
 
@@ -242,9 +248,35 @@ export class WhatsappService {
 
     const especifico = CIERRE_POR_RESULTADO[clave];
     if (!especifico) return CIERRE_BASE;
-    if (clave === 'sin_consentimiento') return especifico;
 
-    return `${CIERRE_BASE}\n\n${especifico}`;
+    // Ni quien no autoriza ni quien queda en callback reciben la promesa de
+    // una cotizacion: el documento no se la hace a ninguno de los dos.
+    if (clave === 'sin_consentimiento' || clave === 'CALLBACK_DECISOR') {
+      return especifico;
+    }
+
+    return [CIERRE_BASE, this.resumenCotizacion(r.cotizacion), especifico]
+      .filter(Boolean)
+      .join('\n\n');
+  }
+
+  private resumenCotizacion(
+    c?: {
+      codigo: string | null;
+      plan_recomendado: string;
+      numero_galpones: number;
+      valor_total_cop: number;
+    } | null,
+  ) {
+    if (!c) return '';
+
+    const valor = c.valor_total_cop.toLocaleString('es-CO');
+    return (
+      `*Cotización${c.codigo ? ' ' + c.codigo : ''}*\n` +
+      `Plan ${c.plan_recomendado} · ${c.numero_galpones} galpón(es)\n` +
+      `Valor estimado: $${valor} COP\n` +
+      `_Valores de referencia; un asesor confirma la cotización definitiva._`
+    );
   }
 
   private async reintento(sesionId: string): Promise<PartesMensaje> {
