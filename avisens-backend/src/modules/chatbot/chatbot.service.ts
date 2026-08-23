@@ -149,6 +149,21 @@ export class ChatbotService {
     return FIN;
   }
 
+  async preguntaActual(sesionId: string) {
+    const prospecto = await this.prisma.prospecto.findUnique({
+      where: { sesion_id: sesionId },
+      select: { pregunta_actual: true },
+    });
+
+    if (!prospecto?.pregunta_actual || prospecto.pregunta_actual === FIN) {
+      return null;
+    }
+
+    return this.formatearPregunta(
+      await this.obtenerPregunta(prospecto.pregunta_actual),
+    );
+  }
+
   private async obtenerPregunta(codigo: string) {
     const pregunta = await this.prisma.preguntaChatbot.findFirst({
       where: { codigo, activa: true },
