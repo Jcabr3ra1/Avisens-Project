@@ -15,6 +15,22 @@ const PRIMERA_PREGUNTA_PQRS = 'B1';
 const RUTA_PQRS = 'general';
 const FIN = 'FIN';
 const CONFIRMAR = 'CONFIRMAR';
+const CORREGIR = 'CORREGIR';
+const PREFIJO_CORRECCION = 'FIX:';
+
+// Que dato se puede corregir y a que pregunta corresponde. Se ofrece elegir en
+// vez de rehacer el cuestionario entero.
+const CORREGIBLES: Array<[string, string]> = [
+  ['Nombre', 'A2'],
+  ['Nombre de la granja', 'A2C'],
+  ['Documento', 'A3'],
+  ['Municipio', 'A4'],
+  ['Departamento', 'A4B'],
+  ['Tamaño de la granja', 'A5'],
+  ['Tamaño del galpón', 'A6'],
+  ['Teléfono', 'C1'],
+  ['Correo', 'C2'],
+];
 const CAMPOS_NUMERICOS = new Set(['area_granja_m2', 'area_galpon_m2']);
 
 const UMBRAL_CALIENTE = 12;
@@ -101,13 +117,13 @@ export class ChatbotService {
       }
       await this.prisma.prospecto.update({
         where: { id: prospecto.id },
-        data: { pregunta_actual: 'A2', estado: 'en_proceso' },
+        data: { pregunta_actual: CORREGIR, estado: 'en_proceso' },
       });
-      const pregunta = await this.obtenerPregunta('A2');
+
       return {
         sesion_id: prospecto.sesion_id,
-        pregunta: this.formatearPregunta(pregunta),
-        mensaje_transicion: '✏️ Entendido. Vamos a revisar tus datos desde el principio.',
+        pregunta: this.menuCorreccion(),
+        mensaje_transicion: '✏️ Claro. ¿Qué dato quieres corregir?',
         progreso: null as number | null,
         total_pasos: null as number | null,
         finalizado: false,
@@ -116,7 +132,43 @@ export class ChatbotService {
       };
     }
 
-    const pregunta = await this.obtenerPregunta(prospecto.pregunta_actual);
+    if (prospecto.pregunta_actual === CORREGIR) {
+      const elegido = this.sinTildes(dto.respuesta);
+      const par = CORREGIBLES.find(
+        ([etiqueta]) => this.sinTildes(etiqueta) === elegido,
+      );
+
+      if (!par) {
+        throw new BadRequestException(
+          `Elige uno de los datos: ${CORREGIBLES.map(([e]) => e).join(' | ')}`,
+        );
+      }
+
+      await this.prisma.prospecto.update({
+        where: { id: prospecto.id },
+        data: { pregunta_actual: PREFIJO_CORRECCION + par[1] },
+      });
+
+      return {
+        sesion_id: prospecto.sesion_id,
+        pregunta: this.formatearPregunta(await this.obtenerPregunta(par[1])),
+        mensaje_transicion: null as string | null,
+        progreso: null as number | null,
+        total_pasos: null as number | null,
+        finalizado: false,
+        puntaje_total: null as number | null,
+        clasificacion: null as string | null,
+      };
+    }
+
+    const corrigiendo = prospecto.pregunta_actual.startsWith(
+      PREFIJO_CORRECCION,
+    );
+    const codigoActual = corrigiendo
+      ? prospecto.pregunta_actual.slice(PREFIJO_CORRECCION.length)
+      : prospecto.pregunta_actual;
+
+    const pregunta = await this.obtenerPregunta(codigoActual);
 
     const respuesta = this.normalizarRespuesta(pregunta, dto.respuesta);
 
@@ -139,10 +191,12 @@ export class ChatbotService {
 
     const saltos = pregunta.saltos as Record<string, string> | null;
     const candidato = saltos?.[respuesta] ?? pregunta.siguiente ?? FIN;
-    const siguiente = await this.primeraVisible(
-      candidato,
-      prospecto.canal_origen,
-    );
+
+    // Al corregir un dato se vuelve al resumen, no se sigue el cuestionario:
+    // la persona ya lo recorrio entero.
+    const siguiente = corrigiendo
+      ? CONFIRMAR
+      : await this.primeraVisible(candidato, prospecto.canal_origen);
 
     const datosProspecto: Record<string, unknown> = {
       pregunta_actual: siguiente,
@@ -161,6 +215,24 @@ export class ChatbotService {
       where: { id: prospecto.id },
       data: datosProspecto,
     });
+
+    if (siguiente === CONFIRMAR) {
+      return {
+        sesion_id: prospecto.sesion_id,
+        pregunta: {
+          codigo: CONFIRMAR,
+          texto: await this.obtenerResumen(prospecto.id),
+          tipo: 'si_no',
+          opciones: ['Sí', 'No, corregir datos'],
+        },
+        mensaje_transicion: '✅ Dato actualizado.',
+        progreso: null as number | null,
+        total_pasos: null as number | null,
+        finalizado: false,
+        puntaje_total: null as number | null,
+        clasificacion: null as string | null,
+      };
+    }
 
     if (siguiente === FIN) {
       const esPqrs = pregunta.bloque === 'B';
@@ -255,6 +327,15 @@ export class ChatbotService {
       where: { prospecto_id: prospectoId },
     });
     return count;
+  }
+
+  private menuCorreccion() {
+    return {
+      codigo: CORREGIR,
+      texto: '✏️ ¿Qué dato quieres corregir?',
+      tipo: 'opcion_unica',
+      opciones: CORREGIBLES.map(([etiqueta]) => etiqueta),
+    };
   }
 
   private async obtenerResumen(prospectoId: number): Promise<string> {
