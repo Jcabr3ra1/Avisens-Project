@@ -429,7 +429,7 @@ export class WhatsappService {
         : this.formatear(r.pregunta);
 
       if (r.progreso !== null && r.progreso !== undefined && !r.finalizado) {
-        const total = 20;
+        const total = r.total_pasos ?? 20;
         const porcentaje = Math.min(Math.round((r.progreso / total) * 100), 100);
         partes.texto = `📊 Progreso: ${r.progreso}/${total} (${porcentaje}%)\n\n${partes.texto}`;
       }

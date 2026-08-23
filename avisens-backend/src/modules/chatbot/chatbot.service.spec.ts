@@ -9,7 +9,7 @@ describe('ChatbotService', () => {
 
   const prisma = {
     prospecto: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
-    preguntaChatbot: { findFirst: jest.fn() },
+    preguntaChatbot: { findFirst: jest.fn(), count: jest.fn() },
     respuestaChatbot: { create: jest.fn(), aggregate: jest.fn(), findMany: jest.fn(), count: jest.fn() },
     matrizCalificacion: { findUnique: jest.fn() },
     solicitudPqrs: { create: jest.fn() },
@@ -48,6 +48,7 @@ describe('ChatbotService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    prisma.preguntaChatbot.count.mockResolvedValue(19);
     cotizaciones.generar.mockResolvedValue({
       codigo: 'COT-1-ABC',
       plan_recomendado: 'Profesional',
@@ -703,10 +704,14 @@ describe('ChatbotService', () => {
         })),
       );
 
-      return service.responder({
+      return (await service.responder({
         sesion_id: enCurso.sesion_id,
         respuesta: 'Sí',
-      });
+      })) as {
+        finalizado: boolean;
+        clasificacion: string | null;
+        cotizacion: { codigo: string } | null;
+      };
     };
 
     it('la genera sola cuando el prospecto queda calificado', async () => {
@@ -733,6 +738,70 @@ describe('ChatbotService', () => {
       expect(r.finalizado).toBe(true);
       expect(r.clasificacion).toBe('caliente');
       expect(r.cotizacion).toBeNull();
+    });
+  });
+
+  describe('rangos de area', () => {
+    const responderRango = async (opciones: string[], respuesta: string) => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'A5',
+          tipo: 'opcion_unica',
+          opciones,
+          campo_prospecto: 'area_granja_m2',
+          siguiente: 'A6',
+        }),
+      );
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta,
+      });
+
+      return datosDe(prisma.prospecto.update).area_granja_m2;
+    };
+
+    it('guarda el punto medio del rango elegido', async () => {
+      const valor = await responderRango(
+        ['Menos de 500 m²', '500 - 2.000 m²'],
+        '500 - 2.000 m²',
+      );
+      expect(valor).toBe(1250);
+    });
+
+    it('respeta los separadores de miles', async () => {
+      const valor = await responderRango(
+        ['2.000 - 10.000 m²', 'Otro, lo escribo'],
+        '2.000 - 10.000 m²',
+      );
+      expect(valor).toBe(6000);
+    });
+
+    it('usa el unico numero cuando el rango es abierto', async () => {
+      const valor = await responderRango(
+        ['Menos de 500 m²', 'Más de 10.000 m²'],
+        'Menos de 500 m²',
+      );
+      expect(valor).toBe(500);
+    });
+
+    it('no convierte cuando el usuario escribe el numero a mano', async () => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'A5B',
+          tipo: 'numero',
+          opciones: null,
+          campo_prospecto: 'area_granja_m2',
+          siguiente: 'A6',
+        }),
+      );
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: '1200,5',
+      });
+
+      expect(datosDe(prisma.prospecto.update).area_granja_m2).toBe(1200.5);
     });
   });
 });
