@@ -25,6 +25,8 @@ export class ListarProspectosDto extends PaginationQueryDto {
     'asignado',
     'cerrado',
     'abandonado',
+    'pqrs',
+    'consulta_atendida',
     'sin_consentimiento',
   ])
   @IsOptional()

@@ -745,20 +745,328 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'B1',
     bloque: 'B',
     orden: 1,
-    texto: '¿Qué tipo de solicitud quieres radicar?\n\nAl radicarla aceptas nuestra política de tratamiento de datos: https://avisens-project-production.up.railway.app/privacidad',
+    texto: 'Con gusto te ayudo. ¿De qué tipo es tu consulta?',
     tipo: 'opcion_unica',
-    opciones: ['Petición', 'Queja', 'Reclamo', 'Sugerencia', 'Felicitación'],
+    opciones: ['Petición', 'Reclamo', 'Queja', 'Sugerencia', 'Trámite'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'B2',
-    saltos: null,
+    siguiente: 'BMP',
+    saltos: { 'Petición': 'BMP', Reclamo: 'BMR', Queja: 'BMQ', Sugerencia: 'BMS', 'Trámite': 'BMT' },
+  },
+  {
+    codigo: 'BMP',
+    bloque: 'B',
+    orden: 2,
+    texto: '¿Sobre qué necesitas ayuda?',
+    tipo: 'opcion_unica',
+    opciones: ['¿Cuánto cuesta instalar AVISENS?', '¿Qué incluye el sistema?', '¿Funciona sin internet estable?', '¿Cuánto tarda la instalación?', '¿Necesito saber de tecnología?', '¿Ofrecen financiación o cuotas?', '¿Qué pasa si se va la luz?', '¿Tienen clientes en el Cauca?', 'Otra consulta'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'BP1',
+    saltos: { '¿Cuánto cuesta instalar AVISENS?': 'BP1', '¿Qué incluye el sistema?': 'BP2', '¿Funciona sin internet estable?': 'BP3', '¿Cuánto tarda la instalación?': 'BP4', '¿Necesito saber de tecnología?': 'BP5', '¿Ofrecen financiación o cuotas?': 'BP6', '¿Qué pasa si se va la luz?': 'BP7', '¿Tienen clientes en el Cauca?': 'BP8', 'Otra consulta': 'B2' },
+  },
+  {
+    codigo: 'BP1',
+    bloque: 'B',
+    orden: 3,
+    texto: 
+      'La instalación de AVISENS tiene un costo desde $3.500.000 COP, dependiendo del tamaño de la granja, el número de galpones y la cantidad de sensores que necesites. El valor incluye los equipos, la instalación y la configuración inicial.' +
+      '\\n\\n' +
+      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP2',
+    bloque: 'B',
+    orden: 4,
+    texto: 
+      'AVISENS incluye sensores ambientales, unidad de comunicación, plataforma web y app, configuración e instalación técnica. La cantidad de sensores depende del número de galpones y de las necesidades de tu granja. También va incluida una capacitación básica para que puedas usarlo bien.' +
+      '\\n\\n' +
+      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP3',
+    bloque: 'B',
+    orden: 5,
+    texto: 
+      'Sí. AVISENS está diseñado para trabajar en zonas rurales. Si la granja tiene internet inestable o poca cobertura celular, contamos con alternativas de comunicación y almacenamiento temporal de datos para mantener el monitoreo. Antes de instalar hacemos una evaluación de conectividad para elegir la mejor alternativa.' +
+      '\\n\\n' +
+      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP4',
+    bloque: 'B',
+    orden: 6,
+    texto: 
+      'La instalación tarda entre 1 y 2 días por granja, según su tamaño y la cantidad de equipos. La hace nuestro equipo técnico, que instala, configura y verifica que todo quede funcionando.' +
+      '\\n\\n' +
+      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP5',
+    bloque: 'B',
+    orden: 7,
+    texto: 
+      'No necesitas conocimientos técnicos avanzados. AVISENS está pensado para que sea fácil de usar: consultas los indicadores de tu granja y recibes las alertas desde el celular o el computador. Además te damos una capacitación básica durante la instalación.' +
+      '\\n\\n' +
+      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP6',
+    bloque: 'B',
+    orden: 8,
+    texto: 
+      'Sí. Ofrecemos financiación hasta en 12 cuotas, sujeta a aprobación. También estamos trabajando en alianzas con cooperativas y entidades del sector agropecuario para facilitar el acceso a la tecnología.' +
+      '\\n\\n' +
+      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP7',
+    bloque: 'B',
+    orden: 9,
+    texto: 
+      'El sistema tiene respaldo energético para seguir monitoreando durante los cortes de electricidad. Según la configuración instalada, puede operar varias horas y guardar los datos para sincronizarlos cuando vuelva la energía.' +
+      '\\n\\n' +
+      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BP8',
+    bloque: 'B',
+    orden: 10,
+    texto: 
+      'Sí, tenemos clientes en el Cauca. Podemos gestionar una referencia comercial o, cuando el cliente lo autorice, coordinar una visita para que veas de primera mano cómo funciona AVISENS en una granja.' +
+      '\\n\\n' +
+      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'A1', No: 'FIN' },
+  },
+  {
+    codigo: 'BMR',
+    bloque: 'B',
+    orden: 11,
+    texto: '¿Sobre qué necesitas ayuda?',
+    tipo: 'opcion_unica',
+    opciones: ['Mis sensores dejaron de enviar datos', 'Las alertas llegan tarde o no llegan', 'Me facturaron un valor distinto', 'Otra consulta'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'BR1',
+    saltos: { 'Mis sensores dejaron de enviar datos': 'BR1', 'Las alertas llegan tarde o no llegan': 'BR2', 'Me facturaron un valor distinto': 'BR3', 'Otra consulta': 'B2' },
+  },
+  {
+    codigo: 'BR1',
+    bloque: 'B',
+    orden: 12,
+    texto: 
+      'Lamentamos el inconveniente. Primero revisa que los sensores tengan alimentación eléctrica y que la unidad de comunicación esté encendida. Si el problema sigue, nuestro equipo puede hacer un diagnóstico remoto y, si hace falta, programar una visita técnica.' +
+      '\\n\\n' +
+      '¿Quieres que registremos tu caso para que un asesor te contacte?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'B2', No: 'FIN' },
+  },
+  {
+    codigo: 'BR2',
+    bloque: 'B',
+    orden: 13,
+    texto: 
+      'Las alertas tardías o que no llegan suelen deberse a conectividad, configuración o comunicación con los sensores. Nuestro equipo puede revisar la configuración de forma remota y corregirla. Si persiste, se programa una revisión técnica.' +
+      '\\n\\n' +
+      '¿Quieres que registremos tu caso para que un asesor te contacte?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'B2', No: 'FIN' },
+  },
+  {
+    codigo: 'BR3',
+    bloque: 'B',
+    orden: 14,
+    texto: 
+      'Lamentamos el inconveniente. Necesitamos la cotización aprobada y la factura recibida para que el área de facturación revise la diferencia. Si se confirma un error, se hace el ajuste correspondiente.' +
+      '\\n\\n' +
+      '¿Quieres que registremos tu caso para que un asesor te contacte?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'B2', No: 'FIN' },
+  },
+  {
+    codigo: 'BMQ',
+    bloque: 'B',
+    orden: 15,
+    texto: '¿Sobre qué necesitas ayuda?',
+    tipo: 'opcion_unica',
+    opciones: ['No llegó la visita técnica prometida', 'Otra consulta'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'BQ1',
+    saltos: { 'No llegó la visita técnica prometida': 'BQ1', 'Otra consulta': 'B2' },
+  },
+  {
+    codigo: 'BQ1',
+    bloque: 'B',
+    orden: 16,
+    texto: 
+      'Lamentamos que la visita programada no se haya realizado. Podemos escalar el caso con Servicio al Cliente. Para agilizarlo necesitamos el número de solicitud o ticket, la fecha en que estaba programada la visita y los datos de la granja.' +
+      '\\n\\n' +
+      '¿Quieres que registremos tu caso para que un asesor te contacte?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'B2', No: 'FIN' },
+  },
+  {
+    codigo: 'BMS',
+    bloque: 'B',
+    orden: 17,
+    texto: '¿Sobre qué necesitas ayuda?',
+    tipo: 'opcion_unica',
+    opciones: ['Que controle el consumo de alimento', 'Otra consulta'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'BS1',
+    saltos: { 'Que controle el consumo de alimento': 'BS1', 'Otra consulta': 'B2' },
+  },
+  {
+    codigo: 'BS1',
+    bloque: 'B',
+    orden: 18,
+    texto: 
+      'Gracias por la sugerencia. El monitoreo del consumo de alimento está contemplado dentro de nuestro roadmap de desarrollo. Estamos evaluando su integración para darte una visión más completa de la eficiencia de tu producción. La disponibilidad dependerá del desarrollo y la validación de la funcionalidad.' +
+      '\\n\\n' +
+      '¿Quieres que registremos tu caso para que un asesor te contacte?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'B2', No: 'FIN' },
+  },
+  {
+    codigo: 'BMT',
+    bloque: 'B',
+    orden: 19,
+    texto: '¿Sobre qué necesitas ayuda?',
+    tipo: 'opcion_unica',
+    opciones: ['Ampliar el sistema a un galpón nuevo', 'Dar de baja o trasladar el equipo', 'Otra consulta'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'BT1',
+    saltos: { 'Ampliar el sistema a un galpón nuevo': 'BT1', 'Dar de baja o trasladar el equipo': 'BT2', 'Otra consulta': 'B2' },
+  },
+  {
+    codigo: 'BT1',
+    bloque: 'B',
+    orden: 20,
+    texto: 
+      'Para ampliar el sistema, un asesor revisa las características del galpón nuevo, determina cuántos sensores hacen falta y prepara una cotización. Una vez la apruebes, el equipo técnico programa la instalación.' +
+      '\\n\\n' +
+      '¿Quieres que registremos tu caso para que un asesor te contacte?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'B2', No: 'FIN' },
+  },
+  {
+    codigo: 'BT2',
+    bloque: 'B',
+    orden: 21,
+    texto: 
+      'Para dar de baja el servicio o trasladar los equipos a otra granja, Servicio al Cliente revisa las condiciones del contrato y programa el retiro o el traslado. Si es traslado, hacemos una evaluación técnica de la nueva ubicación antes de instalar de nuevo.' +
+      '\\n\\n' +
+      '¿Quieres que registremos tu caso para que un asesor te contacte?',
+    tipo: 'si_no',
+    opciones: ['Sí', 'No'],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: { 'Sí': 'B2', No: 'FIN' },
   },
   {
     codigo: 'B2',
     bloque: 'B',
-    orden: 2,
-    texto: '¿Cuál es el asunto de tu solicitud?',
+    orden: 90,
+    texto:
+      '¿Cuál es el asunto de tu solicitud?\n\n' +
+      'Al registrarla aceptas nuestra política de tratamiento de datos: ' +
+      'https://avisens-project-production.up.railway.app/privacidad',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: null,
@@ -770,7 +1078,7 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'B3',
     bloque: 'B',
-    orden: 3,
+    orden: 91,
     texto: 'Cuéntanos con detalle qué sucedió',
     tipo: 'texto_libre',
     opciones: null,

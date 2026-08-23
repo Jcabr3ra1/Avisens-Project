@@ -279,20 +279,25 @@ export class ChatbotService {
       const porCodigo = new Map(
         respuestas.map((r) => [r.codigo_pregunta, r.respuesta_texto]),
       );
-      await this.prisma.solicitudPqrs.create({
-        data: {
-          prospecto_id: prospectoId,
-          categoria: porCodigo.get('B1') ?? 'Petición',
-          asunto: porCodigo.get('B2'),
-          mensaje: porCodigo.get('B3'),
-          estado: 'abierta',
-        },
-      });
+
+      // Solo se radica si la persona pidio que registraramos su caso (B2/B3).
+      // Consultar una pregunta frecuente no debe generar un ticket vacio.
+      if (porCodigo.has('B2')) {
+        await this.prisma.solicitudPqrs.create({
+          data: {
+            prospecto_id: prospectoId,
+            categoria: porCodigo.get('B1') ?? 'Petición',
+            asunto: porCodigo.get('B2'),
+            mensaje: porCodigo.get('B3'),
+            estado: 'abierta',
+          },
+        });
+      }
 
       const cerrado = await this.prisma.prospecto.update({
         where: { id: prospectoId },
         data: {
-          estado: 'pqrs',
+          estado: porCodigo.has('B2') ? 'pqrs' : 'consulta_atendida',
           pregunta_actual: FIN,
           fecha_finalizacion: new Date(),
         },
