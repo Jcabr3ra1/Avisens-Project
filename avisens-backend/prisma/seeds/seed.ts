@@ -846,7 +846,7 @@ const PREGUNTAS_CHATBOT = [
     omitir_si_canal: null,
     puntua: false,
     siguiente: 'BMP',
-    saltos: { 'Petición': 'BMP', Reclamo: 'BMR', Queja: 'BMQ', Sugerencia: 'BMS', 'Trámite': 'BMT' },
+    saltos: { 'Petición': 'BMP', Reclamo: 'BIDR', Queja: 'BIDQ', Sugerencia: 'BMS', 'Trámite': 'BIDT' },
   },
 
   // --- Peticiones ---
@@ -1222,6 +1222,48 @@ const PREGUNTAS_CHATBOT = [
   },
 
   // --- Radicacion PQRS ---
+  {
+    codigo: 'BIDR',
+    bloque: 'B',
+    orden: 70,
+    texto:
+      '🪪 Para ubicar tu granja y tu contrato, ¿cuál es tu número de documento?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'documento',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'BMR',
+    saltos: null,
+  },
+  {
+    codigo: 'BIDQ',
+    bloque: 'B',
+    orden: 71,
+    texto:
+      '🪪 Para ubicar tu granja y tu contrato, ¿cuál es tu número de documento?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'documento',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'BMQ',
+    saltos: null,
+  },
+  {
+    codigo: 'BIDT',
+    bloque: 'B',
+    orden: 72,
+    texto:
+      '🪪 Para ubicar tu granja y tu contrato, ¿cuál es tu número de documento?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'documento',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'BMT',
+    saltos: null,
+  },
   {
     codigo: 'B2',
     bloque: 'B',
