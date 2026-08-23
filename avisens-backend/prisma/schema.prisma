@@ -665,6 +665,9 @@ model Prospecto {
   fecha_callback             DateTime?
   puntaje_total              Int?
   clasificacion              String?
+  accion_siguiente           String?
+  senal_caliente             Boolean   @default(false)
+  conectividad_limitada      Boolean   @default(false)
   estado                     String    @default("nuevo")
   pregunta_actual            String?
   asesor_asignado_id         Int?
