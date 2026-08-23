@@ -12,7 +12,11 @@ describe('WhatsappService', () => {
   const prisma = {
     prospecto: { findFirst: jest.fn(), update: jest.fn() },
   };
-  const chatbot = { iniciar: jest.fn(), responder: jest.fn() };
+  const chatbot = {
+    iniciar: jest.fn(),
+    responder: jest.fn(),
+    preguntaActual: jest.fn(),
+  };
 
   const argsDe = (mock: jest.Mock, indice = 0) =>
     mock.mock.calls[indice] as unknown[];
@@ -276,16 +280,24 @@ describe('WhatsappService', () => {
       expect(datos.texto).toMatch(/asesor/);
     });
 
-    it('le devuelve al prospecto el error del motor en vez de perderlo', async () => {
+    it('no le filtra al prospecto el error tecnico del motor', async () => {
       prisma.prospecto.findFirst.mockResolvedValue({ sesion_id: 'uuid-9' });
       chatbot.responder.mockRejectedValue(
         new Error('Respuesta no valida para A8. Opciones: <1000 | >10000'),
       );
+      chatbot.preguntaActual.mockResolvedValue({
+        codigo: 'A8',
+        texto: '¿Cuantas aves maneja la granja?',
+        tipo: 'opcion_unica',
+        opciones: ['<1000', '>10000'],
+      });
 
       await service.responder(entrante);
 
       const [, datos] = argsDe(cola.add) as [string, { texto: string }];
-      expect(datos.texto).toMatch(/Respuesta no valida para A8/);
+      expect(datos.texto).not.toMatch(/Respuesta no valida/);
+      expect(datos.texto).toMatch(/¿Cuantas aves maneja la granja\?/);
+      expect(datos.texto).toMatch(/1\. <1000/);
     });
   });
 
@@ -295,6 +307,47 @@ describe('WhatsappService', () => {
 
       expect(prisma.prospecto.findFirst).not.toHaveBeenCalled();
       expect(cola.add).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cuando el chatbot rechaza la respuesta', () => {
+    it('repite la pregunta en vez de mandar el error crudo', async () => {
+      prisma.prospecto.findFirst.mockResolvedValue({ sesion_id: 'ses-1' });
+      chatbot.responder.mockRejectedValue(
+        new Error('Respuesta no valida para A1. Opciones: Sí | No'),
+      );
+      chatbot.preguntaActual.mockResolvedValue({
+        codigo: 'A1',
+        texto: '¿Autorizas el tratamiento de tus datos personales?',
+        tipo: 'si_no',
+        opciones: ['Sí', 'No'],
+      });
+
+      await service.responder({
+        de: '573001112233',
+        texto: 'Hola',
+        wamid: 'wamid.X',
+      });
+
+      const salida = cola.add.mock.calls.at(-1) as [string, { texto: string }];
+      expect(salida[1].texto).toBe(
+        'No te entendi.\n\n¿Autorizas el tratamiento de tus datos personales?\n\n1. Sí\n2. No',
+      );
+    });
+
+    it('usa un aviso generico si no puede releer la pregunta', async () => {
+      prisma.prospecto.findFirst.mockResolvedValue({ sesion_id: 'ses-1' });
+      chatbot.responder.mockRejectedValue(new Error('lo que sea'));
+      chatbot.preguntaActual.mockRejectedValue(new Error('base caida'));
+
+      await service.responder({
+        de: '573001112233',
+        texto: 'Hola',
+        wamid: 'wamid.X',
+      });
+
+      const salida = cola.add.mock.calls.at(-1) as [string, { texto: string }];
+      expect(salida[1].texto).toBe('No te entendi. Intenta de nuevo, por favor.');
     });
   });
 });

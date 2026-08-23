@@ -78,6 +78,18 @@ export class WhatsappService {
     return `${pregunta.texto}\n\n${opciones}`;
   }
 
+  private async reintento(sesionId: string) {
+    try {
+      const pregunta = await this.chatbot.preguntaActual(sesionId);
+      if (pregunta) {
+        return `No te entendi.\n\n${this.formatear(pregunta)}`;
+      }
+    } catch {
+      this.logger.warn(`No se pudo releer la pregunta de ${sesionId}`);
+    }
+    return 'No te entendi. Intenta de nuevo, por favor.';
+  }
+
   private async encolarSalida(destino: string, texto: string) {
     await this.cola.add('saliente', { destino, texto });
   }
@@ -122,7 +134,7 @@ export class WhatsappService {
     } catch (e) {
       const mensaje = e instanceof Error ? e.message : 'Hubo un problema';
       this.logger.warn(`Chatbot rechazo la respuesta: ${mensaje}`);
-      await this.encolarSalida(entrante.de, mensaje);
+      await this.encolarSalida(entrante.de, await this.reintento(abierto.sesion_id));
     }
   }
 }
