@@ -10,7 +10,7 @@ describe('WhatsappService', () => {
 
   const cola = { add: jest.fn() };
   const prisma = {
-    prospecto: { findFirst: jest.fn(), update: jest.fn() },
+    prospecto: { findFirst: jest.fn(), findMany: jest.fn(), update: jest.fn() },
   };
   const chatbot = {
     iniciar: jest.fn(),
@@ -348,6 +348,57 @@ describe('WhatsappService', () => {
 
       const salida = cola.add.mock.calls.at(-1) as [string, { texto: string }];
       expect(salida[1].texto).toBe('No te entendi. Intenta de nuevo, por favor.');
+    });
+  });
+
+  describe('cerrarInactivas', () => {
+    it('cierra la conversacion y se despide de quien dejo de responder', async () => {
+      prisma.prospecto.findMany.mockResolvedValue([
+        { id: 3, telefono: '573001112233' },
+      ]);
+
+      const cerradas = await service.cerrarInactivas();
+
+      expect(cerradas).toBe(1);
+
+      const datos = (
+        prisma.prospecto.update.mock.calls as Array<
+          [{ data: Record<string, unknown> }]
+        >
+      )[0][0].data;
+      expect(datos.pregunta_actual).toBe('FIN');
+      expect(datos.estado).toBe('abandonado');
+      expect(datos.fecha_finalizacion).toBeInstanceOf(Date);
+
+      const [nombre, trabajo] = cola.add.mock.calls.at(-1) as [
+        string,
+        { destino: string; texto: string },
+      ];
+      expect(nombre).toBe('saliente');
+      expect(trabajo.destino).toBe('573001112233');
+      expect(trabajo.texto).toMatch(/cerramos esta conversacion/);
+    });
+
+    it('cierra igual al prospecto sin telefono, pero no le encola nada', async () => {
+      prisma.prospecto.findMany.mockResolvedValue([{ id: 4, telefono: null }]);
+
+      await service.cerrarInactivas();
+
+      expect(prisma.prospecto.update).toHaveBeenCalled();
+      expect(cola.add).not.toHaveBeenCalled();
+    });
+
+    it('solo mira conversaciones de whatsapp que sigan abiertas', async () => {
+      prisma.prospecto.findMany.mockResolvedValue([]);
+
+      await service.cerrarInactivas();
+
+      const [args] = prisma.prospecto.findMany.mock.calls[0] as [
+        { where: Record<string, unknown> },
+      ];
+      expect(args.where.canal_origen).toBe('whatsapp');
+      expect(args.where.pregunta_actual).toEqual({ not: 'FIN' });
+      expect(args.where.ultima_actividad).toHaveProperty('lt');
     });
   });
 });

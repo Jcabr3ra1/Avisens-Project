@@ -6,6 +6,7 @@ import { COLA_WHATSAPP } from './whatsapp.tipos';
 import { WhatsappController } from './whatsapp.controller';
 import { WhatsappSender } from './whatsapp.sender';
 import { WhatsappService } from './whatsapp.service';
+import { WhatsappInactividadJob } from './whatsapp.inactividad.job';
 import { FirmaMetaGuard } from './firma-meta.guard';
 
 @Module({
@@ -15,6 +16,7 @@ import { FirmaMetaGuard } from './firma-meta.guard';
     WhatsappSender,
     WhatsappService,
     WhatsappProcessor,
+    WhatsappInactividadJob,
     FirmaMetaGuard,
   ],
   exports: [BullModule],

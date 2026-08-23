@@ -9,6 +9,13 @@ import {
   TrabajoMensaje,
 } from './whatsapp.tipos';
 
+const FIN = 'FIN';
+const HORAS_INACTIVIDAD = Number(process.env.WHATSAPP_HORAS_INACTIVIDAD ?? 24);
+const DESPEDIDA =
+  'No recibimos tu respuesta, asi que cerramos esta conversacion por ahora. ' +
+  'Cuando quieras retomar tu cotizacion escribenos de nuevo y seguimos donde ' +
+  'quedamos. Gracias por tu interes en Avisens.';
+
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
@@ -78,6 +85,42 @@ export class WhatsappService {
     return `${pregunta.texto}\n\n${opciones}`;
   }
 
+  async cerrarInactivas() {
+    const limite = new Date(Date.now() - HORAS_INACTIVIDAD * 3600_000);
+
+    const abandonadas = await this.prisma.prospecto.findMany({
+      where: {
+        canal_origen: 'whatsapp',
+        pregunta_actual: { not: FIN },
+        ultima_actividad: { lt: limite },
+      },
+      select: { id: true, telefono: true },
+    });
+
+    for (const prospecto of abandonadas) {
+      await this.prisma.prospecto.update({
+        where: { id: prospecto.id },
+        data: {
+          pregunta_actual: FIN,
+          estado: 'abandonado',
+          fecha_finalizacion: new Date(),
+        },
+      });
+
+      if (prospecto.telefono) {
+        await this.encolarSalida(prospecto.telefono, DESPEDIDA);
+      }
+    }
+
+    if (abandonadas.length) {
+      this.logger.log(
+        `Cerradas ${abandonadas.length} conversaciones sin respuesta en ${HORAS_INACTIVIDAD}h`,
+      );
+    }
+
+    return abandonadas.length;
+  }
+
   private async reintento(sesionId: string) {
     try {
       const pregunta = await this.chatbot.preguntaActual(sesionId);
@@ -104,7 +147,7 @@ export class WhatsappService {
       where: {
         telefono: entrante.de,
         canal_origen: 'whatsapp',
-        pregunta_actual: { not: 'FIN' },
+        pregunta_actual: { not: FIN },
       },
       orderBy: { fecha_inicio: 'desc' },
       select: { sesion_id: true },

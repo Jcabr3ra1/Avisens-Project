@@ -672,6 +672,7 @@ model Prospecto {
   user_agent                 String?
   consentimiento_habeas_data Boolean   @default(false)
   fecha_inicio               DateTime  @default(now())
+  ultima_actividad           DateTime  @default(now()) @updatedAt
   fecha_finalizacion         DateTime?
 
   asesor        Usuario?             @relation(fields: [asesor_asignado_id], references: [id])
