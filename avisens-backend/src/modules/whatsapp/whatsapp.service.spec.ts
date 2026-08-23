@@ -404,4 +404,62 @@ describe('WhatsappService', () => {
       expect(args.where.ultima_actividad).toHaveProperty('lt');
     });
   });
+
+  describe('mensajes de cierre segun la especificacion', () => {
+    const mensaje = {
+      de: '573001112233',
+      texto: 'Sí',
+      wamid: 'wamid.CIERRE',
+    };
+
+    const cerrarCon = async (r: Record<string, unknown>) => {
+      prisma.prospecto.findFirst.mockResolvedValue({ sesion_id: 'uuid-9' });
+      chatbot.responder.mockResolvedValue({ finalizado: true, pregunta: null, ...r });
+
+      await service.responder(mensaje);
+
+      const [, datos] = argsDe(cola.add) as [string, { texto: string }];
+      return datos.texto;
+    };
+
+    it('al lead caliente le anuncia la visita tecnica en 24 horas', async () => {
+      const texto = await cerrarCon({
+        clasificacion: 'caliente',
+        accion_siguiente: 'VISITA_PRESENCIAL',
+      });
+      expect(texto).toMatch(/cotización personalizada/);
+      expect(texto).toMatch(/visita técnica/);
+    });
+
+    it('al lead tibio le ofrece la demostracion remota', async () => {
+      const texto = await cerrarCon({
+        clasificacion: 'tibio',
+        accion_siguiente: 'DEMO_REMOTA',
+      });
+      expect(texto).toMatch(/demostración remota/);
+    });
+
+    it('al lead frio le anuncia contenido de valor', async () => {
+      const texto = await cerrarCon({
+        clasificacion: 'frio',
+        accion_siguiente: 'SEGUIMIENTO_AUTOMATIZADO',
+      });
+      expect(texto).toMatch(/información útil/);
+    });
+
+    it('el callback del decisor manda sobre la clasificacion por puntaje', async () => {
+      const texto = await cerrarCon({
+        clasificacion: 'caliente',
+        accion_siguiente: 'CALLBACK_DECISOR',
+      });
+      expect(texto).toMatch(/dentro de 48 horas/);
+      expect(texto).not.toMatch(/visita técnica/);
+    });
+
+    it('a quien no autoriza no se le habla de cotizacion', async () => {
+      const texto = await cerrarCon({ clasificacion: 'sin_consentimiento' });
+      expect(texto).toMatch(/no podemos continuar con la cotización/);
+      expect(texto).not.toMatch(/estamos generando/);
+    });
+  });
 });

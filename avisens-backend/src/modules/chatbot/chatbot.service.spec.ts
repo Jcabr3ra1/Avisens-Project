@@ -506,4 +506,116 @@ describe('ChatbotService', () => {
       expect(prisma.solicitudPqrs.create).not.toHaveBeenCalled();
     });
   });
+
+  describe('reglas de negocio de la especificacion', () => {
+    const cerrarCon = async (
+      respuestas: Array<{ bloque: string; codigo_pregunta: string; respuesta_texto: string }>,
+      puntaje: number,
+    ) => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ siguiente: 'FIN' }),
+      );
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: puntaje },
+      });
+      prisma.respuestaChatbot.findMany.mockResolvedValue(respuestas);
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Sí',
+      });
+
+      return ultimosDatos(prisma.prospecto.update);
+    };
+
+    const A = (codigo: string, texto: string) => ({
+      bloque: 'A',
+      codigo_pregunta: codigo,
+      respuesta_texto: texto,
+    });
+
+    it('un lead caliente se enruta a visita presencial', async () => {
+      const datos = await cerrarCon([A('A20', 'Sí')], 14);
+      expect(datos.clasificacion).toBe('caliente');
+      expect(datos.accion_siguiente).toBe('VISITA_PRESENCIAL');
+    });
+
+    it('un lead tibio se enruta a demostracion remota', async () => {
+      const datos = await cerrarCon([A('A20', 'Sí')], 9);
+      expect(datos.clasificacion).toBe('tibio');
+      expect(datos.accion_siguiente).toBe('DEMO_REMOTA');
+    });
+
+    it('un lead frio se enruta a seguimiento automatizado', async () => {
+      const datos = await cerrarCon([A('A20', 'Sí')], 4);
+      expect(datos.clasificacion).toBe('frio');
+      expect(datos.accion_siguiente).toBe('SEGUIMIENTO_AUTOMATIZADO');
+    });
+
+    it('sin poder de decision prima el callback sobre el puntaje', async () => {
+      const datos = await cerrarCon([A('A20', 'No')], 15);
+
+      expect(datos.clasificacion).toBe('caliente');
+      expect(datos.accion_siguiente).toBe('CALLBACK_DECISOR');
+      expect(datos.fecha_callback).toBeInstanceOf(Date);
+    });
+
+    it('el callback queda programado a 48 horas', async () => {
+      const antes = Date.now();
+      const datos = await cerrarCon([A('A20', 'No')], 5);
+
+      const fecha = datos.fecha_callback as Date;
+      const horas = (fecha.getTime() - antes) / 3600000;
+      expect(horas).toBeGreaterThan(47.9);
+      expect(horas).toBeLessThan(48.1);
+    });
+
+    it('quien si decide no queda con callback programado', async () => {
+      const datos = await cerrarCon([A('A20', 'Sí')], 5);
+      expect(datos.fecha_callback).toBeUndefined();
+    });
+
+    it('la zona rural sin senal se registra sin descartar al prospecto', async () => {
+      const datos = await cerrarCon(
+        [A('A20', 'Sí'), A('A13', 'No, zona rural sin señal')],
+        13,
+      );
+
+      expect(datos.conectividad_limitada).toBe(true);
+      expect(datos.clasificacion).toBe('caliente');
+      expect(datos.accion_siguiente).toBe('VISITA_PRESENCIAL');
+    });
+
+    it('la conectividad estable no marca la condicion', async () => {
+      const datos = await cerrarCon(
+        [A('A20', 'Sí'), A('A13', 'Sí, estable')],
+        13,
+      );
+      expect(datos.conectividad_limitada).toBe(false);
+    });
+
+    it('la mortalidad ambiental repetida marca senal caliente', async () => {
+      const datos = await cerrarCon(
+        [A('A20', 'Sí'), A('A16', 'Sí, más de una vez')],
+        8,
+      );
+      expect(datos.senal_caliente).toBe(true);
+    });
+
+    it('una problematica descrita en texto libre tambien marca senal caliente', async () => {
+      const datos = await cerrarCon(
+        [A('A20', 'Sí'), A('A16', 'No'), A('A14', 'Se me mueren por calor')],
+        8,
+      );
+      expect(datos.senal_caliente).toBe(true);
+    });
+
+    it('sin dolor declarado no se marca senal caliente', async () => {
+      const datos = await cerrarCon(
+        [A('A20', 'Sí'), A('A16', 'No'), A('A14', '   ')],
+        8,
+      );
+      expect(datos.senal_caliente).toBe(false);
+    });
+  });
 });
