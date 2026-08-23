@@ -16,9 +16,34 @@ const DESPEDIDA =
   'Cuando quieras retomarla escríbenos de nuevo y con gusto te atendemos. ' +
   'Gracias por tu interés en AVISENS.';
 
-const CIERRE_COTIZACION =
-  '¡Listo! Con esto tenemos lo necesario para preparar tu cotización.\n\n' +
-  'Un asesor de AVISENS se comunicará contigo pronto. Gracias por tu tiempo.';
+const CIERRE_BASE =
+  'Gracias por tu tiempo. Con la información de tu granja estamos generando ' +
+  'una cotización personalizada de AVISENS que recibirás en breve por ' +
+  'WhatsApp o correo.';
+
+// Textos definidos por la especificacion del 16/08/2026, uno por resultado.
+const CIERRE_POR_RESULTADO: Record<string, string> = {
+  caliente:
+    '¡Tu granja es un candidato ideal para AVISENS! Un asesor comercial te ' +
+    'contactará en las próximas 24 horas para coordinar una visita técnica y ' +
+    'afinar tu propuesta.',
+  tibio:
+    'AVISENS puede aportar mucho a tu operación. Te invitaremos a una ' +
+    'demostración remota para que veas la plataforma en acción y resolvamos ' +
+    'tus dudas antes de avanzar.',
+  frio:
+    'Gracias por conocer AVISENS. Te enviaremos información útil sobre ' +
+    'monitoreo y bienestar avícola y quedaremos atentos para cuando decidas ' +
+    'dar el siguiente paso.',
+  CALLBACK_DECISOR:
+    'Gracias por tu interés. Como la decisión de compra recae en otra ' +
+    'persona, un asesor te escribirá dentro de 48 horas para retomar el ' +
+    'proceso con el responsable.',
+  sin_consentimiento:
+    'Entendido. Sin tu autorización para el tratamiento de datos no podemos ' +
+    'continuar con la cotización. Si cambias de opinión, escríbenos cuando lo ' +
+    'desees.',
+};
 
 const CIERRE_PQRS =
   '¡Listo! Tu solicitud quedó radicada.\n\n' +
@@ -130,6 +155,25 @@ export class WhatsappService {
     return abandonadas.length;
   }
 
+  private cierre(r: {
+    clasificacion: string | null;
+    accion_siguiente?: string | null;
+  }) {
+    if (r.clasificacion === 'pqrs') return CIERRE_PQRS;
+
+    // El callback por falta de decisor manda sobre la clasificacion por puntaje.
+    const clave =
+      r.accion_siguiente === 'CALLBACK_DECISOR'
+        ? 'CALLBACK_DECISOR'
+        : (r.clasificacion ?? '');
+
+    const especifico = CIERRE_POR_RESULTADO[clave];
+    if (!especifico) return CIERRE_BASE;
+    if (clave === 'sin_consentimiento') return especifico;
+
+    return `${CIERRE_BASE}\n\n${especifico}`;
+  }
+
   private async reintento(sesionId: string) {
     try {
       const pregunta = await this.chatbot.preguntaActual(sesionId);
@@ -179,9 +223,7 @@ export class WhatsappService {
       });
 
       const texto = r.finalizado
-        ? r.clasificacion === 'pqrs'
-          ? CIERRE_PQRS
-          : CIERRE_COTIZACION
+        ? this.cierre(r)
         : this.formatear(r.pregunta);
 
       await this.encolarSalida(entrante.de, texto);

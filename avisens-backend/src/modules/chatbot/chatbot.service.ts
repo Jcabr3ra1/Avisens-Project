@@ -15,6 +15,16 @@ const FIN = 'FIN';
 
 const UMBRAL_CALIENTE = 12;
 const UMBRAL_TIBIO = 7;
+
+const VISITA_PRESENCIAL = 'VISITA_PRESENCIAL';
+const DEMO_REMOTA = 'DEMO_REMOTA';
+const SEGUIMIENTO_AUTOMATIZADO = 'SEGUIMIENTO_AUTOMATIZADO';
+const CALLBACK_DECISOR = 'CALLBACK_DECISOR';
+
+const HORAS_CALLBACK = 48;
+const SIN_SENAL = 'No, zona rural sin señal';
+const NO_DECIDE = 'No';
+const DOLOR = ['Sí, más de una vez', 'Una vez'];
 const SIN_CONSENTIMIENTO = 'sin_consentimiento';
 
 @Injectable()
@@ -93,8 +103,13 @@ export class ChatbotService {
       pregunta_actual: siguiente,
     };
     if (pregunta.campo_prospecto && valor !== '') {
+      // En las de si/no el texto de la opcion lo fija la especificacion
+      // ("Sí autorizo" / "No autorizo"), asi que la negacion se detecta por el
+      // inicio de la respuesta y no comparando contra un literal exacto.
       datosProspecto[pregunta.campo_prospecto] =
-        pregunta.tipo === 'si_no' ? respuesta === 'Sí' : valor;
+        pregunta.tipo === 'si_no'
+          ? !/^no\b/i.test(respuesta.trim())
+          : valor;
     }
 
     await this.prisma.prospecto.update({
@@ -264,20 +279,25 @@ export class ChatbotService {
       const porCodigo = new Map(
         respuestas.map((r) => [r.codigo_pregunta, r.respuesta_texto]),
       );
-      await this.prisma.solicitudPqrs.create({
-        data: {
-          prospecto_id: prospectoId,
-          categoria: porCodigo.get('B1') ?? 'Petición',
-          asunto: porCodigo.get('B2'),
-          mensaje: porCodigo.get('B3'),
-          estado: 'abierta',
-        },
-      });
+
+      // Solo se radica si la persona pidio que registraramos su caso (B2/B3).
+      // Consultar una pregunta frecuente no debe generar un ticket vacio.
+      if (porCodigo.has('B2')) {
+        await this.prisma.solicitudPqrs.create({
+          data: {
+            prospecto_id: prospectoId,
+            categoria: porCodigo.get('B1') ?? 'Petición',
+            asunto: porCodigo.get('B2'),
+            mensaje: porCodigo.get('B3'),
+            estado: 'abierta',
+          },
+        });
+      }
 
       const cerrado = await this.prisma.prospecto.update({
         where: { id: prospectoId },
         data: {
-          estado: 'pqrs',
+          estado: porCodigo.has('B2') ? 'pqrs' : 'consulta_atendida',
           pregunta_actual: FIN,
           fecha_finalizacion: new Date(),
         },
@@ -330,14 +350,45 @@ export class ChatbotService {
           ? 'tibio'
           : 'frio';
 
+    const porCodigo = new Map(
+      respuestas.map((r) => [r.codigo_pregunta, r.respuesta_texto]),
+    );
+
+    // Regla previa del documento: sin poder de decision el lead no se enruta
+    // por puntaje, se agenda callback con el responsable de compra.
+    const decide = porCodigo.get('A20') !== NO_DECIDE;
+
+    const accion = !decide
+      ? CALLBACK_DECISOR
+      : clasificacion === 'caliente'
+        ? VISITA_PRESENCIAL
+        : clasificacion === 'tibio'
+          ? DEMO_REMOTA
+          : SEGUIMIENTO_AUTOMATIZADO;
+
+    const dolor =
+      DOLOR.includes(porCodigo.get('A16') ?? '') ||
+      !!porCodigo.get('A14')?.trim() ||
+      !!porCodigo.get('A15')?.trim();
+
     const prospecto = await this.prisma.prospecto.update({
       where: { id: prospectoId },
       data: {
         puntaje_total: puntaje,
         clasificacion,
+        accion_siguiente: accion,
+        senal_caliente: dolor,
+        conectividad_limitada: porCodigo.get('A13') === SIN_SENAL,
         estado: 'calificado',
         pregunta_actual: FIN,
         fecha_finalizacion: new Date(),
+        ...(decide
+          ? {}
+          : {
+              fecha_callback: new Date(
+                Date.now() + HORAS_CALLBACK * 60 * 60 * 1000,
+              ),
+            }),
       },
     });
 
@@ -347,6 +398,7 @@ export class ChatbotService {
       finalizado: true,
       puntaje_total: puntaje as number | null,
       clasificacion: clasificacion as string | null,
+      accion_siguiente: accion as string | null,
     };
   }
 }
