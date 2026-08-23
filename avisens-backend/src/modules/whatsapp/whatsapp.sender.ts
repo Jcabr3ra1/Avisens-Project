@@ -4,9 +4,17 @@ const PROVEDOR = process.env.WHATSAPP_PROVIDER ?? 'simulado';
 const VERSION = process.env.WHATSAPP_API_VERSION ?? 'v25.0';
 const TIMEOUT_MS = 8000;
 
+const BSUID = /^[A-Z]{2}\.\d+$/;
+
 @Injectable()
 export class WhatsappSender {
   private readonly logger = new Logger(WhatsappSender.name);
+
+  private destinatario(destino: string) {
+    return BSUID.test(destino)
+      ? { recipient_type: 'individual', recipient: destino }
+      : { to: destino };
+  }
 
   async enviarTexto(destino: string, texto: string): Promise<boolean> {
     if (PROVEDOR === 'simulado') {
@@ -34,7 +42,7 @@ export class WhatsappSender {
           },
           body: JSON.stringify({
             messaging_product: 'whatsapp',
-            to: destino,
+            ...this.destinatario(destino),
             type: 'text',
             text: { preview_url: false, body: texto },
           }),

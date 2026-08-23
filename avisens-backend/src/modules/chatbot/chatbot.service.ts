@@ -7,7 +7,6 @@ import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { IniciarChatDto } from './dto/iniciar-chat.dto';
 import { ResponderChatDto } from './dto/responder-chat.dto';
-import { ChatbotNluService } from './chatbot.nlu.service';
 
 const PRIMERA_PREGUNTA = 'A1';
 const PRIMERA_PREGUNTA_PQRS = 'B1';
@@ -22,7 +21,6 @@ const SIN_CONSENTIMIENTO = 'sin_consentimiento';
 export class ChatbotService {
   constructor(
     private prisma: PrismaService,
-    private nlu: ChatbotNluService,
   ) {}
 
   async iniciar(dto: IniciarChatDto) {
@@ -65,8 +63,7 @@ export class ChatbotService {
 
     const pregunta = await this.obtenerPregunta(prospecto.pregunta_actual);
 
-    const interpretada = await this.nlu.interpretar(pregunta, dto.respuesta);
-    const respuesta = interpretada ?? dto.respuesta;
+    const respuesta = this.normalizarRespuesta(pregunta, dto.respuesta);
 
     const valor = this.validarRespuesta(pregunta, respuesta);
     const puntaje = pregunta.puntua
@@ -187,6 +184,34 @@ export class ChatbotService {
       opciones: pregunta.opciones as string[] | null,
     };
   }
+  private sinTildes(texto: string) {
+    return texto
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+  }
+
+  private normalizarRespuesta(
+    pregunta: { tipo: string; opciones: unknown },
+    respuesta: string,
+  ) {
+    const opciones = pregunta.opciones as string[] | null;
+    if (!opciones?.length) return respuesta.trim();
+
+    const texto = respuesta.trim();
+
+    const indice = Number(texto);
+    if (Number.isInteger(indice) && indice >= 1 && indice <= opciones.length) {
+      return opciones[indice - 1];
+    }
+
+    const buscado = this.sinTildes(texto);
+    return (
+      opciones.find((o) => this.sinTildes(o) === buscado) ?? texto
+    );
+  }
+
   private validarRespuesta(
     pregunta: { tipo: string; opciones: unknown; codigo: string },
     respuesta: string,
