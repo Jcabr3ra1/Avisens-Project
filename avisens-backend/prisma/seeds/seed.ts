@@ -447,10 +447,12 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'nombre',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A3',
+    siguiente: 'A6',
     saltos: null,
   },
   {
+    // Fuera del recorrido: el documento no hace falta para cotizar y no lo usa
+    // ningun modulo. Se pide al formalizar (contrato o factura), no antes.
     codigo: 'A3',
     bloque: 'A',
     orden: 3,
@@ -462,6 +464,7 @@ const PREGUNTAS_CHATBOT = [
     puntua: false,
     siguiente: 'A4',
     saltos: null,
+    activa: false,
   },
   {
     codigo: 'A4',
@@ -487,7 +490,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'email',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A6',
+    siguiente: 'FIN',
     saltos: null,
   },
   {
@@ -544,7 +547,7 @@ const PREGUNTAS_CHATBOT = [
     omitir_si_canal: null,
     puntua: true,
     siguiente: 'A10',
-    saltos: null,
+    saltos: { 'No, aún no lo construyo': 'A12' },
   },
   {
     codigo: 'A10',
@@ -556,7 +559,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'area_galpon_m2',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A11',
+    siguiente: 'A12',
     saltos: null,
   },
   {
@@ -574,7 +577,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
-    siguiente: 'A12',
+    siguiente: 'A13',
     saltos: null,
   },
   {
@@ -587,7 +590,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'area_granja_m2',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A13',
+    siguiente: 'A11',
     saltos: null,
   },
   {
@@ -600,7 +603,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
-    siguiente: 'A14',
+    siguiente: 'A15',
     saltos: null,
   },
 
@@ -614,7 +617,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'rol_prospecto',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A15',
+    siguiente: 'A16',
     saltos: null,
   },
   {
@@ -627,7 +630,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'tipo_produccion',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A16',
+    siguiente: 'A14',
     saltos: null,
   },
   {
@@ -690,7 +693,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
-    siguiente: 'FIN',
+    siguiente: 'A4',
     saltos: null,
   },
 

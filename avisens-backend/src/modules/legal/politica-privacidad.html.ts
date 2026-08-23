@@ -67,7 +67,7 @@ export const POLITICA_PRIVACIDAD_HTML = `<!doctype html>
   voluntaria durante la conversación:
 </p>
 <ul>
-  <li>Nombre y documento de identidad</li>
+  <li>Nombre</li>
   <li>Teléfono y correo electrónico</li>
   <li>Municipio</li>
   <li>Nombre de la granja, tipo de producción y área en metros cuadrados</li>
