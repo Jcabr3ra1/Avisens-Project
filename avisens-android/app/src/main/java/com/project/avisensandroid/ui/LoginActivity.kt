@@ -1,4 +1,4 @@
-package com.project.avisensandroid
+package com.project.avisensandroid.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -7,7 +7,10 @@ import android.text.method.PasswordTransformationMethod
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.project.avisensandroid.R
+import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.ActivityLoginBinding
+import com.project.avisensandroid.model.LoginRequest
 import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {

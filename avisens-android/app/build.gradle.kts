@@ -38,6 +38,7 @@ android {
 dependencies {
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)
+    implementation("androidx.fragment:fragment-ktx:1.8.9")
     implementation(libs.androidx.constraintlayout)
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.retrofit2:retrofit:2.11.0")

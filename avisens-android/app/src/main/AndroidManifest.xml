@@ -14,7 +14,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Avisensandroid">
         <activity
-            android:name=".LoginActivity"
+            android:name=".ui.LoginActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -24,7 +24,7 @@
         </activity>
 
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
