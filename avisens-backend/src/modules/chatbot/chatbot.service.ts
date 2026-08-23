@@ -15,6 +15,7 @@ const PRIMERA_PREGUNTA_PQRS = 'B1';
 const RUTA_PQRS = 'general';
 const FIN = 'FIN';
 const CONFIRMAR = 'CONFIRMAR';
+const CAMPOS_NUMERICOS = new Set(['area_granja_m2', 'area_galpon_m2']);
 
 const UMBRAL_CALIENTE = 12;
 const UMBRAL_TIBIO = 7;
@@ -76,6 +77,7 @@ export class ChatbotService {
       pregunta: this.formatearPregunta(pregunta),
       mensaje_transicion: null as string | null,
       progreso: 0 as number | null,
+      total_pasos: null as number | null,
       finalizado: false,
       puntaje_total: null as number | null,
       clasificacion: null as string | null,
@@ -107,6 +109,7 @@ export class ChatbotService {
         pregunta: this.formatearPregunta(pregunta),
         mensaje_transicion: '✏️ Entendido. Vamos a revisar tus datos desde el principio.',
         progreso: null as number | null,
+        total_pasos: null as number | null,
         finalizado: false,
         puntaje_total: null as number | null,
         clasificacion: null as string | null,
@@ -148,7 +151,10 @@ export class ChatbotService {
       datosProspecto[pregunta.campo_prospecto] =
         pregunta.tipo === 'si_no'
           ? !/^no\b/i.test(respuesta.trim())
-          : valor;
+          : pregunta.tipo === 'opcion_unica' &&
+              CAMPOS_NUMERICOS.has(pregunta.campo_prospecto)
+            ? this.metrosDeRango(respuesta)
+            : valor;
     }
 
     await this.prisma.prospecto.update({
@@ -174,6 +180,7 @@ export class ChatbotService {
           },
           mensaje_transicion: null as string | null,
           progreso: null as number | null,
+          total_pasos: null as number | null,
           finalizado: false,
           puntaje_total: null as number | null,
           clasificacion: null as string | null,
@@ -190,6 +197,7 @@ export class ChatbotService {
       pregunta: this.formatearPregunta(await this.obtenerPregunta(siguiente)),
       mensaje_transicion: mensajeTransicion,
       progreso: respondidas,
+      total_pasos: await this.totalPasos(),
       finalizado: false,
       puntaje_total: null as number | null,
       clasificacion: null as string | null,
@@ -438,6 +446,7 @@ export class ChatbotService {
         > | null,
         mensaje_transicion: null as string | null,
         progreso: null as number | null,
+        total_pasos: null as number | null,
         finalizado: true,
         puntaje_total: null as number | null,
         clasificacion: 'pqrs' as string | null,
@@ -468,6 +477,7 @@ export class ChatbotService {
         > | null,
         mensaje_transicion: null as string | null,
         progreso: null as number | null,
+        total_pasos: null as number | null,
         finalizado: true,
         puntaje_total: null as number | null,
         clasificacion: SIN_CONSENTIMIENTO as string | null,
@@ -529,12 +539,35 @@ export class ChatbotService {
       pregunta: null as ReturnType<ChatbotService['formatearPregunta']> | null,
       mensaje_transicion: null as string | null,
       progreso: null as number | null,
+      total_pasos: null as number | null,
       finalizado: true,
       puntaje_total: puntaje as number | null,
       clasificacion: clasificacion as string | null,
       accion_siguiente: accion as string | null,
       cotizacion: decide ? await this.generarCotizacion(prospecto.id) : null,
     };
+  }
+
+  // Las preguntas de area ofrecen rangos para no obligar a teclear, pero la
+  // columna es numerica y la cotizacion calcula sensores con ella. Se toma el
+  // punto medio del rango; quien necesite precision escoge "Otro, lo escribo".
+  // El total se cuenta desde la tabla y solo sobre los codigos canonicos del
+  // documento (A1..A19): las ramas alternas como A5B no son pasos adicionales
+  // para quien las recorre.
+  private async totalPasos() {
+    return this.prisma.preguntaChatbot.count({
+      where: { bloque: 'A', activa: true, codigo: { not: { contains: 'B' } } },
+    });
+  }
+
+  private metrosDeRango(respuesta: string) {
+    const numeros = (respuesta.match(/\d[\d.]*/g) ?? []).map((n) =>
+      Number(n.replace(/\./g, '')),
+    );
+
+    if (!numeros.length) return null;
+    if (numeros.length === 1) return numeros[0];
+    return Math.round((numeros[0] + numeros[1]) / 2);
   }
 
   private async generarCotizacion(prospectoId: number) {
