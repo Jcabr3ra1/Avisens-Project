@@ -64,6 +64,47 @@ describe('WhatsappSender', () => {
     });
   });
 
+  it('a un BSUID le manda recipient y omite el to', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+    global.fetch = fetchMock;
+
+    const sender = cargarCon({
+      WHATSAPP_PROVIDER: 'meta',
+      WHATSAPP_API_VERSION: 'v25.0',
+      WHATSAPP_PHONE_NUMBER_ID: '999',
+      WHATSAPP_ACCESS_TOKEN: 'token-x',
+    });
+    const ok = await sender.enviarTexto('CO.1639897497563370', 'hola');
+
+    expect(ok).toBe(true);
+    const [, opciones] = fetchMock.mock.calls[0] as [string, { body: string }];
+    expect(JSON.parse(opciones.body)).toEqual({
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      recipient: 'CO.1639897497563370',
+      type: 'text',
+      text: { preview_url: false, body: 'hola' },
+    });
+  });
+
+  it('un telefono normal sigue viajando en to, sin recipient', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+    global.fetch = fetchMock;
+
+    const sender = cargarCon({
+      WHATSAPP_PROVIDER: 'meta',
+      WHATSAPP_PHONE_NUMBER_ID: '999',
+      WHATSAPP_ACCESS_TOKEN: 'token-x',
+    });
+    await sender.enviarTexto('573001112233', 'hola');
+
+    const [, opciones] = fetchMock.mock.calls[0] as [string, { body: string }];
+    const cuerpo = JSON.parse(opciones.body) as Record<string, unknown>;
+    expect(cuerpo.to).toBe('573001112233');
+    expect(cuerpo).not.toHaveProperty('recipient');
+    expect(cuerpo).not.toHaveProperty('recipient_type');
+  });
+
   it('devuelve false cuando faltan las credenciales', async () => {
     global.fetch = jest.fn();
 

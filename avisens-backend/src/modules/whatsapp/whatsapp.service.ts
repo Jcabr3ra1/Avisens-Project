@@ -9,6 +9,22 @@ import {
   TrabajoMensaje,
 } from './whatsapp.tipos';
 
+const FIN = 'FIN';
+const HORAS_INACTIVIDAD = Number(process.env.WHATSAPP_HORAS_INACTIVIDAD ?? 24);
+const DESPEDIDA =
+  'No recibimos tu respuesta, así que cerramos esta conversación por ahora.\n\n' +
+  'Cuando quieras retomarla escríbenos de nuevo y con gusto te atendemos. ' +
+  'Gracias por tu interés en AVISENS.';
+
+const CIERRE_COTIZACION =
+  '¡Listo! Con esto tenemos lo necesario para preparar tu cotización.\n\n' +
+  'Un asesor de AVISENS se comunicará contigo pronto. Gracias por tu tiempo.';
+
+const CIERRE_PQRS =
+  '¡Listo! Tu solicitud quedó radicada.\n\n' +
+  'Le haremos seguimiento y te responderemos por este mismo medio. ' +
+  'Gracias por escribirnos.';
+
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
@@ -21,6 +37,7 @@ export class WhatsappService {
 
   async encolarEntrantes(cuerpo: unknown) {
     for (const mensaje of this.extraer(cuerpo)) {
+      this.logger.log(`Entrante ${mensaje.wamid} de ${mensaje.de}`);
       await this.cola.add('entrante', mensaje as unknown as TrabajoMensaje, {
         jobId: mensaje.wamid,
       });
@@ -36,16 +53,29 @@ export class WhatsappService {
     for (const entrada of entradas) {
       for (const cambio of entrada.changes ?? []) {
         const valor = cambio.value as {
+          contacts?: Array<{ wa_id?: string; user_id?: string }>;
           messages?: Array<{
             id: string;
-            from: string;
+            from?: string;
+            from_user_id?: string;
             type: string;
             text?: { body: string };
           }>;
         };
+        const contacto = valor?.contacts?.[0];
+        const respaldo = contacto?.wa_id ?? contacto?.user_id;
         for (const m of valor?.messages ?? []) {
           if (m.type !== 'text' || !m.text?.body) continue;
-          mensajes.push({ de: m.from, texto: m.text.body, wamid: m.id });
+
+          const de = m.from ?? m.from_user_id ?? respaldo;
+          if (!de) {
+            this.logger.warn(
+              `Mensaje ${m.id} sin remitente: se descarta para no engancharlo a otra conversacion`,
+            );
+            continue;
+          }
+
+          mensajes.push({ de, texto: m.text.body, wamid: m.id });
         }
       }
     }
@@ -55,7 +85,7 @@ export class WhatsappService {
   private formatear(
     pregunta: { texto: string; opciones: string[] | null } | null,
   ): string {
-    if (!pregunta) return 'Conversacion finalizada.';
+    if (!pregunta) return 'Conversación finalizada.';
     if (!pregunta.opciones?.length) return pregunta.texto;
 
     const opciones = pregunta.opciones
@@ -64,15 +94,69 @@ export class WhatsappService {
     return `${pregunta.texto}\n\n${opciones}`;
   }
 
+  async cerrarInactivas() {
+    const limite = new Date(Date.now() - HORAS_INACTIVIDAD * 3600_000);
+
+    const abandonadas = await this.prisma.prospecto.findMany({
+      where: {
+        canal_origen: 'whatsapp',
+        pregunta_actual: { not: FIN },
+        ultima_actividad: { lt: limite },
+      },
+      select: { id: true, telefono: true },
+    });
+
+    for (const prospecto of abandonadas) {
+      await this.prisma.prospecto.update({
+        where: { id: prospecto.id },
+        data: {
+          pregunta_actual: FIN,
+          estado: 'abandonado',
+          fecha_finalizacion: new Date(),
+        },
+      });
+
+      if (prospecto.telefono) {
+        await this.encolarSalida(prospecto.telefono, DESPEDIDA);
+      }
+    }
+
+    if (abandonadas.length) {
+      this.logger.log(
+        `Cerradas ${abandonadas.length} conversaciones sin respuesta en ${HORAS_INACTIVIDAD}h`,
+      );
+    }
+
+    return abandonadas.length;
+  }
+
+  private async reintento(sesionId: string) {
+    try {
+      const pregunta = await this.chatbot.preguntaActual(sesionId);
+      if (pregunta) {
+        return `No te entendí. Elige una de estas opciones:\n\n${this.formatear(pregunta)}`;
+      }
+    } catch {
+      this.logger.warn(`No se pudo releer la pregunta de ${sesionId}`);
+    }
+    return 'No te entendí. ¿Puedes intentarlo de nuevo, por favor?';
+  }
+
   private async encolarSalida(destino: string, texto: string) {
     await this.cola.add('saliente', { destino, texto });
   }
+
   async responder(entrante: MensajeEntrante) {
+    if (!entrante.de) {
+      this.logger.warn(`Mensaje ${entrante.wamid} sin remitente: se ignora`);
+      return;
+    }
+
     const abierto = await this.prisma.prospecto.findFirst({
       where: {
         telefono: entrante.de,
         canal_origen: 'whatsapp',
-        pregunta_actual: { not: 'FIN' },
+        pregunta_actual: { not: FIN },
       },
       orderBy: { fecha_inicio: 'desc' },
       select: { sesion_id: true },
@@ -95,14 +179,16 @@ export class WhatsappService {
       });
 
       const texto = r.finalizado
-        ? `Listo, gracias. Un asesor de Avisens se comunicara contigo pronto.`
+        ? r.clasificacion === 'pqrs'
+          ? CIERRE_PQRS
+          : CIERRE_COTIZACION
         : this.formatear(r.pregunta);
 
       await this.encolarSalida(entrante.de, texto);
     } catch (e) {
       const mensaje = e instanceof Error ? e.message : 'Hubo un problema';
       this.logger.warn(`Chatbot rechazo la respuesta: ${mensaje}`);
-      await this.encolarSalida(entrante.de, mensaje);
+      await this.encolarSalida(entrante.de, await this.reintento(abierto.sesion_id));
     }
   }
 }

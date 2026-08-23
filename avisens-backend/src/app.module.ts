@@ -7,6 +7,7 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
 import { GranjasModule } from './modules/granjas/granjas.module';
 import { GalponesModule } from './modules/galpones/galpones.module';
 import { HealthModule } from './modules/health/health.module';
+import { LegalModule } from './modules/legal/legal.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
@@ -94,6 +95,7 @@ import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
     ClimaModule,
     AlertasModule,
     HealthModule,
+    LegalModule,
     PoliticasAlertaModule,
     AlertasCanalesModule,
     EvidenciaAlertaModule,
