@@ -1,4 +1,4 @@
-package com.project.avisensandroid
+package com.project.avisensandroid.model
 
 data class LoginResponse(
     val id: Int,

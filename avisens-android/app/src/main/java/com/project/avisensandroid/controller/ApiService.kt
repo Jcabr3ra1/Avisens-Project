@@ -1,5 +1,8 @@
-package com.project.avisensandroid
+package com.project.avisensandroid.controller
 
+import com.project.avisensandroid.model.LoginRequest
+import com.project.avisensandroid.model.LoginResponse
+import com.project.avisensandroid.model.UserResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
