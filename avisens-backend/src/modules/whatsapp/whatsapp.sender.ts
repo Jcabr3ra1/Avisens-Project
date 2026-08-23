@@ -41,6 +41,8 @@ export class WhatsappSender {
       return false;
     }
 
+    await this.enviarTyping(phoneId, token, trabajo.destino);
+
     const payload = this.construirPayload(trabajo);
 
     try {
@@ -68,6 +70,30 @@ export class WhatsappSender {
       const mensaje = e instanceof Error ? e.message : 'error desconocido';
       this.logger.error(`No se pudo enviar a WhatsApp: ${mensaje}`);
       return false;
+    }
+  }
+
+  private async enviarTyping(phoneId: string, token: string, destino: string) {
+    try {
+      await fetch(
+        `https://graph.facebook.com/${VERSION}/${phoneId}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            ...this.destinatario(destino),
+            type: 'reaction',
+            reaction: { emoji: '', message_id: '' },
+          }),
+          signal: AbortSignal.timeout(3000),
+        },
+      );
+    } catch {
+      // Silenciar errores de typing indicator - es opcional y no debe bloquear el envío
     }
   }
 

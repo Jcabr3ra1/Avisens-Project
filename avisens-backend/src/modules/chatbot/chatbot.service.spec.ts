@@ -9,7 +9,7 @@ describe('ChatbotService', () => {
   const prisma = {
     prospecto: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     preguntaChatbot: { findFirst: jest.fn() },
-    respuestaChatbot: { create: jest.fn(), aggregate: jest.fn(), findMany: jest.fn() },
+    respuestaChatbot: { create: jest.fn(), aggregate: jest.fn(), findMany: jest.fn(), count: jest.fn() },
     matrizCalificacion: { findUnique: jest.fn() },
     solicitudPqrs: { create: jest.fn() },
   };
@@ -57,6 +57,7 @@ describe('ChatbotService', () => {
     prisma.prospecto.update.mockResolvedValue(enCurso);
     prisma.respuestaChatbot.create.mockResolvedValue({});
     prisma.respuestaChatbot.findMany.mockResolvedValue([]);
+    prisma.respuestaChatbot.count.mockResolvedValue(0);
     prisma.solicitudPqrs.create.mockResolvedValue({});
     prisma.preguntaChatbot.findFirst.mockResolvedValue(pregunta({}));
   });
@@ -117,7 +118,7 @@ describe('ChatbotService', () => {
 
     it('sigue el salto cuando la respuesta tiene uno definido', async () => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ saltos: { No: 'FIN' } }),
+        pregunta({ bloque: 'B', saltos: { No: 'FIN' } }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: 3 },
@@ -216,7 +217,7 @@ describe('ChatbotService', () => {
   describe('clasificacion al finalizar', () => {
     const finalizarCon = async (puntos: number | null) => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ siguiente: 'FIN' }),
+        pregunta({ bloque: 'B', siguiente: 'FIN' }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: puntos },
@@ -295,7 +296,7 @@ describe('ChatbotService', () => {
 
     it('sigue el salto usando la opcion resuelta, no lo que tecleo el usuario', async () => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ saltos: { No: 'FIN' } }),
+        pregunta({ bloque: 'B', saltos: { No: 'FIN' } }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: null },
@@ -389,7 +390,7 @@ describe('ChatbotService', () => {
         consentimiento_habeas_data: false,
       });
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ saltos: { No: 'FIN' } }),
+        pregunta({ bloque: 'B', saltos: { No: 'FIN' } }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: null },
@@ -412,7 +413,7 @@ describe('ChatbotService', () => {
     it('clasifica normalmente a quien si autorizo', async () => {
       prisma.prospecto.findUnique.mockResolvedValue(enCurso);
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ siguiente: 'FIN' }),
+        pregunta({ bloque: 'B', siguiente: 'FIN' }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: 14 },
@@ -492,7 +493,7 @@ describe('ChatbotService', () => {
 
     it('la ruta de cotizacion no radica PQRS', async () => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ siguiente: 'FIN' }),
+        pregunta({ bloque: 'B', siguiente: 'FIN' }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: 12 },
@@ -513,7 +514,7 @@ describe('ChatbotService', () => {
       puntaje: number,
     ) => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ siguiente: 'FIN' }),
+        pregunta({ bloque: 'B', siguiente: 'FIN' }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: puntaje },

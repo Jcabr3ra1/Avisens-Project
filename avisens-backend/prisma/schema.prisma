@@ -671,6 +671,7 @@ model Prospecto {
   conectividad_limitada      Boolean   @default(false)
   estado                     String    @default("nuevo")
   pregunta_actual            String?
+  ultima_pregunta            String?
   asesor_asignado_id         Int?
   ip_origen                  String?
   user_agent                 String?

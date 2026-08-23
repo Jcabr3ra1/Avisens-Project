@@ -60,7 +60,7 @@ describe('WhatsappSender', () => {
     const ok = await sender.enviarTexto('573001112233', 'hola');
 
     expect(ok).toBe(true);
-    const [url, opciones] = fetchMock.mock.calls[0] as [
+    const [url, opciones] = fetchMock.mock.calls[1] as [
       string,
       { headers: Record<string, string>; body: string; signal?: AbortSignal },
     ];
@@ -88,7 +88,7 @@ describe('WhatsappSender', () => {
     const ok = await sender.enviarTexto('CO.1639897497563370', 'hola');
 
     expect(ok).toBe(true);
-    const [, opciones] = fetchMock.mock.calls[0] as [string, { body: string }];
+    const [, opciones] = fetchMock.mock.calls[1] as [string, { body: string }];
     expect(JSON.parse(opciones.body)).toEqual({
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
@@ -109,7 +109,7 @@ describe('WhatsappSender', () => {
     });
     await sender.enviarTexto('573001112233', 'hola');
 
-    const [, opciones] = fetchMock.mock.calls[0] as [string, { body: string }];
+    const [, opciones] = fetchMock.mock.calls[1] as [string, { body: string }];
     const cuerpo = JSON.parse(opciones.body) as Record<string, unknown>;
     expect(cuerpo.to).toBe('573001112233');
     expect(cuerpo).not.toHaveProperty('recipient');
@@ -180,7 +180,7 @@ describe('WhatsappSender', () => {
     });
 
     expect(ok).toBe(true);
-    const [, opciones] = fetchMock.mock.calls[0] as [string, { body: string }];
+    const [, opciones] = fetchMock.mock.calls[1] as [string, { body: string }];
     const cuerpo = JSON.parse(opciones.body) as Record<string, unknown>;
     expect(cuerpo.type).toBe('interactive');
     const interactive = cuerpo.interactive as Record<string, unknown>;
@@ -215,7 +215,7 @@ describe('WhatsappSender', () => {
     });
 
     expect(ok).toBe(true);
-    const [, opciones] = fetchMock.mock.calls[0] as [string, { body: string }];
+    const [, opciones] = fetchMock.mock.calls[1] as [string, { body: string }];
     const cuerpo = JSON.parse(opciones.body) as Record<string, unknown>;
     expect(cuerpo.type).toBe('interactive');
     const interactive = cuerpo.interactive as Record<string, unknown>;

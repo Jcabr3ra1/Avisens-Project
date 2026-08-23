@@ -17,10 +17,24 @@ const MAX_LISTA_TITULO = 24;
 const MAX_BOTONES = 3;
 const MAX_LISTA_FILAS = 10;
 
+const COMANDOS_CANCELAR = ['cancelar', 'salir', 'reiniciar', 'empezar de nuevo', 'cancel'];
+const COMANDOS_AYUDA = ['ayuda', 'help', '?', 'como funciona'];
+
 const DESPEDIDA =
   '⏰ No recibimos tu respuesta, así que cerramos esta conversación por ahora.\n\n' +
   'Cuando quieras retomarla escríbenos de nuevo y con gusto te atendemos. ' +
   'Gracias por tu interés en AVISENS. 🐔';
+
+const CANCELADO =
+  '❌ Conversación cancelada. Si quieres empezar de nuevo, escríbeme cuando quieras. 🐔';
+
+const AYUDA =
+  'ℹ️ *Cómo funciona:*\n\n' +
+  '• Responde las preguntas que te haga\n' +
+  '• Puedes escribir *cancelar* en cualquier momento para empezar de nuevo\n' +
+  '• Si no respondes en 5 minutos, la conversación se cierra automáticamente\n' +
+  '• Al final te mostraré un resumen para confirmar tus datos\n\n' +
+  '¿Listo para continuar? 👇';
 
 const CIERRE_BASE =
   '✅ Gracias por tu tiempo. Con la información de tu granja estamos generando ' +
@@ -182,13 +196,14 @@ export class WhatsappService {
         pregunta_actual: { not: FIN },
         ultima_actividad: { lt: limite },
       },
-      select: { id: true, telefono: true },
+      select: { id: true, telefono: true, pregunta_actual: true },
     });
 
     for (const prospecto of abandonadas) {
       await this.prisma.prospecto.update({
         where: { id: prospecto.id },
         data: {
+          ultima_pregunta: prospecto.pregunta_actual,
           pregunta_actual: FIN,
           estado: 'abandonado',
           fecha_finalizacion: new Date(),
@@ -245,6 +260,23 @@ export class WhatsappService {
     };
   }
 
+  private esComando(texto: string, comandos: string[]): boolean {
+    const normalizado = texto.trim().toLowerCase();
+    return comandos.some((cmd) => normalizado === cmd);
+  }
+
+  private async cancelarConversacion(telefono: string, sesionId: string) {
+    await this.prisma.prospecto.update({
+      where: { sesion_id: sesionId },
+      data: {
+        pregunta_actual: FIN,
+        estado: 'cancelado',
+        fecha_finalizacion: new Date(),
+      },
+    });
+    await this.encolarSalida(telefono, { texto: CANCELADO });
+  }
+
   private async encolarSalida(destino: string, partes: PartesMensaje) {
     await this.cola.add('saliente', { destino, ...partes });
   }
@@ -266,6 +298,62 @@ export class WhatsappService {
     });
 
     if (!abierto) {
+      const abandonado = await this.prisma.prospecto.findFirst({
+        where: {
+          telefono: entrante.de,
+          canal_origen: 'whatsapp',
+          estado: 'abandonado',
+          pregunta_actual: FIN,
+        },
+        orderBy: { fecha_finalizacion: 'desc' },
+        select: { sesion_id: true, fecha_finalizacion: true, ultima_pregunta: true },
+      });
+
+      if (abandonado && abandonado.fecha_finalizacion) {
+        const horasDesdeCierre =
+          (Date.now() - abandonado.fecha_finalizacion.getTime()) / 3600_000;
+        if (horasDesdeCierre < 24) {
+          if (entrante.texto.toLowerCase() === 'continuar') {
+            const ultimaPregunta = abandonado.ultima_pregunta;
+            if (ultimaPregunta && ultimaPregunta !== FIN) {
+              await this.prisma.prospecto.update({
+                where: { sesion_id: abandonado.sesion_id },
+                data: { estado: 'en_proceso', pregunta_actual: ultimaPregunta },
+              });
+              const pregunta = await this.chatbot.preguntaActual(abandonado.sesion_id);
+              if (pregunta) {
+                await this.encolarSalida(entrante.de, {
+                  texto: '👋 ¡Hola de nuevo! Continuemos donde quedamos.',
+                });
+                await this.encolarSalida(entrante.de, this.formatear(pregunta));
+                return;
+              }
+            }
+          }
+
+          if (entrante.texto.toLowerCase() === 'empezar de nuevo') {
+            const inicio = await this.chatbot.iniciar({ canal_origen: 'whatsapp' });
+            await this.prisma.prospecto.update({
+              where: { sesion_id: inicio.sesion_id },
+              data: { telefono: entrante.de },
+            });
+            await this.encolarSalida(entrante.de, this.formatear(inicio.pregunta));
+            return;
+          }
+
+          await this.encolarSalida(entrante.de, {
+            texto:
+              '👋 ¡Hola de nuevo! Vi que estabas en una conversación hace poco.\n\n' +
+              '¿Quieres continuar donde quedaste o empezar de nuevo?',
+            botones: [
+              { id: 'continuar', titulo: 'Continuar' },
+              { id: 'nuevo', titulo: 'Empezar de nuevo' },
+            ],
+          });
+          return;
+        }
+      }
+
       const inicio = await this.chatbot.iniciar({ canal_origen: 'whatsapp' });
       await this.prisma.prospecto.update({
         where: { sesion_id: inicio.sesion_id },
@@ -275,15 +363,39 @@ export class WhatsappService {
       return;
     }
 
+    if (this.esComando(entrante.texto, COMANDOS_CANCELAR)) {
+      await this.cancelarConversacion(entrante.de, abierto.sesion_id);
+      return;
+    }
+
+    if (this.esComando(entrante.texto, COMANDOS_AYUDA)) {
+      await this.encolarSalida(entrante.de, { texto: AYUDA });
+      const pregunta = await this.chatbot.preguntaActual(abierto.sesion_id);
+      if (pregunta) {
+        await this.encolarSalida(entrante.de, this.formatear(pregunta));
+      }
+      return;
+    }
+
     try {
       const r = await this.chatbot.responder({
         sesion_id: abierto.sesion_id,
         respuesta: entrante.texto,
       });
 
+      if (r.mensaje_transicion) {
+        await this.encolarSalida(entrante.de, { texto: r.mensaje_transicion });
+      }
+
       const partes = r.finalizado
         ? { texto: this.cierre(r) }
         : this.formatear(r.pregunta);
+
+      if (r.progreso !== null && r.progreso !== undefined && !r.finalizado) {
+        const total = 20;
+        const porcentaje = Math.min(Math.round((r.progreso / total) * 100), 100);
+        partes.texto = `📊 Progreso: ${r.progreso}/${total} (${porcentaje}%)\n\n${partes.texto}`;
+      }
 
       await this.encolarSalida(entrante.de, partes);
     } catch (e) {

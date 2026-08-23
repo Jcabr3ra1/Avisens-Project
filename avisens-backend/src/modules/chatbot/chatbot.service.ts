@@ -12,6 +12,7 @@ const PRIMERA_PREGUNTA = 'M1';
 const PRIMERA_PREGUNTA_PQRS = 'B1';
 const RUTA_PQRS = 'general';
 const FIN = 'FIN';
+const CONFIRMAR = 'CONFIRMAR';
 
 const UMBRAL_CALIENTE = 12;
 const UMBRAL_TIBIO = 7;
@@ -26,6 +27,19 @@ const SIN_SENAL = 'No, zona rural sin señal';
 const NO_DECIDE = 'No';
 const DOLOR = ['Sí, más de una vez', 'Una vez'];
 const SIN_CONSENTIMIENTO = 'sin_consentimiento';
+
+const VALIDACION_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const VALIDACION_TELEFONO = /^\+?[\d\s\-()]{7,15}$/;
+const VALIDACION_DOCUMENTO = /^[\d\-.]+$/;
+
+const MENSAJES_TRANSICION: Record<string, string> = {
+  A2: '✅ ¡Perfecto! Ahora cuéntame sobre ti 📝',
+  A5: '🌾 Excelente. Ahora hablemos de tu granja...',
+  A14: '😖 Entiendo. Cuéntame sobre los retos que has enfrentado...',
+  A17: '🔧 Muy bien. Ahora algunas preguntas sobre tu experiencia con tecnología...',
+  A20: '🤝 Casi terminamos. Solo unas preguntas finales...',
+  C1: '📞 ¡Genial! Para poder contactarte...',
+};
 
 @Injectable()
 export class ChatbotService {
@@ -55,6 +69,8 @@ export class ChatbotService {
     return {
       sesion_id: prospecto.sesion_id,
       pregunta: this.formatearPregunta(pregunta),
+      mensaje_transicion: null as string | null,
+      progreso: 0 as number | null,
       finalizado: false,
       puntaje_total: null as number | null,
       clasificacion: null as string | null,
@@ -69,6 +85,27 @@ export class ChatbotService {
 
     if (!prospecto.pregunta_actual || prospecto.pregunta_actual === FIN) {
       throw new BadRequestException('Esta conversacion ya termino');
+    }
+
+    if (prospecto.pregunta_actual === CONFIRMAR) {
+      const respuesta = dto.respuesta.trim().toLowerCase();
+      if (respuesta === 'sí' || respuesta === 'si' || respuesta === 'confirmar') {
+        return this.finalizar(prospecto.id);
+      }
+      await this.prisma.prospecto.update({
+        where: { id: prospecto.id },
+        data: { pregunta_actual: 'A2', estado: 'en_proceso' },
+      });
+      const pregunta = await this.obtenerPregunta('A2');
+      return {
+        sesion_id: prospecto.sesion_id,
+        pregunta: this.formatearPregunta(pregunta),
+        mensaje_transicion: '✏️ Entendido. Vamos a revisar tus datos desde el principio.',
+        progreso: null as number | null,
+        finalizado: false,
+        puntaje_total: null as number | null,
+        clasificacion: null as string | null,
+      };
     }
 
     const pregunta = await this.obtenerPregunta(prospecto.pregunta_actual);
@@ -103,9 +140,6 @@ export class ChatbotService {
       pregunta_actual: siguiente,
     };
     if (pregunta.campo_prospecto && valor !== '') {
-      // En las de si/no el texto de la opcion lo fija la especificacion
-      // ("Sí autorizo" / "No autorizo"), asi que la negacion se detecta por el
-      // inicio de la respuesta y no comparando contra un literal exacto.
       datosProspecto[pregunta.campo_prospecto] =
         pregunta.tipo === 'si_no'
           ? !/^no\b/i.test(respuesta.trim())
@@ -118,12 +152,39 @@ export class ChatbotService {
     });
 
     if (siguiente === FIN) {
+      const esPqrs = pregunta.bloque === 'B';
+      if (!esPqrs) {
+        const resumen = await this.obtenerResumen(prospecto.id);
+        await this.prisma.prospecto.update({
+          where: { id: prospecto.id },
+          data: { pregunta_actual: CONFIRMAR },
+        });
+        return {
+          sesion_id: prospecto.sesion_id,
+          pregunta: {
+            codigo: CONFIRMAR,
+            texto: resumen,
+            tipo: 'si_no',
+            opciones: ['Sí', 'No, corregir datos'],
+          },
+          mensaje_transicion: null as string | null,
+          progreso: null as number | null,
+          finalizado: false,
+          puntaje_total: null as number | null,
+          clasificacion: null as string | null,
+        };
+      }
       return this.finalizar(prospecto.id);
     }
+
+    const respondidas = await this.contarRespondidas(prospecto.id);
+    const mensajeTransicion = MENSAJES_TRANSICION[siguiente] ?? null;
 
     return {
       sesion_id: prospecto.sesion_id,
       pregunta: this.formatearPregunta(await this.obtenerPregunta(siguiente)),
+      mensaje_transicion: mensajeTransicion,
+      progreso: respondidas,
       finalizado: false,
       puntaje_total: null as number | null,
       clasificacion: null as string | null,
@@ -174,6 +235,48 @@ export class ChatbotService {
     return this.formatearPregunta(
       await this.obtenerPregunta(prospecto.pregunta_actual),
     );
+  }
+
+  private async contarRespondidas(prospectoId: number): Promise<number> {
+    const count = await this.prisma.respuestaChatbot.count({
+      where: { prospecto_id: prospectoId },
+    });
+    return count;
+  }
+
+  private async obtenerResumen(prospectoId: number): Promise<string> {
+    const prospecto = await this.prisma.prospecto.findUnique({
+      where: { id: prospectoId },
+      select: {
+        nombre: true,
+        tipo_documento: true,
+        documento: true,
+        municipio: true,
+        area_granja_m2: true,
+        area_galpon_m2: true,
+        telefono: true,
+        email: true,
+      },
+    });
+
+    if (!prospecto) return '';
+
+    const lineas: string[] = ['📋 *Resumen de tus datos:*\n'];
+
+    if (prospecto.nombre) lineas.push(`👤 *Nombre:* ${prospecto.nombre}`);
+    if (prospecto.tipo_documento || prospecto.documento) {
+      const doc = [prospecto.tipo_documento, prospecto.documento].filter(Boolean).join(' ');
+      lineas.push(`🪪 *Documento:* ${doc}`);
+    }
+    if (prospecto.municipio) lineas.push(`📍 *Ubicación:* ${prospecto.municipio}`);
+    if (prospecto.area_granja_m2) lineas.push(`🌾 *Tamaño granja:* ${prospecto.area_granja_m2} m²`);
+    if (prospecto.area_galpon_m2) lineas.push(`🏠 *Tamaño galpón:* ${prospecto.area_galpon_m2} m²`);
+    if (prospecto.telefono) lineas.push(`📞 *Teléfono:* ${prospecto.telefono}`);
+    if (prospecto.email) lineas.push(`📧 *Email:* ${prospecto.email}`);
+
+    lineas.push('\n¿Confirmas que estos datos son correctos?');
+
+    return lineas.join('\n');
   }
 
   private async obtenerPregunta(codigo: string) {
@@ -228,7 +331,7 @@ export class ChatbotService {
   }
 
   private validarRespuesta(
-    pregunta: { tipo: string; opciones: unknown; codigo: string },
+    pregunta: { tipo: string; opciones: unknown; codigo: string; campo_prospecto?: string | null },
     respuesta: string,
   ): string | number {
     const opciones = pregunta.opciones as string[] | null;
@@ -252,7 +355,27 @@ export class ChatbotService {
       return numero;
     }
 
-    return respuesta.trim();
+    const texto = respuesta.trim();
+
+    if (texto && pregunta.campo_prospecto === 'email' && !VALIDACION_EMAIL.test(texto)) {
+      throw new BadRequestException(
+        'El correo electrónico no parece válido. Por favor verifica e intenta de nuevo.',
+      );
+    }
+
+    if (texto && pregunta.campo_prospecto === 'telefono' && !VALIDACION_TELEFONO.test(texto)) {
+      throw new BadRequestException(
+        'El número de teléfono no parece válido. Usa solo números, opcionalmente con +, espacios o guiones.',
+      );
+    }
+
+    if (texto && pregunta.campo_prospecto === 'documento' && !VALIDACION_DOCUMENTO.test(texto)) {
+      throw new BadRequestException(
+        'El documento debe contener solo números, puntos o guiones.',
+      );
+    }
+
+    return texto;
   }
 
   private async finalizar(prospectoId: number) {
@@ -308,6 +431,8 @@ export class ChatbotService {
         pregunta: null as ReturnType<
           ChatbotService['formatearPregunta']
         > | null,
+        mensaje_transicion: null as string | null,
+        progreso: null as number | null,
         finalizado: true,
         puntaje_total: null as number | null,
         clasificacion: 'pqrs' as string | null,
@@ -336,6 +461,8 @@ export class ChatbotService {
         pregunta: null as ReturnType<
           ChatbotService['formatearPregunta']
         > | null,
+        mensaje_transicion: null as string | null,
+        progreso: null as number | null,
         finalizado: true,
         puntaje_total: null as number | null,
         clasificacion: SIN_CONSENTIMIENTO as string | null,
@@ -395,6 +522,8 @@ export class ChatbotService {
     return {
       sesion_id: prospecto.sesion_id,
       pregunta: null as ReturnType<ChatbotService['formatearPregunta']> | null,
+      mensaje_transicion: null as string | null,
+      progreso: null as number | null,
       finalizado: true,
       puntaje_total: puntaje as number | null,
       clasificacion: clasificacion as string | null,
