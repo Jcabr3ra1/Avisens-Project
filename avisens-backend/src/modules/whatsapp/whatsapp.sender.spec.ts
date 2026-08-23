@@ -1,6 +1,17 @@
 describe('WhatsappSender', () => {
+  interface OpcionInteractiva {
+    id: string;
+    titulo: string;
+  }
+  interface TrabajoMensaje {
+    destino: string;
+    texto: string;
+    botones?: OpcionInteractiva[];
+    lista?: { boton: string; filas: OpcionInteractiva[] };
+  }
   interface Sender {
     enviarTexto: (destino: string, texto: string) => Promise<boolean>;
+    enviar: (trabajo: TrabajoMensaje) => Promise<boolean>;
   }
 
   const envOriginal = { ...process.env };
@@ -146,5 +157,76 @@ describe('WhatsappSender', () => {
     });
 
     expect(await sender.enviarTexto('57300', 'hola')).toBe(false);
+  });
+
+  it('envia botones interactivos cuando el trabajo trae botones', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+    global.fetch = fetchMock;
+
+    const sender = cargarCon({
+      WHATSAPP_PROVIDER: 'meta',
+      WHATSAPP_API_VERSION: 'v25.0',
+      WHATSAPP_PHONE_NUMBER_ID: '999',
+      WHATSAPP_ACCESS_TOKEN: 'token-x',
+    });
+
+    const ok = await sender.enviar({
+      destino: '573001112233',
+      texto: '¿Autorizas?',
+      botones: [
+        { id: 'btn_1', titulo: 'Sí' },
+        { id: 'btn_2', titulo: 'No' },
+      ],
+    });
+
+    expect(ok).toBe(true);
+    const [, opciones] = fetchMock.mock.calls[0] as [string, { body: string }];
+    const cuerpo = JSON.parse(opciones.body) as Record<string, unknown>;
+    expect(cuerpo.type).toBe('interactive');
+    const interactive = cuerpo.interactive as Record<string, unknown>;
+    expect(interactive.type).toBe('button');
+    expect(interactive.body).toEqual({ text: '¿Autorizas?' });
+    const action = interactive.action as { buttons: Array<{ type: string; reply: { id: string; title: string } }> };
+    expect(action.buttons).toHaveLength(2);
+    expect(action.buttons[0].reply).toEqual({ id: 'btn_1', title: 'Sí' });
+  });
+
+  it('envia lista interactiva cuando el trabajo trae lista', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+    global.fetch = fetchMock;
+
+    const sender = cargarCon({
+      WHATSAPP_PROVIDER: 'meta',
+      WHATSAPP_API_VERSION: 'v25.0',
+      WHATSAPP_PHONE_NUMBER_ID: '999',
+      WHATSAPP_ACCESS_TOKEN: 'token-x',
+    });
+
+    const ok = await sender.enviar({
+      destino: '573001112233',
+      texto: '¿Cuántas aves?',
+      lista: {
+        boton: 'Ver opciones',
+        filas: [
+          { id: 'opt_1', titulo: '<1000' },
+          { id: 'opt_2', titulo: '1000-5000' },
+        ],
+      },
+    });
+
+    expect(ok).toBe(true);
+    const [, opciones] = fetchMock.mock.calls[0] as [string, { body: string }];
+    const cuerpo = JSON.parse(opciones.body) as Record<string, unknown>;
+    expect(cuerpo.type).toBe('interactive');
+    const interactive = cuerpo.interactive as Record<string, unknown>;
+    expect(interactive.type).toBe('list');
+    expect(interactive.body).toEqual({ text: '¿Cuántas aves?' });
+    const action = interactive.action as {
+      button: string;
+      sections: Array<{ title: string; rows: Array<{ id: string; title: string }> }>;
+    };
+    expect(action.button).toBe('Ver opciones');
+    expect(action.sections[0].rows).toHaveLength(2);
+    expect(action.sections[0].rows[0]).toEqual({ id: 'opt_1', title: '<1000' });
   });
 });

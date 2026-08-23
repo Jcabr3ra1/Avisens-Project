@@ -11,7 +11,7 @@ import { IcAlert, IcRefresh, IcSend, IcSparkle } from '@shared/ui/icons/icons'
 import Ic from '@shared/ui/Ic/Ic'
 import './FloatChat.css'
 
-const TOTAL_PREGUNTAS = 19
+const TOTAL_PREGUNTAS = 20
 const SIN_CONSENTIMIENTO = 'sin_consentimiento'
 const PUNTAJE_MAXIMO = 16
 

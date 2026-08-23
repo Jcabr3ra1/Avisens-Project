@@ -343,7 +343,7 @@ const MATRIZ_CALIFICACION = [
   {
     bloque: 'A',
     codigo_pregunta: 'A18',
-    opcion_respuesta: 'Lo que sea más conveniente',
+    opcion_respuesta: 'El más conveniente',
     puntaje: 1,
     descripcion: 'Presupuesto y adquisicion (HU-04)',
   },
@@ -357,8 +357,7 @@ const MATRIZ_CALIFICACION = [
   {
     bloque: 'A',
     codigo_pregunta: 'A9',
-    opcion_respuesta:
-      'Sí, está construido y se encuentra en buenas condiciones',
+    opcion_respuesta: 'Sí, en buen estado',
     puntaje: 1,
     descripcion: 'Infraestructura habilitante (HU-03)',
   },
@@ -379,14 +378,14 @@ const MATRIZ_CALIFICACION = [
   {
     bloque: 'A',
     codigo_pregunta: 'A19',
-    opcion_respuesta: 'Sí, ya tengo cotizaciones',
+    opcion_respuesta: 'Ya tengo cotizaciones',
     puntaje: 3,
     descripcion: 'Urgencia y competencia (HU-05)',
   },
   {
     bloque: 'A',
     codigo_pregunta: 'A19',
-    opcion_respuesta: 'Estoy mirando opciones',
+    opcion_respuesta: 'Mirando opciones',
     puntaje: 1,
     descripcion: 'Urgencia y competencia (HU-05)',
   },
@@ -407,15 +406,18 @@ const MATRIZ_CALIFICACION = [
 ];
 
 const PREGUNTAS_CHATBOT = [
+  // =========================================================================
+  // MENU PRINCIPAL
+  // =========================================================================
   {
     codigo: 'M1',
     bloque: 'M',
     orden: 0,
-    texto: 
-      'Hola, soy AVIA, el asistente de AVISENS.\n\n' +
+    texto:
+      '👋 ¡Hola! Soy *AVIA*, la asistente virtual de AVISENS 🐔\n\n' +
       'Monitoreamos granjas avícolas con sensores de temperatura, humedad y ' +
-      'ventilación, para que sepas lo que pasa en el galpón antes de perder aves.\n\n' +
-      '¿En qué te puedo ayudar?',
+      'ventilación para que sepas lo que pasa en el galpón antes de perder aves.\n\n' +
+      '¿En qué te puedo ayudar hoy?',
     tipo: 'opcion_unica',
     opciones: ['Cotizar un sistema', 'Otra consulta o PQRS'],
     campo_prospecto: null,
@@ -424,13 +426,20 @@ const PREGUNTAS_CHATBOT = [
     siguiente: 'A1',
     saltos: { 'Cotizar un sistema': 'A1', 'Otra consulta o PQRS': 'B1' },
   },
+
+  // =========================================================================
+  // BLOQUE A — COTIZACION (calificacion del prospecto)
+  // =========================================================================
+
+  // --- Identificacion ---
   {
     codigo: 'A1',
     bloque: 'A',
     orden: 1,
-    texto: 
-      '¿Autorizas el tratamiento de datos según la ley de Hábeas Data?\n\n' +
-      'Puedes consultar nuestra política en ' +
+    texto:
+      '🔐 Antes de empezar: ¿autorizas el tratamiento de tus datos personales ' +
+      'según la Ley de Hábeas Data (Ley 1581)?\n\n' +
+      'Puedes consultar nuestra política aquí 👇\n' +
       'https://avisens-project-production.up.railway.app/privacidad',
     tipo: 'si_no',
     opciones: ['Sí autorizo', 'No autorizo'],
@@ -444,10 +453,23 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A2',
     bloque: 'A',
     orden: 2,
-    texto: '¿Cuál es tu nombre y el nombre de tu granja?',
+    texto: '👤 ¿Cuál es tu nombre completo y el nombre de tu granja?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'nombre',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A2B',
+    saltos: null,
+  },
+  {
+    codigo: 'A2B',
+    bloque: 'A',
+    orden: 3,
+    texto: '🪪 ¿Qué tipo de documento de identidad tienes?',
+    tipo: 'opcion_unica',
+    opciones: ['Cédula de ciudadanía', 'NIT', 'Cédula de extranjería', 'Pasaporte'],
+    campo_prospecto: 'tipo_documento',
     omitir_si_canal: null,
     puntua: false,
     siguiente: 'A3',
@@ -456,8 +478,8 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A3',
     bloque: 'A',
-    orden: 3,
-    texto: '¿Cuál es el número de tu documento de identidad (cédula)?',
+    orden: 4,
+    texto: '🔢 ¿Cuál es el número de tu documento de identidad?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'documento',
@@ -469,8 +491,8 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A4',
     bloque: 'A',
-    orden: 4,
-    texto: '¿En qué municipio y departamento está ubicada tu granja?',
+    orden: 5,
+    texto: '📍 ¿En qué municipio y departamento está ubicada tu granja?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'municipio',
@@ -479,11 +501,13 @@ const PREGUNTAS_CHATBOT = [
     siguiente: 'A5',
     saltos: null,
   },
+
+  // --- La granja ---
   {
     codigo: 'A5',
     bloque: 'A',
-    orden: 5,
-    texto: '¿Qué tamaño en metros cuadrados tiene la granja?',
+    orden: 6,
+    texto: '🌾 ¿Qué tamaño tiene la granja en metros cuadrados?',
     tipo: 'numero',
     opciones: null,
     campo_prospecto: 'area_granja_m2',
@@ -495,8 +519,8 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A6',
     bloque: 'A',
-    orden: 6,
-    texto: '¿Qué tamaño en metros cuadrados tiene el galpón?',
+    orden: 7,
+    texto: '🏠 ¿Qué tamaño tiene el galpón en metros cuadrados?',
     tipo: 'numero',
     opciones: null,
     campo_prospecto: 'area_galpon_m2',
@@ -508,8 +532,8 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A7',
     bloque: 'A',
-    orden: 7,
-    texto: '¿Cuántas aves maneja cada galpón en promedio?',
+    orden: 8,
+    texto: '🐣 ¿Cuántas aves maneja cada galpón en promedio?',
     tipo: 'opcion_unica',
     opciones: ['<1000', '1000-5000', '5000-10000', '>10000'],
     campo_prospecto: null,
@@ -521,8 +545,8 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A8',
     bloque: 'A',
-    orden: 8,
-    texto: '¿Cuántas aves en total almacena actualmente en sus galpones?',
+    orden: 9,
+    texto: '🐔 ¿Cuántas aves almacenas actualmente en total en tus galpones?',
     tipo: 'opcion_unica',
     opciones: ['<1000', '1000-5000', '5000-10000', '>10000'],
     campo_prospecto: null,
@@ -534,12 +558,10 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A9',
     bloque: 'A',
-    orden: 9,
-    texto: 
-      '¿El galpón (infraestructura física) actualmente está construido y se ' +
-      'encuentra en buenas condiciones?',
+    orden: 10,
+    texto: '🏗️ ¿El galpón ya está construido y en buenas condiciones?',
     tipo: 'opcion_unica',
-    opciones: ['Sí, está construido y se encuentra en buenas condiciones', 'Sí, está construido pero no está en buenas condiciones', 'No está construido'],
+    opciones: ['Sí, en buen estado', 'Construido, mal estado', 'No está construido'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
@@ -549,10 +571,10 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A10',
     bloque: 'A',
-    orden: 10,
-    texto: 
-      '¿Su granja está ubicada en una zona donde hay presencia de árboles altos ' +
-      'que sirven como rompe vientos y mejoran la circulación?',
+    orden: 11,
+    texto:
+      '🌳 ¿Tu granja está en una zona con árboles altos que sirvan como ' +
+      'rompevientos y mejoren la circulación del aire?',
     tipo: 'opcion_unica',
     opciones: ['Sí', 'No'],
     campo_prospecto: null,
@@ -564,8 +586,8 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A11',
     bloque: 'A',
-    orden: 11,
-    texto: '¿Tienes un sistema eléctrico estable o dependes de planta eléctrica?',
+    orden: 12,
+    texto: '⚡ ¿Cómo es el suministro eléctrico en tu granja?',
     tipo: 'opcion_unica',
     opciones: ['Eléctrico estable', 'Planta de respaldo', 'Solo planta', 'No'],
     campo_prospecto: null,
@@ -577,10 +599,10 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A12',
     bloque: 'A',
-    orden: 12,
-    texto: '¿Tienes una fuente de agua cercana y confiable?',
+    orden: 13,
+    texto: '💧 ¿Tienes una fuente de agua cercana y confiable?',
     tipo: 'opcion_unica',
-    opciones: ['Sí, un riachuelo cercano', 'Sí, un río cercano', 'Sí, una quebrada cercana', 'Sí, un pozo de agua', 'No'],
+    opciones: ['Riachuelo cercano', 'Río cercano', 'Quebrada cercana', 'Pozo de agua', 'No tengo'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
@@ -590,9 +612,8 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A13',
     bloque: 'A',
-    orden: 13,
-    texto: 
-      '¿Tienes conectividad a internet (WiFi o datos móviles) dentro de la granja?',
+    orden: 14,
+    texto: '📶 ¿Tienes internet (WiFi o datos móviles) dentro de la granja?',
     tipo: 'opcion_unica',
     opciones: ['Sí, estable', 'Sí, pero intermitente', 'No, zona rural sin señal'],
     campo_prospecto: null,
@@ -601,13 +622,15 @@ const PREGUNTAS_CHATBOT = [
     siguiente: 'A14',
     saltos: null,
   },
+
+  // --- El dolor ---
   {
     codigo: 'A14',
     bloque: 'A',
-    orden: 14,
-    texto: 
-      'Describe cuáles son las principales problemáticas que se te han presentado ' +
-      'en la cría de pollos de engorde',
+    orden: 15,
+    texto:
+      '😖 Cuéntame: ¿cuáles son las principales problemáticas que se te han ' +
+      'presentado en la cría de pollos de engorde?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: null,
@@ -619,8 +642,8 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A15',
     bloque: 'A',
-    orden: 15,
-    texto: 'Especifica cuáles son las principales causas de muerte de las aves',
+    orden: 16,
+    texto: '🦠 ¿Cuáles han sido las principales causas de muerte de las aves?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: null,
@@ -632,9 +655,9 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A16',
     bloque: 'A',
-    orden: 16,
-    texto: 
-      '¿Has tenido mortalidad elevada por condiciones ambientales en los ' +
+    orden: 17,
+    texto:
+      '📉 ¿Has tenido mortalidad elevada por condiciones ambientales en los ' +
       'últimos 12 meses?',
     tipo: 'opcion_unica',
     opciones: ['Sí, más de una vez', 'Una vez', 'No', 'No sé la causa'],
@@ -644,15 +667,17 @@ const PREGUNTAS_CHATBOT = [
     siguiente: 'A17',
     saltos: null,
   },
+
+  // --- La compra ---
   {
     codigo: 'A17',
     bloque: 'A',
-    orden: 17,
-    texto: 
-      '¿Has invertido antes en tecnología para tu granja (sensores, software, ' +
+    orden: 18,
+    texto:
+      '🔧 ¿Has invertido antes en tecnología para tu granja (sensores, software, ' +
       'automatización)?',
     tipo: 'opcion_unica',
-    opciones: ['Sí', 'No', 'Estoy evaluándolo por primera vez'],
+    opciones: ['Sí', 'No', 'Es la primera vez'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
@@ -662,12 +687,12 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A18',
     bloque: 'A',
-    orden: 18,
-    texto: 
-      '¿Estás buscando una solución para adquirir o prefieres un modelo de ' +
-      'suscripción mensual?',
+    orden: 19,
+    texto:
+      '💳 ¿Buscas adquirir la solución o prefieres un modelo de suscripción ' +
+      'mensual?',
     tipo: 'opcion_unica',
-    opciones: ['Compra directa', 'Suscripción', 'Lo que sea más conveniente', 'No sé'],
+    opciones: ['Compra directa', 'Suscripción', 'El más conveniente', 'No sé'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
@@ -677,10 +702,10 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A19',
     bloque: 'A',
-    orden: 19,
-    texto: '¿Estás evaluando otras soluciones o plataformas similares?',
+    orden: 20,
+    texto: '🔍 ¿Estás evaluando otras soluciones o plataformas similares?',
     tipo: 'opcion_unica',
-    opciones: ['Sí, ya tengo cotizaciones', 'Estoy mirando opciones', 'Solo AVISENS', 'No sé qué más existe'],
+    opciones: ['Ya tengo cotizaciones', 'Mirando opciones', 'Solo AVISENS', 'No sé qué más existe'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
@@ -690,8 +715,8 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A20',
     bloque: 'A',
-    orden: 20,
-    texto: '¿Eres la persona que toma la decisión de compra?',
+    orden: 21,
+    texto: '🤝 ¿Eres tú quien toma la decisión de compra?',
     tipo: 'opcion_unica',
     opciones: ['Sí', 'No'],
     campo_prospecto: null,
@@ -703,9 +728,9 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A21',
     bloque: 'A',
-    orden: 21,
-    texto: 
-      '¿Con quién debemos hablar? Déjanos su nombre y un número de contacto',
+    orden: 22,
+    texto:
+      '👥 ¿Con quién debemos hablar? Déjanos su nombre y un número de contacto.',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'contacto_decisor',
@@ -714,11 +739,13 @@ const PREGUNTAS_CHATBOT = [
     siguiente: 'C1',
     saltos: null,
   },
+
+  // --- Contacto ---
   {
     codigo: 'C1',
     bloque: 'A',
-    orden: 22,
-    texto: '¿A qué número de teléfono te podemos contactar?',
+    orden: 23,
+    texto: '📞 ¿A qué número de teléfono te podemos contactar?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'telefono',
@@ -730,8 +757,8 @@ const PREGUNTAS_CHATBOT = [
   {
     codigo: 'C2',
     bloque: 'A',
-    orden: 23,
-    texto: '¿Cuál es tu correo electrónico?',
+    orden: 24,
+    texto: '📧 ¿Cuál es tu correo electrónico?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'email',
@@ -741,11 +768,14 @@ const PREGUNTAS_CHATBOT = [
     saltos: null,
   },
 
+  // =========================================================================
+  // BLOQUE B — PQRS / CONSULTAS GENERALES (sin puntaje comercial)
+  // =========================================================================
   {
     codigo: 'B1',
     bloque: 'B',
     orden: 1,
-    texto: 'Con gusto te ayudo. ¿De qué tipo es tu consulta?',
+    texto: '🗂️ Con gusto te ayudo. ¿Qué tipo de consulta tienes?',
     tipo: 'opcion_unica',
     opciones: ['Petición', 'Reclamo', 'Queja', 'Sugerencia', 'Trámite'],
     campo_prospecto: null,
@@ -754,26 +784,50 @@ const PREGUNTAS_CHATBOT = [
     siguiente: 'BMP',
     saltos: { 'Petición': 'BMP', Reclamo: 'BMR', Queja: 'BMQ', Sugerencia: 'BMS', 'Trámite': 'BMT' },
   },
+
+  // --- Peticiones ---
   {
     codigo: 'BMP',
     bloque: 'B',
     orden: 2,
-    texto: '¿Sobre qué necesitas ayuda?',
+    texto: '❓ ¿Sobre qué necesitas ayuda?',
     tipo: 'opcion_unica',
-    opciones: ['¿Cuánto cuesta instalar AVISENS?', '¿Qué incluye el sistema?', '¿Funciona sin internet estable?', '¿Cuánto tarda la instalación?', '¿Necesito saber de tecnología?', '¿Ofrecen financiación o cuotas?', '¿Qué pasa si se va la luz?', '¿Tienen clientes en el Cauca?', 'Otra consulta'],
+    opciones: [
+      '¿Cuánto cuesta?',
+      '¿Qué incluye?',
+      '¿Sin internet estable?',
+      '¿Cuánto tarda?',
+      '¿Fácil de usar?',
+      '¿Financiación?',
+      '¿Y si se va la luz?',
+      'Clientes en el Cauca',
+      'Otra consulta',
+    ],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
     siguiente: 'BP1',
-    saltos: { '¿Cuánto cuesta instalar AVISENS?': 'BP1', '¿Qué incluye el sistema?': 'BP2', '¿Funciona sin internet estable?': 'BP3', '¿Cuánto tarda la instalación?': 'BP4', '¿Necesito saber de tecnología?': 'BP5', '¿Ofrecen financiación o cuotas?': 'BP6', '¿Qué pasa si se va la luz?': 'BP7', '¿Tienen clientes en el Cauca?': 'BP8', 'Otra consulta': 'B2' },
+    saltos: {
+      '¿Cuánto cuesta?': 'BP1',
+      '¿Qué incluye?': 'BP2',
+      '¿Sin internet estable?': 'BP3',
+      '¿Cuánto tarda?': 'BP4',
+      '¿Fácil de usar?': 'BP5',
+      '¿Financiación?': 'BP6',
+      '¿Y si se va la luz?': 'BP7',
+      'Clientes en el Cauca': 'BP8',
+      'Otra consulta': 'B2',
+    },
   },
   {
     codigo: 'BP1',
     bloque: 'B',
     orden: 3,
-    texto: 
-      'La instalación de AVISENS tiene un costo desde $3.500.000 COP, dependiendo del tamaño de la granja, el número de galpones y la cantidad de sensores que necesites. El valor incluye los equipos, la instalación y la configuración inicial.' +
-      '\\n\\n' +
+    texto:
+      '💰 La instalación de AVISENS tiene un costo desde $3.500.000 COP, ' +
+      'dependiendo del tamaño de la granja, el número de galpones y la cantidad ' +
+      'de sensores que necesites. El valor incluye los equipos, la instalación ' +
+      'y la configuración inicial.\n\n' +
       '¿Quieres que preparemos una cotización personalizada para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -787,9 +841,12 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'BP2',
     bloque: 'B',
     orden: 4,
-    texto: 
-      'AVISENS incluye sensores ambientales, unidad de comunicación, plataforma web y app, configuración e instalación técnica. La cantidad de sensores depende del número de galpones y de las necesidades de tu granja. También va incluida una capacitación básica para que puedas usarlo bien.' +
-      '\\n\\n' +
+    texto:
+      '📦 AVISENS incluye sensores ambientales, unidad de comunicación, ' +
+      'plataforma web y app, configuración e instalación técnica. La cantidad ' +
+      'de sensores depende del número de galpones y de las necesidades de tu ' +
+      'granja. También va incluida una capacitación básica para que puedas ' +
+      'usarlo bien.\n\n' +
       '¿Quieres que preparemos una cotización personalizada para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -803,9 +860,12 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'BP3',
     bloque: 'B',
     orden: 5,
-    texto: 
-      'Sí. AVISENS está diseñado para trabajar en zonas rurales. Si la granja tiene internet inestable o poca cobertura celular, contamos con alternativas de comunicación y almacenamiento temporal de datos para mantener el monitoreo. Antes de instalar hacemos una evaluación de conectividad para elegir la mejor alternativa.' +
-      '\\n\\n' +
+    texto:
+      '📶 Sí. AVISENS está diseñado para trabajar en zonas rurales. Si la ' +
+      'granja tiene internet inestable o poca cobertura celular, contamos con ' +
+      'alternativas de comunicación y almacenamiento temporal de datos para ' +
+      'mantener el monitoreo. Antes de instalar hacemos una evaluación de ' +
+      'conectividad para elegir la mejor alternativa.\n\n' +
       '¿Quieres que preparemos una cotización personalizada para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -819,9 +879,10 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'BP4',
     bloque: 'B',
     orden: 6,
-    texto: 
-      'La instalación tarda entre 1 y 2 días por granja, según su tamaño y la cantidad de equipos. La hace nuestro equipo técnico, que instala, configura y verifica que todo quede funcionando.' +
-      '\\n\\n' +
+    texto:
+      '⏱️ La instalación tarda entre 1 y 2 días por granja, según su tamaño y ' +
+      'la cantidad de equipos. La hace nuestro equipo técnico, que instala, ' +
+      'configura y verifica que todo quede funcionando.\n\n' +
       '¿Quieres que preparemos una cotización personalizada para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -835,9 +896,11 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'BP5',
     bloque: 'B',
     orden: 7,
-    texto: 
-      'No necesitas conocimientos técnicos avanzados. AVISENS está pensado para que sea fácil de usar: consultas los indicadores de tu granja y recibes las alertas desde el celular o el computador. Además te damos una capacitación básica durante la instalación.' +
-      '\\n\\n' +
+    texto:
+      '✅ No necesitas conocimientos técnicos avanzados. AVISENS está pensado ' +
+      'para que sea fácil de usar: consultas los indicadores de tu granja y ' +
+      'recibes las alertas desde el celular o el computador. Además te damos ' +
+      'una capacitación básica durante la instalación.\n\n' +
       '¿Quieres que preparemos una cotización personalizada para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -851,9 +914,10 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'BP6',
     bloque: 'B',
     orden: 8,
-    texto: 
-      'Sí. Ofrecemos financiación hasta en 12 cuotas, sujeta a aprobación. También estamos trabajando en alianzas con cooperativas y entidades del sector agropecuario para facilitar el acceso a la tecnología.' +
-      '\\n\\n' +
+    texto:
+      '💳 Sí. Ofrecemos financiación hasta en 12 cuotas, sujeta a aprobación. ' +
+      'También estamos trabajando en alianzas con cooperativas y entidades del ' +
+      'sector agropecuario para facilitar el acceso a la tecnología.\n\n' +
       '¿Quieres que preparemos una cotización personalizada para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -867,9 +931,11 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'BP7',
     bloque: 'B',
     orden: 9,
-    texto: 
-      'El sistema tiene respaldo energético para seguir monitoreando durante los cortes de electricidad. Según la configuración instalada, puede operar varias horas y guardar los datos para sincronizarlos cuando vuelva la energía.' +
-      '\\n\\n' +
+    texto:
+      '🔋 El sistema tiene respaldo energético para seguir monitoreando durante ' +
+      'los cortes de electricidad. Según la configuración instalada, puede ' +
+      'operar varias horas y guardar los datos para sincronizarlos cuando ' +
+      'vuelva la energía.\n\n' +
       '¿Quieres que preparemos una cotización personalizada para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -883,9 +949,10 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'BP8',
     bloque: 'B',
     orden: 10,
-    texto: 
-      'Sí, tenemos clientes en el Cauca. Podemos gestionar una referencia comercial o, cuando el cliente lo autorice, coordinar una visita para que veas de primera mano cómo funciona AVISENS en una granja.' +
-      '\\n\\n' +
+    texto:
+      '📍 Sí, tenemos clientes en el Cauca. Podemos gestionar una referencia ' +
+      'comercial o, cuando el cliente lo autorice, coordinar una visita para ' +
+      'que veas de primera mano cómo funciona AVISENS en una granja.\n\n' +
       '¿Quieres que preparemos una cotización personalizada para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -895,26 +962,35 @@ const PREGUNTAS_CHATBOT = [
     siguiente: 'FIN',
     saltos: { 'Sí': 'A1', No: 'FIN' },
   },
+
+  // --- Reclamos ---
   {
     codigo: 'BMR',
     bloque: 'B',
     orden: 11,
-    texto: '¿Sobre qué necesitas ayuda?',
+    texto: '🔧 ¿Sobre qué necesitas ayuda?',
     tipo: 'opcion_unica',
-    opciones: ['Mis sensores dejaron de enviar datos', 'Las alertas llegan tarde o no llegan', 'Me facturaron un valor distinto', 'Otra consulta'],
+    opciones: ['Sensores sin datos', 'Alertas no llegan', 'Factura incorrecta', 'Otra consulta'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
     siguiente: 'BR1',
-    saltos: { 'Mis sensores dejaron de enviar datos': 'BR1', 'Las alertas llegan tarde o no llegan': 'BR2', 'Me facturaron un valor distinto': 'BR3', 'Otra consulta': 'B2' },
+    saltos: {
+      'Sensores sin datos': 'BR1',
+      'Alertas no llegan': 'BR2',
+      'Factura incorrecta': 'BR3',
+      'Otra consulta': 'B2',
+    },
   },
   {
     codigo: 'BR1',
     bloque: 'B',
     orden: 12,
-    texto: 
-      'Lamentamos el inconveniente. Primero revisa que los sensores tengan alimentación eléctrica y que la unidad de comunicación esté encendida. Si el problema sigue, nuestro equipo puede hacer un diagnóstico remoto y, si hace falta, programar una visita técnica.' +
-      '\\n\\n' +
+    texto:
+      '🔌 Lamentamos el inconveniente. Primero revisa que los sensores tengan ' +
+      'alimentación eléctrica y que la unidad de comunicación esté encendida. ' +
+      'Si el problema sigue, nuestro equipo puede hacer un diagnóstico remoto ' +
+      'y, si hace falta, programar una visita técnica.\n\n' +
       '¿Quieres que registremos tu caso para que un asesor te contacte?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -928,9 +1004,11 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'BR2',
     bloque: 'B',
     orden: 13,
-    texto: 
-      'Las alertas tardías o que no llegan suelen deberse a conectividad, configuración o comunicación con los sensores. Nuestro equipo puede revisar la configuración de forma remota y corregirla. Si persiste, se programa una revisión técnica.' +
-      '\\n\\n' +
+    texto:
+      '🔔 Las alertas tardías o que no llegan suelen deberse a conectividad, ' +
+      'configuración o comunicación con los sensores. Nuestro equipo puede ' +
+      'revisar la configuración de forma remota y corregirla. Si persiste, se ' +
+      'programa una revisión técnica.\n\n' +
       '¿Quieres que registremos tu caso para que un asesor te contacte?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -944,9 +1022,10 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'BR3',
     bloque: 'B',
     orden: 14,
-    texto: 
-      'Lamentamos el inconveniente. Necesitamos la cotización aprobada y la factura recibida para que el área de facturación revise la diferencia. Si se confirma un error, se hace el ajuste correspondiente.' +
-      '\\n\\n' +
+    texto:
+      '📋 Lamentamos el inconveniente. Necesitamos la cotización aprobada y la ' +
+      'factura recibida para que el área de facturación revise la diferencia. ' +
+      'Si se confirma un error, se hace el ajuste correspondiente.\n\n' +
       '¿Quieres que registremos tu caso para que un asesor te contacte?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -956,26 +1035,30 @@ const PREGUNTAS_CHATBOT = [
     siguiente: 'FIN',
     saltos: { 'Sí': 'B2', No: 'FIN' },
   },
+
+  // --- Quejas ---
   {
     codigo: 'BMQ',
     bloque: 'B',
     orden: 15,
-    texto: '¿Sobre qué necesitas ayuda?',
+    texto: '😤 ¿Sobre qué necesitas ayuda?',
     tipo: 'opcion_unica',
-    opciones: ['No llegó la visita técnica prometida', 'Otra consulta'],
+    opciones: ['Visita técnica no llegó', 'Otra consulta'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
     siguiente: 'BQ1',
-    saltos: { 'No llegó la visita técnica prometida': 'BQ1', 'Otra consulta': 'B2' },
+    saltos: { 'Visita técnica no llegó': 'BQ1', 'Otra consulta': 'B2' },
   },
   {
     codigo: 'BQ1',
     bloque: 'B',
     orden: 16,
-    texto: 
-      'Lamentamos que la visita programada no se haya realizado. Podemos escalar el caso con Servicio al Cliente. Para agilizarlo necesitamos el número de solicitud o ticket, la fecha en que estaba programada la visita y los datos de la granja.' +
-      '\\n\\n' +
+    texto:
+      '📅 Lamentamos que la visita programada no se haya realizado. Podemos ' +
+      'escalar el caso con Servicio al Cliente. Para agilizarlo necesitamos el ' +
+      'número de solicitud o ticket, la fecha en que estaba programada la ' +
+      'visita y los datos de la granja.\n\n' +
       '¿Quieres que registremos tu caso para que un asesor te contacte?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -985,26 +1068,30 @@ const PREGUNTAS_CHATBOT = [
     siguiente: 'FIN',
     saltos: { 'Sí': 'B2', No: 'FIN' },
   },
+
+  // --- Sugerencias ---
   {
     codigo: 'BMS',
     bloque: 'B',
     orden: 17,
-    texto: '¿Sobre qué necesitas ayuda?',
+    texto: '💡 ¿Sobre qué necesitas ayuda?',
     tipo: 'opcion_unica',
-    opciones: ['Que controle el consumo de alimento', 'Otra consulta'],
+    opciones: ['Control de alimento', 'Otra consulta'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
     siguiente: 'BS1',
-    saltos: { 'Que controle el consumo de alimento': 'BS1', 'Otra consulta': 'B2' },
+    saltos: { 'Control de alimento': 'BS1', 'Otra consulta': 'B2' },
   },
   {
     codigo: 'BS1',
     bloque: 'B',
     orden: 18,
-    texto: 
-      'Gracias por la sugerencia. El monitoreo del consumo de alimento está contemplado dentro de nuestro roadmap de desarrollo. Estamos evaluando su integración para darte una visión más completa de la eficiencia de tu producción. La disponibilidad dependerá del desarrollo y la validación de la funcionalidad.' +
-      '\\n\\n' +
+    texto:
+      '🙏 Gracias por la sugerencia. El monitoreo del consumo de alimento está ' +
+      'contemplado dentro de nuestro roadmap de desarrollo. Estamos evaluando ' +
+      'su integración para darte una visión más completa de la eficiencia de ' +
+      'tu producción.\n\n' +
       '¿Quieres que registremos tu caso para que un asesor te contacte?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -1014,26 +1101,34 @@ const PREGUNTAS_CHATBOT = [
     siguiente: 'FIN',
     saltos: { 'Sí': 'B2', No: 'FIN' },
   },
+
+  // --- Tramites ---
   {
     codigo: 'BMT',
     bloque: 'B',
     orden: 19,
-    texto: '¿Sobre qué necesitas ayuda?',
+    texto: '📄 ¿Sobre qué necesitas ayuda?',
     tipo: 'opcion_unica',
-    opciones: ['Ampliar el sistema a un galpón nuevo', 'Dar de baja o trasladar el equipo', 'Otra consulta'],
+    opciones: ['Ampliar a galpón nuevo', 'Baja o traslado', 'Otra consulta'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
     siguiente: 'BT1',
-    saltos: { 'Ampliar el sistema a un galpón nuevo': 'BT1', 'Dar de baja o trasladar el equipo': 'BT2', 'Otra consulta': 'B2' },
+    saltos: {
+      'Ampliar a galpón nuevo': 'BT1',
+      'Baja o traslado': 'BT2',
+      'Otra consulta': 'B2',
+    },
   },
   {
     codigo: 'BT1',
     bloque: 'B',
     orden: 20,
-    texto: 
-      'Para ampliar el sistema, un asesor revisa las características del galpón nuevo, determina cuántos sensores hacen falta y prepara una cotización. Una vez la apruebes, el equipo técnico programa la instalación.' +
-      '\\n\\n' +
+    texto:
+      '🏗️ Para ampliar el sistema, un asesor revisa las características del ' +
+      'galpón nuevo, determina cuántos sensores hacen falta y prepara una ' +
+      'cotización. Una vez la apruebes, el equipo técnico programa la ' +
+      'instalación.\n\n' +
       '¿Quieres que registremos tu caso para que un asesor te contacte?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -1047,9 +1142,11 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'BT2',
     bloque: 'B',
     orden: 21,
-    texto: 
-      'Para dar de baja el servicio o trasladar los equipos a otra granja, Servicio al Cliente revisa las condiciones del contrato y programa el retiro o el traslado. Si es traslado, hacemos una evaluación técnica de la nueva ubicación antes de instalar de nuevo.' +
-      '\\n\\n' +
+    texto:
+      '🔄 Para dar de baja el servicio o trasladar los equipos a otra granja, ' +
+      'Servicio al Cliente revisa las condiciones del contrato y programa el ' +
+      'retiro o el traslado. Si es traslado, hacemos una evaluación técnica de ' +
+      'la nueva ubicación antes de instalar de nuevo.\n\n' +
       '¿Quieres que registremos tu caso para que un asesor te contacte?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
@@ -1059,12 +1156,14 @@ const PREGUNTAS_CHATBOT = [
     siguiente: 'FIN',
     saltos: { 'Sí': 'B2', No: 'FIN' },
   },
+
+  // --- Radicacion PQRS ---
   {
     codigo: 'B2',
     bloque: 'B',
     orden: 90,
     texto:
-      '¿Cuál es el asunto de tu solicitud?\n\n' +
+      '📌 ¿Cuál es el asunto de tu solicitud?\n\n' +
       'Al registrarla aceptas nuestra política de tratamiento de datos: ' +
       'https://avisens-project-production.up.railway.app/privacidad',
     tipo: 'texto_libre',
@@ -1079,7 +1178,7 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'B3',
     bloque: 'B',
     orden: 91,
-    texto: 'Cuéntanos con detalle qué sucedió',
+    texto: '📝 Cuéntanos con detalle qué sucedió',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: null,

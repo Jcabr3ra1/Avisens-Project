@@ -26,11 +26,11 @@ export class WhatsappProcessor extends WorkerHost {
       return;
     }
 
-    const { destino, texto } = job.data as TrabajoMensaje;
-    const enviado = await this.sender.enviarTexto(destino, texto);
+    const trabajo = job.data as TrabajoMensaje;
+    const enviado = await this.sender.enviar(trabajo);
     if (!enviado) {
-      throw new Error(`Envio fallido a ${destino}`);
+      throw new Error(`Envio fallido a ${trabajo.destino}`);
     }
-    this.logger.log(`Mensaje ${job.id} entregado a ${destino}`);
+    this.logger.log(`Mensaje ${job.id} entregado a ${trabajo.destino}`);
   }
 }
