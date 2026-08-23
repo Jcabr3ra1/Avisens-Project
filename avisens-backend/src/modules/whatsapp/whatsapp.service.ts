@@ -10,7 +10,12 @@ import {
 } from './whatsapp.tipos';
 
 const FIN = 'FIN';
-const MINUTOS_INACTIVIDAD = Number(process.env.WHATSAPP_MINUTOS_INACTIVIDAD ?? 5);
+// 1440 min = 24 h, que es la ventana en la que WhatsApp deja escribir sin
+// plantilla aprobada. Se baja por variable solo para demostrarlo en vivo: con
+// valores cortos se cierra la conversacion de quien apenas esta buscando un dato.
+const MINUTOS_INACTIVIDAD = Number(
+  process.env.WHATSAPP_MINUTOS_INACTIVIDAD ?? 1440,
+);
 
 const MAX_BOTON_TITULO = 20;
 const MAX_LISTA_TITULO = 24;
