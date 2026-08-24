@@ -804,4 +804,82 @@ describe('ChatbotService', () => {
       expect(datosDe(prisma.prospecto.update).area_granja_m2).toBe(1200.5);
     });
   });
+
+  describe('correccion selectiva de datos', () => {
+    const enConfirmar = { ...enCurso, pregunta_actual: 'CONFIRMAR' };
+
+    it('ofrece elegir el dato en vez de rehacer el cuestionario', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue(enConfirmar);
+
+      const r = await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'No, corregir datos',
+      });
+
+      expect(r.pregunta?.codigo).toBe('CORREGIR');
+      expect(r.pregunta?.opciones).toContain('Municipio');
+      expect(ultimosDatos(prisma.prospecto.update).pregunta_actual).toBe(
+        'CORREGIR',
+      );
+    });
+
+    it('lleva a la pregunta del dato elegido, marcada como correccion', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue({
+        ...enCurso,
+        pregunta_actual: 'CORREGIR',
+      });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ codigo: 'A4', tipo: 'texto_libre', opciones: null }),
+      );
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Municipio',
+      });
+
+      expect(ultimosDatos(prisma.prospecto.update).pregunta_actual).toBe(
+        'FIX:A4',
+      );
+    });
+
+    it('rechaza un dato que no esta en la lista', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue({
+        ...enCurso,
+        pregunta_actual: 'CORREGIR',
+      });
+
+      await expect(
+        service.responder({
+          sesion_id: enCurso.sesion_id,
+          respuesta: 'lo que sea',
+        }),
+      ).rejects.toThrow(/Elige uno de los datos/);
+    });
+
+    it('tras corregir vuelve al resumen y no sigue el cuestionario', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue({
+        ...enCurso,
+        pregunta_actual: 'FIX:A4',
+      });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'A4',
+          tipo: 'texto_libre',
+          opciones: null,
+          campo_prospecto: 'municipio',
+          siguiente: 'A5',
+        }),
+      );
+
+      const r = await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Piendamo',
+      });
+
+      expect(r.pregunta?.codigo).toBe('CONFIRMAR');
+      const datos = ultimosDatos(prisma.prospecto.update);
+      expect(datos.pregunta_actual).toBe('CONFIRMAR');
+      expect(datos.municipio).toBe('Piendamo');
+    });
+  });
 });

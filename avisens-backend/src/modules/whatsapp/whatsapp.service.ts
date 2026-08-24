@@ -118,8 +118,15 @@ export class WhatsappService {
             };
           }>;
         };
-        const contacto = valor?.contacts?.[0];
-        const respaldo = contacto?.wa_id ?? contacto?.user_id;
+        // El respaldo por contacts solo es fiable cuando la carga trae un
+        // unico contacto: con varios no hay forma de saber cual corresponde a
+        // cada mensaje, y atribuirlo mal mete a una persona en la conversacion
+        // de otra.
+        const contactos = valor?.contacts ?? [];
+        const respaldo =
+          contactos.length === 1
+            ? (contactos[0].wa_id ?? contactos[0].user_id)
+            : undefined;
         for (const m of valor?.messages ?? []) {
           let texto: string | undefined;
 
@@ -136,6 +143,12 @@ export class WhatsappService {
           if (!texto) continue;
 
           const de = m.from ?? m.from_user_id ?? respaldo;
+
+          if (!m.from && !m.from_user_id) {
+            this.logger.warn(
+              `Mensaje ${m.id} sin remitente propio; contactos=${contactos.length} resuelto=${de ?? 'ninguno'}`,
+            );
+          }
           if (!de) {
             this.logger.warn(
               `Mensaje ${m.id} sin remitente: se descarta para no engancharlo a otra conversacion`,
