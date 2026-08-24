@@ -187,6 +187,11 @@ model Galpon {
 // Dispositivos (nodos ESP32 que agrupan sensores en un galpon)
 // ---------------------------------------------------------------------------
 
+enum EstadoDispositivo {
+  online
+  offline
+}
+
 model Dispositivo {
   id               Int       @id @default(autoincrement())
   galpon_id        Int
@@ -194,7 +199,7 @@ model Dispositivo {
   codigo_topic     String    @unique
   nombre           String
   version_firmware String?
-  estado           String    @default("offline")
+  estado           EstadoDispositivo @default(offline)
   ip_local         String?
   // Secreto que el ESP32 manda en el header X-Device-Token de POST /ingest.
   // Nunca se expone en los listados; solo al crear el dispositivo o al regenerarlo.
@@ -216,6 +221,13 @@ model Dispositivo {
 // Sensores (miden una variable ambiental y reportan via un dispositivo)
 // ---------------------------------------------------------------------------
 
+enum EstadoSensor {
+  activo
+  inactivo
+  mantenimiento
+  falla
+}
+
 model Sensor {
   id                  Int       @id @default(autoincrement())
   galpon_id           Int
@@ -232,7 +244,7 @@ model Sensor {
   fecha_instalacion   DateTime? @db.Date
   ultima_calibracion  DateTime? @db.Date
   proxima_calibracion DateTime? @db.Date
-  estado              String    @default("activo")
+  estado              EstadoSensor @default(activo)
 
   mediciones  Medicion[]
   galpon      Galpon      @relation(fields: [galpon_id], references: [id])
@@ -350,6 +362,12 @@ model InventarioInsumo {
 // Lotes (grupo de aves que entra junto y se cria como una unidad)
 // ---------------------------------------------------------------------------
 
+enum EstadoLote {
+  activo
+  finalizado
+  inactivo
+}
+
 model Lote {
   id                     Int       @id @default(autoincrement())
   galpon_id              Int
@@ -364,7 +382,7 @@ model Lote {
   presupuesto_total_cop  Float?
   fecha_salida_estimada  DateTime? @db.Date
   fecha_salida_real      DateTime? @db.Date
-  estado                 String    @default("activo")
+  estado                 EstadoLote @default(activo)
 
   galpon    Galpon    @relation(fields: [galpon_id], references: [id])
   proveedor Proveedor @relation(fields: [proveedor_id], references: [id])
@@ -628,7 +646,7 @@ model PreguntaChatbot {
 }
 
 // ---------------------------------------------------------------------------
-// Chatbot de cotizacion (matriz de calificacion, prospectos y cotizaciones)
+// Matriz de calificacion (puntaje que suma cada opcion de respuesta)
 // ---------------------------------------------------------------------------
 model MatrizCalificacion {
   id               Int      @id @default(autoincrement())
@@ -644,6 +662,23 @@ model MatrizCalificacion {
 
   @@unique([codigo_pregunta, opcion_respuesta])
   @@map("matriz_calificacion")
+}
+
+// ---------------------------------------------------------------------------
+// Prospectos (quien pide cotizacion: su ciclo de vida y calificacion).
+// El estado es un enum: la restriccion vive en PostgreSQL, no en la aplicacion
+// ---------------------------------------------------------------------------
+enum EstadoProspecto {
+  nuevo
+  en_proceso
+  calificado
+  asignado
+  cerrado
+  abandonado
+  cancelado
+  pqrs
+  consulta_atendida
+  sin_consentimiento
 }
 
 model Prospecto {
@@ -669,7 +704,7 @@ model Prospecto {
   accion_siguiente           String?
   senal_caliente             Boolean   @default(false)
   conectividad_limitada      Boolean   @default(false)
-  estado                     String    @default("nuevo")
+  estado                     EstadoProspecto @default(nuevo)
   pregunta_actual            String?
   ultima_pregunta            String?
   asesor_asignado_id         Int?
@@ -690,6 +725,9 @@ model Prospecto {
   @@map("prospectos")
 }
 
+// ---------------------------------------------------------------------------
+// Respuestas del chatbot (lo que contesto el prospecto, con su puntaje)
+// ---------------------------------------------------------------------------
 model RespuestaChatbot {
   id               Int      @id @default(autoincrement())
   prospecto_id     Int
@@ -710,6 +748,9 @@ model RespuestaChatbot {
   @@map("respuestas_chatbot")
 }
 
+// ---------------------------------------------------------------------------
+// Cotizaciones (propuesta generada al calificar, con su detalle de sensores)
+// ---------------------------------------------------------------------------
 model Cotizacion {
   id               Int       @id @default(autoincrement())
   prospecto_id     Int
@@ -743,6 +784,9 @@ model CotizacionSensor {
   @@map("cotizaciones_sensores")
 }
 
+// ---------------------------------------------------------------------------
+// Interacciones del chatbot (traza de la conversacion mensaje a mensaje)
+// ---------------------------------------------------------------------------
 model InteraccionChatbot {
   id               Int      @id @default(autoincrement())
   prospecto_id     Int
@@ -758,6 +802,9 @@ model InteraccionChatbot {
   @@map("interacciones_chatbot")
 }
 
+// ---------------------------------------------------------------------------
+// Solicitudes PQRS (bloque B: peticiones, quejas, reclamos, sugerencias)
+// ---------------------------------------------------------------------------
 model SolicitudPqrs {
   id              Int       @id @default(autoincrement())
   prospecto_id    Int
@@ -827,12 +874,17 @@ model CurvaObjetivo {
 // ---------------------------------------------------------------------------
 // Accionamientos de equipos (historial de encendido/apagado, manual o automatico)
 // ---------------------------------------------------------------------------
+enum EstadoAccionamiento {
+  encendido
+  apagado
+}
+
 model AccionamientoEquipo {
   id            Int       @id @default(autoincrement())
   equipo_id     Int
   alerta_id     Int?
   origen        String?
-  estado        String?
+  estado        EstadoAccionamiento?
   valor_disparo Float?
   usuario_id    Int?
   fecha_inicio  DateTime  @default(now())
@@ -866,6 +918,12 @@ model PoliticaAlerta {
   @@map("politicas_alerta")
 }
 
+enum EstadoAlerta {
+  abierta
+  en_proceso
+  cerrada
+}
+
 model Alerta {
   id                Int       @id @default(autoincrement())
   galpon_id         Int
@@ -876,7 +934,7 @@ model Alerta {
   valor_detectado   Float?
   valor_umbral      Float?
   mensaje           String?
-  estado            String    @default("abierta")
+  estado            EstadoAlerta @default(abierta)
   responsable_id    Int?
   escalado_a_id     Int?
   accion_correctiva String?
@@ -931,6 +989,13 @@ model EvidenciaAlerta {
 // ---------------------------------------------------------------------------
 // Compras y finanzas (ordenes de compra, categorias y movimientos)
 // ---------------------------------------------------------------------------
+enum EstadoOrdenCompra {
+  pendiente
+  en_proceso
+  entregada
+  cancelada
+}
+
 model OrdenCompra {
   id                        Int       @id @default(autoincrement())
   proveedor_id              Int
@@ -940,7 +1005,7 @@ model OrdenCompra {
   fecha_entrega_estimada    DateTime? @db.Date
   fecha_entrega_real        DateTime? @db.Date
   valor_total_cop           Float?
-  estado                    String    @default("pendiente")
+  estado                    EstadoOrdenCompra @default(pendiente)
   calificacion_cumplimiento Float?
   calificacion_calidad      Float?
   calificacion_tiempo       Float?
@@ -1197,6 +1262,11 @@ model Prediccion {
 // ---------------------------------------------------------------------------
 // Recomendaciones (lo que la IA sugiere hacer, con su estado)
 // ---------------------------------------------------------------------------
+enum EstadoRecomendacion {
+  pendiente
+  resuelta
+}
+
 model Recomendacion {
   id               Int       @id @default(autoincrement())
   lote_id          Int?
@@ -1207,7 +1277,7 @@ model Recomendacion {
   descripcion      String?
   accion_sugerida  String?
   prioridad        String    @default("media")
-  estado           String    @default("pendiente")
+  estado           EstadoRecomendacion @default(pendiente)
   usuario_id       Int?
   fecha_generacion DateTime  @default(now())
   fecha_resolucion DateTime?

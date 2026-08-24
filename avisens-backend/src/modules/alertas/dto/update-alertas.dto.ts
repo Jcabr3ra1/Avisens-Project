@@ -1,15 +1,17 @@
 // dto/update-alertas.dto.ts
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { EstadoAlerta } from '@prisma/client';
 
 export class UpdateAlertasDto {
   @ApiPropertyOptional({
-    example: 'en_proceso',
-    description: 'Estado de la alerta: abierta | en_proceso | cerrada',
+    example: EstadoAlerta.en_proceso,
+    enum: EstadoAlerta,
+    description: 'Estado de la alerta',
   })
-  @IsString()
+  @IsEnum(EstadoAlerta)
   @IsOptional()
-  estado?: string;
+  estado?: EstadoAlerta;
 
   @ApiPropertyOptional({
     example: 'Se ajustó la ventilación',
