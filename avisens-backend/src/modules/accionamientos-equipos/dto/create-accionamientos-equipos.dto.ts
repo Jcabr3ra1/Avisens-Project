@@ -1,13 +1,15 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsInt,
-  IsPositive,
-  IsOptional,
-  IsNumber,
-  IsIn,
+  ApiProperty,
+  ApiPropertyOptional } from '@nestjs/swagger'; import {   IsInt,
   IsDateString,
+  IsEnum,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsPositive,
   IsString,
 } from 'class-validator';
+import { EstadoAccionamiento } from '@prisma/client';
 
 export const ORIGENES_ACCIONAMIENTO = [
   'manual',
@@ -47,13 +49,13 @@ export class CreateAccionamientoEquipoDto {
   origen?: string;
 
   @ApiPropertyOptional({
-    example: 'encendido',
-    description: 'Estado del accionamiento: encendido | apagado',
+    example: EstadoAccionamiento.encendido,
+    enum: EstadoAccionamiento,
+    description: 'Estado del accionamiento',
   })
-  @IsString()
-  @IsIn(ESTADOS_ACCIONAMIENTO)
+  @IsEnum(EstadoAccionamiento)
   @IsOptional()
-  estado?: string;
+  estado?: EstadoAccionamiento;
 
   @ApiPropertyOptional({
     example: 31.5,

@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OrdenesCompraService } from './ordenes-compra.service';
+import { EstadoOrdenCompra } from '@prisma/client';
 
 describe('OrdenesCompraService', () => {
   let service: OrdenesCompraService;
@@ -28,7 +29,7 @@ describe('OrdenesCompraService', () => {
     codigo: 'OC-2026-001',
     fecha_pedido: '2026-08-20',
     valor_total_cop: 1250000,
-    estado: 'pendiente',
+    estado: EstadoOrdenCompra.pendiente,
   };
 
   beforeEach(async () => {
@@ -109,16 +110,16 @@ describe('OrdenesCompraService', () => {
     it('actualiza los campos recibidos después de validar la orden', async () => {
       prisma.ordenCompra.update.mockResolvedValue({
         id: 1,
-        estado: 'entregada',
+        estado: EstadoOrdenCompra.entregada,
       });
 
-      await service.actualizar(1, { estado: 'entregada' });
+      await service.actualizar(1, { estado: EstadoOrdenCompra.entregada });
 
       expect(prisma.ordenCompra.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 1 },
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          data: expect.objectContaining({ estado: 'entregada' }),
+          data: expect.objectContaining({ estado: EstadoOrdenCompra.entregada }),
         }),
       );
     });
@@ -126,7 +127,7 @@ describe('OrdenesCompraService', () => {
     it('no actualiza una orden inexistente', async () => {
       prisma.ordenCompra.findUnique.mockResolvedValue(null);
 
-      await expect(service.actualizar(99, { estado: 'cancelada' })).rejects.toThrow(
+      await expect(service.actualizar(99, { estado: EstadoOrdenCompra.cancelada })).rejects.toThrow(
         NotFoundException,
       );
       expect(prisma.ordenCompra.update).not.toHaveBeenCalled();
