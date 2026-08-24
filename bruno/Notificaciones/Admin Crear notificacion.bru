@@ -1,0 +1,30 @@
+meta {
+  name: [Admin] Crear notificacion
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/v1/notificaciones
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "usuario_id": 1,
+    "tipo": "prospecto_caliente",
+    "titulo": "Nuevo prospecto caliente",
+    "mensaje": "Pedro Ramirez tiene 16 puntos y fue clasificado como caliente.",
+    "referencia_tipo": "prospecto",
+    "referencia_id": 14
+  }
+}

@@ -44,6 +44,10 @@ import { ProspectosModule } from './modules/prospectos/prospectos.module';
 import { CotizacionesModule } from './modules/cotizaciones/cotizaciones.module';
 import { BullModule } from '@nestjs/bullmq';
 import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
+import { SolicitudesPqrsModule } from './modules/solicitudes-pqrs/solicitudes-pqrs.module';
+import { EquiposModule } from './modules/equipos/equipos.module';
+import { InteraccionesChatbotModule } from './modules/interacciones-chatbot/interacciones-chatbot.module';
+import { NotificacionesModule } from './modules/notificaciones/notificaciones.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -109,6 +113,10 @@ import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
     ProspectosModule,
     CotizacionesModule,
     WhatsappModule,
+    SolicitudesPqrsModule,
+    EquiposModule,
+    InteraccionesChatbotModule,
+    NotificacionesModule,
   ],
   providers: [
     {

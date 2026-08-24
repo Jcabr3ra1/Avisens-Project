@@ -76,6 +76,7 @@ model Usuario {
   usuarios_galpones       UsuarioGalpon[]
   prospectos_asesorados   Prospecto[]
   solicitudes_pqrs        SolicitudPqrs[]
+  notificaciones          Notificacion[]
   comandos_voz            ComandoVoz[]
   accionamientos          AccionamientoEquipo[]
   alertas_responsable     Alerta[]               @relation("AlertaResponsable")
@@ -1398,4 +1399,25 @@ model CatalogoSensor {
   fecha_actualizacion DateTime @updatedAt
 
   @@map("catalogo_sensores")
+}
+
+// ---------------------------------------------------------------------------
+// Notificaciones internas (buzón para admin/propietario)
+// ---------------------------------------------------------------------------
+model Notificacion {
+  id             Int       @id @default(autoincrement())
+  usuario_id     Int
+  tipo           String
+  titulo         String
+  mensaje        String
+  leida          Boolean   @default(false)
+  referencia_tipo String?
+  referencia_id  Int?
+  fecha_creacion DateTime  @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([leida])
+  @@map("notificaciones")
 }
