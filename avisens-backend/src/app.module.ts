@@ -44,6 +44,7 @@ import { ProspectosModule } from './modules/prospectos/prospectos.module';
 import { CotizacionesModule } from './modules/cotizaciones/cotizaciones.module';
 import { BullModule } from '@nestjs/bullmq';
 import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
+import { MantenimientoModule } from './modules/mantenimiento/mantenimiento.module';
 import { SolicitudesPqrsModule } from './modules/solicitudes-pqrs/solicitudes-pqrs.module';
 import { EquiposModule } from './modules/equipos/equipos.module';
 import { InteraccionesChatbotModule } from './modules/interacciones-chatbot/interacciones-chatbot.module';
@@ -66,9 +67,9 @@ import { DecimalInterceptor } from './common/decimal.interceptor';
       connection: process.env.REDIS_URL
         ? { url: process.env.REDIS_URL }
         : {
-          host: process.env.REDIS_HOST ?? 'localhost',
-          port: Number(process.env.REDIS_PORT ?? 6379),
-        },
+            host: process.env.REDIS_HOST ?? 'localhost',
+            port: Number(process.env.REDIS_PORT ?? 6379),
+          },
       defaultJobOptions: {
         attempts: 3,
         backoff: { type: 'exponential', delay: 2000 },
@@ -115,6 +116,7 @@ import { DecimalInterceptor } from './common/decimal.interceptor';
     ProspectosModule,
     CotizacionesModule,
     WhatsappModule,
+    MantenimientoModule,
     SolicitudesPqrsModule,
     EquiposModule,
     InteraccionesChatbotModule,
@@ -128,4 +130,4 @@ import { DecimalInterceptor } from './common/decimal.interceptor';
     { provide: APP_INTERCEPTOR, useClass: DecimalInterceptor },
   ],
 })
-export class AppModule { }
+export class AppModule {}
