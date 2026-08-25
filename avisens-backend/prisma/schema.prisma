@@ -342,7 +342,7 @@ model InventarioInsumo {
   unidad_medida         String
   stock_actual          Float     @default(0)
   stock_minimo          Float     @default(0)
-  precio_unitario_cop   Float?
+  precio_unitario_cop   Decimal? @db.Decimal(14, 2)
   proveedor_habitual_id Int?
   ubicacion_almacen     String?
   fecha_vencimiento     DateTime? @db.Date
@@ -379,8 +379,8 @@ model Lote {
   raza                   String?
   sexo                   String?
   marca_alimento         String?
-  costo_pollito_unitario Float?
-  presupuesto_total_cop  Float?
+  costo_pollito_unitario Decimal? @db.Decimal(14, 2)
+  presupuesto_total_cop  Decimal? @db.Decimal(14, 2)
   fecha_salida_estimada  DateTime? @db.Date
   fecha_salida_real      DateTime? @db.Date
   estado                 EstadoLote @default(activo)
@@ -759,7 +759,7 @@ model Cotizacion {
   plan_recomendado String?
   numero_galpones  Int?
   numero_aves      Int?
-  valor_total_cop  Float?
+  valor_total_cop  Decimal? @db.Decimal(14, 2)
   url_pdf          String?
   canal_envio      String?
   estado           String    @default("generada")
@@ -1005,7 +1005,7 @@ model OrdenCompra {
   fecha_pedido              DateTime? @db.Date
   fecha_entrega_estimada    DateTime? @db.Date
   fecha_entrega_real        DateTime? @db.Date
-  valor_total_cop           Float?
+  valor_total_cop           Decimal? @db.Decimal(14, 2)
   estado                    EstadoOrdenCompra @default(pendiente)
   calificacion_cumplimiento Float?
   calificacion_calidad      Float?
@@ -1039,7 +1039,7 @@ model MovimientoFinanciero {
   categoria_id    Int
   proveedor_id    Int?
   tipo            String?
-  valor_cop       Float
+  valor_cop       Decimal @db.Decimal(14, 2)
   fecha           DateTime @db.Date
   descripcion     String?
   numero_factura  String?
@@ -1123,7 +1123,7 @@ model Equipo {
   modo_operacion    String?
   coordenada_x      Float?
   coordenada_y      Float?
-  costo_cop         Float?
+  costo_cop         Decimal? @db.Decimal(14, 2)
 
   galpon         Galpon                @relation(fields: [galpon_id], references: [id])
   zona           ZonaGalpon?           @relation(fields: [zona_id], references: [id])
@@ -1144,7 +1144,7 @@ model Mantenimiento {
   tecnico_responsable   String?
   tecnico_id            Int?
   descripcion           String?
-  costo_cop             Float?
+  costo_cop             Decimal? @db.Decimal(14, 2)
   causa_falla           String?
   tiempo_inactivo_horas Float?
   estado                String    @default("programado")
@@ -1166,7 +1166,7 @@ model MantenimientoRepuesto {
   insumo_id        Int
   descripcion      String?
   cantidad         Float?
-  costo_cop        Float?
+  costo_cop        Decimal? @db.Decimal(14, 2)
 
   mantenimiento Mantenimiento    @relation(fields: [mantenimiento_id], references: [id])
   insumo        InventarioInsumo @relation(fields: [insumo_id], references: [id])
@@ -1392,7 +1392,7 @@ model CatalogoSensor {
   tipo_sensor         String   @unique
   nombre              String
   descripcion         String?
-  precio_unitario_cop Float
+  precio_unitario_cop Decimal @db.Decimal(14, 2)
   cobertura_m2        Float?
   obligatorio         Boolean  @default(true)
   activo              Boolean  @default(true)

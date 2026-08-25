@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { IndicadoresService } from './indicadores.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 describe('IndicadoresService · calcularParaLote', () => {
   let service: IndicadoresService;
@@ -298,15 +299,17 @@ describe('IndicadoresService · kpisFinancieros', () => {
       mortalidad_acumulada_pct: 5,
     });
     prisma.movimientoFinanciero.aggregate
-      .mockResolvedValueOnce({ _sum: { valor_cop: 5000000 } })
-      .mockResolvedValueOnce({ _sum: { valor_cop: 8000000 } });
+      .mockResolvedValueOnce({ _sum: { valor_cop: new Prisma.Decimal(5000000) } })
+      .mockResolvedValueOnce({ _sum: { valor_cop: new Prisma.Decimal(8000000) } });
 
     const r = await service.kpisFinancieros(1, admin);
 
     // aves_vivas = 1000 * (1 - 0.05) = 950 ; kg = 2 * 950 = 1900
-    expect(r.costo_total_cop).toBe(5000000);
-    expect(r.ingreso_total_cop).toBe(8000000);
-    expect(r.margen_cop).toBe(3000000);
+    // El servicio devuelve Decimal: el interceptor los pasa a numero en la
+    // frontera HTTP, pero aqui se llama al servicio directamente.
+    expect(r.costo_total_cop.toString()).toBe('5000000');
+    expect(r.ingreso_total_cop.toString()).toBe('8000000');
+    expect(r.margen_cop.toString()).toBe('3000000');
     expect(r.kg_producidos).toBe(1900);
     expect(r.costo_por_kg_cop as number).toBeCloseTo(2631.58, 1);
     expect(r.roi_pct as number).toBeCloseTo(60, 1);
@@ -315,13 +318,13 @@ describe('IndicadoresService · kpisFinancieros', () => {
   it('costo_por_kg null cuando no hay indicador (sin kg producidos)', async () => {
     prisma.indicadorLote.findFirst.mockResolvedValue(null);
     prisma.movimientoFinanciero.aggregate
-      .mockResolvedValueOnce({ _sum: { valor_cop: 1000000 } })
+      .mockResolvedValueOnce({ _sum: { valor_cop: new Prisma.Decimal(1000000) } })
       .mockResolvedValueOnce({ _sum: { valor_cop: null } });
 
     const r = await service.kpisFinancieros(1, admin);
 
-    expect(r.costo_total_cop).toBe(1000000);
-    expect(r.ingreso_total_cop).toBe(0);
+    expect(r.costo_total_cop.toString()).toBe('1000000');
+    expect(r.ingreso_total_cop.toString()).toBe('0');
     expect(r.kg_producidos).toBe(0);
     expect(r.costo_por_kg_cop).toBeNull();
   });
