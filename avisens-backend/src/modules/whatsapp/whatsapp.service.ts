@@ -11,11 +11,13 @@ import {
 import { Prisma } from '@prisma/client';
 
 const FIN = 'FIN';
-// 1440 min = 24 h, que es la ventana en la que WhatsApp deja escribir sin
-// plantilla aprobada. Se baja por variable solo para demostrarlo en vivo: con
-// valores cortos se cierra la conversacion de quien apenas esta buscando un dato.
+// Cerrar a los 5 min no es despedirse: se guarda ultima_pregunta y, si la
+// persona vuelve dentro de 24 h, el bot le ofrece Continuar y retoma en la
+// pregunta exacta donde quedo. Quien esta contestando nunca se cierra, porque
+// el filtro es ultima_actividad y se refresca con cada mensaje. Con 1440 el
+// prospecto quedaria colgado un dia entero sin que el bot le diga nada.
 const MINUTOS_INACTIVIDAD = Number(
-  process.env.WHATSAPP_MINUTOS_INACTIVIDAD ?? 1440,
+  process.env.WHATSAPP_MINUTOS_INACTIVIDAD ?? 5,
 );
 
 const MAX_BOTON_TITULO = 20;
