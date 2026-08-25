@@ -1,8 +1,10 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
@@ -99,9 +101,17 @@ export class OrdenesCompraService {
   }
 
   async listar({ page, limit }: PaginationQueryDto, solicitante?: Solicitante) {
-    const where =
+    // Mismo criterio que obtener(): las de sus lotes y, cuando no hay lote,
+    // las que creo el. Antes solo miraba la ruta del lote, asi que un
+    // propietario no veia ni siquiera sus propias ordenes sin lote.
+    const where: Prisma.OrdenCompraWhereInput =
       solicitante && esPropietario(solicitante)
-        ? { lote: { galpon: { granja: { propietario_id: solicitante.id } } } }
+        ? {
+            OR: [
+              { lote: { galpon: { granja: { propietario_id: solicitante.id } } } },
+              { lote_id: null, usuario_id: solicitante.id },
+            ],
+          }
         : {};
     const [data, total] = await this.prisma.$transaction([
       this.prisma.ordenCompra.findMany({
@@ -132,7 +142,7 @@ export class OrdenesCompraService {
       where: { id },
       include: {
         proveedor: true,
-        lote: true,
+        lote: { include: { galpon: { include: { granja: true } } } },
         usuario: {
           select: {
             id: true,
@@ -147,9 +157,20 @@ export class OrdenesCompraService {
       throw new NotFoundException('Orden de compra no encontrada');
     }
 
-    if (solicitante && esPropietario(solicitante) && orden.lote) {
-      const lote = await this.prisma.lote.findUnique({ where: { id: orden.lote_id! }, include: { galpon: { include: { granja: true } } } });
-      if (lote) verificarDueno(solicitante, lote.galpon.granja.propietario_id, 'No tienes acceso a esta orden');
+    if (solicitante && esPropietario(solicitante)) {
+      // El lote es opcional, asi que no puede ser el unico vinculo con el dueno:
+      // una orden sin lote se quedaba sin ninguna comprobacion y cualquier
+      // propietario podia leerla, editarla o borrarla. Para esas, el dueno es
+      // quien la creo, que es lo que `crear` ya obliga a los propietarios.
+      const propietarioDelLote = orden.lote?.galpon.granja.propietario_id;
+      const esSuya =
+        propietarioDelLote !== undefined
+          ? propietarioDelLote === solicitante.id
+          : orden.usuario_id === solicitante.id;
+
+      if (!esSuya) {
+        throw new ForbiddenException('No tienes acceso a esta orden');
+      }
     }
 
     return orden;

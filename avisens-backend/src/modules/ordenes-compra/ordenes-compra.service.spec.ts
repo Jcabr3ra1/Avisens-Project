@@ -1,8 +1,9 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OrdenesCompraService } from './ordenes-compra.service';
 import { EstadoOrdenCompra } from '@prisma/client';
+import { ROLES } from '../../common/auth/roles';
 
 describe('OrdenesCompraService', () => {
   let service: OrdenesCompraService;
@@ -150,6 +151,103 @@ describe('OrdenesCompraService', () => {
 
       await expect(service.eliminar(99)).rejects.toThrow(NotFoundException);
       expect(prisma.ordenCompra.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('alcance por rol', () => {
+    const ADMIN = { id: 1, rol: ROLES.ADMINISTRADOR };
+    const DUENO = { id: 7, rol: ROLES.PROPIETARIO };
+    const OTRO = { id: 8, rol: ROLES.PROPIETARIO };
+
+    const conLote = (propietarioId: number) => ({
+      id: 1,
+      usuario_id: 99,
+      lote_id: 2,
+      lote: { id: 2, galpon: { granja: { propietario_id: propietarioId } } },
+    });
+
+    const sinLote = (creadorId: number) => ({
+      id: 1,
+      usuario_id: creadorId,
+      lote_id: null,
+      lote: null,
+    });
+
+    describe('obtener', () => {
+      it('el propietario ve la orden de su lote', async () => {
+        prisma.ordenCompra.findUnique.mockResolvedValue(conLote(DUENO.id));
+        const r = await service.obtener(1, DUENO);
+        expect(r.id).toBe(1);
+      });
+
+      it('impide al propietario ver la orden del lote de otro', async () => {
+        prisma.ordenCompra.findUnique.mockResolvedValue(conLote(DUENO.id));
+        await expect(service.obtener(1, OTRO)).rejects.toThrow(
+          ForbiddenException,
+        );
+      });
+
+      it('SIN LOTE: el propietario ve la que el creo', async () => {
+        prisma.ordenCompra.findUnique.mockResolvedValue(sinLote(DUENO.id));
+        const r = await service.obtener(1, DUENO);
+        expect(r.id).toBe(1);
+      });
+
+      it('SIN LOTE: impide al propietario ver la que creo otro', async () => {
+        // Este es el agujero que se arregla: antes, al no haber lote, no se
+        // comprobaba nada y cualquier propietario podia leerla.
+        prisma.ordenCompra.findUnique.mockResolvedValue(sinLote(DUENO.id));
+        await expect(service.obtener(1, OTRO)).rejects.toThrow(
+          ForbiddenException,
+        );
+      });
+
+      it('el administrador ve cualquier orden', async () => {
+        prisma.ordenCompra.findUnique.mockResolvedValue(sinLote(999));
+        const r = await service.obtener(1, ADMIN);
+        expect(r.id).toBe(1);
+      });
+    });
+
+    describe('actualizar y eliminar heredan la comprobacion', () => {
+      it('impide actualizar una orden sin lote de otro propietario', async () => {
+        prisma.ordenCompra.findUnique.mockResolvedValue(sinLote(DUENO.id));
+        await expect(
+          service.actualizar(1, { codigo: 'X' }, OTRO),
+        ).rejects.toThrow(ForbiddenException);
+        expect(prisma.ordenCompra.update).not.toHaveBeenCalled();
+      });
+
+      it('impide eliminar una orden sin lote de otro propietario', async () => {
+        prisma.ordenCompra.findUnique.mockResolvedValue(sinLote(DUENO.id));
+        await expect(service.eliminar(1, OTRO)).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(prisma.ordenCompra.delete).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('listar', () => {
+      it('el administrador ve todas', async () => {
+        prisma.$transaction.mockResolvedValue([[], 0]);
+        await service.listar({ page: 1, limit: 10 }, ADMIN);
+        expect(prisma.ordenCompra.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({ where: {} }),
+        );
+      });
+
+      it('el propietario ve las de sus lotes Y las suyas sin lote', async () => {
+        prisma.$transaction.mockResolvedValue([[], 0]);
+        await service.listar({ page: 1, limit: 10 }, DUENO);
+
+        const [args] = prisma.ordenCompra.findMany.mock.calls[0] as [
+          { where: { OR: unknown[] } },
+        ];
+        expect(args.where.OR).toEqual([
+          { lote: { galpon: { granja: { propietario_id: DUENO.id } } } },
+          { lote_id: null, usuario_id: DUENO.id },
+        ]);
+      });
     });
   });
 });
