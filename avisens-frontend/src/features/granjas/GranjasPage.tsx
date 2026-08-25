@@ -1,105 +1,79 @@
 // GranjasPage.tsx — Módulo de Granjas (EP-08 HU-34).
-// CRUD real de granjas y galpones del propietario — mismo patrón que UsuariosPage:
-// listar, crear, editar, activar/desactivar y eliminar, todo contra la API.
-// El galpón "activo" (badge verde/gris) y su día de vida se derivan en el
-// cliente cruzando el galpón con su lote en curso — eso no se guarda, se calcula.
+// Muestra las granjas del propietario y sus galpones, ambos contra la API real.
+// Permite crear granjas (con sus galpones iniciales), editarlas, activarlas o
+// desactivarlas, y gestionar los galpones de cada una (crear, editar, activar).
 
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { isAxiosError } from 'axios'
 import {
-  listarGranjas,
-  crearGranja,
-  actualizarGranja,
-  activarGranja,
-  desactivarGranja,
-  eliminarGranjaPermanente,
-  listarGalpones,
-  crearGalpon,
-  actualizarGalpon,
-  activarGalpon,
-  desactivarGalpon,
-  eliminarGalponPermanente,
-  listarLotes,
-  type Granja,
-  type CrearGranjaPayload,
-  type Galpon,
-  type CrearGalponPayload,
-  type Lote,
+  listarGranjas, crearGranja, actualizarGranja, activarGranja, desactivarGranja,
+  listarGalpones, crearGalpon, actualizarGalpon, activarGalpon, desactivarGalpon,
+  type Granja, type CrearGranjaPayload,
+  type Galpon, type CrearGalponPayload,
 } from '@shared/api'
-import { IcPin } from '@shared/ui/icons/icons'
+import { IcPin, IcSettings, IcPlus } from '@shared/ui/icons/icons'
 import './GranjasPage.css'
 
-type EstadoGalpon = 'activo' | 'vacio'
-
-// Un galpón con su lote activo (si tiene) resuelto — lo que la tabla necesita.
-type GalponConLote = Galpon & {
-  loteActivo: Lote | null
-  estadoLote: EstadoGalpon
-  diaVida: number
-  areaM2: number | null
+const FORM_GRANJA_INICIAL: CrearGranjaPayload = {
+  nombre: '',
+  direccion: '',
+  municipio: '',
+  departamento: '',
+  area_total_m2: undefined,
 }
 
-function diasDesde(fechaISO: string): number {
-  const dias = Math.floor((Date.now() - new Date(fechaISO).getTime()) / 86_400_000)
-  return Math.max(dias, 0)
-}
+// Solo se usa en el modo "crear granja" para generar los galpones iniciales.
+const GALPONES_INICIALES = { cantidad: 0, capacidadAves: undefined as number | undefined }
 
-// Traduce un error de axios a un mensaje legible (igual que en UsuariosPage).
+const FORM_GALPON_INICIAL = { codigo: '', nombre: '', capacidad_aves: undefined as number | undefined }
+
+type ModalGranja = { modo: 'crear' } | { modo: 'editar'; granja: Granja }
+type ModalGalpon = { modo: 'crear'; granjaId: number } | { modo: 'editar'; galpon: Galpon }
+
+// Traduce un error de axios a un mensaje legible para el usuario.
 function mensajeError(err: unknown, fallback: string): string {
   if (isAxiosError(err) && err.response) {
-    if (err.response.status === 403) return 'No tienes permisos para esta acción.'
+    if (err.response.status === 403) {
+      return 'No tienes permisos para esta acción.'
+    }
     const data = err.response.data as { message?: string | string[] }
-    if (data?.message) return Array.isArray(data.message) ? data.message.join(', ') : data.message
+    if (data?.message) {
+      return Array.isArray(data.message) ? data.message.join(', ') : data.message
+    }
   }
   return fallback
 }
-
-const FORM_GRANJA_INICIAL: CrearGranjaPayload = { nombre: '' }
-const FORM_GALPON_INICIAL: Omit<CrearGalponPayload, 'granja_id'> = { codigo: '', nombre: '' }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 function GranjasPage() {
   const [granjas, setGranjas] = useState<Granja[]>([])
   const [galpones, setGalpones] = useState<Galpon[]>([])
-  const [lotes, setLotes] = useState<Lote[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
   // Granja expandida para ver sus galpones
   const [granjaExpandida, setGranjaExpandida] = useState<number | null>(null)
 
-  // ── Modal de granja (crear/editar) ──
-  const [modalGranja, setModalGranja] = useState(false)
-  const [editandoGranjaId, setEditandoGranjaId] = useState<number | null>(null)
+  // Modal granja (crear / editar)
+  const [modalGranja, setModalGranja] = useState<ModalGranja | null>(null)
   const [formGranja, setFormGranja] = useState<CrearGranjaPayload>(FORM_GRANJA_INICIAL)
+  const [galponesIniciales, setGalponesIniciales] = useState(GALPONES_INICIALES)
   const [guardandoGranja, setGuardandoGranja] = useState(false)
-  const [errorFormGranja, setErrorFormGranja] = useState('')
+  const [errorGranja, setErrorGranja] = useState('')
 
-  // ── Modal de galpón (crear/editar) ──
-  const [modalGalpon, setModalGalpon] = useState(false)
-  const [granjaParaGalpon, setGranjaParaGalpon] = useState<number | null>(null)
-  const [editandoGalponId, setEditandoGalponId] = useState<number | null>(null)
-  const [formGalpon, setFormGalpon] = useState<Omit<CrearGalponPayload, 'granja_id'>>(FORM_GALPON_INICIAL)
+  // Modal galpón (crear / editar)
+  const [modalGalpon, setModalGalpon] = useState<ModalGalpon | null>(null)
+  const [formGalpon, setFormGalpon] = useState(FORM_GALPON_INICIAL)
   const [guardandoGalpon, setGuardandoGalpon] = useState(false)
-  const [errorFormGalpon, setErrorFormGalpon] = useState('')
+  const [errorGalpon, setErrorGalpon] = useState('')
 
-  // ── Menú ⋯ de acciones (compartido por granjas y galpones) ──
-  const [menuGranja, setMenuGranja] = useState<{ granja: Granja; top: number; left: number } | null>(null)
-  const [menuGalpon, setMenuGalpon] = useState<{ galpon: Galpon; top: number; left: number } | null>(null)
-
-  async function cargar() {
+  async function cargarTodo() {
     setCargando(true)
     setError('')
     try {
-      const [granjasData, galponesData, lotesData] = await Promise.all([
-        listarGranjas(),
-        listarGalpones(),
-        listarLotes(),
-      ])
-      setGranjas(granjasData)
-      setGalpones(galponesData)
-      setLotes(lotesData)
-      setGranjaExpandida((actual) => actual ?? granjasData[0]?.id ?? null)
+      const [gr, gp] = await Promise.all([listarGranjas(), listarGalpones()])
+      setGranjas(gr)
+      setGalpones(gp)
     } catch (err) {
       setError(mensajeError(err, 'No se pudieron cargar las granjas.'))
     } finally {
@@ -108,172 +82,160 @@ function GranjasPage() {
   }
 
   useEffect(() => {
-    cargar()
+    cargarTodo()
   }, [])
 
-  function galponesDe(granjaId: number): GalponConLote[] {
-    return galpones
-      .filter((g) => g.granja.id === granjaId)
-      .map((g) => {
-        const loteActivo = lotes.find((l) => l.galpon.id === g.id && l.estado === 'activo') ?? null
-        return {
-          ...g,
-          loteActivo,
-          estadoLote: loteActivo ? 'activo' : 'vacio',
-          diaVida: loteActivo ? diasDesde(loteActivo.fecha_ingreso) : 0,
-          areaM2: g.ancho_metros && g.largo_metros ? g.ancho_metros * g.largo_metros : null,
-        }
-      })
-  }
+  const galponesPorGranja = useMemo(() => {
+    const map = new Map<number, Galpon[]>()
+    for (const g of galpones) {
+      const lista = map.get(g.granja.id) ?? []
+      lista.push(g)
+      map.set(g.granja.id, lista)
+    }
+    return map
+  }, [galpones])
 
   // Totales globales del propietario para el encabezado
   const totalGalpones = galpones.length
-  const galponesActivos = galpones.filter((g) =>
-    lotes.some((l) => l.galpon.id === g.id && l.estado === 'activo'),
-  ).length
-  const totalAves = lotes.filter((l) => l.estado === 'activo').reduce((s, l) => s + l.cantidad_inicial, 0)
+  const galponesActivos = useMemo(() => galpones.filter((g) => g.activo).length, [galpones])
+  const capacidadTotal = useMemo(
+    () => galpones.reduce((s, g) => s + (g.capacidad_aves ?? 0), 0),
+    [galpones],
+  )
 
-  // ── Acciones: Granja ──
+  // ── Granja: crear / editar ──────────────────────────────────────────────────
   function abrirCrearGranja() {
-    setEditandoGranjaId(null)
     setFormGranja(FORM_GRANJA_INICIAL)
-    setErrorFormGranja('')
-    setModalGranja(true)
+    setGalponesIniciales(GALPONES_INICIALES)
+    setErrorGranja('')
+    setModalGranja({ modo: 'crear' })
   }
 
-  function abrirEditarGranja(g: Granja) {
-    setEditandoGranjaId(g.id)
+  function abrirEditarGranja(granja: Granja) {
     setFormGranja({
-      nombre: g.nombre,
-      direccion: g.direccion ?? undefined,
-      municipio: g.municipio ?? undefined,
-      departamento: g.departamento ?? undefined,
-      latitud: g.latitud ?? undefined,
-      longitud: g.longitud ?? undefined,
-      area_total_m2: g.area_total_m2 ?? undefined,
+      nombre: granja.nombre,
+      direccion: granja.direccion ?? '',
+      municipio: granja.municipio ?? '',
+      departamento: granja.departamento ?? '',
+      area_total_m2: granja.area_total_m2 ?? undefined,
     })
-    setErrorFormGranja('')
-    setModalGranja(true)
+    setErrorGranja('')
+    setModalGranja({ modo: 'editar', granja })
+  }
+
+  function actualizarCampoGranja<K extends keyof CrearGranjaPayload>(campo: K, valor: CrearGranjaPayload[K]) {
+    setFormGranja((prev) => ({ ...prev, [campo]: valor }))
   }
 
   async function handleGuardarGranja(e: FormEvent) {
     e.preventDefault()
-    setErrorFormGranja('')
+    if (!modalGranja) return
+    setErrorGranja('')
     setGuardandoGranja(true)
     try {
-      if (editandoGranjaId !== null) {
-        await actualizarGranja(editandoGranjaId, formGranja)
-      } else {
-        await crearGranja(formGranja)
+      const payload = {
+        nombre: formGranja.nombre,
+        direccion: formGranja.direccion?.trim() || undefined,
+        municipio: formGranja.municipio?.trim() || undefined,
+        departamento: formGranja.departamento?.trim() || undefined,
+        area_total_m2: formGranja.area_total_m2 || undefined,
       }
-      setModalGranja(false)
-      await cargar()
+      if (modalGranja.modo === 'editar') {
+        await actualizarGranja(modalGranja.granja.id, payload)
+      } else {
+        const nueva = await crearGranja(payload)
+        for (let i = 1; i <= (galponesIniciales.cantidad || 0); i++) {
+          await crearGalpon({
+            granja_id: nueva.id,
+            codigo: `GP-${String(i).padStart(2, '0')}`,
+            nombre: `Galpón ${i}`,
+            capacidad_aves: galponesIniciales.capacidadAves || undefined,
+          })
+        }
+        setGranjaExpandida(nueva.id)
+      }
+      setModalGranja(null)
+      await cargarTodo()
     } catch (err) {
-      setErrorFormGranja(mensajeError(err, `No se pudo ${editandoGranjaId !== null ? 'actualizar' : 'crear'} la granja.`))
+      setErrorGranja(mensajeError(err, 'No se pudo guardar la granja.'))
     } finally {
       setGuardandoGranja(false)
     }
   }
 
-  async function handleToggleActivaGranja(g: Granja) {
+  async function alternarActivaGranja(granja: Granja) {
     try {
-      if (g.activa) await desactivarGranja(g.id)
-      else await activarGranja(g.id)
-      await cargar()
+      if (granja.activa) await desactivarGranja(granja.id)
+      else await activarGranja(granja.id)
+      await cargarTodo()
     } catch (err) {
       setError(mensajeError(err, 'No se pudo cambiar el estado de la granja.'))
     }
   }
 
-  async function handleEliminarGranja(g: Granja) {
-    const ok = window.confirm(`¿Eliminar PERMANENTEMENTE la granja "${g.nombre}"?\nEsta acción no se puede deshacer.`)
-    if (!ok) return
-    try {
-      await eliminarGranjaPermanente(g.id)
-      await cargar()
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudo eliminar la granja.'))
-    }
-  }
-
-  // ── Acciones: Galpón ──
+  // ── Galpón: crear / editar ──────────────────────────────────────────────────
   function abrirCrearGalpon(granjaId: number) {
-    setGranjaParaGalpon(granjaId)
-    setEditandoGalponId(null)
     setFormGalpon(FORM_GALPON_INICIAL)
-    setErrorFormGalpon('')
-    setModalGalpon(true)
+    setErrorGalpon('')
+    setModalGalpon({ modo: 'crear', granjaId })
   }
 
-  function abrirEditarGalpon(g: Galpon) {
-    setGranjaParaGalpon(g.granja.id)
-    setEditandoGalponId(g.id)
+  function abrirEditarGalpon(galpon: Galpon) {
     setFormGalpon({
-      codigo: g.codigo,
-      nombre: g.nombre,
-      capacidad_aves: g.capacidad_aves ?? undefined,
-      ancho_metros: g.ancho_metros ?? undefined,
-      largo_metros: g.largo_metros ?? undefined,
-      orientacion: g.orientacion ?? undefined,
-      tipo_techo: g.tipo_techo ?? undefined,
+      codigo: galpon.codigo,
+      nombre: galpon.nombre,
+      capacidad_aves: galpon.capacidad_aves ?? undefined,
     })
-    setErrorFormGalpon('')
-    setModalGalpon(true)
+    setErrorGalpon('')
+    setModalGalpon({ modo: 'editar', galpon })
+  }
+
+  function actualizarCampoGalpon<K extends keyof typeof FORM_GALPON_INICIAL>(
+    campo: K,
+    valor: (typeof FORM_GALPON_INICIAL)[K],
+  ) {
+    setFormGalpon((prev) => ({ ...prev, [campo]: valor }))
   }
 
   async function handleGuardarGalpon(e: FormEvent) {
     e.preventDefault()
-    if (granjaParaGalpon === null) return
-    setErrorFormGalpon('')
+    if (!modalGalpon) return
+    setErrorGalpon('')
     setGuardandoGalpon(true)
     try {
-      if (editandoGalponId !== null) {
-        await actualizarGalpon(editandoGalponId, formGalpon)
-      } else {
-        await crearGalpon({ ...formGalpon, granja_id: granjaParaGalpon })
+      const payload = {
+        codigo: formGalpon.codigo,
+        nombre: formGalpon.nombre,
+        capacidad_aves: formGalpon.capacidad_aves || undefined,
       }
-      setModalGalpon(false)
-      await cargar()
+      if (modalGalpon.modo === 'editar') {
+        await actualizarGalpon(modalGalpon.galpon.id, payload)
+      } else {
+        const cargaGalpon: CrearGalponPayload = { granja_id: modalGalpon.granjaId, ...payload }
+        await crearGalpon(cargaGalpon)
+      }
+      setModalGalpon(null)
+      await cargarTodo()
     } catch (err) {
-      setErrorFormGalpon(mensajeError(err, `No se pudo ${editandoGalponId !== null ? 'actualizar' : 'crear'} el galpón.`))
+      setErrorGalpon(mensajeError(err, 'No se pudo guardar el galpón.'))
     } finally {
       setGuardandoGalpon(false)
     }
   }
 
-  async function handleToggleActivoGalpon(g: Galpon) {
+  async function alternarActivoGalpon(galpon: Galpon) {
     try {
-      if (g.activo) await desactivarGalpon(g.id)
-      else await activarGalpon(g.id)
-      await cargar()
+      if (galpon.activo) await desactivarGalpon(galpon.id)
+      else await activarGalpon(galpon.id)
+      await cargarTodo()
     } catch (err) {
       setError(mensajeError(err, 'No se pudo cambiar el estado del galpón.'))
     }
   }
 
-  async function handleEliminarGalpon(g: Galpon) {
-    const ok = window.confirm(`¿Eliminar PERMANENTEMENTE el galpón "${g.nombre}"?\nEsta acción no se puede deshacer.`)
-    if (!ok) return
-    try {
-      await eliminarGalponPermanente(g.id)
-      await cargar()
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudo eliminar el galpón.'))
-    }
-  }
-
-  function abrirMenuGranja(e: React.MouseEvent, g: Granja) {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setMenuGranja({ granja: g, top: r.bottom + 4, left: r.right - 152 })
-  }
-
-  function abrirMenuGalpon(e: React.MouseEvent, g: Galpon) {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setMenuGalpon({ galpon: g, top: r.bottom + 4, left: r.right - 152 })
-  }
-
   return (
     <div className="page-container grj-page">
+
       {/* ── Encabezado ──────────────────────────────────────────────────────── */}
       <header className="grj-header">
         <div>
@@ -283,222 +245,222 @@ function GranjasPage() {
         <button className="btn-primary" onClick={abrirCrearGranja}>+ Nueva granja</button>
       </header>
 
-      {error && (
-        <div className="grj-alert grj-alert--error" role="alert">
-          {error}
+      {/* ── Resumen global ──────────────────────────────────────────────────── */}
+      <div className="grj-resumen">
+        <div className="grj-stat">
+          <span className="grj-stat-valor">{granjas.length}</span>
+          <span className="grj-stat-label">Granjas</span>
         </div>
-      )}
+        <div className="grj-stat">
+          <span className="grj-stat-valor">{totalGalpones}</span>
+          <span className="grj-stat-label">Galpones</span>
+        </div>
+        <div className="grj-stat">
+          <span className="grj-stat-valor">{galponesActivos}</span>
+          <span className="grj-stat-label">Activos</span>
+        </div>
+        <div className="grj-stat">
+          <span className="grj-stat-valor">{capacidadTotal.toLocaleString()}</span>
+          <span className="grj-stat-label">Capacidad (aves)</span>
+        </div>
+      </div>
 
+      {error && <div className="grj-alert" role="alert">{error}</div>}
+
+      {/* ── Lista de granjas ─────────────────────────────────────────────────── */}
       {cargando ? (
-        <p className="grj-cargando">Cargando granjas…</p>
+        <p className="grj-empty">Cargando granjas…</p>
+      ) : granjas.length === 0 ? (
+        <div className="grj-vacio">
+          <IcPin size={32} />
+          <p className="grj-vacio-titulo">No tienes granjas registradas.</p>
+          <p className="grj-vacio-sub">Crea la primera con el botón de arriba.</p>
+        </div>
       ) : (
-        <>
-          {/* ── Resumen global ──────────────────────────────────────────────── */}
-          <div className="grj-resumen">
-            <div className="grj-stat">
-              <span className="grj-stat-valor">{granjas.length}</span>
-              <span className="grj-stat-label">Granjas</span>
-            </div>
-            <div className="grj-stat">
-              <span className="grj-stat-valor">{totalGalpones}</span>
-              <span className="grj-stat-label">Galpones</span>
-            </div>
-            <div className="grj-stat">
-              <span className="grj-stat-valor">{galponesActivos}</span>
-              <span className="grj-stat-label">Activos</span>
-            </div>
-            <div className="grj-stat">
-              <span className="grj-stat-valor">{totalAves.toLocaleString()}</span>
-              <span className="grj-stat-label">Aves totales</span>
-            </div>
-          </div>
+        <div className="grj-lista">
+          {granjas.map((granja) => {
+            const galponesGranja = galponesPorGranja.get(granja.id) ?? []
+            const ubicacion = [granja.municipio, granja.departamento].filter(Boolean).join(', ')
+            const expandida = granjaExpandida === granja.id
+            return (
+              <div key={granja.id} className={`grj-card ${granja.activa ? '' : 'grj-card--inactiva'}`}>
 
-          {/* ── Lista de granjas ─────────────────────────────────────────────── */}
-          {granjas.length === 0 ? (
-            <p className="grj-cargando">Aún no tienes granjas registradas. Crea la primera con el botón de arriba.</p>
-          ) : (
-            <div className="grj-lista">
-              {granjas.map((granja) => (
-                <div key={granja.id} className={`grj-card${granja.activa ? '' : ' grj-card--inactiva'}`}>
-                  {/* Cabecera de la granja — click para expandir/colapsar + menú de acciones */}
-                  <div className="grj-card-head">
+                {/* Cabecera de la granja — click para expandir/colapsar */}
+                <div className="grj-card-head">
+                  <button
+                    type="button"
+                    className="grj-card-titlebtn"
+                    onClick={() => setGranjaExpandida(expandida ? null : granja.id)}
+                  >
+                    <div className="grj-card-info">
+                      <span className="grj-nombre">{granja.nombre}</span>
+                      {ubicacion && (
+                        <span className="grj-ubicacion"><IcPin size={13} /> {ubicacion}</span>
+                      )}
+                    </div>
+                  </button>
+                  <div className="grj-card-meta">
+                    <span>{galponesGranja.length} galpones</span>
+                    {granja.area_total_m2 != null && <span>{granja.area_total_m2.toLocaleString()} m²</span>}
                     <button
-                      className="grj-card-head-clickable"
-                      onClick={() => setGranjaExpandida(granjaExpandida === granja.id ? null : granja.id)}
+                      type="button"
+                      className={`grj-badge grj-badge--${granja.activa ? 'activa' : 'inactiva'}`}
+                      onClick={() => alternarActivaGranja(granja)}
+                      title={granja.activa ? 'Clic para desactivar' : 'Clic para activar'}
                     >
-                      <div className="grj-card-info">
-                        <span className="grj-nombre">
-                          {granja.nombre}
-                          {!granja.activa && <span className="grj-tag-inactiva">Inactiva</span>}
-                        </span>
-                        <span className="grj-ubicacion">
-                          <IcPin size={13} /> {granja.municipio ?? '—'}, {granja.departamento ?? '—'}
-                        </span>
-                      </div>
-                      <div className="grj-card-meta">
-                        <span>{galponesDe(granja.id).length} galpones</span>
-                        <span>{granja.area_total_m2 ? `${granja.area_total_m2} m²` : '—'}</span>
-                        <span className="grj-chevron">{granjaExpandida === granja.id ? '▲' : '▼'}</span>
-                      </div>
+                      {granja.activa ? 'Activa' : 'Inactiva'}
                     </button>
-                    <button className="btn-kebab" onClick={(e) => abrirMenuGranja(e, granja)} aria-label="Acciones de la granja">
-                      ⋯
+                    <button
+                      type="button"
+                      className="grj-icon-btn"
+                      title="Editar granja"
+                      onClick={() => abrirEditarGranja(granja)}
+                    >
+                      <IcSettings size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="grj-chevron-btn"
+                      onClick={() => setGranjaExpandida(expandida ? null : granja.id)}
+                    >
+                      {expandida ? '▲' : '▼'}
                     </button>
                   </div>
+                </div>
 
-                  {/* Tabla de galpones — visible solo cuando la granja está expandida */}
-                  {granjaExpandida === granja.id && (
-                    <div className="grj-galpones">
-                      <div className="grj-galpones-toolbar">
-                        <button className="btn-ghost-sm" onClick={() => abrirCrearGalpon(granja.id)}>
-                          + Nuevo galpón
-                        </button>
-                      </div>
+                {/* Tabla de galpones — visible solo cuando la granja está expandida */}
+                {expandida && (
+                  <div className="grj-galpones">
+                    {galponesGranja.length > 0 ? (
                       <table className="grj-tabla">
                         <thead>
                           <tr>
-                            <th>Código</th>
-                            <th>Nombre</th>
-                            <th>Área (m²)</th>
-                            <th>Capacidad</th>
-                            <th>Aves actuales</th>
-                            <th>Día de vida</th>
-                            <th>Lote activo</th>
-                            <th>Estado</th>
-                            <th aria-label="Acciones"></th>
+                            <th>Código</th><th>Nombre</th><th>Capacidad (aves)</th><th>Estado</th><th>Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {galponesDe(granja.id).length === 0 ? (
-                            <tr>
-                              <td colSpan={9} className="grj-cargando">
-                                Esta granja aún no tiene galpones.
-                              </td>
-                            </tr>
-                          ) : (
-                            galponesDe(granja.id).map((g) => (
-                              <FilaGalpon key={g.id} galpon={g} onAbrirMenu={abrirMenuGalpon} />
-                            ))
-                          )}
+                          {galponesGranja.map((g) => (
+                            <FilaGalpon
+                              key={g.id}
+                              galpon={g}
+                              onEditar={() => abrirEditarGalpon(g)}
+                              onAlternar={() => alternarActivoGalpon(g)}
+                            />
+                          ))}
                         </tbody>
                       </table>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </>
+                    ) : (
+                      <p className="grj-galpones-vacio">Aún no tiene galpones registrados.</p>
+                    )}
+                    <button
+                      type="button"
+                      className="grj-agregar-galpon"
+                      onClick={() => abrirCrearGalpon(granja.id)}
+                    >
+                      <IcPlus size={14} /> Agregar galpón
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       )}
 
-      {/* ── Menú ⋯ de granja ─────────────────────────────────────────────────── */}
-      {menuGranja && (
-        <>
-          <div className="menu-overlay" onClick={() => setMenuGranja(null)} />
-          <div className="menu-dropdown" style={{ top: menuGranja.top, left: menuGranja.left }}>
-            <button className="menu-item" onClick={() => { const g = menuGranja.granja; setMenuGranja(null); abrirEditarGranja(g) }}>
-              Editar
-            </button>
-            <button className="menu-item" onClick={() => { const g = menuGranja.granja; setMenuGranja(null); handleToggleActivaGranja(g) }}>
-              {menuGranja.granja.activa ? 'Desactivar' : 'Activar'}
-            </button>
-            <button className="menu-item menu-item-danger" onClick={() => { const g = menuGranja.granja; setMenuGranja(null); handleEliminarGranja(g) }}>
-              Eliminar
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* ── Menú ⋯ de galpón ─────────────────────────────────────────────────── */}
-      {menuGalpon && (
-        <>
-          <div className="menu-overlay" onClick={() => setMenuGalpon(null)} />
-          <div className="menu-dropdown" style={{ top: menuGalpon.top, left: menuGalpon.left }}>
-            <button className="menu-item" onClick={() => { const g = menuGalpon.galpon; setMenuGalpon(null); abrirEditarGalpon(g) }}>
-              Editar
-            </button>
-            <button className="menu-item" onClick={() => { const g = menuGalpon.galpon; setMenuGalpon(null); handleToggleActivoGalpon(g) }}>
-              {menuGalpon.galpon.activo ? 'Desactivar' : 'Activar'}
-            </button>
-            <button className="menu-item menu-item-danger" onClick={() => { const g = menuGalpon.galpon; setMenuGalpon(null); handleEliminarGalpon(g) }}>
-              Eliminar
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* ── Modal: crear/editar granja ───────────────────────────────────────── */}
+      {/* ── Modal: crear / editar granja ───────────────────────────────────────── */}
       {modalGranja && (
-        <div className="modal-overlay" onClick={() => setModalGranja(false)}>
+        <div className="modal-overlay" onClick={() => setModalGranja(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h2 className="modal-title">{editandoGranjaId !== null ? 'Editar granja' : 'Nueva granja'}</h2>
+            <h2 className="modal-title">{modalGranja.modo === 'editar' ? 'Editar granja' : 'Nueva granja'}</h2>
+
             <form className="modal-form" onSubmit={handleGuardarGranja}>
               <label className="campo">
                 <span>Nombre</span>
                 <input
                   value={formGranja.nombre}
-                  onChange={(e) => setFormGranja({ ...formGranja, nombre: e.target.value })}
+                  onChange={(e) => actualizarCampoGranja('nombre', e.target.value)}
                   required
                 />
               </label>
-              <label className="campo">
-                <span>Dirección <em>(opcional)</em></span>
-                <input
-                  value={formGranja.direccion ?? ''}
-                  onChange={(e) => setFormGranja({ ...formGranja, direccion: e.target.value })}
-                />
-              </label>
+
               <div className="campo-fila">
                 <label className="campo">
                   <span>Municipio <em>(opcional)</em></span>
                   <input
-                    value={formGranja.municipio ?? ''}
-                    onChange={(e) => setFormGranja({ ...formGranja, municipio: e.target.value })}
+                    value={formGranja.municipio}
+                    onChange={(e) => actualizarCampoGranja('municipio', e.target.value)}
                   />
                 </label>
                 <label className="campo">
                   <span>Departamento <em>(opcional)</em></span>
                   <input
-                    value={formGranja.departamento ?? ''}
-                    onChange={(e) => setFormGranja({ ...formGranja, departamento: e.target.value })}
+                    value={formGranja.departamento}
+                    onChange={(e) => actualizarCampoGranja('departamento', e.target.value)}
                   />
                 </label>
               </div>
-              <div className="campo-fila">
-                <label className="campo">
-                  <span>Latitud <em>(opcional)</em></span>
-                  <input
-                    type="number" step="any"
-                    value={formGranja.latitud ?? ''}
-                    onChange={(e) => setFormGranja({ ...formGranja, latitud: e.target.value ? Number(e.target.value) : undefined })}
-                  />
-                </label>
-                <label className="campo">
-                  <span>Longitud <em>(opcional)</em></span>
-                  <input
-                    type="number" step="any"
-                    value={formGranja.longitud ?? ''}
-                    onChange={(e) => setFormGranja({ ...formGranja, longitud: e.target.value ? Number(e.target.value) : undefined })}
-                  />
-                </label>
-              </div>
+
               <label className="campo">
-                <span>Área total (m²) <em>(opcional)</em></span>
+                <span>Dirección <em>(opcional)</em></span>
                 <input
-                  type="number" step="any"
-                  value={formGranja.area_total_m2 ?? ''}
-                  onChange={(e) => setFormGranja({ ...formGranja, area_total_m2: e.target.value ? Number(e.target.value) : undefined })}
+                  value={formGranja.direccion}
+                  onChange={(e) => actualizarCampoGranja('direccion', e.target.value)}
                 />
               </label>
 
-              {errorFormGranja && <p className="modal-error" role="alert">{errorFormGranja}</p>}
+              <label className="campo">
+                <span>Área total en m² <em>(opcional)</em></span>
+                <input
+                  type="number"
+                  min={0}
+                  value={formGranja.area_total_m2 ?? ''}
+                  onChange={(e) => actualizarCampoGranja('area_total_m2', e.target.value ? Number(e.target.value) : undefined)}
+                />
+              </label>
+
+              {modalGranja.modo === 'crear' && (
+                <div className="campo-fila">
+                  <label className="campo">
+                    <span>Número de galpones <em>(opcional)</em></span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={galponesIniciales.cantidad || ''}
+                      onChange={(e) =>
+                        setGalponesIniciales((prev) => ({ ...prev, cantidad: e.target.value ? Number(e.target.value) : 0 }))
+                      }
+                    />
+                  </label>
+                  <label className="campo">
+                    <span>Aves por galpón <em>(opcional)</em></span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={galponesIniciales.capacidadAves ?? ''}
+                      onChange={(e) =>
+                        setGalponesIniciales((prev) => ({
+                          ...prev,
+                          capacidadAves: e.target.value ? Number(e.target.value) : undefined,
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+              )}
+
+              {errorGranja && <p className="modal-error" role="alert">{errorGranja}</p>}
 
               <div className="modal-acciones">
-                <button type="button" className="btn-ghost" onClick={() => setModalGranja(false)} disabled={guardandoGranja}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => setModalGranja(null)}
+                  disabled={guardandoGranja}
+                >
                   Cancelar
                 </button>
                 <button type="submit" className="btn-primary" disabled={guardandoGranja}>
-                  {guardandoGranja ? 'Guardando…' : editandoGranjaId !== null ? 'Guardar cambios' : 'Crear granja'}
+                  {guardandoGranja ? 'Guardando…' : modalGranja.modo === 'editar' ? 'Guardar cambios' : 'Crear granja'}
                 </button>
               </div>
             </form>
@@ -506,19 +468,19 @@ function GranjasPage() {
         </div>
       )}
 
-      {/* ── Modal: crear/editar galpón ───────────────────────────────────────── */}
+      {/* ── Modal: crear / editar galpón ───────────────────────────────────────── */}
       {modalGalpon && (
-        <div className="modal-overlay" onClick={() => setModalGalpon(false)}>
+        <div className="modal-overlay" onClick={() => setModalGalpon(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h2 className="modal-title">{editandoGalponId !== null ? 'Editar galpón' : 'Nuevo galpón'}</h2>
+            <h2 className="modal-title">{modalGalpon.modo === 'editar' ? 'Editar galpón' : 'Nuevo galpón'}</h2>
+
             <form className="modal-form" onSubmit={handleGuardarGalpon}>
               <div className="campo-fila">
                 <label className="campo">
                   <span>Código</span>
                   <input
                     value={formGalpon.codigo}
-                    onChange={(e) => setFormGalpon({ ...formGalpon, codigo: e.target.value })}
-                    placeholder="galpon1"
+                    onChange={(e) => actualizarCampoGalpon('codigo', e.target.value)}
                     required
                   />
                 </label>
@@ -526,64 +488,35 @@ function GranjasPage() {
                   <span>Nombre</span>
                   <input
                     value={formGalpon.nombre}
-                    onChange={(e) => setFormGalpon({ ...formGalpon, nombre: e.target.value })}
+                    onChange={(e) => actualizarCampoGalpon('nombre', e.target.value)}
                     required
                   />
                 </label>
               </div>
+
               <label className="campo">
                 <span>Capacidad de aves <em>(opcional)</em></span>
                 <input
                   type="number"
+                  min={0}
                   value={formGalpon.capacidad_aves ?? ''}
-                  onChange={(e) => setFormGalpon({ ...formGalpon, capacidad_aves: e.target.value ? Number(e.target.value) : undefined })}
+                  onChange={(e) => actualizarCampoGalpon('capacidad_aves', e.target.value ? Number(e.target.value) : undefined)}
                 />
               </label>
-              <div className="campo-fila">
-                <label className="campo">
-                  <span>Ancho (m) <em>(opcional)</em></span>
-                  <input
-                    type="number" step="any"
-                    value={formGalpon.ancho_metros ?? ''}
-                    onChange={(e) => setFormGalpon({ ...formGalpon, ancho_metros: e.target.value ? Number(e.target.value) : undefined })}
-                  />
-                </label>
-                <label className="campo">
-                  <span>Largo (m) <em>(opcional)</em></span>
-                  <input
-                    type="number" step="any"
-                    value={formGalpon.largo_metros ?? ''}
-                    onChange={(e) => setFormGalpon({ ...formGalpon, largo_metros: e.target.value ? Number(e.target.value) : undefined })}
-                  />
-                </label>
-              </div>
-              <div className="campo-fila">
-                <label className="campo">
-                  <span>Orientación <em>(opcional)</em></span>
-                  <input
-                    value={formGalpon.orientacion ?? ''}
-                    onChange={(e) => setFormGalpon({ ...formGalpon, orientacion: e.target.value })}
-                    placeholder="norte-sur"
-                  />
-                </label>
-                <label className="campo">
-                  <span>Tipo de techo <em>(opcional)</em></span>
-                  <input
-                    value={formGalpon.tipo_techo ?? ''}
-                    onChange={(e) => setFormGalpon({ ...formGalpon, tipo_techo: e.target.value })}
-                    placeholder="zinc"
-                  />
-                </label>
-              </div>
 
-              {errorFormGalpon && <p className="modal-error" role="alert">{errorFormGalpon}</p>}
+              {errorGalpon && <p className="modal-error" role="alert">{errorGalpon}</p>}
 
               <div className="modal-acciones">
-                <button type="button" className="btn-ghost" onClick={() => setModalGalpon(false)} disabled={guardandoGalpon}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  onClick={() => setModalGalpon(null)}
+                  disabled={guardandoGalpon}
+                >
                   Cancelar
                 </button>
                 <button type="submit" className="btn-primary" disabled={guardandoGalpon}>
-                  {guardandoGalpon ? 'Guardando…' : editandoGalponId !== null ? 'Guardar cambios' : 'Crear galpón'}
+                  {guardandoGalpon ? 'Guardando…' : modalGalpon.modo === 'editar' ? 'Guardar cambios' : 'Crear galpón'}
                 </button>
               </div>
             </form>
@@ -595,38 +528,22 @@ function GranjasPage() {
 }
 
 // ─── Sub-componente: fila de galpón ──────────────────────────────────────────
-function FilaGalpon({
-  galpon,
-  onAbrirMenu,
-}: {
-  galpon: GalponConLote
-  onAbrirMenu: (e: React.MouseEvent, g: Galpon) => void
-}) {
-  const etiqueta: Record<EstadoGalpon, string> = {
-    activo: 'Activo',
-    vacio: 'Vacío',
-  }
-
+function FilaGalpon({ galpon, onEditar, onAlternar }: { galpon: Galpon; onEditar: () => void; onAlternar: () => void }) {
   return (
-    <tr className={`grj-fila grj-fila--${galpon.estadoLote}${galpon.activo ? '' : ' grj-fila--desactivado'}`}>
+    <tr className={`grj-fila ${galpon.activo ? 'grj-fila--activo' : 'grj-fila--inactivo'}`}>
+      <td><code>{galpon.codigo}</code></td>
+      <td>{galpon.nombre}</td>
+      <td>{galpon.capacidad_aves != null ? galpon.capacidad_aves.toLocaleString() : '—'}</td>
       <td>
-        <code>{galpon.codigo}</code>
-      </td>
-      <td>{galpon.nombre}{!galpon.activo && <span className="grj-tag-inactiva">Inactivo</span>}</td>
-      <td>{galpon.areaM2 ? galpon.areaM2.toLocaleString() : '—'}</td>
-      <td>{galpon.capacidad_aves ? galpon.capacidad_aves.toLocaleString() : '—'}</td>
-      <td>{galpon.loteActivo ? galpon.loteActivo.cantidad_inicial.toLocaleString() : '—'}</td>
-      <td>{galpon.diaVida > 0 ? `Día ${galpon.diaVida}` : '—'}</td>
-      <td>{galpon.loteActivo?.codigo ?? '—'}</td>
-      <td>
-        <span className={`grj-estado grj-estado--${galpon.estadoLote}`}>
-          <span className={`grj-dot grj-dot--${galpon.estadoLote}`} />
-          {etiqueta[galpon.estadoLote]}
+        <span className={`grj-estado grj-estado--${galpon.activo ? 'activo' : 'inactivo'}`}>
+          <span className={`grj-dot grj-dot--${galpon.activo ? 'activo' : 'inactivo'}`} />
+          {galpon.activo ? 'Activo' : 'Inactivo'}
         </span>
       </td>
-      <td className="col-acciones">
-        <button className="btn-kebab" onClick={(e) => onAbrirMenu(e, galpon)} aria-label="Acciones del galpón">
-          ⋯
+      <td className="grj-fila-acciones">
+        <button type="button" className="grj-link-btn" onClick={onEditar}>Editar</button>
+        <button type="button" className="grj-link-btn" onClick={onAlternar}>
+          {galpon.activo ? 'Desactivar' : 'Activar'}
         </button>
       </td>
     </tr>

@@ -26,5 +26,12 @@ export default defineConfig({
         rewrite: (p) => p.replace(/^\/api/, ''),
       },
     },
+    // Bind mount de Windows hacia el contenedor Docker: los eventos de
+    // filesystem (inotify) no llegan, así que sin polling el hot-reload
+    // nunca se dispara al editar desde el host.
+    watch: {
+      usePolling: true,
+      interval: 300,
+    },
   },
 })

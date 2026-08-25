@@ -3,6 +3,7 @@ import type { PaginatedResponse } from './types'
 
 export interface Galpon {
   id: number
+  granja: { id: number; nombre: string; propietario_id: number }
   codigo: string
   nombre: string
   capacidad_aves: number | null
@@ -10,11 +11,7 @@ export interface Galpon {
   largo_metros: number | null
   orientacion: string | null
   tipo_techo: string | null
-  plano_url: string | null
-  fecha_construccion: string | null
   activo: boolean
-  // El backend anida la granja — no manda un `granja_id` plano.
-  granja: { id: number; nombre: string; propietario_id: number }
 }
 
 export interface CrearGalponPayload {

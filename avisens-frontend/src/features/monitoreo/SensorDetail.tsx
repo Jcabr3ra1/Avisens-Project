@@ -1,38 +1,25 @@
 // SensorDetail.tsx — Panel lateral con información detallada de un sensor.
 // Se abre al tocar/clickear una tarjeta de sensor en MonitoreoPage.
-// Muestra: gauge SVG, estadísticas, histórico REAL (vía /mediciones) y
-// referencia del Manual Italcol.
+// Muestra: gauge SVG, estadísticas, histórico y referencia Manual Italcol.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { isAxiosError } from 'axios'
 import { SensorGauge } from './SensorGauge'
-import { listarMediciones, type Medicion } from '@shared/api'
-import { iconoSensor } from '@shared/ui/sensorIcon'
-import { formatearUltimaLectura, type SensorVista } from '@shared/hooks/useMonitoreoAmbiental'
+import type { Sensor } from './data'
+import { ICONOS_VARIABLE } from './data'
 import { IcNote } from '@shared/ui/icons/icons'
 import './SensorDetail.css'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 type Props = {
-  sensor:       SensorVista | null   // Sensor actualmente seleccionado (null = cerrado)
-  galponNombre: string                // Nombre del galpón al que pertenece el sensor
-  diaVida:      number                // Día de vida del lote (para referencia Italcol)
-  onClose:      () => void            // Callback para cerrar el panel
-}
-
-// A qué clave de referencia corresponde el texto libre de `sensor.tipo`.
-function claveReferencia(tipo: string): keyof typeof REFERENCIA_ITALCOL | null {
-  const t = tipo.toLowerCase()
-  if (t.includes('temp')) return 'temperatura'
-  if (t.includes('hum')) return 'humedad'
-  if (t.includes('co2') || t.includes('gas')) return 'co2'
-  if (t.includes('nh3') || t.includes('amon')) return 'nh3'
-  if (t.includes('luz') || t.includes('lum')) return 'luz'
-  return null
+  sensor:   Sensor | null   // Sensor actualmente seleccionado (null = cerrado)
+  galpon:   string          // Nombre del galpón al que pertenece el sensor
+  diaVida:  number          // Día de vida del lote (para referencia Italcol)
+  onClose:  () => void      // Callback para cerrar el panel
 }
 
 // ─── Referencia del Manual Italcol por variable ───────────────────────────────
-const REFERENCIA_ITALCOL = {
+// Valores estándar de referencia para pollos de engorde Ross 308
+const REFERENCIA_ITALCOL: Record<string, { descripcion: string; rangos: string[] }> = {
   temperatura: {
     descripcion: 'La temperatura crítica para el bienestar del lote — el umbral configurado arriba ya está ajustado a la semana de vida del galpón.',
     rangos: ['Semana 1 (1-7 días): 30–33 °C', 'Semana 2 (8-14 días): 28–30 °C', 'Semana 3 (15-21 días): 26–28 °C', 'Semana 4+ (22+ días): 22–26 °C'],
@@ -53,31 +40,55 @@ const REFERENCIA_ITALCOL = {
     descripcion: 'La iluminación controla el ciclo de actividad y consumo de alimento.',
     rangos: ['1–5 días: 20–40 lux (continua)', '6+ días: 10–20 lux (programas 23h/1h)', 'Oscuridad: < 1 lux'],
   },
-} as const
+}
 
 // ─── Colores por estado ───────────────────────────────────────────────────────
 const COLORES: Record<string, string> = {
   optimo:      '#10b981',
   advertencia: '#f59e0b',
   critico:     '#ef4444',
-  sin_umbral:  '#64748b',
   offline:     '#a8b8b0',
 }
 
-const ETIQUETA_ESTADO: Record<string, string> = {
-  optimo:      'Óptimo',
-  advertencia: 'Advertencia',
-  critico:     'Crítico',
-  sin_umbral:  'Sin umbral configurado',
-  offline:     'Sin señal',
+// ─── Genera lecturas históricas simuladas ────────────────────────────────────
+// Crea 7 lecturas anteriores (cada 3 min) con variación alrededor del valor
+// actual. Usa el ID del sensor como semilla para que sean deterministas
+// (no cambian en cada render).
+type Lectura = { valor: number; tiempo: string }
+function generarHistorico(sensor: Sensor): Lectura[] {
+  const valores: number[] = []
+  // Semilla simple basada en el ID del sensor
+  let seed = sensor.id.charCodeAt(0) + sensor.id.charCodeAt(sensor.id.length - 1)
+
+  // Pseudo-random determinista (LCG simple)
+  function rand(): number {
+    seed = (seed * 1664525 + 1013904223) & 0xffffffff
+    return ((seed >>> 0) / 0xffffffff) - 0.5
+  }
+
+  let v = sensor.valor
+  for (let i = 0; i < 7; i++) {
+    // Varía ±4% alrededor del valor actual
+    v = Math.round((v + rand() * sensor.valor * 0.04) * 10) / 10
+    valores.unshift(v)
+  }
+  // La última lectura siempre es el valor actual
+  valores.push(sensor.valor)
+
+  // Lecturas cada 3 min, terminando en "Ahora" (la actual)
+  return valores.map((valor, i) => {
+    const minAtras = (valores.length - 1 - i) * 3
+    return { valor, tiempo: minAtras === 0 ? 'Ahora' : `hace ${minAtras} min` }
+  })
 }
 
 // ─── Gráfico de histórico: línea + banda del rango saludable + hover ─────────
-type Lectura = { valor: number; tiempo: string }
+// Un solo punto se etiqueta de forma permanente (el actual); el resto se
+// consulta pasando el mouse/dedo — no se listan los 8 valores como texto fijo.
 type SparkLineProps = {
   datos: Lectura[]; color: string; unidad: string
-  min: number; max: number
-  umbralMin: number | null; umbralMax: number | null
+  min: number; max: number          // dominio del eje Y (con margen)
+  umbralMin: number; umbralMax: number  // banda del rango saludable configurado
 }
 function SparkLine({ datos, color, unidad, min, max, umbralMin, umbralMax }: SparkLineProps) {
   const W = 240; const H = 64
@@ -87,15 +98,17 @@ function SparkLine({ datos, color, unidad, min, max, umbralMin, umbralMax }: Spa
 
   const rango = (max - min) || 1
   const yOf = (v: number) => H - PAD_BOT - ((v - min) / rango) * (H - PAD_TOP - PAD_BOT)
-  const xOf = (i: number) => datos.length > 1 ? (i / (datos.length - 1)) * W : W / 2
+  const xOf = (i: number) => (i / (datos.length - 1)) * W
 
   const puntos = datos.map((d, i) => ({ x: xOf(i), y: yOf(d.valor), ...d }))
   const lineaPts = puntos.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
   const areaPath = `M 0,${H} L ${lineaPts.split(' ').join(' L ')} L ${W},${H} Z`
 
-  const bandTop = umbralMax !== null ? yOf(Math.min(umbralMax, max)) : null
-  const bandBot = umbralMin !== null ? yOf(Math.max(umbralMin, min)) : null
+  // Banda del rango saludable, recortada al dominio visible del eje Y
+  const bandTop = yOf(Math.min(umbralMax, max))
+  const bandBot = yOf(Math.max(umbralMin, min))
 
+  // Ubica el punto más cercano al puntero (funciona con mouse y touch)
   function actualizarHover(clientX: number) {
     const rect = svgRef.current?.getBoundingClientRect()
     if (!rect) return
@@ -128,19 +141,26 @@ function SparkLine({ datos, color, unidad, min, max, umbralMin, umbralMax }: Spa
           </linearGradient>
         </defs>
 
-        {bandTop !== null && bandBot !== null && bandBot > bandTop && (
+        {/* Banda del rango saludable configurado — referencia neutra, no la línea */}
+        {bandBot > bandTop && (
           <rect x="0" y={bandTop} width={W} height={bandBot - bandTop} fill="#10b981" opacity="0.06" />
         )}
 
+        {/* Relleno degradado bajo la línea */}
         <path d={areaPath} fill="url(#spark-grad)" />
+
+        {/* Línea de tendencia */}
         <polyline points={lineaPts} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
+        {/* Cruce vertical del punto activo (hover o el actual por defecto) */}
         <line x1={p.x} y1={PAD_TOP - 2} x2={p.x} y2={H - PAD_BOT + 2}
           stroke={color} strokeWidth="1" strokeDasharray="2 3" opacity={hoverIdx !== null ? 0.5 : 0} />
 
+        {/* Punto activo */}
         <circle cx={p.x} cy={p.y} r={hoverIdx !== null ? 4.5 : 4} fill={color} stroke="white" strokeWidth="2" />
       </svg>
 
+      {/* Tooltip flotante — sigue al punto activo; clamp() en CSS evita que se salga del borde */}
       <div
         className={`sdet-spark-tip${hoverIdx !== null ? ' sdet-spark-tip--flotante' : ''}`}
         style={{ '--tip-x': `${(p.x / W) * 100}%` } as React.CSSProperties}
@@ -153,87 +173,84 @@ function SparkLine({ datos, color, unidad, min, max, umbralMin, umbralMax }: Spa
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-export function SensorDetail({ sensor, galponNombre, diaVida, onClose }: Props) {
+export function SensorDetail({ sensor, galpon, diaVida, onClose }: Props) {
+  // Referencia al panel para el foco de accesibilidad
   const panelRef = useRef<HTMLDivElement>(null)
-  const [historico, setHistorico] = useState<Medicion[]>([])
-  const [cargandoHist, setCargandoHist] = useState(false)
 
-  // Trae el histórico real del sensor cada vez que cambia la selección.
-  useEffect(() => {
-    if (!sensor) { setHistorico([]); return }
-    let activo = true
-    setCargandoHist(true)
-    listarMediciones({ sensor_id: sensor.id, page: 1, limit: 8 })
-      .then((data) => { if (activo) setHistorico(data) })
-      .catch((err) => {
-        if (activo && !isAxiosError(err)) setHistorico([])
-      })
-      .finally(() => { if (activo) setCargandoHist(false) })
-    return () => { activo = false }
-  }, [sensor?.id])
-
-  // El backend manda más reciente primero — se invierte para graficar en orden cronológico.
-  const lecturas: Lectura[] = useMemo(
-    () => historico
-      .slice()
-      .reverse()
-      .map((m) => ({ valor: m.valor, tiempo: formatearUltimaLectura(new Date(m.fecha_hora).getTime()) })),
-    [historico],
+  // Genera el histórico solo cuando el sensor cambia (no en cada render)
+  const historico = useMemo(
+    () => sensor ? generarHistorico(sensor) : [],
+    [sensor?.id, sensor?.valor],
   )
 
+  // Estadísticas derivadas del histórico
   const stats = useMemo(() => {
-    if (!lecturas.length) return { min: 0, max: 0, avg: 0 }
-    const valores = lecturas.map(h => h.valor)
+    if (!historico.length) return { min: 0, max: 0, avg: 0 }
+    const valores = historico.map(h => h.valor)
     const min = Math.min(...valores)
     const max = Math.max(...valores)
     const avg = Math.round((valores.reduce((s, v) => s + v, 0) / valores.length) * 10) / 10
     return { min, max, avg }
-  }, [lecturas])
+  }, [historico])
 
-  const pctEnRango = sensor && sensor.valor !== null && sensor.minUmbral !== null && sensor.maxUmbral !== null
+  // Porcentaje del valor dentro del rango óptimo (para el texto de resumen)
+  const pctEnRango = sensor && sensor.estado !== 'offline'
     ? Math.round(Math.min(100, Math.max(0, ((sensor.valor - sensor.minUmbral) / (sensor.maxUmbral - sensor.minUmbral)) * 100)))
     : 0
 
+  // Mover el foco al panel cuando abre (accesibilidad)
   useEffect(() => {
     if (sensor) panelRef.current?.focus()
   }, [sensor?.id])
 
+  // Cerrar con Escape — ya lo maneja MonitoreoPage pero por si acaso
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
-  const ref = sensor ? REFERENCIA_ITALCOL[claveReferencia(sensor.tipo) ?? 'temperatura'] : null
-  const refDisponible = sensor ? claveReferencia(sensor.tipo) !== null : false
+  // Referencia del Manual Italcol para esta variable
+  const ref = sensor ? REFERENCIA_ITALCOL[sensor.variable] : null
   const color = sensor ? (COLORES[sensor.estado] ?? COLORES.offline) : COLORES.offline
+
+  // Etiqueta del estado
+  const etiquetaEstado: Record<string, string> = {
+    optimo:      'Óptimo',
+    advertencia: 'Advertencia',
+    critico:     'Crítico',
+    offline:     'Sin señal',
+  }
 
   return (
     <>
+      {/* ── Overlay oscuro detrás del panel ─────────────────────────────── */}
       <div
         className={`sdet-overlay${sensor ? ' sdet-overlay--activo' : ''}`}
         onClick={onClose}
         aria-hidden="true"
       />
 
+      {/* ── Panel lateral ────────────────────────────────────────────────── */}
       <aside
         ref={panelRef}
         tabIndex={-1}
         className={`sdet-panel${sensor ? ' sdet-panel--abierto' : ''}`}
         role="dialog"
         aria-modal="true"
-        aria-label={sensor ? `Detalle de ${sensor.tipo}` : 'Detalle de sensor'}
+        aria-label={sensor ? `Detalle de ${sensor.etiqueta}` : 'Detalle de sensor'}
       >
         {!sensor ? null : (
           <>
+            {/* ── Cabecera del panel ───────────────────────────────────────── */}
             <div className="sdet-header">
               <div className="sdet-header-info">
                 <span className="sdet-icono" style={{ background: `${color}1f`, color }}>
-                  {iconoSensor(sensor.tipo, 18)}
+                  {ICONOS_VARIABLE[sensor.variable]}
                 </span>
                 <div>
-                  <div className="sdet-titulo">{sensor.tipo}</div>
-                  <div className="sdet-subtitulo">{galponNombre} · {sensor.codigo}</div>
+                  <div className="sdet-titulo">{sensor.etiqueta}</div>
+                  <div className="sdet-subtitulo">{galpon} · Zona {sensor.zona}</div>
                 </div>
               </div>
               <button className="sdet-cerrar" onClick={onClose} aria-label="Cerrar panel">
@@ -241,95 +258,104 @@ export function SensorDetail({ sensor, galponNombre, diaVida, onClose }: Props) 
               </button>
             </div>
 
+            {/* ── Gauge principal ──────────────────────────────────────────── */}
             <div className="sdet-gauge-wrap">
               <SensorGauge
-                valor={sensor.valor ?? 0}
-                minUmbral={sensor.minUmbral ?? 0}
-                maxUmbral={sensor.maxUmbral ?? (sensor.valor ?? 1) * 2}
+                valor={sensor.valor}
+                minUmbral={sensor.minUmbral}
+                maxUmbral={sensor.maxUmbral}
                 unidad={sensor.unidad}
-                estado={sensor.estado === 'sin_umbral' ? 'optimo' : sensor.estado}
+                estado={sensor.estado}
                 size={200}
               />
 
+              {/* Badge de estado centrado bajo el gauge */}
               <div className="sdet-estado-wrap">
                 <span
                   className="sdet-estado-badge"
-                  style={{ background: `${color}20`, color, border: `1px solid ${color}40` }}
+                  style={{
+                    background: `${color}20`,
+                    color,
+                    border: `1px solid ${color}40`,
+                  }}
                 >
-                  {ETIQUETA_ESTADO[sensor.estado]}
+                  {etiquetaEstado[sensor.estado]}
                 </span>
               </div>
 
+              {/* Descripción rápida del estado */}
               <p className="sdet-estado-desc">
                 {sensor.estado === 'optimo'      && `Dentro del rango óptimo · ${pctEnRango}% del recorrido`}
                 {sensor.estado === 'advertencia' && `Fuera del umbral recomendado · Monitorear de cerca`}
                 {sensor.estado === 'critico'     && `¡Fuera del rango crítico! Requiere acción correctiva`}
-                {sensor.estado === 'sin_umbral'  && `Esta variable todavía no tiene un umbral configurado en el sistema`}
                 {sensor.estado === 'offline'     && `Sensor sin señal · Verificar conexión del dispositivo`}
               </p>
             </div>
 
+            {/* ── Tarjetas de estadísticas ─────────────────────────────────── */}
             <div className="sdet-stats">
               <div className="sdet-stat">
                 <span className="sdet-stat-label">Mínimo</span>
-                <strong className="sdet-stat-val">{lecturas.length ? stats.min : '—'} <small>{sensor.unidad}</small></strong>
+                <strong className="sdet-stat-val">{stats.min} <small>{sensor.unidad}</small></strong>
               </div>
               <div className="sdet-stat">
                 <span className="sdet-stat-label">Promedio</span>
-                <strong className="sdet-stat-val">{lecturas.length ? stats.avg : '—'} <small>{sensor.unidad}</small></strong>
+                <strong className="sdet-stat-val">{stats.avg} <small>{sensor.unidad}</small></strong>
               </div>
               <div className="sdet-stat">
                 <span className="sdet-stat-label">Máximo</span>
-                <strong className="sdet-stat-val">{lecturas.length ? stats.max : '—'} <small>{sensor.unidad}</small></strong>
+                <strong className="sdet-stat-val">{stats.max} <small>{sensor.unidad}</small></strong>
               </div>
               <div className="sdet-stat">
                 <span className="sdet-stat-label">Última lectura</span>
-                <strong className="sdet-stat-val sdet-stat-mono">{formatearUltimaLectura(sensor.ultimaLecturaTs)}</strong>
+                <strong className="sdet-stat-val sdet-stat-mono">{sensor.ultimaLectura}</strong>
               </div>
             </div>
 
-            {sensor.minUmbral !== null && sensor.maxUmbral !== null && (
-              <div className="sdet-rango-card">
-                <span className="sdet-rango-label">Rango umbral configurado</span>
-                <div className="sdet-rango-bar-wrap">
-                  <div className="sdet-rango-bar">
-                    <div className="sdet-rango-fill" style={{ width: `${pctEnRango}%`, background: color }} />
-                    <div className="sdet-rango-marker" style={{ left: `${pctEnRango}%`, borderColor: color }} />
-                  </div>
-                  <div className="sdet-rango-labels">
-                    <span>{sensor.minUmbral} {sensor.unidad}</span>
-                    <span className="sdet-rango-actual" style={{ color }}>{sensor.valor ?? '—'} {sensor.unidad}</span>
-                    <span>{sensor.maxUmbral} {sensor.unidad}</span>
-                  </div>
+            {/* ── Rango configurado ────────────────────────────────────────── */}
+            <div className="sdet-rango-card">
+              <span className="sdet-rango-label">Rango umbral configurado</span>
+              <div className="sdet-rango-bar-wrap">
+                {/* Barra del rango con marcador del valor actual */}
+                <div className="sdet-rango-bar">
+                  <div
+                    className="sdet-rango-fill"
+                    style={{ width: `${pctEnRango}%`, background: color }}
+                  />
+                  <div
+                    className="sdet-rango-marker"
+                    style={{ left: `${pctEnRango}%`, borderColor: color }}
+                  />
+                </div>
+                <div className="sdet-rango-labels">
+                  <span>{sensor.minUmbral} {sensor.unidad}</span>
+                  <span className="sdet-rango-actual" style={{ color }}>
+                    {sensor.valor} {sensor.unidad}
+                  </span>
+                  <span>{sensor.maxUmbral} {sensor.unidad}</span>
                 </div>
               </div>
-            )}
-
-            <div className="sdet-section">
-              <h3 className="sdet-section-title">Últimas lecturas</h3>
-              {cargandoHist ? (
-                <p className="sdet-spark-hint">Cargando histórico…</p>
-              ) : lecturas.length === 0 ? (
-                <p className="sdet-spark-hint">Todavía no hay mediciones registradas para este sensor.</p>
-              ) : (
-                <>
-                  <p className="sdet-spark-hint">Pasa el dedo o el mouse sobre el gráfico para ver cada lectura</p>
-                  <div className="sdet-spark">
-                    <SparkLine
-                      datos={lecturas}
-                      color={color}
-                      unidad={sensor.unidad}
-                      min={stats.min - (stats.max - stats.min) * 0.1}
-                      max={stats.max + (stats.max - stats.min) * 0.1}
-                      umbralMin={sensor.minUmbral}
-                      umbralMax={sensor.maxUmbral}
-                    />
-                  </div>
-                </>
-              )}
             </div>
 
-            {ref && refDisponible && (
+            {/* ── Histórico de lecturas ────────────────────────────────────── */}
+            <div className="sdet-section">
+              <h3 className="sdet-section-title">Últimas lecturas</h3>
+              <p className="sdet-spark-hint">Pasa el dedo o el mouse sobre el gráfico para ver cada lectura</p>
+              <div className="sdet-spark">
+                <SparkLine
+                  datos={historico}
+                  color={color}
+                  unidad={sensor.unidad}
+                  min={stats.min - (stats.max - stats.min) * 0.1}
+                  max={stats.max + (stats.max - stats.min) * 0.1}
+                  umbralMin={sensor.minUmbral}
+                  umbralMax={sensor.maxUmbral}
+                />
+              </div>
+            </div>
+
+            {/* ── Referencia Manual Italcol ────────────────────────────────── */}
+            {ref && (
               <div className="sdet-section sdet-italcol">
                 <h3 className="sdet-section-title">
                   <IcNote size={14} /> Manual Italcol · Día de vida {diaVida}

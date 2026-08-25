@@ -74,7 +74,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background-image: url('/assets/farm.webp');
+  background-image: url('/assets/farm.png');
   background-size: cover;
   background-position: center 58%;
   filter: saturate(1.1) contrast(1.02);

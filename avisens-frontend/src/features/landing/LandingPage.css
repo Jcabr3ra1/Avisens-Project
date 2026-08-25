@@ -5,13 +5,6 @@
     linear-gradient(180deg, #f5f9f7 0%, #eef7f2 18%, #f8fbf9 38%, #ffffff 58%, #f5f9f7 100%);
 }
 
-/* La landing es larga: el navegador puede aplazar el layout y pintado de las
-   secciones que todavía están lejos del viewport. */
-.landing-page > section:not(.hero) {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 800px;
-}
-
 .landing-page::before {
   content: '';
   position: absolute;

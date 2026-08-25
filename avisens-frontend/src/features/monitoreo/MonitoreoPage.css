@@ -9,13 +9,6 @@
 .mon-title { font-size: 1.75rem; font-weight: 800; color: var(--dash-ink); margin: 0; letter-spacing: -0.03em; }
 .mon-sub   { font-size: 0.85rem; color: var(--text3); margin: 0.2rem 0 0; }
 
-.mon-cargando { padding: 1.5rem; text-align: center; font-size: 0.87rem; color: var(--text3); }
-.mon-alert {
-  border-radius: 8px; padding: 0.6rem 0.85rem; font-size: 0.85rem; margin: 0 0 1.2rem;
-  background: color-mix(in srgb, var(--danger, #ef4444) 12%, transparent);
-  border: 1px solid var(--danger, #ef4444); color: var(--danger, #ef4444);
-}
-
 .mon-resumen { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .mon-badge   { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.28rem 0.75rem; border-radius: 999px; font-size: 0.76rem; font-weight: 700; }
 .mon-badge--critico     { background: rgba(239,68,68,0.12);  color: var(--red); }
@@ -48,7 +41,6 @@
 .mon-dot--advertencia { background: var(--warning); }
 .mon-dot--critico     { background: var(--red); box-shadow: 0 0 6px rgba(239,68,68,0.5); }
 .mon-dot--offline     { background: var(--text4); }
-.mon-dot--sin_umbral  { background: var(--text4); }
 
 .mon-lote-info { font-size: 0.88rem; color: var(--text2); margin-bottom: 1.2rem; }
 .mon-sin-lote  { color: var(--text3); }
@@ -122,7 +114,6 @@
   background: linear-gradient(135deg, rgba(245,158,11,0.05), rgba(255,255,255,0.88));
 }
 .mon-sensor-card--offline { opacity: 0.5; }
-.mon-sensor-card--sin_umbral { opacity: 0.75; }
 
 .mon-sensor-icon   { font-size: 1.7rem; line-height: 1; }
 .mon-sensor-info   { display: flex; flex-direction: column; gap: 0.1rem; }
@@ -146,7 +137,6 @@
 .mon-estado-badge--advertencia { background: rgba(245,158,11,0.13); color: var(--warning3); }
 .mon-estado-badge--critico     { background: rgba(239,68,68,0.13);  color: var(--red); }
 .mon-estado-badge--offline     { background: rgba(100,116,139,0.12); color: var(--text3); }
-.mon-estado-badge--sin_umbral  { background: rgba(100,116,139,0.12); color: var(--text3); }
 .mon-ultima { font-size: 0.71rem; color: var(--text4); }
 
 /* ─── Tabla de umbrales ──────────────────────────────────────────────────── */

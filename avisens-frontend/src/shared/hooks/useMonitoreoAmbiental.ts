@@ -102,7 +102,7 @@ function construirVista(
   }
 
   return galpones.map((g) => {
-    const loteActivo = lotes.find((l) => l.galpon.id === g.id && l.estado === 'activo') ?? null
+    const loteActivo = lotes.find((l) => (l.galpon?.id ?? l.galpon_id) === g.id && l.estado === 'activo') ?? null
     const diaVida = loteActivo ? diasDesde(loteActivo.fecha_ingreso) : 0
     const semanaVida = Math.floor(diaVida / 7)
 
@@ -121,7 +121,7 @@ function construirVista(
         let estado: EstadoSensorVista
         if (s.estado !== 'activo' || valor === null) estado = 'offline'
         else if (!umbral) estado = 'sin_umbral'
-        else estado = calcularEstado(valor, umbral.valor_minimo, umbral.valor_maximo)
+        else estado = calcularEstado(valor, umbral.valor_minimo ?? umbral.valor_min ?? 0, umbral.valor_maximo ?? umbral.valor_max ?? 0)
 
         return {
           id: s.id,
