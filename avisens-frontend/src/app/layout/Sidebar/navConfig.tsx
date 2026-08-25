@@ -9,7 +9,7 @@
 import type { ReactNode } from 'react'
 import {
   IcGrid, IcEye, IcDoc, IcAlert, IcCoin, IcBox,
-  IcUsers, IcServer, IcLeaf, IcUserCircle,
+  IcUsers, IcServer, IcLeaf, IcUserCircle, IcChat,
 } from '@shared/ui/icons/icons'
 
 // Roles del sistema (coinciden exactamente con la tabla `roles` del backend).
@@ -24,6 +24,9 @@ export type NavItem = {
   badge?: number
   // Roles que pueden ver este ítem. Si está ausente, lo ven todos los roles.
   roles?: string[]
+  // Ruta que vive FUERA del panel (pública): se abre en una pestaña nueva para
+  // no perder el panel abierto. Ej.: la demo web del chatbot.
+  nuevaPestana?: boolean
 }
 
 export type NavSection = {
@@ -85,6 +88,10 @@ export const NAV_SECTIONS: NavSection[] = [
 
       // EP-01 HU-08: Leads y pipeline del chatbot de cotizaciones → solo Admin
       { path: '/crm',        label: 'Clientes', icon: <IcUsers size={16} />, roles: [ROL_ADMIN] },
+
+      // EP-01: demo web del chatbot. `chat=1` abre el asistente flotante ya
+      // iniciado; el hash deja a la vista la sección que lo explica.
+      { path: '/?chat=1#chatbot', label: 'Probar chatbot', icon: <IcChat size={16} />, roles: [ROL_ADMIN], nuevaPestana: true },
     ],
   },
   {

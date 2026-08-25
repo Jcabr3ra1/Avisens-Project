@@ -1,0 +1,29 @@
+meta {
+  name: [Admin · Propietario]  Adjuntar una evidencia a una alerta
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/evidencias-alerta
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "alerta_id": 1,
+    "tipo_evidencia": "foto",
+    "archivo_url": "https://servidor.com/evidencias/alerta-1.jpg",
+    "comentario": "Se adjuntó fotografía del sensor afectado",
+    "tamano_bytes": 245760
+  }
+}

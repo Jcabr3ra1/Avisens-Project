@@ -76,6 +76,14 @@ body {
   line-height: 1.5;
 }
 
+.route-loading {
+  display: grid;
+  min-height: 40vh;
+  place-items: center;
+  color: var(--text2);
+  font-weight: 600;
+}
+
 ::selection {
   background: rgba(16, 185, 129, 0.25);
   color: var(--text);

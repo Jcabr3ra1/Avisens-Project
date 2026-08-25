@@ -9,8 +9,8 @@ import { CreatePoliticasAlertaDto } from './dto/create-politicas-alerta.dto';
 import { UpdatePoliticasAlertaDto } from './dto/update-politicas-alerta.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/acceso';
-import type { Solicitante } from '../../common/acceso';
+import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import type { Solicitante } from '../../common/auth/acceso';
 
 const POLITICAS_ALERTA_SELECT = {
   id: true,

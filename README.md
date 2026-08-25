@@ -67,7 +67,40 @@ De *registrar y medir* a *predecir y recomendar*, por fases:
 
 ## Correr localmente
 
-### Backend (NestJS + PostgreSQL)
+### Todo el sistema con Docker (recomendado)
+
+```bash
+cp .env.example .env          # y rellena los secretos (ver abajo)
+docker compose up --build
+```
+
+Eso levanta PostgreSQL, Redis, el backend, el frontend y el microservicio de ML.
+El backend migra la base y la siembra solo, así que al terminar ya hay un admin
+para entrar:
+
+| Servicio | URL |
+|---|---|
+| Frontend | http://localhost:8080 |
+| Backend / Swagger | http://localhost:3000/docs |
+| Microservicio ML | http://localhost:8000/health |
+| PostgreSQL | localhost:5433 (usuario `avisens`) |
+
+En desarrollo el backend corre en modo *watch*: al guardar un archivo se
+recompila solo, sin `--build`.
+
+**Los secretos no están en el repositorio.** `docker-compose.yml` los exige por
+variable de entorno y se niega a arrancar si faltan, con un mensaje que dice
+cuál. Genera cada uno así:
+
+```bash
+openssl rand -base64 48 | tr -d '\n/+=' | head -c 48
+```
+
+`JWT_SECRET` y `JWT_REFRESH_SECRET` deben tener 32 caracteres como mínimo y ser
+**distintos entre sí**: si fueran iguales, un refresh token valdría como token
+de acceso.
+
+### Solo el backend, sin Docker (NestJS + PostgreSQL)
 
 ```bash
 # 1. Levantar PostgreSQL (desde la raíz del repo)

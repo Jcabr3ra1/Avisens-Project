@@ -1,0 +1,14 @@
+meta {
+  name: [Admin] Ver solicitud PQRS
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/solicitudes-pqrs/1
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

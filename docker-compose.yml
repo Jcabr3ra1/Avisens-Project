@@ -1,32 +1,55 @@
-# Orquestación completa de Avisens: base de datos, backend y frontend.
+# Orquestacion completa de Avisens: base de datos, Redis, backend, frontend y ML.
 #
-# Levantar todo:   docker compose up --build
-# Apagar:          docker compose down
-# Apagar + borrar la base de datos: docker compose down -v
+# Este archivo describe el despliegue de PRODUCCION. En local, Docker Compose
+# carga ademas docker-compose.override.yml, que le agrega hot-reload, el seed y
+# los puertos de depuracion.
+#
+# Levantar en desarrollo:  docker compose up --build
+# Levantar en produccion:  docker compose -f docker-compose.yml up --build -d
+# Apagar:                  docker compose down
+# Apagar + borrar la base: docker compose down -v
+#
+# Antes del primer arranque:  cp .env.example .env  y rellenar los secretos.
 #
 # Acceso una vez arriba:
 #   - Frontend (nginx):     http://localhost:8080
 #   - Backend / Swagger:    http://localhost:3000/docs
-#   - PostgreSQL:           localhost:5432  (usuario/clave: avisens)
+#   - PostgreSQL:           solo por la red interna (en dev, localhost:5433)
 
 services:
   # ----- Base de datos PostgreSQL -----
+  # No publica ningun puerto: solo se llega a ella por la red interna de Docker.
+  # El override la expone en el 5433 del host para poder inspeccionarla en local.
   database:
     build: ./database
     container_name: avisens-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: avisens
-      POSTGRES_PASSWORD: avisens
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD en .env (ver .env.example)}
       POSTGRES_DB: avisens
-    ports:
-      - "5432:5432"
     volumes:
       - avisens_pg_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U avisens -d avisens"]
       interval: 5s
       timeout: 5s
+      retries: 10
+
+  # ----- Redis (cola de trabajos en segundo plano) -----
+  # Lo usa BullMQ para los mensajes de WhatsApp: el webhook encola y responde 200
+  # de inmediato; el procesado real ocurre aparte y sobrevive a un reinicio.
+  redis:
+    image: redis:7-alpine
+    container_name: avisens-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - avisens_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
       retries: 10
 
   # ----- Backend NestJS -----
@@ -37,22 +60,42 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       # 'database' es el nombre del servicio: dentro de la red de Docker
       # reemplaza a 'localhost'.
-      DATABASE_URL: "postgresql://avisens:avisens@database:5432/avisens?schema=public"
-      NODE_ENV: development
-      JWT_SECRET: cambia-esto-por-un-secreto-largo-y-aleatorio
-      JWT_EXPIRES_IN: 15m
-      JWT_REFRESH_SECRET: otro-secreto-distinto-tambien-largo
-      JWT_REFRESH_EXPIRES_IN: 7d
+      DATABASE_URL: "postgresql://avisens:${POSTGRES_PASSWORD}@database:5432/avisens?schema=public"
+      NODE_ENV: ${NODE_ENV:-production}
+      # Los secretos NO se escriben aqui: este archivo esta versionado en un
+      # repositorio publico. Los lee del .env de la raiz, que si esta ignorado.
+      # El `:?` hace que Compose se niegue a arrancar si faltan, en vez de
+      # dejar pasar un valor por defecto que todo el mundo conoce.
+      JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET en .env (ver .env.example)}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?falta JWT_REFRESH_SECRET en .env (ver .env.example)}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       PORT: 3000
       # Dominio desde el que el navegador carga el frontend (nginx). Obligatoria
-      # en producción: sin ella la app no arranca (evita CORS abierto).
-      CORS_ORIGIN: "http://localhost:8080"
-      # Crea el usuario admin del seed al arrancar (idempotente). Así quien haga
-      # `docker compose up` obtiene la base lista sin correr nada a mano.
-      RUN_SEED: "true"
+      # en produccion: sin ella la app no arranca (evita CORS abierto).
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      # Sembrar apagado por defecto. El override lo enciende en desarrollo.
+      RUN_SEED: ${RUN_SEED:-false}
+      # Copiloto IA. La key se lee del .env de la raiz.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-haiku-4-5}
+      # Redis para la cola de BullMQ. 'redis' es el nombre del servicio: dentro
+      # de la red de Docker reemplaza a 'localhost'.
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # WhatsApp Cloud API. 'simulado' por defecto a proposito: si alguien
+      # despliega sin configurar nada, NO manda mensajes reales por accidente.
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-simulado}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v25.0}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN}
+      WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET}
     ports:
       - "3000:3000"
 
@@ -61,12 +104,15 @@ services:
     build:
       context: ./avisens-frontend
       args:
-        # El navegador pega a /api y nginx lo reenvía al backend
+        # El navegador pega a /api y nginx lo reenvia al backend
         VITE_API_URL: /api
     container_name: avisens-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      # Espera a que el backend responda /health, no solo a que arranque: si
+      # nginx sube antes, las primeras peticiones a /api dan 502.
+      backend:
+        condition: service_healthy
     ports:
       - "8080:80"
 
@@ -80,3 +126,4 @@ services:
 
 volumes:
   avisens_pg_data:
+  avisens_redis_data:

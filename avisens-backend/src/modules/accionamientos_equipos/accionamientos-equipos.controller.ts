@@ -22,6 +22,7 @@ import {AccionamientosEquiposService} from './accionamiento-equipo.service'
 import { CreateAccionamientoEquipoDto } from './dto/create-accionamientos-equipos.dto';
 import { UpdateAccionamientoEquipoDto } from './dto/update-accionamientos-equipos.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import path from 'path';
 
 interface AuthRequest extends Request {
   user: { id: number; email: string; rol: string; organizacion_id?: number };
@@ -47,6 +48,10 @@ export class AccionamientosEquiposController {
   crear(@Body() dto: CreateAccionamientoEquipoDto, @Req() req: AuthRequest) {
     return this.accionamientosService.crear(dto, req.user);
   }
+
+  
+
+
 
   @Get()
   @ApiOperation({

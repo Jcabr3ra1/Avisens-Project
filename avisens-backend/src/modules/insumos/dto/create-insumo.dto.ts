@@ -9,6 +9,10 @@ import {
 } from 'class-validator';
 
 export class CreateInsumoDto {
+  @ApiProperty({ example: 1, description: 'Granja a la que pertenece el insumo' })
+  @IsInt()
+  granja_id: number;
+
   @ApiProperty({ example: 'Alimento iniciación' })
   @IsString()
   nombre: string;

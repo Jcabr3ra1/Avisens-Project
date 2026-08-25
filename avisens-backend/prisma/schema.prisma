@@ -76,6 +76,7 @@ model Usuario {
   usuarios_galpones       UsuarioGalpon[]
   prospectos_asesorados   Prospecto[]
   solicitudes_pqrs        SolicitudPqrs[]
+  notificaciones          Notificacion[]
   comandos_voz            ComandoVoz[]
   accionamientos          AccionamientoEquipo[]
   alertas_responsable     Alerta[]               @relation("AlertaResponsable")
@@ -143,6 +144,7 @@ model Granja {
   galpones         Galpon[]
   politicas_alerta PoliticaAlerta[]
   clima            Clima[]
+  insumos          InventarioInsumo[]
 
   // El alcance por rol filtra siempre por dueño: granja.propietario_id = X.
   @@index([propietario_id])
@@ -187,6 +189,11 @@ model Galpon {
 // Dispositivos (nodos ESP32 que agrupan sensores en un galpon)
 // ---------------------------------------------------------------------------
 
+enum EstadoDispositivo {
+  online
+  offline
+}
+
 model Dispositivo {
   id               Int       @id @default(autoincrement())
   galpon_id        Int
@@ -194,7 +201,7 @@ model Dispositivo {
   codigo_topic     String    @unique
   nombre           String
   version_firmware String?
-  estado           String    @default("offline")
+  estado           EstadoDispositivo @default(offline)
   ip_local         String?
   // Secreto que el ESP32 manda en el header X-Device-Token de POST /ingest.
   // Nunca se expone en los listados; solo al crear el dispositivo o al regenerarlo.
@@ -216,6 +223,13 @@ model Dispositivo {
 // Sensores (miden una variable ambiental y reportan via un dispositivo)
 // ---------------------------------------------------------------------------
 
+enum EstadoSensor {
+  activo
+  inactivo
+  mantenimiento
+  falla
+}
+
 model Sensor {
   id                  Int       @id @default(autoincrement())
   galpon_id           Int
@@ -232,7 +246,7 @@ model Sensor {
   fecha_instalacion   DateTime? @db.Date
   ultima_calibracion  DateTime? @db.Date
   proxima_calibracion DateTime? @db.Date
-  estado              String    @default("activo")
+  estado              EstadoSensor @default(activo)
 
   mediciones  Medicion[]
   galpon      Galpon      @relation(fields: [galpon_id], references: [id])
@@ -324,24 +338,27 @@ model Proveedor {
 
 model InventarioInsumo {
   id                    Int       @id @default(autoincrement())
+  granja_id             Int
   nombre                String
   tipo                  String?
   unidad_medida         String
-  stock_actual          Float     @default(0)
-  stock_minimo          Float     @default(0)
-  precio_unitario_cop   Float?
+  stock_actual          Decimal   @default(0) @db.Decimal(14, 3)
+  stock_minimo          Decimal   @default(0) @db.Decimal(14, 3)
+  precio_unitario_cop   Decimal? @db.Decimal(14, 2)
   proveedor_habitual_id Int?
   ubicacion_almacen     String?
   fecha_vencimiento     DateTime? @db.Date
   activo                Boolean   @default(true)
   fecha_actualizacion   DateTime  @default(now()) @updatedAt
 
+  granja                   Granja                  @relation(fields: [granja_id], references: [id])
   proveedor_habitual       Proveedor?              @relation(fields: [proveedor_habitual_id], references: [id])
   eventos_sanitarios       EventoSanitario[]
   registros_plagas         RegistroPlaga[]
   movimientos_inventario   MovimientoInventario[]
   mantenimientos_repuestos MantenimientoRepuesto[]
 
+  @@index([granja_id])
   @@index([proveedor_habitual_id])
   @@map("inventario_insumos")
 }
@@ -349,6 +366,12 @@ model InventarioInsumo {
 // ---------------------------------------------------------------------------
 // Lotes (grupo de aves que entra junto y se cria como una unidad)
 // ---------------------------------------------------------------------------
+
+enum EstadoLote {
+  activo
+  finalizado
+  inactivo
+}
 
 model Lote {
   id                     Int       @id @default(autoincrement())
@@ -360,11 +383,11 @@ model Lote {
   raza                   String?
   sexo                   String?
   marca_alimento         String?
-  costo_pollito_unitario Float?
-  presupuesto_total_cop  Float?
+  costo_pollito_unitario Decimal? @db.Decimal(14, 2)
+  presupuesto_total_cop  Decimal? @db.Decimal(14, 2)
   fecha_salida_estimada  DateTime? @db.Date
   fecha_salida_real      DateTime? @db.Date
-  estado                 String    @default("activo")
+  estado                 EstadoLote @default(activo)
 
   galpon    Galpon    @relation(fields: [galpon_id], references: [id])
   proveedor Proveedor @relation(fields: [proveedor_id], references: [id])
@@ -601,7 +624,34 @@ model UsuarioGalpon {
 }
 
 // ---------------------------------------------------------------------------
-// Chatbot de cotizacion (matriz de calificacion, prospectos y cotizaciones)
+// Preguntas del chatbot (el flujo vive en datos: agregar o reordenar una
+// pregunta NO requiere desplegar, es una fila)
+// ---------------------------------------------------------------------------
+model PreguntaChatbot {
+  id              Int      @id @default(autoincrement())
+  codigo          String   @unique
+  bloque          String
+  orden           Int
+  texto           String
+  tipo            String
+  opciones        Json?
+  campo_prospecto String?
+  puntua          Boolean  @default(false)
+  obligatoria     Boolean  @default(true)
+  omitir_si_canal String?
+  siguiente       String?
+  saltos          Json?
+  activa          Boolean  @default(true)
+  fecha_creacion  DateTime @default(now())
+
+  respuestas RespuestaChatbot[]
+
+  @@index([bloque, orden])
+  @@map("preguntas_chatbot")
+}
+
+// ---------------------------------------------------------------------------
+// Matriz de calificacion (puntaje que suma cada opcion de respuesta)
 // ---------------------------------------------------------------------------
 model MatrizCalificacion {
   id               Int      @id @default(autoincrement())
@@ -619,11 +669,29 @@ model MatrizCalificacion {
   @@map("matriz_calificacion")
 }
 
+// ---------------------------------------------------------------------------
+// Prospectos (quien pide cotizacion: su ciclo de vida y calificacion).
+// El estado es un enum: la restriccion vive en PostgreSQL, no en la aplicacion
+// ---------------------------------------------------------------------------
+enum EstadoProspecto {
+  nuevo
+  en_proceso
+  calificado
+  asignado
+  cerrado
+  abandonado
+  cancelado
+  pqrs
+  consulta_atendida
+  sin_consentimiento
+}
+
 model Prospecto {
   id                         Int       @id @default(autoincrement())
   sesion_id                  String    @unique
   nombre                     String?
   nombre_granja              String?
+  tipo_documento             String?
   documento                  String?
   municipio                  String?
   departamento               String?
@@ -638,12 +706,18 @@ model Prospecto {
   fecha_callback             DateTime?
   puntaje_total              Int?
   clasificacion              String?
-  estado                     String    @default("nuevo")
+  accion_siguiente           String?
+  senal_caliente             Boolean   @default(false)
+  conectividad_limitada      Boolean   @default(false)
+  estado                     EstadoProspecto @default(nuevo)
+  pregunta_actual            String?
+  ultima_pregunta            String?
   asesor_asignado_id         Int?
   ip_origen                  String?
   user_agent                 String?
   consentimiento_habeas_data Boolean   @default(false)
   fecha_inicio               DateTime  @default(now())
+  ultima_actividad           DateTime  @default(now()) @updatedAt
   fecha_finalizacion         DateTime?
 
   asesor        Usuario?             @relation(fields: [asesor_asignado_id], references: [id])
@@ -656,9 +730,13 @@ model Prospecto {
   @@map("prospectos")
 }
 
+// ---------------------------------------------------------------------------
+// Respuestas del chatbot (lo que contesto el prospecto, con su puntaje)
+// ---------------------------------------------------------------------------
 model RespuestaChatbot {
   id               Int      @id @default(autoincrement())
   prospecto_id     Int
+  pregunta_id      Int?
   matriz_id        Int?
   bloque           String?
   codigo_pregunta  String?
@@ -668,12 +746,16 @@ model RespuestaChatbot {
   fecha_respuesta  DateTime @default(now())
 
   prospecto Prospecto           @relation(fields: [prospecto_id], references: [id])
+  pregunta  PreguntaChatbot?    @relation(fields: [pregunta_id], references: [id])
   matriz    MatrizCalificacion? @relation(fields: [matriz_id], references: [id])
 
   @@index([prospecto_id])
   @@map("respuestas_chatbot")
 }
 
+// ---------------------------------------------------------------------------
+// Cotizaciones (propuesta generada al calificar, con su detalle de sensores)
+// ---------------------------------------------------------------------------
 model Cotizacion {
   id               Int       @id @default(autoincrement())
   prospecto_id     Int
@@ -681,7 +763,7 @@ model Cotizacion {
   plan_recomendado String?
   numero_galpones  Int?
   numero_aves      Int?
-  valor_total_cop  Float?
+  valor_total_cop  Decimal? @db.Decimal(14, 2)
   url_pdf          String?
   canal_envio      String?
   estado           String    @default("generada")
@@ -707,6 +789,9 @@ model CotizacionSensor {
   @@map("cotizaciones_sensores")
 }
 
+// ---------------------------------------------------------------------------
+// Interacciones del chatbot (traza de la conversacion mensaje a mensaje)
+// ---------------------------------------------------------------------------
 model InteraccionChatbot {
   id               Int      @id @default(autoincrement())
   prospecto_id     Int
@@ -722,6 +807,9 @@ model InteraccionChatbot {
   @@map("interacciones_chatbot")
 }
 
+// ---------------------------------------------------------------------------
+// Solicitudes PQRS (bloque B: peticiones, quejas, reclamos, sugerencias)
+// ---------------------------------------------------------------------------
 model SolicitudPqrs {
   id              Int       @id @default(autoincrement())
   prospecto_id    Int
@@ -791,12 +879,17 @@ model CurvaObjetivo {
 // ---------------------------------------------------------------------------
 // Accionamientos de equipos (historial de encendido/apagado, manual o automatico)
 // ---------------------------------------------------------------------------
+enum EstadoAccionamiento {
+  encendido
+  apagado
+}
+
 model AccionamientoEquipo {
   id            Int       @id @default(autoincrement())
   equipo_id     Int
   alerta_id     Int?
   origen        String?
-  estado        String?
+  estado        EstadoAccionamiento?
   valor_disparo Float?
   usuario_id    Int?
   fecha_inicio  DateTime  @default(now())
@@ -830,6 +923,12 @@ model PoliticaAlerta {
   @@map("politicas_alerta")
 }
 
+enum EstadoAlerta {
+  abierta
+  en_proceso
+  cerrada
+}
+
 model Alerta {
   id                Int       @id @default(autoincrement())
   galpon_id         Int
@@ -840,7 +939,7 @@ model Alerta {
   valor_detectado   Float?
   valor_umbral      Float?
   mensaje           String?
-  estado            String    @default("abierta")
+  estado            EstadoAlerta @default(abierta)
   responsable_id    Int?
   escalado_a_id     Int?
   accion_correctiva String?
@@ -895,6 +994,13 @@ model EvidenciaAlerta {
 // ---------------------------------------------------------------------------
 // Compras y finanzas (ordenes de compra, categorias y movimientos)
 // ---------------------------------------------------------------------------
+enum EstadoOrdenCompra {
+  pendiente
+  en_proceso
+  entregada
+  cancelada
+}
+
 model OrdenCompra {
   id                        Int       @id @default(autoincrement())
   proveedor_id              Int
@@ -903,8 +1009,8 @@ model OrdenCompra {
   fecha_pedido              DateTime? @db.Date
   fecha_entrega_estimada    DateTime? @db.Date
   fecha_entrega_real        DateTime? @db.Date
-  valor_total_cop           Float?
-  estado                    String    @default("pendiente")
+  valor_total_cop           Decimal? @db.Decimal(14, 2)
+  estado                    EstadoOrdenCompra @default(pendiente)
   calificacion_cumplimiento Float?
   calificacion_calidad      Float?
   calificacion_tiempo       Float?
@@ -937,7 +1043,7 @@ model MovimientoFinanciero {
   categoria_id    Int
   proveedor_id    Int?
   tipo            String?
-  valor_cop       Float
+  valor_cop       Decimal @db.Decimal(14, 2)
   fecha           DateTime @db.Date
   descripcion     String?
   numero_factura  String?
@@ -956,16 +1062,22 @@ model MovimientoFinanciero {
   @@map("movimientos_financieros")
 }
 
+enum TipoMovimientoInventario {
+  entrada
+  salida
+  ajuste
+}
+
 model MovimientoInventario {
   id               Int      @id @default(autoincrement())
   insumo_id        Int
   lote_id          Int?
-  tipo_movimiento  String?
-  cantidad         Float
+  tipo_movimiento  TipoMovimientoInventario
+  cantidad         Decimal  @db.Decimal(14, 3)
   unidad_medida    String?
   motivo           String?
   comprobante_url  String?
-  stock_resultante Float?
+  stock_resultante Decimal? @db.Decimal(14, 3)
   usuario_id       Int
   fecha_movimiento DateTime @default(now())
 
@@ -1021,7 +1133,7 @@ model Equipo {
   modo_operacion    String?
   coordenada_x      Float?
   coordenada_y      Float?
-  costo_cop         Float?
+  costo_cop         Decimal? @db.Decimal(14, 2)
 
   galpon         Galpon                @relation(fields: [galpon_id], references: [id])
   zona           ZonaGalpon?           @relation(fields: [zona_id], references: [id])
@@ -1042,7 +1154,7 @@ model Mantenimiento {
   tecnico_responsable   String?
   tecnico_id            Int?
   descripcion           String?
-  costo_cop             Float?
+  costo_cop             Decimal? @db.Decimal(14, 2)
   causa_falla           String?
   tiempo_inactivo_horas Float?
   estado                String    @default("programado")
@@ -1064,7 +1176,7 @@ model MantenimientoRepuesto {
   insumo_id        Int
   descripcion      String?
   cantidad         Float?
-  costo_cop        Float?
+  costo_cop        Decimal? @db.Decimal(14, 2)
 
   mantenimiento Mantenimiento    @relation(fields: [mantenimiento_id], references: [id])
   insumo        InventarioInsumo @relation(fields: [insumo_id], references: [id])
@@ -1161,6 +1273,11 @@ model Prediccion {
 // ---------------------------------------------------------------------------
 // Recomendaciones (lo que la IA sugiere hacer, con su estado)
 // ---------------------------------------------------------------------------
+enum EstadoRecomendacion {
+  pendiente
+  resuelta
+}
+
 model Recomendacion {
   id               Int       @id @default(autoincrement())
   lote_id          Int?
@@ -1171,7 +1288,7 @@ model Recomendacion {
   descripcion      String?
   accion_sugerida  String?
   prioridad        String    @default("media")
-  estado           String    @default("pendiente")
+  estado           EstadoRecomendacion @default(pendiente)
   usuario_id       Int?
   fecha_generacion DateTime  @default(now())
   fecha_resolucion DateTime?
@@ -1274,4 +1391,43 @@ model Clima {
 
   @@index([granja_id])
   @@map("clima")
+}
+
+// ---------------------------------------------------------------------------
+// Catalogo de sensores (precios y cobertura para cotizar; los precios viven en
+// datos para poder actualizarlos sin desplegar)
+// ---------------------------------------------------------------------------
+model CatalogoSensor {
+  id                  Int      @id @default(autoincrement())
+  tipo_sensor         String   @unique
+  nombre              String
+  descripcion         String?
+  precio_unitario_cop Decimal @db.Decimal(14, 2)
+  cobertura_m2        Float?
+  obligatorio         Boolean  @default(true)
+  activo              Boolean  @default(true)
+  fecha_actualizacion DateTime @updatedAt
+
+  @@map("catalogo_sensores")
+}
+
+// ---------------------------------------------------------------------------
+// Notificaciones internas (buzón para admin/propietario)
+// ---------------------------------------------------------------------------
+model Notificacion {
+  id             Int       @id @default(autoincrement())
+  usuario_id     Int
+  tipo           String
+  titulo         String
+  mensaje        String
+  leida          Boolean   @default(false)
+  referencia_tipo String?
+  referencia_id  Int?
+  fecha_creacion DateTime  @default(now())
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id])
+  @@index([leida])
+  @@map("notificaciones")
 }

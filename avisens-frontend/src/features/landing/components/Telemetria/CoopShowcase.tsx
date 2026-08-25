@@ -125,8 +125,10 @@ function CoopShowcase() {
         <div className="coop-showcase-image-wrap">
           <img
             className="coop-showcase-image"
-            src="/assets/galpon.png"
+            src="/assets/galpon.webp"
             alt="Galpón con sensores AVISENS"
+            loading="lazy"
+            decoding="async"
             draggable={false}
           />
         </div>

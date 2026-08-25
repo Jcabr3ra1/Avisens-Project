@@ -67,6 +67,36 @@ const Sidebar = ({ collapsed, onToggle, rol, galponesActivos, totalAves, totalAl
             // en vivo que muestra el panel de estado de abajo y la página de
             // Alertas, para que nunca se vean números distintos entre sí.
             const badge = item.path === '/alertas' ? totalAlertas : item.badge
+
+            const contenido = (
+              <>
+                <span className="dash-side-accent" />
+                <span className="dash-side-item-icon">
+                  {item.icon}
+                  {badge ? <span className="dash-side-item-icon-dot" /> : null}
+                </span>
+                <span className="dash-side-item-label">{item.label}</span>
+                {badge ? <span className="dash-side-badge">{badge}</span> : null}
+              </>
+            )
+
+            // Rutas públicas fuera del panel: se abren aparte para no perder
+            // el panel abierto (ver `nuevaPestana` en navConfig.tsx).
+            if (item.nuevaPestana) {
+              return (
+                <a
+                  key={item.path}
+                  href={item.path}
+                  target="_blank"
+                  rel="noreferrer"
+                  data-label={item.label}
+                  className="dash-side-item"
+                >
+                  {contenido}
+                </a>
+              )
+            }
+
             return (
               <NavLink
                 key={item.path}
@@ -75,13 +105,7 @@ const Sidebar = ({ collapsed, onToggle, rol, galponesActivos, totalAves, totalAl
                 className={({ isActive }) => `dash-side-item${isActive ? ' active' : ''}`}
                 end
               >
-                <span className="dash-side-accent" />
-                <span className="dash-side-item-icon">
-                  {item.icon}
-                  {badge ? <span className="dash-side-item-icon-dot" /> : null}
-                </span>
-                <span className="dash-side-item-label">{item.label}</span>
-                {badge ? <span className="dash-side-badge">{badge}</span> : null}
+                {contenido}
               </NavLink>
             )
           })}
