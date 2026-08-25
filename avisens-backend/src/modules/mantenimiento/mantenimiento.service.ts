@@ -10,9 +10,12 @@ import { CreateMantenimientoDto } from './dto/create-mantenimiento.dto';
 import { UpdateMantenimientoDto } from './dto/update-mantenimiento.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
 import { AgregarRepuestoDto } from './dto/agregar-repuesto.dto';
+import {
+  filtroMantenimientos,
+  verificarAccesoEquipo,
+} from '../../common/auth/alcance';
 
 type StockBloqueado = { stock_actual: Prisma.Decimal };
 type RepuestoBloqueado = {
@@ -43,10 +46,12 @@ export class MantenimientoService {
       throw new NotFoundException(`El equipo con ID ${equipoId} no existe`);
     }
 
-    verificarDueno(
+    await verificarAccesoEquipo(
+      this.prisma,
+      equipoId,
       solicitante,
-      equipo.galpon.granja.propietario_id,
       'No tienes acceso a este equipo',
+      equipo.galpon.granja.propietario_id,
     );
 
     return equipo;
@@ -77,17 +82,7 @@ export class MantenimientoService {
   }
 
   async findAll(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? {
-          equipo: {
-            galpon: {
-              granja: {
-                propietario_id: solicitante.id,
-              },
-            },
-          },
-        }
-      : {};
+    const where = filtroMantenimientos(solicitante) ?? {};
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.mantenimiento.findMany({
@@ -135,10 +130,12 @@ export class MantenimientoService {
       );
     }
 
-    verificarDueno(
+    await verificarAccesoEquipo(
+      this.prisma,
+      mantenimiento.equipo_id,
       solicitante,
-      mantenimiento.equipo.galpon.granja.propietario_id,
       'No tienes acceso a este mantenimiento',
+      mantenimiento.equipo.galpon.granja.propietario_id,
     );
 
     return mantenimiento;

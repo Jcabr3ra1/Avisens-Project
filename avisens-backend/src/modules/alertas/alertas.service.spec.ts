@@ -10,7 +10,7 @@ describe('AlertasService', () => {
   let service: AlertasService;
 
   const prisma = {
-    galpon: { findUnique: jest.fn() },
+    galpon: { findFirst: jest.fn(), findUnique: jest.fn() },
     lote: { findUnique: jest.fn() },
     sensor: { findUnique: jest.fn() },
     usuario: { findUnique: jest.fn() },
@@ -27,6 +27,11 @@ describe('AlertasService', () => {
 
   const admin: Solicitante = { id: 1, rol: ROLES.ADMINISTRADOR };
   const propietario: Solicitante = { id: 5, rol: ROLES.PROPIETARIO };
+  const operario: Solicitante = {
+    id: 8,
+    rol: ROLES.OPERARIO,
+    organizacion_id: 10,
+  };
 
   const galponDeOtro = { id: 1, granja: { propietario_id: 999 } };
   const galponPropio = { id: 1, granja: { propietario_id: propietario.id } };
@@ -178,6 +183,24 @@ describe('AlertasService', () => {
         where: soloDelPropietario,
       });
     });
+
+    it('el Operario solo ve alertas de galpones asignados', async () => {
+      await service.listar(operario, paginacion);
+
+      expect(prisma.alerta.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            galpon: {
+              activo: true,
+              granja: { activa: true, organizacion: { activa: true } },
+              usuarios_galpones: {
+                some: { usuario_id: 8, activa: true },
+              },
+            },
+          },
+        }),
+      );
+    });
   });
 
   describe('obtener', () => {
@@ -315,7 +338,10 @@ describe('AlertasService', () => {
 
       await service.actualizar(
         1,
-        { estado: EstadoAlerta.cerrada, accion_correctiva: 'Se ajusto la ventilacion' },
+        {
+          estado: EstadoAlerta.cerrada,
+          accion_correctiva: 'Se ajusto la ventilacion',
+        },
         admin,
       );
 
@@ -343,7 +369,13 @@ describe('AlertasService', () => {
       await service.aceptar(1, propietario);
 
       const [args] = prisma.alerta.update.mock.calls[0] as [
-        { data: { estado: string; responsable_id: number; fecha_aceptacion: Date } },
+        {
+          data: {
+            estado: string;
+            responsable_id: number;
+            fecha_aceptacion: Date;
+          };
+        },
       ];
       expect(args.data.estado).toBe('en_proceso');
       expect(args.data.responsable_id).toBe(propietario.id);
@@ -364,10 +396,20 @@ describe('AlertasService', () => {
       prisma.alerta.findUnique.mockResolvedValue(alertaDe(propietario.id));
       prisma.alerta.update.mockResolvedValue({ id: 1 });
 
-      await service.cerrar(1, { accion_correctiva: 'Se abrio la cortina' }, admin);
+      await service.cerrar(
+        1,
+        { accion_correctiva: 'Se abrio la cortina' },
+        admin,
+      );
 
       const [args] = prisma.alerta.update.mock.calls[0] as [
-        { data: { estado: string; accion_correctiva: string; fecha_cierre: Date } },
+        {
+          data: {
+            estado: string;
+            accion_correctiva: string;
+            fecha_cierre: Date;
+          };
+        },
       ];
       expect(args.data.estado).toBe('cerrada');
       expect(args.data.accion_correctiva).toBe('Se abrio la cortina');
@@ -463,7 +505,7 @@ describe('AlertasService', () => {
 
       const r = await service.obtenerEstadisticas(admin);
 
-      expect(r.tasa_resolucion) .toBe(0);
+      expect(r.tasa_resolucion).toBe(0);
       expect(Number.isNaN(r.tasa_resolucion)).toBe(false);
     });
 

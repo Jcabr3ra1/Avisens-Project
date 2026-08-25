@@ -9,6 +9,7 @@ describe('GalponesService', () => {
   const prisma = {
     galpon: {
       create: jest.fn(),
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
@@ -22,6 +23,7 @@ describe('GalponesService', () => {
 
   const admin = { id: 1, rol: 'Administrador' };
   const propietario = { id: 5, rol: 'Propietario' };
+  const operario = { id: 8, rol: 'Operario', organizacion_id: 10 };
 
   const dtoCrear = { granja_id: 3, codigo: 'galpon1', nombre: 'Galpón Norte' };
 
@@ -93,6 +95,18 @@ describe('GalponesService', () => {
       await service.listar(admin, { page: 1, limit: 10 });
 
       expect(whereDe(prisma.galpon.findMany)).toBeUndefined();
+    });
+
+    it('un Operario solo ve galpones con asignación activa', async () => {
+      await service.listar(operario, { page: 1, limit: 10 });
+
+      expect(whereDe(prisma.galpon.findMany)).toEqual({
+        activo: true,
+        granja: { activa: true, organizacion: { activa: true } },
+        usuarios_galpones: {
+          some: { usuario_id: 8, activa: true },
+        },
+      });
     });
   });
 

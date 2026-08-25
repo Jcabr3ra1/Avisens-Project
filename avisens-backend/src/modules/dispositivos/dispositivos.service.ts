@@ -5,8 +5,12 @@ import { CreateDispositivoDto } from './dto/create-dispositivo.dto';
 import { UpdateDispositivoDto } from './dto/update-dispositivo.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import { verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroDispositivos,
+  verificarAccesoGalpon,
+} from '../../common/auth/alcance';
 
 const DISPOSITIVO_SELECT = {
   id: true,
@@ -96,9 +100,7 @@ export class DispositivosService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { galpon: { granja: { propietario_id: solicitante.id } } }
-      : undefined;
+    const where = filtroDispositivos(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.dispositivo.findMany({
@@ -120,10 +122,12 @@ export class DispositivosService {
       select: DISPOSITIVO_SELECT,
     });
     if (!dispositivo) throw new NotFoundException('Dispositivo no encontrado');
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      dispositivo.galpon.id,
       solicitante,
-      dispositivo.galpon.granja.propietario_id,
       'Solo puedes gestionar dispositivos de tus propios galpones',
+      dispositivo.galpon.granja.propietario_id,
     );
     return dispositivo;
   }

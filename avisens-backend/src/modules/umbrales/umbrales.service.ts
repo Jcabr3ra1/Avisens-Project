@@ -9,8 +9,11 @@ import { CreateUmbralDto } from './dto/create-umbral.dto';
 import { RevisarUmbralDto } from './dto/revisar-umbral.dto';
 import { QueryUmbralesDto } from './dto/query-umbrales.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroGalpones,
+  verificarAccesoGalpon,
+} from '../../common/auth/alcance';
 
 const UMBRAL_SELECT = {
   id: true,
@@ -43,10 +46,12 @@ export class UmbralesService {
       select: { id: true, granja: { select: { propietario_id: true } } },
     });
     if (!galpon) throw new NotFoundException('Galpón no encontrado');
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      galponId,
       solicitante,
-      galpon.granja.propietario_id,
       'Solo puedes gestionar umbrales de tus propios galpones',
+      galpon.granja.propietario_id,
     );
   }
 
@@ -88,10 +93,12 @@ export class UmbralesService {
       select: UMBRAL_SELECT,
     });
     if (!umbral) throw new NotFoundException('Umbral no encontrado');
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      umbral.galpon_id,
       solicitante,
-      umbral.galpon.granja.propietario_id,
       'Solo puedes gestionar umbrales de tus propios galpones',
+      umbral.galpon.granja.propietario_id,
     );
     return umbral;
   }
@@ -134,9 +141,7 @@ export class UmbralesService {
       variable,
 
       vigente: incluir_historico ? undefined : true,
-      galpon: esPropietario(solicitante)
-        ? { granja: { propietario_id: solicitante.id } }
-        : undefined,
+      galpon: filtroGalpones(solicitante),
     };
 
     const [data, total] = await this.prisma.$transaction([

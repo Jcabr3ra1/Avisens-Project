@@ -23,7 +23,7 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 @ApiTags('tipos-alimento')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('tipos-alimento')
 export class TiposAlimentoController {
   constructor(private tiposAlimentoService: TiposAlimentoService) {}

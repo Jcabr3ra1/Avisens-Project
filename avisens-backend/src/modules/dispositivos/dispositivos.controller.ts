@@ -33,12 +33,13 @@ interface AuthRequest extends Request {
 @ApiTags('dispositivos')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('dispositivos')
 export class DispositivosController {
   constructor(private dispositivosService: DispositivosService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Registrar un dispositivo (ESP32) en galpon' })
   crear(@Body() dto: CreateDispositivoDto, @Req() req: AuthRequest) {
     return this.dispositivosService.crear(dto, req.user);
@@ -59,6 +60,7 @@ export class DispositivosController {
   }
 
   @Patch(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Actualizar un dispositivo' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -69,12 +71,14 @@ export class DispositivosController {
   }
 
   @Patch(':id/activar')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Activar un dispositivo' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.dispositivosService.activar(id, req.user);
   }
 
   @Post(':id/token')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary: 'Regenerar y revelar el token de ingesta del dispositivo',
   })
@@ -86,12 +90,14 @@ export class DispositivosController {
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Desactivar un dispositivo (borrado suave)' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.dispositivosService.desactivar(id, req.user);
   }
 
   @Delete(':id/permanente')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary: 'Eliminar un dispositivo de forma permanente (casos legales)',
   })

@@ -23,7 +23,7 @@ import { QueryCurvasObjetivoDto } from './dto/query-curvas-objetivo.dto';
 @ApiTags('curvas-objetivo')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('curvas-objetivo')
 export class CurvasObjetivoController {
   constructor(private curvasObjetivoService: CurvasObjetivoService) {}

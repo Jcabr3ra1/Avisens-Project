@@ -8,8 +8,12 @@ import { CreateSensorDto } from './dto/create-sensor.dto';
 import { UpdateSensorDto } from './dto/update-sensor.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import { verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroSensores,
+  verificarAccesoSensor,
+} from '../../common/auth/alcance';
 
 const SENSOR_SELECT = {
   id: true,
@@ -122,9 +126,7 @@ export class SensoresService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { galpon: { granja: { propietario_id: solicitante.id } } }
-      : undefined;
+    const where = filtroSensores(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.sensor.findMany({
@@ -146,10 +148,12 @@ export class SensoresService {
       select: SENSOR_SELECT,
     });
     if (!sensor) throw new NotFoundException('Sensor no encontrado');
-    verificarDueno(
+    await verificarAccesoSensor(
+      this.prisma,
+      id,
       solicitante,
-      sensor.galpon.granja.propietario_id,
       'Solo puedes gestionar sensores de tus propios galpones',
+      sensor.galpon.granja.propietario_id,
     );
     return sensor;
   }

@@ -9,8 +9,12 @@ import { CreateGranjaDto } from './dto/create-granja.dto';
 import { UpdateGranjaDto } from './dto/update-granja.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import { esPropietario } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroGranjas,
+  verificarAccesoGranja,
+} from '../../common/auth/alcance';
 
 const GRANJA_SELECT = {
   id: true,
@@ -94,9 +98,7 @@ export class GranjasService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { propietario_id: solicitante.id }
-      : undefined;
+    const where = filtroGranjas(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.granja.findMany({
@@ -118,10 +120,12 @@ export class GranjasService {
       select: GRANJA_SELECT,
     });
     if (!granja) throw new NotFoundException('Granja no encontrada');
-    verificarDueno(
+    await verificarAccesoGranja(
+      this.prisma,
+      id,
       solicitante,
-      granja.propietario.id,
       'Solo puedes gestionar tus propias granjas',
+      granja.propietario.id,
     );
     return granja;
   }

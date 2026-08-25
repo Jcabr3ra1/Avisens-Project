@@ -33,7 +33,7 @@ interface AuthRequest extends Request {
 @ApiTags('consumos-diarios')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('consumos-diarios')
 export class ConsumosDiariosController {
   constructor(private consumosDiariosService: ConsumosDiariosService) {}

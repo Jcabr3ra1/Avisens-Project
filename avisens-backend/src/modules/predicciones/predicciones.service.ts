@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { verificarDueno, Solicitante } from '../../common/auth/acceso';
+import { Solicitante } from '../../common/auth/acceso';
+import { verificarAccesoLote } from '../../common/auth/alcance';
 import { PESO_INICIAL_G } from '../indicadores/indicadores.service';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
@@ -44,11 +45,7 @@ export class PrediccionesService {
 
   constructor(private prisma: PrismaService) {}
 
-  async predecir(
-    loteId: number,
-    solicitante: Solicitante,
-    persistir = false,
-  ) {
+  async predecir(loteId: number, solicitante: Solicitante, persistir = false) {
     const lote = await this.prisma.lote.findUnique({
       where: { id: loteId },
       select: {
@@ -61,10 +58,12 @@ export class PrediccionesService {
     });
     if (!lote) throw new NotFoundException('Lote no encontrado');
 
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      loteId,
       solicitante,
-      lote.galpon.granja.propietario_id,
       'Solo puedes predecir tus propios lotes',
+      lote.galpon.granja.propietario_id,
     );
     const pesajes = await this.prisma.pesaje.findMany({
       where: { lote_id: loteId },
@@ -237,10 +236,12 @@ export class PrediccionesService {
       },
     });
     if (!lote) throw new NotFoundException('Lote no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      loteId,
       solicitante,
-      lote.galpon.granja.propietario_id,
       'Solo puedes consultar tus propios lotes',
+      lote.galpon.granja.propietario_id,
     );
   }
 

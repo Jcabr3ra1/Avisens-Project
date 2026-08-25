@@ -4,8 +4,9 @@ import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import { verificarDueno } from '../../common/auth/acceso';
 import { Solicitante } from '../../common/auth/acceso';
+import { filtroLotes, verificarAccesoLote } from '../../common/auth/alcance';
 
 const LOTE_SELECT = {
   id: true,
@@ -82,9 +83,7 @@ export class LotesService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { galpon: { granja: { propietario_id: solicitante.id } } }
-      : undefined;
+    const where = filtroLotes(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.lote.findMany({
@@ -106,10 +105,12 @@ export class LotesService {
       select: LOTE_SELECT,
     });
     if (!lote) throw new NotFoundException('Lote no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      id,
       solicitante,
-      lote.galpon.granja.propietario_id,
       'Solo puedes gestionar lotes de tus propios galpones',
+      lote.galpon.granja.propietario_id,
     );
     return lote;
   }

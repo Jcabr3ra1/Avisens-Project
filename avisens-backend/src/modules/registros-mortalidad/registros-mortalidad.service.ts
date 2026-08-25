@@ -4,11 +4,11 @@ import { CreateRegistroMortalidadDto } from './dto/create-registro-mortalidad.dt
 import { UpdateRegistroMortalidadDto } from './dto/update-registro-mortalidad.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
+import { Solicitante } from '../../common/auth/acceso';
 import {
-  esPropietario,
-  verificarDueno,
-  Solicitante,
-} from '../../common/auth/acceso';
+  filtroRegistrosDeLote,
+  verificarAccesoLote,
+} from '../../common/auth/alcance';
 
 const MORTALIDAD_SELECT = {
   id: true,
@@ -45,10 +45,12 @@ export class RegistrosMortalidadService {
     });
 
     if (!lote) throw new NotFoundException('Lote no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      loteId,
       solicitante,
-      lote.galpon.granja.propietario_id,
       'Solo puedes registrar mortalidad de tus propios lotes',
+      lote.galpon.granja.propietario_id,
     );
   }
 
@@ -71,9 +73,7 @@ export class RegistrosMortalidadService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { lote: { galpon: { granja: { propietario_id: solicitante.id } } } }
-      : undefined;
+    const where = filtroRegistrosDeLote(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.registroMortalidad.findMany({
@@ -97,10 +97,12 @@ export class RegistrosMortalidadService {
 
     if (!registro)
       throw new NotFoundException('Registro de mortalidad no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      registro.lote_id,
       solicitante,
-      registro.lote.galpon.granja.propietario_id,
       'Solo puedes ver mortalidad de tus propios lotes',
+      registro.lote.galpon.granja.propietario_id,
     );
     return registro;
   }
