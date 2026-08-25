@@ -9,6 +9,7 @@ export interface JwtPayload {
   email: string;
   rol: string;
   organizacion_id?: number | null;
+  tipo?: string;
 }
 
 @Injectable()
@@ -24,6 +25,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: JwtPayload) {
+    if (payload.tipo === 'cambio_password') {
+      throw new UnauthorizedException();
+    }
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: payload.sub, activo: true },
       include: { rol: true },

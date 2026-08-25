@@ -302,10 +302,6 @@ export class UsuariosService {
       if (!rol) throw new NotFoundException('Rol no encontrado');
     }
 
-    const password_hash = dto.password
-      ? await bcrypt.hash(dto.password, 12)
-      : undefined;
-
     return this.prisma.usuario.update({
       where: { id },
       data: {
@@ -315,7 +311,6 @@ export class UsuariosService {
         telefono: dto.telefono,
         rol_id: rolId,
         activo: dto.activo,
-        password_hash,
       },
       select: USUARIO_SELECT,
     });

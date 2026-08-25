@@ -14,8 +14,8 @@
 > Los módulos operativos cubren autenticación, producción, monitoreo, alertas,
 > chatbot/cotización, clima, finanzas, inventario, mantenimiento, notificaciones,
 > asignación usuario-galpón, indicadores, predicciones, recomendaciones y
-> copiloto. Siguen pendientes los flujos de recuperación de contraseña, voz,
-> zonas, registro de modelos ML, bioacústica y visión.
+> copiloto y recuperación asistida de contraseña. Siguen pendientes los flujos
+> de voz, zonas, registro de modelos ML, bioacústica y visión.
 
 ```
 title AVISENS v1.3 — Normalizado
@@ -218,6 +218,8 @@ seguridad_cuenta [icon: shield-off, color: cyan] {
   bloqueado_hasta datetime
   fecha_ultimo_login datetime
   fecha_ultimo_cambio_password datetime
+  debe_cambiar_password bool
+  password_temporal_expira_en datetime
 }
 
 sesiones [icon: log-in, color: cyan] {
@@ -234,6 +236,12 @@ sesiones [icon: log-in, color: cyan] {
 recuperaciones_password [icon: rotate-ccw, color: cyan] {
   id integer pk
   usuario_id integer fk
+  estado string
+  motivo string
+  ip_solicitud string
+  atendida_por_id integer fk
+  atendida_en datetime
+  observacion string
   token_hash string
   expira_en datetime
   usado bool
@@ -891,6 +899,7 @@ roles_permisos.permiso_id > permisos.id
 seguridad_cuenta.usuario_id > usuarios.id
 sesiones.usuario_id > usuarios.id
 recuperaciones_password.usuario_id > usuarios.id
+recuperaciones_password.atendida_por_id > usuarios.id
 usuarios_galpones.usuario_id > usuarios.id
 usuarios_galpones.galpon_id > galpones.id
 bitacora_auditoria.usuario_id > usuarios.id

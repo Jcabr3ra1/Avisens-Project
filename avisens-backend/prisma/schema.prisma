@@ -62,33 +62,34 @@ model Usuario {
   activo          Boolean  @default(true)
   fecha_creacion  DateTime @default(now())
 
-  rol                     Rol                    @relation(fields: [rol_id], references: [id])
-  seguridad_cuenta        SeguridadCuenta?
-  sesiones                Sesion[]
-  granjas                 Granja[]
-  pesajes                 Pesaje[]
-  registros_mortalidad    RegistroMortalidad[]
-  eventos_sanitarios      EventoSanitario[]
-  consumos_diarios        ConsumoDiario[]
-  registros_plagas        RegistroPlaga[]
-  auditorias              BitacoraAuditoria[]
-  recuperaciones          RecuperacionPassword[]
-  usuarios_galpones       UsuarioGalpon[]
-  prospectos_asesorados   Prospecto[]
-  solicitudes_pqrs        SolicitudPqrs[]
-  notificaciones          Notificacion[]
-  comandos_voz            ComandoVoz[]
-  accionamientos          AccionamientoEquipo[]
-  alertas_responsable     Alerta[]               @relation("AlertaResponsable")
-  alertas_escalado        Alerta[]               @relation("AlertaEscalado")
-  evidencias_alertas      EvidenciaAlerta[]
-  ordenes_compra          OrdenCompra[]
-  movimientos_financieros MovimientoFinanciero[]
-  movimientos_inventario  MovimientoInventario[]
-  mantenimientos          Mantenimiento[]
-  organizacion            Organizacion?          @relation(fields: [organizacion_id], references: [id])
-  recomendaciones         Recomendacion[]
-  conversaciones_ia       ConversacionIa[]
+  rol                        Rol                    @relation(fields: [rol_id], references: [id])
+  seguridad_cuenta           SeguridadCuenta?
+  sesiones                   Sesion[]
+  granjas                    Granja[]
+  pesajes                    Pesaje[]
+  registros_mortalidad       RegistroMortalidad[]
+  eventos_sanitarios         EventoSanitario[]
+  consumos_diarios           ConsumoDiario[]
+  registros_plagas           RegistroPlaga[]
+  auditorias                 BitacoraAuditoria[]
+  recuperaciones_solicitadas RecuperacionPassword[] @relation("RecuperacionSolicitante")
+  recuperaciones_atendidas   RecuperacionPassword[] @relation("RecuperacionAdministrador")
+  usuarios_galpones          UsuarioGalpon[]
+  prospectos_asesorados      Prospecto[]
+  solicitudes_pqrs           SolicitudPqrs[]
+  notificaciones             Notificacion[]
+  comandos_voz               ComandoVoz[]
+  accionamientos             AccionamientoEquipo[]
+  alertas_responsable        Alerta[]               @relation("AlertaResponsable")
+  alertas_escalado           Alerta[]               @relation("AlertaEscalado")
+  evidencias_alertas         EvidenciaAlerta[]
+  ordenes_compra             OrdenCompra[]
+  movimientos_financieros    MovimientoFinanciero[]
+  movimientos_inventario     MovimientoInventario[]
+  mantenimientos             Mantenimiento[]
+  organizacion               Organizacion?          @relation(fields: [organizacion_id], references: [id])
+  recomendaciones            Recomendacion[]
+  conversaciones_ia          ConversacionIa[]
 
   @@index([organizacion_id])
   @@map("usuarios")
@@ -101,6 +102,8 @@ model SeguridadCuenta {
   bloqueado_hasta              DateTime?
   fecha_ultimo_login           DateTime?
   fecha_ultimo_cambio_password DateTime?
+  debe_cambiar_password        Boolean   @default(false)
+  password_temporal_expira_en  DateTime?
 
   usuario Usuario @relation(fields: [usuario_id], references: [id])
 
@@ -594,19 +597,34 @@ model BitacoraAuditoria {
 }
 
 // ---------------------------------------------------------------------------
-// Recuperaciones de password (tokens para restablecer la contrasena)
+// Recuperacion asistida: el usuario solicita y un administrador decide.
 // ---------------------------------------------------------------------------
+enum EstadoRecuperacionPassword {
+  pendiente
+  aprobada
+  rechazada
+  completada
+}
+
 model RecuperacionPassword {
-  id             Int      @id @default(autoincrement())
-  usuario_id     Int
-  token_hash     String
-  expira_en      DateTime
-  usado          Boolean  @default(false)
-  fecha_creacion DateTime @default(now())
+  id              Int                        @id @default(autoincrement())
+  usuario_id      Int
+  estado          EstadoRecuperacionPassword @default(pendiente)
+  motivo          String?
+  ip_solicitud    String?
+  atendida_por_id Int?
+  atendida_en     DateTime?
+  observacion     String?
+  token_hash      String? // legado: el flujo nuevo no crea tokens públicos
+  expira_en       DateTime?
+  usado           Boolean                    @default(false)
+  fecha_creacion  DateTime                   @default(now())
 
-  usuario Usuario @relation(fields: [usuario_id], references: [id])
+  usuario      Usuario  @relation("RecuperacionSolicitante", fields: [usuario_id], references: [id])
+  atendida_por Usuario? @relation("RecuperacionAdministrador", fields: [atendida_por_id], references: [id])
 
-  @@index([usuario_id])
+  @@index([usuario_id, estado])
+  @@index([atendida_por_id])
   @@map("recuperaciones_password")
 }
 

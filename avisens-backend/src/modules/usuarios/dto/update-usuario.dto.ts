@@ -6,6 +6,7 @@ export class UpdateUsuarioDto extends PartialType(
   OmitType(CreateUsuarioDto, [
     'organizacion_id',
     'organizacion_nombre',
+    'password',
   ] as const),
 ) {
   @ApiPropertyOptional({

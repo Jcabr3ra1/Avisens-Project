@@ -43,6 +43,27 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    if (seguridad?.debe_cambiar_password) {
+      if (
+        !seguridad.password_temporal_expira_en ||
+        seguridad.password_temporal_expira_en <= new Date()
+      ) {
+        throw new ForbiddenException(
+          'La contraseña temporal venció. Solicita una nueva recuperación.',
+        );
+      }
+
+      await this.resetearIntentosFallidos(usuario.id);
+      const cambio_password_token = await this.jwt.signAsync(
+        { sub: usuario.id, tipo: 'cambio_password' },
+        {
+          secret: this.config.getOrThrow('JWT_SECRET'),
+          expiresIn: '15m',
+        },
+      );
+      return { requiere_cambio_password: true, cambio_password_token };
+    }
+
     await this.resetearIntentosFallidos(usuario.id);
 
     const tokens = await this.generarTokens(
@@ -70,6 +91,7 @@ export class AuthService {
     });
 
     return {
+      requiere_cambio_password: false,
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       usuario: {
@@ -105,10 +127,16 @@ export class AuthService {
 
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: userId },
-      include: { rol: true },
+      include: { rol: true, seguridad_cuenta: true },
     });
 
-    if (!usuario || !usuario.activo) throw new UnauthorizedException();
+    if (
+      !usuario ||
+      !usuario.activo ||
+      usuario.seguridad_cuenta?.debe_cambiar_password
+    ) {
+      throw new UnauthorizedException();
+    }
 
     const tokens = await this.generarTokens(
       usuario.id,
