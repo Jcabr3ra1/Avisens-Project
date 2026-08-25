@@ -1,13 +1,21 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from 'react'
 import { isAxiosError } from 'axios'
 import {
   listarUsuarios,
   crearUsuario,
   actualizarUsuario,
   eliminarUsuario,
+  listarOrganizaciones,
   getRol,
   type Usuario,
   type CrearUsuarioPayload,
+  type OrganizacionResumen,
 } from '@shared/api'
 import { IcUsers, IcSearch, IcEye, IcEyeOff } from '@shared/ui/icons/icons'
 import './UsuariosPage.css'
@@ -37,7 +45,9 @@ function mensajeError(err: unknown, fallback: string): string {
     }
     const data = err.response.data as { message?: string | string[] }
     if (data?.message) {
-      return Array.isArray(data.message) ? data.message.join(', ') : data.message
+      return Array.isArray(data.message)
+        ? data.message.join(', ')
+        : data.message
     }
   }
   return fallback
@@ -45,6 +55,9 @@ function mensajeError(err: unknown, fallback: string): string {
 
 function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [organizaciones, setOrganizaciones] = useState<OrganizacionResumen[]>(
+    [],
+  )
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -56,7 +69,11 @@ function UsuariosPage() {
   const [errorForm, setErrorForm] = useState('')
 
   // Menú de acciones (⋯) abierto: guarda la fila y dónde dibujarlo.
-  const [menu, setMenu] = useState<{ user: Usuario; top: number; left: number } | null>(null)
+  const [menu, setMenu] = useState<{
+    user: Usuario
+    top: number
+    left: number
+  } | null>(null)
 
   // Búsqueda por nombre, correo o cédula (filtro en el cliente).
   const [busqueda, setBusqueda] = useState('')
@@ -73,42 +90,55 @@ function UsuariosPage() {
     : ROLES
 
   // Cifras del resumen — cuentan sobre TODOS los usuarios, sin filtrar por búsqueda.
-  const totalUsuarios  = usuarios.length
-  const totalActivos   = usuarios.filter((u) => u.activo).length
-  const totalPropietarios = usuarios.filter((u) => u.rol.nombre === 'Propietario').length
-  const totalOperarios    = usuarios.filter((u) => u.rol.nombre === 'Operario').length
+  const totalUsuarios = usuarios.length
+  const totalActivos = usuarios.filter((u) => u.activo).length
+  const totalPropietarios = usuarios.filter(
+    (u) => u.rol.nombre === 'Propietario',
+  ).length
+  const totalOperarios = usuarios.filter(
+    (u) => u.rol.nombre === 'Operario',
+  ).length
 
   // Lista filtrada por el término de búsqueda (nombre, correo o cédula).
   const usuariosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase()
     if (!q) return usuarios
-    return usuarios.filter((u) =>
-      u.nombre_completo.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      u.cedula.toLowerCase().includes(q),
+    return usuarios.filter(
+      (u) =>
+        u.nombre_completo.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.cedula.toLowerCase().includes(q),
     )
   }, [usuarios, busqueda])
 
-  async function cargarUsuarios() {
+  const cargarUsuarios = useCallback(async () => {
     setCargando(true)
     setError('')
     try {
-      setUsuarios(await listarUsuarios())
+      const [usuariosCargados, organizacionesCargadas] = await Promise.all([
+        listarUsuarios(),
+        esPropietario ? Promise.resolve([]) : listarOrganizaciones(),
+      ])
+      setUsuarios(usuariosCargados)
+      setOrganizaciones(organizacionesCargadas)
     } catch (err) {
       setError(mensajeError(err, 'No se pudieron cargar los usuarios.'))
     } finally {
       setCargando(false)
     }
-  }
+  }, [esPropietario])
 
   useEffect(() => {
-    cargarUsuarios()
-  }, [])
+    void cargarUsuarios()
+  }, [cargarUsuarios])
 
   function abrirCrear() {
     setEditandoId(null)
     // Para el Dueño, el rol por defecto (y único) es Operario.
-    setForm({ ...FORM_INICIAL, rol_id: esPropietario ? 3 : FORM_INICIAL.rol_id })
+    setForm({
+      ...FORM_INICIAL,
+      rol_id: esPropietario ? 3 : FORM_INICIAL.rol_id,
+    })
     setErrorForm('')
     setMostrarPassword(false)
     setModalAbierto(true)
@@ -144,7 +174,10 @@ function UsuariosPage() {
       const telefono = form.telefono?.trim() || undefined
       if (modoEdicion && editandoId !== null) {
         // En edición solo mandamos la contraseña si el campo no quedó vacío.
-        const { password, ...resto } = form
+        const { password, organizacion_id, organizacion_nombre, ...resto } =
+          form
+        void organizacion_id
+        void organizacion_nombre
         await actualizarUsuario(editandoId, {
           ...resto,
           telefono,
@@ -157,7 +190,10 @@ function UsuariosPage() {
       await cargarUsuarios()
     } catch (err) {
       setErrorForm(
-        mensajeError(err, `No se pudo ${modoEdicion ? 'actualizar' : 'crear'} el usuario.`),
+        mensajeError(
+          err,
+          `No se pudo ${modoEdicion ? 'actualizar' : 'crear'} el usuario.`,
+        ),
       )
     } finally {
       setGuardando(false)
@@ -198,7 +234,9 @@ function UsuariosPage() {
     <div className="page-container usuarios">
       <header className="usuarios-head">
         <div>
-          <h1 className="usuarios-title">{esPropietario ? 'Operarios' : 'Usuarios y Roles'}</h1>
+          <h1 className="usuarios-title">
+            {esPropietario ? 'Operarios' : 'Usuarios y Roles'}
+          </h1>
           <p className="usuarios-sub">
             {esPropietario
               ? 'Gestiona los operarios de tu granja.'
@@ -214,7 +252,9 @@ function UsuariosPage() {
       <div className="usuarios-resumen">
         <div className="usuarios-stat">
           <span className="usuarios-stat-valor">{totalUsuarios}</span>
-          <span className="usuarios-stat-label">{esPropietario ? 'Operarios' : 'Total'}</span>
+          <span className="usuarios-stat-label">
+            {esPropietario ? 'Operarios' : 'Total'}
+          </span>
         </div>
         <div className="usuarios-stat usuarios-stat--activo">
           <span className="usuarios-stat-valor">{totalActivos}</span>
@@ -234,7 +274,11 @@ function UsuariosPage() {
         )}
       </div>
 
-      {error && <div className="usuarios-alert" role="alert">{error}</div>}
+      {error && (
+        <div className="usuarios-alert" role="alert">
+          {error}
+        </div>
+      )}
 
       <div className="usuarios-card">
         {/* ── Buscador ─────────────────────────────────────────────────────── */}
@@ -260,14 +304,22 @@ function UsuariosPage() {
         ) : usuarios.length === 0 ? (
           <div className="usuarios-vacio">
             <IcUsers size={32} />
-            <p className="usuarios-vacio-titulo">No hay usuarios registrados.</p>
-            <p className="usuarios-vacio-sub">Crea el primero con el botón de arriba.</p>
+            <p className="usuarios-vacio-titulo">
+              No hay usuarios registrados.
+            </p>
+            <p className="usuarios-vacio-sub">
+              Crea el primero con el botón de arriba.
+            </p>
           </div>
         ) : usuariosFiltrados.length === 0 ? (
           <div className="usuarios-vacio">
             <IcSearch size={28} />
-            <p className="usuarios-vacio-titulo">Sin resultados para "{busqueda}"</p>
-            <p className="usuarios-vacio-sub">Prueba con otro nombre, correo o cédula.</p>
+            <p className="usuarios-vacio-titulo">
+              Sin resultados para "{busqueda}"
+            </p>
+            <p className="usuarios-vacio-sub">
+              Prueba con otro nombre, correo o cédula.
+            </p>
           </div>
         ) : (
           <table className="usuarios-table">
@@ -289,9 +341,18 @@ function UsuariosPage() {
                   <td>{u.email}</td>
                   <td>{u.cedula}</td>
                   <td>{u.telefono ?? '—'}</td>
-                  <td><span className={`rol-badge rol-badge--${u.rol.nombre.toLowerCase()}`}>{u.rol.nombre}</span></td>
                   <td>
-                    <label className="switch" title={u.activo ? 'Desactivar' : 'Activar'}>
+                    <span
+                      className={`rol-badge rol-badge--${u.rol.nombre.toLowerCase()}`}
+                    >
+                      {u.rol.nombre}
+                    </span>
+                  </td>
+                  <td>
+                    <label
+                      className="switch"
+                      title={u.activo ? 'Desactivar' : 'Activar'}
+                    >
                       <input
                         type="checkbox"
                         checked={u.activo}
@@ -299,14 +360,18 @@ function UsuariosPage() {
                       />
                       <span className="switch-slider" />
                     </label>
-                    <span className={`estado-text ${u.activo ? 'activo' : 'inactivo'}`}>
+                    <span
+                      className={`estado-text ${u.activo ? 'activo' : 'inactivo'}`}
+                    >
                       {u.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
                   <td className="col-acciones">
                     <button
                       className="btn-kebab"
-                      onClick={(e) => (menu?.user.id === u.id ? setMenu(null) : abrirMenu(e, u))}
+                      onClick={(e) =>
+                        menu?.user.id === u.id ? setMenu(null) : abrirMenu(e, u)
+                      }
                       aria-label="Acciones"
                     >
                       ⋯
@@ -322,16 +387,27 @@ function UsuariosPage() {
       {menu && (
         <>
           <div className="menu-overlay" onClick={() => setMenu(null)} />
-          <div className="menu-dropdown" style={{ top: menu.top, left: menu.left }}>
+          <div
+            className="menu-dropdown"
+            style={{ top: menu.top, left: menu.left }}
+          >
             <button
               className="menu-item"
-              onClick={() => { const u = menu.user; setMenu(null); abrirEditar(u) }}
+              onClick={() => {
+                const u = menu.user
+                setMenu(null)
+                abrirEditar(u)
+              }}
             >
               Editar
             </button>
             <button
               className="menu-item menu-item-danger"
-              onClick={() => { const u = menu.user; setMenu(null); handleEliminar(u) }}
+              onClick={() => {
+                const u = menu.user
+                setMenu(null)
+                handleEliminar(u)
+              }}
             >
               Eliminar
             </button>
@@ -344,8 +420,12 @@ function UsuariosPage() {
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h2 className="modal-title">
               {modoEdicion
-                ? esPropietario ? 'Editar operario' : 'Editar usuario'
-                : esPropietario ? 'Nuevo operario' : 'Nuevo usuario'}
+                ? esPropietario
+                  ? 'Editar operario'
+                  : 'Editar usuario'
+                : esPropietario
+                  ? 'Nuevo operario'
+                  : 'Nuevo usuario'}
             </h2>
 
             <form className="modal-form" onSubmit={handleGuardar}>
@@ -353,7 +433,9 @@ function UsuariosPage() {
                 <span>Nombre completo</span>
                 <input
                   value={form.nombre_completo}
-                  onChange={(e) => actualizarCampo('nombre_completo', e.target.value)}
+                  onChange={(e) =>
+                    actualizarCampo('nombre_completo', e.target.value)
+                  }
                   required
                 />
               </label>
@@ -368,10 +450,14 @@ function UsuariosPage() {
                   />
                 </label>
                 <label className="campo">
-                  <span>Teléfono <em>(opcional)</em></span>
+                  <span>
+                    Teléfono <em>(opcional)</em>
+                  </span>
                   <input
                     value={form.telefono}
-                    onChange={(e) => actualizarCampo('telefono', e.target.value)}
+                    onChange={(e) =>
+                      actualizarCampo('telefono', e.target.value)
+                    }
                   />
                 </label>
               </div>
@@ -398,17 +484,31 @@ function UsuariosPage() {
                       minLength={8}
                       placeholder={modoEdicion ? '••••••••' : ''}
                       value={form.password}
-                      onChange={(e) => actualizarCampo('password', e.target.value)}
+                      onChange={(e) =>
+                        actualizarCampo('password', e.target.value)
+                      }
                       required={!modoEdicion}
                     />
                     <button
                       type="button"
                       className="campo-password-toggle"
                       onClick={() => setMostrarPassword((v) => !v)}
-                      aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                      title={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                      aria-label={
+                        mostrarPassword
+                          ? 'Ocultar contraseña'
+                          : 'Mostrar contraseña'
+                      }
+                      title={
+                        mostrarPassword
+                          ? 'Ocultar contraseña'
+                          : 'Mostrar contraseña'
+                      }
                     >
-                      {mostrarPassword ? <IcEyeOff size={16} /> : <IcEye size={16} />}
+                      {mostrarPassword ? (
+                        <IcEyeOff size={16} />
+                      ) : (
+                        <IcEye size={16} />
+                      )}
                     </button>
                   </div>
                 </label>
@@ -416,17 +516,70 @@ function UsuariosPage() {
                   <span>Rol</span>
                   <select
                     value={form.rol_id}
-                    onChange={(e) => actualizarCampo('rol_id', Number(e.target.value))}
+                    onChange={(e) => {
+                      actualizarCampo('rol_id', Number(e.target.value))
+                      actualizarCampo('organizacion_id', undefined)
+                      actualizarCampo('organizacion_nombre', undefined)
+                    }}
                     disabled={esPropietario}
                   >
                     {rolesDisponibles.map((r) => (
-                      <option key={r.id} value={r.id}>{r.nombre}</option>
+                      <option key={r.id} value={r.id}>
+                        {r.nombre}
+                      </option>
                     ))}
                   </select>
                 </label>
               </div>
 
-              {errorForm && <p className="modal-error" role="alert">{errorForm}</p>}
+              {!modoEdicion && !esPropietario && form.rol_id === 2 && (
+                <label className="campo">
+                  <span>
+                    Nombre de la organización <em>(opcional)</em>
+                  </span>
+                  <input
+                    value={form.organizacion_nombre ?? ''}
+                    placeholder={`Organización de ${form.nombre_completo || 'nuevo propietario'}`}
+                    onChange={(e) =>
+                      actualizarCampo(
+                        'organizacion_nombre',
+                        e.target.value || undefined,
+                      )
+                    }
+                  />
+                </label>
+              )}
+
+              {!modoEdicion && !esPropietario && form.rol_id === 3 && (
+                <label className="campo">
+                  <span>Organización</span>
+                  <select
+                    value={form.organizacion_id ?? ''}
+                    onChange={(e) =>
+                      actualizarCampo(
+                        'organizacion_id',
+                        e.target.value ? Number(e.target.value) : undefined,
+                      )
+                    }
+                    required
+                  >
+                    <option value="">Selecciona una organización</option>
+                    {organizaciones
+                      .filter((organizacion) => organizacion.activa !== false)
+                      .map((organizacion) => (
+                        <option key={organizacion.id} value={organizacion.id}>
+                          {organizacion.nombre}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              )}
+
+              {errorForm && (
+                <p className="modal-error" role="alert">
+                  {errorForm}
+                </p>
+              )}
 
               <div className="modal-acciones">
                 <button
@@ -437,7 +590,11 @@ function UsuariosPage() {
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary" disabled={guardando}>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={guardando}
+                >
                   {guardando
                     ? 'Guardando…'
                     : modoEdicion

@@ -15,6 +15,7 @@ function usuarioFalso(overrides: Record<string, unknown> = {}) {
     nombre_completo: 'Test',
     password_hash: 'hash-guardado',
     activo: true,
+    organizacion_id: 10,
     rol: { nombre: 'Operario' },
     seguridad_cuenta: null,
     ...overrides,
@@ -120,10 +121,15 @@ describe('AuthService', () => {
         nombre: 'Test',
         email: 'test@avisens.com',
         rol: 'Operario',
+        organizacion_id: 10,
       });
       expect(prisma.sesion.create).toHaveBeenCalled();
       expect(prisma.sesion.deleteMany).toHaveBeenCalled();
       expect(prisma.seguridadCuenta.upsert).toHaveBeenCalled();
+      expect(jwt.signAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ organizacion_id: 10 }),
+        expect.any(Object),
+      );
     });
   });
 

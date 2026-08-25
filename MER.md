@@ -1,33 +1,46 @@
-# MER Avisens v1.2 — Normalizado
+# MER Avisens v1.3 — Normalizado
 
-> Modelo Entidad-Relación de referencia del proyecto. **55 entidades** (45 base +
+> Modelo Entidad-Relación de referencia del proyecto. **59 entidades** (49 base +
 > 10 de la capa de inteligencia). Notación de [Eraser](https://eraser.io). Esta es
-> la fuente de verdad del modelo de datos: las tablas se construyen a partir de
-> este documento, no al revés.
+> una vista documental del modelo. La fuente de verdad ejecutable es
+> `prisma/schema.prisma` junto con `prisma/migrations`; este documento debe
+> actualizarse en el mismo cambio que modifique cualquiera de los dos.
 >
-> ## ✅ MODELO COMPLETO EN EL SCHEMA (2026-08-11)
-> Las **55 tablas** ya están creadas en `prisma/schema.prisma` y en la base de datos
-> (migraciones `..._completar_modelo_mer` y `..._capa_inteligencia_ia`). El modelo
-> quedó **terminado**, incluida la capa de inteligencia para la evolución futura.
+> ## MODELO EN EL SCHEMA (2026-08-25)
+> Las **59 tablas** están definidas en `prisma/schema.prisma`. Las entidades de
+> roadmap permanecen identificadas como tales: estar modeladas no significa que
+> su flujo funcional ya esté implementado.
 >
-> Los **módulos** (endpoints) se construyen aparte, de forma incremental:
-> - ✅ **Con módulo:** auth, granjas, galpones, dispositivos, sensores, mediciones,
->   umbrales, proveedores, insumos, tipos_alimento, lotes, pesajes, mortalidad,
->   eventos sanitarios, consumos, plagas, auditoría.
-> - 🔜 **Tabla lista, sin módulo aún:** chatbot (EP-01), voz (EP-02), alertas (EP-05),
->   finanzas/compras (EP-07), zonas/equipos/mantenimiento (EP-08), recuperaciones y
->   usuarios_galpones (EP-03).
-> - 🧠 **Roadmap (capa de inteligencia, EP-09):** organizaciones (SaaS), indicadores_lote
->   (KPIs), modelos_ml, predicciones, recomendaciones, conversaciones_ia + mensajes_ia
->   (copiloto), analisis_bioacustico, analisis_vision, clima. Se llenan por jobs/IA,
->   no por CRUD. Ver la hoja "Cómo construir la IA" del Excel.
+> Los módulos operativos cubren autenticación, producción, monitoreo, alertas,
+> chatbot/cotización, clima, finanzas, inventario, mantenimiento, notificaciones,
+> indicadores, predicciones, recomendaciones y copiloto. Siguen pendientes los
+> flujos de recuperación de contraseña, asignación usuario-galpón, voz, zonas,
+> registro de modelos ML, bioacústica y visión.
 
 ```
-title AVISENS v1.2 — Normalizado
+title AVISENS v1.3 — Normalizado
 
 // ============================================================
 // EP-01 · CHATBOT DE COTIZACIÓN (yellow)
 // ============================================================
+
+preguntas_chatbot [icon: help-circle, color: yellow] {
+  id integer pk
+  codigo string unique
+  bloque string
+  orden integer
+  texto string
+  tipo string
+  opciones json
+  campo_prospecto string
+  puntua bool
+  obligatoria bool
+  omitir_si_canal string
+  siguiente string
+  saltos json
+  activa bool
+  fecha_creacion datetime
+}
 
 matriz_calificacion [icon: clipboard, color: yellow] {
   id integer pk
@@ -44,7 +57,13 @@ prospectos [icon: user-plus, color: yellow] {
   id integer pk
   sesion_id string unique
   nombre string
+  nombre_granja string
+  tipo_documento string
+  documento string
   municipio string
+  departamento string
+  area_granja_m2 number
+  area_galpon_m2 number
   rol_prospecto string
   tipo_produccion string
   telefono string
@@ -52,18 +71,27 @@ prospectos [icon: user-plus, color: yellow] {
   canal_origen string
   contacto_decisor string
   fecha_callback datetime
+  puntaje_total integer
+  clasificacion string
+  accion_siguiente string
+  senal_caliente bool
+  conectividad_limitada bool
   estado string
+  pregunta_actual string
+  ultima_pregunta string
   asesor_asignado_id integer fk
   ip_origen string
   user_agent string
   consentimiento_habeas_data bool
   fecha_inicio datetime
+  ultima_actividad datetime
   fecha_finalizacion datetime
 }
 
 respuestas_chatbot [icon: message-circle, color: yellow] {
   id integer pk
   prospecto_id integer fk
+  pregunta_id integer fk
   matriz_id integer fk
   bloque string
   codigo_pregunta string
@@ -103,6 +131,20 @@ interacciones_chatbot [icon: message-square, color: yellow] {
   intent_detectado string
   confianza_nlu number
   fecha_hora datetime
+}
+
+solicitudes_pqrs [icon: inbox, color: yellow] {
+  id integer pk
+  prospecto_id integer fk
+  categoria string
+  codigo_pregunta string
+  asunto string
+  mensaje string
+  respuesta string
+  estado string
+  responsable_id integer fk
+  fecha_creacion datetime
+  fecha_cierre datetime
 }
 
 
@@ -156,6 +198,7 @@ roles_permisos [icon: lock, color: cyan] {
 usuarios [icon: user, color: cyan] {
   id integer pk
   rol_id integer fk
+  organizacion_id integer fk
   nombre_completo string
   cedula string unique
   email string unique
@@ -219,6 +262,18 @@ bitacora_auditoria [icon: file-text, color: cyan] {
   fecha_hora datetime
 }
 
+notificaciones [icon: bell, color: cyan] {
+  id integer pk
+  usuario_id integer fk
+  tipo string
+  titulo string
+  mensaje string
+  leida bool
+  referencia_tipo string
+  referencia_id integer
+  fecha_creacion datetime
+}
+
 
 // ============================================================
 // EP-04 · MONITOREO AMBIENTAL (green)
@@ -227,6 +282,7 @@ bitacora_auditoria [icon: file-text, color: cyan] {
 granjas [icon: home, color: green] {
   id integer pk
   propietario_id integer fk
+  organizacion_id integer fk
   nombre string
   direccion string
   municipio string
@@ -247,6 +303,7 @@ dispositivos [icon: cpu, color: green] {
   version_firmware string
   estado string
   ip_local string
+  token_ingesta string unique
   ultima_conexion datetime
   activo bool
   fecha_creacion datetime
@@ -320,6 +377,8 @@ umbrales_ambientales [icon: sliders, color: green] {
 
 curvas_objetivo [icon: trending-up, color: green] {
   id integer pk
+  marca string
+  fuente string
   sexo string
   dia integer
   peso_esperado_g number
@@ -413,6 +472,7 @@ lotes [icon: layers, color: blue] {
   cantidad_inicial integer
   raza string
   sexo string
+  marca_alimento string
   costo_pollito_unitario number
   presupuesto_total_cop number
   fecha_salida_estimada date
@@ -567,6 +627,7 @@ movimientos_financieros [icon: dollar-sign, color: pink] {
 
 inventario_insumos [icon: archive, color: pink] {
   id integer pk
+  granja_id integer fk
   nombre string
   tipo string
   unidad_medida string
@@ -789,6 +850,18 @@ clima [icon: cloud, color: teal] {
   fuente string
 }
 
+catalogo_sensores [icon: list, color: yellow] {
+  id integer pk
+  tipo_sensor string unique
+  nombre string
+  descripcion string
+  precio_unitario_cop number
+  cobertura_m2 number
+  obligatorio bool
+  activo bool
+  fecha_actualizacion datetime
+}
+
 
 // ============================================================
 // RELACIONES (LLAVES FORÁNEAS)
@@ -797,10 +870,13 @@ clima [icon: cloud, color: teal] {
 // EP-01 Chatbot
 prospectos.asesor_asignado_id > usuarios.id
 respuestas_chatbot.prospecto_id > prospectos.id
+respuestas_chatbot.pregunta_id > preguntas_chatbot.id
 respuestas_chatbot.matriz_id > matriz_calificacion.id
 cotizaciones.prospecto_id > prospectos.id
 cotizaciones_sensores.cotizacion_id > cotizaciones.id
 interacciones_chatbot.prospecto_id > prospectos.id
+solicitudes_pqrs.prospecto_id > prospectos.id
+solicitudes_pqrs.responsable_id > usuarios.id
 
 // EP-02 Asistente de voz
 comandos_voz.usuario_id > usuarios.id
@@ -816,9 +892,11 @@ recuperaciones_password.usuario_id > usuarios.id
 usuarios_galpones.usuario_id > usuarios.id
 usuarios_galpones.galpon_id > galpones.id
 bitacora_auditoria.usuario_id > usuarios.id
+notificaciones.usuario_id > usuarios.id
 
 // EP-04 Estructura y monitoreo
 granjas.propietario_id > usuarios.id
+granjas.organizacion_id > organizaciones.id
 galpones.granja_id > granjas.id
 zonas_galpon.galpon_id > galpones.id
 sensores.galpon_id > galpones.id
@@ -868,6 +946,7 @@ movimientos_financieros.categoria_id > categorias_financieras.id
 movimientos_financieros.proveedor_id > proveedores.id
 movimientos_financieros.usuario_id > usuarios.id
 inventario_insumos.proveedor_habitual_id > proveedores.id
+inventario_insumos.granja_id > granjas.id
 movimientos_inventario.insumo_id > inventario_insumos.id
 movimientos_inventario.lote_id > lotes.id
 movimientos_inventario.usuario_id > usuarios.id
@@ -901,6 +980,6 @@ clima.granja_id > granjas.id
 
 
 // ================================================================
-// FIN — 55 entidades (45 base + 10 capa de inteligencia)
+// FIN — 59 entidades (49 base + 10 capa de inteligencia)
 // ================================================================
 ```

@@ -20,6 +20,15 @@ export interface RolResumen {
   nombre: string
 }
 
+export interface OrganizacionResumen {
+  id: number
+  nombre: string
+  nit?: string | null
+  plan?: string
+  activa?: boolean
+  fecha_creacion?: string
+}
+
 export interface Usuario {
   id: number
   nombre_completo: string
@@ -29,6 +38,7 @@ export interface Usuario {
   activo: boolean
   fecha_creacion: string
   rol: RolResumen
+  organizacion: Pick<OrganizacionResumen, 'id' | 'nombre'> | null
 }
 
 // ----- Auth -----
@@ -43,6 +53,7 @@ export interface UsuarioSesion {
   nombre: string
   email: string
   rol: string
+  organizacion_id?: number | null
 }
 
 export interface LoginResponse {
@@ -65,11 +76,15 @@ export interface CrearUsuarioPayload {
   password: string
   telefono?: string
   rol_id: number
+  organizacion_id?: number
+  organizacion_nombre?: string
 }
 
 // En una edición todos los campos son opcionales: solo se envía lo que cambia.
 // `activo` permite reactivar o desactivar la cuenta.
-export type ActualizarUsuarioPayload = Partial<CrearUsuarioPayload> & {
+export type ActualizarUsuarioPayload = Partial<
+  Omit<CrearUsuarioPayload, 'organizacion_id' | 'organizacion_nombre'>
+> & {
   activo?: boolean
 }
 

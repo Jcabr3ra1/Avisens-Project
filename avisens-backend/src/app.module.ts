@@ -49,6 +49,7 @@ import { SolicitudesPqrsModule } from './modules/solicitudes-pqrs/solicitudes-pq
 import { EquiposModule } from './modules/equipos/equipos.module';
 import { InteraccionesChatbotModule } from './modules/interacciones-chatbot/interacciones-chatbot.module';
 import { NotificacionesModule } from './modules/notificaciones/notificaciones.module';
+import { OrganizacionesModule } from './modules/organizaciones/organizaciones.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { DecimalInterceptor } from './common/decimal.interceptor';
 @Module({
@@ -121,6 +122,7 @@ import { DecimalInterceptor } from './common/decimal.interceptor';
     EquiposModule,
     InteraccionesChatbotModule,
     NotificacionesModule,
+    OrganizacionesModule,
   ],
   providers: [
     {

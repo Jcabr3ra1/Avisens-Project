@@ -49,6 +49,7 @@ export class AuthService {
       usuario.id,
       usuario.email,
       usuario.rol.nombre,
+      usuario.organizacion_id,
     );
 
     await this.prisma.sesion.deleteMany({
@@ -76,6 +77,7 @@ export class AuthService {
         nombre: usuario.nombre_completo,
         email: usuario.email,
         rol: usuario.rol.nombre,
+        organizacion_id: usuario.organizacion_id,
       },
     };
   }
@@ -112,6 +114,7 @@ export class AuthService {
       usuario.id,
       usuario.email,
       usuario.rol.nombre,
+      usuario.organizacion_id,
     );
 
     await this.prisma.sesion.update({
@@ -142,8 +145,18 @@ export class AuthService {
     }
   }
 
-  private async generarTokens(userId: number, email: string, rol: string) {
-    const payload = { sub: userId, email, rol };
+  private async generarTokens(
+    userId: number,
+    email: string,
+    rol: string,
+    organizacionId?: number | null,
+  ) {
+    const payload = {
+      sub: userId,
+      email,
+      rol,
+      organizacion_id: organizacionId ?? null,
+    };
 
     const [access_token, refresh_token] = await Promise.all([
       this.jwt.signAsync(payload, {

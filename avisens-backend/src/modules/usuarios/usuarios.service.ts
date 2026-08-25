@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -22,15 +23,54 @@ const USUARIO_SELECT = {
   telefono: true,
   activo: true,
   fecha_creacion: true,
+  organizacion_id: true,
   rol: { select: { id: true, nombre: true } },
+  organizacion: { select: { id: true, nombre: true } },
 } as const;
 
 @Injectable()
 export class UsuariosService {
   constructor(private prisma: PrismaService) {}
 
+  private organizacionDelPropietario(solicitante: Solicitante): number {
+    if (!solicitante.organizacion_id) {
+      throw new ForbiddenException(
+        'Tu cuenta de propietario no tiene una organización asignada',
+      );
+    }
+    return solicitante.organizacion_id;
+  }
+
+  private async validarOrganizacion(id: number) {
+    const organizacion = await this.prisma.organizacion.findFirst({
+      where: { id, activa: true },
+      select: { id: true },
+    });
+    if (!organizacion) {
+      throw new NotFoundException('Organización no encontrada o inactiva');
+    }
+  }
+
+  private verificarOperarioDeLaOrganizacion(
+    usuario: { rol: { nombre: string }; organizacion_id?: number | null },
+    solicitante: Solicitante,
+  ) {
+    if (!esPropietario(solicitante)) return;
+    const organizacionId = this.organizacionDelPropietario(solicitante);
+    if (
+      usuario.rol.nombre !== ROLES.OPERARIO ||
+      usuario.organizacion_id !== organizacionId
+    ) {
+      throw new ForbiddenException(
+        'Solo puedes gestionar operarios de tu organización',
+      );
+    }
+  }
+
   async crear(dto: CreateUsuarioDto, solicitante: Solicitante) {
     let rolId = dto.rol_id;
+    let organizacionId: number | undefined;
+    let nuevaOrganizacion: string | undefined;
     if (esPropietario(solicitante)) {
       const rolOperario = await this.prisma.rol.findUnique({
         where: { nombre: ROLES.OPERARIO },
@@ -38,31 +78,59 @@ export class UsuariosService {
       if (!rolOperario)
         throw new NotFoundException('Rol Operario no encontrado');
       rolId = rolOperario.id;
+      organizacionId = this.organizacionDelPropietario(solicitante);
     } else {
       const rol = await this.prisma.rol.findUnique({
         where: { id: dto.rol_id },
       });
       if (!rol) throw new NotFoundException('Rol no encontrado');
+
+      if (dto.organizacion_id) {
+        await this.validarOrganizacion(dto.organizacion_id);
+        organizacionId = dto.organizacion_id;
+      } else if (rol.nombre === ROLES.PROPIETARIO) {
+        nuevaOrganizacion =
+          dto.organizacion_nombre?.trim() ||
+          `Organización de ${dto.nombre_completo}`;
+      } else if (rol.nombre === ROLES.OPERARIO) {
+        throw new BadRequestException(
+          'El Administrador debe indicar la organización del Operario',
+        );
+      }
     }
 
     const password_hash = await bcrypt.hash(dto.password, 12);
 
-    return this.prisma.usuario.create({
-      data: {
-        nombre_completo: dto.nombre_completo,
-        cedula: dto.cedula,
-        email: dto.email,
-        password_hash,
-        telefono: dto.telefono,
-        rol_id: rolId,
-      },
-      select: USUARIO_SELECT,
+    return this.prisma.$transaction(async (tx) => {
+      if (nuevaOrganizacion) {
+        const organizacion = await tx.organizacion.create({
+          data: { nombre: nuevaOrganizacion },
+          select: { id: true },
+        });
+        organizacionId = organizacion.id;
+      }
+
+      return tx.usuario.create({
+        data: {
+          nombre_completo: dto.nombre_completo,
+          cedula: dto.cedula,
+          email: dto.email,
+          password_hash,
+          telefono: dto.telefono,
+          rol_id: rolId,
+          organizacion_id: organizacionId,
+        },
+        select: USUARIO_SELECT,
+      });
     });
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
     const where = esPropietario(solicitante)
-      ? { rol: { nombre: ROLES.OPERARIO } }
+      ? {
+          rol: { nombre: ROLES.OPERARIO },
+          organizacion_id: this.organizacionDelPropietario(solicitante),
+        }
       : undefined;
 
     const [data, total] = await this.prisma.$transaction([
@@ -94,9 +162,7 @@ export class UsuariosService {
       },
     });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
-    if (esPropietario(solicitante) && usuario.rol.nombre !== ROLES.OPERARIO) {
-      throw new ForbiddenException('Solo puedes gestionar operarios');
-    }
+    this.verificarOperarioDeLaOrganizacion(usuario, solicitante);
     return usuario;
   }
 
@@ -110,10 +176,7 @@ export class UsuariosService {
       include: { rol: true },
     });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
-
-    if (esPropietario(solicitante) && usuario.rol.nombre !== ROLES.OPERARIO) {
-      throw new ForbiddenException('Solo puedes gestionar operarios');
-    }
+    this.verificarOperarioDeLaOrganizacion(usuario, solicitante);
 
     const cambiaEmail = dto.email && dto.email !== usuario.email;
     const cambiaCedula = dto.cedula && dto.cedula !== usuario.cedula;

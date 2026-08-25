@@ -90,6 +90,7 @@ model Usuario {
   recomendaciones         Recomendacion[]
   conversaciones_ia       ConversacionIa[]
 
+  @@index([organizacion_id])
   @@map("usuarios")
 }
 
@@ -128,19 +129,21 @@ model Sesion {
 // ---------------------------------------------------------------------------
 
 model Granja {
-  id             Int      @id @default(autoincrement())
-  propietario_id Int
-  nombre         String
-  direccion      String?
-  municipio      String?
-  departamento   String?
-  latitud        Float?
-  longitud       Float?
-  area_total_m2  Float?
-  activa         Boolean  @default(true)
-  fecha_creacion DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  propietario_id  Int
+  organizacion_id Int
+  nombre          String
+  direccion       String?
+  municipio       String?
+  departamento    String?
+  latitud         Float?
+  longitud        Float?
+  area_total_m2   Float?
+  activa          Boolean  @default(true)
+  fecha_creacion  DateTime @default(now())
 
-  propietario      Usuario          @relation(fields: [propietario_id], references: [id])
+  propietario      Usuario            @relation(fields: [propietario_id], references: [id])
+  organizacion     Organizacion       @relation(fields: [organizacion_id], references: [id])
   galpones         Galpon[]
   politicas_alerta PoliticaAlerta[]
   clima            Clima[]
@@ -148,6 +151,7 @@ model Granja {
 
   // El alcance por rol filtra siempre por dueño: granja.propietario_id = X.
   @@index([propietario_id])
+  @@index([organizacion_id])
   @@map("granjas")
 }
 
@@ -195,20 +199,20 @@ enum EstadoDispositivo {
 }
 
 model Dispositivo {
-  id               Int       @id @default(autoincrement())
+  id               Int               @id @default(autoincrement())
   galpon_id        Int
-  mac_address      String    @unique
-  codigo_topic     String    @unique
+  mac_address      String            @unique
+  codigo_topic     String            @unique
   nombre           String
   version_firmware String?
   estado           EstadoDispositivo @default(offline)
   ip_local         String?
   // Secreto que el ESP32 manda en el header X-Device-Token de POST /ingest.
   // Nunca se expone en los listados; solo al crear el dispositivo o al regenerarlo.
-  token_ingesta    String?   @unique
+  token_ingesta    String?           @unique
   ultima_conexion  DateTime?
-  activo           Boolean   @default(true)
-  fecha_creacion   DateTime  @default(now())
+  activo           Boolean           @default(true)
+  fecha_creacion   DateTime          @default(now())
 
   galpon   Galpon   @relation(fields: [galpon_id], references: [id])
   sensores Sensor[]
@@ -231,11 +235,11 @@ enum EstadoSensor {
 }
 
 model Sensor {
-  id                  Int       @id @default(autoincrement())
+  id                  Int          @id @default(autoincrement())
   galpon_id           Int
   dispositivo_id      Int
   zona_id             Int?
-  codigo              String    @unique
+  codigo              String       @unique
   tipo                String
   unidad_medida       String
   modelo              String?
@@ -243,9 +247,9 @@ model Sensor {
   coordenada_x        Float?
   coordenada_y        Float?
   altura_metros       Float?
-  fecha_instalacion   DateTime? @db.Date
-  ultima_calibracion  DateTime? @db.Date
-  proxima_calibracion DateTime? @db.Date
+  fecha_instalacion   DateTime?    @db.Date
+  ultima_calibracion  DateTime?    @db.Date
+  proxima_calibracion DateTime?    @db.Date
   estado              EstadoSensor @default(activo)
 
   mediciones  Medicion[]
@@ -344,7 +348,7 @@ model InventarioInsumo {
   unidad_medida         String
   stock_actual          Decimal   @default(0) @db.Decimal(14, 3)
   stock_minimo          Decimal   @default(0) @db.Decimal(14, 3)
-  precio_unitario_cop   Decimal? @db.Decimal(14, 2)
+  precio_unitario_cop   Decimal?  @db.Decimal(14, 2)
   proveedor_habitual_id Int?
   ubicacion_almacen     String?
   fecha_vencimiento     DateTime? @db.Date
@@ -374,19 +378,19 @@ enum EstadoLote {
 }
 
 model Lote {
-  id                     Int       @id @default(autoincrement())
+  id                     Int        @id @default(autoincrement())
   galpon_id              Int
   proveedor_id           Int
-  codigo                 String    @unique
-  fecha_ingreso          DateTime  @db.Date
+  codigo                 String     @unique
+  fecha_ingreso          DateTime   @db.Date
   cantidad_inicial       Int
   raza                   String?
   sexo                   String?
   marca_alimento         String?
-  costo_pollito_unitario Decimal? @db.Decimal(14, 2)
-  presupuesto_total_cop  Decimal? @db.Decimal(14, 2)
-  fecha_salida_estimada  DateTime? @db.Date
-  fecha_salida_real      DateTime? @db.Date
+  costo_pollito_unitario Decimal?   @db.Decimal(14, 2)
+  presupuesto_total_cop  Decimal?   @db.Decimal(14, 2)
+  fecha_salida_estimada  DateTime?  @db.Date
+  fecha_salida_real      DateTime?  @db.Date
   estado                 EstadoLote @default(activo)
 
   galpon    Galpon    @relation(fields: [galpon_id], references: [id])
@@ -618,7 +622,7 @@ model UsuarioGalpon {
   usuario Usuario @relation(fields: [usuario_id], references: [id])
   galpon  Galpon  @relation(fields: [galpon_id], references: [id])
 
-  @@index([usuario_id])
+  @@unique([usuario_id, galpon_id])
   @@index([galpon_id])
   @@map("usuarios_galpones")
 }
@@ -687,8 +691,8 @@ enum EstadoProspecto {
 }
 
 model Prospecto {
-  id                         Int       @id @default(autoincrement())
-  sesion_id                  String    @unique
+  id                         Int             @id @default(autoincrement())
+  sesion_id                  String          @unique
   nombre                     String?
   nombre_granja              String?
   tipo_documento             String?
@@ -707,17 +711,17 @@ model Prospecto {
   puntaje_total              Int?
   clasificacion              String?
   accion_siguiente           String?
-  senal_caliente             Boolean   @default(false)
-  conectividad_limitada      Boolean   @default(false)
+  senal_caliente             Boolean         @default(false)
+  conectividad_limitada      Boolean         @default(false)
   estado                     EstadoProspecto @default(nuevo)
   pregunta_actual            String?
   ultima_pregunta            String?
   asesor_asignado_id         Int?
   ip_origen                  String?
   user_agent                 String?
-  consentimiento_habeas_data Boolean   @default(false)
-  fecha_inicio               DateTime  @default(now())
-  ultima_actividad           DateTime  @default(now()) @updatedAt
+  consentimiento_habeas_data Boolean         @default(false)
+  fecha_inicio               DateTime        @default(now())
+  ultima_actividad           DateTime        @default(now()) @updatedAt
   fecha_finalizacion         DateTime?
 
   asesor        Usuario?             @relation(fields: [asesor_asignado_id], references: [id])
@@ -763,7 +767,7 @@ model Cotizacion {
   plan_recomendado String?
   numero_galpones  Int?
   numero_aves      Int?
-  valor_total_cop  Decimal? @db.Decimal(14, 2)
+  valor_total_cop  Decimal?  @db.Decimal(14, 2)
   url_pdf          String?
   canal_envio      String?
   estado           String    @default("generada")
@@ -885,14 +889,14 @@ enum EstadoAccionamiento {
 }
 
 model AccionamientoEquipo {
-  id            Int       @id @default(autoincrement())
+  id            Int                  @id @default(autoincrement())
   equipo_id     Int
   alerta_id     Int?
   origen        String?
   estado        EstadoAccionamiento?
   valor_disparo Float?
   usuario_id    Int?
-  fecha_inicio  DateTime  @default(now())
+  fecha_inicio  DateTime             @default(now())
   fecha_fin     DateTime?
 
   equipo  Equipo   @relation(fields: [equipo_id], references: [id])
@@ -930,7 +934,7 @@ enum EstadoAlerta {
 }
 
 model Alerta {
-  id                Int       @id @default(autoincrement())
+  id                Int          @id @default(autoincrement())
   galpon_id         Int
   lote_id           Int?
   sensor_id         Int?
@@ -943,7 +947,7 @@ model Alerta {
   responsable_id    Int?
   escalado_a_id     Int?
   accion_correctiva String?
-  fecha_creacion    DateTime  @default(now())
+  fecha_creacion    DateTime     @default(now())
   fecha_aceptacion  DateTime?
   fecha_cierre      DateTime?
 
@@ -1002,20 +1006,20 @@ enum EstadoOrdenCompra {
 }
 
 model OrdenCompra {
-  id                        Int       @id @default(autoincrement())
+  id                        Int               @id @default(autoincrement())
   proveedor_id              Int
   lote_id                   Int?
-  codigo                    String    @unique
-  fecha_pedido              DateTime? @db.Date
-  fecha_entrega_estimada    DateTime? @db.Date
-  fecha_entrega_real        DateTime? @db.Date
-  valor_total_cop           Decimal? @db.Decimal(14, 2)
+  codigo                    String            @unique
+  fecha_pedido              DateTime?         @db.Date
+  fecha_entrega_estimada    DateTime?         @db.Date
+  fecha_entrega_real        DateTime?         @db.Date
+  valor_total_cop           Decimal?          @db.Decimal(14, 2)
   estado                    EstadoOrdenCompra @default(pendiente)
   calificacion_cumplimiento Float?
   calificacion_calidad      Float?
   calificacion_tiempo       Float?
   usuario_id                Int
-  fecha_registro            DateTime  @default(now())
+  fecha_registro            DateTime          @default(now())
 
   proveedor Proveedor @relation(fields: [proveedor_id], references: [id])
   lote      Lote?     @relation(fields: [lote_id], references: [id])
@@ -1043,7 +1047,7 @@ model MovimientoFinanciero {
   categoria_id    Int
   proveedor_id    Int?
   tipo            String?
-  valor_cop       Decimal @db.Decimal(14, 2)
+  valor_cop       Decimal  @db.Decimal(14, 2)
   fecha           DateTime @db.Date
   descripcion     String?
   numero_factura  String?
@@ -1069,17 +1073,17 @@ enum TipoMovimientoInventario {
 }
 
 model MovimientoInventario {
-  id               Int      @id @default(autoincrement())
+  id               Int                      @id @default(autoincrement())
   insumo_id        Int
   lote_id          Int?
   tipo_movimiento  TipoMovimientoInventario
-  cantidad         Decimal  @db.Decimal(14, 3)
+  cantidad         Decimal                  @db.Decimal(14, 3)
   unidad_medida    String?
   motivo           String?
   comprobante_url  String?
-  stock_resultante Decimal? @db.Decimal(14, 3)
+  stock_resultante Decimal?                 @db.Decimal(14, 3)
   usuario_id       Int
-  fecha_movimiento DateTime @default(now())
+  fecha_movimiento DateTime                 @default(now())
 
   insumo  InventarioInsumo @relation(fields: [insumo_id], references: [id])
   lote    Lote?            @relation(fields: [lote_id], references: [id])
@@ -1133,7 +1137,7 @@ model Equipo {
   modo_operacion    String?
   coordenada_x      Float?
   coordenada_y      Float?
-  costo_cop         Decimal? @db.Decimal(14, 2)
+  costo_cop         Decimal?  @db.Decimal(14, 2)
 
   galpon         Galpon                @relation(fields: [galpon_id], references: [id])
   zona           ZonaGalpon?           @relation(fields: [zona_id], references: [id])
@@ -1154,7 +1158,7 @@ model Mantenimiento {
   tecnico_responsable   String?
   tecnico_id            Int?
   descripcion           String?
-  costo_cop             Decimal? @db.Decimal(14, 2)
+  costo_cop             Decimal?  @db.Decimal(14, 2)
   causa_falla           String?
   tiempo_inactivo_horas Float?
   estado                String    @default("programado")
@@ -1171,7 +1175,7 @@ model Mantenimiento {
 }
 
 model MantenimientoRepuesto {
-  id               Int     @id @default(autoincrement())
+  id               Int      @id @default(autoincrement())
   mantenimiento_id Int
   insumo_id        Int
   descripcion      String?
@@ -1197,6 +1201,7 @@ model Organizacion {
   fecha_creacion DateTime @default(now())
 
   usuarios Usuario[]
+  granjas  Granja[]
 
   @@map("organizaciones")
 }
@@ -1279,7 +1284,7 @@ enum EstadoRecomendacion {
 }
 
 model Recomendacion {
-  id               Int       @id @default(autoincrement())
+  id               Int                 @id @default(autoincrement())
   lote_id          Int?
   galpon_id        Int?
   prediccion_id    Int?
@@ -1287,10 +1292,10 @@ model Recomendacion {
   titulo           String
   descripcion      String?
   accion_sugerida  String?
-  prioridad        String    @default("media")
+  prioridad        String              @default("media")
   estado           EstadoRecomendacion @default(pendiente)
   usuario_id       Int?
-  fecha_generacion DateTime  @default(now())
+  fecha_generacion DateTime            @default(now())
   fecha_resolucion DateTime?
 
   lote       Lote?       @relation(fields: [lote_id], references: [id])
@@ -1402,7 +1407,7 @@ model CatalogoSensor {
   tipo_sensor         String   @unique
   nombre              String
   descripcion         String?
-  precio_unitario_cop Decimal @db.Decimal(14, 2)
+  precio_unitario_cop Decimal  @db.Decimal(14, 2)
   cobertura_m2        Float?
   obligatorio         Boolean  @default(true)
   activo              Boolean  @default(true)
@@ -1415,15 +1420,15 @@ model CatalogoSensor {
 // Notificaciones internas (buzón para admin/propietario)
 // ---------------------------------------------------------------------------
 model Notificacion {
-  id             Int       @id @default(autoincrement())
-  usuario_id     Int
-  tipo           String
-  titulo         String
-  mensaje        String
-  leida          Boolean   @default(false)
+  id              Int      @id @default(autoincrement())
+  usuario_id      Int
+  tipo            String
+  titulo          String
+  mensaje         String
+  leida           Boolean  @default(false)
   referencia_tipo String?
-  referencia_id  Int?
-  fecha_creacion DateTime  @default(now())
+  referencia_id   Int?
+  fecha_creacion  DateTime @default(now())
 
   usuario Usuario @relation(fields: [usuario_id], references: [id])
 

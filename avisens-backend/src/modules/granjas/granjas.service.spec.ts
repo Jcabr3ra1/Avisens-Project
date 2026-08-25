@@ -24,7 +24,11 @@ describe('GranjasService', () => {
   };
 
   const admin = { id: 1, rol: 'Administrador' };
-  const propietario = { id: 5, rol: 'Propietario' };
+  const propietario = {
+    id: 5,
+    rol: 'Propietario',
+    organizacion_id: 10,
+  };
 
   const dataDe = (mock: jest.Mock): Record<string, unknown> => {
     const calls = mock.mock.calls as Array<[{ data: Record<string, unknown> }]>;
@@ -55,6 +59,7 @@ describe('GranjasService', () => {
       await service.crear({ nombre: 'La Esperanza' }, propietario);
 
       expect(dataDe(prisma.granja.create).propietario_id).toBe(5);
+      expect(dataDe(prisma.granja.create).organizacion_id).toBe(10);
     });
 
     it('un Admin sin propietario_id recibe 400', async () => {
@@ -74,12 +79,30 @@ describe('GranjasService', () => {
     });
 
     it('un Admin crea la granja para el propietario indicado', async () => {
-      prisma.usuario.findUnique.mockResolvedValue({ id: 7 });
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 7,
+        organizacion_id: 20,
+        rol: { nombre: 'Propietario' },
+      });
       prisma.granja.create.mockResolvedValue({ id: 1 });
 
       await service.crear({ nombre: 'X', propietario_id: 7 }, admin);
 
       expect(dataDe(prisma.granja.create).propietario_id).toBe(7);
+      expect(dataDe(prisma.granja.create).organizacion_id).toBe(20);
+    });
+
+    it('un Admin no puede asignar una granja a un usuario que no sea Propietario', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 7,
+        organizacion_id: 20,
+        rol: { nombre: 'Operario' },
+      });
+
+      await expect(
+        service.crear({ nombre: 'X', propietario_id: 7 }, admin),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.granja.create).not.toHaveBeenCalled();
     });
   });
 

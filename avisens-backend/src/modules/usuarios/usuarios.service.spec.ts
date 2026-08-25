@@ -15,6 +15,7 @@ describe('UsuariosService', () => {
 
   const prisma = {
     rol: { findUnique: jest.fn() },
+    organizacion: { findFirst: jest.fn(), create: jest.fn() },
     usuario: {
       create: jest.fn(),
       findMany: jest.fn(),
@@ -32,7 +33,11 @@ describe('UsuariosService', () => {
   const hashMock = bcrypt.hash as unknown as jest.Mock;
 
   const admin = { id: 1, rol: 'Administrador' };
-  const propietario = { id: 5, rol: 'Propietario' };
+  const propietario = {
+    id: 5,
+    rol: 'Propietario',
+    organizacion_id: 10,
+  };
 
   const dtoCrear = {
     nombre_completo: 'María López',
@@ -58,14 +63,19 @@ describe('UsuariosService', () => {
 
     hashMock.mockResolvedValue('hash_fake');
     prisma.usuario.findFirst.mockResolvedValue(null);
-    prisma.$transaction.mockResolvedValue([[], 0]);
+    prisma.$transaction.mockImplementation((operacion: unknown) =>
+      typeof operacion === 'function'
+        ? (operacion as (tx: typeof prisma) => unknown)(prisma)
+        : Promise.resolve([[], 0]),
+    );
+    prisma.organizacion.create.mockResolvedValue({ id: 10 });
   });
 
   afterEach(() => jest.clearAllMocks());
 
   describe('crear', () => {
     it('un Propietario siempre crea Operarios, ignorando el rol_id que mande', async () => {
-      prisma.rol.findUnique.mockResolvedValue({ id: 3 });
+      prisma.rol.findUnique.mockResolvedValue({ id: 3, nombre: 'Operario' });
       prisma.usuario.create.mockResolvedValue({ id: 99 });
 
       await service.crear({ ...dtoCrear, rol_id: 1 }, propietario);
@@ -74,16 +84,39 @@ describe('UsuariosService', () => {
         where: { nombre: 'Operario' },
       });
       expect(dataDe(prisma.usuario.create).rol_id).toBe(3);
+      expect(dataDe(prisma.usuario.create).organizacion_id).toBe(10);
     });
 
     it('un Admin crea con el rol_id que indique', async () => {
-      prisma.rol.findUnique.mockResolvedValue({ id: 2 });
+      prisma.rol.findUnique.mockResolvedValue({
+        id: 2,
+        nombre: 'Propietario',
+      });
       prisma.usuario.create.mockResolvedValue({ id: 99 });
 
       await service.crear(dtoCrear, admin);
 
       expect(prisma.rol.findUnique).toHaveBeenCalledWith({ where: { id: 2 } });
       expect(dataDe(prisma.usuario.create).rol_id).toBe(2);
+      expect(prisma.organizacion.create).toHaveBeenCalled();
+      expect(dataDe(prisma.usuario.create).organizacion_id).toBe(10);
+    });
+
+    it('un Admin asigna un Operario a una organización existente', async () => {
+      prisma.rol.findUnique.mockResolvedValue({ id: 3, nombre: 'Operario' });
+      prisma.organizacion.findFirst.mockResolvedValue({ id: 20 });
+      prisma.usuario.create.mockResolvedValue({ id: 99 });
+
+      await service.crear(
+        { ...dtoCrear, rol_id: 3, organizacion_id: 20 },
+        admin,
+      );
+
+      expect(prisma.organizacion.findFirst).toHaveBeenCalledWith({
+        where: { id: 20, activa: true },
+        select: { id: true },
+      });
+      expect(dataDe(prisma.usuario.create).organizacion_id).toBe(20);
     });
 
     it('rechaza (404) si el rol indicado no existe', async () => {
@@ -96,7 +129,10 @@ describe('UsuariosService', () => {
     });
 
     it('hashea la contraseña (nunca la guarda en texto plano)', async () => {
-      prisma.rol.findUnique.mockResolvedValue({ id: 2 });
+      prisma.rol.findUnique.mockResolvedValue({
+        id: 2,
+        nombre: 'Propietario',
+      });
       prisma.usuario.create.mockResolvedValue({ id: 99 });
 
       await service.crear(dtoCrear, admin);
@@ -113,7 +149,12 @@ describe('UsuariosService', () => {
       await service.listar(propietario, { page: 1, limit: 10 });
 
       expect(prisma.usuario.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { rol: { nombre: 'Operario' } } }),
+        expect.objectContaining({
+          where: {
+            rol: { nombre: 'Operario' },
+            organizacion_id: 10,
+          },
+        }),
       );
     });
 
@@ -138,10 +179,23 @@ describe('UsuariosService', () => {
     it('un Propietario no puede ver a un no-operario (403)', async () => {
       prisma.usuario.findUnique.mockResolvedValue({
         id: 2,
+        organizacion_id: 10,
         rol: { nombre: 'Administrador' },
       });
 
       await expect(service.obtener(2, propietario)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('un Propietario no puede ver un Operario de otra organización', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 21,
+        organizacion_id: 99,
+        rol: { nombre: 'Operario' },
+      });
+
+      await expect(service.obtener(21, propietario)).rejects.toThrow(
         ForbiddenException,
       );
     });
@@ -153,6 +207,7 @@ describe('UsuariosService', () => {
         id: 20,
         email: 'op@x.com',
         cedula: '123',
+        organizacion_id: 10,
         rol: { nombre: 'Operario' },
       });
       prisma.usuario.update.mockResolvedValue({ id: 20 });
@@ -167,6 +222,7 @@ describe('UsuariosService', () => {
         id: 20,
         email: 'op@x.com',
         cedula: '123',
+        organizacion_id: 10,
         rol: { nombre: 'Operario' },
       });
       prisma.usuario.findFirst.mockResolvedValue({ id: 99 });
