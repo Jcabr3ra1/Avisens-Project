@@ -16,7 +16,7 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { EvidenciaAlertaService } from './evidencia-alerta.service';
 import { CreateEvidenciaAlertaDto } from './dto/create-evidencia-alerta.dto';
 import { UpdateEvidenciaAlertaDto } from './dto/update-evidencia-alerta.dto';

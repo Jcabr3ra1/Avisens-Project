@@ -4,6 +4,7 @@ import { WhatsappService } from './whatsapp.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ChatbotService } from '../chatbot/chatbot.service';
 import { COLA_WHATSAPP } from './whatsapp.tipos';
+import { Prisma } from '@prisma/client';
 
 describe('WhatsappService', () => {
   let service: WhatsappService;
@@ -534,7 +535,7 @@ describe('WhatsappService', () => {
       codigo: 'COT-9-XYZ',
       plan_recomendado: 'Profesional',
       numero_galpones: 4,
-      valor_total_cop: 7360000,
+      valor_total_cop: new Prisma.Decimal(7360000),
     };
 
     it('incluye codigo, plan y valor formateado', async () => {

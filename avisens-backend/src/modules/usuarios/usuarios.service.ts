@@ -10,9 +10,9 @@ import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { ROLES } from '../../common/roles';
-import { esPropietario } from '../../common/acceso';
-import type { Solicitante } from '../../common/acceso';
+import { ROLES } from '../../common/auth/roles';
+import { esPropietario } from '../../common/auth/acceso';
+import type { Solicitante } from '../../common/auth/acceso';
 
 const USUARIO_SELECT = {
   id: true,

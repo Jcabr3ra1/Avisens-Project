@@ -1,14 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsDateString,
-  IsIn,
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'; import {   IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { EstadoOrdenCompra } from '@prisma/client';
 
 export class CreateOrdenesCompraDto {
   @ApiProperty({ example: 1, description: 'ID del proveedor de la orden' })
@@ -71,13 +62,13 @@ export class CreateOrdenesCompraDto {
   valor_total_cop?: number;
 
   @ApiPropertyOptional({
-    example: 'pendiente',
-    enum: ['pendiente', 'en_proceso', 'entregada', 'cancelada'],
+    example: EstadoOrdenCompra.pendiente,
+    enum: EstadoOrdenCompra,
     description: 'Estado actual de la orden',
   })
-  @IsIn(['pendiente', 'en_proceso', 'entregada', 'cancelada'])
+  @IsEnum(EstadoOrdenCompra)
   @IsOptional()
-  estado?: string;
+  estado?: EstadoOrdenCompra;
 
   @ApiPropertyOptional({
     example: 4.5,

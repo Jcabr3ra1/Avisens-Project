@@ -8,6 +8,7 @@ import {
   MensajeEntrante,
   TrabajoMensaje,
 } from './whatsapp.tipos';
+import { Prisma } from '@prisma/client';
 
 const FIN = 'FIN';
 // 1440 min = 24 h, que es la ventana en la que WhatsApp deja escribir sin
@@ -249,7 +250,7 @@ export class WhatsappService {
       codigo: string | null;
       plan_recomendado: string;
       numero_galpones: number;
-      valor_total_cop: number;
+      valor_total_cop: Prisma.Decimal;
     } | null;
   }): string {
     if (r.clasificacion === 'pqrs') return CIERRE_PQRS;
@@ -278,12 +279,12 @@ export class WhatsappService {
       codigo: string | null;
       plan_recomendado: string;
       numero_galpones: number;
-      valor_total_cop: number;
+      valor_total_cop: Prisma.Decimal;
     } | null,
   ) {
     if (!c) return '';
 
-    const valor = c.valor_total_cop.toLocaleString('es-CO');
+    const valor = c.valor_total_cop.toNumber().toLocaleString('es-CO');
     return (
       `*Cotización${c.codigo ? ' ' + c.codigo : ''}*\n` +
       `Plan ${c.plan_recomendado} · ${c.numero_galpones} galpón(es)\n` +

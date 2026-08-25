@@ -1,0 +1,37 @@
+meta {
+  name: [Admin]  Registrar movimiento de stock
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/v1/insumos/1/movimientos
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "tipo_movimiento": "entrada",
+    "cantidad": 49.5,
+    "motivo": "Compra a proveedor"
+  }
+}
+
+docs {
+  tipo_movimiento acepta entrada, salida o ajuste.
+
+  - entrada suma la cantidad al stock
+  - salida la resta, y se rechaza con 400 si dejaria el stock en negativo
+  - ajuste NO suma ni resta: fija el stock al valor contado en bodega
+
+  La respuesta trae stock_resultante, el stock que quedo tras el movimiento.
+}

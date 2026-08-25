@@ -3,8 +3,8 @@ import { NotFoundException } from '@nestjs/common';
 import { RecomendacionesService } from './recomendaciones.service';
 import { IndicadoresService } from '../indicadores/indicadores.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ROLES } from '../../common/roles';
-import type { Solicitante } from '../../common/acceso';
+import { ROLES } from '../../common/auth/roles';
+import type { Solicitante } from '../../common/auth/acceso';
 
 describe('RecomendacionesService', () => {
   let service: RecomendacionesService;

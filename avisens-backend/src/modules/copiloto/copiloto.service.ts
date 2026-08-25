@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
 import { PrismaService } from '../../prisma/prisma.service';
-import type { Solicitante } from '../../common/acceso';
+import type { Solicitante } from '../../common/auth/acceso';
 import { LotesService } from '../lotes/lotes.service';
 import { IndicadoresService } from '../indicadores/indicadores.service';
 import { PrediccionesService } from '../predicciones/predicciones.service';

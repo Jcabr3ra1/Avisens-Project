@@ -1,0 +1,21 @@
+# Artefactos de Node que no pintan nada en una imagen de Python.
+node_modules
+package.json
+package-lock.json
+
+# Bytecode compilado en la maquina del desarrollador: la arquitectura puede no
+# coincidir con la del contenedor.
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+
+# Entornos virtuales locales.
+.venv
+venv
+
+.git
+.gitignore
+*.md
+Dockerfile
+.dockerignore

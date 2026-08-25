@@ -1,6 +1,5 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsDateString, IsIn, IsString } from 'class-validator';
-import { ESTADOS_ACCIONAMIENTO } from './create-accionamientos-equipos.dto';
+import { ApiPropertyOptional } from '@nestjs/swagger'; import { IsDateString, IsEnum, IsOptional } from 'class-validator';
+import { EstadoAccionamiento } from '@prisma/client';
 
 export class UpdateAccionamientoEquipoDto {
   @ApiPropertyOptional({
@@ -12,11 +11,11 @@ export class UpdateAccionamientoEquipoDto {
   fecha_fin?: string;
 
   @ApiPropertyOptional({
-    example: 'apagado',
-    description: 'Estado final del accionamiento: encendido | apagado',
+    example: EstadoAccionamiento.apagado,
+    enum: EstadoAccionamiento,
+    description: 'Estado final del accionamiento',
   })
-  @IsString()
-  @IsIn(ESTADOS_ACCIONAMIENTO)
+  @IsEnum(EstadoAccionamiento)
   @IsOptional()
-  estado?: string;
+  estado?: EstadoAccionamiento;
 }
