@@ -144,6 +144,7 @@ model Granja {
   galpones         Galpon[]
   politicas_alerta PoliticaAlerta[]
   clima            Clima[]
+  insumos          InventarioInsumo[]
 
   // El alcance por rol filtra siempre por dueño: granja.propietario_id = X.
   @@index([propietario_id])
@@ -337,11 +338,12 @@ model Proveedor {
 
 model InventarioInsumo {
   id                    Int       @id @default(autoincrement())
+  granja_id             Int
   nombre                String
   tipo                  String?
   unidad_medida         String
-  stock_actual          Float     @default(0)
-  stock_minimo          Float     @default(0)
+  stock_actual          Decimal   @default(0) @db.Decimal(14, 3)
+  stock_minimo          Decimal   @default(0) @db.Decimal(14, 3)
   precio_unitario_cop   Decimal? @db.Decimal(14, 2)
   proveedor_habitual_id Int?
   ubicacion_almacen     String?
@@ -349,12 +351,14 @@ model InventarioInsumo {
   activo                Boolean   @default(true)
   fecha_actualizacion   DateTime  @default(now()) @updatedAt
 
+  granja                   Granja                  @relation(fields: [granja_id], references: [id])
   proveedor_habitual       Proveedor?              @relation(fields: [proveedor_habitual_id], references: [id])
   eventos_sanitarios       EventoSanitario[]
   registros_plagas         RegistroPlaga[]
   movimientos_inventario   MovimientoInventario[]
   mantenimientos_repuestos MantenimientoRepuesto[]
 
+  @@index([granja_id])
   @@index([proveedor_habitual_id])
   @@map("inventario_insumos")
 }
@@ -1058,16 +1062,22 @@ model MovimientoFinanciero {
   @@map("movimientos_financieros")
 }
 
+enum TipoMovimientoInventario {
+  entrada
+  salida
+  ajuste
+}
+
 model MovimientoInventario {
   id               Int      @id @default(autoincrement())
   insumo_id        Int
   lote_id          Int?
-  tipo_movimiento  String?
-  cantidad         Float
+  tipo_movimiento  TipoMovimientoInventario
+  cantidad         Decimal  @db.Decimal(14, 3)
   unidad_medida    String?
   motivo           String?
   comprobante_url  String?
-  stock_resultante Float?
+  stock_resultante Decimal? @db.Decimal(14, 3)
   usuario_id       Int
   fecha_movimiento DateTime @default(now())
 
