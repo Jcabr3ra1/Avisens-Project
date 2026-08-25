@@ -14,6 +14,10 @@ services:
       # Admin de DESARROLLO local (no es prod). El seed lo crea con estas vars.
       ADMIN_EMAIL: admin@avisens.com
       ADMIN_PASSWORD: Avisens2026!
+      # Sin esto, pnpm aborta al arrancar si el volumen de node_modules quedó
+      # desincronizado (pide confirmar por TTY, que no existe en un contenedor
+      # en segundo plano). CI=true le dice que asuma "sí" y siga.
+      CI: "true"
     volumes:
       - ./avisens-backend:/app
       - /app/node_modules
@@ -23,3 +27,18 @@ services:
     volumes:
       - ./avisens-ml:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend con Vite en modo dev (hot-reload). Usa la etapa `dev` del
+  # Dockerfile en vez del build estático + nginx, para que localhost:8080
+  # siempre refleje el código actual sin reconstruir la imagen a mano.
+  # VITE_API_URL apunta al puerto 3000 publicado en el host (docker-compose.yml
+  # ya lo expone), asi el navegador llama al backend directo sin pasar por
+  # proxy; el backend acepta cualquier origen en dev (ver CORS_ORIGIN).
+  frontend:
+    build:
+      target: dev
+    environment:
+      VITE_API_URL: http://localhost:3000/v1
+    volumes:
+      - ./avisens-frontend:/app
+      - /app/node_modules

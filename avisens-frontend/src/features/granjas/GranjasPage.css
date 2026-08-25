@@ -8,6 +8,83 @@
 .grj-title  { font-size: 1.75rem; font-weight: 800; color: var(--dash-ink); margin: 0; letter-spacing: -0.03em; }
 .grj-sub    { font-size: 0.85rem; color: var(--text3); margin: 0.2rem 0 0; }
 
+/* ---- Botones ---- */
+.btn-primary {
+  padding: 0.6rem 1.1rem;
+  background: linear-gradient(135deg, var(--green), var(--green-d));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16, 185, 129, 0.38); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn-ghost {
+  padding: 0.6rem 1.05rem;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.btn-ghost:hover:not(:disabled) { background: var(--card-h); }
+
+/* ---- Estado vacío / carga / error ---- */
+.grj-empty { color: var(--text3); font-size: 0.9rem; padding: 1.5rem 0; }
+.grj-alert {
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 25%, transparent);
+  color: var(--red); border-radius: 12px; padding: 0.7rem 1rem;
+  font-size: 0.87rem; margin-bottom: 1.2rem;
+}
+.grj-vacio {
+  display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+  padding: 3rem 1rem; color: var(--text3); text-align: center;
+}
+.grj-vacio-titulo { font-weight: 700; color: var(--dash-ink); margin: 0.3rem 0 0; }
+.grj-vacio-sub { font-size: 0.85rem; margin: 0; }
+.grj-galpones-vacio { padding: 1.1rem 1.4rem; color: var(--text3); font-size: 0.87rem; margin: 0; }
+
+/* ---- Modal ---- */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem; background: rgba(7, 20, 14, 0.55); backdrop-filter: blur(4px);
+}
+.modal-card {
+  width: 100%; max-width: 520px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(16, 44, 35, 0.1);
+  border-radius: 20px; padding: 1.6rem;
+  box-shadow: 0 32px 80px rgba(7, 20, 14, 0.35);
+}
+.modal-title { margin: 0 0 1.1rem; font-size: 1.2rem; font-weight: 800; color: var(--dash-ink); }
+.modal-form { display: flex; flex-direction: column; gap: 0.85rem; }
+.campo-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+.campo { display: flex; flex-direction: column; gap: 0.3rem; }
+.campo > span { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+.campo > span em { font-style: normal; font-weight: 400; color: var(--text3); }
+.campo input, .campo select {
+  padding: 0.6rem 0.7rem; border: 1px solid var(--border); border-radius: 9px;
+  background: var(--bg); color: var(--text); font-size: 0.9rem; outline: none;
+  transition: border-color 0.2s ease;
+}
+.campo input:focus, .campo select:focus { border-color: var(--green); }
+.modal-error { margin: 0; color: var(--red); font-size: 0.85rem; }
+.modal-acciones { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.4rem; }
+
+@media (max-width: 560px) {
+  .campo-fila { grid-template-columns: 1fr; }
+}
+
 /* ─── Resumen global ─────────────────────────────────────────────────────── */
 .grj-resumen { display: flex; gap: 1rem; margin-bottom: 1.8rem; flex-wrap: wrap; }
 .grj-stat {
@@ -34,18 +111,37 @@
 
 .grj-card-head {
   width: 100%; display: flex; align-items: center; justify-content: space-between;
-  padding: 1.1rem 1.4rem; text-align: left; cursor: pointer;
-  background: transparent; border: none; gap: 1rem;
-  transition: background 0.15s;
+  padding: 1.1rem 1.4rem; gap: 1rem;
 }
-.grj-card-head:hover { background: rgba(16,185,129,0.03); }
+.grj-card--inactiva { opacity: 0.65; }
 
+.grj-card-titlebtn {
+  display: flex; align-items: flex-start; text-align: left; cursor: pointer;
+  background: transparent; border: none; padding: 0; min-width: 0;
+}
 .grj-card-info  { display: flex; flex-direction: column; gap: 0.2rem; }
 .grj-nombre     { font-weight: 700; font-size: 1.02rem; color: var(--dash-ink); }
 .grj-ubicacion  { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; color: var(--text3); }
 .grj-ubicacion svg { flex-shrink: 0; }
-.grj-card-meta  { display: flex; align-items: center; gap: 1rem; font-size: 0.84rem; color: var(--text3); margin-left: auto; }
-.grj-chevron    { font-size: 0.7rem; color: var(--text4); }
+.grj-card-meta  { display: flex; align-items: center; gap: 0.8rem; font-size: 0.84rem; color: var(--text3); margin-left: auto; flex-shrink: 0; }
+.grj-chevron-btn {
+  background: transparent; border: none; cursor: pointer; font-size: 0.7rem; color: var(--text4); padding: 0.2rem;
+}
+
+.grj-badge {
+  border: 1px solid transparent; border-radius: 999px; padding: 0.25rem 0.7rem;
+  font-size: 0.76rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.grj-badge--activa   { background: color-mix(in srgb, var(--green) 12%, transparent); color: var(--green-d); border-color: color-mix(in srgb, var(--green) 25%, transparent); }
+.grj-badge--inactiva { background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red); border-color: color-mix(in srgb, var(--red) 25%, transparent); }
+
+.grj-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--text3); cursor: pointer; flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.grj-icon-btn:hover { background: var(--card-h); color: var(--dash-ink); }
 
 /* ─── Tabla de galpones ──────────────────────────────────────────────────── */
 .grj-galpones { border-top: 1px solid rgba(16,44,35,0.07); overflow-x: auto; }
@@ -55,24 +151,37 @@
 .grj-tabla tbody tr:last-child td { border-bottom: none; }
 .grj-tabla tbody tr:hover td { background: rgba(16,185,129,0.03); }
 
-.grj-fila--vacio        td { opacity: 0.6; }
-.grj-fila--mantenimiento td { opacity: 0.7; }
+.grj-fila--inactivo td { opacity: 0.6; }
 
 .grj-estado                    { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
 .grj-estado--activo            { color: var(--green-d); }
-.grj-estado--vacio             { color: var(--text3); }
-.grj-estado--preparacion       { color: var(--warning3); }
-.grj-estado--mantenimiento     { color: var(--red); }
+.grj-estado--inactivo          { color: var(--text3); }
 
 .grj-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .grj-dot--activo        { background: var(--green); box-shadow: 0 0 5px rgba(16,185,129,0.5); }
-.grj-dot--vacio         { background: var(--text4); }
-.grj-dot--preparacion   { background: var(--warning); }
-.grj-dot--mantenimiento { background: var(--red); box-shadow: 0 0 5px rgba(239,68,68,0.5); }
+.grj-dot--inactivo      { background: var(--text4); }
+
+.grj-fila-acciones { display: flex; gap: 0.7rem; }
+.grj-link-btn {
+  background: transparent; border: none; padding: 0; cursor: pointer;
+  color: var(--green-d); font-size: 0.83rem; font-weight: 600;
+}
+.grj-link-btn:hover { text-decoration: underline; }
+
+.grj-agregar-galpon {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  margin: 0.9rem 1.1rem 1.1rem; padding: 0.5rem 0.9rem;
+  background: transparent; border: 1px dashed var(--border); border-radius: 9px;
+  color: var(--text3); font-size: 0.83rem; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.grj-agregar-galpon:hover { background: rgba(16,185,129,0.05); color: var(--green-d); border-color: rgba(16,185,129,0.3); }
 
 /* ─── Responsive: celular ────────────────────────────────────────────────── */
 @media (max-width: 640px) {
+  .grj-header   { flex-direction: column; align-items: stretch; }
   .grj-title    { font-size: 1.4rem; }
+  .btn-primary  { width: 100%; }
   .grj-card-head { flex-wrap: wrap; }
   .grj-card-meta { margin-left: 0; width: 100%; justify-content: space-between; }
 }

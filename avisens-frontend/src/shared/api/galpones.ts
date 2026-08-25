@@ -3,7 +3,7 @@ import type { PaginatedResponse } from './types'
 
 export interface Galpon {
   id: number
-  granja_id: number
+  granja: { id: number; nombre: string; propietario_id: number }
   codigo: string
   nombre: string
   capacidad_aves: number | null

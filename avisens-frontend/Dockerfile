@@ -13,6 +13,13 @@ ENV VITE_API_URL=$VITE_API_URL
 COPY . .
 RUN npm run build
 
+# ---------- Etapa dev: hot-reload (vite dev server) ----------
+# Solo se usa en local via docker-compose.override.yml (el código real llega
+# por bind mount, no por este COPY). Producción usa la etapa runner de abajo.
+FROM builder AS dev
+EXPOSE 80
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "80"]
+
 # ---------- Etapa 2: servir estáticos con nginx ----------
 FROM nginx:alpine AS runner
 

@@ -2,11 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import './Navbar.css'
 
-const navItems = [
-  ['Sensores', '#sensores'],
-  ['Problemas', '#problems'],
-  ['Funciones', '#features'],
-  ['FAQ', '#faq'],
+const navItems: [string, string][] = [
+  ['Resultados', '#cifras'],
 ]
 
 function Navbar() {
@@ -52,7 +49,14 @@ function Navbar() {
 
       <div className="nav-actions">
         <Link to="/login" className="nav-btn nav-btn-ghost">Entrar</Link>
-        <a href="mailto:contacto@avisens.com" className="nav-btn nav-btn-primary">Contáctanos</a>
+        <a
+          href="https://wa.me/573022358210?text=Hola%2C%20quiero%20saber%20m%C3%A1s%20sobre%20AVISENS"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="nav-btn nav-btn-primary"
+        >
+          Contáctanos
+        </a>
         <button
           className="nav-menu-toggle"
           type="button"
