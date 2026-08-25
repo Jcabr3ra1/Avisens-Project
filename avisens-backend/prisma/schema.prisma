@@ -142,12 +142,14 @@ model Granja {
   activa          Boolean  @default(true)
   fecha_creacion  DateTime @default(now())
 
-  propietario      Usuario            @relation(fields: [propietario_id], references: [id])
-  organizacion     Organizacion       @relation(fields: [organizacion_id], references: [id])
-  galpones         Galpon[]
-  politicas_alerta PoliticaAlerta[]
-  clima            Clima[]
-  insumos          InventarioInsumo[]
+  propietario             Usuario                @relation(fields: [propietario_id], references: [id])
+  organizacion            Organizacion           @relation(fields: [organizacion_id], references: [id])
+  galpones                Galpon[]
+  politicas_alerta        PoliticaAlerta[]
+  clima                   Clima[]
+  insumos                 InventarioInsumo[]
+  ordenes_compra          OrdenCompra[]
+  movimientos_financieros MovimientoFinanciero[]
 
   // El alcance por rol filtra siempre por dueño: granja.propietario_id = X.
   @@index([propietario_id])
@@ -1007,9 +1009,10 @@ enum EstadoOrdenCompra {
 
 model OrdenCompra {
   id                        Int               @id @default(autoincrement())
+  granja_id                 Int
   proveedor_id              Int
   lote_id                   Int?
-  codigo                    String            @unique
+  codigo                    String
   fecha_pedido              DateTime?         @db.Date
   fecha_entrega_estimada    DateTime?         @db.Date
   fecha_entrega_real        DateTime?         @db.Date
@@ -1021,10 +1024,13 @@ model OrdenCompra {
   usuario_id                Int
   fecha_registro            DateTime          @default(now())
 
+  granja    Granja    @relation(fields: [granja_id], references: [id])
   proveedor Proveedor @relation(fields: [proveedor_id], references: [id])
   lote      Lote?     @relation(fields: [lote_id], references: [id])
   usuario   Usuario   @relation(fields: [usuario_id], references: [id])
 
+  @@unique([granja_id, codigo])
+  @@index([granja_id])
   @@index([proveedor_id])
   @@map("ordenes_compra")
 }
@@ -1043,6 +1049,7 @@ model CategoriaFinanciera {
 
 model MovimientoFinanciero {
   id              Int      @id @default(autoincrement())
+  granja_id       Int
   lote_id         Int?
   categoria_id    Int
   proveedor_id    Int?
@@ -1056,11 +1063,13 @@ model MovimientoFinanciero {
   usuario_id      Int
   fecha_registro  DateTime @default(now())
 
+  granja    Granja              @relation(fields: [granja_id], references: [id])
   lote      Lote?               @relation(fields: [lote_id], references: [id])
   categoria CategoriaFinanciera @relation(fields: [categoria_id], references: [id])
   proveedor Proveedor?          @relation(fields: [proveedor_id], references: [id])
   usuario   Usuario             @relation(fields: [usuario_id], references: [id])
 
+  @@index([granja_id])
   @@index([lote_id])
   @@index([categoria_id])
   @@map("movimientos_financieros")

@@ -586,9 +586,10 @@ proveedores [icon: truck, color: pink] {
 
 ordenes_compra [icon: shopping-cart, color: pink] {
   id integer pk
+  granja_id integer fk
   proveedor_id integer fk
   lote_id integer fk
-  codigo string unique
+  codigo string
   fecha_pedido date
   fecha_entrega_estimada date
   fecha_entrega_real date
@@ -611,6 +612,7 @@ categorias_financieras [icon: tag, color: pink] {
 
 movimientos_financieros [icon: dollar-sign, color: pink] {
   id integer pk
+  granja_id integer fk
   lote_id integer fk
   categoria_id integer fk
   proveedor_id integer fk
@@ -938,9 +940,11 @@ registros_plagas.insumo_id > inventario_insumos.id
 registros_plagas.usuario_id > usuarios.id
 
 // EP-07 Finanzas e inventario
+ordenes_compra.granja_id > granjas.id
 ordenes_compra.proveedor_id > proveedores.id
 ordenes_compra.lote_id > lotes.id
 ordenes_compra.usuario_id > usuarios.id
+movimientos_financieros.granja_id > granjas.id
 movimientos_financieros.lote_id > lotes.id
 movimientos_financieros.categoria_id > categorias_financieras.id
 movimientos_financieros.proveedor_id > proveedores.id
