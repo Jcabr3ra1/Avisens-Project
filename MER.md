@@ -1,13 +1,13 @@
-# MER Avisens v1.3 — Normalizado
+# MER Avisens v1.4 — Normalizado
 
-> Modelo Entidad-Relación de referencia del proyecto. **59 entidades** (49 base +
+> Modelo Entidad-Relación de referencia del proyecto. **60 entidades** (50 base +
 > 10 de la capa de inteligencia). Notación de [Eraser](https://eraser.io). Esta es
 > una vista documental del modelo. La fuente de verdad ejecutable es
 > `prisma/schema.prisma` junto con `prisma/migrations`; este documento debe
 > actualizarse en el mismo cambio que modifique cualquiera de los dos.
 >
 > ## MODELO EN EL SCHEMA (2026-08-25)
-> Las **59 tablas** están definidas en `prisma/schema.prisma`. Las entidades de
+> Las **60 tablas** están definidas en `prisma/schema.prisma`. Las entidades de
 > roadmap permanecen identificadas como tales: estar modeladas no significa que
 > su flujo funcional ya esté implementado.
 >
@@ -18,7 +18,7 @@
 > de voz, zonas, registro de modelos ML, bioacústica y visión.
 
 ```
-title AVISENS v1.3 — Normalizado
+title AVISENS v1.4 — Normalizado
 
 // ============================================================
 // EP-01 · CHATBOT DE COTIZACIÓN (yellow)
@@ -610,6 +610,17 @@ ordenes_compra [icon: shopping-cart, color: pink] {
   fecha_registro datetime
 }
 
+detalles_ordenes_compra [icon: list, color: pink] {
+  id integer pk
+  orden_compra_id integer fk
+  insumo_id integer fk
+  cantidad number
+  cantidad_recibida number
+  unidad_medida string
+  precio_unitario_cop number
+  subtotal_cop number
+}
+
 categorias_financieras [icon: tag, color: pink] {
   id integer pk
   nombre string
@@ -662,6 +673,8 @@ movimientos_inventario [icon: shuffle, color: pink] {
   comprobante_url string
   stock_resultante number
   usuario_id integer fk
+  detalle_orden_compra_id integer fk
+  clave_idempotencia string
   fecha_movimiento datetime
 }
 
@@ -953,6 +966,8 @@ ordenes_compra.granja_id > granjas.id
 ordenes_compra.proveedor_id > proveedores.id
 ordenes_compra.lote_id > lotes.id
 ordenes_compra.usuario_id > usuarios.id
+detalles_ordenes_compra.orden_compra_id > ordenes_compra.id
+detalles_ordenes_compra.insumo_id > inventario_insumos.id
 movimientos_financieros.granja_id > granjas.id
 movimientos_financieros.lote_id > lotes.id
 movimientos_financieros.categoria_id > categorias_financieras.id
@@ -963,6 +978,7 @@ inventario_insumos.granja_id > granjas.id
 movimientos_inventario.insumo_id > inventario_insumos.id
 movimientos_inventario.lote_id > lotes.id
 movimientos_inventario.usuario_id > usuarios.id
+movimientos_inventario.detalle_orden_compra_id > detalles_ordenes_compra.id
 
 // EP-08 Infraestructura
 equipos.galpon_id > galpones.id

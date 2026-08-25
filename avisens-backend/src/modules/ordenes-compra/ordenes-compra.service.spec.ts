@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { EstadoOrdenCompra } from '@prisma/client';
+import { EstadoOrdenCompra, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ROLES } from '../../common/auth/roles';
 import type { Solicitante } from '../../common/auth/acceso';
@@ -26,6 +26,16 @@ describe('OrdenesCompraService', () => {
     proveedor: { findUnique: jest.fn() },
     lote: { findUnique: jest.fn() },
     usuario: { findUnique: jest.fn() },
+    inventarioInsumo: { findUnique: jest.fn(), update: jest.fn() },
+    detalleOrdenCompra: {
+      create: jest.fn(),
+      aggregate: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    movimientoInventario: { findMany: jest.fn(), create: jest.fn() },
+    $queryRaw: jest.fn(),
     $transaction: jest.fn(),
   };
 
@@ -46,7 +56,10 @@ describe('OrdenesCompraService', () => {
     id: 1,
     granja_id: 10,
     lote_id: 2,
+    codigo: 'OC-2026-001',
+    estado: EstadoOrdenCompra.pendiente,
     granja: { id: 10, nombre: 'Granja Norte', propietario_id: 5 },
+    detalles: [],
   };
 
   beforeEach(async () => {
@@ -70,7 +83,11 @@ describe('OrdenesCompraService', () => {
       galpon: { granja: { id: 10, propietario_id: 5 } },
     });
     prisma.ordenCompra.findUnique.mockResolvedValue(ordenExistente);
-    prisma.$transaction.mockResolvedValue([[], 0]);
+    prisma.$transaction.mockImplementation((operacion: unknown) =>
+      typeof operacion === 'function'
+        ? (operacion as (tx: typeof prisma) => unknown)(prisma)
+        : Promise.resolve([[], 0]),
+    );
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -199,12 +216,12 @@ describe('OrdenesCompraService', () => {
     it('conserva la coherencia entre el lote existente y la granja', async () => {
       prisma.ordenCompra.update.mockResolvedValue({
         ...ordenExistente,
-        estado: EstadoOrdenCompra.entregada,
+        estado: EstadoOrdenCompra.cancelada,
       });
 
       await service.actualizar(
         1,
-        { estado: EstadoOrdenCompra.entregada },
+        { estado: EstadoOrdenCompra.cancelada },
         propietario,
       );
 
@@ -217,7 +234,7 @@ describe('OrdenesCompraService', () => {
       expect(llamada.data).toEqual(
         expect.objectContaining({
           granja_id: 10,
-          estado: EstadoOrdenCompra.entregada,
+          estado: EstadoOrdenCompra.cancelada,
         }),
       );
     });
@@ -228,6 +245,19 @@ describe('OrdenesCompraService', () => {
       await expect(
         service.actualizar(99, { estado: EstadoOrdenCompra.cancelada }, admin),
       ).rejects.toThrow(NotFoundException);
+      expect(prisma.ordenCompra.update).not.toHaveBeenCalled();
+    });
+
+    it('impide actualizar una orden sin lote de otra granja', async () => {
+      prisma.ordenCompra.findUnique.mockResolvedValue({
+        ...ordenExistente,
+        lote_id: null,
+        granja: { id: 99, nombre: 'Ajena', propietario_id: 999 },
+      });
+
+      await expect(
+        service.actualizar(1, { codigo: 'X' }, propietario),
+      ).rejects.toThrow(ForbiddenException);
       expect(prisma.ordenCompra.update).not.toHaveBeenCalled();
     });
   });
@@ -243,6 +273,124 @@ describe('OrdenesCompraService', () => {
       expect(prisma.ordenCompra.delete).toHaveBeenCalledWith({
         where: { id: 1 },
       });
+    });
+
+    it('impide eliminar una orden sin lote de otra granja', async () => {
+      prisma.ordenCompra.findUnique.mockResolvedValue({
+        ...ordenExistente,
+        lote_id: null,
+        granja: { id: 99, nombre: 'Ajena', propietario_id: 999 },
+      });
+
+      await expect(service.eliminar(1, propietario)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.ordenCompra.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('detalles y recepción', () => {
+    it('agrega un insumo de la misma granja y recalcula el total', async () => {
+      prisma.inventarioInsumo.findUnique.mockResolvedValue({
+        id: 4,
+        granja_id: 10,
+        unidad_medida: 'kg',
+        activo: true,
+      });
+      prisma.detalleOrdenCompra.create.mockResolvedValue({ id: 8 });
+      prisma.detalleOrdenCompra.aggregate.mockResolvedValue({
+        _sum: { subtotal_cop: new Prisma.Decimal(500000) },
+      });
+
+      await service.agregarDetalle(
+        1,
+        { insumo_id: 4, cantidad: 10, precio_unitario_cop: 50000 },
+        propietario,
+      );
+
+      expect(prisma.detalleOrdenCompra.create).toHaveBeenCalled();
+      expect(prisma.ordenCompra.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { valor_total_cop: new Prisma.Decimal(500000) },
+      });
+    });
+
+    it('rechaza un insumo de otra granja', async () => {
+      prisma.inventarioInsumo.findUnique.mockResolvedValue({
+        id: 4,
+        granja_id: 99,
+        unidad_medida: 'kg',
+        activo: true,
+      });
+
+      await expect(
+        service.agregarDetalle(
+          1,
+          { insumo_id: 4, cantidad: 10, precio_unitario_cop: 50000 },
+          propietario,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('recibe parcialmente y crea una entrada de inventario', async () => {
+      prisma.movimientoInventario.findMany.mockResolvedValue([]);
+      prisma.$queryRaw
+        .mockResolvedValueOnce([
+          {
+            id: 8,
+            insumo_id: 4,
+            cantidad: new Prisma.Decimal(10),
+            cantidad_recibida: new Prisma.Decimal(0),
+            unidad_medida: 'kg',
+          },
+        ])
+        .mockResolvedValueOnce([
+          { id: 4, stock_actual: new Prisma.Decimal(20) },
+        ]);
+      prisma.movimientoInventario.create.mockResolvedValue({ id: 12 });
+
+      const resultado = await service.recibir(
+        1,
+        {
+          clave_idempotencia: 'recepcion-1',
+          items: [{ detalle_id: 8, cantidad: 4 }],
+        },
+        propietario,
+      );
+
+      expect(resultado.completa).toBe(false);
+      expect(prisma.inventarioInsumo.update).toHaveBeenCalledWith({
+        where: { id: 4 },
+        data: { stock_actual: new Prisma.Decimal(24) },
+      });
+      const actualizaciones = prisma.ordenCompra.update.mock.calls as Array<
+        [{ data: Record<string, unknown> }]
+      >;
+      expect(actualizaciones.at(-1)?.[0].data.estado).toBe(
+        EstadoOrdenCompra.en_proceso,
+      );
+    });
+
+    it('repetir la misma clave devuelve la recepción sin duplicar stock', async () => {
+      prisma.movimientoInventario.findMany.mockResolvedValue([
+        {
+          detalle_orden_compra_id: 8,
+          cantidad: new Prisma.Decimal(4),
+        },
+      ]);
+
+      const resultado = await service.recibir(
+        1,
+        {
+          clave_idempotencia: 'recepcion-1',
+          items: [{ detalle_id: 8, cantidad: 4 }],
+        },
+        propietario,
+      );
+
+      expect(resultado.idempotente).toBe(true);
+      expect(prisma.inventarioInsumo.update).not.toHaveBeenCalled();
+      expect(prisma.movimientoInventario.create).not.toHaveBeenCalled();
     });
   });
 });

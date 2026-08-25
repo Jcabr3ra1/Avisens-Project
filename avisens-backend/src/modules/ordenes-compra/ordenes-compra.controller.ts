@@ -20,6 +20,8 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 import { OrdenesCompraService } from './ordenes-compra.service';
 import { CreateOrdenesCompraDto } from './dto/create-ordenes-compra.dto';
 import { UpdateOrdenesCompraDto } from './dto/update-ordenes-compra.dto';
+import { CreateDetalleOrdenDto } from './dto/create-detalle-orden.dto';
+import { RecibirOrdenDto } from './dto/recibir-orden.dto';
 import type { Request } from 'express';
 
 interface AuthRequest extends Request {
@@ -44,6 +46,38 @@ export class OrdenesCompraController {
   @ApiOperation({ summary: 'Listar órdenes de compra paginadas' })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.ordenesCompraService.listar(paginacion, req.user);
+  }
+
+  @Post(':id/detalles')
+  @ApiOperation({ summary: 'Agregar un renglón de insumo a la orden' })
+  agregarDetalle(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateDetalleOrdenDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.ordenesCompraService.agregarDetalle(id, dto, req.user);
+  }
+
+  @Delete(':id/detalles/:detalleId')
+  @ApiOperation({ summary: 'Eliminar un renglón que aún no se ha recibido' })
+  eliminarDetalle(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('detalleId', ParseIntPipe) detalleId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.ordenesCompraService.eliminarDetalle(id, detalleId, req.user);
+  }
+
+  @Post(':id/recepciones')
+  @ApiOperation({
+    summary: 'Recibir total o parcialmente una orden e ingresar stock',
+  })
+  recibir(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: RecibirOrdenDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.ordenesCompraService.recibir(id, dto, req.user);
   }
 
   @Get(':id')
