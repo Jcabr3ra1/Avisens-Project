@@ -4,14 +4,39 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { verificarDueno, Solicitante } from '../../common/acceso';
+import { verificarDueno, Solicitante } from '../../common/auth/acceso';
 import { PESO_INICIAL_G } from '../indicadores/indicadores.service';
+import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { paginate } from '../../common/pagination/paginate';
 
 const ML_URL = process.env.ML_URL ?? 'http://ml:8000';
 const UMBRAL_DESVIO_PCT = 5;
 const UMBRAL_DESVIO_FCR = 0.05;
 const ML_TIMEOUT_MS = 5000;
+const MS_POR_DIA = 1000 * 60 * 60 * 24;
+
+const PREDICCION_SELECT = {
+  id: true,
+  lote_id: true,
+  tipo: true,
+  valor_predicho: true,
+  unidad: true,
+  horizonte_dias: true,
+  confianza: true,
+  fecha_objetivo: true,
+  datos_entrada: true,
+  fecha_generacion: true,
+} as const;
+
+interface ResultadoPrediccion {
+  peso_proyectado_faena_g: number;
+  dia_faena: number;
+  mortalidad_proyectada_pct: number | null;
+  consumo_proyectado_kg: number | null;
+  fcr_proyectado: number | null;
+}
 
 @Injectable()
 export class PrediccionesService {
@@ -19,7 +44,11 @@ export class PrediccionesService {
 
   constructor(private prisma: PrismaService) {}
 
-  async predecir(loteId: number, solicitante: Solicitante) {
+  async predecir(
+    loteId: number,
+    solicitante: Solicitante,
+    persistir = false,
+  ) {
     const lote = await this.prisma.lote.findUnique({
       where: { id: loteId },
       select: {
@@ -91,7 +120,7 @@ export class PrediccionesService {
       fcr,
     );
 
-    return {
+    const resultado = {
       lote_id: loteId,
       pesajes_usados: pesajesParaMl.length,
       ...prediccion,
@@ -100,6 +129,119 @@ export class PrediccionesService {
       fcr_proyectado: fcr,
       comparacion_objetivo: comparacion,
     };
+
+    // El mismo objeto en los dos casos, para que quien consuma la respuesta no
+    // tenga que distinguir entre dos formas: null significa "no se guardo".
+    const guardadas = persistir
+      ? await this.guardar(loteId, inicio, resultado, pesajesParaMl)
+      : null;
+    return { ...resultado, predicciones_guardadas: guardadas };
+  }
+
+  // Cada magnitud proyectada se guarda como una fila propia: asi se puede
+  // consultar el historial de una sola ("como ha ido cambiando el FCR
+  // proyectado de este lote") sin desarmar un JSON. datos_entrada conserva los
+  // pesajes que se usaron, que es lo que permite auditar por que el modelo
+  // dijo lo que dijo.
+  private async guardar(
+    loteId: number,
+    inicioMs: number,
+    r: ResultadoPrediccion,
+    pesajes: Array<{ dia: number; peso: number }>,
+  ) {
+    const fechaObjetivo = new Date(inicioMs + r.dia_faena * MS_POR_DIA);
+    const ultimoDia = pesajes[pesajes.length - 1]?.dia ?? 0;
+    const horizonte = r.dia_faena - ultimoDia;
+    const datosEntrada = { pesajes, dia_faena: r.dia_faena };
+
+    const filas: Prisma.PrediccionCreateManyInput[] = [
+      {
+        lote_id: loteId,
+        tipo: 'peso_faena',
+        valor_predicho: r.peso_proyectado_faena_g,
+        unidad: 'g',
+        horizonte_dias: horizonte,
+        fecha_objetivo: fechaObjetivo,
+        datos_entrada: datosEntrada,
+      },
+    ];
+
+    if (r.mortalidad_proyectada_pct != null) {
+      filas.push({
+        lote_id: loteId,
+        tipo: 'mortalidad',
+        valor_predicho: r.mortalidad_proyectada_pct,
+        unidad: '%',
+        horizonte_dias: horizonte,
+        fecha_objetivo: fechaObjetivo,
+        datos_entrada: datosEntrada,
+      });
+    }
+
+    if (r.consumo_proyectado_kg != null) {
+      filas.push({
+        lote_id: loteId,
+        tipo: 'consumo',
+        valor_predicho: r.consumo_proyectado_kg,
+        unidad: 'kg',
+        horizonte_dias: horizonte,
+        fecha_objetivo: fechaObjetivo,
+        datos_entrada: datosEntrada,
+      });
+    }
+
+    if (r.fcr_proyectado != null) {
+      filas.push({
+        lote_id: loteId,
+        tipo: 'fcr',
+        valor_predicho: r.fcr_proyectado,
+        horizonte_dias: horizonte,
+        fecha_objetivo: fechaObjetivo,
+        datos_entrada: datosEntrada,
+      });
+    }
+
+    await this.prisma.prediccion.createMany({ data: filas });
+    return filas.length;
+  }
+
+  async historial(
+    loteId: number,
+    solicitante: Solicitante,
+    { page, limit }: PaginationQueryDto,
+    tipo?: string,
+  ) {
+    await this.validarLote(loteId, solicitante);
+
+    const where = { lote_id: loteId, ...(tipo ? { tipo } : {}) };
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.prediccion.findMany({
+        where,
+        select: PREDICCION_SELECT,
+        orderBy: { fecha_generacion: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.prediccion.count({ where }),
+    ]);
+
+    return paginate(data, total, page, limit);
+  }
+
+  private async validarLote(loteId: number, solicitante: Solicitante) {
+    const lote = await this.prisma.lote.findUnique({
+      where: { id: loteId },
+      select: {
+        galpon: { select: { granja: { select: { propietario_id: true } } } },
+      },
+    });
+    if (!lote) throw new NotFoundException('Lote no encontrado');
+    verificarDueno(
+      solicitante,
+      lote.galpon.granja.propietario_id,
+      'Solo puedes consultar tus propios lotes',
+    );
   }
 
   private async mortalidadProyectada(

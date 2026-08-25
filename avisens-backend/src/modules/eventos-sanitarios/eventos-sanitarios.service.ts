@@ -8,7 +8,7 @@ import {
   esPropietario,
   verificarDueno,
   Solicitante,
-} from '../../common/acceso';
+} from '../../common/auth/acceso';
 
 const SANITARIO_SELECT = {
   id: true,

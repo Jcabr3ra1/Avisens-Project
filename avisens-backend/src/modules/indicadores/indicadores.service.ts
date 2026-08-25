@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { verificarDueno, Solicitante } from '../../common/acceso';
-import { ROLES } from '../../common/roles';
+import { verificarDueno, Solicitante } from '../../common/auth/acceso';
+import { ROLES } from '../../common/auth/roles';
+import { Prisma } from '@prisma/client';
 
 export const PESO_INICIAL_G = 42;
 const UMBRAL_DESVIO_PCT = 5;
@@ -252,9 +253,9 @@ export class IndicadoresService {
       _sum: { valor_cop: true },
     });
 
-    const costoTotal = egresos._sum.valor_cop ?? 0;
-    const ingresoTotal = ingresos._sum.valor_cop ?? 0;
-    const margen = ingresoTotal - costoTotal;
+    const costoTotal = egresos._sum.valor_cop ?? new Prisma.Decimal(0);
+    const ingresoTotal = ingresos._sum.valor_cop ?? new Prisma.Decimal(0);
+    const margen = ingresoTotal.minus(costoTotal);
 
     const avesVivas =
       lote.cantidad_inicial *
@@ -264,8 +265,11 @@ export class IndicadoresService {
         ? (indicador.peso_promedio_g / 1000) * avesVivas
         : 0;
 
-    const costoPorKg = kgProducidos > 0 ? costoTotal / kgProducidos : null;
-    const roiPct = costoTotal > 0 ? (margen / costoTotal) * 100 : null;
+    const costoPorKg =
+      kgProducidos > 0 ? costoTotal.div(kgProducidos).toNumber() : null;
+    const roiPct = costoTotal.gt(0)
+      ? margen.div(costoTotal).mul(100).toNumber()
+      : null;
     return {
       lote_id: loteId,
       costo_total_cop: costoTotal,

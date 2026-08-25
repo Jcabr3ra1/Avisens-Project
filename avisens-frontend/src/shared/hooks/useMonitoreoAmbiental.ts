@@ -3,7 +3,7 @@
 // reales del backend y arma, por galpón, la lista de sensores con su estado
 // ya calculado. Lo usan Monitoreo, Alertas, Dashboard y Admin — así los
 // cuatro ven exactamente los mismos números, porque leen la misma fuente.
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { isAxiosError } from 'axios'
 import {
   listarGalpones,
@@ -60,6 +60,12 @@ export type GalponMonitoreoVista = {
   sensores: SensorVista[]
 }
 
+type MonitoreoState = {
+  galpones: GalponMonitoreoVista[]
+  cargando: boolean
+  error: string
+}
+
 function calcularEstado(valor: number, min: number, max: number): 'optimo' | 'advertencia' | 'critico' {
   // Variables sin piso real (min = 0, típico de gases): lo que importa es
   // qué tan cerca está del techo.
@@ -80,46 +86,13 @@ function diasDesde(fechaISO: string): number {
   return Math.max(Math.floor((Date.now() - new Date(fechaISO).getTime()) / 86_400_000), 0)
 }
 
-export function useMonitoreoAmbiental() {
-  const [galpones, setGalpones] = useState<Galpon[]>([])
-  const [lotes, setLotes] = useState<Lote[]>([])
-  const [sensores, setSensores] = useState<Sensor[]>([])
-  const [mediciones, setMediciones] = useState<Medicion[]>([])
-  const [umbrales, setUmbrales] = useState<Umbral[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState('')
-
-  const cargar = useCallback(async () => {
-    setCargando(true)
-    setError('')
-    try {
-      const [galponesData, lotesData, sensoresData, medicionesData, umbralesData] = await Promise.all([
-        listarGalpones(),
-        listarLotes(),
-        listarSensores(),
-        listarMediciones({ page: 1, limit: LIMITE_MEDICIONES }),
-        listarUmbrales(),
-      ])
-      setGalpones(galponesData)
-      setLotes(lotesData)
-      setSensores(sensoresData)
-      setMediciones(medicionesData)
-      setUmbrales(umbralesData)
-    } catch (err) {
-      setError(
-        isAxiosError(err) && err.response?.status === 403
-          ? 'No tienes permisos para ver el monitoreo ambiental.'
-          : 'No se pudo cargar el monitoreo ambiental.',
-      )
-    } finally {
-      setCargando(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    cargar()
-  }, [cargar])
-
+function construirVista(
+  galpones: Galpon[],
+  lotes: Lote[],
+  sensores: Sensor[],
+  mediciones: Medicion[],
+  umbrales: Umbral[],
+): GalponMonitoreoVista[] {
   // Última medición por sensor: `mediciones` viene ordenada más reciente
   // primero (el backend ordena por fecha_hora desc), así que el primer match
   // por sensor_id ya es el más nuevo.
@@ -128,7 +101,7 @@ export function useMonitoreoAmbiental() {
     if (!ultimaPorSensor.has(m.sensor_id)) ultimaPorSensor.set(m.sensor_id, m)
   }
 
-  const galponesVista: GalponMonitoreoVista[] = galpones.map((g) => {
+  return galpones.map((g) => {
     const loteActivo = lotes.find((l) => l.galpon.id === g.id && l.estado === 'activo') ?? null
     const diaVida = loteActivo ? diasDesde(loteActivo.fecha_ingreso) : 0
     const semanaVida = Math.floor(diaVida / 7)
@@ -174,8 +147,82 @@ export function useMonitoreoAmbiental() {
       sensores: sensoresGalpon,
     }
   })
+}
 
-  return { galpones: galponesVista, cargando, error, recargar: cargar }
+// Store compartido entre el layout y las páginas. Antes, cada uso del hook
+// ejecutaba cinco peticiones nuevas; Dashboard/Monitoreo/Alertas/Admin las
+// duplicaban porque el sidebar usa la misma fuente. La promesa compartida
+// también evita la doble petición que StrictMode provoca en desarrollo.
+const CACHE_MS = 30_000
+let estadoMonitoreo: MonitoreoState = { galpones: [], cargando: true, error: '' }
+let cargaEnCurso: Promise<void> | null = null
+let ultimaCarga = 0
+const suscriptores = new Set<() => void>()
+
+function notificar() {
+  suscriptores.forEach((listener) => listener())
+}
+
+function suscribir(listener: () => void) {
+  suscriptores.add(listener)
+  return () => suscriptores.delete(listener)
+}
+
+function obtenerSnapshot() {
+  return estadoMonitoreo
+}
+
+async function cargarMonitoreo(forzar = false): Promise<void> {
+  if (cargaEnCurso) return cargaEnCurso
+  if (!forzar && ultimaCarga > 0 && Date.now() - ultimaCarga < CACHE_MS) return
+
+  estadoMonitoreo = { ...estadoMonitoreo, cargando: true, error: '' }
+  notificar()
+
+  cargaEnCurso = (async () => {
+    try {
+      const [galpones, lotes, sensores, mediciones, umbrales] = await Promise.all([
+        listarGalpones(),
+        listarLotes(),
+        listarSensores(),
+        listarMediciones({ page: 1, limit: LIMITE_MEDICIONES }),
+        listarUmbrales(),
+      ])
+      estadoMonitoreo = {
+        galpones: construirVista(galpones, lotes, sensores, mediciones, umbrales),
+        cargando: false,
+        error: '',
+      }
+    } catch (err) {
+      estadoMonitoreo = {
+        ...estadoMonitoreo,
+        cargando: false,
+        error: isAxiosError(err) && err.response?.status === 403
+          ? 'No tienes permisos para ver el monitoreo ambiental.'
+          : 'No se pudo cargar el monitoreo ambiental.',
+      }
+    } finally {
+      ultimaCarga = Date.now()
+      cargaEnCurso = null
+      notificar()
+    }
+  })()
+
+  return cargaEnCurso
+}
+
+function recargarMonitoreo() {
+  return cargarMonitoreo(true)
+}
+
+export function useMonitoreoAmbiental() {
+  const estado = useSyncExternalStore(suscribir, obtenerSnapshot, obtenerSnapshot)
+
+  useEffect(() => {
+    void cargarMonitoreo()
+  }, [])
+
+  return { ...estado, recargar: recargarMonitoreo }
 }
 
 // Texto relativo simple: "hace 3s", "hace 2 min", "hace 1 h", o "—" si nunca hubo lectura.

@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrediccionesService } from './predicciones.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ROLES } from '../../common/roles';
-import type { Solicitante } from '../../common/acceso';
+import { ROLES } from '../../common/auth/roles';
+import type { Solicitante } from '../../common/auth/acceso';
 
 describe('PrediccionesService', () => {
   let service: PrediccionesService;
@@ -14,6 +14,8 @@ describe('PrediccionesService', () => {
     registroMortalidad: { findMany: jest.fn() },
     consumoDiario: { findMany: jest.fn() },
     curvaObjetivo: { findFirst: jest.fn() },
+    prediccion: { createMany: jest.fn(), findMany: jest.fn(), count: jest.fn() },
+    $transaction: jest.fn(),
   };
 
   const admin: Solicitante = { id: 1, rol: ROLES.ADMINISTRADOR };
@@ -45,7 +47,39 @@ describe('PrediccionesService', () => {
     prisma.registroMortalidad.findMany.mockResolvedValue([]);
     prisma.consumoDiario.findMany.mockResolvedValue([]);
     prisma.curvaObjetivo.findFirst.mockResolvedValue(null);
+    prisma.prediccion.createMany.mockResolvedValue({ count: 0 });
+    prisma.$transaction.mockResolvedValue([[], 0]);
   });
+
+  const respuestaMl = {
+    peso_proyectado_faena_g: 2400,
+    dia_faena: 42,
+    dias_al_objetivo: 5,
+    peso_objetivo_g: 2400,
+  };
+
+  // Cada ruta del servicio ML devuelve una forma distinta; un solo mock para
+  // las tres haria que mortalidad y consumo recibieran el cuerpo del peso.
+  const mlResponde = () => {
+    global.fetch = jest.fn().mockImplementation((url: string) => {
+      const cuerpo = url.includes('/predecir-mortalidad')
+        ? { mortalidad_proyectada_pct: 4.2, dia_faena: 42 }
+        : url.includes('/predecir-consumo')
+          ? { consumo_proyectado_kg: 3800, dia_faena: 42 }
+          : respuestaMl;
+      return Promise.resolve({
+        ok: true,
+        json: jest.fn().mockResolvedValue(cuerpo),
+      });
+    });
+  };
+
+  const filasGuardadas = () => {
+    const [args] = prisma.prediccion.createMany.mock.calls[0] as [
+      { data: Array<{ tipo: string; valor_predicho: number; unidad?: string }> },
+    ];
+    return args.data;
+  };
 
   afterEach(() => jest.restoreAllMocks());
 
@@ -479,5 +513,119 @@ describe('PrediccionesService', () => {
     expect(r.mortalidad_proyectada_pct).toBeNull();
     expect(r.consumo_proyectado_kg).toBeNull();
     expect(r.fcr_proyectado).toBeNull();
+  });
+
+  describe('persistencia', () => {
+    it('por defecto NO guarda nada: el GET solo calcula', async () => {
+      mlResponde();
+
+      await service.predecir(1, admin);
+
+      expect(prisma.prediccion.createMany).not.toHaveBeenCalled();
+    });
+
+    it('con persistir=true guarda una fila por magnitud proyectada', async () => {
+      mlResponde();
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-08'), cantidad_aves: 10 },
+        { fecha: new Date('2026-07-15'), cantidad_aves: 12 },
+        { fecha: new Date('2026-07-22'), cantidad_aves: 15 },
+      ]);
+      prisma.consumoDiario.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-08'), alimento_kg: 100 },
+        { fecha: new Date('2026-07-15'), alimento_kg: 300 },
+        { fecha: new Date('2026-07-22'), alimento_kg: 600 },
+      ]);
+
+      const r = await service.predecir(1, admin, true);
+
+      const tipos = filasGuardadas().map((f) => f.tipo);
+      expect(tipos).toEqual(['peso_faena', 'mortalidad', 'consumo', 'fcr']);
+      expect(r.predicciones_guardadas).toBe(4);
+    });
+
+    it('guarda el peso proyectado con su unidad', async () => {
+      mlResponde();
+
+      await service.predecir(1, admin, true);
+
+      const peso = filasGuardadas().find((f) => f.tipo === 'peso_faena');
+      expect(peso?.valor_predicho).toBe(2400);
+      expect(peso?.unidad).toBe('g');
+    });
+
+    it('no guarda las magnitudes que no se pudieron calcular', async () => {
+      mlResponde();
+      // Sin registros de mortalidad ni de consumo, esas proyecciones son null
+      // y no deben quedar como filas con valor vacio.
+      await service.predecir(1, admin, true);
+
+      expect(filasGuardadas().map((f) => f.tipo)).toEqual(['peso_faena']);
+    });
+
+    it('la fecha objetivo es la de ingreso mas el dia de faena', async () => {
+      mlResponde();
+
+      await service.predecir(1, admin, true);
+
+      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
+        { data: Array<{ fecha_objetivo: Date }> },
+      ];
+      // 2026-07-01 + 42 dias
+      expect(args.data[0].fecha_objetivo.toISOString().slice(0, 10)).toBe(
+        '2026-08-12',
+      );
+    });
+
+    it('conserva los pesajes usados como datos de entrada, para poder auditar', async () => {
+      mlResponde();
+
+      await service.predecir(1, admin, true);
+
+      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
+        { data: Array<{ datos_entrada: { pesajes: unknown[] } }> },
+      ];
+      expect(args.data[0].datos_entrada.pesajes).toHaveLength(3);
+    });
+  });
+
+  describe('historial', () => {
+    it('devuelve las predicciones del lote, de la mas reciente a la mas antigua', async () => {
+      await service.historial(1, admin, { page: 1, limit: 10 });
+
+      expect(prisma.prediccion.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { lote_id: 1 },
+          orderBy: { fecha_generacion: 'desc' },
+        }),
+      );
+    });
+
+    it('filtra por tipo cuando se indica', async () => {
+      await service.historial(1, admin, { page: 1, limit: 10 }, 'fcr');
+
+      expect(prisma.prediccion.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { lote_id: 1, tipo: 'fcr' } }),
+      );
+    });
+
+    it('lanza NotFound cuando el lote no existe', async () => {
+      prisma.lote.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.historial(99, admin, { page: 1, limit: 10 }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('impide al propietario ver el historial de un lote ajeno', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        galpon: { granja: { propietario_id: 999 } },
+      });
+
+      await expect(
+        service.historial(1, propietario, { page: 1, limit: 10 }),
+      ).rejects.toThrow(/propios lotes/);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
   });
 });

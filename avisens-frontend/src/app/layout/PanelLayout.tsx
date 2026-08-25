@@ -7,6 +7,42 @@ import { useMonitoreoAmbiental } from '@shared/hooks/useMonitoreoAmbiental'
 import { usePauseOnHidden } from '@shared/hooks/usePauseOnHidden'
 import './PanelLayout.css'
 
+function PanelShell({
+  sidebarCollapsed,
+  onToggle,
+  rol,
+}: {
+  sidebarCollapsed: boolean
+  onToggle: () => void
+  rol: string | null
+}) {
+  // Contadores del sidebar EN VIVO — misma fuente y misma regla que usan
+  // Monitoreo y Alertas, así que nunca pueden mostrar números distintos.
+  const { galpones } = useMonitoreoAmbiental()
+  const totalAves = galpones.reduce((acc, g) => acc + (g.loteActivo?.cantidad_inicial ?? 0), 0)
+  const galponesActivos = galpones.filter((g) => g.loteActivo !== null).length
+  const totalAlertas = galpones.reduce(
+    (acc, g) => acc + g.sensores.filter((s) => s.estado === 'advertencia' || s.estado === 'critico').length,
+    0,
+  )
+
+  return (
+    <div className={`dash-page${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggle={onToggle}
+        rol={rol}
+        galponesActivos={galponesActivos}
+        totalAves={totalAves}
+        totalAlertas={totalAlertas}
+      />
+      <main className="dash-main">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
+
 /**
  * Shell de la aplicación interna: sidebar de navegación + área de contenido.
  *
@@ -38,16 +74,6 @@ function PanelLayout() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // Contadores del sidebar EN VIVO — misma fuente y misma regla que usan
-  // Monitoreo y Alertas, así que nunca pueden mostrar números distintos.
-  const { galpones } = useMonitoreoAmbiental()
-  const totalAves = galpones.reduce((acc, g) => acc + (g.loteActivo?.cantidad_inicial ?? 0), 0)
-  const galponesActivos = galpones.filter((g) => g.loteActivo !== null).length
-  const totalAlertas = galpones.reduce(
-    (acc, g) => acc + g.sensores.filter((s) => s.estado === 'advertencia' || s.estado === 'critico').length,
-    0,
-  )
-
   const rol = getRol()
 
   // Ruta de inicio según el rol: el Admin va a su panel; los demás al dashboard operativo.
@@ -64,19 +90,11 @@ function PanelLayout() {
   }
 
   return (
-    <div className={`dash-page${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed((v) => !v)}
-        rol={rol}
-        galponesActivos={galponesActivos}
-        totalAves={totalAves}
-        totalAlertas={totalAlertas}
-      />
-      <main className="dash-main">
-        <Outlet />
-      </main>
-    </div>
+    <PanelShell
+      sidebarCollapsed={sidebarCollapsed}
+      onToggle={() => setSidebarCollapsed((v) => !v)}
+      rol={rol}
+    />
   )
 }
 

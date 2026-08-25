@@ -1,11 +1,13 @@
 # Overrides SOLO para desarrollo local. Docker Compose lo carga automaticamente
 # encima de docker-compose.yml al hacer `docker compose up`.
 #  - Hot-reload: al editar el codigo, el servicio se recarga sin `--build`.
-#  - La base se expone en el puerto 5433 del host (evita chocar con un
-#    PostgreSQL nativo escuchando en 5432). La app no se afecta: se conecta por
-#    la red interna de Docker (database:5432).
-# En produccion NO se usa (se levanta solo el base:
-# `docker compose -f docker-compose.yml up`).
+#  - Siembra la base con roles y el admin local.
+#  - Expone la base en el puerto 5433 del host (evita chocar con un PostgreSQL
+#    nativo escuchando en 5432). La app no se afecta: se conecta por la red
+#    interna de Docker (database:5432).
+#
+# En produccion NO se usa: se levanta solo el base con
+# `docker compose -f docker-compose.yml up`.
 services:
   database:
     ports:
@@ -26,12 +28,23 @@ services:
       target: dev
     command: sh -c "pnpm prisma generate && pnpm prisma migrate deploy && pnpm run seed && pnpm run start:dev"
     environment:
+      NODE_ENV: development
+      # En desarrollo si se siembra; el archivo base lo deja apagado para que
+      # un despliegue de produccion no reescriba datos sin querer.
+      RUN_SEED: "true"
       # Admin de DESARROLLO local (no es prod). El seed lo crea con estas vars.
-      ADMIN_EMAIL: admin@avisens.com
-      ADMIN_PASSWORD: Avisens2026!
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@avisens.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Avisens2026!}
     volumes:
       - ./avisens-backend:/app
       - /app/node_modules
+
+  # El frontend en local no espera al backend: nginx sirve la SPA igual, y
+  # bloquear el arranque hasta que /health responda alarga el ciclo de trabajo
+  # sin ganar nada. En produccion si espera (ver el archivo base).
+  frontend:
+    depends_on:
+      - backend
 
   # Microservicio Python con uvicorn --reload.
   ml:

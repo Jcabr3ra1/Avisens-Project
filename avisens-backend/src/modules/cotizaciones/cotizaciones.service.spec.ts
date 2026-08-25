@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CotizacionesService } from './cotizaciones.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 describe('CotizacionesService', () => {
   let service: CotizacionesService;
@@ -17,14 +18,14 @@ describe('CotizacionesService', () => {
     {
       tipo_sensor: 'temperatura_humedad',
       nombre: 'Sensor de temperatura y humedad',
-      precio_unitario_cop: 180000,
+      precio_unitario_cop: new Prisma.Decimal(180000),
       cobertura_m2: 120,
       obligatorio: true,
     },
     {
       tipo_sensor: 'nodo_esp32',
       nombre: 'Nodo de control ESP32',
-      precio_unitario_cop: 250000,
+      precio_unitario_cop: new Prisma.Decimal(250000),
       cobertura_m2: null,
       obligatorio: true,
     },
@@ -171,9 +172,12 @@ describe('CotizacionesService', () => {
   it('el total suma los sensores mas la instalacion por galpon', async () => {
     const c = await service.generar(14, { numero_galpones: 2 });
 
-    const sensores = c.lineas.reduce((s, l) => s + l.subtotal_cop, 0);
+    const sensores = c.lineas.reduce(
+      (s, l) => s.plus(l.subtotal_cop),
+      new Prisma.Decimal(0),
+    );
     expect(c.instalacion_cop).toBe(800000);
-    expect(c.valor_total_cop).toBe(sensores + 800000);
+    expect(c.valor_total_cop.toString()).toBe(sensores.plus(800000).toString());
   });
 
   it('advierte que los valores son de referencia', async () => {
