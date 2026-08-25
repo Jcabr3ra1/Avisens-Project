@@ -23,19 +23,23 @@ export class UpdateAlertasDto {
 
   @ApiPropertyOptional({
     example: 2,
-    description: 'ID del usuario responsable de la alerta',
+    nullable: true,
+    description:
+      'ID del usuario responsable. null lo desasigna (@IsOptional deja pasar null)',
   })
   @IsInt()
   @IsOptional()
-  responsable_id?: number;
+  responsable_id?: number | null;
 
   @ApiPropertyOptional({
     example: 3,
-    description: 'ID del usuario a quien se escaló la alerta',
+    nullable: true,
+    description:
+      'ID del usuario a quien se escaló. null lo desasigna (@IsOptional deja pasar null)',
   })
   @IsInt()
   @IsOptional()
-  escalado_a_id?: number;
+  escalado_a_id?: number | null;
 
   @ApiPropertyOptional({
     example: '2024-01-15T10:30:00Z',
