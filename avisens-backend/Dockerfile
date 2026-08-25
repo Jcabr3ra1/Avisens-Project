@@ -49,5 +49,18 @@ COPY --from=builder /app/package.json ./package.json
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
+# La app no corre como root. La imagen node trae un usuario `node` (uid 1000)
+# sin privilegios; se le da la propiedad de /app porque el entrypoint necesita
+# poder ejecutar el script y Prisma escribe archivos temporales al migrar.
+RUN chown -R node:node /app
+USER node
+
 EXPOSE 3000
+
+# Docker consulta /health para saber si el contenedor esta realmente listo, no
+# solo arrancado. `depends_on: condition: service_healthy` se apoya en esto.
+# start-period cubre el arranque: migraciones + seed pueden tardar.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||3000)+'/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+
 ENTRYPOINT ["./docker-entrypoint.sh"]
