@@ -124,7 +124,16 @@ export class GalponesService {
   async desactivar(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
-    await this.prisma.galpon.update({ where: { id }, data: { activo: false } });
+    await this.prisma.$transaction([
+      this.prisma.usuarioGalpon.updateMany({
+        where: { galpon_id: id, activa: true },
+        data: { activa: false },
+      }),
+      this.prisma.galpon.update({
+        where: { id },
+        data: { activo: false },
+      }),
+    ]);
     return { id, activo: false };
   }
 
@@ -138,7 +147,10 @@ export class GalponesService {
   async eliminarPermanente(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
-    await this.prisma.galpon.delete({ where: { id } });
+    await this.prisma.$transaction([
+      this.prisma.usuarioGalpon.deleteMany({ where: { galpon_id: id } }),
+      this.prisma.galpon.delete({ where: { id } }),
+    ]);
     return { id, eliminado: true };
   }
 }

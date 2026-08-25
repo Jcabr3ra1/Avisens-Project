@@ -28,6 +28,31 @@ const USUARIO_SELECT = {
   organizacion: { select: { id: true, nombre: true } },
 } as const;
 
+const ASIGNACION_SELECT = {
+  id: true,
+  usuario_id: true,
+  galpon_id: true,
+  rol_asignacion: true,
+  fecha_asignacion: true,
+  activa: true,
+  galpon: {
+    select: {
+      id: true,
+      codigo: true,
+      nombre: true,
+      activo: true,
+      granja: {
+        select: {
+          id: true,
+          nombre: true,
+          propietario_id: true,
+          organizacion_id: true,
+        },
+      },
+    },
+  },
+} as const;
+
 @Injectable()
 export class UsuariosService {
   constructor(private prisma: PrismaService) {}
@@ -65,6 +90,79 @@ export class UsuariosService {
         'Solo puedes gestionar operarios de tu organización',
       );
     }
+  }
+
+  private async obtenerOperarioParaAsignacion(
+    usuarioId: number,
+    solicitante: Solicitante,
+    exigirActivo = false,
+  ) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: {
+        id: true,
+        activo: true,
+        organizacion_id: true,
+        rol: { select: { nombre: true } },
+      },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    this.verificarOperarioDeLaOrganizacion(usuario, solicitante);
+    if (usuario.rol.nombre !== ROLES.OPERARIO) {
+      throw new BadRequestException('Solo se pueden asignar usuarios Operario');
+    }
+    if (!usuario.organizacion_id) {
+      throw new BadRequestException('El Operario no tiene una organización');
+    }
+    if (exigirActivo && !usuario.activo) {
+      throw new BadRequestException('No se puede asignar un Operario inactivo');
+    }
+
+    return usuario;
+  }
+
+  private async validarGalponParaOperario(
+    galponId: number,
+    organizacionId: number,
+    solicitante: Solicitante,
+    exigirActivo = false,
+  ) {
+    const galpon = await this.prisma.galpon.findUnique({
+      where: { id: galponId },
+      select: {
+        id: true,
+        activo: true,
+        granja: {
+          select: { propietario_id: true, organizacion_id: true },
+        },
+      },
+    });
+
+    if (!galpon) {
+      throw new NotFoundException('Galpón no encontrado');
+    }
+    if (
+      esPropietario(solicitante) &&
+      galpon.granja.propietario_id !== solicitante.id
+    ) {
+      throw new ForbiddenException(
+        'Solo puedes asignar operarios a galpones de tus propias granjas',
+      );
+    }
+    if (galpon.granja.organizacion_id !== organizacionId) {
+      throw new BadRequestException(
+        'El Operario y el galpón deben pertenecer a la misma organización',
+      );
+    }
+    if (exigirActivo && !galpon.activo) {
+      throw new BadRequestException('No se puede asignar un galpón inactivo');
+    }
+
+    return galpon;
   }
 
   async crear(dto: CreateUsuarioDto, solicitante: Solicitante) {
@@ -223,6 +321,107 @@ export class UsuariosService {
     });
   }
 
+  async asignarGalpon(
+    usuarioId: number,
+    galponId: number,
+    rolAsignacion: string | undefined,
+    solicitante: Solicitante,
+  ) {
+    const operario = await this.obtenerOperarioParaAsignacion(
+      usuarioId,
+      solicitante,
+      true,
+    );
+    await this.validarGalponParaOperario(
+      galponId,
+      operario.organizacion_id!,
+      solicitante,
+      true,
+    );
+
+    return this.prisma.usuarioGalpon.upsert({
+      where: {
+        usuario_id_galpon_id: {
+          usuario_id: usuarioId,
+          galpon_id: galponId,
+        },
+      },
+      create: {
+        usuario_id: usuarioId,
+        galpon_id: galponId,
+        rol_asignacion: rolAsignacion,
+      },
+      update: {
+        activa: true,
+        rol_asignacion: rolAsignacion,
+        fecha_asignacion: new Date(),
+      },
+      select: ASIGNACION_SELECT,
+    });
+  }
+
+  async listarGalponesAsignados(
+    usuarioId: number,
+    solicitante: Solicitante,
+    { page, limit }: PaginationQueryDto,
+  ) {
+    await this.obtenerOperarioParaAsignacion(usuarioId, solicitante);
+
+    const where = {
+      usuario_id: usuarioId,
+      ...(esPropietario(solicitante)
+        ? { galpon: { granja: { propietario_id: solicitante.id } } }
+        : {}),
+    };
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.usuarioGalpon.findMany({
+        where,
+        select: ASIGNACION_SELECT,
+        orderBy: { fecha_asignacion: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.usuarioGalpon.count({ where }),
+    ]);
+
+    return paginate(data, total, page, limit);
+  }
+
+  async desasignarGalpon(
+    usuarioId: number,
+    galponId: number,
+    solicitante: Solicitante,
+  ) {
+    const operario = await this.obtenerOperarioParaAsignacion(
+      usuarioId,
+      solicitante,
+    );
+    await this.validarGalponParaOperario(
+      galponId,
+      operario.organizacion_id!,
+      solicitante,
+    );
+
+    const asignacion = await this.prisma.usuarioGalpon.findUnique({
+      where: {
+        usuario_id_galpon_id: {
+          usuario_id: usuarioId,
+          galpon_id: galponId,
+        },
+      },
+      select: { id: true, activa: true },
+    });
+    if (!asignacion?.activa) {
+      throw new NotFoundException('Asignación activa no encontrada');
+    }
+
+    await this.prisma.usuarioGalpon.update({
+      where: { id: asignacion.id },
+      data: { activa: false },
+    });
+    return { usuario_id: usuarioId, galpon_id: galponId, activa: false };
+  }
+
   async desactivar(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
     if (id === solicitante.id) {
@@ -233,6 +432,10 @@ export class UsuariosService {
       this.prisma.sesion.updateMany({
         where: { usuario_id: id, revocada: false },
         data: { revocada: true },
+      }),
+      this.prisma.usuarioGalpon.updateMany({
+        where: { usuario_id: id, activa: true },
+        data: { activa: false },
       }),
       this.prisma.usuario.update({ where: { id }, data: { activo: false } }),
     ]);
@@ -256,6 +459,7 @@ export class UsuariosService {
     await this.prisma.$transaction([
       this.prisma.sesion.deleteMany({ where: { usuario_id: id } }),
       this.prisma.seguridadCuenta.deleteMany({ where: { usuario_id: id } }),
+      this.prisma.usuarioGalpon.deleteMany({ where: { usuario_id: id } }),
       this.prisma.usuario.delete({ where: { id } }),
     ]);
 

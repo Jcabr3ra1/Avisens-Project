@@ -13,9 +13,9 @@
 >
 > Los módulos operativos cubren autenticación, producción, monitoreo, alertas,
 > chatbot/cotización, clima, finanzas, inventario, mantenimiento, notificaciones,
-> indicadores, predicciones, recomendaciones y copiloto. Siguen pendientes los
-> flujos de recuperación de contraseña, asignación usuario-galpón, voz, zonas,
-> registro de modelos ML, bioacústica y visión.
+> asignación usuario-galpón, indicadores, predicciones, recomendaciones y
+> copiloto. Siguen pendientes los flujos de recuperación de contraseña, voz,
+> zonas, registro de modelos ML, bioacústica y visión.
 
 ```
 title AVISENS v1.3 — Normalizado

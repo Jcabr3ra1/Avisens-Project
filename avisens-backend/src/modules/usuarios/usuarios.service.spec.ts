@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -27,6 +28,16 @@ describe('UsuariosService', () => {
     },
     sesion: { updateMany: jest.fn(), deleteMany: jest.fn() },
     seguridadCuenta: { deleteMany: jest.fn() },
+    galpon: { findUnique: jest.fn() },
+    usuarioGalpon: {
+      upsert: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      deleteMany: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -50,6 +61,11 @@ describe('UsuariosService', () => {
   const dataDe = (mock: jest.Mock): Record<string, unknown> => {
     const calls = mock.mock.calls as Array<[{ data: Record<string, unknown> }]>;
     return calls[0][0].data;
+  };
+
+  const argumentosDe = (mock: jest.Mock): Record<string, unknown> => {
+    const calls = mock.mock.calls as Array<[Record<string, unknown>]>;
+    return calls[0][0];
   };
 
   beforeEach(async () => {
@@ -234,6 +250,158 @@ describe('UsuariosService', () => {
     });
   });
 
+  describe('asignaciones de galpón', () => {
+    const operario = {
+      id: 20,
+      activo: true,
+      organizacion_id: 10,
+      rol: { nombre: 'Operario' },
+    };
+    const galpon = {
+      id: 30,
+      activo: true,
+      granja: { propietario_id: 5, organizacion_id: 10 },
+    };
+
+    it('un Propietario asigna un Operario de su organización a su galpón', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(operario);
+      prisma.galpon.findUnique.mockResolvedValue(galpon);
+      prisma.usuarioGalpon.upsert.mockResolvedValue({ id: 40, activa: true });
+
+      await service.asignarGalpon(
+        20,
+        30,
+        'Responsable de alimentación',
+        propietario,
+      );
+
+      const argumentos = argumentosDe(prisma.usuarioGalpon.upsert);
+      expect(argumentos.where).toEqual({
+        usuario_id_galpon_id: { usuario_id: 20, galpon_id: 30 },
+      });
+      expect(argumentos.create).toEqual({
+        usuario_id: 20,
+        galpon_id: 30,
+        rol_asignacion: 'Responsable de alimentación',
+      });
+    });
+
+    it('reactiva la misma fila en vez de duplicar la asignación', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(operario);
+      prisma.galpon.findUnique.mockResolvedValue(galpon);
+      prisma.usuarioGalpon.upsert.mockResolvedValue({ id: 40, activa: true });
+
+      await service.asignarGalpon(20, 30, undefined, propietario);
+
+      const argumentos = argumentosDe(prisma.usuarioGalpon.upsert);
+      const actualizacion = argumentos.update as Record<string, unknown>;
+      expect(actualizacion.activa).toBe(true);
+      expect(actualizacion.fecha_asignacion).toBeInstanceOf(Date);
+    });
+
+    it('rechaza asignar un usuario que no es Operario', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        ...operario,
+        rol: { nombre: 'Propietario' },
+      });
+
+      await expect(
+        service.asignarGalpon(20, 30, undefined, admin),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.usuarioGalpon.upsert).not.toHaveBeenCalled();
+    });
+
+    it('rechaza cruzar organizaciones aunque lo intente un Administrador', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(operario);
+      prisma.galpon.findUnique.mockResolvedValue({
+        ...galpon,
+        granja: { propietario_id: 99, organizacion_id: 77 },
+      });
+
+      await expect(
+        service.asignarGalpon(20, 30, undefined, admin),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.usuarioGalpon.upsert).not.toHaveBeenCalled();
+    });
+
+    it('un Propietario no asigna operarios a un galpón ajeno', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(operario);
+      prisma.galpon.findUnique.mockResolvedValue({
+        ...galpon,
+        granja: { propietario_id: 99, organizacion_id: 10 },
+      });
+
+      await expect(
+        service.asignarGalpon(20, 30, undefined, propietario),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.usuarioGalpon.upsert).not.toHaveBeenCalled();
+    });
+
+    it('no permite asignar un Operario inactivo', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        ...operario,
+        activo: false,
+      });
+
+      await expect(
+        service.asignarGalpon(20, 30, undefined, propietario),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.galpon.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('lista solo las asignaciones a granjas del Propietario', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(operario);
+      prisma.$transaction.mockResolvedValue([[{ id: 40 }], 1]);
+
+      const resultado = await service.listarGalponesAsignados(20, propietario, {
+        page: 1,
+        limit: 10,
+      });
+
+      expect(prisma.usuarioGalpon.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            usuario_id: 20,
+            galpon: { granja: { propietario_id: 5 } },
+          },
+        }),
+      );
+      expect(resultado.meta.total).toBe(1);
+    });
+
+    it('desactiva la asignación sin borrar su historial', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(operario);
+      prisma.galpon.findUnique.mockResolvedValue(galpon);
+      prisma.usuarioGalpon.findUnique.mockResolvedValue({
+        id: 40,
+        activa: true,
+      });
+      prisma.usuarioGalpon.update.mockResolvedValue({ id: 40, activa: false });
+
+      await expect(
+        service.desasignarGalpon(20, 30, propietario),
+      ).resolves.toEqual({ usuario_id: 20, galpon_id: 30, activa: false });
+      expect(prisma.usuarioGalpon.update).toHaveBeenCalledWith({
+        where: { id: 40 },
+        data: { activa: false },
+      });
+    });
+
+    it('responde 404 si la asignación ya estaba inactiva', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(operario);
+      prisma.galpon.findUnique.mockResolvedValue(galpon);
+      prisma.usuarioGalpon.findUnique.mockResolvedValue({
+        id: 40,
+        activa: false,
+      });
+
+      await expect(
+        service.desasignarGalpon(20, 30, propietario),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.usuarioGalpon.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('borrado', () => {
     it('no puedes desactivar tu propia cuenta (403)', async () => {
       prisma.usuario.findUnique.mockResolvedValue({
@@ -257,6 +425,35 @@ describe('UsuariosService', () => {
         ForbiddenException,
       );
       expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('al desactivar un Operario también desactiva sus asignaciones', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 20,
+        organizacion_id: 10,
+        rol: { nombre: 'Operario' },
+      });
+
+      await service.desactivar(20, propietario);
+
+      expect(prisma.usuarioGalpon.updateMany).toHaveBeenCalledWith({
+        where: { usuario_id: 20, activa: true },
+        data: { activa: false },
+      });
+    });
+
+    it('retira asignaciones antes de eliminar permanentemente un Operario', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 20,
+        organizacion_id: 10,
+        rol: { nombre: 'Operario' },
+      });
+
+      await service.eliminarPermanente(20, propietario);
+
+      expect(prisma.usuarioGalpon.deleteMany).toHaveBeenCalledWith({
+        where: { usuario_id: 20 },
+      });
     });
   });
 });

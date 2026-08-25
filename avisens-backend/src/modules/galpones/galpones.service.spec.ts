@@ -16,6 +16,7 @@ describe('GalponesService', () => {
       delete: jest.fn(),
     },
     granja: { findUnique: jest.fn() },
+    usuarioGalpon: { updateMany: jest.fn(), deleteMany: jest.fn() },
     $transaction: jest.fn(),
   };
 
@@ -160,6 +161,10 @@ describe('GalponesService', () => {
       const res = await service.desactivar(1, propietario);
 
       expect(res).toEqual({ id: 1, activo: false });
+      expect(prisma.usuarioGalpon.updateMany).toHaveBeenCalledWith({
+        where: { galpon_id: 1, activa: true },
+        data: { activa: false },
+      });
     });
 
     it('elimina permanentemente cuando es dueño', async () => {
@@ -168,6 +173,9 @@ describe('GalponesService', () => {
       const res = await service.eliminarPermanente(1, propietario);
 
       expect(res).toEqual({ id: 1, eliminado: true });
+      expect(prisma.usuarioGalpon.deleteMany).toHaveBeenCalledWith({
+        where: { galpon_id: 1 },
+      });
     });
   });
 });
