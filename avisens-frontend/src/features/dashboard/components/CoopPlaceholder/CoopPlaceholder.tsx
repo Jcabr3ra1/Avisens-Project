@@ -12,8 +12,8 @@ import type { ReactNode } from 'react'
 import {
   IcAlert, IcDrop, IcFan, IcRefresh, IcSeed, IcSettings, IcThermo, IcWind, IcChevronRight, IcPlus,
 } from '@shared/ui/icons/icons'
-import type { Galpon } from '@shared/data/farm'
-import type { SensorVista } from '@shared/hooks/useMonitoreoAmbiental'
+import type { Galpon } from '../../model'
+import type { Sensor as SensorReal } from '../../../monitoreo/data'
 import './CoopPlaceholder.css'
 
 type DeviceStatus = 'ok' | 'warn' | 'crit' | 'info'
@@ -51,7 +51,7 @@ const ic = (t: SensorPoint['type'], s = 15): ReactNode => {
 // Traduce el estado de Monitoreo (optimo/advertencia/critico/offline) al
 // vocabulario visual del plano (ok/warn/crit/info).
 const ESTADO_A_STATUS: Record<string, DeviceStatus> = {
-  optimo: 'ok', advertencia: 'warn', critico: 'crit', offline: 'info', sin_umbral: 'info',
+  optimo: 'ok', advertencia: 'warn', critico: 'crit', offline: 'info',
 }
 function notaTemperatura(estado: string, valor: number): string {
   if (estado === 'critico')     return `Temperatura crítica (${valor}°C). Revisa la ventilación de inmediato.`
@@ -68,15 +68,15 @@ function notaHumedad(estado: string, valor: number): string {
 // lectura REAL del galpón (Monitoreo) — así el plano deja de mostrar
 // siempre los mismos números sin importar qué galpón se esté viendo.
 // Extractores/comederos/bebederos/puerta siguen ilustrativos (sin telemetría real todavía).
-function construirSensores(reales: SensorVista[]): SensorPoint[] {
-  const temp = reales.find(s => s.variableUmbral === 'temperatura' && s.valor !== null)
-  const hum  = reales.find(s => s.variableUmbral === 'humedad' && s.valor !== null)
+function construirSensores(reales: SensorReal[]): SensorPoint[] {
+  const temp = reales.find(s => s.variable === 'temperatura')
+  const hum  = reales.find(s => s.variable === 'humedad')
   return SENSORS_BASE.map(s => {
-    if (s.type === 'temp' && temp && temp.valor !== null) {
+    if (s.type === 'temp' && temp) {
       return { ...s, value: String(temp.valor), numValue: temp.valor,
         status: ESTADO_A_STATUS[temp.estado] ?? 'info', note: notaTemperatura(temp.estado, temp.valor) }
     }
-    if (s.type === 'humid' && hum && hum.valor !== null) {
+    if (s.type === 'humid' && hum) {
       return { ...s, value: String(hum.valor), numValue: hum.valor,
         status: ESTADO_A_STATUS[hum.estado] ?? 'info', note: notaHumedad(hum.estado, hum.valor) }
     }
@@ -84,7 +84,7 @@ function construirSensores(reales: SensorVista[]): SensorPoint[] {
   })
 }
 
-type Props = { galpon: Galpon; sensores?: SensorVista[]; mortalidadPct?: number; pesoKg?: number }
+type Props = { galpon: Galpon; sensores?: SensorReal[]; mortalidadPct?: number; pesoKg?: number }
 
 const CoopPlaceholder = ({ galpon, sensores = [], mortalidadPct, pesoKg }: Props) => {
   const SENSORS = useMemo(() => construirSensores(sensores), [sensores])

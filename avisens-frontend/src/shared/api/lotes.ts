@@ -3,6 +3,8 @@ import type { PaginatedResponse } from './types'
 
 export interface Lote {
   id: number
+  galpon_id: number
+  proveedor_id: number
   codigo: string
   fecha_ingreso: string
   cantidad_inicial: number
@@ -14,9 +16,7 @@ export interface Lote {
   fecha_salida_estimada: string | null
   fecha_salida_real: string | null
   estado: string
-  // El backend anida galpón y proveedor — no manda IDs planos.
-  galpon: { id: number; nombre: string; granja: { id: number; propietario_id: number } }
-  proveedor: { id: number; nombre: string }
+  galpon?: { id: number; nombre: string; codigo: string; granja?: { id: number; nombre: string } }
 }
 
 export interface CrearLotePayload {
