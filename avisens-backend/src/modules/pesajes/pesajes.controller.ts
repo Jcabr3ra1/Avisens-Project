@@ -16,7 +16,7 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { PesajesService } from './pesajes.service';
 import { CreatePesajeDto } from './dto/create-pesaje.dto';
 import { UpdatePesajeDto } from './dto/update-pesaje.dto';

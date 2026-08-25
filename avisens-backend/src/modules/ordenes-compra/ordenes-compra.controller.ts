@@ -15,7 +15,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { OrdenesCompraService } from './ordenes-compra.service';
 import { CreateOrdenesCompraDto } from './dto/create-ordenes-compra.dto';

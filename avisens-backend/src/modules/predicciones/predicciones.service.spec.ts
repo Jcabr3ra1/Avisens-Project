@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrediccionesService } from './predicciones.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ROLES } from '../../common/roles';
-import type { Solicitante } from '../../common/acceso';
+import { ROLES } from '../../common/auth/roles';
+import type { Solicitante } from '../../common/auth/acceso';
 
 describe('PrediccionesService', () => {
   let service: PrediccionesService;

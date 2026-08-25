@@ -5,8 +5,8 @@ import {
 } from '@nestjs/common';
 import { EvidenciaAlertaService } from './evidencia-alerta.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ROLES } from '../../common/roles';
-import type { Solicitante } from '../../common/acceso';
+import { ROLES } from '../../common/auth/roles';
+import type { Solicitante } from '../../common/auth/acceso';
 
 describe('EvidenciaAlertaService', () => {
   let service: EvidenciaAlertaService;

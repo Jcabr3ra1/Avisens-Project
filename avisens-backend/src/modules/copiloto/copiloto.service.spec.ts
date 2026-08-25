@@ -14,8 +14,8 @@ import { LotesService } from '../lotes/lotes.service';
 import { IndicadoresService } from '../indicadores/indicadores.service';
 import { PrediccionesService } from '../predicciones/predicciones.service';
 import { RecomendacionesService } from '../recomendaciones/recomendaciones.service';
-import { ROLES } from '../../common/roles';
-import type { Solicitante } from '../../common/acceso';
+import { ROLES } from '../../common/auth/roles';
+import type { Solicitante } from '../../common/auth/acceso';
 
 type RespuestaClaude = {
   stop_reason: string;

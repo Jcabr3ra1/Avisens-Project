@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { ClimaService } from './clima.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ROLES } from '../../common/roles';
-import type { Solicitante } from '../../common/acceso';
+import { ROLES } from '../../common/auth/roles';
+import type { Solicitante } from '../../common/auth/acceso';
 
 describe('ClimaService', () => {
   let service: ClimaService;
