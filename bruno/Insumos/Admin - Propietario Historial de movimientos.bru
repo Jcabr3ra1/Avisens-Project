@@ -1,0 +1,26 @@
+meta {
+  name: [Admin · Propietario]  Historial de movimientos de un insumo
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/v1/insumos/1/movimientos?page=1&limit=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 20
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Devuelve los movimientos del insumo, del mas reciente al mas antiguo.
+  Cada uno guarda stock_resultante, asi que el stock actual se puede
+  reconstruir y explicar movimiento a movimiento.
+}
