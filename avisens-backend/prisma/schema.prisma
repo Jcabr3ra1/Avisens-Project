@@ -1135,10 +1135,12 @@ model MovimientoInventario {
   clave_idempotencia      String?
   fecha_movimiento        DateTime                 @default(now())
 
-  insumo               InventarioInsumo    @relation(fields: [insumo_id], references: [id])
-  lote                 Lote?               @relation(fields: [lote_id], references: [id])
-  usuario              Usuario             @relation(fields: [usuario_id], references: [id])
-  detalle_orden_compra DetalleOrdenCompra? @relation(fields: [detalle_orden_compra_id], references: [id])
+  insumo               InventarioInsumo       @relation(fields: [insumo_id], references: [id])
+  lote                 Lote?                  @relation(fields: [lote_id], references: [id])
+  usuario              Usuario                @relation(fields: [usuario_id], references: [id])
+  detalle_orden_compra DetalleOrdenCompra?    @relation(fields: [detalle_orden_compra_id], references: [id])
+  repuesto_salida      MantenimientoRepuesto? @relation("RepuestoSalida")
+  repuesto_reversion   MantenimientoRepuesto? @relation("RepuestoReversion")
 
   @@unique([detalle_orden_compra_id, clave_idempotencia], map: "mov_inv_detalle_clave_key")
   @@index([detalle_orden_compra_id], map: "mov_inv_detalle_idx")
@@ -1228,17 +1230,27 @@ model Mantenimiento {
 }
 
 model MantenimientoRepuesto {
-  id               Int      @id @default(autoincrement())
-  mantenimiento_id Int
-  insumo_id        Int
-  descripcion      String?
-  cantidad         Float?
-  costo_cop        Decimal? @db.Decimal(14, 2)
+  id                      Int      @id @default(autoincrement())
+  mantenimiento_id        Int
+  insumo_id               Int
+  descripcion             String?
+  cantidad                Decimal  @db.Decimal(14, 3)
+  unidad_medida           String
+  costo_cop               Decimal? @db.Decimal(14, 2)
+  clave_idempotencia      String
+  movimiento_salida_id    Int?     @unique(map: "mant_repuesto_salida_key")
+  movimiento_reversion_id Int?     @unique(map: "mant_repuesto_reversion_key")
+  revertido               Boolean  @default(false)
+  fecha_registro          DateTime @default(now())
 
-  mantenimiento Mantenimiento    @relation(fields: [mantenimiento_id], references: [id])
-  insumo        InventarioInsumo @relation(fields: [insumo_id], references: [id])
+  mantenimiento        Mantenimiento         @relation(fields: [mantenimiento_id], references: [id])
+  insumo               InventarioInsumo      @relation(fields: [insumo_id], references: [id])
+  movimiento_salida    MovimientoInventario? @relation("RepuestoSalida", fields: [movimiento_salida_id], references: [id])
+  movimiento_reversion MovimientoInventario? @relation("RepuestoReversion", fields: [movimiento_reversion_id], references: [id])
 
+  @@unique([mantenimiento_id, clave_idempotencia], map: "mant_repuesto_clave_key")
   @@index([mantenimiento_id])
+  @@index([insumo_id])
   @@map("mantenimientos_repuestos")
 }
 

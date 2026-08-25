@@ -744,7 +744,13 @@ mantenimientos_repuestos [icon: package-2, color: gray] {
   insumo_id integer fk
   descripcion string
   cantidad number
+  unidad_medida string
   costo_cop number
+  clave_idempotencia string
+  movimiento_salida_id integer fk
+  movimiento_reversion_id integer fk
+  revertido bool
+  fecha_registro datetime
 }
 
 
@@ -987,6 +993,8 @@ mantenimientos.equipo_id > equipos.id
 mantenimientos.tecnico_id > usuarios.id
 mantenimientos_repuestos.mantenimiento_id > mantenimientos.id
 mantenimientos_repuestos.insumo_id > inventario_insumos.id
+mantenimientos_repuestos.movimiento_salida_id > movimientos_inventario.id
+mantenimientos_repuestos.movimiento_reversion_id > movimientos_inventario.id
 
 // EP-09 Capa de inteligencia
 usuarios.organizacion_id > organizaciones.id
