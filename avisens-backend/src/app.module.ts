@@ -44,6 +44,7 @@ import { ProspectosModule } from './modules/prospectos/prospectos.module';
 import { CotizacionesModule } from './modules/cotizaciones/cotizaciones.module';
 import { BullModule } from '@nestjs/bullmq';
 import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
+import { MantenimientoModule } from './modules/mantenimiento/mantenimiento.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -109,6 +110,7 @@ import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
     ProspectosModule,
     CotizacionesModule,
     WhatsappModule,
+    MantenimientoModule,
   ],
   providers: [
     {

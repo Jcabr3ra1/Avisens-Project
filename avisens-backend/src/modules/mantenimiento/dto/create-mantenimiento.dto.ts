@@ -1,12 +1,20 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsDateString, IsInt, IsNumber, IsOptional, IsString } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsDateString,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
-export class createMantenimientoDto {
+export class CreateMantenimientoDto {
   @ApiProperty({
     example: 4,
-    description: ' ID del equipo al que pertenece el mantenimiento',
+    description: 'ID del equipo al que pertenece el mantenimiento',
   })
   @IsInt()
+  @Min(1)
   equipo_id: number;
 
   @ApiPropertyOptional({
@@ -17,13 +25,12 @@ export class createMantenimientoDto {
   @IsString()
   tipo?: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: '2026-08-25',
-    description: 'Fecha del mantenimiento',
+    description: 'Fecha programada del mantenimiento',
   })
-  @IsOptional()
   @IsDateString()
-  fecha_programada?: string;
+  fecha_programada: string;
 
   @ApiPropertyOptional({
     example: 'Juan Perez (externo)',
@@ -39,11 +46,12 @@ export class createMantenimientoDto {
   })
   @IsOptional()
   @IsInt()
+  @Min(1)
   tecnico_id?: number;
 
   @ApiPropertyOptional({
     example: 'Cambio de correa y engrase',
-    description: 'Descripción del traba o mantenimiento realizado',
+    description: 'Descripción del trabajo o mantenimiento realizado',
   })
   @IsOptional()
   @IsString()
@@ -54,12 +62,14 @@ export class createMantenimientoDto {
     description: 'Costo del mantenimiento en pesos colombianos (COP)',
   })
   @IsOptional()
-  @IsInt()
+  @IsNumber()
+  @Min(0)
   costo_cop?: number;
 
   @ApiPropertyOptional({
     example: 'programado',
-    description: 'Estado del mantenimiento (ej. programado, en_proceso,completo, cancelado',
+    description:
+      'Estado del mantenimiento (ej. programado, en_proceso, completo, cancelado)',
   })
   @IsOptional()
   @IsString()
@@ -81,12 +91,14 @@ export class createMantenimientoDto {
   @IsString()
   observaciones?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '2026-08-25',
-    description: 'Fecha en que se ejecuta el mantenimiento (formato YYYY-MM-DD',
+    description:
+      'Fecha en que se ejecutó el mantenimiento (formato YYYY-MM-DD)',
   })
+  @IsOptional()
   @IsDateString()
-  fecha_ejecucion: string;
+  fecha_ejecucion?: string;
 
   @ApiPropertyOptional({
     example: 2.5,
@@ -94,6 +106,7 @@ export class createMantenimientoDto {
   })
   @IsOptional()
   @IsNumber()
+  @Min(0)
   duracion_horas?: number;
 
   @ApiPropertyOptional({
@@ -106,9 +119,11 @@ export class createMantenimientoDto {
 
   @ApiPropertyOptional({
     example: 3,
-    description: 'Tiempo que el equipo estuvo fuera de servicio (inactivo) durante el mantenimiento, en horas',
+    description:
+      'Tiempo que el equipo estuvo fuera de servicio durante el mantenimiento, en horas',
   })
   @IsOptional()
   @IsNumber()
-  tiempo_inactvo_horas?: number;
+  @Min(0)
+  tiempo_inactivo_horas?: number;
 }

@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { createMantenimientoDto } from './dto/create-mantenimiento.tdo';
+import { CreateMantenimientoDto } from './dto/create-mantenimiento.dto';
 import { UpdateMantenimientoDto } from './dto/update-mantenimiento.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
@@ -15,10 +15,7 @@ import type { Solicitante } from '../../common/acceso';
 export class MantenimientoService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async validarEquipo(
-    equipoId: number,
-    solicitante: Solicitante,
-  ) {
+  private async validarEquipo(equipoId: number, solicitante: Solicitante) {
     const equipo = await this.prisma.equipo.findUnique({
       where: { id: equipoId },
       include: {
@@ -31,9 +28,7 @@ export class MantenimientoService {
     });
 
     if (!equipo) {
-      throw new NotFoundException(
-        `El equipo con ID ${equipoId} no existe`,
-      );
+      throw new NotFoundException(`El equipo con ID ${equipoId} no existe`);
     }
 
     verificarDueno(
@@ -45,16 +40,11 @@ export class MantenimientoService {
     return equipo;
   }
 
-  async create(
-    createDto: createMantenimientoDto,
-    solicitante: Solicitante,
-  ) {
-    const { fecha_programada, equipo_id, ...data } = createDto;
+  async create(createDto: CreateMantenimientoDto, solicitante: Solicitante) {
+    const { fecha_programada, fecha_ejecucion, equipo_id, ...data } = createDto;
 
     if (!fecha_programada) {
-      throw new BadRequestException(
-        'La fecha programada es obligatoria',
-      );
+      throw new BadRequestException('La fecha programada es obligatoria');
     }
 
     await this.validarEquipo(equipo_id, solicitante);
@@ -64,6 +54,9 @@ export class MantenimientoService {
         ...data,
         equipo_id,
         fecha_programada: new Date(fecha_programada),
+        ...(fecha_ejecucion && {
+          fecha_ejecucion: new Date(fecha_ejecucion),
+        }),
       },
       include: {
         equipo: true,
@@ -71,10 +64,7 @@ export class MantenimientoService {
     });
   }
 
-  async findAll(
-    solicitante: Solicitante,
-    { page, limit }: PaginationQueryDto,
-  ) {
+  async findAll(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
     const where = esPropietario(solicitante)
       ? {
           equipo: {
@@ -105,10 +95,7 @@ export class MantenimientoService {
     return paginate(data, total, page, limit);
   }
 
-  async findOne(
-    id: string,
-    solicitante: Solicitante,
-  ) {
+  async findOne(id: string, solicitante: Solicitante) {
     const mantenimiento = await this.prisma.mantenimiento.findUnique({
       where: {
         id: Number(id),
@@ -148,18 +135,11 @@ export class MantenimientoService {
   ) {
     await this.findOne(id, solicitante);
 
-    if (updateDto.equipo_id) {
-      await this.validarEquipo(
-        updateDto.equipo_id,
-        solicitante,
-      );
+    if (updateDto.equipo_id !== undefined) {
+      await this.validarEquipo(updateDto.equipo_id, solicitante);
     }
 
-    const {
-      fecha_programada,
-      fecha_ejecucion,
-      ...data
-    } = updateDto;
+    const { fecha_programada, fecha_ejecucion, ...data } = updateDto;
 
     return this.prisma.mantenimiento.update({
       where: {
@@ -182,10 +162,7 @@ export class MantenimientoService {
     });
   }
 
-  async remove(
-    id: string,
-    solicitante: Solicitante,
-  ) {
+  async remove(id: string, solicitante: Solicitante) {
     await this.findOne(id, solicitante);
 
     await this.prisma.mantenimiento.delete({

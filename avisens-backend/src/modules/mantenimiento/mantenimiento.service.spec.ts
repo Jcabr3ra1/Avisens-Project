@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { MantenimientoService } from './mantenimiento.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CreateMantenimientoDto } from './dto/create-mantenimiento.dto';
 
 describe('MantenimientoService', () => {
   let service: MantenimientoService;
@@ -24,7 +25,7 @@ describe('MantenimientoService', () => {
   const admin = { id: 1, rol: 'Administrador' };
   const propietario = { id: 5, rol: 'Propietario' };
 
-  const dtoCrear = {
+  const dtoCrear: CreateMantenimientoDto = {
     equipo_id: 1,
     tipo: 'Preventivo',
     fecha_programada: '2026-08-25T10:00:00Z',
@@ -38,6 +39,12 @@ describe('MantenimientoService', () => {
     >;
 
     return calls[0][0].where;
+  };
+
+  const dataDe = (mock: jest.Mock): Record<string, unknown> => {
+    const calls = mock.mock.calls as Array<[{ data: Record<string, unknown> }]>;
+
+    return calls[0][0].data;
   };
 
   beforeEach(async () => {
@@ -97,7 +104,18 @@ describe('MantenimientoService', () => {
         },
       });
 
-      expect(prisma.mantenimiento.create).toHaveBeenCalled();
+      expect(prisma.mantenimiento.create).toHaveBeenCalledWith({
+        data: {
+          equipo_id: 1,
+          tipo: 'Preventivo',
+          fecha_programada: new Date('2026-08-25T10:00:00Z'),
+          descripcion: 'Mantenimiento preventivo del equipo',
+          estado: 'Programado',
+        },
+        include: {
+          equipo: true,
+        },
+      });
     });
 
     it('un Propietario no puede crear un mantenimiento en un equipo ajeno (403)', async () => {
@@ -110,9 +128,9 @@ describe('MantenimientoService', () => {
         },
       });
 
-      await expect(
-        service.create(dtoCrear, propietario),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.create(dtoCrear, propietario)).rejects.toThrow(
+        ForbiddenException,
+      );
 
       expect(prisma.mantenimiento.create).not.toHaveBeenCalled();
     });
@@ -120,9 +138,9 @@ describe('MantenimientoService', () => {
     it('rechaza (404) si el equipo no existe', async () => {
       prisma.equipo.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.create(dtoCrear, admin),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.create(dtoCrear, admin)).rejects.toThrow(
+        NotFoundException,
+      );
 
       expect(prisma.mantenimiento.create).not.toHaveBeenCalled();
     });
@@ -185,9 +203,9 @@ describe('MantenimientoService', () => {
     it('rechaza (404) si el mantenimiento no existe', async () => {
       prisma.mantenimiento.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.findOne('999', admin),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('999', admin)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('un Propietario no puede ver un mantenimiento ajeno (403)', async () => {
@@ -202,9 +220,9 @@ describe('MantenimientoService', () => {
         },
       });
 
-      await expect(
-        service.findOne('1', propietario),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.findOne('1', propietario)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
@@ -257,6 +275,26 @@ describe('MantenimientoService', () => {
       });
     });
 
+    it('convierte las fechas y conserva el tiempo inactivo al actualizar', async () => {
+      prisma.mantenimiento.update.mockResolvedValue({ id: 1 });
+
+      await service.update(
+        '1',
+        {
+          fecha_programada: '2026-09-01',
+          fecha_ejecucion: '2026-09-02',
+          tiempo_inactivo_horas: 3.5,
+        },
+        admin,
+      );
+
+      expect(dataDe(prisma.mantenimiento.update)).toEqual({
+        fecha_programada: new Date('2026-09-01'),
+        fecha_ejecucion: new Date('2026-09-02'),
+        tiempo_inactivo_horas: 3.5,
+      });
+    });
+
     it('un Propietario no puede actualizar un mantenimiento ajeno (403)', async () => {
       prisma.mantenimiento.findUnique.mockResolvedValue({
         id: 1,
@@ -270,11 +308,7 @@ describe('MantenimientoService', () => {
       });
 
       await expect(
-        service.update(
-          '1',
-          { estado: 'Realizado' },
-          propietario,
-        ),
+        service.update('1', { estado: 'Realizado' }, propietario),
       ).rejects.toThrow(ForbiddenException);
 
       expect(prisma.mantenimiento.update).not.toHaveBeenCalled();
@@ -313,9 +347,9 @@ describe('MantenimientoService', () => {
         },
       });
 
-      await expect(
-        service.remove('1', propietario),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.remove('1', propietario)).rejects.toThrow(
+        ForbiddenException,
+      );
 
       expect(prisma.mantenimiento.delete).not.toHaveBeenCalled();
     });
@@ -323,9 +357,9 @@ describe('MantenimientoService', () => {
     it('rechaza (404) al eliminar un mantenimiento que no existe', async () => {
       prisma.mantenimiento.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.remove('999', admin),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.remove('999', admin)).rejects.toThrow(
+        NotFoundException,
+      );
 
       expect(prisma.mantenimiento.delete).not.toHaveBeenCalled();
     });

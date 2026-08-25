@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/swagger';
-import { createMantenimientoDto } from './create-mantenimiento.tdo';
+import { CreateMantenimientoDto } from './create-mantenimiento.dto';
 
 export class UpdateMantenimientoDto extends PartialType(
-	createMantenimientoDto,
+  CreateMantenimientoDto,
 ) {}

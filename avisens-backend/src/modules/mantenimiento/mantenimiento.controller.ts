@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -16,24 +18,25 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ROLES } from '../../common/roles';
 import { MantenimientoService } from './mantenimiento.service';
-import { createMantenimientoDto } from './dto/create-mantenimiento.tdo';
+import { CreateMantenimientoDto } from './dto/create-mantenimiento.dto';
+import { UpdateMantenimientoDto } from './dto/update-mantenimiento.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
   user: { id: number; email: string; rol: string; organizacion_id?: number };
 }
 
-@ApiTags('mantenimiento')
+@ApiTags('mantenimientos')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
-@Controller('mantenimiento')
+@Controller('mantenimientos')
 export class MantenimientoController {
   constructor(private mantenimientoService: MantenimientoService) {}
 
   @Post()
   @ApiOperation({ summary: 'Registrar un mantenimiento' })
-  create(@Body() dto: createMantenimientoDto, @Req() req: AuthRequest) {
+  create(@Body() dto: CreateMantenimientoDto, @Req() req: AuthRequest) {
     return this.mantenimientoService.create(dto, req.user);
   }
 
@@ -47,5 +50,21 @@ export class MantenimientoController {
   @ApiOperation({ summary: 'Obtener un mantenimiento por ID' })
   findOne(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.mantenimientoService.findOne(String(id), req.user);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar un mantenimiento' })
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateMantenimientoDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.mantenimientoService.update(String(id), dto, req.user);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Eliminar un mantenimiento' })
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.mantenimientoService.remove(String(id), req.user);
   }
 }
