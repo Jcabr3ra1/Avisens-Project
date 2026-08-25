@@ -1,0 +1,29 @@
+meta {
+  name: [Admin · Propietario]  Historial de predicciones del lote
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/v1/predicciones/lote/2/historial?page=1&limit=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 20
+  ~tipo: fcr
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Predicciones guardadas del lote, de la mas reciente a la mas antigua.
+
+  El parametro opcional `tipo` filtra por magnitud: peso_faena, mortalidad,
+  consumo o fcr. Sirve para ver como ha ido cambiando una sola proyeccion a
+  lo largo del ciclo.
+}
