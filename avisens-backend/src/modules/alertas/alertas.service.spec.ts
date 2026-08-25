@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AlertasService } from './alertas.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ROLES } from '../../common/roles';
-import type { Solicitante } from '../../common/acceso';
+import { ROLES } from '../../common/auth/roles';
+import type { Solicitante } from '../../common/auth/acceso';
 
 describe('AlertasService', () => {
   let service: AlertasService;

@@ -6,8 +6,12 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '../../common/pagination/paginate';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import type { Solicitante } from '../../common/auth/acceso';
 import { CreateEquipoDto } from './dto/create-equipo.dto';
 import { UpdateEquipoDto } from './dto/update-equipo.dto';
+
+const SIN_ACCESO = 'Solo puedes gestionar equipos de tus propios galpones';
 
 const EQUIPO_SELECT = {
   id: true,
@@ -30,7 +34,17 @@ const EQUIPO_SELECT = {
   coordenada_y: true,
   costo_cop: true,
   galpon: {
-    select: { id: true, nombre: true, codigo: true },
+    select: {
+      id: true,
+      nombre: true,
+      codigo: true,
+      granja: {
+        select: {
+          id: true,
+          propietario_id: true,
+        },
+      },
+    },
   },
 } as const;
 
@@ -38,7 +52,22 @@ const EQUIPO_SELECT = {
 export class EquiposService {
   constructor(private prisma: PrismaService) {}
 
-  async crear(dto: CreateEquipoDto) {
+  private async validarGalpon(galponId: number, solicitante: Solicitante) {
+    const galpon = await this.prisma.galpon.findUnique({
+      where: { id: galponId },
+      select: {
+        id: true,
+        granja: {
+          select: { propietario_id: true },
+        },
+      },
+    });
+    if (!galpon) throw new NotFoundException('Galpón no encontrado');
+    verificarDueno(solicitante, galpon.granja.propietario_id, SIN_ACCESO);
+  }
+
+  async crear(dto: CreateEquipoDto, solicitante: Solicitante) {
+    await this.validarGalpon(dto.galpon_id, solicitante);
     try {
       return await this.prisma.equipo.create({
         data: {
@@ -69,30 +98,39 @@ export class EquiposService {
     }
   }
 
-  async listar({ page, limit }: PaginationQueryDto) {
+  async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
+    const where = esPropietario(solicitante)
+      ? { galpon: { granja: { propietario_id: solicitante.id } } }
+      : undefined;
+
     const [data, total] = await this.prisma.$transaction([
       this.prisma.equipo.findMany({
+        where,
         select: EQUIPO_SELECT,
         orderBy: { id: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.prisma.equipo.count(),
+      this.prisma.equipo.count({ where }),
     ]);
     return paginate(data, total, page, limit);
   }
 
-  async obtener(id: number) {
+  async obtener(id: number, solicitante: Solicitante) {
     const equipo = await this.prisma.equipo.findUnique({
       where: { id },
       select: EQUIPO_SELECT,
     });
     if (!equipo) throw new NotFoundException(`Equipo con ID ${id} no encontrado`);
+    verificarDueno(solicitante, equipo.galpon.granja.propietario_id, SIN_ACCESO);
     return equipo;
   }
 
-  async actualizar(id: number, dto: UpdateEquipoDto) {
-    await this.obtener(id);
+  async actualizar(id: number, dto: UpdateEquipoDto, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+    if (dto.galpon_id !== undefined) {
+      await this.validarGalpon(dto.galpon_id, solicitante);
+    }
     try {
       return await this.prisma.equipo.update({
         where: { id },
@@ -124,8 +162,8 @@ export class EquiposService {
     }
   }
 
-  async eliminar(id: number) {
-    await this.obtener(id);
+  async eliminar(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
     await this.prisma.equipo.delete({ where: { id } });
     return { id, eliminado: true };
   }

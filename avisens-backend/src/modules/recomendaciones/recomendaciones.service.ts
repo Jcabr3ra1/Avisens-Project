@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { IndicadoresService } from '../indicadores/indicadores.service';
-import { verificarDueno, Solicitante } from '../../common/acceso';
+import { verificarDueno, Solicitante } from '../../common/auth/acceso';
 
 const UMBRAL_COSTO_KG = 4000;
 

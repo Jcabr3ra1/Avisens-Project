@@ -9,8 +9,8 @@ import { CreateUmbralDto } from './dto/create-umbral.dto';
 import { RevisarUmbralDto } from './dto/revisar-umbral.dto';
 import { QueryUmbralesDto } from './dto/query-umbrales.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/acceso';
-import type { Solicitante } from '../../common/acceso';
+import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import type { Solicitante } from '../../common/auth/acceso';
 
 const UMBRAL_SELECT = {
   id: true,

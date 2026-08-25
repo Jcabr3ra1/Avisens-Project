@@ -8,8 +8,8 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 import { paginate } from '../../common/pagination/paginate';
 import { CreateOrdenesCompraDto } from './dto/create-ordenes-compra.dto';
 import { UpdateOrdenesCompraDto } from './dto/update-ordenes-compra.dto';
-import { esPropietario, verificarDueno } from '../../common/acceso';
-import type { Solicitante } from '../../common/acceso';
+import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import type { Solicitante } from '../../common/auth/acceso';
 
 @Injectable()
 export class OrdenesCompraService {

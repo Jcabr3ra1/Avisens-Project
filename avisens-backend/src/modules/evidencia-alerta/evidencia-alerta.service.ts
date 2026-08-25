@@ -8,7 +8,7 @@ import {
   esPropietario,
   verificarDueno,
   type Solicitante,
-} from '../../common/acceso';
+} from '../../common/auth/acceso';
 
 const EVIDENCIA_SELECT = {
   id: true,

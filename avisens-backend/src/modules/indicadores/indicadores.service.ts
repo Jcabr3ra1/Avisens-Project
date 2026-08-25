@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { verificarDueno, Solicitante } from '../../common/acceso';
-import { ROLES } from '../../common/roles';
+import { verificarDueno, Solicitante } from '../../common/auth/acceso';
+import { ROLES } from '../../common/auth/roles';
 
 export const PESO_INICIAL_G = 42;
 const UMBRAL_DESVIO_PCT = 5;

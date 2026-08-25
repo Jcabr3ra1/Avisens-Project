@@ -12,9 +12,9 @@ import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { ClimaService } from './clima.service';
-import { Solicitante } from '../../common/acceso';
+import { Solicitante } from '../../common/auth/acceso';
 
 interface AuthRequest extends Request {
   user: Solicitante;

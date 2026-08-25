@@ -3,8 +3,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMedicionDto } from './dto/create-medicion.dto';
 import { QueryMedicionesDto } from './dto/query-mediciones.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/acceso';
-import type { Solicitante } from '../../common/acceso';
+import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import type { Solicitante } from '../../common/auth/acceso';
 
 const MEDICION_SELECT = {
   id: true,

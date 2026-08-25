@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { verificarDueno, Solicitante } from '../../common/acceso';
+import { verificarDueno, Solicitante } from '../../common/auth/acceso';
 
 interface OpenMeteoResp {
   current?: {

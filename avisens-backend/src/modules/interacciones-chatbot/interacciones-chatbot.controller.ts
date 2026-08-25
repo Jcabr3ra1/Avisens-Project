@@ -12,7 +12,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { InteraccionesChatbotService } from './interacciones-chatbot.service';
 import { CreateInteraccionChatbotDto } from './dto/create-interaccion-chatbot.dto';
 import { ListarInteraccionesDto } from './dto/listar-interacciones.dto';

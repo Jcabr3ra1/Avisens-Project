@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { verificarDueno, Solicitante } from '../../common/acceso';
+import { verificarDueno, Solicitante } from '../../common/auth/acceso';
 import { PESO_INICIAL_G } from '../indicadores/indicadores.service';
 
 const ML_URL = process.env.ML_URL ?? 'http://ml:8000';

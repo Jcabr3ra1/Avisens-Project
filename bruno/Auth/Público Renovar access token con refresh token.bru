@@ -23,9 +23,9 @@ body:json {
 script:post-response {
   const body = res.getBody();
   if (body && body.access_token) {
-    bru.setEnvVar("token", body.access_token);
+    bru.setVar("token", body.access_token);
   }
   if (body && body.refresh_token) {
-    bru.setEnvVar("refresh_token", body.refresh_token);
+    bru.setVar("refresh_token", body.refresh_token);
   }
 }
