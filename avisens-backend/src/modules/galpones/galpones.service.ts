@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGalponDto } from './dto/create-galpon.dto';
 import { UpdateGalponDto } from './dto/update-galpon.dto';
@@ -98,16 +102,18 @@ export class GalponesService {
   }
 
   async actualizar(id: number, dto: UpdateGalponDto, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    const actual = await this.obtener(id, solicitante);
 
-    if (dto.granja_id) {
-      await this.validarGranja(dto.granja_id, solicitante);
+    if (dto.granja_id !== undefined && dto.granja_id !== actual.granja.id) {
+      throw new BadRequestException(
+        'No se puede trasladar un galpón a otra granja; crea un galpón nuevo para conservar la integridad histórica',
+      );
     }
 
     return this.prisma.galpon.update({
       where: { id },
       data: {
-        granja_id: dto.granja_id,
+        granja_id: undefined,
         codigo: dto.codigo,
         nombre: dto.nombre,
         capacidad_aves: dto.capacidad_aves,

@@ -20,6 +20,7 @@ describe('GranjasService', () => {
       delete: jest.fn(),
     },
     usuario: { findUnique: jest.fn() },
+    usuarioGalpon: { updateMany: jest.fn() },
     $transaction: jest.fn(),
   };
 
@@ -165,6 +166,36 @@ describe('GranjasService', () => {
         service.actualizar(1, { propietario_id: 99 }, admin),
       ).rejects.toThrow(NotFoundException);
       expect(prisma.granja.update).not.toHaveBeenCalled();
+    });
+
+    it('desactiva asignaciones si la granja cambia de organización', async () => {
+      prisma.granja.findUnique.mockResolvedValue({
+        id: 1,
+        organizacion_id: 10,
+        propietario: { id: 5 },
+      });
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 7,
+        organizacion_id: 20,
+        rol: { nombre: 'Propietario' },
+      });
+      prisma.granja.update.mockResolvedValue({ id: 1, organizacion_id: 20 });
+      prisma.$transaction.mockResolvedValue([
+        { count: 2 },
+        { id: 1, organizacion_id: 20 },
+      ]);
+
+      const resultado = await service.actualizar(
+        1,
+        { propietario_id: 7 },
+        admin,
+      );
+
+      expect(prisma.usuarioGalpon.updateMany).toHaveBeenCalledWith({
+        where: { activa: true, galpon: { granja_id: 1 } },
+        data: { activa: false },
+      });
+      expect(resultado).toEqual({ id: 1, organizacion_id: 20 });
     });
   });
 

@@ -161,20 +161,22 @@ export class SensoresService {
   async actualizar(id: number, dto: UpdateSensorDto, solicitante: Solicitante) {
     const actual = await this.obtener(id, solicitante);
 
-    if (dto.galpon_id) {
-      await this.validarGalpon(dto.galpon_id, solicitante);
+    if (dto.galpon_id !== undefined && dto.galpon_id !== actual.galpon.id) {
+      throw new BadRequestException(
+        'No se puede trasladar un sensor a otro galpón; sus mediciones y alertas son históricas',
+      );
     }
 
-    const galponFinal = dto.galpon_id ?? actual.galpon.id;
+    const galponFinal = actual.galpon.id;
     const dispositivoFinal = dto.dispositivo_id ?? actual.dispositivo.id;
-    if (dto.galpon_id || dto.dispositivo_id) {
+    if (dto.dispositivo_id) {
       await this.validarDispositivoEnGalpon(dispositivoFinal, galponFinal);
     }
 
     return this.prisma.sensor.update({
       where: { id },
       data: {
-        galpon_id: dto.galpon_id,
+        galpon_id: undefined,
         dispositivo_id: dto.dispositivo_id,
         codigo: dto.codigo,
         tipo: dto.tipo,

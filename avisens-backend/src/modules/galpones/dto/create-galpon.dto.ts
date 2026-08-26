@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Min,
 } from 'class-validator';
 
 export class CreateGalponDto {
@@ -14,6 +15,7 @@ export class CreateGalponDto {
     description: 'ID de la granja a la que pertenece',
   })
   @IsInt()
+  @Min(1)
   granja_id: number;
 
   @ApiProperty({

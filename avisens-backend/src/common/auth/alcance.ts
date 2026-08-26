@@ -22,8 +22,10 @@ export function filtroGranjas(
   if (solicitante.rol === ROLES.PROPIETARIO) {
     return { propietario_id: solicitante.id };
   }
+  const organizacionId = solicitante.organizacion_id ?? -1;
   return {
     activa: true,
+    organizacion_id: organizacionId,
     organizacion: { activa: true },
     galpones: {
       some: {
@@ -43,9 +45,14 @@ export function filtroGalpones(
   if (solicitante.rol === ROLES.PROPIETARIO) {
     return { granja: { propietario_id: solicitante.id } };
   }
+  const organizacionId = solicitante.organizacion_id ?? -1;
   return {
     activo: true,
-    granja: { activa: true, organizacion: { activa: true } },
+    granja: {
+      activa: true,
+      organizacion_id: organizacionId,
+      organizacion: { activa: true },
+    },
     usuarios_galpones: {
       some: { usuario_id: solicitante.id, activa: true },
     },

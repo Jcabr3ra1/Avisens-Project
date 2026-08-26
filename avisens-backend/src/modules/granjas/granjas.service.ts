@@ -131,7 +131,7 @@ export class GranjasService {
   }
 
   async actualizar(id: number, dto: UpdateGranjaDto, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    const actual = await this.obtener(id, solicitante);
 
     let propietarioId = dto.propietario_id;
     let organizacionId: number | undefined;
@@ -161,7 +161,7 @@ export class GranjasService {
       organizacionId = propietario.organizacion_id;
     }
 
-    return this.prisma.granja.update({
+    const actualizar = this.prisma.granja.update({
       where: { id },
       data: {
         nombre: dto.nombre,
@@ -177,6 +177,22 @@ export class GranjasService {
       },
       select: GRANJA_SELECT,
     });
+
+    if (
+      organizacionId !== undefined &&
+      organizacionId !== actual.organizacion_id
+    ) {
+      const [, granja] = await this.prisma.$transaction([
+        this.prisma.usuarioGalpon.updateMany({
+          where: { activa: true, galpon: { granja_id: id } },
+          data: { activa: false },
+        }),
+        actualizar,
+      ]);
+      return granja;
+    }
+
+    return actualizar;
   }
 
   async desactivar(id: number, solicitante: Solicitante) {

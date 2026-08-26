@@ -103,7 +103,11 @@ describe('PesajesService', () => {
           id: dtoCrear.lote_id,
           galpon: {
             activo: true,
-            granja: { activa: true, organizacion: { activa: true } },
+            granja: {
+              activa: true,
+              organizacion_id: 10,
+              organizacion: { activa: true },
+            },
             usuarios_galpones: {
               some: { usuario_id: operario.id, activa: true },
             },

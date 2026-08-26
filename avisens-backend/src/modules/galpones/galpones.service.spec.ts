@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { GalponesService } from './galpones.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -102,7 +106,11 @@ describe('GalponesService', () => {
 
       expect(whereDe(prisma.galpon.findMany)).toEqual({
         activo: true,
-        granja: { activa: true, organizacion: { activa: true } },
+        granja: {
+          activa: true,
+          organizacion_id: 10,
+          organizacion: { activa: true },
+        },
         usuarios_galpones: {
           some: { usuario_id: 8, activa: true },
         },
@@ -135,7 +143,7 @@ describe('GalponesService', () => {
     it('actualiza cuando el galpón es del solicitante', async () => {
       prisma.galpon.findUnique.mockResolvedValue({
         id: 1,
-        granja: { propietario_id: 5 },
+        granja: { id: 3, propietario_id: 5 },
       });
       prisma.galpon.update.mockResolvedValue({ id: 1 });
 
@@ -144,19 +152,15 @@ describe('GalponesService', () => {
       expect(prisma.galpon.update).toHaveBeenCalled();
     });
 
-    it('al mover a otra granja, re-valida que la nueva sea suya (403)', async () => {
+    it('impide trasladar un galpón a otra granja para no romper su historial', async () => {
       prisma.galpon.findUnique.mockResolvedValue({
         id: 1,
-        granja: { propietario_id: 5 },
-      });
-      prisma.granja.findUnique.mockResolvedValue({
-        id: 9,
-        propietario_id: 999,
+        granja: { id: 3, propietario_id: 5 },
       });
 
       await expect(
         service.actualizar(1, { granja_id: 9 }, propietario),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(BadRequestException);
       expect(prisma.galpon.update).not.toHaveBeenCalled();
     });
   });

@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DispositivosService } from './dispositivos.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -116,7 +120,7 @@ describe('DispositivosService', () => {
     it('genera y revela un token nuevo', async () => {
       prisma.dispositivo.findUnique.mockResolvedValue({
         id: 1,
-        galpon: { granja: { propietario_id: 5 } },
+        galpon: { id: 3, granja: { propietario_id: 5 } },
       });
       prisma.dispositivo.update.mockResolvedValue({});
 
@@ -153,19 +157,15 @@ describe('DispositivosService', () => {
       expect(prisma.dispositivo.update).toHaveBeenCalled();
     });
 
-    it('al mover a otro galpón, re-valida que el nuevo sea suyo (403)', async () => {
+    it('impide trasladar un dispositivo con historial a otro galpón', async () => {
       prisma.dispositivo.findUnique.mockResolvedValue({
         id: 1,
-        galpon: { granja: { propietario_id: 5 } },
-      });
-      prisma.galpon.findUnique.mockResolvedValue({
-        id: 9,
-        granja: { propietario_id: 999 },
+        galpon: { id: 3, granja: { propietario_id: 5 } },
       });
 
       await expect(
         service.actualizar(1, { galpon_id: 9 }, propietario),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(BadRequestException);
       expect(prisma.dispositivo.update).not.toHaveBeenCalled();
     });
   });

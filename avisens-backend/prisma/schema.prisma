@@ -87,10 +87,13 @@ model Usuario {
   movimientos_financieros    MovimientoFinanciero[]
   movimientos_inventario     MovimientoInventario[]
   mantenimientos             Mantenimiento[]
-  organizacion               Organizacion?          @relation(fields: [organizacion_id], references: [id])
+  organizacion               Organizacion?          @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
   recomendaciones            Recomendacion[]
   conversaciones_ia          ConversacionIa[]
 
+  // Permite que la FK compuesta de granjas garantice que el propietario y la
+  // granja pertenezcan a la misma organización.
+  @@unique([id, organizacion_id])
   @@index([organizacion_id])
   @@map("usuarios")
 }
@@ -145,7 +148,7 @@ model Granja {
   activa          Boolean  @default(true)
   fecha_creacion  DateTime @default(now())
 
-  propietario             Usuario                @relation(fields: [propietario_id], references: [id])
+  propietario             Usuario                @relation(fields: [propietario_id, organizacion_id], references: [id, organizacion_id])
   organizacion            Organizacion           @relation(fields: [organizacion_id], references: [id])
   galpones                Galpon[]
   politicas_alerta        PoliticaAlerta[]
@@ -222,6 +225,9 @@ model Dispositivo {
   galpon   Galpon   @relation(fields: [galpon_id], references: [id])
   sensores Sensor[]
 
+  // La relación compuesta impide conectar un sensor a un dispositivo de otro
+  // galpón, incluso si se escribe directamente en la base de datos.
+  @@unique([id, galpon_id])
   // Consulta frecuente: "dispositivos del galpón X". (Galpon no necesita esto:
   // su @@unique([granja_id, codigo]) ya indexa granja_id como prefijo.)
   @@index([galpon_id])
@@ -259,7 +265,7 @@ model Sensor {
 
   mediciones  Medicion[]
   galpon      Galpon      @relation(fields: [galpon_id], references: [id])
-  dispositivo Dispositivo @relation(fields: [dispositivo_id], references: [id])
+  dispositivo Dispositivo @relation(fields: [dispositivo_id, galpon_id], references: [id, galpon_id])
   zona        ZonaGalpon? @relation(fields: [zona_id], references: [id])
   alertas     Alerta[]
 
@@ -645,6 +651,7 @@ model UsuarioGalpon {
 
   @@unique([usuario_id, galpon_id])
   @@index([galpon_id])
+  @@index([galpon_id, usuario_id, activa])
   @@map("usuarios_galpones")
 }
 

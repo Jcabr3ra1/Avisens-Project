@@ -925,6 +925,13 @@ bitacora_auditoria.usuario_id > usuarios.id
 notificaciones.usuario_id > usuarios.id
 
 // EP-04 Estructura y monitoreo
+// Invariantes de integridad aplicadas también en la base de datos:
+// - granjas.(propietario_id, organizacion_id) referencia al mismo usuario/tenant;
+// - sensores.(dispositivo_id, galpon_id) referencia un dispositivo del mismo galpón;
+// - una organización con usuarios no puede eliminarse dejándolos huérfanos.
+// Las asignaciones activas exigen Operario, mismo tenant y toda la cadena activa.
+// La API no traslada galpones, lotes, dispositivos ni sensores entre padres:
+// preserva así las relaciones históricas de alertas, mediciones y finanzas.
 granjas.propietario_id > usuarios.id
 granjas.organizacion_id > organizaciones.id
 galpones.granja_id > granjas.id
@@ -1017,6 +1024,6 @@ clima.granja_id > granjas.id
 
 
 // ================================================================
-// FIN — 59 entidades (49 base + 10 capa de inteligencia)
+// FIN — 60 entidades (50 base + 10 capa de inteligencia)
 // ================================================================
 ```

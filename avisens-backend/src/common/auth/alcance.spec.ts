@@ -27,6 +27,7 @@ describe('alcance por rol', () => {
   it('limita al operario por asignación activa y galpón activo', () => {
     expect(filtroGranjas(operario)).toEqual({
       activa: true,
+      organizacion_id: 10,
       organizacion: { activa: true },
       galpones: {
         some: {
@@ -39,7 +40,11 @@ describe('alcance por rol', () => {
     });
     expect(filtroGalpones(operario)).toEqual({
       activo: true,
-      granja: { activa: true, organizacion: { activa: true } },
+      granja: {
+        activa: true,
+        organizacion_id: 10,
+        organizacion: { activa: true },
+      },
       usuarios_galpones: {
         some: { usuario_id: 8, activa: true },
       },
@@ -47,10 +52,30 @@ describe('alcance por rol', () => {
     expect(filtroLotes(operario)).toEqual({
       galpon: {
         activo: true,
-        granja: { activa: true, organizacion: { activa: true } },
+        granja: {
+          activa: true,
+          organizacion_id: 10,
+          organizacion: { activa: true },
+        },
         usuarios_galpones: {
           some: { usuario_id: 8, activa: true },
         },
+      },
+    });
+  });
+
+  it('niega alcance al operario sin organización', () => {
+    const sinOrganizacion = { id: 8, rol: 'Operario' };
+
+    expect(filtroGalpones(sinOrganizacion)).toEqual({
+      activo: true,
+      granja: {
+        activa: true,
+        organizacion_id: -1,
+        organizacion: { activa: true },
+      },
+      usuarios_galpones: {
+        some: { usuario_id: 8, activa: true },
       },
     });
   });
@@ -78,7 +103,11 @@ describe('alcance por rol', () => {
       where: {
         id: 20,
         activo: true,
-        granja: { activa: true, organizacion: { activa: true } },
+        granja: {
+          activa: true,
+          organizacion_id: 10,
+          organizacion: { activa: true },
+        },
         usuarios_galpones: {
           some: { usuario_id: 8, activa: true },
         },

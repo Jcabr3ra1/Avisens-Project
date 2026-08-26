@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
@@ -116,10 +120,12 @@ export class LotesService {
   }
 
   async actualizar(id: number, dto: UpdateLoteDto, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    const actual = await this.obtener(id, solicitante);
 
-    if (dto.galpon_id) {
-      await this.validarGalpon(dto.galpon_id, solicitante);
+    if (dto.galpon_id !== undefined && dto.galpon_id !== actual.galpon.id) {
+      throw new BadRequestException(
+        'No se puede trasladar un lote a otro galpón; crea un lote nuevo para conservar la integridad histórica',
+      );
     }
     if (dto.proveedor_id) {
       await this.validarProveedor(dto.proveedor_id);
@@ -128,7 +134,7 @@ export class LotesService {
     return this.prisma.lote.update({
       where: { id },
       data: {
-        galpon_id: dto.galpon_id,
+        galpon_id: undefined,
         proveedor_id: dto.proveedor_id,
         codigo: dto.codigo,
         fecha_ingreso: dto.fecha_ingreso

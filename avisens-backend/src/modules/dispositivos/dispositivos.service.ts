@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDispositivoDto } from './dto/create-dispositivo.dto';
@@ -137,16 +141,18 @@ export class DispositivosService {
     dto: UpdateDispositivoDto,
     solicitante: Solicitante,
   ) {
-    await this.obtener(id, solicitante);
+    const actual = await this.obtener(id, solicitante);
 
-    if (dto.galpon_id) {
-      await this.validarGalpon(dto.galpon_id, solicitante);
+    if (dto.galpon_id !== undefined && dto.galpon_id !== actual.galpon.id) {
+      throw new BadRequestException(
+        'No se puede trasladar un dispositivo a otro galpón mientras conserva sensores asociados',
+      );
     }
 
     return this.prisma.dispositivo.update({
       where: { id },
       data: {
-        galpon_id: dto.galpon_id,
+        galpon_id: undefined,
         mac_address: dto.mac_address,
         codigo_topic: dto.codigo_topic,
         nombre: dto.nombre,

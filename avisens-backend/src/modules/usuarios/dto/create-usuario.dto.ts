@@ -33,6 +33,7 @@ export class CreateUsuarioDto {
 
   @ApiProperty({ example: 2, description: 'ID del rol' })
   @IsInt()
+  @Min(1)
   rol_id: number;
 
   @ApiPropertyOptional({
