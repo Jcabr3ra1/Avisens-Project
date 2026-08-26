@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { IcSparkle, IcSend, IcRefresh } from '@shared/ui/icons/icons'
-import { panelIconBtn } from './shared'
+import { panelIconBtn } from './shared-estilos'
 
 type AiMetric = { label: string; value: string; unit: string; delta?: string; deltaPositive?: boolean }
 
