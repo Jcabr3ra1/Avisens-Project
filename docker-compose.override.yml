@@ -1,19 +1,40 @@
 # Overrides SOLO para desarrollo local. Docker Compose lo carga automaticamente
 # encima de docker-compose.yml al hacer `docker compose up`.
-# Da hot-reload: al editar el codigo, el servicio se recarga sin `--build`.
-# En produccion NO se usa (se levanta solo el base: `docker compose -f docker-compose.yml up`).
+#  - Hot-reload: al editar el codigo, el servicio se recarga sin `--build`.
+#  - Siembra la base con roles y el admin local.
+#  - Expone la base en el puerto 5433 del host (evita chocar con un PostgreSQL
+#    nativo escuchando en 5432). La app no se afecta: se conecta por la red
+#    interna de Docker (database:5432).
+#
+# En produccion NO se usa: se levanta solo el base con
+# `docker compose -f docker-compose.yml up`.
 services:
+  database:
+    ports:
+      - "5433:5432"
+
   # Backend NestJS en modo watch (nest --watch). Usa la etapa `dev` del Dockerfile.
-  # Al arrancar: migra la base + siembra roles y admin (idempotente), para que
-  # cualquier compañero tenga login listo sin correr nada a mano.
+  # Al arrancar: regenera el cliente Prisma + migra la base + siembra roles y
+  # admin (idempotente), para que cualquier compañero tenga login listo sin
+  # correr nada a mano.
+  #
+  # El `prisma generate` es imprescindible aqui: el cliente se genera al
+  # construir la imagen, pero /app/node_modules es un volumen anonimo que
+  # sobrevive a los reinicios. Sin esta linea, cualquier cambio en
+  # schema.prisma deja el contenedor con el cliente viejo y el arranque falla
+  # con errores de tipos que no aparecen en el host.
   backend:
     build:
       target: dev
-    command: sh -c "pnpm prisma migrate deploy && pnpm run seed && pnpm run start:dev"
+    command: sh -c "pnpm prisma generate && pnpm prisma migrate deploy && pnpm run seed && pnpm run start:dev"
     environment:
+      NODE_ENV: development
+      # En desarrollo si se siembra; el archivo base lo deja apagado para que
+      # un despliegue de produccion no reescriba datos sin querer.
+      RUN_SEED: "true"
       # Admin de DESARROLLO local (no es prod). El seed lo crea con estas vars.
-      ADMIN_EMAIL: admin@avisens.com
-      ADMIN_PASSWORD: Avisens2026!
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@avisens.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Avisens2026!}
       # Sin esto, pnpm aborta al arrancar si el volumen de node_modules quedó
       # desincronizado (pide confirmar por TTY, que no existe en un contenedor
       # en segundo plano). CI=true le dice que asuma "sí" y siga.
@@ -34,11 +55,20 @@ services:
   # VITE_API_URL apunta al puerto 3000 publicado en el host (docker-compose.yml
   # ya lo expone), asi el navegador llama al backend directo sin pasar por
   # proxy; el backend acepta cualquier origen en dev (ver CORS_ORIGIN).
+  # No se espera a /health del backend antes de arrancar: nginx/vite sirve la
+  # SPA igual, y bloquear el arranque solo alarga el ciclo de trabajo.
   frontend:
+    depends_on:
+      - backend
     build:
       target: dev
     environment:
       VITE_API_URL: http://localhost:3000/v1
+      # Puerto publicado en el host para este servicio (ver "8080:80" arriba).
+      # Sin esto el cliente de HMR de Vite intenta conectar el websocket al
+      # puerto interno del contenedor (80, no publicado) y el hot-reload no
+      # llega al navegador aunque los archivos sí se recarguen en el server.
+      HMR_CLIENT_PORT: "8080"
     volumes:
       - ./avisens-frontend:/app
       - /app/node_modules

@@ -1,0 +1,14 @@
+meta {
+  name: [Admin] Estadisticas interacciones
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/interacciones-chatbot/estadisticas
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

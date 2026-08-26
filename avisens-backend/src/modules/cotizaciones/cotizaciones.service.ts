@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GenerarCotizacionDto } from './dto/generar-cotizacion.dto';
+import { Prisma } from '@prisma/client';
 
 // !!! VALORES PROVISIONALES !!! Ver el comentario del catalogo en seed.ts.
 const INSTALACION_POR_GALPON_COP = 400000;
@@ -25,7 +26,7 @@ const AVES_POR_RANGO: Record<string, number> = {
 
 @Injectable()
 export class CotizacionesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
   async generar(prospectoId: number, dto: GenerarCotizacionDto) {
     const prospecto = await this.prisma.prospecto.findUnique({
       where: { id: prospectoId },
@@ -82,13 +83,15 @@ export class CotizacionesService {
         nombre: sensor.nombre,
         cantidad,
         precio_unitario_cop: sensor.precio_unitario_cop,
-        subtotal_cop: cantidad * sensor.precio_unitario_cop,
+        subtotal_cop: sensor.precio_unitario_cop.mul(cantidad),
       };
     });
 
     const instalacion = INSTALACION_POR_GALPON_COP * galpones;
-    const total =
-      lineas.reduce((suma, l) => suma + l.subtotal_cop, 0) + instalacion;
+    const total = lineas.reduce(
+      (suma, l) => suma.plus(l.subtotal_cop),
+      new Prisma.Decimal(instalacion),
+    );
 
     const cotizacion = await this.prisma.$transaction(async (tx) => {
       const creada = await tx.cotizacion.create({

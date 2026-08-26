@@ -134,7 +134,7 @@ describe('ProspectosService', () => {
       prisma.prospecto.findUnique.mockResolvedValue(calificado);
       prisma.usuario.findFirst.mockResolvedValue(null);
 
-      await expect(service.asignar(5, 99)).rejects.toThrow(/asesor/);
+      await expect(service.asignar(5, 99)).rejects.toThrow(/administrador|asesor/);
       expect(prisma.usuario.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: 99, activo: true } }),
       );
@@ -155,6 +155,7 @@ describe('ProspectosService', () => {
         prospecto_id: 5,
         clasificacion: 'caliente',
         asesor: 'Ana Gomez',
+        admin: 'Ana Gomez',
         estado: 'asignado',
       });
     });

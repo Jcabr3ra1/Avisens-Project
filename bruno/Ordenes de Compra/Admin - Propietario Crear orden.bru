@@ -1,0 +1,31 @@
+meta {
+  name: [Admin · Propietario] Crear orden
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/ordenes-compra
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "proveedor_id": 1,
+    "codigo": "OC-2026-001",
+    "usuario_id": 1,
+    "lote_id": 1,
+    "fecha_pedido": "2026-08-20",
+    "valor_total_cop": 1250000,
+    "estado": "pendiente"
+  }
+}

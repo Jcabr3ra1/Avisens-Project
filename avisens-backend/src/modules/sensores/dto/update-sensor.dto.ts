@@ -1,16 +1,15 @@
 import { ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsIn, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
 import { CreateSensorDto } from './create-sensor.dto';
-import { ESTADOS_SENSOR } from '../sensor-estados';
-import type { EstadoSensor } from '../sensor-estados';
+import { EstadoSensor } from '@prisma/client';
 
 export class UpdateSensorDto extends PartialType(CreateSensorDto) {
   @ApiPropertyOptional({
-    example: 'mantenimiento',
-    enum: ESTADOS_SENSOR,
+    example: EstadoSensor.mantenimiento,
+    enum: EstadoSensor,
     description: 'Estado del sensor',
   })
-  @IsIn(ESTADOS_SENSOR)
+  @IsEnum(EstadoSensor)
   @IsOptional()
   estado?: EstadoSensor;
 }

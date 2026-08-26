@@ -8,7 +8,7 @@ import {
   esPropietario,
   verificarDueno,
   Solicitante,
-} from '../../common/acceso';
+} from '../../common/auth/acceso';
 
 const PLAGA_SELECT = {
   id: true,

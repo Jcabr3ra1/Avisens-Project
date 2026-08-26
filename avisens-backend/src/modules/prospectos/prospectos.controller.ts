@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   ParseIntPipe,
   Patch,
@@ -12,7 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/roles';
+import { ROLES } from '../../common/auth/roles';
 import { ProspectosService } from './prospectos.service';
 import { ListarProspectosDto } from './dto/listar-prospectos.dto';
 import { AsignarAsesorDto } from './dto/asignar-asesor.dto';
@@ -33,6 +34,17 @@ export class ProspectosController {
     return this.prospectosService.listar(dto);
   }
 
+  @Get('exportar')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="prospectos.csv"')
+  @ApiOperation({
+    summary:
+      'Exportar prospectos a CSV (respeta los mismos filtros del listado)',
+  })
+  exportar(@Query() dto: ListarProspectosDto) {
+    return this.prospectosService.exportarCsv(dto);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Ver un prospecto con todas sus respuestas' })
   obtener(@Param('id', ParseIntPipe) id: number) {
@@ -40,11 +52,12 @@ export class ProspectosController {
   }
 
   @Patch(':id/asignar')
-  @ApiOperation({ summary: 'Asignar un asesor a un prospecto calificado' })
+  @ApiOperation({ summary: 'Asignar un administrador a un prospecto calificado' })
   asignar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AsignarAsesorDto,
   ) {
-    return this.prospectosService.asignar(id, dto.asesor_id);
+    const adminId = dto.admin_id ?? dto.asesor_id;
+    return this.prospectosService.asignar(id, adminId);
   }
 }

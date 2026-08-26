@@ -1,26 +1,26 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsIn, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto';
-
+import { EstadoProspecto } from '@prisma/client';
 export class ListarProspectosDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     example: 'caliente',
     description: 'Filtra por clasificacion: caliente | tibio | frio',
   })
   @IsString()
-  @IsIn(['caliente', 'tibio', 'frio'])
+  @IsIn(['caliente', 'tibio', 'frio', 'sin_consentimiento'])
   @IsOptional()
   clasificacion?: string;
 
   @ApiPropertyOptional({
-    example: 'calificado',
-    description: 'Filtra por estado: nuevo | en_proceso | calificado | cerrado',
+    example: EstadoProspecto.calificado,
+    enum: EstadoProspecto,
+    description: 'Filtra por estado del prospecto',
   })
-  @IsString()
-  @IsIn(['nuevo', 'en_proceso', 'calificado', 'asignado', 'cerrado'])
+  @IsEnum(EstadoProspecto)
   @IsOptional()
-  estado?: string;
+  estado?: EstadoProspecto;
 
   @ApiPropertyOptional({
     example: true,

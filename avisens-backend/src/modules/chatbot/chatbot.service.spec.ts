@@ -2,19 +2,20 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ChatbotNluService } from './chatbot.nlu.service';
+import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
 
 describe('ChatbotService', () => {
   let service: ChatbotService;
 
   const prisma = {
     prospecto: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
-    preguntaChatbot: { findFirst: jest.fn() },
-    respuestaChatbot: { create: jest.fn(), aggregate: jest.fn() },
+    preguntaChatbot: { findFirst: jest.fn(), count: jest.fn() },
+    respuestaChatbot: { create: jest.fn(), aggregate: jest.fn(), findMany: jest.fn(), count: jest.fn() },
     matrizCalificacion: { findUnique: jest.fn() },
+    solicitudPqrs: { create: jest.fn() },
   };
 
-  const nlu = { interpretar: jest.fn() };
+  const cotizaciones = { generar: jest.fn() };
 
   const datosDe = (mock: jest.Mock, indice = 0) =>
     (mock.mock.calls as Array<[{ data: Record<string, unknown> }]>)[indice][0]
@@ -42,15 +43,23 @@ describe('ChatbotService', () => {
     id: 7,
     sesion_id: '3f8a1c22-0b5e-4a71-9f3d-6c2b8e1d4a90',
     pregunta_actual: 'A1',
+    consentimiento_habeas_data: true,
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    prisma.preguntaChatbot.count.mockResolvedValue(19);
+    cotizaciones.generar.mockResolvedValue({
+      codigo: 'COT-1-ABC',
+      plan_recomendado: 'Profesional',
+      numero_galpones: 2,
+      valor_total_cop: 8000000,
+    });
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ChatbotService,
         { provide: PrismaService, useValue: prisma },
-        { provide: ChatbotNluService, useValue: nlu },
+        { provide: CotizacionesService, useValue: cotizaciones },
       ],
     }).compile();
     service = module.get<ChatbotService>(ChatbotService);
@@ -58,18 +67,20 @@ describe('ChatbotService', () => {
     prisma.prospecto.findUnique.mockResolvedValue(enCurso);
     prisma.prospecto.update.mockResolvedValue(enCurso);
     prisma.respuestaChatbot.create.mockResolvedValue({});
+    prisma.respuestaChatbot.findMany.mockResolvedValue([]);
+    prisma.respuestaChatbot.count.mockResolvedValue(0);
+    prisma.solicitudPqrs.create.mockResolvedValue({});
     prisma.preguntaChatbot.findFirst.mockResolvedValue(pregunta({}));
-    nlu.interpretar.mockResolvedValue(null);
   });
 
   describe('iniciar', () => {
-    it('crea el prospecto con un sesion_id UUID y arranca en A1', async () => {
+    it('crea el prospecto con un sesion_id UUID y arranca en el menu M1', async () => {
       prisma.prospecto.create.mockResolvedValue({ id: 1, sesion_id: 'uuid-x' });
 
       const r = await service.iniciar({});
       const datos = datosDe(prisma.prospecto.create);
 
-      expect(datos.pregunta_actual).toBe('A1');
+      expect(datos.pregunta_actual).toBe('M1');
       expect(datos.estado).toBe('en_proceso');
       expect(datos.canal_origen).toBe('web');
       expect(datos.sesion_id).toMatch(
@@ -118,7 +129,7 @@ describe('ChatbotService', () => {
 
     it('sigue el salto cuando la respuesta tiene uno definido', async () => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ saltos: { No: 'FIN' } }),
+        pregunta({ bloque: 'B', saltos: { No: 'FIN' } }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: 3 },
@@ -217,7 +228,7 @@ describe('ChatbotService', () => {
   describe('clasificacion al finalizar', () => {
     const finalizarCon = async (puntos: number | null) => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ siguiente: 'FIN' }),
+        pregunta({ bloque: 'B', siguiente: 'FIN' }),
       );
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: puntos },
@@ -255,11 +266,11 @@ describe('ChatbotService', () => {
       expect(datos.asesor_asignado_id).toBeUndefined();
     });
   });
-  describe('NLU', () => {
+  describe('interpretacion de la respuesta', () => {
     const responder = (respuesta: string) =>
       service.responder({ sesion_id: enCurso.sesion_id, respuesta });
 
-    it('usa la opcion interpretada cuando el NLU traduce texto libre', async () => {
+    it('acepta el numero de la opcion, que es como se listan por WhatsApp', async () => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
         pregunta({
           codigo: 'A8',
@@ -269,11 +280,13 @@ describe('ChatbotService', () => {
           siguiente: 'A9',
         }),
       );
-      nlu.interpretar.mockResolvedValue('5000-10000');
       prisma.matrizCalificacion.findUnique.mockResolvedValue({ puntaje: 3 });
 
-      await responder('como ocho mil pollos');
+      await responder('2');
 
+      expect(datosDe(prisma.respuestaChatbot.create).respuesta_texto).toBe(
+        '5000-10000',
+      );
       expect(prisma.matrizCalificacion.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
@@ -284,44 +297,41 @@ describe('ChatbotService', () => {
           },
         }),
       );
-      expect(datosDe(prisma.respuestaChatbot.create).respuesta_texto).toBe(
-        '5000-10000',
-      );
     });
 
-    it('sigue el salto usando la respuesta interpretada, no el texto libre', async () => {
+    it('acepta la opcion escrita sin tildes ni mayusculas', async () => {
+      await responder('si');
+
+      expect(datosDe(prisma.respuestaChatbot.create).respuesta_texto).toBe('Sí');
+    });
+
+    it('sigue el salto usando la opcion resuelta, no lo que tecleo el usuario', async () => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ saltos: { No: 'FIN' } }),
+        pregunta({ bloque: 'B', saltos: { No: 'FIN' } }),
       );
-      nlu.interpretar.mockResolvedValue('No');
       prisma.respuestaChatbot.aggregate.mockResolvedValue({
         _sum: { puntaje_obtenido: null },
       });
 
-      const r = await responder('no gracias, prefiero no dar mis datos');
+      const r = await responder('2');
 
       expect(r.finalizado).toBe(true);
     });
 
-    it('valida igual lo que devuelve el NLU: no confia en el modelo', async () => {
-      nlu.interpretar.mockResolvedValue('Quiza');
-
+    it('rechaza lo que no corresponde a ninguna opcion', async () => {
       await expect(responder('tal vez')).rejects.toThrow(
         /Respuesta no valida para A1/,
       );
       expect(prisma.respuestaChatbot.create).not.toHaveBeenCalled();
     });
 
-    it('usa el texto original cuando el NLU no esta disponible', async () => {
-      nlu.interpretar.mockResolvedValue(null);
-
-      await responder('Sí');
-
-      expect(datosDe(prisma.respuestaChatbot.create).respuesta_texto).toBe(
-        'Sí',
+    it('un numero fuera de rango no se toma como indice', async () => {
+      await expect(responder('7')).rejects.toThrow(
+        /Respuesta no valida para A1/,
       );
     });
   });
+
   describe('preguntas omitidas por canal', () => {
     it('no omite una pregunta que no declara canal', async () => {
       prisma.prospecto.create.mockResolvedValue({ id: 1, sesion_id: 'u' });
@@ -374,16 +384,502 @@ describe('ChatbotService', () => {
           omitir_si_canal: null,
         }),
       );
-      nlu.interpretar.mockResolvedValue('   ');
-
       await service.responder({
         sesion_id: enCurso.sesion_id,
-        respuesta: 'pues no se, tal vez',
+        respuesta: '   ',
       });
 
       const datos = datosDe(prisma.prospecto.update);
       expect(datos.telefono).toBeUndefined();
       expect(datos.pregunta_actual).toBeDefined();
+    });
+  });
+  describe('sin consentimiento de habeas data', () => {
+    it('no clasifica como frio a quien no autorizo sus datos', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue({
+        ...enCurso,
+        consentimiento_habeas_data: false,
+      });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ bloque: 'B', saltos: { No: 'FIN' } }),
+      );
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: null },
+      });
+
+      const r = await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'No',
+      });
+
+      expect(r.finalizado).toBe(true);
+      expect(r.clasificacion).toBe('sin_consentimiento');
+      expect(r.puntaje_total).toBeNull();
+
+      const datos = ultimosDatos(prisma.prospecto.update);
+      expect(datos.estado).toBe('sin_consentimiento');
+      expect(datos.puntaje_total).toBeUndefined();
+    });
+
+    it('clasifica normalmente a quien si autorizo', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue(enCurso);
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ bloque: 'B', siguiente: 'FIN' }),
+      );
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: 14 },
+      });
+
+      const r = await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Sí',
+      });
+
+      expect(r.clasificacion).toBe('caliente');
+      expect(ultimosDatos(prisma.prospecto.update).estado).toBe('calificado');
+    });
+  });
+
+  describe('rutas: cotizacion (bloque A) vs general (bloque B)', () => {
+    it('por defecto arranca en la ruta de cotizacion (A1)', async () => {
+      prisma.prospecto.create.mockResolvedValue({ id: 1, sesion_id: 'u' });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(pregunta({}));
+
+      const r = await service.iniciar({});
+
+      expect(r.pregunta?.codigo).toBe('A1');
+    });
+
+    it('con ruta general arranca en B1 (PQRS)', async () => {
+      prisma.prospecto.create.mockResolvedValue({ id: 1, sesion_id: 'u' });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ codigo: 'B1', bloque: 'B', tipo: 'opcion_unica' }),
+      );
+
+      const r = await service.iniciar({ ruta: 'general' });
+
+      expect(r.pregunta?.codigo).toBe('B1');
+      expect(datosDe(prisma.prospecto.create).pregunta_actual).toBe('B1');
+    });
+
+    it('radica una SolicitudPqrs al terminar el bloque B, sin puntaje comercial', async () => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'B3',
+          bloque: 'B',
+          tipo: 'texto_libre',
+          siguiente: 'FIN',
+        }),
+      );
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: null },
+      });
+      prisma.respuestaChatbot.findMany.mockResolvedValue([
+        { bloque: 'B', codigo_pregunta: 'B1', respuesta_texto: 'Sugerencia' },
+        { bloque: 'B', codigo_pregunta: 'B2', respuesta_texto: 'Los sensores' },
+        { bloque: 'B', codigo_pregunta: 'B3', respuesta_texto: 'Detalle largo' },
+      ]);
+
+      const r = await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Detalle largo',
+      });
+
+      expect(r.finalizado).toBe(true);
+      expect(r.clasificacion).toBe('pqrs');
+      expect(r.puntaje_total).toBeNull();
+      expect(prisma.solicitudPqrs.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          data: expect.objectContaining({
+            categoria: 'Sugerencia',
+            asunto: 'Los sensores',
+            mensaje: 'Detalle largo',
+            estado: 'abierta',
+          }),
+        }),
+      );
+      expect(ultimosDatos(prisma.prospecto.update).estado).toBe('pqrs');
+    });
+
+    it('la ruta de cotizacion no radica PQRS', async () => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ bloque: 'B', siguiente: 'FIN' }),
+      );
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: 12 },
+      });
+      prisma.respuestaChatbot.findMany.mockResolvedValue([
+        { bloque: 'A', codigo_pregunta: 'A8', respuesta_texto: '>10000' },
+      ]);
+
+      await service.responder({ sesion_id: enCurso.sesion_id, respuesta: 'Sí' });
+
+      expect(prisma.solicitudPqrs.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reglas de negocio de la especificacion', () => {
+    const cerrarCon = async (
+      respuestas: Array<{ bloque: string; codigo_pregunta: string; respuesta_texto: string }>,
+      puntaje: number,
+    ) => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ bloque: 'B', siguiente: 'FIN' }),
+      );
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: puntaje },
+      });
+      prisma.respuestaChatbot.findMany.mockResolvedValue(respuestas);
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Sí',
+      });
+
+      return ultimosDatos(prisma.prospecto.update);
+    };
+
+    const A = (codigo: string, texto: string) => ({
+      bloque: 'A',
+      codigo_pregunta: codigo,
+      respuesta_texto: texto,
+    });
+
+    it('un lead caliente se enruta a visita presencial', async () => {
+      const datos = await cerrarCon([A('A20', 'Sí')], 14);
+      expect(datos.clasificacion).toBe('caliente');
+      expect(datos.accion_siguiente).toBe('VISITA_PRESENCIAL');
+    });
+
+    it('un lead tibio se enruta a demostracion remota', async () => {
+      const datos = await cerrarCon([A('A20', 'Sí')], 9);
+      expect(datos.clasificacion).toBe('tibio');
+      expect(datos.accion_siguiente).toBe('DEMO_REMOTA');
+    });
+
+    it('un lead frio se enruta a seguimiento automatizado', async () => {
+      const datos = await cerrarCon([A('A20', 'Sí')], 4);
+      expect(datos.clasificacion).toBe('frio');
+      expect(datos.accion_siguiente).toBe('SEGUIMIENTO_AUTOMATIZADO');
+    });
+
+    it('sin poder de decision prima el callback sobre el puntaje', async () => {
+      const datos = await cerrarCon([A('A20', 'No')], 15);
+
+      expect(datos.clasificacion).toBe('caliente');
+      expect(datos.accion_siguiente).toBe('CALLBACK_DECISOR');
+      expect(datos.fecha_callback).toBeInstanceOf(Date);
+    });
+
+    it('el callback queda programado a 48 horas', async () => {
+      const antes = Date.now();
+      const datos = await cerrarCon([A('A20', 'No')], 5);
+
+      const fecha = datos.fecha_callback as Date;
+      const horas = (fecha.getTime() - antes) / 3600000;
+      expect(horas).toBeGreaterThan(47.9);
+      expect(horas).toBeLessThan(48.1);
+    });
+
+    it('quien si decide no queda con callback programado', async () => {
+      const datos = await cerrarCon([A('A20', 'Sí')], 5);
+      expect(datos.fecha_callback).toBeUndefined();
+    });
+
+    it('la zona rural sin senal se registra sin descartar al prospecto', async () => {
+      const datos = await cerrarCon(
+        [A('A20', 'Sí'), A('A13', 'No, zona rural sin señal')],
+        13,
+      );
+
+      expect(datos.conectividad_limitada).toBe(true);
+      expect(datos.clasificacion).toBe('caliente');
+      expect(datos.accion_siguiente).toBe('VISITA_PRESENCIAL');
+    });
+
+    it('la conectividad estable no marca la condicion', async () => {
+      const datos = await cerrarCon(
+        [A('A20', 'Sí'), A('A13', 'Sí, estable')],
+        13,
+      );
+      expect(datos.conectividad_limitada).toBe(false);
+    });
+
+    it('la mortalidad ambiental repetida marca senal caliente', async () => {
+      const datos = await cerrarCon(
+        [A('A20', 'Sí'), A('A16', 'Sí, más de una vez')],
+        8,
+      );
+      expect(datos.senal_caliente).toBe(true);
+    });
+
+    it('una problematica descrita en texto libre tambien marca senal caliente', async () => {
+      const datos = await cerrarCon(
+        [A('A20', 'Sí'), A('A16', 'No'), A('A14', 'Se me mueren por calor')],
+        8,
+      );
+      expect(datos.senal_caliente).toBe(true);
+    });
+
+    it('sin dolor declarado no se marca senal caliente', async () => {
+      const datos = await cerrarCon(
+        [A('A20', 'Sí'), A('A16', 'No'), A('A14', '   ')],
+        8,
+      );
+      expect(datos.senal_caliente).toBe(false);
+    });
+  });
+
+  describe('bloque B: consultas frecuentes y radicacion', () => {
+    const cerrarB = async (respuestas: Array<[string, string]>) => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ codigo: 'BP1', bloque: 'B', siguiente: 'FIN' }),
+      );
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: null },
+      });
+      prisma.respuestaChatbot.findMany.mockResolvedValue(
+        respuestas.map(([codigo, texto]) => ({
+          bloque: 'B',
+          codigo_pregunta: codigo,
+          respuesta_texto: texto,
+        })),
+      );
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Sí',
+      });
+    };
+
+    it('una consulta atendida no genera ticket', async () => {
+      await cerrarB([['B1', 'Petición']]);
+
+      expect(prisma.solicitudPqrs.create).not.toHaveBeenCalled();
+      expect(ultimosDatos(prisma.prospecto.update).estado).toBe(
+        'consulta_atendida',
+      );
+    });
+
+    it('radica solo cuando la persona pidio registrar el caso', async () => {
+      await cerrarB([
+        ['B1', 'Reclamo'],
+        ['B2', 'Sensores sin datos'],
+        ['B3', 'Llevan dos dias sin reportar'],
+      ]);
+
+      expect(prisma.solicitudPqrs.create).toHaveBeenCalled();
+      const datos = datosDe(prisma.solicitudPqrs.create);
+      expect(datos.categoria).toBe('Reclamo');
+      expect(datos.asunto).toBe('Sensores sin datos');
+      expect(datos.estado).toBe('abierta');
+      expect(ultimosDatos(prisma.prospecto.update).estado).toBe('pqrs');
+    });
+
+    it('no puntua ni clasifica comercialmente una consulta', async () => {
+      await cerrarB([['B1', 'Queja'], ['B2', 'x'], ['B3', 'y']]);
+
+      const datos = ultimosDatos(prisma.prospecto.update);
+      expect(datos.puntaje_total).toBeUndefined();
+      expect(datos.accion_siguiente).toBeUndefined();
+    });
+  });
+
+  describe('cotizacion automatica al cerrar', () => {
+    const cerrar = async (respuestas: Array<[string, string]>, puntaje = 13) => {
+      // El flujo pasa por la pantalla de confirmacion antes de cerrar.
+      prisma.prospecto.findUnique.mockResolvedValue({
+        ...enCurso,
+        pregunta_actual: 'CONFIRMAR',
+      });
+      prisma.respuestaChatbot.aggregate.mockResolvedValue({
+        _sum: { puntaje_obtenido: puntaje },
+      });
+      prisma.respuestaChatbot.findMany.mockResolvedValue(
+        respuestas.map(([codigo, texto]) => ({
+          bloque: 'A',
+          codigo_pregunta: codigo,
+          respuesta_texto: texto,
+        })),
+      );
+
+      return (await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Sí',
+      })) as {
+        finalizado: boolean;
+        clasificacion: string | null;
+        cotizacion: { codigo: string } | null;
+      };
+    };
+
+    it('la genera sola cuando el prospecto queda calificado', async () => {
+      const r = await cerrar([['A20', 'Sí']]);
+
+      expect(cotizaciones.generar).toHaveBeenCalledWith(enCurso.id, {});
+      expect(r.cotizacion).toEqual(
+        expect.objectContaining({ codigo: 'COT-1-ABC' }),
+      );
+    });
+
+    it('no la genera para quien queda en callback: no se le prometio', async () => {
+      const r = await cerrar([['A20', 'No']]);
+
+      expect(cotizaciones.generar).not.toHaveBeenCalled();
+      expect(r.cotizacion).toBeNull();
+    });
+
+    it('un fallo al cotizar no tumba el cierre de la conversacion', async () => {
+      cotizaciones.generar.mockRejectedValue(new Error('catalogo vacio'));
+
+      const r = await cerrar([['A20', 'Sí']]);
+
+      expect(r.finalizado).toBe(true);
+      expect(r.clasificacion).toBe('caliente');
+      expect(r.cotizacion).toBeNull();
+    });
+  });
+
+  describe('rangos de area', () => {
+    const responderRango = async (opciones: string[], respuesta: string) => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'A5',
+          tipo: 'opcion_unica',
+          opciones,
+          campo_prospecto: 'area_granja_m2',
+          siguiente: 'A6',
+        }),
+      );
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta,
+      });
+
+      return datosDe(prisma.prospecto.update).area_granja_m2;
+    };
+
+    it('guarda el punto medio del rango elegido', async () => {
+      const valor = await responderRango(
+        ['Menos de 500 m²', '500 - 2.000 m²'],
+        '500 - 2.000 m²',
+      );
+      expect(valor).toBe(1250);
+    });
+
+    it('respeta los separadores de miles', async () => {
+      const valor = await responderRango(
+        ['2.000 - 10.000 m²', 'Otro, lo escribo'],
+        '2.000 - 10.000 m²',
+      );
+      expect(valor).toBe(6000);
+    });
+
+    it('usa el unico numero cuando el rango es abierto', async () => {
+      const valor = await responderRango(
+        ['Menos de 500 m²', 'Más de 10.000 m²'],
+        'Menos de 500 m²',
+      );
+      expect(valor).toBe(500);
+    });
+
+    it('no convierte cuando el usuario escribe el numero a mano', async () => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'A5B',
+          tipo: 'numero',
+          opciones: null,
+          campo_prospecto: 'area_granja_m2',
+          siguiente: 'A6',
+        }),
+      );
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: '1200,5',
+      });
+
+      expect(datosDe(prisma.prospecto.update).area_granja_m2).toBe(1200.5);
+    });
+  });
+
+  describe('correccion selectiva de datos', () => {
+    const enConfirmar = { ...enCurso, pregunta_actual: 'CONFIRMAR' };
+
+    it('ofrece elegir el dato en vez de rehacer el cuestionario', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue(enConfirmar);
+
+      const r = await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'No, corregir datos',
+      });
+
+      expect(r.pregunta?.codigo).toBe('CORREGIR');
+      expect(r.pregunta?.opciones).toContain('Municipio');
+      expect(ultimosDatos(prisma.prospecto.update).pregunta_actual).toBe(
+        'CORREGIR',
+      );
+    });
+
+    it('lleva a la pregunta del dato elegido, marcada como correccion', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue({
+        ...enCurso,
+        pregunta_actual: 'CORREGIR',
+      });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({ codigo: 'A4', tipo: 'texto_libre', opciones: null }),
+      );
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Municipio',
+      });
+
+      expect(ultimosDatos(prisma.prospecto.update).pregunta_actual).toBe(
+        'FIX:A4',
+      );
+    });
+
+    it('rechaza un dato que no esta en la lista', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue({
+        ...enCurso,
+        pregunta_actual: 'CORREGIR',
+      });
+
+      await expect(
+        service.responder({
+          sesion_id: enCurso.sesion_id,
+          respuesta: 'lo que sea',
+        }),
+      ).rejects.toThrow(/Elige uno de los datos/);
+    });
+
+    it('tras corregir vuelve al resumen y no sigue el cuestionario', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue({
+        ...enCurso,
+        pregunta_actual: 'FIX:A4',
+      });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'A4',
+          tipo: 'texto_libre',
+          opciones: null,
+          campo_prospecto: 'municipio',
+          siguiente: 'A5',
+        }),
+      );
+
+      const r = await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Piendamo',
+      });
+
+      expect(r.pregunta?.codigo).toBe('CONFIRMAR');
+      const datos = ultimosDatos(prisma.prospecto.update);
+      expect(datos.pregunta_actual).toBe('CONFIRMAR');
+      expect(datos.municipio).toBe('Piendamo');
     });
   });
 });

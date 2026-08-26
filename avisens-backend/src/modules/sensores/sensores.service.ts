@@ -8,8 +8,8 @@ import { CreateSensorDto } from './dto/create-sensor.dto';
 import { UpdateSensorDto } from './dto/update-sensor.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/acceso';
-import type { Solicitante } from '../../common/acceso';
+import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import type { Solicitante } from '../../common/auth/acceso';
 
 const SENSOR_SELECT = {
   id: true,
