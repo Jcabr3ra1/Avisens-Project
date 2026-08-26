@@ -71,7 +71,7 @@
 
 .footer-top {
   display: grid;
-  grid-template-columns: minmax(280px, 2fr) repeat(3, minmax(130px, 1fr));
+  grid-template-columns: minmax(280px, 2fr) repeat(2, minmax(130px, 1fr));
   gap: clamp(2rem, 5vw, 4rem);
   margin-bottom: clamp(2.25rem, 4vw, 3rem);
 }

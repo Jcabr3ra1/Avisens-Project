@@ -11,7 +11,6 @@ function LoginForm() {
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [remember, setRemember] = useState(true)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -53,19 +52,14 @@ function LoginForm() {
   return (
     <div className="lf-card">
       <div className="lf-header">
-        <span className="lf-kicker">Ingreso seguro</span>
-        <h1 className="lf-title">Bienvenido a AVISENS</h1>
-        <p className="lf-sub">Entre con su cuenta o use un perfil de prueba para conocer la plataforma.</p>
+        <h1 className="lf-title">Entrar a AVISENS</h1>
+        <p className="lf-sub">Use el correo y la contraseña de su cuenta.</p>
       </div>
 
       <form className="lf-form" onSubmit={handleSubmit} noValidate>
         <div className="lf-field">
           <label className="lf-label" htmlFor="email">Correo electrónico</label>
           <div className="lf-input-wrap">
-            <svg className="lf-input-ic" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 6h16v12H4z" />
-              <path d="m4 7 8 6 8-6" />
-            </svg>
             <input
               id="email"
               className="lf-input"
@@ -83,10 +77,6 @@ function LoginForm() {
         <div className="lf-field">
           <label className="lf-label" htmlFor="password">Contraseña</label>
           <div className="lf-input-wrap">
-            <svg className="lf-input-ic" viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="5" y="10" width="14" height="10" rx="2" />
-              <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-            </svg>
             <input
               id="password"
               className="lf-input lf-input-password"
@@ -126,19 +116,11 @@ function LoginForm() {
         {error && <p id="lf-error-msg" className="lf-error" role="alert">{error}</p>}
 
         <div className="lf-row">
-          <label className="lf-check">
-            <input
-              type="checkbox"
-              checked={remember}
-              onChange={e => setRemember(e.target.checked)}
-            />
-            <span>Recordarme en este equipo</span>
-          </label>
           <a className="lf-link" href="#recuperar">¿Olvidó su contraseña?</a>
         </div>
 
         <button className="lf-btn-primary" type="submit" disabled={loading} aria-busy={loading}>
-          {loading ? <span className="lf-spinner" aria-hidden="true" /> : 'Entrar a mi granja'}
+          {loading ? <span className="lf-spinner" aria-hidden="true" /> : 'Entrar'}
         </button>
       </form>
 
