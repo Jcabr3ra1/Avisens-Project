@@ -1,54 +1,53 @@
-# CI de Avisens — la "restricción" que obliga a que el código demuestre que
-# funciona. Corre en cada push a main y en cada Pull Request.
-#
-# Gates (si alguno falla, el push queda marcado en rojo en GitHub):
-#   Backend  → prisma generate · tsc --noEmit · eslint · jest (con cobertura)
-#   Frontend → build (tsc + vite)
-#
-# Las pruebas mockean Prisma, así que NO necesitan base de datos en el CI.
 name: CI
-
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-
+    branches: [main, develop]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   backend:
-    name: Backend · tsc · lint · tests
+    name: Backend · quality + integration
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: avisens
+          POSTGRES_PASSWORD: avisens_ci
+          POSTGRES_DB: avisens_test
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U avisens -d avisens_test" --health-interval 5s --health-timeout 5s --health-retries 10
     defaults:
       run:
         working-directory: avisens-backend
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://avisens:avisens_ci@localhost:5432/avisens_test
+      JWT_SECRET: ci-access-secret-at-least-32-characters
+      JWT_REFRESH_SECRET: ci-refresh-secret-at-least-32-characters
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
           version: 11.17.0
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: avisens-backend/pnpm-lock.yaml
-
-      # El postinstall genera el cliente Prisma; prisma.config.ts exige
-      # DATABASE_URL (generate no se conecta a la base).
-      - name: Instalar dependencias
-        run: pnpm install --frozen-lockfile
-        env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
-
-      - name: Typecheck (tsc)
-        run: pnpm exec tsc --noEmit
-
-      - name: Lint (eslint, cero warnings)
-        run: pnpm exec eslint src --max-warnings 0
-
-      - name: Pruebas + cobertura (jest)
-        run: pnpm exec jest --coverage --coverageReporters=text-summary
-
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma migrate deploy
+      - run: pnpm exec prisma validate
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm exec eslint "{src,test}/**/*.ts" --max-warnings 0
+      - run: pnpm run test:unit
+      - run: pnpm run test:e2e
+      - run: pnpm run build
   frontend:
     name: Frontend · build
     runs-on: ubuntu-latest
@@ -57,15 +56,10 @@ jobs:
         working-directory: avisens-frontend
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: avisens-frontend/package-lock.json
-
-      - name: Instalar dependencias
-        run: npm ci
-
-      - name: Build (tsc + vite)
-        run: npm run build
+      - run: npm ci
+      - run: npm run build
