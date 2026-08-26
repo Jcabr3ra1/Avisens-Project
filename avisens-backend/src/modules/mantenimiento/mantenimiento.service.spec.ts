@@ -1,8 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { MantenimientoService } from './mantenimiento.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMantenimientoDto } from './dto/create-mantenimiento.dto';
+import { Prisma, TipoMovimientoInventario } from '@prisma/client';
 
 describe('MantenimientoService', () => {
   let service: MantenimientoService;
@@ -19,6 +24,17 @@ describe('MantenimientoService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    mantenimientoRepuesto: {
+      count: jest.fn(),
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    inventarioInsumo: { findUnique: jest.fn(), update: jest.fn() },
+    movimientoInventario: { create: jest.fn() },
+    $queryRaw: jest.fn(),
     $transaction: jest.fn(),
   };
 
@@ -62,6 +78,7 @@ describe('MantenimientoService', () => {
       galpon: {
         granja: {
           propietario_id: 5,
+          id: 10,
         },
       },
     });
@@ -70,17 +87,25 @@ describe('MantenimientoService', () => {
       id: 1,
       equipo_id: 1,
       tipo: 'Preventivo',
+      estado: 'programado',
       fecha_programada: new Date('2026-08-25T10:00:00Z'),
       equipo: {
         galpon: {
           granja: {
+            id: 10,
             propietario_id: 5,
           },
         },
       },
+      repuestos: [],
     });
 
-    prisma.$transaction.mockResolvedValue([[], 0]);
+    prisma.mantenimientoRepuesto.count.mockResolvedValue(0);
+    prisma.$transaction.mockImplementation((operacion: unknown) =>
+      typeof operacion === 'function'
+        ? (operacion as (tx: typeof prisma) => unknown)(prisma)
+        : Promise.resolve([[], 0]),
+    );
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -195,6 +220,10 @@ describe('MantenimientoService', () => {
                 },
               },
             },
+          },
+          repuestos: {
+            include: { insumo: true },
+            orderBy: { id: 'asc' },
           },
         },
       });
@@ -362,6 +391,147 @@ describe('MantenimientoService', () => {
       );
 
       expect(prisma.mantenimiento.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('repuestos', () => {
+    it('descuenta stock y registra el movimiento de salida', async () => {
+      prisma.mantenimientoRepuesto.findUnique.mockResolvedValue(null);
+      prisma.inventarioInsumo.findUnique.mockResolvedValue({
+        id: 4,
+        granja_id: 10,
+        unidad_medida: 'unidad',
+        activo: true,
+      });
+      prisma.$queryRaw.mockResolvedValueOnce([
+        { stock_actual: new Prisma.Decimal(8) },
+      ]);
+      prisma.movimientoInventario.create.mockResolvedValue({ id: 30 });
+      prisma.mantenimientoRepuesto.create.mockResolvedValue({ id: 40 });
+
+      const resultado = await service.agregarRepuesto(
+        1,
+        {
+          insumo_id: 4,
+          cantidad: 2,
+          clave_idempotencia: 'rep-1',
+        },
+        propietario,
+      );
+
+      expect(resultado.idempotente).toBe(false);
+      expect(prisma.inventarioInsumo.update).toHaveBeenCalledWith({
+        where: { id: 4 },
+        data: { stock_actual: new Prisma.Decimal(6) },
+      });
+      const llamadas = prisma.movimientoInventario.create.mock.calls as Array<
+        [{ data: Record<string, unknown> }]
+      >;
+      expect(llamadas[0][0].data.tipo_movimiento).toBe(
+        TipoMovimientoInventario.salida,
+      );
+    });
+
+    it('no descuenta dos veces al repetir la clave', async () => {
+      prisma.mantenimientoRepuesto.findUnique.mockResolvedValue({
+        id: 40,
+        insumo_id: 4,
+        cantidad: new Prisma.Decimal(2),
+      });
+
+      const resultado = await service.agregarRepuesto(
+        1,
+        {
+          insumo_id: 4,
+          cantidad: 2,
+          clave_idempotencia: 'rep-1',
+        },
+        propietario,
+      );
+
+      expect(resultado.idempotente).toBe(true);
+      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+      expect(prisma.inventarioInsumo.update).not.toHaveBeenCalled();
+    });
+
+    it('rechaza repuestos de otra granja', async () => {
+      prisma.mantenimientoRepuesto.findUnique.mockResolvedValue(null);
+      prisma.inventarioInsumo.findUnique.mockResolvedValue({
+        id: 4,
+        granja_id: 99,
+        unidad_medida: 'unidad',
+        activo: true,
+      });
+
+      await expect(
+        service.agregarRepuesto(
+          1,
+          {
+            insumo_id: 4,
+            cantidad: 2,
+            clave_idempotencia: 'rep-1',
+          },
+          propietario,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rechaza el consumo si no hay stock suficiente', async () => {
+      prisma.mantenimientoRepuesto.findUnique.mockResolvedValue(null);
+      prisma.inventarioInsumo.findUnique.mockResolvedValue({
+        id: 4,
+        granja_id: 10,
+        unidad_medida: 'unidad',
+        activo: true,
+      });
+      prisma.$queryRaw.mockResolvedValueOnce([
+        { stock_actual: new Prisma.Decimal(1) },
+      ]);
+
+      await expect(
+        service.agregarRepuesto(
+          1,
+          {
+            insumo_id: 4,
+            cantidad: 2,
+            clave_idempotencia: 'rep-1',
+          },
+          propietario,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.movimientoInventario.create).not.toHaveBeenCalled();
+    });
+
+    it('revertir restaura stock y conserva trazabilidad', async () => {
+      prisma.mantenimientoRepuesto.findFirst.mockResolvedValue({ id: 40 });
+      prisma.$queryRaw
+        .mockResolvedValueOnce([
+          {
+            id: 40,
+            insumo_id: 4,
+            cantidad: new Prisma.Decimal(2),
+            unidad_medida: 'unidad',
+            revertido: false,
+          },
+        ])
+        .mockResolvedValueOnce([{ stock_actual: new Prisma.Decimal(6) }]);
+      prisma.movimientoInventario.create.mockResolvedValue({ id: 31 });
+      prisma.mantenimientoRepuesto.update.mockResolvedValue({
+        id: 40,
+        revertido: true,
+      });
+
+      await service.revertirRepuesto(1, 40, propietario);
+
+      expect(prisma.inventarioInsumo.update).toHaveBeenCalledWith({
+        where: { id: 4 },
+        data: { stock_actual: new Prisma.Decimal(8) },
+      });
+      expect(prisma.mantenimientoRepuesto.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { revertido: true, movimiento_reversion_id: 31 },
+        }),
+      );
     });
   });
 });

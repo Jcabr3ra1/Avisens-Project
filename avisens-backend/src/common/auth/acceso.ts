@@ -1,7 +1,11 @@
 import { ForbiddenException } from '@nestjs/common';
 import { ROLES } from './roles';
 
-export type Solicitante = { id: number; rol: string };
+export type Solicitante = {
+  id: number;
+  rol: string;
+  organizacion_id?: number | null;
+};
 
 export function esPropietario(solicitante: Solicitante): boolean {
   return solicitante.rol === ROLES.PROPIETARIO;

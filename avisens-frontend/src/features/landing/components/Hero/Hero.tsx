@@ -21,13 +21,13 @@ function Hero() {
             Controla temperatura, humedad, alertas y decisiones del galpón desde una plataforma diseñada para actuar a tiempo.
           </p>
           <div className="hero-ctas">
-            <a href="#telemetria" className="btn-hero btn-hero-primary">
+            <a href="#cifras" className="btn-hero btn-hero-primary">
               Ver soluciones
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18" aria-hidden="true">
                 <path d="M5 12h14M13 5l7 7-7 7" />
               </svg>
             </a>
-            <a href="#chatbot" className="btn-hero btn-hero-secondary">
+            <a href="mailto:contacto@avisens.com" className="btn-hero btn-hero-secondary">
               Hablar con AVIA
             </a>
           </div>

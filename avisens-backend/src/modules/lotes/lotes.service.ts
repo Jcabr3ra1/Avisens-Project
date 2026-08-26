@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import { verificarDueno } from '../../common/auth/acceso';
 import { Solicitante } from '../../common/auth/acceso';
+import { filtroLotes, verificarAccesoLote } from '../../common/auth/alcance';
 
 const LOTE_SELECT = {
   id: true,
@@ -82,9 +87,7 @@ export class LotesService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { galpon: { granja: { propietario_id: solicitante.id } } }
-      : undefined;
+    const where = filtroLotes(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.lote.findMany({
@@ -106,19 +109,23 @@ export class LotesService {
       select: LOTE_SELECT,
     });
     if (!lote) throw new NotFoundException('Lote no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      id,
       solicitante,
-      lote.galpon.granja.propietario_id,
       'Solo puedes gestionar lotes de tus propios galpones',
+      lote.galpon.granja.propietario_id,
     );
     return lote;
   }
 
   async actualizar(id: number, dto: UpdateLoteDto, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    const actual = await this.obtener(id, solicitante);
 
-    if (dto.galpon_id) {
-      await this.validarGalpon(dto.galpon_id, solicitante);
+    if (dto.galpon_id !== undefined && dto.galpon_id !== actual.galpon.id) {
+      throw new BadRequestException(
+        'No se puede trasladar un lote a otro galpón; crea un lote nuevo para conservar la integridad histórica',
+      );
     }
     if (dto.proveedor_id) {
       await this.validarProveedor(dto.proveedor_id);
@@ -127,7 +134,7 @@ export class LotesService {
     return this.prisma.lote.update({
       where: { id },
       data: {
-        galpon_id: dto.galpon_id,
+        galpon_id: undefined,
         proveedor_id: dto.proveedor_id,
         codigo: dto.codigo,
         fecha_ingreso: dto.fecha_ingreso

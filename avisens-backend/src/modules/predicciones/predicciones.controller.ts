@@ -24,12 +24,13 @@ interface AuthRequest extends Request {
 @ApiTags('predicciones')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('predicciones')
 export class PrediccionesController {
   constructor(private prediccionesService: PrediccionesService) {}
 
   @Post('lote/:loteId')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary:
       'Generar una prediccion y dejarla registrada (una fila por magnitud proyectada)',

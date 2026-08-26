@@ -33,12 +33,13 @@ interface AuthRequest extends Request {
 @ApiTags('equipos')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('equipos')
 export class EquiposController {
   constructor(private equiposService: EquiposService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Registrar un equipo en un galpón' })
   crear(@Body() dto: CreateEquipoDto, @Req() req: AuthRequest) {
     return this.equiposService.crear(dto, req.user);
@@ -60,6 +61,7 @@ export class EquiposController {
   }
 
   @Patch(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Actualizar un equipo' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -70,6 +72,7 @@ export class EquiposController {
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Eliminar un equipo' })
   eliminar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.equiposService.eliminar(id, req.user);

@@ -34,14 +34,19 @@ PrismaService  → PostgreSQL
 Cualquier error → filtros globales → respuesta JSON uniforme con su código HTTP.
 ```
 
-### Control de acceso (dos niveles)
+### Control de acceso y RBAC
 
-1. **Por rol** — `RolesGuard` + el decorador `@Roles(...)`: quién puede entrar a
-   cada módulo (`Administrador`, `Propietario`, `Operario`).
-2. **Por dueño** — en cada servicio, los ayudantes `esPropietario()` y
-   `verificarDueno()` de `common/acceso.ts`: un **Propietario solo ve/toca lo que
-   cuelga de sus granjas**; un **Administrador** ve todo. El filtro sube por las
-   relaciones hasta `granja.propietario_id`.
+Avisens usa un RBAC híbrido y explícito:
+
+1. `@Roles` conserva las fronteras gruesas de cada módulo para Administrador,
+   Propietario y Operario.
+2. `@Permisos` expresa capacidades reutilizables mediante la matriz tipada de
+   `src/common/auth/permisos.ts`.
+3. Los servicios aplican el alcance por organización, granja y galpón; un
+   permiso nunca concede acceso a datos de otro tenant.
+
+El seed sincroniza la matriz con `permisos` y `roles_permisos` para auditoría.
+Esta versión no permite crear roles dinámicos desde la API.
 
 ---
 
@@ -80,20 +85,21 @@ modules/sensores/
 
 ### Módulos
 
-| Módulo | Qué gestiona |
-|---|---|
-| `auth` | Login, JWT + refresh token, sesiones y bloqueo por intentos fallidos |
-| `usuarios` | Usuarios y roles (RBAC) |
-| `granjas` | Granjas de un propietario |
-| `galpones` | Galpones de una granja |
-| `dispositivos` | Nodos ESP32 (con su token de ingesta) |
-| `sensores` | Sensores ambientales de un galpón |
-| `mediciones` | Lecturas de los sensores (serie de tiempo) |
-| `umbrales` | Rangos aceptables por variable/semana, versionados |
-| `proveedores` | Proveedores de insumos |
-| `insumos` | Inventario de insumos (stock) |
-| `ingest` | Ingesta de lecturas desde el ESP32 (auth por token de dispositivo) |
-| `health` | Chequeo de estado del servicio |
+| Módulo         | Qué gestiona                                                         |
+| -------------- | -------------------------------------------------------------------- |
+| `auth`         | Login, JWT + refresh token, sesiones y bloqueo por intentos fallidos |
+| `usuarios`     | Usuarios y roles (RBAC)                                              |
+| `granjas`      | Granjas de un propietario                                            |
+| `galpones`     | Galpones de una granja                                               |
+| `dispositivos` | Nodos ESP32 (con su token de ingesta)                                |
+| `sensores`     | Sensores ambientales de un galpón                                    |
+| `mediciones`   | Lecturas de los sensores (serie de tiempo)                           |
+| `umbrales`     | Rangos aceptables por variable/semana, versionados                   |
+| `proveedores`  | Proveedores de insumos                                               |
+| `insumos`      | Inventario de insumos (stock)                                        |
+| `ingest`       | Ingesta de lecturas desde el ESP32 (auth por token de dispositivo)   |
+| `health`       | Liveness y readiness de PostgreSQL/Redis                             |
+| `metrics`      | Métricas operativas en formato Prometheus                            |
 
 ---
 
@@ -147,9 +153,31 @@ JWT_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=...      # secreto del refresh token (distinto)
 JWT_REFRESH_EXPIRES_IN=7d
 CORS_ORIGIN=http://localhost:8080
+REDIS_HOST=localhost
+REDIS_PORT=6379
+JOBS_ENABLED=true            # false en réplicas que no deben ejecutar cron
+JOB_HISTORY_DAYS=30
+IOT_IDEMPOTENCY_DAYS=30
 ```
 
 La configuración se valida al arrancar: si falta un secreto, la app no inicia.
+
+### Operación e ingesta IoT
+
+- `GET /health/live` comprueba el proceso; `GET /health/ready` y `GET /health`
+  comprueban PostgreSQL y Redis.
+- `GET /metrics` expone contadores Prometheus. Cada respuesta incluye
+  `X-Request-Id` para correlacionar solicitudes con los logs JSON.
+- `POST /ingest` acepta como máximo 100 lecturas. El ESP32 debería enviar
+  `id_lote` (UUID) y reutilizarlo en sus reintentos; así la API devuelve el
+  resultado anterior sin duplicar mediciones. Durante la transición, los nodos
+  que todavía no lo envían continúan funcionando, aunque sin deduplicación.
+- Los tokens de dispositivo solo se revelan al crearlos o regenerarlos. En la
+  base se conserva su hash SHA-256; los tokens antiguos migran al primer uso.
+- Las ejecuciones programadas se coordinan en PostgreSQL por nombre y ventana,
+  de modo que varias réplicas no procesen el mismo job simultáneamente.
+- Un job diario elimina bitácoras e idempotencias vencidas según los periodos
+  configurados, evitando crecimiento indefinido de las tablas operativas.
 
 ---
 

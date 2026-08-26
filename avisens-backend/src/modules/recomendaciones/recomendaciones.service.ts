@@ -1,7 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { IndicadoresService } from '../indicadores/indicadores.service';
-import { verificarDueno, Solicitante } from '../../common/auth/acceso';
+import { Solicitante } from '../../common/auth/acceso';
+import {
+  esAdministrador,
+  verificarAccesoGalpon,
+  verificarAccesoLote,
+} from '../../common/auth/alcance';
 
 const UMBRAL_COSTO_KG = 4000;
 
@@ -35,10 +44,12 @@ export class RecomendacionesService {
       },
     });
     if (!lote) throw new NotFoundException('Lote no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      loteId,
       solicitante,
-      lote.galpon.granja.propietario_id,
       'Solo puedes gestionar recomendaciones de tus propios lotes',
+      lote.galpon.granja.propietario_id,
     );
     return lote;
   }
@@ -124,6 +135,8 @@ export class RecomendacionesService {
       where: { id },
       select: {
         id: true,
+        lote_id: true,
+        galpon_id: true,
         lote: {
           select: {
             galpon: {
@@ -134,11 +147,24 @@ export class RecomendacionesService {
       },
     });
     if (!rec) throw new NotFoundException('Recomendacion no encontrada');
-    if (rec.lote) {
-      verificarDueno(
+    if (rec.lote && rec.lote_id) {
+      await verificarAccesoLote(
+        this.prisma,
+        rec.lote_id,
         solicitante,
-        rec.lote.galpon.granja.propietario_id,
         'Solo puedes resolver recomendaciones de tus propios lotes',
+        rec.lote.galpon.granja.propietario_id,
+      );
+    } else if (rec.galpon_id !== null) {
+      await verificarAccesoGalpon(
+        this.prisma,
+        rec.galpon_id,
+        solicitante,
+        'No tienes acceso a recomendaciones de este galpón',
+      );
+    } else if (!esAdministrador(solicitante)) {
+      throw new ForbiddenException(
+        'No tienes acceso a recomendaciones sin un galpón asociado',
       );
     }
     return this.prisma.recomendacion.update({

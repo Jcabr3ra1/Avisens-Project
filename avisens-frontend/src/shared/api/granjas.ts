@@ -10,10 +10,9 @@ export interface Granja {
   latitud: number | null
   longitud: number | null
   area_total_m2: number | null
+  propietario_id: number
   activa: boolean
   fecha_creacion: string
-  // El backend anida el dueño — no manda un `propietario_id` plano.
-  propietario: { id: number; nombre_completo: string }
 }
 
 export interface CrearGranjaPayload {

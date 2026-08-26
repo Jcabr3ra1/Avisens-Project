@@ -5,26 +5,18 @@ export interface Insumo {
   id: number
   nombre: string
   tipo: string | null
-  unidad_medida: string
-  stock_actual: number
-  stock_minimo: number
-  precio_unitario_cop: number | null
-  proveedor_habitual_id: number | null
-  ubicacion_almacen: string | null
-  fecha_vencimiento: string | null
+  unidad_medida: string | null
+  stock_actual: number | null
+  stock_minimo: number | null
   activo: boolean
 }
 
 export interface CrearInsumoPayload {
   nombre: string
-  unidad_medida: string
   tipo?: string
+  unidad_medida?: string
   stock_actual?: number
   stock_minimo?: number
-  precio_unitario_cop?: number
-  proveedor_habitual_id?: number
-  ubicacion_almacen?: string
-  fecha_vencimiento?: string
 }
 
 export type ActualizarInsumoPayload = Partial<CrearInsumoPayload> & {

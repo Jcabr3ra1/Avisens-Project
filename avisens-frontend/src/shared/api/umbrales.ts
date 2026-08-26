@@ -1,62 +1,32 @@
 import { api } from './client'
 import type { PaginatedResponse } from './types'
 
-// El backend versiona el umbral por (galpón, variable, semana de vida) — no por
-// sensor. Ojo: `variable` hoy solo admite 'temperatura' | 'humedad' | 'luminosidad'
-// (ver umbral-constantes.ts del backend) — CO₂ y NH₃ todavía no tienen umbral
-// configurable ahí.
-export const VARIABLES_UMBRAL = ['temperatura', 'humedad', 'luminosidad'] as const
-export const CRITICIDADES_UMBRAL = ['baja', 'media', 'alta', 'critica'] as const
-
-export interface GalponResumenUmbral {
-  id: number
-  nombre: string
-  granja: { id: number; propietario_id: number }
-}
-
 export interface Umbral {
   id: number
-  galpon_id: number
-  variable: string
-  semana_vida: number
-  valor_minimo: number
-  valor_maximo: number
-  unidad: string
-  criticidad: string
-  vigente: boolean
+  sensor_id: number
+  galpon_id?: number
+  variable?: string
+  semana_vida?: number
+  valor_min: number | null
+  valor_max: number | null
+  valor_minimo?: number | null
+  valor_maximo?: number | null
   version: number
+  vigente: boolean
   fecha_creacion: string
-  galpon: GalponResumenUmbral
 }
 
 export interface CrearUmbralPayload {
-  galpon_id: number
-  variable: string
-  semana_vida: number
-  valor_minimo: number
-  valor_maximo: number
-  unidad: string
-  criticidad: string
-}
-
-export interface RevisarUmbralPayload {
-  valor_minimo?: number
-  valor_maximo?: number
-  unidad?: string
-  criticidad?: string
-}
-
-export interface ListarUmbralesQuery {
-  galpon_id?: number
-  variable?: string
-  incluir_historico?: boolean
+  sensor_id: number
+  valor_min?: number
+  valor_max?: number
 }
 
 export async function listarUmbrales(
-  query: ListarUmbralesQuery = {},
+  incluirHistorico = false,
 ): Promise<Umbral[]> {
   const { data } = await api.get<PaginatedResponse<Umbral>>('/umbrales', {
-    params: query,
+    params: { incluir_historico: incluirHistorico },
   })
   return data.data
 }
@@ -71,10 +41,9 @@ export async function crearUmbral(payload: CrearUmbralPayload): Promise<Umbral> 
   return data
 }
 
-// Crea una nueva versión vigente y jubila la anterior (versionado, no update in-place).
 export async function revisarUmbral(
   id: number,
-  payload: RevisarUmbralPayload,
+  payload: Partial<CrearUmbralPayload>,
 ): Promise<Umbral> {
   const { data } = await api.patch<Umbral>(`/umbrales/${id}/revisar`, payload)
   return data

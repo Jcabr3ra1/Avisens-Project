@@ -17,5 +17,7 @@ venv
 .git
 .gitignore
 *.md
+requirements-dev.txt
+test_*.py
 Dockerfile
 .dockerignore

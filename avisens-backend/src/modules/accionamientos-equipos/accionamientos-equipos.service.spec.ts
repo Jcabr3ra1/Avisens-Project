@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { AccionamientosEquiposService } from './accionamientos-equipos.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAccionamientoEquipoDto } from './dto/create-accionamientos-equipos.dto';
@@ -18,6 +22,7 @@ describe('AccionamientosEquiposService', () => {
       delete: jest.fn(),
     },
     equipo: {
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
     },
@@ -29,6 +34,7 @@ describe('AccionamientosEquiposService', () => {
 
   const admin = { id: 1, rol: 'Administrador', organizacion_id: 1 };
   const propietario = { id: 5, rol: 'Propietario', organizacion_id: 1 };
+  const operario = { id: 8, rol: 'Operario', organizacion_id: 1 };
 
   const dtoCrear: CreateAccionamientoEquipoDto = {
     equipo_id: 1,
@@ -64,7 +70,9 @@ describe('AccionamientosEquiposService', () => {
       ],
     }).compile();
 
-    service = module.get<AccionamientosEquiposService>(AccionamientosEquiposService);
+    service = module.get<AccionamientosEquiposService>(
+      AccionamientosEquiposService,
+    );
 
     prisma.$transaction.mockResolvedValue([[], 0]);
 
@@ -78,6 +86,7 @@ describe('AccionamientosEquiposService', () => {
         },
       },
     });
+    prisma.equipo.findFirst.mockResolvedValue({ id: 1 });
 
     prisma.alerta.findUnique.mockResolvedValue({
       id: 1,
@@ -181,6 +190,17 @@ describe('AccionamientosEquiposService', () => {
 
       expect(dataDe(prisma.accionamientoEquipo.create)).toMatchObject({
         usuario_id: 5,
+      });
+    });
+
+    it('fuerza origen manual y registra al Operario autenticado', async () => {
+      prisma.accionamientoEquipo.create.mockResolvedValue({ id: 1 });
+
+      await service.crear({ equipo_id: 1, origen: 'automatico' }, operario);
+
+      expect(dataDe(prisma.accionamientoEquipo.create)).toMatchObject({
+        origen: 'manual',
+        usuario_id: operario.id,
       });
     });
 
@@ -289,7 +309,7 @@ describe('AccionamientosEquiposService', () => {
         expect.objectContaining({
           skip: 5,
           take: 5,
-        })
+        }),
       );
     });
 
@@ -299,7 +319,7 @@ describe('AccionamientosEquiposService', () => {
       expect(prisma.accionamientoEquipo.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           orderBy: { fecha_inicio: 'desc' },
-        })
+        }),
       );
     });
   });
@@ -484,7 +504,7 @@ describe('AccionamientosEquiposService', () => {
       expect(prisma.accionamientoEquipo.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { equipo_id: 1 },
-        })
+        }),
       );
     });
 
@@ -500,7 +520,7 @@ describe('AccionamientosEquiposService', () => {
       });
 
       await expect(
-        service.obtenerPorEquipo(1, propietario, { page: 1, limit: 10 })
+        service.obtenerPorEquipo(1, propietario, { page: 1, limit: 10 }),
       ).rejects.toThrow(ForbiddenException);
       expect(prisma.accionamientoEquipo.findMany).not.toHaveBeenCalled();
     });
@@ -524,7 +544,7 @@ describe('AccionamientosEquiposService', () => {
       expect(prisma.accionamientoEquipo.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { alerta_id: 1 },
-        })
+        }),
       );
     });
 
@@ -539,7 +559,7 @@ describe('AccionamientosEquiposService', () => {
       });
 
       await expect(
-        service.obtenerPorAlerta(1, propietario, { page: 1, limit: 10 })
+        service.obtenerPorAlerta(1, propietario, { page: 1, limit: 10 }),
       ).rejects.toThrow(ForbiddenException);
       expect(prisma.accionamientoEquipo.findMany).not.toHaveBeenCalled();
     });

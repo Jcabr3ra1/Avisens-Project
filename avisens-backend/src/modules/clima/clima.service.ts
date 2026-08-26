@@ -5,7 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { verificarDueno, Solicitante } from '../../common/auth/acceso';
+import { Solicitante } from '../../common/auth/acceso';
+import { verificarAccesoGranja } from '../../common/auth/alcance';
 
 interface OpenMeteoResp {
   current?: {
@@ -62,10 +63,12 @@ export class ClimaService {
       select: { id: true, propietario_id: true },
     });
     if (!granja) throw new NotFoundException('Granja no encontrada');
-    verificarDueno(
+    await verificarAccesoGranja(
+      this.prisma,
+      granjaId,
       solicitante,
-      granja.propietario_id,
       'Solo puedes ver el clima de tus propias granjas',
+      granja.propietario_id,
     );
   }
 
@@ -89,10 +92,12 @@ export class ClimaService {
     });
     if (!granja) throw new NotFoundException('Granja no encontrada');
 
-    verificarDueno(
+    await verificarAccesoGranja(
+      this.prisma,
+      granjaId,
       solicitante,
-      granja.propietario_id,
       'Solo puedes traer el clima de tus propias granjas',
+      granja.propietario_id,
     );
 
     const lectura = await this.traerClimaDeGranja(granja);

@@ -33,7 +33,7 @@ interface AuthRequest extends Request {
 @ApiTags('pesajes')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('pesajes')
 export class PesajesController {
   constructor(private pesajesService: PesajesService) {}

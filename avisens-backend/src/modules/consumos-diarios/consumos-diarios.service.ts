@@ -4,11 +4,11 @@ import { CreateConsumoDiarioDto } from './dto/create-consumo-diario.dto';
 import { UpdateConsumoDiarioDto } from './dto/update-consumo-diario.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
+import { Solicitante } from '../../common/auth/acceso';
 import {
-  esPropietario,
-  verificarDueno,
-  Solicitante,
-} from '../../common/auth/acceso';
+  filtroRegistrosDeLote,
+  verificarAccesoLote,
+} from '../../common/auth/alcance';
 
 const CONSUMO_SELECT = {
   id: true,
@@ -45,10 +45,12 @@ export class ConsumosDiariosService {
     });
 
     if (!lote) throw new NotFoundException('Lote no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      loteId,
       solicitante,
-      lote.galpon.granja.propietario_id,
       'Solo puedes registrar consumos de tus propios lotes',
+      lote.galpon.granja.propietario_id,
     );
   }
 
@@ -82,9 +84,7 @@ export class ConsumosDiariosService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { lote: { galpon: { granja: { propietario_id: solicitante.id } } } }
-      : undefined;
+    const where = filtroRegistrosDeLote(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.consumoDiario.findMany({
@@ -107,10 +107,12 @@ export class ConsumosDiariosService {
     });
 
     if (!consumo) throw new NotFoundException('Consumo diario no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      consumo.lote_id,
       solicitante,
-      consumo.lote.galpon.granja.propietario_id,
       'Solo puedes ver consumos de tus propios lotes',
+      consumo.lote.galpon.granja.propietario_id,
     );
     return consumo;
   }

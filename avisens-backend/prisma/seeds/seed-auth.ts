@@ -1,5 +1,6 @@
 import * as bcrypt from 'bcrypt';
 import type { PrismaClient } from '@prisma/client';
+import { PERMISOS_POR_ROL } from '../../src/common/auth/permisos';
 
 export async function sembrarRoles(prisma: PrismaClient) {
   const rolAdmin = await prisma.rol.upsert({
@@ -10,16 +11,40 @@ export async function sembrarRoles(prisma: PrismaClient) {
       descripcion: 'Control total del sistema',
     },
   });
-  await prisma.rol.upsert({
+  const rolPropietario = await prisma.rol.upsert({
     where: { nombre: 'Propietario' },
     update: {},
     create: { nombre: 'Propietario', descripcion: 'Gestiona sus granjas' },
   });
-  await prisma.rol.upsert({
+  const rolOperario = await prisma.rol.upsert({
     where: { nombre: 'Operario' },
     update: {},
     create: { nombre: 'Operario', descripcion: 'Registra datos de su galpón' },
   });
+
+  for (const rol of [rolAdmin, rolPropietario, rolOperario]) {
+    for (const codigo of PERMISOS_POR_ROL[rol.nombre] ?? []) {
+      const permiso = await prisma.permiso.upsert({
+        where: { codigo },
+        update: { activo: true },
+        create: {
+          codigo,
+          modulo: codigo.split(':')[0],
+          descripcion: `Permiso RBAC ${codigo}`,
+        },
+      });
+      await prisma.rolPermiso.upsert({
+        where: {
+          rol_id_permiso_id: {
+            rol_id: rol.id,
+            permiso_id: permiso.id,
+          },
+        },
+        update: {},
+        create: { rol_id: rol.id, permiso_id: permiso.id },
+      });
+    }
+  }
   return rolAdmin;
 }
 

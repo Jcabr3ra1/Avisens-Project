@@ -29,7 +29,7 @@ interface AuthRequest extends Request {
 @ApiTags('accionamientos-equipos')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('accionamientos-equipos')
 export class AccionamientosEquiposController {
   constructor(private accionamientosService: AccionamientosEquiposService) {}
@@ -64,7 +64,11 @@ export class AccionamientosEquiposController {
     @Query() paginacion: PaginationQueryDto,
     @Req() req: AuthRequest,
   ) {
-    return this.accionamientosService.obtenerPorEquipo(equipoId, req.user, paginacion);
+    return this.accionamientosService.obtenerPorEquipo(
+      equipoId,
+      req.user,
+      paginacion,
+    );
   }
 
   @Get('alerta/:alertaId')
@@ -74,7 +78,11 @@ export class AccionamientosEquiposController {
     @Query() paginacion: PaginationQueryDto,
     @Req() req: AuthRequest,
   ) {
-    return this.accionamientosService.obtenerPorAlerta(alertaId, req.user, paginacion);
+    return this.accionamientosService.obtenerPorAlerta(
+      alertaId,
+      req.user,
+      paginacion,
+    );
   }
 
   @Get(':id')
@@ -97,6 +105,7 @@ export class AccionamientosEquiposController {
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Eliminar un accionamiento' })
   eliminar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.accionamientosService.eliminar(id, req.user);

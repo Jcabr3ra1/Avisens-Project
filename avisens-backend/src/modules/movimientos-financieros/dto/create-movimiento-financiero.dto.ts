@@ -10,6 +10,15 @@ import {
 } from 'class-validator';
 
 export class CreateMovimientoFinancieroDto {
+  @ApiPropertyOptional({
+    example: 1,
+    description:
+      'ID de la granja. Es obligatorio cuando no se envia lote_id; con lote se infiere y, si se envia, debe coincidir.',
+  })
+  @IsInt()
+  @IsOptional()
+  granja_id?: number;
+
   @ApiProperty({ example: 3, description: 'ID de la categoria financiera' })
   @IsInt()
   categoria_id: number;
