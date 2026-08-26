@@ -23,7 +23,7 @@ interface AuthRequest extends Request {
 @ApiTags('clima')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('granjas/:granjaId/clima')
 export class ClimaController {
   constructor(private readonly clima: ClimaService) {}

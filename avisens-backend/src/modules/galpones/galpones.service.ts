@@ -1,11 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGalponDto } from './dto/create-galpon.dto';
 import { UpdateGalponDto } from './dto/update-galpon.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import { verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroGalpones,
+  verificarAccesoGalpon,
+} from '../../common/auth/alcance';
 
 const GALPON_SELECT = {
   id: true,
@@ -61,9 +69,7 @@ export class GalponesService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { granja: { propietario_id: solicitante.id } }
-      : undefined;
+    const where = filtroGalpones(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.galpon.findMany({
@@ -85,25 +91,29 @@ export class GalponesService {
       select: GALPON_SELECT,
     });
     if (!galpon) throw new NotFoundException('Galpón no encontrado');
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      id,
       solicitante,
-      galpon.granja.propietario_id,
       'Solo puedes gestionar galpones de tus propias granjas',
+      galpon.granja.propietario_id,
     );
     return galpon;
   }
 
   async actualizar(id: number, dto: UpdateGalponDto, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    const actual = await this.obtener(id, solicitante);
 
-    if (dto.granja_id) {
-      await this.validarGranja(dto.granja_id, solicitante);
+    if (dto.granja_id !== undefined && dto.granja_id !== actual.granja.id) {
+      throw new BadRequestException(
+        'No se puede trasladar un galpón a otra granja; crea un galpón nuevo para conservar la integridad histórica',
+      );
     }
 
     return this.prisma.galpon.update({
       where: { id },
       data: {
-        granja_id: dto.granja_id,
+        granja_id: undefined,
         codigo: dto.codigo,
         nombre: dto.nombre,
         capacidad_aves: dto.capacidad_aves,

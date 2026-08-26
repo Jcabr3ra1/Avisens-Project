@@ -31,16 +31,25 @@ proyecta:
 
 1. **`peso_proyectado_faena_g`** — cuánto pesará al día de faena (por defecto, día 42).
 2. **`dias_al_objetivo`** — en cuántos días alcanzará el peso meta (por defecto, 2500 g).
+3. **Trazabilidad del modelo** — nombre, versión, framework, puntos usados y
+   confianza R² del ajuste. El backend registra estos metadatos en `modelos_ml`
+   y los enlaza con cada predicción persistida.
 
 > Requiere al menos **3 pesajes** en **días distintos** (con menos puntos, o todos
 > el mismo día, no se puede ajustar la curva).
 
 ## Endpoints
 
-| Método | Ruta        | Descripción                              |
-|--------|-------------|------------------------------------------|
-| GET    | `/health`   | Estado del servicio                      |
-| POST   | `/predecir` | Recibe pesajes y devuelve la predicción  |
+| Método | Ruta                   | Descripción                   |
+| ------ | ---------------------- | ----------------------------- |
+| GET    | `/health`              | Estado del servicio           |
+| POST   | `/predecir`            | Proyecta crecimiento          |
+| POST   | `/predecir-mortalidad` | Proyecta mortalidad acumulada |
+| POST   | `/predecir-consumo`    | Proyecta consumo acumulado    |
+
+Los endpoints de predicción requieren `X-ML-Token` cuando
+`ML_INTERNAL_TOKEN` está configurada. `/health` permanece disponible para el
+healthcheck interno.
 
 ### Ejemplo — `POST /predecir`
 
@@ -49,7 +58,7 @@ Petición:
 ```json
 {
   "pesajes": [
-    { "dia": 7,  "peso": 180 },
+    { "dia": 7, "peso": 180 },
     { "dia": 14, "peso": 500 },
     { "dia": 21, "peso": 1000 },
     { "dia": 28, "peso": 1650 }
@@ -66,7 +75,14 @@ Respuesta:
   "peso_proyectado_faena_g": 3256,
   "dia_faena": 42,
   "dias_al_objetivo": 37,
-  "peso_objetivo_g": 2500
+  "peso_objetivo_g": 2500,
+  "modelo": {
+    "nombre": "crecimiento_aves",
+    "version": "1.1.0",
+    "framework": "numpy",
+    "confianza": 0.98,
+    "puntos_usados": 4
+  }
 }
 ```
 
@@ -81,17 +97,19 @@ proyecto:
 docker compose up -d ml
 ```
 
-Queda disponible en `http://localhost:8000`. Dentro de la red de Docker, el
-backend lo alcanza como `http://ml:8000`.
+No publica un puerto al host en producción. Dentro de la red privada de Docker,
+el backend lo alcanza como `http://ml:8000`.
 
 ## Archivos
 
-| Archivo            | Rol                                                     |
-|--------------------|---------------------------------------------------------|
-| `prediccion.py`    | La lógica del modelo (regresión con numpy)              |
-| `main.py`          | La API FastAPI que expone la predicción                 |
-| `requirements.txt` | Las dependencias de Python                              |
-| `Dockerfile`       | La imagen del servicio                                  |
+| Archivo                | Rol                                        |
+| ---------------------- | ------------------------------------------ |
+| `prediccion.py`        | La lógica del modelo (regresión con numpy) |
+| `main.py`              | La API FastAPI que expone la predicción    |
+| `requirements.txt`     | Las dependencias de Python                 |
+| `requirements-dev.txt` | Pytest, HTTPX y Ruff para calidad          |
+| `test_main.py`         | Pruebas del contrato HTTP y del modelo     |
+| `Dockerfile`           | La imagen del servicio                     |
 
 ## Quién lo consume
 
@@ -99,3 +117,12 @@ El backend (NestJS), en su módulo `predicciones`, expone
 `GET /v1/predicciones/:loteId`: trae los pesajes del lote de la base de datos,
 calcula el día de vida de cada uno y llama a este servicio. El frontend no habla
 directamente con este microservicio; siempre pasa por el backend.
+
+## Pruebas
+
+```bash
+pip install -r requirements-dev.txt
+ruff check .
+ruff format --check .
+pytest -q
+```

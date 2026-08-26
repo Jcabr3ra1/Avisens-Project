@@ -3,8 +3,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMedicionDto } from './dto/create-medicion.dto';
 import { QueryMedicionesDto } from './dto/query-mediciones.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroSensores,
+  verificarAccesoSensor,
+} from '../../common/auth/alcance';
 
 const MEDICION_SELECT = {
   id: true,
@@ -27,10 +30,12 @@ export class MedicionesService {
       },
     });
     if (!sensor) throw new NotFoundException('Sensor no encontrado');
-    verificarDueno(
+    await verificarAccesoSensor(
+      this.prisma,
+      sensorId,
       solicitante,
-      sensor.galpon.granja.propietario_id,
       'Solo puedes gestionar mediciones de tus propios sensores',
+      sensor.galpon.granja.propietario_id,
     );
   }
 
@@ -65,9 +70,7 @@ export class MedicionesService {
             }
           : undefined,
 
-      sensor: esPropietario(solicitante)
-        ? { galpon: { granja: { propietario_id: solicitante.id } } }
-        : undefined,
+      sensor: filtroSensores(solicitante),
     };
 
     const [data, total] = await this.prisma.$transaction([

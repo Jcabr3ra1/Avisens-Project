@@ -23,12 +23,13 @@ interface AuthRequest extends Request {
 @ApiTags('recomendaciones')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('recomendaciones')
 export class RecomendacionesController {
   constructor(private recomendacionesService: RecomendacionesService) {}
 
   @Post('generar/:loteId')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary: 'Generar las recomendaciones de un lote segun sus KPIs',
   })

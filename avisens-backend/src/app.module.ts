@@ -53,6 +53,11 @@ import { OrganizacionesModule } from './modules/organizaciones/organizaciones.mo
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { DecimalInterceptor } from './common/decimal.interceptor';
 import { RecuperacionesPasswordModule } from './modules/recuperaciones-password/recuperaciones-password.module';
+import { CatalogoSensoresModule } from './modules/catalogo-sensores/catalogo-sensores.module';
+import { ComandosVozModule } from './modules/comandos-voz/comandos-voz.module';
+import { JobsModule } from './common/jobs/jobs.module';
+import { ObservabilityModule } from './common/observability/observability.module';
+import { RequestObservabilityInterceptor } from './common/observability/request-observability.interceptor';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -80,6 +85,8 @@ import { RecuperacionesPasswordModule } from './modules/recuperaciones-password/
       },
     }),
     PrismaModule,
+    JobsModule,
+    ObservabilityModule,
     AuthModule,
     UsuariosModule,
     GranjasModule,
@@ -125,6 +132,8 @@ import { RecuperacionesPasswordModule } from './modules/recuperaciones-password/
     NotificacionesModule,
     OrganizacionesModule,
     RecuperacionesPasswordModule,
+    CatalogoSensoresModule,
+    ComandosVozModule,
   ],
   providers: [
     {
@@ -132,6 +141,10 @@ import { RecuperacionesPasswordModule } from './modules/recuperaciones-password/
       useClass: ThrottlerGuard,
     },
     { provide: APP_INTERCEPTOR, useClass: DecimalInterceptor },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestObservabilityInterceptor,
+    },
   ],
 })
 export class AppModule {}

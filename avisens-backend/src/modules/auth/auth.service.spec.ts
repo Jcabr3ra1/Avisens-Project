@@ -77,6 +77,16 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
+    it('rechaza (401) si la organización está inactiva', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(
+        usuarioFalso({ organizacion: { activa: false } }),
+      );
+
+      await expect(
+        service.login({ email: 'test@avisens.com', password: '123456' }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
     it('rechaza (403) si la cuenta está bloqueada', async () => {
       const enUnaHora = new Date(Date.now() + 60 * 60 * 1000);
       prisma.usuario.findUnique.mockResolvedValue(

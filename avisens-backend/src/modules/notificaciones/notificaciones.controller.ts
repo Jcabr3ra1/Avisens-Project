@@ -28,12 +28,13 @@ interface AuthRequest extends Request {
 @ApiTags('notificaciones')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('notificaciones')
 export class NotificacionesController {
   constructor(private service: NotificacionesService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Crear una notificación para un usuario' })
   crear(@Body() dto: CreateNotificacionDto) {
     return this.service.crear(dto);

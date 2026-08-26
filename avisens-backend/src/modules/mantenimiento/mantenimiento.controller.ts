@@ -30,12 +30,13 @@ interface AuthRequest extends Request {
 @ApiTags('mantenimientos')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('mantenimientos')
 export class MantenimientoController {
   constructor(private mantenimientoService: MantenimientoService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Registrar un mantenimiento' })
   create(@Body() dto: CreateMantenimientoDto, @Req() req: AuthRequest) {
     return this.mantenimientoService.create(dto, req.user);
@@ -48,6 +49,7 @@ export class MantenimientoController {
   }
 
   @Post(':id/repuestos')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Consumir un repuesto desde inventario' })
   agregarRepuesto(
     @Param('id', ParseIntPipe) id: number,
@@ -67,6 +69,7 @@ export class MantenimientoController {
   }
 
   @Patch(':id/repuestos/:repuestoId/revertir')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Revertir el consumo y restaurar el inventario' })
   revertirRepuesto(
     @Param('id', ParseIntPipe) id: number,
@@ -83,6 +86,7 @@ export class MantenimientoController {
   }
 
   @Patch(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Actualizar un mantenimiento' })
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -93,6 +97,7 @@ export class MantenimientoController {
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Eliminar un mantenimiento' })
   remove(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.mantenimientoService.remove(String(id), req.user);

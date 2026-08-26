@@ -30,9 +30,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: payload.sub, activo: true },
-      include: { rol: true },
+      include: { rol: true, organizacion: true },
     });
-    if (!usuario) throw new UnauthorizedException();
+    if (!usuario || usuario.organizacion?.activa === false) {
+      throw new UnauthorizedException();
+    }
     return {
       id: usuario.id,
       email: usuario.email,

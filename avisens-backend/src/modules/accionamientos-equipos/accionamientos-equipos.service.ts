@@ -8,8 +8,13 @@ import { CreateAccionamientoEquipoDto } from './dto/create-accionamientos-equipo
 import { UpdateAccionamientoEquipoDto } from './dto/update-accionamientos-equipos.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  esOperario,
+  filtroAccionamientos,
+  verificarAccesoEquipo,
+  verificarAccesoGalpon,
+} from '../../common/auth/alcance';
 
 const ACCIONAMIENTO_SELECT = {
   id: true,
@@ -65,7 +70,10 @@ const ACCIONAMIENTO_SELECT = {
 export class AccionamientosEquiposService {
   constructor(private prisma: PrismaService) {}
 
-  private async validarEquipoActuador(equipoId: number, solicitante: Solicitante) {
+  private async validarEquipoActuador(
+    equipoId: number,
+    solicitante: Solicitante,
+  ) {
     const equipo = await this.prisma.equipo.findUnique({
       where: { id: equipoId },
       include: {
@@ -83,14 +91,16 @@ export class AccionamientosEquiposService {
 
     if (!equipo.es_actuador) {
       throw new BadRequestException(
-        `El equipo "${equipo.nombre}" no es un actuador. Solo se pueden accionar actuadores.`
+        `El equipo "${equipo.nombre}" no es un actuador. Solo se pueden accionar actuadores.`,
       );
     }
 
-    verificarDueno(
+    await verificarAccesoEquipo(
+      this.prisma,
+      equipoId,
       solicitante,
-      equipo.galpon.granja.propietario_id,
       'No tienes acceso a este equipo',
+      equipo.galpon.granja.propietario_id,
     );
 
     return equipo;
@@ -112,16 +122,21 @@ export class AccionamientosEquiposService {
       throw new NotFoundException(`Alerta con ID ${alertaId} no encontrada`);
     }
 
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      alerta.galpon_id,
       solicitante,
-      alerta.galpon.granja.propietario_id,
       'No tienes acceso a esta alerta',
+      alerta.galpon.granja.propietario_id,
     );
 
     return alerta;
   }
 
-  private async obtenerAccionamientoConValidacion(id: number, solicitante: Solicitante) {
+  private async obtenerAccionamientoConValidacion(
+    id: number,
+    solicitante: Solicitante,
+  ) {
     const accionamiento = await this.prisma.accionamientoEquipo.findUnique({
       where: { id },
       select: ACCIONAMIENTO_SELECT,
@@ -131,17 +146,24 @@ export class AccionamientosEquiposService {
       throw new NotFoundException(`Accionamiento con ID ${id} no encontrado`);
     }
 
-    verificarDueno(
+    await verificarAccesoEquipo(
+      this.prisma,
+      accionamiento.equipo_id,
       solicitante,
-      accionamiento.equipo.galpon.granja.propietario_id,
       'No tienes acceso a este accionamiento',
+      accionamiento.equipo.galpon.granja.propietario_id,
     );
 
     return accionamiento;
   }
 
-  private async actualizarHorasOperacionEquipo(equipoId: number, fechaInicio: Date, fechaFin: Date) {
-    const horasOperacion = (fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60);
+  private async actualizarHorasOperacionEquipo(
+    equipoId: number,
+    fechaInicio: Date,
+    fechaFin: Date,
+  ) {
+    const horasOperacion =
+      (fechaFin.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60);
     const horasRedondeadas = Math.round(horasOperacion * 100) / 100;
 
     await this.prisma.equipo.update({
@@ -163,11 +185,14 @@ export class AccionamientosEquiposService {
       await this.validarAlerta(dto.alerta_id, solicitante);
     }
 
+    const origen = esOperario(solicitante)
+      ? 'manual'
+      : (dto.origen ?? 'automatico');
     const data = {
       equipo_id: dto.equipo_id,
-      origen: dto.origen ?? 'automatico',
+      origen,
       estado: dto.estado ?? 'encendido',
-      usuario_id: dto.origen === 'automatico' ? null : solicitante.id,
+      usuario_id: origen === 'automatico' ? null : solicitante.id,
       fecha_inicio: dto.fecha_inicio ? new Date(dto.fecha_inicio) : new Date(),
       ...(dto.alerta_id ? { alerta_id: dto.alerta_id } : {}),
       ...(dto.valor_disparo !== undefined
@@ -182,17 +207,7 @@ export class AccionamientosEquiposService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? {
-          equipo: {
-            galpon: {
-              granja: {
-                propietario_id: solicitante.id,
-              },
-            },
-          },
-        }
-      : {};
+    const where = filtroAccionamientos(solicitante) ?? {};
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.accionamientoEquipo.findMany({
@@ -212,8 +227,15 @@ export class AccionamientosEquiposService {
     return this.obtenerAccionamientoConValidacion(id, solicitante);
   }
 
-  async cerrar(id: number, dto: UpdateAccionamientoEquipoDto, solicitante: Solicitante) {
-    const accionamiento = await this.obtenerAccionamientoConValidacion(id, solicitante);
+  async cerrar(
+    id: number,
+    dto: UpdateAccionamientoEquipoDto,
+    solicitante: Solicitante,
+  ) {
+    const accionamiento = await this.obtenerAccionamientoConValidacion(
+      id,
+      solicitante,
+    );
 
     if (accionamiento.fecha_fin) {
       throw new BadRequestException('Este accionamiento ya está cerrado');
@@ -250,7 +272,11 @@ export class AccionamientosEquiposService {
     };
   }
 
-  async obtenerPorEquipo(equipoId: number, solicitante: Solicitante, paginacion: PaginationQueryDto) {
+  async obtenerPorEquipo(
+    equipoId: number,
+    solicitante: Solicitante,
+    paginacion: PaginationQueryDto,
+  ) {
     const { page, limit } = paginacion;
 
     await this.validarEquipoActuador(equipoId, solicitante);
@@ -271,7 +297,11 @@ export class AccionamientosEquiposService {
     return paginate(data, total, page, limit);
   }
 
-  async obtenerPorAlerta(alertaId: number, solicitante: Solicitante, paginacion: PaginationQueryDto) {
+  async obtenerPorAlerta(
+    alertaId: number,
+    solicitante: Solicitante,
+    paginacion: PaginationQueryDto,
+  ) {
     const { page, limit } = paginacion;
 
     await this.validarAlerta(alertaId, solicitante);
@@ -293,25 +323,25 @@ export class AccionamientosEquiposService {
   }
 
   async obtenerEstadisticas(solicitante: Solicitante) {
-    const where = esPropietario(solicitante)
-      ? {
-          equipo: {
-            galpon: {
-              granja: {
-                propietario_id: solicitante.id,
-              },
-            },
-          },
-        }
-      : {};
+    const where = filtroAccionamientos(solicitante) ?? {};
 
-    const [total, activos, cerrados, automaticos, manuales] = await Promise.all([
-      this.prisma.accionamientoEquipo.count({ where }),
-      this.prisma.accionamientoEquipo.count({ where: { ...where, fecha_fin: null } }),
-      this.prisma.accionamientoEquipo.count({ where: { ...where, NOT: { fecha_fin: null } } }),
-      this.prisma.accionamientoEquipo.count({ where: { ...where, origen: 'automatico' } }),
-      this.prisma.accionamientoEquipo.count({ where: { ...where, origen: 'manual' } }),
-    ]);
+    const [total, activos, cerrados, automaticos, manuales] = await Promise.all(
+      [
+        this.prisma.accionamientoEquipo.count({ where }),
+        this.prisma.accionamientoEquipo.count({
+          where: { ...where, fecha_fin: null },
+        }),
+        this.prisma.accionamientoEquipo.count({
+          where: { ...where, NOT: { fecha_fin: null } },
+        }),
+        this.prisma.accionamientoEquipo.count({
+          where: { ...where, origen: 'automatico' },
+        }),
+        this.prisma.accionamientoEquipo.count({
+          where: { ...where, origen: 'manual' },
+        }),
+      ],
+    );
 
     return {
       total,

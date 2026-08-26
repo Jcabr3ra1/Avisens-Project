@@ -29,12 +29,13 @@ interface AuthRequest extends Request {
 @ApiTags('umbrales')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('umbrales')
 export class UmbralesController {
   constructor(private umbralesService: UmbralesService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Crear un umbral (versión 1, vigente)' })
   crear(@Body() dto: CreateUmbralDto, @Req() req: AuthRequest) {
     return this.umbralesService.crear(dto, req.user);
@@ -56,6 +57,7 @@ export class UmbralesController {
   }
 
   @Patch(':id/revisar')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary: 'Revisar un umbral: crea una versión nueva y jubila la anterior',
   })
@@ -68,6 +70,7 @@ export class UmbralesController {
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Jubilar un umbral (vigente=false, sin reemplazo)' })
   jubilar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.umbralesService.jubilar(id, req.user);

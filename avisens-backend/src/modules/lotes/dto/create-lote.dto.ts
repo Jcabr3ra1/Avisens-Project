@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Min,
 } from 'class-validator';
 
 export class CreateLoteDto {
@@ -14,6 +15,7 @@ export class CreateLoteDto {
     description: 'ID del galpón al que pertenece el lote',
   })
   @IsInt()
+  @Min(1)
   galpon_id: number;
 
   @ApiProperty({
@@ -21,6 +23,7 @@ export class CreateLoteDto {
     description: 'ID del proveedor que vendio los pollitos',
   })
   @IsInt()
+  @Min(1)
   proveedor_id: number;
 
   @ApiProperty({
