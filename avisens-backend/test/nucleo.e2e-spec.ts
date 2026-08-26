@@ -19,6 +19,7 @@ import { PERMISOS } from '../src/common/auth/permisos';
 import { IngestModule } from '../src/modules/ingest/ingest.module';
 import { hashDeviceToken } from '../src/common/security/device-token';
 import { randomUUID } from 'crypto';
+import { ComandosVozModule } from '../src/modules/comandos-voz/comandos-voz.module';
 
 describe('Núcleo multi-tenant (e2e)', () => {
   let app: INestApplication;
@@ -48,6 +49,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         GalponesModule,
         CatalogoSensoresModule,
         IngestModule,
+        ComandosVozModule,
       ],
     }).compile();
     app = modulo.createNestApplication();
@@ -177,6 +179,9 @@ describe('Núcleo multi-tenant (e2e)', () => {
       await prisma.usuarioGalpon.deleteMany({
         where: { usuario_id: { in: ids.usuarios } },
       });
+      await prisma.comandoVoz.deleteMany({
+        where: { usuario_id: { in: ids.usuarios } },
+      });
       await prisma.medicion.deleteMany({ where: { sensor_id: ids.sensor } });
       await prisma.ingestaDispositivo.deleteMany({
         where: { dispositivo_id: ids.dispositivo },
@@ -299,6 +304,84 @@ describe('Núcleo multi-tenant (e2e)', () => {
     );
     await expect(
       prisma.medicion.count({ where: { sensor_id: ids.sensor } }),
+    ).resolves.toBe(1);
+  });
+
+  it('consulta el ambiente por voz sin habilitar acciones peligrosas', async () => {
+    const consulta = await request(servidor)
+      .post('/v1/comandos-voz/interpretar')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        galpon_id: ids.galpones[0],
+        comando_texto: '¿Cuál es la temperatura?',
+      })
+      .expect(201);
+    expect(JSON.parse(consulta.text)).toMatchObject({
+      tipo_comando: 'consultar_temperatura',
+      accion_ejecutada: 'consulta_ambiental',
+      requiere_clarificacion: false,
+    });
+
+    const accion = await request(servidor)
+      .post('/v1/comandos-voz/interpretar')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        galpon_id: ids.galpones[0],
+        comando_texto: 'Apaga los ventiladores',
+      })
+      .expect(201);
+    expect(JSON.parse(accion.text)).toMatchObject({
+      tipo_comando: 'accion_no_autorizada',
+      accion_ejecutada: null,
+      requiere_clarificacion: true,
+      lecturas: [],
+    });
+  });
+
+  it('sincroniza comandos offline de forma idempotente', async () => {
+    const idSincronizacion = randomUUID();
+    const cuerpo = {
+      comandos: [
+        {
+          galpon_id: ids.galpones[0],
+          comando_texto: 'temperatura',
+          id_sincronizacion: idSincronizacion,
+          fecha_ejecucion: new Date().toISOString(),
+        },
+      ],
+    };
+
+    const primera = await request(servidor)
+      .post('/v1/comandos-voz/sincronizar')
+      .set('Authorization', `Bearer ${token}`)
+      .send(cuerpo)
+      .expect(201);
+    const segunda = await request(servidor)
+      .post('/v1/comandos-voz/sincronizar')
+      .set('Authorization', `Bearer ${token}`)
+      .send(cuerpo)
+      .expect(201);
+
+    const respuestaPrimera = JSON.parse(primera.text) as {
+      resultados: Array<{ duplicado: boolean; modo_conexion: string }>;
+    };
+    const respuestaSegunda = JSON.parse(segunda.text) as {
+      resultados: Array<{ duplicado: boolean }>;
+    };
+    expect(respuestaPrimera.resultados[0]).toMatchObject({
+      duplicado: false,
+      modo_conexion: 'offline',
+    });
+    expect(respuestaSegunda.resultados[0]).toMatchObject({
+      duplicado: true,
+    });
+    await expect(
+      prisma.comandoVoz.count({
+        where: {
+          usuario_id: ids.usuarios[2],
+          id_sincronizacion: idSincronizacion,
+        },
+      }),
     ).resolves.toBe(1);
   });
 });

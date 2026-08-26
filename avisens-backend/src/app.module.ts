@@ -54,6 +54,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { DecimalInterceptor } from './common/decimal.interceptor';
 import { RecuperacionesPasswordModule } from './modules/recuperaciones-password/recuperaciones-password.module';
 import { CatalogoSensoresModule } from './modules/catalogo-sensores/catalogo-sensores.module';
+import { ComandosVozModule } from './modules/comandos-voz/comandos-voz.module';
 import { JobsModule } from './common/jobs/jobs.module';
 import { ObservabilityModule } from './common/observability/observability.module';
 import { RequestObservabilityInterceptor } from './common/observability/request-observability.interceptor';
@@ -132,6 +133,7 @@ import { RequestObservabilityInterceptor } from './common/observability/request-
     OrganizacionesModule,
     RecuperacionesPasswordModule,
     CatalogoSensoresModule,
+    ComandosVozModule,
   ],
   providers: [
     {

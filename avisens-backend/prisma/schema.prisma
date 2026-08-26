@@ -926,10 +926,13 @@ model ComandoVoz {
   modo_conexion          String?
   sincronizado           Boolean  @default(true)
   fecha_ejecucion        DateTime @default(now())
+  fecha_recepcion        DateTime @default(now())
+  id_sincronizacion      String?
 
   usuario Usuario @relation(fields: [usuario_id], references: [id])
   galpon  Galpon  @relation(fields: [galpon_id], references: [id])
 
+  @@unique([usuario_id, id_sincronizacion])
   @@index([usuario_id])
   @@index([galpon_id])
   @@map("comandos_voz")
