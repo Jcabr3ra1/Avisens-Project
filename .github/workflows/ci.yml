@@ -10,6 +10,25 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  ml:
+    name: ML · tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: avisens-ml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            avisens-ml/requirements.txt
+            avisens-ml/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -q
   backend:
     name: Backend · quality + integration
     runs-on: ubuntu-latest

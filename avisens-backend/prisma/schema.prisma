@@ -1368,6 +1368,7 @@ model ModeloMl {
   analisis_bioacustico AnalisisBioacustico[]
   analisis_vision      AnalisisVision[]
 
+  @@unique([nombre, version])
   @@map("modelos_ml")
 }
 

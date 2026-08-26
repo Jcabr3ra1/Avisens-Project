@@ -63,6 +63,19 @@ class EnvironmentVariables {
   @IsNumberString()
   @IsOptional()
   IOT_IDEMPOTENCY_DAYS: string;
+
+  @IsString()
+  @IsOptional()
+  ML_URL: string;
+
+  @IsNumberString()
+  @IsOptional()
+  ML_TIMEOUT_MS: string;
+
+  @IsString()
+  @MinLength(32)
+  @IsOptional()
+  ML_INTERNAL_TOKEN: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {
@@ -89,6 +102,12 @@ export function validateEnv(config: Record<string, unknown>) {
   ) {
     throw new Error(
       'REDIS_URL o REDIS_HOST es obligatoria en producción (colas y jobs)',
+    );
+  }
+
+  if (validated.NODE_ENV === 'production' && !validated.ML_INTERNAL_TOKEN) {
+    throw new Error(
+      'ML_INTERNAL_TOKEN es obligatoria en producción (comunicación Backend-ML)',
     );
   }
 

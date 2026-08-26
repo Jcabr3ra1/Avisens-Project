@@ -91,6 +91,9 @@ services:
       JOBS_ENABLED: ${JOBS_ENABLED:-true}
       JOB_HISTORY_DAYS: ${JOB_HISTORY_DAYS:-30}
       IOT_IDEMPOTENCY_DAYS: ${IOT_IDEMPOTENCY_DAYS:-30}
+      ML_URL: http://ml:8000
+      ML_TIMEOUT_MS: 5000
+      ML_INTERNAL_TOKEN: ${ML_INTERNAL_TOKEN:?falta ML_INTERNAL_TOKEN en .env (ver .env.example)}
       # WhatsApp Cloud API. 'simulado' por defecto a proposito: si alguien
       # despliega sin configurar nada, NO manda mensajes reales por accidente.
       WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-simulado}
@@ -125,8 +128,10 @@ services:
     build: ./avisens-ml
     container_name: avisens-ml
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    environment:
+      ML_INTERNAL_TOKEN: ${ML_INTERNAL_TOKEN:?falta ML_INTERNAL_TOKEN en .env (ver .env.example)}
+    expose:
+      - "8000"
 
 volumes:
   avisens_pg_data:

@@ -4,6 +4,7 @@ import { PrediccionesService } from './predicciones.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ROLES } from '../../common/auth/roles';
 import type { Solicitante } from '../../common/auth/acceso';
+import { ConfigService } from '@nestjs/config';
 
 describe('PrediccionesService', () => {
   let service: PrediccionesService;
@@ -14,9 +15,15 @@ describe('PrediccionesService', () => {
     registroMortalidad: { findMany: jest.fn() },
     consumoDiario: { findMany: jest.fn() },
     curvaObjetivo: { findFirst: jest.fn() },
-    prediccion: { createMany: jest.fn(), findMany: jest.fn(), count: jest.fn() },
+    prediccion: {
+      createMany: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+    },
+    modeloMl: { upsert: jest.fn() },
     $transaction: jest.fn(),
   };
+  const config = { get: jest.fn() };
 
   const admin: Solicitante = { id: 1, rol: ROLES.ADMINISTRADOR };
   const propietario: Solicitante = { id: 5, rol: ROLES.PROPIETARIO };
@@ -39,6 +46,7 @@ describe('PrediccionesService', () => {
       providers: [
         PrediccionesService,
         { provide: PrismaService, useValue: prisma },
+        { provide: ConfigService, useValue: config },
       ],
     }).compile();
     service = module.get<PrediccionesService>(PrediccionesService);
@@ -48,6 +56,8 @@ describe('PrediccionesService', () => {
     prisma.consumoDiario.findMany.mockResolvedValue([]);
     prisma.curvaObjetivo.findFirst.mockResolvedValue(null);
     prisma.prediccion.createMany.mockResolvedValue({ count: 0 });
+    prisma.modeloMl.upsert.mockResolvedValue({ id: 11 });
+    config.get.mockImplementation((clave: string, defecto?: string) => defecto);
     prisma.$transaction.mockResolvedValue([[], 0]);
   });
 
@@ -56,6 +66,15 @@ describe('PrediccionesService', () => {
     dia_faena: 42,
     dias_al_objetivo: 5,
     peso_objetivo_g: 2400,
+    modelo: {
+      nombre: 'crecimiento_aves',
+      version: '1.1.0',
+      framework: 'numpy',
+      tipo: 'regresion_polinomial',
+      objetivo: 'peso_faena',
+      confianza: 0.94,
+      puntos_usados: 3,
+    },
   };
 
   // Cada ruta del servicio ML devuelve una forma distinta; un solo mock para
@@ -76,7 +95,9 @@ describe('PrediccionesService', () => {
 
   const filasGuardadas = () => {
     const [args] = prisma.prediccion.createMany.mock.calls[0] as [
-      { data: Array<{ tipo: string; valor_predicho: number; unidad?: string }> },
+      {
+        data: Array<{ tipo: string; valor_predicho: number; unidad?: string }>;
+      },
     ];
     return args.data;
   };
@@ -105,10 +126,55 @@ describe('PrediccionesService', () => {
     );
   });
 
+  it('exige pesajes de al menos 3 días distintos', async () => {
+    prisma.pesaje.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), peso_promedio_g: 180 },
+      { fecha: new Date('2026-07-08'), peso_promedio_g: 200 },
+      { fecha: new Date('2026-07-15'), peso_promedio_g: 500 },
+    ]);
+
+    await expect(service.predecir(1, admin)).rejects.toThrow(
+      /3 días distintos/,
+    );
+  });
+
+  it('promedia los pesajes del mismo día antes de enviarlos al modelo', async () => {
+    prisma.pesaje.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), peso_promedio_g: 180 },
+      { fecha: new Date('2026-07-08'), peso_promedio_g: 200 },
+      { fecha: new Date('2026-07-15'), peso_promedio_g: 500 },
+      { fecha: new Date('2026-07-22'), peso_promedio_g: 1000 },
+    ]);
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(respuestaMl),
+    });
+    global.fetch = fetchMock;
+
+    await service.predecir(1, admin);
+
+    const calls = fetchMock.mock.calls as Array<[string, { body: string }]>;
+    const body = JSON.parse(calls[0][1].body) as {
+      pesajes: Array<{ dia: number; peso: number }>;
+    };
+    expect(body.pesajes[0]).toEqual({ dia: 7, peso: 190 });
+  });
+
   it('lanza BadRequest cuando el servicio ML responde con error', async () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: false });
     await expect(service.predecir(1, admin)).rejects.toThrow(
       BadRequestException,
+    );
+  });
+
+  it('rechaza una respuesta 200 con contrato inválido', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({ peso_proyectado_faena_g: 'mucho' }),
+    });
+
+    await expect(service.predecir(1, admin)).rejects.toThrow(
+      /respuesta inválida/,
     );
   });
 
@@ -552,6 +618,45 @@ describe('PrediccionesService', () => {
       const peso = filasGuardadas().find((f) => f.tipo === 'peso_faena');
       expect(peso?.valor_predicho).toBe(2400);
       expect(peso?.unidad).toBe('g');
+    });
+
+    it('registra la versión del modelo y la enlaza con la predicción', async () => {
+      mlResponde();
+
+      await service.predecir(1, admin, true);
+
+      const llamadasModelo = prisma.modeloMl.upsert.mock.calls as Array<
+        [
+          {
+            create: { nombre: string; version: string; framework: string };
+          },
+        ]
+      >;
+      expect(llamadasModelo[0][0].create).toMatchObject({
+        nombre: 'crecimiento_aves',
+        version: '1.1.0',
+        framework: 'numpy',
+      });
+      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
+        { data: Array<{ modelo_id?: number; confianza?: number }> },
+      ];
+      expect(args.data[0]).toMatchObject({
+        modelo_id: 11,
+        confianza: 0.94,
+      });
+    });
+
+    it('reutiliza un modelo ya registrado', async () => {
+      mlResponde();
+      prisma.modeloMl.upsert.mockResolvedValue({ id: 8 });
+
+      await service.predecir(1, admin, true);
+
+      expect(prisma.modeloMl.upsert).toHaveBeenCalledTimes(1);
+      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
+        { data: Array<{ modelo_id?: number }> },
+      ];
+      expect(args.data[0].modelo_id).toBe(8);
     });
 
     it('no guarda las magnitudes que no se pudieron calcular', async () => {
