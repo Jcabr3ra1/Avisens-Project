@@ -1,4 +1,5 @@
 import './Footer.css'
+import logoAvisens from '@shared/assets/logo-avisens.png'
 
 const footerGroups = [
   {
@@ -24,7 +25,7 @@ function Footer() {
           <div className="footer-brand">
             <div className="footer-brand-head">
               <span className="footer-logo-mark">
-                <img src="/views/avisens/img/logo.png" alt="" />
+                <img src={logoAvisens} alt="" />
               </span>
               <span>
                 <strong>AVISENS</strong>

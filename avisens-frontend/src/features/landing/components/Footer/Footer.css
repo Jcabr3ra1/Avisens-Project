@@ -101,7 +101,9 @@
 }
 
 .footer-logo-mark img {
-  height: 32px;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
 }
 
 .footer-brand-head span:last-child {
