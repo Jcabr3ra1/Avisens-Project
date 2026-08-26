@@ -88,6 +88,9 @@ services:
       # de la red de Docker reemplaza a 'localhost'.
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      JOBS_ENABLED: ${JOBS_ENABLED:-true}
+      JOB_HISTORY_DAYS: ${JOB_HISTORY_DAYS:-30}
+      IOT_IDEMPOTENCY_DAYS: ${IOT_IDEMPOTENCY_DAYS:-30}
       # WhatsApp Cloud API. 'simulado' por defecto a proposito: si alguien
       # despliega sin configurar nada, NO manda mensajes reales por accidente.
       WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-simulado}
@@ -96,6 +99,7 @@ services:
       WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN}
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN}
       WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET}
+      WHATSAPP_MINUTOS_INACTIVIDAD: ${WHATSAPP_MINUTOS_INACTIVIDAD:-5}
     ports:
       - "3000:3000"
 

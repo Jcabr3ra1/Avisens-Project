@@ -39,6 +39,30 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   CORS_ORIGIN: string;
+
+  @IsString()
+  @IsOptional()
+  REDIS_URL: string;
+
+  @IsString()
+  @IsOptional()
+  REDIS_HOST: string;
+
+  @IsNumberString()
+  @IsOptional()
+  REDIS_PORT: string;
+
+  @IsIn(['true', 'false'])
+  @IsOptional()
+  JOBS_ENABLED: string;
+
+  @IsNumberString()
+  @IsOptional()
+  JOB_HISTORY_DAYS: string;
+
+  @IsNumberString()
+  @IsOptional()
+  IOT_IDEMPOTENCY_DAYS: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {
@@ -55,6 +79,16 @@ export function validateEnv(config: Record<string, unknown>) {
   if (validated.NODE_ENV === 'production' && !validated.CORS_ORIGIN) {
     throw new Error(
       'CORS_ORIGIN es obligatoria en producción (dominio del frontend)',
+    );
+  }
+
+  if (
+    validated.NODE_ENV === 'production' &&
+    !validated.REDIS_URL &&
+    !validated.REDIS_HOST
+  ) {
+    throw new Error(
+      'REDIS_URL o REDIS_HOST es obligatoria en producción (colas y jobs)',
     );
   }
 

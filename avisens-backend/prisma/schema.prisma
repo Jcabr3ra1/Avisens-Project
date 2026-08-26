@@ -207,23 +207,26 @@ enum EstadoDispositivo {
 }
 
 model Dispositivo {
-  id               Int               @id @default(autoincrement())
-  galpon_id        Int
-  mac_address      String            @unique
-  codigo_topic     String            @unique
-  nombre           String
-  version_firmware String?
-  estado           EstadoDispositivo @default(offline)
-  ip_local         String?
+  id                 Int               @id @default(autoincrement())
+  galpon_id          Int
+  mac_address        String            @unique
+  codigo_topic       String            @unique
+  nombre             String
+  version_firmware   String?
+  estado             EstadoDispositivo @default(offline)
+  ip_local           String?
   // Secreto que el ESP32 manda en el header X-Device-Token de POST /ingest.
-  // Nunca se expone en los listados; solo al crear el dispositivo o al regenerarlo.
-  token_ingesta    String?           @unique
-  ultima_conexion  DateTime?
-  activo           Boolean           @default(true)
-  fecha_creacion   DateTime          @default(now())
+  // token_ingesta solo se conserva temporalmente para migrar instalaciones
+  // anteriores; los tokens nuevos y migrados se guardan como SHA-256.
+  token_ingesta      String?           @unique
+  token_ingesta_hash String?           @unique
+  ultima_conexion    DateTime?
+  activo             Boolean           @default(true)
+  fecha_creacion     DateTime          @default(now())
 
-  galpon   Galpon   @relation(fields: [galpon_id], references: [id])
+  galpon   Galpon               @relation(fields: [galpon_id], references: [id])
   sensores Sensor[]
+  ingestas IngestaDispositivo[]
 
   // La relación compuesta impide conectar un sensor a un dispositivo de otro
   // galpón, incluso si se escribe directamente en la base de datos.
@@ -295,6 +298,51 @@ model Medicion {
   // La consulta reina será "lecturas del sensor X entre dos fechas".
   @@index([sensor_id, fecha_hora])
   @@map("mediciones")
+}
+
+// Registra cada lote recibido para deduplicar reintentos de los nodos IoT y
+// conservar trazabilidad incluso si alguna lectura trae un código desconocido.
+model IngestaDispositivo {
+  id                  BigInt    @id @default(autoincrement())
+  dispositivo_id      Int
+  clave_idempotencia  String
+  fecha_dispositivo   DateTime?
+  fecha_recepcion     DateTime  @default(now())
+  ip_origen           String?
+  cantidad_recibida   Int
+  cantidad_registrada Int
+  codigos_ignorados   String[]  @default([])
+
+  dispositivo Dispositivo @relation(fields: [dispositivo_id], references: [id])
+
+  @@unique([dispositivo_id, clave_idempotencia])
+  @@index([dispositivo_id, fecha_recepcion])
+  @@map("ingestas_dispositivos")
+}
+
+enum EstadoEjecucionJob {
+  ejecutando
+  completado
+  fallido
+}
+
+// Bloqueo distribuido y bitácora de los cron jobs. Evita que dos réplicas de
+// la API ejecuten la misma ventana de trabajo al mismo tiempo.
+model EjecucionJob {
+  id            BigInt             @id @default(autoincrement())
+  nombre        String
+  clave_ventana String
+  propietario   String
+  estado        EstadoEjecucionJob @default(ejecutando)
+  intentos      Int                @default(1)
+  iniciada_en   DateTime           @default(now())
+  expira_en     DateTime
+  finalizada_en DateTime?
+  error         String?
+
+  @@unique([nombre, clave_ventana])
+  @@index([estado, expira_en])
+  @@map("ejecuciones_jobs")
 }
 
 // ---------------------------------------------------------------------------

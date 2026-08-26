@@ -54,6 +54,9 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { DecimalInterceptor } from './common/decimal.interceptor';
 import { RecuperacionesPasswordModule } from './modules/recuperaciones-password/recuperaciones-password.module';
 import { CatalogoSensoresModule } from './modules/catalogo-sensores/catalogo-sensores.module';
+import { JobsModule } from './common/jobs/jobs.module';
+import { ObservabilityModule } from './common/observability/observability.module';
+import { RequestObservabilityInterceptor } from './common/observability/request-observability.interceptor';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -81,6 +84,8 @@ import { CatalogoSensoresModule } from './modules/catalogo-sensores/catalogo-sen
       },
     }),
     PrismaModule,
+    JobsModule,
+    ObservabilityModule,
     AuthModule,
     UsuariosModule,
     GranjasModule,
@@ -134,6 +139,10 @@ import { CatalogoSensoresModule } from './modules/catalogo-sensores/catalogo-sen
       useClass: ThrottlerGuard,
     },
     { provide: APP_INTERCEPTOR, useClass: DecimalInterceptor },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestObservabilityInterceptor,
+    },
   ],
 })
 export class AppModule {}

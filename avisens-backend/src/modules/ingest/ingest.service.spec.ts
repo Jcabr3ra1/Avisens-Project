@@ -2,16 +2,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { IngestService } from './ingest.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { DispositivoAutenticado } from '../../common/guards/device-token.guard';
+import { ObservabilityService } from '../../common/observability/observability.service';
 
 describe('IngestService', () => {
   let service: IngestService;
 
   const prisma = {
     sensor: { findMany: jest.fn() },
-    medicion: { create: jest.fn() },
+    medicion: { createMany: jest.fn() },
+    ingestaDispositivo: { findUnique: jest.fn(), create: jest.fn() },
     dispositivo: { update: jest.fn() },
     $transaction: jest.fn(),
   };
+  const observability = { registrarIngesta: jest.fn() };
 
   const dispositivo: DispositivoAutenticado = {
     id: 7,
@@ -21,11 +24,16 @@ describe('IngestService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [IngestService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        IngestService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: ObservabilityService, useValue: observability },
+      ],
     }).compile();
     service = module.get<IngestService>(IngestService);
 
     prisma.$transaction.mockResolvedValue([]);
+    prisma.ingestaDispositivo.findUnique.mockResolvedValue(null);
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -48,7 +56,11 @@ describe('IngestService', () => {
 
     expect(res.registradas).toBe(2);
     expect(res.ignoradas).toEqual([]);
-    expect(prisma.medicion.create).toHaveBeenCalledTimes(2);
+    const calls = prisma.medicion.createMany.mock.calls as Array<
+      [{ data: unknown[] }]
+    >;
+    const data = calls[0][0].data;
+    expect(data).toHaveLength(2);
   });
 
   it('solo busca sensores del propio dispositivo (alcance)', async () => {
@@ -80,7 +92,11 @@ describe('IngestService', () => {
 
     expect(res.registradas).toBe(1);
     expect(res.ignoradas).toEqual(['AJENO-99']);
-    expect(prisma.medicion.create).toHaveBeenCalledTimes(1);
+    const calls = prisma.medicion.createMany.mock.calls as Array<
+      [{ data: unknown[] }]
+    >;
+    const data = calls[0][0].data;
+    expect(data).toHaveLength(1);
   });
 
   it('marca el dispositivo online (heartbeat) con la IP recibida', async () => {
@@ -100,5 +116,25 @@ describe('IngestService', () => {
     expect(calls[0][0].where.id).toBe(7);
     expect(calls[0][0].data.estado).toBe('online');
     expect(calls[0][0].data.ip_local).toBe('192.168.1.5');
+  });
+
+  it('no duplica mediciones cuando se reintenta el mismo id_lote', async () => {
+    prisma.ingestaDispositivo.findUnique.mockResolvedValue({
+      clave_idempotencia: 'ad65a582-4ef3-48c9-b847-2f9f6a8c6186',
+      cantidad_registrada: 2,
+      codigos_ignorados: [],
+    });
+
+    const res = await service.registrar(
+      {
+        id_lote: 'ad65a582-4ef3-48c9-b847-2f9f6a8c6186',
+        lecturas: [{ codigo: 'TEMP-G1-01', valor: 24.8 }],
+      },
+      dispositivo,
+    );
+
+    expect(res.duplicada).toBe(true);
+    expect(prisma.sensor.findMany).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

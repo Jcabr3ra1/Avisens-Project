@@ -3,7 +3,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDispositivoDto } from './dto/create-dispositivo.dto';
 import { UpdateDispositivoDto } from './dto/update-dispositivo.dto';
@@ -15,6 +14,10 @@ import {
   filtroDispositivos,
   verificarAccesoGalpon,
 } from '../../common/auth/alcance';
+import {
+  generarDeviceToken,
+  hashDeviceToken,
+} from '../../common/security/device-token';
 
 const DISPOSITIVO_SELECT = {
   id: true,
@@ -68,14 +71,10 @@ export class DispositivosService {
     );
   }
 
-  private generarToken(): string {
-    return randomBytes(24).toString('hex');
-  }
-
   async crear(dto: CreateDispositivoDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
 
-    const token = this.generarToken();
+    const token = generarDeviceToken();
 
     const dispositivo = await this.prisma.dispositivo.create({
       data: {
@@ -85,7 +84,7 @@ export class DispositivosService {
         nombre: dto.nombre,
         version_firmware: dto.version_firmware,
         ip_local: dto.ip_local,
-        token_ingesta: token,
+        token_ingesta_hash: hashDeviceToken(token),
       },
       select: DISPOSITIVO_SELECT,
     });
@@ -95,10 +94,13 @@ export class DispositivosService {
 
   async regenerarToken(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
-    const token = this.generarToken();
+    const token = generarDeviceToken();
     await this.prisma.dispositivo.update({
       where: { id },
-      data: { token_ingesta: token },
+      data: {
+        token_ingesta: null,
+        token_ingesta_hash: hashDeviceToken(token),
+      },
     });
     return { id, token_ingesta: token };
   }

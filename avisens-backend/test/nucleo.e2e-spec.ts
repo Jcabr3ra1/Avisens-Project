@@ -16,6 +16,9 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { validateEnv } from '../src/config/env.validation';
 import { CatalogoSensoresModule } from '../src/modules/catalogo-sensores/catalogo-sensores.module';
 import { PERMISOS } from '../src/common/auth/permisos';
+import { IngestModule } from '../src/modules/ingest/ingest.module';
+import { hashDeviceToken } from '../src/common/security/device-token';
+import { randomUUID } from 'crypto';
 
 describe('Núcleo multi-tenant (e2e)', () => {
   let app: INestApplication;
@@ -28,10 +31,12 @@ describe('Núcleo multi-tenant (e2e)', () => {
     granjas: [] as number[],
     galpones: [] as number[],
     dispositivo: 0,
+    sensor: 0,
     catalogoSensor: 0,
   };
   const sufijo = `${Date.now()}-${process.pid}`;
   const password = 'Prueba-e2e-123';
+  const deviceToken = `iot-${randomUUID()}`;
 
   beforeAll(async () => {
     const modulo = await Test.createTestingModule({
@@ -42,6 +47,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         GranjasModule,
         GalponesModule,
         CatalogoSensoresModule,
+        IngestModule,
       ],
     }).compile();
     app = modulo.createNestApplication();
@@ -131,9 +137,20 @@ describe('Núcleo multi-tenant (e2e)', () => {
         mac_address: `MAC-${sufijo}`,
         codigo_topic: `topic-${sufijo}`,
         nombre: 'Nodo E2E',
+        token_ingesta_hash: hashDeviceToken(deviceToken),
       },
     });
     ids.dispositivo = dispositivo.id;
+    const sensor = await prisma.sensor.create({
+      data: {
+        galpon_id: galponA.id,
+        dispositivo_id: dispositivo.id,
+        codigo: `TEMP-${sufijo}`,
+        tipo: 'temperatura',
+        unidad_medida: 'C',
+      },
+    });
+    ids.sensor = sensor.id;
     const catalogo = await prisma.catalogoSensor.create({
       data: {
         tipo_sensor: `temperatura-${sufijo}`,
@@ -160,6 +177,11 @@ describe('Núcleo multi-tenant (e2e)', () => {
       await prisma.usuarioGalpon.deleteMany({
         where: { usuario_id: { in: ids.usuarios } },
       });
+      await prisma.medicion.deleteMany({ where: { sensor_id: ids.sensor } });
+      await prisma.ingestaDispositivo.deleteMany({
+        where: { dispositivo_id: ids.dispositivo },
+      });
+      await prisma.sensor.deleteMany({ where: { id: ids.sensor } });
       await prisma.dispositivo.deleteMany({ where: { id: ids.dispositivo } });
       await prisma.catalogoSensor.deleteMany({
         where: { id: ids.catalogoSensor },
@@ -248,5 +270,35 @@ describe('Núcleo multi-tenant (e2e)', () => {
         },
       }),
     ).rejects.toThrow();
+  });
+
+  it('hace idempotente la ingesta IoT ante reintentos del dispositivo', async () => {
+    const idLote = randomUUID();
+    const cuerpo = {
+      id_lote: idLote,
+      fecha_dispositivo: new Date().toISOString(),
+      lecturas: [{ codigo: `TEMP-${sufijo}`, valor: 24.8 }],
+    };
+
+    const primera = await request(servidor)
+      .post('/ingest')
+      .set('X-Device-Token', deviceToken)
+      .send(cuerpo)
+      .expect(201);
+    const segunda = await request(servidor)
+      .post('/ingest')
+      .set('X-Device-Token', deviceToken)
+      .send(cuerpo)
+      .expect(201);
+
+    expect((JSON.parse(primera.text) as { duplicada: boolean }).duplicada).toBe(
+      false,
+    );
+    expect((JSON.parse(segunda.text) as { duplicada: boolean }).duplicada).toBe(
+      true,
+    );
+    await expect(
+      prisma.medicion.count({ where: { sensor_id: ids.sensor } }),
+    ).resolves.toBe(1);
   });
 });
