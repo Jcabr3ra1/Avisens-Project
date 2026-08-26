@@ -1,3 +1,9 @@
+/* eslint-disable react-refresh/only-export-components */
+// Este archivo NO exporta ningun componente: solo tipos y catalogos de
+// configuracion. Necesita extension .tsx porque algunas constantes llevan
+// iconos JSX (QUICK_ACTION_CATALOG, METRIC_TABS), y por eso react-refresh lo
+// trata como archivo de componentes. La regla protege el hot reload de los
+// componentes, algo que aqui no aplica.
 // model.tsx — Datos mock, tipos y configuración del dashboard
 // Contiene: datos de granjas/galpones, métricas de sensores, acciones rápidas
 // Los textos usan lenguaje campesino colombiano en todas las descripciones
