@@ -12,9 +12,9 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/auth/roles';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
+import { Permisos } from '../../common/decorators/permisos.decorator';
+import { PERMISOS } from '../../common/auth/permisos';
 import { TiposAlimentoService } from './tipos-alimento.service';
 import { CreateTipoAlimentoDto } from './dto/create-tipo-alimento.dto';
 import { UpdateTipoAlimentoDto } from './dto/update-tipo-alimento.dto';
@@ -22,14 +22,14 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 
 @ApiTags('tipos-alimento')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
+@UseGuards(JwtAuthGuard, PermisosGuard)
+@Permisos(PERMISOS.CATALOGOS_LEER)
 @Controller('tipos-alimento')
 export class TiposAlimentoController {
   constructor(private tiposAlimentoService: TiposAlimentoService) {}
 
   @Post()
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.CATALOGOS_GESTIONAR)
   @ApiOperation({ summary: 'Crear un tipo de alimento (solo Admin)' })
   crear(@Body() dto: CreateTipoAlimentoDto) {
     return this.tiposAlimentoService.crear(dto);
@@ -50,7 +50,7 @@ export class TiposAlimentoController {
   }
 
   @Patch(':id')
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.CATALOGOS_GESTIONAR)
   @ApiOperation({ summary: 'Actualizar un tipo de alimento (solo Admin)' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -60,14 +60,14 @@ export class TiposAlimentoController {
   }
 
   @Patch(':id/activar')
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.CATALOGOS_GESTIONAR)
   @ApiOperation({ summary: 'Activar un tipo de alimento (solo Admin)' })
   activar(@Param('id', ParseIntPipe) id: number) {
     return this.tiposAlimentoService.activar(id);
   }
 
   @Delete(':id')
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.CATALOGOS_GESTIONAR)
   @ApiOperation({
     summary: 'Desactivar un tipo de alimento (borrado suave, solo Admin)',
   })
@@ -76,7 +76,7 @@ export class TiposAlimentoController {
   }
 
   @Delete(':id/permanente')
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.CATALOGOS_GESTIONAR)
   @ApiOperation({
     summary: 'Eliminar un tipo de alimento permanente (solo Admin)',
   })

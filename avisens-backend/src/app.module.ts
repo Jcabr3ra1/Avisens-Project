@@ -53,6 +53,7 @@ import { OrganizacionesModule } from './modules/organizaciones/organizaciones.mo
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { DecimalInterceptor } from './common/decimal.interceptor';
 import { RecuperacionesPasswordModule } from './modules/recuperaciones-password/recuperaciones-password.module';
+import { CatalogoSensoresModule } from './modules/catalogo-sensores/catalogo-sensores.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -125,6 +126,7 @@ import { RecuperacionesPasswordModule } from './modules/recuperaciones-password/
     NotificacionesModule,
     OrganizacionesModule,
     RecuperacionesPasswordModule,
+    CatalogoSensoresModule,
   ],
   providers: [
     {

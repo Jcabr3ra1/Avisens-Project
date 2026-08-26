@@ -14,6 +14,8 @@ import { GranjasModule } from '../src/modules/granjas/granjas.module';
 import { PrismaModule } from '../src/prisma/prisma.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { validateEnv } from '../src/config/env.validation';
+import { CatalogoSensoresModule } from '../src/modules/catalogo-sensores/catalogo-sensores.module';
+import { PERMISOS } from '../src/common/auth/permisos';
 
 describe('Núcleo multi-tenant (e2e)', () => {
   let app: INestApplication;
@@ -26,6 +28,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
     granjas: [] as number[],
     galpones: [] as number[],
     dispositivo: 0,
+    catalogoSensor: 0,
   };
   const sufijo = `${Date.now()}-${process.pid}`;
   const password = 'Prueba-e2e-123';
@@ -38,6 +41,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         AuthModule,
         GranjasModule,
         GalponesModule,
+        CatalogoSensoresModule,
       ],
     }).compile();
     app = modulo.createNestApplication();
@@ -130,6 +134,14 @@ describe('Núcleo multi-tenant (e2e)', () => {
       },
     });
     ids.dispositivo = dispositivo.id;
+    const catalogo = await prisma.catalogoSensor.create({
+      data: {
+        tipo_sensor: `temperatura-${sufijo}`,
+        nombre: 'Temperatura E2E',
+        precio_unitario_cop: 85000,
+      },
+    });
+    ids.catalogoSensor = catalogo.id;
     const login = await request(servidor)
       .post('/v1/auth/login')
       .send({ email: operario.email, password })
@@ -149,6 +161,9 @@ describe('Núcleo multi-tenant (e2e)', () => {
         where: { usuario_id: { in: ids.usuarios } },
       });
       await prisma.dispositivo.deleteMany({ where: { id: ids.dispositivo } });
+      await prisma.catalogoSensor.deleteMany({
+        where: { id: ids.catalogoSensor },
+      });
       await prisma.galpon.deleteMany({ where: { id: { in: ids.galpones } } });
       await prisma.granja.deleteMany({ where: { id: { in: ids.granjas } } });
       await prisma.usuario.deleteMany({ where: { id: { in: ids.usuarios } } });
@@ -185,6 +200,30 @@ describe('Núcleo multi-tenant (e2e)', () => {
       .post('/v1/galpones')
       .set('Authorization', `Bearer ${token}`)
       .send({ granja_id: ids.granjas[0], codigo: 'NO', nombre: 'No' })
+      .expect(403);
+  });
+
+  it('expone el RBAC efectivo y permite solo lectura de catálogos', async () => {
+    const permisos = await request(servidor)
+      .get('/v1/auth/permisos')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const cuerpo = JSON.parse(permisos.text) as { permisos: string[] };
+    expect(cuerpo.permisos).toContain(PERMISOS.CATALOGOS_LEER);
+    expect(cuerpo.permisos).not.toContain(PERMISOS.CATALOGOS_GESTIONAR);
+
+    await request(servidor)
+      .get('/v1/catalogo-sensores')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    await request(servidor)
+      .post('/v1/catalogo-sensores')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        tipo_sensor: 'prohibido',
+        nombre: 'Prohibido',
+        precio_unitario_cop: 1,
+      })
       .expect(403);
   });
 

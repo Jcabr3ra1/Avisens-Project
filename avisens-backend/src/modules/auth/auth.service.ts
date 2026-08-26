@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
+import { permisosDelRol } from '../../common/auth/permisos';
 
 @Injectable()
 export class AuthService {
@@ -17,13 +18,17 @@ export class AuthService {
     private config: ConfigService,
   ) {}
 
+  obtenerPermisos(rol: string) {
+    return { rol, permisos: permisosDelRol(rol) };
+  }
+
   async login(dto: LoginDto, ip?: string, userAgent?: string) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { email: dto.email },
-      include: { rol: true, seguridad_cuenta: true },
+      include: { rol: true, seguridad_cuenta: true, organizacion: true },
     });
 
-    if (!usuario || !usuario.activo) {
+    if (!usuario || !usuario.activo || usuario.organizacion?.activa === false) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
@@ -127,12 +132,13 @@ export class AuthService {
 
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: userId },
-      include: { rol: true, seguridad_cuenta: true },
+      include: { rol: true, seguridad_cuenta: true, organizacion: true },
     });
 
     if (
       !usuario ||
       !usuario.activo ||
+      usuario.organizacion?.activa === false ||
       usuario.seguridad_cuenta?.debe_cambiar_password
     ) {
       throw new UnauthorizedException();

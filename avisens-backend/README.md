@@ -34,14 +34,19 @@ PrismaService  → PostgreSQL
 Cualquier error → filtros globales → respuesta JSON uniforme con su código HTTP.
 ```
 
-### Control de acceso (dos niveles)
+### Control de acceso y RBAC
 
-1. **Por rol** — `RolesGuard` + el decorador `@Roles(...)`: quién puede entrar a
-   cada módulo (`Administrador`, `Propietario`, `Operario`).
-2. **Por dueño** — en cada servicio, los ayudantes `esPropietario()` y
-   `verificarDueno()` de `common/acceso.ts`: un **Propietario solo ve/toca lo que
-   cuelga de sus granjas**; un **Administrador** ve todo. El filtro sube por las
-   relaciones hasta `granja.propietario_id`.
+Avisens usa un RBAC híbrido y explícito:
+
+1. `@Roles` conserva las fronteras gruesas de cada módulo para Administrador,
+   Propietario y Operario.
+2. `@Permisos` expresa capacidades reutilizables mediante la matriz tipada de
+   `src/common/auth/permisos.ts`.
+3. Los servicios aplican el alcance por organización, granja y galpón; un
+   permiso nunca concede acceso a datos de otro tenant.
+
+El seed sincroniza la matriz con `permisos` y `roles_permisos` para auditoría.
+Esta versión no permite crear roles dinámicos desde la API.
 
 ---
 

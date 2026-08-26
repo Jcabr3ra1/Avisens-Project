@@ -12,9 +12,9 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/auth/roles';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
+import { Permisos } from '../../common/decorators/permisos.decorator';
+import { PERMISOS } from '../../common/auth/permisos';
 import { CurvasObjetivoService } from './curvas-objetivo.service';
 import { CreateCurvaObjetivoDto } from './dto/create-curva-objetivo.dto';
 import { UpdateCurvaObjetivoDto } from './dto/update-curva-objetivo.dto';
@@ -22,14 +22,14 @@ import { QueryCurvasObjetivoDto } from './dto/query-curvas-objetivo.dto';
 
 @ApiTags('curvas-objetivo')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
+@UseGuards(JwtAuthGuard, PermisosGuard)
+@Permisos(PERMISOS.CATALOGOS_LEER)
 @Controller('curvas-objetivo')
 export class CurvasObjetivoController {
   constructor(private curvasObjetivoService: CurvasObjetivoService) {}
 
   @Post()
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.CATALOGOS_GESTIONAR)
   @ApiOperation({ summary: 'Crear un punto de curva objetivo (solo Admin)' })
   crear(@Body() dto: CreateCurvaObjetivoDto) {
     return this.curvasObjetivoService.crear(dto);
@@ -51,7 +51,7 @@ export class CurvasObjetivoController {
   }
 
   @Patch(':id')
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.CATALOGOS_GESTIONAR)
   @ApiOperation({ summary: 'Actualizar un punto de curva (solo Admin)' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -61,7 +61,7 @@ export class CurvasObjetivoController {
   }
 
   @Delete(':id')
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.CATALOGOS_GESTIONAR)
   @ApiOperation({
     summary: 'Eliminar un punto de curva de forma permanente (solo Admin)',
   })
