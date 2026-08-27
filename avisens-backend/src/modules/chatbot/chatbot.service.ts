@@ -53,13 +53,16 @@ const VALIDACION_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALIDACION_TELEFONO = /^\+?[\d\s\-()]{7,15}$/;
 const VALIDACION_DOCUMENTO = /^[\d\-.]+$/;
 
+// El cuestionario se anuncia en cuatro bloques, cada uno diciendo cuantas
+// preguntas trae. Saber que faltan tres se siente mucho mas corto que recibir
+// tres mensajes sueltos sin final a la vista. Los bloques coinciden con las
+// pantallas del formulario de WhatsApp Flows, para que el dia que se publique
+// no haya que reagrupar nada.
 const MENSAJES_TRANSICION: Record<string, string> = {
-  A2: '✅ ¡Perfecto! Ahora cuéntame sobre ti 📝',
-  A5: '🌾 Excelente. Ahora hablemos de tu granja...',
-  A14: '😖 Entiendo. Cuéntame sobre los retos que has enfrentado...',
-  A17: '🔧 Muy bien. Ahora algunas preguntas sobre tu experiencia con tecnología...',
-  A20: '🤝 Casi terminamos. Solo unas preguntas finales...',
-  C1: '📞 ¡Genial! Para poder contactarte...',
+  A5: '🏘️ *Tu granja* — 3 preguntas para poder cotizarte',
+  A9: '⚙️ *Cómo está montada* — 3 preguntas rápidas',
+  A14: '🎯 *Qué necesitas* — 5 preguntas y terminamos',
+  C1: '📞 *Casi listo* — solo falta cómo contactarte',
 };
 
 @Injectable()
@@ -245,8 +248,8 @@ export class ChatbotService {
     }
 
     if (siguiente === FIN) {
-      const esPqrs = pregunta.bloque === 'B';
-      if (!esPqrs) {
+      const esConsulta = pregunta.bloque === 'B';
+      if (!esConsulta) {
         const resumen = await this.obtenerResumen(prospecto.id);
         await this.prisma.prospecto.update({
           where: { id: prospecto.id },
@@ -500,31 +503,17 @@ export class ChatbotService {
 
     // Ruta PQRS (bloque B): no hay puntaje ni clasificacion comercial; la
     // solicitud queda radicada con su categoria, asunto y detalle.
-    const esPqrs = respuestas.some((r) => r.bloque === 'B');
+    const esConsulta = respuestas.some((r) => r.bloque === 'B');
 
-    if (esPqrs) {
-      const porCodigo = new Map(
-        respuestas.map((r) => [r.codigo_pregunta, r.respuesta_texto]),
-      );
-
-      // Solo se radica si la persona pidio que registraramos su caso (B2/B3).
-      // Consultar una pregunta frecuente no debe generar un ticket vacio.
-      if (porCodigo.has('B2')) {
-        await this.prisma.solicitudPqrs.create({
-          data: {
-            prospecto_id: prospectoId,
-            categoria: porCodigo.get('B1') ?? 'Petición',
-            asunto: porCodigo.get('B2'),
-            mensaje: porCodigo.get('B3'),
-            estado: 'abierta',
-          },
-        });
-      }
-
+    // El bloque B quedo reducido a las preguntas frecuentes de preventa. La
+    // radicacion de PQRS se retiro: era soporte para clientes que ya compraron,
+    // y todavia no hay ninguno. Cuando los haya, va en su propio canal, no
+    // mezclado con el cuestionario que califica prospectos.
+    if (esConsulta) {
       const cerrado = await this.prisma.prospecto.update({
         where: { id: prospectoId },
         data: {
-          estado: porCodigo.has('B2') ? 'pqrs' : 'consulta_atendida',
+          estado: 'consulta_atendida',
           pregunta_actual: FIN,
           fecha_finalizacion: new Date(),
         },
@@ -540,7 +529,7 @@ export class ChatbotService {
         total_pasos: null as number | null,
         finalizado: true,
         puntaje_total: null as number | null,
-        clasificacion: 'pqrs' as string | null,
+        clasificacion: 'consulta_atendida' as string | null,
       };
     }
 

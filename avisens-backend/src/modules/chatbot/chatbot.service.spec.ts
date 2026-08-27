@@ -462,7 +462,7 @@ describe('ChatbotService', () => {
       expect(datosDe(prisma.prospecto.create).pregunta_actual).toBe('B1');
     });
 
-    it('radica una SolicitudPqrs al terminar el bloque B, sin puntaje comercial', async () => {
+    it('cierra el bloque B como consulta atendida, sin radicar ni puntuar', async () => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
         pregunta({
           codigo: 'B3',
@@ -486,20 +486,11 @@ describe('ChatbotService', () => {
       });
 
       expect(r.finalizado).toBe(true);
-      expect(r.clasificacion).toBe('pqrs');
+      expect(r.clasificacion).toBe('consulta_atendida');
       expect(r.puntaje_total).toBeNull();
-      expect(prisma.solicitudPqrs.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          data: expect.objectContaining({
-            categoria: 'Sugerencia',
-            asunto: 'Los sensores',
-            mensaje: 'Detalle largo',
-            estado: 'abierta',
-          }),
-        }),
-      );
-      expect(ultimosDatos(prisma.prospecto.update).estado).toBe('pqrs');
+      // Ya no se radica nada: el bloque B quedo reducido a preguntas
+      // frecuentes de preventa, sin soporte posventa.
+      expect(prisma.solicitudPqrs.create).not.toHaveBeenCalled();
     });
 
     it('la ruta de cotizacion no radica PQRS', async () => {
@@ -662,20 +653,6 @@ describe('ChatbotService', () => {
       );
     });
 
-    it('radica solo cuando la persona pidio registrar el caso', async () => {
-      await cerrarB([
-        ['B1', 'Reclamo'],
-        ['B2', 'Sensores sin datos'],
-        ['B3', 'Llevan dos dias sin reportar'],
-      ]);
-
-      expect(prisma.solicitudPqrs.create).toHaveBeenCalled();
-      const datos = datosDe(prisma.solicitudPqrs.create);
-      expect(datos.categoria).toBe('Reclamo');
-      expect(datos.asunto).toBe('Sensores sin datos');
-      expect(datos.estado).toBe('abierta');
-      expect(ultimosDatos(prisma.prospecto.update).estado).toBe('pqrs');
-    });
 
     it('no puntua ni clasifica comercialmente una consulta', async () => {
       await cerrarB([['B1', 'Queja'], ['B2', 'x'], ['B3', 'y']]);
