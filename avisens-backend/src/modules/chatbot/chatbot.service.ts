@@ -9,6 +9,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
 import { IniciarChatDto } from './dto/iniciar-chat.dto';
 import { ResponderChatDto } from './dto/responder-chat.dto';
+import {
+  NO_DECIDE,
+  SIN_SENAL,
+  tieneDolor,
+  viabilidadTecnica,
+} from './dominio/calificacion';
 
 const PRIMERA_PREGUNTA = 'M1';
 const PRIMERA_PREGUNTA_PQRS = 'B1';
@@ -35,8 +41,10 @@ const CAMPOS_NUMERICOS = new Set([
   'area_galpon_m2',
 ]);
 
-const UMBRAL_CALIENTE = 12;
-const UMBRAL_TIBIO = 7;
+// Sobre PUNTAJE_MAXIMO (12): dos tercios para caliente, 40% para tibio. Antes
+// eran 12 y 7 sobre 16, que son proporciones equivalentes.
+const UMBRAL_CALIENTE = 8;
+const UMBRAL_TIBIO = 5;
 
 const VISITA_PRESENCIAL = 'VISITA_PRESENCIAL';
 const DEMO_REMOTA = 'DEMO_REMOTA';
@@ -44,9 +52,6 @@ const SEGUIMIENTO_AUTOMATIZADO = 'SEGUIMIENTO_AUTOMATIZADO';
 const CALLBACK_DECISOR = 'CALLBACK_DECISOR';
 
 const HORAS_CALLBACK = 48;
-const SIN_SENAL = 'No, zona rural sin señal';
-const NO_DECIDE = 'No';
-const DOLOR = ['Sí, más de una vez', 'Una vez'];
 const SIN_CONSENTIMIENTO = 'sin_consentimiento';
 
 const VALIDACION_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -588,11 +593,7 @@ export class ChatbotService {
           ? DEMO_REMOTA
           : SEGUIMIENTO_AUTOMATIZADO;
 
-    // A14 absorbio lo que antes preguntaba A15 (causas de muerte): eran dos
-    // preguntas de texto libre seguidas que aqui ya se leian como una sola.
-    const dolor =
-      DOLOR.includes(porCodigo.get('A16') ?? '') ||
-      !!porCodigo.get('A14')?.trim();
+    const dolor = tieneDolor(porCodigo.get('A16'), porCodigo.get('A14'));
 
     const prospecto = await this.prisma.prospecto.update({
       where: { id: prospectoId },
@@ -602,6 +603,13 @@ export class ChatbotService {
         accion_siguiente: accion,
         senal_caliente: dolor,
         conectividad_limitada: porCodigo.get('A13') === SIN_SENAL,
+        // Semaforo tecnico, aparte del puntaje comercial: dice si se le puede
+        // instalar hoy, no si quiere comprar.
+        viabilidad_tecnica: viabilidadTecnica(
+          porCodigo.get('A9'),
+          porCodigo.get('A11'),
+          porCodigo.get('A13'),
+        ),
         estado: 'calificado',
         pregunta_actual: FIN,
         fecha_finalizacion: new Date(),

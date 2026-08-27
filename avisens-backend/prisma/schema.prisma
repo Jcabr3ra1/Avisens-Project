@@ -790,6 +790,7 @@ model Prospecto {
   accion_siguiente           String?
   senal_caliente             Boolean         @default(false)
   conectividad_limitada      Boolean         @default(false)
+  viabilidad_tecnica         String?
   estado                     EstadoProspecto @default(nuevo)
   pregunta_actual            String?
   ultima_pregunta            String?

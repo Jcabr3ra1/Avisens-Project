@@ -4,6 +4,15 @@ import { ChatbotService } from './chatbot.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
 
+import {
+  A13_INTERNET,
+  A16_MORTALIDAD,
+  A20_DECIDE,
+  DOLOR,
+  NO_DECIDE,
+  PUNTAJE_MAXIMO,
+} from './dominio/calificacion';
+
 describe('ChatbotService', () => {
   let service: ChatbotService;
 
@@ -239,12 +248,14 @@ describe('ChatbotService', () => {
       });
     };
 
+    // Los umbrales son 8 y 5 sobre los 12 puntos comerciales. Antes eran 12 y
+    // 7 sobre 16, que son las mismas proporciones.
     it.each([
-      [16, 'caliente'],
       [12, 'caliente'],
-      [11, 'tibio'],
+      [8, 'caliente'],
       [7, 'tibio'],
-      [6, 'frio'],
+      [5, 'tibio'],
+      [4, 'frio'],
       [0, 'frio'],
     ])('con %i puntos clasifica como %s', async (puntos, esperada) => {
       const r = await finalizarCon(puntos);
@@ -538,13 +549,13 @@ describe('ChatbotService', () => {
     });
 
     it('un lead caliente se enruta a visita presencial', async () => {
-      const datos = await cerrarCon([A('A20', 'Sí')], 14);
+      const datos = await cerrarCon([A('A20', A20_DECIDE[0].texto)], PUNTAJE_MAXIMO);
       expect(datos.clasificacion).toBe('caliente');
       expect(datos.accion_siguiente).toBe('VISITA_PRESENCIAL');
     });
 
     it('un lead tibio se enruta a demostracion remota', async () => {
-      const datos = await cerrarCon([A('A20', 'Sí')], 9);
+      const datos = await cerrarCon([A('A20', A20_DECIDE[0].texto)], 6);
       expect(datos.clasificacion).toBe('tibio');
       expect(datos.accion_siguiente).toBe('DEMO_REMOTA');
     });
@@ -556,7 +567,7 @@ describe('ChatbotService', () => {
     });
 
     it('sin poder de decision prima el callback sobre el puntaje', async () => {
-      const datos = await cerrarCon([A('A20', 'No')], 15);
+      const datos = await cerrarCon([A('A20', NO_DECIDE)], PUNTAJE_MAXIMO);
 
       expect(datos.clasificacion).toBe('caliente');
       expect(datos.accion_siguiente).toBe('CALLBACK_DECISOR');
@@ -565,7 +576,7 @@ describe('ChatbotService', () => {
 
     it('el callback queda programado a 48 horas', async () => {
       const antes = Date.now();
-      const datos = await cerrarCon([A('A20', 'No')], 5);
+      const datos = await cerrarCon([A('A20', NO_DECIDE)], 5);
 
       const fecha = datos.fecha_callback as Date;
       const horas = (fecha.getTime() - antes) / 3600000;
@@ -580,7 +591,7 @@ describe('ChatbotService', () => {
 
     it('la zona rural sin senal se registra sin descartar al prospecto', async () => {
       const datos = await cerrarCon(
-        [A('A20', 'Sí'), A('A13', 'No, zona rural sin señal')],
+        [A('A20', A20_DECIDE[0].texto), A('A13', A13_INTERNET.SIN_SENAL)],
         13,
       );
 
@@ -599,7 +610,7 @@ describe('ChatbotService', () => {
 
     it('la mortalidad ambiental repetida marca senal caliente', async () => {
       const datos = await cerrarCon(
-        [A('A20', 'Sí'), A('A16', 'Sí, más de una vez')],
+        [A('A20', A20_DECIDE[0].texto), A('A16', DOLOR[0])],
         8,
       );
       expect(datos.senal_caliente).toBe(true);
@@ -607,7 +618,11 @@ describe('ChatbotService', () => {
 
     it('una problematica descrita en texto libre tambien marca senal caliente', async () => {
       const datos = await cerrarCon(
-        [A('A20', 'Sí'), A('A16', 'No'), A('A14', 'Se me mueren por calor')],
+        [
+          A('A20', A20_DECIDE[0].texto),
+          A('A16', A16_MORTALIDAD[2].texto),
+          A('A14', 'Mortalidad por calor o frío'),
+        ],
         8,
       );
       expect(datos.senal_caliente).toBe(true);
@@ -701,7 +716,7 @@ describe('ChatbotService', () => {
     });
 
     it('no la genera para quien queda en callback: no se le prometio', async () => {
-      const r = await cerrar([['A20', 'No']]);
+      const r = await cerrar([['A20', NO_DECIDE]]);
 
       expect(cotizaciones.generar).not.toHaveBeenCalled();
       expect(r.cotizacion).toBeNull();
