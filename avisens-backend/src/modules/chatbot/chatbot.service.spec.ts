@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
+import { InterpreteRespuestaService } from './interprete-respuesta.service';
 
 import {
   A13_INTERNET,
@@ -55,6 +56,10 @@ describe('ChatbotService', () => {
     consentimiento_habeas_data: true,
   };
 
+  // Por defecto no interpreta: las pruebas de siempre siguen siendo
+  // deterministas y no dependen de ningun modelo.
+  const interprete = { interpretar: jest.fn().mockResolvedValue(null) };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     prisma.preguntaChatbot.count.mockResolvedValue(19);
@@ -69,6 +74,7 @@ describe('ChatbotService', () => {
         ChatbotService,
         { provide: PrismaService, useValue: prisma },
         { provide: CotizacionesService, useValue: cotizaciones },
+        { provide: InterpreteRespuestaService, useValue: interprete },
       ],
     }).compile();
     service = module.get<ChatbotService>(ChatbotService);
@@ -872,6 +878,70 @@ describe('ChatbotService', () => {
       const datos = ultimosDatos(prisma.prospecto.update);
       expect(datos.pregunta_actual).toBe('CONFIRMAR');
       expect(datos.municipio).toBe('Piendamo');
+    });
+  });
+
+  describe('respuestas en lenguaje natural', () => {
+    const conOpciones = () =>
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'A11',
+          texto: '¿Cómo es la energía en tu granja?',
+          tipo: 'opcion_unica',
+          opciones: ['Estable todo el día', 'Se va, pero tengo planta'],
+          siguiente: 'A13',
+        }),
+      );
+
+    it('no llama al modelo si la persona escribio el numero de la opcion', async () => {
+      conOpciones();
+
+      await service.responder({ sesion_id: enCurso.sesion_id, respuesta: '1' });
+
+      expect(interprete.interpretar).not.toHaveBeenCalled();
+      expect(datosDe(prisma.respuestaChatbot.create).respuesta_texto).toBe(
+        'Estable todo el día',
+      );
+    });
+
+    it('no llama al modelo si escribio el texto exacto', async () => {
+      conOpciones();
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Se va, pero tengo planta',
+      });
+
+      expect(interprete.interpretar).not.toHaveBeenCalled();
+    });
+
+    it('interpreta una respuesta escrita a mano y guarda la opcion', async () => {
+      conOpciones();
+      interprete.interpretar.mockResolvedValueOnce('Se va, pero tengo planta');
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'se me va la luz a cada rato pero tengo plantica',
+      });
+
+      expect(interprete.interpretar).toHaveBeenCalled();
+      expect(datosDe(prisma.respuestaChatbot.create).respuesta_texto).toBe(
+        'Se va, pero tengo planta',
+      );
+    });
+
+    it('si el modelo no entiende, se comporta como antes de existir', async () => {
+      // Sin API key, con error o con una respuesta que no encaja, el flujo
+      // sigue siendo el determinista: la respuesta se rechaza como siempre.
+      conOpciones();
+      interprete.interpretar.mockResolvedValueOnce(null);
+
+      await expect(
+        service.responder({
+          sesion_id: enCurso.sesion_id,
+          respuesta: 'cualquier cosa que no encaja',
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });
