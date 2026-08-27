@@ -1,4 +1,3 @@
-import type { PrismaClient } from '@prisma/client';
 
 const DIAS_MEDIDOS = [7, 14, 21, 28];
 
