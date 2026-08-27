@@ -7,12 +7,21 @@ import {
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
+import { InterpreteRespuestaService } from './interprete-respuesta.service';
 import { IniciarChatDto } from './dto/iniciar-chat.dto';
 import { ResponderChatDto } from './dto/responder-chat.dto';
+import {
+  NO_DECIDE,
+  SIN_SENAL,
+  tieneDolor,
+  viabilidadTecnica,
+} from './dominio/calificacion';
 
 const PRIMERA_PREGUNTA = 'M1';
 const PRIMERA_PREGUNTA_PQRS = 'B1';
+const PRIMERA_PREGUNTA_COTIZACION = 'A1';
 const RUTA_PQRS = 'general';
+const RUTA_COTIZACION = 'cotizacion';
 const FIN = 'FIN';
 const CONFIRMAR = 'CONFIRMAR';
 const CORREGIR = 'CORREGIR';
@@ -22,19 +31,21 @@ const PREFIJO_CORRECCION = 'FIX:';
 // vez de rehacer el cuestionario entero.
 const CORREGIBLES: Array<[string, string]> = [
   ['Nombre', 'A2'],
-  ['Nombre de la granja', 'A2C'],
-  ['Documento', 'A3'],
-  ['Municipio', 'A4'],
-  ['Departamento', 'A4B'],
-  ['Tamaño de la granja', 'A5'],
+  ['Número de galpones', 'A5'],
   ['Tamaño del galpón', 'A6'],
   ['Teléfono', 'C1'],
   ['Correo', 'C2'],
 ];
-const CAMPOS_NUMERICOS = new Set(['area_granja_m2', 'area_galpon_m2']);
+const CAMPOS_NUMERICOS = new Set([
+  'numero_galpones',
+  'area_granja_m2',
+  'area_galpon_m2',
+]);
 
-const UMBRAL_CALIENTE = 12;
-const UMBRAL_TIBIO = 7;
+// Sobre PUNTAJE_MAXIMO (12): dos tercios para caliente, 40% para tibio. Antes
+// eran 12 y 7 sobre 16, que son proporciones equivalentes.
+const UMBRAL_CALIENTE = 8;
+const UMBRAL_TIBIO = 5;
 
 const VISITA_PRESENCIAL = 'VISITA_PRESENCIAL';
 const DEMO_REMOTA = 'DEMO_REMOTA';
@@ -42,22 +53,22 @@ const SEGUIMIENTO_AUTOMATIZADO = 'SEGUIMIENTO_AUTOMATIZADO';
 const CALLBACK_DECISOR = 'CALLBACK_DECISOR';
 
 const HORAS_CALLBACK = 48;
-const SIN_SENAL = 'No, zona rural sin señal';
-const NO_DECIDE = 'No';
-const DOLOR = ['Sí, más de una vez', 'Una vez'];
 const SIN_CONSENTIMIENTO = 'sin_consentimiento';
 
 const VALIDACION_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALIDACION_TELEFONO = /^\+?[\d\s\-()]{7,15}$/;
 const VALIDACION_DOCUMENTO = /^[\d\-.]+$/;
 
+// El cuestionario se anuncia en cuatro bloques, cada uno diciendo cuantas
+// preguntas trae. Saber que faltan tres se siente mucho mas corto que recibir
+// tres mensajes sueltos sin final a la vista. Los bloques coinciden con las
+// pantallas del formulario de WhatsApp Flows, para que el dia que se publique
+// no haya que reagrupar nada.
 const MENSAJES_TRANSICION: Record<string, string> = {
-  A2: '✅ ¡Perfecto! Ahora cuéntame sobre ti 📝',
-  A5: '🌾 Excelente. Ahora hablemos de tu granja...',
-  A14: '😖 Entiendo. Cuéntame sobre los retos que has enfrentado...',
-  A17: '🔧 Muy bien. Ahora algunas preguntas sobre tu experiencia con tecnología...',
-  A20: '🤝 Casi terminamos. Solo unas preguntas finales...',
-  C1: '📞 ¡Genial! Para poder contactarte...',
+  A5: '🏘️ *Tu granja* — 3 preguntas para poder cotizarte',
+  A9: '⚙️ *Cómo está montada* — 3 preguntas rápidas',
+  A14: '🎯 *Qué necesitas* — 5 preguntas y terminamos',
+  C1: '📞 *Casi listo* — solo falta cómo contactarte',
 };
 
 @Injectable()
@@ -67,14 +78,23 @@ export class ChatbotService {
   constructor(
     private prisma: PrismaService,
     private cotizaciones: CotizacionesService,
+    private interprete: InterpreteRespuestaService,
   ) {}
 
   async iniciar(dto: IniciarChatDto) {
     const canal = dto.canal_origen ?? 'web';
     // La ruta la escoge el usuario: cotizacion califica al prospecto (bloque A)
     // y general radica una solicitud PQRS (bloque B, sin puntaje).
+    // Si quien abre el chat ya eligio a que viene -el boton "Cotizar" de la web
+    // manda ruta: 'cotizacion'-, el menu sobra: preguntarle otra vez lo que
+    // acaba de decir es un paso regalado. El menu queda para WhatsApp, donde
+    // la persona solo escribe "hola" y no hay ruta.
     const primeraCodigo =
-      dto.ruta === RUTA_PQRS ? PRIMERA_PREGUNTA_PQRS : PRIMERA_PREGUNTA;
+      dto.ruta === RUTA_PQRS
+        ? PRIMERA_PREGUNTA_PQRS
+        : dto.ruta === RUTA_COTIZACION
+          ? PRIMERA_PREGUNTA_COTIZACION
+          : PRIMERA_PREGUNTA;
     const primera = await this.primeraVisible(primeraCodigo, canal);
 
     const prospecto = await this.prisma.prospecto.create({
@@ -170,7 +190,7 @@ export class ChatbotService {
 
     const pregunta = await this.obtenerPregunta(codigoActual);
 
-    const respuesta = this.normalizarRespuesta(pregunta, dto.respuesta);
+    const respuesta = await this.resolverRespuesta(pregunta, dto.respuesta);
 
     const valor = this.validarRespuesta(pregunta, respuesta);
     const puntaje = pregunta.puntua
@@ -235,8 +255,8 @@ export class ChatbotService {
     }
 
     if (siguiente === FIN) {
-      const esPqrs = pregunta.bloque === 'B';
-      if (!esPqrs) {
+      const esConsulta = pregunta.bloque === 'B';
+      if (!esConsulta) {
         const resumen = await this.obtenerResumen(prospecto.id);
         await this.prisma.prospecto.update({
           where: { id: prospecto.id },
@@ -404,6 +424,37 @@ export class ChatbotService {
       .toLowerCase();
   }
 
+  /**
+   * Determinista primero, IA despues. Si la persona escribio el numero de la
+   * opcion o su texto, se resuelve sin llamar a nadie. Solo cuando escribio
+   * algo distinto -"como 3000 pollos"- se le pide al modelo que lo ubique en
+   * la lista, y si no lo consigue se sigue con el texto tal cual, igual que
+   * antes de existir esto.
+   */
+  private async resolverRespuesta(
+    pregunta: { codigo: string; texto: string; tipo: string; opciones: unknown },
+    original: string,
+  ): Promise<string> {
+    const normalizada = this.normalizarRespuesta(pregunta, original);
+    const opciones = pregunta.opciones as string[] | null;
+    if (!opciones?.length || opciones.includes(normalizada)) {
+      return normalizada;
+    }
+
+    const interpretada = await this.interprete.interpretar(
+      pregunta.texto,
+      opciones,
+      original,
+    );
+    if (interpretada) {
+      this.logger.log(
+        `${pregunta.codigo}: "${original}" se interpreto como "${interpretada}"`,
+      );
+      return interpretada;
+    }
+    return normalizada;
+  }
+
   private normalizarRespuesta(
     pregunta: { tipo: string; opciones: unknown },
     respuesta: string,
@@ -490,31 +541,17 @@ export class ChatbotService {
 
     // Ruta PQRS (bloque B): no hay puntaje ni clasificacion comercial; la
     // solicitud queda radicada con su categoria, asunto y detalle.
-    const esPqrs = respuestas.some((r) => r.bloque === 'B');
+    const esConsulta = respuestas.some((r) => r.bloque === 'B');
 
-    if (esPqrs) {
-      const porCodigo = new Map(
-        respuestas.map((r) => [r.codigo_pregunta, r.respuesta_texto]),
-      );
-
-      // Solo se radica si la persona pidio que registraramos su caso (B2/B3).
-      // Consultar una pregunta frecuente no debe generar un ticket vacio.
-      if (porCodigo.has('B2')) {
-        await this.prisma.solicitudPqrs.create({
-          data: {
-            prospecto_id: prospectoId,
-            categoria: porCodigo.get('B1') ?? 'Petición',
-            asunto: porCodigo.get('B2'),
-            mensaje: porCodigo.get('B3'),
-            estado: 'abierta',
-          },
-        });
-      }
-
+    // El bloque B quedo reducido a las preguntas frecuentes de preventa. La
+    // radicacion de PQRS se retiro: era soporte para clientes que ya compraron,
+    // y todavia no hay ninguno. Cuando los haya, va en su propio canal, no
+    // mezclado con el cuestionario que califica prospectos.
+    if (esConsulta) {
       const cerrado = await this.prisma.prospecto.update({
         where: { id: prospectoId },
         data: {
-          estado: porCodigo.has('B2') ? 'pqrs' : 'consulta_atendida',
+          estado: 'consulta_atendida',
           pregunta_actual: FIN,
           fecha_finalizacion: new Date(),
         },
@@ -530,7 +567,7 @@ export class ChatbotService {
         total_pasos: null as number | null,
         finalizado: true,
         puntaje_total: null as number | null,
-        clasificacion: 'pqrs' as string | null,
+        clasificacion: 'consulta_atendida' as string | null,
       };
     }
 
@@ -589,10 +626,7 @@ export class ChatbotService {
           ? DEMO_REMOTA
           : SEGUIMIENTO_AUTOMATIZADO;
 
-    const dolor =
-      DOLOR.includes(porCodigo.get('A16') ?? '') ||
-      !!porCodigo.get('A14')?.trim() ||
-      !!porCodigo.get('A15')?.trim();
+    const dolor = tieneDolor(porCodigo.get('A16'), porCodigo.get('A14'));
 
     const prospecto = await this.prisma.prospecto.update({
       where: { id: prospectoId },
@@ -602,6 +636,13 @@ export class ChatbotService {
         accion_siguiente: accion,
         senal_caliente: dolor,
         conectividad_limitada: porCodigo.get('A13') === SIN_SENAL,
+        // Semaforo tecnico, aparte del puntaje comercial: dice si se le puede
+        // instalar hoy, no si quiere comprar.
+        viabilidad_tecnica: viabilidadTecnica(
+          porCodigo.get('A9'),
+          porCodigo.get('A11'),
+          porCodigo.get('A13'),
+        ),
         estado: 'calificado',
         pregunta_actual: FIN,
         fecha_finalizacion: new Date(),

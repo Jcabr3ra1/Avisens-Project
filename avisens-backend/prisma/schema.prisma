@@ -775,6 +775,7 @@ model Prospecto {
   documento                  String?
   municipio                  String?
   departamento               String?
+  numero_galpones            Int?
   area_granja_m2             Float?
   area_galpon_m2             Float?
   rol_prospecto              String?
@@ -789,6 +790,7 @@ model Prospecto {
   accion_siguiente           String?
   senal_caliente             Boolean         @default(false)
   conectividad_limitada      Boolean         @default(false)
+  viabilidad_tecnica         String?
   estado                     EstadoProspecto @default(nuevo)
   pregunta_actual            String?
   ultima_pregunta            String?

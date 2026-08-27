@@ -33,6 +33,7 @@ export class CotizacionesService {
       select: {
         id: true,
         estado: true,
+        numero_galpones: true,
         area_galpon_m2: true,
         area_granja_m2: true,
         respuestas: {
@@ -50,8 +51,13 @@ export class CotizacionesService {
     }
 
     const areaGalpon = prospecto.area_galpon_m2 ?? AREA_GALPON_POR_DEFECTO_M2;
+    // El cuestionario ahora pregunta cuantos galpones hay, asi que se usa el
+    // dato tal cual. La division del area de la granja entre la del galpon
+    // queda como respaldo para los prospectos que respondieron antes del
+    // cambio y solo tienen las areas.
     const galpones =
       dto.numero_galpones ??
+      prospecto.numero_galpones ??
       Math.max(
         1,
         Math.round((prospecto.area_granja_m2 ?? areaGalpon) / areaGalpon),

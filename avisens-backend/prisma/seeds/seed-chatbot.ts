@@ -1,141 +1,32 @@
 import { Prisma } from '@prisma/client';
 import type { PrismaClient } from '@prisma/client';
 
-const MATRIZ_CALIFICACION = [
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A8',
-    opcion_respuesta: '<1000',
-    puntaje: 0,
-    descripcion: 'Escala de la operacion (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A8',
-    opcion_respuesta: '1000-5000',
-    puntaje: 2,
-    descripcion: 'Escala de la operacion (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A8',
-    opcion_respuesta: '5000-10000',
-    puntaje: 3,
-    descripcion: 'Escala de la operacion (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A8',
-    opcion_respuesta: '>10000',
-    puntaje: 4,
-    descripcion: 'Escala de la operacion (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A16',
-    opcion_respuesta: 'Sí, más de una vez',
-    puntaje: 3,
-    descripcion: 'Dolor declarado (HU-02)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A16',
-    opcion_respuesta: 'Una vez',
-    puntaje: 2,
-    descripcion: 'Dolor declarado (HU-02)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A16',
-    opcion_respuesta: 'No',
-    puntaje: 0,
-    descripcion: 'Dolor declarado (HU-02)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A16',
-    opcion_respuesta: 'No sé la causa',
-    puntaje: 0,
-    descripcion: 'Dolor declarado (HU-02)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A18',
-    opcion_respuesta: 'Compra directa',
-    puntaje: 3,
-    descripcion: 'Presupuesto y adquisicion (HU-04)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A18',
-    opcion_respuesta: 'Suscripción',
-    puntaje: 3,
-    descripcion: 'Presupuesto y adquisicion (HU-04)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A18',
-    opcion_respuesta: 'El más conveniente',
-    puntaje: 1,
-    descripcion: 'Presupuesto y adquisicion (HU-04)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A18',
-    opcion_respuesta: 'No sé',
-    puntaje: 0,
-    descripcion: 'Presupuesto y adquisicion (HU-04)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A9',
-    opcion_respuesta: 'Sí, en buen estado',
-    puntaje: 1,
-    descripcion: 'Infraestructura habilitante (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A11',
-    opcion_respuesta: 'Eléctrico estable',
-    puntaje: 1,
-    descripcion: 'Infraestructura habilitante (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A13',
-    opcion_respuesta: 'Sí, estable',
-    puntaje: 1,
-    descripcion: 'Infraestructura habilitante (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A19',
-    opcion_respuesta: 'Ya tengo cotizaciones',
-    puntaje: 3,
-    descripcion: 'Urgencia y competencia (HU-05)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A19',
-    opcion_respuesta: 'Mirando opciones',
-    puntaje: 1,
-    descripcion: 'Urgencia y competencia (HU-05)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A19',
-    opcion_respuesta: 'Solo AVISENS',
-    puntaje: 0,
-    descripcion: 'Urgencia y competencia (HU-05)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A19',
-    opcion_respuesta: 'No sé qué más existe',
-    puntaje: 0,
-    descripcion: 'Urgencia y competencia (HU-05)',
-  },
-];
+import {
+  A11_ENERGIA,
+  A13_INTERNET,
+  A14_DOLOR,
+  A16_MORTALIDAD,
+  A18_PAGO,
+  A19_URGENCIA,
+  A20_DECIDE,
+  A9_GALPON,
+  OPCIONES_CALIFICADAS,
+  textosDe,
+} from '../../src/modules/chatbot/dominio/calificacion';
+
+// La matriz sale del dominio, no se escribe a mano. Antes el texto de cada
+// opcion vivia aqui y en el cuestionario por separado, y si no coincidian al
+// caracter la pregunta no puntuaba: nada fallaba, solo calificaba mal.
+const MATRIZ_CALIFICACION = Object.entries(OPCIONES_CALIFICADAS).flatMap(
+  ([codigo, opciones]) =>
+    opciones.map((o) => ({
+      bloque: 'A',
+      codigo_pregunta: codigo,
+      opcion_respuesta: o.texto,
+      puntaje: o.puntaje,
+      descripcion: `Calificacion comercial (${codigo})`,
+    })),
+);
 
 const PREGUNTAS_CHATBOT = [
   // =========================================================================
@@ -146,17 +37,17 @@ const PREGUNTAS_CHATBOT = [
     bloque: 'M',
     orden: 0,
     texto:
-      '👋 ¡Hola! Soy *AVIA*, la asistente virtual de AVISENS 🐔\n\n' +
-      'Monitoreamos granjas avícolas con sensores de temperatura, humedad y ' +
-      'ventilación para que sepas lo que pasa en el galpón antes de perder aves.\n\n' +
-      '¿En qué te puedo ayudar hoy?',
+      '👋 Hola, soy *AVIA* de AVISENS 🐔\n\n' +
+      'Ponemos sensores en tu galpón para que sepas qué está pasando ' +
+      'antes de perder aves.\n\n' +
+      '¿Qué necesitas?',
     tipo: 'opcion_unica',
-    opciones: ['Cotizar un sistema', 'Otra consulta o PQRS'],
+    opciones: ['Quiero cotizar', 'Tengo dudas primero'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
     siguiente: 'A1',
-    saltos: { 'Cotizar un sistema': 'A1', 'Otra consulta o PQRS': 'B1' },
+    saltos: { 'Quiero cotizar': 'A1', 'Tengo dudas primero': 'BMP' },
   },
 
   // =========================================================================
@@ -185,52 +76,13 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A2',
     bloque: 'A',
     orden: 2,
-    texto: '👤 ¿Cuál es tu nombre completo?',
+    texto: '👤 ¿Cómo te llamas?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'nombre',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A2C',
-    saltos: null,
-  },
-  {
-    codigo: 'A2B',
-    bloque: 'A',
-    orden: 3,
-    texto: '🪪 ¿Qué tipo de documento de identidad tienes?',
-    tipo: 'opcion_unica',
-    opciones: ['Cédula de ciudadanía', 'NIT', 'Cédula de extranjería', 'Pasaporte'],
-    campo_prospecto: 'tipo_documento',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'A3',
-    saltos: null,
-  },
-  {
-    codigo: 'A3',
-    bloque: 'A',
-    orden: 4,
-    texto: '🔢 ¿Cuál es el número de tu documento de identidad?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: 'documento',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'C1',
-    saltos: null,
-  },
-  {
-    codigo: 'A4',
-    bloque: 'A',
-    orden: 5,
-    texto: '📍 ¿En qué municipio está ubicada tu granja?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: 'municipio',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'A4B',
+    siguiente: 'A5',
     saltos: null,
   },
 
@@ -239,78 +91,39 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A5',
     bloque: 'A',
     orden: 6,
-    texto: '🌾 ¿Qué tamaño tiene la granja en metros cuadrados?',
+    texto: '🏘️ ¿Cuántos galpones tiene tu granja?',
     tipo: 'opcion_unica',
     opciones: [
-      'Menos de 500 m²',
-      '500 - 2.000 m²',
-      '2.000 - 10.000 m²',
-      'Más de 10.000 m²',
-      'Otro, lo escribo',
+      '1 galpón',
+      '2 galpones',
+      '3 galpones',
+      '4 a 6 galpones',
+      'Más de 6 galpones',
     ],
-    campo_prospecto: 'area_granja_m2',
+    campo_prospecto: 'numero_galpones',
     omitir_si_canal: null,
     puntua: false,
     siguiente: 'A6',
-    saltos: { 'Otro, lo escribo': 'A5B' },
+    saltos: null,
   },
   {
     codigo: 'A6',
     bloque: 'A',
     orden: 7,
-    texto: '🏠 ¿Qué tamaño tiene el galpón en metros cuadrados?',
+    texto: '📏 ¿De qué tamaño es cada galpón?',
     tipo: 'opcion_unica',
     opciones: [
       'Menos de 200 m²',
-      '200 - 500 m²',
-      '500 - 1.000 m²',
+      'Entre 200 y 500 m²',
+      'Entre 500 y 1.000 m²',
       'Más de 1.000 m²',
-      'Otro, lo escribo',
+      'Prefiero escribirlo',
     ],
     campo_prospecto: 'area_galpon_m2',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A7',
+    siguiente: 'A8',
     saltos: { 'Otro, lo escribo': 'A6B' },
-  },
-  {
-    codigo: 'A2C',
-    bloque: 'A',
-    orden: 4,
-    texto: '🌾 ¿Cómo se llama tu granja?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: 'nombre_granja',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'A4',
-    saltos: null,
-  },
-  {
-    codigo: 'A4B',
-    bloque: 'A',
-    orden: 6,
-    texto: '🗺️ ¿En qué departamento?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: 'departamento',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'A5',
-    saltos: null,
-  },
-  {
-    codigo: 'A5B',
-    bloque: 'A',
-    orden: 8,
-    texto: '🌾 Escribe el tamaño de la granja en metros cuadrados',
-    tipo: 'numero',
-    opciones: null,
-    campo_prospecto: 'area_granja_m2',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'A6',
-    saltos: null,
   },
   {
     codigo: 'A6B',
@@ -322,19 +135,6 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'area_galpon_m2',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A7',
-    saltos: null,
-  },
-  {
-    codigo: 'A7',
-    bloque: 'A',
-    orden: 8,
-    texto: '🐣 ¿Cuántas aves maneja cada galpón en promedio?',
-    tipo: 'opcion_unica',
-    opciones: ['<1000', '1000-5000', '5000-10000', '>10000'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
     siguiente: 'A8',
     saltos: null,
   },
@@ -342,12 +142,17 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A8',
     bloque: 'A',
     orden: 9,
-    texto: '🐔 ¿Cuántas aves almacenas actualmente en total en tus galpones?',
+    texto: '🐔 ¿Cuántas aves manejas en total?',
     tipo: 'opcion_unica',
-    opciones: ['<1000', '1000-5000', '5000-10000', '>10000'],
+    opciones: [
+      'Menos de 1.000',
+      'Entre 1.000 y 5.000',
+      'Entre 5.000 y 10.000',
+      'Más de 10.000',
+    ],
     campo_prospecto: null,
     omitir_si_canal: null,
-    puntua: true,
+    puntua: false,
     siguiente: 'A9',
     saltos: null,
   },
@@ -355,24 +160,13 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A9',
     bloque: 'A',
     orden: 10,
-    texto: '🏗️ ¿El galpón ya está construido y en buenas condiciones?',
+    texto: '🏗️ ¿Cómo están tus galpones?',
     tipo: 'opcion_unica',
-    opciones: ['Sí, en buen estado', 'Construido, mal estado', 'No está construido'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: true,
-    siguiente: 'A10',
-    saltos: null,
-  },
-  {
-    codigo: 'A10',
-    bloque: 'A',
-    orden: 11,
-    texto:
-      '🌳 ¿Tu granja está en una zona con árboles altos que sirvan como ' +
-      'rompevientos y mejoren la circulación del aire?',
-    tipo: 'opcion_unica',
-    opciones: ['Sí', 'No'],
+    opciones: [
+      A9_GALPON.BUENO,
+      A9_GALPON.DETERIORADO,
+      A9_GALPON.SIN_CONSTRUIR,
+    ],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
@@ -383,22 +177,14 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A11',
     bloque: 'A',
     orden: 12,
-    texto: '⚡ ¿Cómo es el suministro eléctrico en tu granja?',
+    texto: '⚡ ¿Cómo es la energía en tu granja?',
     tipo: 'opcion_unica',
-    opciones: ['Eléctrico estable', 'Planta de respaldo', 'Solo planta', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: true,
-    siguiente: 'A12',
-    saltos: null,
-  },
-  {
-    codigo: 'A12',
-    bloque: 'A',
-    orden: 13,
-    texto: '💧 ¿Tienes una fuente de agua cercana y confiable?',
-    tipo: 'opcion_unica',
-    opciones: ['Riachuelo cercano', 'Río cercano', 'Quebrada cercana', 'Pozo de agua', 'No tengo'],
+    opciones: [
+      A11_ENERGIA.ESTABLE,
+      A11_ENERGIA.CON_PLANTA,
+      A11_ENERGIA.SOLO_PLANTA,
+      A11_ENERGIA.INESTABLE,
+    ],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
@@ -409,12 +195,16 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A13',
     bloque: 'A',
     orden: 14,
-    texto: '📶 ¿Tienes internet (WiFi o datos móviles) dentro de la granja?',
+    texto: '📶 ¿Hay internet en la granja?',
     tipo: 'opcion_unica',
-    opciones: ['Sí, estable', 'Sí, pero intermitente', 'No, zona rural sin señal'],
+    opciones: [
+      A13_INTERNET.ESTABLE,
+      A13_INTERNET.INTERMITENTE,
+      A13_INTERNET.SIN_SENAL,
+    ],
     campo_prospecto: null,
     omitir_si_canal: null,
-    puntua: true,
+    puntua: false,
     siguiente: 'A14',
     saltos: null,
   },
@@ -424,27 +214,12 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A14',
     bloque: 'A',
     orden: 15,
-    texto:
-      '😖 Cuéntame: ¿cuáles son las principales problemáticas que se te han ' +
-      'presentado en la cría de pollos de engorde?',
-    tipo: 'texto_libre',
-    opciones: null,
+    texto: '😖 ¿Qué es lo que más te preocupa hoy?',
+    tipo: 'opcion_unica',
+    opciones: textosDe(A14_DOLOR),
     campo_prospecto: null,
     omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'A15',
-    saltos: null,
-  },
-  {
-    codigo: 'A15',
-    bloque: 'A',
-    orden: 16,
-    texto: '🦠 ¿Cuáles han sido las principales causas de muerte de las aves?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
+    puntua: true,
     siguiente: 'A16',
     saltos: null,
   },
@@ -453,42 +228,24 @@ const PREGUNTAS_CHATBOT = [
     bloque: 'A',
     orden: 17,
     texto:
-      '📉 ¿Has tenido mortalidad elevada por condiciones ambientales en los ' +
-      'últimos 12 meses?',
+      '📉 En el último año, ¿perdiste aves por calor, frío o humedad?',
     tipo: 'opcion_unica',
-    opciones: ['Sí, más de una vez', 'Una vez', 'No', 'No sé la causa'],
+    opciones: textosDe(A16_MORTALIDAD),
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
-    siguiente: 'A17',
+    siguiente: 'A18',
     saltos: null,
   },
 
   // --- La compra ---
   {
-    codigo: 'A17',
-    bloque: 'A',
-    orden: 18,
-    texto:
-      '🔧 ¿Has invertido antes en tecnología para tu granja (sensores, software, ' +
-      'automatización)?',
-    tipo: 'opcion_unica',
-    opciones: ['Sí', 'No', 'Es la primera vez'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'A18',
-    saltos: null,
-  },
-  {
     codigo: 'A18',
     bloque: 'A',
     orden: 19,
-    texto:
-      '💳 ¿Buscas adquirir la solución o prefieres un modelo de suscripción ' +
-      'mensual?',
+    texto: '💳 ¿Cómo preferirías pagarlo?',
     tipo: 'opcion_unica',
-    opciones: ['Compra directa', 'Suscripción', 'El más conveniente', 'No sé'],
+    opciones: textosDe(A18_PAGO),
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
@@ -499,9 +256,9 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A19',
     bloque: 'A',
     orden: 20,
-    texto: '🔍 ¿Estás evaluando otras soluciones o plataformas similares?',
+    texto: '🔍 ¿Estás viendo otras opciones además de AVISENS?',
     tipo: 'opcion_unica',
-    opciones: ['Ya tengo cotizaciones', 'Mirando opciones', 'Solo AVISENS', 'No sé qué más existe'],
+    opciones: textosDe(A19_URGENCIA),
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
@@ -512,13 +269,13 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A20',
     bloque: 'A',
     orden: 21,
-    texto: '🤝 ¿Eres tú quien toma la decisión de compra?',
+    texto: '🤝 ¿La decisión de compra la tomas tú?',
     tipo: 'opcion_unica',
-    opciones: ['Sí', 'No'],
+    opciones: textosDe(A20_DECIDE),
     campo_prospecto: null,
     omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'A2B',
+    puntua: true,
+    siguiente: 'C1',
     saltos: { No: 'A21' },
   },
   {
@@ -526,13 +283,13 @@ const PREGUNTAS_CHATBOT = [
     bloque: 'A',
     orden: 22,
     texto:
-      '👥 ¿Con quién debemos hablar? Déjanos su nombre y un número de contacto.',
+      '👥 ¿Con quién hablamos? Déjanos su nombre y un teléfono.',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'contacto_decisor',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A2B',
+    siguiente: 'C1',
     saltos: null,
   },
 
@@ -541,7 +298,7 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'C1',
     bloque: 'A',
     orden: 23,
-    texto: '📞 ¿A qué número de teléfono te podemos contactar?',
+    texto: '📞 ¿A qué número te llamamos?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'telefono',
@@ -554,11 +311,11 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'C2',
     bloque: 'A',
     orden: 24,
-    texto: '📧 ¿Cuál es tu correo electrónico?',
+    texto: '📧 ¿Y tu correo? Ahí te enviamos la cotización.',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'email',
-    omitir_si_canal: null,
+    omitir_si_canal: 'whatsapp',
     puntua: false,
     siguiente: 'FIN',
     saltos: null,
@@ -567,19 +324,6 @@ const PREGUNTAS_CHATBOT = [
   // =========================================================================
   // BLOQUE B — PQRS / CONSULTAS GENERALES (sin puntaje comercial)
   // =========================================================================
-  {
-    codigo: 'B1',
-    bloque: 'B',
-    orden: 1,
-    texto: '🗂️ Con gusto te ayudo. ¿Qué tipo de consulta tienes?',
-    tipo: 'opcion_unica',
-    opciones: ['Petición', 'Reclamo', 'Queja', 'Sugerencia', 'Trámite'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BMP',
-    saltos: { 'Petición': 'BMP', Reclamo: 'BIDR', Queja: 'BIDQ', Sugerencia: 'BMS', 'Trámite': 'BIDT' },
-  },
 
   // --- Peticiones ---
   {
@@ -597,7 +341,7 @@ const PREGUNTAS_CHATBOT = [
       '¿Financiación?',
       '¿Y si se va la luz?',
       'Clientes en el Cauca',
-      'Otra consulta',
+      'Hablar con un asesor',
     ],
     campo_prospecto: null,
     omitir_si_canal: null,
@@ -612,7 +356,7 @@ const PREGUNTAS_CHATBOT = [
       '¿Financiación?': 'BP6',
       '¿Y si se va la luz?': 'BP7',
       'Clientes en el Cauca': 'BP8',
-      'Otra consulta': 'B2',
+      'Hablar con un asesor': 'A1',
     },
   },
   {
@@ -760,271 +504,14 @@ const PREGUNTAS_CHATBOT = [
   },
 
   // --- Reclamos ---
-  {
-    codigo: 'BMR',
-    bloque: 'B',
-    orden: 11,
-    texto: '🔧 ¿Sobre qué necesitas ayuda?',
-    tipo: 'opcion_unica',
-    opciones: ['Sensores sin datos', 'Alertas no llegan', 'Factura incorrecta', 'Otra consulta'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BR1',
-    saltos: {
-      'Sensores sin datos': 'BR1',
-      'Alertas no llegan': 'BR2',
-      'Factura incorrecta': 'BR3',
-      'Otra consulta': 'B2',
-    },
-  },
-  {
-    codigo: 'BR1',
-    bloque: 'B',
-    orden: 12,
-    texto:
-      '🔌 Lamentamos el inconveniente. Primero revisa que los sensores tengan ' +
-      'alimentación eléctrica y que la unidad de comunicación esté encendida. ' +
-      'Si el problema sigue, nuestro equipo puede hacer un diagnóstico remoto ' +
-      'y, si hace falta, programar una visita técnica.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
-  {
-    codigo: 'BR2',
-    bloque: 'B',
-    orden: 13,
-    texto:
-      '🔔 Las alertas tardías o que no llegan suelen deberse a conectividad, ' +
-      'configuración o comunicación con los sensores. Nuestro equipo puede ' +
-      'revisar la configuración de forma remota y corregirla. Si persiste, se ' +
-      'programa una revisión técnica.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
-  {
-    codigo: 'BR3',
-    bloque: 'B',
-    orden: 14,
-    texto:
-      '📋 Lamentamos el inconveniente. Necesitamos la cotización aprobada y la ' +
-      'factura recibida para que el área de facturación revise la diferencia. ' +
-      'Si se confirma un error, se hace el ajuste correspondiente.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
 
   // --- Quejas ---
-  {
-    codigo: 'BMQ',
-    bloque: 'B',
-    orden: 15,
-    texto: '😤 ¿Sobre qué necesitas ayuda?',
-    tipo: 'opcion_unica',
-    opciones: ['Visita técnica no llegó', 'Otra consulta'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BQ1',
-    saltos: { 'Visita técnica no llegó': 'BQ1', 'Otra consulta': 'B2' },
-  },
-  {
-    codigo: 'BQ1',
-    bloque: 'B',
-    orden: 16,
-    texto:
-      '📅 Lamentamos que la visita programada no se haya realizado. Podemos ' +
-      'escalar el caso con Servicio al Cliente. Para agilizarlo necesitamos el ' +
-      'número de solicitud o ticket, la fecha en que estaba programada la ' +
-      'visita y los datos de la granja.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
 
   // --- Sugerencias ---
-  {
-    codigo: 'BMS',
-    bloque: 'B',
-    orden: 17,
-    texto: '💡 ¿Sobre qué necesitas ayuda?',
-    tipo: 'opcion_unica',
-    opciones: ['Control de alimento', 'Otra consulta'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BS1',
-    saltos: { 'Control de alimento': 'BS1', 'Otra consulta': 'B2' },
-  },
-  {
-    codigo: 'BS1',
-    bloque: 'B',
-    orden: 18,
-    texto:
-      '🙏 Gracias por la sugerencia. El monitoreo del consumo de alimento está ' +
-      'contemplado dentro de nuestro roadmap de desarrollo. Estamos evaluando ' +
-      'su integración para darte una visión más completa de la eficiencia de ' +
-      'tu producción.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
 
   // --- Tramites ---
-  {
-    codigo: 'BMT',
-    bloque: 'B',
-    orden: 19,
-    texto: '📄 ¿Sobre qué necesitas ayuda?',
-    tipo: 'opcion_unica',
-    opciones: ['Ampliar a galpón nuevo', 'Baja o traslado', 'Otra consulta'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BT1',
-    saltos: {
-      'Ampliar a galpón nuevo': 'BT1',
-      'Baja o traslado': 'BT2',
-      'Otra consulta': 'B2',
-    },
-  },
-  {
-    codigo: 'BT1',
-    bloque: 'B',
-    orden: 20,
-    texto:
-      '🏗️ Para ampliar el sistema, un asesor revisa las características del ' +
-      'galpón nuevo, determina cuántos sensores hacen falta y prepara una ' +
-      'cotización. Una vez la apruebes, el equipo técnico programa la ' +
-      'instalación.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
-  {
-    codigo: 'BT2',
-    bloque: 'B',
-    orden: 21,
-    texto:
-      '🔄 Para dar de baja el servicio o trasladar los equipos a otra granja, ' +
-      'Servicio al Cliente revisa las condiciones del contrato y programa el ' +
-      'retiro o el traslado. Si es traslado, hacemos una evaluación técnica de ' +
-      'la nueva ubicación antes de instalar de nuevo.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
 
   // --- Radicacion PQRS ---
-  {
-    codigo: 'BIDR',
-    bloque: 'B',
-    orden: 70,
-    texto:
-      '🪪 Para ubicar tu granja y tu contrato, ¿cuál es tu número de documento?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: 'documento',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BMR',
-    saltos: null,
-  },
-  {
-    codigo: 'BIDQ',
-    bloque: 'B',
-    orden: 71,
-    texto:
-      '🪪 Para ubicar tu granja y tu contrato, ¿cuál es tu número de documento?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: 'documento',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BMQ',
-    saltos: null,
-  },
-  {
-    codigo: 'BIDT',
-    bloque: 'B',
-    orden: 72,
-    texto:
-      '🪪 Para ubicar tu granja y tu contrato, ¿cuál es tu número de documento?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: 'documento',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BMT',
-    saltos: null,
-  },
-  {
-    codigo: 'B2',
-    bloque: 'B',
-    orden: 90,
-    texto:
-      '📌 ¿Cuál es el asunto de tu solicitud?\n\n' +
-      'Al registrarla aceptas nuestra política de tratamiento de datos: ' +
-      'https://avisens-project-production.up.railway.app/privacidad',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'B3',
-    saltos: null,
-  },
-  {
-    codigo: 'B3',
-    bloque: 'B',
-    orden: 91,
-    texto: '📝 Cuéntanos con detalle qué sucedió',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: null,
-  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -1111,6 +598,16 @@ export async function sembrarPreguntasChatbot(prisma: PrismaClient) {
       create: datos,
     });
   }
+
+  // Las preguntas que se retiran del cuestionario se desactivan, no se borran:
+  // los prospectos que ya las respondieron conservan su historial, y el flujo
+  // deja de ofrecerlas. Sin esto, quitar una pregunta del seed la dejaba viva
+  // en cualquier base que ya la tuviera.
+  const vigentes = PREGUNTAS_CHATBOT.map((p) => p.codigo);
+  await prisma.preguntaChatbot.updateMany({
+    where: { codigo: { notIn: vigentes }, activa: true },
+    data: { activa: false },
+  });
 }
 
 export async function sembrarMatrizCalificacion(prisma: PrismaClient) {
@@ -1126,4 +623,27 @@ export async function sembrarMatrizCalificacion(prisma: PrismaClient) {
       create: fila,
     });
   }
+
+  // Las filas que salen del modelo se desactivan, igual que las preguntas.
+  // Sin esto, cambiar el puntaje de una pregunta dejaba viva la fila anterior
+  // y el maximo dejaba de cuadrar: el upsert agrega, no reemplaza.
+  const vigentes = MATRIZ_CALIFICACION.map((f) => f.codigo_pregunta);
+  await prisma.matrizCalificacion.updateMany({
+    where: { codigo_pregunta: { notIn: vigentes }, activa: true },
+    data: { activa: false },
+  });
+
+  // Y dentro de las preguntas que siguen calificando, las redacciones que ya
+  // no se usan tampoco deben puntuar.
+  for (const [codigo, opciones] of Object.entries(OPCIONES_CALIFICADAS)) {
+    await prisma.matrizCalificacion.updateMany({
+      where: {
+        codigo_pregunta: codigo,
+        opcion_respuesta: { notIn: opciones.map((o) => o.texto) },
+        activa: true,
+      },
+      data: { activa: false },
+    });
+  }
 }
+
