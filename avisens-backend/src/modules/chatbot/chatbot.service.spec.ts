@@ -817,7 +817,7 @@ describe('ChatbotService', () => {
       });
 
       expect(r.pregunta?.codigo).toBe('CORREGIR');
-      expect(r.pregunta?.opciones).toContain('Municipio');
+      expect(r.pregunta?.opciones).toContain('Teléfono');
       expect(ultimosDatos(prisma.prospecto.update).pregunta_actual).toBe(
         'CORREGIR',
       );
@@ -829,16 +829,16 @@ describe('ChatbotService', () => {
         pregunta_actual: 'CORREGIR',
       });
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ codigo: 'A4', tipo: 'texto_libre', opciones: null }),
+        pregunta({ codigo: 'C1', tipo: 'texto_libre', opciones: null }),
       );
 
       await service.responder({
         sesion_id: enCurso.sesion_id,
-        respuesta: 'Municipio',
+        respuesta: 'Teléfono',
       });
 
       expect(ultimosDatos(prisma.prospecto.update).pregunta_actual).toBe(
-        'FIX:A4',
+        'FIX:C1',
       );
     });
 

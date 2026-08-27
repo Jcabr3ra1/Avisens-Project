@@ -775,6 +775,7 @@ model Prospecto {
   documento                  String?
   municipio                  String?
   departamento               String?
+  numero_galpones            Int?
   area_granja_m2             Float?
   area_galpon_m2             Float?
   rol_prospecto              String?
