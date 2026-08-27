@@ -22,10 +22,7 @@ const PREFIJO_CORRECCION = 'FIX:';
 // vez de rehacer el cuestionario entero.
 const CORREGIBLES: Array<[string, string]> = [
   ['Nombre', 'A2'],
-  ['Nombre de la granja', 'A2C'],
   ['Documento', 'A3'],
-  ['Municipio', 'A4'],
-  ['Departamento', 'A4B'],
   ['Tamaño de la granja', 'A5'],
   ['Tamaño del galpón', 'A6'],
   ['Teléfono', 'C1'],
