@@ -161,3 +161,32 @@ export function tieneDolor(a16?: string | null, a14?: string | null): boolean {
 export function textosDe(opciones: OpcionCalificada[]): string[] {
   return opciones.map((o) => o.texto);
 }
+
+// ---------------------------------------------------------------------------
+// Soporte a clientes (bloque S)
+// ---------------------------------------------------------------------------
+// El plazo lo fija el tipo de solicitud: lo que deja a alguien sin monitoreo
+// va por la via rapida; lo comercial puede esperar un dia mas.
+
+export const CATEGORIAS_SOPORTE: Record<
+  string,
+  { categoria: string; horas: number | null }
+> = {
+  'Los sensores no reportan': { categoria: 'Reclamo', horas: 24 },
+  'Las alertas no llegan o llegan tarde': { categoria: 'Reclamo', horas: 24 },
+  'Un cobro que no cuadra': { categoria: 'Reclamo', horas: 48 },
+  'Una visita o instalación pendiente': { categoria: 'Queja', horas: 48 },
+  'Quiero sugerir una mejora': { categoria: 'Sugerencia', horas: null },
+  'Otra cosa': { categoria: 'Petición', horas: 48 },
+};
+
+export function clasificarSoporte(opcion?: string | null) {
+  return (
+    CATEGORIAS_SOPORTE[opcion ?? ''] ?? { categoria: 'Petición', horas: 48 }
+  );
+}
+
+/** Numero que se le muestra al cliente para que pueda hacer seguimiento. */
+export function radicadoDe(id: number): string {
+  return `PQRS-${String(id).padStart(6, '0')}`;
+}

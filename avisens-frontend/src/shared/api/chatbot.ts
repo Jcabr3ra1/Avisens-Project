@@ -2,7 +2,7 @@ import { api } from './client'
 
 export type CanalOrigen = 'web' | 'whatsapp'
 
-export type RutaChat = 'cotizacion' | 'general'
+export type RutaChat = 'cotizacion' | 'general' | 'soporte'
 
 export type TipoPregunta = 'opcion_unica' | 'texto_libre' | 'numero' | 'si_no'
 

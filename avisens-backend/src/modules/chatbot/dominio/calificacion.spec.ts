@@ -9,6 +9,8 @@ import {
   NO_DECIDE,
   OPCIONES_CALIFICADAS,
   PUNTAJE_MAXIMO,
+  clasificarSoporte,
+  radicadoDe,
   tieneDolor,
   viabilidadTecnica,
 } from './calificacion';
@@ -121,5 +123,41 @@ describe('tieneDolor', () => {
 
   it('sin respuestas no hay dolor', () => {
     expect(tieneDolor(null, null)).toBe(false);
+  });
+});
+
+describe('soporte a clientes', () => {
+  it('lo que deja al cliente sin monitoreo va en 24 horas', () => {
+    expect(clasificarSoporte('Los sensores no reportan').horas).toBe(24);
+    expect(clasificarSoporte('Las alertas no llegan o llegan tarde').horas).toBe(
+      24,
+    );
+  });
+
+  it('lo comercial puede esperar 48', () => {
+    expect(clasificarSoporte('Un cobro que no cuadra').horas).toBe(48);
+    expect(clasificarSoporte('Una visita o instalación pendiente').horas).toBe(
+      48,
+    );
+  });
+
+  it('una sugerencia no promete plazo', () => {
+    const r = clasificarSoporte('Quiero sugerir una mejora');
+    expect(r.horas).toBeNull();
+    expect(r.categoria).toBe('Sugerencia');
+  });
+
+  it('una opcion desconocida no rompe: cae en peticion a 48 horas', () => {
+    expect(clasificarSoporte('cualquier cosa')).toEqual({
+      categoria: 'Petición',
+      horas: 48,
+    });
+    expect(clasificarSoporte(null).categoria).toBe('Petición');
+  });
+
+  it('el radicado se muestra con ceros a la izquierda', () => {
+    // Sin un numero visible el cliente no tiene con que preguntar por su caso.
+    expect(radicadoDe(42)).toBe('PQRS-000042');
+    expect(radicadoDe(1)).toBe('PQRS-000001');
   });
 });
