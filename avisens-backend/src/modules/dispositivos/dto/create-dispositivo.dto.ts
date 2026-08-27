@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateDispositivoDto {
   @ApiProperty({
@@ -7,6 +7,7 @@ export class CreateDispositivoDto {
     description: 'ID del galpon donde esta instalado',
   })
   @IsInt()
+  @Min(1)
   galpon_id: number;
 
   @ApiProperty({

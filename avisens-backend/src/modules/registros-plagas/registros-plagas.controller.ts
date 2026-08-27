@@ -33,7 +33,7 @@ interface AuthRequest extends Request {
 @ApiTags('registros-plagas')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('registros-plagas')
 export class RegistrosPlagasController {
   constructor(private registrosPlagasService: RegistrosPlagasService) {}

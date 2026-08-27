@@ -12,9 +12,9 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { ROLES } from '../../common/auth/roles';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
+import { Permisos } from '../../common/decorators/permisos.decorator';
+import { PERMISOS } from '../../common/auth/permisos';
 import { ProveedoresService } from './proveedores.service';
 import { CreateProveedorDto } from './dto/create-proveedor.dto';
 import { UpdateProveedorDto } from './dto/update-proveedor.dto';
@@ -22,14 +22,14 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 
 @ApiTags('proveedores')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@UseGuards(JwtAuthGuard, PermisosGuard)
+@Permisos(PERMISOS.PROVEEDORES_LEER)
 @Controller('proveedores')
 export class ProveedoresController {
   constructor(private proveedoresService: ProveedoresService) {}
 
   @Post()
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.PROVEEDORES_GESTIONAR)
   @ApiOperation({ summary: 'Crear un proveedor (solo Admin)' })
   crear(@Body() dto: CreateProveedorDto) {
     return this.proveedoresService.crear(dto);
@@ -50,7 +50,7 @@ export class ProveedoresController {
   }
 
   @Patch(':id')
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.PROVEEDORES_GESTIONAR)
   @ApiOperation({ summary: 'Actualizar un proveedor (solo Admin)' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -60,14 +60,14 @@ export class ProveedoresController {
   }
 
   @Patch(':id/activar')
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.PROVEEDORES_GESTIONAR)
   @ApiOperation({ summary: 'Activar un proveedor (solo Admin)' })
   activar(@Param('id', ParseIntPipe) id: number) {
     return this.proveedoresService.activar(id);
   }
 
   @Delete(':id')
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.PROVEEDORES_GESTIONAR)
   @ApiOperation({
     summary: 'Desactivar un proveedor (borrado suave, solo Admin)',
   })
@@ -76,7 +76,7 @@ export class ProveedoresController {
   }
 
   @Delete(':id/permanente')
-  @Roles(ROLES.ADMINISTRADOR)
+  @Permisos(PERMISOS.PROVEEDORES_GESTIONAR)
   @ApiOperation({ summary: 'Eliminar un proveedor permanente (solo Admin)' })
   eliminarPermanente(@Param('id', ParseIntPipe) id: number) {
     return this.proveedoresService.eliminarPermanente(id);

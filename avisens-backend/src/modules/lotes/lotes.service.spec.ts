@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { LotesService } from './lotes.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -143,7 +147,7 @@ describe('LotesService', () => {
     it('actualiza cuando el lote es del solicitante', async () => {
       prisma.lote.findUnique.mockResolvedValue({
         id: 1,
-        galpon: { granja: { propietario_id: 5 } },
+        galpon: { id: 3, granja: { propietario_id: 5 } },
       });
       prisma.lote.update.mockResolvedValue({ id: 1 });
 
@@ -152,19 +156,15 @@ describe('LotesService', () => {
       expect(prisma.lote.update).toHaveBeenCalled();
     });
 
-    it('al mover a otro galpón, re-valida que el nuevo sea suyo (403)', async () => {
+    it('impide trasladar un lote a otro galpón para no romper su historial', async () => {
       prisma.lote.findUnique.mockResolvedValue({
         id: 1,
-        galpon: { granja: { propietario_id: 5 } },
-      });
-      prisma.galpon.findUnique.mockResolvedValue({
-        id: 9,
-        granja: { propietario_id: 999 },
+        galpon: { id: 3, granja: { propietario_id: 5 } },
       });
 
       await expect(
         service.actualizar(1, { galpon_id: 9 }, propietario),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(BadRequestException);
       expect(prisma.lote.update).not.toHaveBeenCalled();
     });
   });

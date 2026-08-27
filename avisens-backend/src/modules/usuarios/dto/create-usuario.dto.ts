@@ -4,6 +4,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -32,5 +33,26 @@ export class CreateUsuarioDto {
 
   @ApiProperty({ example: 2, description: 'ID del rol' })
   @IsInt()
+  @Min(1)
   rol_id: number;
+
+  @ApiPropertyOptional({
+    example: 1,
+    description:
+      'Organización existente. Solo la usa el Administrador; el Propietario asigna automáticamente la suya.',
+  })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  organizacion_id?: number;
+
+  @ApiPropertyOptional({
+    example: 'Avícola La Esperanza',
+    description:
+      'Nombre de la organización que se crea junto con un nuevo Propietario.',
+  })
+  @IsString()
+  @MinLength(2)
+  @IsOptional()
+  organizacion_nombre?: string;
 }

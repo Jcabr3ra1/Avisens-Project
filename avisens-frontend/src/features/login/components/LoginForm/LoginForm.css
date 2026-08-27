@@ -1,58 +1,41 @@
-/* ── Card del formulario ── */
 .lf-card {
-  position: relative;
-  z-index: 1;
-  width: min(100%, 430px);
-  animation: fadeUp 0.5s ease both;
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
 }
 
-/* Encabezado */
+/* ---------- Cabecera ---------- */
+
 .lf-header {
-  margin-bottom: 1.5rem;
-}
-
-.lf-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-bottom: 0.55rem;
-  color: var(--green-d);
-  font-family: 'DM Mono', monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.lf-kicker::before {
-  content: '';
-  width: 18px;
-  height: 1px;
-  background: linear-gradient(90deg, var(--green), var(--green-d));
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .lf-title {
-  margin-bottom: 0.5rem;
+  margin: 0;
   color: var(--text);
   font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(1.9rem, 3.5vw, 2.4rem);
+  font-size: 1.6rem;
   font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 1.06;
+  letter-spacing: -0.025em;
 }
 
 .lf-sub {
-  max-width: 360px;
+  margin: 0;
   color: var(--text2);
-  font-size: 0.92rem;
-  line-height: 1.65;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
-/* ── Formulario ── */
+/* ---------- Formulario ---------- */
+
 .lf-form {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
-  margin-bottom: 1.1rem;
+  gap: 1.1rem;
 }
 
 .lf-field {
@@ -64,7 +47,7 @@
 .lf-label {
   color: var(--text2);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .lf-input-wrap {
@@ -73,37 +56,21 @@
   align-items: center;
 }
 
-.lf-input-ic {
-  position: absolute;
-  left: 0.9rem;
-  width: 18px;
-  height: 18px;
-  color: var(--text4);
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  pointer-events: none;
-  transition: color 0.25s ease;
-}
-
 .lf-input {
   width: 100%;
-  min-height: 48px;
-  padding: 0.75rem 0.95rem 0.75rem 2.75rem;
-  background: #ffffff;
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
   color: var(--text);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.94rem;
+  background: #ffffff;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.92rem;
   outline: none;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .lf-input-password {
-  padding-right: 3rem;
+  padding-right: 2.6rem;
 }
 
 .lf-input::placeholder {
@@ -112,318 +79,139 @@
 
 .lf-input:focus {
   border-color: var(--green);
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
 }
 
-.lf-input-wrap:focus-within .lf-input-ic {
-  color: var(--green-d);
-}
-
-/* Ojo de contraseña */
 .lf-eye-btn {
   position: absolute;
-  right: 0.55rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  right: 0.35rem;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
   color: var(--text3);
-  transition: color 0.2s ease, background 0.2s ease;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
 .lf-eye-btn:hover {
-  background: var(--bg-tint);
   color: var(--green-d);
+  background: var(--bg3);
 }
 
 .lf-eye-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.8;
+  stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-/* Error */
+/* ---------- Error ---------- */
+
 .lf-error {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.65rem 0.85rem;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  color: #b91c1c;
-  font-size: 0.82rem;
-  font-weight: 500;
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  color: var(--danger3);
+  background: rgba(239, 68, 68, 0.08);
+  border-left: 3px solid var(--danger);
+  border-radius: 6px;
+  font-size: 0.84rem;
 }
 
-/* Fila recordarme + olvidó */
+/* ---------- Fila secundaria ---------- */
+
 .lf-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.lf-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--text2);
-  cursor: pointer;
-  font-size: 0.82rem;
-}
-
-.lf-check input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--green-d);
+  justify-content: flex-end;
+  margin-top: -0.3rem;
 }
 
 .lf-link {
   color: var(--green-d);
-  font-size: 0.82rem;
+  font-size: 0.83rem;
   font-weight: 600;
   text-decoration: none;
-  transition: color 0.2s ease;
 }
 
 .lf-link:hover {
-  color: var(--green-dd);
+  text-decoration: underline;
 }
 
-/* ── Botón principal ── */
+/* ---------- Botón principal ---------- */
+
 .lf-btn-primary {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  min-height: 50px;
-  padding: 0.8rem 1rem;
-  background: linear-gradient(135deg, var(--green) 0%, var(--green-d) 50%, var(--green-dd) 100%);
-  border: none;
-  border-radius: 12px;
+  height: 46px;
+  display: grid;
+  place-items: center;
   color: #ffffff;
-  cursor: pointer;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.96rem;
+  background: var(--green);
+  border: 0;
+  border-radius: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.95rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
-  overflow: hidden;
-  box-shadow:
-    0 8px 24px -4px rgba(16, 185, 129, 0.35),
-    0 2px 6px rgba(16, 185, 129, 0.2);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.lf-btn-primary::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
-  pointer-events: none;
+  cursor: pointer;
+  transition: background 0.18s ease;
 }
 
 .lf-btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow:
-    0 14px 36px -6px rgba(16, 185, 129, 0.4),
-    0 4px 10px rgba(16, 185, 129, 0.25);
-}
-
-.lf-btn-primary:active:not(:disabled) {
-  transform: translateY(0);
+  background: var(--green-d);
 }
 
 .lf-btn-primary:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
+  cursor: progress;
+  background: var(--green-l);
 }
 
 .lf-spinner {
-  width: 20px;
-  height: 20px;
-  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
   border-top-color: #ffffff;
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: lf-spin 0.7s linear infinite;
 }
 
-/* ── Separador ── */
-.lf-divider {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 1.2rem 0 0.85rem;
-  color: var(--text3);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+@keyframes lf-spin {
+  to { transform: rotate(360deg); }
 }
 
-.lf-divider::before,
-.lf-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, var(--border), transparent);
-}
+/* ---------- Pie ---------- */
 
-.lf-divider::after {
-  background: linear-gradient(90deg, transparent, var(--border));
-}
-
-/* ── Perfiles de prueba ── */
-.lf-demo-grid {
-  display: grid;
-  gap: 0.6rem;
-  margin-bottom: 1.1rem;
-}
-
-.lf-demo-btn {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.7rem 0.8rem;
-  background: #ffffff;
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.lf-demo-btn:hover:not(:disabled) {
-  background: #fafdfb;
-  border-color: var(--green);
-  box-shadow:
-    0 0 0 3px rgba(16, 185, 129, 0.08),
-    0 8px 20px -8px rgba(10, 40, 28, 0.15);
-  transform: translateY(-2px);
-}
-
-.lf-demo-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.lf-demo-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  flex-shrink: 0;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 700;
-  transition: transform 0.25s ease;
-}
-
-.lf-demo-btn:hover .lf-demo-avatar {
-  transform: scale(1.08);
-}
-
-.lf-demo-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.08rem;
-}
-
-.lf-demo-nombre {
-  color: var(--text);
-  font-size: 0.88rem;
-  font-weight: 700;
-}
-
-.lf-demo-rol {
-  color: var(--green-d);
-  font-family: 'DM Mono', monospace;
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
-.lf-demo-desc {
-  color: var(--text3);
-  font-size: 0.74rem;
-}
-
-/* Volver */
 .lf-back {
+  margin: 0;
   text-align: center;
-  font-size: 0.84rem;
 }
 
 .lf-back a {
   color: var(--text3);
-  font-weight: 600;
+  font-size: 0.84rem;
   text-decoration: none;
-  transition: color 0.2s ease;
 }
 
 .lf-back a:hover {
   color: var(--green-d);
 }
 
-/* ── Responsive ── */
-@media (max-width: 480px) {
-  .lf-row {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.65rem;
-  }
-}
+/* ---------- Foco visible ---------- */
 
-@media (min-width: 921px) {
-  .lf-demo-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .lf-demo-btn {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 0.5rem;
-    min-height: 100px;
-    padding: 0.85rem 0.6rem;
-    text-align: center;
-  }
-
-  .lf-demo-avatar {
-    width: 44px;
-    height: 44px;
-  }
-
-  .lf-demo-copy {
-    align-items: center;
-  }
-
-  .lf-demo-desc {
-    display: none;
-  }
+.lf-input:focus-visible,
+.lf-eye-btn:focus-visible,
+.lf-link:focus-visible,
+.lf-btn-primary:focus-visible,
+.lf-back a:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lf-card,
   .lf-spinner {
-    animation: none;
-  }
-
-  .lf-btn-primary:hover:not(:disabled),
-  .lf-demo-btn:hover:not(:disabled) {
-    transform: none;
+    animation-duration: 1.6s;
   }
 }

@@ -33,12 +33,13 @@ interface AuthRequest extends Request {
 @ApiTags('sensores')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('sensores')
 export class SensoresController {
   constructor(private sensoresService: SensoresService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Registrar un sensor en un galpón' })
   crear(@Body() dto: CreateSensorDto, @Req() req: AuthRequest) {
     return this.sensoresService.crear(dto, req.user);
@@ -60,6 +61,7 @@ export class SensoresController {
   }
 
   @Patch(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Actualizar un sensor' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -70,12 +72,14 @@ export class SensoresController {
   }
 
   @Patch(':id/activar')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Activar un sensor (estado → activo)' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.sensoresService.activar(id, req.user);
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary: 'Desactivar un sensor (borrado suave, estado → inactivo)',
   })
@@ -84,6 +88,7 @@ export class SensoresController {
   }
 
   @Delete(':id/permanente')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary: 'Eliminar un sensor de forma permanente (casos legales)',
   })

@@ -142,12 +142,35 @@
   background: color-mix(in srgb, var(--text3) 16%, transparent); color: var(--text3);
 }
 
+.grj-card--inactiva { opacity: 0.65; }
+
+.grj-card-titlebtn {
+  display: flex; align-items: flex-start; text-align: left; cursor: pointer;
+  background: transparent; border: none; padding: 0; min-width: 0;
+}
 .grj-card-info  { display: flex; flex-direction: column; gap: 0.2rem; }
 .grj-nombre     { font-weight: 700; font-size: 1.02rem; color: var(--dash-ink); }
 .grj-ubicacion  { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; color: var(--text3); }
 .grj-ubicacion svg { flex-shrink: 0; }
-.grj-card-meta  { display: flex; align-items: center; gap: 1rem; font-size: 0.84rem; color: var(--text3); margin-left: auto; }
-.grj-chevron    { font-size: 0.7rem; color: var(--text4); }
+.grj-card-meta  { display: flex; align-items: center; gap: 0.8rem; font-size: 0.84rem; color: var(--text3); margin-left: auto; flex-shrink: 0; }
+.grj-chevron-btn {
+  background: transparent; border: none; cursor: pointer; font-size: 0.7rem; color: var(--text4); padding: 0.2rem;
+}
+
+.grj-badge {
+  border: 1px solid transparent; border-radius: 999px; padding: 0.25rem 0.7rem;
+  font-size: 0.76rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.grj-badge--activa   { background: color-mix(in srgb, var(--green) 12%, transparent); color: var(--green-d); border-color: color-mix(in srgb, var(--green) 25%, transparent); }
+.grj-badge--inactiva { background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red); border-color: color-mix(in srgb, var(--red) 25%, transparent); }
+
+.grj-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--text3); cursor: pointer; flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.grj-icon-btn:hover { background: var(--card-h); color: var(--dash-ink); }
 
 .grj-galpones-toolbar { display: flex; justify-content: flex-end; padding: 0.7rem 1.1rem 0; }
 

@@ -33,7 +33,7 @@ interface AuthRequest extends Request {
 @ApiTags('eventos-sanitarios')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('eventos-sanitarios')
 export class EventosSanitariosController {
   constructor(private eventosSanitariosService: EventosSanitariosService) {}

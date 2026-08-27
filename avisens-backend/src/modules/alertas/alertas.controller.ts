@@ -30,7 +30,7 @@ interface AuthRequest extends Request {
 @ApiTags('alertas')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('alertas')
 export class AlertasController {
   constructor(private alertasService: AlertasService) {}
@@ -40,6 +40,7 @@ export class AlertasController {
   // ============================================================
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Crear una nueva alerta' })
   crear(@Body() dto: CreateAlertasDto, @Req() req: AuthRequest) {
     return this.alertasService.crear(dto, req.user);
@@ -61,6 +62,7 @@ export class AlertasController {
   }
 
   @Patch(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Actualizar una alerta' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -71,6 +73,7 @@ export class AlertasController {
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Eliminar una alerta permanentemente' })
   eliminar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.alertasService.eliminar(id, req.user);
@@ -97,6 +100,7 @@ export class AlertasController {
   }
 
   @Patch(':id/escalar/:usuarioId')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Escalar una alerta a otro usuario' })
   escalar(
     @Param('id', ParseIntPipe) id: number,

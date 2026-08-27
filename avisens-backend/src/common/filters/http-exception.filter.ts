@@ -53,6 +53,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       ...(errors ? { errors } : {}),
       timestamp: new Date().toISOString(),
       path: request.url,
+      requestId: response.getHeader('X-Request-Id'),
     });
   }
 }

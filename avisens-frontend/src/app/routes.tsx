@@ -1,6 +1,6 @@
 // routes.tsx — Define TODAS las rutas de la aplicación.
 // Hay 3 grupos: standalone (login), público (landing) e interno (panel + módulos).
-// Cada grupo usa un layout diferente (sin layout, AppLayout, PanelLayout).
+// Cada grupo usa su estructura correspondiente (página pública o PanelLayout).
 //
 // Rutas internas por rol:
 //   /admin      → solo Administrador (AdminPage)
@@ -12,7 +12,6 @@ import { Routes, Route } from 'react-router-dom'
 // Cada pantalla se descarga solo cuando el usuario entra a su ruta. Antes se
 // enviaban todos los módulos (y todo su CSS) en el primer acceso, aunque la
 // mayoría no fueran necesarios para la página actual.
-const AppLayout = lazy(() => import('./layout/AppLayout'))
 const PanelLayout = lazy(() => import('./layout/PanelLayout'))
 const LandingPage = lazy(() => import('@features/landing/LandingPage'))
 const LoginPage = lazy(() => import('@features/login/LoginPage'))
@@ -43,10 +42,8 @@ function AppRoutes() {
       {/* GRUPO 1: Standalone — pantalla completa sin layout */}
       <Route path="/login" element={cargarPagina(<LoginPage />)} />
 
-      {/* GRUPO 2: Web pública — con Navbar + Footer + FloatChat */}
-      <Route element={cargarPagina(<AppLayout />)}>
-        <Route path="/" element={cargarPagina(<LandingPage />)} />
-      </Route>
+      {/* GRUPO 2: Web pública — la landing controla sus propios componentes */}
+      <Route path="/" element={cargarPagina(<LandingPage />)} />
 
       {/* GRUPO 3: App interna — con Sidebar lateral (PanelLayout) */}
       {/* PanelLayout verifica sesión y permisos antes de renderizar cada página */}

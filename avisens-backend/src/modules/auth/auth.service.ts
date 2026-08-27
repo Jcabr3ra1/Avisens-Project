@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
+import { permisosDelRol } from '../../common/auth/permisos';
 
 @Injectable()
 export class AuthService {
@@ -17,13 +18,17 @@ export class AuthService {
     private config: ConfigService,
   ) {}
 
+  obtenerPermisos(rol: string) {
+    return { rol, permisos: permisosDelRol(rol) };
+  }
+
   async login(dto: LoginDto, ip?: string, userAgent?: string) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { email: dto.email },
-      include: { rol: true, seguridad_cuenta: true },
+      include: { rol: true, seguridad_cuenta: true, organizacion: true },
     });
 
-    if (!usuario || !usuario.activo) {
+    if (!usuario || !usuario.activo || usuario.organizacion?.activa === false) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
@@ -43,12 +48,34 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    if (seguridad?.debe_cambiar_password) {
+      if (
+        !seguridad.password_temporal_expira_en ||
+        seguridad.password_temporal_expira_en <= new Date()
+      ) {
+        throw new ForbiddenException(
+          'La contraseña temporal venció. Solicita una nueva recuperación.',
+        );
+      }
+
+      await this.resetearIntentosFallidos(usuario.id);
+      const cambio_password_token = await this.jwt.signAsync(
+        { sub: usuario.id, tipo: 'cambio_password' },
+        {
+          secret: this.config.getOrThrow('JWT_SECRET'),
+          expiresIn: '15m',
+        },
+      );
+      return { requiere_cambio_password: true, cambio_password_token };
+    }
+
     await this.resetearIntentosFallidos(usuario.id);
 
     const tokens = await this.generarTokens(
       usuario.id,
       usuario.email,
       usuario.rol.nombre,
+      usuario.organizacion_id,
     );
 
     await this.prisma.sesion.deleteMany({
@@ -69,6 +96,7 @@ export class AuthService {
     });
 
     return {
+      requiere_cambio_password: false,
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       usuario: {
@@ -76,6 +104,7 @@ export class AuthService {
         nombre: usuario.nombre_completo,
         email: usuario.email,
         rol: usuario.rol.nombre,
+        organizacion_id: usuario.organizacion_id,
       },
     };
   }
@@ -103,15 +132,23 @@ export class AuthService {
 
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: userId },
-      include: { rol: true },
+      include: { rol: true, seguridad_cuenta: true, organizacion: true },
     });
 
-    if (!usuario || !usuario.activo) throw new UnauthorizedException();
+    if (
+      !usuario ||
+      !usuario.activo ||
+      usuario.organizacion?.activa === false ||
+      usuario.seguridad_cuenta?.debe_cambiar_password
+    ) {
+      throw new UnauthorizedException();
+    }
 
     const tokens = await this.generarTokens(
       usuario.id,
       usuario.email,
       usuario.rol.nombre,
+      usuario.organizacion_id,
     );
 
     await this.prisma.sesion.update({
@@ -142,8 +179,18 @@ export class AuthService {
     }
   }
 
-  private async generarTokens(userId: number, email: string, rol: string) {
-    const payload = { sub: userId, email, rol };
+  private async generarTokens(
+    userId: number,
+    email: string,
+    rol: string,
+    organizacionId?: number | null,
+  ) {
+    const payload = {
+      sub: userId,
+      email,
+      rol,
+      organizacion_id: organizacionId ?? null,
+    };
 
     const [access_token, refresh_token] = await Promise.all([
       this.jwt.signAsync(payload, {

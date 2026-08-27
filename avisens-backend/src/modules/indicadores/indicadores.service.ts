@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { verificarDueno, Solicitante } from '../../common/auth/acceso';
+import { Solicitante } from '../../common/auth/acceso';
+import { verificarAccesoLote } from '../../common/auth/alcance';
 import { ROLES } from '../../common/auth/roles';
 import { Prisma } from '@prisma/client';
 
@@ -21,10 +22,12 @@ export class IndicadoresService {
       },
     });
     if (!lote) throw new NotFoundException('Lote no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      loteId,
       solicitante,
-      lote.galpon.granja.propietario_id,
       'Solo puedes gestionar indicadores de tus propios lotes',
+      lote.galpon.granja.propietario_id,
     );
   }
 

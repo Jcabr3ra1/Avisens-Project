@@ -16,7 +16,15 @@ const ACCION_POR_METODO: Record<string, string> = {
   DELETE: 'eliminar',
 };
 
-const CAMPOS_SENSIBLES = ['password', 'refresh_token', 'access_token', 'token'];
+const CAMPOS_SENSIBLES = [
+  'password',
+  'nueva_password',
+  'password_temporal',
+  'refresh_token',
+  'access_token',
+  'cambio_password_token',
+  'token',
+];
 
 function limpiarCuerpo(body: unknown): Record<string, unknown> | undefined {
   if (!body || typeof body !== 'object') return undefined;

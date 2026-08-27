@@ -15,6 +15,7 @@ function usuarioFalso(overrides: Record<string, unknown> = {}) {
     nombre_completo: 'Test',
     password_hash: 'hash-guardado',
     activo: true,
+    organizacion_id: 10,
     rol: { nombre: 'Operario' },
     seguridad_cuenta: null,
     ...overrides,
@@ -76,6 +77,16 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
+    it('rechaza (401) si la organización está inactiva', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(
+        usuarioFalso({ organizacion: { activa: false } }),
+      );
+
+      await expect(
+        service.login({ email: 'test@avisens.com', password: '123456' }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
     it('rechaza (403) si la cuenta está bloqueada', async () => {
       const enUnaHora = new Date(Date.now() + 60 * 60 * 1000);
       prisma.usuario.findUnique.mockResolvedValue(
@@ -115,15 +126,74 @@ describe('AuthService', () => {
 
       expect(resultado.access_token).toBe('un-token');
       expect(resultado.refresh_token).toBe('un-token');
+      expect(resultado.requiere_cambio_password).toBe(false);
       expect(resultado.usuario).toEqual({
         id: 1,
         nombre: 'Test',
         email: 'test@avisens.com',
         rol: 'Operario',
+        organizacion_id: 10,
       });
       expect(prisma.sesion.create).toHaveBeenCalled();
       expect(prisma.sesion.deleteMany).toHaveBeenCalled();
       expect(prisma.seguridadCuenta.upsert).toHaveBeenCalled();
+      expect(jwt.signAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ organizacion_id: 10 }),
+        expect.any(Object),
+      );
+    });
+
+    it('con contraseña temporal solo entrega un token limitado de cambio', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(
+        usuarioFalso({
+          seguridad_cuenta: {
+            id: 1,
+            intentos_fallidos: 0,
+            bloqueado_hasta: null,
+            debe_cambiar_password: true,
+            password_temporal_expira_en: new Date(Date.now() + 60_000),
+          },
+        }),
+      );
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      const resultado = await service.login({
+        email: 'test@avisens.com',
+        password: 'temporal',
+      });
+
+      expect(resultado).toEqual({
+        requiere_cambio_password: true,
+        cambio_password_token: 'un-token',
+      });
+      expect(prisma.sesion.create).not.toHaveBeenCalled();
+      expect(jwt.signAsync).toHaveBeenCalledWith(
+        { sub: 1, tipo: 'cambio_password' },
+        expect.objectContaining({ expiresIn: '15m' }),
+      );
+    });
+
+    it('rechaza una contraseña temporal vencida', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(
+        usuarioFalso({
+          seguridad_cuenta: {
+            id: 1,
+            intentos_fallidos: 0,
+            bloqueado_hasta: null,
+            debe_cambiar_password: true,
+            password_temporal_expira_en: new Date(Date.now() - 60_000),
+          },
+        }),
+      );
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+      await expect(
+        service.login({
+          email: 'test@avisens.com',
+          password: 'temporal',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.sesion.create).not.toHaveBeenCalled();
     });
   });
 

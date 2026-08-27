@@ -23,6 +23,20 @@ import {
 // lote amplio y se reduce en el cliente.
 const LIMITE_MEDICIONES = 500
 
+// El backend tope a 100 elementos por página, así que el lote amplio se arma
+// pidiendo varias páginas en paralelo en vez de una sola con límite alto.
+const LIMITE_POR_PAGINA = 100
+
+async function listarMedicionesRecientes(): Promise<Medicion[]> {
+  const paginas = Math.ceil(LIMITE_MEDICIONES / LIMITE_POR_PAGINA)
+  const lotes = await Promise.all(
+    Array.from({ length: paginas }, (_, i) =>
+      listarMediciones({ page: i + 1, limit: LIMITE_POR_PAGINA }),
+    ),
+  )
+  return lotes.flat()
+}
+
 export type EstadoSensorVista = 'optimo' | 'advertencia' | 'critico' | 'sin_umbral' | 'offline'
 
 // A qué variable de umbral (las 3 que soporta el backend) corresponde el
@@ -185,7 +199,7 @@ async function cargarMonitoreo(forzar = false): Promise<void> {
         listarGalpones(),
         listarLotes(),
         listarSensores(),
-        listarMediciones({ page: 1, limit: LIMITE_MEDICIONES }),
+        listarMedicionesRecientes(),
         listarUmbrales(),
       ])
       estadoMonitoreo = {

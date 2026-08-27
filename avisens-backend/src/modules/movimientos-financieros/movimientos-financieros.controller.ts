@@ -45,7 +45,7 @@ export class MovimientosFinancierosController {
   @Get()
   @ApiOperation({
     summary:
-      'Listar movimientos paginado (Admin: todos - Propietario: los de sus lotes)',
+      'Listar movimientos paginado (Admin: todos - Propietario: los de sus granjas)',
   })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.movimientosService.listar(req.user, paginacion);

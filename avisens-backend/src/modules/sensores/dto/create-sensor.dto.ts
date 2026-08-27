@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   IsDateString,
+  Min,
 } from 'class-validator';
 
 export class CreateSensorDto {
@@ -13,6 +14,7 @@ export class CreateSensorDto {
     description: 'ID del galpón donde está instalado',
   })
   @IsInt()
+  @Min(1)
   galpon_id: number;
 
   @ApiProperty({
@@ -20,6 +22,7 @@ export class CreateSensorDto {
     description: 'ID del dispositivo (ESP32) que lo reporta',
   })
   @IsInt()
+  @Min(1)
   dispositivo_id: number;
 
   @ApiProperty({

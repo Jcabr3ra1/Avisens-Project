@@ -6,8 +6,13 @@ import { CreateAlertasDto } from './dto/create-alertas.dto';
 import { UpdateAlertasDto } from './dto/update-alertas.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroAlertas,
+  verificarAccesoGalpon,
+  verificarAccesoLote,
+  verificarAccesoSensor,
+} from '../../common/auth/alcance';
 
 const ALERTA_SELECT = {
   id: true,
@@ -88,10 +93,12 @@ export class AlertasService {
       throw new NotFoundException('Galpón no encontrado');
     }
 
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      galponId,
       solicitante,
-      galpon.granja.propietario_id,
       'Solo puedes gestionar alertas de tus propias granjas',
+      galpon.granja.propietario_id,
     );
 
     return galpon;
@@ -111,10 +118,12 @@ export class AlertasService {
       throw new NotFoundException('Lote no encontrado');
     }
 
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      loteId,
       solicitante,
-      lote.galpon.granja.propietario_id,
       'Solo puedes gestionar alertas de tus propias granjas',
+      lote.galpon.granja.propietario_id,
     );
 
     return lote;
@@ -134,10 +143,12 @@ export class AlertasService {
       throw new NotFoundException('Sensor no encontrado');
     }
 
-    verificarDueno(
+    await verificarAccesoSensor(
+      this.prisma,
+      sensorId,
       solicitante,
-      sensor.galpon.granja.propietario_id,
       'Solo puedes gestionar alertas de tus propias granjas',
+      sensor.galpon.granja.propietario_id,
     );
 
     return sensor;
@@ -187,15 +198,7 @@ export class AlertasService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? {
-          galpon: {
-            granja: {
-              propietario_id: solicitante.id,
-            },
-          },
-        }
-      : {};
+    const where = filtroAlertas(solicitante) ?? {};
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.alerta.findMany({
@@ -221,10 +224,12 @@ export class AlertasService {
       throw new NotFoundException('Alerta no encontrada');
     }
 
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      alerta.galpon_id,
       solicitante,
-      alerta.galpon.granja.propietario_id,
       'No tienes acceso a esta alerta',
+      alerta.galpon.granja.propietario_id,
     );
 
     return alerta;
@@ -354,15 +359,7 @@ export class AlertasService {
   }
 
   async obtenerEstadisticas(solicitante: Solicitante) {
-    const where = esPropietario(solicitante)
-      ? {
-          galpon: {
-            granja: {
-              propietario_id: solicitante.id,
-            },
-          },
-        }
-      : {};
+    const where = filtroAlertas(solicitante) ?? {};
 
     const [total, abiertas, enProceso, cerradas, criticas] = await Promise.all([
       this.prisma.alerta.count({ where }),
