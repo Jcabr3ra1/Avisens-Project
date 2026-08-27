@@ -1,35 +1,16 @@
 .landing-page {
-  --hero-frame-gap: clamp(0.75rem, 2.4vw, 2.25rem);
   position: relative;
   overflow: hidden;
-  padding-top: var(--hero-frame-gap);
-  background: #03110c;
+  background: var(--avisens-cream);
 }
 
+/* A sangre: la imagen llega hasta el borde de la ventana y la navbar flota
+   encima, sin marco intermedio. */
 .landing-hero-frame {
   position: relative;
   z-index: 1;
-  min-height: calc(100svh - var(--hero-frame-gap) - var(--hero-frame-gap));
-  margin: 0 var(--hero-frame-gap) var(--hero-frame-gap);
+  min-height: 100svh;
   overflow: hidden;
-  border: 1px solid rgba(16, 185, 129, 0.16);
-  border-radius: clamp(22px, 3vw, 44px);
-  background: #061810;
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.38);
+  background: var(--avisens-deep);
   isolation: isolate;
-}
-
-.landing-hero-frame .hero,
-.landing-hero-frame .hero-content {
-  min-height: calc(100svh - var(--hero-frame-gap) - var(--hero-frame-gap));
-}
-
-@media (max-width: 640px) {
-  .landing-page {
-    --hero-frame-gap: 0.5rem;
-  }
-
-  .landing-hero-frame {
-    border-radius: 20px;
-  }
 }

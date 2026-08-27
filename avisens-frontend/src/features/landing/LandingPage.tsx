@@ -12,8 +12,9 @@ function LandingPage() {
         <div className="bg-layer" />
         <div className="grid-layer" />
 
+        <Navbar />
+
         <div className="landing-hero-frame">
-          <Navbar />
           <Hero />
         </div>
 

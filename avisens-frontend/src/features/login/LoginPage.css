@@ -24,16 +24,16 @@
   clip-path: ellipse(100% 132% at 100% 50%);
 }
 
-/* A sangre y recortada por la curva. Bajarle saturación y subirle contraste es
-   lo que la distingue del hero: allá la misma escena va a pleno color. */
+/* La imagen HD conserva su color natural; solo ajustamos ligeramente el tono
+   para integrarla con el panel y mantener el pollo como punto focal. */
 .login-visual-img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 64% center;
-  filter: saturate(0.62) contrast(1.06) brightness(0.92);
+  object-position: 82% center;
+  filter: saturate(0.86) contrast(1.04) brightness(0.94);
 }
 
 /* Velo verde de marca: unifica la escena bajo un solo tono, que es lo que la
@@ -44,8 +44,8 @@
   inset: 0;
   background: linear-gradient(
     150deg,
-    rgba(6, 78, 59, 0.34) 0%,
-    rgba(4, 120, 87, 0.2) 100%
+    rgba(0, 45, 36, 0.18) 0%,
+    rgba(0, 91, 72, 0.1) 100%
   );
 }
 
@@ -65,7 +65,7 @@
   }
 
   .login-visual-img {
-    object-position: center 62%;
+    object-position: 58% 58%;
   }
 
   .login-panel {
