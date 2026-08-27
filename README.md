@@ -117,6 +117,21 @@ pnpm start:dev                # http://localhost:3000  (Swagger en /docs)
 
 > Genera secretos JWT fuertes con `openssl rand -base64 48`. Nunca subas el `.env`.
 
+### Qué se despliega desde dónde
+
+| | Despliega desde | Se ve en |
+|---|---|---|
+| Backend | Railway, rama `main` | avisens-project-production.up.railway.app |
+| Frontend | Vercel, rama `main` | avisens-project.vercel.app |
+
+**Los dos leen `main`, no `develop`.** Lo que se mergea a `develop` no llega a
+producción hasta que pasa a `main` — es el motivo más común de «desplegué y sigo
+viendo lo viejo».
+
+Y las **preguntas del chatbot viven en la base de datos**, no en el código:
+producción tiene `RUN_SEED=false`, así que cambiarlas exige correr el seed una
+vez, no basta con desplegar.
+
 ### Desplegar el frontend en Vercel
 
 El frontend va en Vercel y el backend en Railway. Al crear el proyecto:
@@ -127,11 +142,14 @@ El frontend va en Vercel y el backend en Railway. Al crear el proyecto:
 | Framework | Vite (lo detecta solo) |
 | Variable de entorno | `VITE_API_URL` = `https://<tu-backend>.up.railway.app/v1` |
 
+Desplegado en **https://avisens-project.vercel.app**, y el backend en
+`https://avisens-project-production.up.railway.app`.
+
 **Y hay que abrir el CORS en Railway**, o el navegador bloquea todas las llamadas
 y el chat deja de funcionar:
 
 ```
-CORS_ORIGIN=http://localhost:5173,https://<tu-dominio>.vercel.app,https://<proyecto>-*.vercel.app
+CORS_ORIGIN=http://localhost:5173,http://localhost:8080,https://avisens-project.vercel.app,https://avisens-project-*.vercel.app
 ```
 
 El tercero, con comodín, cubre las previsualizaciones: Vercel crea un subdominio
