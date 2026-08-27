@@ -589,10 +589,11 @@ export class ChatbotService {
           ? DEMO_REMOTA
           : SEGUIMIENTO_AUTOMATIZADO;
 
+    // A14 absorbio lo que antes preguntaba A15 (causas de muerte): eran dos
+    // preguntas de texto libre seguidas que aqui ya se leian como una sola.
     const dolor =
       DOLOR.includes(porCodigo.get('A16') ?? '') ||
-      !!porCodigo.get('A14')?.trim() ||
-      !!porCodigo.get('A15')?.trim();
+      !!porCodigo.get('A14')?.trim();
 
     const prospecto = await this.prisma.prospecto.update({
       where: { id: prospectoId },

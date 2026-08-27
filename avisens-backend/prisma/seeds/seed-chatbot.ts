@@ -270,7 +270,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'area_galpon_m2',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A7',
+    siguiente: 'A8',
     saltos: { 'Otro, lo escribo': 'A6B' },
   },
   {
@@ -322,19 +322,6 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'area_galpon_m2',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A7',
-    saltos: null,
-  },
-  {
-    codigo: 'A7',
-    bloque: 'A',
-    orden: 8,
-    texto: '🐣 ¿Cuántas aves maneja cada galpón en promedio?',
-    tipo: 'opcion_unica',
-    opciones: ['<1000', '1000-5000', '5000-10000', '>10000'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
     siguiente: 'A8',
     saltos: null,
   },
@@ -361,21 +348,6 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
-    siguiente: 'A10',
-    saltos: null,
-  },
-  {
-    codigo: 'A10',
-    bloque: 'A',
-    orden: 11,
-    texto:
-      '🌳 ¿Tu granja está en una zona con árboles altos que sirvan como ' +
-      'rompevientos y mejoren la circulación del aire?',
-    tipo: 'opcion_unica',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
     siguiente: 'A11',
     saltos: null,
   },
@@ -389,19 +361,6 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
-    siguiente: 'A12',
-    saltos: null,
-  },
-  {
-    codigo: 'A12',
-    bloque: 'A',
-    orden: 13,
-    texto: '💧 ¿Tienes una fuente de agua cercana y confiable?',
-    tipo: 'opcion_unica',
-    opciones: ['Riachuelo cercano', 'Río cercano', 'Quebrada cercana', 'Pozo de agua', 'No tengo'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
     siguiente: 'A13',
     saltos: null,
   },
@@ -425,21 +384,9 @@ const PREGUNTAS_CHATBOT = [
     bloque: 'A',
     orden: 15,
     texto:
-      '😖 Cuéntame: ¿cuáles son las principales problemáticas que se te han ' +
-      'presentado en la cría de pollos de engorde?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'A15',
-    saltos: null,
-  },
-  {
-    codigo: 'A15',
-    bloque: 'A',
-    orden: 16,
-    texto: '🦠 ¿Cuáles han sido las principales causas de muerte de las aves?',
+      '😖 Cuéntame: ¿qué problemas se te han presentado en la cría de ' +
+      'pollos de engorde? Si has tenido muertes, dinos también a qué se ' +
+      'debieron.',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: null,
@@ -460,26 +407,11 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
-    siguiente: 'A17',
+    siguiente: 'A18',
     saltos: null,
   },
 
   // --- La compra ---
-  {
-    codigo: 'A17',
-    bloque: 'A',
-    orden: 18,
-    texto:
-      '🔧 ¿Has invertido antes en tecnología para tu granja (sensores, software, ' +
-      'automatización)?',
-    tipo: 'opcion_unica',
-    opciones: ['Sí', 'No', 'Es la primera vez'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'A18',
-    saltos: null,
-  },
   {
     codigo: 'A18',
     bloque: 'A',
@@ -1111,6 +1043,16 @@ export async function sembrarPreguntasChatbot(prisma: PrismaClient) {
       create: datos,
     });
   }
+
+  // Las preguntas que se retiran del cuestionario se desactivan, no se borran:
+  // los prospectos que ya las respondieron conservan su historial, y el flujo
+  // deja de ofrecerlas. Sin esto, quitar una pregunta del seed la dejaba viva
+  // en cualquier base que ya la tuviera.
+  const vigentes = PREGUNTAS_CHATBOT.map((p) => p.codigo);
+  await prisma.preguntaChatbot.updateMany({
+    where: { codigo: { notIn: vigentes }, activa: true },
+    data: { activa: false },
+  });
 }
 
 export async function sembrarMatrizCalificacion(prisma: PrismaClient) {
