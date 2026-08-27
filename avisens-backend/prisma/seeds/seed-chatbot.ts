@@ -1,141 +1,32 @@
 import { Prisma } from '@prisma/client';
 import type { PrismaClient } from '@prisma/client';
 
-const MATRIZ_CALIFICACION = [
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A8',
-    opcion_respuesta: '<1000',
-    puntaje: 0,
-    descripcion: 'Escala de la operacion (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A8',
-    opcion_respuesta: '1000-5000',
-    puntaje: 2,
-    descripcion: 'Escala de la operacion (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A8',
-    opcion_respuesta: '5000-10000',
-    puntaje: 3,
-    descripcion: 'Escala de la operacion (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A8',
-    opcion_respuesta: '>10000',
-    puntaje: 4,
-    descripcion: 'Escala de la operacion (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A16',
-    opcion_respuesta: 'Sí, más de una vez',
-    puntaje: 3,
-    descripcion: 'Dolor declarado (HU-02)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A16',
-    opcion_respuesta: 'Una vez',
-    puntaje: 2,
-    descripcion: 'Dolor declarado (HU-02)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A16',
-    opcion_respuesta: 'No',
-    puntaje: 0,
-    descripcion: 'Dolor declarado (HU-02)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A16',
-    opcion_respuesta: 'No sé la causa',
-    puntaje: 0,
-    descripcion: 'Dolor declarado (HU-02)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A18',
-    opcion_respuesta: 'Compra directa',
-    puntaje: 3,
-    descripcion: 'Presupuesto y adquisicion (HU-04)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A18',
-    opcion_respuesta: 'Suscripción',
-    puntaje: 3,
-    descripcion: 'Presupuesto y adquisicion (HU-04)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A18',
-    opcion_respuesta: 'El más conveniente',
-    puntaje: 1,
-    descripcion: 'Presupuesto y adquisicion (HU-04)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A18',
-    opcion_respuesta: 'No sé',
-    puntaje: 0,
-    descripcion: 'Presupuesto y adquisicion (HU-04)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A9',
-    opcion_respuesta: 'Sí, en buen estado',
-    puntaje: 1,
-    descripcion: 'Infraestructura habilitante (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A11',
-    opcion_respuesta: 'Eléctrico estable',
-    puntaje: 1,
-    descripcion: 'Infraestructura habilitante (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A13',
-    opcion_respuesta: 'Sí, estable',
-    puntaje: 1,
-    descripcion: 'Infraestructura habilitante (HU-03)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A19',
-    opcion_respuesta: 'Ya tengo cotizaciones',
-    puntaje: 3,
-    descripcion: 'Urgencia y competencia (HU-05)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A19',
-    opcion_respuesta: 'Mirando opciones',
-    puntaje: 1,
-    descripcion: 'Urgencia y competencia (HU-05)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A19',
-    opcion_respuesta: 'Solo AVISENS',
-    puntaje: 0,
-    descripcion: 'Urgencia y competencia (HU-05)',
-  },
-  {
-    bloque: 'A',
-    codigo_pregunta: 'A19',
-    opcion_respuesta: 'No sé qué más existe',
-    puntaje: 0,
-    descripcion: 'Urgencia y competencia (HU-05)',
-  },
-];
+import {
+  A11_ENERGIA,
+  A13_INTERNET,
+  A14_DOLOR,
+  A16_MORTALIDAD,
+  A18_PAGO,
+  A19_URGENCIA,
+  A20_DECIDE,
+  A9_GALPON,
+  OPCIONES_CALIFICADAS,
+  textosDe,
+} from '../../src/modules/chatbot/dominio/calificacion';
+
+// La matriz sale del dominio, no se escribe a mano. Antes el texto de cada
+// opcion vivia aqui y en el cuestionario por separado, y si no coincidian al
+// caracter la pregunta no puntuaba: nada fallaba, solo calificaba mal.
+const MATRIZ_CALIFICACION = Object.entries(OPCIONES_CALIFICADAS).flatMap(
+  ([codigo, opciones]) =>
+    opciones.map((o) => ({
+      bloque: 'A',
+      codigo_pregunta: codigo,
+      opcion_respuesta: o.texto,
+      puntaje: o.puntaje,
+      descripcion: `Calificacion comercial (${codigo})`,
+    })),
+);
 
 const PREGUNTAS_CHATBOT = [
   // =========================================================================
@@ -146,10 +37,10 @@ const PREGUNTAS_CHATBOT = [
     bloque: 'M',
     orden: 0,
     texto:
-      '👋 ¡Hola! Soy *AVIA*, la asistente virtual de AVISENS 🐔\n\n' +
-      'Monitoreamos granjas avícolas con sensores de temperatura, humedad y ' +
-      'ventilación para que sepas lo que pasa en el galpón antes de perder aves.\n\n' +
-      '¿En qué te puedo ayudar hoy?',
+      '👋 Hola, soy *AVIA* de AVISENS 🐔\n\n' +
+      'Ponemos sensores en tu galpón para que sepas qué está pasando ' +
+      'antes de perder aves.\n\n' +
+      '¿Qué necesitas?',
     tipo: 'opcion_unica',
     opciones: ['Quiero cotizar', 'Tengo dudas primero'],
     campo_prospecto: null,
@@ -185,7 +76,7 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A2',
     bloque: 'A',
     orden: 2,
-    texto: '👤 ¿Cuál es tu nombre completo?',
+    texto: '👤 ¿Cómo te llamas?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'nombre',
@@ -200,7 +91,7 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A5',
     bloque: 'A',
     orden: 6,
-    texto: '🏘️ ¿Cuántos galpones tienes en tu granja?',
+    texto: '🏘️ ¿Cuántos galpones tiene tu granja?',
     tipo: 'opcion_unica',
     opciones: [
       '1 galpón',
@@ -219,14 +110,14 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A6',
     bloque: 'A',
     orden: 7,
-    texto: '🏠 ¿Qué tamaño tiene el galpón en metros cuadrados?',
+    texto: '📏 ¿De qué tamaño es cada galpón?',
     tipo: 'opcion_unica',
     opciones: [
       'Menos de 200 m²',
-      '200 - 500 m²',
-      '500 - 1.000 m²',
+      'Entre 200 y 500 m²',
+      'Entre 500 y 1.000 m²',
       'Más de 1.000 m²',
-      'Otro, lo escribo',
+      'Prefiero escribirlo',
     ],
     campo_prospecto: 'area_galpon_m2',
     omitir_si_canal: null,
@@ -251,12 +142,17 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A8',
     bloque: 'A',
     orden: 9,
-    texto: '🐔 ¿Cuántas aves almacenas actualmente en total en tus galpones?',
+    texto: '🐔 ¿Cuántas aves manejas en total?',
     tipo: 'opcion_unica',
-    opciones: ['<1000', '1000-5000', '5000-10000', '>10000'],
+    opciones: [
+      'Menos de 1.000',
+      'Entre 1.000 y 5.000',
+      'Entre 5.000 y 10.000',
+      'Más de 10.000',
+    ],
     campo_prospecto: null,
     omitir_si_canal: null,
-    puntua: true,
+    puntua: false,
     siguiente: 'A9',
     saltos: null,
   },
@@ -264,12 +160,16 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A9',
     bloque: 'A',
     orden: 10,
-    texto: '🏗️ ¿El galpón ya está construido y en buenas condiciones?',
+    texto: '🏗️ ¿Cómo están tus galpones?',
     tipo: 'opcion_unica',
-    opciones: ['Sí, en buen estado', 'Construido, mal estado', 'No está construido'],
+    opciones: [
+      A9_GALPON.BUENO,
+      A9_GALPON.DETERIORADO,
+      A9_GALPON.SIN_CONSTRUIR,
+    ],
     campo_prospecto: null,
     omitir_si_canal: null,
-    puntua: true,
+    puntua: false,
     siguiente: 'A11',
     saltos: null,
   },
@@ -277,12 +177,17 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A11',
     bloque: 'A',
     orden: 12,
-    texto: '⚡ ¿Cómo es el suministro eléctrico en tu granja?',
+    texto: '⚡ ¿Cómo es la energía en tu granja?',
     tipo: 'opcion_unica',
-    opciones: ['Eléctrico estable', 'Planta de respaldo', 'Solo planta', 'No'],
+    opciones: [
+      A11_ENERGIA.ESTABLE,
+      A11_ENERGIA.CON_PLANTA,
+      A11_ENERGIA.SOLO_PLANTA,
+      A11_ENERGIA.INESTABLE,
+    ],
     campo_prospecto: null,
     omitir_si_canal: null,
-    puntua: true,
+    puntua: false,
     siguiente: 'A13',
     saltos: null,
   },
@@ -290,12 +195,16 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A13',
     bloque: 'A',
     orden: 14,
-    texto: '📶 ¿Tienes internet (WiFi o datos móviles) dentro de la granja?',
+    texto: '📶 ¿Hay internet en la granja?',
     tipo: 'opcion_unica',
-    opciones: ['Sí, estable', 'Sí, pero intermitente', 'No, zona rural sin señal'],
+    opciones: [
+      A13_INTERNET.ESTABLE,
+      A13_INTERNET.INTERMITENTE,
+      A13_INTERNET.SIN_SENAL,
+    ],
     campo_prospecto: null,
     omitir_si_canal: null,
-    puntua: true,
+    puntua: false,
     siguiente: 'A14',
     saltos: null,
   },
@@ -305,18 +214,12 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A14',
     bloque: 'A',
     orden: 15,
-    texto: '😖 ¿Cuál es tu mayor dolor de cabeza hoy en la granja?',
+    texto: '😖 ¿Qué es lo que más te preocupa hoy?',
     tipo: 'opcion_unica',
-    opciones: [
-      'Mortalidad por calor o frío',
-      'Consumo de alimento descontrolado',
-      'Humedad y amoniaco',
-      'Enfermedades respiratorias',
-      'Ninguno en particular',
-    ],
+    opciones: textosDe(A14_DOLOR),
     campo_prospecto: null,
     omitir_si_canal: null,
-    puntua: false,
+    puntua: true,
     siguiente: 'A16',
     saltos: null,
   },
@@ -325,10 +228,9 @@ const PREGUNTAS_CHATBOT = [
     bloque: 'A',
     orden: 17,
     texto:
-      '📉 ¿Has tenido mortalidad elevada por condiciones ambientales en los ' +
-      'últimos 12 meses?',
+      '📉 En el último año, ¿perdiste aves por calor, frío o humedad?',
     tipo: 'opcion_unica',
-    opciones: ['Sí, más de una vez', 'Una vez', 'No', 'No sé la causa'],
+    opciones: textosDe(A16_MORTALIDAD),
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
@@ -341,11 +243,9 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A18',
     bloque: 'A',
     orden: 19,
-    texto:
-      '💳 ¿Buscas adquirir la solución o prefieres un modelo de suscripción ' +
-      'mensual?',
+    texto: '💳 ¿Cómo preferirías pagarlo?',
     tipo: 'opcion_unica',
-    opciones: ['Compra directa', 'Suscripción', 'El más conveniente', 'No sé'],
+    opciones: textosDe(A18_PAGO),
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
@@ -356,9 +256,9 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A19',
     bloque: 'A',
     orden: 20,
-    texto: '🔍 ¿Estás evaluando otras soluciones o plataformas similares?',
+    texto: '🔍 ¿Estás viendo otras opciones además de AVISENS?',
     tipo: 'opcion_unica',
-    opciones: ['Ya tengo cotizaciones', 'Mirando opciones', 'Solo AVISENS', 'No sé qué más existe'],
+    opciones: textosDe(A19_URGENCIA),
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
@@ -369,12 +269,12 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'A20',
     bloque: 'A',
     orden: 21,
-    texto: '🤝 ¿Eres tú quien toma la decisión de compra?',
+    texto: '🤝 ¿La decisión de compra la tomas tú?',
     tipo: 'opcion_unica',
-    opciones: ['Sí', 'No'],
+    opciones: textosDe(A20_DECIDE),
     campo_prospecto: null,
     omitir_si_canal: null,
-    puntua: false,
+    puntua: true,
     siguiente: 'C1',
     saltos: { No: 'A21' },
   },
@@ -383,7 +283,7 @@ const PREGUNTAS_CHATBOT = [
     bloque: 'A',
     orden: 22,
     texto:
-      '👥 ¿Con quién debemos hablar? Déjanos su nombre y un número de contacto.',
+      '👥 ¿Con quién hablamos? Déjanos su nombre y un teléfono.',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'contacto_decisor',
@@ -398,7 +298,7 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'C1',
     bloque: 'A',
     orden: 23,
-    texto: '📞 ¿A qué número de teléfono te podemos contactar?',
+    texto: '📞 ¿A qué número te llamamos?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'telefono',
@@ -411,7 +311,7 @@ const PREGUNTAS_CHATBOT = [
     codigo: 'C2',
     bloque: 'A',
     orden: 24,
-    texto: '📧 ¿Cuál es tu correo electrónico?',
+    texto: '📧 ¿Y tu correo? Ahí te enviamos la cotización.',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'email',
@@ -723,4 +623,27 @@ export async function sembrarMatrizCalificacion(prisma: PrismaClient) {
       create: fila,
     });
   }
+
+  // Las filas que salen del modelo se desactivan, igual que las preguntas.
+  // Sin esto, cambiar el puntaje de una pregunta dejaba viva la fila anterior
+  // y el maximo dejaba de cuadrar: el upsert agrega, no reemplaza.
+  const vigentes = MATRIZ_CALIFICACION.map((f) => f.codigo_pregunta);
+  await prisma.matrizCalificacion.updateMany({
+    where: { codigo_pregunta: { notIn: vigentes }, activa: true },
+    data: { activa: false },
+  });
+
+  // Y dentro de las preguntas que siguen calificando, las redacciones que ya
+  // no se usan tampoco deben puntuar.
+  for (const [codigo, opciones] of Object.entries(OPCIONES_CALIFICADAS)) {
+    await prisma.matrizCalificacion.updateMany({
+      where: {
+        codigo_pregunta: codigo,
+        opcion_respuesta: { notIn: opciones.map((o) => o.texto) },
+        activa: true,
+      },
+      data: { activa: false },
+    });
+  }
 }
+
