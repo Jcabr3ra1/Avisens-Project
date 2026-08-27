@@ -78,8 +78,8 @@
 }
 
 .lf-input:focus {
-  border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
+  border-color: var(--avisens-deep);
+  box-shadow: 0 0 0 3px rgba(0, 91, 72, 0.13);
 }
 
 .lf-eye-btn {
@@ -98,7 +98,7 @@
 }
 
 .lf-eye-btn:hover {
-  color: var(--green-d);
+  color: var(--avisens-deep);
   background: var(--bg3);
 }
 
@@ -133,7 +133,7 @@
 }
 
 .lf-link {
-  color: var(--green-d);
+  color: var(--avisens-deep);
   font-size: 0.83rem;
   font-weight: 600;
   text-decoration: none;
@@ -149,10 +149,10 @@
   height: 46px;
   display: grid;
   place-items: center;
-  color: #ffffff;
-  background: var(--green);
+  color: var(--avisens-deep);
+  background: var(--avisens-yellow);
   border: 0;
-  border-radius: 8px;
+  border-radius: 999px;
   font-family: 'Space Grotesk', sans-serif;
   font-size: 0.95rem;
   font-weight: 700;
@@ -161,19 +161,19 @@
 }
 
 .lf-btn-primary:hover:not(:disabled) {
-  background: var(--green-d);
+  background: #ffe792;
 }
 
 .lf-btn-primary:disabled {
   cursor: progress;
-  background: var(--green-l);
+  background: #f4ecc4;
 }
 
 .lf-spinner {
   width: 17px;
   height: 17px;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  border-top-color: #ffffff;
+  border: 2px solid rgba(0, 91, 72, 0.3);
+  border-top-color: var(--avisens-deep);
   border-radius: 50%;
   animation: lf-spin 0.7s linear infinite;
 }
@@ -196,7 +196,7 @@
 }
 
 .lf-back a:hover {
-  color: var(--green-d);
+  color: var(--avisens-deep);
 }
 
 /* ---------- Foco visible ---------- */
@@ -206,7 +206,7 @@
 .lf-link:focus-visible,
 .lf-btn-primary:focus-visible,
 .lf-back a:focus-visible {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--avisens-deep);
   outline-offset: 2px;
 }
 

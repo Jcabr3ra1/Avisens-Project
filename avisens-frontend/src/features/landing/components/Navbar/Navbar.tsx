@@ -3,17 +3,13 @@ import { Link } from 'react-router-dom';
 import logoAvisens from '@shared/assets/logo-avisens.png';
 import './Navbar.css';
 
-const navItems: [string, string][] = [['Resultados', '#cifras']];
+const navItems: [string, string][] = [
+  ['Inicio', '#'],
+  ['Resultados', '#cifras'],
+];
 
 function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -27,11 +23,12 @@ function Navbar() {
   }, [menuOpen]);
 
   return (
-    <nav className="navbar" data-scrolled={scrolled} data-menu-open={menuOpen}>
-      <a href="#" className="nav-logo">
+    <nav className="navbar" data-menu-open={menuOpen}>
+      <a href="#" className="nav-logo" aria-label="Ir al inicio de AVISENS">
         <span className="nav-logo-mark">
-          <img src={logoAvisens} alt="AVISENS" />
+          <img src={logoAvisens} alt="" />
         </span>
+        <span className="nav-logo-name">AVISENS</span>
       </a>
 
       <ul className="nav-links">

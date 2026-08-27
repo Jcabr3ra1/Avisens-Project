@@ -1,5 +1,5 @@
 import LoginForm from './components/LoginForm/LoginForm'
-import ilustracionGranja from '@shared/assets/farm-hero.webp'
+import ilustracionGranja from './assets/login-chicken-hd.webp'
 import './LoginPage.css'
 
 function LoginPage() {
