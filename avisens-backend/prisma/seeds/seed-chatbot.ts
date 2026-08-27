@@ -42,12 +42,16 @@ const PREGUNTAS_CHATBOT = [
       'antes de perder aves.\n\n' +
       '¿Qué necesitas?',
     tipo: 'opcion_unica',
-    opciones: ['Quiero cotizar', 'Tengo dudas primero'],
+    opciones: ['Quiero cotizar', 'Tengo dudas primero', 'Ya soy cliente'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
     siguiente: 'A1',
-    saltos: { 'Quiero cotizar': 'A1', 'Tengo dudas primero': 'BMP' },
+    saltos: {
+      'Quiero cotizar': 'A1',
+      'Tengo dudas primero': 'BMP',
+      'Ya soy cliente': 'S1',
+    },
   },
 
   // =========================================================================
@@ -512,6 +516,66 @@ const PREGUNTAS_CHATBOT = [
   // --- Tramites ---
 
   // --- Radicacion PQRS ---
+  // =========================================================================
+  // BLOQUE S — SOPORTE A CLIENTES (PQRS)
+  // =========================================================================
+  // Solo para quien ya compro. Aqui SI se pide la cedula, porque sirve para
+  // ubicar su granja y su contrato: es el unico sitio del chatbot donde ese
+  // dato hace un trabajo. En la cotizacion se retiro justamente por eso.
+  //
+  // Tres preguntas y se radica. La version anterior tenia dieciseis, con una
+  // respuesta guionizada por cada tipo de falla; eso no es soporte, es un
+  // arbol de respuestas que envejece mal. Quien tiene un problema quiere
+  // contarlo y que alguien lo lea.
+  {
+    codigo: 'S1',
+    bloque: 'S',
+    orden: 200,
+    texto:
+      '🪪 Para ubicar tu granja y tu contrato, ¿cuál es tu número de cédula?',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'documento',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'S2',
+    saltos: null,
+  },
+  {
+    codigo: 'S2',
+    bloque: 'S',
+    orden: 201,
+    texto: '🛠️ ¿Qué está pasando?',
+    tipo: 'opcion_unica',
+    opciones: [
+      'Los sensores no reportan',
+      'Las alertas no llegan o llegan tarde',
+      'Un cobro que no cuadra',
+      'Una visita o instalación pendiente',
+      'Quiero sugerir una mejora',
+      'Otra cosa',
+    ],
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'S3',
+    saltos: null,
+  },
+  {
+    codigo: 'S3',
+    bloque: 'S',
+    orden: 202,
+    texto:
+      '📝 Cuéntanos qué pasó, con el detalle que puedas. ' +
+      'Entre más nos digas, más rápido lo resolvemos.',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: null,
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'FIN',
+    saltos: null,
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -571,6 +635,7 @@ const CATALOGO_SENSORES = [
     cobertura_m2: 300,
     obligatorio: false,
   },
+
 ];
 
 export async function sembrarCatalogoSensores(prisma: PrismaClient) {

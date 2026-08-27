@@ -13,6 +13,8 @@ import { ResponderChatDto } from './dto/responder-chat.dto';
 import {
   NO_DECIDE,
   SIN_SENAL,
+  clasificarSoporte,
+  radicadoDe,
   tieneDolor,
   viabilidadTecnica,
 } from './dominio/calificacion';
@@ -20,8 +22,10 @@ import {
 const PRIMERA_PREGUNTA = 'M1';
 const PRIMERA_PREGUNTA_PQRS = 'B1';
 const PRIMERA_PREGUNTA_COTIZACION = 'A1';
+const PRIMERA_PREGUNTA_SOPORTE = 'S1';
 const RUTA_PQRS = 'general';
 const RUTA_COTIZACION = 'cotizacion';
+const RUTA_SOPORTE = 'soporte';
 const FIN = 'FIN';
 const CONFIRMAR = 'CONFIRMAR';
 const CORREGIR = 'CORREGIR';
@@ -92,9 +96,11 @@ export class ChatbotService {
     const primeraCodigo =
       dto.ruta === RUTA_PQRS
         ? PRIMERA_PREGUNTA_PQRS
-        : dto.ruta === RUTA_COTIZACION
-          ? PRIMERA_PREGUNTA_COTIZACION
-          : PRIMERA_PREGUNTA;
+        : dto.ruta === RUTA_SOPORTE
+          ? PRIMERA_PREGUNTA_SOPORTE
+          : dto.ruta === RUTA_COTIZACION
+            ? PRIMERA_PREGUNTA_COTIZACION
+            : PRIMERA_PREGUNTA;
     const primera = await this.primeraVisible(primeraCodigo, canal);
 
     const prospecto = await this.prisma.prospecto.create({
@@ -255,8 +261,11 @@ export class ChatbotService {
     }
 
     if (siguiente === FIN) {
-      const esConsulta = pregunta.bloque === 'B';
-      if (!esConsulta) {
+      // El resumen "confirma tus datos" es del cuestionario de cotizacion.
+      // Ni una consulta frecuente (B) ni una PQRS (S) tienen datos que
+      // confirmar: se cierran directo.
+      const sinResumen = pregunta.bloque === 'B' || pregunta.bloque === 'S';
+      if (!sinResumen) {
         const resumen = await this.obtenerResumen(prospecto.id);
         await this.prisma.prospecto.update({
           where: { id: prospecto.id },
@@ -541,6 +550,56 @@ export class ChatbotService {
 
     // Ruta PQRS (bloque B): no hay puntaje ni clasificacion comercial; la
     // solicitud queda radicada con su categoria, asunto y detalle.
+    const esSoporte = respuestas.some((r) => r.bloque === 'S');
+    if (esSoporte) {
+      const porCodigo = new Map(
+        respuestas.map((r) => [r.codigo_pregunta, r.respuesta_texto]),
+      );
+      const { categoria, horas } = clasificarSoporte(porCodigo.get('S2'));
+
+      const solicitud = await this.prisma.solicitudPqrs.create({
+        data: {
+          prospecto_id: prospectoId,
+          categoria,
+          codigo_pregunta: 'S2',
+          asunto: porCodigo.get('S2'),
+          mensaje: porCodigo.get('S3'),
+          estado: 'abierta',
+        },
+        select: { id: true },
+      });
+
+      const cerrado = await this.prisma.prospecto.update({
+        where: { id: prospectoId },
+        data: {
+          estado: 'pqrs',
+          pregunta_actual: FIN,
+          fecha_finalizacion: new Date(),
+        },
+      });
+
+      return {
+        sesion_id: cerrado.sesion_id,
+        pregunta: null as ReturnType<
+          ChatbotService['formatearPregunta']
+        > | null,
+        // El radicado se le muestra: sin numero, el cliente no tiene con que
+        // preguntar despues por su caso.
+        mensaje_transicion:
+          `✅ Listo. Tu solicitud quedó radicada con el número ` +
+          `*${radicadoDe(solicitud.id)}*.` +
+          (horas
+            ? `\n\nUn asesor te responde dentro de las próximas ${horas} horas. ` +
+              `Guarda ese número para hacerle seguimiento.`
+            : `\n\nGracias por la sugerencia: la revisamos con el equipo de producto.`),
+        progreso: null as number | null,
+        total_pasos: null as number | null,
+        finalizado: true,
+        puntaje_total: null as number | null,
+        clasificacion: 'pqrs' as string | null,
+      };
+    }
+
     const esConsulta = respuestas.some((r) => r.bloque === 'B');
 
     // El bloque B quedo reducido a las preguntas frecuentes de preventa. La

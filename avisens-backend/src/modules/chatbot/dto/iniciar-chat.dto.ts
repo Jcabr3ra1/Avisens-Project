@@ -13,12 +13,13 @@ export class IniciarChatDto {
 
   @ApiPropertyOptional({
     example: 'cotizacion',
-    enum: ['cotizacion', 'general'],
+    enum: ['cotizacion', 'general', 'soporte'],
     description:
-      'Ruta del chat: cotizacion lleva al bloque A (calificacion) y general al bloque B (PQRS)',
+      'cotizacion: bloque A (califica al prospecto) · general: bloque B ' +
+      '(preguntas frecuentes) · soporte: bloque S (PQRS de clientes)',
   })
   @IsString()
-  @IsIn(['cotizacion', 'general'])
+  @IsIn(['cotizacion', 'general', 'soporte'])
   @IsOptional()
   ruta?: string;
 }
