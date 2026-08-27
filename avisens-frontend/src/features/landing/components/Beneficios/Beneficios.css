@@ -32,13 +32,8 @@
   background: rgba(0, 91, 72, 0.3);
 }
 
-<<<<<<< HEAD:avisens-frontend/src/features/landing/components/Beneficios/Beneficios.css
 .beneficios-eyebrow-txt {
-  color: var(--green-d);
-=======
-.stats-eyebrow-txt {
   color: var(--avisens-deep);
->>>>>>> b4c11d2b01646468d49d52878a548d1ea4ed3106:avisens-frontend/src/features/landing/components/Stats/Stats.css
   font-weight: 500;
 }
 
@@ -67,25 +62,16 @@
   position: relative;
   padding: 1.8rem 1.6rem 1.6rem;
   border-radius: 18px;
-<<<<<<< HEAD:avisens-frontend/src/features/landing/components/Beneficios/Beneficios.css
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(245, 251, 248, 0.86));
-  border: 1px solid rgba(16, 185, 129, 0.22);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(233, 227, 186, 0.78));
+  border: 1px solid rgba(0, 91, 72, 0.22);
   transition:
     transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease,
     opacity 0.5s ease, translate 0.5s ease;
   overflow: hidden;
   isolation: isolate;
-  box-shadow: 0 14px 30px -22px rgba(4, 120, 87, 0.2);
+  box-shadow: 0 14px 30px -22px rgba(0, 91, 72, 0.28);
   opacity: 0;
   translate: 0 16px;
-=======
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(233, 227, 186, 0.78));
-  border: 1px solid rgba(0, 91, 72, 0.22);
-  transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
-  overflow: hidden;
-  isolation: isolate;
-  box-shadow: 0 14px 30px -22px rgba(0, 91, 72, 0.28);
->>>>>>> b4c11d2b01646468d49d52878a548d1ea4ed3106:avisens-frontend/src/features/landing/components/Stats/Stats.css
 }
 
 .beneficios-grid.is-visible .beneficio-card {
@@ -120,7 +106,6 @@
   box-shadow: 0 22px 44px -22px rgba(0, 91, 72, 0.38);
 }
 
-<<<<<<< HEAD:avisens-frontend/src/features/landing/components/Beneficios/Beneficios.css
 .beneficio-card-icono {
   display: inline-flex;
   align-items: center;
@@ -129,15 +114,15 @@
   height: 42px;
   margin-bottom: 1rem;
   border-radius: 12px;
-  background: rgba(16, 185, 129, 0.12);
-  color: var(--green-d);
+  background: rgba(71, 187, 75, 0.14);
+  color: var(--avisens-deep);
 }
 
 .beneficio-card-titulo {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--avisens-deep);
   margin: 0 0 0.6rem;
   letter-spacing: -0.005em;
 }
@@ -145,45 +130,8 @@
 .beneficio-card-texto {
   font-size: 0.88rem;
   line-height: 1.6;
-  color: var(--text2);
-  margin: 0 0 1.3rem;
-=======
-.stat-card-index {
-  position: absolute;
-  top: 1rem;
-  right: 1.1rem;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.16em;
-  color: rgba(0, 91, 72, 0.62);
-  opacity: 0.55;
-}
-
-.stat-card-num {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(2rem, 3.6vw, 2.6rem);
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  color: var(--avisens-deep);
-  line-height: 1;
-  margin-bottom: 0.55rem;
-}
-
-.stat-card-label {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--avisens-deep);
-  margin-bottom: 0.7rem;
-  letter-spacing: -0.005em;
-}
-
-.stat-card-desc {
-  font-size: 0.86rem;
-  line-height: 1.55;
   color: rgba(0, 91, 72, 0.82);
-  margin: 0 0 1.4rem;
->>>>>>> b4c11d2b01646468d49d52878a548d1ea4ed3106:avisens-frontend/src/features/landing/components/Stats/Stats.css
+  margin: 0 0 1.3rem;
 }
 
 @media (max-width: 760px) {

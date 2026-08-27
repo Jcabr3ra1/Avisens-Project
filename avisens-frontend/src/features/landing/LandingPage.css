@@ -4,7 +4,6 @@
   background: var(--avisens-cream);
 }
 
-<<<<<<< HEAD
 /* La landing es larga: el navegador puede aplazar el layout y pintado de las
    secciones que todavía están lejos del viewport. */
 .landing-page > section:not(.hero) {
@@ -12,25 +11,8 @@
   contain-intrinsic-size: auto 800px;
 }
 
-.landing-page::before {
-  content: '';
-  position: absolute;
-  top: 82svh;
-  right: 0;
-  left: 0;
-  z-index: 0;
-  height: 44rem;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 58% 36% at 50% 0%, rgba(16, 185, 129, 0.16), transparent 68%),
-    radial-gradient(ellipse 44% 28% at 82% 20%, rgba(59, 130, 246, 0.1), transparent 70%),
-    linear-gradient(180deg, rgba(245, 249, 247, 0), #f5f9f7 42%, rgba(245, 249, 247, 0));
-}
-
-=======
 /* A sangre: la imagen llega hasta el borde de la ventana y la navbar flota
    encima, sin marco intermedio. */
->>>>>>> b4c11d2b01646468d49d52878a548d1ea4ed3106
 .landing-hero-frame {
   position: relative;
   z-index: 1;

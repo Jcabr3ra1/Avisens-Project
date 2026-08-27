@@ -1,6 +1,7 @@
 import Navbar from './components/Navbar/Navbar'
 import Hero from './components/Hero/Hero'
 import Beneficios from './components/Beneficios/Beneficios'
+import Sensores from './components/Sensores/Sensores'
 import Footer from './components/Footer/Footer'
 import FloatChat from './components/FloatChat/FloatChat'
 import './LandingPage.css'
@@ -19,6 +20,7 @@ function LandingPage() {
         </div>
 
         <Beneficios />
+        <Sensores />
       </div>
       <Footer />
       <FloatChat />
