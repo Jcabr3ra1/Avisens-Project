@@ -7,6 +7,7 @@ import { IcSidebar } from '@shared/ui/icons/icons'
 import { NAV_SECTIONS, itemVisible } from './navConfig'
 // getUsuario lee la sesión del localStorage; logout la revoca en el backend (EP-03 HU-17)
 import { getUsuario, logout } from '@shared/api'
+import logoAvisens from '@shared/assets/logo-avisens.png'
 import './Sidebar.css'
 
 type Props = {
@@ -42,7 +43,7 @@ const Sidebar = ({ collapsed, onToggle, rol, galponesActivos, totalAves, totalAl
     <div className="dash-side-header">
       <div className="dash-side-brand">
         <div className="dash-workspace-logo">
-          <img src="/views/avisens/img/logo.png" alt="AVISENS" className="dash-workspace-logo-img" />
+          <img src={logoAvisens} alt="AVISENS" className="dash-workspace-logo-img" />
         </div>
         <div className="dash-workspace-name">
           AVISENS

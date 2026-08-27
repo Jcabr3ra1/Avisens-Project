@@ -30,7 +30,7 @@ function Ctr({ end, suffix = '', dur = 1600 }: { end: number; suffix?: string; d
 
     obs.observe(el)
     return () => obs.disconnect()
-  }, [end, dur])
+  }, [decimals, dur, end])
 
   return (
     <span ref={ref}>
