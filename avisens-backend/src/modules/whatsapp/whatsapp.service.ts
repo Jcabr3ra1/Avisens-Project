@@ -444,12 +444,11 @@ export class WhatsappService {
         ? { texto: this.cierre(r) }
         : this.formatear(r.pregunta);
 
-      if (r.progreso !== null && r.progreso !== undefined && !r.finalizado) {
-        const total = r.total_pasos ?? 20;
-        const porcentaje = Math.min(Math.round((r.progreso / total) * 100), 100);
-        partes.texto = `📊 Progreso: ${r.progreso}/${total} (${porcentaje}%)\n\n${partes.texto}`;
-      }
-
+      // Sin barra de progreso: en WhatsApp cada mensaje lleva su propia
+      // cabecera y "Progreso 4/15 (27%)" delante de cada pregunta convierte la
+      // conversacion en un formulario. Los mensajes de transicion ya avisan
+      // cuantas preguntas trae cada bloque, que es la informacion util sin el
+      // recordatorio constante de lo que falta.
       await this.encolarSalida(entrante.de, partes);
     } catch (e) {
       const mensaje = e instanceof Error ? e.message : 'Hubo un problema';
