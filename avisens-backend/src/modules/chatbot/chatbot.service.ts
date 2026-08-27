@@ -12,7 +12,9 @@ import { ResponderChatDto } from './dto/responder-chat.dto';
 
 const PRIMERA_PREGUNTA = 'M1';
 const PRIMERA_PREGUNTA_PQRS = 'B1';
+const PRIMERA_PREGUNTA_COTIZACION = 'A1';
 const RUTA_PQRS = 'general';
+const RUTA_COTIZACION = 'cotizacion';
 const FIN = 'FIN';
 const CONFIRMAR = 'CONFIRMAR';
 const CORREGIR = 'CORREGIR';
@@ -22,7 +24,6 @@ const PREFIJO_CORRECCION = 'FIX:';
 // vez de rehacer el cuestionario entero.
 const CORREGIBLES: Array<[string, string]> = [
   ['Nombre', 'A2'],
-  ['Documento', 'A3'],
   ['Tamaño de la granja', 'A5'],
   ['Tamaño del galpón', 'A6'],
   ['Teléfono', 'C1'],
@@ -70,8 +71,16 @@ export class ChatbotService {
     const canal = dto.canal_origen ?? 'web';
     // La ruta la escoge el usuario: cotizacion califica al prospecto (bloque A)
     // y general radica una solicitud PQRS (bloque B, sin puntaje).
+    // Si quien abre el chat ya eligio a que viene -el boton "Cotizar" de la web
+    // manda ruta: 'cotizacion'-, el menu sobra: preguntarle otra vez lo que
+    // acaba de decir es un paso regalado. El menu queda para WhatsApp, donde
+    // la persona solo escribe "hola" y no hay ruta.
     const primeraCodigo =
-      dto.ruta === RUTA_PQRS ? PRIMERA_PREGUNTA_PQRS : PRIMERA_PREGUNTA;
+      dto.ruta === RUTA_PQRS
+        ? PRIMERA_PREGUNTA_PQRS
+        : dto.ruta === RUTA_COTIZACION
+          ? PRIMERA_PREGUNTA_COTIZACION
+          : PRIMERA_PREGUNTA;
     const primera = await this.primeraVisible(primeraCodigo, canal);
 
     const prospecto = await this.prisma.prospecto.create({

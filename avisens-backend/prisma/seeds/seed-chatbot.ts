@@ -194,19 +194,6 @@ const PREGUNTAS_CHATBOT = [
     siguiente: 'A5',
     saltos: null,
   },
-  {
-    codigo: 'A3',
-    bloque: 'A',
-    orden: 4,
-    texto: '🪪 ¿Cuál es tu número de cédula?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: 'documento',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'C1',
-    saltos: null,
-  },
 
   // --- La granja ---
   {
@@ -401,7 +388,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A3',
+    siguiente: 'C1',
     saltos: { No: 'A21' },
   },
   {
@@ -415,7 +402,7 @@ const PREGUNTAS_CHATBOT = [
     campo_prospecto: 'contacto_decisor',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A3',
+    siguiente: 'C1',
     saltos: null,
   },
 
@@ -441,7 +428,7 @@ const PREGUNTAS_CHATBOT = [
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'email',
-    omitir_si_canal: null,
+    omitir_si_canal: 'whatsapp',
     puntua: false,
     siguiente: 'FIN',
     saltos: null,
