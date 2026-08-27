@@ -151,12 +151,12 @@ const PREGUNTAS_CHATBOT = [
       'ventilación para que sepas lo que pasa en el galpón antes de perder aves.\n\n' +
       '¿En qué te puedo ayudar hoy?',
     tipo: 'opcion_unica',
-    opciones: ['Cotizar un sistema', 'Otra consulta o PQRS'],
+    opciones: ['Quiero cotizar', 'Tengo dudas primero'],
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: false,
     siguiente: 'A1',
-    saltos: { 'Cotizar un sistema': 'A1', 'Otra consulta o PQRS': 'B1' },
+    saltos: { 'Quiero cotizar': 'A1', 'Tengo dudas primero': 'BMP' },
   },
 
   // =========================================================================
@@ -424,19 +424,6 @@ const PREGUNTAS_CHATBOT = [
   // =========================================================================
   // BLOQUE B — PQRS / CONSULTAS GENERALES (sin puntaje comercial)
   // =========================================================================
-  {
-    codigo: 'B1',
-    bloque: 'B',
-    orden: 1,
-    texto: '🗂️ Con gusto te ayudo. ¿Qué tipo de consulta tienes?',
-    tipo: 'opcion_unica',
-    opciones: ['Petición', 'Reclamo', 'Queja', 'Sugerencia', 'Trámite'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BMP',
-    saltos: { 'Petición': 'BMP', Reclamo: 'BIDR', Queja: 'BIDQ', Sugerencia: 'BMS', 'Trámite': 'BIDT' },
-  },
 
   // --- Peticiones ---
   {
@@ -454,7 +441,7 @@ const PREGUNTAS_CHATBOT = [
       '¿Financiación?',
       '¿Y si se va la luz?',
       'Clientes en el Cauca',
-      'Otra consulta',
+      'Hablar con un asesor',
     ],
     campo_prospecto: null,
     omitir_si_canal: null,
@@ -469,7 +456,7 @@ const PREGUNTAS_CHATBOT = [
       '¿Financiación?': 'BP6',
       '¿Y si se va la luz?': 'BP7',
       'Clientes en el Cauca': 'BP8',
-      'Otra consulta': 'B2',
+      'Hablar con un asesor': 'A1',
     },
   },
   {
@@ -617,271 +604,14 @@ const PREGUNTAS_CHATBOT = [
   },
 
   // --- Reclamos ---
-  {
-    codigo: 'BMR',
-    bloque: 'B',
-    orden: 11,
-    texto: '🔧 ¿Sobre qué necesitas ayuda?',
-    tipo: 'opcion_unica',
-    opciones: ['Sensores sin datos', 'Alertas no llegan', 'Factura incorrecta', 'Otra consulta'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BR1',
-    saltos: {
-      'Sensores sin datos': 'BR1',
-      'Alertas no llegan': 'BR2',
-      'Factura incorrecta': 'BR3',
-      'Otra consulta': 'B2',
-    },
-  },
-  {
-    codigo: 'BR1',
-    bloque: 'B',
-    orden: 12,
-    texto:
-      '🔌 Lamentamos el inconveniente. Primero revisa que los sensores tengan ' +
-      'alimentación eléctrica y que la unidad de comunicación esté encendida. ' +
-      'Si el problema sigue, nuestro equipo puede hacer un diagnóstico remoto ' +
-      'y, si hace falta, programar una visita técnica.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
-  {
-    codigo: 'BR2',
-    bloque: 'B',
-    orden: 13,
-    texto:
-      '🔔 Las alertas tardías o que no llegan suelen deberse a conectividad, ' +
-      'configuración o comunicación con los sensores. Nuestro equipo puede ' +
-      'revisar la configuración de forma remota y corregirla. Si persiste, se ' +
-      'programa una revisión técnica.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
-  {
-    codigo: 'BR3',
-    bloque: 'B',
-    orden: 14,
-    texto:
-      '📋 Lamentamos el inconveniente. Necesitamos la cotización aprobada y la ' +
-      'factura recibida para que el área de facturación revise la diferencia. ' +
-      'Si se confirma un error, se hace el ajuste correspondiente.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
 
   // --- Quejas ---
-  {
-    codigo: 'BMQ',
-    bloque: 'B',
-    orden: 15,
-    texto: '😤 ¿Sobre qué necesitas ayuda?',
-    tipo: 'opcion_unica',
-    opciones: ['Visita técnica no llegó', 'Otra consulta'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BQ1',
-    saltos: { 'Visita técnica no llegó': 'BQ1', 'Otra consulta': 'B2' },
-  },
-  {
-    codigo: 'BQ1',
-    bloque: 'B',
-    orden: 16,
-    texto:
-      '📅 Lamentamos que la visita programada no se haya realizado. Podemos ' +
-      'escalar el caso con Servicio al Cliente. Para agilizarlo necesitamos el ' +
-      'número de solicitud o ticket, la fecha en que estaba programada la ' +
-      'visita y los datos de la granja.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
 
   // --- Sugerencias ---
-  {
-    codigo: 'BMS',
-    bloque: 'B',
-    orden: 17,
-    texto: '💡 ¿Sobre qué necesitas ayuda?',
-    tipo: 'opcion_unica',
-    opciones: ['Control de alimento', 'Otra consulta'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BS1',
-    saltos: { 'Control de alimento': 'BS1', 'Otra consulta': 'B2' },
-  },
-  {
-    codigo: 'BS1',
-    bloque: 'B',
-    orden: 18,
-    texto:
-      '🙏 Gracias por la sugerencia. El monitoreo del consumo de alimento está ' +
-      'contemplado dentro de nuestro roadmap de desarrollo. Estamos evaluando ' +
-      'su integración para darte una visión más completa de la eficiencia de ' +
-      'tu producción.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
 
   // --- Tramites ---
-  {
-    codigo: 'BMT',
-    bloque: 'B',
-    orden: 19,
-    texto: '📄 ¿Sobre qué necesitas ayuda?',
-    tipo: 'opcion_unica',
-    opciones: ['Ampliar a galpón nuevo', 'Baja o traslado', 'Otra consulta'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BT1',
-    saltos: {
-      'Ampliar a galpón nuevo': 'BT1',
-      'Baja o traslado': 'BT2',
-      'Otra consulta': 'B2',
-    },
-  },
-  {
-    codigo: 'BT1',
-    bloque: 'B',
-    orden: 20,
-    texto:
-      '🏗️ Para ampliar el sistema, un asesor revisa las características del ' +
-      'galpón nuevo, determina cuántos sensores hacen falta y prepara una ' +
-      'cotización. Una vez la apruebes, el equipo técnico programa la ' +
-      'instalación.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
-  {
-    codigo: 'BT2',
-    bloque: 'B',
-    orden: 21,
-    texto:
-      '🔄 Para dar de baja el servicio o trasladar los equipos a otra granja, ' +
-      'Servicio al Cliente revisa las condiciones del contrato y programa el ' +
-      'retiro o el traslado. Si es traslado, hacemos una evaluación técnica de ' +
-      'la nueva ubicación antes de instalar de nuevo.\n\n' +
-      '¿Quieres que registremos tu caso para que un asesor te contacte?',
-    tipo: 'si_no',
-    opciones: ['Sí', 'No'],
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: { 'Sí': 'B2', No: 'FIN' },
-  },
 
   // --- Radicacion PQRS ---
-  {
-    codigo: 'BIDR',
-    bloque: 'B',
-    orden: 70,
-    texto:
-      '🪪 Para ubicar tu granja y tu contrato, ¿cuál es tu número de documento?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: 'documento',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BMR',
-    saltos: null,
-  },
-  {
-    codigo: 'BIDQ',
-    bloque: 'B',
-    orden: 71,
-    texto:
-      '🪪 Para ubicar tu granja y tu contrato, ¿cuál es tu número de documento?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: 'documento',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BMQ',
-    saltos: null,
-  },
-  {
-    codigo: 'BIDT',
-    bloque: 'B',
-    orden: 72,
-    texto:
-      '🪪 Para ubicar tu granja y tu contrato, ¿cuál es tu número de documento?',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: 'documento',
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'BMT',
-    saltos: null,
-  },
-  {
-    codigo: 'B2',
-    bloque: 'B',
-    orden: 90,
-    texto:
-      '📌 ¿Cuál es el asunto de tu solicitud?\n\n' +
-      'Al registrarla aceptas nuestra política de tratamiento de datos: ' +
-      'https://avisens-project-production.up.railway.app/privacidad',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'B3',
-    saltos: null,
-  },
-  {
-    codigo: 'B3',
-    bloque: 'B',
-    orden: 91,
-    texto: '📝 Cuéntanos con detalle qué sucedió',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: null,
-    omitir_si_canal: null,
-    puntua: false,
-    siguiente: 'FIN',
-    saltos: null,
-  },
 ];
 
 // ---------------------------------------------------------------------------
