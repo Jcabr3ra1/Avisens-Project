@@ -14,9 +14,9 @@ import {
 } from '@shared/ui/icons/icons'
 import './CrmPage.css'
 
-// El chatbot puntúa sobre 16 (ver PUNTAJE_MAXIMO en FloatChat) y clasifica
-// caliente/tibio/frío según esos umbrales (ver chatbot.service.ts).
-const PUNTAJE_MAXIMO = 16
+// El chatbot puntúa sobre 12 (ver PUNTAJE_MAXIMO en FloatChat) y clasifica
+// caliente/tibio/frío según esos umbrales (ver UMBRAL_CALIENTE/TIBIO en chatbot.service.ts).
+const PUNTAJE_MAXIMO = 12
 
 // Etapa visual del pipeline. La calcula el cliente a partir de dos campos
 // reales distintos: `clasificacion` (qué tan calificado quedó el prospecto)
@@ -50,7 +50,7 @@ const CFG: Record<Etapa, {
 }
 
 const RANGOS_PUNTAJE: Record<Etapa, string> = {
-  caliente: '12 – 16 pts', tibio: '7 – 11 pts', frio: '0 – 6 pts',
+  caliente: '8 – 12 pts', tibio: '5 – 7 pts', frio: '0 – 4 pts',
   cerrado: 'Convertido', descartado: 'Sin calificar',
 }
 
@@ -430,6 +430,12 @@ function DetallePanel({
             <div className="crm-det-row">
               <span className="crm-det-lbl">Tipo de producción</span>
               <span className="crm-det-val">{detalle.tipo_produccion}</span>
+            </div>
+          )}
+          {detalle?.numero_galpones != null && (
+            <div className="crm-det-row">
+              <span className="crm-det-lbl">Galpones</span>
+              <span className="crm-det-val">{detalle.numero_galpones}</span>
             </div>
           )}
           {detalle?.area_granja_m2 != null && (

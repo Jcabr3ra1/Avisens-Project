@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { origenesPermitidos } from './config/cors';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import helmet from 'helmet';
@@ -49,12 +50,11 @@ async function bootstrap() {
     defaultVersion: '1',
   });
 
-  // CORS_ORIGIN admite varios dominios separados por coma (ej. la web y el panel).
-  // Sin valor (solo dev) se permite cualquier origen; en produccion es obligatorio
-  // (lo valida env.validation).
+  // CORS_ORIGIN admite varios dominios separados por coma y comodines por
+  // subdominio (ej. https://avisens-*.vercel.app para las previsualizaciones).
   const corsOrigin = config.get<string>('CORS_ORIGIN');
   app.enableCors({
-    origin: corsOrigin ? corsOrigin.split(',').map((o) => o.trim()) : true,
+    origin: origenesPermitidos(corsOrigin),
     credentials: true,
   });
 
