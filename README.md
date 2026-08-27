@@ -117,6 +117,31 @@ pnpm start:dev                # http://localhost:3000  (Swagger en /docs)
 
 > Genera secretos JWT fuertes con `openssl rand -base64 48`. Nunca subas el `.env`.
 
+### Desplegar el frontend en Vercel
+
+El frontend va en Vercel y el backend en Railway. Al crear el proyecto:
+
+| Ajuste | Valor |
+|---|---|
+| Root Directory | `avisens-frontend` |
+| Framework | Vite (lo detecta solo) |
+| Variable de entorno | `VITE_API_URL` = `https://<tu-backend>.up.railway.app/v1` |
+
+**Y hay que abrir el CORS en Railway**, o el navegador bloquea todas las llamadas
+y el chat deja de funcionar:
+
+```
+CORS_ORIGIN=http://localhost:5173,https://<tu-dominio>.vercel.app,https://<proyecto>-*.vercel.app
+```
+
+El tercero, con comodín, cubre las previsualizaciones: Vercel crea un subdominio
+distinto en cada despliegue de rama. Sin él, cada previsualización tendría el
+chat roto, y el fallo solo se ve en la consola del navegador — nunca en los logs
+del servidor.
+
+> En local no hace falta nada de esto: nginx reenvía `/api` al backend por la red
+> interna de Docker, así que el navegador nunca cruza de dominio.
+
 ### Frontend web (React + Vite)
 
 ```bash
