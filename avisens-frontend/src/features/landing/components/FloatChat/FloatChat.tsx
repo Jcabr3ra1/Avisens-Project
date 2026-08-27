@@ -13,12 +13,15 @@ import './FloatChat.css'
 
 const RobotLottie = lazy(() => import('./RobotLottie'))
 
-const TOTAL_PREGUNTAS = 20
+// El cuestionario son 15 pasos y el puntaje comercial llega a 12. Estaban en
+// 20 y 16 desde antes del rediseño: el resultado mostraba "12/16" y la barra de
+// progreso se quedaba corta.
+const TOTAL_PREGUNTAS = 15
 const SIN_CONSENTIMIENTO = 'sin_consentimiento'
-const PUNTAJE_MAXIMO = 16
+const PUNTAJE_MAXIMO = 12
 
 type Mensaje = {
-  autor: 'bot' | 'usuario'
+  autor: 'bot' | 'usuario' | 'bloque'
   texto: string
 }
 
@@ -124,7 +127,16 @@ function FloatChat() {
     if (respuesta.pregunta) {
       const siguiente = respuesta.pregunta
       setPregunta(siguiente)
-      setMensajes((m) => [...m, { autor: 'bot', texto: siguiente.texto }])
+      setMensajes((m) => [
+        ...m,
+        // El backend anuncia cada tanda ("Tu granja - 3 preguntas"). Se pinta
+        // como separador y no como mensaje del bot: da estructura sin sumar
+        // una burbuja mas que leer.
+        ...(respuesta.mensaje_transicion
+          ? [{ autor: 'bloque' as const, texto: respuesta.mensaje_transicion }]
+          : []),
+        { autor: 'bot' as const, texto: siguiente.texto },
+      ])
     }
   }, [])
 
@@ -298,11 +310,17 @@ function FloatChat() {
             </div>
           ) : null}
 
-          {mensajes.map((mensaje, i) => (
-            <div key={`${mensaje.autor}-${i}`} className={`float-msg ${mensaje.autor}`}>
-              <div className="float-msg-bub">{mensaje.texto}</div>
-            </div>
-          ))}
+          {mensajes.map((mensaje, i) =>
+            mensaje.autor === 'bloque' ? (
+              <div key={`bloque-${i}`} className="float-bloque" role="separator">
+                <span>{mensaje.texto}</span>
+              </div>
+            ) : (
+              <div key={`${mensaje.autor}-${i}`} className={`float-msg ${mensaje.autor}`}>
+                <div className="float-msg-bub">{mensaje.texto}</div>
+              </div>
+            ),
+          )}
 
           {enviando ? (
             <div className="float-msg bot">
@@ -320,18 +338,27 @@ function FloatChat() {
                 <span>Conversación cerrada</span>
                 <p>Sin tratamiento de datos. Puedes reiniciar cuando quieras.</p>
               </div>
-            ) : resultado.clasificacion === 'pqrs' ? (
+            ) : resultado.clasificacion === 'consulta_atendida' ? (
               <div className="float-result float-result--cerrado">
-                <span>Solicitud radicada</span>
-                <p>Tu solicitud PQRS quedó registrada. Pronto te contactaremos.</p>
+                <span>Consulta resuelta</span>
+                <p>Si quieres una cotización, reinicia y elige «Quiero cotizar».</p>
               </div>
             ) : (
-              <div className="float-result">
-                <span>Resultado</span>
-                <strong>
-                  {resultado.puntaje ?? 0}<small>/{PUNTAJE_MAXIMO}</small>
-                </strong>
-                <p>{etiquetaClasificacion(resultado.clasificacion)}</p>
+              <div className={`float-result float-result--${resultado.clasificacion ?? 'frio'}`}>
+                <span>Tu perfil</span>
+                <strong>{etiquetaClasificacion(resultado.clasificacion)}</strong>
+                <div
+                  className="float-result-barra"
+                  role="img"
+                  aria-label={`${resultado.puntaje ?? 0} de ${PUNTAJE_MAXIMO} puntos`}
+                >
+                  <div
+                    style={{
+                      width: `${Math.round(((resultado.puntaje ?? 0) / PUNTAJE_MAXIMO) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <p>Un asesor te contactará con la cotización.</p>
               </div>
             )
           ) : null}
@@ -352,10 +379,10 @@ function FloatChat() {
           {porElegirRuta && !enviando ? (
             <div className="float-chat-options">
               <button type="button" onClick={() => void iniciar('cotizacion')}>
-                Quiero una cotización
+                Quiero cotizar
               </button>
               <button type="button" onClick={() => void iniciar('general')}>
-                Preguntas generales (PQRS)
+                Tengo dudas primero
               </button>
             </div>
           ) : opciones.length > 0 && !resultado ? (

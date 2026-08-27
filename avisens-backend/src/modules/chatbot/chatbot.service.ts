@@ -7,6 +7,7 @@ import {
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
+import { InterpreteRespuestaService } from './interprete-respuesta.service';
 import { IniciarChatDto } from './dto/iniciar-chat.dto';
 import { ResponderChatDto } from './dto/responder-chat.dto';
 import {
@@ -77,6 +78,7 @@ export class ChatbotService {
   constructor(
     private prisma: PrismaService,
     private cotizaciones: CotizacionesService,
+    private interprete: InterpreteRespuestaService,
   ) {}
 
   async iniciar(dto: IniciarChatDto) {
@@ -188,7 +190,7 @@ export class ChatbotService {
 
     const pregunta = await this.obtenerPregunta(codigoActual);
 
-    const respuesta = this.normalizarRespuesta(pregunta, dto.respuesta);
+    const respuesta = await this.resolverRespuesta(pregunta, dto.respuesta);
 
     const valor = this.validarRespuesta(pregunta, respuesta);
     const puntaje = pregunta.puntua
@@ -420,6 +422,37 @@ export class ChatbotService {
       .replace(/[\u0300-\u036f]/g, '')
       .trim()
       .toLowerCase();
+  }
+
+  /**
+   * Determinista primero, IA despues. Si la persona escribio el numero de la
+   * opcion o su texto, se resuelve sin llamar a nadie. Solo cuando escribio
+   * algo distinto -"como 3000 pollos"- se le pide al modelo que lo ubique en
+   * la lista, y si no lo consigue se sigue con el texto tal cual, igual que
+   * antes de existir esto.
+   */
+  private async resolverRespuesta(
+    pregunta: { codigo: string; texto: string; tipo: string; opciones: unknown },
+    original: string,
+  ): Promise<string> {
+    const normalizada = this.normalizarRespuesta(pregunta, original);
+    const opciones = pregunta.opciones as string[] | null;
+    if (!opciones?.length || opciones.includes(normalizada)) {
+      return normalizada;
+    }
+
+    const interpretada = await this.interprete.interpretar(
+      pregunta.texto,
+      opciones,
+      original,
+    );
+    if (interpretada) {
+      this.logger.log(
+        `${pregunta.codigo}: "${original}" se interpreto como "${interpretada}"`,
+      );
+      return interpretada;
+    }
+    return normalizada;
   }
 
   private normalizarRespuesta(
