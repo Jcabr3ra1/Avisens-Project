@@ -338,6 +338,11 @@ function FloatChat() {
                 <span>Conversación cerrada</span>
                 <p>Sin tratamiento de datos. Puedes reiniciar cuando quieras.</p>
               </div>
+            ) : resultado.clasificacion === 'pqrs' ? (
+              <div className="float-result float-result--cerrado">
+                <span>Solicitud radicada</span>
+                <p>Guarda tu número de radicado para hacerle seguimiento.</p>
+              </div>
             ) : resultado.clasificacion === 'consulta_atendida' ? (
               <div className="float-result float-result--cerrado">
                 <span>Consulta resuelta</span>
@@ -383,6 +388,9 @@ function FloatChat() {
               </button>
               <button type="button" onClick={() => void iniciar('general')}>
                 Tengo dudas primero
+              </button>
+              <button type="button" onClick={() => void iniciar('soporte')}>
+                Ya soy cliente y tengo un problema
               </button>
             </div>
           ) : opciones.length > 0 && !resultado ? (
