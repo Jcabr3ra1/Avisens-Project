@@ -24,12 +24,16 @@ const PREFIJO_CORRECCION = 'FIX:';
 // vez de rehacer el cuestionario entero.
 const CORREGIBLES: Array<[string, string]> = [
   ['Nombre', 'A2'],
-  ['Tamaño de la granja', 'A5'],
+  ['Número de galpones', 'A5'],
   ['Tamaño del galpón', 'A6'],
   ['Teléfono', 'C1'],
   ['Correo', 'C2'],
 ];
-const CAMPOS_NUMERICOS = new Set(['area_granja_m2', 'area_galpon_m2']);
+const CAMPOS_NUMERICOS = new Set([
+  'numero_galpones',
+  'area_granja_m2',
+  'area_galpon_m2',
+]);
 
 const UMBRAL_CALIENTE = 12;
 const UMBRAL_TIBIO = 7;
