@@ -1,12 +1,17 @@
 // movimientos-inventario.service.ts
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateMovimientoInventarioDto } from './dto/create-movimiento-inventario.dto';
-import { UpdateMovimientoInventarioDto } from './dto/update-movimiento-inventario.dto';
+import { CreateMovimientoInventarioDto } from './dto/create-movimientos-inventarios.dto';
+import { UpdateMovimientoInventarioDto } from './dto/update-movimiento-inventarios.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/acceso';
-import type { Solicitante } from '../../common/acceso';
+import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import type { Solicitante } from '../../common/auth/acceso';
 
 const MOVIMIENTO_SELECT = {
   id: true,
@@ -74,7 +79,9 @@ export class MovimientosInventarioService {
     }
 
     if (!insumo.activo) {
-      throw new BadRequestException(`El insumo "${insumo.nombre}" está inactivo`);
+      throw new BadRequestException(
+        `El insumo "${insumo.nombre}" está inactivo`,
+      );
     }
 
     return insumo;
@@ -111,7 +118,10 @@ export class MovimientosInventarioService {
   /**
    * Obtener movimiento con validación de acceso
    */
-  private async obtenerMovimientoConValidacion(id: number, solicitante: Solicitante) {
+  private async obtenerMovimientoConValidacion(
+    id: number,
+    solicitante: Solicitante,
+  ) {
     const movimiento = await this.prisma.movimientoInventario.findUnique({
       where: { id },
       select: MOVIMIENTO_SELECT,
@@ -122,7 +132,7 @@ export class MovimientosInventarioService {
     }
 
     // Verificar que el usuario tiene acceso (a través del insumo)
-    // Nota: Como el insumo no tiene relación directa con granja, 
+    // Nota: Como el insumo no tiene relación directa con granja,
     // validamos que el usuario sea admin o que el movimiento sea de su propiedad
     if (solicitante.rol !== 'ADMINISTRADOR') {
       // Si no es admin, solo puede ver movimientos que él creó
@@ -157,7 +167,7 @@ export class MovimientosInventarioService {
       // Validar que hay suficiente stock
       if (insumo.stock_actual < cantidad) {
         throw new BadRequestException(
-          `Stock insuficiente. Stock actual: ${insumo.stock_actual}, Cantidad solicitada: ${cantidad}`
+          `Stock insuficiente. Stock actual: ${insumo.stock_actual}, Cantidad solicitada: ${cantidad}`,
         );
       }
       nuevoStock = insumo.stock_actual - cantidad;
@@ -267,7 +277,10 @@ export class MovimientosInventarioService {
     solicitante: Solicitante,
   ) {
     // Verificar que existe y el usuario tiene acceso
-    const movimientoExistente = await this.obtenerMovimientoConValidacion(id, solicitante);
+    const movimientoExistente = await this.obtenerMovimientoConValidacion(
+      id,
+      solicitante,
+    );
 
     // Validar lote si se proporciona
     if (dto.lote_id) {
@@ -314,18 +327,24 @@ export class MovimientosInventarioService {
   async eliminar(id: number, solicitante: Solicitante) {
     // Solo ADMIN puede eliminar movimientos
     if (solicitante.rol !== 'ADMINISTRADOR') {
-      throw new ForbiddenException('Solo los administradores pueden eliminar movimientos');
+      throw new ForbiddenException(
+        'Solo los administradores pueden eliminar movimientos',
+      );
     }
 
     // Obtener el movimiento con validación
-    const movimiento = await this.obtenerMovimientoConValidacion(id, solicitante);
+    const movimiento = await this.obtenerMovimientoConValidacion(
+      id,
+      solicitante,
+    );
 
     // Usar transacción para revertir el stock
     await this.prisma.$transaction(async (tx) => {
       // Revertir el stock (operación inversa)
-      const cantidadAjustada = movimiento.tipo_movimiento === 'entrada'
-        ? -movimiento.cantidad  // Si era entrada, restar
-        : movimiento.cantidad;   // Si era salida, sumar
+      const cantidadAjustada =
+        movimiento.tipo_movimiento === 'entrada'
+          ? -movimiento.cantidad // Si era entrada, restar
+          : movimiento.cantidad; // Si era salida, sumar
 
       // Actualizar el stock del insumo
       await tx.inventarioInsumo.update({
@@ -412,19 +431,24 @@ export class MovimientosInventarioService {
       ? { usuario_id: solicitante.id }
       : {};
 
-    const [total, entradas, salidas, totalEntradas, totalSalidas] = await Promise.all([
-      this.prisma.movimientoInventario.count({ where }),
-      this.prisma.movimientoInventario.count({ where: { ...where, tipo_movimiento: 'entrada' } }),
-      this.prisma.movimientoInventario.count({ where: { ...where, tipo_movimiento: 'salida' } }),
-      this.prisma.movimientoInventario.aggregate({
-        where: { ...where, tipo_movimiento: 'entrada' },
-        _sum: { cantidad: true },
-      }),
-      this.prisma.movimientoInventario.aggregate({
-        where: { ...where, tipo_movimiento: 'salida' },
-        _sum: { cantidad: true },
-      }),
-    ]);
+    const [total, entradas, salidas, totalEntradas, totalSalidas] =
+      await Promise.all([
+        this.prisma.movimientoInventario.count({ where }),
+        this.prisma.movimientoInventario.count({
+          where: { ...where, tipo_movimiento: 'entrada' },
+        }),
+        this.prisma.movimientoInventario.count({
+          where: { ...where, tipo_movimiento: 'salida' },
+        }),
+        this.prisma.movimientoInventario.aggregate({
+          where: { ...where, tipo_movimiento: 'entrada' },
+          _sum: { cantidad: true },
+        }),
+        this.prisma.movimientoInventario.aggregate({
+          where: { ...where, tipo_movimiento: 'salida' },
+          _sum: { cantidad: true },
+        }),
+      ]);
 
     return {
       total,
