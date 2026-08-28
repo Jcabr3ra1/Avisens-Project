@@ -55,6 +55,10 @@ import { DecimalInterceptor } from './common/decimal.interceptor';
 import { RecuperacionesPasswordModule } from './modules/recuperaciones-password/recuperaciones-password.module';
 import { CatalogoSensoresModule } from './modules/catalogo-sensores/catalogo-sensores.module';
 import { ComandosVozModule } from './modules/comandos-voz/comandos-voz.module';
+import { ZonasGalponModule } from './modules/zonas-galpon/zonas-galpon.module';
+import { UsuariosGalponesModule } from './modules/usuarios-galpones/usuarios-galpones.module';
+import { MovimientosInventarioModule } from './modules/movimientos-inventario/movimientos-inventario.module';
+import { ModelosMlModule } from './modules/modelos-ml/modelos-ml.module';
 import { JobsModule } from './common/jobs/jobs.module';
 import { ObservabilityModule } from './common/observability/observability.module';
 import { RequestObservabilityInterceptor } from './common/observability/request-observability.interceptor';
@@ -134,6 +138,10 @@ import { RequestObservabilityInterceptor } from './common/observability/request-
     RecuperacionesPasswordModule,
     CatalogoSensoresModule,
     ComandosVozModule,
+    ZonasGalponModule,
+    UsuariosGalponesModule,
+    MovimientosInventarioModule,
+    ModelosMlModule,
   ],
   providers: [
     {
