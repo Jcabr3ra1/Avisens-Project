@@ -1,0 +1,9 @@
+meta {
+  name: [Admin] Crear modelo
+  type: http
+  seq: 1
+}
+post { url: {{baseUrl}}/v1/modelos-ml; body: json; auth: bearer }
+headers { Content-Type: application/json }
+auth:bearer { token: {{token}} }
+body:json { {"nombre":"prediccion-mortalidad","tipo":"regresion","version":"1.0.0","framework":"scikit-learn"} }

@@ -1,0 +1,7 @@
+meta {
+  name: [Admin · Propietario] Listar movimientos
+  type: http
+  seq: 2
+}
+get { url: {{baseUrl}}/v1/movimientos-inventario?page=1&limit=20; auth: bearer }
+auth:bearer { token: {{token}} }
