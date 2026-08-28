@@ -1,7 +1,25 @@
+.landing-shell {
+  /* Paleta calmada y exclusiva de la landing. El resto de la aplicacion
+     conserva los colores globales de Avisens. */
+  --avisens-deep: #005b48;
+  --avisens-cream: #f4ebcf;
+  --avisens-green: #3f8f46;
+  --avisens-yellow: #ddb84b;
+  --avisens-orange: #c84e2b;
+  --landing-bg: #f7f3e6;
+  --landing-surface: #fffdf7;
+  --landing-surface-muted: #f4ebcf;
+  --landing-text: #232323;
+  --landing-text-muted: #5f665f;
+  --landing-border: rgba(0, 91, 72, 0.16);
+  color: var(--landing-text);
+  background: var(--landing-bg);
+}
+
 .landing-page {
   position: relative;
   overflow: hidden;
-  background: var(--avisens-cream);
+  background: var(--landing-bg);
 }
 
 /* La landing es larga: el navegador puede aplazar el layout y pintado de las

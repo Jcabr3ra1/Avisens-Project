@@ -2,8 +2,8 @@
   padding: clamp(3rem, 7vw, 5rem) clamp(1.25rem, 5vw, 4rem) 2rem;
   border-top: 1px solid rgba(0, 91, 72, 0.2);
   background:
-    linear-gradient(135deg, rgba(233, 227, 186, 0.98), rgba(255, 255, 255, 0.86) 46%, rgba(233, 227, 186, 0.92)),
-    var(--avisens-cream);
+    linear-gradient(135deg, var(--landing-surface-muted), var(--landing-surface) 46%, #f1e7c8),
+    var(--landing-bg);
   position: relative;
   z-index: 1;
   overflow: hidden;
@@ -17,7 +17,7 @@
   aspect-ratio: 1;
   border: 1px solid rgba(0, 91, 72, 0.12);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(71, 187, 75, 0.18), rgba(71, 187, 75, 0) 62%);
+  background: radial-gradient(circle, rgba(63, 143, 70, 0.12), rgba(63, 143, 70, 0) 62%);
   pointer-events: none;
 }
 
@@ -36,7 +36,7 @@
   margin-bottom: clamp(2rem, 4vw, 3rem);
   border: 1px solid rgba(0, 91, 72, 0.2);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 253, 247, 0.8);
   box-shadow: 0 18px 50px rgba(0, 91, 72, 0.1);
 }
 
@@ -96,7 +96,7 @@
   width: 48px;
   height: 48px;
   border-radius: 14px;
-  background: rgba(71, 187, 75, 0.14);
+  background: rgba(63, 143, 70, 0.12);
   border: 1px solid rgba(0, 91, 72, 0.18);
 }
 
@@ -145,7 +145,7 @@
 .footer-meta span {
   padding: 0.32rem 0.62rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 253, 247, 0.78);
   border: 1px solid rgba(0, 91, 72, 0.22);
   color: var(--avisens-deep);
   font-family: 'DM Mono', monospace;

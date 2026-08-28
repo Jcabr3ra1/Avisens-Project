@@ -2,8 +2,8 @@
   position: relative;
   padding: 6rem 0 5rem;
   background:
-    radial-gradient(ellipse 70% 50% at 50% 50%, rgba(71, 187, 75, 0.16), transparent 70%),
-    var(--avisens-cream);
+    radial-gradient(ellipse 70% 50% at 50% 50%, rgba(63, 143, 70, 0.1), transparent 70%),
+    var(--landing-bg);
   isolation: isolate;
 }
 
@@ -62,7 +62,7 @@
   position: relative;
   padding: 1.8rem 1.6rem 1.6rem;
   border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(233, 227, 186, 0.78));
+  background: linear-gradient(180deg, var(--landing-surface), var(--landing-surface-muted));
   border: 1px solid rgba(0, 91, 72, 0.22);
   transition:
     transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease,
@@ -102,7 +102,7 @@
 .beneficio-card:hover {
   transform: translateY(-4px);
   border-color: var(--avisens-green);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(233, 227, 186, 0.88));
+  background: linear-gradient(180deg, var(--landing-surface), #f1e7c8);
   box-shadow: 0 22px 44px -22px rgba(0, 91, 72, 0.38);
 }
 
@@ -114,7 +114,7 @@
   height: 42px;
   margin-bottom: 1rem;
   border-radius: 12px;
-  background: rgba(71, 187, 75, 0.14);
+  background: rgba(63, 143, 70, 0.12);
   color: var(--avisens-deep);
 }
 
