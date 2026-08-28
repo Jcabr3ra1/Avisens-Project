@@ -27,7 +27,7 @@
   object-fit: cover;
   object-position: center;
   opacity: 0;
-  filter: saturate(0.98) contrast(1.04) brightness(0.97);
+  filter: saturate(0.88) contrast(1.02) brightness(0.92);
   transform: scale(1.035);
   transition: opacity 1.45s ease, transform 8s ease;
 }

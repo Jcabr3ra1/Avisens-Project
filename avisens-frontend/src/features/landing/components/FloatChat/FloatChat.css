@@ -262,7 +262,7 @@
 
 .float-msg.bot .float-msg-bub {
   color: var(--avisens-deep);
-  background: #ffffff;
+  background: var(--landing-surface);
   border-bottom-left-radius: 5px;
   box-shadow: 0 3px 10px -4px rgba(6, 45, 33, 0.28);
 }
@@ -300,7 +300,7 @@
   display: grid;
   gap: 0.25rem;
   padding: 0.85rem;
-  background: #ffffff;
+  background: var(--landing-surface);
   border: 1px solid rgba(0, 91, 72, 0.18);
   border-left: 4px solid var(--avisens-green);
   border-radius: 10px;
@@ -437,7 +437,7 @@
   /* 44px es el minimo comodo para tocar con el pulgar; antes eran 30. */
   min-height: 44px;
   color: var(--avisens-deep);
-  background: #ffffff;
+  background: var(--landing-surface);
   border: 1.5px solid rgba(71, 187, 75, 0.5);
   border-radius: 13px;
   padding: 0.55rem 0.85rem;
@@ -473,7 +473,7 @@
   flex: 0 0 auto;
   gap: 0.55rem;
   padding: 0.85rem 1rem;
-  background: #ffffff;
+  background: var(--landing-surface);
   border-top: 1px solid rgba(0, 91, 72, 0.16);
 }
 

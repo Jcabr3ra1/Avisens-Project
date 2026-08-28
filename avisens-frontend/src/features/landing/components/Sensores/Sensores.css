@@ -1,7 +1,7 @@
 .sensores-section {
   position: relative;
   padding: 6rem 1.5rem 6.5rem;
-  background: #ffffff;
+  background: var(--landing-surface);
 }
 
 .sensores-head {
@@ -82,7 +82,7 @@
 .sensor-card-foto {
   position: relative;
   aspect-ratio: 16 / 11;
-  background: #f4f1e2;
+  background: var(--landing-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -140,7 +140,7 @@
   padding: 0.55rem 0.7rem;
   margin-bottom: 0.85rem;
   border-radius: 10px;
-  background: rgba(71, 187, 75, 0.1);
+  background: rgba(63, 143, 70, 0.1);
   border: 1px dashed rgba(0, 91, 72, 0.25);
 }
 
@@ -163,7 +163,7 @@
   gap: 0.28rem;
   padding: 0.18rem 0.52rem;
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--landing-surface);
   color: var(--avisens-deep);
   font-family: 'DM Mono', monospace;
   font-size: 0.68rem;
