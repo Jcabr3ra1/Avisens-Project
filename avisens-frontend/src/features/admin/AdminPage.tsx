@@ -3,8 +3,10 @@
 
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listarUsuarios, listarGranjas, listarProspectos, getUsuario } from '@shared/api'
-import type { Usuario, Granja, Prospecto } from '@shared/api'
+import { listarUsuarios, listarGranjas, getUsuario } from '@shared/api'
+import { listarProspectos } from '@features/crm/api/prospectos'
+import type { Usuario, Granja } from '@shared/api'
+import type { Prospecto } from '@features/crm/api/prospectos'
 import {
   IcUsers, IcGrid, IcServer, IcLeaf, IcEgg,
   IcBox, IcPhone, IcBell, IcChevronRight,

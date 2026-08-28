@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { listarProspectos } from '@shared/api'
+import { listarProspectos } from '../api/prospectos'
 import { aProspectoVista, type ProspectoVista } from '../model/prospectoVista'
 
 const POR_PAGINA = 100

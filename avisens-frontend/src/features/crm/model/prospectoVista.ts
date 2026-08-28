@@ -1,4 +1,4 @@
-import type { Prospecto } from '@shared/api'
+import type { Prospecto } from '@features/crm/api/prospectos'
 
 export const PUNTAJE_MAXIMO = 16
 
