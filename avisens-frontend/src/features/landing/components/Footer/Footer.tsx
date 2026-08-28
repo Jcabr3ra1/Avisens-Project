@@ -5,7 +5,7 @@ const footerGroups = [
   {
     title: 'Producto',
     links: [
-      ['Resultados', '#cifras'],
+      ['Cómo ayuda', '#beneficios'],
     ],
   },
   {
@@ -29,11 +29,11 @@ function Footer() {
               </span>
               <span>
                 <strong>AVISENS</strong>
-                <small>IoT + IA para avicultura</small>
+                <small>La app que cuida tu granja contigo</small>
               </span>
             </div>
             <p>
-              Plataforma SaaS para monitorear galpones, anticipar alertas y tomar decisiones con datos vivos de la granja.
+              Te avisa a tiempo, te ayuda a llevar las cuentas de la granja y te deja decidir con la cabeza fría — todo desde el celular.
             </p>
             <div className="footer-meta">
               <span>Colombia</span>

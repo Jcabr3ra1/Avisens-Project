@@ -3,63 +3,82 @@
 
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listarUsuarios, getUsuario } from '@shared/api'
-import type { Usuario } from '@shared/api'
+import { listarUsuarios, listarGranjas, getUsuario } from '@shared/api'
+import { listarProspectos } from '@features/crm/api/prospectos'
+import type { Usuario, Granja } from '@shared/api'
+import type { Prospecto } from '@features/crm/api/prospectos'
 import {
   IcUsers, IcGrid, IcServer, IcLeaf, IcEgg,
   IcBox, IcPhone, IcBell, IcChevronRight,
+  IcFlame, IcThermo, IcSnowflake, IcCheck,
 } from '@shared/ui/icons/icons'
-import { GRANJAS_DETALLE } from '../granjas/data'
-import { LEADS_MOCK } from '../crm/data'
-import { GALPONES_MONITOREO } from '../monitoreo/data'
+import { useMonitoreoAmbiental } from '@shared/hooks/useMonitoreoAmbiental'
 import './AdminPage.css'
 
-// ─── KPIs globales — calculados de los mismos datos que usan Granjas y Monitoreo ─
-// (antes eran números sueltos que no coincidían con el resto de la app)
-const TODOS_LOS_GALPONES = GRANJAS_DETALLE.flatMap(g => g.galpones)
-const TODOS_LOS_SENSORES = GALPONES_MONITOREO.flatMap(g => g.sensores)
-const SENSORES_ONLINE    = TODOS_LOS_SENSORES.filter(s => s.estado !== 'offline').length
-const UPTIME_PCT = TODOS_LOS_SENSORES.length > 0
-  ? Math.round((SENSORES_ONLINE / TODOS_LOS_SENSORES.length) * 1000) / 10
-  : 0
+// ─── KPIs globales — calculados de los mismos datos reales que usan Granjas y Monitoreo ─
+// CRM (leads) sigue siendo mock: no existe ningún módulo de backend para eso todavía.
+function calcularKpiGlobales(granjas: Granja[], galpones: ReturnType<typeof useMonitoreoAmbiental>['galpones']) {
+  const todosLosSensores = galpones.flatMap(g => g.sensores)
+  const sensoresOnline   = todosLosSensores.filter(s => s.estado !== 'offline').length
+  const uptimePct = todosLosSensores.length > 0
+    ? Math.round((sensoresOnline / todosLosSensores.length) * 1000) / 10
+    : 0
 
-// Una granja cuenta como "activa" si al menos uno de sus galpones tiene un lote activo
-const GRANJAS_ACTIVAS = GRANJAS_DETALLE.filter(g => g.galpones.some(gp => gp.estado === 'activo')).length
+  // Una granja cuenta como "activa" si al menos uno de sus galpones tiene un lote activo
+  const granjasActivas = granjas.filter(gr => galpones.some(g => g.granjaId === gr.id && g.loteActivo)).length
+  const galponesActivos = galpones.filter(g => g.loteActivo).length
+  const avesEnSistema = galpones.reduce((s, g) => s + (g.loteActivo?.cantidad_inicial ?? 0), 0)
 
-const KPI_GLOBALES = [
-  {
-    label: 'Granjas activas', valor: GRANJAS_ACTIVAS,
-    sub: `de ${GRANJAS_DETALLE.length} granjas registradas`,
-    color: 'verde', icono: 'granja',
-  },
-  {
-    label: 'Galpones', valor: TODOS_LOS_GALPONES.length,
-    sub: `${TODOS_LOS_GALPONES.filter(g => g.estado === 'activo').length} activos`,
-    color: 'azul', icono: 'galpon',
-  },
-  {
-    label: 'Aves en sistema',
-    valor: TODOS_LOS_GALPONES.reduce((s, g) => s + g.avesActuales, 0).toLocaleString('es-CO'),
-    sub: 'en lotes activos', color: 'naranja', icono: 'aves',
-  },
-  {
-    label: 'Sensores online', valor: `${SENSORES_ONLINE}/${TODOS_LOS_SENSORES.length}`,
-    sub: `${UPTIME_PCT}% uptime`, color: 'teal', icono: 'sensor',
-  },
-]
-
-// ─── Embudo de ventas CRM — calculado de los mismos leads que muestra el CRM ──
-function contarLeads(estado: string) {
-  return LEADS_MOCK.filter(l => l.estado === estado).length
+  return [
+    {
+      label: 'Granjas activas', valor: granjasActivas,
+      sub: `de ${granjas.length} granjas registradas`,
+      color: 'verde', icono: 'granja',
+    },
+    {
+      label: 'Galpones', valor: galpones.length,
+      sub: `${galponesActivos} activos`,
+      color: 'azul', icono: 'galpon',
+    },
+    {
+      label: 'Aves en sistema',
+      valor: avesEnSistema.toLocaleString('es-CO'),
+      sub: 'en lotes activos', color: 'naranja', icono: 'aves',
+    },
+    {
+      label: 'Sensores online', valor: `${sensoresOnline}/${todosLosSensores.length}`,
+      sub: `${uptimePct}% uptime`, color: 'teal', icono: 'sensor',
+    },
+  ]
 }
-const CRM_ETAPAS = [
-  { etapa: 'Fríos',     desc: 'Primer contacto',        count: contarLeads('frio'),     color: '#94a3b8' },
-  { etapa: 'Tibios',    desc: 'Demo / propuesta',       count: contarLeads('tibio'),    color: '#f59e0b' },
-  { etapa: 'Calientes', desc: 'Visita programada',      count: contarLeads('caliente'), color: '#ef4444' },
-  { etapa: 'Cerrados',  desc: 'Contrato firmado',       count: contarLeads('cerrado'),  color: '#10b981' },
-]
-// Leads calificados = todos menos los descartados (sin poder de decisión o sin interés)
-const LEADS_CALIFICADOS = LEADS_MOCK.length - contarLeads('descartado')
+
+// ─── Embudo de ventas CRM — calculado de los mismos prospectos reales que ─────
+// captura el chatbot y muestra el CRM (mismos colores e íconos que CrmPage,
+// para que "frío/tibio/caliente/cerrado" se vea igual en toda la app).
+function calcularEtapasCrm(prospectos: Prospecto[]) {
+  const porClasificacion = (c: string) =>
+    prospectos.filter(p => p.clasificacion === c).length
+  const cerrados = prospectos.filter(p => p.estado === 'cerrado').length
+
+  return [
+    { etapa: 'Fríos', desc: 'Primer contacto', count: porClasificacion('frio'),
+      color: '#3b82f6', icono: <IcSnowflake size={12} /> },
+    { etapa: 'Tibios', desc: 'Demo / propuesta', count: porClasificacion('tibio'),
+      color: '#f59e0b', icono: <IcThermo size={12} /> },
+    { etapa: 'Calientes', desc: 'Visita programada', count: porClasificacion('caliente'),
+      color: '#ef4444', icono: <IcFlame size={12} /> },
+    { etapa: 'Cerrados', desc: 'Contrato firmado', count: cerrados,
+      color: '#10b981', icono: <IcCheck size={12} /> },
+  ]
+}
+
+// Prospectos calificados = los que el chatbot alcanzó a puntuar comercialmente
+// (frío/tibio/caliente), sin contar PQRS ni sesiones sin consentimiento.
+function contarCalificados(prospectos: Prospecto[]) {
+  return prospectos.filter(p =>
+    p.clasificacion === 'frio' || p.clasificacion === 'tibio' || p.clasificacion === 'caliente',
+  ).length
+}
 
 // ─── Relativiza una fecha ISO a texto corto: "hace 12 min", "hace 3 h", "ayer" ─
 function hace(fechaIso: string): string {
@@ -77,7 +96,7 @@ function hace(fechaIso: string): string {
 type EstadoT = 'activo' | 'progreso' | 'planeado'
 const MODULOS: { ep: string; nombre: string; estado: EstadoT; pct: number }[] = [
   { ep: 'EP-01', nombre: 'CRM · Prospectos',    estado: 'progreso', pct: 50 },
-  { ep: 'EP-02', nombre: 'AVIA Asistente',       estado: 'planeado', pct:  0 },
+  { ep: 'EP-02', nombre: 'AVIA Asistente',       estado: 'activo',   pct: 85 },
   { ep: 'EP-03', nombre: 'Gestión de usuarios',  estado: 'activo',   pct: 90 },
   { ep: 'EP-04', nombre: 'Monitoreo IoT',        estado: 'activo',   pct: 85 },
   { ep: 'EP-05', nombre: 'Alertas inteligentes', estado: 'activo',   pct: 70 },
@@ -178,15 +197,31 @@ function AdminPage() {
   const usuario  = getUsuario()
 
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [granjas, setGranjas] = useState<Granja[]>([])
+  const [prospectos, setProspectos] = useState<Prospecto[]>([])
   const [cargando, setCargando] = useState(true)
+  const [cargandoCrm, setCargandoCrm] = useState(true)
+  const { galpones } = useMonitoreoAmbiental()
 
-  // Carga usuarios reales de la API (EP-03 HU-15)
+  // Carga usuarios y granjas reales de la API (EP-03 HU-15 / EP-08)
   useEffect(() => {
-    listarUsuarios()
-      .then(setUsuarios)
+    Promise.all([listarUsuarios(), listarGranjas()])
+      .then(([usuariosData, granjasData]) => { setUsuarios(usuariosData); setGranjas(granjasData) })
       .catch(() => {})
       .finally(() => setCargando(false))
   }, [])
+
+  // Prospectos reales capturados por el chatbot de cotización (EP-01)
+  useEffect(() => {
+    listarProspectos()
+      .then((res) => setProspectos(res.data))
+      .catch(() => {})
+      .finally(() => setCargandoCrm(false))
+  }, [])
+
+  const KPI_GLOBALES = calcularKpiGlobales(granjas, galpones)
+  const CRM_ETAPAS = calcularEtapasCrm(prospectos)
+  const leadsCalificados = contarCalificados(prospectos)
 
   const totalPropietarios = usuarios.filter(u => u.rol.nombre === 'Propietario').length
   const totalOperarios    = usuarios.filter(u => u.rol.nombre === 'Operario').length
@@ -197,9 +232,9 @@ function AdminPage() {
     .sort((a, b) => new Date(b.fecha_creacion).getTime() - new Date(a.fecha_creacion).getTime())
     .slice(0, 5)
 
-  const maxLeads      = Math.max(...CRM_ETAPAS.map(e => e.count))
+  const maxLeads      = Math.max(1, ...CRM_ETAPAS.map(e => e.count))
   const cerrados       = CRM_ETAPAS[3].count
-  const pctConversion  = LEADS_CALIFICADOS > 0 ? Math.round((cerrados / LEADS_CALIFICADOS) * 1000) / 10 : 0
+  const pctConversion  = leadsCalificados > 0 ? Math.round((cerrados / leadsCalificados) * 1000) / 10 : 0
   const fechaHoy      = new Date().toLocaleDateString('es-CO', {
     weekday: 'long', day: 'numeric', month: 'long',
   })
@@ -259,14 +294,17 @@ function AdminPage() {
               Ver todos <IcChevronRight size={13} />
             </button>
           </div>
-          <p className="admin-card-sub">Leads activos este mes por etapa de conversión</p>
+          <p className="admin-card-sub">Prospectos captados por el chatbot, por etapa</p>
 
           {/* Embudo centrado: barras centradas forman visualmente un triángulo */}
           <div className="admin-funnel">
             {CRM_ETAPAS.map(etapa => (
               <div key={etapa.etapa} className="admin-funnel-row">
                 <div className="admin-funnel-meta">
-                  <span className="admin-funnel-label">{etapa.etapa}</span>
+                  <span className="admin-funnel-label">
+                    <span className="admin-funnel-icon" style={{ color: etapa.color }}>{etapa.icono}</span>
+                    {etapa.etapa}
+                  </span>
                   <span className="admin-funnel-desc">{etapa.desc}</span>
                 </div>
                 <div className="admin-funnel-track">
@@ -279,7 +317,7 @@ function AdminPage() {
                   />
                 </div>
                 <span className="admin-funnel-count" style={{ color: etapa.color }}>
-                  {etapa.count}
+                  {cargandoCrm ? '…' : etapa.count}
                 </span>
               </div>
             ))}

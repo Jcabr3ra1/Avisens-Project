@@ -318,23 +318,3 @@ export function SensorGauge({ valor, minUmbral, maxUmbral, unidad, estado, size 
     </svg>
   )
 }
-
-// ─── Mini gauge compacto ───────────────────────────────────────────────────────
-// Versión pequeña del gauge para usar en tarjetas o listas.
-type MiniProps = {
-  pct:   number   // Porcentaje 0-100 ya calculado
-  color: string   // Color hex del arco
-  size?: number   // px — default 56
-}
-export function MiniGauge({ pct, color, size = 56 }: MiniProps) {
-  const cx = size / 2; const cy = size / 2
-  const r  = size * 0.36; const sw = size * 0.1
-  const dBg  = arc(cx, cy, r, 225, 494)
-  const dVal = pct > 1 ? arc(cx, cy, r, 225, 225 + (pct / 100) * 270) : null
-  return (
-    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
-      <path d={dBg}  fill="none" stroke="rgba(10,26,20,0.07)" strokeWidth={sw} strokeLinecap="round" />
-      {dVal && <path d={dVal} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" />}
-    </svg>
-  )
-}

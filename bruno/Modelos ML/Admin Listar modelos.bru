@@ -1,0 +1,7 @@
+meta {
+  name: [Admin] Listar modelos
+  type: http
+  seq: 2
+}
+get { url: {{baseUrl}}/v1/modelos-ml?page=1&limit=20; auth: bearer }
+auth:bearer { token: {{token}} }

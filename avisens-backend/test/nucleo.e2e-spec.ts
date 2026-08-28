@@ -20,12 +20,17 @@ import { IngestModule } from '../src/modules/ingest/ingest.module';
 import { hashDeviceToken } from '../src/common/security/device-token';
 import { randomUUID } from 'crypto';
 import { ComandosVozModule } from '../src/modules/comandos-voz/comandos-voz.module';
+import { MovimientosInventarioModule } from '../src/modules/movimientos-inventario/movimientos-inventario.module';
+import { ZonasGalponModule } from '../src/modules/zonas-galpon/zonas-galpon.module';
+import { AnalisisBioacusticoModule } from '../src/modules/analisis-bioacustico/analisis-bioacustico.module';
+import { AnalisisVisionModule } from '../src/modules/analisis-vision/analisis-vision.module';
 
 describe('Núcleo multi-tenant (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let servidor: Server;
   let token: string;
+  let tokenPropietario: string;
   const ids = {
     organizaciones: [] as number[],
     usuarios: [] as number[],
@@ -34,6 +39,11 @@ describe('Núcleo multi-tenant (e2e)', () => {
     dispositivo: 0,
     sensor: 0,
     catalogoSensor: 0,
+    insumo: 0,
+    movimientosInventario: [] as number[],
+    zonas: [] as number[],
+    analisisBioacustico: [] as number[],
+    analisisVision: [] as number[],
   };
   const sufijo = `${Date.now()}-${process.pid}`;
   const password = 'Prueba-e2e-123';
@@ -50,6 +60,10 @@ describe('Núcleo multi-tenant (e2e)', () => {
         CatalogoSensoresModule,
         IngestModule,
         ComandosVozModule,
+        MovimientosInventarioModule,
+        ZonasGalponModule,
+        AnalisisBioacusticoModule,
+        AnalisisVisionModule,
       ],
     }).compile();
     app = modulo.createNestApplication();
@@ -161,15 +175,48 @@ describe('Núcleo multi-tenant (e2e)', () => {
       },
     });
     ids.catalogoSensor = catalogo.id;
-    const login = await request(servidor)
-      .post('/v1/auth/login')
-      .send({ email: operario.email, password })
-      .expect(200);
-    token = (JSON.parse(login.text) as { access_token: string }).access_token;
+    const insumo = await prisma.inventarioInsumo.create({
+      data: {
+        granja_id: granjaA.id,
+        nombre: `Alimento E2E ${sufijo}`,
+        unidad_medida: 'kg',
+      },
+    });
+    ids.insumo = insumo.id;
+    const [loginOperario, loginPropietario] = await Promise.all([
+      request(servidor)
+        .post('/v1/auth/login')
+        .send({ email: operario.email, password })
+        .expect(200),
+      request(servidor)
+        .post('/v1/auth/login')
+        .send({ email: duenoA.email, password })
+        .expect(200),
+    ]);
+    token = (JSON.parse(loginOperario.text) as { access_token: string })
+      .access_token;
+    tokenPropietario = (
+      JSON.parse(loginPropietario.text) as { access_token: string }
+    ).access_token;
   });
 
   afterAll(async () => {
     if (prisma) {
+      await prisma.analisisBioacustico.deleteMany({
+        where: { id: { in: ids.analisisBioacustico } },
+      });
+      await prisma.analisisVision.deleteMany({
+        where: { id: { in: ids.analisisVision } },
+      });
+      await prisma.zonaGalpon.deleteMany({
+        where: { id: { in: ids.zonas } },
+      });
+      await prisma.movimientoInventario.deleteMany({
+        where: { id: { in: ids.movimientosInventario } },
+      });
+      await prisma.inventarioInsumo.deleteMany({
+        where: { id: ids.insumo },
+      });
       await prisma.sesion.deleteMany({
         where: { usuario_id: { in: ids.usuarios } },
       });
@@ -275,6 +322,73 @@ describe('Núcleo multi-tenant (e2e)', () => {
         },
       }),
     ).rejects.toThrow();
+  });
+
+  it('registra movimientos con el usuario autenticado y actualiza el stock', async () => {
+    const respuesta = await request(servidor)
+      .post('/v1/movimientos-inventario')
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .send({
+        insumo_id: ids.insumo,
+        tipo_movimiento: 'entrada',
+        cantidad: 25.5,
+      })
+      .expect(201);
+    const movimiento = JSON.parse(respuesta.text) as {
+      id: number;
+      usuario_id: number;
+      stock_resultante: string;
+    };
+    ids.movimientosInventario.push(movimiento.id);
+    expect(movimiento).toMatchObject({
+      usuario_id: ids.usuarios[0],
+      stock_resultante: '25.5',
+    });
+    const insumo = await prisma.inventarioInsumo.findUniqueOrThrow({
+      where: { id: ids.insumo },
+    });
+    expect(insumo.stock_actual.toString()).toBe('25.5');
+  });
+
+  it('aísla zonas y análisis avanzados por propietario', async () => {
+    const zona = await request(servidor)
+      .post('/v1/zonas-galpon')
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .send({ galpon_id: ids.galpones[0], nombre: 'Zona E2E' })
+      .expect(201);
+    ids.zonas.push((JSON.parse(zona.text) as { id: number }).id);
+
+    await request(servidor)
+      .post('/v1/zonas-galpon')
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .send({ galpon_id: ids.galpones[1], nombre: 'Cruce prohibido' })
+      .expect(403);
+
+    const bioacustico = await request(servidor)
+      .post('/v1/analisis-bioacustico')
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .send({ galpon_id: ids.galpones[0], indicador: 'estres', valor: 0.2 })
+      .expect(201);
+    ids.analisisBioacustico.push(
+      (JSON.parse(bioacustico.text) as { id: number }).id,
+    );
+
+    const vision = await request(servidor)
+      .post('/v1/analisis-vision')
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .send({
+        galpon_id: ids.galpones[0],
+        tipo_analisis: 'conteo_aves',
+        resultado: { aves: 127 },
+      })
+      .expect(201);
+    ids.analisisVision.push((JSON.parse(vision.text) as { id: number }).id);
+
+    await request(servidor)
+      .post('/v1/analisis-vision')
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .send({ galpon_id: ids.galpones[1], tipo_analisis: 'cruce' })
+      .expect(403);
   });
 
   it('hace idempotente la ingesta IoT ante reintentos del dispositivo', async () => {

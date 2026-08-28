@@ -28,7 +28,9 @@ export interface Usuario {
   telefono: string | null
   activo: boolean
   fecha_creacion: string
+  organizacion_id: number | null
   rol: RolResumen
+  organizacion: { id: number; nombre: string } | null
 }
 
 // ----- Auth -----
@@ -65,11 +67,15 @@ export interface CrearUsuarioPayload {
   password: string
   telefono?: string
   rol_id: number
+  organizacion_id?: number
+  organizacion_nombre?: string
 }
 
 // En una edición todos los campos son opcionales: solo se envía lo que cambia.
 // `activo` permite reactivar o desactivar la cuenta.
-export type ActualizarUsuarioPayload = Partial<CrearUsuarioPayload> & {
+export type ActualizarUsuarioPayload = Partial<
+  Omit<CrearUsuarioPayload, 'password' | 'organizacion_id' | 'organizacion_nombre'>
+> & {
   activo?: boolean
 }
 

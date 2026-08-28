@@ -99,11 +99,6 @@
 .crm-hero-funnel-rango {
   font-size: 0.62rem; color: rgba(255,255,255,0.28); white-space: nowrap;
 }
-/* Total de aves en la etapa */
-.crm-hero-funnel-aves {
-  display: inline-flex; align-items: center; gap: 0.22rem;
-  font-size: 0.62rem; color: rgba(52,211,153,0.45); white-space: nowrap;
-}
 .crm-hero-funnel-sep {
   font-size: 1.4rem; color: rgba(255,255,255,0.18); line-height: 1;
   user-select: none; align-self: center;
@@ -320,26 +315,6 @@
   background: rgba(7,23,19,0.04); border: 1px solid rgba(16,44,35,0.07);
   padding: 0.12rem 0.45rem; border-radius: 6px; white-space: nowrap;
 }
-/* Aves con acento verde — es la métrica más importante en agro */
-.crm-kcard-stat--aves {
-  background: rgba(16,185,129,0.07); border-color: rgba(16,185,129,0.18);
-  color: #059669; font-weight: 700;
-}
-
-/* Solo 1 dolor visible — más de uno satura */
-.crm-kcard-dolores { display: flex; gap: 0.3rem; align-items: center; }
-.crm-kcard-dolor {
-  font-size: 0.64rem; padding: 0.1rem 0.45rem;
-  background: rgba(245,158,11,0.08); color: #b45309;
-  border: 1px solid rgba(245,158,11,0.18); border-radius: 6px;
-  white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;
-}
-.crm-kcard-dolor--extra {
-  font-size: 0.62rem; color: var(--text3);
-  background: rgba(7,23,19,0.05); border: 1px solid rgba(16,44,35,0.09);
-  border-radius: 6px; padding: 0.1rem 0.4rem; white-space: nowrap;
-}
-
 /* ─── Pie: días de urgencia + llamada siempre visible ────────────────────── */
 .crm-kcard-footer {
   display: flex; align-items: center; justify-content: space-between;
@@ -364,6 +339,10 @@
   background: rgba(16,185,129,0.18); transform: none;
 }
 .crm-kcard-call:active { transform: scale(0.96); }
+.crm-kcard-call--disabled {
+  color: var(--text3); background: rgba(7,23,19,0.04);
+  border-color: rgba(16,44,35,0.08); cursor: default;
+}
 
 /* ─── Filtros (vista Lista) ───────────────────────────────────────────────── */
 .crm-filtros {
@@ -526,12 +505,34 @@
   letter-spacing: 0.09em; color: var(--text3); margin: 0.4rem 0 0.3rem;
 }
 
-/* Chips de dolores en el detalle */
-.crm-det-dolores { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.3rem 0; }
-.crm-det-dolor-chip {
-  font-size: 0.75rem; padding: 0.25rem 0.6rem;
-  background: rgba(245,158,11,0.1); color: #b45309;
-  border: 1px solid rgba(245,158,11,0.22); border-radius: 8px;
+/* Selector de asesor para asignar un prospecto calificado */
+.crm-det-asesor { display: flex; gap: 0.5rem; padding: 0.4rem 0; }
+.crm-det-asesor-select {
+  flex: 1; min-width: 0; font-size: 0.82rem; padding: 0.4rem 0.6rem;
+  border-radius: 8px; border: 1px solid rgba(16,44,35,0.14);
+  background: #fff; color: var(--dash-ink);
+}
+.crm-det-asesor-nota {
+  font-size: 0.78rem; color: var(--text3); line-height: 1.5; margin: 0.3rem 0;
+}
+.crm-det-error {
+  font-size: 0.78rem; color: #dc2626; margin: 0.4rem 0 0;
+}
+.crm-det-cargando {
+  font-size: 0.8rem; color: var(--text3); margin: 0.5rem 0;
+}
+
+/* Transcripción de la conversación con el chatbot */
+.crm-det-transcript { display: flex; flex-direction: column; gap: 0.7rem; padding: 0.2rem 0; }
+.crm-det-transcript-item {
+  padding: 0.6rem 0.7rem; border-radius: 10px;
+  background: rgba(7,23,19,0.03); border: 1px solid rgba(16,44,35,0.06);
+}
+.crm-det-transcript-q {
+  font-size: 0.74rem; font-weight: 600; color: var(--text3); margin: 0 0 0.25rem;
+}
+.crm-det-transcript-a {
+  font-size: 0.84rem; color: var(--dash-ink); margin: 0;
 }
 
 /* Links de contacto */
@@ -594,4 +595,14 @@
   .crm-hero-funnel-stage { padding: 0.45rem 0.7rem; }
   .crm-kanban-head { width: 88px; }
   .crm-kanban-head-title { font-size: 0.74rem; }
+}
+
+/* ─── Estados de carga / error de la página ──────────────────────────────── */
+.crm-error-banner {
+  background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.22);
+  color: #b91c1c; font-size: 0.84rem; font-weight: 500;
+  padding: 0.7rem 1rem; border-radius: 12px; margin-bottom: 1rem;
+}
+.crm-vacio-simple {
+  text-align: center; color: var(--text3); font-size: 0.88rem; padding: 3rem 0;
 }

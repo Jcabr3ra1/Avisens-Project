@@ -1,0 +1,9 @@
+meta {
+  name: [Admin] Asignar usuario a galpon
+  type: http
+  seq: 1
+}
+post { url: {{baseUrl}}/v1/usuarios-galpones; body: json; auth: bearer }
+headers { Content-Type: application/json }
+auth:bearer { token: {{token}} }
+body:json { {"usuario_id":2,"galpon_id":1,"rol_asignacion":"galponero"} }
