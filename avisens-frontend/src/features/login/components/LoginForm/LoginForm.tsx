@@ -42,7 +42,7 @@ function LoginForm() {
             : 'No se pudo iniciar sesión. Intente de nuevo.',
         )
       } else {
-        setError('No se pudo conectar con el servidor.')
+        setError('No se pudo conectar. Revisa tu conexión a internet e inténtalo de nuevo.')
       }
     } finally {
       setLoading(false)

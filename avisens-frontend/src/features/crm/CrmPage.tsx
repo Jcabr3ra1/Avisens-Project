@@ -1,16 +1,39 @@
 // CrmPage.tsx — Módulo CRM de Prospectos (EP-01 HU-08).
 // Kanban con donut de puntaje, semáforo de urgencia, acciones rápidas y hero con métricas.
+// Todo contra la API real: los prospectos los captura el chatbot de la portada.
 
-import { useState, useMemo, type ReactNode } from 'react'
-import { LEADS_MOCK, RANGOS_PUNTAJE, type Lead, type EstadoLead } from './data'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { isAxiosError } from 'axios'
+import {
+  listarProspectos, obtenerProspecto, asignarAsesor, exportarProspectosCsv, listarUsuarios,
+  type Prospecto, type ProspectoDetalle, type Usuario,
+} from '@shared/api'
 import {
   IcSearch, IcGrid, IcUsers, IcPhone, IcClose, IcPin,
-  IcFlame, IcThermo, IcSnowflake, IcCheck, IcHome, IcClock, IcEgg,
+  IcFlame, IcThermo, IcSnowflake, IcCheck, IcClock, IcChat,
 } from '@shared/ui/icons/icons'
 import './CrmPage.css'
 
+// El chatbot puntúa sobre 12 (ver PUNTAJE_MAXIMO en FloatChat) y clasifica
+// caliente/tibio/frío según esos umbrales (ver UMBRAL_CALIENTE/TIBIO en chatbot.service.ts).
+const PUNTAJE_MAXIMO = 12
+
+// Etapa visual del pipeline. La calcula el cliente a partir de dos campos
+// reales distintos: `clasificacion` (qué tan calificado quedó el prospecto)
+// y `estado` (en qué paso del proceso comercial va, p. ej. "cerrado").
+type Etapa = 'caliente' | 'tibio' | 'frio' | 'cerrado' | 'descartado'
+
+function etapaDe(p: Prospecto): Etapa {
+  if (p.estado === 'cerrado') return 'cerrado'
+  if (p.clasificacion === 'caliente') return 'caliente'
+  if (p.clasificacion === 'tibio') return 'tibio'
+  if (p.clasificacion === 'frio') return 'frio'
+  // pqrs, sin_consentimiento, abandonado, cancelado o sin clasificar todavía
+  return 'descartado'
+}
+
 // ─── Configuración visual de cada etapa del pipeline ─────────────────────────
-const CFG: Record<EstadoLead, {
+const CFG: Record<Etapa, {
   label: string; icon: ReactNode; color: string
   colorLight: string; borderColor: string
 }> = {
@@ -26,55 +49,64 @@ const CFG: Record<EstadoLead, {
     colorLight: 'rgba(148,163,184,0.1)', borderColor: 'rgba(148,163,184,0.2)'  },
 }
 
+const RANGOS_PUNTAJE: Record<Etapa, string> = {
+  caliente: '8 – 12 pts', tibio: '5 – 7 pts', frio: '0 – 4 pts',
+  cerrado: 'Convertido', descartado: 'Sin calificar',
+}
+
 // Orden de columnas: mayor urgencia primero
-const ORDEN: EstadoLead[] = ['caliente', 'tibio', 'frio', 'cerrado', 'descartado']
+const ORDEN: Etapa[] = ['caliente', 'tibio', 'frio', 'cerrado', 'descartado']
+
+// De dónde llegó el prospecto — el chatbot vive tanto en la web como en WhatsApp.
+const CANAL_CFG: Record<string, { label: string; icon: ReactNode }> = {
+  web:      { label: 'Web',      icon: <IcChat size={11} /> },
+  whatsapp: { label: 'WhatsApp', icon: <IcPhone size={11} /> },
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Obtiene las dos iniciales del nombre completo
-function getIniciales(nombre: string): string {
+function getIniciales(nombre: string | null): string {
+  if (!nombre?.trim()) return '?'
   return nombre.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase()
 }
 
-// Parsea DD/MM/YYYY y retorna días transcurridos desde hoy
-function diasDesde(fechaStr: string): number {
-  const [d, m, y] = fechaStr.split('/').map(Number)
-  const hoy   = new Date()
-  const fecha = new Date(y, m - 1, d)
-  return Math.max(0, Math.floor((hoy.getTime() - fecha.getTime()) / 86_400_000))
+// Días transcurridos desde una fecha ISO del backend
+function diasDesde(fechaIso: string): number {
+  return Math.max(0, Math.floor((Date.now() - new Date(fechaIso).getTime()) / 86_400_000))
 }
 
-// Formatea número de aves como "22k", "3.5k" o "800"
-function fmtAves(n: number): string {
-  if (n >= 10000) return `${Math.round(n / 1000)}k`
-  if (n >= 1000)  return `${(n / 1000).toFixed(1)}k`
-  return String(n)
+function fmtFecha(fechaIso: string): string {
+  return new Date(fechaIso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function mensajeError(err: unknown, fallback: string): string {
+  if (isAxiosError(err) && err.response) {
+    const data = err.response.data as { message?: string | string[] }
+    if (data?.message) return Array.isArray(data.message) ? data.message.join(', ') : data.message
+  }
+  return fallback
 }
 
 // ─── Sistema de urgencia ──────────────────────────────────────────────────────
 
-// Nivel de urgencia según días sin contacto y estado del lead
 type NivelUrgencia = 'urgente' | 'alerta' | 'reciente' | 'normal'
 
 interface UrgInfo {
   nivel:      NivelUrgencia
-  borderClr:  string   // color para el borde izquierdo de la card
-  diasClr:    string   // color para el badge de días
-  diasLabel:  string   // texto del badge ("Hoy", "2d", "12d")
+  borderClr:  string
+  diasClr:    string
+  diasLabel:  string
 }
 
-function urgenciaInfo(dias: number, estado: EstadoLead): UrgInfo {
+function urgenciaInfo(dias: number, etapa: Etapa): UrgInfo {
   const lbl = dias <= 0 ? 'Hoy' : `${dias}d`
-  // Lead caliente sin contactar por 7+ días = visita vencida
-  if (estado === 'caliente' && dias >= 7)
+  // Caliente sin contactar 7+ días = visita vencida
+  if (etapa === 'caliente' && dias >= 7)
     return { nivel: 'urgente', borderClr: '#ef4444', diasClr: '#ef4444', diasLabel: lbl }
-  // Lead caliente sin contactar por 4-6 días = alerta
-  if (estado === 'caliente' && dias >= 4)
+  if (etapa === 'caliente' && dias >= 4)
     return { nivel: 'alerta', borderClr: '#f59e0b', diasClr: '#f59e0b', diasLabel: lbl }
-  // Lead tibio sin contactar por 12+ días = se está enfriando
-  if (estado === 'tibio' && dias >= 12)
+  if (etapa === 'tibio' && dias >= 12)
     return { nivel: 'alerta', borderClr: '#f59e0b', diasClr: '#f59e0b', diasLabel: lbl }
-  // Contacto muy reciente = indicador verde
   if (dias <= 2)
     return { nivel: 'reciente', borderClr: '#10b981', diasClr: '#10b981', diasLabel: lbl }
   return { nivel: 'normal', borderClr: 'transparent', diasClr: 'var(--text3)', diasLabel: lbl }
@@ -82,31 +114,21 @@ function urgenciaInfo(dias: number, estado: EstadoLead): UrgInfo {
 
 // ─── Donut SVG de puntaje ────────────────────────────────────────────────────
 
-// Anillo de progreso que muestra el puntaje visualmente (esquina superior derecha)
 function ScoreDonut({ puntaje, color }: { puntaje: number; color: string }) {
-  const r    = 11                         // radio del anillo
-  const circ = 2 * Math.PI * r            // circunferencia ≈ 69.1 px
-  const off  = circ * (1 - puntaje / 14)  // offset para el arco de progreso
+  const r    = 11
+  const circ = 2 * Math.PI * r
+  const off  = circ * (1 - puntaje / PUNTAJE_MAXIMO)
   return (
-    <svg
-      width="30" height="30"
-      viewBox="0 0 30 30"
-      className="crm-kcard-donut"
-      aria-label={`Puntaje ${puntaje} de 14`}
-    >
-      {/* Pista vacía del anillo */}
-      <circle cx="15" cy="15" r={r}
-        fill="none" stroke="rgba(10,26,20,0.1)" strokeWidth="2.5" />
-      {/* Arco de progreso (empieza en 12 horas = -90°) */}
+    <svg width="30" height="30" viewBox="0 0 30 30" className="crm-kcard-donut"
+      aria-label={`Puntaje ${puntaje} de ${PUNTAJE_MAXIMO}`}>
+      <circle cx="15" cy="15" r={r} fill="none" stroke="rgba(10,26,20,0.1)" strokeWidth="2.5" />
       <circle cx="15" cy="15" r={r}
         fill="none" stroke={color} strokeWidth="2.5"
         strokeDasharray={circ.toFixed(2)}
         strokeDashoffset={off.toFixed(2)}
         strokeLinecap="round"
         transform="rotate(-90 15 15)" />
-      {/* Número centrado */}
-      <text x="15" y="19.5" textAnchor="middle"
-        fontSize="8.5" fontWeight="800" fill={color}>
+      <text x="15" y="19.5" textAnchor="middle" fontSize="8.5" fontWeight="800" fill={color}>
         {puntaje}
       </text>
     </svg>
@@ -117,45 +139,36 @@ function ScoreDonut({ puntaje, color }: { puntaje: number; color: string }) {
 
 interface HeroProps {
   cnts:          Record<string, number>
-  avesXEstado:   Record<string, number>  // aves totales por etapa
-  avesTotal:     number
+  sinAsignar:    number
   convPct:       number
   scorePromedio: string
   urgentes:      number
 }
 
-function CrmHero({ cnts, avesXEstado, avesTotal, convPct, scorePromedio, urgentes }: HeroProps) {
-  // Etapas del flujo de conversión con toda la info integrada (reemplaza pipeline cards)
+function CrmHero({ cnts, sinAsignar, convPct, scorePromedio, urgentes }: HeroProps) {
   const etapas = [
-    { icon: <IcSnowflake size={12} />, label: 'Frío',     cnt: cnts['frio'],     clr: '#60a5fa', rango: '0 – 6 pts',  aves: avesXEstado['frio']     },
-    { icon: <IcThermo size={12} />,    label: 'Tibio',    cnt: cnts['tibio'],    clr: '#fbbf24', rango: '7 – 11 pts', aves: avesXEstado['tibio']    },
-    { icon: <IcFlame size={12} />,     label: 'Caliente', cnt: cnts['caliente'], clr: '#f87171', rango: '≥ 12 pts',   aves: avesXEstado['caliente'] },
-    { icon: <IcCheck size={12} />,     label: 'Cliente',  cnt: cnts['cerrado'],  clr: '#34d399', rango: 'Convertido', aves: avesXEstado['cerrado']  },
+    { icon: <IcSnowflake size={12} />, label: 'Frío',     cnt: cnts['frio'],     clr: '#60a5fa' },
+    { icon: <IcThermo size={12} />,    label: 'Tibio',    cnt: cnts['tibio'],    clr: '#fbbf24' },
+    { icon: <IcFlame size={12} />,     label: 'Caliente', cnt: cnts['caliente'], clr: '#f87171' },
+    { icon: <IcCheck size={12} />,     label: 'Cliente',  cnt: cnts['cerrado'],  clr: '#34d399' },
   ]
 
-  // Construye los nodos del embudo con flechas intercaladas
   const nodosFunnel: ReactNode[] = []
   etapas.forEach((e, i) => {
     nodosFunnel.push(
       <div key={e.label} className="crm-hero-funnel-stage">
         <span className="crm-hero-funnel-cnt" style={{ color: e.clr }}>{e.cnt}</span>
         <span className="crm-hero-funnel-lbl">{e.icon} {e.label}</span>
-        <span className="crm-hero-funnel-rango">{e.rango}</span>
-        {e.aves > 0 && (
-          <span className="crm-hero-funnel-aves"><IcEgg size={11} /> {fmtAves(e.aves)}</span>
-        )}
+        <span className="crm-hero-funnel-rango">{RANGOS_PUNTAJE[ORDEN[i]]}</span>
       </div>
     )
     if (i < etapas.length - 1) {
-      nodosFunnel.push(
-        <span key={`sep-${i}`} className="crm-hero-funnel-sep">›</span>
-      )
+      nodosFunnel.push(<span key={`sep-${i}`} className="crm-hero-funnel-sep">›</span>)
     }
   })
 
   return (
     <div className="crm-hero">
-      {/* Fila superior: título + badge de urgencia */}
       <div className="crm-hero-top">
         <div className="crm-hero-info">
           <span className="crm-hero-kicker">EP-01 · Pipeline CRM</span>
@@ -169,7 +182,6 @@ function CrmHero({ cnts, avesXEstado, avesTotal, convPct, scorePromedio, urgente
         )}
       </div>
 
-      {/* Métricas globales del pipeline */}
       <div className="crm-hero-stats">
         <div className="crm-hero-stat">
           <span className="crm-hero-stat-val">{cnts['todos'] - cnts['descartado']}</span>
@@ -177,8 +189,8 @@ function CrmHero({ cnts, avesXEstado, avesTotal, convPct, scorePromedio, urgente
         </div>
         <div className="crm-hero-stat-sep" />
         <div className="crm-hero-stat">
-          <span className="crm-hero-stat-val">{fmtAves(avesTotal)}</span>
-          <span className="crm-hero-stat-lbl"><IcEgg size={11} /> Aves pipeline</span>
+          <span className="crm-hero-stat-val">{sinAsignar}</span>
+          <span className="crm-hero-stat-lbl">Sin asignar</span>
         </div>
         <div className="crm-hero-stat-sep" />
         <div className="crm-hero-stat">
@@ -192,10 +204,8 @@ function CrmHero({ cnts, avesXEstado, avesTotal, convPct, scorePromedio, urgente
         </div>
       </div>
 
-      {/* Embudo de conversión — reemplaza las tarjetas de pipeline separadas */}
       <div className="crm-hero-funnel">
         {nodosFunnel}
-        {/* Descartados como nota al margen */}
         {cnts['descartado'] > 0 && (
           <div className="crm-hero-funnel-desc">
             <IcClose size={11} />
@@ -207,16 +217,17 @@ function CrmHero({ cnts, avesXEstado, avesTotal, convPct, scorePromedio, urgente
   )
 }
 
-// ─── Tarjeta de lead para el Kanban ─────────────────────────────────────────
+// ─── Tarjeta de prospecto para el Kanban ─────────────────────────────────────
 
-function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
-  const cfg  = CFG[lead.estado]
-  const ini  = getIniciales(lead.nombre)
-  const dias = diasDesde(lead.fechaContacto)
-  const urg  = urgenciaInfo(dias, lead.estado)
+function ProspectoCard({ p, onClick }: { p: Prospecto; onClick: () => void }) {
+  const etapa = etapaDe(p)
+  const cfg   = CFG[etapa]
+  const ini   = getIniciales(p.nombre)
+  const dias  = diasDesde(p.fecha_inicio)
+  const urg   = urgenciaInfo(dias, etapa)
+  const canal = p.canal_origen ? CANAL_CFG[p.canal_origen] : null
 
   return (
-    // Div con rol button para permitir <a> anidado (botón de llamada)
     <div
       className={`crm-kcard crm-kcard--${urg.nivel}`}
       style={{ borderLeftColor: urg.borderClr }}
@@ -225,65 +236,43 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
       onClick={onClick}
       onKeyDown={e => e.key === 'Enter' && onClick()}
     >
-      {/* ── Cabecera: avatar · nombre · donut inline (sin posicionamiento absoluto) */}
       <div className="crm-kcard-head">
         <span className="crm-kcard-avatar" style={{ background: cfg.color }}>{ini}</span>
         <div className="crm-kcard-ident">
-          <span className="crm-kcard-nombre">{lead.nombre}</span>
-          <span className="crm-kcard-granja">{lead.granja}</span>
+          <span className="crm-kcard-nombre">{p.nombre ?? 'Sin nombre'}</span>
+          <span className="crm-kcard-granja">{p.nombre_granja ?? 'Granja sin nombre'}</span>
         </div>
-        {/* Donut como flex-item — no flota encima del texto */}
-        {lead.puntaje > 0 && (
-          <ScoreDonut puntaje={lead.puntaje} color={cfg.color} />
+        {p.puntaje_total != null && (
+          <ScoreDonut puntaje={p.puntaje_total} color={cfg.color} />
         )}
       </div>
 
-      {/* ── Cuerpo: ubicación + volumen de la granja */}
       <div className="crm-kcard-body">
-        <span className="crm-kcard-muni"><IcPin size={11} /> {lead.municipio}</span>
+        <span className="crm-kcard-muni"><IcPin size={11} /> {p.municipio ?? 'Municipio sin dato'}</span>
 
-        {/* Volumen físico — métrica principal para B2B agrícola */}
-        {(lead.galpones > 0 || lead.avesLote > 0) && (
+        {canal && (
           <div className="crm-kcard-stats">
-            {lead.galpones > 0 && (
-              <span className="crm-kcard-stat">
-                <IcHome size={11} /> {lead.galpones} galp.
-              </span>
-            )}
-            {lead.avesLote > 0 && (
-              <span className="crm-kcard-stat crm-kcard-stat--aves">
-                <IcEgg size={11} /> {fmtAves(lead.avesLote)} aves
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Solo el primer dolor — más de uno satura visualmente */}
-        {lead.doloresDetectados.length > 0 && (
-          <div className="crm-kcard-dolores">
-            <span className="crm-kcard-dolor">{lead.doloresDetectados[0]}</span>
-            {lead.doloresDetectados.length > 1 && (
-              <span className="crm-kcard-dolor crm-kcard-dolor--extra">
-                +{lead.doloresDetectados.length - 1}
-              </span>
-            )}
+            <span className="crm-kcard-stat">{canal.icon} {canal.label}</span>
           </div>
         )}
       </div>
 
-      {/* ── Pie: días de urgencia + llamada siempre visible (sin hover) */}
       <div className="crm-kcard-footer">
         <span className="crm-kcard-dias" style={{ color: urg.diasClr }}>
           <IcClock size={11} /> {urg.diasLabel}
         </span>
-        <a
-          className="crm-kcard-call"
-          href={`tel:${lead.telefono}`}
-          onClick={e => e.stopPropagation()}
-          aria-label={`Llamar a ${lead.nombre}`}
-        >
-          <IcPhone size={11} /> Llamar
-        </a>
+        {p.telefono ? (
+          <a
+            className="crm-kcard-call"
+            href={`tel:${p.telefono}`}
+            onClick={e => e.stopPropagation()}
+            aria-label={`Llamar a ${p.nombre ?? 'prospecto'}`}
+          >
+            <IcPhone size={11} /> Llamar
+          </a>
+        ) : (
+          <span className="crm-kcard-call crm-kcard-call--disabled">Sin teléfono</span>
+        )}
       </div>
     </div>
   )
@@ -291,49 +280,48 @@ function LeadCard({ lead, onClick }: { lead: Lead; onClick: () => void }) {
 
 // ─── Fila de la vista lista (tabla) ──────────────────────────────────────────
 
-function FilaLead({ lead, onClick }: { lead: Lead; onClick: () => void }) {
-  const dias = diasDesde(lead.fechaContacto)
-  const urg  = urgenciaInfo(dias, lead.estado)
+function FilaProspecto({ p, onClick }: { p: Prospecto; onClick: () => void }) {
+  const etapa = etapaDe(p)
+  const dias  = diasDesde(p.fecha_inicio)
+  const urg   = urgenciaInfo(dias, etapa)
+  const canal = p.canal_origen ? CANAL_CFG[p.canal_origen] : null
+
   return (
-    <tr className={`crm-fila crm-fila--${lead.estado}`} onClick={onClick}>
+    <tr className={`crm-fila crm-fila--${etapa}`} onClick={onClick}>
       <td>
         <div className="crm-fila-nombre-wrap">
-          <span className="crm-fila-avatar"
-            style={{ background: CFG[lead.estado].color }}>
-            {getIniciales(lead.nombre)}
+          <span className="crm-fila-avatar" style={{ background: CFG[etapa].color }}>
+            {getIniciales(p.nombre)}
           </span>
           <div>
-            <strong>{lead.nombre}</strong>
-            <small className="crm-rol">{lead.rol}</small>
+            <strong>{p.nombre ?? 'Sin nombre'}</strong>
           </div>
         </div>
       </td>
-      <td>{lead.granja}</td>
-      <td>{lead.municipio}</td>
-      <td>{lead.avesLote > 0 ? `${fmtAves(lead.avesLote)} aves` : '—'}</td>
+      <td>{p.nombre_granja ?? '—'}</td>
+      <td>{p.municipio ?? '—'}</td>
+      <td>{canal ? <>{canal.icon} {canal.label}</> : '—'}</td>
       <td>
-        <div className="crm-puntaje">
-          <span className="crm-puntaje-num">{lead.puntaje}</span>
-          <div className="crm-puntaje-barra-wrap">
-            <div className={`crm-puntaje-barra crm-puntaje-barra--${lead.estado}`}
-              style={{ width: `${(lead.puntaje / 14) * 100}%` }} />
+        {p.puntaje_total != null ? (
+          <div className="crm-puntaje">
+            <span className="crm-puntaje-num">{p.puntaje_total}</span>
+            <div className="crm-puntaje-barra-wrap">
+              <div className={`crm-puntaje-barra crm-puntaje-barra--${etapa}`}
+                style={{ width: `${(p.puntaje_total / PUNTAJE_MAXIMO) * 100}%` }} />
+            </div>
           </div>
-        </div>
+        ) : '—'}
       </td>
-      {/* Columna días con color de urgencia */}
       <td>
-        <span className="crm-tabla-dias" style={{ color: urg.diasClr }}>
-          {urg.diasLabel}
+        <span className="crm-tabla-dias" style={{ color: urg.diasClr }}>{urg.diasLabel}</span>
+      </td>
+      <td>
+        <span className={`crm-estado-badge crm-estado-badge--${etapa}`}>
+          {CFG[etapa].icon} {CFG[etapa].label}
         </span>
       </td>
       <td>
-        <span className={`crm-estado-badge crm-estado-badge--${lead.estado}`}>
-          {CFG[lead.estado].icon} {CFG[lead.estado].label}
-        </span>
-      </td>
-      <td>
-        <span>{lead.telefono}</span>
-        {lead.correo && <><br /><small>{lead.correo}</small></>}
+        {p.telefono ?? '—'}
       </td>
     </tr>
   )
@@ -341,35 +329,68 @@ function FilaLead({ lead, onClick }: { lead: Lead; onClick: () => void }) {
 
 // ─── Panel de detalle deslizable ──────────────────────────────────────────────
 
-function DetallePanel({ lead, onCerrar }: { lead: Lead; onCerrar: () => void }) {
-  const cfg  = CFG[lead.estado]
-  const ini  = getIniciales(lead.nombre)
-  const dias = diasDesde(lead.fechaContacto)
-  const urg  = urgenciaInfo(dias, lead.estado)
+function DetallePanel({
+  resumen, admins, onCerrar, onAsignado,
+}: {
+  resumen: Prospecto
+  admins: Usuario[]
+  onCerrar: () => void
+  onAsignado: () => void
+}) {
+  const [detalle, setDetalle]   = useState<ProspectoDetalle | null>(null)
+  const [cargando, setCargando] = useState(true)
+  const [error, setError]       = useState('')
+  const [asesorId, setAsesorId] = useState<number | ''>('')
+  const [asignando, setAsignando] = useState(false)
+  const [errorAsignar, setErrorAsignar] = useState('')
+
+  useEffect(() => {
+    setCargando(true)
+    obtenerProspecto(resumen.id)
+      .then(setDetalle)
+      .catch(err => setError(mensajeError(err, 'No se pudo cargar el detalle del prospecto.')))
+      .finally(() => setCargando(false))
+  }, [resumen.id])
+
+  const etapa = etapaDe(resumen)
+  const cfg   = CFG[etapa]
+  const ini   = getIniciales(resumen.nombre)
+  const dias  = diasDesde(resumen.fecha_inicio)
+  const urg   = urgenciaInfo(dias, etapa)
+
+  async function handleAsignar() {
+    if (!asesorId) return
+    setAsignando(true)
+    setErrorAsignar('')
+    try {
+      await asignarAsesor(resumen.id, asesorId)
+      onAsignado()
+      const actualizado = await obtenerProspecto(resumen.id)
+      setDetalle(actualizado)
+    } catch (err) {
+      setErrorAsignar(mensajeError(err, 'No se pudo asignar el asesor.'))
+    } finally {
+      setAsignando(false)
+    }
+  }
 
   return (
-    // Overlay oscuro — clic fuera cierra el panel
     <div className="crm-overlay" onClick={onCerrar}>
       <aside className="crm-detalle" onClick={e => e.stopPropagation()}>
 
-        {/* Cabecera */}
         <div className="crm-detalle-head" style={{ borderBottomColor: cfg.color }}>
-          <span className="crm-detalle-avatar" style={{ background: cfg.color }}>
-            {ini}
-          </span>
+          <span className="crm-detalle-avatar" style={{ background: cfg.color }}>{ini}</span>
           <div className="crm-detalle-ident">
-            <h2 className="crm-detalle-nombre">{lead.nombre}</h2>
-            <span className="crm-detalle-rol">{lead.rol}</span>
+            <h2 className="crm-detalle-nombre">{resumen.nombre ?? 'Sin nombre'}</h2>
+            {detalle?.rol_prospecto && <span className="crm-detalle-rol">{detalle.rol_prospecto}</span>}
           </div>
           <button className="crm-detalle-cerrar" onClick={onCerrar} aria-label="Cerrar">
             <IcClose size={17} />
           </button>
         </div>
 
-        {/* Cuerpo scrollable */}
         <div className="crm-detalle-body">
 
-          {/* Estado + puntaje */}
           <div className="crm-det-row">
             <span className="crm-det-lbl">Estado</span>
             <span className="crm-det-badge"
@@ -377,19 +398,18 @@ function DetallePanel({ lead, onCerrar }: { lead: Lead; onCerrar: () => void }) 
               {cfg.icon} {cfg.label}
             </span>
           </div>
-          {lead.puntaje > 0 && (
+          {resumen.puntaje_total != null && (
             <div className="crm-det-row">
               <span className="crm-det-lbl">Puntaje</span>
               <div className="crm-det-score-wrap">
-                <strong style={{ color: cfg.color }}>{lead.puntaje}</strong>
-                <span className="crm-det-score-max"> / 14</span>
-                <span className="crm-det-score-rango">· {RANGOS_PUNTAJE[lead.estado]}</span>
+                <strong style={{ color: cfg.color }}>{resumen.puntaje_total}</strong>
+                <span className="crm-det-score-max"> / {PUNTAJE_MAXIMO}</span>
+                <span className="crm-det-score-rango">· {RANGOS_PUNTAJE[etapa]}</span>
               </div>
             </div>
           )}
-          {/* Días desde contacto con color de urgencia */}
           <div className="crm-det-row">
-            <span className="crm-det-lbl">Último contacto</span>
+            <span className="crm-det-lbl">Primer contacto</span>
             <span style={{ color: urg.diasClr, fontWeight: 600, fontSize: '0.84rem' }}>
               {urg.diasLabel === 'Hoy' ? 'Hoy' : `Hace ${urg.diasLabel}`}
             </span>
@@ -397,75 +417,125 @@ function DetallePanel({ lead, onCerrar }: { lead: Lead; onCerrar: () => void }) 
 
           <div className="crm-det-sep" />
 
-          {/* Datos de la granja */}
           <p className="crm-det-section">Granja</p>
           <div className="crm-det-row">
             <span className="crm-det-lbl">Nombre</span>
-            <span className="crm-det-val">{lead.granja}</span>
+            <span className="crm-det-val">{resumen.nombre_granja ?? '—'}</span>
           </div>
           <div className="crm-det-row">
             <span className="crm-det-lbl">Municipio</span>
-            <span className="crm-det-val">{lead.municipio}</span>
+            <span className="crm-det-val">{resumen.municipio ?? '—'}</span>
           </div>
-          {lead.galpones > 0 && (
+          {detalle?.tipo_produccion && (
+            <div className="crm-det-row">
+              <span className="crm-det-lbl">Tipo de producción</span>
+              <span className="crm-det-val">{detalle.tipo_produccion}</span>
+            </div>
+          )}
+          {detalle?.numero_galpones != null && (
             <div className="crm-det-row">
               <span className="crm-det-lbl">Galpones</span>
-              <span className="crm-det-val">{lead.galpones}</span>
+              <span className="crm-det-val">{detalle.numero_galpones}</span>
             </div>
           )}
-          {lead.avesLote > 0 && (
+          {detalle?.area_granja_m2 != null && (
             <div className="crm-det-row">
-              <span className="crm-det-lbl">Aves / lote</span>
-              <span className="crm-det-val">{lead.avesLote.toLocaleString()}</span>
+              <span className="crm-det-lbl">Área de la granja</span>
+              <span className="crm-det-val">{detalle.area_granja_m2.toLocaleString()} m²</span>
             </div>
           )}
-
-          {/* Dolores detectados */}
-          {lead.doloresDetectados.length > 0 && (
-            <>
-              <div className="crm-det-sep" />
-              <p className="crm-det-section">Dolores identificados</p>
-              <div className="crm-det-dolores">
-                {lead.doloresDetectados.map((d, i) => (
-                  <span key={i} className="crm-det-dolor-chip">{d}</span>
-                ))}
-              </div>
-            </>
+          {detalle?.area_galpon_m2 != null && (
+            <div className="crm-det-row">
+              <span className="crm-det-lbl">Área por galpón</span>
+              <span className="crm-det-val">{detalle.area_galpon_m2.toLocaleString()} m²</span>
+            </div>
           )}
 
           <div className="crm-det-sep" />
 
-          {/* Contacto */}
           <p className="crm-det-section">Contacto</p>
           <div className="crm-det-row">
             <span className="crm-det-lbl">Teléfono</span>
-            <a href={`tel:${lead.telefono}`} className="crm-det-link">{lead.telefono}</a>
+            {resumen.telefono
+              ? <a href={`tel:${resumen.telefono}`} className="crm-det-link">{resumen.telefono}</a>
+              : <span className="crm-det-val">—</span>}
           </div>
-          {lead.correo && (
+          {detalle?.email && (
             <div className="crm-det-row">
               <span className="crm-det-lbl">Correo</span>
-              <a href={`mailto:${lead.correo}`} className="crm-det-link crm-det-link--truncate">
-                {lead.correo}
+              <a href={`mailto:${detalle.email}`} className="crm-det-link crm-det-link--truncate">
+                {detalle.email}
               </a>
             </div>
           )}
           <div className="crm-det-row">
             <span className="crm-det-lbl">Primer contacto</span>
-            <span className="crm-det-val">{lead.fechaContacto}</span>
+            <span className="crm-det-val">{fmtFecha(resumen.fecha_inicio)}</span>
           </div>
-          <div className="crm-det-row">
-            <span className="crm-det-lbl">Asesor</span>
-            <span className="crm-det-val">{lead.asesor}</span>
-          </div>
+
+          <div className="crm-det-sep" />
+
+          <p className="crm-det-section">Asesor</p>
+          {detalle?.asesor ? (
+            <div className="crm-det-row">
+              <span className="crm-det-lbl">Asignado a</span>
+              <span className="crm-det-val">{detalle.asesor.nombre_completo}</span>
+            </div>
+          ) : resumen.estado === 'calificado' ? (
+            <div className="crm-det-asesor">
+              <select
+                className="crm-det-asesor-select"
+                value={asesorId}
+                onChange={e => setAsesorId(e.target.value ? Number(e.target.value) : '')}
+                disabled={asignando}
+              >
+                <option value="">Elegir administrador…</option>
+                {admins.map(a => (
+                  <option key={a.id} value={a.id}>{a.nombre_completo}</option>
+                ))}
+              </select>
+              <button
+                className="crm-det-btn crm-det-btn--primary"
+                onClick={handleAsignar}
+                disabled={!asesorId || asignando}
+              >
+                {asignando ? 'Asignando…' : 'Asignar'}
+              </button>
+            </div>
+          ) : (
+            <p className="crm-det-asesor-nota">
+              Se puede asignar un asesor cuando el prospecto quede calificado por el chatbot.
+            </p>
+          )}
+          {errorAsignar && <p className="crm-det-error">{errorAsignar}</p>}
+
+          {cargando && <p className="crm-det-cargando">Cargando conversación…</p>}
+          {error && <p className="crm-det-error">{error}</p>}
+
+          {detalle && detalle.respuestas.length > 0 && (
+            <>
+              <div className="crm-det-sep" />
+              <p className="crm-det-section">Conversación con el chatbot</p>
+              <div className="crm-det-transcript">
+                {detalle.respuestas.map((r, i) => (
+                  <div key={i} className="crm-det-transcript-item">
+                    {r.pregunta_texto && <p className="crm-det-transcript-q">{r.pregunta_texto}</p>}
+                    <p className="crm-det-transcript-a">{r.respuesta_texto ?? '—'}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Acciones principales */}
         <div className="crm-detalle-acciones">
-          <a href={`tel:${lead.telefono}`} className="crm-det-btn crm-det-btn--primary">
-            <IcPhone size={15} /> Llamar ahora
-          </a>
-          {lead.correo && (
-            <a href={`mailto:${lead.correo}`} className="crm-det-btn crm-det-btn--ghost">
+          {resumen.telefono && (
+            <a href={`tel:${resumen.telefono}`} className="crm-det-btn crm-det-btn--primary">
+              <IcPhone size={15} /> Llamar ahora
+            </a>
+          )}
+          {detalle?.email && (
+            <a href={`mailto:${detalle.email}`} className="crm-det-btn crm-det-btn--ghost">
               Enviar correo
             </a>
           )}
@@ -479,73 +549,97 @@ function DetallePanel({ lead, onCerrar }: { lead: Lead; onCerrar: () => void }) 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 function CrmPage() {
-  const [vista,        setVista]        = useState<'kanban' | 'tabla'>('kanban')
-  const [filtro,       setFiltro]       = useState<'todos' | EstadoLead>('todos')
-  const [busqueda,     setBusqueda]     = useState('')
-  const [seleccionado, setSeleccionado] = useState<Lead | null>(null)
+  const [prospectos, setProspectos] = useState<Prospecto[]>([])
+  const [admins, setAdmins]         = useState<Usuario[]>([])
+  const [cargando, setCargando]     = useState(true)
+  const [error, setError]           = useState('')
 
-  // Contadores por estado (sobre todos los leads, sin filtros)
-  const cnts: Record<string, number> = {
-    todos:      LEADS_MOCK.length,
-    caliente:   LEADS_MOCK.filter(l => l.estado === 'caliente').length,
-    tibio:      LEADS_MOCK.filter(l => l.estado === 'tibio').length,
-    frio:       LEADS_MOCK.filter(l => l.estado === 'frio').length,
-    descartado: LEADS_MOCK.filter(l => l.estado === 'descartado').length,
-    cerrado:    LEADS_MOCK.filter(l => l.estado === 'cerrado').length,
+  const [vista,        setVista]        = useState<'kanban' | 'tabla'>('kanban')
+  const [filtro,       setFiltro]       = useState<'todos' | Etapa>('todos')
+  const [busqueda,     setBusqueda]     = useState('')
+  const [seleccionado, setSeleccionado] = useState<Prospecto | null>(null)
+  const [exportando,   setExportando]   = useState(false)
+
+  function cargar() {
+    setCargando(true)
+    setError('')
+    Promise.all([listarProspectos({ limit: 100 }), listarUsuarios()])
+      .then(([resProspectos, usuarios]) => {
+        setProspectos(resProspectos.data)
+        setAdmins(usuarios.filter(u => u.rol.nombre === 'Administrador' && u.activo))
+      })
+      .catch(err => setError(mensajeError(err, 'No se pudieron cargar los prospectos.')))
+      .finally(() => setCargando(false))
   }
 
-  // Métricas del hero (excluye descartados)
-  const leadsActivos   = LEADS_MOCK.filter(l => l.estado !== 'descartado')
-  const avesTotal      = leadsActivos.reduce((s, l) => s + l.avesLote, 0)
-  const convPct        = Math.round((cnts['cerrado'] / leadsActivos.length) * 100)
-  const scoreActivos   = leadsActivos.filter(l => l.estado !== 'cerrado')
-  const scorePromedio  = scoreActivos.length
-    ? (scoreActivos.reduce((s, l) => s + l.puntaje, 0) / scoreActivos.length).toFixed(1)
+  useEffect(cargar, [])
+
+  async function handleExportar() {
+    setExportando(true)
+    try {
+      const blob = await exportarProspectosCsv()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'prospectos.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setError('No se pudo exportar el CSV.')
+    } finally {
+      setExportando(false)
+    }
+  }
+
+  const cnts: Record<string, number> = {
+    todos:      prospectos.length,
+    caliente:   prospectos.filter(p => etapaDe(p) === 'caliente').length,
+    tibio:      prospectos.filter(p => etapaDe(p) === 'tibio').length,
+    frio:       prospectos.filter(p => etapaDe(p) === 'frio').length,
+    descartado: prospectos.filter(p => etapaDe(p) === 'descartado').length,
+    cerrado:    prospectos.filter(p => etapaDe(p) === 'cerrado').length,
+  }
+
+  const leadsActivos  = prospectos.filter(p => etapaDe(p) !== 'descartado')
+  const convPct       = leadsActivos.length > 0 ? Math.round((cnts['cerrado'] / leadsActivos.length) * 100) : 0
+  const scoreActivos  = leadsActivos.filter(p => p.puntaje_total != null)
+  const scorePromedio = scoreActivos.length
+    ? (scoreActivos.reduce((s, p) => s + (p.puntaje_total ?? 0), 0) / scoreActivos.length).toFixed(1)
     : '—'
-  // Leads calientes que llevan 4+ días sin contacto
-  const urgentes = LEADS_MOCK.filter(l =>
-    l.estado === 'caliente' && diasDesde(l.fechaContacto) >= 4
+  const sinAsignar = prospectos.filter(p => p.estado === 'calificado' && !p.asesor_asignado_id).length
+  const urgentes = prospectos.filter(p =>
+    etapaDe(p) === 'caliente' && diasDesde(p.fecha_inicio) >= 4,
   ).length
 
-  // Total de aves por etapa (para el embudo del hero)
-  const avesXEstado: Record<string, number> = {}
-  ORDEN.forEach(estado => {
-    avesXEstado[estado] = LEADS_MOCK
-      .filter(l => l.estado === estado)
-      .reduce((s, l) => s + l.avesLote, 0)
-  })
-
-  // Leads visibles: el filtro de estado aplica solo en vista lista
-  const leads = useMemo(() => {
-    let result = LEADS_MOCK
+  const prospectosVisibles = useMemo(() => {
+    let result = prospectos
     if (vista === 'tabla' && filtro !== 'todos') {
-      result = result.filter(l => l.estado === filtro)
+      result = result.filter(p => etapaDe(p) === filtro)
     }
     if (busqueda.trim()) {
       const q = busqueda.toLowerCase()
-      result = result.filter(l =>
-        l.nombre.toLowerCase().includes(q) ||
-        l.granja.toLowerCase().includes(q) ||
-        l.municipio.toLowerCase().includes(q)
+      result = result.filter(p =>
+        (p.nombre ?? '').toLowerCase().includes(q) ||
+        (p.nombre_granja ?? '').toLowerCase().includes(q) ||
+        (p.municipio ?? '').toLowerCase().includes(q)
       )
     }
     return result
-  }, [vista, filtro, busqueda])
+  }, [prospectos, vista, filtro, busqueda])
 
   return (
     <div className="page-container crm-page">
 
-      {/* ── Hero con métricas + embudo integrado (reemplaza pipeline cards) ─── */}
       <CrmHero
         cnts={cnts}
-        avesXEstado={avesXEstado}
-        avesTotal={avesTotal}
+        sinAsignar={sinAsignar}
         convPct={convPct}
         scorePromedio={scorePromedio}
         urgentes={urgentes}
       />
 
-      {/* ── Barra: búsqueda + toggle de vista ───────────────────────────────── */}
+      {error && <div className="crm-error-banner">{error}</div>}
+
       <div className="crm-toolbar">
         <div className="crm-search">
           <IcSearch size={14} className="crm-search-icon" />
@@ -575,113 +669,107 @@ function CrmPage() {
           >
             <IcUsers size={14} /> Lista
           </button>
+          <button className="crm-vista-btn" onClick={handleExportar} disabled={exportando}>
+            {exportando ? 'Exportando…' : 'Exportar CSV'}
+          </button>
         </div>
       </div>
 
-      {/* ── Vista Kanban ──────────────────────────────────────────────────────── */}
-      {vista === 'kanban' && (
-        <div className="crm-kanban">
-          {ORDEN.map(estado => {
-            const cfg      = CFG[estado]
-            const colLeads = leads.filter(l => l.estado === estado)
-            // Total de aves en esta columna (solo leads visibles con búsqueda activa)
-            const avesCol  = colLeads.reduce((s, l) => s + l.avesLote, 0)
-            // Lane horizontal: color en borde izquierdo identifica la etapa
-            return (
-              <div key={estado}
-                className={`crm-kanban-lane crm-kanban-lane--${estado}`}
-                style={{ borderLeftColor: cfg.color }}
-              >
-                {/* Panel lateral izquierdo — encabezado fijo del lane */}
-                <div className="crm-kanban-head">
-                  <span className="crm-kanban-head-emoji">{cfg.icon}</span>
-                  <span className="crm-kanban-head-title">{cfg.label}</span>
-                  <span className="crm-kanban-count"
-                    style={{ background: cfg.colorLight, color: cfg.color }}>
-                    {colLeads.length}
-                  </span>
-                  {avesCol > 0 && (
-                    <span className="crm-kanban-aves"><IcEgg size={10} /> {fmtAves(avesCol)}</span>
-                  )}
-                </div>
-
-                {/* Área de cards — desplazamiento horizontal */}
-                <div className="crm-kanban-body">
-                  {colLeads.length === 0 ? (
-                    <div className="crm-kanban-vacio">
-                      <p>Sin leads</p>
-                    </div>
-                  ) : (
-                    colLeads.map(lead => (
-                      <LeadCard
-                        key={lead.id}
-                        lead={lead}
-                        onClick={() => setSeleccionado(lead)}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-            )
-          })}
+      {cargando ? (
+        <p className="crm-vacio-simple">Cargando prospectos…</p>
+      ) : prospectos.length === 0 ? (
+        <div className="crm-vacio">
+          <span className="crm-vacio-emoji"><IcUsers size={22} /></span>
+          <p>Todavía no hay prospectos. Aparecerán aquí en cuanto alguien hable con el chatbot de la portada.</p>
         </div>
-      )}
-
-      {/* ── Vista Lista (tabla) ───────────────────────────────────────────────── */}
-      {vista === 'tabla' && (
+      ) : (
         <>
-          {/* Filtros por estado */}
-          <div className="crm-filtros">
-            {(['todos', ...ORDEN] as const).map(e => (
-              <button key={e}
-                className={`crm-filtro${filtro === e ? ' crm-filtro--activo' : ''}`}
-                onClick={() => setFiltro(e)}
-              >
-                {e === 'todos' ? 'Todos' : <>{CFG[e].icon} {CFG[e].label}</>}
-                {' '}({e === 'todos' ? LEADS_MOCK.length : cnts[e]})
-              </button>
-            ))}
-          </div>
+          {vista === 'kanban' && (
+            <div className="crm-kanban">
+              {ORDEN.map(etapa => {
+                const cfg      = CFG[etapa]
+                const colItems = prospectosVisibles.filter(p => etapaDe(p) === etapa)
+                return (
+                  <div key={etapa}
+                    className={`crm-kanban-lane crm-kanban-lane--${etapa}`}
+                    style={{ borderLeftColor: cfg.color }}
+                  >
+                    <div className="crm-kanban-head">
+                      <span className="crm-kanban-head-emoji">{cfg.icon}</span>
+                      <span className="crm-kanban-head-title">{cfg.label}</span>
+                      <span className="crm-kanban-count"
+                        style={{ background: cfg.colorLight, color: cfg.color }}>
+                        {colItems.length}
+                      </span>
+                    </div>
 
-          <div className="crm-tabla-card">
-            <table className="crm-tabla">
-              <thead>
-                <tr>
-                  <th>Prospecto</th>
-                  <th>Granja</th>
-                  <th>Municipio</th>
-                  <th>Aves / lote</th>
-                  <th>Puntaje</th>
-                  <th>Días</th>
-                  <th>Estado</th>
-                  <th>Contacto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leads.map(lead => (
-                  <FilaLead
-                    key={lead.id}
-                    lead={lead}
-                    onClick={() => setSeleccionado(lead)}
-                  />
+                    <div className="crm-kanban-body">
+                      {colItems.length === 0 ? (
+                        <div className="crm-kanban-vacio"><p>Sin prospectos</p></div>
+                      ) : (
+                        colItems.map(p => (
+                          <ProspectoCard key={p.id} p={p} onClick={() => setSeleccionado(p)} />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {vista === 'tabla' && (
+            <>
+              <div className="crm-filtros">
+                {(['todos', ...ORDEN] as const).map(e => (
+                  <button key={e}
+                    className={`crm-filtro${filtro === e ? ' crm-filtro--activo' : ''}`}
+                    onClick={() => setFiltro(e)}
+                  >
+                    {e === 'todos' ? 'Todos' : <>{CFG[e].icon} {CFG[e].label}</>}
+                    {' '}({e === 'todos' ? prospectos.length : cnts[e]})
+                  </button>
                 ))}
-              </tbody>
-            </table>
-            {leads.length === 0 && (
-              <div className="crm-vacio">
-                <span className="crm-vacio-emoji"><IcSearch size={22} /></span>
-                <p>No hay leads que coincidan con la búsqueda</p>
               </div>
-            )}
-          </div>
+
+              <div className="crm-tabla-card">
+                <table className="crm-tabla">
+                  <thead>
+                    <tr>
+                      <th>Prospecto</th>
+                      <th>Granja</th>
+                      <th>Municipio</th>
+                      <th>Canal</th>
+                      <th>Puntaje</th>
+                      <th>Días</th>
+                      <th>Estado</th>
+                      <th>Contacto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {prospectosVisibles.map(p => (
+                      <FilaProspecto key={p.id} p={p} onClick={() => setSeleccionado(p)} />
+                    ))}
+                  </tbody>
+                </table>
+                {prospectosVisibles.length === 0 && (
+                  <div className="crm-vacio">
+                    <span className="crm-vacio-emoji"><IcSearch size={22} /></span>
+                    <p>No hay prospectos que coincidan con la búsqueda</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </>
       )}
 
-      {/* ── Panel de detalle deslizable ──────────────────────────────────────── */}
       {seleccionado && (
         <DetallePanel
-          lead={seleccionado}
+          resumen={seleccionado}
+          admins={admins}
           onCerrar={() => setSeleccionado(null)}
+          onAsignado={cargar}
         />
       )}
 

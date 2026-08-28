@@ -201,7 +201,11 @@
   width: 96px; flex-shrink: 0; text-align: right;
   display: flex; flex-direction: column; gap: 0.04rem;
 }
-.admin-funnel-label { font-size: 0.8rem; font-weight: 700; color: var(--text2); }
+.admin-funnel-label {
+  display: inline-flex; align-items: center; justify-content: flex-end; gap: 0.35rem;
+  font-size: 0.8rem; font-weight: 700; color: var(--text2);
+}
+.admin-funnel-icon { display: inline-flex; }
 .admin-funnel-desc  { font-size: 0.67rem; color: var(--text3); }
 
 /* Pista centrada: barras centradas crean el efecto de embudo */

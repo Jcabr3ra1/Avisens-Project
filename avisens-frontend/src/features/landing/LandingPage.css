@@ -4,6 +4,13 @@
   background: var(--avisens-cream);
 }
 
+/* La landing es larga: el navegador puede aplazar el layout y pintado de las
+   secciones que todavía están lejos del viewport. */
+.landing-page > section:not(.hero) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 800px;
+}
+
 /* A sangre: la imagen llega hasta el borde de la ventana y la navbar flota
    encima, sin marco intermedio. */
 .landing-hero-frame {

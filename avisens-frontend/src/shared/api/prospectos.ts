@@ -22,6 +22,7 @@ export interface Prospecto {
   documento: string | null
   municipio: string | null
   departamento: string | null
+  numero_galpones: number | null
   area_granja_m2: number | null
   area_galpon_m2: number | null
   rol_prospecto: string | null
@@ -36,6 +37,7 @@ export interface Prospecto {
   accion_siguiente: string | null
   senal_caliente: boolean
   conectividad_limitada: boolean
+  viabilidad_tecnica: string | null
   estado: EstadoProspecto
   pregunta_actual: string | null
   ultima_pregunta: string | null
@@ -57,8 +59,15 @@ export interface RespuestaProspecto {
   fecha_respuesta: string
 }
 
+export interface AsesorDeProspecto {
+  id: number
+  nombre_completo: string
+  email: string
+}
+
 export type ProspectoDetalle = Prospecto & {
   respuestas: RespuestaProspecto[]
+  asesor: AsesorDeProspecto | null
 }
 
 export interface ProspectosQuery {

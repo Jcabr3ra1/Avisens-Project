@@ -35,19 +35,40 @@ services:
       # Admin de DESARROLLO local (no es prod). El seed lo crea con estas vars.
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@avisens.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Avisens2026!}
+      # Sin esto, pnpm aborta al arrancar si el volumen de node_modules quedó
+      # desincronizado (pide confirmar por TTY, que no existe en un contenedor
+      # en segundo plano). CI=true le dice que asuma "sí" y siga.
+      CI: "true"
     volumes:
       - ./avisens-backend:/app
       - /app/node_modules
-
-  # El frontend en local no espera al backend: nginx sirve la SPA igual, y
-  # bloquear el arranque hasta que /health responda alarga el ciclo de trabajo
-  # sin ganar nada. En produccion si espera (ver el archivo base).
-  frontend:
-    depends_on:
-      - backend
 
   # Microservicio Python con uvicorn --reload.
   ml:
     volumes:
       - ./avisens-ml:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend con Vite en modo dev (hot-reload). Usa la etapa `dev` del
+  # Dockerfile en vez del build estático + nginx, para que localhost:8080
+  # siempre refleje el código actual sin reconstruir la imagen a mano.
+  # VITE_API_URL apunta al puerto 3000 publicado en el host (docker-compose.yml
+  # ya lo expone), asi el navegador llama al backend directo sin pasar por
+  # proxy; el backend acepta cualquier origen en dev (ver CORS_ORIGIN).
+  # No se espera a /health del backend antes de arrancar: nginx/vite sirve la
+  # SPA igual, y bloquear el arranque solo alarga el ciclo de trabajo.
+  frontend:
+    depends_on:
+      - backend
+    build:
+      target: dev
+    environment:
+      VITE_API_URL: http://localhost:3000/v1
+      # Puerto publicado en el host para este servicio (ver "8080:80" arriba).
+      # Sin esto el cliente de HMR de Vite intenta conectar el websocket al
+      # puerto interno del contenedor (80, no publicado) y el hot-reload no
+      # llega al navegador aunque los archivos sí se recarguen en el server.
+      HMR_CLIENT_PORT: "8080"
+    volumes:
+      - ./avisens-frontend:/app
+      - /app/node_modules

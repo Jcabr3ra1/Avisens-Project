@@ -37,8 +37,22 @@
 }
 .btn-ghost:hover:not(:disabled) { background: var(--card-h); }
 
+.btn-ghost-sm {
+  padding: 0.4rem 0.7rem;
+  margin-right: 0.4rem;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.btn-ghost-sm:hover { background: var(--card-h); border-color: var(--green); }
+
 /* ---- Estado vacío / carga / error ---- */
-.grj-empty { color: var(--text3); font-size: 0.9rem; padding: 1.5rem 0; }
+.grj-empty, .grj-cargando { color: var(--text3); font-size: 0.9rem; padding: 1.5rem 0; text-align: center; }
 .grj-alert {
   background: color-mix(in srgb, var(--red) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--red) 25%, transparent);
@@ -108,11 +122,26 @@
   transition: box-shadow 0.2s, border-color 0.2s;
 }
 .grj-card:hover { box-shadow: 0 14px 40px rgba(10,40,28,0.1); border-color: rgba(16,185,129,0.2); }
+.grj-card--inactiva { opacity: 0.6; }
 
 .grj-card-head {
-  width: 100%; display: flex; align-items: center; justify-content: space-between;
-  padding: 1.1rem 1.4rem; gap: 1rem;
+  width: 100%; display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.6rem 0.8rem 0.6rem 1.4rem;
 }
+.grj-card-head-clickable {
+  flex: 1; display: flex; align-items: center; justify-content: space-between;
+  padding: 0.5rem 0; text-align: left; cursor: pointer;
+  background: transparent; border: none; gap: 1rem; min-width: 0;
+  transition: background 0.15s;
+}
+.grj-card-head-clickable:hover { background: rgba(16,185,129,0.03); border-radius: 10px; }
+
+.grj-tag-inactiva {
+  margin-left: 0.5rem; padding: 0.1rem 0.5rem; border-radius: 999px;
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+  background: color-mix(in srgb, var(--text3) 16%, transparent); color: var(--text3);
+}
+
 .grj-card--inactiva { opacity: 0.65; }
 
 .grj-card-titlebtn {
@@ -143,6 +172,8 @@
 }
 .grj-icon-btn:hover { background: var(--card-h); color: var(--dash-ink); }
 
+.grj-galpones-toolbar { display: flex; justify-content: flex-end; padding: 0.7rem 1.1rem 0; }
+
 /* ─── Tabla de galpones ──────────────────────────────────────────────────── */
 .grj-galpones { border-top: 1px solid rgba(16,44,35,0.07); overflow-x: auto; }
 .grj-tabla  { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
@@ -151,31 +182,44 @@
 .grj-tabla tbody tr:last-child td { border-bottom: none; }
 .grj-tabla tbody tr:hover td { background: rgba(16,185,129,0.03); }
 
-.grj-fila--inactivo td { opacity: 0.6; }
+.grj-fila--vacio        td { opacity: 0.6; }
+.grj-fila--desactivado  td { opacity: 0.55; }
 
 .grj-estado                    { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
 .grj-estado--activo            { color: var(--green-d); }
-.grj-estado--inactivo          { color: var(--text3); }
+.grj-estado--vacio             { color: var(--text3); }
 
 .grj-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .grj-dot--activo        { background: var(--green); box-shadow: 0 0 5px rgba(16,185,129,0.5); }
-.grj-dot--inactivo      { background: var(--text4); }
+.grj-dot--vacio         { background: var(--text4); }
 
-.grj-fila-acciones { display: flex; gap: 0.7rem; }
-.grj-link-btn {
-  background: transparent; border: none; padding: 0; cursor: pointer;
-  color: var(--green-d); font-size: 0.83rem; font-weight: 600;
-}
-.grj-link-btn:hover { text-decoration: underline; }
+.col-acciones { text-align: right; white-space: nowrap; }
 
-.grj-agregar-galpon {
-  display: inline-flex; align-items: center; gap: 0.4rem;
-  margin: 0.9rem 1.1rem 1.1rem; padding: 0.5rem 0.9rem;
-  background: transparent; border: 1px dashed var(--border); border-radius: 9px;
-  color: var(--text3); font-size: 0.83rem; font-weight: 600; cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+/* ---- Botón de acciones (⋯) y su menú ---- */
+.btn-kebab {
+  width: 30px; height: 30px;
+  background: transparent; border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 1.1rem; line-height: 1; cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
-.grj-agregar-galpon:hover { background: rgba(16,185,129,0.05); color: var(--green-d); border-color: rgba(16,185,129,0.3); }
+.btn-kebab:hover { background: var(--card-h); border-color: var(--green); }
+
+.menu-overlay { position: fixed; inset: 0; z-index: 40; }
+.menu-dropdown {
+  position: fixed; z-index: 41;
+  display: flex; flex-direction: column; gap: 0.15rem;
+  min-width: 150px; padding: 0.3rem;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.3);
+}
+.menu-item {
+  width: 100%; padding: 0.5rem 0.7rem;
+  background: transparent; border: none; border-radius: 7px;
+  text-align: left; font-size: 0.86rem; color: var(--text); cursor: pointer;
+}
+.menu-item:hover { background: var(--card-h); }
+.menu-item-danger { color: var(--red); }
+.menu-item-danger:hover { background: color-mix(in srgb, var(--red) 8%, transparent); }
 
 /* ─── Responsive: celular ────────────────────────────────────────────────── */
 @media (max-width: 640px) {
