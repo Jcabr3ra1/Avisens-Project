@@ -1,6 +1,13 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateUsuarioGalponDto, ListarUsuarioGalponDto } from './dto/create-usuario-galpon.dto';
+import type { Solicitante } from '../../common/auth/acceso';
+import { esAdministrador } from '../../common/auth/alcance';
+import { paginate } from '../../common/pagination/paginate';
+import { UsuariosService } from '../usuarios/usuarios.service';
+import {
+  CreateUsuarioGalponDto,
+  ListarUsuarioGalponDto,
+} from './dto/create-usuario-galpon.dto';
 
 const SELECT = {
   id: true,
@@ -15,69 +22,73 @@ const SELECT = {
 
 @Injectable()
 export class UsuariosGalponesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private usuariosService: UsuariosService,
+  ) {}
 
-  async crear(dto: CreateUsuarioGalponDto) {
-    try {
-      return await this.prisma.usuarioGalpon.create({
-        data: {
-          usuario_id: dto.usuario_id,
-          galpon_id: dto.galpon_id,
-          rol_asignacion: dto.rol_asignacion,
-        },
-        select: SELECT,
-      });
-    } catch (error) {
-      if (error instanceof Error && 'code' in error && error.code === 'P2002') {
-        throw new ConflictException('Este usuario ya está asignado a este galpón');
-      }
-      throw error;
-    }
+  async crear(dto: CreateUsuarioGalponDto, solicitante: Solicitante) {
+    return this.usuariosService.asignarGalpon(
+      dto.usuario_id,
+      dto.galpon_id,
+      dto.rol_asignacion,
+      solicitante,
+    );
   }
 
-  async listar(dto: ListarUsuarioGalponDto) {
+  async listar(dto: ListarUsuarioGalponDto, solicitante: Solicitante) {
     const where = {
-      ...(dto.usuario_id ? { usuario_id: dto.usuario_id } : {}),
-      ...(dto.galpon_id ? { galpon_id: dto.galpon_id } : {}),
+      ...(dto.usuario_id !== undefined ? { usuario_id: dto.usuario_id } : {}),
+      ...(dto.galpon_id !== undefined ? { galpon_id: dto.galpon_id } : {}),
       ...(dto.activa !== undefined ? { activa: dto.activa } : {}),
+      ...(!esAdministrador(solicitante)
+        ? { galpon: { granja: { propietario_id: solicitante.id } } }
+        : {}),
     };
-    return this.prisma.usuarioGalpon.findMany({
-      where,
-      select: SELECT,
-      orderBy: { fecha_asignacion: 'desc' },
-    });
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.usuarioGalpon.findMany({
+        where,
+        select: SELECT,
+        orderBy: { fecha_asignacion: 'desc' },
+        skip: (dto.page - 1) * dto.limit,
+        take: dto.limit,
+      }),
+      this.prisma.usuarioGalpon.count({ where }),
+    ]);
+    return paginate(data, total, dto.page, dto.limit);
   }
 
-  async obtener(id: number) {
-    const asignacion = await this.prisma.usuarioGalpon.findUnique({
-      where: { id },
+  async obtener(id: number, solicitante: Solicitante) {
+    const asignacion = await this.prisma.usuarioGalpon.findFirst({
+      where: {
+        id,
+        ...(!esAdministrador(solicitante)
+          ? { galpon: { granja: { propietario_id: solicitante.id } } }
+          : {}),
+      },
       select: SELECT,
     });
     if (!asignacion) throw new NotFoundException('Asignación no encontrada');
     return asignacion;
   }
 
-  async desactivar(id: number) {
-    await this.obtener(id);
-    return this.prisma.usuarioGalpon.update({
-      where: { id },
-      data: { activa: false },
-      select: SELECT,
-    });
+  async desactivar(id: number, solicitante: Solicitante) {
+    const asignacion = await this.obtener(id, solicitante);
+    await this.usuariosService.desasignarGalpon(
+      asignacion.usuario_id,
+      asignacion.galpon_id,
+      solicitante,
+    );
+    return this.obtener(id, solicitante);
   }
 
-  async activar(id: number) {
-    await this.obtener(id);
-    return this.prisma.usuarioGalpon.update({
-      where: { id },
-      data: { activa: true },
-      select: SELECT,
-    });
-  }
-
-  async eliminar(id: number) {
-    await this.obtener(id);
-    await this.prisma.usuarioGalpon.delete({ where: { id } });
-    return { id, eliminado: true };
+  async activar(id: number, solicitante: Solicitante) {
+    const asignacion = await this.obtener(id, solicitante);
+    return this.usuariosService.asignarGalpon(
+      asignacion.usuario_id,
+      asignacion.galpon_id,
+      asignacion.rol_asignacion ?? undefined,
+      solicitante,
+    );
   }
 }

@@ -1,35 +1,31 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { TipoMovimientoInventario } from '@prisma/client';
+import { IsEnum, IsInt, IsOptional } from 'class-validator';
+import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto';
+import { RegistrarMovimientoDto } from '../../insumos/dto/registrar-movimiento.dto';
 
-export class CreateMovimientoInventarioDto {
+export class CreateMovimientoInventarioDto extends RegistrarMovimientoDto {
   @ApiProperty({ example: 1, description: 'ID del insumo' })
   @IsInt()
   insumo_id: number;
+}
 
-  @ApiProperty({ example: 'entrada', description: 'Tipo: entrada | salida | ajuste' })
-  @IsIn(['entrada', 'salida', 'ajuste'])
-  tipo_movimiento: string;
+export class ListarMovimientosInventarioDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ example: 1, description: 'Filtrar por insumo' })
+  @Type(() => Number)
+  @IsInt()
+  @IsOptional()
+  insumo_id?: number;
 
-  @ApiProperty({ example: 50.5, description: 'Cantidad del movimiento' })
-  cantidad: number;
-
-  @ApiPropertyOptional({ example: 1, description: 'ID del lote asociado (salidas)' })
+  @ApiPropertyOptional({ example: 1, description: 'Filtrar por lote' })
+  @Type(() => Number)
   @IsInt()
   @IsOptional()
   lote_id?: number;
 
-  @ApiPropertyOptional({ example: 'kg', description: 'Unidad de medida' })
-  @IsString()
+  @ApiPropertyOptional({ enum: TipoMovimientoInventario })
+  @IsEnum(TipoMovimientoInventario)
   @IsOptional()
-  unidad_medida?: string;
-
-  @ApiPropertyOptional({ example: 'Compra de alimento', description: 'Motivo del movimiento' })
-  @IsString()
-  @IsOptional()
-  motivo?: string;
-
-  @ApiPropertyOptional({ example: 1, description: 'ID del usuario que registra' })
-  @IsInt()
-  @IsOptional()
-  usuario_id?: number;
+  tipo_movimiento?: TipoMovimientoInventario;
 }

@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto';
 
 export class CreateZonaGalponDto {
   @ApiProperty({ example: 1, description: 'ID del galpón al que pertenece' })
@@ -15,32 +23,50 @@ export class CreateZonaGalponDto {
   @IsOptional()
   codigo?: string;
 
-  @ApiPropertyOptional({ example: 'alimentacion', description: 'Tipo: alimentacion | descanso | ventilacion | otro' })
+  @ApiPropertyOptional({
+    example: 'alimentacion',
+    description: 'Tipo: alimentacion | descanso | ventilacion | otro',
+  })
   @IsString()
   @IsOptional()
   tipo_zona?: string;
 
-  @ApiPropertyOptional({ example: 0, description: 'Coordenada X inicio (metros)' })
+  @ApiPropertyOptional({
+    example: 0,
+    description: 'Coordenada X inicio (metros)',
+  })
   @IsNumber()
   @IsOptional()
   coordenada_x_inicio?: number;
 
-  @ApiPropertyOptional({ example: 0, description: 'Coordenada Y inicio (metros)' })
+  @ApiPropertyOptional({
+    example: 0,
+    description: 'Coordenada Y inicio (metros)',
+  })
   @IsNumber()
   @IsOptional()
   coordenada_y_inicio?: number;
 
-  @ApiPropertyOptional({ example: 10, description: 'Coordenada X fin (metros)' })
+  @ApiPropertyOptional({
+    example: 10,
+    description: 'Coordenada X fin (metros)',
+  })
   @IsNumber()
   @IsOptional()
   coordenada_x_fin?: number;
 
-  @ApiPropertyOptional({ example: 20, description: 'Coordenada Y fin (metros)' })
+  @ApiPropertyOptional({
+    example: 20,
+    description: 'Coordenada Y fin (metros)',
+  })
   @IsNumber()
   @IsOptional()
   coordenada_y_fin?: number;
 
-  @ApiPropertyOptional({ example: '#FF5733', description: 'Color para visualización en mapa' })
+  @ApiPropertyOptional({
+    example: '#FF5733',
+    description: 'Color para visualización en mapa',
+  })
   @IsString()
   @IsOptional()
   color_visualizacion?: string;
@@ -49,4 +75,12 @@ export class CreateZonaGalponDto {
   @IsBoolean()
   @IsOptional()
   activa?: boolean;
+}
+
+export class ListarZonasGalponDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ example: 1, description: 'Filtrar por galpón' })
+  @Type(() => Number)
+  @IsInt()
+  @IsOptional()
+  galpon_id?: number;
 }

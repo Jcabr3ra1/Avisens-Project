@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsOptional, IsString } from 'class-validator';
+import { Transform, Type, type TransformFnParams } from 'class-transformer';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString } from 'class-validator';
+import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto';
 
 export class CreateUsuarioGalponDto {
   @ApiProperty({ example: 1, description: 'ID del usuario a asignar' })
@@ -10,24 +12,38 @@ export class CreateUsuarioGalponDto {
   @IsInt()
   galpon_id: number;
 
-  @ApiPropertyOptional({ example: 'galponero', description: 'Rol en la asignación: galponero | supervisor | tecnico' })
+  @ApiPropertyOptional({
+    example: 'galponero',
+    description: 'Rol en la asignación: galponero | supervisor | tecnico',
+  })
   @IsString()
+  @IsIn(['galponero', 'supervisor', 'tecnico'])
   @IsOptional()
   rol_asignacion?: string;
 }
 
-export class ListarUsuarioGalponDto {
+export class ListarUsuarioGalponDto extends PaginationQueryDto {
   @ApiPropertyOptional({ example: 1, description: 'Filtrar por usuario' })
+  @Type(() => Number)
   @IsInt()
   @IsOptional()
   usuario_id?: number;
 
   @ApiPropertyOptional({ example: 1, description: 'Filtrar por galpón' })
+  @Type(() => Number)
   @IsInt()
   @IsOptional()
   galpon_id?: number;
 
-  @ApiPropertyOptional({ example: true, description: 'Solo asignaciones activas' })
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Solo asignaciones activas',
+  })
+  @Transform(({ value }: TransformFnParams): unknown => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value as unknown;
+  })
   @IsBoolean()
   @IsOptional()
   activa?: boolean;

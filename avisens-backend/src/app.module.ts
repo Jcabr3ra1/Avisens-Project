@@ -59,6 +59,8 @@ import { ZonasGalponModule } from './modules/zonas-galpon/zonas-galpon.module';
 import { UsuariosGalponesModule } from './modules/usuarios-galpones/usuarios-galpones.module';
 import { MovimientosInventarioModule } from './modules/movimientos-inventario/movimientos-inventario.module';
 import { ModelosMlModule } from './modules/modelos-ml/modelos-ml.module';
+import { AnalisisBioacusticoModule } from './modules/analisis-bioacustico/analisis-bioacustico.module';
+import { AnalisisVisionModule } from './modules/analisis-vision/analisis-vision.module';
 import { JobsModule } from './common/jobs/jobs.module';
 import { ObservabilityModule } from './common/observability/observability.module';
 import { RequestObservabilityInterceptor } from './common/observability/request-observability.interceptor';
@@ -142,6 +144,8 @@ import { RequestObservabilityInterceptor } from './common/observability/request-
     UsuariosGalponesModule,
     MovimientosInventarioModule,
     ModelosMlModule,
+    AnalisisBioacusticoModule,
+    AnalisisVisionModule,
   ],
   providers: [
     {

@@ -1,5 +1,14 @@
 import {
-  Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -21,23 +30,34 @@ export class ModelosMlController {
 
   @Post()
   @ApiOperation({ summary: 'Registrar un modelo de ML' })
-  crear(@Body() dto: CreateModeloMlDto) { return this.service.crear(dto); }
+  crear(@Body() dto: CreateModeloMlDto) {
+    return this.service.crear(dto);
+  }
 
   @Get()
   @ApiOperation({ summary: 'Listar modelos de ML paginados' })
-  listar(@Query() paginacion: PaginationQueryDto) { return this.service.listar(paginacion); }
+  listar(@Query() paginacion: PaginationQueryDto) {
+    return this.service.listar(paginacion);
+  }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un modelo por ID' })
-  obtener(@Param('id', ParseIntPipe) id: number) { return this.service.obtener(id); }
+  obtener(@Param('id', ParseIntPipe) id: number) {
+    return this.service.obtener(id);
+  }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar un modelo' })
-  actualizar(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateModeloMlDto) {
+  actualizar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateModeloMlDto,
+  ) {
     return this.service.actualizar(id, dto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar un modelo' })
-  eliminar(@Param('id', ParseIntPipe) id: number) { return this.service.eliminar(id); }
+  @ApiOperation({ summary: 'Desactivar un modelo conservando su historial' })
+  eliminar(@Param('id', ParseIntPipe) id: number) {
+    return this.service.eliminar(id);
+  }
 }

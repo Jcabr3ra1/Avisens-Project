@@ -1,17 +1,32 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsObject, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsObject,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateModeloMlDto {
-  @ApiPropertyOptional({ example: 'prediccion-mortalidad', description: 'Nombre del modelo' })
+  @ApiPropertyOptional({
+    example: 'prediccion-mortalidad',
+    description: 'Nombre del modelo',
+  })
   @IsString()
   nombre: string;
 
-  @ApiPropertyOptional({ example: 'regresion', description: 'Tipo: regresion | clasificacion | clustering' })
+  @ApiPropertyOptional({
+    example: 'regresion',
+    description: 'Tipo: regresion | clasificacion | clustering',
+  })
   @IsString()
   @IsOptional()
   tipo?: string;
 
-  @ApiPropertyOptional({ example: 'Predecir mortalidad acumulada', description: 'Objetivo del modelo' })
+  @ApiPropertyOptional({
+    example: 'Predecir mortalidad acumulada',
+    description: 'Objetivo del modelo',
+  })
   @IsString()
   @IsOptional()
   objetivo?: string;
@@ -21,17 +36,34 @@ export class CreateModeloMlDto {
   @IsOptional()
   version?: string;
 
-  @ApiPropertyOptional({ example: 'scikit-learn', description: 'Framework usado' })
+  @ApiPropertyOptional({
+    example: 'scikit-learn',
+    description: 'Framework usado',
+  })
   @IsString()
   @IsOptional()
   framework?: string;
 
-  @ApiPropertyOptional({ example: { rmse: 2.3, r2: 0.87 }, description: 'Métricas del modelo (JSON)' })
+  @ApiPropertyOptional({
+    example: { rmse: 2.3, r2: 0.87 },
+    description: 'Métricas del modelo (JSON)',
+  })
   @IsObject()
   @IsOptional()
   metricas?: Record<string, unknown>;
 
-  @ApiPropertyOptional({ example: true, description: 'Si el modelo está activo' })
+  @ApiPropertyOptional({
+    example: '2026-08-27T15:30:00.000Z',
+    description: 'Fecha y hora en que terminó el entrenamiento',
+  })
+  @IsDateString()
+  @IsOptional()
+  fecha_entrenamiento?: string;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Si el modelo está activo',
+  })
   @IsBoolean()
   @IsOptional()
   activo?: boolean;

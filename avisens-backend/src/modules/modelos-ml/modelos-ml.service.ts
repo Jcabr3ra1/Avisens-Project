@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '../../common/pagination/paginate';
@@ -33,13 +37,18 @@ export class ModelosMlService {
           version: dto.version,
           framework: dto.framework,
           metricas: dto.metricas as unknown as Prisma.InputJsonValue,
+          fecha_entrenamiento: dto.fecha_entrenamiento
+            ? new Date(dto.fecha_entrenamiento)
+            : undefined,
           activo: dto.activo ?? true,
         },
         select: SELECT,
       });
     } catch (error) {
       if (error instanceof Error && 'code' in error && error.code === 'P2002') {
-        throw new ConflictException(`Ya existe un modelo "${dto.nombre}" versión "${dto.version}"`);
+        throw new ConflictException(
+          `Ya existe un modelo "${dto.nombre}" versión "${dto.version}"`,
+        );
       }
       throw error;
     }
@@ -63,30 +72,46 @@ export class ModelosMlService {
       where: { id },
       select: SELECT,
     });
-    if (!modelo) throw new NotFoundException(`Modelo con ID ${id} no encontrado`);
+    if (!modelo)
+      throw new NotFoundException(`Modelo con ID ${id} no encontrado`);
     return modelo;
   }
 
   async actualizar(id: number, dto: UpdateModeloMlDto) {
     await this.obtener(id);
-    return this.prisma.modeloMl.update({
-      where: { id },
-      data: {
-        nombre: dto.nombre,
-        tipo: dto.tipo,
-        objetivo: dto.objetivo,
-        version: dto.version,
-        framework: dto.framework,
-        metricas: dto.metricas as unknown as Prisma.InputJsonValue,
-        activo: dto.activo,
-      },
-      select: SELECT,
-    });
+    try {
+      return await this.prisma.modeloMl.update({
+        where: { id },
+        data: {
+          nombre: dto.nombre,
+          tipo: dto.tipo,
+          objetivo: dto.objetivo,
+          version: dto.version,
+          framework: dto.framework,
+          metricas: dto.metricas as unknown as Prisma.InputJsonValue,
+          fecha_entrenamiento: dto.fecha_entrenamiento
+            ? new Date(dto.fecha_entrenamiento)
+            : undefined,
+          activo: dto.activo,
+        },
+        select: SELECT,
+      });
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'P2002') {
+        throw new ConflictException(
+          `Ya existe un modelo "${dto.nombre}" versión "${dto.version}"`,
+        );
+      }
+      throw error;
+    }
   }
 
   async eliminar(id: number) {
     await this.obtener(id);
-    await this.prisma.modeloMl.delete({ where: { id } });
-    return { id, eliminado: true };
+    return this.prisma.modeloMl.update({
+      where: { id },
+      data: { activo: false },
+      select: SELECT,
+    });
   }
 }

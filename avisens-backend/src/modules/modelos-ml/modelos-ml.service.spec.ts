@@ -6,14 +6,23 @@ import { ModelosMlService } from './modelos-ml.service';
 describe('ModelosMlService', () => {
   let service: ModelosMlService;
   const prisma = {
-    modeloMl: { create: jest.fn(), findMany: jest.fn(), count: jest.fn(), findUnique: jest.fn(), update: jest.fn(), delete: jest.fn() },
+    modeloMl: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ModelosMlService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        ModelosMlService,
+        { provide: PrismaService, useValue: prisma },
+      ],
     }).compile();
     service = module.get<ModelosMlService>(ModelosMlService);
     prisma.$transaction.mockResolvedValue([[], 0]);
@@ -28,7 +37,9 @@ describe('ModelosMlService', () => {
   it('lanza ConflictException si nombre+version duplicados', async () => {
     const err = Object.assign(new Error('dup'), { code: 'P2002' });
     prisma.modeloMl.create.mockRejectedValue(err);
-    await expect(service.crear({ nombre: 'test', version: '1.0' })).rejects.toThrow(ConflictException);
+    await expect(
+      service.crear({ nombre: 'test', version: '1.0' }),
+    ).rejects.toThrow(ConflictException);
   });
 
   it('lanza NotFound al obtener inexistente', async () => {
@@ -36,9 +47,27 @@ describe('ModelosMlService', () => {
     await expect(service.obtener(99)).rejects.toThrow(NotFoundException);
   });
 
-  it('elimina un modelo', async () => {
+  it('desactiva un modelo conservando su historial', async () => {
     prisma.modeloMl.findUnique.mockResolvedValue({ id: 1 });
-    prisma.modeloMl.delete.mockResolvedValue({ id: 1 });
-    expect(await service.eliminar(1)).toEqual({ id: 1, eliminado: true });
+    prisma.modeloMl.update.mockResolvedValue({ id: 1, activo: false });
+    expect(await service.eliminar(1)).toEqual({ id: 1, activo: false });
+    expect(prisma.modeloMl.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { activo: false } }),
+    );
+  });
+
+  it('guarda la fecha de entrenamiento como Date', async () => {
+    prisma.modeloMl.create.mockResolvedValue({ id: 1 });
+    await service.crear({
+      nombre: 'mortalidad',
+      fecha_entrenamiento: '2026-08-27T15:30:00.000Z',
+    });
+    const llamadas = prisma.modeloMl.create.mock.calls as unknown as Array<
+      [{ data: { fecha_entrenamiento?: Date } }]
+    >;
+    const data = llamadas[0][0].data;
+    expect(data.fecha_entrenamiento).toEqual(
+      new Date('2026-08-27T15:30:00.000Z'),
+    );
   });
 });

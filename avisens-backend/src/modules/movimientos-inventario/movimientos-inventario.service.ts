@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '../../common/pagination/paginate';
-import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
-import { CreateMovimientoInventarioDto } from './dto/create-movimiento-inventario.dto';
+import type { Solicitante } from '../../common/auth/acceso';
+import { esAdministrador } from '../../common/auth/alcance';
+import { InsumosService } from '../insumos/insumos.service';
+import {
+  CreateMovimientoInventarioDto,
+  ListarMovimientosInventarioDto,
+} from './dto/create-movimiento-inventario.dto';
 
 const SELECT = {
   id: true,
@@ -22,48 +26,68 @@ const SELECT = {
 
 @Injectable()
 export class MovimientosInventarioService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private insumosService: InsumosService,
+  ) {}
 
-  async crear(dto: CreateMovimientoInventarioDto) {
-    return this.prisma.movimientoInventario.create({
-      data: {
-        insumo_id: dto.insumo_id,
-        tipo_movimiento: dto.tipo_movimiento as 'entrada' | 'salida' | 'ajuste',
-        cantidad: dto.cantidad as unknown as Prisma.Decimal,
+  async crear(dto: CreateMovimientoInventarioDto, solicitante: Solicitante) {
+    return this.insumosService.registrarMovimiento(
+      dto.insumo_id,
+      {
+        tipo_movimiento: dto.tipo_movimiento,
+        cantidad: dto.cantidad,
         lote_id: dto.lote_id,
-        unidad_medida: dto.unidad_medida,
         motivo: dto.motivo,
-        usuario_id: dto.usuario_id ?? 1,
+        comprobante_url: dto.comprobante_url,
       },
-      select: SELECT,
-    });
+      solicitante,
+    );
   }
 
-  async listar({ page, limit }: PaginationQueryDto) {
+  async listar(
+    solicitante: Solicitante,
+    {
+      page,
+      limit,
+      insumo_id,
+      lote_id,
+      tipo_movimiento,
+    }: ListarMovimientosInventarioDto,
+  ) {
+    const where = {
+      ...(insumo_id !== undefined ? { insumo_id } : {}),
+      ...(lote_id !== undefined ? { lote_id } : {}),
+      ...(tipo_movimiento !== undefined ? { tipo_movimiento } : {}),
+      ...(!esAdministrador(solicitante)
+        ? { insumo: { granja: { propietario_id: solicitante.id } } }
+        : {}),
+    };
     const [data, total] = await this.prisma.$transaction([
       this.prisma.movimientoInventario.findMany({
+        where,
         select: SELECT,
         orderBy: { fecha_movimiento: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.prisma.movimientoInventario.count(),
+      this.prisma.movimientoInventario.count({ where }),
     ]);
     return paginate(data, total, page, limit);
   }
 
-  async obtener(id: number) {
-    const mov = await this.prisma.movimientoInventario.findUnique({
-      where: { id },
+  async obtener(id: number, solicitante: Solicitante) {
+    const mov = await this.prisma.movimientoInventario.findFirst({
+      where: {
+        id,
+        ...(!esAdministrador(solicitante)
+          ? { insumo: { granja: { propietario_id: solicitante.id } } }
+          : {}),
+      },
       select: SELECT,
     });
-    if (!mov) throw new NotFoundException(`Movimiento con ID ${id} no encontrado`);
+    if (!mov)
+      throw new NotFoundException(`Movimiento con ID ${id} no encontrado`);
     return mov;
-  }
-
-  async eliminar(id: number) {
-    await this.obtener(id);
-    await this.prisma.movimientoInventario.delete({ where: { id } });
-    return { id, eliminado: true };
   }
 }
