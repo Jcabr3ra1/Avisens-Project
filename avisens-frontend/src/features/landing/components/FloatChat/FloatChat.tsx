@@ -49,7 +49,7 @@ function traducirError(err: unknown, fallback: string): ErrorChat {
 
   if (!err.response) {
     return {
-      texto: 'No se pudo conectar con el servidor. Revisa que la API esté arriba.',
+      texto: 'No se pudo conectar. Revisa tu conexión a internet e inténtalo de nuevo.',
       reiniciar: true,
     }
   }
@@ -59,7 +59,7 @@ function traducirError(err: unknown, fallback: string): ErrorChat {
 
   if (status === 429) {
     return {
-      texto: 'Vas muy rápido para el servidor. Espera un momento y vuelve a intentarlo.',
+      texto: 'Vas muy rápido. Espera un momento y vuelve a intentarlo.',
       reiniciar: false,
     }
   }
@@ -69,7 +69,7 @@ function traducirError(err: unknown, fallback: string): ErrorChat {
   }
 
   if (status === 404) {
-    return { texto: 'Esta conversación ya no existe en el servidor.', reiniciar: true }
+    return { texto: 'Esta conversación ya no existe. Empecemos una nueva.', reiniciar: true }
   }
 
   return { texto: mensaje || fallback, reiniciar: true }

@@ -79,14 +79,14 @@ function Hero() {
         </p>
 
         <div className="hero-bottom-left">
-          <a href="#cifras" className="hero-about-link">
+          <a href="#beneficios" className="hero-about-link">
             <span aria-hidden="true" />
             Conocer AVISENS
           </a>
         </div>
 
         <a
-          href="#cifras"
+          href="#beneficios"
           className="hero-story-card"
           aria-label="Conocer cómo AVISENS acompaña cada granja"
         >

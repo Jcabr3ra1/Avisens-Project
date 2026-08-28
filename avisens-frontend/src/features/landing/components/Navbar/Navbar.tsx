@@ -3,10 +3,7 @@ import { Link } from 'react-router-dom';
 import logoAvisens from '@shared/assets/logo-avisens.png';
 import './Navbar.css';
 
-const navItems: [string, string][] = [
-  ['Inicio', '#'],
-  ['Resultados', '#cifras'],
-];
+const navItems: [string, string][] = [['Cómo ayuda', '#beneficios']];
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);

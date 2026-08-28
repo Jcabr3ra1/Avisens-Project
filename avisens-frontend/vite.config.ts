@@ -33,5 +33,14 @@ export default defineConfig({
       usePolling: true,
       interval: 300,
     },
+    // Vite escucha en el puerto 80 dentro del contenedor, pero el navegador
+    // carga la página por el puerto publicado en el host (8080). Sin esto,
+    // el cliente de HMR intenta abrir el websocket contra localhost:80 (no
+    // publicado) y los cambios nunca llegan solos al navegador.
+    // HMR_CLIENT_PORT solo se define en docker-compose.override.yml: fuera
+    // de Docker (npm run dev directo) queda undefined y Vite usa su default.
+    hmr: process.env.HMR_CLIENT_PORT
+      ? { clientPort: Number(process.env.HMR_CLIENT_PORT) }
+      : undefined,
   },
 })

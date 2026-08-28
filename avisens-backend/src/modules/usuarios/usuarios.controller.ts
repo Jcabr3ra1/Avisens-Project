@@ -51,6 +51,12 @@ export class UsuariosController {
     return this.usuariosService.listar(req.user, paginacion);
   }
 
+  @Get('catalogos/roles')
+  @ApiOperation({ summary: 'Listar roles disponibles para gestionar usuarios' })
+  listarRoles(@Req() req: AuthRequest) {
+    return this.usuariosService.listarRoles(req.user);
+  }
+
   @Post(':id/galpones')
   @ApiOperation({ summary: 'Asignar o reactivar un galpón para un Operario' })
   asignarGalpon(

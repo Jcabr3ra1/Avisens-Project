@@ -6,52 +6,65 @@
 //   /admin      → solo Administrador (AdminPage)
 //   /dashboard  → Propietario y Operario (DashboardPage operativo)
 //   resto       → según permisos definidos en navConfig.tsx
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import PanelLayout from './layout/PanelLayout'
-import LandingPage from '@features/landing/LandingPage'
-import LoginPage from '@features/login/LoginPage'
-import AdminPage from '@features/admin/AdminPage'          // Panel exclusivo del Administrador
-import DashboardPage from '@features/dashboard/DashboardPage'
-import CrmPage from '@features/crm/CrmPage'
-import MonitoreoPage from '@features/monitoreo/MonitoreoPage'
-import BitacoraPage from '@features/bitacora/BitacoraPage'
-import AlertasPage from '@features/alertas/AlertasPage'
-import FinanzasPage from '@features/finanzas/FinanzasPage'
-import InventarioPage from '@features/inventario/InventarioPage'
-import InfraestructuraPage from '@features/infraestructura/InfraestructuraPage'
-import UsuariosPage from '@features/usuarios/UsuariosPage'
-import GranjasPage from '@features/granjas/GranjasPage'
-import SensoresPage from '@features/sensores/SensoresPage'
+
+// Cada pantalla se descarga solo cuando el usuario entra a su ruta. Antes se
+// enviaban todos los módulos (y todo su CSS) en el primer acceso, aunque la
+// mayoría no fueran necesarios para la página actual.
+const PanelLayout = lazy(() => import('./layout/PanelLayout'))
+const LandingPage = lazy(() => import('@features/landing/LandingPage'))
+const LoginPage = lazy(() => import('@features/login/LoginPage'))
+const AdminPage = lazy(() => import('@features/admin/AdminPage'))
+const DashboardPage = lazy(() => import('@features/dashboard/DashboardPage'))
+const CrmPage = lazy(() => import('@features/crm/CrmPage'))
+const MonitoreoPage = lazy(() => import('@features/monitoreo/MonitoreoPage'))
+const BitacoraPage = lazy(() => import('@features/bitacora/BitacoraPage'))
+const AlertasPage = lazy(() => import('@features/alertas/AlertasPage'))
+const FinanzasPage = lazy(() => import('@features/finanzas/FinanzasPage'))
+const InventarioPage = lazy(() => import('@features/inventario/InventarioPage'))
+const InfraestructuraPage = lazy(() => import('@features/infraestructura/InfraestructuraPage'))
+const UsuariosPage = lazy(() => import('@features/usuarios/UsuariosPage'))
+const GranjasPage = lazy(() => import('@features/granjas/GranjasPage'))
+const SensoresPage = lazy(() => import('@features/sensores/SensoresPage'))
+
+function cargarPagina(page: ReactNode) {
+  return (
+    <Suspense fallback={<div className="route-loading" role="status">Cargando…</div>}>
+      {page}
+    </Suspense>
+  )
+}
 
 function AppRoutes() {
   return (
     <Routes>
       {/* GRUPO 1: Standalone — pantalla completa sin layout */}
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={cargarPagina(<LoginPage />)} />
 
       {/* GRUPO 2: Web pública — la landing controla sus propios componentes */}
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={cargarPagina(<LandingPage />)} />
 
       {/* GRUPO 3: App interna — con Sidebar lateral (PanelLayout) */}
       {/* PanelLayout verifica sesión y permisos antes de renderizar cada página */}
-      <Route element={<PanelLayout />}>
+      <Route element={cargarPagina(<PanelLayout />)}>
         {/* Panel del Administrador — solo accesible con rol 'Administrador' */}
-        <Route path="/admin"           element={<AdminPage />} />
+        <Route path="/admin"           element={cargarPagina(<AdminPage />)} />
 
         {/* Dashboard operativo — para Propietario y Operario */}
-        <Route path="/dashboard"       element={<DashboardPage />} />
+        <Route path="/dashboard"       element={cargarPagina(<DashboardPage />)} />
 
         {/* Módulos del sistema — acceso según navConfig.tsx */}
-        <Route path="/crm"             element={<CrmPage />} />
-        <Route path="/monitoreo"       element={<MonitoreoPage />} />
-        <Route path="/bitacora"        element={<BitacoraPage />} />
-        <Route path="/alertas"         element={<AlertasPage />} />
-        <Route path="/finanzas"        element={<FinanzasPage />} />
-        <Route path="/inventario"      element={<InventarioPage />} />
-        <Route path="/infraestructura" element={<InfraestructuraPage />} />
-        <Route path="/usuarios"        element={<UsuariosPage />} />
-        <Route path="/granjas"         element={<GranjasPage />} />
-        <Route path="/sensores"        element={<SensoresPage />} />
+        <Route path="/crm"             element={cargarPagina(<CrmPage />)} />
+        <Route path="/monitoreo"       element={cargarPagina(<MonitoreoPage />)} />
+        <Route path="/bitacora"        element={cargarPagina(<BitacoraPage />)} />
+        <Route path="/alertas"         element={cargarPagina(<AlertasPage />)} />
+        <Route path="/finanzas"        element={cargarPagina(<FinanzasPage />)} />
+        <Route path="/inventario"      element={cargarPagina(<InventarioPage />)} />
+        <Route path="/infraestructura" element={cargarPagina(<InfraestructuraPage />)} />
+        <Route path="/usuarios"        element={cargarPagina(<UsuariosPage />)} />
+        <Route path="/granjas"         element={cargarPagina(<GranjasPage />)} />
+        <Route path="/sensores"        element={cargarPagina(<SensoresPage />)} />
       </Route>
     </Routes>
   )

@@ -1,0 +1,7 @@
+meta {
+  name: [Admin · Propietario] Listar zonas
+  type: http
+  seq: 2
+}
+get { url: {{baseUrl}}/v1/zonas-galpon?page=1&limit=20; auth: bearer }
+auth:bearer { token: {{token}} }
