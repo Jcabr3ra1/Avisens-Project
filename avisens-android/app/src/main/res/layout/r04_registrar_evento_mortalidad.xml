@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -25,8 +26,7 @@
             android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginBottom="14dp"/>
-
+            android:layout_marginBottom="14dp" />
 
         <!-- ====================================== -->
         <!-- TIPO DE EVENTO -->
@@ -39,11 +39,11 @@
             android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginBottom="6dp"/>
+            android:layout_marginBottom="8dp" />
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:weightSum="2">
 
@@ -51,47 +51,117 @@
             <!-- MURIÓ -->
             <!-- ================================== -->
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnEventoMurio"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardTipoMurio"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
+                android:layout_height="70dp"
                 android:layout_weight="1"
-                android:text="♡&#10;Murió"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="#B82F2F"
-                android:backgroundTint="@color/white"
-                android:gravity="center"
-                app:cornerRadius="10dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#E2C7C7"
-                android:layout_marginEnd="5dp"/>
+                android:layout_marginEnd="5dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                app:cardBackgroundColor="#FDE7E7"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#FF3B30"
+                app:strokeWidth="1dp">
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="♡"
+                        android:textSize="25sp"
+                        android:textColor="#B3261E"
+                        android:gravity="center" />
+
+                    <TextView
+                        android:id="@+id/txtTipoMurio"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Murió"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="#A61B16"
+                        android:layout_marginTop="2dp" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- ================================== -->
             <!-- ENFERMO -->
             <!-- ================================== -->
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnEventoEnfermo"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardTipoEnfermo"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
+                android:layout_height="70dp"
                 android:layout_weight="1"
-                android:text="♧&#10;Enfermo"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="#66736D"
-                android:backgroundTint="@color/white"
-                android:gravity="center"
-                app:cornerRadius="10dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#D6DED9"
-                android:layout_marginStart="5dp"/>
+                android:layout_marginStart="5dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                app:cardBackgroundColor="#F1F8F5"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#DCE8E2"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="♧"
+                        android:textSize="27sp"
+                        android:textColor="#718078"
+                        android:gravity="center" />
+
+                    <TextView
+                        android:id="@+id/txtTipoEnfermo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Enfermo"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="#5F6B65"
+                        android:layout_marginTop="2dp" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
 
+        <!-- ====================================== -->
+        <!-- LOTE -->
+        <!-- ====================================== -->
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Lote"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="6dp" />
+
+        <Spinner
+            android:id="@+id/spinnerLote"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:background="@drawable/bg_input_event"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp" />
 
         <!-- ====================================== -->
         <!-- CANTIDAD Y FECHA -->
@@ -104,7 +174,7 @@
             android:layout_marginTop="14dp"
             android:weightSum="2">
 
-            <!-- CANTIDAD -->
+            <!-- CANTIDAD DE AVES -->
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -120,23 +190,22 @@
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
-                    android:layout_marginBottom="6dp"/>
+                    android:layout_marginBottom="6dp" />
 
                 <EditText
                     android:id="@+id/edtCantidadAves"
                     android:layout_width="match_parent"
                     android:layout_height="46dp"
                     android:background="@drawable/bg_input_event"
-                    android:hint="Ej: 500"
+                    android:hint="Ej: 35"
                     android:textSize="13sp"
                     android:textColor="@color/black"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
                     android:inputType="number"
-                    android:singleLine="true"/>
+                    android:singleLine="true" />
 
             </LinearLayout>
-
 
             <!-- FECHA -->
 
@@ -154,160 +223,99 @@
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
-                    android:layout_marginBottom="6dp"/>
+                    android:layout_marginBottom="6dp" />
 
                 <EditText
                     android:id="@+id/edtFecha"
                     android:layout_width="match_parent"
                     android:layout_height="46dp"
                     android:background="@drawable/bg_input_event"
-                    android:hint="30/06/2026"
+                    android:hint="27/08/2026"
                     android:textSize="13sp"
+                    android:textColor="@color/black"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
-                    android:textColor="@color/black"
                     android:singleLine="true"
                     android:focusable="false"
-                    android:clickable="true"/>
+                    android:clickable="true" />
 
             </LinearLayout>
 
         </LinearLayout>
 
-
         <!-- ====================================== -->
-        <!-- CAUSA PROBABLE -->
+        <!-- CAUSA PRESUNTIVA -->
         <!-- ====================================== -->
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Causa probable"
+            android:text="Causa presuntiva"
             android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
             android:layout_marginTop="14dp"
-            android:layout_marginBottom="6dp"/>
+            android:layout_marginBottom="6dp" />
 
-        <Spinner
-            android:id="@+id/spinnerCausa"
+        <EditText
+            android:id="@+id/edtCausaPresuntiva"
             android:layout_width="match_parent"
             android:layout_height="46dp"
-            android:textColor="@color/black"
             android:background="@drawable/bg_input_event"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"/>
-
+            android:hint="Ej: sin determinar"
+            android:textSize="13sp"
+            android:textColor="@color/black"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:singleLine="true" />
 
         <!-- ====================================== -->
-        <!-- ZONA DEL GALPÓN -->
+        <!-- DISPOSICIÓN -->
         <!-- ====================================== -->
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Zona del galpón"
+            android:text="Disposición"
             android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
             android:layout_marginTop="14dp"
-            android:layout_marginBottom="6dp"/>
+            android:layout_marginBottom="6dp" />
 
-        <LinearLayout
+        <EditText
+            android:id="@+id/edtDisposicion"
             android:layout_width="match_parent"
-            android:layout_height="38dp"
-            android:orientation="horizontal"
-            android:weightSum="4">
+            android:layout_height="46dp"
+            android:background="@drawable/bg_input_event"
+            android:hint="Opcional"
+            android:textSize="13sp"
+            android:textColor="@color/black"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:singleLine="true" />
 
-            <!-- NORTE -->
+        <!-- ====================================== -->
+        <!-- MÉTODO DE REGISTRO -->
+        <!-- ====================================== -->
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnZonaNorte"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="Norte"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white"
-                android:backgroundTint="#2E8B57"
-                android:gravity="center"
-                app:cornerRadius="8dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:layout_marginEnd="3dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Método de registro"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="6dp" />
 
-
-            <!-- SUR -->
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnZonaSur"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="Sur"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="#66736D"
-                android:backgroundTint="@color/white"
-                android:gravity="center"
-                app:cornerRadius="8dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#D6DED9"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:layout_marginStart="3dp"
-                android:layout_marginEnd="3dp"/>
-
-
-            <!-- ESTE -->
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnZonaEste"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="Este"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="#66736D"
-                android:backgroundTint="@color/white"
-                android:gravity="center"
-                app:cornerRadius="8dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#D6DED9"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:layout_marginStart="3dp"
-                android:layout_marginEnd="3dp"/>
-
-
-            <!-- OESTE -->
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnZonaOeste"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="Oeste"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="#66736D"
-                android:backgroundTint="@color/white"
-                android:gravity="center"
-                app:cornerRadius="8dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#D6DED9"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:layout_marginStart="3dp"/>
-
-        </LinearLayout>
-
+        <Spinner
+            android:id="@+id/spinnerMetodoRegistro"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:background="@drawable/bg_input_event"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp" />
 
         <!-- ====================================== -->
         <!-- OBSERVACIONES -->
@@ -321,7 +329,7 @@
             android:textStyle="bold"
             android:textColor="@color/text_primary"
             android:layout_marginTop="14dp"
-            android:layout_marginBottom="6dp"/>
+            android:layout_marginBottom="6dp" />
 
         <EditText
             android:id="@+id/edtObservaciones"
@@ -329,75 +337,12 @@
             android:layout_height="64dp"
             android:background="@drawable/bg_observaciones"
             android:gravity="top|start"
-            android:hint=""
+            android:hint="Escribe una observación..."
             android:padding="12dp"
             android:textSize="13sp"
             android:textColor="@color/black"
             android:inputType="textMultiLine"
-            android:overScrollMode="ifContentScrolls"/>
-
-
-        <!-- ====================================== -->
-        <!-- EVIDENCIA -->
-        <!-- ====================================== -->
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="14dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Evidencia "
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="(opcional)"
-                android:textSize="12sp"
-                android:textColor="#8A9690"/>
-
-        </LinearLayout>
-
-
-        <!-- ====================================== -->
-        <!-- ADJUNTAR FOTO -->
-        <!-- ====================================== -->
-
-        <LinearLayout
-            android:id="@+id/btnAdjuntarFoto"
-            android:layout_width="match_parent"
-            android:layout_height="70dp"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/bg_evidence"
-            android:clickable="true"
-            android:focusable="true"
-            android:layout_marginTop="6dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="▣"
-                android:textSize="22sp"
-                android:textColor="#8A9690"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Adjuntar foto"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="#8A9690"
-                android:layout_marginTop="2dp"/>
-
-        </LinearLayout>
-
+            android:overScrollMode="ifContentScrolls" />
 
         <!-- ====================================== -->
         <!-- BOTONES -->
@@ -408,9 +353,7 @@
             android:layout_height="48dp"
             android:orientation="horizontal"
             android:gravity="center"
-            android:layout_marginTop="8dp">
-
-            <!-- CANCELAR -->
+            android:layout_marginTop="14dp">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCancelarEvento"
@@ -424,15 +367,12 @@
                 android:textColor="@color/text_primary"
                 android:backgroundTint="@color/white"
                 android:gravity="center"
-                app:cornerRadius="10dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#D6DED9"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:layout_marginEnd="4dp"/>
-
-
-            <!-- GUARDAR -->
+                android:layout_marginEnd="4dp"
+                app:cornerRadius="10dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#D6DED9" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnGuardarEvento"
@@ -446,10 +386,10 @@
                 android:textColor="@android:color/white"
                 android:backgroundTint="#2E8B57"
                 android:gravity="center"
-                app:cornerRadius="10dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:layout_marginStart="4dp"/>
+                android:layout_marginStart="4dp"
+                app:cornerRadius="10dp" />
 
         </LinearLayout>
 

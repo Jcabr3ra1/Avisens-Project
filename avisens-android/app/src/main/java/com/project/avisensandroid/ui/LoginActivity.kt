@@ -17,11 +17,14 @@ class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
 
-    // Controla si la contraseña está visible o escondida
+    // Controla si la contraseña está visible
     private var passwordVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Inicializar Retrofit
+        RetrofitClient.inicializar(applicationContext)
 
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -36,28 +39,24 @@ class LoginActivity : AppCompatActivity() {
 
             if (passwordVisible) {
 
-                // Mostrar contraseña
                 binding.etContrasena.transformationMethod =
                     HideReturnsTransformationMethod.getInstance()
 
-                // Cambiar icono a ojo
                 binding.btnTogglePassword.setImageResource(
                     R.drawable.ic_eye
                 )
 
             } else {
 
-                // Ocultar contraseña
                 binding.etContrasena.transformationMethod =
                     PasswordTransformationMethod.getInstance()
 
-                // Cambiar icono a ojo tachado
                 binding.btnTogglePassword.setImageResource(
                     R.drawable.ic_eye_off
                 )
             }
 
-            // Mantener el cursor al final del texto
+            // Mantener cursor al final
             binding.etContrasena.setSelection(
                 binding.etContrasena.text.length
             )
@@ -72,41 +71,99 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    // ==========================================
+    // LOGIN
+    // ==========================================
+
     private fun hacerLogin() {
 
-        val username = binding.etCorreo.text.toString().trim()
-        val password = binding.etContrasena.text.toString().trim()
+        val email =
+            binding.etCorreo.text
+                .toString()
+                .trim()
 
+        val password =
+            binding.etContrasena.text
+                .toString()
+                .trim()
+
+        // Limpiar mensaje anterior
         binding.txtError.text = ""
 
-        if (username.isEmpty() || password.isEmpty()) {
-            binding.txtError.text = "Completa todos los campos"
+        // ==========================================
+        // VALIDAR CAMPOS
+        // ==========================================
+
+        if (email.isEmpty()) {
+
+            binding.txtError.text =
+                "Ingresa tu correo electrónico"
+
             return
         }
 
-        binding.progressLogin.visibility = View.VISIBLE
+        if (password.isEmpty()) {
+
+            binding.txtError.text =
+                "Ingresa tu contraseña"
+
+            return
+        }
+
+        // ==========================================
+        // MOSTRAR CARGANDO
+        // ==========================================
+
+        binding.progressLogin.visibility =
+            View.VISIBLE
+
         binding.btnEntrar.isEnabled = false
 
+        // ==========================================
+        // LLAMAR API
+        // ==========================================
+
         lifecycleScope.launch {
+
             try {
 
-                val response = RetrofitClient.api.login(
-                    LoginRequest(
-                        email = username,
-                        password = password
+                val response =
+                    RetrofitClient.api.login(
+                        LoginRequest(
+                            email = email,
+                            password = password
+                        )
                     )
-                )
+
+                // ======================================
+                // LOGIN CORRECTO
+                // ======================================
 
                 if (response.isSuccessful) {
 
-                    val loginData = response.body()
+                    val loginData =
+                        response.body()
 
-                    // Guardar el token
+                    if (loginData == null) {
+
+                        binding.txtError.text =
+                            "El servidor no devolvió información"
+
+                        return@launch
+                    }
+
+                    // ==================================
+                    // GUARDAR ACCESS TOKEN
+                    // ==================================
+
                     guardarToken(
-                        loginData?.accessToken ?: ""
+                        loginData.access_token
                     )
 
-                    // Navegar a MainActivity
+                    // ==================================
+                    // NAVEGAR A MAIN ACTIVITY
+                    // ==================================
+
                     startActivity(
                         Intent(
                             this@LoginActivity,
@@ -114,37 +171,74 @@ class LoginActivity : AppCompatActivity() {
                         )
                     )
 
-                    // Cerrar LoginActivity
                     finish()
 
                 } else {
 
-                    binding.txtError.text =
-                        "Usuario o contraseña incorrectos"
+                    // ==================================
+                    // ERROR DEL SERVIDOR
+                    // ==================================
+
+                    when (response.code()) {
+
+                        401 -> {
+                            binding.txtError.text =
+                                "Correo o contraseña incorrectos"
+                        }
+
+                        403 -> {
+                            binding.txtError.text =
+                                "Tu cuenta está bloqueada"
+                        }
+
+                        else -> {
+                            binding.txtError.text =
+                                "Error del servidor: ${response.code()}"
+                        }
+                    }
                 }
 
             } catch (e: Exception) {
+
+                // ==================================
+                // ERROR DE CONEXIÓN
+                // ==================================
 
                 binding.txtError.text =
                     "Error de conexión: ${e.message}"
 
             } finally {
 
-                binding.progressLogin.visibility = View.GONE
-                binding.btnEntrar.isEnabled = true
+                // ==================================
+                // OCULTAR CARGANDO
+                // ==================================
+
+                binding.progressLogin.visibility =
+                    View.GONE
+
+                binding.btnEntrar.isEnabled =
+                    true
             }
         }
     }
 
+    // ==========================================
+    // GUARDAR TOKEN
+    // ==========================================
+
     private fun guardarToken(token: String) {
 
-        val prefs = getSharedPreferences(
-            "app_prefs",
-            MODE_PRIVATE
-        )
+        val prefs =
+            getSharedPreferences(
+                "app_prefs",
+                MODE_PRIVATE
+            )
 
         prefs.edit()
-            .putString("token", token)
+            .putString(
+                "token",
+                token
+            )
             .apply()
     }
 }

@@ -38,6 +38,7 @@
         android:singleLine="true"
         android:textSize="12sp"
         android:textColor="@color/black"
+        android:hint="Ej. Alimento iniciación"
         android:inputType="text"
         android:layout_marginBottom="13dp" />
 
@@ -51,14 +52,18 @@
         android:textColor="#171D1A"
         android:layout_marginBottom="5dp" />
 
-    <Spinner
-        android:id="@+id/spinnerCategoria"
+    <EditText
+        android:id="@+id/edtCategoriaInsumo"
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:background="@drawable/bg_input_verde"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:singleLine="true"
+        android:textSize="12sp"
         android:textColor="@color/black"
+        android:hint="Ej. Alimento, medicamento, vacuna"
+        android:inputType="text"
         android:layout_marginBottom="13dp" />
 
     <!-- CANTIDAD + UNIDAD -->
@@ -95,6 +100,7 @@
                 android:singleLine="true"
                 android:textSize="12sp"
                 android:textColor="@color/black"
+                android:hint="Ej. 100"
                 android:inputType="numberDecimal" />
 
         </LinearLayout>
@@ -104,8 +110,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_marginStart="0dp">
+            android:orientation="vertical">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -116,14 +121,18 @@
                 android:textColor="#171D1A"
                 android:layout_marginBottom="5dp" />
 
-            <Spinner
-                android:id="@+id/spinnerUnidad"
+            <EditText
+                android:id="@+id/edtUnidadInsumo"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
                 android:background="@drawable/bg_input_verde"
-                android:paddingStart="8dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:singleLine="true"
+                android:textSize="12sp"
                 android:textColor="@color/black"
-                android:paddingEnd="8dp" />
+                android:hint="Ej. kg"
+                android:inputType="text" />
 
         </LinearLayout>
 
@@ -146,7 +155,6 @@
         android:background="@drawable/bg_input_verde"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
-        android:textColor="@color/black"
         android:layout_marginBottom="20dp" />
 
     <!-- BOTONES -->

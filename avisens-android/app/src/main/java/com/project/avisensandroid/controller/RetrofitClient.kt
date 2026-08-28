@@ -1,5 +1,7 @@
 package com.project.avisensandroid.controller
 
+import android.content.Context
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -7,23 +9,88 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
 
-    private const val BASE_URL = "https://avisens-project-production.up.railway.app/"
+    private const val BASE_URL =
+        "https://avisens-project-production.up.railway.app/"
 
-    // Muestra en el Logcat lo que se envía y se recibe (útil para depurar)
-    private val logging = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+    private lateinit var appContext: Context
+
+    // ==========================================
+    // INICIALIZAR CLIENTE
+    // ==========================================
+
+    fun inicializar(context: Context) {
+        appContext = context.applicationContext
     }
 
-    private val client = OkHttpClient.Builder()
-        .addInterceptor(logging)
-        .build()
+    // ==========================================
+    // LOGGING
+    // ==========================================
 
-    // 'by lazy' = se crea solo la primera vez que se usa
+    private val loggingInterceptor =
+        HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+
+    // ==========================================
+    // INTERCEPTOR DE AUTENTICACIÓN
+    // ==========================================
+
+    private val authInterceptor =
+        Interceptor { chain ->
+
+            val requestOriginal = chain.request()
+
+            val requestBuilder =
+                requestOriginal.newBuilder()
+
+            // Obtener token guardado
+            if (::appContext.isInitialized) {
+
+                val prefs =
+                    appContext.getSharedPreferences(
+                        "app_prefs",
+                        Context.MODE_PRIVATE
+                    )
+
+                val token =
+                    prefs.getString("token", null)
+
+                if (!token.isNullOrBlank()) {
+
+                    requestBuilder.header(
+                        "Authorization",
+                        "Bearer $token"
+                    )
+                }
+            }
+
+            chain.proceed(
+                requestBuilder.build()
+            )
+        }
+
+    // ==========================================
+    // OKHTTP CLIENT
+    // ==========================================
+
+    private val client =
+        OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
+            .addInterceptor(loggingInterceptor)
+            .build()
+
+    // ==========================================
+    // RETROFIT
+    // ==========================================
+
     val api: ApiService by lazy {
+
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(
+                GsonConverterFactory.create()
+            )
             .build()
             .create(ApiService::class.java)
     }
