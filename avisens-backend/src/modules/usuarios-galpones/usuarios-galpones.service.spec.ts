@@ -461,7 +461,7 @@ describe('UsuariosGalponesService', () => {
       expect(result.data).toEqual(asignacionesMock);
       expect(result.meta.total).toBe(2);
     });
-
+ 
     it('❌ debería rechazar (403) si el galpón no es del propietario', async () => {
       prismaMock.galpon.findUnique.mockResolvedValue({
         id: 1,
