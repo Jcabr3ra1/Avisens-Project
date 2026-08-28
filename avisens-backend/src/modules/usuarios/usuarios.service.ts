@@ -245,6 +245,16 @@ export class UsuariosService {
     return paginate(data, total, page, limit);
   }
 
+  listarRoles(solicitante: Solicitante) {
+    return this.prisma.rol.findMany({
+      where: esPropietario(solicitante)
+        ? { nombre: ROLES.OPERARIO }
+        : undefined,
+      select: { id: true, nombre: true },
+      orderBy: { id: 'asc' },
+    });
+  }
+
   async obtener(id: number, solicitante: Solicitante) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id },

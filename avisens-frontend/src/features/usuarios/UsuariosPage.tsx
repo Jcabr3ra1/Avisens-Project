@@ -1,453 +1,144 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { isAxiosError } from 'axios'
-import {
-  listarUsuarios,
-  crearUsuario,
-  actualizarUsuario,
-  eliminarUsuario,
-  getRol,
-  type Usuario,
-  type CrearUsuarioPayload,
-} from '@shared/api'
-import { IcUsers, IcSearch, IcEye, IcEyeOff } from '@shared/ui/icons/icons'
+import { useCallback } from 'react'
+import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
+import BarraUsuarios from './components/BarraUsuarios'
+import FormularioUsuario from './components/FormularioUsuario'
+import ResumenUsuarios from './components/ResumenUsuarios'
+import TablaUsuarios from './components/TablaUsuarios'
+import { useCatalogosUsuarios } from './hooks/useCatalogosUsuarios'
+import { useFiltroUsuarios } from './hooks/useFiltroUsuarios'
+import { useFormularioUsuario } from './hooks/useFormularioUsuario'
+import { useResumenUsuarios } from './hooks/useResumenUsuarios'
+import { useUsuarios } from './hooks/useUsuarios'
 import './UsuariosPage.css'
 
-// El backend no expone un endpoint de roles, así que los listamos aquí.
-// Coinciden con los insertados en database/init/01-init.sql.
-const ROLES = [
-  { id: 1, nombre: 'Administrador' },
-  { id: 2, nombre: 'Propietario' },
-  { id: 3, nombre: 'Operario' },
-]
-
-const FORM_INICIAL: CrearUsuarioPayload = {
-  nombre_completo: '',
-  cedula: '',
-  email: '',
-  password: '',
-  telefono: '',
-  rol_id: 2,
-}
-
-// Traduce un error de axios a un mensaje legible para el usuario.
-function mensajeError(err: unknown, fallback: string): string {
-  if (isAxiosError(err) && err.response) {
-    if (err.response.status === 403) {
-      return 'No tienes permisos para esta acción.'
-    }
-    const data = err.response.data as { message?: string | string[] }
-    if (data?.message) {
-      return Array.isArray(data.message) ? data.message.join(', ') : data.message
-    }
-  }
-  return fallback
-}
-
 function UsuariosPage() {
-  const [usuarios, setUsuarios] = useState<Usuario[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState('')
-
-  const [modalAbierto, setModalAbierto] = useState(false)
-  // null = creando un usuario nuevo; un id = editando ese usuario.
-  const [editandoId, setEditandoId] = useState<number | null>(null)
-  const [form, setForm] = useState<CrearUsuarioPayload>(FORM_INICIAL)
-  const [guardando, setGuardando] = useState(false)
-  const [errorForm, setErrorForm] = useState('')
-
-  // Menú de acciones (⋯) abierto: guarda la fila y dónde dibujarlo.
-  const [menu, setMenu] = useState<{ user: Usuario; top: number; left: number } | null>(null)
-
-  // Búsqueda por nombre, correo o cédula (filtro en el cliente).
-  const [busqueda, setBusqueda] = useState('')
-
-  // Mostrar/ocultar el texto de la contraseña en el formulario.
-  const [mostrarPassword, setMostrarPassword] = useState(false)
-
-  const modoEdicion = editandoId !== null
-
-  // El Propietario solo gestiona operarios; el Admin gestiona todos los roles.
   const esPropietario = getRol() === 'Propietario'
-  const rolesDisponibles = esPropietario
-    ? ROLES.filter((r) => r.nombre === 'Operario')
-    : ROLES
+  const {
+    usuarios,
+    cargando,
+    error,
+    recargar,
+    crear,
+    actualizar,
+    alternarActivo,
+    eliminar,
+  } = useUsuarios()
+  const catalogos = useCatalogosUsuarios(esPropietario)
+  const filtro = useFiltroUsuarios(usuarios)
+  const resumen = useResumenUsuarios(usuarios)
 
-  // Cifras del resumen — cuentan sobre TODOS los usuarios, sin filtrar por búsqueda.
-  const totalUsuarios  = usuarios.length
-  const totalActivos   = usuarios.filter((u) => u.activo).length
-  const totalPropietarios = usuarios.filter((u) => u.rol.nombre === 'Propietario').length
-  const totalOperarios    = usuarios.filter((u) => u.rol.nombre === 'Operario').length
+  const guardarUsuario = useCallback(
+    async (datos: CrearUsuarioPayload, editandoId: number | null) => {
+      const telefono = datos.telefono?.trim()
 
-  // Lista filtrada por el término de búsqueda (nombre, correo o cédula).
-  const usuariosFiltrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase()
-    if (!q) return usuarios
-    return usuarios.filter((u) =>
-      u.nombre_completo.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      u.cedula.toLowerCase().includes(q),
-    )
-  }, [usuarios, busqueda])
-
-  async function cargarUsuarios() {
-    setCargando(true)
-    setError('')
-    try {
-      setUsuarios(await listarUsuarios())
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudieron cargar los usuarios.'))
-    } finally {
-      setCargando(false)
-    }
-  }
-
-  useEffect(() => {
-    cargarUsuarios()
-  }, [])
-
-  function abrirCrear() {
-    setEditandoId(null)
-    // Para el Dueño, el rol por defecto (y único) es Operario.
-    setForm({ ...FORM_INICIAL, rol_id: esPropietario ? 3 : FORM_INICIAL.rol_id })
-    setErrorForm('')
-    setMostrarPassword(false)
-    setModalAbierto(true)
-  }
-
-  function abrirEditar(u: Usuario) {
-    setEditandoId(u.id)
-    setForm({
-      nombre_completo: u.nombre_completo,
-      cedula: u.cedula,
-      email: u.email,
-      password: '', // vacío = no cambiar la contraseña
-      telefono: u.telefono ?? '',
-      rol_id: u.rol.id,
-    })
-    setErrorForm('')
-    setMostrarPassword(false)
-    setModalAbierto(true)
-  }
-
-  function actualizarCampo<K extends keyof CrearUsuarioPayload>(
-    campo: K,
-    valor: CrearUsuarioPayload[K],
-  ) {
-    setForm((prev) => ({ ...prev, [campo]: valor }))
-  }
-
-  async function handleGuardar(e: FormEvent) {
-    e.preventDefault()
-    setErrorForm('')
-    setGuardando(true)
-    try {
-      const telefono = form.telefono?.trim() || undefined
-      if (modoEdicion && editandoId !== null) {
-        // En edición solo mandamos la contraseña si el campo no quedó vacío.
-        const { password, ...resto } = form
-        await actualizarUsuario(editandoId, {
-          ...resto,
-          telefono,
-          ...(password ? { password } : {}),
+      if (editandoId !== null) {
+        await actualizar(editandoId, {
+          nombre_completo: datos.nombre_completo.trim(),
+          cedula: datos.cedula.trim(),
+          email: datos.email.trim(),
+          telefono: telefono || '',
+          rol_id: datos.rol_id,
         })
-      } else {
-        await crearUsuario({ ...form, telefono })
+        return
       }
-      setModalAbierto(false)
-      await cargarUsuarios()
-    } catch (err) {
-      setErrorForm(
-        mensajeError(err, `No se pudo ${modoEdicion ? 'actualizar' : 'crear'} el usuario.`),
-      )
-    } finally {
-      setGuardando(false)
-    }
-  }
 
-  // Interruptor de Estado: enciende/apaga la cuenta (borrado lógico).
-  async function handleToggleActivo(u: Usuario) {
-    try {
-      await actualizarUsuario(u.id, { activo: !u.activo })
-      await cargarUsuarios()
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudo cambiar el estado del usuario.'))
-    }
-  }
+      await crear({
+        ...datos,
+        nombre_completo: datos.nombre_completo.trim(),
+        cedula: datos.cedula.trim(),
+        email: datos.email.trim(),
+        telefono: telefono || undefined,
+        organizacion_nombre: datos.organizacion_nombre?.trim() || undefined,
+      })
+    },
+    [actualizar, crear],
+  )
 
-  // Borrado permanente (con confirmación).
-  async function handleEliminar(u: Usuario) {
-    const ok = window.confirm(
-      `¿Eliminar PERMANENTEMENTE a ${u.nombre_completo}?\nEsta acción no se puede deshacer.`,
+  const formulario = useFormularioUsuario(guardarUsuario)
+  const rolInicial = catalogos.roles.length === 1 ? catalogos.roles[0].id : 0
+
+  function confirmarEliminacion(usuario: Usuario) {
+    const confirmado = window.confirm(
+      `¿Eliminar permanentemente a ${usuario.nombre_completo}? Esta acción no se puede deshacer.`,
     )
-    if (!ok) return
-    try {
-      await eliminarUsuario(u.id)
-      await cargarUsuarios()
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudo eliminar el usuario.'))
-    }
+    if (confirmado) void eliminar(usuario.id)
   }
 
-  // Abre el menú ⋯ justo debajo del botón que se pulsó.
-  function abrirMenu(e: React.MouseEvent, u: Usuario) {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setMenu({ user: u, top: r.bottom + 4, left: r.right - 152 })
-  }
+  const tituloFormulario = formulario.modoEdicion
+    ? `Editar ${esPropietario ? 'operario' : 'usuario'}`
+    : `Nuevo ${esPropietario ? 'operario' : 'usuario'}`
 
   return (
     <div className="page-container usuarios">
       <header className="usuarios-head">
         <div>
-          <h1 className="usuarios-title">{esPropietario ? 'Operarios' : 'Usuarios y Roles'}</h1>
+          <h1 className="usuarios-title">{esPropietario ? 'Operarios' : 'Usuarios y roles'}</h1>
           <p className="usuarios-sub">
             {esPropietario
-              ? 'Gestiona los operarios de tu granja.'
+              ? 'Gestiona los operarios de tu organización.'
               : 'Gestiona las cuentas que acceden al sistema.'}
           </p>
         </div>
-        <button className="btn-primary" onClick={abrirCrear}>
+        <button
+          type="button"
+          className="usuarios-btn-primary"
+          onClick={() => formulario.abrirCrear(rolInicial)}
+          disabled={catalogos.cargando || catalogos.roles.length === 0}
+        >
           + {esPropietario ? 'Nuevo operario' : 'Nuevo usuario'}
         </button>
       </header>
 
-      {/* ── Resumen de cifras ─────────────────────────────────────────────── */}
-      <div className="usuarios-resumen">
-        <div className="usuarios-stat">
-          <span className="usuarios-stat-valor">{totalUsuarios}</span>
-          <span className="usuarios-stat-label">{esPropietario ? 'Operarios' : 'Total'}</span>
+      <ResumenUsuarios resumen={resumen} esPropietario={esPropietario} />
+
+      {(error || catalogos.error) && (
+        <div className="usuarios-alert" role="alert">
+          <span>{error || catalogos.error}</span>
+          <button
+            type="button"
+            onClick={() => void (error ? recargar() : catalogos.recargar())}
+          >
+            Reintentar
+          </button>
         </div>
-        <div className="usuarios-stat usuarios-stat--activo">
-          <span className="usuarios-stat-valor">{totalActivos}</span>
-          <span className="usuarios-stat-label">Activos</span>
-        </div>
-        {!esPropietario && (
-          <>
-            <div className="usuarios-stat">
-              <span className="usuarios-stat-valor">{totalPropietarios}</span>
-              <span className="usuarios-stat-label">Propietarios</span>
-            </div>
-            <div className="usuarios-stat">
-              <span className="usuarios-stat-valor">{totalOperarios}</span>
-              <span className="usuarios-stat-label">Operarios</span>
-            </div>
-          </>
-        )}
-      </div>
-
-      {error && <div className="usuarios-alert" role="alert">{error}</div>}
-
-      <div className="usuarios-card">
-        {/* ── Buscador ─────────────────────────────────────────────────────── */}
-        {!cargando && usuarios.length > 0 && (
-          <div className="usuarios-toolbar">
-            <label className="usuarios-search">
-              <IcSearch size={15} />
-              <input
-                type="text"
-                placeholder="Buscar por nombre, correo o cédula…"
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-              />
-            </label>
-            <span className="usuarios-toolbar-count">
-              {usuariosFiltrados.length} de {usuarios.length}
-            </span>
-          </div>
-        )}
-
-        {cargando ? (
-          <p className="usuarios-empty">Cargando usuarios…</p>
-        ) : usuarios.length === 0 ? (
-          <div className="usuarios-vacio">
-            <IcUsers size={32} />
-            <p className="usuarios-vacio-titulo">No hay usuarios registrados.</p>
-            <p className="usuarios-vacio-sub">Crea el primero con el botón de arriba.</p>
-          </div>
-        ) : usuariosFiltrados.length === 0 ? (
-          <div className="usuarios-vacio">
-            <IcSearch size={28} />
-            <p className="usuarios-vacio-titulo">Sin resultados para "{busqueda}"</p>
-            <p className="usuarios-vacio-sub">Prueba con otro nombre, correo o cédula.</p>
-          </div>
-        ) : (
-          <table className="usuarios-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Cédula</th>
-                <th>Teléfono</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                <th aria-label="Acciones"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuariosFiltrados.map((u) => (
-                <tr key={u.id} className={u.activo ? '' : 'is-inactive'}>
-                  <td>{u.nombre_completo}</td>
-                  <td>{u.email}</td>
-                  <td>{u.cedula}</td>
-                  <td>{u.telefono ?? '—'}</td>
-                  <td><span className={`rol-badge rol-badge--${u.rol.nombre.toLowerCase()}`}>{u.rol.nombre}</span></td>
-                  <td>
-                    <label className="switch" title={u.activo ? 'Desactivar' : 'Activar'}>
-                      <input
-                        type="checkbox"
-                        checked={u.activo}
-                        onChange={() => handleToggleActivo(u)}
-                      />
-                      <span className="switch-slider" />
-                    </label>
-                    <span className={`estado-text ${u.activo ? 'activo' : 'inactivo'}`}>
-                      {u.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td className="col-acciones">
-                    <button
-                      className="btn-kebab"
-                      onClick={(e) => (menu?.user.id === u.id ? setMenu(null) : abrirMenu(e, u))}
-                      aria-label="Acciones"
-                    >
-                      ⋯
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {menu && (
-        <>
-          <div className="menu-overlay" onClick={() => setMenu(null)} />
-          <div className="menu-dropdown" style={{ top: menu.top, left: menu.left }}>
-            <button
-              className="menu-item"
-              onClick={() => { const u = menu.user; setMenu(null); abrirEditar(u) }}
-            >
-              Editar
-            </button>
-            <button
-              className="menu-item menu-item-danger"
-              onClick={() => { const u = menu.user; setMenu(null); handleEliminar(u) }}
-            >
-              Eliminar
-            </button>
-          </div>
-        </>
       )}
 
-      {modalAbierto && (
-        <div className="modal-overlay" onClick={() => setModalAbierto(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h2 className="modal-title">
-              {modoEdicion
-                ? esPropietario ? 'Editar operario' : 'Editar usuario'
-                : esPropietario ? 'Nuevo operario' : 'Nuevo usuario'}
-            </h2>
+      <section className="usuarios-card" aria-label="Listado de usuarios">
+        {!cargando && usuarios.length > 0 && (
+          <BarraUsuarios
+            busqueda={filtro.busqueda}
+            visibles={filtro.visibles.length}
+            total={usuarios.length}
+            onBuscar={filtro.setBusqueda}
+          />
+        )}
+        <TablaUsuarios
+          usuarios={usuarios}
+          visibles={filtro.visibles}
+          cargando={cargando}
+          busqueda={filtro.busqueda}
+          onAlternarActivo={(usuario) => void alternarActivo(usuario)}
+          onEditar={formulario.abrirEditar}
+          onEliminar={confirmarEliminacion}
+        />
+      </section>
 
-            <form className="modal-form" onSubmit={handleGuardar}>
-              <label className="campo">
-                <span>Nombre completo</span>
-                <input
-                  value={form.nombre_completo}
-                  onChange={(e) => actualizarCampo('nombre_completo', e.target.value)}
-                  required
-                />
-              </label>
-
-              <div className="campo-fila">
-                <label className="campo">
-                  <span>Cédula</span>
-                  <input
-                    value={form.cedula}
-                    onChange={(e) => actualizarCampo('cedula', e.target.value)}
-                    required
-                  />
-                </label>
-                <label className="campo">
-                  <span>Teléfono <em>(opcional)</em></span>
-                  <input
-                    value={form.telefono}
-                    onChange={(e) => actualizarCampo('telefono', e.target.value)}
-                  />
-                </label>
-              </div>
-
-              <label className="campo">
-                <span>Correo electrónico</span>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => actualizarCampo('email', e.target.value)}
-                  required
-                />
-              </label>
-
-              <div className="campo-fila">
-                <label className="campo">
-                  <span>
-                    Contraseña{' '}
-                    <em>{modoEdicion ? '(vacío = sin cambio)' : '(mín. 8)'}</em>
-                  </span>
-                  <div className="campo-password">
-                    <input
-                      type={mostrarPassword ? 'text' : 'password'}
-                      minLength={8}
-                      placeholder={modoEdicion ? '••••••••' : ''}
-                      value={form.password}
-                      onChange={(e) => actualizarCampo('password', e.target.value)}
-                      required={!modoEdicion}
-                    />
-                    <button
-                      type="button"
-                      className="campo-password-toggle"
-                      onClick={() => setMostrarPassword((v) => !v)}
-                      aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                      title={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                    >
-                      {mostrarPassword ? <IcEyeOff size={16} /> : <IcEye size={16} />}
-                    </button>
-                  </div>
-                </label>
-                <label className="campo">
-                  <span>Rol</span>
-                  <select
-                    value={form.rol_id}
-                    onChange={(e) => actualizarCampo('rol_id', Number(e.target.value))}
-                    disabled={esPropietario}
-                  >
-                    {rolesDisponibles.map((r) => (
-                      <option key={r.id} value={r.id}>{r.nombre}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              {errorForm && <p className="modal-error" role="alert">{errorForm}</p>}
-
-              <div className="modal-acciones">
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  onClick={() => setModalAbierto(false)}
-                  disabled={guardando}
-                >
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-primary" disabled={guardando}>
-                  {guardando
-                    ? 'Guardando…'
-                    : modoEdicion
-                      ? 'Guardar cambios'
-                      : 'Crear usuario'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {formulario.abierto && (
+        <FormularioUsuario
+          form={formulario.form}
+          modoEdicion={formulario.modoEdicion}
+          guardando={formulario.guardando}
+          error={formulario.error}
+          verPassword={formulario.verPassword}
+          roles={catalogos.roles}
+          organizaciones={catalogos.organizaciones}
+          rolBloqueado={esPropietario}
+          titulo={tituloFormulario}
+          onCambiar={formulario.cambiar}
+          onAlternarPassword={formulario.alternarPassword}
+          onGuardar={formulario.guardar}
+          onCerrar={formulario.cerrar}
+        />
       )}
     </div>
   )

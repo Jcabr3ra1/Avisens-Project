@@ -15,7 +15,7 @@ describe('UsuariosService', () => {
   let service: UsuariosService;
 
   const prisma = {
-    rol: { findUnique: jest.fn() },
+    rol: { findUnique: jest.fn(), findMany: jest.fn() },
     organizacion: { findFirst: jest.fn(), create: jest.fn() },
     usuario: {
       create: jest.fn(),
@@ -180,6 +180,28 @@ describe('UsuariosService', () => {
       expect(prisma.usuario.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: undefined }),
       );
+    });
+  });
+
+  describe('listarRoles', () => {
+    it('entrega todos los roles al Administrador', async () => {
+      await service.listarRoles(admin);
+
+      expect(prisma.rol.findMany).toHaveBeenCalledWith({
+        where: undefined,
+        select: { id: true, nombre: true },
+        orderBy: { id: 'asc' },
+      });
+    });
+
+    it('entrega solo el rol Operario al Propietario', async () => {
+      await service.listarRoles(propietario);
+
+      expect(prisma.rol.findMany).toHaveBeenCalledWith({
+        where: { nombre: 'Operario' },
+        select: { id: true, nombre: true },
+        orderBy: { id: 'asc' },
+      });
     });
   });
 

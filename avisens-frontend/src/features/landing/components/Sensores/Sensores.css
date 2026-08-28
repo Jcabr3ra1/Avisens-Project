@@ -1,7 +1,7 @@
 .sensores-section {
   position: relative;
   padding: 6rem 1.5rem 6.5rem;
-  background: #ffffff;
+  background: var(--landing-bg);
 }
 
 .sensores-head {
@@ -19,13 +19,13 @@
   font-size: 0.7rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(0, 91, 72, 0.78);
+  color: rgba(16, 51, 2, 0.78);
 }
 
 .sensores-eyebrow-line {
   flex: 0 0 40px;
   height: 1px;
-  background: rgba(0, 91, 72, 0.3);
+  background: rgba(16, 51, 2, 0.3);
 }
 
 .sensores-eyebrow-txt {
@@ -47,7 +47,7 @@
 .sensores-sub {
   font-size: 1rem;
   line-height: 1.6;
-  color: rgba(0, 91, 72, 0.75);
+  color: rgba(16, 51, 2, 0.78);
   margin: 0;
   text-wrap: balance;
 }
@@ -67,22 +67,22 @@
   flex-direction: column;
   border-radius: 18px;
   overflow: hidden;
-  background: var(--avisens-cream);
-  border: 1px solid rgba(0, 91, 72, 0.14);
-  box-shadow: 0 14px 34px -22px rgba(0, 91, 72, 0.28);
+  background: var(--landing-card);
+  border: 1px solid var(--landing-border);
+  box-shadow: 0 14px 34px -22px rgba(16, 51, 2, 0.34);
   transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
 
 .sensor-card:hover {
   transform: translateY(-4px);
-  border-color: var(--avisens-green);
-  box-shadow: 0 24px 48px -22px rgba(0, 91, 72, 0.36);
+  border-color: var(--landing-accent);
+  box-shadow: 0 24px 48px -22px rgba(16, 51, 2, 0.42);
 }
 
 .sensor-card-foto {
   position: relative;
   aspect-ratio: 16 / 11;
-  background: #f4f1e2;
+  background: var(--landing-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -100,8 +100,8 @@
   left: 0.7rem;
   padding: 0.24rem 0.65rem;
   border-radius: 999px;
-  background: var(--avisens-deep);
-  color: #ffffff;
+  background: var(--landing-primary);
+  color: var(--landing-on-primary);
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -128,7 +128,7 @@
 .sensor-card-texto {
   font-size: 0.8rem;
   line-height: 1.5;
-  color: rgba(0, 91, 72, 0.82);
+  color: rgba(16, 51, 2, 0.86);
   margin: 0 0 0.85rem;
 }
 
@@ -140,8 +140,8 @@
   padding: 0.55rem 0.7rem;
   margin-bottom: 0.85rem;
   border-radius: 10px;
-  background: rgba(71, 187, 75, 0.1);
-  border: 1px dashed rgba(0, 91, 72, 0.25);
+  background: rgba(14, 47, 115, 0.06);
+  border: 1px dashed var(--landing-border);
 }
 
 .sensor-card-puente-txt {
@@ -163,12 +163,12 @@
   gap: 0.28rem;
   padding: 0.18rem 0.52rem;
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--landing-bg);
   color: var(--avisens-deep);
   font-family: 'DM Mono', monospace;
   font-size: 0.68rem;
   font-weight: 700;
-  box-shadow: 0 2px 8px -2px rgba(0, 91, 72, 0.25);
+  box-shadow: 0 2px 8px -2px rgba(16, 51, 2, 0.25);
 }
 
 .sensor-card-footer {
@@ -184,15 +184,15 @@
   flex-shrink: 0;
 }
 
-.sensor-card-punto--0 { background: var(--avisens-orange); }
-.sensor-card-punto--1 { background: var(--avisens-yellow); }
-.sensor-card-punto--2 { background: var(--avisens-green); }
+.sensor-card-punto--0 { background: var(--landing-accent); }
+.sensor-card-punto--1 { background: var(--landing-primary); }
+.sensor-card-punto--2 { background: var(--landing-text); }
 
 .sensor-card-codigo {
   font-family: 'DM Mono', monospace;
   font-size: 0.72rem;
   letter-spacing: 0.06em;
-  color: rgba(0, 91, 72, 0.55);
+  color: rgba(16, 51, 2, 0.68);
 }
 
 @media (max-width: 760px) {
