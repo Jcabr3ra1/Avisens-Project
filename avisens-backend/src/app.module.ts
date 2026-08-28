@@ -49,8 +49,15 @@ import { SolicitudesPqrsModule } from './modules/solicitudes-pqrs/solicitudes-pq
 import { EquiposModule } from './modules/equipos/equipos.module';
 import { InteraccionesChatbotModule } from './modules/interacciones-chatbot/interacciones-chatbot.module';
 import { NotificacionesModule } from './modules/notificaciones/notificaciones.module';
+import { OrganizacionesModule } from './modules/organizaciones/organizaciones.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { DecimalInterceptor } from './common/decimal.interceptor';
+import { RecuperacionesPasswordModule } from './modules/recuperaciones-password/recuperaciones-password.module';
+import { CatalogoSensoresModule } from './modules/catalogo-sensores/catalogo-sensores.module';
+import { ComandosVozModule } from './modules/comandos-voz/comandos-voz.module';
+import { JobsModule } from './common/jobs/jobs.module';
+import { ObservabilityModule } from './common/observability/observability.module';
+import { RequestObservabilityInterceptor } from './common/observability/request-observability.interceptor';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -78,6 +85,8 @@ import { DecimalInterceptor } from './common/decimal.interceptor';
       },
     }),
     PrismaModule,
+    JobsModule,
+    ObservabilityModule,
     AuthModule,
     UsuariosModule,
     GranjasModule,
@@ -121,6 +130,10 @@ import { DecimalInterceptor } from './common/decimal.interceptor';
     EquiposModule,
     InteraccionesChatbotModule,
     NotificacionesModule,
+    OrganizacionesModule,
+    RecuperacionesPasswordModule,
+    CatalogoSensoresModule,
+    ComandosVozModule,
   ],
   providers: [
     {
@@ -128,6 +141,10 @@ import { DecimalInterceptor } from './common/decimal.interceptor';
       useClass: ThrottlerGuard,
     },
     { provide: APP_INTERCEPTOR, useClass: DecimalInterceptor },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestObservabilityInterceptor,
+    },
   ],
 })
 export class AppModule {}

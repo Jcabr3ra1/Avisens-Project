@@ -1,7 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DispositivosService } from './dispositivos.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { hashDeviceToken } from '../../common/security/device-token';
 
 describe('DispositivosService', () => {
   let service: DispositivosService;
@@ -68,9 +73,10 @@ describe('DispositivosService', () => {
       expect(prisma.dispositivo.create).toHaveBeenCalled();
       expect(typeof res.token_ingesta).toBe('string');
       expect(res.token_ingesta.length).toBeGreaterThan(0);
-      // El mismo token se guarda en la BD.
-      expect(dataDe(prisma.dispositivo.create).token_ingesta).toBe(
-        res.token_ingesta,
+      // Solo se persiste el hash; el secreto se revela una única vez.
+      expect(dataDe(prisma.dispositivo.create).token_ingesta).toBeUndefined();
+      expect(dataDe(prisma.dispositivo.create).token_ingesta_hash).toBe(
+        hashDeviceToken(res.token_ingesta),
       );
     });
 
@@ -116,7 +122,7 @@ describe('DispositivosService', () => {
     it('genera y revela un token nuevo', async () => {
       prisma.dispositivo.findUnique.mockResolvedValue({
         id: 1,
-        galpon: { granja: { propietario_id: 5 } },
+        galpon: { id: 3, granja: { propietario_id: 5 } },
       });
       prisma.dispositivo.update.mockResolvedValue({});
 
@@ -125,6 +131,10 @@ describe('DispositivosService', () => {
       expect(typeof res.token_ingesta).toBe('string');
       expect(res.token_ingesta.length).toBeGreaterThan(0);
       expect(prisma.dispositivo.update).toHaveBeenCalled();
+      expect(dataDe(prisma.dispositivo.update).token_ingesta).toBeNull();
+      expect(dataDe(prisma.dispositivo.update).token_ingesta_hash).toBe(
+        hashDeviceToken(res.token_ingesta),
+      );
     });
 
     it('un Propietario no puede regenerar el token de un dispositivo ajeno (403)', async () => {
@@ -153,19 +163,15 @@ describe('DispositivosService', () => {
       expect(prisma.dispositivo.update).toHaveBeenCalled();
     });
 
-    it('al mover a otro galpón, re-valida que el nuevo sea suyo (403)', async () => {
+    it('impide trasladar un dispositivo con historial a otro galpón', async () => {
       prisma.dispositivo.findUnique.mockResolvedValue({
         id: 1,
-        galpon: { granja: { propietario_id: 5 } },
-      });
-      prisma.galpon.findUnique.mockResolvedValue({
-        id: 9,
-        granja: { propietario_id: 999 },
+        galpon: { id: 3, granja: { propietario_id: 5 } },
       });
 
       await expect(
         service.actualizar(1, { galpon_id: 9 }, propietario),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(BadRequestException);
       expect(prisma.dispositivo.update).not.toHaveBeenCalled();
     });
   });

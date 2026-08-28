@@ -145,6 +145,19 @@ describe('SensoresService', () => {
   });
 
   describe('actualizar', () => {
+    it('impide trasladar un sensor a otro galpón', async () => {
+      prisma.sensor.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 1, granja: { propietario_id: 5 } },
+        dispositivo: { id: 5 },
+      });
+
+      await expect(
+        service.actualizar(1, { galpon_id: 2 }, admin),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.sensor.update).not.toHaveBeenCalled();
+    });
+
     it('al mover solo el dispositivo, valida coherencia contra el galpón actual', async () => {
       prisma.sensor.findUnique.mockResolvedValue({
         id: 1,

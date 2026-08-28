@@ -3,6 +3,16 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
+import { InterpreteRespuestaService } from './interprete-respuesta.service';
+
+import {
+  A13_INTERNET,
+  A16_MORTALIDAD,
+  A20_DECIDE,
+  DOLOR,
+  NO_DECIDE,
+  PUNTAJE_MAXIMO,
+} from './dominio/calificacion';
 
 describe('ChatbotService', () => {
   let service: ChatbotService;
@@ -46,6 +56,10 @@ describe('ChatbotService', () => {
     consentimiento_habeas_data: true,
   };
 
+  // Por defecto no interpreta: las pruebas de siempre siguen siendo
+  // deterministas y no dependen de ningun modelo.
+  const interprete = { interpretar: jest.fn().mockResolvedValue(null) };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     prisma.preguntaChatbot.count.mockResolvedValue(19);
@@ -60,6 +74,7 @@ describe('ChatbotService', () => {
         ChatbotService,
         { provide: PrismaService, useValue: prisma },
         { provide: CotizacionesService, useValue: cotizaciones },
+        { provide: InterpreteRespuestaService, useValue: interprete },
       ],
     }).compile();
     service = module.get<ChatbotService>(ChatbotService);
@@ -239,12 +254,14 @@ describe('ChatbotService', () => {
       });
     };
 
+    // Los umbrales son 8 y 5 sobre los 12 puntos comerciales. Antes eran 12 y
+    // 7 sobre 16, que son las mismas proporciones.
     it.each([
-      [16, 'caliente'],
       [12, 'caliente'],
-      [11, 'tibio'],
+      [8, 'caliente'],
       [7, 'tibio'],
-      [6, 'frio'],
+      [5, 'tibio'],
+      [4, 'frio'],
       [0, 'frio'],
     ])('con %i puntos clasifica como %s', async (puntos, esperada) => {
       const r = await finalizarCon(puntos);
@@ -462,7 +479,7 @@ describe('ChatbotService', () => {
       expect(datosDe(prisma.prospecto.create).pregunta_actual).toBe('B1');
     });
 
-    it('radica una SolicitudPqrs al terminar el bloque B, sin puntaje comercial', async () => {
+    it('cierra el bloque B como consulta atendida, sin radicar ni puntuar', async () => {
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
         pregunta({
           codigo: 'B3',
@@ -486,20 +503,11 @@ describe('ChatbotService', () => {
       });
 
       expect(r.finalizado).toBe(true);
-      expect(r.clasificacion).toBe('pqrs');
+      expect(r.clasificacion).toBe('consulta_atendida');
       expect(r.puntaje_total).toBeNull();
-      expect(prisma.solicitudPqrs.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          data: expect.objectContaining({
-            categoria: 'Sugerencia',
-            asunto: 'Los sensores',
-            mensaje: 'Detalle largo',
-            estado: 'abierta',
-          }),
-        }),
-      );
-      expect(ultimosDatos(prisma.prospecto.update).estado).toBe('pqrs');
+      // Ya no se radica nada: el bloque B quedo reducido a preguntas
+      // frecuentes de preventa, sin soporte posventa.
+      expect(prisma.solicitudPqrs.create).not.toHaveBeenCalled();
     });
 
     it('la ruta de cotizacion no radica PQRS', async () => {
@@ -547,13 +555,13 @@ describe('ChatbotService', () => {
     });
 
     it('un lead caliente se enruta a visita presencial', async () => {
-      const datos = await cerrarCon([A('A20', 'Sí')], 14);
+      const datos = await cerrarCon([A('A20', A20_DECIDE[0].texto)], PUNTAJE_MAXIMO);
       expect(datos.clasificacion).toBe('caliente');
       expect(datos.accion_siguiente).toBe('VISITA_PRESENCIAL');
     });
 
     it('un lead tibio se enruta a demostracion remota', async () => {
-      const datos = await cerrarCon([A('A20', 'Sí')], 9);
+      const datos = await cerrarCon([A('A20', A20_DECIDE[0].texto)], 6);
       expect(datos.clasificacion).toBe('tibio');
       expect(datos.accion_siguiente).toBe('DEMO_REMOTA');
     });
@@ -565,7 +573,7 @@ describe('ChatbotService', () => {
     });
 
     it('sin poder de decision prima el callback sobre el puntaje', async () => {
-      const datos = await cerrarCon([A('A20', 'No')], 15);
+      const datos = await cerrarCon([A('A20', NO_DECIDE)], PUNTAJE_MAXIMO);
 
       expect(datos.clasificacion).toBe('caliente');
       expect(datos.accion_siguiente).toBe('CALLBACK_DECISOR');
@@ -574,7 +582,7 @@ describe('ChatbotService', () => {
 
     it('el callback queda programado a 48 horas', async () => {
       const antes = Date.now();
-      const datos = await cerrarCon([A('A20', 'No')], 5);
+      const datos = await cerrarCon([A('A20', NO_DECIDE)], 5);
 
       const fecha = datos.fecha_callback as Date;
       const horas = (fecha.getTime() - antes) / 3600000;
@@ -589,7 +597,7 @@ describe('ChatbotService', () => {
 
     it('la zona rural sin senal se registra sin descartar al prospecto', async () => {
       const datos = await cerrarCon(
-        [A('A20', 'Sí'), A('A13', 'No, zona rural sin señal')],
+        [A('A20', A20_DECIDE[0].texto), A('A13', A13_INTERNET.SIN_SENAL)],
         13,
       );
 
@@ -608,7 +616,7 @@ describe('ChatbotService', () => {
 
     it('la mortalidad ambiental repetida marca senal caliente', async () => {
       const datos = await cerrarCon(
-        [A('A20', 'Sí'), A('A16', 'Sí, más de una vez')],
+        [A('A20', A20_DECIDE[0].texto), A('A16', DOLOR[0])],
         8,
       );
       expect(datos.senal_caliente).toBe(true);
@@ -616,7 +624,11 @@ describe('ChatbotService', () => {
 
     it('una problematica descrita en texto libre tambien marca senal caliente', async () => {
       const datos = await cerrarCon(
-        [A('A20', 'Sí'), A('A16', 'No'), A('A14', 'Se me mueren por calor')],
+        [
+          A('A20', A20_DECIDE[0].texto),
+          A('A16', A16_MORTALIDAD[2].texto),
+          A('A14', 'Mortalidad por calor o frío'),
+        ],
         8,
       );
       expect(datos.senal_caliente).toBe(true);
@@ -662,20 +674,6 @@ describe('ChatbotService', () => {
       );
     });
 
-    it('radica solo cuando la persona pidio registrar el caso', async () => {
-      await cerrarB([
-        ['B1', 'Reclamo'],
-        ['B2', 'Sensores sin datos'],
-        ['B3', 'Llevan dos dias sin reportar'],
-      ]);
-
-      expect(prisma.solicitudPqrs.create).toHaveBeenCalled();
-      const datos = datosDe(prisma.solicitudPqrs.create);
-      expect(datos.categoria).toBe('Reclamo');
-      expect(datos.asunto).toBe('Sensores sin datos');
-      expect(datos.estado).toBe('abierta');
-      expect(ultimosDatos(prisma.prospecto.update).estado).toBe('pqrs');
-    });
 
     it('no puntua ni clasifica comercialmente una consulta', async () => {
       await cerrarB([['B1', 'Queja'], ['B2', 'x'], ['B3', 'y']]);
@@ -724,7 +722,7 @@ describe('ChatbotService', () => {
     });
 
     it('no la genera para quien queda en callback: no se le prometio', async () => {
-      const r = await cerrar([['A20', 'No']]);
+      const r = await cerrar([['A20', NO_DECIDE]]);
 
       expect(cotizaciones.generar).not.toHaveBeenCalled();
       expect(r.cotizacion).toBeNull();
@@ -817,7 +815,7 @@ describe('ChatbotService', () => {
       });
 
       expect(r.pregunta?.codigo).toBe('CORREGIR');
-      expect(r.pregunta?.opciones).toContain('Municipio');
+      expect(r.pregunta?.opciones).toContain('Teléfono');
       expect(ultimosDatos(prisma.prospecto.update).pregunta_actual).toBe(
         'CORREGIR',
       );
@@ -829,16 +827,16 @@ describe('ChatbotService', () => {
         pregunta_actual: 'CORREGIR',
       });
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ codigo: 'A4', tipo: 'texto_libre', opciones: null }),
+        pregunta({ codigo: 'C1', tipo: 'texto_libre', opciones: null }),
       );
 
       await service.responder({
         sesion_id: enCurso.sesion_id,
-        respuesta: 'Municipio',
+        respuesta: 'Teléfono',
       });
 
       expect(ultimosDatos(prisma.prospecto.update).pregunta_actual).toBe(
-        'FIX:A4',
+        'FIX:C1',
       );
     });
 
@@ -880,6 +878,70 @@ describe('ChatbotService', () => {
       const datos = ultimosDatos(prisma.prospecto.update);
       expect(datos.pregunta_actual).toBe('CONFIRMAR');
       expect(datos.municipio).toBe('Piendamo');
+    });
+  });
+
+  describe('respuestas en lenguaje natural', () => {
+    const conOpciones = () =>
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'A11',
+          texto: '¿Cómo es la energía en tu granja?',
+          tipo: 'opcion_unica',
+          opciones: ['Estable todo el día', 'Se va, pero tengo planta'],
+          siguiente: 'A13',
+        }),
+      );
+
+    it('no llama al modelo si la persona escribio el numero de la opcion', async () => {
+      conOpciones();
+
+      await service.responder({ sesion_id: enCurso.sesion_id, respuesta: '1' });
+
+      expect(interprete.interpretar).not.toHaveBeenCalled();
+      expect(datosDe(prisma.respuestaChatbot.create).respuesta_texto).toBe(
+        'Estable todo el día',
+      );
+    });
+
+    it('no llama al modelo si escribio el texto exacto', async () => {
+      conOpciones();
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'Se va, pero tengo planta',
+      });
+
+      expect(interprete.interpretar).not.toHaveBeenCalled();
+    });
+
+    it('interpreta una respuesta escrita a mano y guarda la opcion', async () => {
+      conOpciones();
+      interprete.interpretar.mockResolvedValueOnce('Se va, pero tengo planta');
+
+      await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: 'se me va la luz a cada rato pero tengo plantica',
+      });
+
+      expect(interprete.interpretar).toHaveBeenCalled();
+      expect(datosDe(prisma.respuestaChatbot.create).respuesta_texto).toBe(
+        'Se va, pero tengo planta',
+      );
+    });
+
+    it('si el modelo no entiende, se comporta como antes de existir', async () => {
+      // Sin API key, con error o con una respuesta que no encaja, el flujo
+      // sigue siendo el determinista: la respuesta se rechaza como siempre.
+      conOpciones();
+      interprete.interpretar.mockResolvedValueOnce(null);
+
+      await expect(
+        service.responder({
+          sesion_id: enCurso.sesion_id,
+          respuesta: 'cualquier cosa que no encaja',
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

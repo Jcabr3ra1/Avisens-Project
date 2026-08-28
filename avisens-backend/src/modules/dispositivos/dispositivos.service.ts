@@ -1,12 +1,23 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { randomBytes } from 'crypto';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDispositivoDto } from './dto/create-dispositivo.dto';
 import { UpdateDispositivoDto } from './dto/update-dispositivo.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import { verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroDispositivos,
+  verificarAccesoGalpon,
+} from '../../common/auth/alcance';
+import {
+  generarDeviceToken,
+  hashDeviceToken,
+} from '../../common/security/device-token';
 
 const DISPOSITIVO_SELECT = {
   id: true,
@@ -60,14 +71,10 @@ export class DispositivosService {
     );
   }
 
-  private generarToken(): string {
-    return randomBytes(24).toString('hex');
-  }
-
   async crear(dto: CreateDispositivoDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
 
-    const token = this.generarToken();
+    const token = generarDeviceToken();
 
     const dispositivo = await this.prisma.dispositivo.create({
       data: {
@@ -77,7 +84,7 @@ export class DispositivosService {
         nombre: dto.nombre,
         version_firmware: dto.version_firmware,
         ip_local: dto.ip_local,
-        token_ingesta: token,
+        token_ingesta_hash: hashDeviceToken(token),
       },
       select: DISPOSITIVO_SELECT,
     });
@@ -87,18 +94,19 @@ export class DispositivosService {
 
   async regenerarToken(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
-    const token = this.generarToken();
+    const token = generarDeviceToken();
     await this.prisma.dispositivo.update({
       where: { id },
-      data: { token_ingesta: token },
+      data: {
+        token_ingesta: null,
+        token_ingesta_hash: hashDeviceToken(token),
+      },
     });
     return { id, token_ingesta: token };
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { galpon: { granja: { propietario_id: solicitante.id } } }
-      : undefined;
+    const where = filtroDispositivos(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.dispositivo.findMany({
@@ -120,10 +128,12 @@ export class DispositivosService {
       select: DISPOSITIVO_SELECT,
     });
     if (!dispositivo) throw new NotFoundException('Dispositivo no encontrado');
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      dispositivo.galpon.id,
       solicitante,
-      dispositivo.galpon.granja.propietario_id,
       'Solo puedes gestionar dispositivos de tus propios galpones',
+      dispositivo.galpon.granja.propietario_id,
     );
     return dispositivo;
   }
@@ -133,16 +143,18 @@ export class DispositivosService {
     dto: UpdateDispositivoDto,
     solicitante: Solicitante,
   ) {
-    await this.obtener(id, solicitante);
+    const actual = await this.obtener(id, solicitante);
 
-    if (dto.galpon_id) {
-      await this.validarGalpon(dto.galpon_id, solicitante);
+    if (dto.galpon_id !== undefined && dto.galpon_id !== actual.galpon.id) {
+      throw new BadRequestException(
+        'No se puede trasladar un dispositivo a otro galpón mientras conserva sensores asociados',
+      );
     }
 
     return this.prisma.dispositivo.update({
       where: { id },
       data: {
-        galpon_id: dto.galpon_id,
+        galpon_id: undefined,
         mac_address: dto.mac_address,
         codigo_topic: dto.codigo_topic,
         nombre: dto.nombre,

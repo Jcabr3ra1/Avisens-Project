@@ -43,6 +43,12 @@ COPY --from=pruned /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+# Los seeds importan de src/ -los permisos por rol y el modelo de calificacion-
+# y se ejecutan con tsx, que resuelve el TypeScript en caliente. Sin esta copia
+# el seed falla con MODULE_NOT_FOUND en cualquier despliegue nuevo, incluido el
+# arranque con RUN_SEED=true.
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/package.json ./package.json
 
 # Script de arranque: aplica migraciones y luego lanza la app.

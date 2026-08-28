@@ -1,28 +1,16 @@
 .landing-page {
   position: relative;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, #f5f9f7 0%, #eef7f2 18%, #f8fbf9 38%, #ffffff 58%, #f5f9f7 100%);
+  background: var(--avisens-cream);
 }
 
-/* La landing es larga: el navegador puede aplazar el layout y pintado de las
-   secciones que todavía están lejos del viewport. */
-.landing-page > section:not(.hero) {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 800px;
-}
-
-.landing-page::before {
-  content: '';
-  position: absolute;
-  top: 82svh;
-  right: 0;
-  left: 0;
-  z-index: 0;
-  height: 44rem;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 58% 36% at 50% 0%, rgba(16, 185, 129, 0.16), transparent 68%),
-    radial-gradient(ellipse 44% 28% at 82% 20%, rgba(59, 130, 246, 0.1), transparent 70%),
-    linear-gradient(180deg, rgba(245, 249, 247, 0), #f5f9f7 42%, rgba(245, 249, 247, 0));
+/* A sangre: la imagen llega hasta el borde de la ventana y la navbar flota
+   encima, sin marco intermedio. */
+.landing-hero-frame {
+  position: relative;
+  z-index: 1;
+  min-height: 100svh;
+  overflow: hidden;
+  background: var(--avisens-deep);
+  isolation: isolate;
 }

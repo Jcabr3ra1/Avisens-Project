@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { GalponesService } from './galpones.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -9,6 +13,7 @@ describe('GalponesService', () => {
   const prisma = {
     galpon: {
       create: jest.fn(),
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
@@ -16,11 +21,13 @@ describe('GalponesService', () => {
       delete: jest.fn(),
     },
     granja: { findUnique: jest.fn() },
+    usuarioGalpon: { updateMany: jest.fn(), deleteMany: jest.fn() },
     $transaction: jest.fn(),
   };
 
   const admin = { id: 1, rol: 'Administrador' };
   const propietario = { id: 5, rol: 'Propietario' };
+  const operario = { id: 8, rol: 'Operario', organizacion_id: 10 };
 
   const dtoCrear = { granja_id: 3, codigo: 'galpon1', nombre: 'Galpón Norte' };
 
@@ -93,6 +100,22 @@ describe('GalponesService', () => {
 
       expect(whereDe(prisma.galpon.findMany)).toBeUndefined();
     });
+
+    it('un Operario solo ve galpones con asignación activa', async () => {
+      await service.listar(operario, { page: 1, limit: 10 });
+
+      expect(whereDe(prisma.galpon.findMany)).toEqual({
+        activo: true,
+        granja: {
+          activa: true,
+          organizacion_id: 10,
+          organizacion: { activa: true },
+        },
+        usuarios_galpones: {
+          some: { usuario_id: 8, activa: true },
+        },
+      });
+    });
   });
 
   describe('obtener', () => {
@@ -120,7 +143,7 @@ describe('GalponesService', () => {
     it('actualiza cuando el galpón es del solicitante', async () => {
       prisma.galpon.findUnique.mockResolvedValue({
         id: 1,
-        granja: { propietario_id: 5 },
+        granja: { id: 3, propietario_id: 5 },
       });
       prisma.galpon.update.mockResolvedValue({ id: 1 });
 
@@ -129,19 +152,15 @@ describe('GalponesService', () => {
       expect(prisma.galpon.update).toHaveBeenCalled();
     });
 
-    it('al mover a otra granja, re-valida que la nueva sea suya (403)', async () => {
+    it('impide trasladar un galpón a otra granja para no romper su historial', async () => {
       prisma.galpon.findUnique.mockResolvedValue({
         id: 1,
-        granja: { propietario_id: 5 },
-      });
-      prisma.granja.findUnique.mockResolvedValue({
-        id: 9,
-        propietario_id: 999,
+        granja: { id: 3, propietario_id: 5 },
       });
 
       await expect(
         service.actualizar(1, { granja_id: 9 }, propietario),
-      ).rejects.toThrow(ForbiddenException);
+      ).rejects.toThrow(BadRequestException);
       expect(prisma.galpon.update).not.toHaveBeenCalled();
     });
   });
@@ -160,6 +179,10 @@ describe('GalponesService', () => {
       const res = await service.desactivar(1, propietario);
 
       expect(res).toEqual({ id: 1, activo: false });
+      expect(prisma.usuarioGalpon.updateMany).toHaveBeenCalledWith({
+        where: { galpon_id: 1, activa: true },
+        data: { activa: false },
+      });
     });
 
     it('elimina permanentemente cuando es dueño', async () => {
@@ -168,6 +191,9 @@ describe('GalponesService', () => {
       const res = await service.eliminarPermanente(1, propietario);
 
       expect(res).toEqual({ id: 1, eliminado: true });
+      expect(prisma.usuarioGalpon.deleteMany).toHaveBeenCalledWith({
+        where: { galpon_id: 1 },
+      });
     });
   });
 });

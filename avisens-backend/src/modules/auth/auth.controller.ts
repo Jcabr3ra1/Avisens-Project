@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -18,10 +19,24 @@ interface AuthRequest extends Request {
   user: { sub: number; email: string; refresh_token: string };
 }
 
+interface AccessRequest extends Request {
+  user: { rol: string };
+}
+
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  @Get('permisos')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Consultar capacidades RBAC del usuario autenticado',
+  })
+  permisos(@Req() req: AccessRequest) {
+    return this.authService.obtenerPermisos(req.user.rol);
+  }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)

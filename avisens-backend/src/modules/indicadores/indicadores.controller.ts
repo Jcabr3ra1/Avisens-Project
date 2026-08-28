@@ -22,12 +22,13 @@ interface AuthRequest extends Request {
 @ApiTags('indicadores')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('indicadores')
 export class IndicadoresController {
   constructor(private indicadoresService: IndicadoresService) {}
 
   @Post('calcular/:loteId')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary: 'Calcular y guardar los indicadores de hoy de un lote',
   })
@@ -50,6 +51,7 @@ export class IndicadoresController {
   }
 
   @Get(':loteId/finanzas')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary: 'KPIs financieros del lote (costo/kg, margen, ROI)',
   })

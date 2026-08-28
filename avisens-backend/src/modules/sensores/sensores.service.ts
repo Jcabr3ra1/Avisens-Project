@@ -8,8 +8,12 @@ import { CreateSensorDto } from './dto/create-sensor.dto';
 import { UpdateSensorDto } from './dto/update-sensor.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import { verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroSensores,
+  verificarAccesoSensor,
+} from '../../common/auth/alcance';
 
 const SENSOR_SELECT = {
   id: true,
@@ -122,9 +126,7 @@ export class SensoresService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { galpon: { granja: { propietario_id: solicitante.id } } }
-      : undefined;
+    const where = filtroSensores(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.sensor.findMany({
@@ -146,10 +148,12 @@ export class SensoresService {
       select: SENSOR_SELECT,
     });
     if (!sensor) throw new NotFoundException('Sensor no encontrado');
-    verificarDueno(
+    await verificarAccesoSensor(
+      this.prisma,
+      id,
       solicitante,
-      sensor.galpon.granja.propietario_id,
       'Solo puedes gestionar sensores de tus propios galpones',
+      sensor.galpon.granja.propietario_id,
     );
     return sensor;
   }
@@ -157,20 +161,22 @@ export class SensoresService {
   async actualizar(id: number, dto: UpdateSensorDto, solicitante: Solicitante) {
     const actual = await this.obtener(id, solicitante);
 
-    if (dto.galpon_id) {
-      await this.validarGalpon(dto.galpon_id, solicitante);
+    if (dto.galpon_id !== undefined && dto.galpon_id !== actual.galpon.id) {
+      throw new BadRequestException(
+        'No se puede trasladar un sensor a otro galpón; sus mediciones y alertas son históricas',
+      );
     }
 
-    const galponFinal = dto.galpon_id ?? actual.galpon.id;
+    const galponFinal = actual.galpon.id;
     const dispositivoFinal = dto.dispositivo_id ?? actual.dispositivo.id;
-    if (dto.galpon_id || dto.dispositivo_id) {
+    if (dto.dispositivo_id) {
       await this.validarDispositivoEnGalpon(dispositivoFinal, galponFinal);
     }
 
     return this.prisma.sensor.update({
       where: { id },
       data: {
-        galpon_id: dto.galpon_id,
+        galpon_id: undefined,
         dispositivo_id: dto.dispositivo_id,
         codigo: dto.codigo,
         tipo: dto.tipo,

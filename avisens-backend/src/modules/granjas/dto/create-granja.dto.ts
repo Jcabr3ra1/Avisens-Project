@@ -61,6 +61,7 @@ export class CreateGranjaDto {
       'ID del propietario. Solo lo usa el Administrador; el Propietario se asigna a sí mismo.',
   })
   @IsInt()
+  @Min(1)
   @IsOptional()
   propietario_id?: number;
 }

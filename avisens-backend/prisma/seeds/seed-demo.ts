@@ -1,4 +1,3 @@
-import type { PrismaClient } from '@prisma/client';
 
 const DIAS_MEDIDOS = [7, 14, 21, 28];
 
@@ -30,13 +29,28 @@ function hace(dias: number) {
   return f;
 }
 
-export async function sembrarDatosDemo(prisma: import('@prisma/client').PrismaClient) {
+export async function sembrarDatosDemo(
+  prisma: import('@prisma/client').PrismaClient,
+) {
   if (process.env.SEED_DEMO !== 'true') return;
 
   const admin = await prisma.usuario.findFirst({ orderBy: { id: 'asc' } });
   if (!admin) {
     console.log('Seed demo omitido: no hay usuario admin');
     return;
+  }
+
+  let organizacionId = admin.organizacion_id;
+  if (!organizacionId) {
+    const organizacion = await prisma.organizacion.create({
+      data: { nombre: 'Organización demo Avisens' },
+      select: { id: true },
+    });
+    organizacionId = organizacion.id;
+    await prisma.usuario.update({
+      where: { id: admin.id },
+      data: { organizacion_id: organizacionId },
+    });
   }
 
   const proveedor = await prisma.proveedor.upsert({
@@ -55,6 +69,7 @@ export async function sembrarDatosDemo(prisma: import('@prisma/client').PrismaCl
   granja ??= await prisma.granja.create({
     data: {
       propietario_id: admin.id,
+      organizacion_id: organizacionId,
       nombre: 'Granja La Esperanza (demo)',
       municipio: 'Piedecuesta',
       departamento: 'Santander',

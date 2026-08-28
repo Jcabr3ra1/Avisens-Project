@@ -4,11 +4,11 @@ import { CreatePesajeDto } from './dto/create-pesaje.dto';
 import { UpdatePesajeDto } from './dto/update-pesaje.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
+import { Solicitante } from '../../common/auth/acceso';
 import {
-  esPropietario,
-  verificarDueno,
-  Solicitante,
-} from '../../common/auth/acceso';
+  filtroRegistrosDeLote,
+  verificarAccesoLote,
+} from '../../common/auth/alcance';
 
 const PESAJE_SELECT = {
   id: true,
@@ -63,10 +63,12 @@ export class PesajesService {
     });
 
     if (!lote) throw new NotFoundException('Lote no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      loteId,
       solicitante,
-      lote.galpon.granja.propietario_id,
       ' Solo puedes registrar pesajes de tus propios lotes',
+      lote.galpon.granja.propietario_id,
     );
   }
 
@@ -90,9 +92,7 @@ export class PesajesService {
     });
   }
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { lote: { galpon: { granja: { propietario_id: solicitante.id } } } }
-      : undefined;
+    const where = filtroRegistrosDeLote(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.pesaje.findMany({
@@ -115,10 +115,12 @@ export class PesajesService {
     });
 
     if (!pesaje) throw new NotFoundException('Pesaje no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      pesaje.lote_id,
       solicitante,
-      pesaje.lote.galpon.granja.propietario_id,
       'Solo puedes ver pesajes de tus propios lotes',
+      pesaje.lote.galpon.granja.propietario_id,
     );
     return pesaje;
   }

@@ -4,11 +4,11 @@ import { CreateEventoSanitarioDto } from './dto/create-evento-sanitario.dto';
 import { UpdateEventoSanitarioDto } from './dto/update-evento-sanitario.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
+import { Solicitante } from '../../common/auth/acceso';
 import {
-  esPropietario,
-  verificarDueno,
-  Solicitante,
-} from '../../common/auth/acceso';
+  filtroRegistrosDeLote,
+  verificarAccesoLote,
+} from '../../common/auth/alcance';
 
 const SANITARIO_SELECT = {
   id: true,
@@ -29,7 +29,9 @@ const SANITARIO_SELECT = {
     select: {
       id: true,
       codigo: true,
-      galpon: { select: { granja: { select: { propietario_id: true } } } },
+      galpon: {
+        select: { granja: { select: { id: true, propietario_id: true } } },
+      },
     },
   },
   insumo: { select: { id: true, nombre: true } },
@@ -44,31 +46,40 @@ export class EventosSanitariosService {
       where: { id: loteId },
       select: {
         id: true,
-        galpon: { select: { granja: { select: { propietario_id: true } } } },
+        galpon: {
+          select: { granja: { select: { id: true, propietario_id: true } } },
+        },
       },
     });
 
     if (!lote) throw new NotFoundException('Lote no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      loteId,
       solicitante,
-      lote.galpon.granja.propietario_id,
       'Solo puedes registrar eventos sanitarios de tus propios lotes',
+      lote.galpon.granja.propietario_id,
     );
+    return lote.galpon.granja.id;
   }
 
-  private async validarInsumo(insumoId: number) {
-    const insumo = await this.prisma.inventarioInsumo.findUnique({
-      where: { id: insumoId },
+  private async validarInsumo(insumoId: number, granjaId: number) {
+    const insumo = await this.prisma.inventarioInsumo.findFirst({
+      where: { id: insumoId, granja_id: granjaId, activo: true },
       select: { id: true },
     });
 
-    if (!insumo) throw new NotFoundException('Insumo no encontrado');
+    if (!insumo) {
+      throw new NotFoundException(
+        'Insumo no encontrado, inactivo o perteneciente a otra granja',
+      );
+    }
   }
 
   async crear(dto: CreateEventoSanitarioDto, solicitante: Solicitante) {
-    await this.validarLote(dto.lote_id, solicitante);
+    const granjaId = await this.validarLote(dto.lote_id, solicitante);
     if (dto.insumo_id) {
-      await this.validarInsumo(dto.insumo_id);
+      await this.validarInsumo(dto.insumo_id, granjaId);
     }
 
     return this.prisma.eventoSanitario.create({
@@ -91,9 +102,7 @@ export class EventosSanitariosService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { lote: { galpon: { granja: { propietario_id: solicitante.id } } } }
-      : undefined;
+    const where = filtroRegistrosDeLote(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.eventoSanitario.findMany({
@@ -116,10 +125,12 @@ export class EventosSanitariosService {
     });
 
     if (!evento) throw new NotFoundException('Evento sanitario no encontrado');
-    verificarDueno(
+    await verificarAccesoLote(
+      this.prisma,
+      evento.lote_id,
       solicitante,
-      evento.lote.galpon.granja.propietario_id,
       'Solo puedes ver eventos sanitarios de tus propios lotes',
+      evento.lote.galpon.granja.propietario_id,
     );
     return evento;
   }
@@ -129,13 +140,13 @@ export class EventosSanitariosService {
     dto: UpdateEventoSanitarioDto,
     solicitante: Solicitante,
   ) {
-    await this.obtener(id, solicitante);
-
-    if (dto.lote_id) {
-      await this.validarLote(dto.lote_id, solicitante);
-    }
+    const actual = await this.obtener(id, solicitante);
+    const granjaId = await this.validarLote(
+      dto.lote_id ?? actual.lote_id,
+      solicitante,
+    );
     if (dto.insumo_id) {
-      await this.validarInsumo(dto.insumo_id);
+      await this.validarInsumo(dto.insumo_id, granjaId);
     }
 
     return this.prisma.eventoSanitario.update({

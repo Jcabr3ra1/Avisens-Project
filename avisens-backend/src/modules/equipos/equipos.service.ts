@@ -6,8 +6,12 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '../../common/pagination/paginate';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import { verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  filtroEquipos,
+  verificarAccesoEquipo,
+} from '../../common/auth/alcance';
 import { CreateEquipoDto } from './dto/create-equipo.dto';
 import { UpdateEquipoDto } from './dto/update-equipo.dto';
 
@@ -79,8 +83,12 @@ export class EquiposService {
           modelo: dto.modelo,
           fabricante: dto.fabricante,
           serial: dto.serial,
-          fecha_compra: dto.fecha_compra ? new Date(dto.fecha_compra) : undefined,
-          fecha_instalacion: dto.fecha_instalacion ? new Date(dto.fecha_instalacion) : undefined,
+          fecha_compra: dto.fecha_compra
+            ? new Date(dto.fecha_compra)
+            : undefined,
+          fecha_instalacion: dto.fecha_instalacion
+            ? new Date(dto.fecha_instalacion)
+            : undefined,
           vida_util_horas: dto.vida_util_horas,
           estado_actual: dto.estado_actual ?? 'operativo',
           modo_operacion: dto.modo_operacion,
@@ -92,16 +100,16 @@ export class EquiposService {
       });
     } catch (error) {
       if (error instanceof Error && 'code' in error && error.code === 'P2002') {
-        throw new ConflictException(`Ya existe un equipo con el código "${dto.codigo}"`);
+        throw new ConflictException(
+          `Ya existe un equipo con el código "${dto.codigo}"`,
+        );
       }
       throw error;
     }
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? { galpon: { granja: { propietario_id: solicitante.id } } }
-      : undefined;
+    const where = filtroEquipos(solicitante);
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.equipo.findMany({
@@ -121,8 +129,15 @@ export class EquiposService {
       where: { id },
       select: EQUIPO_SELECT,
     });
-    if (!equipo) throw new NotFoundException(`Equipo con ID ${id} no encontrado`);
-    verificarDueno(solicitante, equipo.galpon.granja.propietario_id, SIN_ACCESO);
+    if (!equipo)
+      throw new NotFoundException(`Equipo con ID ${id} no encontrado`);
+    await verificarAccesoEquipo(
+      this.prisma,
+      id,
+      solicitante,
+      SIN_ACCESO,
+      equipo.galpon.granja.propietario_id,
+    );
     return equipo;
   }
 
@@ -143,8 +158,12 @@ export class EquiposService {
           modelo: dto.modelo,
           fabricante: dto.fabricante,
           serial: dto.serial,
-          fecha_compra: dto.fecha_compra ? new Date(dto.fecha_compra) : undefined,
-          fecha_instalacion: dto.fecha_instalacion ? new Date(dto.fecha_instalacion) : undefined,
+          fecha_compra: dto.fecha_compra
+            ? new Date(dto.fecha_compra)
+            : undefined,
+          fecha_instalacion: dto.fecha_instalacion
+            ? new Date(dto.fecha_instalacion)
+            : undefined,
           vida_util_horas: dto.vida_util_horas,
           estado_actual: dto.estado_actual,
           modo_operacion: dto.modo_operacion,
@@ -156,7 +175,9 @@ export class EquiposService {
       });
     } catch (error) {
       if (error instanceof Error && 'code' in error && error.code === 'P2002') {
-        throw new ConflictException(`Ya existe un equipo con el código "${dto.codigo}"`);
+        throw new ConflictException(
+          `Ya existe un equipo con el código "${dto.codigo}"`,
+        );
       }
       throw error;
     }

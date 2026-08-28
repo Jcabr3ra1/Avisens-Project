@@ -20,6 +20,7 @@ import { ROLES } from '../../common/auth/roles';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { AsignarGalponDto } from './dto/asignar-galpon.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
@@ -48,6 +49,45 @@ export class UsuariosController {
   })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.usuariosService.listar(req.user, paginacion);
+  }
+
+  @Post(':id/galpones')
+  @ApiOperation({ summary: 'Asignar o reactivar un galpón para un Operario' })
+  asignarGalpon(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AsignarGalponDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.usuariosService.asignarGalpon(
+      id,
+      dto.galpon_id,
+      dto.rol_asignacion,
+      req.user,
+    );
+  }
+
+  @Get(':id/galpones')
+  @ApiOperation({ summary: 'Listar asignaciones de galpón de un Operario' })
+  listarGalponesAsignados(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() paginacion: PaginationQueryDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.usuariosService.listarGalponesAsignados(
+      id,
+      req.user,
+      paginacion,
+    );
+  }
+
+  @Delete(':id/galpones/:galponId')
+  @ApiOperation({ summary: 'Desactivar la asignación de un galpón' })
+  desasignarGalpon(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('galponId', ParseIntPipe) galponId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.usuariosService.desasignarGalpon(id, galponId, req.user);
   }
 
   @Get(':id')

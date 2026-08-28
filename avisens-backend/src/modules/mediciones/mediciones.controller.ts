@@ -24,12 +24,13 @@ interface AuthRequest extends Request {
 @ApiTags('mediciones')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('mediciones')
 export class MedicionesController {
   constructor(private medicionesService: MedicionesService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Registrar una medición de un sensor' })
   registrar(@Body() dto: CreateMedicionDto, @Req() req: AuthRequest) {
     return this.medicionesService.registrar(dto, req.user);

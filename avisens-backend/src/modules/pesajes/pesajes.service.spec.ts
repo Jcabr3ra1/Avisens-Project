@@ -15,12 +15,13 @@ describe('PesajesService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
-    lote: { findUnique: jest.fn() },
+    lote: { findFirst: jest.fn(), findUnique: jest.fn() },
     $transaction: jest.fn(),
   };
 
   const admin = { id: 1, rol: 'Administrador' };
   const propietario = { id: 5, rol: 'Propietario' };
+  const operario = { id: 8, rol: 'Operario', organizacion_id: 10 };
 
   const dtoCrear = {
     lote_id: 3,
@@ -51,6 +52,7 @@ describe('PesajesService', () => {
       id: 3,
       galpon: { granja: { propietario_id: 5 } },
     });
+    prisma.lote.findFirst.mockResolvedValue({ id: 3 });
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -86,6 +88,40 @@ describe('PesajesService', () => {
 
       await expect(service.crear(dtoCrear, admin)).rejects.toThrow(
         NotFoundException,
+      );
+      expect(prisma.pesaje.create).not.toHaveBeenCalled();
+    });
+
+    it('permite registrar al Operario en un lote de su galpón asignado', async () => {
+      prisma.pesaje.create.mockResolvedValue({ id: 1 });
+
+      await service.crear(dtoCrear, operario);
+
+      expect(dataDe(prisma.pesaje.create).usuario_id).toBe(operario.id);
+      expect(prisma.lote.findFirst).toHaveBeenCalledWith({
+        where: {
+          id: dtoCrear.lote_id,
+          galpon: {
+            activo: true,
+            granja: {
+              activa: true,
+              organizacion_id: 10,
+              organizacion: { activa: true },
+            },
+            usuarios_galpones: {
+              some: { usuario_id: operario.id, activa: true },
+            },
+          },
+        },
+        select: { id: true },
+      });
+    });
+
+    it('rechaza al Operario sin asignación activa al lote', async () => {
+      prisma.lote.findFirst.mockResolvedValue(null);
+
+      await expect(service.crear(dtoCrear, operario)).rejects.toThrow(
+        ForbiddenException,
       );
       expect(prisma.pesaje.create).not.toHaveBeenCalled();
     });

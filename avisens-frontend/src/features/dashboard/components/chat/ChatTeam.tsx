@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { IcMic, IcChevronDown, IcPaperclip, IcSend } from '@shared/ui/icons/icons'
-import { Avatar, Bubble, panelIconBtn, panelTextBtn } from './shared'
-import type { Operator } from './shared'
+import { Avatar, Bubble } from './shared'
+import { panelIconBtn, panelTextBtn } from './shared-estilos'
+import type { Operator } from './shared-estilos'
 
 const initialOperators: Operator[] = [
   { id: 1, name: 'Carlos Méndez',        role: 'Encargado Galpón 1', online: true,  color: '#10b981', initials: 'CM', unread: 2 },

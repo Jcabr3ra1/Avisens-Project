@@ -5,6 +5,14 @@
 }
 
 :root {
+  /* Paleta de marca AVISENS. El orden refleja su peso de uso:
+     crema 45 %, verde profundo 25 %, verde 15 %, amarillo 10 %, naranja 5 %. */
+  --avisens-cream: #e9e3ba;
+  --avisens-deep: #005b48;
+  --avisens-green: #47bb4b;
+  --avisens-yellow: #ffdd67;
+  --avisens-orange: #e84200;
+
   --bg: #f5f9f7;
   --bg2: #ffffff;
   --bg3: #eaf3ee;
@@ -74,14 +82,6 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
-}
-
-.route-loading {
-  display: grid;
-  min-height: 40vh;
-  place-items: center;
-  color: var(--text2);
-  font-weight: 600;
 }
 
 ::selection {

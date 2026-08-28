@@ -2,7 +2,7 @@ import { api } from './client'
 
 export type CanalOrigen = 'web' | 'whatsapp'
 
-export type RutaChat = 'cotizacion' | 'general'
+export type RutaChat = 'cotizacion' | 'general' | 'soporte'
 
 export type TipoPregunta = 'opcion_unica' | 'texto_libre' | 'numero' | 'si_no'
 
@@ -16,6 +16,9 @@ export interface PreguntaChatbot {
 export interface RespuestaChatbot {
   sesion_id: string
   pregunta: PreguntaChatbot | null
+  mensaje_transicion: string | null
+  progreso: number | null
+  total_pasos: number | null
   finalizado: boolean
   puntaje_total: number | null
   clasificacion: string | null

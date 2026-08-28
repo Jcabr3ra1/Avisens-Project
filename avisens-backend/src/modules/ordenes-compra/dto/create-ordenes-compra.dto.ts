@@ -1,14 +1,33 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'; import {   IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 import { EstadoOrdenCompra } from '@prisma/client';
 
 export class CreateOrdenesCompraDto {
+  @ApiPropertyOptional({
+    example: 1,
+    description:
+      'ID de la granja. Es obligatorio cuando no se envia lote_id; con lote se infiere y, si se envia, debe coincidir.',
+  })
+  @IsInt()
+  @IsOptional()
+  granja_id?: number;
+
   @ApiProperty({ example: 1, description: 'ID del proveedor de la orden' })
   @IsInt()
   proveedor_id: number;
 
   @ApiProperty({
     example: 'OC-2026-001',
-    description: 'Código único de la orden',
+    description: 'Código único de la orden dentro de la granja',
   })
   @IsString()
   codigo: string;
