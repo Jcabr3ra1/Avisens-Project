@@ -105,8 +105,8 @@
   gap: 0.65rem;
   padding: 0 1.55rem;
   border-radius: 999px;
-  color: var(--avisens-deep);
-  background: var(--avisens-cream);
+  color: var(--landing-on-primary);
+  background: var(--landing-primary);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.24);
   font-size: 0.9rem;
   font-weight: 750;
@@ -118,11 +118,11 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--avisens-orange);
+  background: var(--avisens-yellow);
 }
 
 .hero-about-link:hover {
-  background: var(--avisens-yellow);
+  background: var(--landing-primary-hover);
   transform: translateY(-2px);
 }
 
@@ -151,7 +151,7 @@
 }
 
 .hero-story-card:hover {
-  border-color: var(--avisens-yellow);
+  border-color: var(--landing-focus);
   transform: translateY(-3px);
 }
 
@@ -181,8 +181,8 @@
   display: grid;
   place-items: center;
   border-radius: 50%;
-  color: var(--avisens-deep);
-  background: var(--avisens-yellow);
+  color: var(--landing-on-primary);
+  background: var(--landing-primary);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
 }
 
@@ -233,13 +233,13 @@
 
 .hero-dots button.is-active::before {
   width: 24px;
-  background: var(--avisens-green);
+  background: var(--avisens-yellow);
 }
 
 .hero-about-link:focus-visible,
 .hero-story-card:focus-visible,
 .hero-dots button:focus-visible {
-  outline: 3px solid var(--avisens-yellow);
+  outline: 3px solid var(--landing-focus);
   outline-offset: 3px;
 }
 

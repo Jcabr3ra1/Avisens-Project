@@ -1,17 +1,24 @@
 .landing-shell {
-  /* Paleta calmada y exclusiva de la landing. El resto de la aplicacion
-     conserva los colores globales de Avisens. */
-  --avisens-deep: #005b48;
-  --avisens-cream: #f4ebcf;
-  --avisens-green: #3f8f46;
-  --avisens-yellow: #ddb84b;
-  --avisens-orange: #c84e2b;
-  --landing-bg: #f7f3e6;
-  --landing-surface: #fffdf7;
-  --landing-surface-muted: #f4ebcf;
-  --landing-text: #232323;
-  --landing-text-muted: #5f665f;
-  --landing-border: rgba(0, 91, 72, 0.16);
+  /* Paleta natural exclusiva de la landing. El panel conserva sus colores. */
+  --avisens-deep: #103302;
+  --avisens-cream: #f5f7f4;
+  --avisens-green: #0e2f73;
+  --avisens-yellow: #f7f5f7;
+  --avisens-orange: #0e2f73;
+  --landing-bg: #f5f7f4;
+  --landing-surface: #f5f7f4;
+  --landing-surface-muted: #f5f7f4;
+  --landing-card: #f7f5f7;
+  --landing-footer: #e6ede2;
+  --landing-primary: #094f23;
+  --landing-primary-hover: #103302;
+  --landing-accent: #0e2f73;
+  --landing-on-primary: #ffffff;
+  --landing-text: #103302;
+  --landing-text-muted: #0e2f73;
+  --landing-border: #d2d4d2;
+  --landing-focus: #0e2f73;
+  --bg-tint: #f7f5f7;
   color: var(--landing-text);
   background: var(--landing-bg);
 }
