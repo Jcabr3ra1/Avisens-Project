@@ -63,27 +63,29 @@
                 <!-- MORTALIDAD -->
 
                 <TextView
+                    android:id="@+id/tbnEnfermo"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Mortalidad"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+
+                <!-- CONSUMO -->
+
+
+                <TextView
                     android:id="@+id/tabMortalidad"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:background="@drawable/bg_bitacora_tab_selected"
                     android:gravity="center"
-                    android:text="Mortalidad"
-                    android:textColor="@color/text_primary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-
-                <!-- CONSUMO -->
-
-                <TextView
-                    android:id="@+id/tbnEnfermo"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:gravity="center"
                     android:text="Enfermo"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/text_primary"
                     android:textSize="11sp"
                     android:textStyle="bold" />
 

@@ -13,14 +13,14 @@ import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
-import com.project.avisensandroid.databinding.Po06BitacoraMortalidadOpBinding
-import com.project.avisensandroid.model.RegistroMortalidadResponse
+import com.project.avisensandroid.databinding.Po07BitacoraEnfermoOpBinding
+import com.project.avisensandroid.model.EventoSanitarioResponse
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.launch
 
-class BitacoraFragment : BaseBottomNavFragment() {
+class BitacoraEnfermoFragment : BaseBottomNavFragment() {
 
-    private var _binding: Po06BitacoraMortalidadOpBinding? = null
+    private var _binding: Po07BitacoraEnfermoOpBinding? = null
     private val binding get() = _binding!!
 
     override fun onCreateView(
@@ -28,7 +28,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = Po06BitacoraMortalidadOpBinding.inflate(
+        _binding = Po07BitacoraEnfermoOpBinding.inflate(
             inflater,
             container,
             false
@@ -41,20 +41,20 @@ class BitacoraFragment : BaseBottomNavFragment() {
 
         configurarBottomNav(R.id.nav_bitacora)
 
+        binding.tbnEnfermo.setOnClickListener {
+            (requireActivity() as MainActivity).mostrarFragment(
+                BitacoraFragment()
+            )
+        }
+
         binding.tbnConsumo.setOnClickListener {
             (requireActivity() as MainActivity).mostrarFragment(
                 BitacoraConsumoFragment()
             )
         }
 
-        binding.tbnEnfermo.setOnClickListener {
-            (requireActivity() as MainActivity).mostrarFragment(
-                BitacoraEnfermoFragment()
-            )
-        }
-
         binding.btnRegistrarEvento.setOnClickListener {
-            (requireActivity() as MainActivity).mostrarDialogRegistrarEvento()
+            (requireActivity() as MainActivity).mostrarDialogRegistrarTratamiento()
         }
     }
 
@@ -68,7 +68,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
     private fun cargarBitacora() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val response = RetrofitClient.api.listarRegistrosMortalidad(
+                val response = RetrofitClient.api.listarEventosSanitarios(
                     page = 1,
                     limit = 100
                 )
@@ -76,7 +76,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
                 if (!response.isSuccessful) {
                     Toast.makeText(
                         requireContext(),
-                        "No se pudieron cargar los registros de mortalidad. Código: ${response.code()}",
+                        "No se pudieron cargar los registros de enfermos. Código: ${response.code()}",
                         Toast.LENGTH_LONG
                     ).show()
                     return@launch
@@ -87,7 +87,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
                 if (registros == null) {
                     Toast.makeText(
                         requireContext(),
-                        "La API no devolvió registros de mortalidad",
+                        "La API no devolvió registros de eventos sanitarios",
                         Toast.LENGTH_LONG
                     ).show()
                     return@launch
@@ -107,12 +107,12 @@ class BitacoraFragment : BaseBottomNavFragment() {
         }
     }
 
-    private fun mostrarRegistros(registros: List<RegistroMortalidadResponse>) {
+    private fun mostrarRegistros(registros: List<EventoSanitarioResponse>) {
         binding.containerRegistros.removeAllViews()
 
         if (registros.isEmpty()) {
             val mensaje = TextView(requireContext()).apply {
-                text = "No hay registros de mortalidad"
+                text = "No hay registros de enfermos"
                 setTextColor(
                     resources.getColor(
                         R.color.text_secondary,
@@ -145,7 +145,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
         }
     }
 
-    private fun agregarRegistro(registro: RegistroMortalidadResponse) {
+    private fun agregarRegistro(registro: EventoSanitarioResponse) {
         val contenedor = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 18, 0, 18)
@@ -197,54 +197,33 @@ class BitacoraFragment : BaseBottomNavFragment() {
         filaSuperior.addView(fecha)
         contenedor.addView(filaSuperior)
 
-        val cantidad = TextView(requireContext()).apply {
-            text = "${registro.cantidad_aves} aves"
-            setTextColor(
-                resources.getColor(
-                    R.color.text_primary,
-                    requireContext().theme
+        val cantidadTexto = registro.cantidad_aves
+        if (cantidadTexto != null) {
+            val cantidad = TextView(requireContext()).apply {
+                text = "$cantidadTexto aves"
+                setTextColor(
+                    resources.getColor(
+                        R.color.text_primary,
+                        requireContext().theme
+                    )
                 )
-            )
-            textSize = 13f
-            setTypeface(null, Typeface.BOLD)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = 7
+                textSize = 13f
+                setTypeface(null, Typeface.BOLD)
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 7
+                }
             }
+
+            contenedor.addView(cantidad)
         }
 
-        contenedor.addView(cantidad)
-
-        val causa = TextView(requireContext()).apply {
-            val texto = registro.causa_presuntiva?.trim()
-            text = if (!texto.isNullOrBlank()) {
-                "Causa probable: $texto"
-            } else {
-                "Causa probable: No especificada"
-            }
-            setTextColor(
-                resources.getColor(
-                    R.color.text_secondary,
-                    requireContext().theme
-                )
-            )
-            textSize = 12f
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = 4
-            }
-        }
-
-        contenedor.addView(causa)
-
-        val disposicionTexto = registro.disposicion?.trim()
-        if (!disposicionTexto.isNullOrBlank()) {
-            val disposicion = TextView(requireContext()).apply {
-                text = "Disposición: $disposicionTexto"
+        val insumoTexto = registro.insumo?.nombre
+        if (!insumoTexto.isNullOrBlank()) {
+            val insumo = TextView(requireContext()).apply {
+                text = "Insumo: $insumoTexto"
                 setTextColor(
                     resources.getColor(
                         R.color.text_secondary,
@@ -260,7 +239,60 @@ class BitacoraFragment : BaseBottomNavFragment() {
                 }
             }
 
-            contenedor.addView(disposicion)
+            contenedor.addView(insumo)
+        }
+
+        val dosisTexto = registro.dosis?.trim()
+        val viaTexto = registro.via_aplicacion?.trim()
+        if (!dosisTexto.isNullOrBlank() || !viaTexto.isNullOrBlank()) {
+            val dosisVia = TextView(requireContext()).apply {
+                text = buildString {
+                    if (!dosisTexto.isNullOrBlank()) {
+                        append("Dosis: $dosisTexto")
+                    }
+                    if (!viaTexto.isNullOrBlank()) {
+                        if (isNotEmpty()) append(" · ")
+                        append("Vía: $viaTexto")
+                    }
+                }
+                setTextColor(
+                    resources.getColor(
+                        R.color.text_secondary,
+                        requireContext().theme
+                    )
+                )
+                textSize = 12f
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 4
+                }
+            }
+
+            contenedor.addView(dosisVia)
+        }
+
+        val diagnosticoTexto = registro.diagnostico?.trim()
+        if (!diagnosticoTexto.isNullOrBlank()) {
+            val diagnostico = TextView(requireContext()).apply {
+                text = "Diagnóstico: $diagnosticoTexto"
+                setTextColor(
+                    resources.getColor(
+                        R.color.text_secondary,
+                        requireContext().theme
+                    )
+                )
+                textSize = 12f
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = 4
+                }
+            }
+
+            contenedor.addView(diagnostico)
         }
 
         val observacionesTexto = registro.observaciones?.trim()

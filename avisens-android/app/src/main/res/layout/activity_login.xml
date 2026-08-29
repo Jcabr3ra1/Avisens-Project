@@ -42,7 +42,7 @@
                 android:alpha="0.60"
                 android:contentDescription="@null"
                 android:scaleType="centerCrop"
-                android:src="@drawable/ilustracion_granja"
+                android:src="@drawable/login3"
                 app:layout_constraintTop_toTopOf="@id/heroBackground"
                 app:layout_constraintBottom_toBottomOf="@id/heroBackground"
                 app:layout_constraintStart_toStartOf="@id/heroBackground"
@@ -304,22 +304,8 @@
                     android:textColor="#4A5D55"
                     android:textSize="12sp"
                     app:layout_constraintTop_toBottomOf="@id/etContrasena"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toStartOf="@id/txtOlvideContrasena" />
+                    app:layout_constraintStart_toStartOf="parent"/>
 
-                <TextView
-                    android:id="@+id/txtOlvideContrasena"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:minHeight="40dp"
-                    android:gravity="center_vertical"
-                    android:text="¿Olvidó su contraseña?"
-                    android:textColor="#1E9E63"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    app:layout_constraintTop_toTopOf="@id/checkRecordarme"
-                    app:layout_constraintBottom_toBottomOf="@id/checkRecordarme"
-                    app:layout_constraintEnd_toEndOf="parent" />
 
                 <!-- ===================================================== -->
                 <!-- BOTÓN MATERIAL                                         -->

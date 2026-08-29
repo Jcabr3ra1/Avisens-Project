@@ -28,68 +28,6 @@
             android:textColor="@color/text_primary"
             android:layout_marginBottom="10dp" />
 
-        <!-- ====================================== -->
-        <!-- TIPO DE EVENTO -->
-        <!-- ====================================== -->
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Tipo de evento"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="6dp" />
-
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/toggleTipoEventoEnfermo"
-            android:layout_width="match_parent"
-            android:layout_height="58dp"
-            android:layout_marginBottom="8dp"
-            app:singleSelection="true"
-            app:selectionRequired="true"
-            app:checkedButton="@id/btnTipoEnfermo">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnTipoMurio"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="♡  Murió"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="@color/text_secondary"
-                android:backgroundTint="#F1F7F3"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                app:cornerRadius="10dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#DDE8E2" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnTipoEnfermo"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:text="♧  Enfermo"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="@color/text_secondary"
-                android:backgroundTint="#F1F7F3"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                app:cornerRadius="10dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#DDE8E2" />
-
-        </com.google.android.material.button.MaterialButtonToggleGroup>
-
 
         <!-- ====================================== -->
         <!-- LOTE -->

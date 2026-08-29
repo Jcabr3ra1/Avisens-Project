@@ -33,6 +33,7 @@ import com.project.avisensandroid.model.InsumoRequest
 import com.project.avisensandroid.model.RegistroMortalidadRequest
 import com.project.avisensandroid.ui.fragments.AlertasFragment
 import com.project.avisensandroid.ui.fragments.BodegaFragment
+import com.project.avisensandroid.ui.fragments.BitacoraEnfermoFragment
 import com.project.avisensandroid.ui.fragments.BitacoraFragment
 import com.project.avisensandroid.ui.fragments.InicioFragment
 import com.project.avisensandroid.ui.fragments.SensoresFragment
@@ -1004,21 +1005,6 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        // =========================================================
-        // MODIFICADO: cambio de tipo de evento (Murió / Enfermo)
-        // Al tocar "Enfermo" se cierra este diálogo (r04) y se abre
-        // el diálogo de r05 (registrar evento enfermo / tratamiento).
-        // =========================================================
-
-        binding.cardTipoMurio.setOnClickListener {
-            // Ya estamos en la pantalla de "Murió" (r04), no navega a ningún lado
-        }
-
-        binding.cardTipoEnfermo.setOnClickListener {
-            // Reutiliza el mismo diálogo, solo cambia su contenido a r05
-            mostrarDialogRegistrarTratamiento(dialog)
-        }
-
         binding.btnCancelarEvento.setOnClickListener {
             dialog.dismiss()
         }
@@ -1313,13 +1299,6 @@ class MainActivity : AppCompatActivity() {
         // reemplaza su contenido por el de r04.
         // =========================================================
 
-        binding.btnTipoMurio.setOnClickListener {
-            mostrarDialogRegistrarEvento(dialog)
-        }
-
-        binding.btnTipoEnfermo.setOnClickListener {
-            // Ya estamos en la pantalla de "Enfermo" (r05), no navega a ningún lado
-        }
 
         binding.btnCancelarEnfermo.setOnClickListener {
             dialog.dismiss()
@@ -1471,7 +1450,7 @@ class MainActivity : AppCompatActivity() {
                         dialog.dismiss()
 
                         mostrarFragment(
-                            BitacoraFragment()
+                            BitacoraEnfermoFragment()
                         )
 
                     } else {
