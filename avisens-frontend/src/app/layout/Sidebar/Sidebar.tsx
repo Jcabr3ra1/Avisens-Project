@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { IcSidebar } from '@shared/ui/icons/icons'
 import { getUsuario, logout } from '@shared/api'
+import { useConteoNotificaciones } from '@features/notificaciones/hooks/useNotificaciones'
 import logoAvisens from '@shared/assets/logo-avisens.png'
 import {
   NAV_SECTIONS,
@@ -27,6 +28,7 @@ function filtrarItems(items: NavItem[], rol: string | null): NavLinkItem[] {
 const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
   const navigate = useNavigate()
   const usuario = getUsuario()
+  const { noLeidas } = useConteoNotificaciones()
   const rutaInicio = rol === ROL_ADMIN ? '/admin' : '/dashboard'
 
   const secciones = NAV_SECTIONS
@@ -39,7 +41,8 @@ const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
   }
 
   function renderLink(item: NavLinkItem, nested = false) {
-    const badge = item.badge
+    const badge =
+      item.path === '/notificaciones' && noLeidas > 0 ? noLeidas : item.badge
     const contenido = (
       <>
         <span className="dash-side-accent" />

@@ -34,6 +34,10 @@ const SolicitudesPqrsPage = lazy(() => import('@features/solicitudes-pqrs/Solici
 const ProveedoresPage = lazy(() => import('@features/proveedores/ProveedoresPage'))
 const OrdenesCompraPage = lazy(() => import('@features/ordenes-compra/OrdenesCompraPage'))
 const ConsumosDiariosPage = lazy(() => import('@features/consumos-diarios/ConsumosDiariosPage'))
+const NotificacionesPage = lazy(() => import('@features/notificaciones/NotificacionesPage'))
+const RecuperarPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperarPasswordPage'))
+const CambiarPasswordPage = lazy(() => import('@features/recuperaciones-password/CambiarPasswordPage'))
+const RecuperacionesPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperacionesPasswordPage'))
 
 function cargarPagina(page: ReactNode) {
   return (
@@ -48,6 +52,8 @@ function AppRoutes() {
     <Routes>
       {/* GRUPO 1: Standalone — pantalla completa sin layout */}
       <Route path="/login" element={cargarPagina(<LoginPage />)} />
+      <Route path="/recuperar-password" element={cargarPagina(<RecuperarPasswordPage />)} />
+      <Route path="/cambiar-password" element={cargarPagina(<CambiarPasswordPage />)} />
 
       {/* GRUPO 2: Web pública — la landing controla sus propios componentes */}
       <Route path="/" element={cargarPagina(<LandingPage />)} />
@@ -70,11 +76,13 @@ function AppRoutes() {
         <Route path="/bitacora"        element={cargarPagina(<BitacoraPage />)} />
         <Route path="/consumos-diarios" element={cargarPagina(<ConsumosDiariosPage />)} />
         <Route path="/alertas"         element={cargarPagina(<AlertasPage />)} />
+        <Route path="/notificaciones"  element={cargarPagina(<NotificacionesPage />)} />
         <Route path="/finanzas"        element={cargarPagina(<FinanzasPage />)} />
         <Route path="/inventario"      element={cargarPagina(<InventarioPage />)} />
         <Route path="/usuarios"        element={cargarPagina(<UsuariosPage />)} />
         <Route path="/proveedores"     element={cargarPagina(<ProveedoresPage />)} />
         <Route path="/ordenes-compra"  element={cargarPagina(<OrdenesCompraPage />)} />
+        <Route path="/recuperaciones-password" element={cargarPagina(<RecuperacionesPasswordPage />)} />
         <Route path="/granjas"         element={cargarPagina(<GranjasPage />)} />
         <Route path="/galpones"        element={cargarPagina(<GalponesPage />)} />
         <Route path="/lotes"           element={cargarPagina(<LotesPage />)} />

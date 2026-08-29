@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import {
   IcAlert,
+  IcBell,
   IcBox,
   IcClock,
   IcCoin,
@@ -64,6 +65,12 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Mi jornada',
         icon: <IcClock size={16} />,
         roles: [ROL_OPERARIO],
+      },
+      {
+        path: '/notificaciones',
+        label: 'Notificaciones',
+        icon: <IcBell size={16} />,
+        roles: [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
       },
     ],
   },
@@ -145,6 +152,12 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Compras',
         icon: <IcDoc size={16} />,
         roles: [ROL_ADMIN, ROL_PROPIETARIO],
+      },
+      {
+        path: '/recuperaciones-password',
+        label: 'Recuperar acceso',
+        icon: <IcUserCircle size={16} />,
+        roles: [ROL_ADMIN],
       },
     ],
   },

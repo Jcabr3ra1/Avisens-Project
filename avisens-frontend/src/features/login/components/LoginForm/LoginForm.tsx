@@ -26,6 +26,11 @@ function LoginForm() {
       // Hacemos login y recibimos el objeto con el rol del usuario
       const respuesta = await login({ email, password })
 
+      if (respuesta.requiere_cambio_password) {
+        navigate('/cambiar-password')
+        return
+      }
+
       // Redirigimos según el rol:
       //   - Administrador → /admin  (panel de gestión del sistema)
       //   - Propietario / Operario → /dashboard  (vista operativa de galpones)
@@ -116,7 +121,7 @@ function LoginForm() {
         {error && <p id="lf-error-msg" className="lf-error" role="alert">{error}</p>}
 
         <div className="lf-row">
-          <a className="lf-link" href="#recuperar">¿Olvidó su contraseña?</a>
+          <Link className="lf-link" to="/recuperar-password">¿Olvidó su contraseña?</Link>
         </div>
 
         <button className="lf-btn-primary" type="submit" disabled={loading} aria-busy={loading}>
