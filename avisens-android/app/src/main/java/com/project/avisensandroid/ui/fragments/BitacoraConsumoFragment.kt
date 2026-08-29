@@ -22,6 +22,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
         val activity = requireActivity() as MainActivity
         configurarBottomNav(R.id.nav_bitacora)
         binding.btnMortalidad.setOnClickListener { activity.mostrarFragment(BitacoraFragment()) }
+        binding.btnEnfermo.setOnClickListener { activity.mostrarFragment(BitacoraEnfermoFragment()) }
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

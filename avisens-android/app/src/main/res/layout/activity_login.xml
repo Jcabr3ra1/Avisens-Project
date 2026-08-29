@@ -42,7 +42,7 @@
                 android:alpha="0.60"
                 android:contentDescription="@null"
                 android:scaleType="centerCrop"
-                android:src="@drawable/login3"
+                android:src="@drawable/ilustracion_granja"
                 app:layout_constraintTop_toTopOf="@id/heroBackground"
                 app:layout_constraintBottom_toBottomOf="@id/heroBackground"
                 app:layout_constraintStart_toStartOf="@id/heroBackground"

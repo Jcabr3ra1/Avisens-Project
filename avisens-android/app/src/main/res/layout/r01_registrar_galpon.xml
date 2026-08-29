@@ -94,16 +94,23 @@
         android:textStyle="bold"
         android:layout_marginTop="18dp" />
 
-    <Spinner
-        android:id="@+id/spinnerMarcaAlimento"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:layout_marginTop="6dp"
-        android:background="@drawable/bg_spinner_galpon"
-        android:paddingStart="14dp"
-        android:paddingEnd="14dp"
-        android:textColor="@color/black"
-        android:spinnerMode="dropdown" />
+        android:background="@drawable/bg_spinner_galpon">
+
+        <Spinner
+            android:id="@+id/spinnerMarcaAlimento"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:textColor="@color/black"
+            android:spinnerMode="dropdown" />
+
+    </FrameLayout>
 
     <!-- ========================================== -->
     <!-- LÍNEAS -->
@@ -118,17 +125,24 @@
         android:textStyle="bold"
         android:layout_marginTop="18dp" />
 
-    <Spinner
-        android:id="@+id/spinnerLineas"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:layout_marginTop="12dp"
-        android:background="@drawable/bg_spinner_galpon"
-        android:paddingStart="14dp"
-        android:textColor="@color/black"
-        android:paddingEnd="14dp"
         android:layout_marginBottom="30dp"
-        android:spinnerMode="dropdown" />
+        android:background="@drawable/bg_spinner_galpon">
+
+        <Spinner
+            android:id="@+id/spinnerLineas"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:paddingStart="14dp"
+            android:textColor="@color/black"
+            android:paddingEnd="14dp"
+            android:spinnerMode="dropdown" />
+
+    </FrameLayout>
 
     <!-- ========================================== -->
     <!-- BOTONES -->

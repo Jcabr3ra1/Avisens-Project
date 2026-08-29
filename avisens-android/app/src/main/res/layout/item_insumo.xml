@@ -20,11 +20,10 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text=""
-            android:textColor="@color/text_primary"
+            android:textColor="#171D1A"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:maxLines="2"/>
+            android:maxLines="2" />
 
         <TextView
             android:id="@+id/txtTipoInsumo"
@@ -37,16 +36,16 @@
             android:paddingBottom="4dp"
             android:background="@drawable/bg_bodega_tipo"
             android:gravity="center"
-            android:text=""
-            android:textColor="#7D8782"
-            android:textSize="10sp"/>
+            android:textColor="#68736E"
+            android:textSize="10sp"
+            android:maxLines="1" />
 
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="3dp"
         android:gravity="bottom"
         android:orientation="horizontal">
 
@@ -54,10 +53,9 @@
             android:id="@+id/txtCantidadInsumo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="@color/text_primary"
-            android:textSize="32sp"
-            android:textStyle="bold"/>
+            android:textColor="#171D1A"
+            android:textSize="30sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/txtUnidadInsumo"
@@ -65,10 +63,9 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="5dp"
             android:layout_marginBottom="5dp"
-            android:text=""
             android:textColor="#89938E"
-            android:textSize="14sp"
-            android:textStyle="bold"/>
+            android:textSize="13sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
 
@@ -76,21 +73,19 @@
         android:id="@+id/progressStock"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
-        android:layout_height="7dp"
-        android:layout_marginTop="7dp"
+        android:layout_height="8dp"
+        android:layout_marginTop="6dp"
         android:max="100"
         android:progress="0"
-        android:progressTint="#22965F"
-        android:backgroundTint="#E8ECEA"/>
+        android:indeterminate="false" />
 
     <TextView
         android:id="@+id/txtMinimoAutonomia"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:text=""
         android:textColor="#89938E"
-        android:textSize="11sp"/>
+        android:textSize="11sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -104,9 +99,10 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text=""
             android:textColor="#69746F"
-            android:textSize="11sp"/>
+            android:textSize="11sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
         <TextView
             android:id="@+id/txtEstadoInsumo"
@@ -118,10 +114,9 @@
             android:paddingBottom="6dp"
             android:background="@drawable/bg_stock_ok"
             android:gravity="center"
-            android:text=""
             android:textColor="#18875A"
             android:textSize="10sp"
-            android:textStyle="bold"/>
+            android:textStyle="bold" />
 
     </LinearLayout>
 

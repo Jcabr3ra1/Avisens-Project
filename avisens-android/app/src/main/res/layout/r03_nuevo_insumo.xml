@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="20dp"
+    android:padding="18dp"
     android:background="@drawable/bg_dialog_redondeado">
 
     <!-- TÍTULO -->
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -16,9 +18,10 @@
         android:textSize="18sp"
         android:textStyle="bold"
         android:textColor="#171D1A"
-        android:layout_marginBottom="14dp" />
+        android:layout_marginBottom="12dp" />
 
     <!-- NOMBRE -->
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -40,9 +43,10 @@
         android:textColor="@color/black"
         android:hint="Ej. Alimento iniciación"
         android:inputType="text"
-        android:layout_marginBottom="13dp" />
+        android:layout_marginBottom="11dp" />
 
     <!-- CATEGORÍA -->
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -64,22 +68,24 @@
         android:textColor="@color/black"
         android:hint="Ej. Alimento, medicamento, vacuna"
         android:inputType="text"
-        android:layout_marginBottom="13dp" />
+        android:layout_marginBottom="11dp" />
 
     <!-- CANTIDAD + UNIDAD -->
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="13dp">
+        android:layout_marginBottom="11dp">
 
         <!-- CANTIDAD -->
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:layout_marginEnd="8dp">
+            android:layout_marginEnd="6dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -106,11 +112,13 @@
         </LinearLayout>
 
         <!-- UNIDAD -->
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:layout_marginStart="6dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -139,6 +147,7 @@
     </LinearLayout>
 
     <!-- PROVEEDOR -->
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -148,53 +157,67 @@
         android:textColor="#171D1A"
         android:layout_marginBottom="5dp" />
 
-    <Spinner
-        android:id="@+id/spinnerProveedor"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:background="@drawable/bg_input_verde"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:layout_marginBottom="20dp" />
+        android:layout_marginBottom="14dp">
+
+        <Spinner
+            android:id="@+id/spinnerProveedor"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp" />
+
+    </FrameLayout>
 
     <!-- BOTONES -->
+
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
         android:orientation="horizontal"
         android:gravity="end"
-        android:layout_marginTop="20dp">
+        android:layout_marginTop="4dp">
 
         <!-- CANCELAR -->
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancelarInsumo"
             android:layout_width="100dp"
             android:layout_height="40dp"
             android:text="Cancelar"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="#171D1A"
             android:textAllCaps="false"
             android:background="@drawable/bg_boton_cancelar"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="6dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
             app:backgroundTint="@null"
-            app:cornerRadius="10dp"
+            app:cornerRadius="9dp"
             android:insetTop="0dp"
             android:insetBottom="0dp" />
 
-        <!-- AGREGAR INSUMO -->
+        <!-- AGREGAR -->
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAgregarInsumo"
-            android:layout_width="150dp"
+            android:layout_width="135dp"
             android:layout_height="40dp"
             android:text="Agregar insumo"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
             android:textAllCaps="false"
             android:background="@drawable/bg_boton_verde"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
             app:backgroundTint="@null"
-            app:cornerRadius="10dp"
+            app:cornerRadius="9dp"
             android:insetTop="0dp"
             android:insetBottom="0dp" />
 

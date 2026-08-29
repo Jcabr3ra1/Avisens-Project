@@ -12,83 +12,110 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="22dp"
+        android:padding="18dp"
         android:background="@drawable/bg_dialog_white">
 
-        <!-- ====================================== -->
-        <!-- TITULO -->
-        <!-- ====================================== -->
+        <!-- TÍTULO -->
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Registrar evento"
-            android:textSize="22sp"
+            android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginBottom="14dp" />
+            android:layout_marginBottom="10dp" />
 
-        <!-- ====================================== -->
         <!-- LOTE -->
-        <!-- ====================================== -->
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Lote"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginTop="14dp"
-            android:layout_marginBottom="6dp" />
+            android:layout_marginBottom="5dp" />
 
-        <Spinner
-            android:id="@+id/spinnerLote"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="46dp"
-            android:background="@drawable/bg_input_event"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp" />
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event">
 
-        <!-- ====================================== -->
-        <!-- CANTIDAD Y FECHA -->
-        <!-- ====================================== -->
+            <Spinner
+                android:id="@+id/spinnerLote"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
+
+        </FrameLayout>
+
+        <!-- TIPO DE EVENTO -->
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tipo de evento"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event">
+
+            <Spinner
+                android:id="@+id/spinnerTipoEvento"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
+
+        </FrameLayout>
+
+        <!-- CANTIDAD + FECHA -->
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="10dp"
             android:weightSum="2">
 
-            <!-- CANTIDAD DE AVES -->
+            <!-- CANTIDAD -->
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical"
-                android:layout_marginEnd="5dp">
+                android:layout_marginEnd="4dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Cantidad de aves"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
-                    android:layout_marginBottom="6dp" />
+                    android:layout_marginBottom="5dp" />
 
                 <EditText
                     android:id="@+id/edtCantidadAves"
                     android:layout_width="match_parent"
-                    android:layout_height="46dp"
+                    android:layout_height="42dp"
                     android:background="@drawable/bg_input_event"
                     android:hint="Ej: 35"
-                    android:textSize="13sp"
+                    android:textSize="12sp"
                     android:textColor="@color/black"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="12dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
                     android:inputType="number"
                     android:singleLine="true" />
 
@@ -101,27 +128,27 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical"
-                android:layout_marginStart="5dp">
+                android:layout_marginStart="4dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Fecha"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
-                    android:layout_marginBottom="6dp" />
+                    android:layout_marginBottom="5dp" />
 
                 <EditText
                     android:id="@+id/edtFecha"
                     android:layout_width="match_parent"
-                    android:layout_height="46dp"
+                    android:layout_height="42dp"
                     android:background="@drawable/bg_input_event"
                     android:hint="27/08/2026"
-                    android:textSize="13sp"
+                    android:textSize="12sp"
                     android:textColor="@color/black"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="12dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
                     android:singleLine="true"
                     android:focusable="false"
                     android:clickable="true" />
@@ -130,153 +157,158 @@
 
         </LinearLayout>
 
-        <!-- ====================================== -->
         <!-- CAUSA PRESUNTIVA -->
-        <!-- ====================================== -->
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Causa presuntiva"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginTop="14dp"
-            android:layout_marginBottom="6dp" />
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp" />
 
         <EditText
             android:id="@+id/edtCausaPresuntiva"
             android:layout_width="match_parent"
-            android:layout_height="46dp"
+            android:layout_height="42dp"
             android:background="@drawable/bg_input_event"
             android:hint="Ej: sin determinar"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textColor="@color/black"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
             android:singleLine="true" />
 
-        <!-- ====================================== -->
         <!-- DISPOSICIÓN -->
-        <!-- ====================================== -->
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Disposición"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginTop="14dp"
-            android:layout_marginBottom="6dp" />
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp" />
 
         <EditText
             android:id="@+id/edtDisposicion"
             android:layout_width="match_parent"
-            android:layout_height="46dp"
+            android:layout_height="42dp"
             android:background="@drawable/bg_input_event"
             android:hint="Opcional"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textColor="@color/black"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
             android:singleLine="true" />
 
-        <!-- ====================================== -->
         <!-- MÉTODO DE REGISTRO -->
-        <!-- ====================================== -->
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Método de registro"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginTop="14dp"
-            android:layout_marginBottom="6dp" />
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp" />
 
-        <Spinner
-            android:id="@+id/spinnerMetodoRegistro"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="46dp"
-            android:background="@drawable/bg_input_event"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp" />
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event">
 
-        <!-- ====================================== -->
+            <Spinner
+                android:id="@+id/spinnerMetodoRegistro"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
+
+        </FrameLayout>
+
         <!-- OBSERVACIONES -->
-        <!-- ====================================== -->
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Observaciones"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginTop="14dp"
-            android:layout_marginBottom="6dp" />
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp" />
 
         <EditText
             android:id="@+id/edtObservaciones"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="58dp"
             android:background="@drawable/bg_observaciones"
             android:gravity="top|start"
             android:hint="Escribe una observación..."
-            android:padding="12dp"
-            android:textSize="13sp"
+            android:padding="10dp"
+            android:textSize="12sp"
             android:textColor="@color/black"
             android:inputType="textMultiLine"
             android:overScrollMode="ifContentScrolls" />
 
-        <!-- ====================================== -->
         <!-- BOTONES -->
-        <!-- ====================================== -->
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="42dp"
             android:orientation="horizontal"
             android:gravity="center"
-            android:layout_marginTop="14dp">
+            android:layout_marginTop="10dp">
+
+            <!-- CANCELAR -->
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCancelarEvento"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
+                android:layout_height="42dp"
                 android:layout_weight="1"
                 android:text="Cancelar"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
                 android:textColor="@color/text_primary"
                 android:backgroundTint="@color/white"
                 android:gravity="center"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:layout_marginEnd="4dp"
-                app:cornerRadius="10dp"
+                android:layout_marginEnd="3dp"
+                app:cornerRadius="9dp"
                 app:strokeWidth="1dp"
                 app:strokeColor="#D6DED9" />
+
+            <!-- GUARDAR -->
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnGuardarEvento"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
+                android:layout_height="42dp"
                 android:layout_weight="1"
                 android:text="Guardar registro"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
                 android:textColor="@android:color/white"
                 android:backgroundTint="#2E8B57"
                 android:gravity="center"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:layout_marginStart="4dp"
-                app:cornerRadius="10dp" />
+                android:layout_marginStart="3dp"
+                app:cornerRadius="9dp" />
 
         </LinearLayout>
 

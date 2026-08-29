@@ -15,23 +15,18 @@
         android:padding="18dp"
         android:background="@drawable/bg_dialog_white">
 
-        <!-- ====================================== -->
-        <!-- TITULO -->
-        <!-- ====================================== -->
+        <!-- TÍTULO -->
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Registrar evento"
+            android:text="Registrar tratamiento"
             android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
             android:layout_marginBottom="10dp" />
 
-
-        <!-- ====================================== -->
         <!-- LOTE -->
-        <!-- ====================================== -->
 
         <TextView
             android:layout_width="wrap_content"
@@ -42,18 +37,22 @@
             android:textColor="@color/text_primary"
             android:layout_marginBottom="5dp" />
 
-        <Spinner
-            android:id="@+id/spinnerLoteEnfermo"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="42dp"
-            android:background="@drawable/bg_input_event"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp" />
+            android:background="@drawable/bg_input_event">
 
+            <Spinner
+                android:id="@+id/spinnerLoteEnfermo"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
 
-        <!-- ====================================== -->
-        <!-- FECHA Y CANTIDAD -->
-        <!-- ====================================== -->
+        </FrameLayout>
+
+        <!-- CANTIDAD + FECHA -->
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -62,7 +61,7 @@
             android:layout_marginTop="10dp"
             android:weightSum="2">
 
-            <!-- CANTIDAD DE AVES -->
+            <!-- CANTIDAD -->
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -94,7 +93,6 @@
                     android:singleLine="true" />
 
             </LinearLayout>
-
 
             <!-- FECHA -->
 
@@ -132,10 +130,7 @@
 
         </LinearLayout>
 
-
-        <!-- ====================================== -->
         <!-- INSUMO -->
-        <!-- ====================================== -->
 
         <TextView
             android:layout_width="wrap_content"
@@ -147,18 +142,22 @@
             android:layout_marginTop="10dp"
             android:layout_marginBottom="5dp" />
 
-        <Spinner
-            android:id="@+id/spinnerInsumoEnfermo"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="42dp"
-            android:background="@drawable/bg_input_event"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp" />
+            android:background="@drawable/bg_input_event">
 
+            <Spinner
+                android:id="@+id/spinnerInsumoEnfermo"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
 
-        <!-- ====================================== -->
-        <!-- DOSIS Y VIA -->
-        <!-- ====================================== -->
+        </FrameLayout>
+
+        <!-- DOSIS + VÍA -->
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -199,8 +198,7 @@
 
             </LinearLayout>
 
-
-            <!-- VIA DE APLICACION -->
+            <!-- VÍA DE APLICACIÓN -->
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -218,22 +216,26 @@
                     android:textColor="@color/text_primary"
                     android:layout_marginBottom="5dp" />
 
-                <Spinner
-                    android:id="@+id/spinnerViaAplicacionEnfermo"
+                <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="42dp"
-                    android:background="@drawable/bg_input_event"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp" />
+                    android:background="@drawable/bg_input_event">
+
+                    <Spinner
+                        android:id="@+id/spinnerViaAplicacionEnfermo"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp" />
+
+                </FrameLayout>
 
             </LinearLayout>
 
         </LinearLayout>
 
-
-        <!-- ====================================== -->
-        <!-- METODO DE REGISTRO -->
-        <!-- ====================================== -->
+        <!-- MÉTODO DE REGISTRO -->
 
         <TextView
             android:layout_width="wrap_content"
@@ -245,18 +247,22 @@
             android:layout_marginTop="10dp"
             android:layout_marginBottom="5dp" />
 
-        <Spinner
-            android:id="@+id/spinnerMetodoRegistroEnfermo"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="42dp"
-            android:background="@drawable/bg_input_event"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp" />
+            android:background="@drawable/bg_input_event">
 
+            <Spinner
+                android:id="@+id/spinnerMetodoRegistroEnfermo"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp" />
 
-        <!-- ====================================== -->
+        </FrameLayout>
+
         <!-- OBSERVACIONES -->
-        <!-- ====================================== -->
 
         <TextView
             android:layout_width="wrap_content"
@@ -281,10 +287,7 @@
             android:inputType="textMultiLine"
             android:overScrollMode="ifContentScrolls" />
 
-
-        <!-- ====================================== -->
         <!-- BOTONES -->
-        <!-- ====================================== -->
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -315,7 +318,6 @@
                 app:cornerRadius="9dp"
                 app:strokeWidth="1dp"
                 app:strokeColor="#D6DED9" />
-
 
             <!-- GUARDAR -->
 
