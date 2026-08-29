@@ -2,8 +2,23 @@ import { BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CaptacionProspectosService } from './captacion-prospectos.service';
 
+type CrearProspectoArgumento = {
+  data: {
+    nombre: string;
+    municipio: string;
+    tipo_produccion: string;
+    email: string | null;
+    canal_origen: string;
+    estado: string;
+    consentimiento_habeas_data: boolean;
+  };
+};
+
 describe('CaptacionProspectosService', () => {
-  const prospectoCreateMock = jest.fn();
+  const prospectoCreateMock: jest.Mock<
+    Promise<unknown>,
+    [CrearProspectoArgumento]
+  > = jest.fn<Promise<unknown>, [CrearProspectoArgumento]>();
 
   const prisma = {
     prospecto: {
@@ -27,19 +42,17 @@ describe('CaptacionProspectosService', () => {
       consentimiento_habeas_data: true,
     });
 
-    expect(prospectoCreateMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          nombre: 'Ana Rojas',
-          municipio: 'Lebrija',
-          tipo_produccion: 'Pollo de engorde',
-          email: 'ana@granja.co',
-          canal_origen: 'web',
-          estado: 'nuevo',
-          consentimiento_habeas_data: true,
-        }),
-      }),
-    );
+    const llamada = prospectoCreateMock.mock.calls[0]?.[0];
+
+    expect(llamada.data).toMatchObject({
+      nombre: 'Ana Rojas',
+      municipio: 'Lebrija',
+      tipo_produccion: 'Pollo de engorde',
+      email: 'ana@granja.co',
+      canal_origen: 'web',
+      estado: 'nuevo',
+      consentimiento_habeas_data: true,
+    });
   });
 
   it('rechaza una solicitud sin autorización de datos', async () => {
