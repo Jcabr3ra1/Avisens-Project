@@ -47,11 +47,19 @@ export interface UsuarioSesion {
   rol: string
 }
 
-export interface LoginResponse {
+export interface LoginSesionResponse {
+  requiere_cambio_password: false
   access_token: string
   refresh_token: string
   usuario: UsuarioSesion
 }
+
+export interface LoginCambioPasswordResponse {
+  requiere_cambio_password: true
+  cambio_password_token: string
+}
+
+export type LoginResponse = LoginSesionResponse | LoginCambioPasswordResponse
 
 export interface TokensResponse {
   access_token: string

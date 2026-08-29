@@ -141,8 +141,14 @@ function ModalRegistroOperario({
                 <input value={causa} onChange={(evento) => setCausa(evento.target.value)} />
               </label>
               <label>
-                <span>Disposición <em>(opcional)</em></span>
-                <input value={disposicion} onChange={(evento) => setDisposicion(evento.target.value)} />
+                <span>¿Qué hiciste con las aves? <em>(opcional)</em></span>
+                <select value={disposicion} onChange={(evento) => setDisposicion(evento.target.value)}>
+                  <option value="">Sin manejar aún</option>
+                  <option value="compostaje">Compostaje</option>
+                  <option value="incineracion">Incineración</option>
+                  <option value="entierro">Entierro</option>
+                  <option value="otro">Otro</option>
+                </select>
               </label>
             </>
           ) : (

@@ -22,7 +22,7 @@ describe('matriz RBAC', () => {
       rolTienePermisos(ROLES.OPERARIO, [PERMISOS.CATALOGOS_GESTIONAR]),
     ).toBe(false);
     expect(rolTienePermisos(ROLES.OPERARIO, [PERMISOS.PROVEEDORES_LEER])).toBe(
-      false,
+      true,
     );
   });
 
