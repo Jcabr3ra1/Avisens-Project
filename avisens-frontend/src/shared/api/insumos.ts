@@ -3,6 +3,7 @@ import type { PaginatedResponse } from './types'
 
 export interface Insumo {
   id: number
+  granja_id: number
   nombre: string
   tipo: string | null
   unidad_medida: string

@@ -8,7 +8,8 @@ Disallow: /bitacora
 Disallow: /alertas
 Disallow: /finanzas
 Disallow: /inventario
-Disallow: /infraestructura
+Disallow: /galpones
+Disallow: /lotes
 Disallow: /crm
 Disallow: /granjas
 Disallow: /usuarios

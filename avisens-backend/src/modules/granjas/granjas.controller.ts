@@ -35,11 +35,8 @@ export class GranjasController {
   constructor(private granjasService: GranjasService) {}
 
   @Post()
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
-  @ApiOperation({
-    summary:
-      'Crear una granja (Admin: para cualquier propietario · Propietario: para sí mismo)',
-  })
+  @Roles(ROLES.ADMINISTRADOR)
+  @ApiOperation({ summary: 'Crear una granja para un propietario' })
   crear(@Body() dto: CreateGranjaDto, @Req() req: AuthRequest) {
     return this.granjasService.crear(dto, req.user);
   }

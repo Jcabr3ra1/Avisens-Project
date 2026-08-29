@@ -2,9 +2,11 @@ import { useCallback } from 'react'
 import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
 import BarraUsuarios from './components/BarraUsuarios'
 import FormularioUsuario from './components/FormularioUsuario'
+import ModalAsignacionesGalpon from './components/ModalAsignacionesGalpon'
 import ResumenUsuarios from './components/ResumenUsuarios'
 import TablaUsuarios from './components/TablaUsuarios'
 import { useCatalogosUsuarios } from './hooks/useCatalogosUsuarios'
+import { useAsignacionesGalpon } from './hooks/useAsignacionesGalpon'
 import { useFiltroUsuarios } from './hooks/useFiltroUsuarios'
 import { useFormularioUsuario } from './hooks/useFormularioUsuario'
 import { useResumenUsuarios } from './hooks/useResumenUsuarios'
@@ -24,6 +26,7 @@ function UsuariosPage() {
     eliminar,
   } = useUsuarios()
   const catalogos = useCatalogosUsuarios(esPropietario)
+  const asignaciones = useAsignacionesGalpon()
   const filtro = useFiltroUsuarios(usuarios)
   const resumen = useResumenUsuarios(usuarios)
 
@@ -55,7 +58,15 @@ function UsuariosPage() {
   )
 
   const formulario = useFormularioUsuario(guardarUsuario)
-  const rolInicial = catalogos.roles.length === 1 ? catalogos.roles[0].id : 0
+
+  async function abrirCrearUsuario() {
+    const roles = catalogos.roles.length > 0
+      ? catalogos.roles
+      : await catalogos.recargar()
+    if (roles.length === 0) return
+
+    formulario.abrirCrear(roles.length === 1 ? roles[0].id : 0)
+  }
 
   function confirmarEliminacion(usuario: Usuario) {
     const confirmado = window.confirm(
@@ -82,8 +93,8 @@ function UsuariosPage() {
         <button
           type="button"
           className="usuarios-btn-primary"
-          onClick={() => formulario.abrirCrear(rolInicial)}
-          disabled={catalogos.cargando || catalogos.roles.length === 0}
+          onClick={() => void abrirCrearUsuario()}
+          disabled={catalogos.cargando}
         >
           + {esPropietario ? 'Nuevo operario' : 'Nuevo usuario'}
         </button>
@@ -119,6 +130,7 @@ function UsuariosPage() {
           busqueda={filtro.busqueda}
           onAlternarActivo={(usuario) => void alternarActivo(usuario)}
           onEditar={formulario.abrirEditar}
+          onGestionarAsignaciones={(usuario) => void asignaciones.abrir(usuario)}
           onEliminar={confirmarEliminacion}
         />
       </section>
@@ -138,6 +150,20 @@ function UsuariosPage() {
           onAlternarPassword={formulario.alternarPassword}
           onGuardar={formulario.guardar}
           onCerrar={formulario.cerrar}
+        />
+      )}
+
+      {asignaciones.abierto && asignaciones.usuario && (
+        <ModalAsignacionesGalpon
+          usuario={asignaciones.usuario}
+          asignaciones={asignaciones.asignaciones}
+          galpones={asignaciones.galpones}
+          cargando={asignaciones.cargando}
+          guardando={asignaciones.guardando}
+          error={asignaciones.error}
+          onCerrar={asignaciones.cerrar}
+          onAsignar={asignaciones.asignar}
+          onRetirar={asignaciones.retirar}
         />
       )}
     </div>

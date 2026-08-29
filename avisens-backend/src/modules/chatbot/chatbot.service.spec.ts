@@ -19,6 +19,7 @@ describe('ChatbotService', () => {
 
   const prisma = {
     prospecto: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+    usuario: { findUnique: jest.fn() },
     preguntaChatbot: { findFirst: jest.fn(), count: jest.fn() },
     respuestaChatbot: { create: jest.fn(), aggregate: jest.fn(), findMany: jest.fn(), count: jest.fn() },
     matrizCalificacion: { findUnique: jest.fn() },
@@ -140,6 +141,25 @@ describe('ChatbotService', () => {
         /Respuesta no valida para A1/,
       );
       expect(prisma.respuestaChatbot.create).not.toHaveBeenCalled();
+    });
+
+    it('rechaza una cedula que no pertenece a un cliente activo en soporte PQRS', async () => {
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'S1',
+          bloque: 'S',
+          tipo: 'texto_libre',
+          campo_prospecto: 'documento',
+          siguiente: 'S2',
+        }),
+      );
+      prisma.usuario.findUnique.mockResolvedValue(null);
+
+      await expect(responder('999999999')).rejects.toThrow(
+        'La cédula no es válida para una solicitud PQRS',
+      );
+      expect(prisma.respuestaChatbot.create).not.toHaveBeenCalled();
+      expect(prisma.prospecto.update).not.toHaveBeenCalled();
     });
 
     it('sigue el salto cuando la respuesta tiene uno definido', async () => {

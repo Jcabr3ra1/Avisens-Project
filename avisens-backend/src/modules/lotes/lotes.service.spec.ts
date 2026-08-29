@@ -26,11 +26,15 @@ describe('LotesService', () => {
 
   const admin = { id: 1, rol: 'Administrador' };
   const propietario = { id: 5, rol: 'Propietario' };
+  type TransaccionPrueba = (cliente: typeof prisma) => Promise<unknown>;
+
+  const esTransaccionPrueba = (
+    operacion: unknown,
+  ): operacion is TransaccionPrueba => typeof operacion === 'function';
 
   const dtoCrear = {
     galpon_id: 3,
     proveedor_id: 7,
-    codigo: 'LOTE-2026-01',
     fecha_ingreso: '2026-08-06',
     cantidad_inicial: 5000,
     raza: 'Ross 308',
@@ -53,8 +57,10 @@ describe('LotesService', () => {
     }).compile();
     service = module.get<LotesService>(LotesService);
 
-    prisma.$transaction.mockResolvedValue([[], 0]);
-    // Por defecto el galpón 3 es del propietario 5 y el proveedor 7 existe.
+    prisma.$transaction.mockImplementation((operacion: unknown) => {
+      if (esTransaccionPrueba(operacion)) return operacion(prisma);
+      return Promise.resolve([[], 0]);
+    });
     prisma.galpon.findUnique.mockResolvedValue({
       id: 3,
       granja: { propietario_id: 5 },
@@ -66,13 +72,19 @@ describe('LotesService', () => {
 
   describe('crear', () => {
     it('crea el lote cuando el galpón es del solicitante', async () => {
-      prisma.lote.create.mockResolvedValue({ id: 1 });
+      prisma.lote.create.mockResolvedValue({ id: 25 });
+      prisma.lote.update.mockResolvedValue({
+        id: 25,
+        codigo: 'LOT-2026-000025',
+      });
 
-      await service.crear(dtoCrear, propietario);
+      const resultado = await service.crear(dtoCrear, propietario);
 
       expect(prisma.lote.create).toHaveBeenCalled();
-      // Las fechas del DTO (string) se convierten a Date para Prisma.
       expect(dataDe(prisma.lote.create).fecha_ingreso).toBeInstanceOf(Date);
+      expect(dataDe(prisma.lote.create).codigo).toMatch(/^TEMP-/);
+      expect(dataDe(prisma.lote.update).codigo).toBe('LOT-2026-000025');
+      expect(resultado.codigo).toBe('LOT-2026-000025');
     });
 
     it('un Propietario no puede crear en un galpón ajeno (403)', async () => {
@@ -151,9 +163,10 @@ describe('LotesService', () => {
       });
       prisma.lote.update.mockResolvedValue({ id: 1 });
 
-      await service.actualizar(1, { codigo: 'LOTE-NUEVO' }, propietario);
+      await service.actualizar(1, { raza: 'Cobb 500' }, propietario);
 
       expect(prisma.lote.update).toHaveBeenCalled();
+      expect(dataDe(prisma.lote.update)).not.toHaveProperty('codigo');
     });
 
     it('impide trasladar un lote a otro galpón para no romper su historial', async () => {

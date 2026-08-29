@@ -45,31 +45,37 @@ export function useUsuarios() {
 
   const crear = useCallback(
     async (datos: CrearUsuarioPayload) => {
-      await crearUsuario(datos)
-      await cargar()
+      const usuario = await crearUsuario(datos)
+      if (montado.current) setUsuarios((actuales) => [usuario, ...actuales])
     },
-    [cargar],
+    [],
   )
 
   const actualizar = useCallback(
     async (id: number, datos: ActualizarUsuarioPayload) => {
-      await actualizarUsuario(id, datos)
-      await cargar()
+      const usuario = await actualizarUsuario(id, datos)
+      if (montado.current) {
+        setUsuarios((actuales) => actuales.map((actual) => actual.id === id ? usuario : actual))
+      }
     },
-    [cargar],
+    [],
   )
 
   const alternarActivo = useCallback(
     async (usuario: Usuario) => {
       setError('')
       try {
-        await actualizarUsuario(usuario.id, { activo: !usuario.activo })
-        await cargar()
+        const actualizado = await actualizarUsuario(usuario.id, { activo: !usuario.activo })
+        if (montado.current) {
+          setUsuarios((actuales) =>
+            actuales.map((actual) => actual.id === actualizado.id ? actualizado : actual),
+          )
+        }
       } catch (err) {
         setError(mensajeDeError(err, 'No se pudo cambiar el estado del usuario.'))
       }
     },
-    [cargar],
+    [],
   )
 
   const eliminar = useCallback(
@@ -77,12 +83,14 @@ export function useUsuarios() {
       setError('')
       try {
         await eliminarUsuario(id)
-        await cargar()
+        if (montado.current) {
+          setUsuarios((actuales) => actuales.filter((usuario) => usuario.id !== id))
+        }
       } catch (err) {
         setError(mensajeDeError(err, 'No se pudo eliminar el usuario.'))
       }
     },
-    [cargar],
+    [],
   )
 
   return {

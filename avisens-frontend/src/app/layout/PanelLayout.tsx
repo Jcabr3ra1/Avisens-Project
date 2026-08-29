@@ -3,7 +3,6 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar/Sidebar'
 import { puedeAcceder, ROL_ADMIN } from './Sidebar/navConfig'
 import { getAccessToken, getRol } from '@shared/api'
-import { useMonitoreoAmbiental } from '@shared/hooks/useMonitoreoAmbiental'
 import { usePauseOnHidden } from '@shared/hooks/usePauseOnHidden'
 import './PanelLayout.css'
 
@@ -16,25 +15,12 @@ function PanelShell({
   onToggle: () => void
   rol: string | null
 }) {
-  // Contadores del sidebar EN VIVO — misma fuente y misma regla que usan
-  // Monitoreo y Alertas, así que nunca pueden mostrar números distintos.
-  const { galpones } = useMonitoreoAmbiental()
-  const totalAves = galpones.reduce((acc, g) => acc + (g.loteActivo?.cantidad_inicial ?? 0), 0)
-  const galponesActivos = galpones.filter((g) => g.loteActivo !== null).length
-  const totalAlertas = galpones.reduce(
-    (acc, g) => acc + g.sensores.filter((s) => s.estado === 'advertencia' || s.estado === 'critico').length,
-    0,
-  )
-
   return (
     <div className={`dash-page${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={onToggle}
         rol={rol}
-        galponesActivos={galponesActivos}
-        totalAves={totalAves}
-        totalAlertas={totalAlertas}
       />
       <main className="dash-main">
         <Outlet />

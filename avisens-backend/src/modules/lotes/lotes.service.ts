@@ -11,6 +11,7 @@ import { paginate } from '../../common/pagination/paginate';
 import { verificarDueno } from '../../common/auth/acceso';
 import { Solicitante } from '../../common/auth/acceso';
 import { filtroLotes, verificarAccesoLote } from '../../common/auth/alcance';
+import { randomUUID } from 'node:crypto';
 
 const LOTE_SELECT = {
   id: true,
@@ -66,23 +67,35 @@ export class LotesService {
     await this.validarGalpon(dto.galpon_id, solicitante);
     await this.validarProveedor(dto.proveedor_id);
 
-    return this.prisma.lote.create({
-      data: {
-        galpon_id: dto.galpon_id,
-        proveedor_id: dto.proveedor_id,
-        codigo: dto.codigo,
-        fecha_ingreso: new Date(dto.fecha_ingreso),
-        cantidad_inicial: dto.cantidad_inicial,
-        raza: dto.raza,
-        sexo: dto.sexo,
-        marca_alimento: dto.marca_alimento,
-        costo_pollito_unitario: dto.costo_pollito_unitario,
-        presupuesto_total_cop: dto.presupuesto_total_cop,
-        fecha_salida_estimada: dto.fecha_salida_estimada
-          ? new Date(dto.fecha_salida_estimada)
-          : undefined,
-      },
-      select: LOTE_SELECT,
+    return this.prisma.$transaction(async (transaccion) => {
+      const creado = await transaccion.lote.create({
+        data: {
+          galpon_id: dto.galpon_id,
+          proveedor_id: dto.proveedor_id,
+          codigo: `TEMP-${randomUUID()}`,
+          fecha_ingreso: new Date(dto.fecha_ingreso),
+          cantidad_inicial: dto.cantidad_inicial,
+          raza: dto.raza,
+          sexo: dto.sexo,
+          marca_alimento: dto.marca_alimento,
+          costo_pollito_unitario: dto.costo_pollito_unitario,
+          presupuesto_total_cop: dto.presupuesto_total_cop,
+          fecha_salida_estimada: dto.fecha_salida_estimada
+            ? new Date(dto.fecha_salida_estimada)
+            : undefined,
+        },
+        select: { id: true },
+      });
+
+      const anioIngreso = new Date(dto.fecha_ingreso).getUTCFullYear();
+
+      return transaccion.lote.update({
+        where: { id: creado.id },
+        data: {
+          codigo: `LOT-${anioIngreso}-${String(creado.id).padStart(6, '0')}`,
+        },
+        select: LOTE_SELECT,
+      });
     });
   }
 
@@ -136,7 +149,6 @@ export class LotesService {
       data: {
         galpon_id: undefined,
         proveedor_id: dto.proveedor_id,
-        codigo: dto.codigo,
         fecha_ingreso: dto.fecha_ingreso
           ? new Date(dto.fecha_ingreso)
           : undefined,

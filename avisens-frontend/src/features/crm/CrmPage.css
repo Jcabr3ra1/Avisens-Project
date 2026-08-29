@@ -160,6 +160,26 @@
   box-shadow: 0 2px 8px rgba(10,40,28,0.08);
 }
 
+.crm-canal-filtro {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  min-height: 38px; padding: 0 0.65rem;
+  border: 1px solid rgba(16,44,35,0.1); border-radius: 10px;
+  color: var(--text3); font-size: 0.76rem; font-weight: 700;
+  background: rgba(255,255,255,0.7);
+}
+.crm-canal-filtro select {
+  border: 0; outline: 0; color: var(--dash-ink); background: transparent;
+  font: inherit; font-weight: 700; cursor: pointer;
+}
+.crm-canal-badge {
+  display: inline-flex; width: fit-content; align-items: center;
+  margin-top: 0.22rem; padding: 0.1rem 0.38rem; border-radius: 999px;
+  font-size: 0.62rem; font-weight: 800; line-height: 1.25;
+}
+.crm-canal-badge--web { color: #1d4ed8; background: rgba(37,99,235,0.11); }
+.crm-canal-badge--whatsapp { color: #087b51; background: rgba(16,185,129,0.13); }
+.crm-canal-badge--otro { color: var(--text3); background: rgba(100,116,139,0.1); }
+
 /* ─── Kanban: swimlane horizontal (una fila por etapa) ───────────────────── */
 .crm-kanban {
   display: flex; flex-direction: column; gap: 0.55rem;

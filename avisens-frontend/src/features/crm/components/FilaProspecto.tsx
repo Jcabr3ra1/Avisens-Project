@@ -22,6 +22,9 @@ function FilaProspecto({ prospecto, onAbrir }: Props) {
           <div>
             <strong>{prospecto.nombre}</strong>
             <small className="crm-rol">{prospecto.rol}</small>
+            <small className={`crm-canal-badge crm-canal-badge--${prospecto.canal}`}>
+              {prospecto.canal === 'whatsapp' ? 'WhatsApp' : prospecto.canal === 'web' ? 'Web' : 'Otro'}
+            </small>
           </div>
         </div>
       </td>
