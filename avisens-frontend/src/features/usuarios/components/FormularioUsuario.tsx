@@ -1,4 +1,4 @@
-import { useEffect, useRef, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { CrearUsuarioPayload, Organizacion, RolResumen } from '@shared/api'
 import { IcEye, IcEyeOff } from '@shared/ui/icons/icons'
 
@@ -50,6 +50,13 @@ function FormularioUsuario({
         : rolSeleccionado?.nombre === 'Operario'
           ? 'Debes indicar la organización donde trabajará.'
           : 'Selecciona el tipo de acceso antes de completar los datos.'
+
+  // Si el Administrador no tiene ninguna organización creada todavía, no
+  // tiene sentido mostrarle un desplegable vacío que lo obliga a elegir
+  // algo que no existe — se le deja escribir el nombre y se crea sola.
+  // Con organizaciones ya creadas, puede elegir una existente o crear otra.
+  const [organizacionNueva, setOrganizacionNueva] = useState(organizaciones.length === 0)
+  const pideNombreOrganizacion = solicitaOrganizacion && (organizaciones.length === 0 || organizacionNueva)
 
   useEffect(() => {
     nombreRef.current?.focus()
@@ -198,6 +205,34 @@ function FormularioUsuario({
               <select value={form.rol_id} disabled aria-label="Rol actual">
                 {roles.map((rol) => <option key={rol.id} value={rol.id}>{rol.nombre}</option>)}
               </select>
+              <button
+                type="button"
+                className="usuarios-link-btn"
+                onClick={() => { setOrganizacionNueva(true); onCambiar('organizacion_id', undefined) }}
+              >
+                + Crear una organización nueva
+              </button>
+            </label>
+          )}
+
+          {pideNombreOrganizacion && (
+            <label className="usuarios-campo">
+              <span>Nombre de la organización</span>
+              <input
+                value={form.organizacion_nombre ?? ''}
+                onChange={(evento) => onCambiar('organizacion_nombre', evento.target.value)}
+                placeholder="Ej: Avícola La Esperanza"
+                required
+              />
+              {organizaciones.length > 0 && (
+                <button
+                  type="button"
+                  className="usuarios-link-btn"
+                  onClick={() => { setOrganizacionNueva(false); onCambiar('organizacion_nombre', undefined) }}
+                >
+                  Elegir una organización existente
+                </button>
+              )}
             </label>
           )}
 

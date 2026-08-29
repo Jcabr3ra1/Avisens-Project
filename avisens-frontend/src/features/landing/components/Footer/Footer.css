@@ -1,5 +1,5 @@
 .site-footer {
-  padding: clamp(3rem, 7vw, 5rem) clamp(1.25rem, 5vw, 4rem) 2rem;
+  padding: clamp(2rem, 4vw, 3rem) clamp(1.25rem, 5vw, 4rem) 2rem;
   border-top: 1px solid var(--landing-border);
   background:
     linear-gradient(

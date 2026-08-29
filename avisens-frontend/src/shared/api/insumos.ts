@@ -32,6 +32,30 @@ export type ActualizarInsumoPayload = Partial<CrearInsumoPayload> & {
   activo?: boolean
 }
 
+export type TipoMovimientoInventario = 'entrada' | 'salida' | 'ajuste'
+
+export interface MovimientoInventario {
+  id: number
+  insumo_id: number
+  lote_id: number | null
+  tipo_movimiento: TipoMovimientoInventario
+  cantidad: number
+  unidad_medida: string
+  motivo: string | null
+  comprobante_url: string | null
+  stock_resultante: number
+  usuario_id: number
+  fecha_movimiento: string
+}
+
+export interface RegistrarMovimientoPayload {
+  tipo_movimiento: TipoMovimientoInventario
+  cantidad: number
+  motivo?: string
+  lote_id?: number
+  comprobante_url?: string
+}
+
 export async function listarInsumos(): Promise<Insumo[]> {
   const { data } = await api.get<PaginatedResponse<Insumo>>('/insumos')
   return data.data
@@ -53,6 +77,26 @@ export async function actualizarInsumo(
 ): Promise<Insumo> {
   const { data } = await api.patch<Insumo>(`/insumos/${id}`, payload)
   return data
+}
+
+export async function registrarMovimientoInsumo(
+  id: number,
+  payload: RegistrarMovimientoPayload,
+): Promise<MovimientoInventario> {
+  const { data } = await api.post<MovimientoInventario>(
+    `/insumos/${id}/movimientos`,
+    payload,
+  )
+  return data
+}
+
+export async function listarMovimientosInsumo(
+  id: number,
+): Promise<MovimientoInventario[]> {
+  const { data } = await api.get<PaginatedResponse<MovimientoInventario>>(
+    `/insumos/${id}/movimientos`,
+  )
+  return data.data
 }
 
 export async function activarInsumo(

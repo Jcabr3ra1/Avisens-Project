@@ -17,7 +17,7 @@ const beneficios: { icono: ReactNode; titulo: string; texto: string }[] = [
   },
   {
     icono: <IcChart size={22} />,
-    titulo: 'Ve cómo van creciendo tus aves',
+    titulo: 'Revisa cómo van creciendo tus aves',
     texto:
       'El peso, los días de vida y cómo va cada lote, todo en un solo lugar y fácil de entender de un vistazo.',
   },
