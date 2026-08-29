@@ -358,10 +358,7 @@
   }
 
   .hero-dots {
-    right: 6rem;
     bottom: 0.8rem;
-    left: auto;
-    transform: none;
   }
 }
 

@@ -115,10 +115,6 @@ function LoginForm() {
 
         {error && <p id="lf-error-msg" className="lf-error" role="alert">{error}</p>}
 
-        <div className="lf-row">
-          <a className="lf-link" href="#recuperar">¿Olvidó su contraseña?</a>
-        </div>
-
         <button className="lf-btn-primary" type="submit" disabled={loading} aria-busy={loading}>
           {loading ? <span className="lf-spinner" aria-hidden="true" /> : 'Entrar'}
         </button>

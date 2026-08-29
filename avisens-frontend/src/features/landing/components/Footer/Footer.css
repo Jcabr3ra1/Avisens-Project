@@ -19,14 +19,22 @@
   inset: auto -8% -42% auto;
   width: min(560px, 70vw);
   aspect-ratio: 1;
-  border: 1px solid var(--landing-border);
-  border-radius: 50%;
   background: radial-gradient(circle, rgba(14, 47, 115, 0.14), rgba(14, 47, 115, 0) 62%);
+  pointer-events: none;
+}
+
+.footer-corn {
+  position: absolute;
+  right: 4%;
+  bottom: 14px;
+  width: min(228px, 31vw);
+  height: auto;
   pointer-events: none;
 }
 
 .footer-inner {
   position: relative;
+  z-index: 1;
   max-width: 1200px;
   margin: 0 auto;
 }
