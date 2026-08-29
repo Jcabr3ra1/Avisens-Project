@@ -12,6 +12,7 @@ type Props = {
   busqueda: string
   onAlternarActivo: (usuario: Usuario) => void
   onEditar: (usuario: Usuario) => void
+  onGestionarAsignaciones: (usuario: Usuario) => void
   onEliminar: (usuario: Usuario) => void
 }
 
@@ -24,6 +25,7 @@ function TablaUsuarios({
   busqueda,
   onAlternarActivo,
   onEditar,
+  onGestionarAsignaciones,
   onEliminar,
 }: Props) {
   const [menu, setMenu] = useState<PosicionMenu | null>(null)
@@ -43,7 +45,7 @@ function TablaUsuarios({
       return
     }
     const rectangulo = (evento.currentTarget as HTMLElement).getBoundingClientRect()
-    const ancho = 160
+    const ancho = 190
     setMenu({
       usuario,
       top: rectangulo.bottom + 4,
@@ -121,6 +123,15 @@ function TablaUsuarios({
             <button type="button" role="menuitem" onClick={() => ejecutar(onEditar)}>
               Editar
             </button>
+            {menu.usuario.rol.nombre === 'Operario' && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => ejecutar(onGestionarAsignaciones)}
+              >
+                Gestionar galpones
+              </button>
+            )}
             <button
               type="button"
               role="menuitem"

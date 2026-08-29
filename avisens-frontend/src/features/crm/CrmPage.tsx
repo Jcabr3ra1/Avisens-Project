@@ -12,7 +12,17 @@ import './CrmPage.css'
 
 function CrmPage() {
   const { prospectos, cargando, error, recargar } = useProspectos()
-  const { vista, setVista, filtro, setFiltro, busqueda, setBusqueda, visibles } =
+  const {
+    vista,
+    setVista,
+    filtro,
+    setFiltro,
+    filtroCanal,
+    setFiltroCanal,
+    busqueda,
+    setBusqueda,
+    visibles,
+  } =
     useFiltroProspectos(prospectos)
   const resumen = useResumenProspectos(prospectos)
   const [seleccionado, setSeleccionado] = useState<ProspectoVista | null>(null)
@@ -47,6 +57,8 @@ function CrmPage() {
             onBuscar={setBusqueda}
             vista={vista}
             onCambiarVista={setVista}
+            filtroCanal={filtroCanal}
+            onCambiarCanal={setFiltroCanal}
           />
 
           {vista === 'kanban' ? (

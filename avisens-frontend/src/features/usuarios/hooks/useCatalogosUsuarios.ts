@@ -10,7 +10,7 @@ import { mensajeDeError } from '@shared/utils/errores'
 export function useCatalogosUsuarios(esPropietario: boolean) {
   const [roles, setRoles] = useState<RolResumen[]>([])
   const [organizaciones, setOrganizaciones] = useState<Organizacion[]>([])
-  const [cargando, setCargando] = useState(true)
+  const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
   const montado = useRef(true)
 
@@ -34,18 +34,16 @@ export function useCatalogosUsuarios(esPropietario: boolean) {
         setRoles(rolesDisponibles)
         setOrganizaciones(organizacionesDisponibles.filter((organizacion) => organizacion.activa))
       }
+      return rolesDisponibles
     } catch (err) {
       if (montado.current) {
         setError(mensajeDeError(err, 'No se pudieron cargar los datos del formulario.'))
       }
+      return []
     } finally {
       if (montado.current) setCargando(false)
     }
   }, [esPropietario])
-
-  useEffect(() => {
-    void cargar()
-  }, [cargar])
 
   return { roles, organizaciones, cargando, error, recargar: cargar }
 }

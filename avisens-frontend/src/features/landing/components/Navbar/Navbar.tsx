@@ -34,6 +34,7 @@ function Navbar() {
             <a href={href}>{label}</a>
           </li>
         ))}
+        <li><Link to="/contacto">Solicitar acompañamiento</Link></li>
       </ul>
 
       <div className="nav-actions">
@@ -71,6 +72,9 @@ function Navbar() {
             {label}
           </a>
         ))}
+        <Link to="/contacto" tabIndex={menuOpen ? 0 : -1} onClick={() => setMenuOpen(false)}>
+          Solicitar acompañamiento
+        </Link>
         <Link
           to="/login"
           tabIndex={menuOpen ? 0 : -1}

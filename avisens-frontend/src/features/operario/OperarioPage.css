@@ -1,0 +1,494 @@
+.operario-page {
+  max-width: 1160px;
+}
+
+.operario-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.operario-eyebrow {
+  margin: 0 0 0.25rem;
+  color: var(--green-d);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.operario-head h1 {
+  margin: 0;
+  color: var(--dash-ink);
+  font-size: 1.8rem;
+  letter-spacing: -0.03em;
+}
+
+.operario-head p:not(.operario-eyebrow) {
+  margin: 0.3rem 0 0;
+  color: var(--text3);
+  font-size: 0.93rem;
+}
+
+.operario-btn-refresh,
+.operario-btn,
+.operario-link-alertas,
+.operario-btn-primary,
+.operario-btn-secondary,
+.operario-modal-close,
+.operario-alert button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.operario-btn-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  padding: 0.6rem 0.9rem;
+  color: var(--text2);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.operario-btn-refresh:hover:not(:disabled) {
+  color: var(--green-d);
+  border-color: var(--green);
+}
+
+.operario-btn-refresh:disabled,
+.operario-btn:disabled,
+.operario-btn-primary:disabled,
+.operario-btn-secondary:disabled,
+.operario-modal-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.operario-alert,
+.operario-success {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+}
+
+.operario-alert {
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 32%, transparent);
+}
+
+.operario-alert button {
+  min-height: 36px;
+  padding: 0.35rem 0.65rem;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.operario-success {
+  color: var(--green-d);
+  background: color-mix(in srgb, var(--green) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+}
+
+.operario-loading,
+.operario-empty {
+  padding: 3rem 1.5rem;
+  color: var(--text3);
+  text-align: center;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(16, 44, 35, 0.09);
+  border-radius: 20px;
+  box-shadow: 0 6px 24px rgba(10, 40, 28, 0.07);
+}
+
+.operario-empty svg {
+  margin: 0 auto 0.7rem;
+  color: var(--green);
+}
+
+.operario-empty h2 {
+  margin: 0;
+  color: var(--dash-ink);
+  font-size: 1.05rem;
+}
+
+.operario-empty p {
+  max-width: 42ch;
+  margin: 0.5rem auto 0;
+  line-height: 1.5;
+}
+
+.operario-galpones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 1rem;
+}
+
+.operario-galpon-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1.15rem;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(16, 44, 35, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 6px 24px rgba(10, 40, 28, 0.07);
+}
+
+.operario-galpon-head,
+.operario-lote-activo {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.operario-galpon-icon,
+.operario-modal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  color: var(--green-d);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+  border-radius: 12px;
+}
+
+.operario-galpon-head p,
+.operario-galpon-head h2,
+.operario-galpon-head span,
+.operario-lote-activo span,
+.operario-lote-activo strong {
+  display: block;
+}
+
+.operario-galpon-head p,
+.operario-galpon-head span,
+.operario-lote-activo span {
+  margin: 0;
+  color: var(--text3);
+  font-size: 0.78rem;
+}
+
+.operario-galpon-head h2 {
+  margin: 0.08rem 0;
+  color: var(--dash-ink);
+  font-size: 1.05rem;
+}
+
+.operario-lote-activo {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  color: var(--text2);
+  background: color-mix(in srgb, var(--green) 5%, transparent);
+  border-radius: 12px;
+}
+
+.operario-lote-activo strong {
+  margin-top: 0.15rem;
+  color: var(--text);
+  font-size: 0.84rem;
+}
+
+.operario-sin-lote {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  color: var(--text3);
+  background: rgba(7, 23, 19, 0.035);
+  border-radius: 12px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.operario-acciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-top: auto;
+}
+
+.operario-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 46px;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.operario-btn--mortalidad {
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  border-color: color-mix(in srgb, var(--red) 22%, transparent);
+}
+
+.operario-btn--consumo {
+  color: var(--green-d);
+  background: color-mix(in srgb, var(--green) 10%, transparent);
+  border-color: color-mix(in srgb, var(--green) 22%, transparent);
+}
+
+.operario-btn:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+.operario-link-alertas {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0.45rem;
+  color: var(--text2);
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.operario-link-alertas:hover {
+  color: var(--green-d);
+  background: var(--card-h);
+}
+
+.operario-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(7, 20, 14, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.operario-modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - 2rem);
+  padding: 1.4rem;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 32px 80px rgba(7, 20, 14, 0.35);
+}
+
+.operario-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.15rem;
+}
+
+.operario-modal-head > div {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 0.1rem 0.7rem;
+}
+
+.operario-modal-icon {
+  grid-row: span 2;
+}
+
+.operario-modal-head h2,
+.operario-modal-head p {
+  margin: 0;
+}
+
+.operario-modal-head h2 {
+  color: var(--dash-ink);
+  font-size: 1.1rem;
+}
+
+.operario-modal-head p {
+  color: var(--text3);
+  font-size: 0.82rem;
+}
+
+.operario-modal-close {
+  display: inline-flex;
+  flex: 0 0 44px;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--text3);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.operario-modal-close:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--card-h);
+}
+
+.operario-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.operario-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.operario-form label span {
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.operario-form label em {
+  color: var(--text3);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.operario-form input {
+  min-height: 44px;
+  padding: 0.55rem 0.65rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: none;
+  font: inherit;
+}
+
+.operario-form input:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent);
+}
+
+.operario-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.operario-form-error {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 9%, transparent);
+  border-radius: 9px;
+  font-size: 0.84rem;
+}
+
+.operario-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
+}
+
+.operario-btn-primary,
+.operario-btn-secondary {
+  min-height: 44px;
+  padding: 0.55rem 0.9rem;
+  border-radius: 9px;
+  font-size: 0.87rem;
+  font-weight: 700;
+}
+
+.operario-btn-primary {
+  color: #fff;
+  background: var(--green-d);
+  border: 1px solid var(--green-d);
+}
+
+.operario-btn-secondary {
+  color: var(--text2);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+.operario-btn-primary:hover:not(:disabled) {
+  background: var(--green-dd);
+}
+
+.operario-btn-secondary:hover:not(:disabled) {
+  background: var(--card-h);
+}
+
+.operario-btn-refresh:focus-visible,
+.operario-btn:focus-visible,
+.operario-link-alertas:focus-visible,
+.operario-btn-primary:focus-visible,
+.operario-btn-secondary:focus-visible,
+.operario-modal-close:focus-visible,
+.operario-alert button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--green) 40%, transparent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .operario-head {
+    flex-direction: column;
+  }
+
+  .operario-btn-refresh {
+    width: 100%;
+  }
+
+  .operario-head h1 {
+    font-size: 1.45rem;
+  }
+
+  .operario-form-grid,
+  .operario-acciones {
+    grid-template-columns: 1fr;
+  }
+
+  .operario-link-alertas {
+    grid-column: auto;
+  }
+
+  .operario-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .operario-form-actions button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .operario-btn-refresh,
+  .operario-btn,
+  .operario-link-alertas,
+  .operario-modal-close,
+  .operario-btn-primary,
+  .operario-btn-secondary {
+    transition: none;
+  }
+}

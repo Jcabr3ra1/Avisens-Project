@@ -29,7 +29,17 @@ describe('GalponesService', () => {
   const propietario = { id: 5, rol: 'Propietario' };
   const operario = { id: 8, rol: 'Operario', organizacion_id: 10 };
 
-  const dtoCrear = { granja_id: 3, codigo: 'galpon1', nombre: 'Galpón Norte' };
+  const dtoCrear = { granja_id: 3, nombre: 'Galpón Norte' };
+  type TransaccionPrueba = (cliente: typeof prisma) => Promise<unknown>;
+
+  const esTransaccionPrueba = (
+    operacion: unknown,
+  ): operacion is TransaccionPrueba => typeof operacion === 'function';
+
+  const dataDe = (mock: jest.Mock): Record<string, unknown> => {
+    const calls = mock.mock.calls as Array<[{ data: Record<string, unknown> }]>;
+    return calls[0][0].data;
+  };
 
   const whereDe = (mock: jest.Mock): Record<string, unknown> => {
     const calls = mock.mock.calls as Array<
@@ -48,8 +58,10 @@ describe('GalponesService', () => {
     }).compile();
     service = module.get<GalponesService>(GalponesService);
 
-    prisma.$transaction.mockResolvedValue([[], 0]);
-    // Por defecto la granja 3 es del propietario 5.
+    prisma.$transaction.mockImplementation((operacion: unknown) => {
+      if (esTransaccionPrueba(operacion)) return operacion(prisma);
+      return Promise.resolve([[], 0]);
+    });
     prisma.granja.findUnique.mockResolvedValue({ id: 3, propietario_id: 5 });
   });
 
@@ -57,11 +69,18 @@ describe('GalponesService', () => {
 
   describe('crear', () => {
     it('crea el galpón cuando la granja es del solicitante', async () => {
-      prisma.galpon.create.mockResolvedValue({ id: 1 });
+      prisma.galpon.create.mockResolvedValue({ id: 12 });
+      prisma.galpon.update.mockResolvedValue({
+        id: 12,
+        codigo: 'GAL-000012',
+      });
 
-      await service.crear(dtoCrear, propietario);
+      const resultado = await service.crear(dtoCrear, propietario);
 
       expect(prisma.galpon.create).toHaveBeenCalled();
+      expect(dataDe(prisma.galpon.create).codigo).toMatch(/^TEMP-/);
+      expect(dataDe(prisma.galpon.update).codigo).toBe('GAL-000012');
+      expect(resultado.codigo).toBe('GAL-000012');
     });
 
     it('un Propietario no puede crear en una granja ajena (403)', async () => {

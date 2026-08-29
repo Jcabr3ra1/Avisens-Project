@@ -17,6 +17,7 @@ export type ProspectoVista = {
   telefono: string
   correo?: string
   asesorId: number | null
+  canal: 'web' | 'whatsapp' | 'otro'
 }
 
 export const RANGOS_PUNTAJE: Record<EtapaProspecto, string> = {
@@ -68,5 +69,6 @@ export function aProspectoVista(p: Prospecto): ProspectoVista {
     telefono: p.telefono ?? '',
     correo: p.email ?? undefined,
     asesorId: p.asesor_asignado_id,
+    canal: p.canal_origen === 'whatsapp' ? 'whatsapp' : p.canal_origen === 'web' ? 'web' : 'otro',
   }
 }

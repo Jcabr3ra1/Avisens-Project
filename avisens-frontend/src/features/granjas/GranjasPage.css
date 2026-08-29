@@ -1,231 +1,59 @@
-/* GranjasPage — Módulo de Granjas (EP-08) */
-
-.grj-header {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 1rem; margin-bottom: 1.6rem;
-  padding-bottom: 1.2rem; border-bottom: 1px solid rgba(16,44,35,0.07);
-}
-.grj-title  { font-size: 1.75rem; font-weight: 800; color: var(--dash-ink); margin: 0; letter-spacing: -0.03em; }
-.grj-sub    { font-size: 0.85rem; color: var(--text3); margin: 0.2rem 0 0; }
-
-/* ---- Botones ---- */
-.btn-primary {
-  padding: 0.6rem 1.1rem;
-  background: linear-gradient(135deg, var(--green), var(--green-d));
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  cursor: pointer;
-  white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.28);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16, 185, 129, 0.38); }
-.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-
-.btn-ghost {
-  padding: 0.6rem 1.05rem;
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-.btn-ghost:hover:not(:disabled) { background: var(--card-h); }
-
-.btn-ghost-sm {
-  padding: 0.4rem 0.7rem;
-  margin-right: 0.4rem;
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.82rem;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-.btn-ghost-sm:hover { background: var(--card-h); border-color: var(--green); }
-
-/* ---- Estado vacío / carga / error ---- */
-.grj-empty, .grj-cargando { color: var(--text3); font-size: 0.9rem; padding: 1.5rem 0; text-align: center; }
-.grj-alert {
-  background: color-mix(in srgb, var(--red) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--red) 25%, transparent);
-  color: var(--red); border-radius: 12px; padding: 0.7rem 1rem;
-  font-size: 0.87rem; margin-bottom: 1.2rem;
-}
-.grj-vacio {
-  display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
-  padding: 3rem 1rem; color: var(--text3); text-align: center;
-}
-.grj-vacio-titulo { font-weight: 700; color: var(--dash-ink); margin: 0.3rem 0 0; }
-.grj-vacio-sub { font-size: 0.85rem; margin: 0; }
-.grj-galpones-vacio { padding: 1.1rem 1.4rem; color: var(--text3); font-size: 0.87rem; margin: 0; }
-
-/* ---- Modal ---- */
-.modal-overlay {
-  position: fixed; inset: 0; z-index: 50;
-  display: flex; align-items: center; justify-content: center;
-  padding: 1rem; background: rgba(7, 20, 14, 0.55); backdrop-filter: blur(4px);
-}
-.modal-card {
-  width: 100%; max-width: 520px;
-  background: rgba(255, 255, 255, 0.98);
-  border: 1px solid rgba(16, 44, 35, 0.1);
-  border-radius: 20px; padding: 1.6rem;
-  box-shadow: 0 32px 80px rgba(7, 20, 14, 0.35);
-}
-.modal-title { margin: 0 0 1.1rem; font-size: 1.2rem; font-weight: 800; color: var(--dash-ink); }
-.modal-form { display: flex; flex-direction: column; gap: 0.85rem; }
-.campo-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
-.campo { display: flex; flex-direction: column; gap: 0.3rem; }
-.campo > span { font-size: 0.82rem; font-weight: 600; color: var(--text); }
-.campo > span em { font-style: normal; font-weight: 400; color: var(--text3); }
-.campo input, .campo select {
-  padding: 0.6rem 0.7rem; border: 1px solid var(--border); border-radius: 9px;
-  background: var(--bg); color: var(--text); font-size: 0.9rem; outline: none;
-  transition: border-color 0.2s ease;
-}
-.campo input:focus, .campo select:focus { border-color: var(--green); }
-.modal-error { margin: 0; color: var(--red); font-size: 0.85rem; }
-.modal-acciones { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.4rem; }
-
-@media (max-width: 560px) {
-  .campo-fila { grid-template-columns: 1fr; }
-}
-
-/* ─── Resumen global ─────────────────────────────────────────────────────── */
-.grj-resumen { display: flex; gap: 1rem; margin-bottom: 1.8rem; flex-wrap: wrap; }
-.grj-stat {
-  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
-  border-radius: 18px; padding: 1rem 1.3rem;
-  box-shadow: 0 4px 16px rgba(10,40,28,0.06); backdrop-filter: blur(6px);
-  display: flex; flex-direction: column; gap: 0.1rem; min-width: 110px;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.grj-stat:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(10,40,28,0.09); }
-.grj-stat-valor { font-size: 1.7rem; font-weight: 800; color: var(--dash-ink); line-height: 1; font-variant-numeric: tabular-nums; }
-.grj-stat-label { font-size: 0.76rem; color: var(--text3); }
-
-/* ─── Lista de granjas ───────────────────────────────────────────────────── */
-.grj-lista { display: flex; flex-direction: column; gap: 1rem; }
-
-.grj-card {
-  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
-  border-radius: 20px; box-shadow: 0 6px 24px rgba(10,40,28,0.07);
-  backdrop-filter: blur(8px); overflow: hidden;
-  transition: box-shadow 0.2s, border-color 0.2s;
-}
-.grj-card:hover { box-shadow: 0 14px 40px rgba(10,40,28,0.1); border-color: rgba(16,185,129,0.2); }
-.grj-card--inactiva { opacity: 0.6; }
-
-.grj-card-head {
-  width: 100%; display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.6rem 0.8rem 0.6rem 1.4rem;
-}
-.grj-card-head-clickable {
-  flex: 1; display: flex; align-items: center; justify-content: space-between;
-  padding: 0.5rem 0; text-align: left; cursor: pointer;
-  background: transparent; border: none; gap: 1rem; min-width: 0;
-  transition: background 0.15s;
-}
-.grj-card-head-clickable:hover { background: rgba(16,185,129,0.03); border-radius: 10px; }
-
-.grj-tag-inactiva {
-  margin-left: 0.5rem; padding: 0.1rem 0.5rem; border-radius: 999px;
-  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-  background: color-mix(in srgb, var(--text3) 16%, transparent); color: var(--text3);
-}
-
+.grj-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+.grj-header h1 { margin: 0; color: var(--dash-ink); font-size: 1.75rem; }
+.grj-header p { margin: 0.25rem 0 0; color: var(--text3); font-size: 0.88rem; }
+.grj-btn-primary { min-height: 42px; padding: 0.6rem 1rem; border: none; border-radius: 10px; background: var(--green-d); color: #fff; font-weight: 700; cursor: pointer; }
+.grj-resumen { display: grid; grid-template-columns: repeat(4, minmax(110px, 1fr)); gap: 0.8rem; margin-bottom: 1.2rem; }
+.grj-produccion { margin-bottom: 1.2rem; padding: 1.2rem; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--card) 92%, var(--green) 8%); }
+.grj-produccion-cabecera h2 { margin: 0.15rem 0 0.35rem; color: var(--dash-ink); font-size: 1.05rem; }
+.grj-produccion-cabecera p:last-child { max-width: 68ch; margin: 0; color: var(--text3); font-size: 0.84rem; line-height: 1.5; }
+.grj-produccion-kicker { margin: 0; color: var(--green-d); font-size: 0.69rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.grj-produccion-opciones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+.grj-produccion-opcion { display: flex; align-items: center; gap: 0.75rem; min-height: 76px; padding: 0.8rem; border: 1px solid var(--border); border-radius: 13px; background: var(--card); color: inherit; text-decoration: none; transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+.grj-produccion-opcion:hover { border-color: color-mix(in srgb, var(--green) 46%, var(--border)); box-shadow: 0 8px 20px rgba(10, 40, 28, 0.08); transform: translateY(-2px); }
+.grj-produccion-opcion:focus-visible { outline: 3px solid color-mix(in srgb, var(--green) 40%, transparent); outline-offset: 3px; }
+.grj-produccion-icono { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 12px; }
+.grj-produccion-icono--galpon { color: #1d4ed8; background: rgba(37, 99, 235, 0.12); }
+.grj-produccion-icono--lote { color: #a16207; background: rgba(234, 179, 8, 0.15); }
+.grj-produccion-texto { display: grid; min-width: 0; gap: 0.2rem; }
+.grj-produccion-texto strong { color: var(--dash-ink); font-size: 0.9rem; }
+.grj-produccion-texto span { color: var(--text3); font-size: 0.76rem; line-height: 1.4; }
+.grj-produccion-flecha { margin-left: auto; flex: 0 0 auto; color: var(--text3); }
+.grj-stat { display: flex; flex-direction: column; gap: 0.2rem; padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.grj-stat strong { color: var(--dash-ink); font-size: 1.45rem; }
+.grj-stat span { color: var(--text3); font-size: 0.78rem; }
+.grj-alerta { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding: 0.75rem 1rem; border: 1px solid color-mix(in srgb, var(--red) 30%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--red) 9%, transparent); color: var(--red); }
+.grj-alerta button { border: none; background: transparent; color: inherit; font-weight: 700; cursor: pointer; }
+.grj-lista { display: grid; gap: 0.85rem; }
+.grj-card { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.2rem; border: 1px solid var(--border); border-radius: 16px; background: var(--card); }
 .grj-card--inactiva { opacity: 0.65; }
-
-.grj-card-titlebtn {
-  display: flex; align-items: flex-start; text-align: left; cursor: pointer;
-  background: transparent; border: none; padding: 0; min-width: 0;
-}
-.grj-card-info  { display: flex; flex-direction: column; gap: 0.2rem; }
-.grj-nombre     { font-weight: 700; font-size: 1.02rem; color: var(--dash-ink); }
-.grj-ubicacion  { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; color: var(--text3); }
-.grj-ubicacion svg { flex-shrink: 0; }
-.grj-card-meta  { display: flex; align-items: center; gap: 0.8rem; font-size: 0.84rem; color: var(--text3); margin-left: auto; flex-shrink: 0; }
-.grj-chevron-btn {
-  background: transparent; border: none; cursor: pointer; font-size: 0.7rem; color: var(--text4); padding: 0.2rem;
-}
-
-.grj-badge {
-  border: 1px solid transparent; border-radius: 999px; padding: 0.25rem 0.7rem;
-  font-size: 0.76rem; font-weight: 700; cursor: pointer; white-space: nowrap;
-}
-.grj-badge--activa   { background: color-mix(in srgb, var(--green) 12%, transparent); color: var(--green-d); border-color: color-mix(in srgb, var(--green) 25%, transparent); }
-.grj-badge--inactiva { background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red); border-color: color-mix(in srgb, var(--red) 25%, transparent); }
-
-.grj-icon-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--border);
-  background: transparent; color: var(--text3); cursor: pointer; flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
-}
-.grj-icon-btn:hover { background: var(--card-h); color: var(--dash-ink); }
-
-.grj-galpones-toolbar { display: flex; justify-content: flex-end; padding: 0.7rem 1.1rem 0; }
-
-/* ─── Tabla de galpones ──────────────────────────────────────────────────── */
-.grj-galpones { border-top: 1px solid rgba(16,44,35,0.07); overflow-x: auto; }
-.grj-tabla  { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
-.grj-tabla th { padding: 0.75rem 1.1rem; background: rgba(7,23,19,0.025); border-bottom: 1px solid rgba(16,44,35,0.08); text-align: left; font-size: 0.71rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); }
-.grj-tabla td { padding: 0.75rem 1.1rem; border-bottom: 1px solid rgba(16,44,35,0.055); }
-.grj-tabla tbody tr:last-child td { border-bottom: none; }
-.grj-tabla tbody tr:hover td { background: rgba(16,185,129,0.03); }
-
-.grj-fila--vacio        td { opacity: 0.6; }
-.grj-fila--desactivado  td { opacity: 0.55; }
-
-.grj-estado                    { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
-.grj-estado--activo            { color: var(--green-d); }
-.grj-estado--vacio             { color: var(--text3); }
-
-.grj-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.grj-dot--activo        { background: var(--green); box-shadow: 0 0 5px rgba(16,185,129,0.5); }
-.grj-dot--vacio         { background: var(--text4); }
-
-.col-acciones { text-align: right; white-space: nowrap; }
-
-/* ---- Botón de acciones (⋯) y su menú ---- */
-.btn-kebab {
-  width: 30px; height: 30px;
-  background: transparent; border: 1px solid var(--border); border-radius: 8px;
-  color: var(--text); font-size: 1.1rem; line-height: 1; cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-.btn-kebab:hover { background: var(--card-h); border-color: var(--green); }
-
-.menu-overlay { position: fixed; inset: 0; z-index: 40; }
-.menu-dropdown {
-  position: fixed; z-index: 41;
-  display: flex; flex-direction: column; gap: 0.15rem;
-  min-width: 150px; padding: 0.3rem;
-  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-  box-shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.3);
-}
-.menu-item {
-  width: 100%; padding: 0.5rem 0.7rem;
-  background: transparent; border: none; border-radius: 7px;
-  text-align: left; font-size: 0.86rem; color: var(--text); cursor: pointer;
-}
+.grj-card-info h2 { display: inline; margin: 0; color: var(--dash-ink); font-size: 1rem; }
+.grj-card-info p { display: flex; align-items: center; gap: 0.3rem; margin: 0.35rem 0 0; color: var(--text3); font-size: 0.82rem; }
+.grj-estado { margin-left: 0.5rem; padding: 0.15rem 0.5rem; border-radius: 999px; background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red); font-size: 0.7rem; font-weight: 700; }
+.grj-card-meta { display: flex; align-items: center; gap: 0.8rem; color: var(--text3); font-size: 0.82rem; }
+.grj-menu-btn { width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); cursor: pointer; }
+.grj-vacio { padding: 2rem; text-align: center; color: var(--text3); }
+.menu-overlay { position: fixed; inset: 0; z-index: 40; border: none; background: transparent; }
+.menu-dropdown { position: fixed; z-index: 41; display: flex; flex-direction: column; gap: 0.15rem; min-width: 150px; padding: 0.3rem; border: 1px solid var(--border); border-radius: 10px; background: var(--card); box-shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.3); }
+.menu-item { width: 100%; padding: 0.5rem 0.7rem; border: none; border-radius: 7px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .menu-item:hover { background: var(--card-h); }
 .menu-item-danger { color: var(--red); }
-.menu-item-danger:hover { background: color-mix(in srgb, var(--red) 8%, transparent); }
-
-/* ─── Responsive: celular ────────────────────────────────────────────────── */
-@media (max-width: 640px) {
-  .grj-header   { flex-direction: column; align-items: stretch; }
-  .grj-title    { font-size: 1.4rem; }
-  .btn-primary  { width: 100%; }
-  .grj-card-head { flex-wrap: wrap; }
-  .grj-card-meta { margin-left: 0; width: 100%; justify-content: space-between; }
-}
+.grj-modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(7, 20, 14, 0.58); }
+.grj-modal-card { width: min(560px, 100%); max-height: calc(100vh - 2rem); overflow-y: auto; padding: 1.4rem; border-radius: 18px; background: var(--card); box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3); }
+.grj-modal-card h2 { margin: 0 0 0.25rem; color: var(--dash-ink); }
+.grj-form-ayuda { margin: 0 0 1rem; color: var(--text3); font-size: 0.82rem; line-height: 1.5; }
+.grj-modal-card form { display: flex; flex-direction: column; gap: 0.85rem; }
+.grj-modal-card label { display: flex; flex-direction: column; gap: 0.3rem; }
+.grj-modal-card label > span { color: var(--text); font-size: 0.8rem; font-weight: 600; }
+.grj-modal-card em { color: var(--text3); font-style: normal; font-weight: 400; }
+.grj-modal-card input, .grj-modal-card select { min-height: 44px; padding: 0.6rem 0.7rem; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--text); }
+.grj-modal-card select:disabled, .grj-form-acciones button:disabled { opacity: 0.5; cursor: not-allowed; }
+.grj-form-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+.grj-form-desplegar { min-height: 44px; padding: 0.55rem 0.75rem; border: 1px solid var(--border); border-radius: 9px; background: color-mix(in srgb, var(--green) 7%, var(--card)); color: var(--green-d); font-weight: 700; text-align: left; cursor: pointer; }
+.grj-form-adicional { display: flex; flex-direction: column; gap: 0.85rem; padding: 0.9rem; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--bg) 70%, var(--card)); }
+.grj-form-error { margin: 0; color: var(--red); }
+.grj-form-acciones { display: flex; justify-content: flex-end; gap: 0.6rem; }
+.grj-form-acciones button { padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); cursor: pointer; }
+.grj-form-acciones .grj-btn-primary { border: none; background: var(--green-d); color: #fff; }
+.grj-btn-primary:focus-visible, .grj-menu-btn:focus-visible, .menu-item:focus-visible, .grj-form-desplegar:focus-visible, .grj-form-acciones button:focus-visible, .grj-modal-card input:focus-visible, .grj-modal-card select:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+@media (max-width: 640px) { .grj-header, .grj-card { align-items: stretch; flex-direction: column; } .grj-resumen, .grj-produccion-opciones { grid-template-columns: repeat(2, 1fr); } .grj-form-fila { grid-template-columns: 1fr; } .grj-card-meta { justify-content: space-between; } }
+@media (max-width: 460px) { .grj-produccion-opciones { grid-template-columns: 1fr; } }

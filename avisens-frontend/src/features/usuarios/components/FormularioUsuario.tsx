@@ -41,6 +41,15 @@ function FormularioUsuario({
   const solicitaOrganizacion = !modoEdicion && !rolBloqueado && rolSeleccionado?.nombre === 'Operario'
   const permiteNombreOrganizacion =
     !modoEdicion && !rolBloqueado && rolSeleccionado?.nombre === 'Propietario'
+  const ayudaRol = rolBloqueado
+    ? 'Crearás una cuenta de Operario para tu organización.'
+    : rolSeleccionado?.nombre === 'Administrador'
+      ? 'Tendrá acceso general a la organización y a sus módulos de gestión.'
+      : rolSeleccionado?.nombre === 'Propietario'
+        ? 'Se creará su organización si no indicas un nombre para ella.'
+        : rolSeleccionado?.nombre === 'Operario'
+          ? 'Debes indicar la organización donde trabajará.'
+          : 'Selecciona el tipo de acceso antes de completar los datos.'
 
   useEffect(() => {
     nombreRef.current?.focus()
@@ -63,6 +72,28 @@ function FormularioUsuario({
         <h2 id="usuarios-modal-titulo" className="usuarios-modal-titulo">{titulo}</h2>
 
         <form className="usuarios-form" onSubmit={onGuardar}>
+          {!modoEdicion && (
+            <>
+              <label className="usuarios-campo">
+                <span>Tipo de cuenta</span>
+                <select
+                  value={form.rol_id}
+                  onChange={(evento) => onCambiar('rol_id', Number(evento.target.value))}
+                  disabled={rolBloqueado}
+                  aria-describedby="usuarios-ayuda-rol"
+                  required
+                >
+                  {!form.rol_id && <option value="">Selecciona un rol</option>}
+                  {roles.map((rol) => <option key={rol.id} value={rol.id}>{rol.nombre}</option>)}
+                </select>
+              </label>
+
+              <p id="usuarios-ayuda-rol" className="usuarios-rol-ayuda">
+                {ayudaRol}
+              </p>
+            </>
+          )}
+
           <label className="usuarios-campo">
             <span>Nombre completo</span>
             <input
@@ -94,6 +125,37 @@ function FormularioUsuario({
               />
             </label>
           </div>
+
+          {solicitaOrganizacion && (
+            <label className="usuarios-campo">
+              <span>Organización donde trabajará</span>
+              <select
+                value={form.organizacion_id ?? ''}
+                onChange={(evento) =>
+                  onCambiar(
+                    'organizacion_id',
+                    evento.target.value ? Number(evento.target.value) : undefined,
+                  )
+                }
+                required
+              >
+                <option value="">Selecciona una organización</option>
+                {organizaciones.map((organizacion) => (
+                  <option key={organizacion.id} value={organizacion.id}>{organizacion.nombre}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {permiteNombreOrganizacion && (
+            <label className="usuarios-campo">
+              <span>Nombre de la organización <em>(opcional)</em></span>
+              <input
+                value={form.organizacion_nombre ?? ''}
+                onChange={(evento) => onCambiar('organizacion_nombre', evento.target.value)}
+              />
+            </label>
+          )}
 
           <label className="usuarios-campo">
             <span>Correo electrónico</span>
@@ -130,47 +192,12 @@ function FormularioUsuario({
             </label>
           )}
 
-          <label className="usuarios-campo">
-            <span>Rol</span>
-            <select
-              value={form.rol_id}
-              onChange={(evento) => onCambiar('rol_id', Number(evento.target.value))}
-              disabled={rolBloqueado || modoEdicion}
-              required
-            >
-              {!form.rol_id && <option value="">Selecciona un rol</option>}
-              {roles.map((rol) => <option key={rol.id} value={rol.id}>{rol.nombre}</option>)}
-            </select>
-          </label>
-
-          {solicitaOrganizacion && (
+          {modoEdicion && (
             <label className="usuarios-campo">
-              <span>Organización</span>
-              <select
-                value={form.organizacion_id ?? ''}
-                onChange={(evento) =>
-                  onCambiar(
-                    'organizacion_id',
-                    evento.target.value ? Number(evento.target.value) : undefined,
-                  )
-                }
-                required
-              >
-                <option value="">Selecciona una organización</option>
-                {organizaciones.map((organizacion) => (
-                  <option key={organizacion.id} value={organizacion.id}>{organizacion.nombre}</option>
-                ))}
+              <span>Rol</span>
+              <select value={form.rol_id} disabled aria-label="Rol actual">
+                {roles.map((rol) => <option key={rol.id} value={rol.id}>{rol.nombre}</option>)}
               </select>
-            </label>
-          )}
-
-          {permiteNombreOrganizacion && (
-            <label className="usuarios-campo">
-              <span>Nombre de la organización <em>(opcional)</em></span>
-              <input
-                value={form.organizacion_nombre ?? ''}
-                onChange={(evento) => onCambiar('organizacion_nombre', evento.target.value)}
-              />
             </label>
           )}
 
