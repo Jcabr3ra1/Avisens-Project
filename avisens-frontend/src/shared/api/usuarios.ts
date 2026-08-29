@@ -7,11 +7,21 @@ import type {
   Usuario,
 } from './types'
 
+let solicitudListado: Promise<Usuario[]> | null = null
+
 export async function listarUsuarios(): Promise<Usuario[]> {
-  const { data } = await api.get<PaginatedResponse<Usuario>>('/usuarios', {
+  if (solicitudListado) return solicitudListado
+
+  solicitudListado = api.get<PaginatedResponse<Usuario>>('/usuarios', {
     params: { page: 1, limit: 100 },
-  })
-  return data.data
+  }).then(({ data }) => data.data)
+
+  solicitudListado.then(
+    () => { solicitudListado = null },
+    () => { solicitudListado = null },
+  )
+
+  return solicitudListado
 }
 
 export async function listarRolesUsuario(): Promise<RolResumen[]> {

@@ -110,6 +110,8 @@
 .usuarios-btn-menu:focus-visible,
 .usuarios-menu button:focus-visible,
 .usuarios-password button:focus-visible,
+.usuarios-modal-cerrar:focus-visible,
+.usuarios-btn-retirar:focus-visible,
 .usuarios-alert button:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--green) 40%, transparent);
   outline-offset: 2px;
@@ -410,7 +412,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  min-width: 160px;
+  min-width: 190px;
   padding: 0.3rem;
   background: var(--card);
   border: 1px solid var(--border);
@@ -468,6 +470,10 @@
   box-shadow: 0 32px 80px rgba(7, 20, 14, 0.35);
 }
 
+.usuarios-modal-asignaciones {
+  max-width: 680px;
+}
+
 .usuarios-modal-titulo {
   margin: 0 0 1.1rem;
   color: var(--dash-ink);
@@ -475,10 +481,167 @@
   font-weight: 800;
 }
 
+.usuarios-modal-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.usuarios-modal-cabecera .usuarios-modal-titulo {
+  margin-bottom: 0.3rem;
+}
+
+.usuarios-modal-cerrar {
+  display: inline-flex;
+  flex: 0 0 44px;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--text3);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.usuarios-modal-cerrar:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--card-h);
+}
+
+.usuarios-modal-cerrar:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.usuarios-asignaciones-ayuda {
+  max-width: 42ch;
+  margin: 0;
+  color: var(--text3);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.usuarios-asignaciones-cargando,
+.usuarios-asignaciones-vacio {
+  margin: 0;
+  padding: 1rem;
+  color: var(--text3);
+  background: color-mix(in srgb, var(--green) 5%, transparent);
+  border-radius: 10px;
+  font-size: 0.88rem;
+}
+
+.usuarios-asignaciones-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  background: color-mix(in srgb, var(--green) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--green) 14%, transparent);
+  border-radius: 12px;
+}
+
+.usuarios-asignaciones-form .usuarios-btn-primary {
+  white-space: nowrap;
+}
+
+.usuarios-asignaciones-listado {
+  margin-top: 1.25rem;
+}
+
+.usuarios-asignaciones-listado h3 {
+  margin: 0 0 0.65rem;
+  color: var(--dash-ink);
+  font-size: 0.98rem;
+}
+
+.usuarios-asignaciones-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.usuarios-asignacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0.9rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+}
+
+.usuarios-asignacion-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.usuarios-asignacion-info strong {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.usuarios-asignacion-info span,
+.usuarios-asignacion-info small {
+  color: var(--text3);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.usuarios-asignacion-info small {
+  color: var(--green-d);
+  font-weight: 600;
+}
+
+.usuarios-btn-retirar {
+  min-height: 44px;
+  padding: 0.55rem 0.8rem;
+  color: var(--red);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--red) 25%, var(--border));
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.usuarios-btn-retirar:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+}
+
+.usuarios-btn-retirar:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .usuarios-form {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+}
+
+.usuarios-rol-ayuda {
+  margin: -0.35rem 0 0;
+  padding: 0.65rem 0.75rem;
+  color: var(--text3);
+  background: color-mix(in srgb, var(--green) 7%, transparent);
+  border-left: 3px solid var(--green);
+  border-radius: 0 8px 8px 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 .usuarios-campo-fila {
@@ -605,6 +768,23 @@
   .usuarios-campo input,
   .usuarios-campo select {
     font-size: 1rem;
+  }
+
+  .usuarios-asignaciones-form {
+    grid-template-columns: 1fr;
+  }
+
+  .usuarios-asignaciones-form .usuarios-btn-primary {
+    width: 100%;
+  }
+
+  .usuarios-asignacion {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .usuarios-btn-retirar {
+    width: 100%;
   }
 }
 

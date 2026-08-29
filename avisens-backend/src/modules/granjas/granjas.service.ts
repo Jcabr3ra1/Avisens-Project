@@ -11,6 +11,7 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 import { paginate } from '../../common/pagination/paginate';
 import { esPropietario } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import { ROLES } from '../../common/auth/roles';
 import {
   filtroGranjas,
   verificarAccesoGranja,
@@ -36,49 +37,32 @@ const GRANJA_SELECT = {
 export class GranjasService {
   constructor(private prisma: PrismaService) {}
 
-  private organizacionDelPropietario(solicitante: Solicitante): number {
-    if (!solicitante.organizacion_id) {
-      throw new ForbiddenException(
-        'Tu cuenta de propietario no tiene una organización asignada',
+  async crear(dto: CreateGranjaDto, solicitante: Solicitante) {
+    if (solicitante.rol !== ROLES.ADMINISTRADOR) {
+      throw new ForbiddenException('Solo un administrador puede crear granjas');
+    }
+
+    if (!dto.propietario_id) {
+      throw new BadRequestException('Debe indicar el propietario de la granja');
+    }
+    const propietario = await this.prisma.usuario.findUnique({
+      where: { id: dto.propietario_id },
+      select: {
+        id: true,
+        organizacion_id: true,
+        rol: { select: { nombre: true } },
+      },
+    });
+    if (!propietario) throw new NotFoundException('Propietario no encontrado');
+    if (propietario.rol.nombre !== ROLES.PROPIETARIO) {
+      throw new BadRequestException(
+        'El usuario indicado no tiene el rol Propietario',
       );
     }
-    return solicitante.organizacion_id;
-  }
-
-  async crear(dto: CreateGranjaDto, solicitante: Solicitante) {
-    let propietarioId: number;
-    let organizacionId: number;
-    if (esPropietario(solicitante)) {
-      propietarioId = solicitante.id;
-      organizacionId = this.organizacionDelPropietario(solicitante);
-    } else {
-      if (!dto.propietario_id) {
-        throw new BadRequestException(
-          'Debe indicar el propietario de la granja',
-        );
-      }
-      const propietario = await this.prisma.usuario.findUnique({
-        where: { id: dto.propietario_id },
-        select: {
-          id: true,
-          organizacion_id: true,
-          rol: { select: { nombre: true } },
-        },
-      });
-      if (!propietario)
-        throw new NotFoundException('Propietario no encontrado');
-      if (propietario.rol.nombre !== 'Propietario') {
-        throw new BadRequestException(
-          'El usuario indicado no tiene el rol Propietario',
-        );
-      }
-      if (!propietario.organizacion_id) {
-        throw new BadRequestException(
-          'El propietario no tiene una organización asignada',
-        );
-      }
-      propietarioId = dto.propietario_id;
-      organizacionId = propietario.organizacion_id;
+    if (!propietario.organizacion_id) {
+      throw new BadRequestException(
+        'El propietario no tiene una organización asignada',
+      );
     }
 
     return this.prisma.granja.create({
@@ -90,8 +74,8 @@ export class GranjasService {
         latitud: dto.latitud,
         longitud: dto.longitud,
         area_total_m2: dto.area_total_m2,
-        propietario_id: propietarioId,
-        organizacion_id: organizacionId,
+        propietario_id: propietario.id,
+        organizacion_id: propietario.organizacion_id,
       },
       select: GRANJA_SELECT,
     });

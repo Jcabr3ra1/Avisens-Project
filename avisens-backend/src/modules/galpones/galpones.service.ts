@@ -14,6 +14,7 @@ import {
   filtroGalpones,
   verificarAccesoGalpon,
 } from '../../common/auth/alcance';
+import { randomUUID } from 'node:crypto';
 
 const GALPON_SELECT = {
   id: true,
@@ -49,22 +50,30 @@ export class GalponesService {
   async crear(dto: CreateGalponDto, solicitante: Solicitante) {
     await this.validarGranja(dto.granja_id, solicitante);
 
-    return this.prisma.galpon.create({
-      data: {
-        granja_id: dto.granja_id,
-        codigo: dto.codigo,
-        nombre: dto.nombre,
-        capacidad_aves: dto.capacidad_aves,
-        ancho_metros: dto.ancho_metros,
-        largo_metros: dto.largo_metros,
-        orientacion: dto.orientacion,
-        tipo_techo: dto.tipo_techo,
-        plano_url: dto.plano_url,
-        fecha_construccion: dto.fecha_construccion
-          ? new Date(dto.fecha_construccion)
-          : undefined,
-      },
-      select: GALPON_SELECT,
+    return this.prisma.$transaction(async (transaccion) => {
+      const creado = await transaccion.galpon.create({
+        data: {
+          granja_id: dto.granja_id,
+          codigo: `TEMP-${randomUUID()}`,
+          nombre: dto.nombre,
+          capacidad_aves: dto.capacidad_aves,
+          ancho_metros: dto.ancho_metros,
+          largo_metros: dto.largo_metros,
+          orientacion: dto.orientacion,
+          tipo_techo: dto.tipo_techo,
+          plano_url: dto.plano_url,
+          fecha_construccion: dto.fecha_construccion
+            ? new Date(dto.fecha_construccion)
+            : undefined,
+        },
+        select: { id: true },
+      });
+
+      return transaccion.galpon.update({
+        where: { id: creado.id },
+        data: { codigo: `GAL-${String(creado.id).padStart(6, '0')}` },
+        select: GALPON_SELECT,
+      });
     });
   }
 
@@ -114,7 +123,6 @@ export class GalponesService {
       where: { id },
       data: {
         granja_id: undefined,
-        codigo: dto.codigo,
         nombre: dto.nombre,
         capacidad_aves: dto.capacidad_aves,
         ancho_metros: dto.ancho_metros,

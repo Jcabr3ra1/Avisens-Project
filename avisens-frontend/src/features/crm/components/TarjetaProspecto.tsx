@@ -30,6 +30,9 @@ function TarjetaProspecto({ prospecto, onAbrir }: Props) {
         <div className="crm-kcard-ident">
           <span className="crm-kcard-nombre">{prospecto.nombre}</span>
           <span className="crm-kcard-granja">{prospecto.granja}</span>
+          <span className={`crm-canal-badge crm-canal-badge--${prospecto.canal}`}>
+            {prospecto.canal === 'whatsapp' ? 'WhatsApp' : prospecto.canal === 'web' ? 'Web' : 'Otro'}
+          </span>
         </div>
         {prospecto.puntaje > 0 && (
           <ScoreDonut puntaje={prospecto.puntaje} color={estilo.color} />

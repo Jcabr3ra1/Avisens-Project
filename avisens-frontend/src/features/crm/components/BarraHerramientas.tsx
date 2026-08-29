@@ -1,14 +1,23 @@
 import { IcClose, IcGrid, IcSearch, IcUsers } from '@shared/ui/icons/icons'
-import type { Vista } from '../hooks/useFiltroProspectos'
+import type { FiltroCanal, Vista } from '../hooks/useFiltroProspectos'
 
 type Props = {
   busqueda: string
   onBuscar: (texto: string) => void
   vista: Vista
   onCambiarVista: (vista: Vista) => void
+  filtroCanal: FiltroCanal
+  onCambiarCanal: (canal: FiltroCanal) => void
 }
 
-function BarraHerramientas({ busqueda, onBuscar, vista, onCambiarVista }: Props) {
+function BarraHerramientas({
+  busqueda,
+  onBuscar,
+  vista,
+  onCambiarVista,
+  filtroCanal,
+  onCambiarCanal,
+}: Props) {
   return (
     <div className="crm-toolbar">
       <div className="crm-search">
@@ -44,6 +53,19 @@ function BarraHerramientas({ busqueda, onBuscar, vista, onCambiarVista }: Props)
           <IcUsers size={14} /> Lista
         </button>
       </div>
+
+      <label className="crm-canal-filtro" htmlFor="crm-canal">
+        <span>Origen</span>
+        <select
+          id="crm-canal"
+          value={filtroCanal}
+          onChange={(event) => onCambiarCanal(event.target.value as FiltroCanal)}
+        >
+          <option value="todos">Todos</option>
+          <option value="web">Web</option>
+          <option value="whatsapp">WhatsApp</option>
+        </select>
+      </label>
     </div>
   )
 }

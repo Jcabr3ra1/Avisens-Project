@@ -54,13 +54,12 @@ describe('GranjasService', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('crear', () => {
-    it('un Propietario crea la granja a su propio nombre', async () => {
-      prisma.granja.create.mockResolvedValue({ id: 1 });
+    it('un Propietario no puede crear granjas', async () => {
+      await expect(
+        service.crear({ nombre: 'La Esperanza' }, propietario),
+      ).rejects.toThrow(ForbiddenException);
 
-      await service.crear({ nombre: 'La Esperanza' }, propietario);
-
-      expect(dataDe(prisma.granja.create).propietario_id).toBe(5);
-      expect(dataDe(prisma.granja.create).organizacion_id).toBe(10);
+      expect(prisma.granja.create).not.toHaveBeenCalled();
     });
 
     it('un Admin sin propietario_id recibe 400', async () => {

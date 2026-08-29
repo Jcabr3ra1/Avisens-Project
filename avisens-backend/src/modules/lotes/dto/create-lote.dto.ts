@@ -27,13 +27,6 @@ export class CreateLoteDto {
   proveedor_id: number;
 
   @ApiProperty({
-    example: 'LOTE-2026-01',
-    description: 'Codigo unico del lote',
-  })
-  @IsString()
-  codigo: string;
-
-  @ApiProperty({
     example: '2026-08-06',
     description: 'Fecha de ingreso de las aves',
   })

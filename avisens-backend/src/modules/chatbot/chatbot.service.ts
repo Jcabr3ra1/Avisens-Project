@@ -199,6 +199,9 @@ export class ChatbotService {
     const respuesta = await this.resolverRespuesta(pregunta, dto.respuesta);
 
     const valor = this.validarRespuesta(pregunta, respuesta);
+    if (pregunta.bloque === 'S' && pregunta.campo_prospecto === 'documento') {
+      await this.validarClientePqrs(String(valor));
+    }
     const puntaje = pregunta.puntua
       ? await this.puntajeDe(pregunta.codigo, respuesta)
       : null;
@@ -530,6 +533,19 @@ export class ChatbotService {
     }
 
     return texto;
+  }
+
+  private async validarClientePqrs(documento: string) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { cedula: documento },
+      select: { id: true, activo: true },
+    });
+
+    if (!usuario || !usuario.activo) {
+      throw new BadRequestException(
+        'La cédula no es válida para una solicitud PQRS. Verifica que esté registrada en AVISENS e inténtalo de nuevo.',
+      );
+    }
   }
 
   private async finalizar(prospectoId: number) {

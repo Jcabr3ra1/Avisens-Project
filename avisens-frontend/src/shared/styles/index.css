@@ -196,7 +196,7 @@ button {
   display: none;
 }
 
-section {
+.landing-shell :where(section) {
   padding: clamp(5rem, 9vw, 8rem) clamp(1.5rem, 5vw, 4rem);
   position: relative;
   z-index: 1;

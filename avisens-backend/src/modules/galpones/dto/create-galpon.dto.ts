@@ -18,13 +18,6 @@ export class CreateGalponDto {
   @Min(1)
   granja_id: number;
 
-  @ApiProperty({
-    example: 'galpon1',
-    description: 'Coincide con el prefijo del topic MQTT',
-  })
-  @IsString()
-  codigo: string;
-
   @ApiProperty({ example: 'Galpón Norte' })
   @IsString()
   nombre: string;

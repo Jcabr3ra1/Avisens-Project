@@ -9,10 +9,9 @@ import { useEffect, useState } from 'react'
 import { isAxiosError } from 'axios'
 import {
   listarInsumos,
-  listarProveedores,
   type Insumo,
-  type Proveedor,
 } from '@shared/api'
+import { listarProveedores, type Proveedor } from '@features/proveedores/api/proveedores'
 import { IcBox, IcUsers } from '@shared/ui/icons/icons'
 import './InventarioPage.css'
 

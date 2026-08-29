@@ -64,6 +64,7 @@ import { AnalisisVisionModule } from './modules/analisis-vision/analisis-vision.
 import { JobsModule } from './common/jobs/jobs.module';
 import { ObservabilityModule } from './common/observability/observability.module';
 import { RequestObservabilityInterceptor } from './common/observability/request-observability.interceptor';
+import { CaptacionProspectosModule } from './modules/captacion-prospectos/captacion-prospectos.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -146,6 +147,7 @@ import { RequestObservabilityInterceptor } from './common/observability/request-
     ModelosMlModule,
     AnalisisBioacusticoModule,
     AnalisisVisionModule,
+    CaptacionProspectosModule,
   ],
   providers: [
     {

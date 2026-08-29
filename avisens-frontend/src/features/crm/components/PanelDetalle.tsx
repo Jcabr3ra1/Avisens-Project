@@ -48,6 +48,13 @@ function PanelDetalle({ prospecto, onCerrar }: Props) {
             </span>
           </div>
 
+          <div className="crm-det-row">
+            <span className="crm-det-lbl">Origen</span>
+            <span className={`crm-canal-badge crm-canal-badge--${prospecto.canal}`}>
+              {prospecto.canal === 'whatsapp' ? 'WhatsApp' : prospecto.canal === 'web' ? 'Web' : 'Otro'}
+            </span>
+          </div>
+
           {prospecto.puntaje > 0 && (
             <div className="crm-det-row">
               <span className="crm-det-lbl">Puntaje</span>
