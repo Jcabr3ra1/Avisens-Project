@@ -4,7 +4,9 @@ import type { ConsumoDiario, CrearConsumoDiarioPayload } from '../model/consumoD
 
 export type { ConsumoDiario, CrearConsumoDiarioPayload } from '../model/consumoDiario'
 
-export async function listarConsumosDiarios(page = 1, limit = 200): Promise<ConsumoDiario[]> {
+// El backend topa "limit" a 100 por página (PaginationQueryDto) — pedir más
+// devuelve 400 Bad Request.
+export async function listarConsumosDiarios(page = 1, limit = 100): Promise<ConsumoDiario[]> {
   const { data } = await api.get<PaginatedResponse<ConsumoDiario>>('/consumos-diarios', { params: { page, limit } })
   return data.data
 }
