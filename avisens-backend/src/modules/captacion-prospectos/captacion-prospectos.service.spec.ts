@@ -3,9 +3,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CaptacionProspectosService } from './captacion-prospectos.service';
 
 describe('CaptacionProspectosService', () => {
+  const prospectoCreateMock = jest.fn();
+
   const prisma = {
     prospecto: {
-      create: jest.fn(),
+      create: prospectoCreateMock,
     },
   } as unknown as PrismaService;
 
@@ -14,7 +16,7 @@ describe('CaptacionProspectosService', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('guarda una solicitud web como un prospecto nuevo', async () => {
-    prisma.prospecto.create.mockResolvedValue({ id: 4, estado: 'nuevo' });
+    prospectoCreateMock.mockResolvedValue({ id: 4, estado: 'nuevo' });
 
     await service.crearDesdeWeb({
       nombre: '  Ana Rojas  ',
@@ -25,7 +27,7 @@ describe('CaptacionProspectosService', () => {
       consentimiento_habeas_data: true,
     });
 
-    expect(prisma.prospecto.create).toHaveBeenCalledWith(
+    expect(prospectoCreateMock).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           nombre: 'Ana Rojas',
@@ -51,6 +53,6 @@ describe('CaptacionProspectosService', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
 
-    expect(prisma.prospecto.create).not.toHaveBeenCalled();
+    expect(prospectoCreateMock).not.toHaveBeenCalled();
   });
 });
