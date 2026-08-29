@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
+import { crearOrganizacion, getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
 import BarraUsuarios from './components/BarraUsuarios'
 import FormularioUsuario from './components/FormularioUsuario'
 import ModalAsignacionesGalpon from './components/ModalAsignacionesGalpon'
@@ -45,16 +45,32 @@ function UsuariosPage() {
         return
       }
 
+      const rol = catalogos.roles.find((r) => r.id === datos.rol_id)
+      const nombreOrgNueva = datos.organizacion_nombre?.trim() || undefined
+      let organizacionId = datos.organizacion_id
+
+      // El backend solo auto-crea la organización cuando el rol es
+      // Propietario. Para un Operario dado de alta por el Administrador,
+      // si no eligió una organización existente sino que escribió un
+      // nombre nuevo, la creamos aquí primero y usamos su id — así el
+      // Admin no depende de que ya exista una organización de antes.
+      if (rol?.nombre === 'Operario' && !organizacionId && nombreOrgNueva) {
+        const nueva = await crearOrganizacion({ nombre: nombreOrgNueva })
+        organizacionId = nueva.id
+        void catalogos.recargar()
+      }
+
       await crear({
         ...datos,
         nombre_completo: datos.nombre_completo.trim(),
         cedula: datos.cedula.trim(),
         email: datos.email.trim(),
         telefono: telefono || undefined,
-        organizacion_nombre: datos.organizacion_nombre?.trim() || undefined,
+        organizacion_id: organizacionId,
+        organizacion_nombre: rol?.nombre === 'Propietario' ? nombreOrgNueva : undefined,
       })
     },
-    [actualizar, crear],
+    [actualizar, crear, catalogos.roles, catalogos.recargar],
   )
 
   const formulario = useFormularioUsuario(guardarUsuario)

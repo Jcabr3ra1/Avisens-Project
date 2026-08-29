@@ -10,10 +10,11 @@ import { UpdateInsumoDto } from './dto/update-insumo.dto';
 import { RegistrarMovimientoDto } from './dto/registrar-movimiento.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import { esPropietario, verificarDueno } from '../../common/auth/acceso';
+import { verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import { filtroGranjas, verificarAccesoGranja } from '../../common/auth/alcance';
 
-const SIN_ACCESO = 'Solo puedes gestionar insumos de tus propias granjas';
+const SIN_ACCESO = 'No tienes acceso a los insumos de esta granja';
 
 const INSUMO_SELECT = {
   id: true,
@@ -114,10 +115,12 @@ export class InsumosService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where: Prisma.InventarioInsumoWhereInput | undefined = esPropietario(
-      solicitante,
-    )
-      ? { granja: { propietario_id: solicitante.id } }
+    // Admin ve todo; Propietario solo sus granjas; Operario solo las
+    // granjas donde tiene un galpón asignado (mismo criterio que
+    // Bitácora/Alertas — ver common/auth/alcance.ts).
+    const granja = filtroGranjas(solicitante);
+    const where: Prisma.InventarioInsumoWhereInput | undefined = granja
+      ? { granja }
       : undefined;
 
     const [data, total] = await this.prisma.$transaction([
@@ -139,7 +142,13 @@ export class InsumosService {
       select: INSUMO_SELECT,
     });
     if (!insumo) throw new NotFoundException('Insumo no encontrado');
-    verificarDueno(solicitante, insumo.granja.propietario_id, SIN_ACCESO);
+    await verificarAccesoGranja(
+      this.prisma,
+      insumo.granja_id,
+      solicitante,
+      SIN_ACCESO,
+      insumo.granja.propietario_id,
+    );
     return insumo;
   }
 

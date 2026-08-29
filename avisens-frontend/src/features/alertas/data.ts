@@ -1,6 +1,7 @@
-// data.ts — Tipos y datos mock del módulo de Alertas (EP-05).
-// Cuando exista el backend real, este archivo se reemplaza por llamadas
-// a la API de alertas. Los criterios de severidad siguen el Manual Italcol.
+// data.ts — Tipos del módulo de Alertas (EP-05). Los criterios de severidad
+// siguen el Manual Italcol. Los datos viven en AlertasPage.tsx: las activas
+// se derivan en vivo de useMonitoreoAmbiental, el historial viene de la API
+// real /alertas (shared/api/alertas.ts).
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -28,48 +29,3 @@ export type Alerta = {
   accionCierre?: string    // Descripción de la acción correctiva (si fue cerrada)
 }
 
-// ─── Datos mock ───────────────────────────────────────────────────────────────
-// Las alertas ACTIVAS ya no se escriben a mano aquí: AlertasPage.tsx las
-// calcula solas para todos los galpones, a partir de los mismos sensores que
-// muestra Monitoreo (reales donde ya hay un ESP32 conectado, de ejemplo donde
-// no) — ver `generarAlertasSensores` en AlertasPage.tsx. Así, un cambio en los
-// datos de Monitoreo no puede desincronizarse de lo que ve Alertas, porque es
-// literalmente la misma fuente.
-// Lo único que sigue viviendo aquí es el HISTÓRICO ya cerrado, que no se
-// deriva de ningún estado actual — son hechos pasados.
-
-export const ALERTAS_MOCK: Alerta[] = [
-  // Alertas ya cerradas — histórico
-  {
-    id: 4,
-    galpon: 'Galpón Norte (GP-01)',
-    zona: 'Zona Centro',
-    variable: 'CO₂',
-    valorActual: 3200,
-    unidad: 'ppm',
-    rangoMin: 0,
-    rangoMax: 3000,
-    severidad: 'advertencia',
-    estado: 'cerrada',
-    fechaHora: '29/06/2026 10:15',
-    minutosActiva: 12,
-    responsable: 'Edison (Operario)',
-    accionCierre: 'Se activó el extractor 2 y se revisaron las cortinas laterales.',
-  },
-  {
-    id: 5,
-    galpon: 'Galpón Sur (GP-02)',
-    zona: 'Zona Sur',
-    variable: 'Temperatura',
-    valorActual: 34.1,
-    unidad: '°C',
-    rangoMin: 28,
-    rangoMax: 33,
-    severidad: 'critica',
-    estado: 'cerrada',
-    fechaHora: '28/06/2026 14:22',
-    minutosActiva: 8,
-    responsable: 'Edison (Operario)',
-    accionCierre: 'Se abrieron las cortinas y se encendió el nebulizador.',
-  },
-]

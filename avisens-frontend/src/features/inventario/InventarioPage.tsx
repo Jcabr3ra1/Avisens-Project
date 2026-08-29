@@ -5,14 +5,17 @@
 // original no están en la UI porque no existen en el modelo de datos. El
 // precio unitario y el proveedor habitual sí existen y ya se muestran.
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { isAxiosError } from 'axios'
 import {
   listarInsumos,
+  registrarMovimientoInsumo,
   type Insumo,
+  type TipoMovimientoInventario,
 } from '@shared/api'
 import { listarProveedores, type Proveedor } from '@features/proveedores/api/proveedores'
-import { IcBox, IcUsers } from '@shared/ui/icons/icons'
+import { mensajeDeError } from '@shared/utils/errores'
+import { IcBox, IcUsers, IcRefresh } from '@shared/ui/icons/icons'
 import './InventarioPage.css'
 
 type EstadoStock = 'ok' | 'bajo' | 'critico'
@@ -34,6 +37,9 @@ function InventarioPage() {
 
   // Pestaña activa: insumos o proveedores
   const [tab, setTab] = useState<'insumos' | 'proveedores'>('insumos')
+
+  // Insumo sobre el que se está registrando un movimiento (null = modal cerrado)
+  const [movimientoDe, setMovimientoDe] = useState<Insumo | null>(null)
 
   useEffect(() => {
     let activo = true
@@ -116,7 +122,12 @@ function InventarioPage() {
         ) : (
           <div className="inv-grid">
             {insumos.map(insumo => (
-              <TarjetaInsumo key={insumo.id} insumo={insumo} proveedores={proveedores} />
+              <TarjetaInsumo
+                key={insumo.id}
+                insumo={insumo}
+                proveedores={proveedores}
+                onRegistrarMovimiento={() => setMovimientoDe(insumo)}
+              />
             ))}
           </div>
         )
@@ -155,12 +166,34 @@ function InventarioPage() {
           </div>
         )
       )}
+
+      {/* ── Modal: registrar movimiento de stock ─────────────────────────────── */}
+      {movimientoDe && (
+        <ModalMovimiento
+          insumo={movimientoDe}
+          onCerrar={() => setMovimientoDe(null)}
+          onRegistrado={(stockResultante) => {
+            setInsumos(prev =>
+              prev.map(i => i.id === movimientoDe.id ? { ...i, stock_actual: stockResultante } : i),
+            )
+            setMovimientoDe(null)
+          }}
+        />
+      )}
     </div>
   )
 }
 
 // ─── Sub-componente: tarjeta de insumo ───────────────────────────────────────
-function TarjetaInsumo({ insumo, proveedores }: { insumo: Insumo; proveedores: Proveedor[] }) {
+function TarjetaInsumo({
+  insumo,
+  proveedores,
+  onRegistrarMovimiento,
+}: {
+  insumo: Insumo
+  proveedores: Proveedor[]
+  onRegistrarMovimiento: () => void
+}) {
   const estado = estadoStock(insumo)
   // Porcentaje del stock actual respecto a la capacidad máxima estimada
   // Usamos 2× el stock mínimo como referencia visual máxima
@@ -206,6 +239,111 @@ function TarjetaInsumo({ insumo, proveedores }: { insumo: Insumo; proveedores: P
         <span className={`inv-estado-badge inv-estado-badge--${estado}`}>
           {etiquetaEstado[estado]}
         </span>
+      </div>
+
+      <button type="button" className="inv-btn-movimiento" onClick={onRegistrarMovimiento}>
+        <IcRefresh size={13} /> Registrar movimiento
+      </button>
+    </div>
+  )
+}
+
+// ─── Sub-componente: modal para registrar un movimiento de stock ────────────
+const ETIQUETA_TIPO: Record<TipoMovimientoInventario, string> = {
+  entrada: 'Entrada (sumar al stock)',
+  salida: 'Salida (restar del stock)',
+  ajuste: 'Ajuste (fijar el stock real)',
+}
+
+function ModalMovimiento({
+  insumo,
+  onCerrar,
+  onRegistrado,
+}: {
+  insumo: Insumo
+  onCerrar: () => void
+  onRegistrado: (stockResultante: number) => void
+}) {
+  const [tipo, setTipo] = useState<TipoMovimientoInventario>('entrada')
+  const [cantidad, setCantidad] = useState('')
+  const [motivo, setMotivo] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+
+  async function onGuardar(evento: FormEvent) {
+    evento.preventDefault()
+    const cantidadNum = Number(cantidad)
+    if (!cantidad || cantidadNum <= 0) {
+      setError('Ingresa una cantidad mayor que cero.')
+      return
+    }
+
+    setGuardando(true)
+    setError('')
+    try {
+      const movimiento = await registrarMovimientoInsumo(insumo.id, {
+        tipo_movimiento: tipo,
+        cantidad: cantidadNum,
+        motivo: motivo.trim() || undefined,
+      })
+      onRegistrado(movimiento.stock_resultante)
+    } catch (err) {
+      setError(mensajeDeError(err, 'No se pudo registrar el movimiento.'))
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <div className="inv-modal-overlay" onMouseDown={onCerrar}>
+      <div className="inv-modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
+        <h2 className="inv-modal-titulo">Registrar movimiento</h2>
+        <p className="inv-modal-desc">
+          {insumo.nombre} · stock actual: <strong>{insumo.stock_actual.toLocaleString()} {insumo.unidad_medida}</strong>
+        </p>
+
+        <form className="inv-modal-form" onSubmit={onGuardar}>
+          <label className="inv-modal-campo">
+            <span>Tipo de movimiento</span>
+            <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoMovimientoInventario)}>
+              {(Object.keys(ETIQUETA_TIPO) as TipoMovimientoInventario[]).map((t) => (
+                <option key={t} value={t}>{ETIQUETA_TIPO[t]}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="inv-modal-campo">
+            <span>{tipo === 'ajuste' ? `Stock real contado (${insumo.unidad_medida})` : `Cantidad (${insumo.unidad_medida})`}</span>
+            <input
+              type="number"
+              min="0"
+              step="0.001"
+              value={cantidad}
+              onChange={(e) => setCantidad(e.target.value)}
+              required
+            />
+          </label>
+
+          <label className="inv-modal-campo">
+            <span>Motivo <em>(opcional)</em></span>
+            <input
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Ej: Compra a proveedor, consumo del galpón 2…"
+            />
+          </label>
+
+          {error && <p className="inv-modal-error" role="alert">{error}</p>}
+
+          <div className="inv-modal-acciones">
+            <button type="button" className="inv-btn-secundario" onClick={onCerrar} disabled={guardando}>
+              Cancelar
+            </button>
+            <button type="submit" className="inv-btn-primary" disabled={guardando}>
+              {guardando ? 'Guardando…' : 'Registrar'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )

@@ -34,6 +34,7 @@ export const PERMISOS_POR_ROL: Readonly<Record<string, readonly Permiso[]>> = {
     PERMISOS.CATALOGOS_LEER,
     PERMISOS.INFRAESTRUCTURA_LEER,
     PERMISOS.OPERACION_REGISTRAR,
+    PERMISOS.PROVEEDORES_LEER,
   ],
 };
 

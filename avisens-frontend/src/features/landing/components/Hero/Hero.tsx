@@ -8,9 +8,23 @@ import './Hero.css';
 const INTERVALO_CARRUSEL = 7500;
 
 const slides = [
-  { src: avicultorImage, label: 'Avicultor cuidando sus aves' },
-  { src: pollosImage, label: 'Pollos de engorde en la granja' },
-  { src: comunidadImage, label: 'Comunidad rural del Cauca' },
+  {
+    src: avicultorImage,
+    label: 'Avicultor cuidando sus aves',
+    aside: 'Hacemos más fácil el manejo de tu galpón.',
+  },
+  {
+    src: pollosImage,
+    label: 'Pollos de engorde en la granja',
+    aside:
+      'Tú conoces tu galpón. AVISENS te ayuda a tenerlo todo más organizado y bajo control.',
+  },
+  {
+    src: comunidadImage,
+    label: 'Comunidad rural del Cauca',
+    aside:
+      'Cuidamos más que aves: ayudamos a construir un futuro mejor para las familias, las granjas y las comunidades del campo colombiano.',
+  },
 ];
 
 function Hero() {
@@ -74,9 +88,8 @@ function Hero() {
           <span>sostenible</span>
         </h1>
 
-        <p className="hero-aside">
-          Cuidamos más que aves: ayudamos a construir un futuro mejor para las
-          familias, las granjas y las comunidades del campo colombiano.
+        <p key={activeIndex} className="hero-aside">
+          {slides[activeIndex].aside}
         </p>
 
         <div className="hero-bottom-left">

@@ -80,8 +80,8 @@
 }
 
 .nav-links a:hover {
-  color: var(--avisens-deep);
-  background: var(--avisens-yellow);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .nav-actions {

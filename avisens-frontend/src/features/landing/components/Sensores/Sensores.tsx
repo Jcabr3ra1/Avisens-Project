@@ -1,9 +1,9 @@
 import { IcThermo, IcDrop, IcScale, IcEye, IcWind } from '@shared/ui/icons/icons'
-import dht22 from '../../assets/sensores/dht22-600x600.jpg'
-import hx711 from '../../assets/sensores/HX711.jpg'
-import ky032 from '../../assets/sensores/KY-032.jpg'
-import mq135 from '../../assets/sensores/MQ-135.jpg'
-import hcsr04 from '../../assets/sensores/HC-SR04.jpg'
+import dht22 from '../../assets/sensores/dht22.png'
+import hx711 from '../../assets/sensores/HX711.png'
+import ky032 from '../../assets/sensores/KY-032.png'
+import mq135 from '../../assets/sensores/MQ-135.png'
+import hcsr04 from '../../assets/sensores/HC-SR04.png'
 import './Sensores.css'
 
 // Cada tarjeta muestra un sensor real de los que usa AVISENS en el galpón,

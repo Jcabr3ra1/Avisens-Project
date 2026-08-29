@@ -1,4 +1,18 @@
 .login-page {
+  /* Misma paleta que usa la landing (.landing-shell), para que el login se
+     sienta parte del mismo sitio en vez de arrastrar los colores viejos. */
+  --avisens-deep: #103302;
+  --avisens-cream: #f5f7f4;
+  --avisens-green: #0e2f73;
+  --avisens-yellow: #f7f5f7;
+  --avisens-orange: #0e2f73;
+  --landing-primary: #094f23;
+  --landing-primary-hover: #103302;
+  --landing-accent: #0e2f73;
+  --landing-on-primary: #ffffff;
+  --landing-border: #d2d4d2;
+  --landing-card: #ffffff;
+
   min-height: 100svh;
   display: grid;
   grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
@@ -20,7 +34,7 @@
 .login-visual {
   position: relative;
   overflow: hidden;
-  background: #0a2f1e;
+  background: var(--avisens-deep);
   clip-path: ellipse(100% 132% at 100% 50%);
 }
 
@@ -44,8 +58,8 @@
   inset: 0;
   background: linear-gradient(
     150deg,
-    rgba(0, 45, 36, 0.18) 0%,
-    rgba(0, 91, 72, 0.1) 100%
+    rgba(16, 51, 2, 0.2) 0%,
+    rgba(9, 79, 35, 0.1) 100%
   );
 }
 

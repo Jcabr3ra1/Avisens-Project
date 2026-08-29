@@ -34,7 +34,7 @@ interface AuthRequest extends Request {
 @ApiTags('insumos')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('insumos')
 export class InsumosController {
   constructor(private insumosService: InsumosService) {}
@@ -62,7 +62,7 @@ export class InsumosController {
   }
 
   @Post(':id/movimientos')
-  @Roles(ROLES.ADMINISTRADOR)
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
   @ApiOperation({
     summary:
       'Registrar un movimiento de stock (entrada, salida o ajuste) y actualizar el inventario',

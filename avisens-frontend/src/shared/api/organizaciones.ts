@@ -15,6 +15,12 @@ export interface OrganizacionesQuery {
   limit?: number
 }
 
+export interface CrearOrganizacionPayload {
+  nombre: string
+  nit?: string
+  plan?: string
+}
+
 export async function listarOrganizaciones(
   query: OrganizacionesQuery = {},
 ): Promise<Organizacion[]> {
@@ -23,4 +29,11 @@ export async function listarOrganizaciones(
     { params: { page: 1, limit: 100, ...query } },
   )
   return data.data
+}
+
+export async function crearOrganizacion(
+  payload: CrearOrganizacionPayload,
+): Promise<Organizacion> {
+  const { data } = await api.post<Organizacion>('/organizaciones', payload)
+  return data
 }

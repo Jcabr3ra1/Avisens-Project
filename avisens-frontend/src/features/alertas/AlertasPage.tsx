@@ -1,16 +1,57 @@
 // AlertasPage.tsx — Módulo de Alertas (EP-05 HU-22 a HU-25).
 // Las alertas ACTIVAS se calculan en vivo a partir de los mismos sensores
 // reales que muestra Monitoreo (useMonitoreoAmbiental) — nunca puede
-// desincronizarse porque lee la misma fuente. El HISTÓRICO de cerradas sigue
-// viniendo de un mock: no hay ninguna tabla en el backend todavía para
-// persistir alertas ya resueltas (ver ALERTAS_MOCK en ./data).
+// desincronizarse porque lee la misma fuente. El HISTÓRICO de cerradas viene
+// de la tabla real /alertas del backend (listarAlertas). Al cerrar una
+// alerta activa, primero se persiste con crearAlerta (queda un registro real
+// con el galpón/sensor/valores) y luego se cierra con cerrarAlerta — así deja
+// de ser un estado que solo vive en memoria del navegador.
 
-import { useRef, useState } from 'react'
-import { ALERTAS_MOCK, type Alerta, type EstadoAlerta } from './data'
+import { useEffect, useRef, useState } from 'react'
+import { isAxiosError } from 'axios'
+import { type Alerta, type EstadoAlerta } from './data'
+import {
+  listarAlertas,
+  crearAlerta,
+  cerrarAlerta as cerrarAlertaApi,
+  getRol,
+  type Alerta as AlertaApi,
+} from '@shared/api'
 import { useMonitoreoAmbiental, formatearUltimaLectura } from '@shared/hooks/useMonitoreoAmbiental'
 import { iconoSensor } from '@shared/ui/sensorIcon'
 import { IcCheck, IcPaperclip, IcAlert, IcClock, IcUserCircle } from '@shared/ui/icons/icons'
 import './AlertasPage.css'
+
+// Traduce la severidad local (usada en toda la UI) a la criticidad que
+// espera el backend real al crear una alerta.
+function criticidadApi(severidad: Alerta['severidad']): string {
+  if (severidad === 'critica') return 'alta'
+  if (severidad === 'advertencia') return 'media'
+  return 'baja'
+}
+
+// Traduce una alerta ya cerrada que viene del backend real a la forma que
+// usa la UI (misma que las activas, calculadas del lado del cliente).
+function mapearAlertaApi(a: AlertaApi): Alerta {
+  const creada = new Date(a.fecha_creacion).getTime()
+  const cerrada = a.fecha_cierre ? new Date(a.fecha_cierre).getTime() : Date.now()
+  return {
+    id: a.id,
+    galpon: `${a.galpon.nombre} (${a.galpon.codigo})`,
+    zona: a.sensor?.codigo ?? a.lote?.codigo ?? '—',
+    variable: a.sensor?.tipo ?? a.tipo,
+    valorActual: a.valor_detectado ?? 0,
+    unidad: '',
+    rangoMin: 0,
+    rangoMax: a.valor_umbral ?? 0,
+    severidad: a.criticidad === 'alta' ? 'critica' : a.criticidad === 'media' ? 'advertencia' : 'info',
+    estado: 'cerrada',
+    fechaHora: new Date(a.fecha_creacion).toLocaleString('es-CO'),
+    minutosActiva: Math.max(0, Math.round((cerrada - creada) / 60000)),
+    responsable: a.responsable?.nombre_completo,
+    accionCierre: a.accion_correctiva ?? a.mensaje ?? undefined,
+  }
+}
 
 // ─── Tipos del modal de cierre ────────────────────────────────────────────────
 type FormCierre = {
@@ -18,13 +59,44 @@ type FormCierre = {
   fotoNombre: string | null
 }
 
+// Alerta activa calculada del lado del cliente, con los ids reales que hacen
+// falta para poder persistirla en el backend cuando se cierra.
+type AlertaActiva = Alerta & { galponId: number; sensorId: number; loteId: number | null }
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 function AlertasPage() {
   const { galpones, cargando, error } = useMonitoreoAmbiental()
+  const rol = getRol()
 
-  // El histórico de cerradas es mock (sin backend); las activas se calculan
-  // abajo en cada render a partir del hook — no viven en este estado.
-  const [historial] = useState<Alerta[]>(ALERTAS_MOCK.filter(a => a.estado === 'cerrada'))
+  // Histórico real: alertas ya cerradas en el backend (/alertas).
+  const [historial, setHistorial] = useState<Alerta[]>([])
+  const [cargandoHistorial, setCargandoHistorial] = useState(true)
+  const [errorHistorial, setErrorHistorial] = useState('')
+
+  useEffect(() => {
+    let activo = true
+    listarAlertas()
+      .then(data => {
+        if (!activo) return
+        setHistorial(
+          data
+            .filter(a => a.estado === 'cerrada')
+            .map(mapearAlertaApi)
+            .sort((a, b) => b.id - a.id),
+        )
+        setErrorHistorial('')
+      })
+      .catch(err => {
+        if (!activo) return
+        setErrorHistorial(
+          isAxiosError(err) && err.response?.status === 403
+            ? 'No tienes permisos para ver el historial de alertas.'
+            : 'No se pudo cargar el historial de alertas.',
+        )
+      })
+      .finally(() => { if (activo) setCargandoHistorial(false) })
+    return () => { activo = false }
+  }, [])
 
   // Decisiones del usuario sobre alertas activas (cerrar/escalar), guardadas
   // por id de sensor — mientras el sensor SIGA fuera de rango se respeta la
@@ -35,7 +107,7 @@ function AlertasPage() {
   const inicioAlerta = useRef<Record<number, number>>({})
 
   // ── Arma las alertas activas a partir de los sensores en advertencia/crítico ──
-  const activas: Alerta[] = []
+  const activas: AlertaActiva[] = []
   for (const galpon of galpones) {
     for (const sensor of galpon.sensores) {
       if (sensor.estado !== 'advertencia' && sensor.estado !== 'critico') {
@@ -48,6 +120,9 @@ function AlertasPage() {
 
       activas.push({
         id: sensor.id,
+        galponId: galpon.id,
+        sensorId: sensor.id,
+        loteId: galpon.loteActivo?.id ?? null,
         galpon: `${galpon.nombre} (${galpon.codigo})`,
         zona: sensor.codigo,
         variable: sensor.tipo,
@@ -64,16 +139,18 @@ function AlertasPage() {
     }
   }
 
-  // Las cerradas por el usuario en esta sesión se van al historial visible.
-  const cerradasPorUsuario = activas.filter(a => a.estado === 'cerrada')
+  // Las cerradas por el usuario ya quedaron persistidas y se agregaron a
+  // `historial` directamente en confirmarCierre — aquí solo se descartan de
+  // la lista de activas (el sensor puede seguir fuera de rango un rato más).
   const activasVisibles = activas.filter(a => a.estado !== 'cerrada')
-  const historialCompleto = [...cerradasPorUsuario, ...historial]
+  const historialCompleto = historial
 
   // Pestaña activa: 'activas' o 'historial'
   const [tab, setTab] = useState<'activas' | 'historial'>('activas')
 
   // ID de la alerta que se está cerrando (null = modal cerrado)
   const [cierreId, setCierreId] = useState<number | null>(null)
+  const [cerrando, setCerrando] = useState(false)
 
   const [formCierre, setFormCierre] = useState<FormCierre>({ comentario: '', fotoNombre: null })
   const [errorCierre, setErrorCierre] = useState('')
@@ -87,7 +164,7 @@ function AlertasPage() {
     setCierreId(id)
   }
 
-  function confirmarCierre() {
+  async function confirmarCierre() {
     if (!formCierre.comentario.trim()) {
       setErrorCierre('El comentario es obligatorio para cerrar la alerta.')
       return
@@ -96,10 +173,34 @@ function AlertasPage() {
       setErrorCierre('Debes adjuntar al menos una fotografía como evidencia.')
       return
     }
-    if (cierreId !== null) {
-      setDecisiones(prev => ({ ...prev, [cierreId]: { estado: 'cerrada', accionCierre: formCierre.comentario } }))
+    const alerta = activas.find(a => a.id === cierreId)
+    if (!alerta) { setCierreId(null); return }
+
+    setCerrando(true)
+    try {
+      // Se persiste primero como alerta real (queda el registro del galpón,
+      // sensor y valores) y luego se cierra con la acción correctiva — así
+      // la decisión sobrevive a un refresco de página, no solo vive en memoria.
+      const creada = await crearAlerta({
+        galpon_id: alerta.galponId,
+        tipo: alerta.variable,
+        criticidad: criticidadApi(alerta.severidad),
+        sensor_id: alerta.sensorId,
+        lote_id: alerta.loteId ?? undefined,
+        valor_detectado: alerta.valorActual,
+        valor_umbral: alerta.rangoMax || alerta.rangoMin || undefined,
+        mensaje: `${alerta.variable} fuera de rango en ${alerta.galpon}`,
+      })
+      const cerrada = await cerrarAlertaApi(creada.id, formCierre.comentario)
+
+      setDecisiones(prev => ({ ...prev, [alerta.sensorId]: { estado: 'cerrada', accionCierre: formCierre.comentario } }))
+      setHistorial(prev => [mapearAlertaApi(cerrada), ...prev])
+      setCierreId(null)
+    } catch {
+      setErrorCierre('No se pudo cerrar la alerta. Intenta de nuevo.')
+    } finally {
+      setCerrando(false)
     }
-    setCierreId(null)
   }
 
   function escalarAlerta(id: number) {
@@ -132,6 +233,7 @@ function AlertasPage() {
       </header>
 
       {error && <div className="ale-alert-error" role="alert">{error}</div>}
+      {errorHistorial && tab === 'historial' && <div className="ale-alert-error" role="alert">{errorHistorial}</div>}
 
       {/* ── Pestañas ────────────────────────────────────────────────────────── */}
       <div className="ale-tabs">
@@ -151,7 +253,7 @@ function AlertasPage() {
       </div>
 
       {/* ── Lista de alertas ────────────────────────────────────────────────── */}
-      {cargando ? (
+      {(tab === 'activas' ? cargando : cargandoHistorial) ? (
         <p className="ale-vacio-txt">Cargando alertas…</p>
       ) : lista.length === 0
         ? (
@@ -168,6 +270,7 @@ function AlertasPage() {
                 alerta={a}
                 onCerrar={() => abrirCierre(a.id)}
                 onEscalar={() => escalarAlerta(a.id)}
+                mostrarEscalar={rol !== 'Operario'}
               />
             ))}
           </div>
@@ -216,11 +319,11 @@ function AlertasPage() {
             {errorCierre && <p className="ale-modal-error" role="alert">{errorCierre}</p>}
 
             <div className="ale-modal-acciones">
-              <button className="ale-btn-cancelar" onClick={() => setCierreId(null)}>
+              <button className="ale-btn-cancelar" onClick={() => setCierreId(null)} disabled={cerrando}>
                 Cancelar
               </button>
-              <button className="ale-btn-confirmar" onClick={confirmarCierre}>
-                Confirmar cierre
+              <button className="ale-btn-confirmar" onClick={() => void confirmarCierre()} disabled={cerrando}>
+                {cerrando ? 'Cerrando…' : 'Confirmar cierre'}
               </button>
             </div>
           </div>
@@ -235,8 +338,9 @@ type FilaAlertaProps = {
   alerta: Alerta
   onCerrar: () => void
   onEscalar: () => void
+  mostrarEscalar: boolean
 }
-function FilaAlerta({ alerta, onCerrar, onEscalar }: FilaAlertaProps) {
+function FilaAlerta({ alerta, onCerrar, onEscalar, mostrarEscalar }: FilaAlertaProps) {
   const sobrePasaMax = alerta.valorActual > alerta.rangoMax
   const hayMinimoReal = alerta.rangoMin > 0
   const desviacionValida = sobrePasaMax || hayMinimoReal
@@ -301,7 +405,7 @@ function FilaAlerta({ alerta, onCerrar, onEscalar }: FilaAlertaProps) {
 
       {estaActiva && (
         <div className="ale-acciones">
-          {alerta.estado !== 'escalada' && (
+          {mostrarEscalar && alerta.estado !== 'escalada' && (
             <button className={`ale-btn ale-btn--escalar${debioEscalar ? ' ale-btn--escalar-urgente' : ''}`} onClick={onEscalar}>
               Escalar
             </button>

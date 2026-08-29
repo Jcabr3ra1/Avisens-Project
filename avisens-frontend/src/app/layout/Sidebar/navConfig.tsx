@@ -44,6 +44,23 @@ export type NavSection = {
   items: NavItem[]
 }
 
+// Configuración completa de la navegación del sidebar.
+// Es infraestructura de `app/`, no de un feature: define cómo se
+// mueve cada rol entre los módulos del sistema.
+// ─── Navegación por rol ───────────────────────────────────────────────────────
+//
+// ADMINISTRADOR (admin@avisens.com) — administra el sistema Avisens (la empresa):
+//   Ve: Panel Admin, CRM de prospectos, Equipos/Infraestructura, Granjas, Personas.
+//   NO ve: módulos operativos de granja (sensores, bitácora, alertas, finanzas, bodega).
+//
+// PROPIETARIO (dueño@avisens.com) — dueño de la granja:
+//   Ve: Mi galpón, Sensores, Bitácora, Alertas, Finanzas, Bodega, Equipos, Granjas, Personas.
+//   NO ve: Panel Admin ni CRM (no es su pipeline comercial).
+//
+// OPERARIO (operario@avisens.com) — personal de campo en el galpón:
+//   Ve: Mi galpón, Sensores, Bitácora, Alertas, Bodega (solo consulta de stock).
+//   Solo accede a lo que necesita en su jornada diaria.
+//
 export const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Inicio',

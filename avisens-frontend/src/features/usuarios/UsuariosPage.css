@@ -693,6 +693,19 @@
   opacity: 0.7;
 }
 
+.usuarios-link-btn {
+  align-self: flex-start;
+  color: var(--green);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.usuarios-link-btn:hover {
+  color: var(--green-d, var(--green));
+}
+
 .usuarios-password {
   position: relative;
   display: flex;
