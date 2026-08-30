@@ -10,7 +10,6 @@ import {
   IcLeaf,
   IcNote,
   IcServer,
-  IcSeed,
   IcUserCircle,
   IcUsers,
 } from '@shared/ui/icons/icons'
@@ -120,11 +119,6 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/bitacora',
         label: 'Bitácora',
         icon: <IcDoc size={16} />,
-      },
-      {
-        path: '/consumos-diarios',
-        label: 'Consumos diarios',
-        icon: <IcSeed size={16} />,
       },
     ],
   },
