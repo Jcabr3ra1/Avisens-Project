@@ -1,8 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { IcSidebar } from '@shared/ui/icons/icons'
 import { getUsuario, logout } from '@shared/api'
-import { useConteoNotificaciones } from '@features/notificaciones/hooks/useNotificaciones'
 import logoAvisens from '@shared/assets/logo-avisens.png'
+import CampanaNotificaciones from './CampanaNotificaciones'
 import {
   NAV_SECTIONS,
   ROL_ADMIN,
@@ -12,6 +12,17 @@ import {
   type NavLinkItem,
 } from './navConfig'
 import './Sidebar.css'
+
+function iniciales(nombre?: string): string {
+  if (!nombre) return '?'
+  return nombre
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((parte) => parte[0])
+    .join('')
+    .toUpperCase()
+}
 
 type Props = {
   collapsed: boolean
@@ -28,7 +39,6 @@ function filtrarItems(items: NavItem[], rol: string | null): NavLinkItem[] {
 const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
   const navigate = useNavigate()
   const usuario = getUsuario()
-  const { noLeidas } = useConteoNotificaciones()
   const rutaInicio = rol === ROL_ADMIN ? '/admin' : '/dashboard'
 
   const secciones = NAV_SECTIONS
@@ -41,8 +51,7 @@ const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
   }
 
   function renderLink(item: NavLinkItem, nested = false) {
-    const badge =
-      item.path === '/notificaciones' && noLeidas > 0 ? noLeidas : item.badge
+    const badge = item.badge
     const contenido = (
       <>
         <span className="dash-side-accent" />
@@ -99,6 +108,7 @@ const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
           </div>
           <div className="dash-workspace-name">AVISENS</div>
         </NavLink>
+        <CampanaNotificaciones />
         <button
           className="dash-sidebar-toggle"
           onClick={onToggle}
@@ -110,6 +120,12 @@ const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
         </button>
       </div>
 
+      <div className="dash-side-perfil">
+        <div className="dash-side-perfil-foto">{iniciales(usuario?.nombre)}</div>
+        <span className="dash-side-perfil-nombre">{usuario?.nombre ?? 'Usuario'}</span>
+        <span className="dash-side-perfil-rol">{usuario?.rol ?? ''}</span>
+      </div>
+
       <nav className="dash-side-nav" aria-label="Navegación principal">
         {secciones.map((section) => (
           <div className="dash-side-section" key={section.label}>
@@ -119,23 +135,14 @@ const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
         ))}
       </nav>
 
-      <div className="dash-side-user">
-        <div className="dash-side-user-info">
-          <div className="dash-side-user-avatar">
-            {usuario?.nombre
-              ? usuario.nombre
-                  .split(' ')
-                  .slice(0, 2)
-                  .map((parte) => parte[0])
-                  .join('')
-                  .toUpperCase()
-              : '?'}
-          </div>
-          <div className="dash-side-user-text">
-            <span className="dash-side-user-name">{usuario?.nombre ?? 'Usuario'}</span>
-            <span className="dash-side-user-rol">{usuario?.rol ?? ''}</span>
-          </div>
+      {rol !== ROL_ADMIN && (
+        <div className="dash-side-promo">
+          <p>Gestiona todas tus granjas desde un solo lugar</p>
+          <NavLink to="/granjas">+ Añadir granja</NavLink>
         </div>
+      )}
+
+      <div className="dash-side-user">
         <button
           className="dash-side-logout"
           onClick={handleLogout}
