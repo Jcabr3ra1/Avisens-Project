@@ -69,6 +69,14 @@ export class SolicitudesPqrsService {
     return paginate(data, total, page, limit);
   }
 
+  async listarDeProspecto(prospectoId: number) {
+    return this.prisma.solicitudPqrs.findMany({
+      where: { prospecto_id: prospectoId },
+      select: SOLICITUD_SELECT,
+      orderBy: { fecha_creacion: 'desc' },
+    });
+  }
+
   async obtener(id: number) {
     const solicitud = await this.prisma.solicitudPqrs.findUnique({
       where: { id },
