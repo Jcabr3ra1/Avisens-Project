@@ -130,11 +130,6 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: <IcEye size={16} />,
       },
       {
-        path: '/sensores',
-        label: 'Sensores',
-        icon: <IcServer size={16} />,
-      },
-      {
         path: '/alertas',
         label: 'Alertas',
         icon: <IcAlert size={16} />,
