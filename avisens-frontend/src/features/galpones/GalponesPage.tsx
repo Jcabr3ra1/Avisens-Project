@@ -1,4 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
+import SensoresDeGalpon from '@features/sensores/SensoresDeGalpon'
 import type { Galpon } from './api/galpones'
 import BarraGalpones from './components/BarraGalpones'
 import FormularioGalpon from './components/FormularioGalpon'
@@ -15,6 +17,7 @@ function GalponesPage() {
   const filtro = useFiltroGalpones(gestion.galpones)
   const formulario = useFormularioGalpon(gestion.guardar)
   const resumen = useMemo(() => calcularResumenGalpones(gestion.galpones), [gestion.galpones])
+  const [galponSensores, setGalponSensores] = useState<Galpon | null>(null)
 
   function abrirCrear() {
     const granjaId = gestion.granjas[0]?.id
@@ -53,11 +56,21 @@ function GalponesPage() {
         {gestion.galpones.length > 0 && (
           <BarraGalpones busqueda={filtro.busqueda} estado={filtro.estado} visibles={filtro.visibles.length} total={gestion.galpones.length} onBuscar={filtro.setBusqueda} onCambiarEstado={filtro.setEstado} />
         )}
-        <TablaGalpones galpones={filtro.visibles} cargando={gestion.cargando} onEditar={formulario.abrirEditar} onAlternar={(galpon) => void gestion.alternarActivo(galpon)} onEliminar={confirmarEliminacion} />
+        <TablaGalpones galpones={filtro.visibles} cargando={gestion.cargando} onEditar={formulario.abrirEditar} onAlternar={(galpon) => void gestion.alternarActivo(galpon)} onEliminar={confirmarEliminacion} onVerSensores={setGalponSensores} />
       </section>
 
       {formulario.abierto && (
         <FormularioGalpon form={formulario.form} modoEdicion={formulario.modoEdicion} granjas={gestion.granjas} guardando={formulario.guardando} error={formulario.error} onCambiar={formulario.cambiar} onGuardar={formulario.guardar} onCerrar={formulario.cerrar} />
+      )}
+
+      {galponSensores && (
+        <PantallaHija
+          titulo={`Sensores · ${galponSensores.nombre}`}
+          subtitulo={`${galponSensores.codigo} · ${galponSensores.granja.nombre}`}
+          onCerrar={() => setGalponSensores(null)}
+        >
+          <SensoresDeGalpon galpon={galponSensores} />
+        </PantallaHija>
       )}
     </div>
   )

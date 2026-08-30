@@ -30,6 +30,10 @@ export function MedicionesVivas({ sensores }: { sensores: Sensor[] }) {
     return mapa
   }, [sensores])
 
+  // Si la lista de sensores viene acotada (p. ej. a un galpón), solo cuentan
+  // sus mediciones; con la lista completa no filtra nada.
+  const visibles = mediciones.filter((m) => porId.has(m.sensor_id))
+
   useEffect(() => {
     if (!enVivo) return
     let activo = true
@@ -80,7 +84,7 @@ export function MedicionesVivas({ sensores }: { sensores: Sensor[] }) {
 
       {!cargado ? (
         <p className="sn-empty">Cargando mediciones…</p>
-      ) : mediciones.length === 0 ? (
+      ) : visibles.length === 0 ? (
         <div className="sn-vacio">
           <p className="sn-vacio-titulo">Aún no hay mediciones.</p>
           <p className="sn-vacio-sub">
@@ -100,7 +104,7 @@ export function MedicionesVivas({ sensores }: { sensores: Sensor[] }) {
               </tr>
             </thead>
             <tbody>
-              {mediciones.map((m) => {
+              {visibles.map((m) => {
                 const sensor = porId.get(m.sensor_id)
                 return (
                   <tr key={m.id}>
