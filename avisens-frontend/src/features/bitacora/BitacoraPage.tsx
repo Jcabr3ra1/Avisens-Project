@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 import { IcDoc, IcDrop, IcHeart, IcScale, IcSeed } from '@shared/ui/icons/icons'
+import GestionConsumos from '@features/consumos-diarios/components/GestionConsumos'
 import { mensajeDeError } from '@shared/utils/errores'
 import FormularioRegistro from './components/FormularioRegistro'
 import { useBitacora } from './hooks/useBitacora'
@@ -234,47 +234,16 @@ function BitacoraPage() {
                     <small>Vacunas, tratamientos o revisión</small>
                   </span>
                 </button>
-                <Link to='/consumos-diarios'>
+                <button onClick={() => setVista('consumo')}>
                   <IcSeed size={21} />
                   <span>
                     Registrar consumo<small>Alimento y agua diaria</small>
                   </span>
-                </Link>
+                </button>
               </div>
             </section>
           ) : vista === 'consumo' ? (
-            <section className='bit-card'>
-              <div className='bit-seccion-cab'>
-                <div>
-                  <h2>Consumos registrados</h2>
-                  <p>
-                    El detalle y el registro se gestionan en el módulo
-                    especializado.
-                  </p>
-                </div>
-                <Link className='bit-principal' to='/consumos-diarios'>
-                  Ir a consumos diarios
-                </Link>
-              </div>
-              {consumos.length === 0 ? (
-                <p className='bit-vacio'>Aún no hay consumos para este lote.</p>
-              ) : (
-                <div className='bit-lista'>
-                  {consumos.map((x) => (
-                    <article key={x.id}>
-                      <time>{formatearFecha(x.fecha)}</time>
-                      <strong>
-                        {Number(x.alimento_kg ?? 0).toLocaleString('es-CO')} kg
-                        · {Number(x.agua_litros ?? 0).toLocaleString('es-CO')} L
-                      </strong>
-                      <span>
-                        {x.tipo_alimento?.nombre ?? 'Sin tipo de alimento'}
-                      </span>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </section>
+            <GestionConsumos loteFijo={loteId} />
           ) : (
             <section className='bit-card'>
               <div className='bit-seccion-cab'>
