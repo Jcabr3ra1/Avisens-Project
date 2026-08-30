@@ -44,6 +44,9 @@ export class AuditoriaService {
   async listar({ page, limit }: PaginationQueryDto) {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.bitacoraAuditoria.findMany({
+        include: {
+          usuario: { select: { nombre_completo: true, email: true } },
+        },
         orderBy: { fecha_hora: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
