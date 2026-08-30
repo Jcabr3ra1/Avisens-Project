@@ -16,6 +16,16 @@ export async function listarSolicitudesPqrs(
   return data
 }
 
+export async function listarSolicitudesPqrsDeProspecto(
+  prospectoId: number,
+): Promise<SolicitudPqrs[]> {
+  const { data } = await api.get<SolicitudPqrs[]>(
+    `/solicitudes-pqrs/prospecto/${prospectoId}`,
+  )
+
+  return data
+}
+
 export async function obtenerSolicitudPqrs(
   id: number,
 ): Promise<SolicitudPqrs> {

@@ -52,3 +52,10 @@ export interface ResponderSolicitudPqrsDto {
   respuesta?: string
   responsable_id?: number
 }
+
+export const ETIQUETAS_ESTADO: Record<EstadoSolicitudPqrs, string> = {
+  abierta: 'Abierta',
+  en_proceso: 'En proceso',
+  resuelta: 'Resuelta',
+  cerrada: 'Cerrada',
+}
