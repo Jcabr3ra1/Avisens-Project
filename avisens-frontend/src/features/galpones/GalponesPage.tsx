@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
-import SensoresDeGalpon from '@features/sensores/SensoresDeGalpon'
+import SensoresDeGalpon from '@features/sensores/components/SensoresDeGalpon'
 import type { Galpon } from './api/galpones'
 import BarraGalpones from './components/BarraGalpones'
 import FormularioGalpon from './components/FormularioGalpon'

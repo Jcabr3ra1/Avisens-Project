@@ -1,16 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { isAxiosError } from 'axios'
-import {
-  listarSensores,
-  crearSensor,
-  activarSensor,
-  desactivarSensor,
-  eliminarSensor,
-  getRol,
-  type Sensor,
-  type CrearSensorPayload,
-} from '@shared/api'
-import { MedicionesVivas } from './MedicionesVivas'
+import { useState, type FormEvent } from 'react'
+import { getRol, type CrearSensorPayload, type Sensor } from '@shared/api'
+import { mensajeDeError } from '@shared/utils/errores'
+import { useSensores } from './hooks/useSensores'
+import { SENSOR_TIPOS } from './model/sensor'
+import { MedicionesVivas } from './components/MedicionesVivas'
 import './SensoresPage.css'
 
 // Página de PRUEBA del backend de sensores (EP-08). Pensada para que el equipo
@@ -29,50 +22,16 @@ const FORM_INICIAL: CrearSensorPayload = {
   fabricante: '',
 }
 
-// Variables ambientales frecuentes (el backend acepta cualquier string).
-const TIPOS = ['temperatura', 'humedad', 'co2', 'nh3', 'luz']
-
-// Traduce un error de axios a un mensaje legible.
-function mensajeError(err: unknown, fallback: string): string {
-  if (isAxiosError(err) && err.response) {
-    if (err.response.status === 403) {
-      return 'No tienes permisos para esta acción.'
-    }
-    const data = err.response.data as { message?: string | string[] }
-    if (data?.message) {
-      return Array.isArray(data.message) ? data.message.join(', ') : data.message
-    }
-  }
-  return fallback
-}
-
 function SensoresPage() {
-  const [sensores, setSensores] = useState<Sensor[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState('')
-
+  const { sensores, cargando, error, crear, alternar, eliminar, recargar } =
+    useSensores()
   const [form, setForm] = useState<CrearSensorPayload>(FORM_INICIAL)
   const [guardando, setGuardando] = useState(false)
+  const [errorAccion, setErrorAccion] = useState('')
   const [errorForm, setErrorForm] = useState('')
   const [ok, setOk] = useState('')
 
   const rol = getRol()
-
-  async function cargar() {
-    setCargando(true)
-    setError('')
-    try {
-      setSensores(await listarSensores())
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudieron cargar los sensores.'))
-    } finally {
-      setCargando(false)
-    }
-  }
-
-  useEffect(() => {
-    cargar()
-  }, [])
 
   function campo<K extends keyof CrearSensorPayload>(
     k: K,
@@ -97,28 +56,24 @@ function SensoresPage() {
         modelo: form.modelo?.trim() || undefined,
         fabricante: form.fabricante?.trim() || undefined,
       }
-      const creado = await crearSensor(payload)
+      const creado = await crear(payload)
       setOk(`Sensor "${creado.codigo}" creado (id ${creado.id}).`)
       setForm((prev) => ({ ...prev, codigo: '' })) // limpia solo el código
-      await cargar()
     } catch (err) {
-      setErrorForm(mensajeError(err, 'No se pudo crear el sensor.'))
+      setErrorForm(mensajeDeError(err, 'No se pudo crear el sensor.'))
     } finally {
       setGuardando(false)
     }
   }
 
   async function handleToggle(s: Sensor) {
-    setError('')
+    setErrorAccion('')
     try {
-      if (s.estado === 'activo') {
-        await desactivarSensor(s.id)
-      } else {
-        await activarSensor(s.id)
-      }
-      await cargar()
+      await alternar(s)
     } catch (err) {
-      setError(mensajeError(err, 'No se pudo cambiar el estado del sensor.'))
+      setErrorAccion(
+        mensajeDeError(err, 'No se pudo cambiar el estado del sensor.'),
+      )
     }
   }
 
@@ -128,12 +83,11 @@ function SensoresPage() {
         'Falla si ya tiene mediciones asociadas. Esta acción no se deshace.',
     )
     if (!confirmar) return
-    setError('')
+    setErrorAccion('')
     try {
-      await eliminarSensor(s.id)
-      await cargar()
+      await eliminar(s.id)
     } catch (err) {
-      setError(mensajeError(err, 'No se pudo eliminar el sensor.'))
+      setErrorAccion(mensajeDeError(err, 'No se pudo eliminar el sensor.'))
     }
   }
 
@@ -149,7 +103,11 @@ function SensoresPage() {
             <strong>{rol ?? 'sin rol'}</strong>.
           </p>
         </div>
-        <button className="sn-btn" onClick={cargar} disabled={cargando}>
+        <button
+          className="sn-btn"
+          onClick={() => void recargar()}
+          disabled={cargando}
+        >
           {cargando ? 'Cargando…' : '↻ Recargar'}
         </button>
       </header>
@@ -173,6 +131,11 @@ function SensoresPage() {
       {error && (
         <div className="sn-alert sn-alert--error" role="alert">
           {error}
+        </div>
+      )}
+      {errorAccion && (
+        <div className="sn-alert sn-alert--error" role="alert">
+          {errorAccion}
         </div>
       )}
 
@@ -218,7 +181,7 @@ function SensoresPage() {
               required
             />
             <datalist id="tipos-sensor">
-              {TIPOS.map((t) => (
+              {SENSOR_TIPOS.map((t) => (
                 <option key={t} value={t} />
               ))}
             </datalist>

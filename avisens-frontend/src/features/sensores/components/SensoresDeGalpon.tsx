@@ -1,82 +1,51 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { isAxiosError } from 'axios'
+import { useEffect, useState, type FormEvent } from 'react'
 import {
-  listarSensores,
   listarDispositivos,
-  crearSensor,
-  activarSensor,
-  desactivarSensor,
-  eliminarSensor,
+  type CrearSensorPayload,
   type Dispositivo,
   type Sensor,
-  type CrearSensorPayload,
 } from '@shared/api'
+import { mensajeDeError } from '@shared/utils/errores'
 import type { Galpon } from '@features/galpones/api/galpones'
+import { useSensores } from '../hooks/useSensores'
+import {
+  FORMULARIO_SENSOR_INICIAL,
+  SENSOR_TIPOS,
+  type DatosSensor,
+} from '../model/sensor'
 import { MedicionesVivas } from './MedicionesVivas'
-import './SensoresPage.css'
-
-const TIPOS = ['temperatura', 'humedad', 'co2', 'nh3', 'luz']
-
-function mensajeError(err: unknown, fallback: string): string {
-  if (isAxiosError(err) && err.response) {
-    if (err.response.status === 403) {
-      return 'No tienes permisos para esta acción.'
-    }
-    const data = err.response.data as { message?: string | string[] }
-    if (data?.message) {
-      return Array.isArray(data.message) ? data.message.join(', ') : data.message
-    }
-  }
-  return fallback
-}
+import '../SensoresPage.css'
 
 function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
-  const [sensores, setSensores] = useState<Sensor[]>([])
+  const { sensores, cargando, error, crear, alternar, eliminar } = useSensores(
+    galpon.id,
+  )
   const [dispositivos, setDispositivos] = useState<Dispositivo[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState('')
-  const [form, setForm] = useState({
-    codigo: '',
-    tipo: 'temperatura',
-    unidad_medida: '°C',
-    modelo: '',
-    fabricante: '',
-  })
+  const [form, setForm] = useState<DatosSensor>(FORMULARIO_SENSOR_INICIAL)
   const [dispositivoId, setDispositivoId] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
+  const [errorAccion, setErrorAccion] = useState('')
   const [ok, setOk] = useState('')
 
-  const cargar = useCallback(async () => {
-    setCargando(true)
-    setError('')
-    try {
-      const [todos, dispositivosTodos] = await Promise.all([
-        listarSensores(),
-        listarDispositivos(),
-      ])
-      setSensores(todos.filter((s) => s.galpon.id === galpon.id))
-      setDispositivos(
-        dispositivosTodos.filter((d) => d.galpon.id === galpon.id && d.activo),
+  useEffect(() => {
+    void listarDispositivos()
+      .then((todos) =>
+        setDispositivos(
+          todos.filter((d) => d.galpon.id === galpon.id && d.activo),
+        ),
       )
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudieron cargar los sensores.'))
-    } finally {
-      setCargando(false)
-    }
+      .catch(() => undefined)
   }, [galpon.id])
 
-  useEffect(() => {
-    void cargar()
-  }, [cargar])
-
-  function campo<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
+  function campo<K extends keyof DatosSensor>(k: K, v: DatosSensor[K]) {
     setForm((prev) => ({ ...prev, [k]: v }))
   }
 
   async function handleCrear(e: FormEvent) {
     e.preventDefault()
     setErrorForm('')
+    setErrorAccion('')
     setOk('')
     if (!dispositivoId) {
       setErrorForm('Selecciona el dispositivo al que pertenece el sensor.')
@@ -93,28 +62,24 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
         modelo: form.modelo.trim() || undefined,
         fabricante: form.fabricante.trim() || undefined,
       }
-      const creado = await crearSensor(payload)
+      const creado = await crear(payload)
       setOk(`Sensor "${creado.codigo}" creado.`)
       setForm((prev) => ({ ...prev, codigo: '' }))
-      await cargar()
     } catch (err) {
-      setErrorForm(mensajeError(err, 'No se pudo crear el sensor.'))
+      setErrorForm(mensajeDeError(err, 'No se pudo crear el sensor.'))
     } finally {
       setGuardando(false)
     }
   }
 
-  async function handleToggle(s: Sensor) {
-    setError('')
+  async function handleAlternar(s: Sensor) {
+    setErrorAccion('')
     try {
-      if (s.estado === 'activo') {
-        await desactivarSensor(s.id)
-      } else {
-        await activarSensor(s.id)
-      }
-      await cargar()
+      await alternar(s)
     } catch (err) {
-      setError(mensajeError(err, 'No se pudo cambiar el estado del sensor.'))
+      setErrorAccion(
+        mensajeDeError(err, 'No se pudo cambiar el estado del sensor.'),
+      )
     }
   }
 
@@ -124,12 +89,11 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
         'Falla si ya tiene mediciones asociadas. Esta acción no se deshace.',
     )
     if (!confirmar) return
-    setError('')
+    setErrorAccion('')
     try {
-      await eliminarSensor(s.id)
-      await cargar()
+      await eliminar(s.id)
     } catch (err) {
-      setError(mensajeError(err, 'No se pudo eliminar el sensor.'))
+      setErrorAccion(mensajeDeError(err, 'No se pudo eliminar el sensor.'))
     }
   }
 
@@ -155,6 +119,11 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
       {error && (
         <div className="sn-alert sn-alert--error" role="alert">
           {error}
+        </div>
+      )}
+      {errorAccion && (
+        <div className="sn-alert sn-alert--error" role="alert">
+          {errorAccion}
         </div>
       )}
 
@@ -198,7 +167,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
               required
             />
             <datalist id="tipos-sensor-galpon">
-              {TIPOS.map((t) => (
+              {SENSOR_TIPOS.map((t) => (
                 <option key={t} value={t} />
               ))}
             </datalist>
@@ -309,7 +278,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
                     <td className="sn-acciones">
                       <button
                         className="sn-btn sn-btn--sm"
-                        onClick={() => handleToggle(s)}
+                        onClick={() => handleAlternar(s)}
                       >
                         {s.estado === 'activo' ? 'Desactivar' : 'Activar'}
                       </button>
