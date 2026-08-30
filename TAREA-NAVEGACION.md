@@ -110,6 +110,11 @@ padre de navegación es aquel por el que el usuario la busca. **Pregúntale a Ju
 antes de moverla**: si se consulta cruzando granjas, es vista transversal y se
 queda donde está.
 
+**Decisión (2026-08-30):** se queda transversal, con ítem propio. La consulta
+diaria cruza granjas y proveedores, y los permisos lo refuerzan:
+`/proveedores` es solo de Administrador mientras `/ordenes-compra` también la
+ve el Propietario — moverla dentro del panel le quitaría el acceso. No se toca.
+
 ### 5. Recuperar acceso → Personas  ·  BLOQUEADO
 
 Una recuperación no existe sin su usuario, así que le toca vivir dentro de
