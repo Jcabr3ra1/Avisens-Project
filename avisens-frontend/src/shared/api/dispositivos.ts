@@ -30,7 +30,9 @@ export type ActualizarDispositivoPayload = Partial<CrearDispositivoPayload> & {
 }
 
 export async function listarDispositivos(): Promise<Dispositivo[]> {
-  const { data } = await api.get<PaginatedResponse<Dispositivo>>('/dispositivos')
+  const { data } = await api.get<PaginatedResponse<Dispositivo>>('/dispositivos', {
+    params: { page: 1, limit: 200 },
+  })
   return data.data
 }
 

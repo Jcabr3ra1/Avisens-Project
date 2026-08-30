@@ -11,8 +11,11 @@ import type {
 // de galpones de sus propias granjas (el alcance se aplica en el servidor).
 
 export async function listarSensores(): Promise<Sensor[]> {
-  // El backend pagina: { data, meta }. Devolvemos solo el array `data`.
-  const { data } = await api.get<PaginatedResponse<Sensor>>('/sensores')
+  // El backend pagina: { data, meta }. Sin `limit` devuelve 20 y el recorte no
+  // avisa, así que un galpón con sensores fuera de esa página sale vacío.
+  const { data } = await api.get<PaginatedResponse<Sensor>>('/sensores', {
+    params: { page: 1, limit: 200 },
+  })
   return data.data
 }
 
