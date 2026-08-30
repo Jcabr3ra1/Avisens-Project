@@ -370,6 +370,38 @@
   border-top: 0;
 }
 
+.float-chat-pregunta {
+  margin: 0.1rem 0.15rem 0;
+  color: rgba(16, 51, 2, 0.62);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.float-chat-menu {
+  gap: 0.55rem;
+}
+
+.float-chat-menu button {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.6rem 0.9rem;
+}
+
+.float-chat-menu button strong {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.float-chat-menu button small {
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.3;
+  color: rgba(16, 51, 2, 0.62);
+}
+
 /* Separador de bloque: da estructura al cuestionario sin sumar otra burbuja
    que leer. */
 .float-bloque {
