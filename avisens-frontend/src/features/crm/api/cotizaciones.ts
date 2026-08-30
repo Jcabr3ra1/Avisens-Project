@@ -1,41 +1,41 @@
-import { api } from './client'
+import { api } from '@shared/api/client'
 
-export interface LineaCotizacion {
+export type LineaCotizacion = {
   tipo_sensor: string
   nombre: string
   cantidad: number
-  precio_unitario_cop: number
-  subtotal_cop: number
+  precio_unitario_cop: number | string
+  subtotal_cop: number | string
 }
 
-export interface CotizacionGenerada {
+export type CotizacionGenerada = {
   id: number
   codigo: string | null
-  plan_recomendado: string | null
-  numero_galpones: number | null
-  area_galpon_m2: number | null
-  numero_aves_estimado: number | null
+  plan_recomendado: string
+  numero_galpones: number
+  area_galpon_m2: number
+  numero_aves_estimado: number
   lineas: LineaCotizacion[]
-  instalacion_cop: number
-  valor_total_cop: number
+  instalacion_cop: number | string
+  valor_total_cop: number | string
   nota: string
 }
 
-export interface SensorCotizado {
+export type SensorCotizado = {
   id: number
   cotizacion_id: number
   tipo_sensor: string
   cantidad: number
 }
 
-export interface Cotizacion {
+export type Cotizacion = {
   id: number
   prospecto_id: number
   codigo: string | null
   plan_recomendado: string | null
   numero_galpones: number | null
   numero_aves: number | null
-  valor_total_cop: number | null
+  valor_total_cop: number | string | null
   url_pdf: string | null
   canal_envio: string | null
   estado: string
@@ -44,7 +44,7 @@ export interface Cotizacion {
   sensores: SensorCotizado[]
 }
 
-export interface GenerarCotizacionPayload {
+export type GenerarCotizacionPayload = {
   numero_galpones?: number
   incluir_opcionales?: boolean
 }
@@ -60,7 +60,7 @@ export async function generarCotizacion(
   return data
 }
 
-export async function listarCotizacionesDeProspecto(
+export async function listarCotizaciones(
   prospectoId: number,
 ): Promise<Cotizacion[]> {
   const { data } = await api.get<Cotizacion[]>(

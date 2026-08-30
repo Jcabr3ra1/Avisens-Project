@@ -13,3 +13,12 @@ export function metros(m2: number): string {
   if (m2 >= 1000) return `${(m2 / 1000).toFixed(1)}k m²`
   return `${m2} m²`
 }
+
+export function pesos(valor: number | string | null): string {
+  if (valor === null) return '—'
+  return Number(valor).toLocaleString('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  })
+}
