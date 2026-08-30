@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import {
   IcAlert,
-  IcBell,
   IcBox,
   IcClock,
   IcCoin,
@@ -23,7 +22,6 @@ export const ROL_OPERARIO = 'Operario'
 type NavBase = {
   label: string
   icon: ReactNode
-  roles?: string[]
 }
 
 export type NavLinkItem = NavBase & {
@@ -61,6 +59,34 @@ export type NavSection = {
 //   Ve: Mi galpón, Sensores, Bitácora, Alertas, Bodega (solo consulta de stock).
 //   Solo accede a lo que necesita en su jornada diaria.
 //
+// Permiso de acceso por ruta. Es la ÚNICA fuente de verdad: el sidebar
+// dibuja lo que esta tabla permite, y la guardia de rutas la consulta.
+// Antes el permiso salía de que la ruta tuviera ítem en el menú, así que
+// sacar un ítem del sidebar la dejaba abierta para todos los roles.
+const PERMISOS_RUTA: Record<string, string[]> = {
+  '/admin':                   [ROL_ADMIN],
+  '/dashboard':               [ROL_PROPIETARIO, ROL_OPERARIO],
+  '/mi-jornada':              [ROL_OPERARIO],
+  '/granjas':                 [ROL_ADMIN, ROL_PROPIETARIO],
+  '/galpones':                [ROL_ADMIN, ROL_PROPIETARIO],
+  '/lotes':                   [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/bitacora':                [ROL_PROPIETARIO, ROL_OPERARIO],
+  '/consumos-diarios':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/monitoreo':               [ROL_PROPIETARIO, ROL_OPERARIO],
+  '/sensores':                [ROL_ADMIN, ROL_PROPIETARIO],
+  '/alertas':                 [ROL_PROPIETARIO, ROL_OPERARIO],
+  '/notificaciones':          [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/inventario':              [ROL_PROPIETARIO],
+  '/finanzas':                [ROL_PROPIETARIO],
+  '/usuarios':                [ROL_ADMIN, ROL_PROPIETARIO],
+  '/proveedores':             [ROL_ADMIN],
+  '/ordenes-compra':          [ROL_ADMIN, ROL_PROPIETARIO],
+  '/recuperaciones-password': [ROL_ADMIN],
+  '/auditoria':               [ROL_ADMIN],
+  '/crm':                     [ROL_ADMIN],
+  '/solicitudes-pqrs':        [ROL_ADMIN],
+}
+
 export const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Inicio',
@@ -69,25 +95,16 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/admin',
         label: 'Panel Admin',
         icon: <IcServer size={16} />,
-        roles: [ROL_ADMIN],
       },
       {
         path: '/dashboard',
         label: 'Resumen',
         icon: <IcGrid size={16} />,
-        roles: [ROL_PROPIETARIO, ROL_OPERARIO],
       },
       {
         path: '/mi-jornada',
         label: 'Mi jornada',
         icon: <IcClock size={16} />,
-        roles: [ROL_OPERARIO],
-      },
-      {
-        path: '/notificaciones',
-        label: 'Notificaciones',
-        icon: <IcBell size={16} />,
-        roles: [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
       },
     ],
   },
@@ -98,19 +115,16 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/granjas',
         label: 'Granjas',
         icon: <IcLeaf size={16} />,
-        roles: [ROL_ADMIN, ROL_PROPIETARIO],
       },
       {
         path: '/bitacora',
         label: 'Bitácora',
         icon: <IcDoc size={16} />,
-        roles: [ROL_PROPIETARIO, ROL_OPERARIO],
       },
       {
         path: '/consumos-diarios',
         label: 'Consumos diarios',
         icon: <IcSeed size={16} />,
-        roles: [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
       },
     ],
   },
@@ -121,19 +135,16 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/monitoreo',
         label: 'Monitoreo',
         icon: <IcEye size={16} />,
-        roles: [ROL_PROPIETARIO, ROL_OPERARIO],
       },
       {
         path: '/sensores',
         label: 'Sensores',
         icon: <IcServer size={16} />,
-        roles: [ROL_ADMIN, ROL_PROPIETARIO],
       },
       {
         path: '/alertas',
         label: 'Alertas',
         icon: <IcAlert size={16} />,
-        roles: [ROL_PROPIETARIO, ROL_OPERARIO],
       },
     ],
   },
@@ -144,37 +155,36 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/inventario',
         label: 'Bodega',
         icon: <IcBox size={16} />,
-        roles: [ROL_PROPIETARIO],
       },
       {
         path: '/finanzas',
         label: 'Finanzas',
         icon: <IcCoin size={16} />,
-        roles: [ROL_PROPIETARIO],
       },
       {
         path: '/usuarios',
         label: 'Personas',
         icon: <IcUserCircle size={16} />,
-        roles: [ROL_ADMIN, ROL_PROPIETARIO],
       },
       {
         path: '/proveedores',
         label: 'Proveedores',
         icon: <IcUsers size={16} />,
-        roles: [ROL_ADMIN],
       },
       {
         path: '/ordenes-compra',
         label: 'Compras',
         icon: <IcDoc size={16} />,
-        roles: [ROL_ADMIN, ROL_PROPIETARIO],
       },
       {
         path: '/recuperaciones-password',
         label: 'Recuperar acceso',
         icon: <IcUserCircle size={16} />,
-        roles: [ROL_ADMIN],
+      },
+      {
+        path: '/auditoria',
+        label: 'Auditoría',
+        icon: <IcDoc size={16} />,
       },
     ],
   },
@@ -185,13 +195,11 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/crm',
         label: 'Clientes',
         icon: <IcUsers size={16} />,
-        roles: [ROL_ADMIN],
       },
       {
         path: '/solicitudes-pqrs',
         label: 'Solicitudes PQRS',
         icon: <IcNote size={16} />,
-        roles: [ROL_ADMIN],
       },
     ],
   },
@@ -201,23 +209,12 @@ export function esGrupo(item: NavItem): item is NavGroupItem {
   return 'children' in item
 }
 
-export function itemVisible(item: NavBase, rol: string | null): boolean {
-  if (!item.roles) return true
-  return rol !== null && item.roles.includes(rol)
+export function puedeAcceder(path: string, rol: string | null): boolean {
+  const permitidos = PERMISOS_RUTA[path]
+  if (!permitidos) return false
+  return rol !== null && permitidos.includes(rol)
 }
 
-export function puedeAcceder(path: string, rol: string | null): boolean {
-  for (const section of NAV_SECTIONS) {
-    for (const item of section.items) {
-      if (esGrupo(item)) {
-        if (item.path === path) return itemVisible(item, rol)
-        const child = item.children.find((navItem) => navItem.path === path)
-        if (child) return itemVisible(child, rol)
-      } else if (item.path === path) {
-        return itemVisible(item, rol)
-      }
-    }
-  }
-
-  return true
+export function itemVisible(item: NavItem, rol: string | null): boolean {
+  return puedeAcceder(item.path, rol)
 }
