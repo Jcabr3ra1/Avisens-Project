@@ -20,28 +20,37 @@ Hay trabajo sin commitear en el árbol. **No hagas `git add -A`**: añade por ru
 solo los archivos que tú modificaste. Es regla del proyecto y ya costó un PR con
 4.301 líneas ajenas.
 
-## Trampa: quitar un ítem del menú abre la ruta a todos los roles
+## La guardia de rutas ya está arreglada (no la rehagas)
 
-`navConfig.tsx` termina así:
+Hasta el commit `c275571`, `puedeAcceder` buscaba la ruta en `NAV_SECTIONS` y
+devolvía `true` si no la encontraba. Una ruta sin ítem en el sidebar quedaba
+abierta para cualquier rol — `/galpones` y `/lotes` lo estaban. Como esta tarea
+consiste justamente en sacar ítems del menú, habría abierto una puerta por cada
+movimiento.
+
+Ya está resuelto. Ahora manda `PERMISOS_RUTA` en `navConfig.tsx`:
 
 ```ts
 export function puedeAcceder(path: string, rol: string | null): boolean {
-  for (const section of NAV_SECTIONS) { /* ... busca el path ... */ }
-  return true   // ← no encontrado = permitido
+  const permitidos = PERMISOS_RUTA[path]
+  if (!permitidos) return false          // no declarada = negada
+  return rol !== null && permitidos.includes(rol)
+}
+
+export function itemVisible(item: NavItem, rol: string | null): boolean {
+  return puedeAcceder(item.path, rol)
 }
 ```
 
-`PanelLayout` usa esa función como guardia de rutas. **Una ruta que desaparece de
-`NAV_SECTIONS` deja de estar protegida** y queda accesible para cualquier rol.
+Es la única fuente de verdad: la guardia la consulta y el menú deriva de ella.
+Los ítems de `NAV_SECTIONS` ya no llevan `roles`.
 
-`/recuperaciones-password` es solo de Admin. Quitarlo del menú sin más se la
-abriría a los operarios. Lo mismo aplica a cualquier otro ítem con `roles`
-restringidos.
+**Lo que esto te exige:**
 
-**Antes de mover el primer ítem, arregla la guardia**: separa el permiso del
-menú (una tabla `PERMISOS_RUTA` o un `return false` por defecto con las rutas
-públicas declaradas). Que `puedeAcceder` no dependa de que la ruta tenga puerta
-en el sidebar. Sin esto, cada movimiento de la lista de abajo es un agujero.
+- Quitar un ítem de `NAV_SECTIONS` ya **no** afecta el permiso. Es seguro.
+- **La ruta debe seguir en `PERMISOS_RUTA`** aunque pierda su puerta en el menú.
+  Si la borras de la tabla, deja de ser accesible para todos.
+- Si añades una ruta nueva, decláralala en la tabla o nadie podrá entrar.
 
 ## La herramienta ya existe
 
