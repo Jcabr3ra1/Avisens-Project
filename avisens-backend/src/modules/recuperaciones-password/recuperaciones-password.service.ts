@@ -20,6 +20,27 @@ const RESPUESTA_SOLICITUD = {
 export class RecuperacionesPasswordService {
   constructor(private prisma: PrismaService) {}
 
+  private selectSolicitud = {
+    id: true,
+    estado: true,
+    motivo: true,
+    fecha_creacion: true,
+    atendida_en: true,
+    observacion: true,
+    usuario: {
+      select: {
+        id: true,
+        nombre_completo: true,
+        email: true,
+        cedula: true,
+        activo: true,
+      },
+    },
+    atendida_por: {
+      select: { id: true, nombre_completo: true },
+    },
+  };
+
   async solicitar(email: string, motivo?: string, ip?: string) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { email: email.trim().toLowerCase() },
@@ -89,26 +110,7 @@ export class RecuperacionesPasswordService {
   async listar({ page, limit }: PaginationQueryDto) {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.recuperacionPassword.findMany({
-        select: {
-          id: true,
-          estado: true,
-          motivo: true,
-          fecha_creacion: true,
-          atendida_en: true,
-          observacion: true,
-          usuario: {
-            select: {
-              id: true,
-              nombre_completo: true,
-              email: true,
-              cedula: true,
-              activo: true,
-            },
-          },
-          atendida_por: {
-            select: { id: true, nombre_completo: true },
-          },
-        },
+        select: this.selectSolicitud,
         orderBy: { fecha_creacion: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -116,6 +118,14 @@ export class RecuperacionesPasswordService {
       this.prisma.recuperacionPassword.count(),
     ]);
     return paginate(data, total, page, limit);
+  }
+
+  async listarDeUsuario(usuarioId: number) {
+    return this.prisma.recuperacionPassword.findMany({
+      where: { usuario_id: usuarioId },
+      select: this.selectSolicitud,
+      orderBy: { fecha_creacion: 'desc' },
+    });
   }
 
   async aprobar(id: number, administradorId: number, observacion?: string) {
