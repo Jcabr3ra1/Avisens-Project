@@ -7,10 +7,10 @@ import {
 } from '@shared/api'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { Galpon } from '@features/galpones/api/galpones'
+import { useCatalogoSensores } from '../hooks/useCatalogoSensores'
 import { useSensores } from '../hooks/useSensores'
 import {
   FORMULARIO_SENSOR_INICIAL,
-  SENSOR_TIPOS,
   type DatosSensor,
 } from '../model/sensor'
 import { MedicionesVivas } from './MedicionesVivas'
@@ -20,6 +20,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
   const { sensores, cargando, error, crear, alternar, eliminar } = useSensores(
     galpon.id,
   )
+  const { tipos } = useCatalogoSensores()
   const [dispositivos, setDispositivos] = useState<Dispositivo[]>([])
   const [form, setForm] = useState<DatosSensor>(FORMULARIO_SENSOR_INICIAL)
   const [dispositivoId, setDispositivoId] = useState('')
@@ -167,7 +168,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
               required
             />
             <datalist id="tipos-sensor-galpon">
-              {SENSOR_TIPOS.map((t) => (
+              {tipos.map((t) => (
                 <option key={t} value={t} />
               ))}
             </datalist>

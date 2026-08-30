@@ -1,20 +1,20 @@
 import { useState, type FormEvent } from 'react'
 import { getRol, type CrearSensorPayload, type Sensor } from '@shared/api'
 import { mensajeDeError } from '@shared/utils/errores'
+import { useCatalogoSensores } from './hooks/useCatalogoSensores'
+import { useOpcionesSensor } from './hooks/useOpcionesSensor'
 import { useSensores } from './hooks/useSensores'
-import { SENSOR_TIPOS } from './model/sensor'
 import { MedicionesVivas } from './components/MedicionesVivas'
 import './SensoresPage.css'
 
-// Página de PRUEBA del backend de sensores (EP-08). Pensada para que el equipo
-// verifique en vivo el CRUD real contra la API: registrar, listar, activar,
-// desactivar y eliminar. No es el dashboard de monitoreo (ese usa mock).
+// Vista transversal de sensores: el inventario completo, sin bajar galpón por
+// galpón. Los sensores de UN galpón se ven desde su propia pantalla hija.
 
-// El form pide galpon_id y dispositivo_id como números crudos: el equipo conoce
-// los IDs de su seed. El backend valida que el dispositivo pertenezca al galpón.
+// Sin galpón ni dispositivo elegidos: 0 no es un id válido, así que el
+// formulario no puede enviarse hasta que el usuario escoja ambos.
 const FORM_INICIAL: CrearSensorPayload = {
-  galpon_id: 1,
-  dispositivo_id: 1,
+  galpon_id: 0,
+  dispositivo_id: 0,
   codigo: '',
   tipo: 'temperatura',
   unidad_medida: '°C',
@@ -25,6 +25,7 @@ const FORM_INICIAL: CrearSensorPayload = {
 function SensoresPage() {
   const { sensores, cargando, error, crear, alternar, eliminar, recargar } =
     useSensores()
+  const { tipos } = useCatalogoSensores()
   const [form, setForm] = useState<CrearSensorPayload>(FORM_INICIAL)
   const [guardando, setGuardando] = useState(false)
   const [errorAccion, setErrorAccion] = useState('')
@@ -32,6 +33,8 @@ function SensoresPage() {
   const [ok, setOk] = useState('')
 
   const rol = getRol()
+  const { galpones, dispositivosDelGalpon, cargando: cargandoOpciones } =
+    useOpcionesSensor(form.galpon_id)
 
   function campo<K extends keyof CrearSensorPayload>(
     k: K,
@@ -97,9 +100,9 @@ function SensoresPage() {
     <div className="page-container sensores">
       <header className="sensores-head">
         <div>
-          <h1 className="sensores-title">Sensores · prueba de API</h1>
+          <h1 className="sensores-title">Sensores</h1>
           <p className="sensores-sub">
-            CRUD real contra el backend <code>/sensores</code>. Sesión:{' '}
+            Inventario de sensores de todas las granjas a tu alcance. Sesión:{' '}
             <strong>{rol ?? 'sin rol'}</strong>.
           </p>
         </div>
@@ -144,24 +147,48 @@ function SensoresPage() {
         <h2 className="sn-form-titulo">Registrar sensor</h2>
         <div className="sn-grid">
           <label className="sn-campo">
-            <span>galpon_id</span>
-            <input
-              type="number"
-              min={1}
-              value={form.galpon_id}
-              onChange={(e) => campo('galpon_id', Number(e.target.value))}
+            <span>galpón</span>
+            <select
+              value={form.galpon_id || ''}
+              onChange={(e) => {
+                campo('galpon_id', Number(e.target.value))
+                // El dispositivo elegido pertenecía al galpón anterior.
+                campo('dispositivo_id', 0)
+              }}
+              disabled={cargandoOpciones}
               required
-            />
+            >
+              <option value="" disabled>
+                {cargandoOpciones ? 'Cargando…' : 'Elige un galpón'}
+              </option>
+              {galpones.map((galpon) => (
+                <option key={galpon.id} value={galpon.id}>
+                  {galpon.nombre}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="sn-campo">
-            <span>dispositivo_id</span>
-            <input
-              type="number"
-              min={1}
-              value={form.dispositivo_id}
+            <span>dispositivo</span>
+            <select
+              value={form.dispositivo_id || ''}
               onChange={(e) => campo('dispositivo_id', Number(e.target.value))}
+              disabled={!form.galpon_id || dispositivosDelGalpon.length === 0}
               required
-            />
+            >
+              <option value="" disabled>
+                {!form.galpon_id
+                  ? 'Elige primero el galpón'
+                  : dispositivosDelGalpon.length === 0
+                    ? 'Este galpón no tiene dispositivos'
+                    : 'Elige un dispositivo'}
+              </option>
+              {dispositivosDelGalpon.map((dispositivo) => (
+                <option key={dispositivo.id} value={dispositivo.id}>
+                  {dispositivo.nombre}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="sn-campo">
             <span>código único</span>
@@ -181,7 +208,7 @@ function SensoresPage() {
               required
             />
             <datalist id="tipos-sensor">
-              {SENSOR_TIPOS.map((t) => (
+              {tipos.map((t) => (
                 <option key={t} value={t} />
               ))}
             </datalist>
