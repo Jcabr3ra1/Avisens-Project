@@ -25,6 +25,15 @@ export async function listarRecuperaciones(): Promise<RecuperacionPassword[]> {
   return data.data
 }
 
+export async function listarRecuperacionesDeUsuario(
+  usuarioId: number,
+): Promise<RecuperacionPassword[]> {
+  const { data } = await api.get<RecuperacionPassword[]>(
+    `/recuperaciones-password/usuario/${usuarioId}`,
+  )
+  return data
+}
+
 export async function aprobarRecuperacion(
   id: number,
   payload: ResolverRecuperacionPayload,
