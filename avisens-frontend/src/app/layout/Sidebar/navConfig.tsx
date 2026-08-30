@@ -165,11 +165,6 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: <IcDoc size={16} />,
       },
       {
-        path: '/recuperaciones-password',
-        label: 'Recuperar acceso',
-        icon: <IcUserCircle size={16} />,
-      },
-      {
         path: '/auditoria',
         label: 'Auditoría',
         icon: <IcDoc size={16} />,
