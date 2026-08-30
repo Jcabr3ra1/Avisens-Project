@@ -3,15 +3,15 @@
   overflow: hidden;
   padding: 2rem 2.4rem 1.8rem;
   background: linear-gradient(135deg,
-    #071713 0%,
-    #0a2218 40%,
-    #0e5234 100%
+    #00332a 0%,
+    var(--avisens-deep) 55%,
+    #0a7358 100%
   );
   border-radius: 24px;
   margin-bottom: 1.4rem;
   box-shadow:
-    0 20px 56px rgba(5,40,20,0.38),
-    0 0 0 1px rgba(16,185,129,0.14);
+    0 16px 44px rgba(0, 46, 36, 0.26),
+    0 0 0 1px rgba(71, 187, 75, 0.16);
 }
 .admin-hero::after {
   content: '';
@@ -84,7 +84,7 @@
 }
 .admin-hero-pulse {
   width: 7px; height: 7px;
-  background: #10b981;
+  background: var(--avisens-green);
   border-radius: 50%;
   animation: admin-pulse 2.2s ease-out infinite;
 }
@@ -233,12 +233,12 @@
 }
 .admin-crm-conv-bar {
   display: block; height: 100%;
-  background: linear-gradient(90deg, #34d399, #10b981, #059669);
+  background: linear-gradient(90deg, var(--avisens-green), var(--avisens-green), var(--avisens-deep));
   border-radius: 99px;
   max-width: 100%;
 }
 .admin-crm-conv strong {
-  font-size: 0.92rem; color: #059669; white-space: nowrap; font-weight: 800;
+  font-size: 0.92rem; color: var(--avisens-deep); white-space: nowrap; font-weight: 800;
 }
 
 .admin-act-counters {
@@ -260,7 +260,7 @@
   font-size: 1.25rem; font-weight: 800; color: var(--dash-ink); line-height: 1;
 }
 .admin-act-counter span { font-size: 0.67rem; color: var(--text3); margin-top: 0.15rem; }
-.admin-act-counter--activo strong { color: #059669; }
+.admin-act-counter--activo strong { color: var(--avisens-deep); }
 
 .admin-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .admin-feed-vacio { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--text3); text-align: center; padding: 1rem 0; }
@@ -277,8 +277,8 @@
   display: flex; align-items: center; justify-content: center;
   font-size: 0.72rem; font-weight: 700; color: #fff; flex-shrink: 0;
 }
-.admin-feed-avatar--p { background: linear-gradient(135deg,#059669,#10b981); }
-.admin-feed-avatar--o { background: linear-gradient(135deg,#2563eb,#60a5fa); }
+.admin-feed-avatar--p { background: linear-gradient(135deg,var(--avisens-deep),var(--avisens-green)); }
+.admin-feed-avatar--o { background: linear-gradient(135deg,var(--avisens-deep),var(--avisens-green)); }
 
 .admin-feed-info   { flex: 1; min-width: 0; }
 .admin-feed-nombre {
@@ -292,16 +292,61 @@
 .admin-control-lista { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
 .admin-control-fila {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  padding: 0.8rem 0; border-bottom: 1px solid rgba(16,44,35,0.07);
+  width: 100%; padding: 0.8rem 0.6rem; border: 0; border-radius: 12px;
+  background: transparent; cursor: pointer; text-align: left; font: inherit;
+  transition: background 150ms ease;
 }
-.admin-control-fila:last-child { border-bottom: none; }
+.admin-control-fila:hover { background: rgba(0,91,72,0.06); }
+.admin-control-fila:focus-visible {
+  outline: 2px solid var(--avisens-green); outline-offset: -2px;
+}
+.admin-control-lista > li { border-bottom: 1px solid rgba(16,44,35,0.07); }
+.admin-control-lista > li:last-child { border-bottom: none; }
+.admin-control-flecha { color: var(--text4); flex: 0 0 auto; }
+.admin-control-fila:hover .admin-control-flecha { color: var(--avisens-deep); }
+
+/* ─── Contenido de la pantalla hija (granjas del propietario) ─── */
+.admin-hija-vacio { margin: 0; padding: 1.6rem 0; color: var(--text3); font-size: 0.86rem; text-align: center; }
+.admin-hija-lista { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.admin-hija-granja {
+  display: flex; align-items: center; gap: 0.85rem; width: 100%;
+  padding: 0.85rem 0.9rem; border: 1px solid rgba(16,44,35,0.09); border-radius: 14px;
+  background: #fff; cursor: pointer; text-align: left; font: inherit;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+.admin-hija-granja:hover {
+  border-color: rgba(0,91,72,0.28);
+  box-shadow: 0 6px 18px rgba(0,46,36,0.08);
+  transform: translateY(-1px);
+}
+.admin-hija-granja:focus-visible { outline: 2px solid var(--avisens-green); outline-offset: 2px; }
+.admin-hija-granja-icono {
+  display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center;
+  border-radius: 11px; color: var(--avisens-deep); background: rgba(71,187,75,0.14);
+}
+.admin-hija-granja-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.admin-hija-granja-texto strong {
+  overflow: hidden; color: var(--dash-ink); font-size: 0.9rem; font-weight: 700;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.admin-hija-granja-texto span {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: var(--text3); font-size: 0.78rem;
+}
+.admin-hija-estado {
+  flex: 0 0 auto; padding: 3px 9px; border-radius: 999px;
+  color: var(--text3); background: rgba(16,44,35,0.07);
+  font-size: 0.7rem; font-weight: 700;
+}
+.admin-hija-estado.es-activa { color: #0a6b4c; background: rgba(71,187,75,0.16); }
+.admin-hija-flecha { color: var(--text4); flex: 0 0 auto; }
 .admin-control-propietario { color: var(--dash-ink); font-size: 0.88rem; font-weight: 700; }
 .admin-control-datos { color: var(--text3); font-size: 0.8rem; white-space: nowrap; }
 .admin-control-vacio { margin: 0; padding: 1rem 0; color: var(--text3); font-size: 0.85rem; text-align: center; }
 .admin-control-aviso {
   display: flex; align-items: center; justify-content: center; gap: 0.25rem;
   width: 100%; min-height: 44px; margin-top: 0.7rem; padding: 0.55rem 0.75rem;
-  color: #b45309; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);
+  color: var(--avisens-orange); background: rgba(232, 66, 0, 0.1); border: 1px solid rgba(232, 66, 0, 0.22);
   border-radius: 10px; font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer;
 }
 .admin-control-aviso:hover { background: rgba(245,158,11,0.16); }
@@ -341,9 +386,9 @@
   width: 50px; height: 50px; border-radius: 15px;
   flex-shrink: 0; position: relative;
 }
-.admin-accion--verde   .admin-accion-icon { background: rgba(16,185,129,0.12); color: #059669; }
-.admin-accion--azul    .admin-accion-icon { background: rgba(59,130,246,0.12); color: #2563eb; }
-.admin-accion--naranja .admin-accion-icon { background: rgba(245,158,11,0.12); color: #d97706; }
+.admin-accion--verde   .admin-accion-icon { background: rgba(71, 187, 75, 0.14); color: var(--avisens-deep); }
+.admin-accion--azul    .admin-accion-icon { background: rgba(0, 91, 72, 0.12); color: var(--avisens-deep); }
+.admin-accion--naranja .admin-accion-icon { background: rgba(232, 66, 0, 0.12); color: var(--avisens-orange); }
 
 .admin-accion-text {
   flex: 1; min-width: 0; position: relative;
@@ -375,4 +420,5 @@
   .admin-act-counters       { grid-template-columns: repeat(2, 1fr); }
   .admin-acciones           { grid-template-columns: 1fr; }
   .admin-control-fila       { align-items: flex-start; flex-direction: column; gap: 0.25rem; }
+  .admin-control-flecha     { display: none; }
 }

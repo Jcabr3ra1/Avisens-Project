@@ -9,7 +9,9 @@
   --dash-muted: #4a6b58;
   --dash-line: rgba(10, 26, 20, 0.08);
   --dash-shadow: 0 18px 48px rgba(10, 40, 28, 0.08);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+  box-sizing: border-box;
   display: flex;
   background:
     linear-gradient(150deg, rgba(16, 185, 129, 0.06), transparent 40%),
@@ -19,6 +21,16 @@
   font-family: 'Inter', sans-serif;
   position: relative;
   isolation: isolate;
+}
+
+/* ─── Carcasa verde: sidebar y contenido son UNA sola pieza ───
+   El sidebar no pinta su propio fondo; el verde sale de aquí, y el panel
+   blanco va metido adentro con un margen que deja ver el marco. */
+.dash-shell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  background: var(--avisens-deep);
 }
 
 .dash-page::before {
@@ -47,10 +59,54 @@
   display: flex;
   flex-direction: column;
   position: relative;
+  margin: 14px 14px 14px 0;
+  background: var(--dash-surface-strong);
+  border-radius: 26px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(10, 26, 20, 0.18) transparent;
+  scrollbar-width: thin;
 }
 
-/* Contenedor base para páginas internas aún sin maquetar (placeholders) */
+.dash-main::-webkit-scrollbar { width: 10px; }
+.dash-main::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(10, 26, 20, 0.16);
+  background-clip: content-box;
+}
+.dash-main::-webkit-scrollbar-thumb:hover {
+  background: rgba(10, 26, 20, 0.28);
+  background-clip: content-box;
+}
+
+/* ─── Entrada de pantalla ───
+   Cada ruta entra empujada desde el sidebar: se desliza a la derecha y se
+   asienta. Es lo que hace que el ítem del menú se sienta como el botón que
+   abrió la pantalla, y no como un simple enlace. */
+.dash-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  animation: dash-abrir 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes dash-abrir {
+  from {
+    opacity: 0;
+    transform: translate3d(-18px, 0, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* Contenedor base de cada página. El `flex: 1` hace que llene el alto del
+   panel; sin él, una página corta deja el blanco cortado a media altura. */
 .page-container {
+  flex: 1;
   padding: 28px 30px;
   color: var(--dash-ink);
 }
@@ -87,16 +143,35 @@
 @media (max-width: 620px) {
   .dash-page {
     display: block;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
+
+  /* En celular la carcasa desaparece: el sidebar vuelve a ser una barra
+     flotante y el contenido ocupa la pantalla completa. */
+  .dash-shell {
+    display: block;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
   /* El sidebar se vuelve una barra fija de 68px al fondo — sin este espacio,
      tapa el final del contenido de cada página en el celular. */
   .dash-main {
+    margin: 0;
+    border-radius: 0;
     padding-bottom: 78px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dash-status-pulse .ring {
+    animation: none;
+  }
+
+  .dash-view {
     animation: none;
   }
 }

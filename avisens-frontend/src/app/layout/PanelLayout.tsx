@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar/Sidebar'
 import { puedeAcceder, ROL_ADMIN } from './Sidebar/navConfig'
@@ -15,16 +15,31 @@ function PanelShell({
   onToggle: () => void
   rol: string | null
 }) {
+  const { pathname } = useLocation()
+  const panel = useRef<HTMLElement>(null)
+
+  // El panel scrollea por dentro, así que el navegador no restaura la posición
+  // al cambiar de ruta: sin esto, la pantalla nueva entra a media altura.
+  useEffect(() => {
+    panel.current?.scrollTo({ top: 0 })
+  }, [pathname])
+
   return (
     <div className={`dash-page${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        onToggle={onToggle}
-        rol={rol}
-      />
-      <main className="dash-main">
-        <Outlet />
-      </main>
+      <div className="dash-shell">
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggle={onToggle}
+          rol={rol}
+        />
+        <main className="dash-main" ref={panel}>
+          {/* La `key` fuerza a React a remontar el contenido en cada ruta:
+              sin ella la animación de entrada solo correría la primera vez. */}
+          <div className="dash-view" key={pathname}>
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
