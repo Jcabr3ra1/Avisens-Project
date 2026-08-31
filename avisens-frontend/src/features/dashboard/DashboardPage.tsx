@@ -5,16 +5,17 @@ import ComunicacionFab from '@features/comunicacion/components/ComunicacionFab'
 import type { PestanaComunicacion } from '@features/comunicacion/model/comunicacion'
 import DashboardHeader from './components/DashboardHeader'
 import FranjaAtencion from './components/FranjaAtencion'
+import EstadoLote from './components/EstadoLote'
 import PanelMetricas from './components/PanelMetricas'
 import SelectorGalpones from './components/SelectorGalpones'
 import EstadoGeneral from './components/EstadoGeneral'
 import AccionesRapidas from './components/AccionesRapidas'
 import ResumenOperativo from './components/ResumenOperativo'
 import AlertasPrioritarias from './components/AlertasPrioritarias'
-import ResumenProductivo from './components/ResumenProductivo'
 import EstadoInicial from './components/EstadoInicial'
 import { useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { useAtencion } from './hooks/useAtencion'
+import { useIndicadoresLote } from './hooks/useIndicadoresLote'
 import { useDashboard } from './hooks/useDashboard'
 import './DashboardPage.css'
 
@@ -39,10 +40,14 @@ function DashboardPage() {
   const { galpones: galponesMonitoreo } = useMonitoreoAmbiental()
   const sensoresDelGalpon =
     galponesMonitoreo.find((item) => item.id === dashboard.galponId)?.sensores ?? []
+  const { indicadores, comparacion, cargando: cargandoLote } = useIndicadoresLote(
+    dashboard.lote?.id ?? null,
+  )
   const chipsAtencion = useAtencion({
     alertas: dashboard.alertas,
     galponId: dashboard.galponId,
-    loteId: dashboard.lote?.id ?? null,
+    indicadores,
+    comparacion,
   })
   const rolVista = getRolVista()
   const puedeAdministrar = ['Administrador', 'Propietario'].includes(rolVista ?? '')
@@ -152,10 +157,12 @@ function DashboardPage() {
         <AlertasPrioritarias alertas={dashboard.alertas} onVerTodas={() => navigate('/alertas')} />
       </div>
 
-      <ResumenProductivo
-        indicador={dashboard.indicador}
-        cargando={dashboard.cargandoIndicador}
-        tieneLote={dashboard.lote !== null}
+      <EstadoLote
+        lote={dashboard.lote}
+        indicadores={indicadores}
+        comparacion={comparacion}
+        diaLote={dashboard.diaLote}
+        cargando={cargandoLote}
         onAbrirBitacora={() => navigate('/bitacora')}
       />
 

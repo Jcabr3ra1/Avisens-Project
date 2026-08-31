@@ -1552,3 +1552,118 @@
 @media (prefers-reduced-motion: reduce) {
   .dash-metrica-tab, .dash-metrica-barra { transition: none; }
 }
+
+/* ── Estado del lote ──────────────────────────────────────────────────────
+   Ficha del lote: cada dato en su fila, con su comparación contra la curva
+   objetivo debajo del valor. */
+
+.dash-lote {
+  margin-bottom: 1.4rem;
+  padding: 1.2rem 1.3rem;
+  border: 1px solid rgba(16, 44, 35, 0.09);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.dash-lote-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.dash-lote-cabecera h2 {
+  margin: 0;
+  color: var(--dash-ink);
+  font-size: 1.02rem;
+  font-weight: 800;
+}
+
+.dash-lote-enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.28rem 0.55rem;
+  border: 0;
+  border-radius: 8px;
+  color: var(--avisens-deep);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.dash-lote-enlace:hover { background: rgba(0, 91, 72, 0.08); }
+.dash-lote-enlace:focus-visible { outline: 2px solid var(--avisens-green); outline-offset: 2px; }
+
+.dash-lote-filas { display: flex; flex-direction: column; margin: 0; }
+
+.dash-lote-fila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(16, 44, 35, 0.06);
+}
+
+.dash-lote-fila:last-child { border-bottom: 0; }
+
+.dash-lote-fila dt { color: var(--dash-muted); font-size: 0.84rem; }
+
+.dash-lote-fila dd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  margin: 0;
+  text-align: right;
+}
+
+.dash-lote-fila dd > span { color: var(--dash-ink); font-size: 0.95rem; font-weight: 700; }
+.dash-lote-fila dd > span.es-alerta { color: #b93300; }
+
+/* La comparación va bajo el valor y en pequeño: acompaña al dato, no compite
+   con él. */
+.dash-lote-fila dd small { color: var(--text3, #6d7f76); font-size: 0.7rem; }
+
+.dash-lote-mensaje {
+  margin: 0.7rem 0 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 11px;
+  color: var(--text3, #6d7f76);
+  background: rgba(16, 44, 35, 0.04);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.dash-lote-pie {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed rgba(16, 44, 35, 0.12);
+}
+
+.dash-lote-pie-fila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.4rem;
+  color: var(--dash-muted);
+  font-size: 0.78rem;
+}
+
+.dash-lote-pie-fila .mono { color: var(--avisens-deep); font-size: 0.9rem; font-weight: 800; }
+
+.dash-lote-spark { display: block; width: 100%; height: 44px; }
+
+.dash-lote-spark polyline {
+  fill: none;
+  stroke: var(--avisens-green);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}

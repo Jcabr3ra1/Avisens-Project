@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { compararConCurva } from '@features/indicadores/api/indicadores'
+import { useMemo } from 'react'
 import { useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
-import { obtenerIndicadoresDeLote } from '../api/dashboard'
+import type { ComparacionIndicador } from '@features/indicadores/api/indicadores'
 import type { DashboardAlerta, DashboardIndicador } from '../model/dashboard'
 import {
   detallePorCriticidad,
@@ -18,34 +17,13 @@ import {
 type Args = {
   alertas: DashboardAlerta[]
   galponId: number | null
-  loteId: number | null
+  indicadores: DashboardIndicador[]
+  comparacion: ComparacionIndicador | null
 }
 
-export function useAtencion({ alertas, galponId, loteId }: Args) {
+export function useAtencion({ alertas, galponId, indicadores, comparacion }: Args) {
   const { galpones } = useMonitoreoAmbiental()
-  const [indicadores, setIndicadores] = useState<DashboardIndicador[]>([])
-  const [desvioPesoPct, setDesvioPesoPct] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (loteId === null) {
-      setIndicadores([])
-      setDesvioPesoPct(null)
-      return
-    }
-    let vigente = true
-
-    void obtenerIndicadoresDeLote(loteId)
-      .then((lista) => { if (vigente) setIndicadores(lista) })
-      .catch(() => { if (vigente) setIndicadores([]) })
-
-    // Sin curva objetivo sembrada el backend no puede comparar: se muestra
-    // "sin curva objetivo", no un 0% que parecería estar en la meta.
-    void compararConCurva(loteId)
-      .then((c) => { if (vigente) setDesvioPesoPct(c.desvio_peso_pct) })
-      .catch(() => { if (vigente) setDesvioPesoPct(null) })
-
-    return () => { vigente = false }
-  }, [loteId])
+  const desvioPesoPct = comparacion?.desvio_peso_pct ?? null
 
   return useMemo<ChipAtencion[]>(() => {
     const activas = alertas.filter((alerta) => alerta.estado !== 'cerrada')
