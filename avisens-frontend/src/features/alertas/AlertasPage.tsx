@@ -9,10 +9,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
-import { type Alerta, type EstadoAlerta } from './data'
+import { type Alerta, type EstadoAlerta } from './model/alertaVista'
 import { getRol } from '@shared/api'
 import { listarAlertas, crearAlerta, cerrarAlerta as cerrarAlertaApi, type Alerta as AlertaApi } from '@features/alertas/api/alertas'
-import { useMonitoreoAmbiental, formatearUltimaLectura } from '@shared/hooks/useMonitoreoAmbiental'
+import { useMonitoreoAmbiental, formatearUltimaLectura } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { iconoSensor } from '@shared/ui/sensorIcon'
 import { IcCheck, IcPaperclip, IcAlert, IcClock, IcUserCircle } from '@shared/ui/icons/icons'
 import './AlertasPage.css'
