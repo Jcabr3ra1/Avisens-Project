@@ -7,9 +7,10 @@ interface Props {
   onAlternar: (galpon: Galpon) => void
   onEliminar: (galpon: Galpon) => void
   onVerSensores: (galpon: Galpon) => void
+  onVerDispositivos: (galpon: Galpon) => void
 }
 
-function TablaGalpones({ galpones, cargando, onEditar, onAlternar, onEliminar, onVerSensores }: Props) {
+function TablaGalpones({ galpones, cargando, onEditar, onAlternar, onEliminar, onVerSensores, onVerDispositivos }: Props) {
   if (cargando) return <p className="galpones-vacio">Cargando galpones…</p>
   if (galpones.length === 0) return <p className="galpones-vacio">No hay galpones para mostrar.</p>
 
@@ -34,6 +35,7 @@ function TablaGalpones({ galpones, cargando, onEditar, onAlternar, onEliminar, o
                 <td><span className={`galpones-estado galpones-estado--${galpon.activo ? 'activo' : 'inactivo'}`}>{galpon.activo ? 'Activo' : 'Inactivo'}</span></td>
                 <td>
                   <div className="galpones-acciones">
+                    <button type="button" onClick={() => onVerDispositivos(galpon)}>Dispositivos</button>
                     <button type="button" onClick={() => onVerSensores(galpon)}>Sensores</button>
                     <button type="button" onClick={() => onEditar(galpon)}>Editar</button>
                     <button type="button" onClick={() => onAlternar(galpon)}>{galpon.activo ? 'Desactivar' : 'Activar'}</button>

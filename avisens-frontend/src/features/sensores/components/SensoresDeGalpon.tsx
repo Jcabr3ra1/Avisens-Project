@@ -1,10 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { type CrearSensorPayload, type Sensor } from '@shared/api'
 import {
   listarDispositivos,
-  type CrearSensorPayload,
   type Dispositivo,
-  type Sensor,
-} from '@shared/api'
+} from '@features/dispositivos/api/dispositivos'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { Galpon } from '@features/galpones/api/galpones'
 import { useCatalogoSensores } from '../hooks/useCatalogoSensores'

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listarDispositivos, type Dispositivo } from '@shared/api'
+import {
+  listarDispositivos,
+  type Dispositivo,
+} from '@features/dispositivos/api/dispositivos'
 import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
 
 export function useOpcionesSensor(galponId: number) {
