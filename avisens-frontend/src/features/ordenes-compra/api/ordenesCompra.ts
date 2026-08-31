@@ -44,3 +44,12 @@ export async function eliminarDetalleOrden(id: number, detalleId: number): Promi
 export async function recibirOrdenCompra(id: number, payload: RecibirOrdenPayload): Promise<void> {
   await api.post(`/ordenes-compra/${id}/recepciones`, payload)
 }
+
+export async function eliminarOrdenCompra(
+  id: number,
+): Promise<{ id: number; eliminado: boolean }> {
+  const { data } = await api.delete<{ id: number; eliminado: boolean }>(
+    `/ordenes-compra/${id}`,
+  )
+  return data
+}

@@ -37,3 +37,31 @@ export async function crearOrganizacion(
   const { data } = await api.post<Organizacion>('/organizaciones', payload)
   return data
 }
+
+export type ActualizarOrganizacionPayload = Partial<CrearOrganizacionPayload> & {
+  activa?: boolean
+}
+
+export async function obtenerOrganizacion(id: number): Promise<Organizacion> {
+  const { data } = await api.get<Organizacion>(`/organizaciones/${id}`)
+  return data
+}
+
+export async function actualizarOrganizacion(
+  id: number,
+  payload: ActualizarOrganizacionPayload,
+): Promise<Organizacion> {
+  const { data } = await api.patch<Organizacion>(`/organizaciones/${id}`, payload)
+  return data
+}
+
+export async function activarOrganizacion(id: number): Promise<Organizacion> {
+  const { data } = await api.patch<Organizacion>(`/organizaciones/${id}/activar`)
+  return data
+}
+
+// Baja lógica: conserva la organización y todo lo que cuelga de ella.
+export async function desactivarOrganizacion(id: number): Promise<Organizacion> {
+  const { data } = await api.delete<Organizacion>(`/organizaciones/${id}`)
+  return data
+}
