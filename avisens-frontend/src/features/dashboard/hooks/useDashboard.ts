@@ -110,6 +110,19 @@ export function useDashboard() {
     ),
     [fuentes.alertas, galponId],
   )
+  const alertasPorGalpon = useMemo(() => fuentes.alertas.reduce<Record<number, { total: number; urgentes: number }>>(
+    (acumulado, alerta) => {
+      if (alerta.estado === 'cerrada') return acumulado
+      const actual = acumulado[alerta.galponId] ?? { total: 0, urgentes: 0 }
+      const esUrgente = ['critica', 'crítica', 'alta'].includes(alerta.criticidad.toLowerCase())
+      acumulado[alerta.galponId] = {
+        total: actual.total + 1,
+        urgentes: actual.urgentes + (esUrgente ? 1 : 0),
+      }
+      return acumulado
+    },
+    {},
+  ), [fuentes.alertas])
 
   const granja = fuentes.granjas.find((item) => item.id === granjaId) ?? null
   const galpon = galpones.find((item) => item.id === galponId) ?? null
@@ -118,6 +131,7 @@ export function useDashboard() {
   return {
     usuario,
     granjas: fuentes.granjas,
+    lotes: fuentes.lotes,
     totalGalpones: fuentes.galpones.length,
     galpones,
     granja,
@@ -125,6 +139,7 @@ export function useDashboard() {
     lote,
     indicador,
     alertas,
+    alertasPorGalpon,
     estadoGeneral,
     diaLote: lote ? indicador?.diaVida ?? calcularDiaLote(lote.fechaIngreso) : null,
     granjaId,

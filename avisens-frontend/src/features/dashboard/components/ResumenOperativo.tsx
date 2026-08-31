@@ -28,13 +28,28 @@ function Metrica({ icono, etiqueta, valor, ayuda }: MetricaProps) {
 }
 
 function ResumenOperativo({ galpon, lote, diaLote, alertasAbiertas }: ResumenOperativoProps) {
+  const estado = !lote
+    ? 'Sin lote activo'
+    : alertasAbiertas === 0
+      ? 'Sin alertas abiertas'
+      : `${alertasAbiertas} ${alertasAbiertas === 1 ? 'alerta abierta' : 'alertas abiertas'}`
+
   return (
-    <section className="dashboard-panel" aria-labelledby="resumen-operativo-title">
-      <div className="dashboard-panel__heading">
+    <section className="dashboard-panel dashboard-operacion" aria-labelledby="resumen-operativo-title">
+      <div className="dashboard-operacion__contexto">
         <div>
-          <p className="dashboard-section-label">Situación actual</p>
-          <h2 id="resumen-operativo-title">Resumen operativo</h2>
+          <p className="dashboard-section-label">Contexto del galpón</p>
+          <div className="dashboard-operacion__title-row">
+            <h2 id="resumen-operativo-title">{galpon?.nombre ?? 'Sin galpón seleccionado'}</h2>
+            {galpon && <span className="dashboard-operacion__code">{galpon.codigo}</span>}
+          </div>
+          <p className="dashboard-operacion__meta">
+            {lote
+              ? `${lote.codigo} · ${lote.cantidadInicial.toLocaleString('es-CO')} aves al ingreso · Día ${diaLote ?? '—'}`
+              : 'Registra un lote para iniciar el seguimiento productivo.'}
+          </p>
         </div>
+        <span className={`dashboard-operacion__estado${alertasAbiertas > 0 ? ' has-alertas' : ''}`}>{estado}</span>
       </div>
       <div className="dashboard-metrics">
         <Metrica
