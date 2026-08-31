@@ -16,9 +16,12 @@ export function useFormularioGranja(alGuardar: GuardarGranja) {
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
-  function abrirCrear() {
+  function abrirCrear(propietarioId?: number) {
     setEditandoId(null)
-    setForm(crearFormularioGranja())
+    setForm({
+      ...crearFormularioGranja(),
+      propietario_id: propietarioId,
+    })
     setError('')
     setAbierto(true)
   }

@@ -1,4 +1,3 @@
-import type { Usuario } from '@shared/api'
 import type { Granja } from '@features/granjas/api/granjas'
 import type { Prospecto } from '@features/crm/api/prospectos'
 import type { GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
@@ -15,13 +14,6 @@ export type EtapaCrmAdmin = {
   descripcion: string
   cantidad: number
   color: string
-}
-
-export type ResumenPropietario = {
-  id: number
-  nombre: string
-  totalGranjas: number
-  granjasActivas: number
 }
 
 export function calcularKpisAdmin(granjas: Granja[], galpones: GalponMonitoreoVista[]): KpiAdmin[] {
@@ -77,21 +69,6 @@ export function calcularEtapasCrmAdmin(prospectos: Prospecto[]): EtapaCrmAdmin[]
     { nombre: 'Calientes', descripcion: 'Visita programada', cantidad: cantidadPorClasificacion('caliente'), color: '#ef4444' },
     { nombre: 'Cerrados', descripcion: 'Contrato firmado', cantidad: prospectos.filter((prospecto) => prospecto.estado === 'cerrado').length, color: '#10b981' },
   ]
-}
-
-export function calcularResumenPropietarios(usuarios: Usuario[], granjas: Granja[]): ResumenPropietario[] {
-  return usuarios
-    .filter((usuario) => usuario.rol.nombre === 'Propietario')
-    .map((propietario) => {
-      const granjasDelPropietario = granjas.filter((granja) => granja.propietario.id === propietario.id)
-      return {
-        id: propietario.id,
-        nombre: propietario.nombre_completo,
-        totalGranjas: granjasDelPropietario.length,
-        granjasActivas: granjasDelPropietario.filter((granja) => granja.activa).length,
-      }
-    })
-    .sort((a, b) => b.totalGranjas - a.totalGranjas || a.nombre.localeCompare(b.nombre, 'es-CO'))
 }
 
 export function calcularConversionCrm(prospectos: Prospecto[], etapas: EtapaCrmAdmin[]): number {

@@ -1,24 +1,36 @@
 import { useMemo } from 'react'
-import { getRol } from '@shared/api'
+import { useNavigate } from 'react-router-dom'
+import { getRolVista } from '@shared/api'
+import { useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { Granja } from './api/granjas'
 import FormularioGranja from './components/FormularioGranja'
-import ExplorarProduccionGranja from './components/ExplorarProduccionGranja'
 import ListaGranjas from './components/ListaGranjas'
 import ResumenGranjas from './components/ResumenGranjas'
+import TableroImplementacionGranjas from './components/TableroImplementacionGranjas'
 import { useFormularioGranja } from './hooks/useFormularioGranja'
 import { useGranjas } from './hooks/useGranjas'
 import { usePropietariosGranja } from './hooks/usePropietariosGranja'
-import { calcularResumenGranjas } from './model/granjaVista'
+import { calcularEtapasImplementacionGranjas, calcularResumenGranjas } from './model/granjaVista'
 import './GranjasPage.css'
 
 function GranjasPage() {
-  const esAdministrador = getRol() === 'Administrador'
+  const navigate = useNavigate()
+  const esAdministrador = getRolVista() === 'Administrador'
   const gestion = useGranjas()
   const formulario = useFormularioGranja(gestion.guardar)
   const catalogoPropietarios = usePropietariosGranja(esAdministrador)
+  const monitoreo = useMonitoreoAmbiental()
   const resumen = useMemo(
     () => calcularResumenGranjas(gestion.granjas),
     [gestion.granjas],
+  )
+  const etapasImplementacion = useMemo(
+    () => calcularEtapasImplementacionGranjas(
+      catalogoPropietarios.propietarios,
+      gestion.granjas,
+      monitoreo.galpones,
+    ),
+    [catalogoPropietarios.propietarios, gestion.granjas, monitoreo.galpones],
   )
 
   function confirmarEliminacion(granja: Granja) {
@@ -39,14 +51,21 @@ function GranjasPage() {
           <button
             type="button"
             className="grj-btn-primary"
-            onClick={formulario.abrirCrear}
+            onClick={() => formulario.abrirCrear()}
           >
             + Nueva granja
           </button>
         )}
       </header>
       <ResumenGranjas resumen={resumen} />
-      <ExplorarProduccionGranja />
+      {esAdministrador && (
+        <TableroImplementacionGranjas
+          etapas={etapasImplementacion}
+          cargando={gestion.cargando || catalogoPropietarios.cargando || monitoreo.cargando}
+          onAsignarGranja={formulario.abrirCrear}
+          onAbrirGranja={(granjaId) => navigate(`/galpones?granja=${granjaId}`)}
+        />
+      )}
       {gestion.error && (
         <div className="grj-alerta" role="alert">
           <span>{gestion.error}</span>
@@ -63,6 +82,8 @@ function GranjasPage() {
           onEditar={formulario.abrirEditar}
           onAlternar={(granja) => void gestion.alternarActivo(granja)}
           onEliminar={confirmarEliminacion}
+          onVerGalpones={(granja) => navigate(`/galpones?granja=${granja.id}`)}
+          puedeGestionar={esAdministrador}
         />
       )}
       {formulario.abierto && (

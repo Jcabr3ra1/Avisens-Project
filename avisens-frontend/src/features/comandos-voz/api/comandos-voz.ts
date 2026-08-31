@@ -9,6 +9,8 @@ export interface ComandoVoz {
   id_sincronizacion: string | null
   fecha_ejecucion: string | null
   fecha_registro: string
+  mensaje?: string
+  requiere_clarificacion?: boolean
 }
 
 export interface InterpretarComandoPayload {
