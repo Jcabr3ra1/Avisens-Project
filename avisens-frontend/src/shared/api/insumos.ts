@@ -57,7 +57,9 @@ export interface RegistrarMovimientoPayload {
 }
 
 export async function listarInsumos(): Promise<Insumo[]> {
-  const { data } = await api.get<PaginatedResponse<Insumo>>('/insumos')
+  const { data } = await api.get<PaginatedResponse<Insumo>>('/insumos', {
+    params: { page: 1, limit: 200 },
+  })
   return data.data
 }
 

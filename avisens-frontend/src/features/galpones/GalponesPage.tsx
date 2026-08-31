@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
 import DispositivosDeGalpon from '@features/dispositivos/components/DispositivosDeGalpon'
+import EquiposDeGalpon from '@features/equipos/components/EquiposDeGalpon'
 import SensoresDeGalpon from '@features/sensores/components/SensoresDeGalpon'
 import type { Galpon } from './api/galpones'
 import BarraGalpones from './components/BarraGalpones'
@@ -20,6 +21,7 @@ function GalponesPage() {
   const resumen = useMemo(() => calcularResumenGalpones(gestion.galpones), [gestion.galpones])
   const [galponSensores, setGalponSensores] = useState<Galpon | null>(null)
   const [galponDispositivos, setGalponDispositivos] = useState<Galpon | null>(null)
+  const [galponEquipos, setGalponEquipos] = useState<Galpon | null>(null)
 
   function abrirCrear() {
     const granjaId = gestion.granjas[0]?.id
@@ -58,11 +60,21 @@ function GalponesPage() {
         {gestion.galpones.length > 0 && (
           <BarraGalpones busqueda={filtro.busqueda} estado={filtro.estado} visibles={filtro.visibles.length} total={gestion.galpones.length} onBuscar={filtro.setBusqueda} onCambiarEstado={filtro.setEstado} />
         )}
-        <TablaGalpones galpones={filtro.visibles} cargando={gestion.cargando} onEditar={formulario.abrirEditar} onAlternar={(galpon) => void gestion.alternarActivo(galpon)} onEliminar={confirmarEliminacion} onVerSensores={setGalponSensores} onVerDispositivos={setGalponDispositivos} />
+        <TablaGalpones galpones={filtro.visibles} cargando={gestion.cargando} onEditar={formulario.abrirEditar} onAlternar={(galpon) => void gestion.alternarActivo(galpon)} onEliminar={confirmarEliminacion} onVerSensores={setGalponSensores} onVerDispositivos={setGalponDispositivos} onVerEquipos={setGalponEquipos} />
       </section>
 
       {formulario.abierto && (
         <FormularioGalpon form={formulario.form} modoEdicion={formulario.modoEdicion} granjas={gestion.granjas} guardando={formulario.guardando} error={formulario.error} onCambiar={formulario.cambiar} onGuardar={formulario.guardar} onCerrar={formulario.cerrar} />
+      )}
+
+      {galponEquipos && (
+        <PantallaHija
+          titulo={`Equipos · ${galponEquipos.nombre}`}
+          subtitulo={`${galponEquipos.codigo} · ${galponEquipos.granja.nombre}`}
+          onCerrar={() => setGalponEquipos(null)}
+        >
+          <EquiposDeGalpon galpon={galponEquipos} />
+        </PantallaHija>
       )}
 
       {galponDispositivos && (
