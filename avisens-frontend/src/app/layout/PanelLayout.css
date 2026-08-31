@@ -92,7 +92,7 @@
   animation: dash-abrir 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.dash-modo-prueba {
+.dash-vista-previa {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -105,8 +105,8 @@
   border-radius: 12px;
   font-size: 0.78rem;
 }
-.dash-modo-prueba strong { color: var(--avisens-deep); }
-.dash-modo-prueba span { color: var(--dash-muted); }
+.dash-vista-previa strong { color: var(--avisens-deep); }
+.dash-vista-previa span { color: var(--dash-muted); }
 
 @keyframes dash-abrir {
   from {
@@ -173,7 +173,7 @@
     box-shadow: none;
   }
 
-  .dash-modo-prueba { margin: 14px 16px -8px; font-size: 0.74rem; }
+  .dash-vista-previa { margin: 14px 16px -8px; font-size: 0.74rem; }
 
   /* El sidebar se vuelve una barra fija de 68px al fondo — sin este espacio,
      tapa el final del contenido de cada página en el celular. */

@@ -43,9 +43,9 @@ function PanelShell({
               sin ella la animación de entrada solo correría la primera vez. */}
           <div className="dash-view" key={pathname}>
             {rolAutenticado === ROL_ADMIN && rolVista !== ROL_ADMIN && (
-              <div className="dash-modo-prueba" role="status">
-                <strong>Modo de prueba: vista {rolVista}</strong>
-                <span>Tu sesión y permisos reales siguen siendo de Administrador.</span>
+              <div className="dash-vista-previa" role="status">
+                <strong>Viendo como {rolVista}</strong>
+                <span>Sólo cambia lo que ves. Tu sesión sigue siendo de Administrador y lo que registres aquí es real.</span>
               </div>
             )}
             <Outlet />
@@ -107,8 +107,8 @@ function PanelLayout() {
     return <Navigate to="/login" replace />
   }
   // Guardia 2: el rol no tiene permiso para esta ruta → a su ruta de inicio.
-  const accesoPorVistaDePrueba = rol === ROL_ADMIN && puedeAcceder(location.pathname, rolVista)
-  if (!puedeAcceder(location.pathname, rol) && !accesoPorVistaDePrueba) {
+  const accesoPorVistaPrevia = rol === ROL_ADMIN && puedeAcceder(location.pathname, rolVista)
+  if (!puedeAcceder(location.pathname, rol) && !accesoPorVistaPrevia) {
     return <Navigate to={rutaInicio} replace />
   }
 

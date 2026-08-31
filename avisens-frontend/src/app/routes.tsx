@@ -4,10 +4,10 @@
 //
 // Rutas internas por rol:
 //   /admin      → solo Administrador (AdminPage)
-//   /dashboard  → Propietario y Operario (DashboardPage operativo)
+//   /dashboard  → todos los roles (DashboardPage operativo)
 //   resto       → según permisos definidos en navConfig.tsx
 import { lazy, Suspense, type ReactNode } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Navigate, Routes, Route } from 'react-router-dom'
 
 // Cada pantalla se descarga solo cuando el usuario entra a su ruta. Antes se
 // enviaban todos los módulos (y todo su CSS) en el primer acceso, aunque la
@@ -90,6 +90,8 @@ function AppRoutes() {
         <Route path="/lotes"           element={cargarPagina(<LotesPage />)} />
         <Route path="/sensores"        element={cargarPagina(<SensoresPage />)} />
       </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
