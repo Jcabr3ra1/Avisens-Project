@@ -1,0 +1,30 @@
+meta {
+  name: [Admin] Aprobar solicitud
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/recuperaciones-password/1/aprobar
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "observacion": "Verificado por teléfono con el propietario"
+  }
+}
+
+docs {
+  Devuelve la contraseña temporal UNA sola vez: no se vuelve a mostrar.
+  El usuario queda obligado a cambiarla al entrar.
+}

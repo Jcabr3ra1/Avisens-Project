@@ -1,0 +1,14 @@
+meta {
+  name: Activar organización
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/v1/organizaciones/1/activar
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

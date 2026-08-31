@@ -1,0 +1,39 @@
+meta {
+  name: [Admin · Propietario] Agregar repuesto
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/v1/mantenimientos/1/repuestos
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "insumo_id": 1,
+    "cantidad": 2,
+    "clave_idempotencia": "cambia-esta-clave-en-cada-envio",
+    "descripcion": "Rodamiento 6204-2RS"
+  }
+}
+
+docs {
+  DESCUENTA STOCK de bodega.
+
+  `clave_idempotencia` debe ser distinta en cada envío real: repetir la misma
+  devuelve el repuesto ya creado en vez de descontar otra vez. El frontend
+  genera un UUID por envío justamente para eso.
+
+  Para probar la idempotencia: manda esta petición dos veces sin cambiar la
+  clave y comprueba en Insumos que el stock bajó UNA sola vez.
+}

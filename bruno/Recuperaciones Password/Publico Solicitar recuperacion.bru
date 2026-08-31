@@ -1,0 +1,28 @@
+meta {
+  name: [Público] Solicitar recuperación
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/recuperaciones-password/solicitudes
+  body: json
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "operario@avisens.com",
+    "motivo": "Olvidé mi contraseña"
+  }
+}
+
+docs {
+  Sin sesión. Responde 202 aunque el correo no exista, para no revelar qué
+  cuentas están registradas.
+
+  Limitado a 3 intentos cada 15 minutos por IP: el cuarto responde 429.
+}

@@ -1,0 +1,14 @@
+meta {
+  name: Ver mantenimiento
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/mantenimientos/1
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
