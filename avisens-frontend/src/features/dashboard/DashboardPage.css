@@ -319,139 +319,8 @@
   cursor: wait;
 }
 
-.dashboard-galpones {
-  padding: 1.2rem 1.25rem 1.3rem;
-  border: 1px solid #d9e7e0;
-  border-radius: 20px;
-  background: linear-gradient(145deg, #ffffff, #f6fbf8);
-  box-shadow: 0 10px 26px rgba(8, 55, 43, 0.05);
-}
-
-.dashboard-galpones__heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.9rem;
-}
-
-.dashboard-galpones__heading h2 {
-  margin-top: 0.16rem;
-  color: var(--dashboard-green-950);
-  font-size: 1.08rem;
-  letter-spacing: -0.02em;
-}
-
-.dashboard-galpones__count {
-  flex: 0 0 auto;
-  padding: 0.32rem 0.58rem;
-  border: 1px solid #c7e0d4;
-  border-radius: 999px;
-  color: var(--dashboard-green-800);
-  background: var(--dashboard-green-50);
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.dashboard-galpones__list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 0.65rem;
-}
-
-.dashboard-galpones__empty {
-  grid-column: 1 / -1;
-  padding: 1rem;
-  color: var(--text2);
-  border: 1px dashed #bfd8cb;
-  border-radius: 13px;
-  font-size: 0.86rem;
-  text-align: center;
-}
-
-.dashboard-galpon {
-  min-width: 0;
-  min-height: 116px !important;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 0.55rem;
-  padding: 0.8rem;
-  color: var(--text);
-  border: 1px solid #d9e7e0;
-  border-radius: 15px;
-  background: #ffffff;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
-}
-
-.dashboard-galpon:hover {
-  border-color: #9ccbb5;
-  background: #fbfefc;
-  box-shadow: 0 7px 16px rgba(8, 55, 43, 0.07);
-}
-
-.dashboard-galpon.is-selected {
-  border-color: var(--dashboard-green-800);
-  background: linear-gradient(145deg, #eef9f4, #ffffff);
-  box-shadow: 0 0 0 3px rgba(11, 143, 112, 0.12), 0 8px 18px rgba(8, 55, 43, 0.08);
-}
-
 .dashboard-galpon__topline,
 .dashboard-galpon__title,
-.dashboard-galpon__status {
-  display: flex;
-  align-items: center;
-}
-
-.dashboard-galpon__topline {
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.dashboard-galpon__title {
-  min-width: 0;
-  gap: 0.38rem;
-  overflow: hidden;
-  color: var(--dashboard-green-950);
-  font-size: 0.86rem;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dashboard-galpon__code {
-  flex: 0 0 auto;
-  padding: 0.18rem 0.32rem;
-  border-radius: 6px;
-  color: var(--dashboard-green-800);
-  background: var(--dashboard-green-100);
-  font-family: 'DM Mono', monospace;
-  font-size: 0.65rem;
-  font-weight: 700;
-}
-
-.dashboard-galpon__detail {
-  overflow: hidden;
-  color: var(--text2);
-  font-size: 0.77rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dashboard-galpon__status {
-  align-self: flex-start;
-  gap: 0.32rem;
-  color: var(--dashboard-green-800);
-  font-size: 0.7rem;
-  font-weight: 800;
-}
-
-.dashboard-galpon--atencion .dashboard-galpon__status { color: var(--dashboard-amber-700); }
-.dashboard-galpon--urgente .dashboard-galpon__status { color: var(--dashboard-red-700); }
-.dashboard-galpon--sin_lote .dashboard-galpon__status { color: #60776d; }
 
 .dashboard-state {
   display: grid;
@@ -1149,10 +1018,6 @@
     padding: 1rem;
   }
 
-  .dashboard-galpones {
-    padding: 1rem;
-  }
-
   .dashboard-galpones__heading,
   .dashboard-operacion__contexto {
     align-items: flex-start;
@@ -1336,4 +1201,168 @@
 @media (prefers-reduced-motion: reduce) {
   .dash-atencion, .dash-chip { transition: none; }
   .dash-chip:hover { transform: none; }
+}
+
+/* ── Tira de galpones ─────────────────────────────────────────────────────
+   Tarjetas en una fila que scrollea, no una rejilla: la comparación entre
+   galpones es horizontal y el galpón activo tiene que destacarse solo. */
+
+.dash-galpones { margin-bottom: 1.4rem; }
+
+.dash-galpones-titulo {
+  margin: 0 0 0.7rem;
+  color: var(--dash-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dash-galpones-tira {
+  display: flex;
+  gap: 0.7rem;
+  overflow-x: auto;
+  padding-bottom: 0.35rem;
+  scrollbar-width: thin;
+}
+
+.dash-galpones-tira::-webkit-scrollbar { height: 6px; }
+.dash-galpones-tira::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(10, 26, 20, 0.14);
+}
+
+.dash-galpon {
+  display: flex;
+  min-width: 230px;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid rgba(16, 44, 35, 0.1);
+  border-radius: 15px;
+  background: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.dash-galpon:hover { border-color: rgba(0, 91, 72, 0.3); transform: translateY(-1px); }
+.dash-galpon:focus-visible { outline: 2px solid var(--avisens-green); outline-offset: 2px; }
+
+/* El activo se marca con borde oscuro y sombra, no solo con color de fondo:
+   tiene que leerse de un vistazo cuál se está mirando. */
+.dash-galpon.es-activo {
+  border-color: var(--avisens-deep);
+  border-width: 2px;
+  padding: calc(0.8rem - 1px) calc(0.9rem - 1px);
+  box-shadow: 0 8px 22px rgba(0, 46, 36, 0.12);
+}
+
+.dash-galpon-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.dash-galpon-nombre {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  overflow: hidden;
+  color: var(--dash-ink);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-galpon-punto {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--text4, #9aa8a2);
+}
+
+/* El halo alrededor del punto solo aparece cuando todo está bien: es una
+   señal tranquila, no una más entre varias. */
+.dash-galpon--correcto .dash-galpon-punto {
+  background: var(--avisens-green);
+  box-shadow: 0 0 0 3px rgba(71, 187, 75, 0.2);
+}
+.dash-galpon--atencion .dash-galpon-punto { background: var(--avisens-yellow); }
+.dash-galpon--urgente  .dash-galpon-punto { background: var(--avisens-orange); }
+
+.dash-galpon--vacio { background: #fafbfa; }
+.dash-galpon--vacio .dash-galpon-nombre,
+.dash-galpon--vacio .dash-galpon-detalle { color: var(--text3, #6d7f76); }
+
+.dash-galpon-codigo {
+  flex: 0 0 auto;
+  color: var(--text4, #9aa8a2);
+  font-size: 0.72rem;
+}
+
+.dash-galpon-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.dash-galpon-detalle {
+  overflow: hidden;
+  color: var(--dash-muted);
+  font-size: 0.79rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-galpon-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex: 0 0 auto;
+  padding: 0.12rem 0.4rem;
+  border: 1px solid rgba(232, 66, 0, 0.22);
+  border-radius: 999px;
+  color: #b93300;
+  background: rgba(232, 66, 0, 0.09);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.dash-galpon-agregar {
+  display: grid;
+  width: 56px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px dashed rgba(16, 44, 35, 0.22);
+  border-radius: 15px;
+  color: var(--dash-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.dash-galpon-agregar:hover {
+  border-color: var(--avisens-green);
+  color: var(--avisens-deep);
+  background: rgba(71, 187, 75, 0.07);
+}
+.dash-galpon-agregar:focus-visible { outline: 2px solid var(--avisens-green); outline-offset: 2px; }
+
+.dash-galpones-vacio {
+  margin: 0;
+  padding: 1rem 0;
+  color: var(--text3, #6d7f76);
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-galpon, .dash-galpon-agregar { transition: none; }
+  .dash-galpon:hover { transform: none; }
 }

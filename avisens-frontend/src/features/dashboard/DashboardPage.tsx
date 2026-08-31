@@ -123,6 +123,7 @@ function DashboardPage() {
         galponId={dashboard.galponId}
         busqueda={busqueda}
         onSeleccionar={dashboard.seleccionarGalpon}
+        onAgregar={puedeAdministrar ? () => navigate('/galpones') : undefined}
       />
 
       <EstadoGeneral
