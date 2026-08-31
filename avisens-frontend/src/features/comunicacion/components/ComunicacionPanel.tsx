@@ -1,12 +1,11 @@
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { getRolVista } from '@shared/api'
 import { IcChat, IcClose, IcMic, IcSparkle, IcUsers } from '@shared/ui/icons/icons'
+import { type PestanaComunicacion } from '../model/comunicacion'
 import PanelEquipo from './PanelEquipo'
 import PanelIa from './PanelIa'
 import PanelVoz from './PanelVoz'
 import './ComunicacionPanel.css'
-
-export type PestanaComunicacion = 'equipo' | 'ia' | 'voz'
 
 type Props = {
   abierto: boolean
