@@ -408,3 +408,150 @@
   .comunicacion-panel,
   .comunicacion-voz__mic.is-listening { animation: none; }
 }
+
+/* ── Chat de equipo ───────────────────────────────────────────────────────
+   El hilo cuelga del galpón, no de una pareja: lo que se habla ahí lo lee
+   quien entra en el turno siguiente. */
+
+.comunicacion-cargando {
+  padding: 1.4rem 0;
+  color: var(--text3, #6d7f76);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.comunicacion-hilos { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+
+.comunicacion-hilo {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.8rem 0.4rem;
+  border: 0;
+  border-bottom: 1px solid rgba(16, 44, 35, 0.07);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.comunicacion-hilo:hover { background: rgba(0, 91, 72, 0.05); }
+.comunicacion-hilo:focus-visible { outline: 2px solid var(--avisens-green); outline-offset: -2px; }
+
+.comunicacion-hilo__ident { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+.comunicacion-hilo__ident strong { color: var(--dash-ink, #0a1a14); font-size: 0.9rem; }
+
+.comunicacion-hilo__ultimo {
+  overflow: hidden;
+  color: var(--text3, #6d7f76);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comunicacion-hilo__badge {
+  min-width: 20px;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  color: var(--avisens-deep);
+  background: var(--avisens-yellow);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.comunicacion-equipo { display: flex; height: 100%; flex-direction: column; gap: 0.7rem; }
+
+.comunicacion-equipo__head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(16, 44, 35, 0.08);
+}
+
+.comunicacion-equipo__head strong { color: var(--dash-ink, #0a1a14); font-size: 0.92rem; }
+
+.comunicacion-equipo__volver {
+  padding: 0.25rem 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  color: var(--avisens-deep);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.comunicacion-equipo__volver:hover { background: rgba(0, 91, 72, 0.08); }
+
+.comunicacion-equipo__mensajes {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.comunicacion-msg {
+  max-width: 84%;
+  padding: 0.5rem 0.7rem;
+  border-radius: 14px 14px 14px 4px;
+  background: rgba(16, 44, 35, 0.05);
+}
+
+/* Los propios van a la derecha y en verde: es lo que deja leer de un vistazo
+   quién habló, sin repetir el nombre en cada burbuja. */
+.comunicacion-msg.es-propio {
+  align-self: flex-end;
+  border-radius: 14px 14px 4px 14px;
+  background: rgba(71, 187, 75, 0.16);
+}
+
+.comunicacion-msg__autor {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--avisens-deep);
+  font-size: 0.71rem;
+  font-weight: 800;
+}
+
+.comunicacion-msg__texto {
+  margin: 0;
+  color: var(--dash-ink, #0a1a14);
+  font-size: 0.86rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.comunicacion-msg__pie {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 2px;
+  color: var(--text4, #9aa8a2);
+  font-size: 0.68rem;
+}
+
+.comunicacion-msg__borrar {
+  border: 0;
+  color: var(--text4, #9aa8a2);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  opacity: 0;
+  transition: opacity 140ms ease, color 140ms ease;
+}
+
+.comunicacion-msg:hover .comunicacion-msg__borrar { opacity: 1; }
+.comunicacion-msg__borrar:focus-visible { opacity: 1; outline: 2px solid var(--avisens-green); }
+.comunicacion-msg__borrar:hover { color: #b93300; }
+
+@media (prefers-reduced-motion: reduce) {
+  .comunicacion-msg__borrar { transition: none; }
+}

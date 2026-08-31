@@ -107,7 +107,7 @@ function ComunicacionPanel({ abierto, pestanaInicial, galponId, galponNombre, on
         </div>
 
         <div className="comunicacion-panel__content" id={`comunicacion-panel-${pestana}`} role="tabpanel" aria-labelledby={`comunicacion-tab-${pestana}`}>
-          {pestana === 'equipo' && <PanelEquipo />}
+          {pestana === 'equipo' && <PanelEquipo galponId={galponId} galponNombre={galponNombre} />}
           {pestana === 'ia' && <PanelIa puedeUsarCopiloto={['Administrador', 'Propietario'].includes(getRolVista() ?? '')} />}
           {pestana === 'voz' && <PanelVoz galponId={galponId} galponNombre={galponNombre} />}
         </div>
