@@ -1,0 +1,15 @@
+meta {
+  name: [Todos]  Marcar como leídos los mensajes del galpón
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/v1/mensajes-equipo/galpon/1/leidos
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

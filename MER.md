@@ -1,13 +1,14 @@
 # MER Avisens v1.4 — Normalizado
 
-> Modelo Entidad-Relación de referencia del proyecto. **60 entidades** (50 base +
-> 10 de la capa de inteligencia). Notación de [Eraser](https://eraser.io). Esta es
+> Modelo Entidad-Relación de referencia del proyecto. **62 entidades** (50 base,
+> 10 de la capa de inteligencia y 2 técnicas de operación). Notación de
+> [Eraser](https://eraser.io). Esta es
 > una vista documental del modelo. La fuente de verdad ejecutable es
 > `prisma/schema.prisma` junto con `prisma/migrations`; este documento debe
 > actualizarse en el mismo cambio que modifique cualquiera de los dos.
 >
-> ## MODELO EN EL SCHEMA (2026-08-25)
-> Las **60 tablas** están definidas en `prisma/schema.prisma`. Las entidades de
+> ## MODELO EN EL SCHEMA (2026-08-30)
+> Las **62 tablas** están definidas en `prisma/schema.prisma`. Las entidades de
 > roadmap permanecen identificadas como tales: estar modeladas no significa que
 > su flujo funcional ya esté implementado.
 >
@@ -367,6 +368,35 @@ mediciones [icon: activity, color: green] {
   fecha_hora datetime
   valor number
   calidad string
+}
+
+// Cada entrega de lecturas de un nodo IoT queda registrada para deduplicar
+// reintentos, auditar la recepción y conservar códigos desconocidos.
+ingestas_dispositivos [icon: upload-cloud, color: green] {
+  id bigint pk
+  dispositivo_id integer fk
+  clave_idempotencia string
+  fecha_dispositivo datetime
+  fecha_recepcion datetime
+  ip_origen string
+  cantidad_recibida integer
+  cantidad_registrada integer
+  codigos_ignorados string[]
+}
+
+// Bloqueo distribuido y bitácora de trabajos programados. Evita que dos
+// réplicas de la API ejecuten la misma ventana de trabajo al mismo tiempo.
+ejecuciones_jobs [icon: timer, color: green] {
+  id bigint pk
+  nombre string
+  clave_ventana string
+  propietario string
+  estado string
+  intentos integer
+  iniciada_en datetime
+  expira_en datetime
+  finalizada_en datetime
+  error string
 }
 
 umbrales_ambientales [icon: sliders, color: green] {
@@ -827,6 +857,15 @@ recomendaciones [icon: check-circle, color: teal] {
   fecha_resolucion datetime
 }
 
+mensajes_equipo [icon: message-square, color: indigo] {
+  id integer pk
+  galpon_id integer fk
+  emisor_id integer fk
+  contenido string
+  fecha_envio datetime
+  fecha_lectura datetime
+}
+
 conversaciones_ia [icon: message-circle, color: teal] {
   id integer pk
   usuario_id integer fk
@@ -945,6 +984,7 @@ accionamientos_equipos.alerta_id > alertas.id
 accionamientos_equipos.usuario_id > usuarios.id
 dispositivos.galpon_id > galpones.id
 sensores.dispositivo_id > dispositivos.id
+ingestas_dispositivos.dispositivo_id > dispositivos.id
 
 // EP-05 Alertas
 politicas_alerta.granja_id > granjas.id
@@ -1012,6 +1052,8 @@ recomendaciones.lote_id > lotes.id
 recomendaciones.galpon_id > galpones.id
 recomendaciones.prediccion_id > predicciones.id
 recomendaciones.usuario_id > usuarios.id
+mensajes_equipo.galpon_id > galpones.id
+mensajes_equipo.emisor_id > usuarios.id
 conversaciones_ia.usuario_id > usuarios.id
 mensajes_ia.conversacion_id > conversaciones_ia.id
 analisis_bioacustico.galpon_id > galpones.id
@@ -1024,6 +1066,6 @@ clima.granja_id > granjas.id
 
 
 // ================================================================
-// FIN — 60 entidades (50 base + 10 capa de inteligencia)
+// FIN — 62 entidades (50 base + 10 capa de inteligencia + 2 técnicas)
 // ================================================================
 ```
