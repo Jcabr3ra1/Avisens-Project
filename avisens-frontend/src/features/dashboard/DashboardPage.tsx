@@ -1,13 +1,22 @@
+import { lazy, Suspense, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getRolVista } from '@shared/api'
+import ComunicacionFab from '@features/comunicacion/components/ComunicacionFab'
+import type { PestanaComunicacion } from '@features/comunicacion/components/ComunicacionPanel'
 import DashboardHeader from './components/DashboardHeader'
+import FranjaAtencion from './components/FranjaAtencion'
+import SelectorGalpones from './components/SelectorGalpones'
 import EstadoGeneral from './components/EstadoGeneral'
 import AccionesRapidas from './components/AccionesRapidas'
 import ResumenOperativo from './components/ResumenOperativo'
 import AlertasPrioritarias from './components/AlertasPrioritarias'
 import ResumenProductivo from './components/ResumenProductivo'
 import EstadoInicial from './components/EstadoInicial'
+import { useAtencion } from './hooks/useAtencion'
 import { useDashboard } from './hooks/useDashboard'
 import './DashboardPage.css'
+
+const ComunicacionPanel = lazy(() => import('@features/comunicacion/components/ComunicacionPanel'))
 
 function DashboardSkeleton() {
   return (
@@ -25,8 +34,22 @@ function DashboardSkeleton() {
 function DashboardPage() {
   const navigate = useNavigate()
   const dashboard = useDashboard()
-  const puedeAdministrar = dashboard.usuario?.rol === 'Propietario'
+  const chipsAtencion = useAtencion({
+    alertas: dashboard.alertas,
+    galponId: dashboard.galponId,
+    loteId: dashboard.lote?.id ?? null,
+  })
+  const rolVista = getRolVista()
+  const puedeAdministrar = ['Administrador', 'Propietario'].includes(rolVista ?? '')
   const nombre = dashboard.usuario?.nombre?.trim().split(/\s+/)[0] || 'equipo'
+  const [busqueda, setBusqueda] = useState('')
+  const [comunicacionAbierta, setComunicacionAbierta] = useState(false)
+  const [pestanaComunicacion, setPestanaComunicacion] = useState<PestanaComunicacion>('equipo')
+
+  const abrirComunicacion = (pestana: PestanaComunicacion) => {
+    setPestanaComunicacion(pestana)
+    setComunicacionAbierta(true)
+  }
 
   if (dashboard.cargando && dashboard.granjas.length === 0) {
     return <DashboardSkeleton />
@@ -52,8 +75,8 @@ function DashboardPage() {
         <EstadoInicial
           granjas={dashboard.granjas.length}
           galpones={dashboard.totalGalpones}
-          puedeAdministrar={puedeAdministrar}
-          onComenzar={() => navigate('/granjas')}
+          rolVista={rolVista}
+          onIrAProduccion={() => navigate('/granjas')}
           onRecargar={dashboard.recargar}
         />
       </div>
@@ -61,7 +84,7 @@ function DashboardPage() {
   }
 
   const rutaEstado = dashboard.estadoGeneral.estado === 'sin_lote'
-    ? '/lotes'
+    ? '/granjas'
     : dashboard.estadoGeneral.estado === 'correcto'
       ? '/monitoreo'
       : '/alertas'
@@ -71,15 +94,20 @@ function DashboardPage() {
       <DashboardHeader
         nombre={nombre}
         granjas={dashboard.granjas}
-        galpones={dashboard.galpones}
         granjaId={dashboard.granjaId}
-        galponId={dashboard.galponId}
         actualizadoEn={dashboard.actualizadoEn}
         cargando={dashboard.cargando}
+        busqueda={busqueda}
         onGranjaChange={dashboard.seleccionarGranja}
-        onGalponChange={dashboard.seleccionarGalpon}
+        onBusquedaChange={setBusqueda}
         onRecargar={dashboard.recargar}
+        onAbrirComunicacion={abrirComunicacion}
+        onIrABitacora={() => navigate('/bitacora')}
+        onIrAAlertas={() => navigate('/alertas')}
+        onIrANotificaciones={() => navigate('/notificaciones')}
       />
+
+      <FranjaAtencion chips={chipsAtencion} />
 
       {dashboard.error && (
         <div className="dashboard-error-banner" role="alert">
@@ -87,6 +115,15 @@ function DashboardPage() {
           <button type="button" onClick={dashboard.recargar}>Reintentar</button>
         </div>
       )}
+
+      <SelectorGalpones
+        galpones={dashboard.galpones}
+        lotes={dashboard.lotes}
+        alertasPorGalpon={dashboard.alertasPorGalpon}
+        galponId={dashboard.galponId}
+        busqueda={busqueda}
+        onSeleccionar={dashboard.seleccionarGalpon}
+      />
 
       <EstadoGeneral
         estado={dashboard.estadoGeneral}
@@ -113,6 +150,19 @@ function DashboardPage() {
         tieneLote={dashboard.lote !== null}
         onAbrirBitacora={() => navigate('/bitacora')}
       />
+
+      {comunicacionAbierta && (
+        <Suspense fallback={null}>
+          <ComunicacionPanel
+            abierto={comunicacionAbierta}
+            pestanaInicial={pestanaComunicacion}
+            galponId={dashboard.galponId}
+            galponNombre={dashboard.galpon?.nombre ?? null}
+            onCerrar={() => setComunicacionAbierta(false)}
+          />
+        </Suspense>
+      )}
+      <ComunicacionFab onAbrir={() => abrirComunicacion('equipo')} />
     </div>
   )
 }
