@@ -5,6 +5,7 @@ import ComunicacionFab from '@features/comunicacion/components/ComunicacionFab'
 import type { PestanaComunicacion } from '@features/comunicacion/model/comunicacion'
 import DashboardHeader from './components/DashboardHeader'
 import FranjaAtencion from './components/FranjaAtencion'
+import PanelMetricas from './components/PanelMetricas'
 import SelectorGalpones from './components/SelectorGalpones'
 import EstadoGeneral from './components/EstadoGeneral'
 import AccionesRapidas from './components/AccionesRapidas'
@@ -12,6 +13,7 @@ import ResumenOperativo from './components/ResumenOperativo'
 import AlertasPrioritarias from './components/AlertasPrioritarias'
 import ResumenProductivo from './components/ResumenProductivo'
 import EstadoInicial from './components/EstadoInicial'
+import { useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { useAtencion } from './hooks/useAtencion'
 import { useDashboard } from './hooks/useDashboard'
 import './DashboardPage.css'
@@ -34,6 +36,9 @@ function DashboardSkeleton() {
 function DashboardPage() {
   const navigate = useNavigate()
   const dashboard = useDashboard()
+  const { galpones: galponesMonitoreo } = useMonitoreoAmbiental()
+  const sensoresDelGalpon =
+    galponesMonitoreo.find((item) => item.id === dashboard.galponId)?.sensores ?? []
   const chipsAtencion = useAtencion({
     alertas: dashboard.alertas,
     galponId: dashboard.galponId,
@@ -132,6 +137,8 @@ function DashboardPage() {
           ? undefined
           : () => navigate(rutaEstado)}
       />
+
+      <PanelMetricas sensores={sensoresDelGalpon} />
 
       <ResumenOperativo
         galpon={dashboard.galpon}
