@@ -45,9 +45,9 @@ export type NavSection = {
 // mueve cada rol entre los módulos del sistema.
 // ─── Navegación por rol ───────────────────────────────────────────────────────
 //
-// ADMINISTRADOR (admin@avisens.com) — administra el sistema Avisens (la empresa):
-//   Ve: Panel Admin, CRM de prospectos, Equipos/Infraestructura, Granjas, Personas.
-//   NO ve: módulos operativos de granja (sensores, bitácora, alertas, finanzas, bodega).
+// ADMINISTRADOR (admin@avisens.com) — superusuario de Avisens:
+//   Ve y gestiona todos los módulos transversales y operativos, excepto Mi jornada,
+//   que representa la jornada personal de un Operario asignado a un galpón.
 //
 // PROPIETARIO (dueño@avisens.com) — dueño de la granja:
 //   Ve: Mi galpón, Sensores, Bitácora, Alertas, Finanzas, Bodega, Equipos, Granjas, Personas.
@@ -63,19 +63,19 @@ export type NavSection = {
 // sacar un ítem del sidebar la dejaba abierta para todos los roles.
 const PERMISOS_RUTA: Record<string, string[]> = {
   '/admin':                   [ROL_ADMIN],
-  '/dashboard':               [ROL_PROPIETARIO, ROL_OPERARIO],
+  '/dashboard':               [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/mi-jornada':              [ROL_OPERARIO],
   '/granjas':                 [ROL_ADMIN, ROL_PROPIETARIO],
   '/galpones':                [ROL_ADMIN, ROL_PROPIETARIO],
   '/lotes':                   [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
-  '/bitacora':                [ROL_PROPIETARIO, ROL_OPERARIO],
+  '/bitacora':                [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/consumos-diarios':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
-  '/monitoreo':               [ROL_PROPIETARIO, ROL_OPERARIO],
+  '/monitoreo':               [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/sensores':                [ROL_ADMIN, ROL_PROPIETARIO],
   '/alertas':                 [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/notificaciones':          [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
-  '/inventario':              [ROL_PROPIETARIO],
-  '/finanzas':                [ROL_PROPIETARIO],
+  '/inventario':              [ROL_ADMIN, ROL_PROPIETARIO],
+  '/finanzas':                [ROL_ADMIN, ROL_PROPIETARIO],
   '/usuarios':                [ROL_ADMIN, ROL_PROPIETARIO],
   '/proveedores':             [ROL_ADMIN],
   '/ordenes-compra':          [ROL_ADMIN, ROL_PROPIETARIO],
@@ -191,6 +191,12 @@ export function puedeAcceder(path: string, rol: string | null): boolean {
   const permitidos = PERMISOS_RUTA[path]
   if (!permitidos) return false
   return rol !== null && permitidos.includes(rol)
+}
+
+export function rutaInicioPorRol(rol: string | null): string {
+  if (rol === ROL_ADMIN) return '/admin'
+  if (rol === ROL_OPERARIO) return '/mi-jornada'
+  return '/dashboard'
 }
 
 export function itemVisible(item: NavItem, rol: string | null): boolean {
