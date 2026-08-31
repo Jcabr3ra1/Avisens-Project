@@ -7,12 +7,7 @@
 
 import { useState, useEffect, type FormEvent } from 'react'
 import { isAxiosError } from 'axios'
-import {
-  listarInsumos,
-  registrarMovimientoInsumo,
-  type Insumo,
-  type TipoMovimientoInventario,
-} from '@shared/api'
+import { listarInsumos, registrarMovimientoInsumo, type Insumo, type TipoMovimientoInventario } from '@features/inventario/api/insumos'
 import { listarProveedores, type Proveedor } from '@features/proveedores/api/proveedores'
 import { mensajeDeError } from '@shared/utils/errores'
 import { IcBox, IcUsers, IcRefresh } from '@shared/ui/icons/icons'

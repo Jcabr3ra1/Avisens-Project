@@ -1,6 +1,6 @@
 import { useEffect, useRef, type FormEvent } from 'react'
 import type { Lote } from '@features/lotes/api/lotes'
-import type { TipoAlimento } from '@shared/api/tipos-alimento'
+import type { TipoAlimento } from '@features/consumos-diarios/api/tipos-alimento'
 import type { FormularioConsumo as DatosConsumo } from '../model/consumoDiario'
 
 type Props = { form: DatosConsumo; lotes: Lote[]; tiposAlimento: TipoAlimento[]; modoEdicion: boolean; guardando: boolean; error: string; onCambiar: <K extends keyof DatosConsumo>(campo: K, valor: DatosConsumo[K]) => void; onGuardar: (evento: FormEvent<HTMLFormElement>) => void; onCerrar: () => void }

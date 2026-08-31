@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
-import { listarTiposAlimento, type TipoAlimento } from '@shared/api/tipos-alimento'
+import { listarTiposAlimento, type TipoAlimento } from '@features/consumos-diarios/api/tipos-alimento'
 import { mensajeDeError } from '@shared/utils/errores'
 import { actualizarConsumoDiario, crearConsumoDiario, eliminarConsumoDiario, listarConsumosDiarios } from '../api/consumosDiarios'
 import type { ConsumoDiario, CrearConsumoDiarioPayload } from '../model/consumoDiario'

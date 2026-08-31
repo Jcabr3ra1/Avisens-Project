@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { getRol } from '@shared/api'
-import type { Notificacion } from '@shared/api'
+import type { Notificacion } from '@features/notificaciones/api/notificaciones'
 import { IcBell, IcCheck } from '@shared/ui/icons/icons'
 import { useNotificaciones } from './hooks/useNotificaciones'
 import './NotificacionesPage.css'

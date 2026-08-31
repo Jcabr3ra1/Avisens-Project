@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
-import { crearOrganizacion, getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
+import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
+import { crearOrganizacion } from '@features/organizaciones/api/organizaciones'
 import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
 import RecuperacionesDeUsuario from '@features/recuperaciones-password/components/RecuperacionesDeUsuario'
 import BarraUsuarios from './components/BarraUsuarios'

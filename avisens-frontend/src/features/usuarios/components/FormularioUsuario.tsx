@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import type { CrearUsuarioPayload, Organizacion, RolResumen } from '@shared/api'
+import type { CrearUsuarioPayload, RolResumen } from '@shared/api'
+import type { Organizacion } from '@features/organizaciones/api/organizaciones'
 import { IcEye, IcEyeOff } from '@shared/ui/icons/icons'
 
 type Props = {

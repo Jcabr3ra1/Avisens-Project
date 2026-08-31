@@ -6,7 +6,7 @@ import {
   type PreguntaChatbot,
   type RespuestaChatbot,
   type RutaChat,
-} from '@shared/api/chatbot'
+} from '@features/landing/api/chatbot'
 import { IcAlert, IcRefresh, IcSend } from '@shared/ui/icons/icons'
 import Ic from '@shared/ui/Ic/Ic'
 import './FloatChat.css'

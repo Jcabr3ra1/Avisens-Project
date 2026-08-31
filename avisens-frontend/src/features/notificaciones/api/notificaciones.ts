@@ -1,5 +1,5 @@
-import { api } from './client'
-import type { PaginatedResponse } from './types'
+import { api } from '@shared/api/client'
+import type { PaginatedResponse } from '@shared/api/types'
 
 export interface Notificacion {
   id: number

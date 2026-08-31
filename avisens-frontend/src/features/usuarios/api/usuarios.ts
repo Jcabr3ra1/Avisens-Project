@@ -1,11 +1,11 @@
-import { api } from './client'
+import { api } from '@shared/api/client'
 import type {
   ActualizarUsuarioPayload,
   CrearUsuarioPayload,
   PaginatedResponse,
   RolResumen,
   Usuario,
-} from './types'
+} from '@shared/api/types'
 
 let solicitudListado: Promise<Usuario[]> | null = null
 

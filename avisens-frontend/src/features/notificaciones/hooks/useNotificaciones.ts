@@ -1,13 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  contarNotificacionesNoLeidas,
-  eliminarNotificacion,
-  listarNotificaciones,
-  marcarNotificacionLeida,
-  marcarTodasLeidas,
-  type Notificacion,
-} from '@shared/api'
-
+import { contarNotificacionesNoLeidas, eliminarNotificacion, listarNotificaciones, marcarNotificacionLeida, marcarTodasLeidas, type Notificacion } from '@features/notificaciones/api/notificaciones'
 const INTERVALO_SONDEO_MS = 30_000
 
 export function useConteoNotificaciones() {

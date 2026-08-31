@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { listarInsumos, type Insumo } from '@shared/api'
+import { listarInsumos, type Insumo } from '@features/inventario/api/insumos'
 import { mensajeDeError } from '@shared/utils/errores'
 import {
   agregarRepuesto,
