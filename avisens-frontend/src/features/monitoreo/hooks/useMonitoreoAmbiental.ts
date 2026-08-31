@@ -55,6 +55,10 @@ export type SensorVista = {
   maxUmbral: number | null
   estado: EstadoSensorVista
   ultimaLecturaTs: number | null
+  // Posición dentro del galpón, en metros. Puede faltar: no todos los
+  // sensores se registran con coordenadas.
+  x: number | null
+  y: number | null
 }
 
 export type GalponMonitoreoVista = {
@@ -62,6 +66,8 @@ export type GalponMonitoreoVista = {
   codigo: string
   nombre: string
   granjaId: number
+  anchoMetros: number | null
+  largoMetros: number | null
   loteActivo: Lote | null
   diaVida: number
   sensores: SensorVista[]
@@ -141,6 +147,8 @@ function construirVista(
           maxUmbral: umbral?.valor_maximo ?? null,
           estado,
           ultimaLecturaTs: medicion ? new Date(medicion.fecha_hora).getTime() : null,
+          x: s.coordenada_x,
+          y: s.coordenada_y,
         }
       })
 
@@ -149,6 +157,8 @@ function construirVista(
       codigo: g.codigo,
       nombre: g.nombre,
       granjaId: g.granja.id,
+      anchoMetros: g.ancho_metros,
+      largoMetros: g.largo_metros,
       loteActivo,
       diaVida,
       sensores: sensoresGalpon,

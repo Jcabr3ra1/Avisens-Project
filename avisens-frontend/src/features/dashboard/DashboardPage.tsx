@@ -7,6 +7,7 @@ import DashboardHeader from './components/DashboardHeader'
 import FranjaAtencion from './components/FranjaAtencion'
 import EstadoLote from './components/EstadoLote'
 import PanelMetricas from './components/PanelMetricas'
+import PlanoGalpon from './components/PlanoGalpon'
 import SelectorGalpones from './components/SelectorGalpones'
 import EstadoGeneral from './components/EstadoGeneral'
 import AccionesRapidas from './components/AccionesRapidas'
@@ -38,8 +39,9 @@ function DashboardPage() {
   const navigate = useNavigate()
   const dashboard = useDashboard()
   const { galpones: galponesMonitoreo } = useMonitoreoAmbiental()
-  const sensoresDelGalpon =
-    galponesMonitoreo.find((item) => item.id === dashboard.galponId)?.sensores ?? []
+  const galponMonitoreo =
+    galponesMonitoreo.find((item) => item.id === dashboard.galponId) ?? null
+  const sensoresDelGalpon = galponMonitoreo?.sensores ?? []
   const { indicadores, comparacion, cargando: cargandoLote } = useIndicadoresLote(
     dashboard.lote?.id ?? null,
   )
@@ -157,14 +159,17 @@ function DashboardPage() {
         <AlertasPrioritarias alertas={dashboard.alertas} onVerTodas={() => navigate('/alertas')} />
       </div>
 
-      <EstadoLote
+      <div className="dash-lote-plano">
+        <EstadoLote
         lote={dashboard.lote}
         indicadores={indicadores}
         comparacion={comparacion}
         diaLote={dashboard.diaLote}
         cargando={cargandoLote}
         onAbrirBitacora={() => navigate('/bitacora')}
-      />
+        />
+        <PlanoGalpon galpon={galponMonitoreo} />
+      </div>
 
       {comunicacionAbierta && (
         <Suspense fallback={null}>

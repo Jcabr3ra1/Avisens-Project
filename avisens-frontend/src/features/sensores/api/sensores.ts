@@ -14,11 +14,11 @@ export interface Sensor {
   unidad_medida: string
   modelo: string | null
   fabricante: string | null
-  // Coordenadas y alturas son Decimal en el MER; Prisma las serializa como
-  // string. No las mostramos en esta pantalla de prueba, pero las tipamos.
-  coordenada_x: string | null
-  coordenada_y: string | null
-  altura_metros: string | null
+  // Float en el esquema, no Decimal: llegan como número. Ubican al sensor
+  // dentro del galpón, y con eso se dibuja el plano.
+  coordenada_x: number | null
+  coordenada_y: number | null
+  altura_metros: number | null
   fecha_instalacion: string | null
   ultima_calibracion: string | null
   proxima_calibracion: string | null
