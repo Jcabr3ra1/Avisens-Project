@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
 import DispositivosDeGalpon from '@features/dispositivos/components/DispositivosDeGalpon'
 import EquiposDeGalpon from '@features/equipos/components/EquiposDeGalpon'
@@ -15,16 +16,34 @@ import { calcularResumenGalpones } from './model/galponVista'
 import './GalponesPage.css'
 
 function GalponesPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const gestion = useGalpones()
-  const filtro = useFiltroGalpones(gestion.galpones)
+  const granjaParam = searchParams.get('granja')
+  const granjaId = Number(granjaParam)
+  const tieneContextoDeGranja = granjaParam !== null && Number.isInteger(granjaId)
+  const granjaSeleccionada = tieneContextoDeGranja
+    ? gestion.granjas.find((granja) => granja.id === granjaId)
+    : undefined
+  const granjasDisponibles = useMemo(() => {
+    if (granjaSeleccionada) return [granjaSeleccionada]
+    return tieneContextoDeGranja ? [] : gestion.granjas
+  }, [gestion.granjas, granjaSeleccionada, tieneContextoDeGranja])
+  const galponesDeGranja = useMemo(() => {
+    if (granjaSeleccionada) {
+      return gestion.galpones.filter((galpon) => galpon.granja.id === granjaSeleccionada.id)
+    }
+    return tieneContextoDeGranja ? [] : gestion.galpones
+  }, [gestion.galpones, granjaSeleccionada, tieneContextoDeGranja])
+  const filtro = useFiltroGalpones(galponesDeGranja)
   const formulario = useFormularioGalpon(gestion.guardar)
-  const resumen = useMemo(() => calcularResumenGalpones(gestion.galpones), [gestion.galpones])
+  const resumen = useMemo(() => calcularResumenGalpones(galponesDeGranja), [galponesDeGranja])
   const [galponSensores, setGalponSensores] = useState<Galpon | null>(null)
   const [galponDispositivos, setGalponDispositivos] = useState<Galpon | null>(null)
   const [galponEquipos, setGalponEquipos] = useState<Galpon | null>(null)
 
   function abrirCrear() {
-    const granjaId = gestion.granjas[0]?.id
+    const granjaId = granjasDisponibles[0]?.id
     if (granjaId) formulario.abrirCrear(granjaId)
   }
 
@@ -39,10 +58,17 @@ function GalponesPage() {
     <div className="page-container galpones-page">
       <header className="galpones-header">
         <div>
-          <h1>Galpones</h1>
-          <p>Gestiona la capacidad y las características físicas de cada galpón.</p>
+          <h1>{granjaSeleccionada ? `Galpones · ${granjaSeleccionada.nombre}` : 'Galpones'}</h1>
+          <p>{granjaSeleccionada ? 'Gestiona los espacios físicos de esta granja.' : 'Gestiona la capacidad y las características físicas de cada galpón.'}</p>
         </div>
-        <button type="button" className="galpones-btn-primary" onClick={abrirCrear} disabled={gestion.cargando || gestion.granjas.length === 0}>+ Nuevo galpón</button>
+        <div className="galpones-header-acciones">
+          {granjaSeleccionada && (
+            <button type="button" className="galpones-btn-secondary" onClick={() => navigate('/granjas')}>
+              Volver a granjas
+            </button>
+          )}
+          <button type="button" className="galpones-btn-primary" onClick={abrirCrear} disabled={gestion.cargando || granjasDisponibles.length === 0}>+ Nuevo galpón</button>
+        </div>
       </header>
 
       <ResumenGalpones resumen={resumen} />
@@ -54,17 +80,17 @@ function GalponesPage() {
         </div>
       )}
 
-      {!gestion.cargando && gestion.granjas.length === 0 && <p className="galpones-aviso">Necesitas una granja activa antes de registrar galpones.</p>}
+      {!gestion.cargando && granjasDisponibles.length === 0 && <p className="galpones-aviso">Necesitas una granja activa antes de registrar galpones.</p>}
 
       <section className="galpones-card" aria-label="Listado de galpones">
-        {gestion.galpones.length > 0 && (
-          <BarraGalpones busqueda={filtro.busqueda} estado={filtro.estado} visibles={filtro.visibles.length} total={gestion.galpones.length} onBuscar={filtro.setBusqueda} onCambiarEstado={filtro.setEstado} />
+        {galponesDeGranja.length > 0 && (
+          <BarraGalpones busqueda={filtro.busqueda} estado={filtro.estado} visibles={filtro.visibles.length} total={galponesDeGranja.length} onBuscar={filtro.setBusqueda} onCambiarEstado={filtro.setEstado} />
         )}
-        <TablaGalpones galpones={filtro.visibles} cargando={gestion.cargando} onEditar={formulario.abrirEditar} onAlternar={(galpon) => void gestion.alternarActivo(galpon)} onEliminar={confirmarEliminacion} onVerSensores={setGalponSensores} onVerDispositivos={setGalponDispositivos} onVerEquipos={setGalponEquipos} />
+        <TablaGalpones galpones={filtro.visibles} cargando={gestion.cargando} onEditar={formulario.abrirEditar} onAlternar={(galpon) => void gestion.alternarActivo(galpon)} onEliminar={confirmarEliminacion} onVerLotes={(galpon) => navigate(`/lotes?galpon=${galpon.id}`)} onVerSensores={setGalponSensores} onVerDispositivos={setGalponDispositivos} onVerEquipos={setGalponEquipos} />
       </section>
 
       {formulario.abierto && (
-        <FormularioGalpon form={formulario.form} modoEdicion={formulario.modoEdicion} granjas={gestion.granjas} guardando={formulario.guardando} error={formulario.error} onCambiar={formulario.cambiar} onGuardar={formulario.guardar} onCerrar={formulario.cerrar} />
+        <FormularioGalpon form={formulario.form} modoEdicion={formulario.modoEdicion} granjas={granjasDisponibles} guardando={formulario.guardando} error={formulario.error} onCambiar={formulario.cambiar} onGuardar={formulario.guardar} onCerrar={formulario.cerrar} />
       )}
 
       {galponEquipos && (

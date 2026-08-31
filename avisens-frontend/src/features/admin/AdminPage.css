@@ -13,6 +13,7 @@
     0 16px 44px rgba(0, 46, 36, 0.26),
     0 0 0 1px rgba(71, 187, 75, 0.16);
 }
+
 .admin-hero::after {
   content: '';
   position: absolute;
@@ -178,8 +179,7 @@
 }
 .admin-card-link:hover { background: rgba(16,185,129,0.09); }
 .admin-card-link:focus-visible,
-.admin-accion:focus-visible,
-.admin-control-aviso:focus-visible {
+.admin-accion:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--green) 40%, transparent);
   outline-offset: 2px;
 }
@@ -288,69 +288,6 @@
 .admin-feed-meta   { display: block; font-size: 0.73rem; color: var(--text3); }
 .admin-feed-hace   { font-size: 0.71rem; color: var(--text3); white-space: nowrap; flex-shrink: 0; }
 
-.admin-control-granjas { margin-bottom: 1.4rem; }
-.admin-control-lista { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
-.admin-control-fila {
-  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  width: 100%; padding: 0.8rem 0.6rem; border: 0; border-radius: 12px;
-  background: transparent; cursor: pointer; text-align: left; font: inherit;
-  transition: background 150ms ease;
-}
-.admin-control-fila:hover { background: rgba(0,91,72,0.06); }
-.admin-control-fila:focus-visible {
-  outline: 2px solid var(--avisens-green); outline-offset: -2px;
-}
-.admin-control-lista > li { border-bottom: 1px solid rgba(16,44,35,0.07); }
-.admin-control-lista > li:last-child { border-bottom: none; }
-.admin-control-flecha { color: var(--text4); flex: 0 0 auto; }
-.admin-control-fila:hover .admin-control-flecha { color: var(--avisens-deep); }
-
-/* ─── Contenido de la pantalla hija (granjas del propietario) ─── */
-.admin-hija-vacio { margin: 0; padding: 1.6rem 0; color: var(--text3); font-size: 0.86rem; text-align: center; }
-.admin-hija-lista { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
-.admin-hija-granja {
-  display: flex; align-items: center; gap: 0.85rem; width: 100%;
-  padding: 0.85rem 0.9rem; border: 1px solid rgba(16,44,35,0.09); border-radius: 14px;
-  background: #fff; cursor: pointer; text-align: left; font: inherit;
-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
-}
-.admin-hija-granja:hover {
-  border-color: rgba(0,91,72,0.28);
-  box-shadow: 0 6px 18px rgba(0,46,36,0.08);
-  transform: translateY(-1px);
-}
-.admin-hija-granja:focus-visible { outline: 2px solid var(--avisens-green); outline-offset: 2px; }
-.admin-hija-granja-icono {
-  display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center;
-  border-radius: 11px; color: var(--avisens-deep); background: rgba(71,187,75,0.14);
-}
-.admin-hija-granja-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.admin-hija-granja-texto strong {
-  overflow: hidden; color: var(--dash-ink); font-size: 0.9rem; font-weight: 700;
-  text-overflow: ellipsis; white-space: nowrap;
-}
-.admin-hija-granja-texto span {
-  display: inline-flex; align-items: center; gap: 4px;
-  color: var(--text3); font-size: 0.78rem;
-}
-.admin-hija-estado {
-  flex: 0 0 auto; padding: 3px 9px; border-radius: 999px;
-  color: var(--text3); background: rgba(16,44,35,0.07);
-  font-size: 0.7rem; font-weight: 700;
-}
-.admin-hija-estado.es-activa { color: #0a6b4c; background: rgba(71,187,75,0.16); }
-.admin-hija-flecha { color: var(--text4); flex: 0 0 auto; }
-.admin-control-propietario { color: var(--dash-ink); font-size: 0.88rem; font-weight: 700; }
-.admin-control-datos { color: var(--text3); font-size: 0.8rem; white-space: nowrap; }
-.admin-control-vacio { margin: 0; padding: 1rem 0; color: var(--text3); font-size: 0.85rem; text-align: center; }
-.admin-control-aviso {
-  display: flex; align-items: center; justify-content: center; gap: 0.25rem;
-  width: 100%; min-height: 44px; margin-top: 0.7rem; padding: 0.55rem 0.75rem;
-  color: var(--avisens-orange); background: rgba(232, 66, 0, 0.1); border: 1px solid rgba(232, 66, 0, 0.22);
-  border-radius: 10px; font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer;
-}
-.admin-control-aviso:hover { background: rgba(245,158,11,0.16); }
-
 .admin-acciones {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;
 }
@@ -419,6 +356,4 @@
   .admin-hero-kpis          { grid-template-columns: 1fr 1fr; }
   .admin-act-counters       { grid-template-columns: repeat(2, 1fr); }
   .admin-acciones           { grid-template-columns: 1fr; }
-  .admin-control-fila       { align-items: flex-start; flex-direction: column; gap: 0.25rem; }
-  .admin-control-flecha     { display: none; }
 }

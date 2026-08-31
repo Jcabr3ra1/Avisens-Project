@@ -6,6 +6,7 @@ import { CreateAlertasDto } from './dto/create-alertas.dto';
 import { UpdateAlertasDto } from './dto/update-alertas.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
+import { ROLES } from '../../common/auth/roles';
 import type { Solicitante } from '../../common/auth/acceso';
 import {
   filtroAlertas,
@@ -78,6 +79,153 @@ const ALERTA_SELECT = {
 @Injectable()
 export class AlertasService {
   constructor(private prisma: PrismaService) {}
+
+  async evaluarLectura(sensorId: number, valor: number, fecha = new Date()) {
+    const sensor = await this.prisma.sensor.findUnique({
+      where: { id: sensorId },
+      select: {
+        id: true,
+        tipo: true,
+        galpon_id: true,
+        galpon: {
+          select: {
+            nombre: true,
+            granja: { select: { propietario_id: true } },
+            lotes: {
+              where: { estado: 'activo' },
+              select: { id: true, fecha_ingreso: true },
+              orderBy: { fecha_ingreso: 'desc' },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+    if (!sensor) return null;
+
+    const variable = this.normalizarVariable(sensor.tipo);
+    if (!variable) return null;
+
+    const loteActivo = sensor.galpon.lotes[0] ?? null;
+    const semanaVida = loteActivo
+      ? Math.max(
+          0,
+          Math.floor(
+            (fecha.getTime() - loteActivo.fecha_ingreso.getTime()) /
+              (7 * 24 * 60 * 60 * 1000),
+          ),
+        )
+      : 0;
+    const umbral = await this.prisma.umbralAmbiental.findFirst({
+      where: {
+        galpon_id: sensor.galpon_id,
+        variable,
+        semana_vida: semanaVida,
+        vigente: true,
+      },
+      select: {
+        valor_minimo: true,
+        valor_maximo: true,
+      },
+    });
+    if (!umbral || this.estaEnRango(valor, umbral.valor_minimo, umbral.valor_maximo)) {
+      return null;
+    }
+
+    const existente = await this.prisma.alerta.findFirst({
+      where: {
+        sensor_id: sensor.id,
+        estado: { in: ['abierta', 'en_proceso'] },
+      },
+      select: { id: true },
+    });
+    if (existente) {
+      return this.prisma.alerta.update({
+        where: { id: existente.id },
+        data: { valor_detectado: valor },
+        select: ALERTA_SELECT,
+      });
+    }
+
+    const criticidad = this.calcularCriticidad(
+      valor,
+      umbral.valor_minimo,
+      umbral.valor_maximo,
+    );
+    const alerta = await this.prisma.alerta.create({
+      data: {
+        galpon_id: sensor.galpon_id,
+        lote_id: loteActivo?.id,
+        sensor_id: sensor.id,
+        tipo: sensor.tipo,
+        criticidad,
+        valor_detectado: valor,
+        valor_umbral:
+          valor > umbral.valor_maximo
+            ? umbral.valor_maximo
+            : umbral.valor_minimo,
+        mensaje: `${sensor.tipo} fuera del rango seguro en ${sensor.galpon.nombre}.`,
+      },
+      select: ALERTA_SELECT,
+    });
+    await this.notificarNuevaAlerta(
+      alerta.id,
+      sensor.galpon.granja.propietario_id,
+      sensor.galpon_id,
+      alerta.mensaje ?? 'Hay una alerta por revisar.',
+      criticidad,
+    );
+    return alerta;
+  }
+
+  private normalizarVariable(tipo: string) {
+    const valor = tipo.toLowerCase();
+    if (valor.includes('temp')) return 'temperatura';
+    if (valor.includes('hum')) return 'humedad';
+    if (valor.includes('luz') || valor.includes('lum')) return 'luminosidad';
+    return null;
+  }
+
+  private estaEnRango(valor: number, minimo: number, maximo: number) {
+    return valor >= minimo && valor <= maximo;
+  }
+
+  private calcularCriticidad(valor: number, minimo: number, maximo: number) {
+    const rango = Math.max(maximo - minimo, maximo, 1);
+    const distancia = valor > maximo ? valor - maximo : minimo - valor;
+    return distancia <= rango * 0.15 ? 'media' : 'alta';
+  }
+
+  private async notificarNuevaAlerta(
+    alertaId: number,
+    propietarioId: number,
+    galponId: number,
+    mensaje: string,
+    criticidad: string,
+  ) {
+    const asignaciones = await this.prisma.usuarioGalpon.findMany({
+      where: {
+        galpon_id: galponId,
+        activa: true,
+        usuario: { activo: true, rol: { nombre: ROLES.OPERARIO } },
+      },
+      select: { usuario_id: true },
+    });
+    const destinatarios = new Set([
+      propietarioId,
+      ...asignaciones.map(({ usuario_id }) => usuario_id),
+    ]);
+    await this.prisma.notificacion.createMany({
+      data: [...destinatarios].map((usuario_id) => ({
+        usuario_id,
+        tipo: 'alerta',
+        titulo: criticidad === 'alta' ? 'Alerta crítica' : 'Alerta por revisar',
+        mensaje,
+        referencia_tipo: 'alerta',
+        referencia_id: alertaId,
+      })),
+    });
+  }
 
   // ============================================================
   // VALIDACIONES PRIVADAS

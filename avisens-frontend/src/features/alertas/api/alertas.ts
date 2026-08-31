@@ -164,6 +164,19 @@ export async function escalarAlerta(id: number, usuarioId: number): Promise<Aler
   return data
 }
 
+export interface DestinatarioAlerta {
+  id: number
+  nombre_completo: string
+  activo: boolean
+}
+
+export async function listarDestinatariosAlerta(): Promise<DestinatarioAlerta[]> {
+  const { data } = await api.get<PaginatedResponse<DestinatarioAlerta>>('/usuarios', {
+    params: { page: 1, limit: 100 },
+  })
+  return data.data.filter((usuario) => usuario.activo)
+}
+
 export async function eliminarAlerta(
   id: number,
 ): Promise<{ id: number; eliminado: boolean }> {

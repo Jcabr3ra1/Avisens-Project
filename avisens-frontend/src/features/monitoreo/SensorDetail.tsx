@@ -157,20 +157,21 @@ export function SensorDetail({ sensor, galponNombre, diaVida, onClose }: Props) 
   const panelRef = useRef<HTMLDivElement>(null)
   const [historico, setHistorico] = useState<Medicion[]>([])
   const [cargandoHist, setCargandoHist] = useState(false)
+  const sensorId = sensor?.id
 
   // Trae el histórico real del sensor cada vez que cambia la selección.
   useEffect(() => {
-    if (!sensor) { setHistorico([]); return }
+    if (!sensorId) { setHistorico([]); return }
     let activo = true
     setCargandoHist(true)
-    listarMediciones({ sensor_id: sensor.id, page: 1, limit: 8 })
+    listarMediciones({ sensor_id: sensorId, page: 1, limit: 8 })
       .then((data) => { if (activo) setHistorico(data) })
       .catch((err) => {
         if (activo && !isAxiosError(err)) setHistorico([])
       })
       .finally(() => { if (activo) setCargandoHist(false) })
     return () => { activo = false }
-  }, [sensor?.id])
+  }, [sensorId])
 
   // El backend manda más reciente primero — se invierte para graficar en orden cronológico.
   const lecturas: Lectura[] = useMemo(
@@ -195,8 +196,8 @@ export function SensorDetail({ sensor, galponNombre, diaVida, onClose }: Props) 
     : 0
 
   useEffect(() => {
-    if (sensor) panelRef.current?.focus()
-  }, [sensor?.id])
+    if (sensorId) panelRef.current?.focus()
+  }, [sensorId])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }

@@ -13,8 +13,12 @@ describe('AlertasService', () => {
     galpon: { findFirst: jest.fn(), findUnique: jest.fn() },
     lote: { findUnique: jest.fn() },
     sensor: { findUnique: jest.fn() },
+    umbralAmbiental: { findFirst: jest.fn() },
+    usuarioGalpon: { findMany: jest.fn() },
+    notificacion: { createMany: jest.fn() },
     usuario: { findUnique: jest.fn() },
     alerta: {
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
@@ -163,6 +167,84 @@ describe('AlertasService', () => {
       expect(r).toEqual({ id: 1 });
       expect(prisma.lote.findUnique).toHaveBeenCalled();
       expect(prisma.sensor.findUnique).toHaveBeenCalled();
+    });
+  });
+
+  describe('evaluarLectura', () => {
+    it('crea una alerta y notifica cuando una lectura supera el umbral', async () => {
+      prisma.sensor.findUnique.mockResolvedValue({
+        id: 3,
+        tipo: 'Temperatura',
+        galpon_id: 1,
+        galpon: {
+          nombre: 'Galpón Norte',
+          granja: { propietario_id: 5 },
+          lotes: [],
+        },
+      });
+      prisma.umbralAmbiental.findFirst.mockResolvedValue({
+        valor_minimo: 20,
+        valor_maximo: 30,
+      });
+      prisma.alerta.findFirst.mockResolvedValue(null);
+      prisma.alerta.create.mockResolvedValue({
+        id: 12,
+        mensaje: 'Temperatura fuera del rango seguro en Galpón Norte.',
+      });
+      prisma.usuarioGalpon.findMany.mockResolvedValue([{ usuario_id: 8 }]);
+
+      await service.evaluarLectura(3, 35, new Date('2026-08-30T12:00:00Z'));
+
+      const llamadasCrear = prisma.alerta.create.mock.calls as unknown as Array<[
+        { data: Record<string, unknown> },
+      ]>;
+      const llamadasNotificar =
+        prisma.notificacion.createMany.mock.calls as unknown as Array<[
+          { data: Array<Record<string, unknown>> },
+        ]>;
+      const llamadaCrear = llamadasCrear[0]?.[0];
+      const llamadaNotificar = llamadasNotificar[0]?.[0];
+
+      expect(llamadaCrear?.data).toMatchObject({
+        sensor_id: 3,
+        galpon_id: 1,
+        criticidad: 'alta',
+        valor_detectado: 35,
+      });
+      expect(llamadaNotificar?.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ usuario_id: 5, referencia_id: 12 }),
+          expect.objectContaining({ usuario_id: 8, referencia_id: 12 }),
+        ]),
+      );
+    });
+
+    it('actualiza la alerta abierta sin crear una duplicada', async () => {
+      prisma.sensor.findUnique.mockResolvedValue({
+        id: 3,
+        tipo: 'Temperatura',
+        galpon_id: 1,
+        galpon: {
+          nombre: 'Galpón Norte',
+          granja: { propietario_id: 5 },
+          lotes: [],
+        },
+      });
+      prisma.umbralAmbiental.findFirst.mockResolvedValue({
+        valor_minimo: 20,
+        valor_maximo: 30,
+      });
+      prisma.alerta.findFirst.mockResolvedValue({ id: 12 });
+
+      await service.evaluarLectura(3, 35);
+
+      expect(prisma.alerta.create).not.toHaveBeenCalled();
+      expect(prisma.alerta.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 12 },
+          data: { valor_detectado: 35 },
+        }),
+      );
     });
   });
 

@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import {
   aceptarAlerta as aceptarAlertaApi,
   cerrarAlerta as cerrarAlertaApi,
+  escalarAlerta as escalarAlertaApi,
   listarAlertas,
   type Alerta,
 } from '../api/alertas'
@@ -62,5 +63,20 @@ export function useAlertas() {
     }
   }, [recargar])
 
-  return { alertas, cargando, actualizandoId, error, recargar, aceptar, cerrar }
+  const escalar = useCallback(async (id: number, usuarioId: number) => {
+    setActualizandoId(id)
+    try {
+      await escalarAlertaApi(id, usuarioId)
+      toast.success('Alerta escalada y asignada')
+      await recargar()
+      return true
+    } catch {
+      toast.error('No se pudo escalar la alerta')
+      return false
+    } finally {
+      setActualizandoId(null)
+    }
+  }, [recargar])
+
+  return { alertas, cargando, actualizandoId, error, recargar, aceptar, cerrar, escalar }
 }

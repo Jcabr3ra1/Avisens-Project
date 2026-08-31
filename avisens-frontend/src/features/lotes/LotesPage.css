@@ -1,7 +1,9 @@
 .lotes-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
 .lotes-header h1 { margin: 0; color: var(--dash-ink); font-size: 1.75rem; }
 .lotes-header p { margin: 0.25rem 0 0; color: var(--text3); font-size: 0.88rem; }
+.lotes-header-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; }
 .lotes-btn-primary { min-height: 42px; padding: 0.6rem 1rem; border: none; border-radius: 10px; background: var(--green-d); color: #fff; font-weight: 700; cursor: pointer; }
+.lotes-btn-secondary { min-height: 42px; padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--green-d); font-weight: 700; cursor: pointer; }
 .lotes-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 .lotes-resumen { display: grid; grid-template-columns: repeat(5, minmax(110px, 1fr)); gap: 0.8rem; margin-bottom: 1.2rem; }
 .lotes-stat { display: flex; flex-direction: column; gap: 0.2rem; padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
@@ -42,5 +44,5 @@
 .lotes-form-adicional { display: flex; flex-direction: column; gap: 0.9rem; padding: 0.9rem; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--bg) 70%, var(--card)); }
 .lotes-form-error { margin: 0; color: var(--red); }
 .lotes-form-acciones { display: flex; justify-content: flex-end; gap: 0.6rem; }
-.lotes-btn-primary:focus-visible, .lotes-acciones button:focus-visible, .lotes-form-desplegar:focus-visible, .lotes-form-acciones button:focus-visible, .lotes-barra input:focus-visible, .lotes-barra select:focus-visible, .lotes-form-fila input:focus-visible, .lotes-form-fila select:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-@media (max-width: 760px) { .lotes-header { flex-direction: column; } .lotes-resumen { grid-template-columns: repeat(2, 1fr); } .lotes-form-fila { grid-template-columns: 1fr; } .lotes-barra { align-items: stretch; flex-direction: column; } }
+.lotes-btn-primary:focus-visible, .lotes-btn-secondary:focus-visible, .lotes-acciones button:focus-visible, .lotes-form-desplegar:focus-visible, .lotes-form-acciones button:focus-visible, .lotes-barra input:focus-visible, .lotes-barra select:focus-visible, .lotes-form-fila input:focus-visible, .lotes-form-fila select:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+@media (max-width: 760px) { .lotes-header { flex-direction: column; } .lotes-header-acciones { justify-content: flex-start; } .lotes-resumen { grid-template-columns: repeat(2, 1fr); } .lotes-form-fila { grid-template-columns: 1fr; } .lotes-barra { align-items: stretch; flex-direction: column; } }

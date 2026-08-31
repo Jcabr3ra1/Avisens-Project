@@ -1,7 +1,9 @@
 .galpones-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
 .galpones-header h1 { margin: 0; color: var(--dash-ink); font-size: 1.75rem; }
 .galpones-header p { margin: 0.25rem 0 0; color: var(--text3); font-size: 0.88rem; }
+.galpones-header-acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; }
 .galpones-btn-primary { min-height: 42px; padding: 0.6rem 1rem; border: none; border-radius: 10px; background: var(--green-d); color: #fff; font-weight: 700; cursor: pointer; }
+.galpones-btn-secondary { min-height: 42px; padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--green-d); font-weight: 700; cursor: pointer; }
 .galpones-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 .galpones-resumen { display: grid; grid-template-columns: repeat(4, minmax(110px, 1fr)); gap: 0.8rem; margin-bottom: 1.2rem; }
 .galpones-stat { display: flex; flex-direction: column; gap: 0.2rem; padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
@@ -41,5 +43,5 @@
 .galpones-form-adicional { display: flex; flex-direction: column; gap: 0.9rem; padding: 0.9rem; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--bg) 70%, var(--card)); }
 .galpones-form-error { margin: 0; color: var(--red); }
 .galpones-form-acciones { display: flex; justify-content: flex-end; gap: 0.6rem; }
-.galpones-btn-primary:focus-visible, .galpones-acciones button:focus-visible, .galpones-form-desplegar:focus-visible, .galpones-form-acciones button:focus-visible, .galpones-barra input:focus-visible, .galpones-barra select:focus-visible, .galpones-form-fila input:focus-visible, .galpones-form-fila select:focus-visible, .galpones-form-ancho input:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-@media (max-width: 760px) { .galpones-header { flex-direction: column; } .galpones-resumen { grid-template-columns: repeat(2, 1fr); } .galpones-form-fila { grid-template-columns: 1fr; } .galpones-barra { align-items: stretch; flex-direction: column; } }
+.galpones-btn-primary:focus-visible, .galpones-btn-secondary:focus-visible, .galpones-acciones button:focus-visible, .galpones-form-desplegar:focus-visible, .galpones-form-acciones button:focus-visible, .galpones-barra input:focus-visible, .galpones-barra select:focus-visible, .galpones-form-fila input:focus-visible, .galpones-form-fila select:focus-visible, .galpones-form-ancho input:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+@media (max-width: 760px) { .galpones-header { flex-direction: column; } .galpones-header-acciones { justify-content: flex-start; } .galpones-resumen { grid-template-columns: repeat(2, 1fr); } .galpones-form-fila { grid-template-columns: 1fr; } .galpones-barra { align-items: stretch; flex-direction: column; } }

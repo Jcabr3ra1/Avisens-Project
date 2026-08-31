@@ -1,3 +1,4 @@
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { Lote } from './api/lotes'
 import BarraLotes from './components/BarraLotes'
 import FormularioLote from './components/FormularioLote'
@@ -10,14 +11,32 @@ import { useResumenLotes } from './hooks/useResumenLotes'
 import './LotesPage.css'
 
 function LotesPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const gestion = useLotes()
-  const filtro = useFiltroLotes(gestion.lotes)
-  const resumen = useResumenLotes(gestion.lotes)
+  const galponParam = searchParams.get('galpon')
+  const galponId = Number(galponParam)
+  const tieneContextoDeGalpon = galponParam !== null && Number.isInteger(galponId)
+  const galponSeleccionado = tieneContextoDeGalpon
+    ? gestion.galpones.find((galpon) => galpon.id === galponId)
+    : undefined
+  const galponesDisponibles = galponSeleccionado
+    ? [galponSeleccionado]
+    : tieneContextoDeGalpon
+      ? []
+      : gestion.galpones
+  const lotesDelGalpon = galponSeleccionado
+    ? gestion.lotes.filter((lote) => lote.galpon.id === galponSeleccionado.id)
+    : tieneContextoDeGalpon
+      ? []
+      : gestion.lotes
+  const filtro = useFiltroLotes(lotesDelGalpon)
+  const resumen = useResumenLotes(lotesDelGalpon)
   const formulario = useFormularioLote(gestion.guardar)
-  const catalogosDisponibles = gestion.galpones.length > 0 && gestion.proveedores.length > 0
+  const catalogosDisponibles = galponesDisponibles.length > 0 && gestion.proveedores.length > 0
 
   function abrirCrear() {
-    const galponId = gestion.galpones.find((galpon) => galpon.activo)?.id
+    const galponId = galponesDisponibles.find((galpon) => galpon.activo)?.id
     const proveedorId = gestion.proveedores[0]?.id
     if (galponId && proveedorId) formulario.abrirCrear(galponId, proveedorId)
   }
@@ -33,12 +52,19 @@ function LotesPage() {
     <div className="page-container lotes-page">
       <header className="lotes-header">
         <div>
-          <h1>Lotes</h1>
-          <p>Gestiona los grupos de aves asociados a cada galpón.</p>
+          <h1>{galponSeleccionado ? `Lotes · ${galponSeleccionado.nombre}` : 'Lotes'}</h1>
+          <p>{galponSeleccionado ? 'Gestiona los grupos de aves de este galpón.' : 'Gestiona los grupos de aves asociados a cada galpón.'}</p>
         </div>
-        <button type="button" className="lotes-btn-primary" onClick={abrirCrear} disabled={!catalogosDisponibles || gestion.cargando}>
-          + Nuevo lote
-        </button>
+        <div className="lotes-header-acciones">
+          {galponSeleccionado && (
+            <button type="button" className="lotes-btn-secondary" onClick={() => navigate(`/galpones?granja=${galponSeleccionado.granja.id}`)}>
+              Volver a galpones
+            </button>
+          )}
+          <button type="button" className="lotes-btn-primary" onClick={abrirCrear} disabled={!catalogosDisponibles || gestion.cargando}>
+            + Nuevo lote
+          </button>
+        </div>
       </header>
 
       <ResumenLotes resumen={resumen} />
@@ -51,16 +77,16 @@ function LotesPage() {
       )}
 
       {!gestion.cargando && !catalogosDisponibles && (
-        <p className="lotes-aviso">Necesitas al menos un galpón activo y un proveedor para crear lotes.</p>
+        <p className="lotes-aviso">Necesitas un galpón activo y un proveedor para crear lotes.</p>
       )}
 
       <section className="lotes-card" aria-label="Listado de lotes">
-        {gestion.lotes.length > 0 && (
+        {lotesDelGalpon.length > 0 && (
           <BarraLotes
             busqueda={filtro.busqueda}
             estado={filtro.estado}
             visibles={filtro.visibles.length}
-            total={gestion.lotes.length}
+            total={lotesDelGalpon.length}
             onBuscar={filtro.setBusqueda}
             onCambiarEstado={filtro.setEstado}
           />
@@ -78,7 +104,7 @@ function LotesPage() {
         <FormularioLote
           form={formulario.form}
           modoEdicion={formulario.modoEdicion}
-          galpones={gestion.galpones}
+          galpones={galponesDisponibles}
           proveedores={gestion.proveedores}
           guardando={formulario.guardando}
           error={formulario.error}

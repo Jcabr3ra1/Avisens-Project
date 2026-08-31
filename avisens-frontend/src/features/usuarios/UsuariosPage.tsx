@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
+import { getRolVista, type CrearUsuarioPayload, type Usuario } from '@shared/api'
 import { crearOrganizacion } from '@features/organizaciones/api/organizaciones'
 import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
 import RecuperacionesDeUsuario from '@features/recuperaciones-password/components/RecuperacionesDeUsuario'
@@ -17,8 +17,8 @@ import { useUsuarios } from './hooks/useUsuarios'
 import './UsuariosPage.css'
 
 function UsuariosPage() {
-  const esPropietario = getRol() === 'Propietario'
-  const esAdmin = getRol() === 'Administrador'
+  const esPropietario = getRolVista() === 'Propietario'
+  const esAdmin = getRolVista() === 'Administrador'
   const [usuarioRecuperaciones, setUsuarioRecuperaciones] = useState<Usuario | null>(null)
   const {
     usuarios,

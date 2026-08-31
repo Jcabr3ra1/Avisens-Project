@@ -8,6 +8,8 @@ interface Props {
   onEditar: (granja: Granja) => void
   onAlternar: (granja: Granja) => void
   onEliminar: (granja: Granja) => void
+  onVerGalpones: (granja: Granja) => void
+  puedeGestionar: boolean
 }
 
 interface MenuGranja {
@@ -16,7 +18,7 @@ interface MenuGranja {
   left: number
 }
 
-function ListaGranjas({ granjas, onEditar, onAlternar, onEliminar }: Props) {
+function ListaGranjas({ granjas, onEditar, onAlternar, onEliminar, onVerGalpones, puedeGestionar }: Props) {
   const [menu, setMenu] = useState<MenuGranja | null>(null)
 
   function abrirMenu(evento: MouseEvent<HTMLButtonElement>, granja: Granja) {
@@ -41,13 +43,16 @@ function ListaGranjas({ granjas, onEditar, onAlternar, onEliminar }: Props) {
             </div>
             <div className="grj-card-meta">
               <span>{granja.area_total_m2 !== null ? `${granja.area_total_m2.toLocaleString()} m²` : 'Área sin registrar'}</span>
-              <button type="button" className="grj-menu-btn" onClick={(evento) => abrirMenu(evento, granja)} aria-label={`Acciones de la granja ${granja.nombre}`}>⋯</button>
+              <button type="button" className="grj-ver-hijos" onClick={() => onVerGalpones(granja)}>Ver galpones</button>
+              {puedeGestionar && (
+                <button type="button" className="grj-menu-btn" onClick={(evento) => abrirMenu(evento, granja)} aria-label={`Acciones de la granja ${granja.nombre}`}>⋯</button>
+              )}
             </div>
           </article>
         ))}
       </section>
 
-      {menu && (
+      {menu && puedeGestionar && (
         <MenuAcciones
           top={menu.top}
           left={menu.left}

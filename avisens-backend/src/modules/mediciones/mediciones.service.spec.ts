@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { MedicionesService } from './mediciones.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AlertasService } from '../alertas/alertas.service';
 
 describe('MedicionesService', () => {
   let service: MedicionesService;
@@ -17,6 +18,7 @@ describe('MedicionesService', () => {
   };
 
   const admin = { id: 1, rol: 'Administrador' };
+  const alertas = { evaluarLectura: jest.fn() };
   const propietario = { id: 5, rol: 'Propietario' };
 
   const dtoRegistrar = { sensor_id: 1, valor: 27.5 };
@@ -33,6 +35,7 @@ describe('MedicionesService', () => {
       providers: [
         MedicionesService,
         { provide: PrismaService, useValue: prisma },
+        { provide: AlertasService, useValue: alertas },
       ],
     }).compile();
     service = module.get<MedicionesService>(MedicionesService);
@@ -53,6 +56,7 @@ describe('MedicionesService', () => {
       await service.registrar(dtoRegistrar, admin);
 
       expect(prisma.medicion.create).toHaveBeenCalled();
+      expect(alertas.evaluarLectura).toHaveBeenCalledWith(1, 27.5, undefined);
     });
 
     it('un Propietario no puede registrar en un sensor ajeno (403)', async () => {
