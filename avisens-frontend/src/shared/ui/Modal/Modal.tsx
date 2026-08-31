@@ -17,6 +17,11 @@ const FOCUSABLES =
 
 function Modal({ titulo, subtitulo, onCerrar, children, acciones, ancho = 'normal' }: Props) {
   const tarjeta = useRef<HTMLDivElement>(null)
+  const onCerrarRef = useRef(onCerrar)
+
+  useEffect(() => {
+    onCerrarRef.current = onCerrar
+  }, [onCerrar])
 
   useEffect(() => {
     // El foco entra al diálogo y no vuelve a salir mientras esté abierto: sin
@@ -27,7 +32,7 @@ function Modal({ titulo, subtitulo, onCerrar, children, acciones, ancho = 'norma
 
     function alTeclear(evento: KeyboardEvent) {
       if (evento.key === 'Escape') {
-        onCerrar()
+        onCerrarRef.current()
         return
       }
       if (evento.key !== 'Tab' || !tarjeta.current) return
@@ -60,7 +65,7 @@ function Modal({ titulo, subtitulo, onCerrar, children, acciones, ancho = 'norma
       document.body.style.overflow = overflowPrevio
       previo?.focus()
     }
-  }, [onCerrar])
+  }, [])
 
   return createPortal(
     <div className="modal-velo" role="presentation" onClick={onCerrar}>

@@ -1366,3 +1366,189 @@
   .dash-galpon, .dash-galpon-agregar { transition: none; }
   .dash-galpon:hover { transform: none; }
 }
+
+/* ── Panel de métricas ────────────────────────────────────────────────────
+   Pestañas por sensor con su valor actual, y debajo el detalle con las
+   lecturas de las últimas 24 horas. */
+
+.dash-metricas {
+  margin-bottom: 1.4rem;
+  overflow: hidden;
+  border: 1px solid rgba(16, 44, 35, 0.09);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.dash-metricas--vacio {
+  padding: 1.6rem;
+  color: var(--text3, #6d7f76);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.dash-metricas-tabs {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(16, 44, 35, 0.09);
+  background: #fbfcfb;
+}
+
+.dash-metrica-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1 0 auto;
+  min-width: 150px;
+  padding: 0.75rem 1rem;
+  border: 0;
+  /* La pestaña activa se marca con una línea inferior naranja: el borde
+     inferior neutro reserva el espacio y evita que el contenido salte. */
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.dash-metrica-tab:hover { background: rgba(0, 91, 72, 0.04); }
+.dash-metrica-tab:focus-visible { outline: 2px solid var(--avisens-green); outline-offset: -2px; }
+
+.dash-metrica-tab.es-activo {
+  border-bottom-color: var(--avisens-orange);
+  background: #ffffff;
+}
+
+.dash-metrica-tab-icono {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--avisens-deep);
+  background: rgba(71, 187, 75, 0.12);
+}
+
+.dash-metrica-tab-texto { display: flex; min-width: 0; flex-direction: column; gap: 1px; }
+
+.dash-metrica-tab-tipo {
+  overflow: hidden;
+  color: var(--dash-muted);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.dash-metrica-tab-valor { color: var(--dash-ink); font-size: 1rem; font-weight: 800; }
+.dash-metrica-tab-unidad { margin-left: 2px; color: var(--text3, #6d7f76); font-size: 0.72rem; font-weight: 600; }
+
+.dash-metricas-cuerpo { padding: 1.3rem 1.4rem 1.5rem; }
+
+.dash-metrica-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dash-metrica-titulo {
+  margin: 0;
+  color: var(--dash-ink);
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.dash-metrica-umbral { margin: 2px 0 0; color: var(--text3, #6d7f76); font-size: 0.79rem; }
+
+.dash-metrica-badge {
+  flex: 0 0 auto;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+
+.dash-metrica-badge--optimo      { color: #0a6b4c; background: rgba(71, 187, 75, 0.16); }
+.dash-metrica-badge--advertencia { color: #8a6d45; background: rgba(255, 221, 103, 0.3); }
+.dash-metrica-badge--critico     { color: #b93300; background: rgba(232, 66, 0, 0.1); }
+.dash-metrica-badge--offline,
+.dash-metrica-badge--sin_umbral  { color: var(--dash-muted); background: rgba(16, 44, 35, 0.06); }
+
+.dash-metrica-cifras {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1rem 0 1.1rem;
+}
+
+.dash-metrica-actual {
+  color: var(--dash-ink);
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.dash-metrica-unidad { margin-left: 0.25rem; color: var(--text3, #6d7f76); font-size: 1.1rem; font-weight: 600; }
+
+.dash-metrica-extremos { display: flex; gap: 1.4rem; margin: 0; }
+.dash-metrica-extremos div { text-align: right; }
+
+.dash-metrica-extremos dt {
+  color: var(--text4, #9aa8a2);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dash-metrica-extremos dd { margin: 2px 0 0; color: var(--dash-ink); font-size: 1rem; font-weight: 700; }
+
+.dash-metrica-grafica {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 150px;
+  padding-top: 0.5rem;
+  border-bottom: 1px solid rgba(16, 44, 35, 0.09);
+}
+
+.dash-metrica-barra {
+  flex: 1;
+  min-width: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--avisens-green);
+  transition: background 140ms ease;
+}
+
+.dash-metrica-barra:hover { background: var(--avisens-deep); }
+
+.dash-metrica-eje {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.4rem;
+  color: var(--text4, #9aa8a2);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+}
+
+.dash-metrica-vacio {
+  margin: 0;
+  padding: 2rem 0;
+  color: var(--text3, #6d7f76);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+@media (max-width: 620px) {
+  .dash-metrica-cifras { align-items: flex-start; flex-direction: column; gap: 0.8rem; }
+  .dash-metrica-extremos { gap: 1.1rem; }
+  .dash-metrica-extremos div { text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-metrica-tab, .dash-metrica-barra { transition: none; }
+}
