@@ -30,6 +30,7 @@ import { CurvasObjetivoModule } from './modules/curvas-objetivo/curvas-objetivo.
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClimaModule } from './modules/clima/clima.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
+import { MensajesEquipoModule } from './modules/mensajes-equipo/mensajes-equipo.module';
 import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-alerta.module';
 import { AlertasCanalesModule } from './modules/alertas-canales/alertas-canales.module';
 import { EvidenciaAlertaModule } from './modules/evidencia-alerta/evidencia-alerta.module';
@@ -117,6 +118,7 @@ import { CaptacionProspectosModule } from './modules/captacion-prospectos/captac
     CurvasObjetivoModule,
     ClimaModule,
     AlertasModule,
+    MensajesEquipoModule,
     HealthModule,
     LegalModule,
     PoliticasAlertaModule,
