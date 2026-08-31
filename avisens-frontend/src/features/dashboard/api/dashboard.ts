@@ -97,16 +97,7 @@ export async function cargarFuentesDashboard(): Promise<DashboardFuentes> {
   return { granjas, galpones, lotes, alertas }
 }
 
-export async function obtenerIndicadorReciente(
-  loteId: number,
-): Promise<DashboardIndicador | null> {
-  const { data } = await api.get<IndicadorApi[]>(`/indicadores/${loteId}`)
-  const reciente = [...data].sort(
-    (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
-  )[0]
-
-  if (!reciente) return null
-
+function aIndicador(reciente: IndicadorApi): DashboardIndicador {
   return {
     fecha: reciente.fecha,
     diaVida: reciente.dia_vida,
@@ -115,4 +106,22 @@ export async function obtenerIndicadorReciente(
     epef: reciente.epef,
     mortalidadAcumuladaPct: reciente.mortalidad_acumulada_pct,
   }
+}
+
+// Del más reciente al más antiguo. La franja de atención necesita dos para
+// poder decir "vs. ayer" sin inventarse la tendencia.
+export async function obtenerIndicadoresDeLote(
+  loteId: number,
+): Promise<DashboardIndicador[]> {
+  const { data } = await api.get<IndicadorApi[]>(`/indicadores/${loteId}`)
+  return [...data]
+    .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+    .map(aIndicador)
+}
+
+export async function obtenerIndicadorReciente(
+  loteId: number,
+): Promise<DashboardIndicador | null> {
+  const [reciente] = await obtenerIndicadoresDeLote(loteId)
+  return reciente ?? null
 }
