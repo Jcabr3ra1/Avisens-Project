@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { getRol, type CrearSensorPayload, type Sensor } from '@shared/api'
+import { getRol } from '@shared/api'
+import { type CrearSensorPayload, type Sensor } from '@features/sensores/api/sensores'
 import { mensajeDeError } from '@shared/utils/errores'
 import { useCatalogoSensores } from './hooks/useCatalogoSensores'
 import { useOpcionesSensor } from './hooks/useOpcionesSensor'

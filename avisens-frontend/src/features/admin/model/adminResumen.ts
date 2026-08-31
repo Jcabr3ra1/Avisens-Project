@@ -1,7 +1,7 @@
 import type { Usuario } from '@shared/api'
 import type { Granja } from '@features/granjas/api/granjas'
 import type { Prospecto } from '@features/crm/api/prospectos'
-import type { GalponMonitoreoVista } from '@shared/hooks/useMonitoreoAmbiental'
+import type { GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 
 export type KpiAdmin = {
   etiqueta: string

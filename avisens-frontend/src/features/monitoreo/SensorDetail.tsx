@@ -6,9 +6,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { SensorGauge } from './SensorGauge'
-import { listarMediciones, type Medicion } from '@shared/api'
+import { listarMediciones, type Medicion } from '@features/sensores/api/mediciones'
 import { iconoSensor } from '@shared/ui/sensorIcon'
-import { formatearUltimaLectura, type SensorVista } from '@shared/hooks/useMonitoreoAmbiental'
+import { formatearUltimaLectura, type SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { IcNote } from '@shared/ui/icons/icons'
 import './SensorDetail.css'
 

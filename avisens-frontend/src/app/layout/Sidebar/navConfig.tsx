@@ -72,7 +72,7 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/consumos-diarios':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/monitoreo':               [ROL_PROPIETARIO, ROL_OPERARIO],
   '/sensores':                [ROL_ADMIN, ROL_PROPIETARIO],
-  '/alertas':                 [ROL_PROPIETARIO, ROL_OPERARIO],
+  '/alertas':                 [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/notificaciones':          [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/inventario':              [ROL_PROPIETARIO],
   '/finanzas':                [ROL_PROPIETARIO],

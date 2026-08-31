@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { type CrearSensorPayload, type Sensor } from '@shared/api'
+import { type CrearSensorPayload, type Sensor } from '@features/sensores/api/sensores'
 import {
   listarDispositivos,
   type Dispositivo,

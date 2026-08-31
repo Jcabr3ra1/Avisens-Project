@@ -1,10 +1,51 @@
-import { api } from './client'
-import type {
-  ActualizarSensorPayload,
-  CrearSensorPayload,
-  PaginatedResponse,
-  Sensor,
-} from './types'
+import { api } from '@shared/api/client'
+import type { GalponResumen, PaginatedResponse } from '@shared/api/types'
+
+export interface DispositivoResumen {
+  id: number
+  nombre: string
+  codigo_topic: string
+}
+
+export interface Sensor {
+  id: number
+  codigo: string
+  tipo: string
+  unidad_medida: string
+  modelo: string | null
+  fabricante: string | null
+  // Coordenadas y alturas son Decimal en el MER; Prisma las serializa como
+  // string. No las mostramos en esta pantalla de prueba, pero las tipamos.
+  coordenada_x: string | null
+  coordenada_y: string | null
+  altura_metros: string | null
+  fecha_instalacion: string | null
+  ultima_calibracion: string | null
+  proxima_calibracion: string | null
+  estado: string
+  galpon: GalponResumen
+  dispositivo: DispositivoResumen
+}
+
+// El sensor guarda galpon_id Y dispositivo_id; el backend valida que el
+// dispositivo pertenezca al galpón (coherencia), así que ambos son obligatorios.
+
+export interface CrearSensorPayload {
+  galpon_id: number
+  dispositivo_id: number
+  codigo: string
+  tipo: string
+  unidad_medida: string
+  modelo?: string
+  fabricante?: string
+}
+
+// En edición todo es opcional; `estado` permite activar/desactivar.
+
+export type ActualizarSensorPayload = Partial<CrearSensorPayload> & {
+  estado?: string
+}
+
 
 // Funciones del módulo `sensores` del backend (EP-08).
 // Requieren sesión: el Admin gestiona todos; el Propietario, solo los sensores

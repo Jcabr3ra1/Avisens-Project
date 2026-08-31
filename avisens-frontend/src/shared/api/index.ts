@@ -1,7 +1,4 @@
 export { api } from './client'
 export * from './tokens'
 export * from './auth'
-export * from './sensores'
-export * from './mediciones'
-export * from './umbrales'
 export type * from './types'

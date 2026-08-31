@@ -1,13 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import {
-  activarSensor,
-  crearSensor,
-  desactivarSensor,
-  eliminarSensor,
-  listarSensores,
-  type CrearSensorPayload,
-  type Sensor,
-} from '@shared/api'
+import { activarSensor, crearSensor, desactivarSensor, eliminarSensor, listarSensores, type CrearSensorPayload, type Sensor } from '@features/sensores/api/sensores'
 import { mensajeDeError } from '@shared/utils/errores'
 
 export function useSensores(galponId?: number) {

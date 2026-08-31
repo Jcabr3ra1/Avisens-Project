@@ -5,14 +5,9 @@
 // cuatro ven exactamente los mismos números, porque leen la misma fuente.
 import { useEffect, useSyncExternalStore } from 'react'
 import { isAxiosError } from 'axios'
-import {
-  listarSensores,
-  listarMediciones,
-  listarUmbrales,
-  type Sensor,
-  type Medicion,
-  type Umbral,
-} from '@shared/api'
+import { listarUmbrales, type Umbral } from '@features/galpones/api/umbrales'
+import { listarMediciones, type Medicion } from '@features/sensores/api/mediciones'
+import { listarSensores, type Sensor } from '@features/sensores/api/sensores'
 import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
 
