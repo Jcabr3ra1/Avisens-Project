@@ -20,3 +20,8 @@ export async function actualizarConsumoDiario(id: number, payload: Partial<Crear
 }
 
 export async function eliminarConsumoDiario(id: number): Promise<void> { await api.delete(`/consumos-diarios/${id}`) }
+
+export async function obtenerConsumoDiario(id: number): Promise<ConsumoDiario> {
+  const { data } = await api.get<ConsumoDiario>(`/consumos-diarios/${id}`)
+  return data
+}

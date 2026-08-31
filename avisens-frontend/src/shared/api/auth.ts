@@ -42,3 +42,10 @@ export async function logout(): Promise<void> {
 
   clearTokens()
 }
+
+// Permisos efectivos de la sesión. Útil para habilitar acciones en la UI en
+// vez de dejar que el backend responda 403 después del clic.
+export async function obtenerPermisos(): Promise<string[]> {
+  const { data } = await api.get<{ permisos: string[] }>('/auth/permisos')
+  return data.permisos
+}

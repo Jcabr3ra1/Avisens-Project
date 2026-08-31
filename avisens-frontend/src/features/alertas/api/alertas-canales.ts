@@ -132,3 +132,12 @@ export async function eliminarAlertaCanal(
   )
   return data
 }
+
+export async function eliminarCanalesDeAlerta(
+  alertaId: number,
+): Promise<{ alerta_id: number; eliminados: number }> {
+  const { data } = await api.delete<{ alerta_id: number; eliminados: number }>(
+    `/alertas-canales/alerta/${alertaId}`,
+  )
+  return data
+}

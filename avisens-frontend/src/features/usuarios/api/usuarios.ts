@@ -47,7 +47,21 @@ export async function actualizarUsuario(
   return data
 }
 
+// Borrado permanente (casos legales). La baja normal es alternar `activo`
+// con actualizarUsuario, que conserva el historial.
 export async function eliminarUsuario(id: number): Promise<{ id: number; eliminado: boolean }> {
   const { data } = await api.delete<{ id: number; eliminado: boolean }>(`/usuarios/${id}/permanente`)
+  return data
+}
+
+// Baja lógica del backend, equivalente a actualizarUsuario({ activo: false }).
+export async function desactivarUsuario(id: number): Promise<Usuario> {
+  const { data } = await api.delete<Usuario>(`/usuarios/${id}`)
+  return data
+}
+
+// Reactiva una cuenta dada de baja.
+export async function activarUsuario(id: number): Promise<Usuario> {
+  const { data } = await api.patch<Usuario>(`/usuarios/${id}/activar`)
   return data
 }
