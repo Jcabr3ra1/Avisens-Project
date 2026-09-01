@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getRol, getRolVista } from '@shared/api'
+import { getRol } from '@shared/api'
 import DashboardHeader from './components/DashboardHeader'
 import FranjaAtencion from './components/FranjaAtencion'
 import EstadoLote from './components/EstadoLote'
@@ -47,10 +47,8 @@ function DashboardPage() {
     indicadores,
     comparacion,
   })
-  // rolVista es solo para el copy de EstadoInicial (qué vería ese rol);
-  // puedeAdministrar habilita una acción real, así que usa el rol autenticado.
-  const rolVista = getRolVista()
-  const puedeAdministrar = ['Administrador', 'Propietario'].includes(getRol() ?? '')
+  const rol = getRol()
+  const puedeAdministrar = ['Administrador', 'Propietario'].includes(rol ?? '')
   const nombre = dashboard.usuario?.nombre?.trim().split(/\s+/)[0] || 'equipo'
   const [busqueda, setBusqueda] = useState('')
 
@@ -78,7 +76,7 @@ function DashboardPage() {
         <EstadoInicial
           granjas={dashboard.granjas.length}
           galpones={dashboard.totalGalpones}
-          rolVista={rolVista}
+          rol={rol}
           onIrAProduccion={() => navigate('/granjas')}
           onRecargar={dashboard.recargar}
         />
