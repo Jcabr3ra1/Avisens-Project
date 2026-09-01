@@ -17,11 +17,11 @@ type GuardarLote = (
 export function useFormularioLote(alGuardar: GuardarLote) {
   const [abierto, setAbierto] = useState(false)
   const [editandoId, setEditandoId] = useState<number | null>(null)
-  const [form, setForm] = useState<FormularioLoteDatos>(() => crearFormularioLote(0, 0))
+  const [form, setForm] = useState<FormularioLoteDatos>(() => crearFormularioLote(0))
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
-  function abrirCrear(galponId: number, proveedorId: number) {
+  function abrirCrear(galponId: number, proveedorId: number | null = null) {
     setEditandoId(null)
     setForm(crearFormularioLote(galponId, proveedorId))
     setError('')

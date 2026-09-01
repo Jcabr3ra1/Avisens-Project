@@ -7,7 +7,7 @@ import type {
 
 export interface FormularioLoteDatos {
   galpon_id: number
-  proveedor_id: number
+  proveedor_id: number | null
   fecha_ingreso: string
   cantidad_inicial: number | ''
   raza: string
@@ -32,7 +32,7 @@ function fechaActual(): string {
 
 export function crearFormularioLote(
   galponId: number,
-  proveedorId: number,
+  proveedorId: number | null = null,
 ): FormularioLoteDatos {
   return {
     galpon_id: galponId,
@@ -53,7 +53,7 @@ export function crearFormularioLote(
 export function formularioDesdeLote(lote: Lote): FormularioLoteDatos {
   return {
     galpon_id: lote.galpon.id,
-    proveedor_id: lote.proveedor.id,
+    proveedor_id: lote.proveedor?.id ?? null,
     fecha_ingreso: fechaInput(lote.fecha_ingreso),
     cantidad_inicial: lote.cantidad_inicial,
     raza: lote.raza ?? '',
@@ -74,7 +74,7 @@ function textoOpcional(valor: string): string | undefined {
 export function crearPayloadLote(form: FormularioLoteDatos): CrearLotePayload {
   return {
     galpon_id: form.galpon_id,
-    proveedor_id: form.proveedor_id,
+    ...(form.proveedor_id === null ? {} : { proveedor_id: form.proveedor_id }),
     fecha_ingreso: form.fecha_ingreso,
     cantidad_inicial: Number(form.cantidad_inicial),
     raza: textoOpcional(form.raza),
@@ -91,6 +91,7 @@ export function actualizarPayloadLote(
 ): ActualizarLotePayload {
   return {
     ...crearPayloadLote(form),
+    proveedor_id: form.proveedor_id,
     fecha_salida_real: form.fecha_salida_real || undefined,
     estado: form.estado,
   }

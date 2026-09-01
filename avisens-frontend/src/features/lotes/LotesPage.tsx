@@ -41,11 +41,7 @@ function LotesPage() {
   const formulario = useFormularioLote(gestion.guardar)
 
   const galponActivo = galponesDisponibles.find((galpon) => galpon.activo)
-  const proveedor = gestion.proveedores[0]
-  const { puedeCrear, motivoBloqueo } = evaluarAltaDeLote(
-    galponesDisponibles,
-    Boolean(proveedor),
-  )
+  const { puedeCrear, motivoBloqueo } = evaluarAltaDeLote(galponesDisponibles)
 
   const migas: Miga[] = galponSeleccionado
     ? [
@@ -56,7 +52,7 @@ function LotesPage() {
     : [{ label: 'Granjas', to: '/granjas' }, { label: 'Lotes' }]
 
   function abrirCrear() {
-    if (galponActivo && proveedor) formulario.abrirCrear(galponActivo.id, proveedor.id)
+    if (galponActivo) formulario.abrirCrear(galponActivo.id)
   }
 
   function confirmarEliminacion(lote: Lote) {

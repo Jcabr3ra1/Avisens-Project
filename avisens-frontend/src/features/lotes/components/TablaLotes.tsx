@@ -22,7 +22,7 @@ function TablaLotes({ lotes, cargando, permisos, onEditar, onAlternar, onElimina
           <strong>
             <code>{lote.codigo}</code>
           </strong>
-          <span className="tg-sub">{lote.proveedor.nombre}</span>
+          <span className="tg-sub">{lote.proveedor?.nombre ?? 'Sin proveedor'}</span>
         </>
       ),
     },

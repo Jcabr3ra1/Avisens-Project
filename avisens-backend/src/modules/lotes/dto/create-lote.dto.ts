@@ -18,13 +18,15 @@ export class CreateLoteDto {
   @Min(1)
   galpon_id: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 1,
     description: 'ID del proveedor que vendio los pollitos',
+    nullable: true,
   })
+  @IsOptional()
   @IsInt()
   @Min(1)
-  proveedor_id: number;
+  proveedor_id?: number | null;
 
   @ApiProperty({
     example: '2026-08-06',

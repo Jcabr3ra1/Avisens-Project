@@ -41,7 +41,7 @@ function FormularioLote({
   return (
     <Modal
       titulo={modoEdicion ? 'Editar lote' : 'Nuevo lote'}
-      subtitulo="El código se genera automáticamente y la fecha de ingreso inicia en hoy."
+      subtitulo="El código se genera automáticamente. Puedes asociar el proveedor ahora o hacerlo después."
       onCerrar={onCerrar}
       acciones={
         <>
@@ -80,14 +80,15 @@ function FormularioLote({
             </select>
           </label>
           <label className="modal-campo">
-            <span>Proveedor *</span>
+            <span>Proveedor</span>
             <select
-              value={form.proveedor_id}
-              onChange={(evento) =>
-                onCambiar('proveedor_id', Number(evento.target.value))
-              }
-              required
+              value={form.proveedor_id ?? ''}
+              onChange={(evento) => {
+                const proveedorId = evento.target.value
+                onCambiar('proveedor_id', proveedorId === '' ? null : Number(proveedorId))
+              }}
             >
+              <option value="">Sin proveedor por ahora</option>
               {proveedores.map((proveedor) => (
                 <option key={proveedor.id} value={proveedor.id}>
                   {proveedor.nombre}
