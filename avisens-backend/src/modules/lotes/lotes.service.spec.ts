@@ -123,7 +123,12 @@ describe('LotesService', () => {
         id: 26,
         codigo: 'LOT-2026-000026',
       });
-      const { proveedor_id: _proveedorId, ...dtoSinProveedor } = dtoCrear;
+      const dtoSinProveedor = {
+        galpon_id: dtoCrear.galpon_id,
+        fecha_ingreso: dtoCrear.fecha_ingreso,
+        cantidad_inicial: dtoCrear.cantidad_inicial,
+        raza: dtoCrear.raza,
+      };
 
       await service.crear(dtoSinProveedor, propietario);
 
