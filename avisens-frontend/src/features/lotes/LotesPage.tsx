@@ -11,6 +11,7 @@ import { useFiltroLotes } from './hooks/useFiltroLotes'
 import { useFormularioLote } from './hooks/useFormularioLote'
 import { useLotes } from './hooks/useLotes'
 import { useResumenLotes } from './hooks/useResumenLotes'
+import { evaluarAltaDeLote } from './model/loteVista'
 
 function LotesPage() {
   const navigate = useNavigate()
@@ -35,7 +36,13 @@ function LotesPage() {
   const filtro = useFiltroLotes(lotesDelGalpon)
   const resumen = useResumenLotes(lotesDelGalpon)
   const formulario = useFormularioLote(gestion.guardar)
-  const catalogosDisponibles = galponesDisponibles.length > 0 && gestion.proveedores.length > 0
+
+  const galponActivo = galponesDisponibles.find((galpon) => galpon.activo)
+  const proveedor = gestion.proveedores[0]
+  const { puedeCrear, motivoBloqueo } = evaluarAltaDeLote(
+    galponesDisponibles,
+    Boolean(proveedor),
+  )
 
   const migas: Miga[] = galponSeleccionado
     ? [
@@ -46,9 +53,7 @@ function LotesPage() {
     : [{ label: 'Granjas', to: '/granjas' }, { label: 'Lotes' }]
 
   function abrirCrear() {
-    const galponId = galponesDisponibles.find((galpon) => galpon.activo)?.id
-    const proveedorId = gestion.proveedores[0]?.id
-    if (galponId && proveedorId) formulario.abrirCrear(galponId, proveedorId)
+    if (galponActivo && proveedor) formulario.abrirCrear(galponActivo.id, proveedor.id)
   }
 
   function confirmarEliminacion(lote: Lote) {
@@ -84,7 +89,7 @@ function LotesPage() {
               type="button"
               className="adm-btn adm-btn--primario"
               onClick={abrirCrear}
-              disabled={!catalogosDisponibles || gestion.cargando}
+              disabled={!puedeCrear || gestion.cargando}
             >
               <IcPlus size={15} aria-hidden="true" />
               Nuevo lote
@@ -102,8 +107,8 @@ function LotesPage() {
         </div>
       )}
 
-      {!gestion.cargando && !catalogosDisponibles && (
-        <p className="adm-aviso">Necesitas un galpón activo y un proveedor para crear lotes.</p>
+      {!gestion.cargando && motivoBloqueo && (
+        <p className="adm-aviso">{motivoBloqueo}</p>
       )}
 
       <section className="adm-panel" aria-label="Listado de lotes">
