@@ -1,345 +1,246 @@
-// InventarioPage.tsx — Módulo de Inventario (EP-07 HU-31, HU-32).
-// Muestra el stock de insumos con semáforo de nivel y el directorio de proveedores.
-// Consume /insumos y /proveedores. El backend no guarda días de autonomía ni
-// calificación de desempeño del proveedor — esos dos campos del diseño
-// original no están en la UI porque no existen en el modelo de datos. El
-// precio unitario y el proveedor habitual sí existen y ya se muestran.
-
-import { useState, useEffect, type FormEvent } from 'react'
-import { isAxiosError } from 'axios'
-import { listarInsumos, registrarMovimientoInsumo, type Insumo, type TipoMovimientoInventario } from '@features/inventario/api/insumos'
-import { listarProveedores, type Proveedor } from '@features/proveedores/api/proveedores'
-import { mensajeDeError } from '@shared/utils/errores'
-import { IcBox, IcUsers, IcRefresh } from '@shared/ui/icons/icons'
+import { useMemo, useState } from 'react'
+import { getRol } from '@shared/api'
+import { permisosDeInsumo, ROL_ADMIN } from '@shared/auth/permisos'
+import { IcAlert, IcBox, IcCoin, IcPlus, IcRefresh, IcSearch } from '@shared/ui/icons/icons'
+import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
+import '@shared/ui/admin/AdminKit.css'
+import type { Insumo } from './api/insumos'
+import AcordeonInsumo from './components/AcordeonInsumo'
+import FormularioInsumo from './components/FormularioInsumo'
+import FormularioMovimiento from './components/FormularioMovimiento'
+import { useFormularioInsumo } from './hooks/useFormularioInsumo'
+import { useInventario } from './hooks/useInventario'
+import { useMovimientosInsumo } from './hooks/useMovimientosInsumo'
+import {
+  filtrarInsumos,
+  ordenarPorUrgencia,
+  resumirInventario,
+  type FiltroStock,
+} from './model/inventario'
 import './InventarioPage.css'
 
-type EstadoStock = 'ok' | 'bajo' | 'critico'
+const FILTROS: { valor: FiltroStock; etiqueta: string }[] = [
+  { valor: 'todos', etiqueta: 'Todos' },
+  { valor: 'reposicion', etiqueta: 'Por reponer' },
+  { valor: 'inactivos', etiqueta: 'Inactivos' },
+]
 
-function estadoStock(insumo: Insumo): EstadoStock {
-  if (!insumo.stock_minimo) return 'ok'
-  const ratio = insumo.stock_actual / insumo.stock_minimo
-  if (ratio < 0.5) return 'critico'
-  if (ratio < 1) return 'bajo'
-  return 'ok'
-}
-
-// ─── Componente principal ─────────────────────────────────────────────────────
 function InventarioPage() {
-  const [insumos, setInsumos] = useState<Insumo[]>([])
-  const [proveedores, setProveedores] = useState<Proveedor[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState('')
+  const rol = getRol()
+  const esAdministrador = rol === ROL_ADMIN
+  const permisos = permisosDeInsumo(rol)
 
-  // Pestaña activa: insumos o proveedores
-  const [tab, setTab] = useState<'insumos' | 'proveedores'>('insumos')
+  const gestion = useInventario()
+  const formulario = useFormularioInsumo(gestion.guardar)
 
-  // Insumo sobre el que se está registrando un movimiento (null = modal cerrado)
+  const [busqueda, setBusqueda] = useState('')
+  const [filtro, setFiltro] = useState<FiltroStock>('todos')
+  const [expandido, setExpandido] = useState<number | null>(null)
   const [movimientoDe, setMovimientoDe] = useState<Insumo | null>(null)
 
-  useEffect(() => {
-    let activo = true
+  const historial = useMovimientosInsumo(expandido)
 
-    async function cargar() {
-      try {
-        const [insumosData, proveedoresData] = await Promise.all([
-          listarInsumos(),
-          listarProveedores(),
-        ])
-        if (!activo) return
-        setInsumos(insumosData)
-        setProveedores(proveedoresData)
-        setError('')
-      } catch (err) {
-        if (!activo) return
-        setError(
-          isAxiosError(err) && err.response?.status === 403
-            ? 'No tienes permisos para ver el inventario.'
-            : 'No se pudo cargar el inventario.',
-        )
-      } finally {
-        if (activo) setCargando(false)
-      }
-    }
+  const resumen = useMemo(() => resumirInventario(gestion.insumos), [gestion.insumos])
+  const visibles = useMemo(
+    () => ordenarPorUrgencia(filtrarInsumos(gestion.insumos, busqueda, filtro)),
+    [gestion.insumos, busqueda, filtro],
+  )
 
-    cargar()
-    return () => { activo = false }
-  }, [])
+  const stats: Stat[] = [
+    { label: 'Insumos', valor: resumen.total, icono: <IcBox size={18} />, tono: 'neutral' },
+    {
+      label: 'Por reponer',
+      valor: resumen.bajos + resumen.criticos,
+      icono: <IcAlert size={18} />,
+      tono: resumen.bajos + resumen.criticos > 0 ? 'aviso' : 'neutral',
+    },
+    {
+      label: 'Agotados',
+      valor: resumen.agotados,
+      icono: <IcAlert size={18} />,
+      tono: resumen.agotados > 0 ? 'peligro' : 'neutral',
+    },
+    {
+      label: 'Valor en bodega',
+      valor: resumen.valorTotalCop.toLocaleString('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        maximumFractionDigits: 0,
+      }),
+      icono: <IcCoin size={18} />,
+      tono: 'info',
+    },
+  ]
 
-  // Contadores de alertas de stock para el encabezado
-  const stockCritico = insumos.filter(i => estadoStock(i) === 'critico').length
-  const stockBajo    = insumos.filter(i => estadoStock(i) === 'bajo').length
+  async function confirmarEliminacion(insumo: Insumo) {
+    const confirmado = window.confirm(
+      `¿Eliminar permanentemente el insumo "${insumo.nombre}"? Esta acción no se puede deshacer.`,
+    )
+    if (confirmado) await gestion.eliminar(insumo)
+  }
 
-  if (cargando) {
+  if (gestion.cargando && gestion.insumos.length === 0) {
     return (
       <div className="page-container inv-page">
-        <p className="inv-vacio">Cargando inventario…</p>
+        <div className="inv-esqueleto" aria-busy="true" aria-label="Cargando la bodega">
+          <div className="inv-hueso inv-hueso--cabecera" />
+          <div className="inv-hueso inv-hueso--resumen" />
+          {[0, 1, 2, 3].map((indice) => (
+            <div key={indice} className="inv-hueso inv-hueso--fila" />
+          ))}
+        </div>
       </div>
     )
   }
 
   return (
     <div className="page-container inv-page">
-
-      {/* ── Encabezado ──────────────────────────────────────────────────────── */}
-      <header className="inv-header">
-        <div>
-          <h1 className="inv-title">Bodega e Inventario</h1>
-          <p className="inv-sub">Stock de insumos y directorio de proveedores</p>
-        </div>
-
-        {/* Alertas de stock */}
-        <div className="inv-alertas">
-          {stockCritico > 0 && (
-            <span className="inv-alerta inv-alerta--critico"><span className="inv-dot inv-dot--critico" /> {stockCritico} crítico{stockCritico > 1 ? 's' : ''}</span>
-          )}
-          {stockBajo > 0 && (
-            <span className="inv-alerta inv-alerta--bajo"><span className="inv-dot inv-dot--bajo" /> {stockBajo} bajo{stockBajo > 1 ? 's' : ''}</span>
-          )}
+      <header className="inv-cabecera">
+        <div className="inv-cabecera-fila">
+          <div>
+            <span className="inv-eyebrow">
+              <span className="inv-eyebrow-punto" aria-hidden="true" />
+              {esAdministrador ? 'Control de bodega' : 'Bodega'}
+            </span>
+            <h1>Insumos</h1>
+            <p>Stock, movimientos y reposición. Cada insumo guarda su propio historial.</p>
+          </div>
+          <div className="inv-cabecera-acciones">
+            <button
+              type="button"
+              className="inv-btn inv-btn--suave"
+              onClick={() => void gestion.recargar()}
+            >
+              <IcRefresh size={14} aria-hidden="true" />
+              Actualizar
+            </button>
+            {permisos.crear && (
+              <button
+                type="button"
+                className="inv-btn inv-btn--primario"
+                onClick={formulario.abrirCrear}
+              >
+                <IcPlus size={15} aria-hidden="true" />
+                Nuevo insumo
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
-      {error && <div className="inv-alert-error" role="alert">{error}</div>}
+      <TarjetasResumen stats={stats} etiqueta="Resumen de la bodega" />
 
-      {/* ── Pestañas ────────────────────────────────────────────────────────── */}
-      <div className="inv-tabs">
-        <button className={`inv-tab${tab === 'insumos' ? ' inv-tab--activo' : ''}`} onClick={() => setTab('insumos')}>
-          <IcBox size={14} /> Insumos
-        </button>
-        <button className={`inv-tab${tab === 'proveedores' ? ' inv-tab--activo' : ''}`} onClick={() => setTab('proveedores')}>
-          <IcUsers size={14} /> Proveedores
-        </button>
-      </div>
+      {gestion.error && (
+        <div className="adm-alerta" role="alert">
+          <span>{gestion.error}</span>
+          <button type="button" onClick={() => void gestion.recargar()}>Reintentar</button>
+        </div>
+      )}
 
-      {/* ── Pestaña: Insumos (HU-31) ────────────────────────────────────────── */}
-      {tab === 'insumos' && (
-        insumos.length === 0 ? (
-          <p className="inv-vacio">No hay insumos registrados todavía.</p>
-        ) : (
-          <div className="inv-grid">
-            {insumos.map(insumo => (
-              <TarjetaInsumo
-                key={insumo.id}
-                insumo={insumo}
-                proveedores={proveedores}
-                onRegistrarMovimiento={() => setMovimientoDe(insumo)}
+      {gestion.insumos.length === 0 ? (
+        <div className="inv-vacio inv-vacio--grande">
+          <span className="inv-vacio-icono" aria-hidden="true">
+            <IcBox size={26} />
+          </span>
+          <h2>La bodega todavía no tiene insumos.</h2>
+          <p>
+            Registra el primero para llevar su stock y dejar rastro de cada entrada y salida.
+          </p>
+          {permisos.crear && (
+            <button
+              type="button"
+              className="inv-btn inv-btn--primario"
+              onClick={formulario.abrirCrear}
+            >
+              Registrar primer insumo
+            </button>
+          )}
+        </div>
+      ) : (
+        <section className="inv-panel" aria-label="Catálogo de insumos">
+          <div className="inv-barra">
+            <div className="inv-buscador">
+              <IcSearch size={15} aria-hidden="true" />
+              <input
+                type="search"
+                value={busqueda}
+                onChange={(evento) => setBusqueda(evento.target.value)}
+                placeholder="Buscar por nombre, tipo o ubicación"
+                aria-label="Buscar insumos"
               />
-            ))}
+            </div>
+
+            <div className="inv-segmentos" role="group" aria-label="Filtrar insumos">
+              {FILTROS.map((opcion) => (
+                <button
+                  key={opcion.valor}
+                  type="button"
+                  className="inv-segmento"
+                  aria-pressed={filtro === opcion.valor}
+                  onClick={() => setFiltro(opcion.valor)}
+                >
+                  {opcion.etiqueta}
+                </button>
+              ))}
+            </div>
+
+            <span className="inv-conteo">
+              {visibles.length === gestion.insumos.length
+                ? `${gestion.insumos.length}`
+                : `${visibles.length} de ${gestion.insumos.length}`}
+            </span>
           </div>
-        )
+
+          {visibles.length === 0 ? (
+            <p className="inv-vacio">Ningún insumo coincide con la búsqueda.</p>
+          ) : (
+            <div className="inv-lista">
+              {visibles.map((insumo) => (
+                <AcordeonInsumo
+                  key={insumo.id}
+                  insumo={insumo}
+                  expandido={expandido === insumo.id}
+                  onAlternarExpansion={() =>
+                    setExpandido((previo) => (previo === insumo.id ? null : insumo.id))
+                  }
+                  movimientos={historial.porInsumo.get(insumo.id)}
+                  cargandoMovimientos={historial.cargando}
+                  permisos={permisos}
+                  onEditar={formulario.abrirEditar}
+                  onAlternar={(item) => void gestion.alternarActivo(item)}
+                  onEliminar={(item) => void confirmarEliminacion(item)}
+                  onRegistrarMovimiento={setMovimientoDe}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       )}
 
-      {/* ── Pestaña: Proveedores (HU-32) ────────────────────────────────────── */}
-      {tab === 'proveedores' && (
-        proveedores.length === 0 ? (
-          <p className="inv-vacio">No hay proveedores registrados todavía.</p>
-        ) : (
-          <div className="inv-tabla-card">
-            <table className="inv-tabla">
-              <thead>
-                <tr><th>Proveedor</th><th>NIT</th><th>Tipo</th><th>Contacto</th><th>Estado</th></tr>
-              </thead>
-              <tbody>
-                {proveedores.map(p => (
-                  <tr key={p.id}>
-                    <td>
-                      <strong>{p.nombre}</strong><br />
-                      <small className="inv-contacto">{p.email ?? p.direccion ?? '—'}</small>
-                    </td>
-                    <td>{p.nit}</td>
-                    <td className="inv-catalogo">{p.tipo_proveedor ?? '—'}</td>
-                    <td>{p.contacto_persona ?? '—'} {p.telefono ? `· ${p.telefono}` : ''}</td>
-                    <td>
-                      <span className={`inv-cal-badge inv-cal-badge--${p.activo ? 'verde' : 'rojo'}`}>
-                        <span className={`inv-dot inv-dot--${p.activo ? 'verde' : 'rojo'}`} />
-                        {p.activo ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )
+      {formulario.abierto && (
+        <FormularioInsumo
+          form={formulario.form}
+          modoEdicion={formulario.modoEdicion}
+          guardando={formulario.guardando}
+          error={formulario.error}
+          onCambiar={formulario.cambiar}
+          onGuardar={formulario.guardar}
+          onCerrar={formulario.cerrar}
+        />
       )}
 
-      {/* ── Modal: registrar movimiento de stock ─────────────────────────────── */}
       {movimientoDe && (
-        <ModalMovimiento
+        <FormularioMovimiento
           insumo={movimientoDe}
           onCerrar={() => setMovimientoDe(null)}
-          onRegistrado={(stockResultante) => {
-            setInsumos(prev =>
-              prev.map(i => i.id === movimientoDe.id ? { ...i, stock_actual: stockResultante } : i),
-            )
-            setMovimientoDe(null)
+          onRegistrar={async (payload) => {
+            await gestion.registrarMovimiento(movimientoDe.id, payload)
+            // El historial del insumo acaba de cambiar: se vuelve a pedir
+            // solo si está abierto, para que el usuario lo vea reflejado.
+            if (expandido === movimientoDe.id) await historial.refrescar(movimientoDe.id)
           }}
         />
       )}
-    </div>
-  )
-}
-
-// ─── Sub-componente: tarjeta de insumo ───────────────────────────────────────
-function TarjetaInsumo({
-  insumo,
-  proveedores,
-  onRegistrarMovimiento,
-}: {
-  insumo: Insumo
-  proveedores: Proveedor[]
-  onRegistrarMovimiento: () => void
-}) {
-  const estado = estadoStock(insumo)
-  // Porcentaje del stock actual respecto a la capacidad máxima estimada
-  // Usamos 2× el stock mínimo como referencia visual máxima
-  const pct = insumo.stock_minimo > 0 ? Math.min(100, (insumo.stock_actual / (insumo.stock_minimo * 2)) * 100) : 100
-  const proveedor = proveedores.find(p => p.id === insumo.proveedor_habitual_id)
-
-  const etiquetaEstado: Record<EstadoStock, string> = {
-    ok:      'Stock OK',
-    bajo:    'Stock bajo',
-    critico: 'Stock crítico',
-  }
-
-  return (
-    <div className={`inv-insumo-card inv-insumo-card--${estado}`}>
-      {/* Cabecera: nombre y tipo */}
-      <div className="inv-insumo-head">
-        <span className="inv-insumo-nombre">{insumo.nombre}</span>
-        {insumo.tipo && <span className="inv-cat-badge">{insumo.tipo}</span>}
-      </div>
-
-      {/* Stock actual */}
-      <div className="inv-insumo-stock">
-        <strong>{insumo.stock_actual.toLocaleString()}</strong>
-        <span>{insumo.unidad_medida}</span>
-      </div>
-
-      {/* Barra de nivel de stock */}
-      <div className="inv-stock-barra-wrap">
-        <div className={`inv-stock-barra inv-stock-barra--${estado}`} style={{ width: `${pct}%` }} />
-      </div>
-
-      {/* Información adicional */}
-      <div className="inv-insumo-info">
-        <span>Mínimo: {insumo.stock_minimo} {insumo.unidad_medida}</span>
-        {insumo.precio_unitario_cop != null && (
-          <span>{insumo.precio_unitario_cop.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}/{insumo.unidad_medida}</span>
-        )}
-      </div>
-
-      {/* Proveedor y estado */}
-      <div className="inv-insumo-footer">
-        <span className="inv-proveedor">{proveedor?.nombre ?? (insumo.activo ? 'Insumo activo' : 'Insumo inactivo')}</span>
-        <span className={`inv-estado-badge inv-estado-badge--${estado}`}>
-          {etiquetaEstado[estado]}
-        </span>
-      </div>
-
-      <button type="button" className="inv-btn-movimiento" onClick={onRegistrarMovimiento}>
-        <IcRefresh size={13} /> Registrar movimiento
-      </button>
-    </div>
-  )
-}
-
-// ─── Sub-componente: modal para registrar un movimiento de stock ────────────
-const ETIQUETA_TIPO: Record<TipoMovimientoInventario, string> = {
-  entrada: 'Entrada (sumar al stock)',
-  salida: 'Salida (restar del stock)',
-  ajuste: 'Ajuste (fijar el stock real)',
-}
-
-function ModalMovimiento({
-  insumo,
-  onCerrar,
-  onRegistrado,
-}: {
-  insumo: Insumo
-  onCerrar: () => void
-  onRegistrado: (stockResultante: number) => void
-}) {
-  const [tipo, setTipo] = useState<TipoMovimientoInventario>('entrada')
-  const [cantidad, setCantidad] = useState('')
-  const [motivo, setMotivo] = useState('')
-  const [guardando, setGuardando] = useState(false)
-  const [error, setError] = useState('')
-
-  async function onGuardar(evento: FormEvent) {
-    evento.preventDefault()
-    const cantidadNum = Number(cantidad)
-    if (!cantidad || cantidadNum <= 0) {
-      setError('Ingresa una cantidad mayor que cero.')
-      return
-    }
-
-    setGuardando(true)
-    setError('')
-    try {
-      const movimiento = await registrarMovimientoInsumo(insumo.id, {
-        tipo_movimiento: tipo,
-        cantidad: cantidadNum,
-        motivo: motivo.trim() || undefined,
-      })
-      onRegistrado(movimiento.stock_resultante)
-    } catch (err) {
-      setError(mensajeDeError(err, 'No se pudo registrar el movimiento.'))
-    } finally {
-      setGuardando(false)
-    }
-  }
-
-  return (
-    <div className="inv-modal-overlay" onMouseDown={onCerrar}>
-      <div className="inv-modal" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
-        <h2 className="inv-modal-titulo">Registrar movimiento</h2>
-        <p className="inv-modal-desc">
-          {insumo.nombre} · stock actual: <strong>{insumo.stock_actual.toLocaleString()} {insumo.unidad_medida}</strong>
-        </p>
-
-        <form className="inv-modal-form" onSubmit={onGuardar}>
-          <label className="inv-modal-campo">
-            <span>Tipo de movimiento</span>
-            <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoMovimientoInventario)}>
-              {(Object.keys(ETIQUETA_TIPO) as TipoMovimientoInventario[]).map((t) => (
-                <option key={t} value={t}>{ETIQUETA_TIPO[t]}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="inv-modal-campo">
-            <span>{tipo === 'ajuste' ? `Stock real contado (${insumo.unidad_medida})` : `Cantidad (${insumo.unidad_medida})`}</span>
-            <input
-              type="number"
-              min="0"
-              step="0.001"
-              value={cantidad}
-              onChange={(e) => setCantidad(e.target.value)}
-              required
-            />
-          </label>
-
-          <label className="inv-modal-campo">
-            <span>Motivo <em>(opcional)</em></span>
-            <input
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ej: Compra a proveedor, consumo del galpón 2…"
-            />
-          </label>
-
-          {error && <p className="inv-modal-error" role="alert">{error}</p>}
-
-          <div className="inv-modal-acciones">
-            <button type="button" className="inv-btn-secundario" onClick={onCerrar} disabled={guardando}>
-              Cancelar
-            </button>
-            <button type="submit" className="inv-btn-primary" disabled={guardando}>
-              {guardando ? 'Guardando…' : 'Registrar'}
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   )
 }

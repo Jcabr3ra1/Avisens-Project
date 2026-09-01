@@ -33,12 +33,12 @@ export function filtrarLotes(
       !termino ||
       lote.codigo.toLowerCase().includes(termino) ||
       lote.galpon.nombre.toLowerCase().includes(termino) ||
-      lote.proveedor.nombre.toLowerCase().includes(termino)
+      lote.proveedor?.nombre.toLowerCase().includes(termino)
     return coincideEstado && coincideBusqueda
   })
 }
 
-// Requisitos para dar de alta un lote: un galpón ACTIVO y un proveedor.
+// Requisitos para dar de alta un lote: un galpón ACTIVO.
 // Vive aquí, y no suelto en la página, porque la condición que habilita el
 // botón y la que abre el formulario tienen que ser exactamente la misma.
 // Cuando divergieron, un galpón inactivo dejaba el botón habilitado y el
@@ -50,7 +50,6 @@ export type AltaDeLote = {
 
 export function evaluarAltaDeLote(
   galponesDisponibles: { activo: boolean }[],
-  hayProveedor: boolean,
 ): AltaDeLote {
   const hayGalponActivo = galponesDisponibles.some((galpon) => galpon.activo)
 
@@ -61,14 +60,6 @@ export function evaluarAltaDeLote(
         galponesDisponibles.length > 0
           ? 'El galpón está inactivo. Actívalo desde Galpones para poder registrarle lotes.'
           : 'Necesitas un galpón activo antes de registrar lotes.',
-    }
-  }
-
-  if (!hayProveedor) {
-    return {
-      puedeCrear: false,
-      motivoBloqueo:
-        'No hay proveedores activos. Un administrador debe registrar uno antes de crear lotes.',
     }
   }
 

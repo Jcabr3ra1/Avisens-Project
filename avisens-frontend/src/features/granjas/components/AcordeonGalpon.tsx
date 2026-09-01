@@ -10,7 +10,7 @@ import {
 import type { GalponConLotes } from '../hooks/useEstructuraGranjas'
 import type { IndicadoresDeLote } from '../hooks/useIndicadoresDeLotes'
 import FilaLote from './FilaLote'
-import MenuAcciones from './MenuAcciones'
+import MenuAcciones from '@shared/ui/MenuAcciones/MenuAcciones'
 
 interface Props {
   galpon: GalponConLotes

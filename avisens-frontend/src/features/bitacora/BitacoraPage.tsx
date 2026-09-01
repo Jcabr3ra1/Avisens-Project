@@ -1,193 +1,260 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { IcDoc, IcDrop, IcHeart, IcScale, IcSeed } from '@shared/ui/icons/icons'
+import { useMemo, useState, type FormEvent } from 'react'
+import { getRol } from '@shared/api'
+import { ROL_ADMIN } from '@shared/auth/permisos'
+import { IcDoc, IcDrop, IcHeart, IcRefresh, IcScale, IcSeed } from '@shared/ui/icons/icons'
 import GestionConsumos from '@features/consumos-diarios/components/GestionConsumos'
 import { mensajeDeError } from '@shared/utils/errores'
+import AccionesRapidasBitacora from './components/AccionesRapidasBitacora'
 import FormularioRegistro from './components/FormularioRegistro'
+import HistorialRegistros from './components/HistorialRegistros'
+import ResumenLote from './components/ResumenLote'
 import { useBitacora } from './hooks/useBitacora'
 import {
   FORMULARIO_INICIAL,
   type FormularioRegistro as DatosFormulario,
   type TipoRegistro,
 } from './model/bitacora'
+import {
+  calcularResumenBitacora,
+  crearFilasRegistro,
+  filtrarRegistrosPorLote,
+  type VistaBitacora,
+} from './model/resumenBitacora'
 import './BitacoraPage.css'
 
-type Vista = 'resumen' | TipoRegistro | 'consumo'
 const ETIQUETA: Record<TipoRegistro, string> = {
   peso: 'Pesajes',
   mortalidad: 'Mortalidad',
   sanitario: 'Sanidad',
 }
-const formatearFecha = (v: string) =>
-  new Date(`${v.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CO')
 
 function BitacoraPage() {
   const datos = useBitacora()
+  const esAdministrador = getRol() === ROL_ADMIN
+  const [granjaId, setGranjaId] = useState<number | null>(null)
+  const [galponId, setGalponId] = useState<number | null>(null)
   const [loteId, setLoteId] = useState<number | null>(null)
-  const [vista, setVista] = useState<Vista>('resumen')
+  const [vista, setVista] = useState<VistaBitacora>('resumen')
   const [modal, setModal] = useState<TipoRegistro | null>(null)
   const [form, setForm] = useState<DatosFormulario>(FORMULARIO_INICIAL)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
-  useEffect(() => {
-    if (loteId === null && datos.lotes[0]) setLoteId(datos.lotes[0].id)
-  }, [datos.lotes, loteId])
-  const lote = datos.lotes.find((x) => x.id === loteId)
-  const pesajes = datos.pesajes.filter((x) => x.lote_id === loteId)
-  const mortalidad = datos.mortalidad.filter((x) => x.lote_id === loteId)
-  const sanitarios = datos.sanitarios.filter((x) => x.lote_id === loteId)
-  const consumos = datos.consumos.filter((x) => x.lote_id === loteId)
-  const ultimoPeso = pesajes[0]
-  const alimento = consumos.reduce((a, x) => a + Number(x.alimento_kg ?? 0), 0)
-  const agua = consumos.reduce((a, x) => a + Number(x.agua_litros ?? 0), 0)
-  const avesMuertas = mortalidad.reduce((a, x) => a + x.cantidad_aves, 0)
+
+  const granjas = useMemo(() => {
+    const granjasPorId = new Map<number, { id: number; nombre: string }>()
+
+    datos.lotes.forEach((item) => {
+      granjasPorId.set(item.galpon.granja.id, {
+        id: item.galpon.granja.id,
+        nombre: item.galpon.granja.nombre,
+      })
+    })
+
+    return [...granjasPorId.values()].sort((primera, segunda) => primera.nombre.localeCompare(segunda.nombre, 'es'))
+  }, [datos.lotes])
+
+  const granjaSeleccionadaId = granjas.some((granja) => granja.id === granjaId)
+    ? granjaId
+    : (granjas[0]?.id ?? null)
+
+  const galpones = useMemo(() => {
+    const galponesPorId = new Map<number, { id: number; nombre: string }>()
+
+    datos.lotes
+      .filter((item) => item.galpon.granja.id === granjaSeleccionadaId)
+      .forEach((item) => {
+        galponesPorId.set(item.galpon.id, { id: item.galpon.id, nombre: item.galpon.nombre })
+      })
+
+    return [...galponesPorId.values()].sort((primero, segundo) => primero.nombre.localeCompare(segundo.nombre, 'es'))
+  }, [datos.lotes, granjaSeleccionadaId])
+
+  const galponSeleccionadoId = galpones.some((galpon) => galpon.id === galponId)
+    ? galponId
+    : (galpones[0]?.id ?? null)
+
+  const lotesDelGalpon = useMemo(
+    () => datos.lotes.filter((item) => item.galpon.id === galponSeleccionadoId),
+    [datos.lotes, galponSeleccionadoId],
+  )
+
+  const loteSeleccionadoId = lotesDelGalpon.some((item) => item.id === loteId)
+    ? loteId
+    : (lotesDelGalpon[0]?.id ?? null)
+
+  const lote = lotesDelGalpon.find((item) => item.id === loteSeleccionadoId)
+  const pesajes = useMemo(() => filtrarRegistrosPorLote(datos.pesajes, loteSeleccionadoId), [datos.pesajes, loteSeleccionadoId])
+  const mortalidad = useMemo(() => filtrarRegistrosPorLote(datos.mortalidad, loteSeleccionadoId), [datos.mortalidad, loteSeleccionadoId])
+  const sanitarios = useMemo(() => filtrarRegistrosPorLote(datos.sanitarios, loteSeleccionadoId), [datos.sanitarios, loteSeleccionadoId])
+  const consumos = useMemo(() => filtrarRegistrosPorLote(datos.consumos, loteSeleccionadoId), [datos.consumos, loteSeleccionadoId])
+  const resumen = useMemo(
+    () => calcularResumenBitacora(pesajes, mortalidad, sanitarios, consumos),
+    [consumos, mortalidad, pesajes, sanitarios],
+  )
+  const filas = useMemo(
+    () => crearFilasRegistro(vista, pesajes, mortalidad, sanitarios),
+    [mortalidad, pesajes, sanitarios, vista],
+  )
+
   const abrir = (tipo: TipoRegistro) => {
     setForm(FORMULARIO_INICIAL)
     setErrorForm('')
     setModal(tipo)
   }
-  const cambiar = <K extends keyof DatosFormulario>(
-    c: K,
-    v: DatosFormulario[K]
-  ) => setForm((x) => ({ ...x, [c]: v }))
-  const guardar = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (!modal || !loteId) return
+
+  const cambiar = <K extends keyof DatosFormulario>(campo: K, valor: DatosFormulario[K]) => {
+    setForm((actual) => ({ ...actual, [campo]: valor }))
+  }
+
+  const guardar = (evento: FormEvent<HTMLFormElement>) => {
+    evento.preventDefault()
+    if (!modal || !loteSeleccionadoId) return
+
     let payload: object = {
-      lote_id: loteId,
+      lote_id: loteSeleccionadoId,
       fecha: form.fecha,
       metodo_registro: 'manual',
       observaciones: form.observaciones || undefined,
     }
-    if (modal === 'peso')
+
+    if (modal === 'peso') {
       payload = {
         ...payload,
         peso_promedio_g: Number(form.peso_promedio_g),
-        cantidad_aves_pesadas: form.cantidad_aves_pesadas
-          ? Number(form.cantidad_aves_pesadas)
-          : undefined,
-        peso_objetivo_g: form.peso_objetivo_g
-          ? Number(form.peso_objetivo_g)
-          : undefined,
+        cantidad_aves_pesadas: form.cantidad_aves_pesadas ? Number(form.cantidad_aves_pesadas) : undefined,
+        peso_objetivo_g: form.peso_objetivo_g ? Number(form.peso_objetivo_g) : undefined,
       }
-    if (modal === 'mortalidad')
+    }
+
+    if (modal === 'mortalidad') {
       payload = {
         ...payload,
         cantidad_aves: Number(form.cantidad_aves),
         causa_presuntiva: form.causa_presuntiva || undefined,
       }
-    if (modal === 'sanitario')
+    }
+
+    if (modal === 'sanitario') {
       payload = {
         ...payload,
         tipo: form.tipo,
         producto: form.producto || undefined,
         diagnostico: form.diagnostico || undefined,
       }
+    }
+
     setGuardando(true)
     setErrorForm('')
     void datos
       .crear(modal, payload)
       .then(() => setModal(null))
-      .catch((err) =>
-        setErrorForm(mensajeDeError(err, 'No se pudo guardar el registro.'))
-      )
+      .catch((error) => setErrorForm(mensajeDeError(error, 'No se pudo guardar el registro.')))
       .finally(() => setGuardando(false))
   }
+
   const borrar = (tipo: TipoRegistro, id: number) => {
-    if (window.confirm('¿Eliminar este registro?'))
+    if (window.confirm('¿Eliminar este registro?')) {
       void datos.eliminar(tipo, id).catch(() => undefined)
+    }
   }
-  const filas = useMemo(
-    () =>
-      vista === 'peso'
-        ? pesajes.map((x) => ({
-            id: x.id,
-            fecha: x.fecha,
-            principal: `${x.peso_promedio_g.toLocaleString('es-CO')} g`,
-            detalle: x.observaciones || 'Sin observaciones',
-          }))
-        : vista === 'mortalidad'
-          ? mortalidad.map((x) => ({
-              id: x.id,
-              fecha: x.fecha,
-              principal: `${x.cantidad_aves} aves`,
-              detalle: x.causa_presuntiva || 'Sin causa registrada',
-            }))
-          : vista === 'sanitario'
-            ? sanitarios.map((x) => ({
-                id: x.id,
-                fecha: x.fecha,
-                principal: x.tipo,
-                detalle: x.producto || x.diagnostico || 'Sin detalle',
-              }))
-            : [],
-    [vista, pesajes, mortalidad, sanitarios]
-  )
-  if (datos.cargando)
+
+  if (datos.cargando) {
     return (
-      <div className='page-container bit-page'>
-        <p className='bit-vacio'>Cargando bitácora…</p>
+      <div className="page-container bit-page">
+        <p className="bit-vacio">Cargando bitácora…</p>
       </div>
     )
+  }
+
   return (
-    <div className='page-container bit-page'>
-      <header className='bit-header'>
+    <div className={`page-container bit-page${esAdministrador ? ' bit-page--admin' : ''}`}>
+      <header className="bit-header">
         <div>
-          <p>Control productivo</p>
-          <h1>Bitácora del lote</h1>
-          <span>Registra y consulta el estado real de tus aves.</span>
+          <p>{esAdministrador ? 'Control de organización' : 'Control productivo'}</p>
+          <h1>{esAdministrador ? 'Bitácora de producción' : 'Bitácora del lote'}</h1>
+          <span>
+            {esAdministrador
+              ? 'Consulta y registra la actividad de los lotes activos.'
+              : 'Registra y consulta el estado real de tus aves.'}
+          </span>
         </div>
-        <select
-          value={loteId ?? ''}
-          onChange={(e) => setLoteId(Number(e.target.value))}
-          aria-label='Seleccionar lote'
-        >
-          {datos.lotes.map((x) => (
-            <option key={x.id} value={x.id}>
-              {x.codigo} · {x.galpon.nombre}
-            </option>
-          ))}
-        </select>
+        <div className="bit-header-controles">
+          <fieldset className="bit-selector-jerarquico">
+            <legend>Ubicación en seguimiento</legend>
+            <label>
+              <span>Granja</span>
+              <select
+                value={granjaSeleccionadaId ?? ''}
+                disabled={!granjas.length}
+                onChange={(evento) => {
+                  setGranjaId(Number(evento.target.value))
+                  setGalponId(null)
+                  setLoteId(null)
+                }}
+              >
+                {!granjas.length && <option value="">Sin granjas con lotes activos</option>}
+                {granjas.map((granja) => <option key={granja.id} value={granja.id}>{granja.nombre}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Galpón</span>
+              <select
+                value={galponSeleccionadoId ?? ''}
+                disabled={!galpones.length}
+                onChange={(evento) => {
+                  setGalponId(Number(evento.target.value))
+                  setLoteId(null)
+                }}
+              >
+                {!galpones.length && <option value="">Sin galpones disponibles</option>}
+                {galpones.map((galpon) => <option key={galpon.id} value={galpon.id}>{galpon.nombre}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Lote activo</span>
+              <select
+                value={loteSeleccionadoId ?? ''}
+                disabled={!lotesDelGalpon.length}
+                onChange={(evento) => setLoteId(Number(evento.target.value))}
+              >
+                {!lotesDelGalpon.length && <option value="">Sin lotes activos</option>}
+                {lotesDelGalpon.map((item) => <option key={item.id} value={item.id}>{item.codigo}</option>)}
+              </select>
+            </label>
+          </fieldset>
+          <button type="button" className="bit-actualizar" onClick={() => void datos.recargar()}>
+            <IcRefresh size={15} aria-hidden="true" />
+            Actualizar
+          </button>
+        </div>
       </header>
+
       {datos.error && (
-        <div className='bit-alert' role='alert'>
-          {datos.error}
-          <button onClick={() => void datos.recargar()}>Reintentar</button>
+        <div className="bit-alert" role="alert">
+          <span>{datos.error}</span>
+          <button type="button" onClick={() => void datos.recargar()}>Reintentar</button>
         </div>
       )}
+
       {!lote ? (
-        <section className='bit-card bit-vacio'>
+        <section className="bit-card bit-vacio">
           <h2>No hay lotes activos</h2>
-          <p>Primero registra un lote para comenzar su seguimiento diario.</p>
+          <p>Cuando exista un lote activo, su control diario aparecerá aquí.</p>
         </section>
       ) : (
         <>
-          <section className='bit-kpis'>
-            <article>
-              <IcScale size={19} />
-              <small>Último peso</small>
-              <strong>
-                {ultimoPeso
-                  ? `${ultimoPeso.peso_promedio_g.toLocaleString('es-CO')} g`
-                  : 'Sin dato'}
-              </strong>
-            </article>
-            <article>
-              <IcHeart size={19} />
-              <small>Mortalidad acumulada</small>
-              <strong>{avesMuertas} aves</strong>
-            </article>
-            <article>
-              <IcSeed size={19} />
-              <small>Alimento registrado</small>
-              <strong>{alimento.toLocaleString('es-CO')} kg</strong>
-            </article>
-            <article>
-              <IcDrop size={19} />
-              <small>Agua registrada</small>
-              <strong>{agua.toLocaleString('es-CO')} L</strong>
-            </article>
+          <section className="bit-contexto-lote" aria-label="Lote seleccionado">
+            <div>
+              <p className="bit-kicker">Lote activo</p>
+              <h2>{lote.codigo}</h2>
+              <p>Galpón {lote.galpon.nombre} · {lote.cantidad_inicial.toLocaleString('es-CO')} aves iniciales</p>
+            </div>
+            <span role="status" aria-atomic="true">{resumen.totalRegistros} registros en este lote</span>
           </section>
-          <nav className='bit-tabs' aria-label='Secciones de la bitácora'>
+
+          <ResumenLote resumen={resumen} />
+
+          <nav className="bit-tabs" aria-label="Secciones de la bitácora">
             {(
               [
                 ['resumen', 'Resumen', <IcDoc size={15} />],
@@ -196,87 +263,40 @@ function BitacoraPage() {
                 ['sanitario', 'Sanidad', <IcDrop size={15} />],
                 ['consumo', 'Consumos', <IcSeed size={15} />],
               ] as const
-            ).map(([id, label, icon]) => (
+            ).map(([id, etiqueta, icono]) => (
               <button
                 key={id}
+                type="button"
+                aria-pressed={vista === id}
                 className={vista === id ? 'activo' : ''}
                 onClick={() => setVista(id)}
               >
-                {icon}
-                {label}
+                <span aria-hidden="true">{icono}</span>
+                {etiqueta}
               </button>
             ))}
           </nav>
+
           {vista === 'resumen' ? (
-            <section className='bit-card bit-resumen'>
-              <h2>¿Qué deseas registrar hoy?</h2>
-              <p>
-                Selecciona una acción rápida para el lote{' '}
-                <strong>{lote.codigo}</strong>.
-              </p>
-              <div className='bit-acciones'>
-                <button onClick={() => abrir('peso')}>
-                  <IcScale size={21} />
-                  <span>
-                    Registrar peso<small>Controlar el crecimiento</small>
-                  </span>
-                </button>
-                <button onClick={() => abrir('mortalidad')}>
-                  <IcHeart size={21} />
-                  <span>
-                    Registrar mortalidad<small>Reportar aves fallecidas</small>
-                  </span>
-                </button>
-                <button onClick={() => abrir('sanitario')}>
-                  <IcDrop size={21} />
-                  <span>
-                    Registrar sanidad
-                    <small>Vacunas, tratamientos o revisión</small>
-                  </span>
-                </button>
-                <button onClick={() => setVista('consumo')}>
-                  <IcSeed size={21} />
-                  <span>
-                    Registrar consumo<small>Alimento y agua diaria</small>
-                  </span>
-                </button>
-              </div>
-            </section>
+            <AccionesRapidasBitacora
+              codigoLote={lote.codigo}
+              onRegistrar={abrir}
+              onRegistrarConsumo={() => setVista('consumo')}
+            />
           ) : vista === 'consumo' ? (
-            <GestionConsumos loteFijo={loteId} />
+            <GestionConsumos loteFijo={loteSeleccionadoId} />
           ) : (
-            <section className='bit-card'>
-              <div className='bit-seccion-cab'>
-                <div>
-                  <h2>{ETIQUETA[vista]}</h2>
-                  <p>Historial del lote {lote.codigo}.</p>
-                </div>
-                <button className='bit-principal' onClick={() => abrir(vista)}>
-                  + Nuevo registro
-                </button>
-              </div>
-              {filas.length === 0 ? (
-                <p className='bit-vacio'>
-                  Aún no hay registros en esta sección.
-                </p>
-              ) : (
-                <div className='bit-lista'>
-                  {filas.map((x) => (
-                    <article key={x.id}>
-                      <time>{formatearFecha(x.fecha)}</time>
-                      <strong>{x.principal}</strong>
-                      <span>{x.detalle}</span>
-                      <button onClick={() => borrar(vista, x.id)}>
-                        Eliminar
-                      </button>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </section>
+            <HistorialRegistros
+              titulo={ETIQUETA[vista]}
+              codigoLote={lote.codigo}
+              filas={filas}
+              onNuevo={() => abrir(vista)}
+              onEliminar={(id) => borrar(vista, id)}
+            />
           )}
         </>
       )}
+
       {modal && (
         <FormularioRegistro
           tipo={modal}
@@ -291,4 +311,5 @@ function BitacoraPage() {
     </div>
   )
 }
+
 export default BitacoraPage

@@ -4,7 +4,8 @@
 //
 // Rutas internas por rol:
 //   /admin      → solo Administrador (AdminPage)
-//   /dashboard  → todos los roles (DashboardPage operativo)
+//   /dashboard  → solo Propietario (DashboardPage de su granja)
+//   /mi-jornada → solo Operario (OperarioPage)
 //   resto       → según permisos definidos en navConfig.tsx
 import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Routes, Route } from 'react-router-dom'
@@ -66,7 +67,7 @@ function AppRoutes() {
         {/* Panel del Administrador — solo accesible con rol 'Administrador' */}
         <Route path="/admin"           element={cargarPagina(<AdminPage />)} />
 
-        {/* Dashboard operativo — para Propietario y Operario */}
+        {/* Inicio operativo del Propietario y jornada diaria del Operario */}
         <Route path="/dashboard"       element={cargarPagina(<DashboardPage />)} />
         <Route path="/mi-jornada"      element={cargarPagina(<OperarioPage />)} />
 

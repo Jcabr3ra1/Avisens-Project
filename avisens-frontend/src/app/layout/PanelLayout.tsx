@@ -73,7 +73,7 @@ function PanelLayout() {
 
   const rol = getRol()
 
-  // Ruta de inicio según el rol: el Admin va a su panel; los demás al dashboard operativo.
+  // Ruta de inicio según el rol: cada experiencia tiene su propio punto de entrada.
   // Esto evita el bucle infinito cuando un rol intenta acceder a una ruta que no le corresponde.
   const rutaInicio = rutaInicioPorRol(rol)
 

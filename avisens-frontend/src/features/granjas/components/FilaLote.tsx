@@ -3,7 +3,7 @@ import type { PermisosGestion } from '@shared/auth/permisos'
 import { avesActuales, diasDeVida } from '../model/estructura'
 import type { IndicadoresDeLote } from '../hooks/useIndicadoresDeLotes'
 import Badge, { type TonoBadge } from './Badge'
-import MenuAcciones from './MenuAcciones'
+import MenuAcciones from '@shared/ui/MenuAcciones/MenuAcciones'
 
 interface Props {
   lote: Lote

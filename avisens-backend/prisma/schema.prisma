@@ -440,7 +440,7 @@ enum EstadoLote {
 model Lote {
   id                     Int        @id @default(autoincrement())
   galpon_id              Int
-  proveedor_id           Int
+  proveedor_id           Int?
   codigo                 String     @unique
   fecha_ingreso          DateTime   @db.Date
   cantidad_inicial       Int
@@ -454,7 +454,7 @@ model Lote {
   estado                 EstadoLote @default(activo)
 
   galpon    Galpon    @relation(fields: [galpon_id], references: [id])
-  proveedor Proveedor @relation(fields: [proveedor_id], references: [id])
+  proveedor Proveedor? @relation(fields: [proveedor_id], references: [id])
 
   pesajes                 Pesaje[]
   registros_mortalidad    RegistroMortalidad[]

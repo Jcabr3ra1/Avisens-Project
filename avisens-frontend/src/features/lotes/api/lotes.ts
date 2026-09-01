@@ -19,14 +19,14 @@ export interface Lote {
   galpon: {
     id: number
     nombre: string
-    granja: { id: number; propietario_id: number }
+    granja: { id: number; nombre: string; propietario_id: number }
   }
-  proveedor: { id: number; nombre: string }
+  proveedor: { id: number; nombre: string } | null
 }
 
 export interface CrearLotePayload {
   galpon_id: number
-  proveedor_id: number
+  proveedor_id?: number
   fecha_ingreso: string
   cantidad_inicial: number
   raza?: string
@@ -37,7 +37,8 @@ export interface CrearLotePayload {
   fecha_salida_estimada?: string
 }
 
-export type ActualizarLotePayload = Partial<CrearLotePayload> & {
+export type ActualizarLotePayload = Omit<Partial<CrearLotePayload>, 'proveedor_id'> & {
+  proveedor_id?: number | null
   fecha_salida_real?: string
   estado?: EstadoLote
 }

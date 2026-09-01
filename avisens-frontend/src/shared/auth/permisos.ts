@@ -43,3 +43,27 @@ export function permisosDeGestion(rol: string | null): PermisosGestion {
 export function gestionaAlgo(permisos: PermisosGestion): boolean {
   return permisos.editar || permisos.alternarActivo || permisos.eliminar
 }
+
+// Bodega: el catálogo de insumos lo administra el administrador, pero el
+// movimiento de stock lo registran los tres roles — el operario apunta lo
+// que consume en campo y esa es la razón de ser del módulo.
+// Fuente: avisens-backend/src/modules/insumos/insumos.controller.ts
+export type PermisosInsumo = {
+  crear: boolean
+  editar: boolean
+  alternarActivo: boolean
+  eliminar: boolean
+  registrarMovimiento: boolean
+}
+
+export function permisosDeInsumo(rol: string | null): PermisosInsumo {
+  const esAdmin = rol === ROL_ADMIN
+  return {
+    crear: esAdmin,
+    editar: esAdmin,
+    alternarActivo: esAdmin,
+    eliminar: esAdmin,
+    registrarMovimiento:
+      rol === ROL_ADMIN || rol === ROL_PROPIETARIO || rol === ROL_OPERARIO,
+  }
+}

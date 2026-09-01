@@ -116,6 +116,25 @@ describe('LotesService', () => {
       );
       expect(prisma.lote.create).not.toHaveBeenCalled();
     });
+
+    it('crea el lote sin proveedor cuando aún no se ha definido', async () => {
+      prisma.lote.create.mockResolvedValue({ id: 26 });
+      prisma.lote.update.mockResolvedValue({
+        id: 26,
+        codigo: 'LOT-2026-000026',
+      });
+      const dtoSinProveedor = {
+        galpon_id: dtoCrear.galpon_id,
+        fecha_ingreso: dtoCrear.fecha_ingreso,
+        cantidad_inicial: dtoCrear.cantidad_inicial,
+        raza: dtoCrear.raza,
+      };
+
+      await service.crear(dtoSinProveedor, propietario);
+
+      expect(prisma.proveedor.findUnique).not.toHaveBeenCalled();
+      expect(dataDe(prisma.lote.create).proveedor_id).toBeNull();
+    });
   });
 
   describe('listar', () => {
@@ -179,6 +198,19 @@ describe('LotesService', () => {
         service.actualizar(1, { galpon_id: 9 }, propietario),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.lote.update).not.toHaveBeenCalled();
+    });
+
+    it('permite retirar un proveedor asignado', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.update.mockResolvedValue({ id: 1, proveedor: null });
+
+      await service.actualizar(1, { proveedor_id: null }, propietario);
+
+      expect(dataDe(prisma.lote.update).proveedor_id).toBeNull();
+      expect(prisma.proveedor.findUnique).not.toHaveBeenCalled();
     });
   });
 

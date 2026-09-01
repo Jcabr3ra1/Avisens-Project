@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import './MenuAcciones.css'
 
 export type AccionMenu = {
   etiqueta: string
@@ -31,10 +32,10 @@ function MenuAcciones({ acciones, etiqueta }: { acciones: AccionMenu[]; etiqueta
   if (acciones.length === 0) return null
 
   return (
-    <div className="gr-menu" ref={contenedor}>
+    <div className="menu-acciones" ref={contenedor}>
       <button
         type="button"
-        className="gr-menu-disparador"
+        className="menu-acciones-disparador"
         aria-label={etiqueta}
         aria-expanded={abierto}
         aria-haspopup="menu"
@@ -50,13 +51,13 @@ function MenuAcciones({ acciones, etiqueta }: { acciones: AccionMenu[]; etiqueta
         </svg>
       </button>
       {abierto && (
-        <div className="gr-menu-lista" role="menu">
+        <div className="menu-acciones-lista" role="menu">
           {acciones.map((accion) => (
             <button
               key={accion.etiqueta}
               type="button"
               role="menuitem"
-              className={accion.peligrosa ? 'gr-menu-item gr-menu-item--peligro' : 'gr-menu-item'}
+              className={accion.peligrosa ? 'menu-acciones-item menu-acciones-item--peligro' : 'menu-acciones-item'}
               onClick={(evento) => {
                 evento.stopPropagation()
                 setAbierto(false)

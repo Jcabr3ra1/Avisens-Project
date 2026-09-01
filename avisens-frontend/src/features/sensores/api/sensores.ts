@@ -46,18 +46,32 @@ export type ActualizarSensorPayload = Partial<CrearSensorPayload> & {
   estado?: string
 }
 
+const LIMITE_POR_PAGINA = 100
 
 // Funciones del módulo `sensores` del backend (EP-08).
 // Requieren sesión: el Admin gestiona todos; el Propietario, solo los sensores
 // de galpones de sus propias granjas (el alcance se aplica en el servidor).
 
 export async function listarSensores(): Promise<Sensor[]> {
-  // El backend pagina: { data, meta }. Sin `limit` devuelve 20 y el recorte no
-  // avisa, así que un galpón con sensores fuera de esa página sale vacío.
-  const { data } = await api.get<PaginatedResponse<Sensor>>('/sensores', {
-    params: { page: 1, limit: 200 },
+  const primeraRespuesta = await api.get<PaginatedResponse<Sensor>>('/sensores', {
+    params: { page: 1, limit: LIMITE_POR_PAGINA },
   })
-  return data.data
+  const primeraPagina = primeraRespuesta.data
+
+  if (primeraPagina.meta.totalPages <= 1) return primeraPagina.data
+
+  const restantes = await Promise.all(
+    Array.from({ length: primeraPagina.meta.totalPages - 1 }, (_, indice) =>
+      api.get<PaginatedResponse<Sensor>>('/sensores', {
+        params: { page: indice + 2, limit: LIMITE_POR_PAGINA },
+      }),
+    ),
+  )
+
+  return [
+    ...primeraPagina.data,
+    ...restantes.flatMap((respuesta) => respuesta.data.data),
+  ]
 }
 
 export async function obtenerSensor(id: number): Promise<Sensor> {

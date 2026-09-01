@@ -1,5 +1,8 @@
 import { api } from '@shared/api/client'
 import type { PaginatedResponse } from '@shared/api/types'
+import type { MovimientoInventario, TipoMovimiento } from './movimientos'
+
+export type { MovimientoInventario, TipoMovimiento } from './movimientos'
 
 export interface Insumo {
   id: number
@@ -32,35 +35,35 @@ export type ActualizarInsumoPayload = Partial<CrearInsumoPayload> & {
   activo?: boolean
 }
 
-export type TipoMovimientoInventario = 'entrada' | 'salida' | 'ajuste'
-
-export interface MovimientoInventario {
-  id: number
-  insumo_id: number
-  lote_id: number | null
-  tipo_movimiento: TipoMovimientoInventario
-  cantidad: number
-  unidad_medida: string
-  motivo: string | null
-  comprobante_url: string | null
-  stock_resultante: number
-  usuario_id: number
-  fecha_movimiento: string
-}
-
 export interface RegistrarMovimientoPayload {
-  tipo_movimiento: TipoMovimientoInventario
+  tipo_movimiento: TipoMovimiento
   cantidad: number
   motivo?: string
   lote_id?: number
   comprobante_url?: string
 }
 
+// El backend tope a 100 por página y no recorta: pedir 200 devolvía 400 y la
+// bodega se quedaba vacía con un "no se pudo cargar".
+const LIMITE_POR_PAGINA = 100
+
 export async function listarInsumos(): Promise<Insumo[]> {
-  const { data } = await api.get<PaginatedResponse<Insumo>>('/insumos', {
-    params: { page: 1, limit: 200 },
+  const primeraRespuesta = await api.get<PaginatedResponse<Insumo>>('/insumos', {
+    params: { page: 1, limit: LIMITE_POR_PAGINA },
   })
-  return data.data
+  const primeraPagina = primeraRespuesta.data
+
+  if (primeraPagina.meta.totalPages <= 1) return primeraPagina.data
+
+  const restantes = await Promise.all(
+    Array.from({ length: primeraPagina.meta.totalPages - 1 }, (_, indice) =>
+      api.get<PaginatedResponse<Insumo>>('/insumos', {
+        params: { page: indice + 2, limit: LIMITE_POR_PAGINA },
+      }),
+    ),
+  )
+
+  return [...primeraPagina.data, ...restantes.flatMap((respuesta) => respuesta.data.data)]
 }
 
 export async function obtenerInsumo(id: number): Promise<Insumo> {
@@ -97,6 +100,7 @@ export async function listarMovimientosInsumo(
 ): Promise<MovimientoInventario[]> {
   const { data } = await api.get<PaginatedResponse<MovimientoInventario>>(
     `/insumos/${id}/movimientos`,
+    { params: { page: 1, limit: LIMITE_POR_PAGINA } },
   )
   return data.data
 }
