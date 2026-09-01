@@ -1,8 +1,9 @@
-import { IcPin } from '@shared/ui/icons/icons'
+import { Link } from 'react-router-dom'
+import { IcChevronRight, IcPin } from '@shared/ui/icons/icons'
 import TablaGestion, { type ColumnaGestion } from '@shared/ui/TablaGestion/TablaGestion'
 import EstadoBadge from '@shared/ui/TablaGestion/EstadoBadge'
 import '@shared/ui/TablaGestion/TablaGestion.css'
-import { gestionaAlgo, type PermisosGestion } from '@shared/auth/permisos'
+import type { PermisosGestion } from '@shared/auth/permisos'
 import type { Granja } from '../api/granjas'
 
 interface Props {
@@ -11,7 +12,6 @@ interface Props {
   onEditar: (granja: Granja) => void
   onAlternar: (granja: Granja) => void
   onEliminar: (granja: Granja) => void
-  onVerGalpones: (granja: Granja) => void
   permisos: PermisosGestion
 }
 
@@ -21,11 +21,19 @@ function TablaGranjas({
   onEditar,
   onAlternar,
   onEliminar,
-  onVerGalpones,
   permisos,
 }: Props) {
   const columnas: ColumnaGestion<Granja>[] = [
-    { encabezado: 'Nombre', render: (granja) => <strong>{granja.nombre}</strong> },
+    {
+      encabezado: 'Nombre',
+      // El nombre es la puerta a la granja: no hace falta un botón "Ver".
+      render: (granja) => (
+        <Link className="grj-enlace" to={`/granjas/${granja.id}`}>
+          <strong>{granja.nombre}</strong>
+          <IcChevronRight size={14} aria-hidden="true" />
+        </Link>
+      ),
+    },
     {
       encabezado: 'Ubicación',
       render: (granja) => (
@@ -56,12 +64,6 @@ function TablaGranjas({
       filaClase={(granja) => (granja.activa ? undefined : 'tg-fila-inactiva')}
       renderAcciones={(granja) => (
         <>
-          <button type="button" className="tg-btn tg-btn--destacado" onClick={() => onVerGalpones(granja)}>
-            Ver galpones
-          </button>
-          {gestionaAlgo(permisos) && (
-            <span className="tg-acciones-sep" aria-hidden="true" />
-          )}
           {permisos.editar && (
             <button type="button" className="tg-btn" onClick={() => onEditar(granja)}>Editar</button>
           )}

@@ -29,3 +29,8 @@
 .grj-tablero-tarjeta > svg { color: var(--text4); }
 .grj-tablero-columna-vacia, .grj-tablero-vacio { margin: 0; padding: 1rem 0.35rem; color: var(--text3); font-size: 0.78rem; line-height: 1.45; text-align: center; }
 @media (max-width: 640px) { .grj-tablero-cabecera { align-items: stretch; flex-direction: column; } .grj-tablero { padding: 1.2rem; } }
+.grj-enlace { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--dash-ink); }
+.grj-enlace svg { color: var(--text4); transition: transform 130ms ease; }
+.grj-enlace:hover { color: #005b48; }
+.grj-enlace:hover svg { transform: translateX(2px); color: currentColor; }
+.grj-enlace:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-radius: 4px; }

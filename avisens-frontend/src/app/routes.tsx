@@ -25,6 +25,7 @@ const FinanzasPage = lazy(() => import('@features/finanzas/FinanzasPage'))
 const InventarioPage = lazy(() => import('@features/inventario/InventarioPage'))
 const UsuariosPage = lazy(() => import('@features/usuarios/UsuariosPage'))
 const GranjasPage = lazy(() => import('@features/granjas/GranjasPage'))
+const GranjaDetallePage = lazy(() => import('@features/granjas/detalle/GranjaDetallePage'))
 const GalponesPage = lazy(() => import('@features/galpones/GalponesPage'))
 const LotesPage = lazy(() => import('@features/lotes/LotesPage'))
 const SensoresPage = lazy(() => import('@features/sensores/SensoresPage'))
@@ -86,6 +87,7 @@ function AppRoutes() {
         <Route path="/recuperaciones-password" element={cargarPagina(<RecuperacionesPasswordPage />)} />
         <Route path="/auditoria"        element={cargarPagina(<AuditoriaPage />)} />
         <Route path="/granjas"         element={cargarPagina(<GranjasPage />)} />
+        <Route path="/granjas/:granjaId" element={cargarPagina(<GranjaDetallePage />)} />
         <Route path="/galpones"        element={cargarPagina(<GalponesPage />)} />
         <Route path="/lotes"           element={cargarPagina(<LotesPage />)} />
         <Route path="/sensores"        element={cargarPagina(<SensoresPage />)} />

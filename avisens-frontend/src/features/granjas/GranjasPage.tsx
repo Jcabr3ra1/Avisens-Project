@@ -98,7 +98,6 @@ function GranjasPage() {
           onEditar={formulario.abrirEditar}
           onAlternar={(granja) => void gestion.alternarActivo(granja)}
           onEliminar={confirmarEliminacion}
-          onVerGalpones={(granja) => navigate(`/galpones?granja=${granja.id}`)}
           permisos={permisos}
         />
       </section>

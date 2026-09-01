@@ -66,6 +66,8 @@ export type GalponMonitoreoVista = {
   codigo: string
   nombre: string
   granjaId: number
+  activo: boolean
+  capacidadAves: number | null
   anchoMetros: number | null
   largoMetros: number | null
   loteActivo: Lote | null
@@ -157,6 +159,8 @@ function construirVista(
       codigo: g.codigo,
       nombre: g.nombre,
       granjaId: g.granja.id,
+      activo: g.activo,
+      capacidadAves: g.capacidad_aves,
       anchoMetros: g.ancho_metros,
       largoMetros: g.largo_metros,
       loteActivo,
