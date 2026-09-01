@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -188,7 +189,16 @@ export class DispositivosService {
   async eliminarPermanente(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
-    await this.prisma.dispositivo.delete({ where: { id } });
+    try {
+      await this.prisma.dispositivo.delete({ where: { id } });
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'P2003') {
+        throw new ConflictException(
+          'No se puede eliminar: el dispositivo tiene sensores asociados. Elimínalos primero, o desactiva el dispositivo en su lugar.',
+        );
+      }
+      throw error;
+    }
     return { id, eliminado: true };
   }
 }
