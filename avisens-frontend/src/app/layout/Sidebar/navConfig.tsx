@@ -66,7 +66,6 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/dashboard':               [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/mi-jornada':              [ROL_OPERARIO],
   '/granjas':                 [ROL_ADMIN, ROL_PROPIETARIO],
-  '/granjas/:granjaId':       [ROL_ADMIN, ROL_PROPIETARIO],
   '/galpones':                [ROL_ADMIN, ROL_PROPIETARIO],
   '/lotes':                   [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/bitacora':                [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
@@ -188,28 +187,10 @@ export function esGrupo(item: NavItem): item is NavGroupItem {
   return 'children' in item
 }
 
-// ¿Coincide una ruta concreta con un patrón que puede llevar `:parametro`?
-// Sin esto, /granjas/5 no encuentra su permiso y la guardia lo rebota.
-function coincidePatron(patron: string, path: string): boolean {
-  const partesPatron = patron.split('/')
-  const partesPath = path.split('/')
-  if (partesPatron.length !== partesPath.length) return false
-  return partesPatron.every(
-    (parte, i) => parte.startsWith(':') ? partesPath[i] !== '' : parte === partesPath[i],
-  )
-}
-
 export function puedeAcceder(path: string, rol: string | null): boolean {
-  if (rol === null) return false
-  // La coincidencia exacta manda: /granjas nunca debe resolverse por el
-  // patrón /granjas/:granjaId.
-  const exacto = PERMISOS_RUTA[path]
-  if (exacto) return exacto.includes(rol)
-
-  const patron = Object.keys(PERMISOS_RUTA).find(
-    (clave) => clave.includes(':') && coincidePatron(clave, path),
-  )
-  return patron ? PERMISOS_RUTA[patron].includes(rol) : false
+  const permitidos = PERMISOS_RUTA[path]
+  if (!permitidos) return false
+  return rol !== null && permitidos.includes(rol)
 }
 
 export function rutaInicioPorRol(rol: string | null): string {

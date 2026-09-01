@@ -11,7 +11,7 @@ import {
   puntosDeGrafica,
   resumirGranja,
   serieCronologica,
-} from './granjaDetalle'
+} from './estructura'
 
 function sensor(parcial: Partial<SensorVista>): SensorVista {
   return {
