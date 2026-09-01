@@ -1,17 +1,19 @@
 import TablaGestion, { type ColumnaGestion } from '@shared/ui/TablaGestion/TablaGestion'
 import EstadoBadge from '@shared/ui/TablaGestion/EstadoBadge'
 import '@shared/ui/TablaGestion/TablaGestion.css'
+import { gestionaAlgo, type PermisosGestion } from '@shared/auth/permisos'
 import type { Lote } from '../api/lotes'
 
 interface Props {
   lotes: Lote[]
   cargando: boolean
+  permisos: PermisosGestion
   onEditar: (lote: Lote) => void
   onAlternar: (lote: Lote) => void
   onEliminar: (lote: Lote) => void
 }
 
-function TablaLotes({ lotes, cargando, onEditar, onAlternar, onEliminar }: Props) {
+function TablaLotes({ lotes, cargando, permisos, onEditar, onAlternar, onEliminar }: Props) {
   const columnas: ColumnaGestion<Lote>[] = [
     {
       encabezado: 'Lote',
@@ -45,21 +47,27 @@ function TablaLotes({ lotes, cargando, onEditar, onAlternar, onEliminar }: Props
       mensajeVacio="No hay lotes para mostrar."
       pistaVacio="Registra un lote para empezar el seguimiento productivo del galpón."
       filaClase={(lote) => (lote.estado === 'activo' ? undefined : 'tg-fila-inactiva')}
-      renderAcciones={(lote) => (
+      renderAcciones={!gestionaAlgo(permisos) ? undefined : (lote) => (
         <>
-          <button type="button" className="tg-btn" onClick={() => onEditar(lote)}>
-            Editar
-          </button>
-          <button type="button" className="tg-btn" onClick={() => onAlternar(lote)}>
-            {lote.estado === 'activo' ? 'Desactivar' : 'Activar'}
-          </button>
-          <button
-            type="button"
-            className="tg-btn tg-btn--peligro"
-            onClick={() => onEliminar(lote)}
-          >
-            Eliminar
-          </button>
+          {permisos.editar && (
+            <button type="button" className="tg-btn" onClick={() => onEditar(lote)}>
+              Editar
+            </button>
+          )}
+          {permisos.alternarActivo && (
+            <button type="button" className="tg-btn" onClick={() => onAlternar(lote)}>
+              {lote.estado === 'activo' ? 'Desactivar' : 'Activar'}
+            </button>
+          )}
+          {permisos.eliminar && (
+            <button
+              type="button"
+              className="tg-btn tg-btn--peligro"
+              onClick={() => onEliminar(lote)}
+            >
+              Eliminar
+            </button>
+          )}
         </>
       )}
     />

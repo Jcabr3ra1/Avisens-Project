@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRol } from '@shared/api'
+import { permisosDeGestion, ROL_ADMIN } from '@shared/auth/permisos'
 import { IcPlus } from '@shared/ui/icons/icons'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import '@shared/ui/admin/AdminKit.css'
@@ -18,8 +19,9 @@ import './GranjasPage.css'
 
 function GranjasPage() {
   const navigate = useNavigate()
-  // El rol REAL: solo el administrador gestiona la estructura productiva.
-  const esAdministrador = getRol() === 'Administrador'
+  const rol = getRol()
+  const esAdministrador = rol === ROL_ADMIN
+  const permisos = permisosDeGestion(rol)
   const gestion = useGranjas()
   const formulario = useFormularioGranja(gestion.guardar)
   const catalogoPropietarios = usePropietariosGranja(esAdministrador)
@@ -56,7 +58,7 @@ function GranjasPage() {
         }
         migas={[{ label: 'Granjas' }]}
         acciones={
-          esAdministrador && (
+          permisos.crear && (
             <button
               type="button"
               className="adm-btn adm-btn--primario"
@@ -97,7 +99,7 @@ function GranjasPage() {
           onAlternar={(granja) => void gestion.alternarActivo(granja)}
           onEliminar={confirmarEliminacion}
           onVerGalpones={(granja) => navigate(`/galpones?granja=${granja.id}`)}
-          puedeGestionar={esAdministrador}
+          permisos={permisos}
         />
       </section>
 

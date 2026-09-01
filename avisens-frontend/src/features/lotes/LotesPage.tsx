@@ -1,4 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { getRol } from '@shared/api'
+import { permisosDeGestion } from '@shared/auth/permisos'
 import { IcPlus } from '@shared/ui/icons/icons'
 import CabeceraAdmin, { type Miga } from '@shared/ui/admin/CabeceraAdmin'
 import '@shared/ui/admin/AdminKit.css'
@@ -17,6 +19,7 @@ function LotesPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const gestion = useLotes()
+  const permisos = permisosDeGestion(getRol())
   const galponParam = searchParams.get('galpon')
   const galponId = Number(galponParam)
   const tieneContextoDeGalpon = galponParam !== null && Number.isInteger(galponId)
@@ -85,15 +88,17 @@ function LotesPage() {
                 Volver a galpones
               </button>
             )}
-            <button
-              type="button"
-              className="adm-btn adm-btn--primario"
-              onClick={abrirCrear}
-              disabled={!puedeCrear || gestion.cargando}
-            >
-              <IcPlus size={15} aria-hidden="true" />
-              Nuevo lote
-            </button>
+            {permisos.crear && (
+              <button
+                type="button"
+                className="adm-btn adm-btn--primario"
+                onClick={abrirCrear}
+                disabled={!puedeCrear || gestion.cargando}
+              >
+                <IcPlus size={15} aria-hidden="true" />
+                Nuevo lote
+              </button>
+            )}
           </>
         }
       />
@@ -107,7 +112,7 @@ function LotesPage() {
         </div>
       )}
 
-      {!gestion.cargando && motivoBloqueo && (
+      {permisos.crear && !gestion.cargando && motivoBloqueo && (
         <p className="adm-aviso">{motivoBloqueo}</p>
       )}
 
@@ -125,6 +130,7 @@ function LotesPage() {
         <TablaLotes
           lotes={filtro.visibles}
           cargando={gestion.cargando}
+          permisos={permisos}
           onEditar={formulario.abrirEditar}
           onAlternar={(lote) => void gestion.alternarActivo(lote)}
           onEliminar={confirmarEliminacion}

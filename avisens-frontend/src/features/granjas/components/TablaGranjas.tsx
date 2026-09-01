@@ -2,6 +2,7 @@ import { IcPin } from '@shared/ui/icons/icons'
 import TablaGestion, { type ColumnaGestion } from '@shared/ui/TablaGestion/TablaGestion'
 import EstadoBadge from '@shared/ui/TablaGestion/EstadoBadge'
 import '@shared/ui/TablaGestion/TablaGestion.css'
+import { gestionaAlgo, type PermisosGestion } from '@shared/auth/permisos'
 import type { Granja } from '../api/granjas'
 
 interface Props {
@@ -11,7 +12,7 @@ interface Props {
   onAlternar: (granja: Granja) => void
   onEliminar: (granja: Granja) => void
   onVerGalpones: (granja: Granja) => void
-  puedeGestionar: boolean
+  permisos: PermisosGestion
 }
 
 function TablaGranjas({
@@ -21,7 +22,7 @@ function TablaGranjas({
   onAlternar,
   onEliminar,
   onVerGalpones,
-  puedeGestionar,
+  permisos,
 }: Props) {
   const columnas: ColumnaGestion<Granja>[] = [
     { encabezado: 'Nombre', render: (granja) => <strong>{granja.nombre}</strong> },
@@ -58,16 +59,21 @@ function TablaGranjas({
           <button type="button" className="tg-btn tg-btn--destacado" onClick={() => onVerGalpones(granja)}>
             Ver galpones
           </button>
-          {puedeGestionar && (
-            <>
-              <button type="button" className="tg-btn" onClick={() => onEditar(granja)}>Editar</button>
-              <button type="button" className="tg-btn" onClick={() => onAlternar(granja)}>
-                {granja.activa ? 'Desactivar' : 'Activar'}
-              </button>
-              <button type="button" className="tg-btn tg-btn--peligro" onClick={() => onEliminar(granja)}>
-                Eliminar
-              </button>
-            </>
+          {gestionaAlgo(permisos) && (
+            <span className="tg-acciones-sep" aria-hidden="true" />
+          )}
+          {permisos.editar && (
+            <button type="button" className="tg-btn" onClick={() => onEditar(granja)}>Editar</button>
+          )}
+          {permisos.alternarActivo && (
+            <button type="button" className="tg-btn" onClick={() => onAlternar(granja)}>
+              {granja.activa ? 'Desactivar' : 'Activar'}
+            </button>
+          )}
+          {permisos.eliminar && (
+            <button type="button" className="tg-btn tg-btn--peligro" onClick={() => onEliminar(granja)}>
+              Eliminar
+            </button>
           )}
         </>
       )}

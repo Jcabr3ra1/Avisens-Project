@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { getRol } from '@shared/api'
+import { permisosDeGestion } from '@shared/auth/permisos'
 import { IcPlus } from '@shared/ui/icons/icons'
 import CabeceraAdmin, { type Miga } from '@shared/ui/admin/CabeceraAdmin'
 import '@shared/ui/admin/AdminKit.css'
@@ -22,6 +24,7 @@ function GalponesPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const gestion = useGalpones()
+  const permisos = permisosDeGestion(getRol())
   const granjaParam = searchParams.get('granja')
   const granjaId = Number(granjaParam)
   const tieneContextoDeGranja = granjaParam !== null && Number.isInteger(granjaId)
@@ -86,15 +89,17 @@ function GalponesPage() {
                 Volver a granjas
               </button>
             )}
-            <button
-              type="button"
-              className="adm-btn adm-btn--primario"
-              onClick={abrirCrear}
-              disabled={gestion.cargando || granjasDisponibles.length === 0}
-            >
-              <IcPlus size={15} aria-hidden="true" />
-              Nuevo galpón
-            </button>
+            {permisos.crear && (
+              <button
+                type="button"
+                className="adm-btn adm-btn--primario"
+                onClick={abrirCrear}
+                disabled={gestion.cargando || granjasDisponibles.length === 0}
+              >
+                <IcPlus size={15} aria-hidden="true" />
+                Nuevo galpón
+              </button>
+            )}
           </>
         }
       />
@@ -108,7 +113,7 @@ function GalponesPage() {
         </div>
       )}
 
-      {!gestion.cargando && granjasDisponibles.length === 0 && (
+      {permisos.crear && !gestion.cargando && granjasDisponibles.length === 0 && (
         <p className="adm-aviso">Necesitas una granja activa antes de registrar galpones.</p>
       )}
 
@@ -126,6 +131,7 @@ function GalponesPage() {
         <TablaGalpones
           galpones={filtro.visibles}
           cargando={gestion.cargando}
+          permisos={permisos}
           onEditar={formulario.abrirEditar}
           onAlternar={(galpon) => void gestion.alternarActivo(galpon)}
           onEliminar={confirmarEliminacion}
