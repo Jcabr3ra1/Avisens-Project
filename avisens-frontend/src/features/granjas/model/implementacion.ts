@@ -31,7 +31,7 @@ export function calcularEtapasImplementacionGranjas(
   galpones: GalponMonitoreoVista[],
 ): EtapaImplementacionGranja[] {
   const etapas: EtapaImplementacionGranja[] = [
-    { id: 'sin_granja', titulo: 'Sin granja activa', descripcion: 'Requieren una asignación o activación.', accion: 'Asignar granja', tarjetas: [] },
+    { id: 'sin_granja', titulo: 'Propietarios en espera', descripcion: 'Selecciona un propietario para asignarle su granja.', accion: 'Asignar granja', tarjetas: [] },
     { id: 'sin_galpon', titulo: 'Pendiente de galpones', descripcion: 'La granja ya está asignada.', accion: 'Registrar galpón', tarjetas: [] },
     { id: 'sin_lote', titulo: 'Pendiente de lote', descripcion: 'Ya hay estructura física.', accion: 'Registrar lote', tarjetas: [] },
     { id: 'operativa', titulo: 'Producción activa', descripcion: 'Tienen al menos un lote activo.', accion: 'Ver producción', tarjetas: [] },

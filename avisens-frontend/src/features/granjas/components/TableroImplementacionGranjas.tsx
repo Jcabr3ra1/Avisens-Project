@@ -22,15 +22,7 @@ function TableroImplementacionGranjas({ etapas, cargando, onAsignarGranja, onAbr
   const totalPropietarios = etapas.reduce((total, etapa) => total + etapa.tarjetas.length, 0)
 
   return (
-    <section className="grj-tablero" aria-labelledby="grj-tablero-titulo">
-      <div className="grj-tablero-cabecera">
-        <div>
-          <p className="grj-tablero-kicker">Control de estructura productiva</p>
-          <h2 id="grj-tablero-titulo">Estado de las granjas por propietario</h2>
-          <p>El avance se calcula con las granjas, galpones y lotes registrados en Avisens.</p>
-        </div>
-      </div>
-
+    <section className="grj-tablero" aria-label="Estado de las granjas por propietario">
       {cargando ? (
         <p className="grj-tablero-vacio" role="status">Cargando estado de las granjas…</p>
       ) : totalPropietarios === 0 ? (

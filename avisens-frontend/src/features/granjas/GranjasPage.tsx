@@ -1,7 +1,16 @@
 import { useMemo, useState } from 'react'
 import { getRol } from '@shared/api'
 import { permisosDeGestion, ROL_ADMIN } from '@shared/auth/permisos'
-import { IcAlert, IcEgg, IcGrid, IcLeaf, IcPin, IcPlus, IcRefresh } from '@shared/ui/icons/icons'
+import {
+  IcAlert,
+  IcEgg,
+  IcGrid,
+  IcLeaf,
+  IcPin,
+  IcPlus,
+  IcRefresh,
+  IcSearch,
+} from '@shared/ui/icons/icons'
 import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import '@shared/ui/admin/AdminKit.css'
 import {
@@ -29,9 +38,10 @@ import AcordeonGalpon from './components/AcordeonGalpon'
 import Badge from './components/Badge'
 import EsqueletoGranjas from './components/EsqueletoGranjas'
 import FormularioGranja from './components/FormularioGranja'
-import MenuAcciones from './components/MenuAcciones'
+import MenuAcciones from '@shared/ui/MenuAcciones/MenuAcciones'
 import SelectorGranjas from './components/SelectorGranjas'
 import TableroImplementacionGranjas from './components/TableroImplementacionGranjas'
+import TablaControlGranjas from './components/TablaControlGranjas'
 import { useEstructuraGranjas, type GalponConLotes } from './hooks/useEstructuraGranjas'
 import { useFormularioGranja } from './hooks/useFormularioGranja'
 import { useGranjas } from './hooks/useGranjas'
@@ -53,6 +63,8 @@ function GranjasPage() {
   // Granja elegida y galpones desplegados: el único estado de la página.
   // Aquí navegar es revelar, no cambiar de ruta.
   const [granjaId, setGranjaId] = useState<number | null>(null)
+  const [vistaAdministrativa, setVistaAdministrativa] = useState<'proceso' | 'tabla'>('proceso')
+  const [busquedaAdministrativa, setBusquedaAdministrativa] = useState('')
   // Lo desplegado se guarda por granja: volver a una ya visitada la
   // reencuentra como se dejó, en vez de reiniciarse.
   const [desplegadosPorGranja, setDesplegadosPorGranja] = useState<Map<number, Set<number>>>(
@@ -60,8 +72,16 @@ function GranjasPage() {
   )
 
   const seleccionada = useMemo(
-    () => estructura.find((item) => item.granja.id === granjaId) ?? estructura[0] ?? null,
-    [estructura, granjaId],
+    () => {
+      if (esAdministrador) {
+        return granjaId === null
+          ? null
+          : estructura.find((item) => item.granja.id === granjaId) ?? null
+      }
+
+      return estructura.find((item) => item.granja.id === granjaId) ?? estructura[0] ?? null
+    },
+    [esAdministrador, estructura, granjaId],
   )
   const idSeleccionada = seleccionada?.granja.id ?? null
 
@@ -166,12 +186,47 @@ function GranjasPage() {
     [catalogoPropietarios.propietarios, estructura],
   )
 
+  const estructuraFiltrada = useMemo(() => {
+    const termino = busquedaAdministrativa.trim().toLocaleLowerCase('es-CO')
+    if (!termino) return estructura
+    return estructura.filter((item) =>
+      [
+        item.granja.nombre,
+        item.granja.propietario.nombre_completo,
+        item.granja.municipio,
+        item.granja.departamento,
+      ].some((valor) => valor?.toLocaleLowerCase('es-CO').includes(termino)),
+    )
+  }, [busquedaAdministrativa, estructura])
+
   const stats: Stat[] = [
     { label: 'Granjas', valor: totales.granjas, icono: <IcLeaf size={18} />, tono: 'neutral' },
     { label: 'Galpones', valor: totales.galpones, icono: <IcGrid size={18} />, tono: 'neutral' },
     { label: 'Lotes activos', valor: totales.lotesActivos, icono: <IcEgg size={18} />, tono: 'ok' },
     { label: 'Aves alojadas', valor: totales.aves, icono: <IcEgg size={18} />, tono: 'info' },
   ]
+
+  const contenidoPorRol = esAdministrador
+    ? {
+        contexto: 'Control de organización',
+        titulo: 'Granjas de la organización',
+        descripcion: 'Administra la estructura productiva y asígnala a cada propietario.',
+        resumen: 'Resumen de la organización',
+        vacioTitulo: 'Aún no hay granjas registradas.',
+        vacioDescripcion:
+          'Crea la primera granja y asígnala a un propietario para iniciar su estructura productiva.',
+        accionVacia: 'Crear primera granja',
+      }
+    : {
+        contexto: 'Mi operación',
+        titulo: 'Mis granjas',
+        descripcion: 'Consulta la estructura productiva de las granjas que tienes asignadas.',
+        resumen: 'Resumen de mis granjas',
+        vacioTitulo: 'Aún no tienes granjas asignadas.',
+        vacioDescripcion:
+          'Cuando el administrador te asigne una granja, podrás consultar aquí sus galpones y lotes.',
+        accionVacia: 'Crear mi primera granja',
+      }
 
   if (cargando && estructura.length === 0) {
     return (
@@ -188,10 +243,10 @@ function GranjasPage() {
           <div>
             <span className="gr-eyebrow">
               <span className="gr-eyebrow-punto" aria-hidden="true" />
-              {esAdministrador ? 'Estructura productiva' : 'Mi operación'}
+              {contenidoPorRol.contexto}
             </span>
-            <h1>Mis granjas</h1>
-            <p>Granjas, galpones y lotes en una sola vista.</p>
+            <h1>{contenidoPorRol.titulo}</h1>
+            <p>{contenidoPorRol.descripcion}</p>
           </div>
           <div className="gr-cabecera-acciones">
             <button
@@ -202,31 +257,16 @@ function GranjasPage() {
               <IcRefresh size={14} aria-hidden="true" />
               Actualizar
             </button>
-            {permisos.crear && (
-              <button
-                type="button"
-                className="gr-btn gr-btn--primario"
-                onClick={() => formularioGranja.abrirCrear()}
-              >
-                <IcPlus size={15} aria-hidden="true" />
-                Nueva granja
-              </button>
-            )}
           </div>
         </div>
       </header>
 
-      <TarjetasResumen stats={stats} etiqueta="Resumen general" />
-
-      {esAdministrador && (
-        <TableroImplementacionGranjas
-          etapas={etapas}
-          cargando={cargando || catalogoPropietarios.cargando}
-          onAsignarGranja={(propietarioId) => formularioGranja.abrirCrear(propietarioId)}
-          // Antes esto saltaba a /galpones. Ahora abre la granja aquí mismo,
-          // que es de lo que trata la página.
-          onAbrirGranja={setGranjaId}
-        />
+      {esAdministrador ? (
+        <section className="grj-resumen" aria-label={contenidoPorRol.resumen}>
+          <TarjetasResumen stats={stats} etiqueta={contenidoPorRol.resumen} />
+        </section>
+      ) : (
+        <TarjetasResumen stats={stats} etiqueta={contenidoPorRol.resumen} />
       )}
 
       {error && (
@@ -236,35 +276,120 @@ function GranjasPage() {
         </div>
       )}
 
-      {estructura.length === 0 ? (
+      {estructura.length === 0 && !esAdministrador ? (
         <div className="gr-vacio gr-vacio--grande">
           <span className="gr-vacio-icono" aria-hidden="true">
             <IcLeaf size={26} />
           </span>
-          <h2>No tienes granjas registradas todavía.</h2>
-          <p>
-            La granja es el punto de partida: de ella cuelgan los galpones y, dentro de cada uno,
-            sus lotes.
-          </p>
+          <h2>{contenidoPorRol.vacioTitulo}</h2>
+          <p>{contenidoPorRol.vacioDescripcion}</p>
           {permisos.crear && (
             <button
               type="button"
               className="gr-btn gr-btn--primario"
               onClick={() => formularioGranja.abrirCrear()}
             >
-              Crear mi primera granja
+              {contenidoPorRol.accionVacia}
             </button>
           )}
         </div>
       ) : (
         <>
-          <SelectorGranjas
-            estructura={estructura}
-            granjaId={idSeleccionada}
-            onSeleccionar={setGranjaId}
-          />
+          {esAdministrador && (
+            <section className="grj-gestion" aria-label="Gestión administrativa de granjas">
+              <div className="grj-vistas">
+                <div className="grj-vistas-cabecera">
+                  <div>
+                    <p className="grj-tablero-kicker">Granjas de la organización</p>
+                    <h2>{vistaAdministrativa === 'proceso' ? 'Flujo de implementación' : 'Todas las granjas'}</h2>
+                    <p>
+                      {vistaAdministrativa === 'proceso'
+                        ? 'Prioriza el paso que falta para poner cada granja en operación.'
+                        : 'Busca, compara e inspecciona la estructura de cada granja.'}
+                    </p>
+                  </div>
+                  <div className="grj-selector-vista" aria-label="Vista de granjas">
+                    <button
+                      type="button"
+                      aria-pressed={vistaAdministrativa === 'proceso'}
+                      className={vistaAdministrativa === 'proceso' ? 'is-activa' : undefined}
+                      onClick={() => setVistaAdministrativa('proceso')}
+                    >
+                      Proceso
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={vistaAdministrativa === 'tabla'}
+                      className={vistaAdministrativa === 'tabla' ? 'is-activa' : undefined}
+                      onClick={() => setVistaAdministrativa('tabla')}
+                    >
+                      Todas las granjas
+                    </button>
+                  </div>
+                </div>
+
+                {vistaAdministrativa === 'proceso' ? (
+                  <TableroImplementacionGranjas
+                    etapas={etapas}
+                    cargando={cargando || catalogoPropietarios.cargando}
+                    onAsignarGranja={(propietarioId) => formularioGranja.abrirCrear(propietarioId)}
+                    onAbrirGranja={setGranjaId}
+                  />
+                ) : (
+                  <div className="grj-tabla-contenedor">
+                    <label className="grj-busqueda">
+                      <span>Buscar granja, propietario o municipio</span>
+                      <div>
+                        <IcSearch size={16} aria-hidden="true" />
+                        <input
+                          type="search"
+                          value={busquedaAdministrativa}
+                          onChange={(evento) => setBusquedaAdministrativa(evento.target.value)}
+                          placeholder="Ej. La Esperanza o Ana Pérez"
+                        />
+                      </div>
+                    </label>
+                    <TablaControlGranjas
+                      estructura={estructuraFiltrada}
+                      granjaSeleccionadaId={idSeleccionada}
+                      onSeleccionar={setGranjaId}
+                    />
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {!esAdministrador && (
+            <SelectorGranjas
+              estructura={estructura}
+              granjaId={idSeleccionada}
+              onSeleccionar={setGranjaId}
+            />
+          )}
 
           {seleccionada && (
+            <section className="gr-inspeccion">
+              {esAdministrador && (
+                <header className="gr-inspeccion-cabecera">
+                  <div>
+                    <span className="gr-eyebrow">
+                      <span className="gr-eyebrow-punto" aria-hidden="true" />
+                      Inspección administrativa
+                    </span>
+                    <h2>Detalle de la granja asignada</h2>
+                    <p>Revisa su estructura y gestiona los ajustes necesarios.</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="gr-btn gr-btn--suave"
+                    onClick={() => setGranjaId(null)}
+                  >
+                    Cerrar inspección
+                  </button>
+                </header>
+              )}
+
             <section className="gr-granja" aria-labelledby="gr-granja-titulo">
               <header className="gr-granja-cabecera">
                 <div>
@@ -279,8 +404,8 @@ function GranjasPage() {
                     <IcPin size={13} aria-hidden="true" />
                     {seleccionada.granja.municipio ?? '—'},{' '}
                     {seleccionada.granja.departamento ?? '—'}
-                    {seleccionada.granja.propietario && (
-                      <> · {seleccionada.granja.propietario.nombre_completo}</>
+                    {esAdministrador && seleccionada.granja.propietario && (
+                      <> · Propietario: {seleccionada.granja.propietario.nombre_completo}</>
                     )}
                   </p>
                   <p className="gr-granja-cifras">
@@ -297,7 +422,7 @@ function GranjasPage() {
                 </div>
 
                 <div className="gr-granja-acciones">
-                  {permisos.crear && (
+                  {permisos.crear && seleccionada.galpones.length > 0 && (
                     <button
                       type="button"
                       className="gr-btn gr-btn--suave"
@@ -371,14 +496,7 @@ function GranjasPage() {
                       onEditarGalpon={(item) => formularioGalpon.abrirEditar(item.origen)}
                       onAlternarGalpon={(item) => void alternarGalpon(item)}
                       onEliminarGalpon={(item) => void eliminarGalpon(item)}
-                      onCrearLote={(item) => {
-                        const proveedor = proveedores[0]
-                        if (proveedor) formularioLote.abrirCrear(item.id, proveedor.id)
-                        else
-                          window.alert(
-                            'No hay proveedores activos. Un administrador debe registrar uno antes de crear lotes.',
-                          )
-                      }}
+                      onCrearLote={(item) => formularioLote.abrirCrear(item.id)}
                       onEditarLote={formularioLote.abrirEditar}
                       onAlternarLote={(lote) => void alternarLote(lote)}
                       onEliminarLote={(lote) => void eliminarLote(lote)}
@@ -386,6 +504,7 @@ function GranjasPage() {
                   ))}
                 </div>
               )}
+            </section>
             </section>
           )}
         </>
