@@ -31,11 +31,13 @@ import EsqueletoGranjas from './components/EsqueletoGranjas'
 import FormularioGranja from './components/FormularioGranja'
 import MenuAcciones from './components/MenuAcciones'
 import SelectorGranjas from './components/SelectorGranjas'
+import TableroImplementacionGranjas from './components/TableroImplementacionGranjas'
 import { useEstructuraGranjas, type GalponConLotes } from './hooks/useEstructuraGranjas'
 import { useFormularioGranja } from './hooks/useFormularioGranja'
 import { useGranjas } from './hooks/useGranjas'
 import { useIndicadoresDeLotes } from './hooks/useIndicadoresDeLotes'
 import { usePropietariosGranja } from './hooks/usePropietariosGranja'
+import { calcularEtapasImplementacionGranjas } from './model/implementacion'
 import './GranjasPage.css'
 
 function GranjasPage() {
@@ -154,6 +156,16 @@ function GranjasPage() {
     [estructura],
   )
 
+  const etapas = useMemo(
+    () =>
+      calcularEtapasImplementacionGranjas(
+        catalogoPropietarios.propietarios,
+        estructura.map((item) => item.granja),
+        estructura.flatMap((item) => item.galpones),
+      ),
+    [catalogoPropietarios.propietarios, estructura],
+  )
+
   const stats: Stat[] = [
     { label: 'Granjas', valor: totales.granjas, icono: <IcLeaf size={18} />, tono: 'neutral' },
     { label: 'Galpones', valor: totales.galpones, icono: <IcGrid size={18} />, tono: 'neutral' },
@@ -205,6 +217,17 @@ function GranjasPage() {
       </header>
 
       <TarjetasResumen stats={stats} etiqueta="Resumen general" />
+
+      {esAdministrador && (
+        <TableroImplementacionGranjas
+          etapas={etapas}
+          cargando={cargando || catalogoPropietarios.cargando}
+          onAsignarGranja={(propietarioId) => formularioGranja.abrirCrear(propietarioId)}
+          // Antes esto saltaba a /galpones. Ahora abre la granja aquí mismo,
+          // que es de lo que trata la página.
+          onAbrirGranja={setGranjaId}
+        />
+      )}
 
       {error && (
         <div className="adm-alerta" role="alert">

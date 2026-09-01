@@ -555,3 +555,155 @@
   .gr-granja { padding: 1.05rem; }
   .gr-lote-metricas { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ─── Tablero de implementación (solo admin) ─────────────────── */
+
+.grj-tablero {
+  padding: 1.3rem 1.45rem;
+  border: 1px solid var(--gr-line);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--gr-sombra);
+}
+
+.grj-tablero-cabecera { margin-bottom: 1.1rem; }
+
+.grj-tablero-kicker {
+  margin: 0 0 0.2rem;
+  color: var(--gr-deep);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.grj-tablero-cabecera h2 {
+  margin: 0;
+  color: var(--dash-ink);
+  font-size: 1.08rem;
+  font-weight: 750;
+  letter-spacing: -0.012em;
+}
+
+.grj-tablero-cabecera p:last-child {
+  max-width: 66ch;
+  margin: 0.3rem 0 0;
+  color: var(--text3);
+  font-size: 0.81rem;
+  line-height: 1.5;
+}
+
+.grj-tablero-scroll { overflow-x: auto; padding-bottom: 0.3rem; }
+
+.grj-tablero-columnas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(228px, 1fr));
+  gap: 0.75rem;
+  min-width: 960px;
+}
+
+.grj-tablero-columna {
+  min-height: 232px;
+  padding: 0.8rem;
+  border: 1px solid var(--gr-line);
+  border-radius: 14px;
+  background: var(--bg-tint);
+}
+
+.grj-tablero-columna-cabecera {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 0.55rem;
+  margin-bottom: 0.8rem;
+}
+
+.grj-tablero-icono { display: grid; width: 31px; height: 31px; place-items: center; border-radius: 10px; }
+
+.grj-tablero-columna h3 { margin: 0; color: var(--dash-ink); font-size: 0.79rem; line-height: 1.25; }
+.grj-tablero-columna p { margin: 0.16rem 0 0; color: var(--text3); font-size: 0.68rem; line-height: 1.35; }
+
+.grj-tablero-contador {
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(10, 26, 20, 0.08);
+  color: var(--dash-ink);
+  font-size: 0.71rem;
+  font-weight: 800;
+}
+
+/* El color de cada etapa vive en el icono, no en la columna entera. */
+.grj-tablero-columna--sin_granja .grj-tablero-icono { color: #b45309; background: rgba(245, 158, 11, 0.15); }
+.grj-tablero-columna--sin_galpon .grj-tablero-icono { color: #2563eb; background: rgba(59, 130, 246, 0.13); }
+.grj-tablero-columna--sin_lote .grj-tablero-icono { color: #7c3aed; background: rgba(124, 58, 237, 0.12); }
+.grj-tablero-columna--operativa .grj-tablero-icono { color: var(--gr-deep); background: rgba(16, 185, 129, 0.16); }
+
+.grj-tablero-tarjetas { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.grj-tablero-tarjeta {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 72px;
+  padding: 0.62rem;
+  border: 1px solid var(--gr-line);
+  border-radius: 11px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.grj-tablero-tarjeta:hover {
+  border-color: rgba(0, 91, 72, 0.26);
+  box-shadow: 0 6px 16px rgba(10, 40, 28, 0.08);
+  transform: translateY(-1px);
+}
+
+.grj-tablero-tarjeta:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+.grj-tablero-avatar {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--avisens-deep), var(--avisens-green));
+  color: #fff;
+  font-size: 0.71rem;
+  font-weight: 800;
+}
+
+.grj-tablero-tarjeta-contenido { display: flex; min-width: 0; flex-direction: column; gap: 0.1rem; }
+
+.grj-tablero-tarjeta-contenido strong {
+  overflow: hidden;
+  color: var(--dash-ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grj-tablero-tarjeta-contenido span { color: var(--text3); font-size: 0.67rem; line-height: 1.3; }
+.grj-tablero-tarjeta > svg { color: var(--text4); }
+
+.grj-tablero-columna-vacia, .grj-tablero-vacio {
+  margin: 0;
+  padding: 1rem 0.35rem;
+  color: var(--text3);
+  font-size: 0.77rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .grj-tablero { padding: 1.1rem; }
+}
