@@ -45,17 +45,10 @@ export type NavSection = {
 // mueve cada rol entre los módulos del sistema.
 // ─── Navegación por rol ───────────────────────────────────────────────────────
 //
-// ADMINISTRADOR (admin@avisens.com) — superusuario de Avisens:
-//   Ve y gestiona todos los módulos transversales y operativos, excepto Mi jornada,
-//   que representa la jornada personal de un Operario asignado a un galpón.
-//
-// PROPIETARIO (dueño@avisens.com) — dueño de la granja:
-//   Ve: Mi galpón, Sensores, Bitácora, Alertas, Finanzas, Bodega, Equipos, Granjas, Personas.
-//   NO ve: Panel Admin ni CRM (no es su pipeline comercial).
-//
-// OPERARIO (operario@avisens.com) — personal de campo en el galpón:
-//   Ve: Mi galpón, Sensores, Bitácora, Alertas, Bodega (solo consulta de stock).
-//   Solo accede a lo que necesita en su jornada diaria.
+// Cada rol inicia en una experiencia distinta: Administrador en el control
+// global, Propietario en la operación de su granja y Operario en su jornada.
+// El detalle completo y las reglas para nuevos módulos están en
+// PANELES-POR-ROL.md.
 //
 // Permiso de acceso por ruta. Es la ÚNICA fuente de verdad: el sidebar
 // dibuja lo que esta tabla permite, y la guardia de rutas la consulta.
@@ -63,7 +56,7 @@ export type NavSection = {
 // sacar un ítem del sidebar la dejaba abierta para todos los roles.
 const PERMISOS_RUTA: Record<string, string[]> = {
   '/admin':                   [ROL_ADMIN],
-  '/dashboard':               [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/dashboard':               [ROL_PROPIETARIO],
   '/mi-jornada':              [ROL_OPERARIO],
   '/granjas':                 [ROL_ADMIN, ROL_PROPIETARIO],
   '/galpones':                [ROL_ADMIN, ROL_PROPIETARIO],
