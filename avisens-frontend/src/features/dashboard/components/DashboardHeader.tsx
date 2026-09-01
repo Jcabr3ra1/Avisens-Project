@@ -1,4 +1,4 @@
-import { IcAlert, IcBell, IcDoc, IcLeaf, IcRefresh, IcSearch, IcSparkle } from '@shared/ui/icons/icons'
+import { IcAlert, IcBell, IcDoc, IcLeaf, IcRefresh, IcSearch } from '@shared/ui/icons/icons'
 import type { DashboardGranja } from '../model/dashboard'
 
 interface DashboardHeaderProps {
@@ -11,7 +11,6 @@ interface DashboardHeaderProps {
   onGranjaChange: (id: number) => void
   onBusquedaChange: (valor: string) => void
   onRecargar: () => void
-  onAbrirComunicacion: (pestana: 'ia' | 'equipo' | 'voz') => void
   onIrABitacora: () => void
   onIrAAlertas: () => void
   onIrANotificaciones: () => void
@@ -27,7 +26,6 @@ function DashboardHeader({
   onGranjaChange,
   onBusquedaChange,
   onRecargar,
-  onAbrirComunicacion,
   onIrABitacora,
   onIrAAlertas,
   onIrANotificaciones,
@@ -80,10 +78,6 @@ function DashboardHeader({
           <button type="button" className="dashboard-toolbar__action" onClick={onIrAAlertas}>
             <IcAlert size={18} aria-hidden="true" />
             <span>Alertas</span>
-          </button>
-          <button type="button" className="dashboard-toolbar__action dashboard-toolbar__action--ia" onClick={() => onAbrirComunicacion('ia')}>
-            <IcSparkle size={18} aria-hidden="true" />
-            <span>Insight IA</span>
           </button>
           <button type="button" className="dashboard-toolbar__icon-action" onClick={onIrANotificaciones} aria-label="Ver notificaciones">
             <IcBell size={20} aria-hidden="true" />

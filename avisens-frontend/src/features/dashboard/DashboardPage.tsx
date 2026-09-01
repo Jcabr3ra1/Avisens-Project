@@ -1,8 +1,6 @@
-import { lazy, Suspense, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRolVista } from '@shared/api'
-import ComunicacionFab from '@features/comunicacion/components/ComunicacionFab'
-import type { PestanaComunicacion } from '@features/comunicacion/model/comunicacion'
 import DashboardHeader from './components/DashboardHeader'
 import FranjaAtencion from './components/FranjaAtencion'
 import EstadoLote from './components/EstadoLote'
@@ -19,8 +17,6 @@ import { useAtencion } from './hooks/useAtencion'
 import { useIndicadoresLote } from './hooks/useIndicadoresLote'
 import { useDashboard } from './hooks/useDashboard'
 import './DashboardPage.css'
-
-const ComunicacionPanel = lazy(() => import('@features/comunicacion/components/ComunicacionPanel'))
 
 function DashboardSkeleton() {
   return (
@@ -55,13 +51,6 @@ function DashboardPage() {
   const puedeAdministrar = ['Administrador', 'Propietario'].includes(rolVista ?? '')
   const nombre = dashboard.usuario?.nombre?.trim().split(/\s+/)[0] || 'equipo'
   const [busqueda, setBusqueda] = useState('')
-  const [comunicacionAbierta, setComunicacionAbierta] = useState(false)
-  const [pestanaComunicacion, setPestanaComunicacion] = useState<PestanaComunicacion>('equipo')
-
-  const abrirComunicacion = (pestana: PestanaComunicacion) => {
-    setPestanaComunicacion(pestana)
-    setComunicacionAbierta(true)
-  }
 
   if (dashboard.cargando && dashboard.granjas.length === 0) {
     return <DashboardSkeleton />
@@ -113,7 +102,6 @@ function DashboardPage() {
         onGranjaChange={dashboard.seleccionarGranja}
         onBusquedaChange={setBusqueda}
         onRecargar={dashboard.recargar}
-        onAbrirComunicacion={abrirComunicacion}
         onIrABitacora={() => navigate('/bitacora')}
         onIrAAlertas={() => navigate('/alertas')}
         onIrANotificaciones={() => navigate('/notificaciones')}
@@ -170,19 +158,6 @@ function DashboardPage() {
         />
         <PlanoGalpon galpon={galponMonitoreo} />
       </div>
-
-      {comunicacionAbierta && (
-        <Suspense fallback={null}>
-          <ComunicacionPanel
-            abierto={comunicacionAbierta}
-            pestanaInicial={pestanaComunicacion}
-            galponId={dashboard.galponId}
-            galponNombre={dashboard.galpon?.nombre ?? null}
-            onCerrar={() => setComunicacionAbierta(false)}
-          />
-        </Suspense>
-      )}
-      <ComunicacionFab onAbrir={() => abrirComunicacion('equipo')} />
     </div>
   )
 }

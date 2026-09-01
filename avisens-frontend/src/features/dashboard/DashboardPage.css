@@ -35,34 +35,6 @@
   outline-offset: 2px;
 }
 
-.comunicacion-fab {
-  position: fixed;
-  z-index: 30;
-  right: 2.2rem;
-  bottom: 2.2rem;
-  width: 60px;
-  height: 60px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  border: 1px solid rgba(208, 255, 232, 0.42);
-  border-radius: 50%;
-  background: linear-gradient(145deg, #2ad89a, #098a65);
-  box-shadow: 0 12px 28px rgba(4, 96, 64, 0.32), 0 0 0 8px rgba(53, 214, 154, 0.1);
-  cursor: pointer;
-  transition: box-shadow 160ms ease, transform 160ms ease;
-}
-
-.comunicacion-fab:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 34px rgba(4, 96, 64, 0.38), 0 0 0 9px rgba(53, 214, 154, 0.14);
-}
-
-.comunicacion-fab:focus-visible {
-  outline: 3px solid #076b4f;
-  outline-offset: 4px;
-}
-
 .dashboard-toolbar {
   display: grid;
   grid-template-columns: minmax(175px, 0.8fr) minmax(220px, 1.6fr) auto;
@@ -938,11 +910,6 @@
   .dashboard-page {
     gap: 0.8rem;
     padding: 1rem 0.9rem 2rem;
-  }
-
-  .comunicacion-fab {
-    right: 1.1rem;
-    bottom: 5.8rem;
   }
 
   .dashboard-header,
