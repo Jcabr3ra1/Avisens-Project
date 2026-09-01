@@ -90,7 +90,6 @@ model Usuario {
   organizacion               Organizacion?          @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
   recomendaciones            Recomendacion[]
   conversaciones_ia          ConversacionIa[]
-  mensajes_equipo            MensajeEquipo[]
 
   // Permite que la FK compuesta de granjas garantice que el propietario y la
   // granja pertenezcan a la misma organización.
@@ -190,7 +189,6 @@ model Galpon {
   equipos              Equipo[]
   recomendaciones      Recomendacion[]
   analisis_bioacustico AnalisisBioacustico[]
-  mensajes_equipo      MensajeEquipo[]
   analisis_vision      AnalisisVision[]
 
   // El código se repite entre granjas (cada una tiene su "galpon1"), pero es
@@ -1433,32 +1431,6 @@ model Recomendacion {
 
   @@index([lote_id])
   @@map("recomendaciones")
-}
-
-// ---------------------------------------------------------------------------
-// Mensajes del equipo (chat interno por galpon)
-// ---------------------------------------------------------------------------
-// El hilo cuelga del GALPON, no de una pareja de personas. En una granja lo
-// que importa es "que pasa en el galpon 3", no "que me dijo Pedro": el
-// operario que entra manana necesita leer lo que se hablo ahi, aunque no
-// estuviera en la conversacion. Ademas el alcance por rol sale solo, porque
-// los operarios ya estan asignados a galpones.
-model MensajeEquipo {
-  id            Int       @id @default(autoincrement())
-  galpon_id     Int
-  emisor_id     Int
-  contenido     String
-  fecha_envio   DateTime  @default(now())
-  fecha_lectura DateTime?
-
-  galpon Galpon  @relation(fields: [galpon_id], references: [id])
-  emisor Usuario @relation(fields: [emisor_id], references: [id])
-
-  // El listado siempre pide "los mensajes de este galpon, del mas reciente al
-  // mas antiguo": el indice cubre esa consulta entera.
-  @@index([galpon_id, fecha_envio])
-  @@index([emisor_id])
-  @@map("mensajes_equipo")
 }
 
 // ---------------------------------------------------------------------------
