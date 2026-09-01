@@ -1,15 +1,7 @@
-.grj-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
-.grj-header h1 { margin: 0; color: var(--dash-ink); font-size: 1.75rem; }
-.grj-header p { margin: 0.25rem 0 0; color: var(--text3); font-size: 0.88rem; }
-.grj-btn-primary { min-height: 42px; padding: 0.6rem 1rem; border: none; border-radius: 10px; background: var(--green-d); color: #fff; font-weight: 700; cursor: pointer; }
-.grj-resumen { display: grid; grid-template-columns: repeat(4, minmax(110px, 1fr)); gap: 0.8rem; margin-bottom: 1.2rem; }
-.grj-stat { display: flex; flex-direction: column; gap: 0.2rem; padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
-.grj-stat strong { color: var(--dash-ink); font-size: 1.45rem; }
-.grj-stat span { color: var(--text3); font-size: 0.78rem; }
-.grj-alerta { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding: 0.75rem 1rem; border: 1px solid color-mix(in srgb, var(--red) 30%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--red) 9%, transparent); color: var(--red); }
-.grj-alerta button { border: none; background: transparent; color: inherit; font-weight: 700; cursor: pointer; }
-.tg-ubicacion { display: flex; align-items: center; gap: 0.3rem; }
-.grj-btn-primary:focus-visible, .grj-tablero-tarjeta:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+/* La cabecera, el resumen y la tabla viven ahora en
+   shared/ui/admin/AdminKit.css y shared/ui/TablaGestion/.
+   Aquí solo queda el tablero de implementación (Kanban de admin). */
+.grj-tablero-tarjeta:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .grj-tablero { margin-bottom: 1.2rem; padding: 1.4rem 1.5rem; border: 1px solid rgba(16,44,35,0.08); border-radius: 20px; background: rgba(255,255,255,0.86); box-shadow: 0 6px 24px rgba(10,40,28,0.06); backdrop-filter: blur(10px); }
 .grj-tablero-cabecera { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.2rem; }
 .grj-tablero-kicker { margin: 0 0 0.2rem; color: var(--green-d); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
@@ -36,4 +28,4 @@
 .grj-tablero-tarjeta-contenido span { color: var(--text3); font-size: 0.67rem; line-height: 1.3; }
 .grj-tablero-tarjeta > svg { color: var(--text4); }
 .grj-tablero-columna-vacia, .grj-tablero-vacio { margin: 0; padding: 1rem 0.35rem; color: var(--text3); font-size: 0.78rem; line-height: 1.45; text-align: center; }
-@media (max-width: 640px) { .grj-header, .grj-tablero-cabecera { align-items: stretch; flex-direction: column; } .grj-resumen { grid-template-columns: repeat(2, 1fr); } .grj-tablero { padding: 1.2rem; } }
+@media (max-width: 640px) { .grj-tablero-cabecera { align-items: stretch; flex-direction: column; } .grj-tablero { padding: 1.2rem; } }

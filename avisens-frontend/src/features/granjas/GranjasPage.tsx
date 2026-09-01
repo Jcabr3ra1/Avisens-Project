@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRol } from '@shared/api'
+import { IcPlus } from '@shared/ui/icons/icons'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
+import '@shared/ui/admin/AdminKit.css'
 import { useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { Granja } from './api/granjas'
 import FormularioGranja from './components/FormularioGranja'
@@ -15,8 +18,7 @@ import './GranjasPage.css'
 
 function GranjasPage() {
   const navigate = useNavigate()
-  // El rol REAL, no el de vista previa: un admin viendo "como Operario" sigue
-  // siendo admin, y la vista previa promete no tocar lo que puede hacer.
+  // El rol REAL: solo el administrador gestiona la estructura productiva.
   const esAdministrador = getRol() === 'Administrador'
   const gestion = useGranjas()
   const formulario = useFormularioGranja(gestion.guardar)
@@ -43,23 +45,32 @@ function GranjasPage() {
   }
 
   return (
-    <div className="page-container grj-page">
-      <header className="grj-header">
-        <div>
-          <h1>Granjas</h1>
-          <p>Gestiona las sedes productivas de tu organización.</p>
-        </div>
-        {esAdministrador && (
-          <button
-            type="button"
-            className="grj-btn-primary"
-            onClick={() => formulario.abrirCrear()}
-          >
-            + Nueva granja
-          </button>
-        )}
-      </header>
+    <div className="page-container adm-page">
+      <CabeceraAdmin
+        eyebrow={esAdministrador ? 'Panel de administración' : 'Mi operación'}
+        titulo="Granjas"
+        subtitulo={
+          esAdministrador
+            ? 'Registra las sedes productivas y asígnalas a su propietario. De aquí cuelgan los galpones y, dentro de ellos, los lotes.'
+            : 'Consulta las sedes productivas a tu cargo y entra a sus galpones.'
+        }
+        migas={[{ label: 'Granjas' }]}
+        acciones={
+          esAdministrador && (
+            <button
+              type="button"
+              className="adm-btn adm-btn--primario"
+              onClick={() => formulario.abrirCrear()}
+            >
+              <IcPlus size={15} aria-hidden="true" />
+              Nueva granja
+            </button>
+          )
+        }
+      />
+
       <ResumenGranjas resumen={resumen} />
+
       {esAdministrador && (
         <TableroImplementacionGranjas
           etapas={etapasImplementacion}
@@ -68,23 +79,28 @@ function GranjasPage() {
           onAbrirGranja={(granjaId) => navigate(`/galpones?granja=${granjaId}`)}
         />
       )}
+
       {gestion.error && (
-        <div className="grj-alerta" role="alert">
+        <div className="adm-alerta" role="alert">
           <span>{gestion.error}</span>
           <button type="button" onClick={() => void gestion.recargar()}>
             Reintentar
           </button>
         </div>
       )}
-      <TablaGranjas
-        granjas={gestion.granjas}
-        cargando={gestion.cargando}
-        onEditar={formulario.abrirEditar}
-        onAlternar={(granja) => void gestion.alternarActivo(granja)}
-        onEliminar={confirmarEliminacion}
-        onVerGalpones={(granja) => navigate(`/galpones?granja=${granja.id}`)}
-        puedeGestionar={esAdministrador}
-      />
+
+      <section className="adm-panel" aria-label="Listado de granjas">
+        <TablaGranjas
+          granjas={gestion.granjas}
+          cargando={gestion.cargando}
+          onEditar={formulario.abrirEditar}
+          onAlternar={(granja) => void gestion.alternarActivo(granja)}
+          onEliminar={confirmarEliminacion}
+          onVerGalpones={(granja) => navigate(`/galpones?granja=${granja.id}`)}
+          puedeGestionar={esAdministrador}
+        />
+      </section>
+
       {formulario.abierto && (
         <FormularioGranja
           form={formulario.form}

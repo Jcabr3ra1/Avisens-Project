@@ -1,4 +1,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { IcPlus } from '@shared/ui/icons/icons'
+import CabeceraAdmin, { type Miga } from '@shared/ui/admin/CabeceraAdmin'
+import '@shared/ui/admin/AdminKit.css'
 import type { Lote } from './api/lotes'
 import BarraLotes from './components/BarraLotes'
 import FormularioLote from './components/FormularioLote'
@@ -8,7 +11,6 @@ import { useFiltroLotes } from './hooks/useFiltroLotes'
 import { useFormularioLote } from './hooks/useFormularioLote'
 import { useLotes } from './hooks/useLotes'
 import { useResumenLotes } from './hooks/useResumenLotes'
-import './LotesPage.css'
 
 function LotesPage() {
   const navigate = useNavigate()
@@ -35,6 +37,14 @@ function LotesPage() {
   const formulario = useFormularioLote(gestion.guardar)
   const catalogosDisponibles = galponesDisponibles.length > 0 && gestion.proveedores.length > 0
 
+  const migas: Miga[] = galponSeleccionado
+    ? [
+        { label: 'Granjas', to: '/granjas' },
+        { label: galponSeleccionado.granja.nombre, to: `/galpones?granja=${galponSeleccionado.granja.id}` },
+        { label: galponSeleccionado.nombre },
+      ]
+    : [{ label: 'Granjas', to: '/granjas' }, { label: 'Lotes' }]
+
   function abrirCrear() {
     const galponId = galponesDisponibles.find((galpon) => galpon.activo)?.id
     const proveedorId = gestion.proveedores[0]?.id
@@ -49,38 +59,54 @@ function LotesPage() {
   }
 
   return (
-    <div className="page-container lotes-page">
-      <header className="lotes-header">
-        <div>
-          <h1>{galponSeleccionado ? `Lotes · ${galponSeleccionado.nombre}` : 'Lotes'}</h1>
-          <p>{galponSeleccionado ? 'Gestiona los grupos de aves de este galpón.' : 'Gestiona los grupos de aves asociados a cada galpón.'}</p>
-        </div>
-        <div className="lotes-header-acciones">
-          {galponSeleccionado && (
-            <button type="button" className="lotes-btn-secondary" onClick={() => navigate(`/galpones?granja=${galponSeleccionado.granja.id}`)}>
-              Volver a galpones
+    <div className="page-container adm-page">
+      <CabeceraAdmin
+        titulo="Lotes"
+        contexto={galponSeleccionado?.nombre}
+        subtitulo={
+          galponSeleccionado
+            ? 'Los grupos de aves alojados en este galpón. Cada lote es la unidad sobre la que se mide el desempeño productivo.'
+            : 'Los grupos de aves asociados a cada galpón: ingreso, cantidad y estado del ciclo.'
+        }
+        migas={migas}
+        acciones={
+          <>
+            {galponSeleccionado && (
+              <button
+                type="button"
+                className="adm-btn adm-btn--secundario"
+                onClick={() => navigate(`/galpones?granja=${galponSeleccionado.granja.id}`)}
+              >
+                Volver a galpones
+              </button>
+            )}
+            <button
+              type="button"
+              className="adm-btn adm-btn--primario"
+              onClick={abrirCrear}
+              disabled={!catalogosDisponibles || gestion.cargando}
+            >
+              <IcPlus size={15} aria-hidden="true" />
+              Nuevo lote
             </button>
-          )}
-          <button type="button" className="lotes-btn-primary" onClick={abrirCrear} disabled={!catalogosDisponibles || gestion.cargando}>
-            + Nuevo lote
-          </button>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <ResumenLotes resumen={resumen} />
 
       {gestion.error && (
-        <div className="lotes-alerta" role="alert">
+        <div className="adm-alerta" role="alert">
           <span>{gestion.error}</span>
           <button type="button" onClick={() => void gestion.recargar()}>Reintentar</button>
         </div>
       )}
 
       {!gestion.cargando && !catalogosDisponibles && (
-        <p className="lotes-aviso">Necesitas un galpón activo y un proveedor para crear lotes.</p>
+        <p className="adm-aviso">Necesitas un galpón activo y un proveedor para crear lotes.</p>
       )}
 
-      <section className="lotes-card" aria-label="Listado de lotes">
+      <section className="adm-panel" aria-label="Listado de lotes">
         {lotesDelGalpon.length > 0 && (
           <BarraLotes
             busqueda={filtro.busqueda}
