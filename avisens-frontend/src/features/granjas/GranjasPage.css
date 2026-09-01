@@ -15,15 +15,12 @@
 .grj-card-info p { display: flex; align-items: center; gap: 0.3rem; margin: 0.35rem 0 0; color: var(--text3); font-size: 0.82rem; }
 .grj-estado { margin-left: 0.5rem; padding: 0.15rem 0.5rem; border-radius: 999px; background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red); font-size: 0.7rem; font-weight: 700; }
 .grj-card-meta { display: flex; align-items: center; gap: 0.8rem; color: var(--text3); font-size: 0.82rem; }
-.grj-ver-hijos { min-height: 44px; padding: 0.45rem 0.75rem; border: 1px solid var(--border); border-radius: 9px; background: color-mix(in srgb, var(--green) 8%, var(--card)); color: var(--green-d); font-weight: 700; cursor: pointer; }
-.grj-menu-btn { width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); cursor: pointer; }
+.grj-acciones { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.grj-acciones button { min-height: 40px; padding: 0.42rem 0.65rem; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); cursor: pointer; }
+.grj-ver-hijos { min-height: 40px; padding: 0.45rem 0.75rem; border: 1px solid var(--border); border-radius: 9px; background: color-mix(in srgb, var(--green) 8%, var(--card)); color: var(--green-d); font-weight: 700; cursor: pointer; }
+.grj-peligro { color: var(--red); }
 .grj-vacio { padding: 2rem; text-align: center; color: var(--text3); }
-.menu-overlay { position: fixed; inset: 0; z-index: 40; border: none; background: transparent; }
-.menu-dropdown { position: fixed; z-index: 41; display: flex; flex-direction: column; gap: 0.15rem; min-width: 150px; padding: 0.3rem; border: 1px solid var(--border); border-radius: 10px; background: var(--card); box-shadow: 0 14px 34px -12px rgba(0, 0, 0, 0.3); }
-.menu-item { width: 100%; padding: 0.5rem 0.7rem; border: none; border-radius: 7px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
-.menu-item:hover { background: var(--card-h); }
-.menu-item-danger { color: var(--red); }
-.grj-btn-primary:focus-visible, .grj-ver-hijos:focus-visible, .grj-menu-btn:focus-visible, .menu-item:focus-visible, .grj-tablero-tarjeta:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.grj-btn-primary:focus-visible, .grj-ver-hijos:focus-visible, .grj-acciones button:focus-visible, .grj-tablero-tarjeta:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .grj-tablero { margin-bottom: 1.2rem; padding: 1.4rem 1.5rem; border: 1px solid rgba(16,44,35,0.08); border-radius: 20px; background: rgba(255,255,255,0.86); box-shadow: 0 6px 24px rgba(10,40,28,0.06); backdrop-filter: blur(10px); }
 .grj-tablero-cabecera { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.2rem; }
 .grj-tablero-kicker { margin: 0 0 0.2rem; color: var(--green-d); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
