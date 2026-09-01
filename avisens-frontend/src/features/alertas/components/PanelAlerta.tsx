@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { getRolVista } from '@shared/api/tokens'
+import { getRol } from '@shared/api/tokens'
 import Modal from '@shared/ui/Modal/Modal'
 import { crearEvidenciaAlerta } from '../api/evidencias-alerta'
 import { listarDestinatariosAlerta, type Alerta, type DestinatarioAlerta } from '../api/alertas'
@@ -19,7 +19,9 @@ function PanelAlerta({ alerta, cerrando, onCerrar, onEscalar, onSalir }: PanelAl
   const [enlaceEvidencia, setEnlaceEvidencia] = useState('')
   const [destinatarios, setDestinatarios] = useState<DestinatarioAlerta[]>([])
   const [destinatarioId, setDestinatarioId] = useState('')
-  const rol = getRolVista()
+  // Escalar es una acción real contra el backend: el rol que decide es el
+  // autenticado, no el de la vista previa.
+  const rol = getRol()
   const puedeEscalar = rol === 'Administrador' || rol === 'Propietario'
 
   useEffect(() => {

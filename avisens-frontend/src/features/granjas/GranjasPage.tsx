@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getRolVista } from '@shared/api'
+import { getRol } from '@shared/api'
 import { useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { Granja } from './api/granjas'
 import FormularioGranja from './components/FormularioGranja'
@@ -15,7 +15,9 @@ import './GranjasPage.css'
 
 function GranjasPage() {
   const navigate = useNavigate()
-  const esAdministrador = getRolVista() === 'Administrador'
+  // El rol REAL, no el de vista previa: un admin viendo "como Operario" sigue
+  // siendo admin, y la vista previa promete no tocar lo que puede hacer.
+  const esAdministrador = getRol() === 'Administrador'
   const gestion = useGranjas()
   const formulario = useFormularioGranja(gestion.guardar)
   const catalogoPropietarios = usePropietariosGranja(esAdministrador)
