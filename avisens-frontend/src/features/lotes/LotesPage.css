@@ -30,19 +30,8 @@
 .lotes-acciones button, .lotes-form-acciones button { padding: 0.42rem 0.62rem; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); cursor: pointer; }
 .lotes-acciones .lotes-peligro { color: var(--red); }
 .lotes-vacio { padding: 2rem; text-align: center; color: var(--text3); }
-.lotes-modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(7, 20, 14, 0.58); }
 .lotes-modal-card { width: min(760px, 100%); max-height: calc(100vh - 2rem); overflow-y: auto; padding: 1.4rem; border-radius: 18px; background: var(--card); box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3); }
 .lotes-modal-card h2 { margin: 0 0 0.25rem; color: var(--dash-ink); }
-.lotes-form-ayuda { margin: 0 0 1rem; color: var(--text3); font-size: 0.82rem; line-height: 1.5; }
 .lotes-modal-card form { display: flex; flex-direction: column; gap: 0.9rem; }
-.lotes-form-fila { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; }
-.lotes-form-fila label { display: flex; flex-direction: column; gap: 0.3rem; }
-.lotes-form-fila label > span { color: var(--text); font-size: 0.8rem; font-weight: 600; }
-.lotes-form-fila em { color: var(--text3); font-style: normal; font-weight: 400; }
-.lotes-form-fila input, .lotes-form-fila select { width: 100%; min-height: 44px; padding: 0.6rem 0.7rem; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--text); }
-.lotes-form-desplegar { min-height: 44px; padding: 0.55rem 0.75rem; border: 1px solid var(--border); border-radius: 9px; background: color-mix(in srgb, var(--green) 7%, var(--card)); color: var(--green-d); font-weight: 700; text-align: left; cursor: pointer; }
-.lotes-form-adicional { display: flex; flex-direction: column; gap: 0.9rem; padding: 0.9rem; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--bg) 70%, var(--card)); }
-.lotes-form-error { margin: 0; color: var(--red); }
-.lotes-form-acciones { display: flex; justify-content: flex-end; gap: 0.6rem; }
 .lotes-btn-primary:focus-visible, .lotes-btn-secondary:focus-visible, .lotes-acciones button:focus-visible, .lotes-form-desplegar:focus-visible, .lotes-form-acciones button:focus-visible, .lotes-barra input:focus-visible, .lotes-barra select:focus-visible, .lotes-form-fila input:focus-visible, .lotes-form-fila select:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 @media (max-width: 760px) { .lotes-header { flex-direction: column; } .lotes-header-acciones { justify-content: flex-start; } .lotes-resumen { grid-template-columns: repeat(2, 1fr); } .lotes-form-fila { grid-template-columns: 1fr; } .lotes-barra { align-items: stretch; flex-direction: column; } }
