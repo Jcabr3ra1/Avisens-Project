@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { getRolVista } from '@shared/api'
+import { getRol } from '@shared/api'
 import type { Notificacion } from '@features/notificaciones/api/notificaciones'
 import { IcBell, IcCheck } from '@shared/ui/icons/icons'
 import { useNotificaciones } from './hooks/useNotificaciones'
@@ -19,7 +19,8 @@ function formatearFecha(fecha: string) {
 
 function NotificacionesPage() {
   const navigate = useNavigate()
-  const rol = getRolVista()
+  // El enlace de recuperación de acceso solo lo puede seguir un admin real.
+  const rol = getRol()
   const {
     notificaciones,
     noLeidas,
