@@ -4,9 +4,32 @@ import type { ConsumoDiario, CrearConsumoDiarioPayload } from '../model/consumoD
 
 export type { ConsumoDiario, CrearConsumoDiarioPayload } from '../model/consumoDiario'
 
-export async function listarConsumosDiarios(page = 1, limit = 200): Promise<ConsumoDiario[]> {
-  const { data } = await api.get<PaginatedResponse<ConsumoDiario>>('/consumos-diarios', { params: { page, limit } })
-  return data.data
+// El backend tope a 100 por página (@Max(100) en PaginationQueryDto) y no
+// recorta: pedir más devuelve 400. Y quedarse con la primera página callaría
+// los consumos viejos, que es peor: los totales de alimento y agua saldrían
+// cortos sin que nada avise. Así que se piden todas las páginas.
+const LIMITE_POR_PAGINA = 100
+
+export async function listarConsumosDiarios(): Promise<ConsumoDiario[]> {
+  const primeraRespuesta = await api.get<PaginatedResponse<ConsumoDiario>>('/consumos-diarios', {
+    params: { page: 1, limit: LIMITE_POR_PAGINA },
+  })
+  const primeraPagina = primeraRespuesta.data
+
+  if (primeraPagina.meta.totalPages <= 1) return primeraPagina.data
+
+  const restantes = await Promise.all(
+    Array.from({ length: primeraPagina.meta.totalPages - 1 }, (_, indice) =>
+      api.get<PaginatedResponse<ConsumoDiario>>('/consumos-diarios', {
+        params: { page: indice + 2, limit: LIMITE_POR_PAGINA },
+      }),
+    ),
+  )
+
+  return [
+    ...primeraPagina.data,
+    ...restantes.flatMap((respuesta) => respuesta.data.data),
+  ]
 }
 
 export async function crearConsumoDiario(payload: CrearConsumoDiarioPayload): Promise<ConsumoDiario> {
