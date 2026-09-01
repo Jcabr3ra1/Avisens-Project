@@ -792,3 +792,99 @@
 @media (prefers-reduced-motion: reduce) {
   .comunicacion-msg__borrar { transition: none; }
 }
+
+/* ── Nueva conversación ───────────────────────────────────────────────── */
+
+.com-nueva { display: flex; height: 100%; flex-direction: column; gap: 0.8rem; }
+
+.com-nueva__head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--com-linea);
+}
+
+.com-nueva__head strong { color: var(--com-tinta); font-size: 0.92rem; }
+
+.com-volver {
+  padding: 0.25rem 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  color: var(--com-acento-claro);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.com-volver:hover { background: var(--com-superficie); }
+
+.com-buscador {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--com-linea);
+  border-radius: 999px;
+  color: var(--com-tinta-tenue);
+  background: var(--com-superficie);
+}
+
+.com-buscador input {
+  flex: 1;
+  border: 0;
+  color: var(--com-tinta);
+  background: transparent;
+  font: inherit;
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.com-buscador input::placeholder { color: var(--com-tinta-tenue); }
+
+.com-contactos { display: flex; flex: 1; flex-direction: column; gap: 1rem; overflow-y: auto; }
+
+/* Agrupado por rol: quien busca a su propietario no debería recorrer veinte
+   operarios para encontrarlo. */
+.com-contactos__rol {
+  margin: 0 0 0.3rem;
+  color: var(--com-tinta-tenue);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.com-contacto {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.5rem 0.4rem;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.com-contacto:hover { background: var(--com-superficie); }
+.com-contacto:focus-visible { outline: 2px solid var(--com-acento); outline-offset: -2px; }
+.com-contacto__nombre { color: var(--com-tinta); font-size: 0.88rem; }
+
+.com-avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--com-sobre-acento);
+  background: var(--com-acento);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
