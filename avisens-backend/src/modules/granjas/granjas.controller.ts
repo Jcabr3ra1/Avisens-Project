@@ -81,9 +81,9 @@ export class GranjasController {
   }
 
   @Delete(':id/permanente')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
-    summary: 'Eliminar una granja de forma permanente (casos legales)',
+    summary: 'Eliminar una granja de forma permanente (casos legales) — sólo Administrador',
   })
   eliminarPermanente(
     @Param('id', ParseIntPipe) id: number,
