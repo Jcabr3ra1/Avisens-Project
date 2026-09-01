@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { mensajeDeError } from '@shared/utils/errores'
 import {
   enviarMensajeEquipo,
@@ -8,6 +8,15 @@ import {
   obtenerResumenEquipo,
   type MensajeEquipo,
   type ResumenGalponEquipo,
+  abrirConversacionPrivada,
+  enviarMensajePrivado,
+  listarContactosEquipo,
+  listarConversacionesPrivadas,
+  listarMensajesPrivados,
+  marcarMensajesPrivadosLeidos,
+  type ContactoEquipo,
+  type ConversacionPrivadaEquipo,
+  type MensajePrivadoEquipo,
 } from '../api/mensajesEquipo'
 
 export function useResumenEquipo(activo: boolean) {
@@ -39,24 +48,26 @@ export function useHiloEquipo(galponId: number | null) {
   const [cargando, setCargando] = useState(true)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
-  const marcado = useRef<number | null>(null)
 
-  const cargar = useCallback(async () => {
+  const cargar = useCallback(async (silencioso = false) => {
     if (galponId === null) {
       setMensajes([])
       setCargando(false)
       return
     }
-    setCargando(true)
-    setError('')
+    if (!silencioso) {
+      setCargando(true)
+      setError('')
+    }
     try {
       // Llegan del más reciente al más antiguo; la conversación se lee al revés.
       const lista = await listarMensajesDeGalpon(galponId)
       setMensajes([...lista].reverse())
+      void marcarLeidosDeGalpon(galponId).catch(() => undefined)
     } catch (err) {
-      setError(mensajeDeError(err, 'No pudimos cargar la conversación de este galpón.'))
+      if (!silencioso) setError(mensajeDeError(err, 'No pudimos cargar la conversación de este galpón.'))
     } finally {
-      setCargando(false)
+      if (!silencioso) setCargando(false)
     }
   }, [galponId])
 
@@ -64,13 +75,11 @@ export function useHiloEquipo(galponId: number | null) {
     void cargar()
   }, [cargar])
 
-  // Marcar leídos una sola vez por galpón: repetirlo en cada render dispararía
-  // un PATCH por cada mensaje que llegue.
   useEffect(() => {
-    if (galponId === null || cargando || marcado.current === galponId) return
-    marcado.current = galponId
-    void marcarLeidosDeGalpon(galponId).catch(() => undefined)
-  }, [galponId, cargando])
+    if (galponId === null) return
+    const intervalo = window.setInterval(() => void cargar(true), 12_000)
+    return () => window.clearInterval(intervalo)
+  }, [cargar, galponId])
 
   const enviar = useCallback(
     async (contenido: string) => {
@@ -101,4 +110,115 @@ export function useHiloEquipo(galponId: number | null) {
   }, [])
 
   return { mensajes, cargando, enviando, error, enviar, eliminar, recargar: cargar }
+}
+
+export function usePrivadasEquipo(galponId: number | null) {
+  const [contactos, setContactos] = useState<ContactoEquipo[]>([])
+  const [conversaciones, setConversaciones] = useState<ConversacionPrivadaEquipo[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [abriendo, setAbriendo] = useState(false)
+  const [error, setError] = useState('')
+
+  const cargar = useCallback(async () => {
+    if (galponId === null) {
+      setContactos([])
+      setConversaciones([])
+      setCargando(false)
+      return
+    }
+    setCargando(true)
+    setError('')
+    try {
+      const [listaContactos, listaConversaciones] = await Promise.all([
+        listarContactosEquipo(galponId),
+        listarConversacionesPrivadas(galponId),
+      ])
+      setContactos(listaContactos)
+      setConversaciones(listaConversaciones)
+    } catch (err) {
+      setError(mensajeDeError(err, 'No pudimos cargar los chats privados.'))
+    } finally {
+      setCargando(false)
+    }
+  }, [galponId])
+
+  useEffect(() => {
+    void cargar()
+  }, [cargar])
+
+  const abrir = useCallback(async (destinatarioId: number) => {
+    if (galponId === null || abriendo) return null
+    setAbriendo(true)
+    setError('')
+    try {
+      const conversacion = await abrirConversacionPrivada({ galpon_id: galponId, destinatario_id: destinatarioId })
+      setConversaciones((actuales) => {
+        const sinActual = actuales.filter((actual) => actual.id !== conversacion.id)
+        return [conversacion, ...sinActual]
+      })
+      return conversacion
+    } catch (err) {
+      setError(mensajeDeError(err, 'No pudimos abrir el chat privado.'))
+      return null
+    } finally {
+      setAbriendo(false)
+    }
+  }, [abriendo, galponId])
+
+  return { contactos, conversaciones, cargando, abriendo, error, abrir, recargar: cargar }
+}
+
+export function useHiloPrivado(conversacionId: number | null) {
+  const [mensajes, setMensajes] = useState<MensajePrivadoEquipo[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [enviando, setEnviando] = useState(false)
+  const [error, setError] = useState('')
+
+  const cargar = useCallback(async (silencioso = false) => {
+    if (conversacionId === null) {
+      setMensajes([])
+      setCargando(false)
+      return
+    }
+    if (!silencioso) {
+      setCargando(true)
+      setError('')
+    }
+    try {
+      const lista = await listarMensajesPrivados(conversacionId)
+      setMensajes([...lista].reverse())
+      void marcarMensajesPrivadosLeidos(conversacionId).catch(() => undefined)
+    } catch (err) {
+      if (!silencioso) setError(mensajeDeError(err, 'No pudimos cargar el chat privado.'))
+    } finally {
+      if (!silencioso) setCargando(false)
+    }
+  }, [conversacionId])
+
+  useEffect(() => {
+    void cargar()
+  }, [cargar])
+
+  useEffect(() => {
+    if (conversacionId === null) return
+    const intervalo = window.setInterval(() => void cargar(true), 12_000)
+    return () => window.clearInterval(intervalo)
+  }, [cargar, conversacionId])
+
+  const enviar = useCallback(async (contenido: string) => {
+    const texto = contenido.trim()
+    if (conversacionId === null || !texto || enviando) return
+    setEnviando(true)
+    setError('')
+    try {
+      const creado = await enviarMensajePrivado(conversacionId, texto)
+      setMensajes((actuales) => [...actuales, creado])
+    } catch (err) {
+      setError(mensajeDeError(err, 'No pudimos enviar el mensaje privado.'))
+    } finally {
+      setEnviando(false)
+    }
+  }, [conversacionId, enviando])
+
+  return { mensajes, cargando, enviando, error, enviar, recargar: cargar }
 }

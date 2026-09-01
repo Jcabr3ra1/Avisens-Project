@@ -3,9 +3,25 @@ import { getUsuario } from '@shared/api'
 import { IcChevronRight, IcSend, IcUsers } from '@shared/ui/icons/icons'
 import { useHiloEquipo, useResumenEquipo } from '../hooks/useMensajesEquipo'
 import type { MensajeEquipo } from '../api/mensajesEquipo'
+import PanelPrivados from './PanelPrivados'
 
 function hora(iso: string): string {
   return new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+}
+
+function etiquetaDia(iso: string): string {
+  const fecha = new Date(iso)
+  const hoy = new Date()
+  const ayer = new Date()
+  ayer.setDate(hoy.getDate() - 1)
+  const esMismoDia = (comparada: Date) => (
+    fecha.getFullYear() === comparada.getFullYear()
+    && fecha.getMonth() === comparada.getMonth()
+    && fecha.getDate() === comparada.getDate()
+  )
+  if (esMismoDia(hoy)) return 'Hoy'
+  if (esMismoDia(ayer)) return 'Ayer'
+  return new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short' }).format(fecha)
 }
 
 function ListaGalpones({ onAbrir }: { onAbrir: (id: number, nombre: string) => void }) {
@@ -58,13 +74,17 @@ function Hilo({ galponId, galponNombre, onVolver }: {
   const { mensajes, cargando, enviando, error, enviar, eliminar } = useHiloEquipo(galponId)
   const [borrador, setBorrador] = useState('')
   const finRef = useRef<HTMLDivElement>(null)
+  const ultimoMensajeId = useRef<number | null>(null)
   const usuarioId = getUsuario()?.id ?? null
 
-  // Al llegar un mensaje la conversación baja sola: si no, el nuevo queda
-  // fuera de vista y parece que no se envió.
   useEffect(() => {
-    finRef.current?.scrollIntoView({ block: 'end' })
-  }, [mensajes.length])
+    const ultimo = mensajes[mensajes.length - 1]
+    if (!ultimo) return
+    if (ultimoMensajeId.current === null || ultimo.emisor_id === usuarioId) {
+      finRef.current?.scrollIntoView({ block: 'end' })
+    }
+    ultimoMensajeId.current = ultimo.id
+  }, [mensajes, usuarioId])
 
   async function alEnviar(evento: FormEvent) {
     evento.preventDefault()
@@ -82,12 +102,19 @@ function Hilo({ galponId, galponNombre, onVolver }: {
   return (
     <section className="comunicacion-equipo" aria-label={`Conversación de ${galponNombre}`}>
       <header className="comunicacion-equipo__head">
-        {onVolver && (
-          <button type="button" className="comunicacion-equipo__volver" onClick={onVolver}>
-            ← Conversaciones
-          </button>
-        )}
-        <strong>{galponNombre}</strong>
+        <div className="comunicacion-equipo__canal">
+          {onVolver && (
+            <button type="button" className="comunicacion-equipo__volver" onClick={onVolver}>
+              ← Conversaciones
+            </button>
+          )}
+          <span className="comunicacion-equipo__canal-icon" aria-hidden="true"><IcUsers size={18} /></span>
+          <span>
+            <strong>{galponNombre}</strong>
+            <small>Canal general del galpón</small>
+          </span>
+        </div>
+        <span className="comunicacion-equipo__estado"><i aria-hidden="true" />General</span>
       </header>
 
       <div className="comunicacion-equipo__mensajes" aria-live="polite">
@@ -98,31 +125,31 @@ function Hilo({ galponId, galponNombre, onVolver }: {
             Nadie ha escrito aquí todavía. Lo que dejes queda para el turno siguiente.
           </p>
         ) : (
-          mensajes.map((mensaje) => {
+          mensajes.map((mensaje, indice) => {
             const propio = mensaje.emisor_id === usuarioId
+            const fechaAnterior = mensajes[indice - 1]?.fecha_envio
+            const cambiaElDia = !fechaAnterior || etiquetaDia(fechaAnterior) !== etiquetaDia(mensaje.fecha_envio)
             return (
-              <article
-                key={mensaje.id}
-                className={`comunicacion-msg${propio ? ' es-propio' : ''}`}
-              >
-                {!propio && (
-                  <span className="comunicacion-msg__autor">{mensaje.emisor.nombre_completo}</span>
-                )}
-                <p className="comunicacion-msg__texto">{mensaje.contenido}</p>
-                <span className="comunicacion-msg__pie">
-                  {hora(mensaje.fecha_envio)}
-                  {propio && (
-                    <button
-                      type="button"
-                      className="comunicacion-msg__borrar"
-                      onClick={() => confirmarBorrado(mensaje)}
-                      aria-label="Borrar mensaje"
-                    >
-                      Borrar
-                    </button>
-                  )}
-                </span>
-              </article>
+              <div key={mensaje.id} className="comunicacion-msg-group">
+                {cambiaElDia && <p className="comunicacion-msg__dia">{etiquetaDia(mensaje.fecha_envio)}</p>}
+                <article className={`comunicacion-msg${propio ? ' es-propio' : ''}`}>
+                  {!propio && <span className="comunicacion-msg__autor">{mensaje.emisor.nombre_completo}</span>}
+                  <p className="comunicacion-msg__texto">{mensaje.contenido}</p>
+                  <span className="comunicacion-msg__pie">
+                    {hora(mensaje.fecha_envio)}
+                    {propio && (
+                      <button
+                        type="button"
+                        className="comunicacion-msg__borrar"
+                        onClick={() => confirmarBorrado(mensaje)}
+                        aria-label="Borrar mensaje"
+                      >
+                        Borrar
+                      </button>
+                    )}
+                  </span>
+                </article>
+              </div>
             )
           })
         )}
@@ -154,9 +181,20 @@ function PanelEquipo({ galponId, galponNombre }: {
   // Sin galpón en el contexto se elige uno de la lista; con galpón se entra
   // directo a su conversación.
   const [elegido, setElegido] = useState<{ id: number; nombre: string } | null>(null)
+  const [vista, setVista] = useState<'general' | 'privados'>('general')
 
   if (galponId !== null) {
-    return <Hilo galponId={galponId} galponNombre={galponNombre ?? `Galpón ${galponId}`} />
+    return (
+      <section className="comunicacion-equipo-tabs">
+        <div className="comunicacion-equipo-tabs__nav" role="tablist" aria-label="Tipo de conversación">
+          <button type="button" role="tab" aria-selected={vista === 'general'} onClick={() => setVista('general')}>General</button>
+          <button type="button" role="tab" aria-selected={vista === 'privados'} onClick={() => setVista('privados')}>Privados</button>
+        </div>
+        {vista === 'general'
+          ? <Hilo galponId={galponId} galponNombre={galponNombre ?? `Galpón ${galponId}`} />
+          : <PanelPrivados galponId={galponId} />}
+      </section>
+    )
   }
 
   if (elegido) {

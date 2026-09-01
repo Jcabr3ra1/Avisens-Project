@@ -24,59 +24,30 @@ const pestanas = [
 function ComunicacionPanel({ abierto, pestanaInicial, galponId, galponNombre, onCerrar }: Props) {
   const [pestana, setPestana] = useState<PestanaComunicacion>(pestanaInicial)
   const panelRef = useRef<HTMLElement>(null)
-  const disparadorRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!abierto) return
     setPestana(pestanaInicial)
-    disparadorRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const marco = window.requestAnimationFrame(() => panelRef.current?.focus())
     return () => window.cancelAnimationFrame(marco)
   }, [abierto, pestanaInicial])
 
-  useEffect(() => {
-    if (abierto) return
-    disparadorRef.current?.focus()
-  }, [abierto])
-
   if (!abierto) return null
 
   const manejarTeclado = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      onCerrar()
-      return
-    }
-
-    if (event.key !== 'Tab') return
-    const elementos = panelRef.current?.querySelectorAll<HTMLElement>(
-      'button:not(:disabled), input:not(:disabled), [tabindex="0"]',
-    )
-    if (!elementos?.length) return
-    const primero = elementos[0]
-    const ultimo = elementos[elementos.length - 1]
-    if (event.shiftKey && document.activeElement === primero) {
-      event.preventDefault()
-      ultimo.focus()
-    } else if (!event.shiftKey && document.activeElement === ultimo) {
-      event.preventDefault()
-      primero.focus()
-    }
+    if (event.key === 'Escape') onCerrar()
   }
 
   return (
-    <div className="comunicacion-layer" role="presentation" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) onCerrar()
-    }}>
-      <aside
-        ref={panelRef}
-        className="comunicacion-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="comunicacion-title"
-        tabIndex={-1}
-        onKeyDown={manejarTeclado}
-      >
+    <aside
+      ref={panelRef}
+      id="comunicacion-panel"
+      className="comunicacion-panel"
+      role="complementary"
+      aria-labelledby="comunicacion-title"
+      tabIndex={-1}
+      onKeyDown={manejarTeclado}
+    >
         <header className="comunicacion-panel__header">
           <span className="comunicacion-panel__badge" aria-hidden="true"><IcChat size={23} /></span>
           <div>
@@ -111,8 +82,7 @@ function ComunicacionPanel({ abierto, pestanaInicial, galponId, galponNombre, on
           {pestana === 'ia' && <PanelIa puedeUsarCopiloto={['Administrador', 'Propietario'].includes(getRolVista() ?? '')} />}
           {pestana === 'voz' && <PanelVoz galponId={galponId} galponNombre={galponNombre} />}
         </div>
-      </aside>
-    </div>
+    </aside>
   )
 }
 

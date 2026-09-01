@@ -20,6 +20,8 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { MensajesEquipoService } from './mensajes-equipo.service';
 import { EnviarMensajeDto } from './dto/enviar-mensaje.dto';
 import { ListarMensajesDto } from './dto/listar-mensajes.dto';
+import { CrearConversacionPrivadaDto } from './dto/crear-conversacion-privada.dto';
+import { EnviarMensajePrivadoDto } from './dto/enviar-mensaje-privado.dto';
 
 interface AuthRequest extends Request {
   user: { id: number; email: string; rol: string; organizacion_id?: number };
@@ -66,6 +68,59 @@ export class MensajesEquipoController {
     @Req() req: AuthRequest,
   ) {
     return this.servicio.marcarLeidos(galponId, req.user);
+  }
+
+  @Get('galpon/:galponId/contactos')
+  @ApiOperation({ summary: 'Personas del equipo habilitadas para conversación privada' })
+  contactos(
+    @Param('galponId', ParseIntPipe) galponId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.servicio.contactos(galponId, req.user);
+  }
+
+  @Get('galpon/:galponId/privadas')
+  @ApiOperation({ summary: 'Conversaciones privadas propias dentro de un galpón' })
+  listarPrivadas(
+    @Param('galponId', ParseIntPipe) galponId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.servicio.listarPrivadas(galponId, req.user);
+  }
+
+  @Post('privadas')
+  @ApiOperation({ summary: 'Abrir o recuperar una conversación privada del equipo' })
+  abrirPrivada(@Body() dto: CrearConversacionPrivadaDto, @Req() req: AuthRequest) {
+    return this.servicio.abrirPrivada(dto, req.user);
+  }
+
+  @Get('privadas/:id/mensajes')
+  @ApiOperation({ summary: 'Listar mensajes de una conversación privada' })
+  listarMensajesPrivados(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: ListarMensajesDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.servicio.listarMensajesPrivados(id, req.user, query);
+  }
+
+  @Post('privadas/:id/mensajes')
+  @ApiOperation({ summary: 'Enviar un mensaje privado del equipo' })
+  enviarPrivado(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: EnviarMensajePrivadoDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.servicio.enviarPrivado(id, dto, req.user);
+  }
+
+  @Patch('privadas/:id/leidos')
+  @ApiOperation({ summary: 'Marcar como leídos los mensajes privados ajenos' })
+  marcarPrivadosLeidos(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.servicio.marcarPrivadosLeidos(id, req.user);
   }
 
   @Delete(':id')

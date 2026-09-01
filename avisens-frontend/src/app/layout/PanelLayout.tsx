@@ -1,10 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from './Sidebar/Sidebar'
 import { puedeAcceder, ROL_ADMIN, rutaInicioPorRol } from './Sidebar/navConfig'
 import { getAccessToken, getRol, getRolVista, guardarRolVista } from '@shared/api'
 import { usePauseOnHidden } from '@shared/hooks/usePauseOnHidden'
+import ComunicacionPanelProvider from '@features/comunicacion/context/ComunicacionPanelContext'
+import { useComunicacionPanel } from '@features/comunicacion/context/comunicacionPanel'
+import { IcChat, IcChevronRight } from '@shared/ui/icons/icons'
 import './PanelLayout.css'
+
+const ComunicacionPanel = lazy(() => import('@features/comunicacion/components/ComunicacionPanel'))
 
 function PanelShell({
   sidebarCollapsed,
@@ -21,12 +26,21 @@ function PanelShell({
 }) {
   const { pathname } = useLocation()
   const panel = useRef<HTMLElement>(null)
+  const comunicacion = useComunicacionPanel()
 
   // El panel scrollea por dentro, así que el navegador no restaura la posición
   // al cambiar de ruta: sin esto, la pantalla nueva entra a media altura.
   useEffect(() => {
     panel.current?.scrollTo({ top: 0 })
   }, [pathname])
+
+  const alternarChat = () => {
+    if (comunicacion.abierto) {
+      comunicacion.cerrar()
+      return
+    }
+    comunicacion.alternar('equipo')
+  }
 
   return (
     <div className={`dash-page${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
@@ -51,6 +65,32 @@ function PanelShell({
             <Outlet />
           </div>
         </main>
+        <aside className={`dash-chat-rail${comunicacion.abierto ? ' dash-chat-rail--open' : ''}`} aria-label="Comunicación">
+          <button
+            type="button"
+            className="dash-chat-rail__toggle"
+            onClick={alternarChat}
+            aria-expanded={comunicacion.abierto}
+            aria-controls="comunicacion-panel"
+            aria-label={comunicacion.abierto ? 'Contraer panel de comunicación' : 'Abrir comunicación'}
+            title={comunicacion.abierto ? 'Contraer chat' : 'Abrir chat'}
+          >
+            {comunicacion.abierto ? <IcChevronRight size={21} aria-hidden="true" /> : <IcChat size={25} aria-hidden="true" />}
+          </button>
+          {comunicacion.abierto && (
+            <section className="dash-chat-panel">
+            <Suspense fallback={<aside className="comunicacion-panel comunicacion-panel--loading" aria-busy="true" />}>
+              <ComunicacionPanel
+                abierto={comunicacion.abierto}
+                pestanaInicial={comunicacion.pestana}
+                galponId={comunicacion.contexto.galponId}
+                galponNombre={comunicacion.contexto.galponNombre}
+                onCerrar={comunicacion.cerrar}
+              />
+            </Suspense>
+            </section>
+          )}
+        </aside>
       </div>
     </div>
   )
@@ -113,13 +153,15 @@ function PanelLayout() {
   }
 
   return (
-    <PanelShell
-      sidebarCollapsed={sidebarCollapsed}
-      onToggle={() => setSidebarCollapsed((v) => !v)}
-      rolAutenticado={rol}
-      rolVista={rolVista}
-      onCambiarVista={cambiarVista}
-    />
+    <ComunicacionPanelProvider>
+      <PanelShell
+        sidebarCollapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((v) => !v)}
+        rolAutenticado={rol}
+        rolVista={rolVista}
+        onCambiarVista={cambiarVista}
+      />
+    </ComunicacionPanelProvider>
   )
 }
 

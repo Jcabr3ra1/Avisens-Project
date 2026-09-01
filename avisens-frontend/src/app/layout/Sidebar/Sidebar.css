@@ -68,8 +68,7 @@
   letter-spacing: 0.08em;
 }
 
-.dash-sidebar-toggle,
-.dash-side-logout {
+.dash-sidebar-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -89,8 +88,6 @@
 
 .dash-sidebar-toggle:hover { color: #ffffff; background: var(--velo-fuerte); }
 .dash-sidebar-toggle svg { transition: transform 180ms ease; }
-
-/* ── Perfil ─────────────────────────────────────────────────────────────── */
 
 .dash-side-perfil {
   display: flex;
@@ -330,8 +327,6 @@
   background: var(--avisens-yellow);
 }
 
-/* ── Cerrar sesión ──────────────────────────────────────────────────────── */
-
 .dash-side-user {
   display: flex;
   align-items: center;
@@ -344,9 +339,11 @@
   width: 100%;
   min-height: 40px;
   gap: 8px;
+  border: 0;
   border-radius: 11px;
   color: var(--tinta-suave);
   background: transparent;
+  cursor: pointer;
   font: inherit;
   font-size: 0.83rem;
   font-weight: 600;
@@ -500,6 +497,7 @@
 
   .dash-side-user { margin: 0; padding: 0; border: 0; }
   .dash-side-logout { width: 50px; min-height: 52px; border-radius: 14px; }
+
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,7 +1,7 @@
-import { lazy, Suspense, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRolVista } from '@shared/api'
-import ComunicacionFab from '@features/comunicacion/components/ComunicacionFab'
+import { useComunicacionPanel } from '@features/comunicacion/context/comunicacionPanel'
 import type { PestanaComunicacion } from '@features/comunicacion/model/comunicacion'
 import DashboardHeader from './components/DashboardHeader'
 import FranjaAtencion from './components/FranjaAtencion'
@@ -19,8 +19,6 @@ import { useAtencion } from './hooks/useAtencion'
 import { useIndicadoresLote } from './hooks/useIndicadoresLote'
 import { useDashboard } from './hooks/useDashboard'
 import './DashboardPage.css'
-
-const ComunicacionPanel = lazy(() => import('@features/comunicacion/components/ComunicacionPanel'))
 
 function DashboardSkeleton() {
   return (
@@ -55,12 +53,13 @@ function DashboardPage() {
   const puedeAdministrar = ['Administrador', 'Propietario'].includes(rolVista ?? '')
   const nombre = dashboard.usuario?.nombre?.trim().split(/\s+/)[0] || 'equipo'
   const [busqueda, setBusqueda] = useState('')
-  const [comunicacionAbierta, setComunicacionAbierta] = useState(false)
-  const [pestanaComunicacion, setPestanaComunicacion] = useState<PestanaComunicacion>('equipo')
+  const comunicacion = useComunicacionPanel()
 
-  const abrirComunicacion = (pestana: PestanaComunicacion) => {
-    setPestanaComunicacion(pestana)
-    setComunicacionAbierta(true)
+  const alternarComunicacion = (pestana: PestanaComunicacion) => {
+    comunicacion.alternar(pestana, {
+      galponId: dashboard.galponId,
+      galponNombre: dashboard.galpon?.nombre ?? null,
+    })
   }
 
   if (dashboard.cargando && dashboard.granjas.length === 0) {
@@ -113,7 +112,7 @@ function DashboardPage() {
         onGranjaChange={dashboard.seleccionarGranja}
         onBusquedaChange={setBusqueda}
         onRecargar={dashboard.recargar}
-        onAbrirComunicacion={abrirComunicacion}
+        onAbrirComunicacion={alternarComunicacion}
         onIrABitacora={() => navigate('/bitacora')}
         onIrAAlertas={() => navigate('/alertas')}
         onIrANotificaciones={() => navigate('/notificaciones')}
@@ -161,28 +160,15 @@ function DashboardPage() {
 
       <div className="dash-lote-plano">
         <EstadoLote
-        lote={dashboard.lote}
-        indicadores={indicadores}
-        comparacion={comparacion}
-        diaLote={dashboard.diaLote}
-        cargando={cargandoLote}
-        onAbrirBitacora={() => navigate('/bitacora')}
+          lote={dashboard.lote}
+          indicadores={indicadores}
+          comparacion={comparacion}
+          diaLote={dashboard.diaLote}
+          cargando={cargandoLote}
+          onAbrirBitacora={() => navigate('/bitacora')}
         />
         <PlanoGalpon galpon={galponMonitoreo} />
       </div>
-
-      {comunicacionAbierta && (
-        <Suspense fallback={null}>
-          <ComunicacionPanel
-            abierto={comunicacionAbierta}
-            pestanaInicial={pestanaComunicacion}
-            galponId={dashboard.galponId}
-            galponNombre={dashboard.galpon?.nombre ?? null}
-            onCerrar={() => setComunicacionAbierta(false)}
-          />
-        </Suspense>
-      )}
-      <ComunicacionFab onAbrir={() => abrirComunicacion('equipo')} />
     </div>
   )
 }

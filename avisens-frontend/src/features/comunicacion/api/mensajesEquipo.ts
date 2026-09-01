@@ -19,6 +19,34 @@ export interface ResumenGalponEquipo {
   ultimo_mensaje: string | null
 }
 
+export interface ContactoEquipo {
+  id: number
+  nombre_completo: string
+  rol: string
+  rol_asignacion: string | null
+}
+
+export interface ConversacionPrivadaEquipo {
+  id: number
+  galpon_id: number
+  fecha_creacion: string
+  ultimo_mensaje_en: string | null
+  participante_uno: { id: number; nombre_completo: string }
+  participante_dos: { id: number; nombre_completo: string }
+  mensajes: Array<{ contenido: string; fecha_envio: string }>
+  _count: { mensajes: number }
+}
+
+export interface MensajePrivadoEquipo {
+  id: number
+  conversacion_id: number
+  emisor_id: number
+  contenido: string
+  fecha_envio: string
+  fecha_lectura: string | null
+  emisor: { id: number; nombre_completo: string }
+}
+
 // `emisor_id` no se manda: sale del token. Si viniera del cuerpo, cualquiera
 // podría escribir haciéndose pasar por otro.
 export interface EnviarMensajePayload {
@@ -67,6 +95,57 @@ export async function eliminarMensajeEquipo(
 ): Promise<{ id: number; eliminado: boolean }> {
   const { data } = await api.delete<{ id: number; eliminado: boolean }>(
     `/mensajes-equipo/${id}`,
+  )
+  return data
+}
+
+export async function listarContactosEquipo(galponId: number): Promise<ContactoEquipo[]> {
+  const { data } = await api.get<ContactoEquipo[]>(`/mensajes-equipo/galpon/${galponId}/contactos`)
+  return data
+}
+
+export async function listarConversacionesPrivadas(
+  galponId: number,
+): Promise<ConversacionPrivadaEquipo[]> {
+  const { data } = await api.get<ConversacionPrivadaEquipo[]>(`/mensajes-equipo/galpon/${galponId}/privadas`)
+  return data
+}
+
+export async function abrirConversacionPrivada(payload: {
+  galpon_id: number
+  destinatario_id: number
+}): Promise<ConversacionPrivadaEquipo> {
+  const { data } = await api.post<ConversacionPrivadaEquipo>('/mensajes-equipo/privadas', payload)
+  return data
+}
+
+export async function listarMensajesPrivados(
+  conversacionId: number,
+  limit = 50,
+): Promise<MensajePrivadoEquipo[]> {
+  const { data } = await api.get<PaginatedResponse<MensajePrivadoEquipo>>(
+    `/mensajes-equipo/privadas/${conversacionId}/mensajes`,
+    { params: { page: 1, limit } },
+  )
+  return data.data
+}
+
+export async function enviarMensajePrivado(
+  conversacionId: number,
+  contenido: string,
+): Promise<MensajePrivadoEquipo> {
+  const { data } = await api.post<MensajePrivadoEquipo>(
+    `/mensajes-equipo/privadas/${conversacionId}/mensajes`,
+    { contenido },
+  )
+  return data
+}
+
+export async function marcarMensajesPrivadosLeidos(
+  conversacionId: number,
+): Promise<{ conversacion_id: number; marcados: number }> {
+  const { data } = await api.patch<{ conversacion_id: number; marcados: number }>(
+    `/mensajes-equipo/privadas/${conversacionId}/leidos`,
   )
   return data
 }

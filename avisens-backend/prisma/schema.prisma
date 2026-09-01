@@ -91,6 +91,9 @@ model Usuario {
   recomendaciones            Recomendacion[]
   conversaciones_ia          ConversacionIa[]
   mensajes_equipo            MensajeEquipo[]
+  conversaciones_privadas_uno ConversacionPrivadaEquipo[] @relation("ConversacionPrivadaUno")
+  conversaciones_privadas_dos ConversacionPrivadaEquipo[] @relation("ConversacionPrivadaDos")
+  mensajes_privados_equipo    MensajePrivadoEquipo[]
 
   // Permite que la FK compuesta de granjas garantice que el propietario y la
   // granja pertenezcan a la misma organización.
@@ -191,6 +194,7 @@ model Galpon {
   recomendaciones      Recomendacion[]
   analisis_bioacustico AnalisisBioacustico[]
   mensajes_equipo      MensajeEquipo[]
+  conversaciones_privadas ConversacionPrivadaEquipo[]
   analisis_vision      AnalisisVision[]
 
   // El código se repite entre granjas (cada una tiene su "galpon1"), pero es
@@ -1459,6 +1463,42 @@ model MensajeEquipo {
   @@index([galpon_id, fecha_envio])
   @@index([emisor_id])
   @@map("mensajes_equipo")
+}
+
+model ConversacionPrivadaEquipo {
+  id                   Int      @id @default(autoincrement())
+  galpon_id            Int
+  participante_uno_id  Int
+  participante_dos_id  Int
+  fecha_creacion       DateTime @default(now())
+  ultimo_mensaje_en    DateTime?
+
+  galpon           Galpon  @relation(fields: [galpon_id], references: [id])
+  participante_uno Usuario @relation("ConversacionPrivadaUno", fields: [participante_uno_id], references: [id])
+  participante_dos Usuario @relation("ConversacionPrivadaDos", fields: [participante_dos_id], references: [id])
+  mensajes         MensajePrivadoEquipo[]
+
+  @@unique([galpon_id, participante_uno_id, participante_dos_id])
+  @@index([participante_uno_id])
+  @@index([participante_dos_id])
+  @@index([galpon_id])
+  @@map("conversaciones_privadas_equipo")
+}
+
+model MensajePrivadoEquipo {
+  id              Int      @id @default(autoincrement())
+  conversacion_id Int
+  emisor_id       Int
+  contenido       String
+  fecha_envio     DateTime @default(now())
+  fecha_lectura   DateTime?
+
+  conversacion ConversacionPrivadaEquipo @relation(fields: [conversacion_id], references: [id], onDelete: Cascade)
+  emisor       Usuario                    @relation(fields: [emisor_id], references: [id])
+
+  @@index([conversacion_id, fecha_envio])
+  @@index([emisor_id])
+  @@map("mensajes_privados_equipo")
 }
 
 // ---------------------------------------------------------------------------
