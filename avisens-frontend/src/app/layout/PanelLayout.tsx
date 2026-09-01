@@ -1,23 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar/Sidebar'
-import { puedeAcceder, ROL_ADMIN, rutaInicioPorRol } from './Sidebar/navConfig'
-import { getAccessToken, getRol, getRolVista, guardarRolVista } from '@shared/api'
+import { puedeAcceder, rutaInicioPorRol } from './Sidebar/navConfig'
+import { getAccessToken, getRol } from '@shared/api'
 import { usePauseOnHidden } from '@shared/hooks/usePauseOnHidden'
 import './PanelLayout.css'
 
 function PanelShell({
   sidebarCollapsed,
   onToggle,
-  rolAutenticado,
-  rolVista,
-  onCambiarVista,
+  rol,
 }: {
   sidebarCollapsed: boolean
   onToggle: () => void
-  rolAutenticado: string | null
-  rolVista: string | null
-  onCambiarVista: (rol: string) => void
+  rol: string | null
 }) {
   const { pathname } = useLocation()
   const panel = useRef<HTMLElement>(null)
@@ -31,23 +27,11 @@ function PanelShell({
   return (
     <div className={`dash-page${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       <div className="dash-shell">
-        <Sidebar
-          collapsed={sidebarCollapsed}
-          onToggle={onToggle}
-          rolAutenticado={rolAutenticado}
-          rolVista={rolVista}
-          onCambiarVista={onCambiarVista}
-        />
+        <Sidebar collapsed={sidebarCollapsed} onToggle={onToggle} rol={rol} />
         <main className="dash-main" ref={panel}>
           {/* La `key` fuerza a React a remontar el contenido en cada ruta:
               sin ella la animación de entrada solo correría la primera vez. */}
           <div className="dash-view" key={pathname}>
-            {rolAutenticado === ROL_ADMIN && rolVista !== ROL_ADMIN && (
-              <div className="dash-vista-previa" role="status">
-                <strong>Viendo como {rolVista}</strong>
-                <span>Sólo cambia lo que ves. Tu sesión sigue siendo de Administrador y lo que registres aquí es real.</span>
-              </div>
-            )}
             <Outlet />
           </div>
         </main>
@@ -70,8 +54,6 @@ function PanelLayout() {
   })
 
   const location = useLocation()
-  const navigate = useNavigate()
-  const [rolVista, setRolVista] = useState<string | null>(() => getRolVista())
   usePauseOnHidden()
 
   useEffect(() => {
@@ -95,20 +77,12 @@ function PanelLayout() {
   // Esto evita el bucle infinito cuando un rol intenta acceder a una ruta que no le corresponde.
   const rutaInicio = rutaInicioPorRol(rol)
 
-  const cambiarVista = (siguienteRol: string) => {
-    if (rol !== ROL_ADMIN) return
-    guardarRolVista(siguienteRol)
-    setRolVista(siguienteRol)
-    navigate(rutaInicioPorRol(siguienteRol))
-  }
-
   // Guardia 1: sin sesión iniciada → al login.
   if (!getAccessToken()) {
     return <Navigate to="/login" replace />
   }
   // Guardia 2: el rol no tiene permiso para esta ruta → a su ruta de inicio.
-  const accesoPorVistaPrevia = rol === ROL_ADMIN && puedeAcceder(location.pathname, rolVista)
-  if (!puedeAcceder(location.pathname, rol) && !accesoPorVistaPrevia) {
+  if (!puedeAcceder(location.pathname, rol)) {
     return <Navigate to={rutaInicio} replace />
   }
 
@@ -116,9 +90,7 @@ function PanelLayout() {
     <PanelShell
       sidebarCollapsed={sidebarCollapsed}
       onToggle={() => setSidebarCollapsed((v) => !v)}
-      rolAutenticado={rol}
-      rolVista={rolVista}
-      onCambiarVista={cambiarVista}
+      rol={rol}
     />
   )
 }

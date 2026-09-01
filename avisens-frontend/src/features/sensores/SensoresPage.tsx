@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { getRolVista } from '@shared/api'
+import { getRol } from '@shared/api'
 import { type CrearSensorPayload, type Sensor } from '@features/sensores/api/sensores'
 import { mensajeDeError } from '@shared/utils/errores'
 import { useCatalogoSensores } from './hooks/useCatalogoSensores'
@@ -33,7 +33,7 @@ function SensoresPage() {
   const [errorForm, setErrorForm] = useState('')
   const [ok, setOk] = useState('')
 
-  const rol = getRolVista()
+  const rol = getRol()
   const { galpones, dispositivosDelGalpon, cargando: cargandoOpciones } =
     useOpcionesSensor(form.galpon_id)
 

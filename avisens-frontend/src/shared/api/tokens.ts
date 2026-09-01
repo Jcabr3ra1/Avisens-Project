@@ -7,9 +7,6 @@ const ACCESS_KEY = 'avisens_access_token'
 const REFRESH_KEY = 'avisens_refresh_token'
 const USER_KEY = 'avisens_usuario'
 const CAMBIO_PASSWORD_KEY = 'avisens_cambio_password_token'
-const MODO_VISTA_KEY = 'avisens_modo_vista'
-const ROL_ADMINISTRADOR = 'Administrador'
-const ROLES_DE_VISTA = [ROL_ADMINISTRADOR, 'Propietario', 'Operario'] as const
 
 export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_KEY)
@@ -57,27 +54,10 @@ export function getRol(): string | null {
   return getUsuario()?.rol ?? null
 }
 
-export function getRolVista(): string | null {
-  const rolAutenticado = getRol()
-  if (rolAutenticado !== ROL_ADMINISTRADOR) return rolAutenticado
-
-  const modoGuardado = localStorage.getItem(MODO_VISTA_KEY)
-  return ROLES_DE_VISTA.includes(modoGuardado as typeof ROLES_DE_VISTA[number])
-    ? modoGuardado
-    : rolAutenticado
-}
-
-export function guardarRolVista(rolVista: string): void {
-  if (getRol() !== ROL_ADMINISTRADOR) return
-  if (!ROLES_DE_VISTA.includes(rolVista as typeof ROLES_DE_VISTA[number])) return
-  localStorage.setItem(MODO_VISTA_KEY, rolVista)
-}
-
 // Limpia toda la sesión (tokens + usuario).
 export function clearTokens(): void {
   localStorage.removeItem(ACCESS_KEY)
   localStorage.removeItem(REFRESH_KEY)
   localStorage.removeItem(USER_KEY)
-  localStorage.removeItem(MODO_VISTA_KEY)
   clearCambioPasswordToken()
 }

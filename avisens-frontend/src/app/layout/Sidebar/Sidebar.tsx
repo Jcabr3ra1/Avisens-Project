@@ -1,13 +1,10 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { IcCheck, IcLeaf, IcServer, IcSidebar, IcUsers } from '@shared/ui/icons/icons'
+import { IcSidebar } from '@shared/ui/icons/icons'
 import { getUsuario, logout } from '@shared/api'
 import logoAvisens from '@shared/assets/logo-avisens.png'
 import CampanaNotificaciones from './CampanaNotificaciones'
 import {
   NAV_SECTIONS,
-  ROL_ADMIN,
-  ROL_OPERARIO,
-  ROL_PROPIETARIO,
   esGrupo,
   itemVisible,
   rutaInicioPorRol,
@@ -30,9 +27,7 @@ function iniciales(nombre?: string): string {
 type Props = {
   collapsed: boolean
   onToggle: () => void
-  rolAutenticado: string | null
-  rolVista: string | null
-  onCambiarVista: (rol: string) => void
+  rol: string | null
 }
 
 function filtrarItems(items: NavItem[], rol: string | null): NavLinkItem[] {
@@ -41,19 +36,13 @@ function filtrarItems(items: NavItem[], rol: string | null): NavLinkItem[] {
   )
 }
 
-const MODOS_DE_VISTA = [
-  { rol: ROL_ADMIN, etiqueta: 'Admin', descripcion: 'Control total', icono: IcServer },
-  { rol: ROL_PROPIETARIO, etiqueta: 'Propietario', descripcion: 'Mi producción', icono: IcLeaf },
-  { rol: ROL_OPERARIO, etiqueta: 'Operario', descripcion: 'Trabajo diario', icono: IcUsers },
-]
-
-const Sidebar = ({ collapsed, onToggle, rolAutenticado, rolVista, onCambiarVista }: Props) => {
+const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
   const navigate = useNavigate()
   const usuario = getUsuario()
-  const rutaInicio = rutaInicioPorRol(rolVista)
+  const rutaInicio = rutaInicioPorRol(rol)
 
   const secciones = NAV_SECTIONS
-    .map((section) => ({ ...section, items: filtrarItems(section.items, rolVista) }))
+    .map((section) => ({ ...section, items: filtrarItems(section.items, rol) }))
     .filter((section) => section.items.length > 0)
 
   async function handleLogout() {
@@ -134,43 +123,8 @@ const Sidebar = ({ collapsed, onToggle, rolAutenticado, rolVista, onCambiarVista
       <div className="dash-side-perfil">
         <div className="dash-side-perfil-foto">{iniciales(usuario?.nombre)}</div>
         <span className="dash-side-perfil-nombre">{usuario?.nombre ?? 'Usuario'}</span>
-        <span className="dash-side-perfil-rol">
-          {rolAutenticado === ROL_ADMIN && rolVista !== ROL_ADMIN
-            ? `Viendo como ${rolVista}`
-            : usuario?.rol ?? ''}
-        </span>
+        <span className="dash-side-perfil-rol">{usuario?.rol ?? ''}</span>
       </div>
-
-      {rolAutenticado === ROL_ADMIN && (
-        <section className="dash-side-modos" aria-label="Cambiar la vista por rol">
-          <div className="dash-side-modos-cabecera">
-            <div>
-              <span className="dash-side-modos-titulo">Vista previa</span>
-              <span className="dash-side-modos-subtitulo">Cambia sólo lo que ves, no tus permisos</span>
-            </div>
-            <span className="dash-side-modos-badge">Sólo la vista</span>
-          </div>
-          <div className="dash-side-modos-opciones" role="group" aria-label="Roles disponibles">
-            {MODOS_DE_VISTA.map(({ rol, etiqueta, descripcion, icono: Icono }) => (
-              <button
-                key={rol}
-                type="button"
-                className={`dash-side-modo${rolVista === rol ? ' activo' : ''}`}
-                onClick={() => onCambiarVista(rol)}
-                aria-pressed={rolVista === rol}
-                aria-label={`Cambiar a vista ${etiqueta}: ${descripcion}`}
-                title={`${etiqueta}: ${descripcion}`}
-              >
-                <span className="dash-side-modo-icono" aria-hidden="true"><Icono size={17} /></span>
-                <span className="dash-side-modo-label">{etiqueta}</span>
-                {rolVista === rol && (
-                  <span className="dash-side-modo-activo" aria-hidden="true"><IcCheck size={11} /></span>
-                )}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
 
       <nav className="dash-side-nav" aria-label="Navegación principal">
         {secciones.map((section) => (

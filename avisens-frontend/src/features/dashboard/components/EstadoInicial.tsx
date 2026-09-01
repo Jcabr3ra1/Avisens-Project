@@ -3,14 +3,14 @@ import { IcCheck, IcEgg, IcGrid, IcLeaf } from '@shared/ui/icons/icons'
 interface EstadoInicialProps {
   granjas: number
   galpones: number
-  rolVista: string | null
+  rol: string | null
   onIrAProduccion: () => void
   onRecargar: () => void
 }
 
-function EstadoInicial({ granjas, galpones, rolVista, onIrAProduccion, onRecargar }: EstadoInicialProps) {
-  const esAdministrador = rolVista === 'Administrador'
-  const esPropietario = rolVista === 'Propietario'
+function EstadoInicial({ granjas, galpones, rol, onIrAProduccion, onRecargar }: EstadoInicialProps) {
+  const esAdministrador = rol === 'Administrador'
+  const esPropietario = rol === 'Propietario'
   const sinGranja = granjas === 0
   const sinGalpon = galpones === 0
 
