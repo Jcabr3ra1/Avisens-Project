@@ -1,0 +1,51 @@
+/* Menú de tres puntos para acciones secundarias, compartido por los
+   módulos administrativos. */
+
+.menu-acciones { position: relative; flex-shrink: 0; }
+
+.menu-acciones-disparador {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+}
+
+.menu-acciones-disparador:hover { border-color: var(--border2); background: var(--card); color: var(--text); }
+.menu-acciones-disparador:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+
+.menu-acciones-lista {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  min-width: 172px;
+  flex-direction: column;
+  padding: 0.28rem;
+  border: 1px solid var(--border2);
+  border-radius: 11px;
+  background: var(--card);
+  box-shadow: 0 10px 30px rgba(10, 40, 28, 0.16);
+}
+
+.menu-acciones-item {
+  padding: 0.45rem 0.6rem;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-acciones-item:hover { background: var(--bg-tint); }
+.menu-acciones-item:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+.menu-acciones-item--peligro { color: #dc2626; }
+.menu-acciones-item--peligro:hover { background: rgba(239, 68, 68, 0.08); }

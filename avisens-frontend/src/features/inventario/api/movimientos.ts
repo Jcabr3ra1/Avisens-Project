@@ -42,7 +42,7 @@ export async function listarMovimientos(
 ): Promise<MovimientoInventario[]> {
   const { data } = await api.get<PaginatedResponse<MovimientoInventario>>(
     '/movimientos-inventario',
-    { params: { page: 1, limit: 200, ...query } },
+    { params: { page: 1, limit: 100, ...query } },
   )
   return data.data
 }

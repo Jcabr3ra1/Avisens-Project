@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   gestionaAlgo,
   permisosDeGestion,
+  permisosDeInsumo,
   ROL_ADMIN,
   ROL_OPERARIO,
   ROL_PROPIETARIO,
@@ -41,5 +42,29 @@ describe('permisosDeGestion', () => {
   it('gestionaAlgo solo es cierto para quien administra', () => {
     expect(gestionaAlgo(permisosDeGestion(ROL_ADMIN))).toBe(true)
     expect(gestionaAlgo(permisosDeGestion(ROL_PROPIETARIO))).toBe(false)
+  })
+})
+
+describe('permisosDeInsumo', () => {
+  it('solo el administrador administra el catálogo de insumos', () => {
+    const admin = permisosDeInsumo(ROL_ADMIN)
+    expect(admin.crear && admin.editar && admin.alternarActivo && admin.eliminar).toBe(true)
+
+    for (const rol of [ROL_PROPIETARIO, ROL_OPERARIO]) {
+      const permisos = permisosDeInsumo(rol)
+      expect(permisos.crear).toBe(false)
+      expect(permisos.editar).toBe(false)
+      expect(permisos.eliminar).toBe(false)
+    }
+  })
+
+  it('los tres roles registran movimientos de stock', () => {
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO]) {
+      expect(permisosDeInsumo(rol).registrarMovimiento).toBe(true)
+    }
+  })
+
+  it('sin sesión no se puede ni mover stock', () => {
+    expect(permisosDeInsumo(null).registrarMovimiento).toBe(false)
   })
 })
