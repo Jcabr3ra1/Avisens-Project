@@ -61,7 +61,7 @@ export class LotesController {
   }
 
   @Patch(':id')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Actualizar un lote' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -72,21 +72,21 @@ export class LotesController {
   }
 
   @Patch(':id/activar')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Activar un lote' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.lotesService.activar(id, req.user);
   }
 
   @Delete(':id')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Desactivar un lote (borrado suave)' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.lotesService.desactivar(id, req.user);
   }
 
   @Delete(':id/permanente')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
     summary: 'Eliminar un lote de forma permanente (casos legales)',
   })
