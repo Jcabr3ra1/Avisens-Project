@@ -48,14 +48,6 @@
 .prv-alerta button { min-height: 36px; border: 0; border-radius: 7px; color: inherit; background: transparent; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
 
 .prv-modal-fondo { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 1rem; background: rgba(8, 37, 25, 0.54); }
-.prv-modal { width: min(100%, 610px); max-height: calc(100dvh - 2rem); overflow-y: auto; padding: 1.4rem; border-radius: 18px; background: #fff; box-shadow: 0 24px 70px rgba(2, 34, 21, 0.3); }
-.prv-modal header h2 { margin: 0; color: var(--dash-ink); font-size: 1.2rem; }
-.prv-modal header p { margin: 0.35rem 0 1.2rem; color: var(--text3); font-size: 0.82rem; }
-.prv-modal form { display: flex; flex-direction: column; gap: 0.85rem; }
-.prv-campo { display: flex; flex-direction: column; gap: 0.35rem; color: var(--text2); font-size: 0.78rem; font-weight: 750; }
-.prv-campo input, .prv-campo select { min-height: 44px; width: 100%; padding: 0.58rem 0.7rem; border: 1px solid #ccdfe3; border-radius: 9px; color: var(--dash-ink); background: #fff; font: inherit; font-size: 0.88rem; }
-.prv-campos-dos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
-.prv-error-formulario { margin: 0; padding: 0.65rem 0.75rem; border-radius: 9px; color: #b91c1c; background: #fff2f2; font-size: 0.82rem; }
 .prv-modal-acciones { display: flex; justify-content: flex-end; gap: 0.65rem; padding-top: 0.35rem; }
 .prv-modal-acciones button { min-height: 44px; padding: 0.6rem 0.85rem; border: 1px solid #d4e4da; border-radius: 9px; color: var(--text2); background: #fff; font: inherit; font-weight: 750; cursor: pointer; }
 .prv-modal-acciones .prv-boton-principal { border-color: #08734c; color: #fff; background: #08734c; }

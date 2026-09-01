@@ -1,5 +1,178 @@
 import { useEffect, useRef, type FormEvent } from 'react'
+import Modal from '@shared/ui/Modal/Modal'
 import type { FormularioRegistro as Datos, TipoRegistro } from '../model/bitacora'
-type Props={tipo:TipoRegistro;form:Datos;guardando:boolean;error:string;onCambiar:<K extends keyof Datos>(c:K,v:Datos[K])=>void;onGuardar:(e:FormEvent<HTMLFormElement>)=>void;onCerrar:()=>void}
-function FormularioRegistro({tipo,form,guardando,error,onCambiar,onGuardar,onCerrar}:Props){const ref=useRef<HTMLInputElement>(null);useEffect(()=>{ref.current?.focus()},[]);const titulo=tipo==='peso'?'Registrar pesaje':tipo==='mortalidad'?'Registrar mortalidad':'Registrar evento sanitario';return <div className="bit-modal-fondo" onMouseDown={onCerrar}><section className="bit-modal" role="dialog" aria-modal="true" aria-labelledby="bit-modal-title" onMouseDown={e=>e.stopPropagation()}><h2 id="bit-modal-title">{titulo}</h2><form onSubmit={onGuardar}><label>Fecha *<input ref={ref} type="date" value={form.fecha} onChange={e=>onCambiar('fecha',e.target.value)} required/></label>{tipo==='peso'&&<><label>Peso promedio (g) *<input type="number" min="1" value={form.peso_promedio_g} onChange={e=>onCambiar('peso_promedio_g',e.target.value)} required/></label><div className="bit-dos"><label>Aves pesadas<input type="number" min="1" value={form.cantidad_aves_pesadas} onChange={e=>onCambiar('cantidad_aves_pesadas',e.target.value)}/></label><label>Peso objetivo (g)<input type="number" min="1" value={form.peso_objetivo_g} onChange={e=>onCambiar('peso_objetivo_g',e.target.value)}/></label></div></>}{tipo==='mortalidad'&&<><label>Aves fallecidas *<input type="number" min="1" value={form.cantidad_aves} onChange={e=>onCambiar('cantidad_aves',e.target.value)} required/></label><label>Causa probable<input value={form.causa_presuntiva} onChange={e=>onCambiar('causa_presuntiva',e.target.value)}/></label></>}{tipo==='sanitario'&&<><label>Tipo de evento *<select value={form.tipo} onChange={e=>onCambiar('tipo',e.target.value)}><option value="vacunacion">Vacunación</option><option value="medicacion">Medicación</option><option value="tratamiento">Tratamiento</option><option value="diagnostico">Diagnóstico</option><option value="revision">Revisión</option></select></label><label>Producto o vacuna<input value={form.producto} onChange={e=>onCambiar('producto',e.target.value)}/></label><label>Diagnóstico<input value={form.diagnostico} onChange={e=>onCambiar('diagnostico',e.target.value)}/></label></>}<label>Observaciones<textarea value={form.observaciones} onChange={e=>onCambiar('observaciones',e.target.value)}/></label>{error&&<p className="bit-error" role="alert">{error}</p>}<footer><button type="button" onClick={onCerrar} disabled={guardando}>Cancelar</button><button type="submit" className="bit-principal" disabled={guardando}>{guardando?'Guardando…':'Guardar registro'}</button></footer></form></section></div>}
+
+type Props = {
+  tipo: TipoRegistro
+  form: Datos
+  guardando: boolean
+  error: string
+  onCambiar: <K extends keyof Datos>(campo: K, valor: Datos[K]) => void
+  onGuardar: (evento: FormEvent<HTMLFormElement>) => void
+  onCerrar: () => void
+}
+
+const ID_FORMULARIO = 'formulario-registro'
+
+const TITULOS: Record<TipoRegistro, string> = {
+  peso: 'Registrar pesaje',
+  mortalidad: 'Registrar mortalidad',
+  sanitario: 'Registrar evento sanitario',
+}
+
+const EVENTOS_SANITARIOS = [
+  ['vacunacion', 'Vacunación'],
+  ['medicacion', 'Medicación'],
+  ['tratamiento', 'Tratamiento'],
+  ['diagnostico', 'Diagnóstico'],
+  ['revision', 'Revisión'],
+] as const
+
+function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar, onCerrar }: Props) {
+  const fechaRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    fechaRef.current?.focus()
+  }, [])
+
+  return (
+    <Modal
+      titulo={TITULOS[tipo]}
+      onCerrar={onCerrar}
+      acciones={
+        <>
+          <button type="button" className="modal-btn" onClick={onCerrar} disabled={guardando}>
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            form={ID_FORMULARIO}
+            className="modal-btn modal-btn--primary"
+            disabled={guardando}
+          >
+            {guardando ? 'Guardando…' : 'Guardar registro'}
+          </button>
+        </>
+      }
+    >
+      <form id={ID_FORMULARIO} onSubmit={onGuardar}>
+        <label className="modal-campo">
+          <span>Fecha *</span>
+          <input
+            ref={fechaRef}
+            type="date"
+            value={form.fecha}
+            onChange={(evento) => onCambiar('fecha', evento.target.value)}
+            required
+          />
+        </label>
+
+        {tipo === 'peso' && (
+          <>
+            <label className="modal-campo">
+              <span>Peso promedio (g) *</span>
+              <input
+                type="number"
+                min="1"
+                value={form.peso_promedio_g}
+                onChange={(evento) => onCambiar('peso_promedio_g', evento.target.value)}
+                required
+              />
+            </label>
+            <div className="modal-fila">
+              <label className="modal-campo">
+                <span>Aves pesadas</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={form.cantidad_aves_pesadas}
+                  onChange={(evento) => onCambiar('cantidad_aves_pesadas', evento.target.value)}
+                />
+              </label>
+              <label className="modal-campo">
+                <span>Peso objetivo (g)</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={form.peso_objetivo_g}
+                  onChange={(evento) => onCambiar('peso_objetivo_g', evento.target.value)}
+                />
+              </label>
+            </div>
+          </>
+        )}
+
+        {tipo === 'mortalidad' && (
+          <>
+            <label className="modal-campo">
+              <span>Aves fallecidas *</span>
+              <input
+                type="number"
+                min="1"
+                value={form.cantidad_aves}
+                onChange={(evento) => onCambiar('cantidad_aves', evento.target.value)}
+                required
+              />
+            </label>
+            <label className="modal-campo">
+              <span>Causa probable</span>
+              <input
+                value={form.causa_presuntiva}
+                onChange={(evento) => onCambiar('causa_presuntiva', evento.target.value)}
+              />
+            </label>
+          </>
+        )}
+
+        {tipo === 'sanitario' && (
+          <>
+            <label className="modal-campo">
+              <span>Tipo de evento *</span>
+              <select
+                value={form.tipo}
+                onChange={(evento) => onCambiar('tipo', evento.target.value)}
+              >
+                {EVENTOS_SANITARIOS.map(([valor, etiqueta]) => (
+                  <option key={valor} value={valor}>
+                    {etiqueta}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="modal-campo">
+              <span>Producto o vacuna</span>
+              <input
+                value={form.producto}
+                onChange={(evento) => onCambiar('producto', evento.target.value)}
+              />
+            </label>
+            <label className="modal-campo">
+              <span>Diagnóstico</span>
+              <input
+                value={form.diagnostico}
+                onChange={(evento) => onCambiar('diagnostico', evento.target.value)}
+              />
+            </label>
+          </>
+        )}
+
+        <label className="modal-campo">
+          <span>Observaciones</span>
+          <textarea
+            rows={3}
+            value={form.observaciones}
+            onChange={(evento) => onCambiar('observaciones', evento.target.value)}
+          />
+        </label>
+
+        {error && (
+          <p className="modal-error" role="alert">
+            {error}
+          </p>
+        )}
+      </form>
+    </Modal>
+  )
+}
+
 export default FormularioRegistro

@@ -9,6 +9,7 @@ import { SensorGauge } from './SensorGauge'
 import { listarMediciones, type Medicion } from '@features/sensores/api/mediciones'
 import { iconoSensor } from '@shared/ui/sensorIcon'
 import { formatearUltimaLectura, type SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import { useFocoAtrapado } from '@shared/ui/Modal/useFocoAtrapado'
 import { IcNote } from '@shared/ui/icons/icons'
 import './SensorDetail.css'
 
@@ -195,15 +196,12 @@ export function SensorDetail({ sensor, galponNombre, diaVida, onClose }: Props) 
     ? Math.round(Math.min(100, Math.max(0, ((sensor.valor - sensor.minUmbral) / (sensor.maxUmbral - sensor.minUmbral)) * 100)))
     : 0
 
-  useEffect(() => {
-    if (sensorId) panelRef.current?.focus()
-  }, [sensorId])
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
+  // El panel nunca se desmonta (la transición es por clase CSS), así que el
+  // foco atrapado se activa y desactiva con `Boolean(sensor)` en vez de con
+  // el ciclo de montaje que usa Modal. Reemplaza el foco manual al `<aside>`
+  // y el listener de Escape que este panel llevaba por su cuenta: ahora
+  // también atrapa el Tab, que antes se escapaba a la página de atrás.
+  useFocoAtrapado(panelRef, Boolean(sensor), onClose)
 
   const ref = sensor ? REFERENCIA_ITALCOL[claveReferencia(sensor.tipo) ?? 'temperatura'] : null
   const refDisponible = sensor ? claveReferencia(sensor.tipo) !== null : false

@@ -857,15 +857,6 @@ recomendaciones [icon: check-circle, color: teal] {
   fecha_resolucion datetime
 }
 
-mensajes_equipo [icon: message-square, color: indigo] {
-  id integer pk
-  galpon_id integer fk
-  emisor_id integer fk
-  contenido string
-  fecha_envio datetime
-  fecha_lectura datetime
-}
-
 conversaciones_ia [icon: message-circle, color: teal] {
   id integer pk
   usuario_id integer fk
@@ -1052,8 +1043,6 @@ recomendaciones.lote_id > lotes.id
 recomendaciones.galpon_id > galpones.id
 recomendaciones.prediccion_id > predicciones.id
 recomendaciones.usuario_id > usuarios.id
-mensajes_equipo.galpon_id > galpones.id
-mensajes_equipo.emisor_id > usuarios.id
 conversaciones_ia.usuario_id > usuarios.id
 mensajes_ia.conversacion_id > conversaciones_ia.id
 analisis_bioacustico.galpon_id > galpones.id

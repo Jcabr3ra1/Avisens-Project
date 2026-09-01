@@ -1,6 +1,7 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { IcClose } from '@shared/ui/icons/icons'
+import { useFocoAtrapado } from './useFocoAtrapado'
 import './Modal.css'
 
 type Props = {
@@ -12,60 +13,11 @@ type Props = {
   ancho?: 'normal' | 'ancho'
 }
 
-const FOCUSABLES =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-
 function Modal({ titulo, subtitulo, onCerrar, children, acciones, ancho = 'normal' }: Props) {
   const tarjeta = useRef<HTMLDivElement>(null)
-  const onCerrarRef = useRef(onCerrar)
-
-  useEffect(() => {
-    onCerrarRef.current = onCerrar
-  }, [onCerrar])
-
-  useEffect(() => {
-    // El foco entra al diálogo y no vuelve a salir mientras esté abierto: sin
-    // esto el Tab se escapa al formulario de atrás, que el usuario no ve.
-    const previo = document.activeElement as HTMLElement | null
-    const primero = tarjeta.current?.querySelector<HTMLElement>(FOCUSABLES)
-    primero?.focus()
-
-    function alTeclear(evento: KeyboardEvent) {
-      if (evento.key === 'Escape') {
-        onCerrarRef.current()
-        return
-      }
-      if (evento.key !== 'Tab' || !tarjeta.current) return
-
-      const focusables = Array.from(
-        tarjeta.current.querySelectorAll<HTMLElement>(FOCUSABLES),
-      ).filter((el) => el.offsetParent !== null)
-      if (focusables.length === 0) return
-
-      const inicio = focusables[0]
-      const fin = focusables[focusables.length - 1]
-
-      if (evento.shiftKey && document.activeElement === inicio) {
-        evento.preventDefault()
-        fin.focus()
-      } else if (!evento.shiftKey && document.activeElement === fin) {
-        evento.preventDefault()
-        inicio.focus()
-      }
-    }
-
-    window.addEventListener('keydown', alTeclear)
-
-    // Sin esto la página de atrás sigue scrolleando bajo el diálogo.
-    const overflowPrevio = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    return () => {
-      window.removeEventListener('keydown', alTeclear)
-      document.body.style.overflow = overflowPrevio
-      previo?.focus()
-    }
-  }, [])
+  // El Modal siempre está montado mientras existe, así que "activo" es
+  // siempre true — la lógica de encendido/apagado vive en quien lo renderiza.
+  useFocoAtrapado(tarjeta, true, onCerrar)
 
   return createPortal(
     <div className="modal-velo" role="presentation" onClick={onCerrar}>
