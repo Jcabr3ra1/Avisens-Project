@@ -4,7 +4,7 @@ import { getRol } from '@shared/api'
 import { useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { Granja } from './api/granjas'
 import FormularioGranja from './components/FormularioGranja'
-import ListaGranjas from './components/ListaGranjas'
+import TablaGranjas from './components/TablaGranjas'
 import ResumenGranjas from './components/ResumenGranjas'
 import TableroImplementacionGranjas from './components/TableroImplementacionGranjas'
 import { useFormularioGranja } from './hooks/useFormularioGranja'
@@ -76,18 +76,15 @@ function GranjasPage() {
           </button>
         </div>
       )}
-      {gestion.cargando ? (
-        <p className="grj-vacio">Cargando granjas…</p>
-      ) : (
-        <ListaGranjas
-          granjas={gestion.granjas}
-          onEditar={formulario.abrirEditar}
-          onAlternar={(granja) => void gestion.alternarActivo(granja)}
-          onEliminar={confirmarEliminacion}
-          onVerGalpones={(granja) => navigate(`/galpones?granja=${granja.id}`)}
-          puedeGestionar={esAdministrador}
-        />
-      )}
+      <TablaGranjas
+        granjas={gestion.granjas}
+        cargando={gestion.cargando}
+        onEditar={formulario.abrirEditar}
+        onAlternar={(granja) => void gestion.alternarActivo(granja)}
+        onEliminar={confirmarEliminacion}
+        onVerGalpones={(granja) => navigate(`/galpones?granja=${granja.id}`)}
+        puedeGestionar={esAdministrador}
+      />
       {formulario.abierto && (
         <FormularioGranja
           form={formulario.form}
