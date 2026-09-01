@@ -1,0 +1,204 @@
+/* Estilo compartido de las tablas de gestión (granjas, galpones, lotes…).
+   Antes cada pantalla tenía su propia copia casi idéntica de estas reglas
+   con un prefijo distinto — eso es lo que hacía que la app se sintiera
+   inconsistente aunque cada pantalla, vista sola, no estuviera mal hecha.
+
+   Va de la mano de shared/ui/admin/AdminKit.css. */
+
+.tg-tabla-wrap { overflow-x: auto; }
+
+.tg-tabla {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.85rem;
+}
+
+.tg-tabla th,
+.tg-tabla td {
+  padding: 0.72rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+/* Encabezado pegajoso: en una tabla larga se sigue sabiendo qué columna
+   se está leyendo sin volver a subir. */
+.tg-tabla thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom: 1px solid var(--border2);
+  background: var(--bg-tint);
+  color: var(--text2);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tg-tabla tbody tr { transition: background 120ms ease; }
+.tg-tabla tbody tr:hover { background: var(--bg-tint); }
+.tg-tabla tbody tr:last-child td { border-bottom: 0; }
+
+.tg-tabla td { color: var(--text); }
+
+.tg-tabla code {
+  padding: 0.14rem 0.42rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg3);
+  color: var(--text2);
+  font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.tg-tabla td strong { color: var(--dash-ink); font-weight: 700; }
+
+/* Celda secundaria: el dato de apoyo bajo el principal. */
+.tg-sub { display: block; color: var(--text3); font-size: 0.75rem; }
+
+.tg-num { font-variant-numeric: tabular-nums; }
+
+.tg-ubicacion { display: inline-flex; align-items: center; gap: 0.32rem; }
+
+.tg-centro { text-align: center; }
+
+.tg-fila-inactiva td:not(:last-child) { opacity: 0.55; }
+
+/* ─── Estado ─── */
+
+.tg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.2rem 0.58rem;
+  border-radius: 999px;
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.tg-badge::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tg-badge--ok { color: var(--green-d); background: rgba(16, 185, 129, 0.12); }
+.tg-badge--peligro { color: var(--danger3); background: rgba(239, 68, 68, 0.1); }
+.tg-badge--neutral { color: var(--text3); background: rgba(122, 142, 132, 0.13); }
+
+/* ─── Acciones ───
+   Se separan en dos grupos porque son dos cosas distintas: navegar hacia
+   lo que cuelga de esta fila, y administrar la fila misma. Mezclarlas en
+   siete botones grises iguales era lo que hacía la tabla ilegible. */
+
+.tg-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.tg-acciones-sep {
+  width: 1px;
+  height: 20px;
+  margin: 0 0.15rem;
+  background: var(--border2);
+}
+
+/* Chip de navegación: "entrar" a los hijos de esta fila. */
+.tg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-height: 30px;
+  padding: 0.28rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: rgba(0, 91, 72, 0.06);
+  color: #005b48;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 130ms ease, border-color 130ms ease;
+}
+
+.tg-chip:hover { border-color: rgba(0, 91, 72, 0.25); background: rgba(0, 91, 72, 0.11); }
+.tg-chip:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+
+/* Botón de administración: discreto hasta que se necesita. */
+.tg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 30px;
+  padding: 0.28rem 0.58rem;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text2);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 130ms ease, border-color 130ms ease, color 130ms ease;
+}
+
+.tg-btn:hover { border-color: var(--border3); background: var(--bg-tint); color: var(--dash-ink); }
+.tg-btn:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+
+.tg-btn--destacado {
+  border-color: rgba(0, 91, 72, 0.22);
+  background: rgba(0, 91, 72, 0.06);
+  color: #005b48;
+  font-weight: 750;
+}
+
+.tg-btn--destacado:hover { border-color: rgba(0, 91, 72, 0.35); background: rgba(0, 91, 72, 0.11); color: #005b48; }
+
+.tg-btn--peligro { color: var(--danger3); }
+.tg-btn--peligro:hover {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger3);
+}
+
+/* ─── Estado vacío ─── */
+
+.tg-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 3rem 2rem;
+  color: var(--text3);
+  font-size: 0.87rem;
+  text-align: center;
+}
+
+.tg-vacio-icono {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  margin-bottom: 0.35rem;
+  border-radius: 13px;
+  background: var(--bg3);
+  color: var(--text4);
+}
+
+@media (max-width: 760px) {
+  .tg-tabla th, .tg-tabla td { padding: 0.6rem 0.7rem; }
+  .tg-acciones { justify-content: flex-start; }
+}

@@ -66,6 +66,11 @@ export type GalponMonitoreoVista = {
   codigo: string
   nombre: string
   granjaId: number
+  // El registro crudo del backend. La vista aplana lo que se pinta seguido,
+  // pero los formularios de edición necesitan el galpón completo.
+  origen: Galpon
+  activo: boolean
+  capacidadAves: number | null
   anchoMetros: number | null
   largoMetros: number | null
   loteActivo: Lote | null
@@ -157,6 +162,9 @@ function construirVista(
       codigo: g.codigo,
       nombre: g.nombre,
       granjaId: g.granja.id,
+      origen: g,
+      activo: g.activo,
+      capacidadAves: g.capacidad_aves,
       anchoMetros: g.ancho_metros,
       largoMetros: g.largo_metros,
       loteActivo,

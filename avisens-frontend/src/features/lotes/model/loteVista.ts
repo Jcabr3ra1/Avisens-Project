@@ -37,3 +37,40 @@ export function filtrarLotes(
     return coincideEstado && coincideBusqueda
   })
 }
+
+// Requisitos para dar de alta un lote: un galpón ACTIVO y un proveedor.
+// Vive aquí, y no suelto en la página, porque la condición que habilita el
+// botón y la que abre el formulario tienen que ser exactamente la misma.
+// Cuando divergieron, un galpón inactivo dejaba el botón habilitado y el
+// clic no hacía nada, sin decir por qué.
+export type AltaDeLote = {
+  puedeCrear: boolean
+  motivoBloqueo: string | null
+}
+
+export function evaluarAltaDeLote(
+  galponesDisponibles: { activo: boolean }[],
+  hayProveedor: boolean,
+): AltaDeLote {
+  const hayGalponActivo = galponesDisponibles.some((galpon) => galpon.activo)
+
+  if (!hayGalponActivo) {
+    return {
+      puedeCrear: false,
+      motivoBloqueo:
+        galponesDisponibles.length > 0
+          ? 'El galpón está inactivo. Actívalo desde Galpones para poder registrarle lotes.'
+          : 'Necesitas un galpón activo antes de registrar lotes.',
+    }
+  }
+
+  if (!hayProveedor) {
+    return {
+      puedeCrear: false,
+      motivoBloqueo:
+        'No hay proveedores activos. Un administrador debe registrar uno antes de crear lotes.',
+    }
+  }
+
+  return { puedeCrear: true, motivoBloqueo: null }
+}
