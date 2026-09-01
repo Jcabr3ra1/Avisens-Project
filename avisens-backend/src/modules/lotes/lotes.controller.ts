@@ -39,7 +39,7 @@ export class LotesController {
   constructor(private lotesService: LotesService) {}
 
   @Post()
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Registrar un lote en un galpon' })
   crear(@Body() dto: CreateLoteDto, @Req() req: AuthRequest) {
     return this.lotesService.crear(dto, req.user);

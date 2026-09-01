@@ -35,7 +35,7 @@ export class GalponesController {
   constructor(private galponesService: GalponesService) {}
 
   @Post()
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Crear un galpón en una granja' })
   crear(@Body() dto: CreateGalponDto, @Req() req: AuthRequest) {
     return this.galponesService.crear(dto, req.user);
