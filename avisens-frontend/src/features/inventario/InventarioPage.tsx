@@ -36,9 +36,17 @@ function InventarioPage() {
   // respondía 400 sin que la pantalla pudiera explicarlo.
   const [granjas, setGranjas] = useState<Granja[]>([])
   useEffect(() => {
+    let vigente = true
     void listarGranjas()
-      .then((lista) => setGranjas(lista.filter((granja) => granja.activa)))
-      .catch(() => setGranjas([]))
+      .then((lista) => {
+        if (vigente) setGranjas(lista.filter((granja) => granja.activa))
+      })
+      .catch(() => {
+        if (vigente) setGranjas([])
+      })
+    return () => {
+      vigente = false
+    }
   }, [])
   const formulario = useFormularioInsumo(
     gestion.guardar,

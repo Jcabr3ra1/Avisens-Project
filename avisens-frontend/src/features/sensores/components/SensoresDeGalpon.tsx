@@ -14,6 +14,7 @@ import {
 } from '../model/sensor'
 import { MedicionesVivas } from './MedicionesVivas'
 import '../SensoresPage.css'
+import { toast } from 'sonner'
 
 function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
   const { sensores, cargando, error, crear, alternar, eliminar } = useSensores(
@@ -29,13 +30,24 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
   const [ok, setOk] = useState('')
 
   useEffect(() => {
+    // Sin la guarda, al saltar de un galpón a otro la respuesta lenta del
+    // primero pisaba la lista del segundo: el desplegable ofrecía
+    // dispositivos de otro galpón, y el backend los rechaza por la clave
+    // compuesta (dispositivo_id, galpon_id).
+    let vigente = true
     void listarDispositivos()
-      .then((todos) =>
-        setDispositivos(
-          todos.filter((d) => d.galpon.id === galpon.id && d.activo),
-        ),
-      )
-      .catch(() => undefined)
+      .then((todos) => {
+        if (!vigente) return
+        setDispositivos(todos.filter((d) => d.galpon.id === galpon.id && d.activo))
+      })
+      .catch(() => {
+        if (!vigente) return
+        setDispositivos([])
+        toast.error('No se pudieron cargar los dispositivos del galpón.')
+      })
+    return () => {
+      vigente = false
+    }
   }, [galpon.id])
 
   function campo<K extends keyof DatosSensor>(k: K, v: DatosSensor[K]) {
