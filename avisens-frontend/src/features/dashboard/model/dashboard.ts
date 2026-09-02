@@ -1,3 +1,4 @@
+import { diasDeVida } from '@shared/utils/fechas'
 export type EstadoDashboard = 'correcto' | 'atencion' | 'urgente' | 'sin_lote'
 
 export interface DashboardGranja {
@@ -56,10 +57,10 @@ export interface EstadoGeneralDashboard {
 }
 
 export function calcularDiaLote(fechaIngreso: string): number {
-  const ingreso = new Date(`${fechaIngreso.slice(0, 10)}T00:00:00`)
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-  return Math.max(Math.floor((hoy.getTime() - ingreso.getTime()) / 86_400_000) + 1, 1)
+  // Misma convención que el backend: el día de ingreso es el 0. Antes sumaba
+  // uno, así que el mismo lote salía con un día distinto según si el trabajo
+  // de indicadores ya había corrido o si se usaba este cálculo de respaldo.
+  return diasDeVida(fechaIngreso)
 }
 
 export function obtenerEstadoGeneral(

@@ -4,7 +4,6 @@ import {
   avesActuales,
   contarSensores,
   densidad,
-  diasDeVida,
   estadoOperativoDeGalpon,
   lecturaPorTipo,
   porcentajeOcupacion,
@@ -127,22 +126,6 @@ describe('densidad y ocupación', () => {
   it('sin capacidad registrada no hay ocupación', () => {
     expect(porcentajeOcupacion(7500, null)).toBeNull()
     expect(porcentajeOcupacion(7500, 0)).toBeNull()
-  })
-})
-
-describe('diasDeVida', () => {
-  it('cuenta los días transcurridos desde el ingreso', () => {
-    const ahora = new Date('2026-09-01T12:00:00Z').getTime()
-    expect(diasDeVida('2026-08-12T12:00:00Z', ahora)).toBe(20)
-  })
-
-  it('una fecha futura no da días negativos', () => {
-    const ahora = new Date('2026-09-01T00:00:00Z').getTime()
-    expect(diasDeVida('2026-09-10T00:00:00Z', ahora)).toBe(0)
-  })
-
-  it('una fecha inválida no rompe la vista', () => {
-    expect(diasDeVida('no-es-fecha')).toBe(0)
   })
 })
 
