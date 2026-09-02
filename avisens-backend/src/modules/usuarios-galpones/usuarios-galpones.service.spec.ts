@@ -144,4 +144,21 @@ describe('UsuariosGalponesService', () => {
 
     expect(whereDe(prisma.usuarioGalpon.findMany)).not.toHaveProperty('galpon');
   });
+
+  // El correo salia en la respuesta sin que nadie lo pintara. Ahora que el
+  // operario tambien lee esta lista, un campo de mas viaja hacia mas gente.
+  it('no expone el correo de los compañeros', async () => {
+    await service.listar({ page: 1, limit: 20 }, operario);
+
+    const llamadas = prisma.usuarioGalpon.findMany.mock.calls as unknown as Array<
+      [{ select: { usuario: { select: Record<string, boolean> } } }]
+    >;
+    const seleccionUsuario = llamadas[0][0].select.usuario.select;
+
+    expect(seleccionUsuario).not.toHaveProperty('email');
+    expect(seleccionUsuario).toMatchObject({
+      id: true,
+      nombre_completo: true,
+    });
+  });
 });

@@ -16,7 +16,11 @@ const SELECT = {
   rol_asignacion: true,
   fecha_asignacion: true,
   activa: true,
-  usuario: { select: { id: true, nombre_completo: true, email: true } },
+  // Sin el correo: quien mira esta lista quiere saber quien trabaja en el
+  // galpon, y para eso basta el nombre. Un dato que nadie pinta no tiene por
+  // que viajar, y ahora que el operario tambien lee esto, viajaria hacia mas
+  // gente todavia.
+  usuario: { select: { id: true, nombre_completo: true } },
   galpon: { select: { id: true, nombre: true, codigo: true } },
 } as const;
 
