@@ -24,6 +24,20 @@ describe('validateEnv', () => {
     ).toThrow(/ML_INTERNAL_TOKEN/);
   });
 
+  // /metrics no lleva JWT, asi que si esta variable falta el endpoint
+  // quedaria abierto a internet sin que nadie se entere. Mejor no arrancar.
+  it('exige el token de métricas en producción', () => {
+    expect(() =>
+      validateEnv({
+        ...BASE,
+        NODE_ENV: 'production',
+        CORS_ORIGIN: 'https://app.avisens.example',
+        REDIS_URL: 'redis://redis:6379',
+        ML_INTERNAL_TOKEN: 'ml-token-interno-at-least-32-characters',
+      }),
+    ).toThrow(/METRICS_TOKEN/);
+  });
+
   it('acepta una configuración de producción completa', () => {
     expect(() =>
       validateEnv({
@@ -32,6 +46,7 @@ describe('validateEnv', () => {
         CORS_ORIGIN: 'https://app.avisens.example',
         REDIS_URL: 'redis://redis:6379',
         ML_INTERNAL_TOKEN: 'ml-token-interno-at-least-32-characters',
+        METRICS_TOKEN: 'metrics-token-at-least-32-characters',
       }),
     ).not.toThrow();
   });
