@@ -350,18 +350,16 @@ describe('Núcleo multi-tenant (e2e)', () => {
     expect(insumo.stock_actual.toString()).toBe('25.5');
   });
 
-  it('aísla zonas y análisis avanzados por propietario', async () => {
-    const zona = await request(servidor)
-      .post('/v1/zonas-galpon')
-      .set('Authorization', `Bearer ${tokenPropietario}`)
-      .send({ galpon_id: ids.galpones[0], nombre: 'Zona E2E' })
-      .expect(201);
-    ids.zonas.push((JSON.parse(zona.text) as { id: number }).id);
-
+  it('cierra las zonas al propietario y aísla los análisis avanzados', async () => {
+    // Una zona es parte física del galpón, así que reestructurarla quedó en
+    // el administrador. El propietario no la crea ni siquiera en su propio
+    // galpón: aquí ya no hay aislamiento que comprobar, hay una puerta
+    // cerrada. El cruce entre organizaciones lo siguen cubriendo los
+    // análisis de abajo, que el propietario sí puede escribir.
     await request(servidor)
       .post('/v1/zonas-galpon')
       .set('Authorization', `Bearer ${tokenPropietario}`)
-      .send({ galpon_id: ids.galpones[1], nombre: 'Cruce prohibido' })
+      .send({ galpon_id: ids.galpones[0], nombre: 'Zona E2E' })
       .expect(403);
 
     const bioacustico = await request(servidor)
