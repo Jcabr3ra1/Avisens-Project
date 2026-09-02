@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getRol } from '@shared/api'
 import { permisosDeInsumo, ROL_ADMIN } from '@shared/auth/permisos'
 import { IcAlert, IcBox, IcCoin, IcPlus, IcRefresh, IcSearch } from '@shared/ui/icons/icons'
 import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import '@shared/ui/admin/AdminKit.css'
+import { listarGranjas, type Granja } from '@features/granjas/api/granjas'
 import type { Insumo } from './api/insumos'
 import AcordeonInsumo from './components/AcordeonInsumo'
 import FormularioInsumo from './components/FormularioInsumo'
@@ -31,7 +32,18 @@ function InventarioPage() {
   const permisos = permisosDeInsumo(rol)
 
   const gestion = useInventario()
-  const formulario = useFormularioInsumo(gestion.guardar)
+  // El backend exige granja_id al crear un insumo; sin esto el alta
+  // respondía 400 sin que la pantalla pudiera explicarlo.
+  const [granjas, setGranjas] = useState<Granja[]>([])
+  useEffect(() => {
+    void listarGranjas()
+      .then((lista) => setGranjas(lista.filter((granja) => granja.activa)))
+      .catch(() => setGranjas([]))
+  }, [])
+  const formulario = useFormularioInsumo(
+    gestion.guardar,
+    granjas.length === 1 ? granjas[0].id : 0,
+  )
 
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState<FiltroStock>('todos')
@@ -220,6 +232,7 @@ function InventarioPage() {
       {formulario.abierto && (
         <FormularioInsumo
           form={formulario.form}
+          granjas={granjas}
           modoEdicion={formulario.modoEdicion}
           guardando={formulario.guardando}
           error={formulario.error}

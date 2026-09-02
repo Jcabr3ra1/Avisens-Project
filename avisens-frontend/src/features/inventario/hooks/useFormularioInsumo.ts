@@ -14,16 +14,16 @@ type GuardarInsumo = (
   editandoId: number | null,
 ) => Promise<void>
 
-export function useFormularioInsumo(alGuardar: GuardarInsumo) {
+export function useFormularioInsumo(alGuardar: GuardarInsumo, granjaPorDefecto = 0) {
   const [abierto, setAbierto] = useState(false)
   const [editandoId, setEditandoId] = useState<number | null>(null)
-  const [form, setForm] = useState<FormularioInsumoDatos>(crearFormularioInsumo)
+  const [form, setForm] = useState<FormularioInsumoDatos>(() => crearFormularioInsumo(granjaPorDefecto))
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
   function abrirCrear() {
     setEditandoId(null)
-    setForm(crearFormularioInsumo())
+    setForm(crearFormularioInsumo(granjaPorDefecto))
     setError('')
     setAbierto(true)
   }

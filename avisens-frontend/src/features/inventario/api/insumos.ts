@@ -20,6 +20,7 @@ export interface Insumo {
 }
 
 export interface CrearInsumoPayload {
+  granja_id: number
   nombre: string
   unidad_medida: string
   tipo?: string
