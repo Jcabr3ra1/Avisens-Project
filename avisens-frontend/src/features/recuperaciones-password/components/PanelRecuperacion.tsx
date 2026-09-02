@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { toast } from 'sonner'
+import { mensajeDeError } from '@shared/utils/errores'
 import { IcClose } from '@shared/ui/icons/icons'
 import type {
   AprobacionRecuperacion,
@@ -31,7 +33,8 @@ function PanelRecuperacion({ solicitud, onCerrar, onAprobar, onRechazar }: Props
     setProcesando(true)
     try {
       setCredencial(await onAprobar(solicitud.id, { observacion: observacion.trim() || undefined }))
-    } catch {
+    } catch (error) {
+      toast.error(mensajeDeError(error, 'No se pudo aprobar la solicitud.'))
       setProcesando(false)
     }
   }
@@ -41,7 +44,8 @@ function PanelRecuperacion({ solicitud, onCerrar, onAprobar, onRechazar }: Props
     try {
       await onRechazar(solicitud.id, { observacion: observacion.trim() || undefined })
       onCerrar()
-    } catch {
+    } catch (error) {
+      toast.error(mensajeDeError(error, 'No se pudo rechazar la solicitud.'))
       setProcesando(false)
     }
   }
