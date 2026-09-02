@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { listarMediciones } from '@features/sensores/api/mediciones'
+import { listarTodasLasMediciones } from '@features/sensores/api/mediciones'
 import { aSerie, desdeHace24h, resumirSerie, type PuntoSerie, type ResumenSerie } from '../model/metricas'
 
 export function useSerieSensor(sensorId: number | null) {
@@ -18,8 +18,10 @@ export function useSerieSensor(sensorId: number | null) {
     let vigente = true
     setCargando(true)
 
-    // 200 lecturas cubren un día completo aunque el ESP32 reporte cada 7 min.
-    listarMediciones({ sensor_id: sensorId, desde: desdeHace24h(), limit: 200 })
+    // El rango acota el volumen; el cliente trae todas las páginas que haga
+    // falta. Antes se pedía limit: 200 y el backend lo rechazaba con 400, así
+    // que la gráfica quedaba vacía sin decir por qué.
+    listarTodasLasMediciones({ sensor_id: sensorId, desde: desdeHace24h() })
       .then((mediciones) => {
         if (!vigente) return
         const puntos = aSerie(mediciones)

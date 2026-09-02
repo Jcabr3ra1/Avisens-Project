@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export interface TipoAlimento {
   id: number
@@ -28,9 +28,7 @@ export type ActualizarTipoAlimentoPayload = Partial<CrearTipoAlimentoPayload> & 
 }
 
 export async function listarTiposAlimento(): Promise<TipoAlimento[]> {
-  const { data } =
-    await api.get<PaginatedResponse<TipoAlimento>>('/tipos-alimento')
-  return data.data
+  return listarTodasLasPaginas<TipoAlimento>('/tipos-alimento')
 }
 
 export async function obtenerTipoAlimento(id: number): Promise<TipoAlimento> {

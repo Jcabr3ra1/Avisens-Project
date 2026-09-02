@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 import type { MovimientoInventario, TipoMovimiento } from './movimientos'
 
 export type { MovimientoInventario, TipoMovimiento } from './movimientos'
@@ -43,27 +43,8 @@ export interface RegistrarMovimientoPayload {
   comprobante_url?: string
 }
 
-// El backend tope a 100 por página y no recorta: pedir 200 devolvía 400 y la
-// bodega se quedaba vacía con un "no se pudo cargar".
-const LIMITE_POR_PAGINA = 100
-
 export async function listarInsumos(): Promise<Insumo[]> {
-  const primeraRespuesta = await api.get<PaginatedResponse<Insumo>>('/insumos', {
-    params: { page: 1, limit: LIMITE_POR_PAGINA },
-  })
-  const primeraPagina = primeraRespuesta.data
-
-  if (primeraPagina.meta.totalPages <= 1) return primeraPagina.data
-
-  const restantes = await Promise.all(
-    Array.from({ length: primeraPagina.meta.totalPages - 1 }, (_, indice) =>
-      api.get<PaginatedResponse<Insumo>>('/insumos', {
-        params: { page: indice + 2, limit: LIMITE_POR_PAGINA },
-      }),
-    ),
-  )
-
-  return [...primeraPagina.data, ...restantes.flatMap((respuesta) => respuesta.data.data)]
+  return listarTodasLasPaginas<Insumo>('/insumos')
 }
 
 export async function obtenerInsumo(id: number): Promise<Insumo> {
@@ -98,11 +79,7 @@ export async function registrarMovimientoInsumo(
 export async function listarMovimientosInsumo(
   id: number,
 ): Promise<MovimientoInventario[]> {
-  const { data } = await api.get<PaginatedResponse<MovimientoInventario>>(
-    `/insumos/${id}/movimientos`,
-    { params: { page: 1, limit: LIMITE_POR_PAGINA } },
-  )
-  return data.data
+  return listarTodasLasPaginas<MovimientoInventario>(`/insumos/${id}/movimientos`)
 }
 
 export async function activarInsumo(

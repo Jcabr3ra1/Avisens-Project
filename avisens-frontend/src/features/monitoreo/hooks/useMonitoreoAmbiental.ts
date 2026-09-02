@@ -7,6 +7,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 import { isAxiosError } from 'axios'
 import { listarUmbrales, type Umbral } from '@features/galpones/api/umbrales'
 import { listarMediciones, type Medicion } from '@features/sensores/api/mediciones'
+import { LIMITE_POR_PAGINA } from '@shared/api/paginacion'
 import { listarSensores, type Sensor } from '@features/sensores/api/sensores'
 import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
@@ -16,9 +17,6 @@ import { listarLotes, type Lote } from '@features/lotes/api/lotes'
 // lote amplio y se reduce en el cliente.
 const LIMITE_MEDICIONES = 500
 
-// El backend tope a 100 elementos por página, así que el lote amplio se arma
-// pidiendo varias páginas en paralelo en vez de una sola con límite alto.
-const LIMITE_POR_PAGINA = 100
 
 async function listarMedicionesRecientes(): Promise<Medicion[]> {
   const paginas = Math.ceil(LIMITE_MEDICIONES / LIMITE_POR_PAGINA)
