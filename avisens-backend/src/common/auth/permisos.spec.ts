@@ -31,4 +31,25 @@ describe('matriz RBAC', () => {
       false,
     );
   });
+
+  // Abrir /usuarios-galpones al operario se hizo con un permiso de LECTURA
+  // aparte. Si algun dia alguien le concede el de gestion, el operario
+  // podria repartir asignaciones, que es trabajo del propietario.
+  it('el operario lee usuarios pero no los gestiona', () => {
+    expect(rolTienePermisos(ROLES.OPERARIO, [PERMISOS.USUARIOS_LEER])).toBe(
+      true,
+    );
+    expect(
+      rolTienePermisos(ROLES.OPERARIO, [PERMISOS.USUARIOS_GESTIONAR]),
+    ).toBe(false);
+  });
+
+  it('el propietario conserva las dos', () => {
+    expect(
+      rolTienePermisos(ROLES.PROPIETARIO, [
+        PERMISOS.USUARIOS_LEER,
+        PERMISOS.USUARIOS_GESTIONAR,
+      ]),
+    ).toBe(true);
+  });
 });
