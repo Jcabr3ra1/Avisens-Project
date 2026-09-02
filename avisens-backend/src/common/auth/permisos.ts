@@ -2,6 +2,7 @@ import { ROLES } from './roles';
 
 export const PERMISOS = {
   ORGANIZACIONES_GESTIONAR: 'organizaciones:gestionar',
+  USUARIOS_LEER: 'usuarios:leer',
   USUARIOS_GESTIONAR: 'usuarios:gestionar',
   CATALOGOS_LEER: 'catalogos:leer',
   CATALOGOS_GESTIONAR: 'catalogos:gestionar',
@@ -25,6 +26,7 @@ const TODOS = Object.values(PERMISOS);
 export const PERMISOS_POR_ROL: Readonly<Record<string, readonly Permiso[]>> = {
   [ROLES.ADMINISTRADOR]: TODOS,
   [ROLES.PROPIETARIO]: [
+    PERMISOS.USUARIOS_LEER,
     PERMISOS.USUARIOS_GESTIONAR,
     PERMISOS.CATALOGOS_LEER,
     PERMISOS.PROVEEDORES_LEER,
@@ -35,6 +37,7 @@ export const PERMISOS_POR_ROL: Readonly<Record<string, readonly Permiso[]>> = {
     PERMISOS.INVENTARIO_GESTIONAR,
   ],
   [ROLES.OPERARIO]: [
+    PERMISOS.USUARIOS_LEER,
     PERMISOS.CATALOGOS_LEER,
     PERMISOS.INFRAESTRUCTURA_LEER,
     PERMISOS.OPERACION_REGISTRAR,
