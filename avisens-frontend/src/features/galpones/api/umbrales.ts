@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 // El backend versiona el umbral por (galpón, variable, semana de vida) — no por
 // sensor. Ojo: `variable` hoy solo admite 'temperatura' | 'humedad' | 'luminosidad'
@@ -52,13 +52,14 @@ export interface ListarUmbralesQuery {
   incluir_historico?: boolean
 }
 
+// Sin `limit` llegaban 20 umbrales para toda la instalación, y un galpón ya
+// son ~21 (3 variables × 7 semanas de ciclo). Los que faltaban dejaban al
+// sensor en `sin_umbral`: la lectura no se comparaba y el galpón salía verde
+// aunque estuviera fuera de rango.
 export async function listarUmbrales(
   query: ListarUmbralesQuery = {},
 ): Promise<Umbral[]> {
-  const { data } = await api.get<PaginatedResponse<Umbral>>('/umbrales', {
-    params: query,
-  })
-  return data.data
+  return listarTodasLasPaginas<Umbral>('/umbrales', { ...query })
 }
 
 export async function obtenerUmbral(id: number): Promise<Umbral> {

@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export type TipoMovimiento = 'entrada' | 'salida' | 'ajuste'
 
@@ -40,11 +40,7 @@ export interface MovimientosQuery {
 export async function listarMovimientos(
   query: MovimientosQuery = {},
 ): Promise<MovimientoInventario[]> {
-  const { data } = await api.get<PaginatedResponse<MovimientoInventario>>(
-    '/movimientos-inventario',
-    { params: { page: 1, limit: 100, ...query } },
-  )
-  return data.data
+  return listarTodasLasPaginas<MovimientoInventario>('/movimientos-inventario', { ...query })
 }
 
 export async function obtenerMovimiento(id: number): Promise<MovimientoInventario> {

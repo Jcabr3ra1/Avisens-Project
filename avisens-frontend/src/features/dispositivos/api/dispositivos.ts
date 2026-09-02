@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export interface Dispositivo {
   id: number
@@ -30,10 +30,7 @@ export type ActualizarDispositivoPayload = Partial<CrearDispositivoPayload> & {
 }
 
 export async function listarDispositivos(): Promise<Dispositivo[]> {
-  const { data } = await api.get<PaginatedResponse<Dispositivo>>('/dispositivos', {
-    params: { page: 1, limit: 200 },
-  })
-  return data.data
+  return listarTodasLasPaginas<Dispositivo>('/dispositivos')
 }
 
 export async function obtenerDispositivo(id: number): Promise<Dispositivo> {

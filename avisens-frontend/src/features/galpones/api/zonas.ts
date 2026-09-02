@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export interface ZonaGalpon {
   id: number
@@ -30,10 +30,7 @@ export interface CrearZonaPayload {
 export type ActualizarZonaPayload = Partial<CrearZonaPayload> & { activa?: boolean }
 
 export async function listarZonas(galponId?: number): Promise<ZonaGalpon[]> {
-  const { data } = await api.get<PaginatedResponse<ZonaGalpon>>('/zonas-galpon', {
-    params: { page: 1, limit: 200, galpon_id: galponId },
-  })
-  return data.data
+  return listarTodasLasPaginas<ZonaGalpon>('/zonas-galpon', { galpon_id: galponId })
 }
 
 export async function obtenerZona(id: number): Promise<ZonaGalpon> {
