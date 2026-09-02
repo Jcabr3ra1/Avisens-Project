@@ -1,4 +1,10 @@
-import { PERMISOS, rolTienePermisos } from './permisos';
+import {
+  PERMISOS,
+  PERMISOS_POR_ROL,
+  esPermisoConocido,
+  paresRolPermiso,
+  rolTienePermisos,
+} from './permisos';
 import { ROLES } from './roles';
 
 describe('matriz RBAC', () => {
@@ -30,5 +36,47 @@ describe('matriz RBAC', () => {
     expect(rolTienePermisos('Desconocido', [PERMISOS.CATALOGOS_LEER])).toBe(
       false,
     );
+  });
+});
+
+// roles_permisos es una proyección de PERMISOS_POR_ROL, no una fuente
+// paralela. Estas pruebas cubren lo que el seed necesita para mantenerla
+// fiel: saber qué pares deben existir y cuáles códigos ya no.
+describe('proyección a roles_permisos', () => {
+  it('enumera un par por cada permiso de cada rol', () => {
+    const esperados = Object.values(PERMISOS_POR_ROL).reduce(
+      (total, permisos) => total + permisos.length,
+      0,
+    );
+
+    expect(paresRolPermiso()).toHaveLength(esperados);
+  });
+
+  it('cada par apunta a un permiso que ese rol realmente tiene', () => {
+    for (const { rol, permiso } of paresRolPermiso()) {
+      expect(PERMISOS_POR_ROL[rol]).toContain(permiso);
+    }
+  });
+
+  it('incluye a los tres roles', () => {
+    const roles = new Set(paresRolPermiso().map((p) => p.rol));
+
+    expect([...roles].sort()).toEqual([
+      'Administrador',
+      'Operario',
+      'Propietario',
+    ]);
+  });
+
+  it('reconoce los códigos que existen en el catálogo', () => {
+    expect(esPermisoConocido(PERMISOS.INVENTARIO_GESTIONAR)).toBe(true);
+    expect(esPermisoConocido(PERMISOS.CATALOGOS_LEER)).toBe(true);
+  });
+
+  // Esto es lo que el seed usa para desactivar filas huérfanas: un código
+  // que quedó en la base pero ya no existe en el código.
+  it('no reconoce un código que ya no existe en el código', () => {
+    expect(esPermisoConocido('inventado:borrar')).toBe(false);
+    expect(esPermisoConocido('')).toBe(false);
   });
 });
