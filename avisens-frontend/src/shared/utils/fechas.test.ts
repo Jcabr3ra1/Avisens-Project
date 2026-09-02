@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { diasDeVida, fechaDeHoy, semanaDeVida } from './fechas'
 
+// Estas pruebas afirman cosas sobre "el día local", así que solo significan
+// algo con una zona fija. Se ancla en la del usuario real (Colombia, UTC-5)
+// desde el script de pruebas; sin eso pasaban en la máquina de quien las
+// escribió y fallaban en CI, que corre en UTC.
+
 // Hora local del entorno de pruebas; lo que importa es que el corte ocurra a
 // medianoche local y no a una hora cualquiera de la tarde.
 function local(iso: string): Date {
