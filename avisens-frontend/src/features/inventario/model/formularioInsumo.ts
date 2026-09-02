@@ -1,6 +1,7 @@
 import type { ActualizarInsumoPayload, CrearInsumoPayload, Insumo } from '../api/insumos'
 
 export interface FormularioInsumoDatos {
+  granja_id: number
   nombre: string
   tipo: string
   unidad_medida: string
@@ -11,8 +12,9 @@ export interface FormularioInsumoDatos {
   fecha_vencimiento: string
 }
 
-export function crearFormularioInsumo(): FormularioInsumoDatos {
+export function crearFormularioInsumo(granjaId = 0): FormularioInsumoDatos {
   return {
+    granja_id: granjaId,
     nombre: '',
     tipo: '',
     unidad_medida: '',
@@ -26,6 +28,7 @@ export function crearFormularioInsumo(): FormularioInsumoDatos {
 
 export function formularioDesdeInsumo(insumo: Insumo): FormularioInsumoDatos {
   return {
+    granja_id: insumo.granja_id,
     nombre: insumo.nombre,
     tipo: insumo.tipo ?? '',
     unidad_medida: insumo.unidad_medida,
@@ -52,6 +55,7 @@ function numeroOpcional(valor: string): number | undefined {
 
 export function crearPayloadInsumo(form: FormularioInsumoDatos): CrearInsumoPayload {
   return {
+    granja_id: form.granja_id,
     nombre: form.nombre.trim(),
     unidad_medida: form.unidad_medida.trim(),
     tipo: textoOpcional(form.tipo),
@@ -68,6 +72,10 @@ export function crearPayloadInsumo(form: FormularioInsumoDatos): CrearInsumoPayl
 // registro y rompería la auditoría.
 export function actualizarPayloadInsumo(form: FormularioInsumoDatos): ActualizarInsumoPayload {
   const payload = crearPayloadInsumo(form)
-  delete (payload as Partial<CrearInsumoPayload>).stock_actual
+  const parcial = payload as Partial<CrearInsumoPayload>
+  delete parcial.stock_actual
+  // La granja tampoco se mueve al editar: cambiarla trasladaría el stock a
+  // otra bodega sin dejar un movimiento que lo explique.
+  delete parcial.granja_id
   return payload
 }

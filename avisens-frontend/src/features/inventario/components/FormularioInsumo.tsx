@@ -1,8 +1,10 @@
 import Modal from '@shared/ui/Modal/Modal'
+import type { Granja } from '@features/granjas/api/granjas'
 import type { FormularioInsumoDatos } from '../model/formularioInsumo'
 
 interface Props {
   form: FormularioInsumoDatos
+  granjas: Granja[]
   modoEdicion: boolean
   guardando: boolean
   error: string
@@ -16,6 +18,7 @@ interface Props {
 
 function FormularioInsumo({
   form,
+  granjas,
   modoEdicion,
   guardando,
   error,
@@ -23,7 +26,8 @@ function FormularioInsumo({
   onGuardar,
   onCerrar,
 }: Props) {
-  const puedeGuardar = form.nombre.trim() !== '' && form.unidad_medida.trim() !== ''
+  const puedeGuardar =
+    form.nombre.trim() !== '' && form.unidad_medida.trim() !== '' && form.granja_id > 0
 
   return (
     <Modal
@@ -45,6 +49,26 @@ function FormularioInsumo({
         </>
       }
     >
+      {!modoEdicion && (
+        <label className="modal-campo">
+          <span>Granja</span>
+          <select
+            value={form.granja_id || ''}
+            onChange={(evento) => onCambiar('granja_id', Number(evento.target.value))}
+            required
+          >
+            <option value="" disabled>
+              {granjas.length === 0 ? 'No hay granjas disponibles' : 'Elige una granja'}
+            </option>
+            {granjas.map((granja) => (
+              <option key={granja.id} value={granja.id}>
+                {granja.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <div className="modal-fila">
         <label className="modal-campo">
           <span>Nombre</span>
