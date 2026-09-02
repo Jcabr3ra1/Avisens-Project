@@ -4,6 +4,8 @@
 
 import type { EstadoSensorVista, SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 
+export { diasDeVida } from '@shared/utils/fechas'
+
 // Semáforo operativo de un galpón. Nace del peor sensor: si uno solo está
 // crítico, el galpón está en alerta aunque los demás vayan bien.
 export type EstadoOperativo = 'normal' | 'atencion' | 'alerta' | 'inactivo' | 'sin_datos'
@@ -57,11 +59,6 @@ export function lecturaPorTipo(sensores: SensorVista[], fragmento: string): Sens
   )
 }
 
-export function diasDeVida(fechaIngresoISO: string, ahora = Date.now()): number {
-  const inicio = new Date(fechaIngresoISO).getTime()
-  if (Number.isNaN(inicio)) return 0
-  return Math.max(Math.floor((ahora - inicio) / 86_400_000), 0)
-}
 
 // Aves que quedan vivas: las que entraron menos la mortalidad acumulada.
 // Sin dato de mortalidad no se inventa nada — se devuelve el inicial.

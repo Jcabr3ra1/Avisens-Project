@@ -8,6 +8,7 @@ import { isAxiosError } from 'axios'
 import { listarUmbrales, type Umbral } from '@features/galpones/api/umbrales'
 import { listarMediciones, type Medicion } from '@features/sensores/api/mediciones'
 import { LIMITE_POR_PAGINA } from '@shared/api/paginacion'
+import { diasDeVida, semanaDeVida } from '@shared/utils/fechas'
 import { listarSensores, type Sensor } from '@features/sensores/api/sensores'
 import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
@@ -98,10 +99,6 @@ function calcularEstado(valor: number, min: number, max: number): 'optimo' | 'ad
   return 'critico'
 }
 
-function diasDesde(fechaISO: string): number {
-  return Math.max(Math.floor((Date.now() - new Date(fechaISO).getTime()) / 86_400_000), 0)
-}
-
 function construirVista(
   galpones: Galpon[],
   lotes: Lote[],
@@ -119,8 +116,8 @@ function construirVista(
 
   return galpones.map((g) => {
     const loteActivo = lotes.find((l) => l.galpon.id === g.id && l.estado === 'activo') ?? null
-    const diaVida = loteActivo ? diasDesde(loteActivo.fecha_ingreso) : 0
-    const semanaVida = Math.floor(diaVida / 7)
+    const diaVida = loteActivo ? diasDeVida(loteActivo.fecha_ingreso) : 0
+    const semanaVida = semanaDeVida(diaVida)
 
     const sensoresGalpon: SensorVista[] = sensores
       .filter((s) => s.galpon.id === g.id)
