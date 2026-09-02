@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { IcClose, IcHeart, IcSeed } from '@shared/ui/icons/icons'
 import type { JornadaOperario } from '../model/jornadaOperario'
+import { fechaDeHoy } from '@shared/utils/fechas'
 
 type TipoRegistro = 'mortalidad' | 'consumo'
 
@@ -20,7 +21,7 @@ type Props = {
 }
 
 function fechaActual() {
-  return new Date().toISOString().slice(0, 10)
+  return fechaDeHoy()
 }
 
 function ModalRegistroOperario({

@@ -40,3 +40,16 @@ export function diasDeVida(fechaIngreso: string, ahora: Date = new Date()): numb
 export function semanaDeVida(diaVida: number): number {
   return Math.floor(Math.max(diaVida, 0) / 7)
 }
+
+// El día de hoy en formato 'YYYY-MM-DD', tomado del calendario local.
+//
+// `new Date().toISOString().slice(0, 10)` da el día en UTC: en Colombia, a
+// partir de las 7 p.m. devuelve el de mañana. Eso ponía la fecha del día
+// siguiente por defecto en los formularios de bitácora, consumos y jornada
+// del operario — justo en la franja en que se trabaja en la granja — y hacía
+// que un registro quedara archivado en el día equivocado.
+export function fechaDeHoy(ahora: Date = new Date()): string {
+  const mes = String(ahora.getMonth() + 1).padStart(2, '0')
+  const dia = String(ahora.getDate()).padStart(2, '0')
+  return `${ahora.getFullYear()}-${mes}-${dia}`
+}
