@@ -4,6 +4,7 @@ import type {
   ActualizarLotePayload,
   EstadoLote,
 } from '../api/lotes'
+import { fechaDeHoy } from '@shared/utils/fechas'
 
 export interface FormularioLoteDatos {
   galpon_id: number
@@ -24,11 +25,7 @@ function fechaInput(fecha: string | null): string {
   return fecha ? fecha.slice(0, 10) : ''
 }
 
-function fechaActual(): string {
-  const hoy = new Date()
-  const desplazamiento = hoy.getTimezoneOffset() * 60_000
-  return new Date(hoy.getTime() - desplazamiento).toISOString().slice(0, 10)
-}
+const fechaActual = fechaDeHoy
 
 export function crearFormularioLote(
   galponId: number,

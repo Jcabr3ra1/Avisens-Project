@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { diasDeVida, semanaDeVida } from './fechas'
+import { diasDeVida, fechaDeHoy, semanaDeVida } from './fechas'
+
+// Estas pruebas afirman cosas sobre "el día local", así que solo significan
+// algo con una zona fija. Se ancla en la del usuario real (Colombia, UTC-5)
+// desde el script de pruebas; sin eso pasaban en la máquina de quien las
+// escribió y fallaban en CI, que corre en UTC.
 
 // Hora local del entorno de pruebas; lo que importa es que el corte ocurra a
 // medianoche local y no a una hora cualquiera de la tarde.
@@ -61,5 +66,25 @@ describe('semanaDeVida', () => {
 
   it('un día negativo no produce una semana negativa', () => {
     expect(semanaDeVida(-3)).toBe(0)
+  })
+})
+
+describe('fechaDeHoy', () => {
+  it('devuelve el día local, no el de UTC', () => {
+    // A las 8:30 p.m. en Colombia, toISOString() ya está en el día siguiente.
+    expect(fechaDeHoy(new Date('2026-09-02T20:30:00-05:00'))).toBe('2026-09-02')
+  })
+
+  it('sigue acertando de madrugada', () => {
+    expect(fechaDeHoy(new Date('2026-09-02T00:30:00-05:00'))).toBe('2026-09-02')
+  })
+
+  it('rellena con cero el mes y el día', () => {
+    expect(fechaDeHoy(new Date('2026-01-05T12:00:00'))).toBe('2026-01-05')
+  })
+
+  it('cambia de día a medianoche local', () => {
+    expect(fechaDeHoy(new Date('2026-09-02T23:59:00-05:00'))).toBe('2026-09-02')
+    expect(fechaDeHoy(new Date('2026-09-03T00:01:00-05:00'))).toBe('2026-09-03')
   })
 })
