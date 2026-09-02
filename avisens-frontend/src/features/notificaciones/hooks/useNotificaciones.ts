@@ -10,7 +10,9 @@ export function useConteoNotificaciones() {
     try {
       setNoLeidas(await contarNotificacionesNoLeidas())
     } catch {
-      setNoLeidas(0)
+      // Se conserva el último conteo conocido: poner 0 hacía desaparecer
+      // el aviso de la campana por un fallo pasajero del sondeo, como si
+      // el usuario ya no tuviera nada pendiente.
     }
   }, [])
 
