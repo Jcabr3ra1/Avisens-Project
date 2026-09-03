@@ -13,6 +13,7 @@ import {
   tonoPorSensores,
   type ChipAtencion,
 } from '../model/atencion'
+import { esCriticidadAlta } from '@features/alertas/model/alerta'
 
 type Args = {
   alertas: DashboardAlerta[]
@@ -27,7 +28,7 @@ export function useAtencion({ alertas, galponId, indicadores, comparacion }: Arg
 
   return useMemo<ChipAtencion[]>(() => {
     const activas = alertas.filter((alerta) => alerta.estado !== 'cerrada')
-    const altas = activas.filter((alerta) => alerta.criticidad === 'alta').length
+    const altas = activas.filter((alerta) => esCriticidadAlta(alerta.criticidad)).length
     const medias = activas.filter((alerta) => alerta.criticidad === 'media').length
 
     const sensores = galpones.find((g) => g.id === galponId)?.sensores ?? []

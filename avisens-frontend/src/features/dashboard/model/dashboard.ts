@@ -1,4 +1,5 @@
 import { diasDeVida } from '@shared/utils/fechas'
+import { esCriticidadAlta } from '@features/alertas/model/alerta'
 export type EstadoDashboard = 'correcto' | 'atencion' | 'urgente' | 'sin_lote'
 
 export interface DashboardGranja {
@@ -77,7 +78,7 @@ export function obtenerEstadoGeneral(
 
   const abiertas = alertas.filter((alerta) => alerta.estado !== 'cerrada')
   const criticas = abiertas.filter((alerta) =>
-    ['critica', 'crítica', 'alta'].includes(alerta.criticidad.toLowerCase()),
+    esCriticidadAlta(alerta.criticidad),
   )
 
   if (criticas.length > 0) {
@@ -106,7 +107,7 @@ export function obtenerEstadoGeneral(
 export function ordenarAlertas(alertas: DashboardAlerta[]): DashboardAlerta[] {
   const prioridad = (criticidad: string) => {
     const valor = criticidad.toLowerCase()
-    if (['critica', 'crítica', 'alta'].includes(valor)) return 0
+    if (esCriticidadAlta(valor)) return 0
     if (['media', 'advertencia'].includes(valor)) return 1
     return 2
   }
