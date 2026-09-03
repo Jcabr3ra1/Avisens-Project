@@ -9,6 +9,7 @@ import {
   type DashboardFuentes,
   type DashboardIndicador,
 } from '../model/dashboard'
+import { esCriticidadAlta } from '@features/alertas/model/alerta'
 
 const fuentesIniciales: DashboardFuentes = {
   granjas: [],
@@ -114,7 +115,7 @@ export function useDashboard() {
     (acumulado, alerta) => {
       if (alerta.estado === 'cerrada') return acumulado
       const actual = acumulado[alerta.galponId] ?? { total: 0, urgentes: 0 }
-      const esUrgente = ['critica', 'crítica', 'alta'].includes(alerta.criticidad.toLowerCase())
+      const esUrgente = esCriticidadAlta(alerta.criticidad)
       acumulado[alerta.galponId] = {
         total: actual.total + 1,
         urgentes: actual.urgentes + (esUrgente ? 1 : 0),

@@ -24,7 +24,7 @@ export function obtenerResumenAlertas(alertas: AlertaApi[]): ResumenAlertas {
     abiertas: alertas.filter((alerta) => alerta.estado === 'abierta').length,
     enProceso: alertas.filter((alerta) => alerta.estado === 'en_proceso').length,
     criticas: alertas.filter(
-      (alerta) => alerta.criticidad === 'alta' && alerta.estado !== 'cerrada',
+      (alerta) => esCriticidadAlta(alerta.criticidad) && alerta.estado !== 'cerrada',
     ).length,
   }
 }
@@ -35,8 +35,14 @@ export function filtrarAlertas(
 ): AlertaApi[] {
   return alertas.filter((alerta) => {
     const coincideEstado = filtros.estado === 'todas' || alerta.estado === filtros.estado
+    // El desplegable ofrece "Crítica" como 'alta', pero el backend también
+    // emite 'critica'. Sin esto, filtrar por Crítica escondía justo las más
+    // graves, que es lo contrario de lo que el usuario pide.
     const coincideCriticidad =
-      filtros.criticidad === 'todas' || alerta.criticidad === filtros.criticidad
+      filtros.criticidad === 'todas' ||
+      (filtros.criticidad === 'alta'
+        ? esCriticidadAlta(alerta.criticidad)
+        : alerta.criticidad === filtros.criticidad)
     const coincideGalpon =
       filtros.galponId === 'todos' || alerta.galpon_id === Number(filtros.galponId)
     return coincideEstado && coincideCriticidad && coincideGalpon
@@ -49,8 +55,19 @@ export function etiquetaEstado(estado: EstadoAlerta): string {
   return 'Cerrada'
 }
 
+// El backend acepta cuatro niveles —baja, media, alta, critica— pero el
+// camino automático de sensores solo produce 'media' y 'alta'; 'critica' solo
+// llega en alertas creadas a mano. Antes no estaba contemplada y caía al
+// último return: el nivel MÁS grave se mostraba como "Informativa".
+export function esCriticidadAlta(criticidad: string): boolean {
+  // Se normaliza porque el valor viaja como texto libre: han aparecido
+  // 'critica' y 'crítica' según quién la creara.
+  const normalizada = criticidad.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  return normalizada === 'alta' || normalizada === 'critica'
+}
+
 export function etiquetaCriticidad(criticidad: string): string {
-  if (criticidad === 'alta') return 'Crítica'
-  if (criticidad === 'media') return 'Atención'
+  if (esCriticidadAlta(criticidad)) return 'Crítica'
+  if (criticidad.toLowerCase() === 'media') return 'Atención'
   return 'Informativa'
 }

@@ -1,5 +1,6 @@
 import { IcAlert } from '@shared/ui/icons/icons'
 import type { Alerta } from '../api/alertas'
+import { esCriticidadAlta } from '../model/alerta'
 
 interface BannerAlertaCriticaProps {
   alertas: Alerta[]
@@ -7,7 +8,7 @@ interface BannerAlertaCriticaProps {
 }
 
 function BannerAlertaCritica({ alertas, onAbrir }: BannerAlertaCriticaProps) {
-  const critica = alertas.find((alerta) => alerta.criticidad === 'alta' && alerta.estado !== 'cerrada')
+  const critica = alertas.find((alerta) => esCriticidadAlta(alerta.criticidad) && alerta.estado !== 'cerrada')
   if (!critica) return null
 
   return (
