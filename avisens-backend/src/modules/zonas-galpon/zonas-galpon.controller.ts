@@ -38,6 +38,11 @@ interface AuthRequest extends Request {
 
 @ApiTags('zonas-galpon')
 @ApiBearerAuth()
+// Una zona es parte fisica del galpon, asi que cae bajo la misma regla que
+// granja, galpon y lote: el propietario las consulta pero no las reestructura.
+// El @Roles de cada escritura hace ese recorte; INFRAESTRUCTURA_GESTIONAR se
+// queda porque analisis-bioacustico y analisis-vision lo comparten, y ahi el
+// propietario si debe poder escribir.
 @UseGuards(JwtAuthGuard, RolesGuard, PermisosGuard)
 @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
 @Permisos(PERMISOS.INFRAESTRUCTURA_LEER)
@@ -46,6 +51,7 @@ export class ZonasGalponController {
   constructor(private service: ZonasGalponService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR)
   @Permisos(PERMISOS.INFRAESTRUCTURA_GESTIONAR)
   @ApiOperation({ summary: 'Crear una zona dentro de un galpón' })
   crear(@Body() dto: CreateZonaGalponDto, @Req() req: AuthRequest) {
@@ -65,6 +71,7 @@ export class ZonasGalponController {
   }
 
   @Patch(':id')
+  @Roles(ROLES.ADMINISTRADOR)
   @Permisos(PERMISOS.INFRAESTRUCTURA_GESTIONAR)
   @ApiOperation({ summary: 'Actualizar una zona' })
   actualizar(
@@ -76,6 +83,7 @@ export class ZonasGalponController {
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR)
   @Permisos(PERMISOS.INFRAESTRUCTURA_GESTIONAR)
   @ApiOperation({ summary: 'Desactivar una zona' })
   eliminar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {

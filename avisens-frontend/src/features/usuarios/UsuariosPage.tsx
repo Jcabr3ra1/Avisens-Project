@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
-import { crearOrganizacion, getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
+import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
+import { crearOrganizacion } from '@features/organizaciones/api/organizaciones'
 import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
 import RecuperacionesDeUsuario from '@features/recuperaciones-password/components/RecuperacionesDeUsuario'
 import BarraUsuarios from './components/BarraUsuarios'
@@ -16,6 +17,8 @@ import { useUsuarios } from './hooks/useUsuarios'
 import './UsuariosPage.css'
 
 function UsuariosPage() {
+  // Rol real: crear usuarios es una acción, no una etiqueta de navegación,
+  // así que no debe depender de la vista previa.
   const esPropietario = getRol() === 'Propietario'
   const esAdmin = getRol() === 'Administrador'
   const [usuarioRecuperaciones, setUsuarioRecuperaciones] = useState<Usuario | null>(null)

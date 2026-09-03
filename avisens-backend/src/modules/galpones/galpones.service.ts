@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -165,10 +166,19 @@ export class GalponesService {
   async eliminarPermanente(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
-    await this.prisma.$transaction([
-      this.prisma.usuarioGalpon.deleteMany({ where: { galpon_id: id } }),
-      this.prisma.galpon.delete({ where: { id } }),
-    ]);
+    try {
+      await this.prisma.$transaction([
+        this.prisma.usuarioGalpon.deleteMany({ where: { galpon_id: id } }),
+        this.prisma.galpon.delete({ where: { id } }),
+      ]);
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'P2003') {
+        throw new ConflictException(
+          'No se puede eliminar: el galpón tiene lotes, sensores, equipos u otros registros asociados. Elimínalos primero, o desactiva el galpón en su lugar.',
+        );
+      }
+      throw error;
+    }
     return { id, eliminado: true };
   }
 }

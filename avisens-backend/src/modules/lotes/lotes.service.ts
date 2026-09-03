@@ -30,7 +30,7 @@ const LOTE_SELECT = {
     select: {
       id: true,
       nombre: true,
-      granja: { select: { id: true, propietario_id: true } },
+      granja: { select: { id: true, nombre: true, propietario_id: true } },
     },
   },
   proveedor: { select: { id: true, nombre: true } },
@@ -65,13 +65,15 @@ export class LotesService {
 
   async crear(dto: CreateLoteDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
-    await this.validarProveedor(dto.proveedor_id);
+    if (dto.proveedor_id !== undefined && dto.proveedor_id !== null) {
+      await this.validarProveedor(dto.proveedor_id);
+    }
 
     return this.prisma.$transaction(async (transaccion) => {
       const creado = await transaccion.lote.create({
         data: {
           galpon_id: dto.galpon_id,
-          proveedor_id: dto.proveedor_id,
+          proveedor_id: dto.proveedor_id ?? null,
           codigo: `TEMP-${randomUUID()}`,
           fecha_ingreso: new Date(dto.fecha_ingreso),
           cantidad_inicial: dto.cantidad_inicial,
@@ -140,7 +142,7 @@ export class LotesService {
         'No se puede trasladar un lote a otro galpón; crea un lote nuevo para conservar la integridad histórica',
       );
     }
-    if (dto.proveedor_id) {
+    if (dto.proveedor_id !== undefined && dto.proveedor_id !== null) {
       await this.validarProveedor(dto.proveedor_id);
     }
 

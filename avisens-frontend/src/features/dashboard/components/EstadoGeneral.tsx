@@ -16,7 +16,7 @@ function EstadoGeneral({ estado, onAccion }: EstadoGeneralProps) {
   const textoAccion = estado.estado === 'correcto'
     ? 'Ver monitoreo'
     : estado.estado === 'sin_lote'
-      ? 'Administrar lotes'
+      ? 'Completar estructura'
       : 'Revisar alertas'
 
   return (

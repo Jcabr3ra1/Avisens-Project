@@ -1,11 +1,20 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getRol } from '@shared/api'
 import DashboardHeader from './components/DashboardHeader'
+import FranjaAtencion from './components/FranjaAtencion'
+import EstadoLote from './components/EstadoLote'
+import PanelMetricas from './components/PanelMetricas'
+import PlanoGalpon from './components/PlanoGalpon'
+import SelectorGalpones from './components/SelectorGalpones'
 import EstadoGeneral from './components/EstadoGeneral'
 import AccionesRapidas from './components/AccionesRapidas'
 import ResumenOperativo from './components/ResumenOperativo'
 import AlertasPrioritarias from './components/AlertasPrioritarias'
-import ResumenProductivo from './components/ResumenProductivo'
 import EstadoInicial from './components/EstadoInicial'
+import { useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import { useAtencion } from './hooks/useAtencion'
+import { useIndicadoresLote } from './hooks/useIndicadoresLote'
 import { useDashboard } from './hooks/useDashboard'
 import './DashboardPage.css'
 
@@ -25,8 +34,23 @@ function DashboardSkeleton() {
 function DashboardPage() {
   const navigate = useNavigate()
   const dashboard = useDashboard()
-  const puedeAdministrar = dashboard.usuario?.rol === 'Propietario'
+  const { galpones: galponesMonitoreo } = useMonitoreoAmbiental()
+  const galponMonitoreo =
+    galponesMonitoreo.find((item) => item.id === dashboard.galponId) ?? null
+  const sensoresDelGalpon = galponMonitoreo?.sensores ?? []
+  const { indicadores, comparacion, cargando: cargandoLote } = useIndicadoresLote(
+    dashboard.lote?.id ?? null,
+  )
+  const chipsAtencion = useAtencion({
+    alertas: dashboard.alertas,
+    galponId: dashboard.galponId,
+    indicadores,
+    comparacion,
+  })
+  const rol = getRol()
+  const puedeAdministrar = ['Administrador', 'Propietario'].includes(rol ?? '')
   const nombre = dashboard.usuario?.nombre?.trim().split(/\s+/)[0] || 'equipo'
+  const [busqueda, setBusqueda] = useState('')
 
   if (dashboard.cargando && dashboard.granjas.length === 0) {
     return <DashboardSkeleton />
@@ -52,8 +76,8 @@ function DashboardPage() {
         <EstadoInicial
           granjas={dashboard.granjas.length}
           galpones={dashboard.totalGalpones}
-          puedeAdministrar={puedeAdministrar}
-          onComenzar={() => navigate('/granjas')}
+          rol={rol}
+          onIrAProduccion={() => navigate('/granjas')}
           onRecargar={dashboard.recargar}
         />
       </div>
@@ -61,7 +85,7 @@ function DashboardPage() {
   }
 
   const rutaEstado = dashboard.estadoGeneral.estado === 'sin_lote'
-    ? '/lotes'
+    ? '/granjas'
     : dashboard.estadoGeneral.estado === 'correcto'
       ? '/monitoreo'
       : '/alertas'
@@ -71,15 +95,19 @@ function DashboardPage() {
       <DashboardHeader
         nombre={nombre}
         granjas={dashboard.granjas}
-        galpones={dashboard.galpones}
         granjaId={dashboard.granjaId}
-        galponId={dashboard.galponId}
         actualizadoEn={dashboard.actualizadoEn}
         cargando={dashboard.cargando}
+        busqueda={busqueda}
         onGranjaChange={dashboard.seleccionarGranja}
-        onGalponChange={dashboard.seleccionarGalpon}
+        onBusquedaChange={setBusqueda}
         onRecargar={dashboard.recargar}
+        onIrABitacora={() => navigate('/bitacora')}
+        onIrAAlertas={() => navigate('/alertas')}
+        onIrANotificaciones={() => navigate('/notificaciones')}
       />
+
+      <FranjaAtencion chips={chipsAtencion} />
 
       {dashboard.error && (
         <div className="dashboard-error-banner" role="alert">
@@ -88,12 +116,24 @@ function DashboardPage() {
         </div>
       )}
 
+      <SelectorGalpones
+        galpones={dashboard.galpones}
+        lotes={dashboard.lotes}
+        alertasPorGalpon={dashboard.alertasPorGalpon}
+        galponId={dashboard.galponId}
+        busqueda={busqueda}
+        onSeleccionar={dashboard.seleccionarGalpon}
+        onAgregar={puedeAdministrar ? () => navigate('/galpones') : undefined}
+      />
+
       <EstadoGeneral
         estado={dashboard.estadoGeneral}
         onAccion={dashboard.estadoGeneral.estado === 'sin_lote' && !puedeAdministrar
           ? undefined
           : () => navigate(rutaEstado)}
       />
+
+      <PanelMetricas sensores={sensoresDelGalpon} />
 
       <ResumenOperativo
         galpon={dashboard.galpon}
@@ -107,12 +147,17 @@ function DashboardPage() {
         <AlertasPrioritarias alertas={dashboard.alertas} onVerTodas={() => navigate('/alertas')} />
       </div>
 
-      <ResumenProductivo
-        indicador={dashboard.indicador}
-        cargando={dashboard.cargandoIndicador}
-        tieneLote={dashboard.lote !== null}
+      <div className="dash-lote-plano">
+        <EstadoLote
+        lote={dashboard.lote}
+        indicadores={indicadores}
+        comparacion={comparacion}
+        diaLote={dashboard.diaLote}
+        cargando={cargandoLote}
         onAbrirBitacora={() => navigate('/bitacora')}
-      />
+        />
+        <PlanoGalpon galpon={galponMonitoreo} />
+      </div>
     </div>
   )
 }

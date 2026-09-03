@@ -20,6 +20,15 @@ describe('UsuariosGalponesService', () => {
     desasignarGalpon: jest.fn(),
   };
   const propietario = { id: 7, rol: ROLES.PROPIETARIO };
+  const operario = { id: 9, rol: ROLES.OPERARIO, organizacion_id: 4 };
+  const administrador = { id: 1, rol: ROLES.ADMINISTRADOR };
+
+  const whereDe = (mock: jest.Mock): Record<string, unknown> => {
+    const llamadas = mock.mock.calls as unknown as Array<
+      [{ where: Record<string, unknown> }]
+    >;
+    return llamadas[0][0].where;
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -84,5 +93,72 @@ describe('UsuariosGalponesService', () => {
       3,
       propietario,
     );
+  });
+
+  // La ruta se abrio al operario para que vea quien mas trabaja en su
+  // galpon. El filtro viejo comparaba contra granja.propietario_id, que su
+  // id nunca cumple: habria entrado a una lista vacia.
+  describe('alcance del operario', () => {
+    it('ve las asignaciones de los galpones donde trabaja', async () => {
+      await service.listar({ page: 1, limit: 20 }, operario);
+
+      expect(whereDe(prisma.usuarioGalpon.findMany)).toMatchObject({
+        galpon: {
+          usuarios_galpones: {
+            some: { usuario_id: operario.id, activa: true },
+          },
+        },
+      });
+    });
+
+    it('no se le filtra por propietario_id', async () => {
+      await service.listar({ page: 1, limit: 20 }, operario);
+
+      expect(
+        JSON.stringify(whereDe(prisma.usuarioGalpon.findMany)),
+      ).not.toContain('propietario_id');
+    });
+
+    it('queda encerrado en su organización', async () => {
+      await service.listar({ page: 1, limit: 20 }, operario);
+
+      expect(whereDe(prisma.usuarioGalpon.findMany)).toMatchObject({
+        galpon: { granja: { organizacion_id: operario.organizacion_id } },
+      });
+    });
+
+    it('el mismo alcance aplica al obtener una suelta', async () => {
+      prisma.usuarioGalpon.findFirst.mockResolvedValue({ id: 5 });
+
+      await service.obtener(5, operario);
+
+      expect(whereDe(prisma.usuarioGalpon.findFirst)).toMatchObject({
+        id: 5,
+        galpon: expect.any(Object) as unknown,
+      });
+    });
+  });
+
+  it('el administrador sigue viendo todas las asignaciones', async () => {
+    await service.listar({ page: 1, limit: 20 }, administrador);
+
+    expect(whereDe(prisma.usuarioGalpon.findMany)).not.toHaveProperty('galpon');
+  });
+
+  // El correo salia en la respuesta sin que nadie lo pintara. Ahora que el
+  // operario tambien lee esta lista, un campo de mas viaja hacia mas gente.
+  it('no expone el correo de los compañeros', async () => {
+    await service.listar({ page: 1, limit: 20 }, operario);
+
+    const llamadas = prisma.usuarioGalpon.findMany.mock.calls as unknown as Array<
+      [{ select: { usuario: { select: Record<string, boolean> } } }]
+    >;
+    const seleccionUsuario = llamadas[0][0].select.usuario.select;
+
+    expect(seleccionUsuario).not.toHaveProperty('email');
+    expect(seleccionUsuario).toMatchObject({
+      id: true,
+      nombre_completo: true,
+    });
   });
 });

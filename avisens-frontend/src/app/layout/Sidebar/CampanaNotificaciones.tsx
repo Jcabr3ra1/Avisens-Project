@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  listarNotificaciones,
-  marcarNotificacionLeida,
-  marcarTodasLeidas,
-  type Notificacion,
-} from '@shared/api'
+import { listarNotificaciones, marcarNotificacionLeida, marcarTodasLeidas, type Notificacion } from '@features/notificaciones/api/notificaciones'
 import { IcBell, IcCheck } from '@shared/ui/icons/icons'
 import { useConteoNotificaciones } from '@features/notificaciones/hooks/useNotificaciones'
 
@@ -77,6 +72,8 @@ function CampanaNotificaciones() {
     navigate(
       notificacion.tipo === 'recuperacion_password'
         ? '/recuperaciones-password'
+        : notificacion.tipo === 'alerta'
+          ? '/alertas'
         : '/notificaciones',
     )
   }

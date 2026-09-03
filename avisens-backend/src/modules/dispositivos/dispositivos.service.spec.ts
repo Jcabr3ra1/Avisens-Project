@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { DispositivosService } from './dispositivos.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -206,6 +207,27 @@ describe('DispositivosService', () => {
       const res = await service.eliminarPermanente(1, propietario);
 
       expect(res).toEqual({ id: 1, eliminado: true });
+    });
+
+    it('con sensores dentro avisa que hay que borrarlos primero', async () => {
+      prisma.dispositivo.delete.mockRejectedValue(
+        Object.assign(new Error('FK'), { code: 'P2003' }),
+      );
+
+      await expect(
+        service.eliminarPermanente(1, propietario),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        service.eliminarPermanente(1, propietario),
+      ).rejects.toThrow(/sensores asociados/);
+    });
+
+    it('un error que no sea de llave foránea se propaga tal cual', async () => {
+      prisma.dispositivo.delete.mockRejectedValue(new Error('se cayó la conexión'));
+
+      await expect(service.eliminarPermanente(1, propietario)).rejects.toThrow(
+        'se cayó la conexión',
+      );
     });
   });
 });

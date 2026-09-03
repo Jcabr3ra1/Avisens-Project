@@ -74,3 +74,6 @@ El backend ya expone los endpoints filtrados por padre que esto necesita:
 Este archivo está versionado a propósito: `CLAUDE.md` y `AGENTS.md` están
 en `.gitignore`, así que una regla escrita solo allí no viaja con el repo.
 El encargo pendiente de aplicarla está en `TAREA-NAVEGACION.md`.
+
+La separación de experiencias y rutas de inicio por rol está definida en
+`PANELES-POR-ROL.md`; se complementa con esta jerarquía, no la reemplaza.

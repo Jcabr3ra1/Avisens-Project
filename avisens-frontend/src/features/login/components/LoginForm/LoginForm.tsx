@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { login } from '@shared/api'
+import { ROL_ADMIN, ROL_OPERARIO } from '@shared/auth/permisos'
 import './LoginForm.css'
 
 function LoginForm() {
@@ -31,11 +32,10 @@ function LoginForm() {
         return
       }
 
-      // Redirigimos según el rol:
-      //   - Administrador → /admin  (panel de gestión del sistema)
-      //   - Propietario / Operario → /dashboard  (vista operativa de galpones)
-      if (respuesta.usuario.rol === 'Administrador') {
+      if (respuesta.usuario.rol === ROL_ADMIN) {
         navigate('/admin')
+      } else if (respuesta.usuario.rol === ROL_OPERARIO) {
+        navigate('/mi-jornada')
       } else {
         navigate('/dashboard')
       }

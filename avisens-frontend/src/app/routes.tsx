@@ -4,10 +4,11 @@
 //
 // Rutas internas por rol:
 //   /admin      → solo Administrador (AdminPage)
-//   /dashboard  → Propietario y Operario (DashboardPage operativo)
+//   /dashboard  → solo Propietario (DashboardPage de su granja)
+//   /mi-jornada → solo Operario (OperarioPage)
 //   resto       → según permisos definidos en navConfig.tsx
 import { lazy, Suspense, type ReactNode } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Navigate, Routes, Route } from 'react-router-dom'
 
 // Cada pantalla se descarga solo cuando el usuario entra a su ruta. Antes se
 // enviaban todos los módulos (y todo su CSS) en el primer acceso, aunque la
@@ -35,6 +36,7 @@ const ProveedoresPage = lazy(() => import('@features/proveedores/ProveedoresPage
 const OrdenesCompraPage = lazy(() => import('@features/ordenes-compra/OrdenesCompraPage'))
 const ConsumosDiariosPage = lazy(() => import('@features/consumos-diarios/ConsumosDiariosPage'))
 const NotificacionesPage = lazy(() => import('@features/notificaciones/NotificacionesPage'))
+const AuditoriaPage = lazy(() => import('@features/auditoria/AuditoriaPage'))
 const RecuperarPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperarPasswordPage'))
 const CambiarPasswordPage = lazy(() => import('@features/recuperaciones-password/CambiarPasswordPage'))
 const RecuperacionesPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperacionesPasswordPage'))
@@ -65,7 +67,7 @@ function AppRoutes() {
         {/* Panel del Administrador — solo accesible con rol 'Administrador' */}
         <Route path="/admin"           element={cargarPagina(<AdminPage />)} />
 
-        {/* Dashboard operativo — para Propietario y Operario */}
+        {/* Inicio operativo del Propietario y jornada diaria del Operario */}
         <Route path="/dashboard"       element={cargarPagina(<DashboardPage />)} />
         <Route path="/mi-jornada"      element={cargarPagina(<OperarioPage />)} />
 
@@ -83,11 +85,14 @@ function AppRoutes() {
         <Route path="/proveedores"     element={cargarPagina(<ProveedoresPage />)} />
         <Route path="/ordenes-compra"  element={cargarPagina(<OrdenesCompraPage />)} />
         <Route path="/recuperaciones-password" element={cargarPagina(<RecuperacionesPasswordPage />)} />
+        <Route path="/auditoria"        element={cargarPagina(<AuditoriaPage />)} />
         <Route path="/granjas"         element={cargarPagina(<GranjasPage />)} />
         <Route path="/galpones"        element={cargarPagina(<GalponesPage />)} />
         <Route path="/lotes"           element={cargarPagina(<LotesPage />)} />
         <Route path="/sensores"        element={cargarPagina(<SensoresPage />)} />
       </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

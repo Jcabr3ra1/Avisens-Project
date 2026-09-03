@@ -1,13 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  contarNotificacionesNoLeidas,
-  eliminarNotificacion,
-  listarNotificaciones,
-  marcarNotificacionLeida,
-  marcarTodasLeidas,
-  type Notificacion,
-} from '@shared/api'
-
+import { contarNotificacionesNoLeidas, eliminarNotificacion, listarNotificaciones, marcarNotificacionLeida, marcarTodasLeidas, type Notificacion } from '@features/notificaciones/api/notificaciones'
 const INTERVALO_SONDEO_MS = 30_000
 
 export function useConteoNotificaciones() {
@@ -18,7 +10,9 @@ export function useConteoNotificaciones() {
     try {
       setNoLeidas(await contarNotificacionesNoLeidas())
     } catch {
-      setNoLeidas(0)
+      // Se conserva el último conteo conocido: poner 0 hacía desaparecer
+      // el aviso de la campana por un fallo pasajero del sondeo, como si
+      // el usuario ya no tuviera nada pendiente.
     }
   }, [])
 

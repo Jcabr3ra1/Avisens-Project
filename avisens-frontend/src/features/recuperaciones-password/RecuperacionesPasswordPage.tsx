@@ -7,13 +7,12 @@ import type { RecuperacionPassword } from './model/recuperacionPassword'
 import './RecuperacionesPassword.css'
 
 function RecuperacionesPasswordPage() {
-  const { solicitudes, cargando, error, mensaje, cargar, aprobar, rechazar } = useRecuperacionesPassword()
+  const { solicitudes, cargando, error, cargar, aprobar, rechazar } = useRecuperacionesPassword()
   const [seleccionada, setSeleccionada] = useState<RecuperacionPassword | null>(null)
 
   return (
     <div className="page-container rec-page">
       <ResumenRecuperaciones solicitudes={solicitudes} />
-      {mensaje && <p className="rec-aviso rec-aviso--exito" role="status">{mensaje}</p>}
       {error && <p className="rec-aviso rec-aviso--error" role="alert">{error} <button type="button" onClick={() => void cargar()}>Reintentar</button></p>}
       {cargando ? (
         <p className="rec-cargando" role="status">Cargando solicitudes…</p>

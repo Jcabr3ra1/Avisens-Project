@@ -5,9 +5,9 @@ import logoAvisens from '@shared/assets/logo-avisens.png'
 import CampanaNotificaciones from './CampanaNotificaciones'
 import {
   NAV_SECTIONS,
-  ROL_ADMIN,
   esGrupo,
   itemVisible,
+  rutaInicioPorRol,
   type NavItem,
   type NavLinkItem,
 } from './navConfig'
@@ -39,7 +39,7 @@ function filtrarItems(items: NavItem[], rol: string | null): NavLinkItem[] {
 const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
   const navigate = useNavigate()
   const usuario = getUsuario()
-  const rutaInicio = rol === ROL_ADMIN ? '/admin' : '/dashboard'
+  const rutaInicio = rutaInicioPorRol(rol)
 
   const secciones = NAV_SECTIONS
     .map((section) => ({ ...section, items: filtrarItems(section.items, rol) }))
@@ -134,13 +134,6 @@ const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
           </div>
         ))}
       </nav>
-
-      {rol !== ROL_ADMIN && (
-        <div className="dash-side-promo">
-          <p>Gestiona todas tus granjas desde un solo lugar</p>
-          <NavLink to="/granjas">+ Añadir granja</NavLink>
-        </div>
-      )}
 
       <div className="dash-side-user">
         <button

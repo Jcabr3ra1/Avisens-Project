@@ -1,23 +1,18 @@
 .landing-shell {
   /* Paleta natural exclusiva de la landing. El panel conserva sus colores. */
-  --avisens-deep: #103302;
-  --avisens-cream: #f5f7f4;
-  --avisens-green: #0e2f73;
-  --avisens-yellow: #f7f5f7;
-  --avisens-orange: #0e2f73;
   --landing-bg: #f5f7f4;
   --landing-surface: #f5f7f4;
   --landing-surface-muted: #f5f7f4;
   --landing-card: #f7f5f7;
   --landing-footer: #e6ede2;
-  --landing-primary: #094f23;
-  --landing-primary-hover: #103302;
-  --landing-accent: #0e2f73;
+  --landing-primary: var(--avisens-deep);
+  --landing-primary-hover: #004437;
+  --landing-accent: var(--avisens-green);
   --landing-on-primary: #ffffff;
-  --landing-text: #103302;
-  --landing-text-muted: #0e2f73;
+  --landing-text: var(--text);
+  --landing-text-muted: var(--text2);
   --landing-border: #d2d4d2;
-  --landing-focus: #0e2f73;
+  --landing-focus: var(--avisens-deep);
   --bg-tint: #f7f5f7;
   color: var(--landing-text);
   background: var(--landing-bg);

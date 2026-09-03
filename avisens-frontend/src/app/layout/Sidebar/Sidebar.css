@@ -247,43 +247,6 @@
   background: var(--avisens-yellow);
 }
 
-/* ── Tarjeta inferior ───────────────────────────────────────────────────── */
-
-.dash-side-promo {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: auto 16px 0;
-  padding: 15px 14px;
-  border: 1px solid var(--linea);
-  border-radius: 16px;
-  background: var(--velo);
-}
-
-.dash-side-promo p {
-  margin: 0;
-  color: var(--tinta);
-  font-size: 0.81rem;
-  font-weight: 500;
-  line-height: 1.4;
-}
-
-.dash-side-promo a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 38px;
-  color: var(--avisens-deep);
-  background: #ffffff;
-  border-radius: 999px;
-  font-size: 0.83rem;
-  font-weight: 700;
-  text-decoration: none;
-  transition: background 150ms ease, transform 150ms ease;
-}
-
-.dash-side-promo a:hover { background: var(--avisens-cream); transform: translateY(-1px); }
-
 /* ── Cerrar sesión ──────────────────────────────────────────────────────── */
 
 .dash-side-user {
@@ -314,8 +277,7 @@
 .dash-sidebar-toggle:focus-visible,
 .dash-side-brand:focus-visible,
 .dash-side-item:focus-visible,
-.dash-side-logout:focus-visible,
-.dash-side-promo a:focus-visible {
+.dash-side-logout:focus-visible {
   outline: 2px solid var(--avisens-yellow);
   outline-offset: 2px;
 }
@@ -337,8 +299,7 @@
 .dash-page.sidebar-collapsed .dash-side-perfil-rol,
 .dash-page.sidebar-collapsed .dash-side-section-label,
 .dash-page.sidebar-collapsed .dash-side-item-label,
-.dash-page.sidebar-collapsed .dash-side-badge,
-.dash-page.sidebar-collapsed .dash-side-promo { display: none; }
+.dash-page.sidebar-collapsed .dash-side-badge { display: none; }
 
 .dash-page.sidebar-collapsed .dash-sidebar-toggle svg { transform: scaleX(-1); }
 
@@ -379,8 +340,7 @@
   .dash-side-perfil-rol,
   .dash-side-section-label,
   .dash-side-item-label,
-  .dash-side-badge,
-  .dash-side-promo { display: none; }
+.dash-side-badge { display: none; }
 }
 
 /* En móvil pasa a ser una barra inferior. */
@@ -436,7 +396,6 @@
   .dash-sidebar-toggle svg,
   .dash-side-item,
   .dash-side-perfil-foto,
-  .dash-side-promo a,
   .dash-side-logout { transition: none; }
 
   .dash-side-item:active { transform: none; }

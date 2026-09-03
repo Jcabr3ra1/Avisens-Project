@@ -1,25 +1,26 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { type CrearSensorPayload, type Sensor } from '@features/sensores/api/sensores'
 import {
   listarDispositivos,
-  type CrearSensorPayload,
   type Dispositivo,
-  type Sensor,
-} from '@shared/api'
+} from '@features/dispositivos/api/dispositivos'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { Galpon } from '@features/galpones/api/galpones'
+import { useCatalogoSensores } from '../hooks/useCatalogoSensores'
 import { useSensores } from '../hooks/useSensores'
 import {
   FORMULARIO_SENSOR_INICIAL,
-  SENSOR_TIPOS,
   type DatosSensor,
 } from '../model/sensor'
 import { MedicionesVivas } from './MedicionesVivas'
 import '../SensoresPage.css'
+import { toast } from 'sonner'
 
 function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
   const { sensores, cargando, error, crear, alternar, eliminar } = useSensores(
     galpon.id,
   )
+  const { tipos } = useCatalogoSensores()
   const [dispositivos, setDispositivos] = useState<Dispositivo[]>([])
   const [form, setForm] = useState<DatosSensor>(FORMULARIO_SENSOR_INICIAL)
   const [dispositivoId, setDispositivoId] = useState('')
@@ -29,13 +30,24 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
   const [ok, setOk] = useState('')
 
   useEffect(() => {
+    // Sin la guarda, al saltar de un galpón a otro la respuesta lenta del
+    // primero pisaba la lista del segundo: el desplegable ofrecía
+    // dispositivos de otro galpón, y el backend los rechaza por la clave
+    // compuesta (dispositivo_id, galpon_id).
+    let vigente = true
     void listarDispositivos()
-      .then((todos) =>
-        setDispositivos(
-          todos.filter((d) => d.galpon.id === galpon.id && d.activo),
-        ),
-      )
-      .catch(() => undefined)
+      .then((todos) => {
+        if (!vigente) return
+        setDispositivos(todos.filter((d) => d.galpon.id === galpon.id && d.activo))
+      })
+      .catch(() => {
+        if (!vigente) return
+        setDispositivos([])
+        toast.error('No se pudieron cargar los dispositivos del galpón.')
+      })
+    return () => {
+      vigente = false
+    }
   }, [galpon.id])
 
   function campo<K extends keyof DatosSensor>(k: K, v: DatosSensor[K]) {
@@ -167,7 +179,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
               required
             />
             <datalist id="tipos-sensor-galpon">
-              {SENSOR_TIPOS.map((t) => (
+              {tipos.map((t) => (
                 <option key={t} value={t} />
               ))}
             </datalist>

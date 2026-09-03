@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { IngestDto } from './dto/ingest.dto';
 import type { DispositivoAutenticado } from '../../common/guards/device-token.guard';
 import { ObservabilityService } from '../../common/observability/observability.service';
+import { AlertasService } from '../alertas/alertas.service';
 
 interface MedicionNueva {
   sensor_id: number;
@@ -19,6 +20,7 @@ export class IngestService {
   constructor(
     private prisma: PrismaService,
     private observability: ObservabilityService,
+    private alertas: AlertasService,
   ) {}
 
   async registrar(
@@ -124,6 +126,15 @@ export class IngestService {
       }),
     );
     this.observability.registrarIngesta(aInsertar.length);
+    await Promise.allSettled(
+      aInsertar.map((medicion) =>
+        this.alertas.evaluarLectura(
+          medicion.sensor_id,
+          medicion.valor,
+          medicion.fecha_hora,
+        ),
+      ),
+    );
 
     return {
       id_lote: claveIdempotencia,

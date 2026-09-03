@@ -55,12 +55,6 @@ export class AlertasController {
     return this.alertasService.listar(req.user, paginacion);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Obtener una alerta por ID' })
-  obtener(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
-    return this.alertasService.obtener(id, req.user);
-  }
-
   @Patch(':id')
   @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Actualizar una alerta' })
@@ -142,5 +136,11 @@ export class AlertasController {
   @ApiOperation({ summary: 'Obtener estadísticas de alertas' })
   obtenerEstadisticas(@Req() req: AuthRequest) {
     return this.alertasService.obtenerEstadisticas(req.user);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener una alerta por ID' })
+  obtener(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.alertasService.obtener(id, req.user);
   }
 }

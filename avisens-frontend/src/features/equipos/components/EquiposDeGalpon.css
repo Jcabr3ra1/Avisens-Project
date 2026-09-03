@@ -1,0 +1,221 @@
+/* Panel de equipos de un galpón y su detalle de mantenimientos. Se abre como
+   pantalla hija desde la fila del galpón, así que no trae encabezado propio. */
+
+.eq-resumen { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem; }
+
+.eq-stat {
+  display: flex;
+  min-width: 96px;
+  flex-direction: column;
+  padding: 0.75rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+}
+.eq-stat-valor { color: var(--text); font-size: 1.5rem; font-weight: 700; }
+.eq-stat-label {
+  color: var(--text2);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.eq-stat--activo .eq-stat-valor { color: var(--green, #22c55e); }
+
+.eq-card {
+  margin-bottom: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.eq-form-titulo { margin: 0 0 1rem; color: var(--text); font-size: 1rem; font-weight: 600; }
+
+.eq-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.85rem;
+}
+
+.eq-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--text2);
+  font-size: 0.85rem;
+}
+.eq-campo--ancho { grid-column: 1 / -1; }
+.eq-campo--check { flex-direction: row; align-items: center; gap: 0.5rem; grid-column: 1 / -1; }
+.eq-campo--check input { width: auto; }
+.eq-campo em { color: var(--text3, var(--text2)); font-size: 0.9em; font-style: normal; }
+
+.eq-campo input,
+.eq-campo select {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--bg2);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.eq-campo input:focus,
+.eq-campo select:focus { outline: none; border-color: var(--green, #22c55e); }
+.eq-campo input:disabled { color: var(--text3, var(--text2)); opacity: 0.75; }
+
+.eq-form-acciones { margin-top: 1rem; }
+
+.eq-btn {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--bg2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+}
+.eq-btn:hover { border-color: var(--green, #22c55e); }
+.eq-btn--sm { padding: 0.3rem 0.6rem; font-size: 0.78rem; }
+.eq-btn--primary {
+  border-color: transparent;
+  color: #fff;
+  background: var(--avisens-deep);
+  font-weight: 600;
+}
+.eq-btn--primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.eq-btn--danger { color: var(--danger, #dc2626); }
+.eq-btn:focus-visible { outline: 2px solid var(--green, #22c55e); outline-offset: 2px; }
+
+.eq-volver {
+  margin-bottom: 0.9rem;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+  border-radius: 8px;
+  color: var(--avisens-deep);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.eq-volver:hover { background: rgba(0, 91, 72, 0.08); }
+
+.eq-cabecera-equipo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+.eq-cabecera-equipo strong { color: var(--text); font-size: 1rem; }
+.eq-cabecera-equipo span { color: var(--text2); font-size: 0.82rem; }
+
+.eq-alert { margin: 0 0 1rem; padding: 0.6rem 0.8rem; border-radius: 8px; font-size: 0.85rem; }
+.eq-alert--error {
+  color: var(--danger, #dc2626);
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.eq-tabla-scroll { overflow-x: auto; }
+.eq-tabla { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.eq-tabla th {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.eq-tabla td {
+  padding: 0.6rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+.eq-tabla tr.is-inactive { opacity: 0.6; }
+
+.eq-tag {
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  color: var(--avisens-deep);
+  background: rgba(71, 187, 75, 0.16);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.eq-sin-dato { color: var(--text3, var(--text2)); }
+.eq-desgaste-alto { color: var(--danger, #dc2626); font-weight: 700; }
+
+.eq-estado-select {
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  background: var(--bg2);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.eq-acciones { display: flex; gap: 0.35rem; white-space: nowrap; }
+
+.eq-badge { padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+.eq-badge--programado { color: #8a6d45; background: rgba(255, 221, 103, 0.28); }
+.eq-badge--en_proceso { color: #0a4d8c; background: rgba(96, 165, 250, 0.22); }
+.eq-badge--completado { color: #0a6b4c; background: rgba(71, 187, 75, 0.18); }
+.eq-badge--cancelado,
+.eq-badge--inactivo { color: var(--text2); background: var(--bg2); }
+
+/* ── Mantenimientos ── */
+.eq-mant-lista { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.eq-mant { border-bottom: 1px solid var(--border); padding: 0.7rem 0; }
+.eq-mant:last-child { border-bottom: 0; }
+
+.eq-mant-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+.eq-mant-tipo { color: var(--text); font-weight: 600; }
+.eq-mant-fecha { color: var(--text2); }
+.eq-mant-desc { flex: 1; min-width: 120px; color: var(--text2); }
+.eq-mant-acciones { display: flex; gap: 0.35rem; }
+
+/* ── Repuestos ── */
+.eq-repuestos {
+  margin-top: 0.7rem;
+  padding: 0.8rem;
+  border-radius: 10px;
+  background: var(--bg2);
+}
+.eq-repuestos-lista { display: flex; flex-direction: column; gap: 0.4rem; margin: 0 0 0.7rem; padding: 0; list-style: none; }
+.eq-repuestos-lista li { display: flex; align-items: center; gap: 0.6rem; font-size: 0.82rem; }
+.eq-repuestos-lista li.is-revertido { opacity: 0.6; text-decoration: line-through; }
+.eq-repuesto-cant { color: var(--text); font-weight: 700; white-space: nowrap; }
+.eq-repuesto-desc { flex: 1; color: var(--text2); }
+
+.eq-repuesto-form { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.eq-repuesto-form select,
+.eq-repuesto-form input {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  background: var(--card);
+  font: inherit;
+  font-size: 0.8rem;
+}
+.eq-repuesto-form select { flex: 1; min-width: 140px; }
+.eq-repuesto-form input { width: 100px; }
+
+.eq-empty, .eq-vacio { padding: 1.5rem 0; color: var(--text2); text-align: center; }
+.eq-vacio-titulo { margin: 0 0 0.25rem; color: var(--text); font-weight: 600; }
+.eq-vacio-sub { margin: 0; font-size: 0.85rem; }

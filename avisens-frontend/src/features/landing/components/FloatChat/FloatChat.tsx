@@ -6,7 +6,7 @@ import {
   type PreguntaChatbot,
   type RespuestaChatbot,
   type RutaChat,
-} from '@shared/api/chatbot'
+} from '@features/landing/api/chatbot'
 import { IcAlert, IcRefresh, IcSend } from '@shared/ui/icons/icons'
 import Ic from '@shared/ui/Ic/Ic'
 import './FloatChat.css'
@@ -346,7 +346,7 @@ function FloatChat() {
             ) : resultado.clasificacion === 'consulta_atendida' ? (
               <div className="float-result float-result--cerrado">
                 <span>Consulta resuelta</span>
-                <p>Si quieres una cotización, reinicia y elige «Quiero cotizar».</p>
+                <p>Si quieres acompañamiento, reinicia y elige «Solicitar acompañamiento».</p>
               </div>
             ) : (
               <div className={`float-result float-result--${resultado.clasificacion ?? 'frio'}`}>
@@ -382,15 +382,19 @@ function FloatChat() {
         ) : null}
 
           {porElegirRuta && !enviando ? (
-            <div className="float-chat-options">
+            <div className="float-chat-options float-chat-menu">
+              <p className="float-chat-pregunta">¿Qué necesitas hoy?</p>
               <button type="button" onClick={() => void iniciar('cotizacion')}>
-                Quiero cotizar
+                <strong>Solicitar acompañamiento</strong>
+                <small>Un asesor visita tu granja y te ayuda con una cotización</small>
               </button>
               <button type="button" onClick={() => void iniciar('general')}>
-                Tengo dudas primero
+                <strong>Tengo dudas primero</strong>
+                <small>Resolvemos tus preguntas antes de decidir</small>
               </button>
               <button type="button" onClick={() => void iniciar('soporte')}>
-                Ya soy cliente y tengo un problema
+                <strong>Ya soy cliente y tengo un problema</strong>
+                <small>Radicar una PQRS con número de radicado para seguimiento</small>
               </button>
             </div>
           ) : opciones.length > 0 && !resultado ? (

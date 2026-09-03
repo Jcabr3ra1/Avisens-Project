@@ -1,14 +1,9 @@
 .login-page {
   /* Misma paleta que usa la landing (.landing-shell), para que el login se
      sienta parte del mismo sitio en vez de arrastrar los colores viejos. */
-  --avisens-deep: #103302;
-  --avisens-cream: #f5f7f4;
-  --avisens-green: #0e2f73;
-  --avisens-yellow: #f7f5f7;
-  --avisens-orange: #0e2f73;
-  --landing-primary: #094f23;
-  --landing-primary-hover: #103302;
-  --landing-accent: #0e2f73;
+  --landing-primary: var(--avisens-deep);
+  --landing-primary-hover: #004437;
+  --landing-accent: var(--avisens-green);
   --landing-on-primary: #ffffff;
   --landing-border: #d2d4d2;
   --landing-card: #ffffff;

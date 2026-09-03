@@ -1,0 +1,19 @@
+meta {
+  name: Listar catálogo de sensores
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/catalogo-sensores?page=1&limit=100
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Alimenta los tipos de sensor del formulario de alta. Sin `limit` el backend
+  devuelve 20 y la lista se corta sin avisar.
+}

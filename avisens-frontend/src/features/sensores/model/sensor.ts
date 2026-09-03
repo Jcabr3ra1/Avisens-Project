@@ -6,8 +6,6 @@ export type DatosSensor = {
   fabricante: string
 }
 
-export const SENSOR_TIPOS = ['temperatura', 'humedad', 'co2', 'nh3', 'luz']
-
 export const FORMULARIO_SENSOR_INICIAL: DatosSensor = {
   codigo: '',
   tipo: 'temperatura',

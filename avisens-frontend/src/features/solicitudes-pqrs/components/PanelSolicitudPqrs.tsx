@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { toast } from 'sonner'
+import { mensajeDeError } from '@shared/utils/errores'
 import { IcClose } from '@shared/ui/icons/icons'
 import type { EstadoSolicitudPqrs, SolicitudPqrs } from '../model/solicitudPqrs'
 
@@ -40,7 +42,10 @@ function PanelSolicitudPqrs({ solicitud, responsableId, onCerrar, onResponder, o
         responsable_id: responsableId,
       })
       onCerrar()
-    } catch {
+    } catch (error) {
+      // Sin este aviso la respuesta al cliente se perdía en silencio: el
+      // formulario se quedaba igual y parecía que no se había pulsado.
+      toast.error(mensajeDeError(error, 'No se pudo guardar la respuesta.'))
       setGuardando(false)
     }
   }
@@ -53,7 +58,8 @@ function PanelSolicitudPqrs({ solicitud, responsableId, onCerrar, onResponder, o
     try {
       await onEliminar(solicitud.id)
       onCerrar()
-    } catch {
+    } catch (error) {
+      toast.error(mensajeDeError(error, 'No se pudo eliminar la solicitud.'))
       setEliminando(false)
     }
   }

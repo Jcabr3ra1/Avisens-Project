@@ -57,3 +57,17 @@ export async function eliminarSolicitudPqrs(
 
   return data
 }
+
+export interface CrearSolicitudPqrsPayload {
+  prospecto_id: number
+  categoria: string
+  asunto?: string
+  mensaje?: string
+}
+
+export async function crearSolicitudPqrs(
+  payload: CrearSolicitudPqrsPayload,
+): Promise<SolicitudPqrs> {
+  const { data } = await api.post<SolicitudPqrs>('/solicitudes-pqrs', payload)
+  return data
+}

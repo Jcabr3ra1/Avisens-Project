@@ -37,8 +37,20 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         break;
       }
       case 'P2003': {
-        status = HttpStatus.BAD_REQUEST;
-        message = 'Referencia inválida: el registro relacionado no existe';
+        // Una llave foránea se rompe en dos direcciones opuestas, y el mensaje
+        // tiene que decir cuál de las dos fue. Al crear o actualizar, el padre
+        // al que se apunta no existe. Al borrar es al revés: el padre existe y
+        // lo que lo bloquea son los hijos que cuelgan de él. Decir "el registro
+        // relacionado no existe" cuando alguien intenta borrar una granja con
+        // galpones describe justo la situación contraria a la que pasó.
+        if (request.method === 'DELETE') {
+          status = HttpStatus.CONFLICT;
+          message =
+            'No se puede eliminar: todavía hay registros que dependen de este';
+        } else {
+          status = HttpStatus.BAD_REQUEST;
+          message = 'Referencia inválida: el registro relacionado no existe';
+        }
         break;
       }
       default:

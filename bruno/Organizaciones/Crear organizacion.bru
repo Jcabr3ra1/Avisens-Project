@@ -1,0 +1,31 @@
+meta {
+  name: Crear organización
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/organizaciones
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "nombre": "Avícola San José",
+    "nit": "900123456-7",
+    "plan": "basic"
+  }
+}
+
+docs {
+  `plan` acepta: free, basic, pro, enterprise.
+}

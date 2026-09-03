@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { isAxiosError } from 'axios'
-import { listarMediciones, type Medicion, type Sensor } from '@shared/api'
-
+import { listarMediciones, type Medicion } from '@features/sensores/api/mediciones'
+import { type Sensor } from '@features/sensores/api/sensores'
 // Cada cuánto refresca las lecturas desde el backend (el ESP32 reporta ~cada 5s).
 const INTERVALO_MS = 5000
 
