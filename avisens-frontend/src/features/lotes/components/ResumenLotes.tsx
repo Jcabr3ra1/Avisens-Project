@@ -8,7 +8,7 @@ function ResumenLotes({ resumen }: { resumen: ResumenLotesDatos }) {
     { label: 'Activos', valor: resumen.activos, icono: <IcCheck size={18} />, tono: 'ok' },
     { label: 'Finalizados', valor: resumen.finalizados, icono: <IcClock size={18} />, tono: 'aviso' },
     { label: 'Inactivos', valor: resumen.inactivos, icono: <IcAlert size={18} />, tono: 'peligro' },
-    { label: 'Aves activas', valor: resumen.avesActivas, icono: <IcEgg size={18} />, tono: 'info' },
+    { label: 'Aves alojadas', valor: resumen.avesAlojadas, icono: <IcEgg size={18} />, tono: 'info' },
   ]
 
   return <TarjetasResumen stats={stats} etiqueta="Resumen de lotes" />

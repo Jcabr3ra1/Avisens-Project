@@ -7,7 +7,7 @@ export interface ResumenLotesDatos {
   activos: number
   finalizados: number
   inactivos: number
-  avesActivas: number
+  avesAlojadas: number
 }
 
 export function calcularResumenLotes(lotes: Lote[]): ResumenLotesDatos {
@@ -17,7 +17,11 @@ export function calcularResumenLotes(lotes: Lote[]): ResumenLotesDatos {
     activos: activos.length,
     finalizados: lotes.filter((lote) => lote.estado === 'finalizado').length,
     inactivos: lotes.filter((lote) => lote.estado === 'inactivo').length,
-    avesActivas: activos.reduce((total, lote) => total + lote.cantidad_inicial, 0),
+    // Las que ingresaron a los lotes activos, no las que siguen vivas: la
+    // mortalidad vive en los indicadores del lote y aquí no se consulta.
+    // Se llamaba "avesActivas" y la pantalla decía "Aves activas", así que
+    // con 5 % de mortalidad afirmaba tener 20.000 vivas habiendo 19.000.
+    avesAlojadas: activos.reduce((total, lote) => total + lote.cantidad_inicial, 0),
   }
 }
 
