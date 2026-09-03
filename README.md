@@ -70,9 +70,19 @@ De *registrar y medir* a *predecir y recomendar*, por fases:
 ### Todo el sistema con Docker (recomendado)
 
 ```bash
-cp .env.example .env          # y rellena los secretos (ver abajo)
-docker compose up --build
+./scripts/preparar-entorno.sh   # crea el .env y genera los secretos
+docker compose up -d --build
 ```
+
+El script se puede correr las veces que haga falta: **nunca pisa un valor que
+ya tengas puesto**. Solo rellena lo que falta, así que también sirve para
+ponerse al día cuando alguien añade una variable nueva al proyecto.
+
+Existe porque `docker compose` corta en la **primera** variable que le falta.
+Sin el script se descubren de una en una: arreglas `POSTGRES_PASSWORD`, vuelves
+a correr y aparece `ML_INTERNAL_TOKEN`. Son cuatro secretos, o sea cuatro
+vueltas. Si prefieres hacerlo a mano, `cp .env.example .env` y rellenas los
+cuatro marcados como OBLIGATORIOS.
 
 Eso levanta PostgreSQL, Redis, el backend, el frontend y el microservicio de ML.
 El backend migra la base y la siembra solo, así que al terminar ya hay un admin
