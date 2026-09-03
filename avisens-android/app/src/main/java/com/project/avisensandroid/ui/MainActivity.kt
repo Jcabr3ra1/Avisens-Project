@@ -3,18 +3,14 @@ package com.project.avisensandroid.ui
 import android.app.DatePickerDialog
 import android.app.Dialog
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Patterns
-import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.ArrayAdapter
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -35,8 +31,12 @@ import com.project.avisensandroid.databinding.R03NuevoInsumoBinding
 import com.project.avisensandroid.databinding.R04RegistrarEventoMortalidadBinding
 import com.project.avisensandroid.databinding.R05RegistrarEventoEnfermoBinding
 import com.project.avisensandroid.model.EventoSanitarioRequest
+import com.project.avisensandroid.model.GalponResponse
+import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.InsumoRequest
 import com.project.avisensandroid.model.RegistroMortalidadRequest
+import com.project.avisensandroid.model.UserRole
+import com.project.avisensandroid.model.UserSession
 import com.project.avisensandroid.ui.fragments.AlertasFragment
 import com.project.avisensandroid.ui.fragments.BodegaFragment
 import com.project.avisensandroid.ui.fragments.BitacoraEnfermoFragment
@@ -64,34 +64,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var confirmacionBinding: Au05ConfirmacionContrasenaBinding
 
     // =========================================================
-    // COLORES DEL SPINNER
+    // COLORES DE SPINNER
     // =========================================================
 
-    private val spinnerTextoSeleccionado = Color.rgb(
-        23,
-        29,
-        26
-    )
+    private val spinnerTextoSeleccionado =
+        0xFF171D1A.toInt()
 
-    private val spinnerTextoDropdown = Color.rgb(
-        23,
-        29,
-        26
-    )
+    private val spinnerTextoDropdown =
+        0xFFFFFFFF.toInt()
 
-    private val spinnerFondoDropdown = Color.WHITE
-
-    private val spinnerBordeDropdown = Color.rgb(
-        210,
-        220,
-        214
-    )
+    private val spinnerFondoDropdown =
+        0xFF171D1A.toInt()
 
     // =========================================================
     // ADAPTADOR DE SPINNER ESTILIZADO
     // =========================================================
 
-    private inner class SpinnerAdapterEstilizado(
+    private class SpinnerAdapterEstilizado(
         context: android.content.Context,
         items: MutableList<String>
     ) : ArrayAdapter<String>(
@@ -100,15 +89,20 @@ class MainActivity : AppCompatActivity() {
         items
     ) {
 
+        private val colorTextoSeleccionado =
+            0xFF171D1A.toInt()
+
+        private val colorTextoDropdown =
+            0xFFFFFFFF.toInt()
+
+        private val colorFondoDropdown =
+            0xFF171D1A.toInt()
+
         init {
             setDropDownViewResource(
                 android.R.layout.simple_spinner_dropdown_item
             )
         }
-
-        // -----------------------------------------------------
-        // ELEMENTO SELECCIONADO
-        // -----------------------------------------------------
 
         override fun getView(
             position: Int,
@@ -125,32 +119,24 @@ class MainActivity : AppCompatActivity() {
             if (view is TextView) {
 
                 view.setTextColor(
-                    spinnerTextoSeleccionado
+                    colorTextoSeleccionado
                 )
 
                 view.textSize = 13f
 
                 view.setPadding(
-                    12,
+                    8,
                     0,
-                    12,
+                    8,
                     0
                 )
 
                 view.gravity =
-                    Gravity.CENTER_VERTICAL
-
-                view.setBackgroundColor(
-                    Color.TRANSPARENT
-                )
+                    android.view.Gravity.CENTER_VERTICAL
             }
 
             return view
         }
-
-        // -----------------------------------------------------
-        // ELEMENTOS DEL DESPLEGABLE
-        // -----------------------------------------------------
 
         override fun getDropDownView(
             position: Int,
@@ -164,33 +150,27 @@ class MainActivity : AppCompatActivity() {
                 parent
             )
 
-            // Evita que el contenedor de la lista
-            // conserve el fondo oscuro del tema.
-            parent.setBackgroundColor(
-                Color.TRANSPARENT
-            )
-
             if (view is TextView) {
 
                 view.setTextColor(
-                    spinnerTextoDropdown
+                    colorTextoDropdown
+                )
+
+                view.setBackgroundColor(
+                    colorFondoDropdown
                 )
 
                 view.textSize = 13f
 
                 view.setPadding(
-                    18,
+                    16,
                     14,
-                    18,
+                    16,
                     14
                 )
 
                 view.gravity =
-                    Gravity.CENTER_VERTICAL
-
-                view.setBackgroundColor(
-                    Color.TRANSPARENT
-                )
+                    android.view.Gravity.CENTER_VERTICAL
             }
 
             return view
@@ -198,81 +178,70 @@ class MainActivity : AppCompatActivity() {
     }
 
     // =========================================================
-    // ESTILIZAR SPINNER
-    // =========================================================
-
-    private fun estilizarSpinner(
-        spinner: Spinner
-    ) {
-
-        val fondoDropdown =
-            GradientDrawable().apply {
-
-                shape =
-                    GradientDrawable.RECTANGLE
-
-                setColor(
-                    spinnerFondoDropdown
-                )
-
-                setStroke(
-                    1,
-                    spinnerBordeDropdown
-                )
-
-                cornerRadius = 28f
-            }
-
-        /*
-         * Esta es la parte importante:
-         *
-         * Cambia el fondo del PopupWindow que aparece
-         * cuando se abre el Spinner.
-         */
-        spinner.setPopupBackgroundDrawable(
-            fondoDropdown
-        )
-
-        /*
-         * Espacio entre el Spinner y el menú desplegado.
-         */
-        spinner.dropDownVerticalOffset =
-            6
-
-        /*
-         * Sin elevación: el borde del spinner ahora vive en el
-         * FrameLayout contenedor (ver layout), así que no necesitamos
-         * (ni queremos) una sombra aquí. Con elevación > 0 el propio
-         * Spinner proyectaba una sombra sobre su borde cada vez que
-         * se redibujaba tras una selección, haciendo que el borde
-         * pareciera desaparecer.
-         */
-        spinner.elevation = 0f
-        spinner.stateListAnimator = null
-    }
-
-    // =========================================================
     // CICLO DE VIDA
     // =========================================================
+
+    // =========================================================
+    // SESIÓN / ROL ACTUAL
+    // =========================================================
+
+    private var rolActual: UserRole? = null
+
+    fun obtenerRolActual(): UserRole? = rolActual
+
+    fun obtenerNombreUsuario(): String =
+        UserSession.name(this)
+
+    fun esOperario(): Boolean =
+        rolActual == UserRole.OPERARIO
 
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
+        super.onCreate(savedInstanceState)
 
-        super.onCreate(
-            savedInstanceState
-        )
+        RetrofitClient.inicializar(applicationContext)
 
-        setContentView(
-            R.layout.activity_main
-        )
+        rolActual = UserSession.role(this)
 
-        if (savedInstanceState == null) {
-
-            mostrarFragment(
-                InicioFragment()
-            )
+        if (!UserSession.isLoggedIn(this) || rolActual == null) {
+            irALogin()
+            return
         }
+
+        if (rolActual == UserRole.OPERARIO) {
+
+            setContentView(R.layout.activity_main)
+
+            if (savedInstanceState == null) {
+                mostrarFragment(InicioFragment())
+            }
+
+        } else {
+            mostrarPantallaRolPendiente()
+        }
+    }
+
+    private fun mostrarPantallaRolPendiente() {
+
+        setContentView(R.layout.activity_rol_pendiente)
+
+        val txtRol = findViewById<TextView>(R.id.txtRolActual)
+        val txtMensaje = findViewById<TextView>(R.id.txtMensajeRol)
+        val btnCerrarSesion = findViewById<View>(R.id.btnCerrarSesionRol)
+
+        txtRol.text = rolActual?.displayName ?: "Usuario"
+        txtMensaje.text =
+            "La interfaz para ${rolActual?.displayName ?: "este rol"} todavía está en desarrollo.\n\nLa sesión fue autenticada correctamente y no se mostrará la interfaz de Operario."
+
+        btnCerrarSesion.setOnClickListener {
+            cerrarSesion()
+        }
+    }
+
+    private fun cerrarSesion() {
+        UserSession.clear(this)
+        irALogin()
     }
 
     // =========================================================
@@ -282,6 +251,8 @@ class MainActivity : AppCompatActivity() {
     fun mostrarFragment(
         fragment: Fragment
     ) {
+
+        if (!esOperario()) return
 
         supportFragmentManager
             .beginTransaction()
@@ -296,44 +267,94 @@ class MainActivity : AppCompatActivity() {
         itemId: Int
     ) {
 
+        if (!esOperario()) return
+
         when (itemId) {
 
             R.id.nav_inicio -> {
-
                 mostrarFragment(
                     InicioFragment()
                 )
             }
 
             R.id.nav_sensores -> {
-
                 mostrarFragment(
                     SensoresFragment()
                 )
             }
 
             R.id.nav_bodega -> {
-
                 mostrarFragment(
                     BodegaFragment()
                 )
             }
 
             R.id.nav_alertas -> {
-
                 mostrarFragment(
                     AlertasFragment()
                 )
             }
 
             R.id.nav_bitacora -> {
-
                 mostrarFragment(
                     BitacoraFragment()
                 )
             }
         }
     }
+
+    // =========================================================
+    // API - GRANJAS
+    // =========================================================
+
+    suspend fun obtenerGranjas() =
+        RetrofitClient.api.listarGranjas(
+            page = 1,
+            limit = 100
+        )
+
+    // =========================================================
+    // API - GALPONES
+    // =========================================================
+
+    suspend fun obtenerGalpones() =
+        RetrofitClient.api.listarGalpones(
+            page = 1,
+            limit = 100
+        )
+
+    // =========================================================
+    // OBTENER GALPONES DE UNA GRANJA
+    // =========================================================
+
+    suspend fun obtenerGalponesDeGranja(
+        granjaId: Int
+    ): List<GalponResponse> {
+
+        val response =
+            RetrofitClient.api.listarGalpones(
+                page = 1,
+                limit = 100
+            )
+
+        if (!response.isSuccessful) {
+
+            throw IllegalStateException(
+                "No se pudieron cargar los galpones. Código: ${response.code()}"
+            )
+        }
+
+        return response.body()
+            ?.data
+            ?.filter {
+                it.granja.id == granjaId
+            }
+            ?: emptyList()
+    }
+
+    // =========================================================
+    // VOLVER AL INICIO
+    // =========================================================
 
     private fun volverAlInicio() {
 
@@ -345,6 +366,10 @@ class MainActivity : AppCompatActivity() {
             InicioFragment()
         )
     }
+
+    // =========================================================
+    // IR AL LOGIN
+    // =========================================================
 
     private fun irALogin() {
 
@@ -373,40 +398,50 @@ class MainActivity : AppCompatActivity() {
             recuperarBinding.root
         )
 
-        recuperarBinding.btnVolver.setOnClickListener {
+        recuperarBinding
+            .btnVolver
+            .setOnClickListener {
 
-            irALogin()
-        }
+                irALogin()
+            }
 
-        recuperarBinding.btnEnviarCorreo.setOnClickListener {
+        recuperarBinding
+            .btnEnviarCorreo
+            .setOnClickListener {
 
-            val correo =
-                recuperarBinding.edtCorreo.text
-                    .toString()
-                    .trim()
+                val correo =
+                    recuperarBinding
+                        .edtCorreo
+                        .text
+                        .toString()
+                        .trim()
 
-            when {
+                when {
 
-                correo.isEmpty() -> {
+                    correo.isEmpty() -> {
 
-                    recuperarBinding.edtCorreo.error =
-                        "Ingresa tu correo electrónico"
-                }
+                        recuperarBinding
+                            .edtCorreo
+                            .error =
+                            "Ingresa tu correo electrónico"
+                    }
 
-                !Patterns.EMAIL_ADDRESS
-                    .matcher(correo)
-                    .matches() -> {
+                    !Patterns.EMAIL_ADDRESS
+                        .matcher(correo)
+                        .matches() -> {
 
-                    recuperarBinding.edtCorreo.error =
-                        "Ingresa un correo válido"
-                }
+                        recuperarBinding
+                            .edtCorreo
+                            .error =
+                            "Ingresa un correo válido"
+                    }
 
-                else -> {
+                    else -> {
 
-                    mostrarVerificarCodigo()
+                        mostrarVerificarCodigo()
+                    }
                 }
             }
-        }
     }
 
     private fun mostrarVerificarCodigo() {
@@ -420,11 +455,14 @@ class MainActivity : AppCompatActivity() {
             verificarBinding.root
         )
 
-        verificarBinding.btnVerificarCodigo
+        verificarBinding
+            .btnVerificarCodigo
             .setOnClickListener {
 
                 val codigo =
-                    verificarBinding.edtCodigo.text
+                    verificarBinding
+                        .edtCodigo
+                        .text
                         .toString()
                         .trim()
 
@@ -432,7 +470,9 @@ class MainActivity : AppCompatActivity() {
 
                     codigo.isEmpty() -> {
 
-                        verificarBinding.edtCodigo.error =
+                        verificarBinding
+                            .edtCodigo
+                            .error =
                             "Ingresa el código"
                     }
 
@@ -441,7 +481,9 @@ class MainActivity : AppCompatActivity() {
                                 !it.isDigit()
                             } -> {
 
-                        verificarBinding.edtCodigo.error =
+                        verificarBinding
+                            .edtCodigo
+                            .error =
                             "El código debe tener 6 dígitos"
                     }
 
@@ -452,7 +494,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-        verificarBinding.txtReenviarCodigo
+        verificarBinding
+            .txtReenviarCodigo
             .setOnClickListener {
 
                 Toast.makeText(
@@ -557,6 +600,8 @@ class MainActivity : AppCompatActivity() {
 
     fun mostrarConfiguracion() {
 
+        if (!esOperario()) return
+
         configuracionBinding =
             Co01ConfiguracionOpBinding.inflate(
                 layoutInflater
@@ -598,9 +643,18 @@ class MainActivity : AppCompatActivity() {
             .btnCerrarSesion
             .setOnClickListener {
 
-                irALogin()
+                cerrarSesion()
             }
     }
+
+    // =========================================================
+    // SEGURIDAD
+    // =========================================================
+    //
+    // Las pantallas todavía no existen.
+    // Por ahora solamente se muestran mensajes.
+    //
+    // =========================================================
 
     private fun mostrarSeguridad() {
 
@@ -613,35 +667,81 @@ class MainActivity : AppCompatActivity() {
             seguridadBinding.root
         )
 
-        seguridadBinding.btnVolver.setOnClickListener {
+        // -----------------------------------------------------
+        // VOLVER
+        // -----------------------------------------------------
 
-            mostrarConfiguracion()
-        }
+        seguridadBinding
+            .btnVolver
+            .setOnClickListener {
+
+                mostrarConfiguracion()
+            }
+
+        // -----------------------------------------------------
+        // VERIFICACIÓN EN DOS PASOS
+        // -----------------------------------------------------
 
         seguridadBinding
             .btnVerificacionDosPasos
             .setOnClickListener {
-                // Pendiente de implementar
+
+                Toast.makeText(
+                    this,
+                    "La verificación en dos pasos estará disponible próximamente",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
+
+        // -----------------------------------------------------
+        // CAMBIAR CONTRASEÑA
+        // -----------------------------------------------------
 
         seguridadBinding
             .btnCambiarContrasena
             .setOnClickListener {
-                // Pendiente de implementar
+
+                Toast.makeText(
+                    this,
+                    "La opción de cambiar contraseña estará disponible próximamente",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
+
+        // -----------------------------------------------------
+        // SESIONES ACTIVAS
+        // -----------------------------------------------------
 
         seguridadBinding
             .btnSesionesActivas
             .setOnClickListener {
-                // Pendiente de implementar
+
+                Toast.makeText(
+                    this,
+                    "La gestión de sesiones estará disponible próximamente",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
+
+        // -----------------------------------------------------
+        // CERRAR SESIONES
+        // -----------------------------------------------------
 
         seguridadBinding
             .btnCerrarSesiones
             .setOnClickListener {
-                // Pendiente de implementar
+
+                Toast.makeText(
+                    this,
+                    "La gestión de sesiones estará disponible próximamente",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
     }
+
+    // =========================================================
+    // NOTIFICACIONES
+    // =========================================================
 
     private fun mostrarNotificaciones() {
 
@@ -662,6 +762,10 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
+    // =========================================================
+    // PERFIL
+    // =========================================================
+
     private fun mostrarPerfil() {
 
         perfilBinding =
@@ -674,17 +778,20 @@ class MainActivity : AppCompatActivity() {
         )
 
         val nombreInicial =
-            perfilBinding.edtNombrePerfil
+            perfilBinding
+                .edtNombrePerfil
                 .text
                 .toString()
 
         val correoInicial =
-            perfilBinding.edtCorreoPerfil
+            perfilBinding
+                .edtCorreoPerfil
                 .text
                 .toString()
 
         val telefonoInicial =
-            perfilBinding.edtTelefonoPerfil
+            perfilBinding
+                .edtTelefonoPerfil
                 .text
                 .toString()
 
@@ -698,13 +805,18 @@ class MainActivity : AppCompatActivity() {
         fun revisarCambios() {
 
             val hayCambios =
-                perfilBinding.edtNombrePerfil
+                perfilBinding
+                    .edtNombrePerfil
                     .text
                     .toString() != nombreInicial ||
-                        perfilBinding.edtCorreoPerfil
+
+                        perfilBinding
+                            .edtCorreoPerfil
                             .text
                             .toString() != correoInicial ||
-                        perfilBinding.edtTelefonoPerfil
+
+                        perfilBinding
+                            .edtTelefonoPerfil
                             .text
                             .toString() != telefonoInicial
 
@@ -734,6 +846,7 @@ class MainActivity : AppCompatActivity() {
                     before: Int,
                     count: Int
                 ) {
+
                     revisarCambios()
                 }
 
@@ -742,14 +855,23 @@ class MainActivity : AppCompatActivity() {
                 ) = Unit
             }
 
-        perfilBinding.edtNombrePerfil
-            .addTextChangedListener(textWatcher)
+        perfilBinding
+            .edtNombrePerfil
+            .addTextChangedListener(
+                textWatcher
+            )
 
-        perfilBinding.edtCorreoPerfil
-            .addTextChangedListener(textWatcher)
+        perfilBinding
+            .edtCorreoPerfil
+            .addTextChangedListener(
+                textWatcher
+            )
 
-        perfilBinding.edtTelefonoPerfil
-            .addTextChangedListener(textWatcher)
+        perfilBinding
+            .edtTelefonoPerfil
+            .addTextChangedListener(
+                textWatcher
+            )
 
         perfilBinding
             .btnCerrarPerfil
@@ -904,16 +1026,17 @@ class MainActivity : AppCompatActivity() {
             binding.root
         )
 
-        dialog.window?.setBackgroundDrawableResource(
-            android.R.color.transparent
-        )
+        dialog.window
+            ?.setBackgroundDrawableResource(
+                android.R.color.transparent
+            )
 
         dialog.show()
 
         dialog.window?.setLayout(
             (
-                    resources.displayMetrics
-                        .widthPixels * 0.90f
+                    resources.displayMetrics.widthPixels *
+                            0.90f
                     ).toInt(),
             WindowManager.LayoutParams.WRAP_CONTENT
         )
@@ -922,30 +1045,36 @@ class MainActivity : AppCompatActivity() {
             binding
         )
 
-        binding.btnCancelarGalpon
+        binding
+            .btnCancelarGalpon
             .setOnClickListener {
 
                 dialog.dismiss()
             }
 
-        binding.btnCrearLote
+        binding
+            .btnCrearLote
             .setOnClickListener {
 
                 val nombre =
-                    binding.edtNombreGalpon
+                    binding
+                        .edtNombreGalpon
                         .text
                         .toString()
                         .trim()
 
                 val cantidad =
-                    binding.edtCantidadPollos
+                    binding
+                        .edtCantidadPollos
                         .text
                         .toString()
                         .trim()
 
                 if (nombre.isEmpty()) {
 
-                    binding.edtNombreGalpon.error =
+                    binding
+                        .edtNombreGalpon
+                        .error =
                         "Ingresa el nombre del galpón"
 
                     return@setOnClickListener
@@ -953,7 +1082,9 @@ class MainActivity : AppCompatActivity() {
 
                 if (cantidad.isEmpty()) {
 
-                    binding.edtCantidadPollos.error =
+                    binding
+                        .edtCantidadPollos
+                        .error =
                         "Ingresa la cantidad de pollos"
 
                     return@setOnClickListener
@@ -963,7 +1094,9 @@ class MainActivity : AppCompatActivity() {
                     (cantidad.toIntOrNull() ?: 0) <= 0
                 ) {
 
-                    binding.edtCantidadPollos.error =
+                    binding
+                        .edtCantidadPollos
+                        .error =
                         "La cantidad debe ser mayor que cero"
 
                     return@setOnClickListener
@@ -993,12 +1126,9 @@ class MainActivity : AppCompatActivity() {
                     .toMutableList()
             )
 
-        binding.spinnerMarcaAlimento.adapter =
-            marcas
-
-        estilizarSpinner(
-            binding.spinnerMarcaAlimento
-        )
+        binding
+            .spinnerMarcaAlimento
+            .adapter = marcas
 
         val lineas =
             SpinnerAdapterEstilizado(
@@ -1010,12 +1140,9 @@ class MainActivity : AppCompatActivity() {
                     .toMutableList()
             )
 
-        binding.spinnerLineas.adapter =
-            lineas
-
-        estilizarSpinner(
-            binding.spinnerLineas
-        )
+        binding
+            .spinnerLineas
+            .adapter = lineas
     }
 
     // =========================================================
@@ -1036,16 +1163,17 @@ class MainActivity : AppCompatActivity() {
             binding.root
         )
 
-        dialog.window?.setBackgroundDrawableResource(
-            android.R.color.transparent
-        )
+        dialog.window
+            ?.setBackgroundDrawableResource(
+                android.R.color.transparent
+            )
 
         dialog.show()
 
         dialog.window?.setLayout(
             (
-                    resources.displayMetrics
-                        .widthPixels * 0.90f
+                    resources.displayMetrics.widthPixels *
+                            0.90f
                     ).toInt(),
             WindowManager.LayoutParams.WRAP_CONTENT
         )
@@ -1064,12 +1192,10 @@ class MainActivity : AppCompatActivity() {
                 nombresProveedores
             )
 
-        binding.spinnerProveedor.adapter =
+        binding
+            .spinnerProveedor
+            .adapter =
             adapterProveedores
-
-        estilizarSpinner(
-            binding.spinnerProveedor
-        )
 
         cargarProveedoresParaInsumo(
             nombresProveedores,
@@ -1077,46 +1203,55 @@ class MainActivity : AppCompatActivity() {
             adapterProveedores
         )
 
-        binding.btnCancelarInsumo
+        binding
+            .btnCancelarInsumo
             .setOnClickListener {
 
                 dialog.dismiss()
             }
 
-        binding.btnAgregarInsumo
+        binding
+            .btnAgregarInsumo
             .setOnClickListener {
 
                 val nombre =
-                    binding.edtNombreInsumo
+                    binding
+                        .edtNombreInsumo
                         .text
                         .toString()
                         .trim()
 
                 val categoria =
-                    binding.edtCategoriaInsumo
+                    binding
+                        .edtCategoriaInsumo
                         .text
                         .toString()
                         .trim()
 
                 val cantidadTexto =
-                    binding.edtCantidadInsumo
+                    binding
+                        .edtCantidadInsumo
                         .text
                         .toString()
                         .trim()
 
                 val unidad =
-                    binding.edtUnidadInsumo
+                    binding
+                        .edtUnidadInsumo
                         .text
                         .toString()
                         .trim()
 
                 val posicion =
-                    binding.spinnerProveedor
+                    binding
+                        .spinnerProveedor
                         .selectedItemPosition
 
                 if (nombre.isEmpty()) {
 
-                    binding.edtNombreInsumo.error =
+                    binding
+                        .edtNombreInsumo
+                        .error =
                         "Ingresa el nombre del insumo"
 
                     return@setOnClickListener
@@ -1124,7 +1259,9 @@ class MainActivity : AppCompatActivity() {
 
                 if (categoria.isEmpty()) {
 
-                    binding.edtCategoriaInsumo.error =
+                    binding
+                        .edtCategoriaInsumo
+                        .error =
                         "Ingresa la categoría"
 
                     return@setOnClickListener
@@ -1138,7 +1275,9 @@ class MainActivity : AppCompatActivity() {
                     cantidad < 0
                 ) {
 
-                    binding.edtCantidadInsumo.error =
+                    binding
+                        .edtCantidadInsumo
+                        .error =
                         "Ingresa una cantidad válida"
 
                     return@setOnClickListener
@@ -1146,7 +1285,9 @@ class MainActivity : AppCompatActivity() {
 
                 if (unidad.isEmpty()) {
 
-                    binding.edtUnidadInsumo.error =
+                    binding
+                        .edtUnidadInsumo
+                        .error =
                         "Ingresa la unidad"
 
                     return@setOnClickListener
@@ -1221,7 +1362,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val data =
-                    response.body()?.data
+                    response.body()
+                        ?.data
                         ?: emptyList()
 
                 nombres.clear()
@@ -1261,10 +1403,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // =========================================================
-    // CREAR INSUMO
-    // =========================================================
-
     private fun crearInsumo(
         dialog: Dialog,
         binding: R03NuevoInsumoBinding,
@@ -1275,8 +1413,9 @@ class MainActivity : AppCompatActivity() {
         proveedorId: Int
     ) {
 
-        binding.btnAgregarInsumo.isEnabled =
-            false
+        binding
+            .btnAgregarInsumo
+            .isEnabled = false
 
         lifecycleScope.launch {
 
@@ -1321,8 +1460,9 @@ class MainActivity : AppCompatActivity() {
 
                 } else {
 
-                    binding.btnAgregarInsumo.isEnabled =
-                        true
+                    binding
+                        .btnAgregarInsumo
+                        .isEnabled = true
 
                     Toast.makeText(
                         this@MainActivity,
@@ -1333,8 +1473,9 @@ class MainActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
 
-                binding.btnAgregarInsumo.isEnabled =
-                    true
+                binding
+                    .btnAgregarInsumo
+                    .isEnabled = true
 
                 Toast.makeText(
                     this@MainActivity,
@@ -1413,8 +1554,8 @@ class MainActivity : AppCompatActivity() {
 
             dialog.window?.setLayout(
                 (
-                        resources.displayMetrics
-                            .widthPixels * 0.92f
+                        resources.displayMetrics.widthPixels *
+                                0.92f
                         ).toInt(),
                 WindowManager.LayoutParams.WRAP_CONTENT
             )
@@ -1434,12 +1575,9 @@ class MainActivity : AppCompatActivity() {
                 nombresLotes
             )
 
-        binding.spinnerLote.adapter =
-            adapterLotes
-
-        estilizarSpinner(
-            binding.spinnerLote
-        )
+        binding
+            .spinnerLote
+            .adapter = adapterLotes
 
         cargarLotes(
             nombresLotes,
@@ -1459,31 +1597,33 @@ class MainActivity : AppCompatActivity() {
                 metodos
             )
 
-        binding.spinnerMetodoRegistro.adapter =
-            adapterMetodo
+        binding
+            .spinnerMetodoRegistro
+            .adapter = adapterMetodo
 
-        estilizarSpinner(
-            binding.spinnerMetodoRegistro
-        )
+        binding
+            .edtFecha
+            .setOnClickListener {
 
-        binding.edtFecha.setOnClickListener {
+                mostrarSelectorFecha(
+                    binding.edtFecha
+                )
+            }
 
-            mostrarSelectorFecha(
-                binding.edtFecha
-            )
-        }
-
-        binding.btnCancelarEvento
+        binding
+            .btnCancelarEvento
             .setOnClickListener {
 
                 dialog.dismiss()
             }
 
-        binding.btnGuardarEvento
+        binding
+            .btnGuardarEvento
             .setOnClickListener {
 
                 val lotePosition =
-                    binding.spinnerLote
+                    binding
+                        .spinnerLote
                         .selectedItemPosition
 
                 val loteId =
@@ -1496,19 +1636,22 @@ class MainActivity : AppCompatActivity() {
                     }
 
                 val fecha =
-                    binding.edtFecha
+                    binding
+                        .edtFecha
                         .text
                         .toString()
                         .trim()
 
                 val cantidad =
-                    binding.edtCantidadAves
+                    binding
+                        .edtCantidadAves
                         .text
                         .toString()
                         .trim()
 
                 val causa =
-                    binding.edtCausaPresuntiva
+                    binding
+                        .edtCausaPresuntiva
                         .text
                         .toString()
                         .trim()
@@ -1517,7 +1660,8 @@ class MainActivity : AppCompatActivity() {
                         }
 
                 val disposicion =
-                    binding.edtDisposicion
+                    binding
+                        .edtDisposicion
                         .text
                         .toString()
                         .trim()
@@ -1526,7 +1670,8 @@ class MainActivity : AppCompatActivity() {
                         }
 
                 val metodo =
-                    binding.spinnerMetodoRegistro
+                    binding
+                        .spinnerMetodoRegistro
                         .selectedItem
                         ?.toString()
                         ?.trim()
@@ -1546,7 +1691,9 @@ class MainActivity : AppCompatActivity() {
 
                     fecha.isEmpty() -> {
 
-                        binding.edtFecha.error =
+                        binding
+                            .edtFecha
+                            .error =
                             "Selecciona una fecha"
 
                         return@setOnClickListener
@@ -1555,7 +1702,9 @@ class MainActivity : AppCompatActivity() {
                     cantidad.toIntOrNull() == null ||
                             cantidad.toInt() <= 0 -> {
 
-                        binding.edtCantidadAves.error =
+                        binding
+                            .edtCantidadAves
+                            .error =
                             "Ingresa una cantidad válida mayor que cero"
 
                         return@setOnClickListener
@@ -1578,7 +1727,8 @@ class MainActivity : AppCompatActivity() {
                         metodo_registro =
                             metodo,
                         observaciones =
-                            binding.edtObservaciones
+                            binding
+                                .edtObservaciones
                                 .text
                                 .toString()
                                 .trim()
@@ -1587,8 +1737,9 @@ class MainActivity : AppCompatActivity() {
                                 }
                     )
 
-                binding.btnGuardarEvento.isEnabled =
-                    false
+                binding
+                    .btnGuardarEvento
+                    .isEnabled = false
 
                 lifecycleScope.launch {
 
@@ -1616,8 +1767,9 @@ class MainActivity : AppCompatActivity() {
 
                         } else {
 
-                            binding.btnGuardarEvento.isEnabled =
-                                true
+                            binding
+                                .btnGuardarEvento
+                                .isEnabled = true
 
                             mostrarErrorApi(
                                 "No se pudo guardar la mortalidad",
@@ -1629,8 +1781,9 @@ class MainActivity : AppCompatActivity() {
 
                     } catch (e: Exception) {
 
-                        binding.btnGuardarEvento.isEnabled =
-                            true
+                        binding
+                            .btnGuardarEvento
+                            .isEnabled = true
 
                         Toast.makeText(
                             this@MainActivity,
@@ -1681,8 +1834,8 @@ class MainActivity : AppCompatActivity() {
 
             dialog.window?.setLayout(
                 (
-                        resources.displayMetrics
-                            .widthPixels * 0.92f
+                        resources.displayMetrics.widthPixels *
+                                0.92f
                         ).toInt(),
                 WindowManager.LayoutParams.WRAP_CONTENT
             )
@@ -1702,12 +1855,9 @@ class MainActivity : AppCompatActivity() {
                 nombresLotes
             )
 
-        binding.spinnerLoteEnfermo.adapter =
-            adapterLotes
-
-        estilizarSpinner(
-            binding.spinnerLoteEnfermo
-        )
+        binding
+            .spinnerLoteEnfermo
+            .adapter = adapterLotes
 
         cargarLotes(
             nombresLotes,
@@ -1729,12 +1879,9 @@ class MainActivity : AppCompatActivity() {
                 nombresInsumos
             )
 
-        binding.spinnerInsumoEnfermo.adapter =
-            adapterInsumos
-
-        estilizarSpinner(
-            binding.spinnerInsumoEnfermo
-        )
+        binding
+            .spinnerInsumoEnfermo
+            .adapter = adapterInsumos
 
         cargarInsumos(
             nombresInsumos,
@@ -1760,12 +1907,9 @@ class MainActivity : AppCompatActivity() {
                 vias
             )
 
-        binding.spinnerViaAplicacionEnfermo.adapter =
-            adapterVia
-
-        estilizarSpinner(
-            binding.spinnerViaAplicacionEnfermo
-        )
+        binding
+            .spinnerViaAplicacionEnfermo
+            .adapter = adapterVia
 
         val metodos =
             mutableListOf(
@@ -1779,14 +1923,12 @@ class MainActivity : AppCompatActivity() {
                 metodos
             )
 
-        binding.spinnerMetodoRegistroEnfermo.adapter =
-            adapterMetodo
+        binding
+            .spinnerMetodoRegistroEnfermo
+            .adapter = adapterMetodo
 
-        estilizarSpinner(
-            binding.spinnerMetodoRegistroEnfermo
-        )
-
-        binding.edtFechaEnfermo
+        binding
+            .edtFechaEnfermo
             .setOnClickListener {
 
                 mostrarSelectorFecha(
@@ -1794,21 +1936,25 @@ class MainActivity : AppCompatActivity() {
                 )
             }
 
-        binding.btnCancelarEnfermo
+        binding
+            .btnCancelarEnfermo
             .setOnClickListener {
 
                 dialog.dismiss()
             }
 
-        binding.btnGuardarEnfermo
+        binding
+            .btnGuardarEnfermo
             .setOnClickListener {
 
                 val lotePosition =
-                    binding.spinnerLoteEnfermo
+                    binding
+                        .spinnerLoteEnfermo
                         .selectedItemPosition
 
                 val insumoPosition =
-                    binding.spinnerInsumoEnfermo
+                    binding
+                        .spinnerInsumoEnfermo
                         .selectedItemPosition
 
                 val loteId =
@@ -1830,19 +1976,22 @@ class MainActivity : AppCompatActivity() {
                     }
 
                 val fecha =
-                    binding.edtFechaEnfermo
+                    binding
+                        .edtFechaEnfermo
                         .text
                         .toString()
                         .trim()
 
                 val cantidad =
-                    binding.edtCantidadAvesEnfermo
+                    binding
+                        .edtCantidadAvesEnfermo
                         .text
                         .toString()
                         .trim()
 
                 val dosis =
-                    binding.edtDosisEnfermo
+                    binding
+                        .edtDosisEnfermo
                         .text
                         .toString()
                         .trim()
@@ -1873,7 +2022,9 @@ class MainActivity : AppCompatActivity() {
 
                     fecha.isEmpty() -> {
 
-                        binding.edtFechaEnfermo.error =
+                        binding
+                            .edtFechaEnfermo
+                            .error =
                             "Selecciona una fecha"
 
                         return@setOnClickListener
@@ -1882,7 +2033,9 @@ class MainActivity : AppCompatActivity() {
                     cantidad.toIntOrNull() == null ||
                             cantidad.toInt() <= 0 -> {
 
-                        binding.edtCantidadAvesEnfermo.error =
+                        binding
+                            .edtCantidadAvesEnfermo
+                            .error =
                             "Ingresa una cantidad válida mayor que cero"
 
                         return@setOnClickListener
@@ -1890,7 +2043,9 @@ class MainActivity : AppCompatActivity() {
 
                     dosis.isEmpty() -> {
 
-                        binding.edtDosisEnfermo.error =
+                        binding
+                            .edtDosisEnfermo
+                            .error =
                             "Ingresa la dosis"
 
                         return@setOnClickListener
@@ -1898,7 +2053,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val via =
-                    binding.spinnerViaAplicacionEnfermo
+                    binding
+                        .spinnerViaAplicacionEnfermo
                         .selectedItem
                         ?.toString()
                         ?.trim()
@@ -1907,7 +2063,8 @@ class MainActivity : AppCompatActivity() {
                         }
 
                 val metodo =
-                    binding.spinnerMetodoRegistroEnfermo
+                    binding
+                        .spinnerMetodoRegistroEnfermo
                         .selectedItem
                         ?.toString()
                         ?.trim()
@@ -1932,7 +2089,8 @@ class MainActivity : AppCompatActivity() {
                             cantidad.toInt(),
                         metodo_registro = metodo,
                         observaciones =
-                            binding.edtObservacionesEnfermo
+                            binding
+                                .edtObservacionesEnfermo
                                 .text
                                 .toString()
                                 .trim()
@@ -1941,8 +2099,9 @@ class MainActivity : AppCompatActivity() {
                                 }
                     )
 
-                binding.btnGuardarEnfermo.isEnabled =
-                    false
+                binding
+                    .btnGuardarEnfermo
+                    .isEnabled = false
 
                 lifecycleScope.launch {
 
@@ -1970,8 +2129,9 @@ class MainActivity : AppCompatActivity() {
 
                         } else {
 
-                            binding.btnGuardarEnfermo.isEnabled =
-                                true
+                            binding
+                                .btnGuardarEnfermo
+                                .isEnabled = true
 
                             mostrarErrorApi(
                                 "No se pudo registrar el tratamiento",
@@ -1983,8 +2143,9 @@ class MainActivity : AppCompatActivity() {
 
                     } catch (e: Exception) {
 
-                        binding.btnGuardarEnfermo.isEnabled =
-                            true
+                        binding
+                            .btnGuardarEnfermo
+                            .isEnabled = true
 
                         Toast.makeText(
                             this@MainActivity,
@@ -2029,7 +2190,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val data =
-                    response.body()?.data
+                    response.body()
+                        ?.data
                         ?: emptyList()
 
                 nombres.clear()
@@ -2110,7 +2272,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val data =
-                    response.body()?.data
+                    response.body()
+                        ?.data
                         ?: emptyList()
 
                 nombres.clear()

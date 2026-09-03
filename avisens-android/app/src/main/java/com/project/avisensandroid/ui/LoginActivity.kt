@@ -11,27 +11,38 @@ import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.ActivityLoginBinding
 import com.project.avisensandroid.model.LoginRequest
+import com.project.avisensandroid.model.UserRole
+import com.project.avisensandroid.model.UserSession
 import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
 
-    // Controla si la contraseña está visible
     private var passwordVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Inicializar Retrofit
         RetrofitClient.inicializar(applicationContext)
 
-        binding = ActivityLoginBinding.inflate(layoutInflater)
+        binding =
+            ActivityLoginBinding.inflate(layoutInflater)
+
         setContentView(binding.root)
 
-        // ==========================================
-        // MOSTRAR / OCULTAR CONTRASEÑA
-        // ==========================================
+        configurarPassword()
+
+        binding.btnEntrar.setOnClickListener {
+            hacerLogin()
+        }
+    }
+
+    // =========================================================
+    // MOSTRAR / OCULTAR CONTRASEÑA
+    // =========================================================
+
+    private fun configurarPassword() {
 
         binding.btnTogglePassword.setOnClickListener {
 
@@ -56,24 +67,15 @@ class LoginActivity : AppCompatActivity() {
                 )
             }
 
-            // Mantener cursor al final
             binding.etContrasena.setSelection(
                 binding.etContrasena.text.length
             )
         }
-
-        // ==========================================
-        // BOTÓN ENTRAR
-        // ==========================================
-
-        binding.btnEntrar.setOnClickListener {
-            hacerLogin()
-        }
     }
 
-    // ==========================================
+    // =========================================================
     // LOGIN
-    // ==========================================
+    // =========================================================
 
     private fun hacerLogin() {
 
@@ -87,12 +89,11 @@ class LoginActivity : AppCompatActivity() {
                 .toString()
                 .trim()
 
-        // Limpiar mensaje anterior
         binding.txtError.text = ""
 
-        // ==========================================
-        // VALIDAR CAMPOS
-        // ==========================================
+        // =====================================================
+        // VALIDACIONES
+        // =====================================================
 
         if (email.isEmpty()) {
 
@@ -110,18 +111,18 @@ class LoginActivity : AppCompatActivity() {
             return
         }
 
-        // ==========================================
-        // MOSTRAR CARGANDO
-        // ==========================================
+        // =====================================================
+        // CARGANDO
+        // =====================================================
 
         binding.progressLogin.visibility =
             View.VISIBLE
 
         binding.btnEntrar.isEnabled = false
 
-        // ==========================================
-        // LLAMAR API
-        // ==========================================
+        // =====================================================
+        // API
+        // =====================================================
 
         lifecycleScope.launch {
 
@@ -134,10 +135,6 @@ class LoginActivity : AppCompatActivity() {
                             password = password
                         )
                     )
-
-                // ======================================
-                // LOGIN CORRECTO
-                // ======================================
 
                 if (response.isSuccessful) {
 
@@ -152,17 +149,40 @@ class LoginActivity : AppCompatActivity() {
                         return@launch
                     }
 
-                    // ==================================
-                    // GUARDAR ACCESS TOKEN
-                    // ==================================
+                    // =================================================
+                    // DATOS DEL USUARIO
+                    // =================================================
 
-                    guardarToken(
-                        loginData.access_token
+                    val usuario =
+                        loginData.usuario
+
+                    val role =
+                        UserRole.fromApiValue(usuario.rol)
+
+                    if (role == null) {
+
+                        binding.txtError.text =
+                            "El usuario no tiene un rol válido: ${usuario.rol}"
+
+                        return@launch
+                    }
+
+                    // =================================================
+                    // GUARDAR SESIÓN CON EL ROL REAL DE LA API
+                    // =================================================
+
+                    guardarSesion(
+                        token = loginData.access_token,
+                        refreshToken = loginData.refresh_token,
+                        usuarioId = usuario.id,
+                        nombre = usuario.nombre,
+                        email = usuario.email,
+                        rol = role
                     )
 
-                    // ==================================
-                    // NAVEGAR A MAIN ACTIVITY
-                    // ==================================
+                    // =================================================
+                    // IR A MAIN
+                    // =================================================
 
                     startActivity(
                         Intent(
@@ -175,23 +195,22 @@ class LoginActivity : AppCompatActivity() {
 
                 } else {
 
-                    // ==================================
-                    // ERROR DEL SERVIDOR
-                    // ==================================
-
                     when (response.code()) {
 
                         401 -> {
+
                             binding.txtError.text =
                                 "Correo o contraseña incorrectos"
                         }
 
                         403 -> {
+
                             binding.txtError.text =
-                                "Tu cuenta está bloqueada"
+                                "No tienes permisos para acceder"
                         }
 
                         else -> {
+
                             binding.txtError.text =
                                 "Error del servidor: ${response.code()}"
                         }
@@ -200,18 +219,12 @@ class LoginActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
 
-                // ==================================
-                // ERROR DE CONEXIÓN
-                // ==================================
-
                 binding.txtError.text =
-                    "Error de conexión: ${e.message}"
+                    "Error de conexión: ${
+                        e.message ?: "error desconocido"
+                    }"
 
             } finally {
-
-                // ==================================
-                // OCULTAR CARGANDO
-                // ==================================
 
                 binding.progressLogin.visibility =
                     View.GONE
@@ -222,23 +235,27 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    // ==========================================
-    // GUARDAR TOKEN
-    // ==========================================
+    // =========================================================
+    // GUARDAR SESIÓN
+    // =========================================================
 
-    private fun guardarToken(token: String) {
+    private fun guardarSesion(
+        token: String,
+        refreshToken: String,
+        usuarioId: Int,
+        nombre: String,
+        email: String,
+        rol: UserRole
+    ) {
 
-        val prefs =
-            getSharedPreferences(
-                "app_prefs",
-                MODE_PRIVATE
-            )
-
-        prefs.edit()
-            .putString(
-                "token",
-                token
-            )
-            .apply()
+        UserSession.save(
+            context = this,
+            token = token,
+            refreshToken = refreshToken,
+            userId = usuarioId,
+            name = nombre,
+            email = email,
+            role = rol
+        )
     }
 }

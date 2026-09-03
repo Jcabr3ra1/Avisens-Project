@@ -2,6 +2,7 @@ package com.project.avisensandroid.controller
 
 import com.project.avisensandroid.model.EventoSanitarioRequest
 import com.project.avisensandroid.model.EventoSanitarioResponse
+import com.project.avisensandroid.model.GalponResponse
 import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.InsumoRequest
 import com.project.avisensandroid.model.InsumoResponse
@@ -9,9 +10,9 @@ import com.project.avisensandroid.model.LoginRequest
 import com.project.avisensandroid.model.LoginResponse
 import com.project.avisensandroid.model.LoteResponse
 import com.project.avisensandroid.model.PaginatedResponse
+import com.project.avisensandroid.model.ProveedorResponse
 import com.project.avisensandroid.model.RegistroMortalidadRequest
 import com.project.avisensandroid.model.RegistroMortalidadResponse
-import com.project.avisensandroid.model.ProveedorResponse
 import com.project.avisensandroid.model.UserResponse
 import retrofit2.Response
 import retrofit2.http.Body
@@ -79,6 +80,17 @@ interface ApiService {
 
 
     // =========================================================
+    // GALPONES
+    // =========================================================
+
+    @GET("v1/galpones")
+    suspend fun listarGalpones(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<GalponResponse>>
+
+
+    // =========================================================
     // LOTES
     // =========================================================
 
@@ -103,6 +115,7 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 100
     ): Response<PaginatedResponse<RegistroMortalidadResponse>>
+
 
     // =========================================================
     // EVENTOS SANITARIOS
@@ -134,6 +147,4 @@ interface ApiService {
     suspend fun eliminarEventoSanitario(
         @Path("id") id: Int
     ): Response<Unit>
-
-
 }

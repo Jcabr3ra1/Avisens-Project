@@ -14,53 +14,70 @@ object RetrofitClient {
 
     private lateinit var appContext: Context
 
-    // ==========================================
-    // INICIALIZAR CLIENTE
-    // ==========================================
+    // =========================================================
+    // INICIALIZAR
+    // =========================================================
 
     fun inicializar(context: Context) {
-        appContext = context.applicationContext
+
+        appContext =
+            context.applicationContext
     }
 
-    // ==========================================
+    // =========================================================
     // LOGGING
-    // ==========================================
+    // =========================================================
 
     private val loggingInterceptor =
         HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+
+            level =
+                HttpLoggingInterceptor.Level.BODY
         }
 
-    // ==========================================
-    // INTERCEPTOR DE AUTENTICACIÓN
-    // ==========================================
+    // =========================================================
+    // AUTENTICACIÓN
+    // =========================================================
 
     private val authInterceptor =
         Interceptor { chain ->
 
-            val requestOriginal = chain.request()
+            val requestOriginal =
+                chain.request()
+
+            val path =
+                requestOriginal.url.encodedPath
 
             val requestBuilder =
                 requestOriginal.newBuilder()
 
-            // Obtener token guardado
-            if (::appContext.isInitialized) {
+            if (
+                !path.endsWith(
+                    "/v1/auth/login"
+                )
+            ) {
 
-                val prefs =
-                    appContext.getSharedPreferences(
-                        "app_prefs",
-                        Context.MODE_PRIVATE
-                    )
+                if (::appContext.isInitialized) {
 
-                val token =
-                    prefs.getString("token", null)
+                    val prefs =
+                        appContext.getSharedPreferences(
+                            "app_prefs",
+                            Context.MODE_PRIVATE
+                        )
 
-                if (!token.isNullOrBlank()) {
+                    val token =
+                        prefs.getString(
+                            "token",
+                            null
+                        )
 
-                    requestBuilder.header(
-                        "Authorization",
-                        "Bearer $token"
-                    )
+                    if (!token.isNullOrBlank()) {
+
+                        requestBuilder.header(
+                            "Authorization",
+                            "Bearer $token"
+                        )
+                    }
                 }
             }
 
@@ -69,19 +86,23 @@ object RetrofitClient {
             )
         }
 
-    // ==========================================
-    // OKHTTP CLIENT
-    // ==========================================
+    // =========================================================
+    // OKHTTP
+    // =========================================================
 
     private val client =
         OkHttpClient.Builder()
-            .addInterceptor(authInterceptor)
-            .addInterceptor(loggingInterceptor)
+            .addInterceptor(
+                authInterceptor
+            )
+            .addInterceptor(
+                loggingInterceptor
+            )
             .build()
 
-    // ==========================================
+    // =========================================================
     // RETROFIT
-    // ==========================================
+    // =========================================================
 
     val api: ApiService by lazy {
 
@@ -92,6 +113,8 @@ object RetrofitClient {
                 GsonConverterFactory.create()
             )
             .build()
-            .create(ApiService::class.java)
+            .create(
+                ApiService::class.java
+            )
     }
 }
