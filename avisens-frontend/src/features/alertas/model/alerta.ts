@@ -42,7 +42,7 @@ export function filtrarAlertas(
       filtros.criticidad === 'todas' ||
       (filtros.criticidad === 'alta'
         ? esCriticidadAlta(alerta.criticidad)
-        : alerta.criticidad === filtros.criticidad)
+        : normalizarCriticidad(alerta.criticidad) === filtros.criticidad)
     const coincideGalpon =
       filtros.galponId === 'todos' || alerta.galpon_id === Number(filtros.galponId)
     return coincideEstado && coincideCriticidad && coincideGalpon
@@ -60,14 +60,19 @@ export function etiquetaEstado(estado: EstadoAlerta): string {
 // llega en alertas creadas a mano. Antes no estaba contemplada y caía al
 // último return: el nivel MÁS grave se mostraba como "Informativa".
 export function esCriticidadAlta(criticidad: string): boolean {
-  // Se normaliza porque el valor viaja como texto libre: han aparecido
-  // 'critica' y 'crítica' según quién la creara.
-  const normalizada = criticidad.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const normalizada = normalizarCriticidad(criticidad)
   return normalizada === 'alta' || normalizada === 'critica'
+}
+
+// El valor viaja como texto libre: han aparecido 'critica' y 'crítica' según
+// quién la creara. Comparar en crudo dejaba fuera a la mitad, así que todo el
+// módulo compara por aquí y no contra la cadena original.
+export function normalizarCriticidad(criticidad: string): string {
+  return criticidad.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 }
 
 export function etiquetaCriticidad(criticidad: string): string {
   if (esCriticidadAlta(criticidad)) return 'Crítica'
-  if (criticidad.toLowerCase() === 'media') return 'Atención'
+  if (normalizarCriticidad(criticidad) === 'media') return 'Atención'
   return 'Informativa'
 }
