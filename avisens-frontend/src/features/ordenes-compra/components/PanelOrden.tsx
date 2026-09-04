@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react'
 import type { Insumo } from '@features/inventario/api/insumos'
 import { mensajeDeError } from '@shared/utils/errores'
-import { nuevaClave, type CrearDetalleOrdenPayload, type OrdenCompra } from '../model/ordenCompra'
+import type { CrearDetalleOrdenPayload, OrdenCompra } from '../model/ordenCompra'
+import { nuevaClaveIdempotencia } from '@shared/utils/idempotencia'
 
 type Props = {
   orden: OrdenCompra
@@ -49,7 +50,7 @@ function PanelOrden({ orden, insumos, onCerrar, onAgregarDetalle, onEliminarDeta
     if (!items.length) { setError('Indica al menos una cantidad recibida.'); return }
     // Se conserva entre reintentos: si la red falla y el usuario vuelve a
     // pulsar sin tocar nada, viaja la misma clave y el backend no duplica.
-    claveIntento.current ??= nuevaClave()
+    claveIntento.current ??= nuevaClaveIdempotencia('recepcion')
     void ejecutar(async () => {
       await onRecibir(items, claveIntento.current as string)
       // Recepción aceptada: la siguiente es otra, con su propia clave.
