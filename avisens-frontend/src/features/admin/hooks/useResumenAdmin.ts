@@ -3,7 +3,9 @@ import type { Usuario } from '@shared/api'
 import type { Granja } from '@features/granjas/api/granjas'
 import type { Prospecto } from '@features/crm/api/prospectos'
 import type { GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import type { AtencionAdminData } from '../api/admin'
 import {
+  calcularAtencionAdmin,
   calcularConversionCrm,
   calcularEtapasCrmAdmin,
   calcularKpisAdmin,
@@ -14,9 +16,10 @@ type Datos = {
   granjas: Granja[]
   prospectos: Prospecto[]
   galpones: GalponMonitoreoVista[]
+  atencion: AtencionAdminData
 }
 
-export function useResumenAdmin({ usuarios, granjas, prospectos, galpones }: Datos) {
+export function useResumenAdmin({ usuarios, granjas, prospectos, galpones, atencion }: Datos) {
   return useMemo(() => {
     const etapasCrm = calcularEtapasCrmAdmin(prospectos)
     const totalPropietarios = usuarios.filter((usuario) => usuario.rol.nombre === 'Propietario').length
@@ -26,6 +29,7 @@ export function useResumenAdmin({ usuarios, granjas, prospectos, galpones }: Dat
 
     return {
       kpis: calcularKpisAdmin(granjas, galpones),
+      atencion: calcularAtencionAdmin(atencion),
       etapasCrm,
       conversionCrm: calcularConversionCrm(prospectos, etapasCrm),
       actividadReciente,
@@ -33,5 +37,5 @@ export function useResumenAdmin({ usuarios, granjas, prospectos, galpones }: Dat
       totalOperarios: usuarios.filter((usuario) => usuario.rol.nombre === 'Operario').length,
       totalActivos: usuarios.filter((usuario) => usuario.activo).length,
     }
-  }, [galpones, granjas, prospectos, usuarios])
+  }, [atencion, galpones, granjas, prospectos, usuarios])
 }
