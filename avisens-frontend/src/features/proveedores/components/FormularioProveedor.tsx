@@ -21,7 +21,7 @@ function FormularioProveedor({ form, modoEdicion, guardando, error, onCambiar, o
   return (
     <Modal
       titulo={modoEdicion ? 'Editar proveedor' : 'Nuevo proveedor'}
-      subtitulo="Los campos marcados con * son obligatorios."
+      subtitulo="Registra la información principal. Los demás datos pueden completarse después."
       onCerrar={onCerrar}
       acciones={
         <>
@@ -41,17 +41,17 @@ function FormularioProveedor({ form, modoEdicion, guardando, error, onCambiar, o
     >
       <form id={ID_FORMULARIO} onSubmit={onGuardar}>
         <label className="modal-campo">
-          <span>Nombre o razón social *</span>
+          <span>Nombre o razón social</span>
           <input ref={nombreRef} value={form.nombre} onChange={(evento) => onCambiar('nombre', evento.target.value)} autoComplete="organization" required />
         </label>
 
         <div className="modal-fila">
           <label className="modal-campo">
-            <span>NIT *</span>
+            <span>NIT</span>
             <input value={form.nit} onChange={(evento) => onCambiar('nit', evento.target.value)} inputMode="numeric" required />
           </label>
           <label className="modal-campo">
-            <span>Tipo de proveedor</span>
+            <span>Tipo de proveedor <em>(Opcional)</em></span>
             <select value={form.tipo_proveedor} onChange={(evento) => onCambiar('tipo_proveedor', evento.target.value)}>
               <option value="">Selecciona una opción</option>
               <option value="Alimento">Alimento</option>
@@ -65,23 +65,23 @@ function FormularioProveedor({ form, modoEdicion, guardando, error, onCambiar, o
         </div>
 
         <label className="modal-campo">
-          <span>Persona de contacto</span>
+          <span>Persona de contacto <em>(Opcional)</em></span>
           <input value={form.contacto_persona} onChange={(evento) => onCambiar('contacto_persona', evento.target.value)} autoComplete="name" />
         </label>
 
         <div className="modal-fila">
           <label className="modal-campo">
-            <span>Teléfono</span>
+            <span>Teléfono <em>(Opcional)</em></span>
             <input value={form.telefono} onChange={(evento) => onCambiar('telefono', evento.target.value)} autoComplete="tel" inputMode="tel" />
           </label>
           <label className="modal-campo">
-            <span>Correo electrónico</span>
+            <span>Correo electrónico <em>(Opcional)</em></span>
             <input type="email" value={form.email} onChange={(evento) => onCambiar('email', evento.target.value)} autoComplete="email" />
           </label>
         </div>
 
         <label className="modal-campo">
-          <span>Dirección</span>
+          <span>Dirección <em>(Opcional)</em></span>
           <input value={form.direccion} onChange={(evento) => onCambiar('direccion', evento.target.value)} autoComplete="street-address" />
         </label>
 
