@@ -1,18 +1,26 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar/Sidebar'
 import { puedeAcceder, rutaInicioPorRol } from './Sidebar/navConfig'
 import { getAccessToken, getRol } from '@shared/api'
 import { usePauseOnHidden } from '@shared/hooks/usePauseOnHidden'
+import { IcSidebar } from '@shared/ui/icons/icons'
+import logoAvisens from '@shared/assets/logo-avisens.png'
 import './PanelLayout.css'
 
 function PanelShell({
   sidebarCollapsed,
   onToggle,
+  mobileMenuOpen,
+  onOpenMobileMenu,
+  onCloseMobileMenu,
   rol,
 }: {
   sidebarCollapsed: boolean
   onToggle: () => void
+  mobileMenuOpen: boolean
+  onOpenMobileMenu: () => void
+  onCloseMobileMenu: () => void
   rol: string | null
 }) {
   const { pathname } = useLocation()
@@ -22,19 +30,49 @@ function PanelShell({
   // al cambiar de ruta: sin esto, la pantalla nueva entra a media altura.
   useEffect(() => {
     panel.current?.scrollTo({ top: 0 })
-  }, [pathname])
+    onCloseMobileMenu()
+  }, [onCloseMobileMenu, pathname])
 
   return (
     <div className={`dash-page${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       <div className="dash-shell">
-        <Sidebar collapsed={sidebarCollapsed} onToggle={onToggle} rol={rol} />
-        <main className="dash-main" ref={panel}>
-          {/* La `key` fuerza a React a remontar el contenido en cada ruta:
-              sin ella la animación de entrada solo correría la primera vez. */}
-          <div className="dash-view" key={pathname}>
-            <Outlet />
-          </div>
-        </main>
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          mobileOpen={mobileMenuOpen}
+          onCloseMobile={onCloseMobileMenu}
+          onToggle={onToggle}
+          rol={rol}
+        />
+        <button
+          type="button"
+          className={`dash-sidebar-backdrop${mobileMenuOpen ? ' is-visible' : ''}`}
+          onClick={onCloseMobileMenu}
+          aria-label="Cerrar menú de navegación"
+          tabIndex={mobileMenuOpen ? 0 : -1}
+        />
+        <div className="dash-content">
+          <header className="dash-mobile-header">
+            <button
+              type="button"
+              className="dash-mobile-menu"
+              onClick={onOpenMobileMenu}
+              aria-label="Abrir menú de navegación"
+              aria-controls="navegacion-principal"
+              aria-expanded={mobileMenuOpen}
+            >
+              <IcSidebar size={20} />
+            </button>
+            <span className="dash-mobile-brand">
+              <img src={logoAvisens} alt="" />
+              AVISENS
+            </span>
+          </header>
+          <main className="dash-main" ref={panel}>
+            <div className="dash-view" key={pathname}>
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
     </div>
   )
@@ -52,6 +90,10 @@ function PanelLayout() {
     if (typeof window === 'undefined') return false
     return window.localStorage.getItem('avisens.sidebarCollapsed') === '1'
   })
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), [])
+  const openMobileMenu = useCallback(() => setMobileMenuOpen(true), [])
+  const toggleSidebar = useCallback(() => setSidebarCollapsed((valor) => !valor), [])
 
   const location = useLocation()
   usePauseOnHidden()
@@ -66,6 +108,7 @@ function PanelLayout() {
         e.preventDefault()
         setSidebarCollapsed((v) => !v)
       }
+      if (e.key === 'Escape') setMobileMenuOpen(false)
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -89,7 +132,10 @@ function PanelLayout() {
   return (
     <PanelShell
       sidebarCollapsed={sidebarCollapsed}
-      onToggle={() => setSidebarCollapsed((v) => !v)}
+      onToggle={toggleSidebar}
+      mobileMenuOpen={mobileMenuOpen}
+      onOpenMobileMenu={openMobileMenu}
+      onCloseMobileMenu={closeMobileMenu}
       rol={rol}
     />
   )

@@ -26,6 +26,8 @@ function iniciales(nombre?: string): string {
 
 type Props = {
   collapsed: boolean
+  mobileOpen: boolean
+  onCloseMobile: () => void
   onToggle: () => void
   rol: string | null
 }
@@ -36,7 +38,7 @@ function filtrarItems(items: NavItem[], rol: string | null): NavLinkItem[] {
   )
 }
 
-const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
+const Sidebar = ({ collapsed, mobileOpen, onCloseMobile, onToggle, rol }: Props) => {
   const navigate = useNavigate()
   const usuario = getUsuario()
   const rutaInicio = rutaInicioPorRol(rol)
@@ -47,6 +49,7 @@ const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
 
   async function handleLogout() {
     await logout()
+    onCloseMobile()
     navigate('/login')
   }
 
@@ -74,6 +77,7 @@ const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
           rel="noreferrer"
           data-label={item.label}
           className={className}
+          onClick={onCloseMobile}
         >
           {contenido}
         </a>
@@ -86,6 +90,7 @@ const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
         to={item.path}
         data-label={item.label}
         className={({ isActive }) => className + (isActive ? ' active' : '')}
+        onClick={onCloseMobile}
         end
       >
         {contenido}
@@ -94,7 +99,10 @@ const Sidebar = ({ collapsed, onToggle, rol }: Props) => {
   }
 
   return (
-    <aside className="dash-sidebar">
+    <aside
+      id="navegacion-principal"
+      className={`dash-sidebar${mobileOpen ? ' is-mobile-open' : ''}`}
+    >
       <div className="dash-side-blob" />
 
       <div className="dash-side-header">
