@@ -656,8 +656,11 @@ describe('AlertasService', () => {
       expect(prisma.alerta.count).toHaveBeenCalledWith({
         where: { ...soloDelPropietario, estado: 'abierta' },
       });
+      // Contaba 'critica', que ningún camino automático escribe. Ahora cuenta
+      // 'alta', que es el techo del cálculo desde umbrales: si no, el tablero
+      // decía cero mientras había lecturas muy fuera de rango.
       expect(prisma.alerta.count).toHaveBeenCalledWith({
-        where: { ...soloDelPropietario, criticidad: 'critica' },
+        where: { ...soloDelPropietario, criticidad: { in: ['alta'] } },
       });
     });
   });

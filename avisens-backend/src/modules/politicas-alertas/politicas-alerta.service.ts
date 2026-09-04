@@ -11,6 +11,7 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 import { paginate } from '../../common/pagination/paginate';
 import { esPropietario, verificarDueno } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import { CRITICIDADES } from '../../common/criticidad/criticidad';
 
 const POLITICAS_ALERTA_SELECT = {
   id: true,
@@ -31,7 +32,9 @@ const POLITICAS_ALERTA_SELECT = {
   },
 } as const;
 
-const CRITICIDADES_VALIDAS = ['Baja', 'Media', 'Alta'];
+// Antes tenía su propia lista con mayúscula inicial, así que 'alta' válida
+// para un umbral era inválida aquí. Ahora las tres comparten escala.
+const CRITICIDADES_VALIDAS: readonly string[] = CRITICIDADES;
 const CANALES_VALIDOS = ['WhatsApp', 'Email', 'SMS'];
 
 @Injectable()
