@@ -57,3 +57,10 @@
 @media (max-width: 760px) { .prv-cabecera { flex-direction: column; } .prv-resumen { align-items: flex-start; flex-direction: column; } .prv-estadisticas { width: 100%; } .prv-boton-nuevo { align-self: flex-start; } .prv-barra { align-items: stretch; flex-wrap: wrap; } .prv-busqueda { flex-basis: 100%; } }
 @media (max-width: 520px) { .prv-resumen { padding: 1.15rem; } .prv-resumen-intro { align-items: flex-start; } .prv-resumen-icono { width: 42px; height: 42px; } .prv-estadisticas { grid-template-columns: repeat(3, 1fr); } .prv-estadisticas div { padding: 0.55rem 0.35rem; } .prv-boton-nuevo { align-self: stretch; width: 100%; } .prv-campos-dos { grid-template-columns: 1fr; } .prv-modal { padding: 1.15rem; } .prv-modal-acciones { flex-direction: column-reverse; } .prv-modal-acciones button { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .prv-boton-nuevo, .prv-acciones-fila button { transition: none; } }
+
+.prv-listado.adm-panel {
+  border-color: var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}

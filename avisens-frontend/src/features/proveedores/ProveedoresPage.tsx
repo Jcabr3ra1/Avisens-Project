@@ -1,18 +1,29 @@
 import { useCallback, useMemo, useState } from 'react'
 import { mensajeDeError } from '@shared/utils/errores'
-import BarraProveedores from './components/BarraProveedores'
+import BarraHerramientas, { type OpcionFiltro } from '@shared/ui/admin/BarraHerramientas'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
+import { IcPlus } from '@shared/ui/icons/icons'
 import FormularioProveedor from './components/FormularioProveedor'
 import ResumenProveedores from './components/ResumenProveedores'
 import TablaProveedores from './components/TablaProveedores'
 import { useFormularioProveedor } from './hooks/useFormularioProveedor'
 import { useProveedores } from './hooks/useProveedores'
 import type { FormularioProveedor as DatosProveedor, Proveedor } from './model/proveedor'
+import '@shared/ui/admin/AdminKit.css'
 import './ProveedoresPage.css'
+
+type FiltroEstado = 'todos' | 'activos' | 'inactivos'
+
+const OPCIONES_ESTADO: OpcionFiltro<FiltroEstado>[] = [
+  { valor: 'todos', label: 'Todos' },
+  { valor: 'activos', label: 'Activos' },
+  { valor: 'inactivos', label: 'Inactivos' },
+]
 
 function ProveedoresPage() {
   const gestion = useProveedores()
   const [busqueda, setBusqueda] = useState('')
-  const [estado, setEstado] = useState<'todos' | 'activos' | 'inactivos'>('todos')
+  const [estado, setEstado] = useState<FiltroEstado>('todos')
 
   const guardarProveedor = useCallback(async (form: DatosProveedor, editandoId: number | null) => {
     const datos = {
@@ -61,30 +72,45 @@ function ProveedoresPage() {
   }
 
   return (
-    <div className="page-container prv-page">
-      <header className="prv-cabecera">
-        <ResumenProveedores proveedores={gestion.proveedores} />
-        <button type="button" className="prv-boton-nuevo" onClick={formulario.abrirCrear}>
-          + Nuevo proveedor
-        </button>
-      </header>
+    <div className="page-container prv-page adm-page">
+      <CabeceraAdmin
+        eyebrow="Abastecimiento"
+        titulo="Proveedores"
+        subtitulo="Centraliza los aliados de alimento, pollitos, insumos y servicios."
+        acciones={(
+          <button
+            type="button"
+            className="adm-btn adm-btn--primario"
+            onClick={formulario.abrirCrear}
+          >
+            <IcPlus size={17} aria-hidden="true" />
+            Nuevo proveedor
+          </button>
+        )}
+      />
+
+      <ResumenProveedores proveedores={gestion.proveedores} />
 
       {gestion.error && (
-        <div className="prv-alerta" role="alert">
+        <div className="adm-alerta" role="alert">
           <span>{gestion.error}</span>
           <button type="button" onClick={() => void gestion.recargar()}>Reintentar</button>
         </div>
       )}
 
-      <section className="prv-listado" aria-label="Directorio de proveedores">
+      <section className="prv-listado adm-panel" aria-label="Directorio de proveedores">
         {!gestion.cargando && gestion.proveedores.length > 0 && (
-          <BarraProveedores
+          <BarraHerramientas
             busqueda={busqueda}
-            estado={estado}
+            placeholder="Buscar por nombre, NIT o contacto"
+            etiquetaBusqueda="Buscar proveedor"
+            onBuscar={setBusqueda}
+            filtro={estado}
+            opciones={OPCIONES_ESTADO}
+            etiquetaFiltro="Filtrar proveedores por estado"
+            onCambiarFiltro={setEstado}
             visibles={visibles.length}
             total={gestion.proveedores.length}
-            onBuscar={setBusqueda}
-            onCambiarEstado={setEstado}
           />
         )}
 

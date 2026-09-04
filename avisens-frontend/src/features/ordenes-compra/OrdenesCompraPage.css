@@ -42,3 +42,10 @@
 @media (max-width: 760px) { .oc-cabecera, .oc-resumen { flex-direction: column; align-items: flex-start; }.oc-estadisticas { width: 100%; }.oc-boton-nuevo { align-self: flex-start; }.oc-barra { align-items: stretch; flex-wrap: wrap; }.oc-busqueda { flex-basis: 100%; }.oc-panel { width: 100%; }.oc-panel-cabecera { position: sticky; z-index: 1; top: -1.25rem; margin: -1.25rem -1.25rem 0; padding: 1.25rem; background: #fff; } }
 @media (max-width: 520px) { .oc-resumen { padding: 1.15rem; }.oc-resumen-intro { align-items: flex-start; }.oc-estadisticas { grid-template-columns: repeat(3, 1fr); }.oc-estadisticas div { min-width: 0; padding: .55rem .35rem; }.oc-estadisticas strong { font-size: .9rem; }.oc-boton-nuevo { align-self: stretch; width: 100%; }.oc-campos-dos { grid-template-columns: 1fr; }.oc-modal { padding: 1.15rem; }.oc-modal-acciones { flex-direction: column-reverse; }.oc-modal-acciones button { width: 100%; }.oc-detalles article { grid-template-columns: 1fr auto; }.oc-detalles article button { grid-column: 1 / -1; }.oc-recepcion label { grid-template-columns: 1fr 82px; } }
 @media (prefers-reduced-motion: reduce) { .oc-boton-nuevo, .oc-boton-principal { transition: none; } }
+
+.oc-listado.adm-panel {
+  border-color: var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}

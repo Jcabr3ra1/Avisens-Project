@@ -30,6 +30,7 @@ function BarraHerramientas({
         />
         {busqueda && (
           <button
+            type="button"
             className="crm-search-clear"
             onClick={() => onBuscar('')}
             aria-label="Limpiar búsqueda"
@@ -39,15 +40,19 @@ function BarraHerramientas({
         )}
       </div>
 
-      <div className="crm-vista-toggle">
+      <div className="crm-vista-toggle" role="group" aria-label="Vista de prospectos">
         <button
+          type="button"
           className={`crm-vista-btn${vista === 'kanban' ? ' crm-vista-btn--activo' : ''}`}
+          aria-pressed={vista === 'kanban'}
           onClick={() => onCambiarVista('kanban')}
         >
           <IcGrid size={14} /> Kanban
         </button>
         <button
+          type="button"
           className={`crm-vista-btn${vista === 'tabla' ? ' crm-vista-btn--activo' : ''}`}
+          aria-pressed={vista === 'tabla'}
           onClick={() => onCambiarVista('tabla')}
         >
           <IcUsers size={14} /> Lista

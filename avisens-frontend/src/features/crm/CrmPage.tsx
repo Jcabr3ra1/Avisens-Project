@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { useProspectos } from './hooks/useProspectos'
 import { useFiltroProspectos } from './hooks/useFiltroProspectos'
 import { useResumenProspectos } from './hooks/useResumenProspectos'
@@ -8,6 +9,7 @@ import BarraHerramientas from './components/BarraHerramientas'
 import TableroKanban from './components/TableroKanban'
 import TablaProspectos from './components/TablaProspectos'
 import PanelDetalle from './components/PanelDetalle'
+import '@shared/ui/admin/AdminKit.css'
 import './CrmPage.css'
 
 function CrmPage() {
@@ -30,18 +32,24 @@ function CrmPage() {
   const sinProspectos = !cargando && !error && prospectos.length === 0
 
   return (
-    <div className="page-container crm-page">
+    <div className="page-container crm-page adm-page">
+      <CabeceraAdmin
+        eyebrow="Relación comercial"
+        titulo="Clientes y PQRS"
+        subtitulo="Prioriza prospectos, acompaña oportunidades y atiende solicitudes desde un solo flujo."
+      />
+
       <ResumenCrm resumen={resumen} />
 
-      {cargando && <p className="crm-aviso">Cargando prospectos…</p>}
+      {cargando && <p className="crm-aviso" role="status">Cargando prospectos…</p>}
 
       {error && (
-        <p className="crm-aviso crm-aviso--error">
-          {error}{' '}
-          <button className="crm-aviso-reintentar" onClick={() => void recargar()}>
+        <div className="adm-alerta" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => void recargar()}>
             Reintentar
           </button>
-        </p>
+        </div>
       )}
 
       {sinProspectos && (

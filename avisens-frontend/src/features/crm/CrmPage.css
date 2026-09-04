@@ -689,3 +689,102 @@
   color: var(--text3); font-size: 0.82rem;
   background: rgba(7, 23, 19, 0.03); border-radius: 10px;
 }
+
+/* Resumen operativo claro y consistente con el resto de Administración. */
+.crm-embudo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.crm-embudo-titulo {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.crm-embudo .crm-hero-funnel {
+  flex: 1;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.crm-embudo .crm-hero-funnel-stage {
+  min-width: 88px;
+  padding: 0.42rem 0.7rem;
+  border-color: var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+}
+
+.crm-embudo .crm-hero-funnel-stage:hover {
+  background: var(--surface-hover);
+}
+
+.crm-embudo .crm-hero-funnel-lbl {
+  color: var(--text-secondary);
+}
+
+.crm-embudo .crm-hero-funnel-rango,
+.crm-embudo .crm-hero-funnel-sep,
+.crm-embudo .crm-hero-funnel-desc {
+  color: var(--text-muted);
+}
+
+.crm-embudo .crm-hero-funnel-desc {
+  border-color: var(--border-subtle);
+  opacity: 1;
+}
+
+.crm-search {
+  min-height: 44px;
+  border-color: var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  backdrop-filter: none;
+}
+
+.crm-vista-toggle,
+.crm-canal-filtro {
+  min-height: 44px;
+  border-color: var(--border-default);
+  background: var(--surface-base);
+}
+
+.crm-vista-btn {
+  min-height: 36px;
+}
+
+.crm-search-clear {
+  width: 36px;
+  height: 36px;
+}
+
+.crm-kanban-lane {
+  border-color: var(--border-subtle);
+  border-left-color: transparent;
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: none;
+}
+
+@media (max-width: 760px) {
+  .crm-embudo {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .crm-embudo .crm-hero-funnel {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
