@@ -53,7 +53,7 @@ function OrdenesCompraPage() {
       {gestion.cargando ? <p className="oc-vacio" role="status">Cargando órdenes…</p> : gestion.ordenes.length === 0 ? <div className="oc-vacio"><h2>Aún no hay órdenes</h2><p>Crea una orden para registrar los insumos que esperas recibir en tu granja.</p></div> : visibles.length === 0 ? <div className="oc-vacio"><h2>No hay coincidencias</h2><p>Prueba con otro texto o estado.</p></div> : <TablaOrdenes ordenes={visibles} onAbrir={(orden) => setOrdenSeleccionadaId(orden.id)} onCancelar={cancelar} />}
     </section>
     {formularioAbierto && <FormularioOrden form={form} granjas={gestion.granjas} proveedores={gestion.proveedores} lotes={gestion.lotes} guardando={guardando} error={errorFormulario} onCambiar={cambiar} onGuardar={crear} onCerrar={() => !guardando && setFormularioAbierto(false)} />}
-    {ordenSeleccionada && <PanelOrden orden={ordenSeleccionada} insumos={gestion.insumos} onCerrar={() => setOrdenSeleccionadaId(null)} onAgregarDetalle={(payload) => gestion.agregarDetalle(ordenSeleccionada.id, payload)} onEliminarDetalle={(detalleId) => gestion.eliminarDetalle(ordenSeleccionada.id, detalleId)} onRecibir={(items) => gestion.recibir(ordenSeleccionada.id, { clave_idempotencia: `recepcion-${ordenSeleccionada.id}-${Date.now()}`, items })} />}
+    {ordenSeleccionada && <PanelOrden orden={ordenSeleccionada} insumos={gestion.insumos} onCerrar={() => setOrdenSeleccionadaId(null)} onAgregarDetalle={(payload) => gestion.agregarDetalle(ordenSeleccionada.id, payload)} onEliminarDetalle={(detalleId) => gestion.eliminarDetalle(ordenSeleccionada.id, detalleId)} onRecibir={(items, claveIdempotencia) => gestion.recibir(ordenSeleccionada.id, { clave_idempotencia: claveIdempotencia, items })} />}
   </div>
 }
 

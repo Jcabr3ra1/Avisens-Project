@@ -75,3 +75,15 @@ export const FORMULARIO_ORDEN_INICIAL: FormularioOrden = {
   fecha_pedido: fechaDeHoy(),
   fecha_entrega_estimada: '',
 }
+
+// Identificador de UN intento de recepción. El backend lo usa para reconocer
+// un reintento y devolver el resultado anterior en vez de volver a sumar el
+// stock. Por eso tiene que ser estable mientras se reintenta lo mismo: si
+// cambia en cada llamada —como ocurría al construirla con Date.now()— la
+// protección del backend no llega a actuar nunca.
+export function nuevaClave(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return `recepcion-${crypto.randomUUID()}`
+  }
+  return `recepcion-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
