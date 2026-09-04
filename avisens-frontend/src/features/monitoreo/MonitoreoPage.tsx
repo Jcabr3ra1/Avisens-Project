@@ -12,6 +12,7 @@ import {
   type EstadoSensorVista,
 } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { iconoSensor } from '@shared/ui/sensorIcon'
+import { semanaDeVida } from '@shared/utils/fechas'
 import { SensorDetail } from './SensorDetail'
 import { IcServer } from '@shared/ui/icons/icons'
 import './MonitoreoPage.css'
@@ -125,7 +126,7 @@ function MonitoreoPage() {
           {/* ── Tabla de umbrales configurados (HU-21) ──────────────────────── */}
           {galpon.sensores.length > 0 && (
             <section className="mon-section">
-              <h2 className="mon-section-title">Umbrales configurados · Semana {Math.floor(galpon.diaVida / 7) + 1}</h2>
+              <h2 className="mon-section-title">Umbrales configurados · Semana {semanaDeVida(galpon.diaVida) + 1}</h2>
               <p className="mon-section-sub">El backend soporta umbral por temperatura, humedad y luminosidad — las demás variables se muestran sin rango.</p>
               <div className="mon-tabla-card">
                 <div className="mon-tabla-head">

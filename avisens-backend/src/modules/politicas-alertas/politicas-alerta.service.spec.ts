@@ -47,7 +47,7 @@ describe('PoliticasAlertaService', () => {
     it('rechaza un canal no valido', async () => {
       await expect(
         service.crear(
-          { granja_id: 1, criticidad: 'Alta', canal: 'Telegram' },
+          { granja_id: 1, criticidad: 'alta', canal: 'Telegram' },
           admin,
         ),
       ).rejects.toThrow(BadRequestException);
@@ -62,7 +62,7 @@ describe('PoliticasAlertaService', () => {
       prisma.politicaAlerta.findFirst.mockResolvedValue(null);
       prisma.politicaAlerta.create.mockResolvedValue({ id: 1 });
       await service.crear(
-        { granja_id: 1, criticidad: 'Alta', canal: 'WhatsApp' },
+        { granja_id: 1, criticidad: 'alta', canal: 'WhatsApp' },
         admin,
       );
       expect(prisma.politicaAlerta.create).toHaveBeenCalled();
@@ -75,7 +75,7 @@ describe('PoliticasAlertaService', () => {
       });
       prisma.politicaAlerta.findFirst.mockResolvedValue({ id: 9 });
       await expect(
-        service.crear({ granja_id: 1, criticidad: 'Alta' }, admin),
+        service.crear({ granja_id: 1, criticidad: 'alta' }, admin),
       ).rejects.toThrow(ConflictException);
       expect(prisma.politicaAlerta.create).not.toHaveBeenCalled();
     });
@@ -86,7 +86,7 @@ describe('PoliticasAlertaService', () => {
         propietario_id: 999,
       });
       await expect(
-        service.crear({ granja_id: 1, criticidad: 'Alta' }, propietario),
+        service.crear({ granja_id: 1, criticidad: 'alta' }, propietario),
       ).rejects.toThrow(ForbiddenException);
     });
   });
