@@ -9,13 +9,13 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .adm-page {
-  --adm-deep: #005b48;
-  --adm-line: rgba(10, 26, 20, 0.09);
-  --adm-shadow: 0 1px 2px rgba(10, 40, 28, 0.04), 0 8px 24px rgba(10, 40, 28, 0.05);
-  --adm-shadow-alto: 0 2px 4px rgba(10, 40, 28, 0.05), 0 16px 40px rgba(10, 40, 28, 0.09);
+  --adm-deep: var(--primary);
+  --adm-line: var(--border-subtle);
+  --adm-shadow: var(--shadow-sm);
+  --adm-shadow-alto: var(--shadow-md);
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: var(--space-4);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -25,12 +25,10 @@
 .adm-cabecera {
   position: relative;
   overflow: hidden;
-  padding: 1.35rem 1.5rem;
+  padding: var(--space-5);
   border: 1px solid var(--adm-line);
-  border-radius: 18px;
-  background:
-    linear-gradient(135deg, rgba(0, 91, 72, 0.055), transparent 55%),
-    var(--card);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
   box-shadow: var(--adm-shadow);
 }
 
@@ -42,7 +40,7 @@
   bottom: 0;
   left: 0;
   width: 3px;
-  background: linear-gradient(180deg, var(--adm-deep), var(--green));
+  background: var(--adm-deep);
 }
 
 .adm-cabecera-fila {
@@ -58,7 +56,7 @@
   gap: 0.4rem;
   margin-bottom: 0.5rem;
   color: var(--adm-deep);
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.11em;
   text-transform: uppercase;
@@ -75,7 +73,7 @@
 .adm-titulo {
   margin: 0;
   color: var(--dash-ink);
-  font-size: 1.6rem;
+  font-size: clamp(1.5rem, 2vw, 1.75rem);
   font-weight: 750;
   letter-spacing: -0.02em;
   line-height: 1.15;
@@ -90,7 +88,7 @@
   max-width: 62ch;
   margin: 0.4rem 0 0;
   color: var(--text2);
-  font-size: 0.86rem;
+  font-size: 0.9rem;
   line-height: 1.5;
 }
 
@@ -150,29 +148,29 @@ a.adm-miga:hover {
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0.55rem 0.95rem;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 0.85rem;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
-  transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  transition: background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
 }
 
-.adm-btn:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.adm-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .adm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .adm-btn--primario {
-  background: linear-gradient(180deg, var(--green-d), #04835c);
+  background: var(--primary);
   color: #fff;
-  box-shadow: 0 1px 2px rgba(4, 120, 87, 0.28), 0 6px 16px rgba(4, 120, 87, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .adm-btn--primario:hover:not(:disabled) {
-  box-shadow: 0 2px 4px rgba(4, 120, 87, 0.3), 0 10px 22px rgba(4, 120, 87, 0.26);
-  transform: translateY(-1px);
+  background: var(--primary-hover);
+  box-shadow: var(--shadow-md);
 }
 
 .adm-btn--secundario {
@@ -203,16 +201,15 @@ a.adm-miga:hover {
   gap: 0.7rem;
   padding: 0.9rem 1rem;
   border: 1px solid var(--adm-line);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: var(--card);
   box-shadow: var(--adm-shadow);
-  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  transition: border-color var(--motion-base) var(--ease-standard), box-shadow var(--motion-base) var(--ease-standard);
 }
 
 .adm-stat:hover {
   border-color: var(--border2);
   box-shadow: var(--adm-shadow-alto);
-  transform: translateY(-1px);
 }
 
 .adm-stat-icono {
@@ -237,7 +234,7 @@ a.adm-miga:hover {
 
 .adm-stat-label {
   color: var(--text3);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.055em;
   text-transform: uppercase;
@@ -256,7 +253,7 @@ a.adm-miga:hover {
 .adm-panel {
   overflow: hidden;
   border: 1px solid var(--adm-line);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: var(--card);
   box-shadow: var(--adm-shadow);
 }
@@ -290,10 +287,10 @@ a.adm-miga:hover {
 
 .adm-buscador input {
   width: 100%;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0.5rem 0.7rem 0.5rem 2.1rem;
   border: 1px solid var(--border2);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg);
   color: var(--text);
   font: inherit;
@@ -301,7 +298,7 @@ a.adm-miga:hover {
 }
 
 .adm-buscador input::placeholder { color: var(--text4); }
-.adm-buscador input:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+.adm-buscador input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 
 /* Filtros como pastillas segmentadas: se ve de un vistazo qué está
    activo, cosa que un <select> cerrado nunca deja ver. */
@@ -315,6 +312,7 @@ a.adm-miga:hover {
 }
 
 .adm-segmento {
+  min-height: 36px;
   padding: 0.36rem 0.68rem;
   border: none;
   border-radius: 8px;
