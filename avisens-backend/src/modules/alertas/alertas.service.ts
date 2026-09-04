@@ -15,6 +15,7 @@ import {
   verificarAccesoSensor,
 } from '../../common/auth/alcance';
 import { diaDeVida, semanaDeVida } from '../../common/fechas/dias-de-vida';
+import { CRITICIDADES_GRAVES } from '../../common/criticidad/criticidad';
 
 const ALERTA_SELECT = {
   id: true,
@@ -512,7 +513,12 @@ export class AlertasService {
       this.prisma.alerta.count({ where: { ...where, estado: 'abierta' } }),
       this.prisma.alerta.count({ where: { ...where, estado: 'en_proceso' } }),
       this.prisma.alerta.count({ where: { ...where, estado: 'cerrada' } }),
-      this.prisma.alerta.count({ where: { ...where, criticidad: 'critica' } }),
+      // Contaba 'critica', un valor que ningún camino automático escribe:
+      // el tablero decía cero mientras había lecturas muy fuera de rango sin
+      // atender. Ahora cuenta el nivel más alto que el sistema sí alcanza.
+      this.prisma.alerta.count({
+        where: { ...where, criticidad: { in: [...CRITICIDADES_GRAVES] } },
+      }),
     ]);
 
     return {
