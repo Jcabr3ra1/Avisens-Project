@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Alerta } from '../api/alertas'
-import { esCriticidadAlta, etiquetaCriticidad, filtrarAlertas, obtenerResumenAlertas } from './alerta'
+import {
+  esCriticidadAlta,
+  etiquetaCriticidad,
+  filtrarAlertas,
+  normalizarCriticidad,
+  obtenerResumenAlertas,
+} from './alerta'
 
 function alerta(criticidad: string, estado = 'abierta'): Alerta {
   return { criticidad, estado } as Alerta
@@ -92,5 +98,32 @@ describe('filtrarAlertas', () => {
   it('sin filtro se ven todas', () => {
     const visibles = filtrarAlertas([alerta('alta'), alerta('media')], filtros)
     expect(visibles).toHaveLength(2)
+  })
+})
+
+describe('normalizarCriticidad', () => {
+  it('deja los niveles leves comparables entre sí', () => {
+    expect(normalizarCriticidad('Media')).toBe('media')
+    expect(normalizarCriticidad(' BAJA ')).toBe('baja')
+  })
+})
+
+describe('filtrar por los niveles leves', () => {
+  it('filtrar por Atención encuentra la escrita en mayúsculas', () => {
+    // El filtro comparaba contra la cadena cruda: un 'Media' del backend
+    // desaparecía del desplegable sin que nada avisara.
+    const alertas = [alerta('Media'), alerta('baja')]
+    const filtradas = filtrarAlertas(alertas, {
+      estado: 'todas',
+      criticidad: 'media',
+      galponId: 'todos',
+    })
+    expect(filtradas).toHaveLength(1)
+  })
+})
+
+describe('etiquetaCriticidad con mayúsculas', () => {
+  it('Media sigue siendo Atención', () => {
+    expect(etiquetaCriticidad('Media')).toBe('Atención')
   })
 })
