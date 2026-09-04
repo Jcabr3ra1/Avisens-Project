@@ -1,6 +1,9 @@
 import * as bcrypt from 'bcrypt';
 import type { PrismaClient } from '@prisma/client';
-import { PERMISOS_POR_ROL } from '../../src/common/auth/permisos';
+import {
+  PERMISOS_POR_ROL,
+  esPermisoConocido,
+} from '../../src/common/auth/permisos';
 
 export async function sembrarRoles(prisma: PrismaClient) {
   const rolAdmin = await prisma.rol.upsert({
@@ -22,8 +25,17 @@ export async function sembrarRoles(prisma: PrismaClient) {
     create: { nombre: 'Operario', descripcion: 'Registra datos de su galpón' },
   });
 
-  for (const rol of [rolAdmin, rolPropietario, rolOperario]) {
-    for (const codigo of PERMISOS_POR_ROL[rol.nombre] ?? []) {
+  const roles = [rolAdmin, rolPropietario, rolOperario];
+
+  // roles_permisos es una proyección de PERMISOS_POR_ROL, no una fuente
+  // paralela: se siembra desde el código y se limpia contra el código. Sin el
+  // borrado de abajo, quitarle un permiso a un rol dejaba la fila vieja en la
+  // base para siempre, y la tabla acababa diciendo algo que la API ya no hace.
+  for (const rol of roles) {
+    const esperados = PERMISOS_POR_ROL[rol.nombre] ?? [];
+    const idsEsperados: number[] = [];
+
+    for (const codigo of esperados) {
       const permiso = await prisma.permiso.upsert({
         where: { codigo },
         update: { activo: true },
@@ -33,18 +45,47 @@ export async function sembrarRoles(prisma: PrismaClient) {
           descripcion: `Permiso RBAC ${codigo}`,
         },
       });
+      idsEsperados.push(permiso.id);
+
       await prisma.rolPermiso.upsert({
         where: {
-          rol_id_permiso_id: {
-            rol_id: rol.id,
-            permiso_id: permiso.id,
-          },
+          rol_id_permiso_id: { rol_id: rol.id, permiso_id: permiso.id },
         },
         update: {},
         create: { rol_id: rol.id, permiso_id: permiso.id },
       });
     }
+
+    const sobrantes = await prisma.rolPermiso.deleteMany({
+      where: { rol_id: rol.id, permiso_id: { notIn: idsEsperados } },
+    });
+    if (sobrantes.count > 0) {
+      console.log(
+        `${rol.nombre}: ${sobrantes.count} permiso(s) retirado(s) de roles_permisos`,
+      );
+    }
   }
+
+  // Un permiso que ya no existe en el código queda inactivo en vez de
+  // borrarse: la fila puede estar referenciada en auditorías viejas, y
+  // desactivarla cuenta la historia sin romperlas.
+  const conocidos = await prisma.permiso.findMany({
+    select: { id: true, codigo: true, activo: true },
+  });
+  const idsDesconocidos = conocidos
+    .filter((p) => p.activo && !esPermisoConocido(p.codigo))
+    .map((p) => p.id);
+
+  if (idsDesconocidos.length > 0) {
+    await prisma.permiso.updateMany({
+      where: { id: { in: idsDesconocidos } },
+      data: { activo: false },
+    });
+    console.log(
+      `${idsDesconocidos.length} permiso(s) desconocido(s) marcados inactivos`,
+    );
+  }
+
   return rolAdmin;
 }
 

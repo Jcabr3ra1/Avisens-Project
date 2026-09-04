@@ -35,7 +35,7 @@ export class GalponesController {
   constructor(private galponesService: GalponesService) {}
 
   @Post()
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Crear un galpón en una granja' })
   crear(@Body() dto: CreateGalponDto, @Req() req: AuthRequest) {
     return this.galponesService.crear(dto, req.user);
@@ -57,7 +57,7 @@ export class GalponesController {
   }
 
   @Patch(':id')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Actualizar un galpón' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -68,21 +68,21 @@ export class GalponesController {
   }
 
   @Patch(':id/activar')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Activar un galpón' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.galponesService.activar(id, req.user);
   }
 
   @Delete(':id')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Desactivar un galpón (borrado suave)' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.galponesService.desactivar(id, req.user);
   }
 
   @Delete(':id/permanente')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
     summary: 'Eliminar un galpón de forma permanente (casos legales)',
   })

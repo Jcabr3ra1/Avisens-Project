@@ -1,9 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { getUsuario } from '@shared/api'
-import { useMonitoreoAmbiental } from '@shared/hooks/useMonitoreoAmbiental'
+import { useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import AccionesAdmin from './components/AccionesAdmin'
 import AdminHero from './components/AdminHero'
-import ControlGranjas from './components/ControlGranjas'
 import PanelActividadAdmin from './components/PanelActividadAdmin'
 import PanelCrmAdmin from './components/PanelCrmAdmin'
 import { useAdminDatos } from './hooks/useAdminDatos'
@@ -48,13 +47,6 @@ function AdminPage() {
         />
       </div>
 
-      <ControlGranjas
-        propietarios={resumen.resumenPropietarios}
-        propietariosSinGranja={resumen.propietariosSinGranja}
-        cargando={cargandoGestion}
-        onGestionar={() => navigate('/granjas')}
-      />
-
       <AccionesAdmin
         onUsuarios={() => navigate('/usuarios')}
         onGranjas={() => navigate('/granjas')}
@@ -64,6 +56,7 @@ function AdminPage() {
         onProveedores={() => navigate('/proveedores')}
         onCompras={() => navigate('/ordenes-compra')}
       />
+
     </div>
   )
 }

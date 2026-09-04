@@ -68,7 +68,7 @@ jobs:
       - run: pnpm run test:e2e
       - run: pnpm run build
   frontend:
-    name: Frontend · build
+    name: Frontend · build y pruebas
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -82,3 +82,4 @@ jobs:
           cache-dependency-path: avisens-frontend/package-lock.json
       - run: npm ci
       - run: npm run build
+      - run: npm test

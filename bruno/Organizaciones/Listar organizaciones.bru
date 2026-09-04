@@ -1,0 +1,14 @@
+meta {
+  name: Listar organizaciones
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/organizaciones?page=1&limit=20
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

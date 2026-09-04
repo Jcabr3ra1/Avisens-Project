@@ -35,9 +35,14 @@ interface AuthRequest extends Request {
 
 @ApiTags('movimientos-inventario')
 @ApiBearerAuth()
+// Esta ruta y POST /insumos/:id/movimientos son la MISMA operacion: el
+// service de aqui delega en insumosService.registrarMovimiento. Tenian
+// reglas distintas, asi que registrar un consumo funcionaba o no segun por
+// donde se entrara. Mandan las mismas que la otra puerta, porque registrar
+// consumo es el trabajo diario del operario.
 @UseGuards(JwtAuthGuard, RolesGuard, PermisosGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
-@Permisos(PERMISOS.INVENTARIO_GESTIONAR)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
+@Permisos(PERMISOS.OPERACION_REGISTRAR)
 @Controller('movimientos-inventario')
 export class MovimientosInventarioController {
   constructor(private service: MovimientosInventarioService) {}

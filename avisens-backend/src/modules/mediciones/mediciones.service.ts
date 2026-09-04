@@ -8,6 +8,7 @@ import {
   filtroSensores,
   verificarAccesoSensor,
 } from '../../common/auth/alcance';
+import { AlertasService } from '../alertas/alertas.service';
 
 const MEDICION_SELECT = {
   id: true,
@@ -19,7 +20,10 @@ const MEDICION_SELECT = {
 
 @Injectable()
 export class MedicionesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private alertas: AlertasService,
+  ) {}
 
   private async validarSensor(sensorId: number, solicitante: Solicitante) {
     const sensor = await this.prisma.sensor.findUnique({
@@ -42,7 +46,7 @@ export class MedicionesService {
   async registrar(dto: CreateMedicionDto, solicitante: Solicitante) {
     await this.validarSensor(dto.sensor_id, solicitante);
 
-    return this.prisma.medicion.create({
+    const medicion = await this.prisma.medicion.create({
       data: {
         sensor_id: dto.sensor_id,
         valor: dto.valor,
@@ -51,6 +55,12 @@ export class MedicionesService {
       },
       select: MEDICION_SELECT,
     });
+    await this.alertas.evaluarLectura(
+      dto.sensor_id,
+      dto.valor,
+      dto.fecha_hora ? new Date(dto.fecha_hora) : undefined,
+    );
+    return medicion;
   }
 
   async listar(query: QueryMedicionesDto, solicitante: Solicitante) {

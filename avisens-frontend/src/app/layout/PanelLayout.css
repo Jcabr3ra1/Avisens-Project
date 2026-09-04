@@ -9,7 +9,9 @@
   --dash-muted: #4a6b58;
   --dash-line: rgba(10, 26, 20, 0.08);
   --dash-shadow: 0 18px 48px rgba(10, 40, 28, 0.08);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+  box-sizing: border-box;
   display: flex;
   background:
     linear-gradient(150deg, rgba(16, 185, 129, 0.06), transparent 40%),
@@ -19,6 +21,16 @@
   font-family: 'Inter', sans-serif;
   position: relative;
   isolation: isolate;
+}
+
+/* ─── Carcasa verde: sidebar y contenido son UNA sola pieza ───
+   El sidebar no pinta su propio fondo; el verde sale de aquí, y el panel
+   blanco va metido adentro con un margen que deja ver el marco. */
+.dash-shell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  background: var(--avisens-deep);
 }
 
 .dash-page::before {
@@ -47,10 +59,196 @@
   display: flex;
   flex-direction: column;
   position: relative;
+  margin: 14px 14px 14px 0;
+  background: var(--dash-surface-strong);
+  border-radius: 26px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(10, 26, 20, 0.18) transparent;
+  scrollbar-width: thin;
 }
 
-/* Contenedor base para páginas internas aún sin maquetar (placeholders) */
+.dash-main::-webkit-scrollbar { width: 10px; }
+.dash-main::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(10, 26, 20, 0.16);
+  background-clip: content-box;
+}
+.dash-main::-webkit-scrollbar-thumb:hover {
+  background: rgba(10, 26, 20, 0.28);
+  background-clip: content-box;
+}
+
+.dash-topbar {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 18;
+  padding: 12px 30px 8px;
+  border-bottom: 1px solid rgba(10, 52, 39, 0.07);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 72%, rgba(255, 255, 255, 0.78));
+}
+
+.dash-topbar__spacer { min-width: 0; flex: 1; }
+
+.dash-topbar__account { position: relative; }
+
+.dash-account-trigger {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.35rem 0.7rem 0.35rem 0.4rem;
+  border: 1px solid #dbeae2;
+  border-radius: 999px;
+  color: #0b4939;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(10, 56, 42, 0.05);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.dash-account-trigger:hover,
+.dash-account-trigger.is-open {
+  border-color: #a8d8be;
+  background: #f6fcf8;
+  box-shadow: 0 10px 24px rgba(10, 88, 62, 0.1);
+}
+
+.dash-account-trigger__avatar {
+  width: 43px;
+  height: 43px;
+  flex: 0 0 43px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.68);
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(145deg, #2ed17c, #07835b);
+  box-shadow: 0 3px 10px rgba(8, 125, 84, 0.24);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.93rem;
+  font-weight: 800;
+}
+
+.dash-account-trigger__copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.05rem;
+}
+
+.dash-account-trigger__copy strong {
+  max-width: 180px;
+  overflow: hidden;
+  color: #0b2d22;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-account-trigger__copy small {
+  overflow: hidden;
+  color: #07835b;
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-account-trigger > svg { color: #668b7c; transition: transform 160ms ease; }
+.dash-account-trigger.is-open > svg { transform: rotate(180deg); }
+
+.dash-account-menu {
+  width: 196px;
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 30;
+  padding: 0.48rem;
+  border: 1px solid #d7e8df;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(7, 50, 36, 0.16);
+  animation: dash-account-menu-in 150ms ease-out both;
+}
+
+.dash-account-menu p {
+  margin: 0;
+  padding: 0.38rem 0.48rem;
+  color: #7a9689;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dash-account-menu button {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 0.48rem;
+  padding: 0 0.48rem;
+  border: 0;
+  border-radius: 10px;
+  color: #a33232;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.dash-account-menu button:hover { background: #fff3f2; }
+
+@keyframes dash-account-menu-in {
+  from { opacity: 0; transform: translateY(-5px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dash-account-trigger:focus-visible,
+.dash-account-menu button:focus-visible {
+  outline: 3px solid rgba(16, 184, 121, 0.4);
+  outline-offset: 3px;
+}
+
+/* ─── Entrada de pantalla ───
+   Cada ruta entra empujada desde el sidebar: se desliza a la derecha y se
+   asienta. Es lo que hace que el ítem del menú se sienta como el botón que
+   abrió la pantalla, y no como un simple enlace. */
+.dash-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  animation: dash-abrir 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes dash-abrir {
+  from {
+    opacity: 0;
+    transform: translate3d(-18px, 0, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* Contenedor base de cada página. El `flex: 1` hace que llene el alto del
+   panel; sin él, una página corta deja el blanco cortado a media altura. */
 .page-container {
+  flex: 1;
   padding: 28px 30px;
   color: var(--dash-ink);
 }
@@ -87,18 +285,49 @@
 @media (max-width: 620px) {
   .dash-page {
     display: block;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
+
+  /* En celular la carcasa desaparece: el sidebar vuelve a ser una barra
+     flotante y el contenido ocupa la pantalla completa. */
+  .dash-shell {
+    display: block;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
   /* El sidebar se vuelve una barra fija de 68px al fondo — sin este espacio,
      tapa el final del contenido de cada página en el celular. */
   .dash-main {
+    margin: 0;
+    border-radius: 0;
     padding-bottom: 78px;
   }
+
+  .dash-topbar {
+    min-height: 64px;
+    padding: 8px 16px;
+  }
+
+  .dash-account-trigger { min-height: 48px; }
+  .dash-account-trigger__avatar { width: 38px; height: 38px; flex-basis: 38px; }
+  .dash-account-trigger__copy strong { max-width: 120px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dash-status-pulse .ring {
     animation: none;
   }
+
+  .dash-view {
+    animation: none;
+  }
+
+  .dash-account-trigger,
+  .dash-account-trigger > svg { transition: none; }
 }
 
 /* ─── Pausa animaciones del shell cuando la pestaña no es visible ─── */

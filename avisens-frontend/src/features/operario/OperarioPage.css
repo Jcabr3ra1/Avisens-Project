@@ -373,7 +373,8 @@
   font-weight: 400;
 }
 
-.operario-form input {
+.operario-form input,
+.operario-form select {
   min-height: 44px;
   padding: 0.55rem 0.65rem;
   color: var(--text);
@@ -384,7 +385,8 @@
   font: inherit;
 }
 
-.operario-form input:focus {
+.operario-form input:focus,
+.operario-form select:focus {
   border-color: var(--green);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent);
 }

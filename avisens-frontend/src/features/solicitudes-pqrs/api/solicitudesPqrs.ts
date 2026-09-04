@@ -16,6 +16,16 @@ export async function listarSolicitudesPqrs(
   return data
 }
 
+export async function listarSolicitudesPqrsDeProspecto(
+  prospectoId: number,
+): Promise<SolicitudPqrs[]> {
+  const { data } = await api.get<SolicitudPqrs[]>(
+    `/solicitudes-pqrs/prospecto/${prospectoId}`,
+  )
+
+  return data
+}
+
 export async function obtenerSolicitudPqrs(
   id: number,
 ): Promise<SolicitudPqrs> {
@@ -45,5 +55,19 @@ export async function eliminarSolicitudPqrs(
     `/solicitudes-pqrs/${id}`,
   )
 
+  return data
+}
+
+export interface CrearSolicitudPqrsPayload {
+  prospecto_id: number
+  categoria: string
+  asunto?: string
+  mensaje?: string
+}
+
+export async function crearSolicitudPqrs(
+  payload: CrearSolicitudPqrsPayload,
+): Promise<SolicitudPqrs> {
+  const { data } = await api.post<SolicitudPqrs>('/solicitudes-pqrs', payload)
   return data
 }

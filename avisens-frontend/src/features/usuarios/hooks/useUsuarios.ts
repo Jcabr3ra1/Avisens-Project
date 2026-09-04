@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  actualizarUsuario,
-  crearUsuario,
-  eliminarUsuario,
-  listarUsuarios,
-  type ActualizarUsuarioPayload,
-  type CrearUsuarioPayload,
-  type Usuario,
-} from '@shared/api'
+import { type ActualizarUsuarioPayload, type CrearUsuarioPayload, type Usuario } from '@shared/api'
+import { actualizarUsuario, crearUsuario, eliminarUsuario, listarUsuarios } from '@features/usuarios/api/usuarios'
 import { mensajeDeError } from '@shared/utils/errores'
 
 export function useUsuarios() {

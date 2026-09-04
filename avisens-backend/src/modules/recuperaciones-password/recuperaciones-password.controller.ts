@@ -56,6 +56,17 @@ export class RecuperacionesPasswordController {
     return this.recuperaciones.listar(paginacion);
   }
 
+  @Get('usuario/:usuarioId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(ROLES.ADMINISTRADOR)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Listar las solicitudes de recuperación de un usuario',
+  })
+  listarDeUsuario(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
+    return this.recuperaciones.listarDeUsuario(usuarioId);
+  }
+
   @Patch(':id/aprobar')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(ROLES.ADMINISTRADOR)

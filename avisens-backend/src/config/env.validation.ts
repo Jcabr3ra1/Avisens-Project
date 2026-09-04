@@ -76,6 +76,11 @@ class EnvironmentVariables {
   @MinLength(32)
   @IsOptional()
   ML_INTERNAL_TOKEN: string;
+
+  @IsString()
+  @MinLength(32)
+  @IsOptional()
+  METRICS_TOKEN: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {
@@ -108,6 +113,12 @@ export function validateEnv(config: Record<string, unknown>) {
   if (validated.NODE_ENV === 'production' && !validated.ML_INTERNAL_TOKEN) {
     throw new Error(
       'ML_INTERNAL_TOKEN es obligatoria en producción (comunicación Backend-ML)',
+    );
+  }
+
+  if (validated.NODE_ENV === 'production' && !validated.METRICS_TOKEN) {
+    throw new Error(
+      'METRICS_TOKEN es obligatoria en producción (/metrics quedaría público)',
     );
   }
 

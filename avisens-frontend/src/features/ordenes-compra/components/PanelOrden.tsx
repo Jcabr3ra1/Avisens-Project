@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import type { Insumo } from '@shared/api/insumos'
+import type { Insumo } from '@features/inventario/api/insumos'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { CrearDetalleOrdenPayload, OrdenCompra } from '../model/ordenCompra'
 

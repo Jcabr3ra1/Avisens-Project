@@ -14,6 +14,7 @@ type Props = {
   onEditar: (usuario: Usuario) => void
   onGestionarAsignaciones: (usuario: Usuario) => void
   onEliminar: (usuario: Usuario) => void
+  onRecuperarAcceso?: (usuario: Usuario) => void
 }
 
 const COLUMNAS = ['Nombre', 'Correo', 'Cédula', 'Teléfono', 'Rol', 'Estado']
@@ -27,6 +28,7 @@ function TablaUsuarios({
   onEditar,
   onGestionarAsignaciones,
   onEliminar,
+  onRecuperarAcceso,
 }: Props) {
   const [menu, setMenu] = useState<PosicionMenu | null>(null)
 
@@ -130,6 +132,15 @@ function TablaUsuarios({
                 onClick={() => ejecutar(onGestionarAsignaciones)}
               >
                 Gestionar galpones
+              </button>
+            )}
+            {onRecuperarAcceso && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => ejecutar(onRecuperarAcceso)}
+              >
+                Recuperar acceso
               </button>
             )}
             <button

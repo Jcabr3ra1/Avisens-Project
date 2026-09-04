@@ -1,5 +1,4 @@
 import { useEffect, useState, type FocusEvent } from 'react';
-import { Link } from 'react-router-dom';
 import avicultorImage from '../../assets/hero/avicultor.webp';
 import pollosImage from '../../assets/hero/pollos-engorde.webp';
 import comunidadImage from '../../assets/hero/comunidad.webp';
@@ -93,10 +92,6 @@ function Hero() {
         </p>
 
         <div className="hero-bottom-left">
-          <Link to="/contacto" className="hero-about-link">
-            <span aria-hidden="true" />
-            Solicitar acompañamiento
-          </Link>
           <a href="#beneficios" className="hero-about-link">
             <span aria-hidden="true" />
             Conocer AVISENS

@@ -1,3 +1,9 @@
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { getRol } from '@shared/api'
+import { permisosDeGestion } from '@shared/auth/permisos'
+import { IcPlus } from '@shared/ui/icons/icons'
+import CabeceraAdmin, { type Miga } from '@shared/ui/admin/CabeceraAdmin'
+import '@shared/ui/admin/AdminKit.css'
 import type { Lote } from './api/lotes'
 import BarraLotes from './components/BarraLotes'
 import FormularioLote from './components/FormularioLote'
@@ -7,19 +13,46 @@ import { useFiltroLotes } from './hooks/useFiltroLotes'
 import { useFormularioLote } from './hooks/useFormularioLote'
 import { useLotes } from './hooks/useLotes'
 import { useResumenLotes } from './hooks/useResumenLotes'
-import './LotesPage.css'
+import { evaluarAltaDeLote } from './model/loteVista'
 
 function LotesPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const gestion = useLotes()
-  const filtro = useFiltroLotes(gestion.lotes)
-  const resumen = useResumenLotes(gestion.lotes)
+  const permisos = permisosDeGestion(getRol())
+  const galponParam = searchParams.get('galpon')
+  const galponId = Number(galponParam)
+  const tieneContextoDeGalpon = galponParam !== null && Number.isInteger(galponId)
+  const galponSeleccionado = tieneContextoDeGalpon
+    ? gestion.galpones.find((galpon) => galpon.id === galponId)
+    : undefined
+  const galponesDisponibles = galponSeleccionado
+    ? [galponSeleccionado]
+    : tieneContextoDeGalpon
+      ? []
+      : gestion.galpones
+  const lotesDelGalpon = galponSeleccionado
+    ? gestion.lotes.filter((lote) => lote.galpon.id === galponSeleccionado.id)
+    : tieneContextoDeGalpon
+      ? []
+      : gestion.lotes
+  const filtro = useFiltroLotes(lotesDelGalpon)
+  const resumen = useResumenLotes(lotesDelGalpon)
   const formulario = useFormularioLote(gestion.guardar)
-  const catalogosDisponibles = gestion.galpones.length > 0 && gestion.proveedores.length > 0
+
+  const galponActivo = galponesDisponibles.find((galpon) => galpon.activo)
+  const { puedeCrear, motivoBloqueo } = evaluarAltaDeLote(galponesDisponibles)
+
+  const migas: Miga[] = galponSeleccionado
+    ? [
+        { label: 'Granjas', to: '/granjas' },
+        { label: galponSeleccionado.granja.nombre, to: `/galpones?granja=${galponSeleccionado.granja.id}` },
+        { label: galponSeleccionado.nombre },
+      ]
+    : [{ label: 'Granjas', to: '/granjas' }, { label: 'Lotes' }]
 
   function abrirCrear() {
-    const galponId = gestion.galpones.find((galpon) => galpon.activo)?.id
-    const proveedorId = gestion.proveedores[0]?.id
-    if (galponId && proveedorId) formulario.abrirCrear(galponId, proveedorId)
+    if (galponActivo) formulario.abrirCrear(galponActivo.id)
   }
 
   function confirmarEliminacion(lote: Lote) {
@@ -30,37 +63,62 @@ function LotesPage() {
   }
 
   return (
-    <div className="page-container lotes-page">
-      <header className="lotes-header">
-        <div>
-          <h1>Lotes</h1>
-          <p>Gestiona los grupos de aves asociados a cada galpón.</p>
-        </div>
-        <button type="button" className="lotes-btn-primary" onClick={abrirCrear} disabled={!catalogosDisponibles || gestion.cargando}>
-          + Nuevo lote
-        </button>
-      </header>
+    <div className="page-container adm-page">
+      <CabeceraAdmin
+        titulo="Lotes"
+        contexto={galponSeleccionado?.nombre}
+        subtitulo={
+          galponSeleccionado
+            ? 'Los grupos de aves alojados en este galpón. Cada lote es la unidad sobre la que se mide el desempeño productivo.'
+            : 'Los grupos de aves asociados a cada galpón: ingreso, cantidad y estado del ciclo.'
+        }
+        migas={migas}
+        acciones={
+          <>
+            {galponSeleccionado && (
+              <button
+                type="button"
+                className="adm-btn adm-btn--secundario"
+                onClick={() => navigate(`/galpones?granja=${galponSeleccionado.granja.id}`)}
+              >
+                Volver a galpones
+              </button>
+            )}
+            {permisos.crear && (
+              <button
+                type="button"
+                className="adm-btn adm-btn--primario"
+                onClick={abrirCrear}
+                disabled={!puedeCrear || gestion.cargando}
+              >
+                <IcPlus size={15} aria-hidden="true" />
+                Nuevo lote
+              </button>
+            )}
+          </>
+        }
+      />
 
       <ResumenLotes resumen={resumen} />
 
       {gestion.error && (
-        <div className="lotes-alerta" role="alert">
+        <div className="adm-alerta" role="alert">
           <span>{gestion.error}</span>
           <button type="button" onClick={() => void gestion.recargar()}>Reintentar</button>
         </div>
       )}
 
-      {!gestion.cargando && !catalogosDisponibles && (
-        <p className="lotes-aviso">Necesitas al menos un galpón activo y un proveedor para crear lotes.</p>
+      {permisos.crear && !gestion.cargando && motivoBloqueo && (
+        <p className="adm-aviso">{motivoBloqueo}</p>
       )}
 
-      <section className="lotes-card" aria-label="Listado de lotes">
-        {gestion.lotes.length > 0 && (
+      <section className="adm-panel" aria-label="Listado de lotes">
+        {lotesDelGalpon.length > 0 && (
           <BarraLotes
             busqueda={filtro.busqueda}
             estado={filtro.estado}
             visibles={filtro.visibles.length}
-            total={gestion.lotes.length}
+            total={lotesDelGalpon.length}
             onBuscar={filtro.setBusqueda}
             onCambiarEstado={filtro.setEstado}
           />
@@ -68,6 +126,7 @@ function LotesPage() {
         <TablaLotes
           lotes={filtro.visibles}
           cargando={gestion.cargando}
+          permisos={permisos}
           onEditar={formulario.abrirEditar}
           onAlternar={(lote) => void gestion.alternarActivo(lote)}
           onEliminar={confirmarEliminacion}
@@ -78,7 +137,7 @@ function LotesPage() {
         <FormularioLote
           form={formulario.form}
           modoEdicion={formulario.modoEdicion}
-          galpones={gestion.galpones}
+          galpones={galponesDisponibles}
           proveedores={gestion.proveedores}
           guardando={formulario.guardando}
           error={formulario.error}

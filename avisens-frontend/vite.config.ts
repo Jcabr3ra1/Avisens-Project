@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
@@ -11,6 +12,12 @@ export default defineConfig({
       '@features': path.resolve(__dirname, './src/features'),
       '@shared':   path.resolve(__dirname, './src/shared'),
     },
+  },
+
+  // Los model/ son funciones puras: no necesitan DOM ni navegador, así que
+  // el entorno por defecto de Node basta y las pruebas corren en milisegundos.
+  test: {
+    include: ['src/**/*.test.ts'],
   },
 
   // Proxy del servidor de desarrollo — igual a lo que hace nginx en Docker.

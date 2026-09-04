@@ -1,4 +1,4 @@
-import { IcClose, IcPhone } from '@shared/ui/icons/icons'
+import { IcClose, IcPhone, IcPlus } from '@shared/ui/icons/icons'
 import {
   PUNTAJE_MAXIMO,
   RANGOS_PUNTAJE,
@@ -6,7 +6,10 @@ import {
 } from '../model/prospectoVista'
 import { ESTILO_ETAPA } from '../model/etapas'
 import { urgenciaDe } from '../model/urgencia'
-import { iniciales } from '../model/formato'
+import { iniciales, pesos } from '../model/formato'
+import { useCotizaciones } from '../hooks/useCotizaciones'
+import { useSolicitudesDeProspecto } from '@features/solicitudes-pqrs/hooks/useSolicitudesDeProspecto'
+import { ETIQUETAS_ESTADO } from '@features/solicitudes-pqrs/model/solicitudPqrs'
 
 type Props = {
   prospecto: ProspectoVista
@@ -16,6 +19,16 @@ type Props = {
 function PanelDetalle({ prospecto, onCerrar }: Props) {
   const estilo = ESTILO_ETAPA[prospecto.etapa]
   const urgencia = urgenciaDe(prospecto.ultimaActividad, prospecto.etapa)
+  const { cotizaciones, cargando, generando, generar } = useCotizaciones(
+    prospecto.id,
+  )
+  const {
+    solicitudes,
+    cargando: cargandoSolicitudes,
+    atendiendo,
+    error: errorSolicitudes,
+    atender,
+  } = useSolicitudesDeProspecto(prospecto.id)
 
   return (
     <div className="crm-overlay" onClick={onCerrar}>
@@ -125,6 +138,124 @@ function PanelDetalle({ prospecto, onCerrar }: Props) {
               {prospecto.asesorId ? `Asesor #${prospecto.asesorId}` : 'Sin asignar'}
             </span>
           </div>
+
+          <div className="crm-det-sep" />
+
+          <div className="crm-det-cotiza-head">
+            <p className="crm-det-section">Cotizaciones</p>
+            <button
+              className="crm-det-btn-generar"
+              type="button"
+              onClick={() => void generar()}
+              disabled={generando || cargando}
+            >
+              <IcPlus size={13} />
+              {generando ? 'Generando…' : 'Generar'}
+            </button>
+          </div>
+
+          {cargando ? (
+            <p className="crm-det-cotiza-vacio">Cargando cotizaciones…</p>
+          ) : cotizaciones.length === 0 ? (
+            <p className="crm-det-cotiza-vacio">
+              Este prospecto aún no tiene cotizaciones.
+            </p>
+          ) : (
+            <ul className="crm-det-cotizaciones">
+              {cotizaciones.map((cotizacion) => (
+                <li key={cotizacion.id} className="crm-det-cotiza">
+                  <div className="crm-det-cotiza-linea">
+                    <strong>{cotizacion.codigo ?? `COT #${cotizacion.id}`}</strong>
+                    <span>{pesos(cotizacion.valor_total_cop)}</span>
+                  </div>
+                  <div className="crm-det-cotiza-meta">
+                    {cotizacion.plan_recomendado && (
+                      <span className="crm-det-cotiza-plan">
+                        {cotizacion.plan_recomendado}
+                      </span>
+                    )}
+                    {cotizacion.numero_galpones !== null && (
+                      <span>{cotizacion.numero_galpones} galpón(es)</span>
+                    )}
+                    <span>
+                      {new Intl.DateTimeFormat('es-CO', {
+                        day: 'numeric',
+                        month: 'short',
+                      }).format(new Date(cotizacion.fecha_generacion))}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="crm-det-sep" />
+
+          <p className="crm-det-section">Solicitudes PQRS</p>
+
+          {errorSolicitudes && (
+            <p className="crm-det-cotiza-vacio">{errorSolicitudes}</p>
+          )}
+
+          {cargandoSolicitudes ? (
+            <p className="crm-det-cotiza-vacio">Cargando solicitudes…</p>
+          ) : solicitudes.length === 0 ? (
+            <p className="crm-det-cotiza-vacio">
+              Este prospecto no tiene solicitudes PQRS.
+            </p>
+          ) : (
+            <ul className="crm-det-cotizaciones">
+              {solicitudes.map((solicitud) => (
+                <li key={solicitud.id} className="crm-det-cotiza">
+                  <div className="crm-det-cotiza-linea">
+                    <strong>{solicitud.asunto ?? solicitud.categoria}</strong>
+                    <span>{ETIQUETAS_ESTADO[solicitud.estado]}</span>
+                  </div>
+                  <div className="crm-det-cotiza-meta">
+                    <span>{solicitud.categoria}</span>
+                    <span>
+                      {new Intl.DateTimeFormat('es-CO', {
+                        day: 'numeric',
+                        month: 'short',
+                      }).format(new Date(solicitud.fecha_creacion))}
+                    </span>
+                    {solicitud.estado !== 'resuelta' &&
+                      solicitud.estado !== 'cerrada' && (
+                        <>
+                          {solicitud.estado === 'abierta' && (
+                            <button
+                              className="crm-det-btn-generar"
+                              type="button"
+                              disabled={atendiendo}
+                              onClick={() =>
+                                void atender(solicitud.id, 'en_proceso')
+                              }
+                            >
+                              Atender
+                            </button>
+                          )}
+                          <button
+                            className="crm-det-btn-generar"
+                            type="button"
+                            disabled={atendiendo}
+                            onClick={() =>
+                              void atender(solicitud.id, 'resuelta')
+                            }
+                          >
+                            Resolver
+                          </button>
+                        </>
+                      )}
+                  </div>
+                  {solicitud.respuesta && (
+                    <div className="crm-det-cotiza-meta">
+                      <span>{solicitud.respuesta}</span>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="crm-detalle-acciones">

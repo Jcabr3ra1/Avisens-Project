@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  listarOrganizaciones,
-  listarRolesUsuario,
-  type Organizacion,
-  type RolResumen,
-} from '@shared/api'
+import { type RolResumen } from '@shared/api'
+import { listarOrganizaciones, type Organizacion } from '@features/organizaciones/api/organizaciones'
+import { listarRolesUsuario } from '@features/usuarios/api/usuarios'
 import { mensajeDeError } from '@shared/utils/errores'
 
 export function useCatalogosUsuarios(esPropietario: boolean) {

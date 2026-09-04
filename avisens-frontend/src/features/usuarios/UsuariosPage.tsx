@@ -1,5 +1,8 @@
-import { useCallback } from 'react'
-import { crearOrganizacion, getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
+import { useCallback, useState } from 'react'
+import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
+import { crearOrganizacion } from '@features/organizaciones/api/organizaciones'
+import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
+import RecuperacionesDeUsuario from '@features/recuperaciones-password/components/RecuperacionesDeUsuario'
 import BarraUsuarios from './components/BarraUsuarios'
 import FormularioUsuario from './components/FormularioUsuario'
 import ModalAsignacionesGalpon from './components/ModalAsignacionesGalpon'
@@ -14,7 +17,11 @@ import { useUsuarios } from './hooks/useUsuarios'
 import './UsuariosPage.css'
 
 function UsuariosPage() {
+  // Rol real: crear usuarios es una acción, no una etiqueta de navegación,
+  // así que no debe depender de la vista previa.
   const esPropietario = getRol() === 'Propietario'
+  const esAdmin = getRol() === 'Administrador'
+  const [usuarioRecuperaciones, setUsuarioRecuperaciones] = useState<Usuario | null>(null)
   const {
     usuarios,
     cargando,
@@ -148,6 +155,7 @@ function UsuariosPage() {
           onEditar={formulario.abrirEditar}
           onGestionarAsignaciones={(usuario) => void asignaciones.abrir(usuario)}
           onEliminar={confirmarEliminacion}
+          onRecuperarAcceso={esAdmin ? setUsuarioRecuperaciones : undefined}
         />
       </section>
 
@@ -181,6 +189,16 @@ function UsuariosPage() {
           onAsignar={asignaciones.asignar}
           onRetirar={asignaciones.retirar}
         />
+      )}
+
+      {usuarioRecuperaciones && (
+        <PantallaHija
+          titulo={`Recuperar acceso · ${usuarioRecuperaciones.nombre_completo}`}
+          subtitulo={usuarioRecuperaciones.email}
+          onCerrar={() => setUsuarioRecuperaciones(null)}
+        >
+          <RecuperacionesDeUsuario usuario={usuarioRecuperaciones} />
+        </PantallaHija>
       )}
     </div>
   )

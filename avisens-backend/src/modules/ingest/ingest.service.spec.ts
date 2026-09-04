@@ -3,6 +3,7 @@ import { IngestService } from './ingest.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { DispositivoAutenticado } from '../../common/guards/device-token.guard';
 import { ObservabilityService } from '../../common/observability/observability.service';
+import { AlertasService } from '../alertas/alertas.service';
 
 describe('IngestService', () => {
   let service: IngestService;
@@ -15,6 +16,7 @@ describe('IngestService', () => {
     $transaction: jest.fn(),
   };
   const observability = { registrarIngesta: jest.fn() };
+  const alertas = { evaluarLectura: jest.fn() };
 
   const dispositivo: DispositivoAutenticado = {
     id: 7,
@@ -28,6 +30,7 @@ describe('IngestService', () => {
         IngestService,
         { provide: PrismaService, useValue: prisma },
         { provide: ObservabilityService, useValue: observability },
+        { provide: AlertasService, useValue: alertas },
       ],
     }).compile();
     service = module.get<IngestService>(IngestService);

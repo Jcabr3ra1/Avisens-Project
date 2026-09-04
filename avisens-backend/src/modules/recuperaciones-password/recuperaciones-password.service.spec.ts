@@ -11,7 +11,8 @@ describe('RecuperacionesPasswordService', () => {
   let service: RecuperacionesPasswordService;
 
   const prisma = {
-    usuario: { findUnique: jest.fn(), update: jest.fn() },
+    usuario: { findUnique: jest.fn(), findMany: jest.fn(), update: jest.fn() },
+    notificacion: { createMany: jest.fn() },
     seguridadCuenta: { upsert: jest.fn(), update: jest.fn() },
     sesion: { updateMany: jest.fn() },
     recuperacionPassword: {
@@ -59,8 +60,15 @@ describe('RecuperacionesPasswordService', () => {
   });
 
   it('crea una sola solicitud pendiente para un usuario activo', async () => {
-    prisma.usuario.findUnique.mockResolvedValue({ id: 5, activo: true });
+    prisma.usuario.findUnique.mockResolvedValue({
+      id: 5,
+      activo: true,
+      nombre_completo: 'Operario Avisens',
+      rol: { nombre: 'Operario' },
+    });
     prisma.recuperacionPassword.findFirst.mockResolvedValue(null);
+    prisma.recuperacionPassword.create.mockResolvedValue({ id: 12 });
+    prisma.usuario.findMany.mockResolvedValue([{ id: 1 }]);
 
     await service.solicitar('OP@AVISENS.COM', '  Olvido  ', '127.0.0.1');
 
@@ -74,15 +82,46 @@ describe('RecuperacionesPasswordService', () => {
         ip_solicitud: '127.0.0.1',
       },
     });
+    expect(prisma.notificacion.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          usuario_id: 1,
+          tipo: 'recuperacion_password',
+          titulo: 'Solicitud de recuperación de contraseña',
+          mensaje: 'Operario Avisens solicitó restablecer su contraseña.',
+          referencia_tipo: 'recuperacion_password',
+          referencia_id: 12,
+        },
+      ],
+    });
   });
 
   it('no duplica una solicitud que ya está pendiente', async () => {
-    prisma.usuario.findUnique.mockResolvedValue({ id: 5, activo: true });
+    prisma.usuario.findUnique.mockResolvedValue({
+      id: 5,
+      activo: true,
+      nombre_completo: 'Operario Avisens',
+      rol: { nombre: 'Operario' },
+    });
     prisma.recuperacionPassword.findFirst.mockResolvedValue({ id: 8 });
 
     await service.solicitar('op@avisens.com');
 
     expect(prisma.recuperacionPassword.create).not.toHaveBeenCalled();
+  });
+
+  it('no crea solicitudes para administradores', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({
+      id: 1,
+      activo: true,
+      nombre_completo: 'Admin Avisens',
+      rol: { nombre: 'Administrador' },
+    });
+
+    await service.solicitar('admin@avisens.com');
+
+    expect(prisma.recuperacionPassword.create).not.toHaveBeenCalled();
+    expect(prisma.notificacion.createMany).not.toHaveBeenCalled();
   });
 
   it('al aprobar cambia el hash, revoca sesiones y exige cambio', async () => {

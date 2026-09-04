@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { Solicitante } from '../../common/auth/acceso';
-import { esAdministrador } from '../../common/auth/alcance';
+import { filtroGalpones } from '../../common/auth/alcance';
 import { paginate } from '../../common/pagination/paginate';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import {
@@ -16,7 +16,11 @@ const SELECT = {
   rol_asignacion: true,
   fecha_asignacion: true,
   activa: true,
-  usuario: { select: { id: true, nombre_completo: true, email: true } },
+  // Sin el correo: quien mira esta lista quiere saber quien trabaja en el
+  // galpon, y para eso basta el nombre. Un dato que nadie pinta no tiene por
+  // que viajar, y ahora que el operario tambien lee esto, viajaria hacia mas
+  // gente todavia.
+  usuario: { select: { id: true, nombre_completo: true } },
   galpon: { select: { id: true, nombre: true, codigo: true } },
 } as const;
 
@@ -37,13 +41,16 @@ export class UsuariosGalponesService {
   }
 
   async listar(dto: ListarUsuarioGalponDto, solicitante: Solicitante) {
+    const galpon = filtroGalpones(solicitante);
     const where = {
       ...(dto.usuario_id !== undefined ? { usuario_id: dto.usuario_id } : {}),
       ...(dto.galpon_id !== undefined ? { galpon_id: dto.galpon_id } : {}),
       ...(dto.activa !== undefined ? { activa: dto.activa } : {}),
-      ...(!esAdministrador(solicitante)
-        ? { galpon: { granja: { propietario_id: solicitante.id } } }
-        : {}),
+      // filtroGalpones resuelve los tres roles. Comparar contra
+      // propietario_id servia mientras la ruta era solo del dueno; ahora que
+      // el operario entra, le habria devuelto la lista vacia, porque su id
+      // nunca es el del propietario de la granja.
+      ...(galpon ? { galpon } : {}),
     };
     const [data, total] = await this.prisma.$transaction([
       this.prisma.usuarioGalpon.findMany({
@@ -59,12 +66,11 @@ export class UsuariosGalponesService {
   }
 
   async obtener(id: number, solicitante: Solicitante) {
+    const galpon = filtroGalpones(solicitante);
     const asignacion = await this.prisma.usuarioGalpon.findFirst({
       where: {
         id,
-        ...(!esAdministrador(solicitante)
-          ? { galpon: { granja: { propietario_id: solicitante.id } } }
-          : {}),
+        ...(galpon ? { galpon } : {}),
       },
       select: SELECT,
     });

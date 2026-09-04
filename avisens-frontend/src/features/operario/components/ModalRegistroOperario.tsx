@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { IcClose, IcHeart, IcSeed } from '@shared/ui/icons/icons'
 import type { JornadaOperario } from '../model/jornadaOperario'
+import { fechaDeHoy } from '@shared/utils/fechas'
 
 type TipoRegistro = 'mortalidad' | 'consumo'
 
@@ -20,7 +21,7 @@ type Props = {
 }
 
 function fechaActual() {
-  return new Date().toISOString().slice(0, 10)
+  return fechaDeHoy()
 }
 
 function ModalRegistroOperario({
@@ -141,8 +142,14 @@ function ModalRegistroOperario({
                 <input value={causa} onChange={(evento) => setCausa(evento.target.value)} />
               </label>
               <label>
-                <span>Disposición <em>(opcional)</em></span>
-                <input value={disposicion} onChange={(evento) => setDisposicion(evento.target.value)} />
+                <span>¿Qué hiciste con las aves? <em>(opcional)</em></span>
+                <select value={disposicion} onChange={(evento) => setDisposicion(evento.target.value)}>
+                  <option value="">Sin manejar aún</option>
+                  <option value="compostaje">Compostaje</option>
+                  <option value="incineracion">Incineración</option>
+                  <option value="entierro">Entierro</option>
+                  <option value="otro">Otro</option>
+                </select>
               </label>
             </>
           ) : (

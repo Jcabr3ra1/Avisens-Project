@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -196,7 +197,16 @@ export class GranjasService {
   async eliminarPermanente(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
-    await this.prisma.granja.delete({ where: { id } });
+    try {
+      await this.prisma.granja.delete({ where: { id } });
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'P2003') {
+        throw new ConflictException(
+          'No se puede eliminar: la granja tiene galpones registrados. Elimínalos primero, o desactiva la granja en su lugar.',
+        );
+      }
+      throw error;
+    }
     return { id, eliminado: true };
   }
 }

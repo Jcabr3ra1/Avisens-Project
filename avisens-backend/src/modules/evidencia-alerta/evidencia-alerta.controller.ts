@@ -33,7 +33,7 @@ interface AuthRequest extends Request {
 @ApiTags('evidencias-alerta')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('evidencias-alerta')
 export class EvidenciaAlertaController {
   constructor(

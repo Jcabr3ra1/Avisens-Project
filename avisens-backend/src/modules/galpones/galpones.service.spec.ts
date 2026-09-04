@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { GalponesService } from './galpones.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -213,6 +214,27 @@ describe('GalponesService', () => {
       expect(prisma.usuarioGalpon.deleteMany).toHaveBeenCalledWith({
         where: { galpon_id: 1 },
       });
+    });
+
+    it('con lotes o sensores dentro avisa que hay que borrarlos primero', async () => {
+      prisma.$transaction.mockRejectedValue(
+        Object.assign(new Error('FK'), { code: 'P2003' }),
+      );
+
+      await expect(
+        service.eliminarPermanente(1, propietario),
+      ).rejects.toBeInstanceOf(ConflictException);
+      await expect(
+        service.eliminarPermanente(1, propietario),
+      ).rejects.toThrow(/lotes, sensores, equipos/);
+    });
+
+    it('un error que no sea de llave foránea se propaga tal cual', async () => {
+      prisma.$transaction.mockRejectedValue(new Error('se cayó la conexión'));
+
+      await expect(service.eliminarPermanente(1, propietario)).rejects.toThrow(
+        'se cayó la conexión',
+      );
     });
   });
 });

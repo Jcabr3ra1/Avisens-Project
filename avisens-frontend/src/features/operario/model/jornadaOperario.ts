@@ -1,3 +1,4 @@
+import { diasDeVida } from '@shared/utils/fechas'
 import type { GalponOperario, LoteOperario } from '../api/operario'
 
 export type JornadaOperario = {
@@ -6,12 +7,9 @@ export type JornadaOperario = {
   diaLote: number | null
 }
 
-function calcularDiaLote(fechaIngreso: string): number {
-  const ingreso = new Date(fechaIngreso)
-  const hoy = new Date()
-  const diferencia = hoy.getTime() - ingreso.getTime()
-  return Math.max(1, Math.floor(diferencia / 86_400_000) + 1)
-}
+// Antes contaba desde 1 y restaba milisegundos: el mismo lote salía con un
+// día distinto al de Monitoreo y el contador avanzaba a las 7 p.m.
+const calcularDiaLote = diasDeVida
 
 export function crearJornadasOperario(
   galpones: GalponOperario[],

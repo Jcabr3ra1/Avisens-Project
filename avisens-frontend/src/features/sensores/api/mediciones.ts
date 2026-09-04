@@ -1,0 +1,47 @@
+import { api } from '@shared/api/client'
+import type { PaginatedResponse } from '@shared/api/types'
+import { LIMITE_POR_PAGINA, listarTodasLasPaginas } from '@shared/api/paginacion'
+
+export interface Medicion {
+  // `id` es BigInt en el backend, por eso llega como string (no cabe en number).
+  id: string
+  sensor_id: number
+  fecha_hora: string
+  valor: number
+  calidad: string
+}
+
+// Filtros de GET /mediciones. Todo opcional; el backend pagina y ordena por
+// fecha_hora descendente (lo más reciente primero).
+
+export interface MedicionesQuery {
+  sensor_id?: number
+  desde?: string
+  hasta?: string
+  page?: number
+  limit?: number
+}
+
+
+// Lecturas registradas (EP-04). Requiere sesión: el Propietario solo ve las de
+// sus sensores. Por defecto trae las 20 más recientes.
+// Una sola página. Sirve para lo acotado a propósito —"las N más recientes"—
+// donde traerlo todo no tiene sentido. El tope del backend es 100 y no
+// recorta: pedir más devuelve 400.
+export async function listarMediciones(
+  query: MedicionesQuery = {},
+): Promise<Medicion[]> {
+  const { data } = await api.get<PaginatedResponse<Medicion>>('/mediciones', {
+    params: { page: 1, limit: LIMITE_POR_PAGINA, ...query },
+  })
+  return data.data
+}
+
+// Todas las lecturas del rango. /mediciones ordena por fecha descendente, así
+// que quedarse en la primera página daría solo las más recientes: la gráfica
+// se vería igual de llena pero cubriendo menos horas de las que dice.
+export async function listarTodasLasMediciones(
+  query: MedicionesQuery = {},
+): Promise<Medicion[]> {
+  return listarTodasLasPaginas<Medicion>('/mediciones', { ...query })
+}

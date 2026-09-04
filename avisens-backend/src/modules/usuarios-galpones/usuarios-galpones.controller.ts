@@ -37,14 +37,19 @@ interface AuthRequest extends Request {
 
 @ApiTags('usuarios-galpones')
 @ApiBearerAuth()
+// El operario ve quien mas trabaja en sus galpones, pero no reparte
+// asignaciones: eso lo hace el propietario. Por eso la clase abre la
+// lectura a los tres y cada escritura vuelve a cerrarse abajo.
 @UseGuards(JwtAuthGuard, RolesGuard, PermisosGuard)
-@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
-@Permisos(PERMISOS.USUARIOS_GESTIONAR)
+@Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
+@Permisos(PERMISOS.USUARIOS_LEER)
 @Controller('usuarios-galpones')
 export class UsuariosGalponesController {
   constructor(private service: UsuariosGalponesService) {}
 
   @Post()
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Permisos(PERMISOS.USUARIOS_GESTIONAR)
   @ApiOperation({ summary: 'Asignar un usuario a un galpón' })
   crear(@Body() dto: CreateUsuarioGalponDto, @Req() req: AuthRequest) {
     return this.service.crear(dto, req.user);
@@ -63,18 +68,24 @@ export class UsuariosGalponesController {
   }
 
   @Patch(':id/desactivar')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Permisos(PERMISOS.USUARIOS_GESTIONAR)
   @ApiOperation({ summary: 'Desactivar una asignación' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.service.desactivar(id, req.user);
   }
 
   @Patch(':id/activar')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Permisos(PERMISOS.USUARIOS_GESTIONAR)
   @ApiOperation({ summary: 'Reactivar una asignación' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.service.activar(id, req.user);
   }
 
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Permisos(PERMISOS.USUARIOS_GESTIONAR)
   @ApiOperation({
     summary: 'Desactivar una asignación conservando el historial',
   })

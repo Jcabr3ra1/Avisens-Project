@@ -1,3 +1,5 @@
+import { diasDeVida } from '@shared/utils/fechas'
+import { esCriticidadAlta } from '@features/alertas/model/alerta'
 export type EstadoDashboard = 'correcto' | 'atencion' | 'urgente' | 'sin_lote'
 
 export interface DashboardGranja {
@@ -56,10 +58,10 @@ export interface EstadoGeneralDashboard {
 }
 
 export function calcularDiaLote(fechaIngreso: string): number {
-  const ingreso = new Date(`${fechaIngreso.slice(0, 10)}T00:00:00`)
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-  return Math.max(Math.floor((hoy.getTime() - ingreso.getTime()) / 86_400_000) + 1, 1)
+  // Misma convención que el backend: el día de ingreso es el 0. Antes sumaba
+  // uno, así que el mismo lote salía con un día distinto según si el trabajo
+  // de indicadores ya había corrido o si se usaba este cálculo de respaldo.
+  return diasDeVida(fechaIngreso)
 }
 
 export function obtenerEstadoGeneral(
@@ -76,7 +78,7 @@ export function obtenerEstadoGeneral(
 
   const abiertas = alertas.filter((alerta) => alerta.estado !== 'cerrada')
   const criticas = abiertas.filter((alerta) =>
-    ['critica', 'crítica', 'alta'].includes(alerta.criticidad.toLowerCase()),
+    esCriticidadAlta(alerta.criticidad),
   )
 
   if (criticas.length > 0) {
@@ -105,7 +107,7 @@ export function obtenerEstadoGeneral(
 export function ordenarAlertas(alertas: DashboardAlerta[]): DashboardAlerta[] {
   const prioridad = (criticidad: string) => {
     const valor = criticidad.toLowerCase()
-    if (['critica', 'crítica', 'alta'].includes(valor)) return 0
+    if (esCriticidadAlta(valor)) return 0
     if (['media', 'advertencia'].includes(valor)) return 1
     return 2
   }

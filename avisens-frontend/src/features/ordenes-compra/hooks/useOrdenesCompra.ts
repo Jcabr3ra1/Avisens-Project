@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listarGranjas, type Granja } from '@features/granjas/api/granjas'
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
-import { listarInsumos, type Insumo } from '@shared/api/insumos'
+import { listarInsumos, type Insumo } from '@features/inventario/api/insumos'
 import { mensajeDeError } from '@shared/utils/errores'
 import { listarProveedores, type Proveedor } from '@features/proveedores/api/proveedores'
 import {

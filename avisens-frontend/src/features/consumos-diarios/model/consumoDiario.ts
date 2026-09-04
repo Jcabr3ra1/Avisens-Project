@@ -1,3 +1,4 @@
+import { fechaDeHoy } from '@shared/utils/fechas'
 export type ConsumoDiario = {
   id: number
   lote_id: number
@@ -31,5 +32,5 @@ export type FormularioConsumo = {
 }
 
 export const FORMULARIO_CONSUMO_INICIAL: FormularioConsumo = {
-  lote_id: '', tipo_alimento_id: '', fecha: new Date().toISOString().slice(0, 10), alimento_kg: '', agua_litros: '',
+  lote_id: '', tipo_alimento_id: '', fecha: fechaDeHoy(), alimento_kg: '', agua_litros: '',
 }

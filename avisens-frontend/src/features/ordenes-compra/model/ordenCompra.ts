@@ -1,3 +1,4 @@
+import { fechaDeHoy } from '@shared/utils/fechas'
 export type EstadoOrdenCompra = 'pendiente' | 'en_proceso' | 'entregada' | 'cancelada'
 
 export type InsumoDeDetalle = {
@@ -71,6 +72,6 @@ export const FORMULARIO_ORDEN_INICIAL: FormularioOrden = {
   granja_id: '',
   proveedor_id: '',
   lote_id: '',
-  fecha_pedido: new Date().toISOString().slice(0, 10),
+  fecha_pedido: fechaDeHoy(),
   fecha_entrega_estimada: '',
 }

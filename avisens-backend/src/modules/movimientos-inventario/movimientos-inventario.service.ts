@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '../../common/pagination/paginate';
 import type { Solicitante } from '../../common/auth/acceso';
-import { esAdministrador } from '../../common/auth/alcance';
+import { filtroGranjas } from '../../common/auth/alcance';
 import { InsumosService } from '../insumos/insumos.service';
 import {
   CreateMovimientoInventarioDto,
@@ -55,13 +55,15 @@ export class MovimientosInventarioService {
       tipo_movimiento,
     }: ListarMovimientosInventarioDto,
   ) {
+    const granja = filtroGranjas(solicitante);
     const where = {
       ...(insumo_id !== undefined ? { insumo_id } : {}),
       ...(lote_id !== undefined ? { lote_id } : {}),
       ...(tipo_movimiento !== undefined ? { tipo_movimiento } : {}),
-      ...(!esAdministrador(solicitante)
-        ? { insumo: { granja: { propietario_id: solicitante.id } } }
-        : {}),
+      // filtroGranjas resuelve los tres roles; comparar contra
+      // propietario_id dejaba al operario con la lista vacia, porque su id
+      // nunca es el del dueno de la granja.
+      ...(granja ? { insumo: { granja } } : {}),
     };
     const [data, total] = await this.prisma.$transaction([
       this.prisma.movimientoInventario.findMany({
@@ -77,12 +79,11 @@ export class MovimientosInventarioService {
   }
 
   async obtener(id: number, solicitante: Solicitante) {
+    const granja = filtroGranjas(solicitante);
     const mov = await this.prisma.movimientoInventario.findFirst({
       where: {
         id,
-        ...(!esAdministrador(solicitante)
-          ? { insumo: { granja: { propietario_id: solicitante.id } } }
-          : {}),
+        ...(granja ? { insumo: { granja } } : {}),
       },
       select: SELECT,
     });

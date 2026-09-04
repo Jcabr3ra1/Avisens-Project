@@ -10,7 +10,7 @@ import {
   type GalponMonitoreoVista,
   type SensorVista,
   type EstadoSensorVista,
-} from '@shared/hooks/useMonitoreoAmbiental'
+} from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { iconoSensor } from '@shared/ui/sensorIcon'
 import { SensorDetail } from './SensorDetail'
 import { IcServer } from '@shared/ui/icons/icons'

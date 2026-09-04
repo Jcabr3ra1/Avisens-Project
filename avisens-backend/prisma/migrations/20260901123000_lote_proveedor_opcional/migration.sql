@@ -1,0 +1,1 @@
+ALTER TABLE "lotes" ALTER COLUMN "proveedor_id" DROP NOT NULL;

@@ -626,3 +626,66 @@
 .crm-vacio-simple {
   text-align: center; color: var(--text3); font-size: 0.88rem; padding: 3rem 0;
 }
+
+/* Cotizaciones del prospecto (PanelDetalle) */
+.crm-det-cotiza-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.5rem;
+}
+.crm-det-cotiza-head .crm-det-section { margin: 0.4rem 0 0.3rem; }
+
+.crm-det-btn-generar {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.32rem 0.65rem; border-radius: 8px;
+  font: inherit; font-size: 0.76rem; font-weight: 700;
+  color: var(--avisens-deep);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.crm-det-btn-generar:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--green) 22%, transparent);
+  transform: translateY(-1px);
+}
+.crm-det-btn-generar:disabled { cursor: not-allowed; opacity: 0.6; }
+
+.crm-det-cotizaciones {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 0.4rem;
+}
+.crm-det-cotiza {
+  padding: 0.55rem 0.7rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.crm-det-cotiza-linea {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 0.5rem;
+}
+.crm-det-cotiza-linea strong {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem; letter-spacing: 0.02em;
+  color: var(--text);
+}
+.crm-det-cotiza-linea span {
+  font-size: 0.84rem; font-weight: 700; color: var(--green-dd);
+  white-space: nowrap;
+}
+.crm-det-cotiza-meta {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 0.25rem 0.55rem; margin-top: 0.2rem;
+  color: var(--text3); font-size: 0.72rem;
+}
+.crm-det-cotiza-plan {
+  padding: 0.1rem 0.45rem; border-radius: 999px;
+  background: color-mix(in srgb, var(--green) 10%, transparent);
+  color: var(--green-dd); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.66rem;
+}
+.crm-det-cotiza-vacio {
+  margin: 0; padding: 0.6rem 0.7rem;
+  color: var(--text3); font-size: 0.82rem;
+  background: rgba(7, 23, 19, 0.03); border-radius: 10px;
+}

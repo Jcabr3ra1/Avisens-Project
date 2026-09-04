@@ -19,6 +19,14 @@ describe('MovimientosInventarioService', () => {
   const insumosService = { registrarMovimiento: jest.fn() };
   const administrador = { id: 1, rol: ROLES.ADMINISTRADOR };
   const propietario = { id: 7, rol: ROLES.PROPIETARIO };
+  const operario = { id: 9, rol: ROLES.OPERARIO, organizacion_id: 4 };
+
+  const whereDe = (mock: jest.Mock): Record<string, unknown> => {
+    const llamadas = mock.mock.calls as unknown as Array<
+      [{ where: Record<string, unknown> }]
+    >;
+    return llamadas[0][0].where;
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -74,6 +82,56 @@ describe('MovimientosInventarioService', () => {
     prisma.movimientoInventario.findFirst.mockResolvedValue(null);
     await expect(service.obtener(99, propietario)).rejects.toThrow(
       NotFoundException,
+    );
+  });
+
+  // El filtro anterior comparaba contra granja.propietario_id, que ningun
+  // operario cumple. Ahora que la ruta le esta abierta, habria visto una
+  // lista vacia en vez de los movimientos de su granja.
+  it('limita el historial del operario a sus galpones asignados', async () => {
+    await service.listar(operario, { page: 1, limit: 20 });
+
+    expect(whereDe(prisma.movimientoInventario.findMany)).toMatchObject({
+      insumo: {
+        granja: {
+          galpones: {
+            some: {
+              usuarios_galpones: {
+                some: { usuario_id: operario.id, activa: true },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('no filtra al operario por propietario_id', async () => {
+    await service.listar(operario, { page: 1, limit: 20 });
+
+    expect(JSON.stringify(whereDe(prisma.movimientoInventario.findMany))).not.toContain(
+      'propietario_id',
+    );
+  });
+
+  it('aplica el mismo alcance al obtener uno suelto', async () => {
+    prisma.movimientoInventario.findFirst.mockResolvedValue({ id: 5 });
+
+    await service.obtener(5, operario);
+
+    expect(whereDe(prisma.movimientoInventario.findFirst)).toMatchObject({
+      id: 5,
+      insumo: { granja: expect.any(Object) as unknown },
+    });
+  });
+
+  it('el administrador sigue sin filtro al obtener uno suelto', async () => {
+    prisma.movimientoInventario.findFirst.mockResolvedValue({ id: 5 });
+
+    await service.obtener(5, administrador);
+
+    expect(whereDe(prisma.movimientoInventario.findFirst)).not.toHaveProperty(
+      'insumo',
     );
   });
 });

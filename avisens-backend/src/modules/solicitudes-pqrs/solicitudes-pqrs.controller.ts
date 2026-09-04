@@ -40,6 +40,12 @@ export class SolicitudesPqrsController {
     return this.service.listar(dto);
   }
 
+  @Get('prospecto/:prospectoId')
+  @ApiOperation({ summary: 'Listar las solicitudes PQRS de un prospecto' })
+  listarDeProspecto(@Param('prospectoId', ParseIntPipe) prospectoId: number) {
+    return this.service.listarDeProspecto(prospectoId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Ver una solicitud PQRS con detalle' })
   obtener(@Param('id', ParseIntPipe) id: number) {

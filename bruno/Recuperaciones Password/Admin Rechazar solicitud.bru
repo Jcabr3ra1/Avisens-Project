@@ -1,0 +1,25 @@
+meta {
+  name: [Admin] Rechazar solicitud
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/v1/recuperaciones-password/1/rechazar
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "observacion": "No se pudo verificar la identidad del solicitante"
+  }
+}

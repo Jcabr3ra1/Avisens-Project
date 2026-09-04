@@ -7,6 +7,7 @@ import { EstadoRecuperacionPassword } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ROLES } from '../../common/auth/roles';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
 
@@ -19,12 +20,43 @@ const RESPUESTA_SOLICITUD = {
 export class RecuperacionesPasswordService {
   constructor(private prisma: PrismaService) {}
 
+  private selectSolicitud = {
+    id: true,
+    estado: true,
+    motivo: true,
+    fecha_creacion: true,
+    atendida_en: true,
+    observacion: true,
+    usuario: {
+      select: {
+        id: true,
+        nombre_completo: true,
+        email: true,
+        cedula: true,
+        activo: true,
+      },
+    },
+    atendida_por: {
+      select: { id: true, nombre_completo: true },
+    },
+  };
+
   async solicitar(email: string, motivo?: string, ip?: string) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { email: email.trim().toLowerCase() },
-      select: { id: true, activo: true },
+      select: {
+        id: true,
+        activo: true,
+        nombre_completo: true,
+        rol: { select: { nombre: true } },
+      },
     });
-    if (!usuario?.activo) return RESPUESTA_SOLICITUD;
+    const rolHabilitado =
+      usuario?.rol.nombre === ROLES.PROPIETARIO ||
+      usuario?.rol.nombre === ROLES.OPERARIO;
+    if (!usuario?.activo || !rolHabilitado) {
+      return RESPUESTA_SOLICITUD;
+    }
 
     const pendiente = await this.prisma.recuperacionPassword.findFirst({
       where: {
@@ -36,12 +68,34 @@ export class RecuperacionesPasswordService {
     if (pendiente) return RESPUESTA_SOLICITUD;
 
     try {
-      await this.prisma.recuperacionPassword.create({
-        data: {
-          usuario_id: usuario.id,
-          motivo: motivo?.trim() || undefined,
-          ip_solicitud: ip,
-        },
+      await this.prisma.$transaction(async (tx) => {
+        const solicitud = await tx.recuperacionPassword.create({
+          data: {
+            usuario_id: usuario.id,
+            motivo: motivo?.trim() || undefined,
+            ip_solicitud: ip,
+          },
+        });
+        const administradores = await tx.usuario.findMany({
+          where: {
+            activo: true,
+            rol: { nombre: ROLES.ADMINISTRADOR },
+          },
+          select: { id: true },
+        });
+
+        if (administradores.length > 0) {
+          await tx.notificacion.createMany({
+            data: administradores.map((administrador) => ({
+              usuario_id: administrador.id,
+              tipo: 'recuperacion_password',
+              titulo: 'Solicitud de recuperación de contraseña',
+              mensaje: `${usuario.nombre_completo} solicitó restablecer su contraseña.`,
+              referencia_tipo: 'recuperacion_password',
+              referencia_id: solicitud.id,
+            })),
+          });
+        }
       });
     } catch (error) {
       if (
@@ -56,26 +110,7 @@ export class RecuperacionesPasswordService {
   async listar({ page, limit }: PaginationQueryDto) {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.recuperacionPassword.findMany({
-        select: {
-          id: true,
-          estado: true,
-          motivo: true,
-          fecha_creacion: true,
-          atendida_en: true,
-          observacion: true,
-          usuario: {
-            select: {
-              id: true,
-              nombre_completo: true,
-              email: true,
-              cedula: true,
-              activo: true,
-            },
-          },
-          atendida_por: {
-            select: { id: true, nombre_completo: true },
-          },
-        },
+        select: this.selectSolicitud,
         orderBy: { fecha_creacion: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -83,6 +118,14 @@ export class RecuperacionesPasswordService {
       this.prisma.recuperacionPassword.count(),
     ]);
     return paginate(data, total, page, limit);
+  }
+
+  async listarDeUsuario(usuarioId: number) {
+    return this.prisma.recuperacionPassword.findMany({
+      where: { usuario_id: usuarioId },
+      select: this.selectSolicitud,
+      orderBy: { fecha_creacion: 'desc' },
+    });
   }
 
   async aprobar(id: number, administradorId: number, observacion?: string) {

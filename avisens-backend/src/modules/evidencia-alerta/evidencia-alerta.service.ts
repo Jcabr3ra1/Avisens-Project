@@ -4,11 +4,8 @@ import { CreateEvidenciaAlertaDto } from './dto/create-evidencia-alerta.dto';
 import { UpdateEvidenciaAlertaDto } from './dto/update-evidencia-alerta.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
-import {
-  esPropietario,
-  verificarDueno,
-  type Solicitante,
-} from '../../common/auth/acceso';
+import { type Solicitante } from '../../common/auth/acceso';
+import { filtroAlertas, verificarAccesoGalpon } from '../../common/auth/alcance';
 
 const EVIDENCIA_SELECT = {
   id: true,
@@ -29,6 +26,7 @@ const EVIDENCIA_SELECT = {
   alerta: {
     select: {
       id: true,
+      galpon_id: true,
       tipo: true,
       estado: true,
       galpon: {
@@ -53,6 +51,7 @@ export class EvidenciaAlertaService {
       where: { id: alertaId },
       select: {
         id: true,
+        galpon_id: true,
         galpon: {
           select: {
             granja: {
@@ -69,10 +68,12 @@ export class EvidenciaAlertaService {
       throw new NotFoundException('Alerta no encontrada');
     }
 
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      alerta.galpon_id,
       solicitante,
-      alerta.galpon.granja.propietario_id,
       'No tienes acceso a esta alerta',
+      alerta.galpon.granja.propietario_id,
     );
 
     return alerta;
@@ -95,17 +96,8 @@ export class EvidenciaAlertaService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = esPropietario(solicitante)
-      ? {
-          alerta: {
-            galpon: {
-              granja: {
-                propietario_id: solicitante.id,
-              },
-            },
-          },
-        }
-      : undefined;
+    const filtro = filtroAlertas(solicitante);
+    const where = filtro ? { alerta: filtro } : undefined;
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.evidenciaAlerta.findMany({
@@ -131,10 +123,12 @@ export class EvidenciaAlertaService {
       throw new NotFoundException('Evidencia no encontrada');
     }
 
-    verificarDueno(
+    await verificarAccesoGalpon(
+      this.prisma,
+      evidencia.alerta.galpon_id,
       solicitante,
-      evidencia.alerta.galpon.granja.propietario_id,
       'No tienes acceso a esta evidencia',
+      evidencia.alerta.galpon.granja.propietario_id,
     );
 
     return evidencia;

@@ -50,3 +50,8 @@ export async function eliminarProveedorPermanente(
   )
   return data
 }
+
+export async function obtenerProveedor(id: number): Promise<Proveedor> {
+  const { data } = await api.get<Proveedor>(`/proveedores/${id}`)
+  return data
+}
