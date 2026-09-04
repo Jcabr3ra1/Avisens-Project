@@ -171,6 +171,56 @@ describe('AlertasService', () => {
   });
 
   describe('evaluarLectura', () => {
+    // semana_vida elige el rango ambiental del galpón. Se cuenta desde el día
+    // de vida, que empieza en 1, así que la primera semana va del día 1 al 7.
+    // Sin el ajuste, el día 7 caería en la semana siguiente y se compararía
+    // contra el umbral equivocado un día antes cada semana.
+    describe('semana de vida con la que busca el umbral', () => {
+      const prepararSensorConLote = (fechaIngreso: Date) => {
+        prisma.sensor.findUnique.mockResolvedValue({
+          id: 3,
+          tipo: 'Temperatura',
+          galpon_id: 1,
+          galpon: {
+            nombre: 'Galpón Norte',
+            granja: { propietario_id: 5 },
+            lotes: [{ fecha_ingreso: fechaIngreso }],
+          },
+        });
+        prisma.umbralAmbiental.findFirst.mockResolvedValue(null);
+      };
+
+      const semanaConsultada = (): number => {
+        const llamadas = prisma.umbralAmbiental.findFirst.mock
+          .calls as unknown as Array<[{ where: { semana_vida: number } }]>;
+        return llamadas[0][0].where.semana_vida;
+      };
+
+      it('el día 1 y el día 7 caen en la semana 0', async () => {
+        prepararSensorConLote(new Date('2026-08-01T00:00:00.000Z'));
+        await service.evaluarLectura(3, 25, new Date('2026-08-01T15:00:00Z'));
+        expect(semanaConsultada()).toBe(0);
+
+        jest.clearAllMocks();
+        prepararSensorConLote(new Date('2026-08-01T00:00:00.000Z'));
+        await service.evaluarLectura(3, 25, new Date('2026-08-07T15:00:00Z'));
+        expect(semanaConsultada()).toBe(0);
+      });
+
+      it('el día 8 ya es la semana 1', async () => {
+        prepararSensorConLote(new Date('2026-08-01T00:00:00.000Z'));
+        await service.evaluarLectura(3, 25, new Date('2026-08-08T15:00:00Z'));
+        expect(semanaConsultada()).toBe(1);
+      });
+
+      // A las 02:00 UTC en la granja son las 21:00 del día anterior.
+      it('usa el día de la granja, no el del servidor', async () => {
+        prepararSensorConLote(new Date('2026-08-01T00:00:00.000Z'));
+        await service.evaluarLectura(3, 25, new Date('2026-08-08T02:00:00Z'));
+        expect(semanaConsultada()).toBe(0);
+      });
+    });
+
     it('crea una alerta y notifica cuando una lectura supera el umbral', async () => {
       prisma.sensor.findUnique.mockResolvedValue({
         id: 3,
