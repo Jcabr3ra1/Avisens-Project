@@ -35,9 +35,9 @@ export function filtrarAlertas(
 ): AlertaApi[] {
   return alertas.filter((alerta) => {
     const coincideEstado = filtros.estado === 'todas' || alerta.estado === filtros.estado
-    // El desplegable ofrece "Crítica" como 'alta', pero el backend también
-    // emite 'critica'. Sin esto, filtrar por Crítica escondía justo las más
-    // graves, que es lo contrario de lo que el usuario pide.
+    // El desplegable ofrece "Crítica" como 'alta', que es el techo de la
+    // escala. Se compara por esCriticidadAlta y no en crudo para que los datos
+    // escritos antes de unificar la escala sigan encontrándose.
     const coincideCriticidad =
       filtros.criticidad === 'todas' ||
       (filtros.criticidad === 'alta'
@@ -55,18 +55,18 @@ export function etiquetaEstado(estado: EstadoAlerta): string {
   return 'Cerrada'
 }
 
-// El backend acepta cuatro niveles —baja, media, alta, critica— pero el
-// camino automático de sensores solo produce 'media' y 'alta'; 'critica' solo
-// llega en alertas creadas a mano. Antes no estaba contemplada y caía al
-// último return: el nivel MÁS grave se mostraba como "Informativa".
+// La escala es baja/media/alta y 'alta' es el techo. Se sigue aceptando
+// 'critica' porque estuvo permitida hasta que se unificó la escala: cualquier
+// fila vieja con ese valor debe seguir contando como grave, no caer al último
+// return y mostrarse como "Informativa", que es el bug que hubo aquí.
 export function esCriticidadAlta(criticidad: string): boolean {
   const normalizada = normalizarCriticidad(criticidad)
   return normalizada === 'alta' || normalizada === 'critica'
 }
 
-// El valor viaja como texto libre: han aparecido 'critica' y 'crítica' según
-// quién la creara. Comparar en crudo dejaba fuera a la mitad, así que todo el
-// módulo compara por aquí y no contra la cadena original.
+// El campo aceptó texto libre hasta que el backend le puso @IsIn, así que
+// llegaron a convivir 'critica' y 'crítica'. Comparar en crudo dejaba fuera a
+// la mitad, así que todo el módulo compara por aquí.
 export function normalizarCriticidad(criticidad: string): string {
   return criticidad.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 }
