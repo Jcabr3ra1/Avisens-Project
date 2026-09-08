@@ -110,6 +110,22 @@ describe('InsumosService', () => {
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
+    // La ruta pasó a aceptar al propietario: antes era sólo del admin, y el
+    // flujo de compras se cortaba porque el detalle de una orden apunta a un
+    // insumo_id que el propietario no podía dar de alta.
+    it('deja al propietario crear insumos en su propia granja', async () => {
+      conCallback();
+      tx.inventarioInsumo.create.mockResolvedValue({
+        id: 1,
+        unidad_medida: 'kg',
+        stock_actual: new Prisma.Decimal(0),
+      });
+
+      await service.crear(dtoCrear, DUENO);
+
+      expect(tx.inventarioInsumo.create).toHaveBeenCalled();
+    });
+
     it('deja rastro del stock inicial como movimiento de entrada', async () => {
       conCallback();
       tx.inventarioInsumo.create.mockResolvedValue({

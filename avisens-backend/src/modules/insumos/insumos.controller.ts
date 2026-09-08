@@ -39,9 +39,14 @@ interface AuthRequest extends Request {
 export class InsumosController {
   constructor(private insumosService: InsumosService) {}
 
+  // Un insumo no es estructura productiva, es inventario: lo maneja quien
+  // opera la granja. El propietario ya podía crear la orden de compra y
+  // recibirla, pero el detalle apunta a un insumo_id que sólo el admin podía
+  // dar de alta, así que el flujo se cortaba en el primer paso. El servicio
+  // ya valida que la granja sea suya, aquí sólo se abre la puerta.
   @Post()
-  @Roles(ROLES.ADMINISTRADOR)
-  @ApiOperation({ summary: 'Crear un insumo en una granja (solo Admin)' })
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({ summary: 'Crear un insumo en una granja' })
   crear(@Body() dto: CreateInsumoDto, @Req() req: AuthRequest) {
     return this.insumosService.crear(dto, req.user);
   }
@@ -86,10 +91,10 @@ export class InsumosController {
   }
 
   @Patch(':id')
-  @Roles(ROLES.ADMINISTRADOR)
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary:
-      'Actualizar un insumo (solo Admin). El stock NO se toca aqui: se mueve con POST /:id/movimientos',
+      'Actualizar un insumo. El stock NO se toca aqui: se mueve con POST /:id/movimientos',
   })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -100,15 +105,15 @@ export class InsumosController {
   }
 
   @Patch(':id/activar')
-  @Roles(ROLES.ADMINISTRADOR)
-  @ApiOperation({ summary: 'Activar un insumo (solo Admin)' })
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({ summary: 'Activar un insumo' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.insumosService.activar(id, req.user);
   }
 
   @Delete(':id')
-  @Roles(ROLES.ADMINISTRADOR)
-  @ApiOperation({ summary: 'Desactivar un insumo (borrado suave, solo Admin)' })
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({ summary: 'Desactivar un insumo (borrado suave)' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.insumosService.desactivar(id, req.user);
   }
