@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   Kit de administración — la piel común de Granjas, Galpones y Lotes.
+   Kit de administración — la piel común de los módulos operativos.
 
    Estas tres pantallas son la consola del administrador: es donde se
    crea la estructura productiva (granja → galpón → lote). Antes cada
@@ -312,7 +312,7 @@ a.adm-miga:hover {
 }
 
 .adm-segmento {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0.36rem 0.68rem;
   border: none;
   border-radius: 8px;
@@ -346,6 +346,38 @@ a.adm-miga:hover {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.adm-barra-extra,
+.adm-barra-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.adm-barra-extra label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.adm-barra-extra select {
+  min-height: 44px;
+  padding: 0.45rem 2rem 0.45rem 0.65rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.adm-barra-extra select:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -388,6 +420,13 @@ a.adm-miga:hover {
   .adm-cabecera-fila { flex-direction: column; }
   .adm-cabecera-acciones { justify-content: flex-start; }
   .adm-barra { align-items: stretch; flex-direction: column; }
+  .adm-barra > * { min-width: 0; max-width: 100%; }
+  .adm-buscador { width: 100%; }
   .adm-conteo { margin-left: 0; align-self: flex-start; }
-  .adm-segmentos { overflow-x: auto; }
+  .adm-segmentos { width: 100%; overflow-x: auto; }
+  .adm-barra-extra,
+  .adm-barra-acciones { width: 100%; }
+  .adm-barra-extra label,
+  .adm-barra-extra select,
+  .adm-barra-acciones .adm-btn { width: 100%; }
 }

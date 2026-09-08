@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import type { Notificacion } from '@features/notificaciones/api/notificaciones'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcBell, IcCheck } from '@shared/ui/icons/icons'
 import { useNotificaciones } from './hooks/useNotificaciones'
+import '@shared/ui/admin/AdminKit.css'
 import './NotificacionesPage.css'
 
 const ETIQUETAS_TIPO: Record<string, string> = {
@@ -42,28 +44,29 @@ function NotificacionesPage() {
   }
 
   return (
-    <div className="page-container not-page">
-      <header className="not-cabecera">
-        <div>
-          <h1>Notificaciones</h1>
-          <p>Avisos del sistema para tu cuenta. {noLeidas > 0 && <strong>Tienes {noLeidas} sin leer.</strong>}</p>
-        </div>
-        <button
-          className="not-boton not-boton--secundario"
-          type="button"
-          onClick={() => void marcarTodas()}
-          disabled={noLeidas === 0 || cargando}
-        >
-          <IcCheck size={14} aria-hidden="true" /> Marcar todas como leídas
-        </button>
-      </header>
+    <div className="page-container not-page adm-page">
+      <CabeceraAdmin
+        eyebrow="Centro de avisos"
+        titulo="Notificaciones"
+        subtitulo={noLeidas > 0 ? `Avisos del sistema para tu cuenta. Tienes ${noLeidas} sin leer.` : 'Avisos del sistema para tu cuenta. Estás al día.'}
+        acciones={(
+          <button
+            className="adm-btn adm-btn--secundario"
+            type="button"
+            onClick={() => void marcarTodas()}
+            disabled={noLeidas === 0 || cargando}
+          >
+            <IcCheck size={14} aria-hidden="true" /> Marcar todas como leídas
+          </button>
+        )}
+      />
 
-      {error && <p className="not-aviso not-aviso--error" role="alert">{error}</p>}
+      {error && <p className="not-aviso not-aviso--error adm-alerta" role="alert">{error}</p>}
 
       {cargando ? (
         <p className="not-cargando" role="status">Cargando notificaciones…</p>
       ) : ordenadas.length === 0 ? (
-        <section className="not-vacio">
+        <section className="not-vacio adm-panel">
           <IcBell size={32} aria-hidden="true" />
           <h2>No tienes notificaciones</h2>
           <p>Cuando el sistema genere un aviso para ti, aparecerá aquí.</p>

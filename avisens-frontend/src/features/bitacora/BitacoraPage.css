@@ -1,6 +1,5 @@
 .bit-page { display: flex; flex-direction: column; gap: 0.9rem; }
 
-.bit-header,
 .bit-contexto-lote,
 .bit-resumen-lote,
 .bit-card {
@@ -10,33 +9,14 @@
   box-shadow: var(--gr-sombra, var(--adm-shadow));
 }
 
-.bit-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.2rem 1.35rem;
-}
-
-.bit-page--admin .bit-header {
-  border-left: 4px solid var(--green);
-  background: linear-gradient(112deg, var(--card), var(--bg-tint));
-}
-
-.bit-header > div:first-child { min-width: 0; }
-.bit-header p, .bit-kicker { margin: 0 0 0.22rem; color: var(--gr-deep, var(--avisens-deep)); font-size: 0.67rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
-.bit-header h1 { margin: 0; color: var(--dash-ink); font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -0.026em; }
-.bit-header > div:first-child > span { display: block; margin-top: 0.35rem; color: var(--text3); font-size: 0.86rem; line-height: 1.45; }
-
-.bit-header-controles { display: flex; flex: 0 1 auto; align-items: flex-end; justify-content: flex-end; gap: 0.55rem; min-width: 0; }
-.bit-selector-jerarquico { display: grid; grid-template-columns: repeat(3, minmax(112px, 1fr)); gap: 0.38rem; min-width: min(590px, 52vw); margin: 0; padding: 0.43rem; border: 1px solid var(--gr-line, var(--border)); border-radius: 12px; background: var(--bg-tint); }
-.bit-selector-jerarquico legend { width: 1px; height: 1px; overflow: hidden; padding: 0; position: absolute; clip: rect(0 0 0 0); white-space: nowrap; }
+.bit-kicker { margin: 0 0 0.22rem; color: var(--gr-deep, var(--avisens-deep)); font-size: 0.67rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.bit-selector-jerarquico { margin: 0; padding: 0.85rem; }
+.bit-selector-jerarquico legend { padding: 0 0.35rem; color: var(--color-texto-secundario); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+.bit-selector-campos { display: grid; grid-template-columns: repeat(3, minmax(112px, 1fr)); gap: 0.6rem; }
 .bit-selector-jerarquico label { display: flex; min-width: 0; flex-direction: column; gap: 0.25rem; color: var(--text2); font-size: 0.65rem; font-weight: 800; letter-spacing: 0.035em; text-transform: uppercase; }
-.bit-selector-jerarquico select { min-width: 0; min-height: 39px; padding: 0 0.58rem; border: 1px solid var(--gr-line, var(--border)); border-radius: 8px; color: var(--dash-ink); background: var(--card); font: inherit; font-size: 0.76rem; font-weight: 700; text-transform: none; }
+.bit-selector-jerarquico select { min-width: 0; min-height: 44px; padding: 0 0.58rem; border: 1px solid var(--gr-line, var(--border)); border-radius: 8px; color: var(--dash-ink); background: var(--card); font: inherit; font-size: 0.76rem; font-weight: 700; text-transform: none; }
 .bit-selector-jerarquico select:disabled { color: var(--text3); cursor: not-allowed; }
-.bit-actualizar { display: inline-flex; min-height: 42px; align-items: center; gap: 0.36rem; padding: 0 0.75rem; border: 1px solid var(--gr-line, var(--border)); border-radius: 10px; color: var(--gr-deep, var(--avisens-deep)); background: var(--card); font: inherit; font-size: 0.78rem; font-weight: 800; cursor: pointer; }
-
-.bit-alert { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 0.9rem; border: 1px solid #fecaca; border-radius: 12px; color: #b91c1c; background: #fff2f2; font-size: 0.82rem; }
+.bit-alert { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: 0.82rem; }
 .bit-alert button { border: 0; color: inherit; background: transparent; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
 
 .bit-contexto-lote { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.95rem 1.15rem; }
@@ -57,7 +37,7 @@
 .bit-indicador--info > span { color: var(--info3); background: rgba(59, 130, 246, 0.12); }
 
 .bit-tabs { display: inline-flex; align-self: flex-start; gap: 0.22rem; padding: 0.23rem; border: 1px solid var(--gr-line, var(--border)); border-radius: 11px; background: var(--bg-tint); }
-.bit-tabs button { display: inline-flex; min-height: 37px; align-items: center; gap: 0.36rem; padding: 0.38rem 0.68rem; border: 1px solid transparent; border-radius: 8px; color: var(--text3); background: transparent; font: inherit; font-size: 0.76rem; font-weight: 780; cursor: pointer; }
+.bit-tabs button { display: inline-flex; min-height: 44px; align-items: center; gap: 0.36rem; padding: 0.38rem 0.68rem; border: 1px solid transparent; border-radius: 8px; color: var(--text3); background: transparent; font: inherit; font-size: 0.76rem; font-weight: 780; cursor: pointer; }
 .bit-tabs button.activo { border-color: var(--gr-line, var(--border)); color: var(--gr-deep, var(--avisens-deep)); background: var(--card); box-shadow: 0 1px 3px rgba(10, 40, 28, 0.08); }
 
 .bit-card { overflow: hidden; }
@@ -72,27 +52,26 @@
 .bit-acciones small { margin-top: 0.18rem; color: var(--text3); font-size: 0.72rem; font-weight: 500; }
 
 .bit-seccion-cab { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.1rem; border-bottom: 1px solid var(--gr-line, var(--border)); }
-.bit-principal { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; padding: 0.45rem 0.7rem; border: 1px solid var(--gr-deep, var(--avisens-deep)); border-radius: 9px; color: #fff; background: var(--gr-deep, var(--avisens-deep)); font: inherit; font-size: 0.77rem; font-weight: 800; cursor: pointer; }
+.bit-principal { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 0.45rem 0.7rem; border: 1px solid var(--gr-deep, var(--avisens-deep)); border-radius: 9px; color: #fff; background: var(--gr-deep, var(--avisens-deep)); font: inherit; font-size: 0.77rem; font-weight: 800; cursor: pointer; }
 .bit-lista article { display: grid; grid-template-columns: 112px minmax(120px, 0.7fr) 1.4fr auto; gap: 0.8rem; align-items: center; padding: 0.84rem 1.1rem; border-bottom: 1px solid var(--gr-line, var(--border)); }
 .bit-lista article:last-child { border-bottom: 0; }
 .bit-lista time, .bit-lista span { color: var(--text3); font-size: 0.78rem; }
 .bit-lista strong { color: var(--dash-ink); font-size: 0.83rem; }
-.bit-lista button { min-height: 33px; padding: 0 0.48rem; border: 1px solid #fecaca; border-radius: 8px; color: #c52424; background: var(--card); font: inherit; font-size: 0.72rem; font-weight: 750; cursor: pointer; }
+.bit-lista button { min-height: 44px; padding: 0 0.62rem; border: 1px solid #fecaca; border-radius: 8px; color: #c52424; background: var(--card); font: inherit; font-size: 0.72rem; font-weight: 750; cursor: pointer; }
 .bit-vacio { margin: 0; padding: 2rem 1rem; color: var(--text3); font-size: 0.82rem; line-height: 1.5; text-align: center; }
 .bit-vacio h2 { margin: 0; color: var(--dash-ink); font-size: 1.1rem; }
 .bit-vacio p { margin: 0.35rem 0 0; }
 
-.bit-selector-jerarquico select:focus-visible, .bit-actualizar:focus-visible, .bit-tabs button:focus-visible, .bit-acciones button:focus-visible, .bit-principal:focus-visible, .bit-lista button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-.bit-actualizar:hover, .bit-tabs button:hover, .bit-acciones button:hover { border-color: rgba(0, 91, 72, 0.28); color: var(--gr-deep, var(--avisens-deep)); }
+.bit-selector-jerarquico select:focus-visible, .bit-tabs button:focus-visible, .bit-acciones button:focus-visible, .bit-principal:focus-visible, .bit-lista button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.bit-tabs button:hover, .bit-acciones button:hover { border-color: rgba(0, 91, 72, 0.28); color: var(--gr-deep, var(--avisens-deep)); }
 .bit-principal:hover { filter: brightness(0.95); }
 
 @media (max-width: 900px) {
-  .bit-header { align-items: flex-start; flex-direction: column; }
-  .bit-header-controles { width: 100%; justify-content: space-between; }
-  .bit-selector-jerarquico { min-width: 0; flex: 1; }
+  .bit-selector-campos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 680px) {
+  .bit-selector-campos { grid-template-columns: 1fr; }
   .bit-resumen-lote { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bit-indicador:nth-child(2) { border-right: 0; }
   .bit-indicador:nth-child(-n + 2) { border-bottom: 1px solid var(--gr-line, var(--border)); }
@@ -104,9 +83,7 @@
 }
 
 @media (max-width: 520px) {
-  .bit-header, .bit-contexto-lote, .bit-seccion-cab { align-items: flex-start; flex-direction: column; }
-  .bit-header-controles { align-items: stretch; flex-direction: column; }
-  .bit-selector-jerarquico { grid-template-columns: 1fr; width: 100%; }
-  .bit-actualizar, .bit-principal { width: 100%; }
+  .bit-contexto-lote, .bit-seccion-cab { align-items: flex-start; flex-direction: column; }
+  .bit-principal { width: 100%; }
   .bit-acciones { grid-template-columns: 1fr; }
 }

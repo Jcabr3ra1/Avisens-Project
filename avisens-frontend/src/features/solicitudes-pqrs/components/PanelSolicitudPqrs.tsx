@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
-import { IcClose } from '@shared/ui/icons/icons'
+import Modal from '@shared/ui/Modal/Modal'
 import type { EstadoSolicitudPqrs, SolicitudPqrs } from '../model/solicitudPqrs'
 
 type Props = {
@@ -12,6 +12,8 @@ type Props = {
   onEliminar: (id: number) => Promise<void>
 }
 
+const ID_FORMULARIO = 'formulario-respuesta-pqrs'
+
 function PanelSolicitudPqrs({ solicitud, responsableId, onCerrar, onResponder, onEliminar }: Props) {
   const [estado, setEstado] = useState<Exclude<EstadoSolicitudPqrs, 'abierta'>>(
     solicitud.estado === 'abierta' ? 'en_proceso' : solicitud.estado,
@@ -21,15 +23,6 @@ function PanelSolicitudPqrs({ solicitud, responsableId, onCerrar, onResponder, o
   const [eliminando, setEliminando] = useState(false)
 
   const contacto = solicitud.prospecto.nombre || solicitud.prospecto.telefono || solicitud.prospecto.email || 'Sin datos de contacto'
-
-  useEffect(() => {
-    const cerrarConEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !guardando && !eliminando) onCerrar()
-    }
-
-    window.addEventListener('keydown', cerrarConEscape)
-    return () => window.removeEventListener('keydown', cerrarConEscape)
-  }, [eliminando, guardando, onCerrar])
 
   const enviar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -65,57 +58,57 @@ function PanelSolicitudPqrs({ solicitud, responsableId, onCerrar, onResponder, o
   }
 
   return (
-    <div className="pqrs-modal" role="presentation" onMouseDown={onCerrar}>
-      <section className="pqrs-panel" role="dialog" aria-modal="true" aria-labelledby="pqrs-detalle-titulo" onMouseDown={(event) => event.stopPropagation()}>
-        <header className="pqrs-panel-cabecera">
-          <div>
-            <p className="pqrs-kicker">{solicitud.categoria}</p>
-            <h2 id="pqrs-detalle-titulo">Solicitud de {contacto}</h2>
-          </div>
-          <button type="button" className="pqrs-cerrar" onClick={onCerrar} aria-label="Cerrar detalle de la solicitud">
-            <IcClose size={20} aria-hidden="true" />
+    <Modal
+      titulo={`Solicitud de ${contacto}`}
+      subtitulo={solicitud.categoria}
+      onCerrar={onCerrar}
+      ancho="ancho"
+      acciones={(
+        <>
+          <button
+            type="button"
+            className="modal-btn modal-btn--danger pqrs-eliminar"
+            onClick={() => void eliminar()}
+            disabled={guardando || eliminando}
+          >
+            {eliminando ? 'Eliminando…' : 'Eliminar solicitud'}
           </button>
-        </header>
+          <button type="button" className="modal-btn" onClick={onCerrar} disabled={guardando || eliminando}>
+            Cancelar
+          </button>
+          <button type="submit" form={ID_FORMULARIO} className="modal-btn modal-btn--primary" disabled={guardando || eliminando}>
+            {guardando ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+        </>
+      )}
+    >
+      <dl className="pqrs-datos-contacto">
+        <div><dt>Teléfono</dt><dd>{solicitud.prospecto.telefono || 'No registrado'}</dd></div>
+        <div><dt>Correo</dt><dd>{solicitud.prospecto.email || 'No registrado'}</dd></div>
+        <div><dt>Canal</dt><dd>{solicitud.prospecto.canal_origen || 'No registrado'}</dd></div>
+      </dl>
 
-        <div className="pqrs-panel-contenido">
-          <dl className="pqrs-datos-contacto">
-            <div><dt>Teléfono</dt><dd>{solicitud.prospecto.telefono || 'No registrado'}</dd></div>
-            <div><dt>Correo</dt><dd>{solicitud.prospecto.email || 'No registrado'}</dd></div>
-            <div><dt>Canal</dt><dd>{solicitud.prospecto.canal_origen || 'No registrado'}</dd></div>
-          </dl>
+      <div className="pqrs-mensaje">
+        <h3>{solicitud.asunto || 'Sin asunto'}</h3>
+        <p>{solicitud.mensaje || 'La persona no dejó un mensaje adicional.'}</p>
+      </div>
 
-          <div className="pqrs-mensaje">
-            <h3>{solicitud.asunto || 'Sin asunto'}</h3>
-            <p>{solicitud.mensaje || 'La persona no dejó un mensaje adicional.'}</p>
-          </div>
+      <form id={ID_FORMULARIO} className="pqrs-form" onSubmit={(event) => void enviar(event)}>
+        <label className="modal-campo">
+          <span>Estado</span>
+          <select value={estado} onChange={(event) => setEstado(event.target.value as Exclude<EstadoSolicitudPqrs, 'abierta'>)}>
+            <option value="en_proceso">En proceso</option>
+            <option value="resuelta">Resuelta</option>
+            <option value="cerrada">Cerrada</option>
+          </select>
+        </label>
 
-          <form onSubmit={(event) => void enviar(event)}>
-            <label className="pqrs-campo">
-              <span>Estado</span>
-              <select value={estado} onChange={(event) => setEstado(event.target.value as Exclude<EstadoSolicitudPqrs, 'abierta'>)}>
-                <option value="en_proceso">En proceso</option>
-                <option value="resuelta">Resuelta</option>
-                <option value="cerrada">Cerrada</option>
-              </select>
-            </label>
-
-            <label className="pqrs-campo">
-              <span>Respuesta o nota interna</span>
-              <textarea value={respuesta} onChange={(event) => setRespuesta(event.target.value)} rows={5} placeholder="Escribe cómo se atendió esta solicitud." />
-            </label>
-
-            <div className="pqrs-panel-acciones">
-              <button type="button" className="pqrs-boton-peligro" onClick={() => void eliminar()} disabled={guardando || eliminando}>
-                {eliminando ? 'Eliminando…' : 'Eliminar'}
-              </button>
-              <button type="submit" className="pqrs-boton-principal" disabled={guardando || eliminando}>
-                {guardando ? 'Guardando…' : 'Guardar cambios'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
-    </div>
+        <label className="modal-campo">
+          <span>Respuesta o nota interna <em>(Opcional)</em></span>
+          <textarea value={respuesta} onChange={(event) => setRespuesta(event.target.value)} rows={5} placeholder="Describe cómo se atendió esta solicitud." />
+        </label>
+      </form>
+    </Modal>
   )
 }
 

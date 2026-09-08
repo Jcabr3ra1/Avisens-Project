@@ -38,8 +38,8 @@
 
 .dash-workspace-logo {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
   place-items: center;
   border-radius: var(--radius-md);
@@ -62,7 +62,7 @@
 }
 
 .dash-sidebar-toggle,
-.dash-campana-boton { width: 36px; height: 36px; flex: 0 0 auto; border-radius: var(--radius-md); }
+.dash-campana-boton { width: 44px; height: 44px; flex: 0 0 auto; border-radius: var(--radius-md); }
 .dash-sidebar-toggle:hover,
 .dash-campana-boton:hover,
 .dash-campana-boton.abierta { color: #fff; background: var(--sidebar-hover); }
@@ -189,7 +189,7 @@
 .dash-campana-punto { position: absolute; top: -3px; right: -3px; min-width: 16px; padding: 0 4px; border: 2px solid var(--primary); border-radius: var(--radius-full); color: var(--primary); background: var(--avisens-yellow); font-size: 0.6rem; font-weight: 800; line-height: 14px; text-align: center; }
 .dash-campana-popover { position: absolute; top: calc(100% + 8px); left: 0; z-index: 70; display: flex; width: min(320px, calc(100vw - 32px)); max-height: min(500px, calc(100dvh - 80px)); flex-direction: column; overflow: hidden; color: var(--text-primary); background: var(--surface-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
 .dash-campana-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-3); border-bottom: 1px solid var(--border-subtle); font-size: 0.86rem; }
-.dash-campana-todas { min-height: 36px; padding: 0 var(--space-2); border-radius: var(--radius-sm); color: var(--primary); font: inherit; font-size: 0.75rem; font-weight: 700; }
+.dash-campana-todas { min-height: 44px; padding: 0 var(--space-2); border-radius: var(--radius-sm); color: var(--primary); font: inherit; font-size: 0.75rem; font-weight: 700; }
 .dash-campana-todas:hover { background: var(--primary-soft); }
 .dash-campana-lista { display: flex; max-height: 320px; flex-direction: column; overflow-y: auto; }
 .dash-campana-estado { padding: var(--space-5) var(--space-3); color: var(--text-muted); font-size: 0.82rem; text-align: center; }

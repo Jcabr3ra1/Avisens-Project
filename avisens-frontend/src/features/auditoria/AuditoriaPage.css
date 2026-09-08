@@ -1,74 +1,18 @@
 .aud-page {
-  display: flex;
-  flex-direction: column;
-  gap: 1.2rem;
-}
-
-.aud-cabecera {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding-bottom: 1.2rem;
-  border-bottom: 1px solid rgba(16, 44, 35, 0.07);
-}
-
-.aud-cabecera h1 {
-  margin: 0;
-  color: var(--dash-ink);
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-
-.aud-cabecera p {
-  margin: 0.3rem 0 0;
-  color: var(--text3);
-  font-size: 0.9rem;
-}
-
-.aud-boton {
-  min-height: 44px;
-  padding: 0.6rem 1.1rem;
-  color: var(--text);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.aud-boton:hover:not(:disabled) {
-  background: var(--card-h);
-  border-color: var(--green);
-}
-
-.aud-boton:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+  max-width: 1280px;
 }
 
 .aud-aviso {
   margin: 0;
-  padding: 0.7rem 0.9rem;
-  color: var(--red);
-  background: color-mix(in srgb, var(--red) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
-  border-radius: 10px;
-  font-size: 0.88rem;
 }
 
 .aud-aviso button {
-  min-height: 36px;
-  padding: 0.35rem 0.65rem;
+  min-height: 44px;
+  padding: 0.45rem 0.75rem;
   color: inherit;
   background: transparent;
   border: 1px solid currentColor;
-  border-radius: 8px;
+  border-radius: var(--radio-md);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -77,7 +21,7 @@
 .aud-cargando {
   margin: 0;
   padding: 2rem;
-  color: var(--text3);
+  color: var(--color-texto-secundario);
   text-align: center;
 }
 
@@ -87,31 +31,31 @@
   align-items: center;
   gap: 0.4rem;
   padding: 3rem 2rem;
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px dashed var(--border2);
-  border-radius: 18px;
+  border-style: dashed;
   text-align: center;
 }
 
-.aud-vacio h2 {
+.aud-vacio h2,
+.aud-vacio p {
   margin: 0;
-  color: var(--text2);
+}
+
+.aud-vacio h2 {
+  color: var(--color-texto);
   font-size: 1rem;
 }
 
-.aud-vacio p {
-  margin: 0;
-  color: var(--text3);
-  font-size: 0.86rem;
+.aud-vacio p,
+.aud-tabla-contenedor td strong + span,
+.aud-registro-id,
+.aud-ip {
+  color: var(--color-texto-secundario);
+  font-size: 0.82rem;
 }
 
 .aud-listado {
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(16, 44, 35, 0.09);
-  border-radius: 20px;
-  box-shadow: 0 6px 24px rgba(10, 40, 28, 0.07);
-  backdrop-filter: blur(8px);
+  padding: 0;
 }
 
 .aud-tabla-contenedor {
@@ -126,10 +70,10 @@
 }
 
 .aud-tabla-contenedor th {
-  padding: 0.75rem 1.2rem;
-  color: var(--text3);
-  background: rgba(7, 23, 19, 0.025);
-  border-bottom: 1px solid rgba(16, 44, 35, 0.08);
+  padding: 0.8rem 1.2rem;
+  color: var(--color-texto-secundario);
+  background: var(--color-superficie-secundaria);
+  border-bottom: 1px solid var(--color-borde);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.07em;
@@ -138,18 +82,18 @@
 }
 
 .aud-tabla-contenedor td {
-  padding: 0.75rem 1.2rem;
-  color: var(--text);
-  border-bottom: 1px solid rgba(16, 44, 35, 0.055);
+  padding: 0.8rem 1.2rem;
+  color: var(--color-texto);
+  border-bottom: 1px solid var(--color-borde);
   vertical-align: top;
 }
 
 .aud-tabla-contenedor tbody tr:last-child td {
-  border-bottom: none;
+  border-bottom: 0;
 }
 
 .aud-tabla-contenedor tbody tr:hover td {
-  background: rgba(16, 185, 129, 0.03);
+  background: var(--color-superficie-secundaria);
 }
 
 .aud-tabla-contenedor td strong {
@@ -157,20 +101,15 @@
   font-weight: 700;
 }
 
-.aud-tabla-contenedor td strong + span {
-  color: var(--text3);
-  font-size: 0.8rem;
-}
-
-.aud-fecha {
+.aud-fecha,
+.aud-ip {
   white-space: nowrap;
-  color: var(--text2);
   font-variant-numeric: tabular-nums;
 }
 
 .aud-accion {
   display: inline-block;
-  padding: 0.2rem 0.6rem;
+  padding: 0.25rem 0.6rem;
   border-radius: 999px;
   font-size: 0.76rem;
   font-weight: 700;
@@ -180,58 +119,50 @@
 .aud-accion--crear,
 .aud-accion--create,
 .aud-accion--registro {
-  color: var(--green-dd);
-  background: rgba(16, 185, 129, 0.12);
+  color: #166534;
+  background: #dcfce7;
 }
 
 .aud-accion--actualizar,
 .aud-accion--update,
 .aud-accion--edicion {
-  color: #2563eb;
-  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  background: #dbeafe;
 }
 
 .aud-accion--eliminar,
 .aud-accion--delete,
 .aud-accion--anular {
   color: #b91c1c;
-  background: rgba(239, 68, 68, 0.12);
+  background: #fee2e2;
 }
 
 .aud-accion--login,
 .aud-accion--logout,
 .aud-accion--sesion {
-  color: #b45309;
-  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+  background: #fef3c7;
 }
 
-.aud-registro-id {
-  color: var(--text3);
-  font-size: 0.8rem;
-}
-
-.aud-ip {
-  color: var(--text3);
-  font-size: 0.82rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.aud-enlace {
-  padding: 0.4rem 0.8rem;
-  color: var(--green-dd);
-  background: color-mix(in srgb, var(--green) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--green) 25%, transparent);
-  border-radius: 8px;
+.aud-enlace,
+.aud-paginado button {
+  min-height: 44px;
+  padding: 0.45rem 0.8rem;
+  color: var(--color-primario-oscuro);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-md);
   font: inherit;
   font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s ease;
 }
 
-.aud-enlace:hover {
-  background: color-mix(in srgb, var(--green) 16%, transparent);
+.aud-enlace:hover,
+.aud-paginado button:hover:not(:disabled) {
+  background: var(--color-superficie-secundaria);
+  border-color: var(--color-primario);
 }
 
 .aud-paginado {
@@ -240,30 +171,12 @@
   justify-content: flex-end;
   gap: 0.9rem;
   padding: 0.75rem 1.2rem;
-  border-top: 1px solid rgba(16, 44, 35, 0.07);
+  border-top: 1px solid var(--color-borde);
 }
 
 .aud-paginado span {
-  color: var(--text3);
+  color: var(--color-texto-secundario);
   font-size: 0.82rem;
-}
-
-.aud-paginado button {
-  min-height: 38px;
-  padding: 0.35rem 0.8rem;
-  color: var(--text);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.aud-paginado button:hover:not(:disabled) {
-  background: var(--card-h);
-  border-color: var(--green);
 }
 
 .aud-paginado button:disabled {
@@ -271,82 +184,10 @@
   opacity: 0.5;
 }
 
-.aud-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  background: rgba(7, 20, 14, 0.55);
-  backdrop-filter: blur(4px);
-}
-
-.aud-panel {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 620px;
-  max-height: calc(100dvh - 2rem);
-  overflow-y: auto;
-  background: rgba(255, 255, 255, 0.98);
-  border: 1px solid rgba(16, 44, 35, 0.1);
-  border-radius: 20px;
-  box-shadow: 0 32px 80px rgba(7, 20, 14, 0.35);
-}
-
-.aud-panel-cabecera {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.4rem 1.5rem 0.9rem;
-  border-bottom: 1px solid rgba(16, 44, 35, 0.07);
-}
-
-.aud-panel-cabecera h2 {
-  margin: 0.2rem 0 0;
-  color: var(--dash-ink);
-  font-size: 1.2rem;
-  font-weight: 800;
-  text-transform: capitalize;
-}
-
-.aud-kicker {
-  margin: 0;
-  color: var(--green-dd);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.aud-cerrar {
-  display: inline-flex;
-  flex: 0 0 44px;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  color: var(--text3);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.aud-cerrar:hover {
-  color: var(--text);
-  background: var(--card-h);
-}
-
 .aud-panel-contenido {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1.2rem 1.5rem 1.5rem;
 }
 
 .aud-datos {
@@ -355,8 +196,8 @@
   gap: 0.55rem;
   margin: 0;
   padding: 0.9rem 1rem;
-  background: color-mix(in srgb, var(--green) 5%, transparent);
-  border-radius: 12px;
+  background: var(--color-superficie-secundaria);
+  border-radius: var(--radio-md);
 }
 
 .aud-datos > div {
@@ -366,7 +207,7 @@
 }
 
 .aud-datos dt {
-  color: var(--text3);
+  color: var(--color-texto-secundario);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -375,26 +216,25 @@
 
 .aud-datos dd {
   margin: 0;
-  color: var(--text);
+  color: var(--color-texto);
   font-size: 0.9rem;
   overflow-wrap: anywhere;
 }
 
 .aud-json-seccion h3 {
   margin: 0 0 0.4rem;
-  color: var(--text2);
+  color: var(--color-texto);
   font-size: 0.85rem;
-  font-weight: 700;
 }
 
 .aud-json-seccion pre {
   margin: 0;
   padding: 0.85rem 1rem;
   overflow-x: auto;
-  color: var(--text);
-  background: rgba(7, 23, 19, 0.04);
-  border: 1px solid rgba(16, 44, 35, 0.09);
-  border-radius: 10px;
+  color: var(--color-texto);
+  background: var(--color-superficie-secundaria);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-md);
   font-family: 'DM Mono', monospace;
   font-size: 0.78rem;
   line-height: 1.5;
@@ -403,14 +243,15 @@
 .aud-sin-json {
   margin: 0;
   padding: 0.8rem 1rem;
-  color: var(--text3);
-  background: rgba(7, 23, 19, 0.03);
-  border-radius: 10px;
+  color: var(--color-texto-secundario);
+  background: var(--color-superficie-secundaria);
+  border-radius: var(--radio-md);
   font-size: 0.86rem;
 }
 
 .aud-sr-only {
   position: absolute;
+  left: 0;
   width: 1px;
   height: 1px;
   padding: 0;
@@ -421,30 +262,21 @@
   border: 0;
 }
 
-.aud-boton:focus-visible,
 .aud-enlace:focus-visible,
-.aud-cerrar:focus-visible,
 .aud-aviso button:focus-visible,
 .aud-paginado button:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--green) 40%, transparent);
+  outline: 3px solid var(--color-foco);
   outline-offset: 2px;
 }
 
 @media (max-width: 640px) {
-  .aud-cabecera {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .aud-paginado {
     justify-content: center;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .aud-boton,
   .aud-enlace,
-  .aud-cerrar,
   .aud-paginado button {
     transition: none;
   }

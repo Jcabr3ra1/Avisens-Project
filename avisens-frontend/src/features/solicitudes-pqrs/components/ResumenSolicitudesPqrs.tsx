@@ -1,4 +1,6 @@
 import type { SolicitudPqrs } from '../model/solicitudPqrs'
+import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
+import { IcAlert, IcCheck, IcClock, IcDoc } from '@shared/ui/icons/icons'
 
 type Props = {
   solicitudes: SolicitudPqrs[]
@@ -11,31 +13,14 @@ function ResumenSolicitudesPqrs({ solicitudes }: Props) {
     (solicitud) => solicitud.estado === 'resuelta' || solicitud.estado === 'cerrada',
   ).length
 
-  const indicadores = [
-    { etiqueta: 'Total', valor: solicitudes.length, tono: 'neutral' },
-    { etiqueta: 'Pendientes', valor: abiertas, tono: 'pendiente' },
-    { etiqueta: 'En proceso', valor: enProceso, tono: 'proceso' },
-    { etiqueta: 'Finalizadas', valor: resueltas, tono: 'finalizada' },
+  const indicadores: Stat[] = [
+    { label: 'Total', valor: solicitudes.length, icono: <IcDoc size={18} /> },
+    { label: 'Pendientes', valor: abiertas, icono: <IcAlert size={18} />, tono: 'aviso' },
+    { label: 'En proceso', valor: enProceso, icono: <IcClock size={18} />, tono: 'info' },
+    { label: 'Finalizadas', valor: resueltas, icono: <IcCheck size={18} />, tono: 'ok' },
   ]
 
-  return (
-    <section className="pqrs-resumen" aria-label="Resumen de solicitudes PQRS">
-      <div className="pqrs-intro">
-        <p className="pqrs-kicker">Atención al cliente</p>
-        <h1>Solicitudes PQRS</h1>
-        <p>Organiza las peticiones, quejas, reclamos y sugerencias recibidas.</p>
-      </div>
-
-      <div className="pqrs-indicadores">
-        {indicadores.map((indicador) => (
-          <article key={indicador.etiqueta} className={`pqrs-indicador pqrs-indicador--${indicador.tono}`}>
-            <strong>{indicador.valor}</strong>
-            <span>{indicador.etiqueta}</span>
-          </article>
-        ))}
-      </div>
-    </section>
-  )
+  return <TarjetasResumen stats={indicadores} etiqueta="Resumen de solicitudes PQRS" />
 }
 
 export default ResumenSolicitudesPqrs

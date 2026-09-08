@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { IcAlert } from '@shared/ui/icons/icons'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import BannerAlertaCritica from './components/BannerAlertaCritica'
 import FiltrosAlertas from './components/FiltrosAlertas'
 import ListaAlertas from './components/ListaAlertas'
@@ -12,6 +12,7 @@ import {
   type Alerta,
   type FiltrosAlertas as FiltrosAlertasModel,
 } from './model/alerta'
+import '@shared/ui/admin/AdminKit.css'
 import './AlertasPage.css'
 
 const FILTROS_INICIALES: FiltrosAlertasModel = {
@@ -37,17 +38,15 @@ function AlertasPage() {
   }
 
   return (
-    <div className="page-container ale-page">
-      <header className="ale-header">
-        <div>
-          <span className="ale-sobrelinea"><IcAlert size={16} /> Monitoreo de producción</span>
-          <h1>Alertas</h1>
-          <p>Revisa, atiende y deja registrada cada situación detectada por los sensores.</p>
-        </div>
-      </header>
+    <div className="page-container ale-page adm-page">
+      <CabeceraAdmin
+        eyebrow="Monitoreo de producción"
+        titulo="Alertas"
+        subtitulo="Revisa, atiende y deja registrada cada situación detectada por los sensores."
+      />
 
       {error && (
-        <div className="ale-error" role="alert">
+        <div className="ale-error adm-alerta" role="alert">
           {error}
           <button type="button" onClick={() => void recargar()}>Reintentar</button>
         </div>

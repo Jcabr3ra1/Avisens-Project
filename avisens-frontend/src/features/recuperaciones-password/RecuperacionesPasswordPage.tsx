@@ -4,6 +4,7 @@ import ResumenRecuperaciones from './components/ResumenRecuperaciones'
 import TablaRecuperaciones from './components/TablaRecuperaciones'
 import { useRecuperacionesPassword } from './hooks/useRecuperacionesPassword'
 import type { RecuperacionPassword } from './model/recuperacionPassword'
+import '@shared/ui/admin/AdminKit.css'
 import './RecuperacionesPassword.css'
 
 function RecuperacionesPasswordPage() {
@@ -11,13 +12,13 @@ function RecuperacionesPasswordPage() {
   const [seleccionada, setSeleccionada] = useState<RecuperacionPassword | null>(null)
 
   return (
-    <div className="page-container rec-page">
+    <div className="page-container rec-page adm-page">
       <ResumenRecuperaciones solicitudes={solicitudes} />
       {error && <p className="rec-aviso rec-aviso--error" role="alert">{error} <button type="button" onClick={() => void cargar()}>Reintentar</button></p>}
       {cargando ? (
         <p className="rec-cargando" role="status">Cargando solicitudes…</p>
       ) : !error && solicitudes.length === 0 ? (
-        <section className="rec-vacio">
+        <section className="rec-vacio adm-panel">
           <h2>No hay solicitudes pendientes</h2>
           <p>Las solicitudes de propietarios y operarios aparecerán aquí para su revisión.</p>
         </section>

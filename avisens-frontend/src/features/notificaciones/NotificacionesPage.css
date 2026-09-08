@@ -4,39 +4,11 @@
   gap: 1.2rem;
 }
 
-.not-cabecera {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding-bottom: 1.2rem;
-  border-bottom: 1px solid rgba(16, 44, 35, 0.07);
-}
-
-.not-cabecera h1 {
-  margin: 0;
-  color: var(--dash-ink);
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-
-.not-cabecera p {
-  margin: 0.3rem 0 0;
-  color: var(--text3);
-  font-size: 0.9rem;
-}
-
-.not-cabecera p strong {
-  color: var(--green-dd);
-}
-
 .not-boton {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0.45rem 0.9rem;
   border-radius: 10px;
   font: inherit;
@@ -54,7 +26,7 @@
 
 .not-boton--principal {
   color: #fff;
-  background: linear-gradient(135deg, var(--green), var(--green-d));
+  background: var(--color-primario);
   border: none;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.28);
 }
@@ -76,7 +48,7 @@
 }
 
 .not-boton--texto {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0.3rem 0.6rem;
   color: var(--text3);
   background: transparent;
@@ -97,8 +69,6 @@
 
 .not-aviso--error {
   color: var(--red);
-  background: color-mix(in srgb, var(--red) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
 }
 
 .not-cargando {
@@ -115,9 +85,7 @@
   gap: 0.4rem;
   padding: 3rem 2rem;
   color: var(--text4);
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px dashed var(--border2);
-  border-radius: 18px;
+  border-style: dashed;
   text-align: center;
 }
 
@@ -150,11 +118,10 @@
   align-items: flex-start;
   gap: 0.9rem;
   padding: 1rem 1.2rem;
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(16, 44, 35, 0.09);
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(10, 40, 28, 0.05);
-  backdrop-filter: blur(6px);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-sm);
 }
 
 .not-tarjeta--no-leida {
@@ -244,11 +211,6 @@
 }
 
 @media (max-width: 640px) {
-  .not-cabecera {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .not-tarjeta {
     flex-direction: column;
     gap: 0.5rem;
