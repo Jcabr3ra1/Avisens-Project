@@ -6,7 +6,6 @@ import { useResumenProspectos } from './hooks/useResumenProspectos'
 import type { ProspectoVista } from './model/prospectoVista'
 import ResumenCrm from './components/ResumenCrm'
 import BarraHerramientas from './components/BarraHerramientas'
-import TableroKanban from './components/TableroKanban'
 import TablaProspectos from './components/TablaProspectos'
 import PanelDetalle from './components/PanelDetalle'
 import '@shared/ui/admin/AdminKit.css'
@@ -15,8 +14,6 @@ import './CrmPage.css'
 function CrmPage() {
   const { prospectos, cargando, error, recargar } = useProspectos()
   const {
-    vista,
-    setVista,
     filtro,
     setFiltro,
     filtroCanal,
@@ -63,24 +60,18 @@ function CrmPage() {
           <BarraHerramientas
             busqueda={busqueda}
             onBuscar={setBusqueda}
-            vista={vista}
-            onCambiarVista={setVista}
             filtroCanal={filtroCanal}
             onCambiarCanal={setFiltroCanal}
           />
 
-          {vista === 'kanban' ? (
-            <TableroKanban prospectos={visibles} onAbrir={setSeleccionado} />
-          ) : (
-            <TablaProspectos
-              prospectos={visibles}
-              filtro={filtro}
-              onFiltrar={setFiltro}
-              conteos={resumen.porEtapa}
-              total={resumen.total}
-              onAbrir={setSeleccionado}
-            />
-          )}
+          <TablaProspectos
+            prospectos={visibles}
+            filtro={filtro}
+            onFiltrar={setFiltro}
+            conteos={resumen.porEtapa}
+            total={resumen.total}
+            onAbrir={setSeleccionado}
+          />
         </>
       )}
 
