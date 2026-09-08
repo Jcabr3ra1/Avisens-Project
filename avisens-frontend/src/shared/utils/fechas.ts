@@ -14,9 +14,11 @@
 //    tiempo.
 //
 // Se comparan días de calendario en hora local, que es como los cuenta quien
-// trabaja en la granja. La convención es la del backend —el día de ingreso es
-// el día 0— para que la pantalla muestre lo mismo con o sin indicadores
-// calculados.
+// trabaja en la granja. El día de ingreso es el DÍA 1, no el 0: es la
+// convención de la avicultura y la que usan las curvas objetivo, sembradas en
+// los días 7, 14, 21, 28, 35 y 42. Con el día empezando en 0 la búsqueda de
+// la curva (`dia <= dia_vida`) no encontraba nada durante toda la primera
+// semana.
 
 function aMedianocheLocal(fecha: Date): number {
   return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()).getTime()
@@ -31,14 +33,16 @@ function interpretarFecha(valor: string): Date | null {
 
 export function diasDeVida(fechaIngreso: string, ahora: Date = new Date()): number {
   const inicio = interpretarFecha(fechaIngreso)
-  if (inicio === null) return 0
+  if (inicio === null) return 1
   const dias = Math.round((aMedianocheLocal(ahora) - aMedianocheLocal(inicio)) / 86_400_000)
-  return Math.max(dias, 0)
+  return Math.max(dias + 1, 1)
 }
 
-// La semana de vida con la que se busca el umbral del galpón.
+// La semana de vida con la que se busca el umbral del galpón. Se resta uno
+// antes de dividir porque el día de vida empieza en 1: sin eso el día 7
+// caería ya en la semana siguiente y la primera duraría seis días.
 export function semanaDeVida(diaVida: number): number {
-  return Math.floor(Math.max(diaVida, 0) / 7)
+  return Math.floor(Math.max(diaVida - 1, 0) / 7)
 }
 
 // El día de hoy en formato 'YYYY-MM-DD', tomado del calendario local.

@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export type EstadoAlerta = 'abierta' | 'en_proceso' | 'cerrada'
 
@@ -67,11 +67,6 @@ export interface EstadisticasAlertas {
   tasa_resolucion: number
 }
 
-export interface AlertasQuery {
-  page?: number
-  limit?: number
-}
-
 export interface CrearAlertaPayload {
   galpon_id: number
   tipo: string
@@ -92,11 +87,8 @@ export interface ActualizarAlertaPayload {
   fecha_cierre?: string
 }
 
-export async function listarAlertas(query: AlertasQuery = {}): Promise<Alerta[]> {
-  const { data } = await api.get<PaginatedResponse<Alerta>>('/alertas', {
-    params: { page: 1, limit: 100, ...query },
-  })
-  return data.data
+export async function listarAlertas(): Promise<Alerta[]> {
+  return listarTodasLasPaginas<Alerta>('/alertas')
 }
 
 export async function obtenerAlerta(id: number): Promise<Alerta> {
@@ -104,26 +96,12 @@ export async function obtenerAlerta(id: number): Promise<Alerta> {
   return data
 }
 
-export async function listarAlertasDeGalpon(
-  galponId: number,
-  query: AlertasQuery = {},
-): Promise<Alerta[]> {
-  const { data } = await api.get<PaginatedResponse<Alerta>>(
-    `/alertas/galpon/${galponId}`,
-    { params: { page: 1, limit: 100, ...query } },
-  )
-  return data.data
+export async function listarAlertasDeGalpon(galponId: number): Promise<Alerta[]> {
+  return listarTodasLasPaginas<Alerta>(`/alertas/galpon/${galponId}`)
 }
 
-export async function listarAlertasDeLote(
-  loteId: number,
-  query: AlertasQuery = {},
-): Promise<Alerta[]> {
-  const { data } = await api.get<PaginatedResponse<Alerta>>(
-    `/alertas/lote/${loteId}`,
-    { params: { page: 1, limit: 100, ...query } },
-  )
-  return data.data
+export async function listarAlertasDeLote(loteId: number): Promise<Alerta[]> {
+  return listarTodasLasPaginas<Alerta>(`/alertas/lote/${loteId}`)
 }
 
 export async function obtenerEstadisticasAlertas(): Promise<EstadisticasAlertas> {
@@ -171,10 +149,8 @@ export interface DestinatarioAlerta {
 }
 
 export async function listarDestinatariosAlerta(): Promise<DestinatarioAlerta[]> {
-  const { data } = await api.get<PaginatedResponse<DestinatarioAlerta>>('/usuarios', {
-    params: { page: 1, limit: 100 },
-  })
-  return data.data.filter((usuario) => usuario.activo)
+  const usuarios = await listarTodasLasPaginas<DestinatarioAlerta>('/usuarios')
+  return usuarios.filter((usuario) => usuario.activo)
 }
 
 export async function eliminarAlerta(

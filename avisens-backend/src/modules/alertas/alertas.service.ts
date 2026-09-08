@@ -14,6 +14,8 @@ import {
   verificarAccesoLote,
   verificarAccesoSensor,
 } from '../../common/auth/alcance';
+import { diaDeVida, semanaDeVida } from '../../common/fechas/dias-de-vida';
+import { CRITICIDADES_GRAVES } from '../../common/criticidad/criticidad';
 
 const ALERTA_SELECT = {
   id: true,
@@ -107,14 +109,11 @@ export class AlertasService {
     if (!variable) return null;
 
     const loteActivo = sensor.galpon.lotes[0] ?? null;
+    // Misma cuenta que en indicadores: días de calendario de la granja, con
+    // el ingreso como día 1. Dividir milisegundos entre siete días arrastraba
+    // el desfase horario hasta el umbral ambiental que se elige.
     const semanaVida = loteActivo
-      ? Math.max(
-          0,
-          Math.floor(
-            (fecha.getTime() - loteActivo.fecha_ingreso.getTime()) /
-              (7 * 24 * 60 * 60 * 1000),
-          ),
-        )
+      ? semanaDeVida(diaDeVida(loteActivo.fecha_ingreso, fecha))
       : 0;
     const umbral = await this.prisma.umbralAmbiental.findFirst({
       where: {
@@ -514,7 +513,12 @@ export class AlertasService {
       this.prisma.alerta.count({ where: { ...where, estado: 'abierta' } }),
       this.prisma.alerta.count({ where: { ...where, estado: 'en_proceso' } }),
       this.prisma.alerta.count({ where: { ...where, estado: 'cerrada' } }),
-      this.prisma.alerta.count({ where: { ...where, criticidad: 'critica' } }),
+      // Contaba 'critica', un valor que ningún camino automático escribe:
+      // el tablero decía cero mientras había lecturas muy fuera de rango sin
+      // atender. Ahora cuenta el nivel más alto que el sistema sí alcanza.
+      this.prisma.alerta.count({
+        where: { ...where, criticidad: { in: [...CRITICIDADES_GRAVES] } },
+      }),
     ]);
 
     return {

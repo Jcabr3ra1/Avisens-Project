@@ -4,6 +4,10 @@ import { Solicitante } from '../../common/auth/acceso';
 import { verificarAccesoLote } from '../../common/auth/alcance';
 import { ROLES } from '../../common/auth/roles';
 import { Prisma } from '@prisma/client';
+import {
+  diaDeVida,
+  inicioDelDiaEnZonaGranja,
+} from '../../common/fechas/dias-de-vida';
 
 export const PESO_INICIAL_G = 42;
 const UMBRAL_DESVIO_PCT = 5;
@@ -64,9 +68,7 @@ export class IndicadoresService {
     const muertes = mortalidad._sum.cantidad_aves ?? 0;
 
     const avesVivas = lote.cantidad_inicial - muertes;
-    const diaVida = Math.floor(
-      (Date.now() - lote.fecha_ingreso.getTime()) / (1000 * 60 * 60 * 24),
-    );
+    const diaVida = diaDeVida(lote.fecha_ingreso);
     const mortalidadPct = (muertes / lote.cantidad_inicial) * 100;
 
     let fcr: number | null = null;
@@ -85,8 +87,11 @@ export class IndicadoresService {
     const consumoAcumuladoG =
       avesVivas > 0 ? (alimentoKg * 1000) / avesVivas : null;
 
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    // La fila lleva el día que vive la granja. Con setHours() en un servidor
+    // UTC, el job de las 02:00 —las 21:00 allá— la estampaba con la fecha de
+    // mañana, y durante esas cinco horas el lote se comparaba contra la curva
+    // del día siguiente.
+    const hoy = inicioDelDiaEnZonaGranja();
 
     return this.prisma.indicadorLote.upsert({
       where: { lote_id_fecha: { lote_id: loteId, fecha: hoy } },

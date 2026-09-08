@@ -35,14 +35,21 @@ export function useRepuestos(mantenimientoId: number) {
     void cargar()
   }, [cargar])
 
-  // La clave de idempotencia la exige el backend: agregar un repuesto descuenta
-  // stock de bodega, y sin ella un doble clic lo descontaría dos veces.
+  // La clave de idempotencia la pone quien llama, no este hook: agregar un
+  // repuesto descuenta stock, y para que el backend reconozca un reintento la
+  // clave tiene que ser la MISMA en los dos envíos. Generándola aquí dentro
+  // cambiaba en cada llamada y esa protección nunca llegaba a actuar.
   const agregar = useCallback(
-    async (insumoId: number, cantidad: number, descripcion?: string) => {
+    async (
+      insumoId: number,
+      cantidad: number,
+      claveIdempotencia: string,
+      descripcion?: string,
+    ) => {
       const creado = await agregarRepuesto(mantenimientoId, {
         insumo_id: insumoId,
         cantidad,
-        clave_idempotencia: crypto.randomUUID(),
+        clave_idempotencia: claveIdempotencia,
         descripcion,
       })
       setRepuestos((actuales) => [...actuales, creado])

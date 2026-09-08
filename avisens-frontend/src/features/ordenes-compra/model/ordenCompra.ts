@@ -75,3 +75,4 @@ export const FORMULARIO_ORDEN_INICIAL: FormularioOrden = {
   fecha_pedido: fechaDeHoy(),
   fecha_entrega_estimada: '',
 }
+

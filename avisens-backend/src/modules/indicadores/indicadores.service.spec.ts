@@ -89,6 +89,64 @@ describe('IndicadoresService · calcularParaLote', () => {
       NotFoundException,
     );
   });
+
+  // El job corre a las 02:00 UTC, que son las 21:00 en la granja: allá
+  // todavía es el día anterior. Antes se restaban milisegundos contra la
+  // hora del servidor, así que la fila salía estampada con la fecha de
+  // mañana y el lote se comparaba contra la curva del día siguiente.
+  describe('a la hora en que corre el job', () => {
+    const ingreso = new Date('2026-07-30T00:00:00.000Z');
+
+    const prepararLote = () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        fecha_ingreso: ingreso,
+        cantidad_inicial: 1000,
+        sexo: 'macho',
+      });
+      prisma.pesaje.findFirst.mockResolvedValue({ peso_promedio_g: 1000 });
+      prisma.consumoDiario.aggregate.mockResolvedValue({
+        _sum: { alimento_kg: 1000 },
+      });
+      prisma.registroMortalidad.aggregate.mockResolvedValue({
+        _sum: { cantidad_aves: 0 },
+      });
+    };
+
+    afterEach(() => jest.useRealTimers());
+
+    it('cuenta el día que vive la granja, no el del servidor', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-03T02:00:00.000Z'));
+      prepararLote();
+
+      await service.calcularParaLote(1);
+
+      const guardado = guardadoDe(prisma.indicadorLote.upsert);
+      // En Colombia son las 21:00 del 2 de septiembre: día 35 de vida.
+      expect(guardado.dia_vida).toBe(35);
+      expect(guardado.fecha).toEqual(new Date('2026-09-02T00:00:00.000Z'));
+    });
+
+    it('cinco horas después ya es el día siguiente', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-03T05:00:00.000Z'));
+      prepararLote();
+
+      await service.calcularParaLote(1);
+
+      const guardado = guardadoDe(prisma.indicadorLote.upsert);
+      expect(guardado.dia_vida).toBe(36);
+      expect(guardado.fecha).toEqual(new Date('2026-09-03T00:00:00.000Z'));
+    });
+
+    it('el día de ingreso es el día 1, no el 0', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-07-30T15:00:00.000Z'));
+      prepararLote();
+
+      await service.calcularParaLote(1);
+
+      expect(guardadoDe(prisma.indicadorLote.upsert).dia_vida).toBe(1);
+    });
+  });
 });
 
 describe('IndicadoresService · compararConCurva', () => {
@@ -328,4 +386,5 @@ describe('IndicadoresService · kpisFinancieros', () => {
     expect(r.kg_producidos).toBe(0);
     expect(r.costo_por_kg_cop).toBeNull();
   });
+
 });

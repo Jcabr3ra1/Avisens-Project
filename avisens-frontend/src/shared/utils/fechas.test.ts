@@ -13,58 +13,73 @@ function local(iso: string): Date {
 }
 
 describe('diasDeVida', () => {
-  it('el día de ingreso es el día 0', () => {
-    expect(diasDeVida('2026-08-12', local('2026-08-12T10:00:00'))).toBe(0)
+  it('el día de ingreso es el día 1', () => {
+    // Convención de la avicultura, y la que usan las curvas objetivo:
+    // están sembradas en los días 7, 14, 21, 28, 35 y 42.
+    expect(diasDeVida('2026-08-12', local('2026-08-12T10:00:00'))).toBe(1)
   })
 
   it('no avanza por la tarde del mismo día', () => {
     // Este era el bug: restando milisegundos contra medianoche UTC, a las
     // 7 p.m. en Colombia la diferencia ya pasaba de 24 h y saltaba a 1.
-    expect(diasDeVida('2026-08-12', local('2026-08-12T19:30:00'))).toBe(0)
-    expect(diasDeVida('2026-08-12', local('2026-08-12T23:59:00'))).toBe(0)
+    expect(diasDeVida('2026-08-12', local('2026-08-12T19:30:00'))).toBe(1)
+    expect(diasDeVida('2026-08-12', local('2026-08-12T23:59:00'))).toBe(1)
   })
 
   it('avanza a medianoche, no antes', () => {
-    expect(diasDeVida('2026-08-12', local('2026-08-13T00:01:00'))).toBe(1)
-    expect(diasDeVida('2026-08-12', local('2026-08-13T06:00:00'))).toBe(1)
+    expect(diasDeVida('2026-08-12', local('2026-08-13T00:01:00'))).toBe(2)
+    expect(diasDeVida('2026-08-12', local('2026-08-13T06:00:00'))).toBe(2)
   })
 
-  it('cuenta un ciclo completo de engorde', () => {
-    expect(diasDeVida('2026-08-12', local('2026-09-23T08:00:00'))).toBe(42)
+  it('un ciclo de engorde termina en el día 42', () => {
+    // 41 días después del ingreso: el día 42 del ciclo, que es donde está
+    // el último punto de la curva objetivo.
+    expect(diasDeVida('2026-08-12', local('2026-09-22T08:00:00'))).toBe(42)
   })
 
-  it('una fecha futura no da días negativos', () => {
-    expect(diasDeVida('2026-09-10', local('2026-09-01T12:00:00'))).toBe(0)
+  it('una fecha futura nunca baja del día 1', () => {
+    expect(diasDeVida('2026-09-10', local('2026-09-01T12:00:00'))).toBe(1)
   })
 
   it('acepta también una fecha con hora, no solo el día suelto', () => {
-    expect(diasDeVida('2026-08-12T00:00:00', local('2026-08-15T09:00:00'))).toBe(3)
+    expect(diasDeVida('2026-08-12T00:00:00', local('2026-08-15T09:00:00'))).toBe(4)
   })
 
   it('una fecha inválida no rompe la pantalla', () => {
-    expect(diasDeVida('no-es-fecha', local('2026-08-15T09:00:00'))).toBe(0)
+    expect(diasDeVida('no-es-fecha', local('2026-08-15T09:00:00'))).toBe(1)
   })
 
   it('cruza el cambio de mes sin perder un día', () => {
-    expect(diasDeVida('2026-08-30', local('2026-09-02T10:00:00'))).toBe(3)
+    expect(diasDeVida('2026-08-30', local('2026-09-02T10:00:00'))).toBe(4)
   })
 })
 
 describe('semanaDeVida', () => {
-  it('la primera semana es la 0 y dura siete días', () => {
+  it('la primera semana son los días 1 al 7', () => {
+    // Con el día empezando en 1, dividir sin restar antes haría que el
+    // día 7 cayera ya en la semana siguiente y la primera durara seis.
+    expect(semanaDeVida(1)).toBe(0)
+    expect(semanaDeVida(7)).toBe(0)
+  })
+
+  it('el día 8 abre la segunda semana', () => {
+    expect(semanaDeVida(8)).toBe(1)
+    expect(semanaDeVida(14)).toBe(1)
+  })
+
+  it('cada semana dura exactamente siete días', () => {
+    for (let semana = 0; semana < 6; semana += 1) {
+      expect(semanaDeVida(semana * 7 + 1)).toBe(semana)
+      expect(semanaDeVida(semana * 7 + 7)).toBe(semana)
+    }
+  })
+
+  it('el día 42 cierra la sexta semana, final del ciclo', () => {
+    expect(semanaDeVida(42)).toBe(5)
+  })
+
+  it('un valor absurdo no produce una semana negativa', () => {
     expect(semanaDeVida(0)).toBe(0)
-    expect(semanaDeVida(6)).toBe(0)
-  })
-
-  it('el día 7 abre la semana 1', () => {
-    expect(semanaDeVida(7)).toBe(1)
-  })
-
-  it('el día 41 sigue en la semana 5, ya al final del ciclo', () => {
-    expect(semanaDeVida(41)).toBe(5)
-  })
-
-  it('un día negativo no produce una semana negativa', () => {
     expect(semanaDeVida(-3)).toBe(0)
   })
 })
