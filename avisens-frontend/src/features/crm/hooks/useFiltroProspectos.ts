@@ -6,7 +6,7 @@ export type Filtro = 'todos' | EtapaProspecto
 export type FiltroCanal = 'todos' | 'web' | 'whatsapp'
 
 export function useFiltroProspectos(prospectos: ProspectoVista[]) {
-  const [vista, setVista] = useState<Vista>('kanban')
+  const [vista, setVista] = useState<Vista>('tabla')
   const [filtro, setFiltro] = useState<Filtro>('todos')
   const [busqueda, setBusqueda] = useState('')
   const [filtroCanal, setFiltroCanal] = useState<FiltroCanal>('todos')

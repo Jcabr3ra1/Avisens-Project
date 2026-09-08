@@ -787,4 +787,8 @@
     width: 100%;
     justify-content: flex-start;
   }
+
+  .crm-embudo .crm-hero-funnel-sep {
+    display: none;
+  }
 }

@@ -1,6 +1,8 @@
+import { useRef } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { IcSidebar } from '@shared/ui/icons/icons'
 import { getUsuario, logout } from '@shared/api'
+import { useFocoAtrapado } from '@shared/ui/Modal/useFocoAtrapado'
 import logoAvisens from '@shared/assets/logo-avisens.png'
 import CampanaNotificaciones from './CampanaNotificaciones'
 import {
@@ -40,8 +42,11 @@ function filtrarItems(items: NavItem[], rol: string | null): NavLinkItem[] {
 
 const Sidebar = ({ collapsed, mobileOpen, onCloseMobile, onToggle, rol }: Props) => {
   const navigate = useNavigate()
+  const sidebar = useRef<HTMLElement>(null)
   const usuario = getUsuario()
   const rutaInicio = rutaInicioPorRol(rol)
+
+  useFocoAtrapado(sidebar, mobileOpen, onCloseMobile)
 
   const secciones = NAV_SECTIONS
     .map((section) => ({ ...section, items: filtrarItems(section.items, rol) }))
@@ -100,8 +105,10 @@ const Sidebar = ({ collapsed, mobileOpen, onCloseMobile, onToggle, rol }: Props)
 
   return (
     <aside
+      ref={sidebar}
       id="navegacion-principal"
       className={`dash-sidebar${mobileOpen ? ' is-mobile-open' : ''}`}
+      aria-label="Menú principal"
     >
       <div className="dash-side-blob" />
 

@@ -43,14 +43,19 @@ function PanelShell({
           onToggle={onToggle}
           rol={rol}
         />
-        <button
-          type="button"
-          className={`dash-sidebar-backdrop${mobileMenuOpen ? ' is-visible' : ''}`}
-          onClick={onCloseMobileMenu}
-          aria-label="Cerrar menú de navegación"
-          tabIndex={mobileMenuOpen ? 0 : -1}
-        />
-        <div className="dash-content">
+        {mobileMenuOpen && (
+          <button
+            type="button"
+            className="dash-sidebar-backdrop is-visible"
+            onClick={onCloseMobileMenu}
+            aria-label="Cerrar menú de navegación"
+          />
+        )}
+        <div
+          className="dash-content"
+          aria-hidden={mobileMenuOpen || undefined}
+          inert={mobileMenuOpen || undefined}
+        >
           <header className="dash-mobile-header">
             <button
               type="button"

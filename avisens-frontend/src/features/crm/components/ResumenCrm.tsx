@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import {
   IcChart,
@@ -43,16 +44,18 @@ function ResumenCrm({ resumen }: Props) {
         <span className="crm-embudo-titulo">Flujo comercial</span>
         <div className="crm-hero-funnel">
           {EMBUDO.map(({ etapa, icono, label, color }, i) => (
-            <div key={etapa} className="crm-hero-funnel-stage">
-              <span className="crm-hero-funnel-cnt" style={{ color }}>
-                {resumen.porEtapa[etapa]}
-              </span>
-              <span className="crm-hero-funnel-lbl">
-                {icono} {label}
-              </span>
-              <span className="crm-hero-funnel-rango">{RANGOS_PUNTAJE[etapa]}</span>
+            <Fragment key={etapa}>
+              <div className="crm-hero-funnel-stage">
+                <span className="crm-hero-funnel-cnt" style={{ color }}>
+                  {resumen.porEtapa[etapa]}
+                </span>
+                <span className="crm-hero-funnel-lbl">
+                  {icono} {label}
+                </span>
+                <span className="crm-hero-funnel-rango">{RANGOS_PUNTAJE[etapa]}</span>
+              </div>
               {i < EMBUDO.length - 1 && <span className="crm-hero-funnel-sep">›</span>}
-            </div>
+            </Fragment>
           ))}
 
           {resumen.porEtapa.descartado > 0 && (

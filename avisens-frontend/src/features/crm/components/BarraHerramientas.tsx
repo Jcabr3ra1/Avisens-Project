@@ -47,7 +47,7 @@ function BarraHerramientas({
           aria-pressed={vista === 'kanban'}
           onClick={() => onCambiarVista('kanban')}
         >
-          <IcGrid size={14} /> Kanban
+          <IcGrid size={14} /> Flujo
         </button>
         <button
           type="button"

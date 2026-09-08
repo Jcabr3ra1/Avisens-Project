@@ -95,7 +95,7 @@
   to { opacity: 0; transform: scale(2.2); }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .dash-page {
     height: 100dvh;
     background: var(--surface-page);
