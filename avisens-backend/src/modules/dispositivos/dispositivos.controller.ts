@@ -96,8 +96,11 @@ export class DispositivosController {
     return this.dispositivosService.desactivar(id, req.user);
   }
 
+  // El borrado definitivo de infraestructura es del administrador, igual que
+  // en granja, galpón y lote. El propietario desactiva con DELETE :id, que no
+  // pierde los sensores ni las ingestas colgadas del dispositivo.
   @Delete(':id/permanente')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
     summary: 'Eliminar un dispositivo de forma permanente (casos legales)',
   })

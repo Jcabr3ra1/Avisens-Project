@@ -87,8 +87,11 @@ export class SensoresController {
     return this.sensoresService.desactivar(id, req.user);
   }
 
+  // El borrado definitivo de infraestructura es del administrador, igual que
+  // en granja, galpón y lote. El propietario desactiva con DELETE :id, que no
+  // pierde el histórico de mediciones colgado del sensor.
   @Delete(':id/permanente')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
     summary: 'Eliminar un sensor de forma permanente (casos legales)',
   })
