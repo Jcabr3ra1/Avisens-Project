@@ -13,6 +13,11 @@ import com.project.avisensandroid.model.PaginatedResponse
 import com.project.avisensandroid.model.ProveedorResponse
 import com.project.avisensandroid.model.RegistroMortalidadRequest
 import com.project.avisensandroid.model.RegistroMortalidadResponse
+import com.project.avisensandroid.model.CreateUsuarioRequest
+import com.project.avisensandroid.model.UsuarioGestionResponse
+import com.project.avisensandroid.model.RolCatalogoResponse
+import com.project.avisensandroid.model.AsignarGalponRequest
+import com.project.avisensandroid.model.UsuarioGalponResponse
 import com.project.avisensandroid.model.UserResponse
 import retrofit2.Response
 import retrofit2.http.Body
@@ -40,6 +45,43 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Response<UserResponse>
 
+
+    // =========================================================
+    // USUARIOS / GESTIÓN DE OPERARIOS
+    // =========================================================
+
+    @POST("v1/usuarios")
+    suspend fun crearUsuario(
+        @Body request: CreateUsuarioRequest
+    ): Response<UsuarioGestionResponse>
+
+    @GET("v1/usuarios")
+    suspend fun listarUsuarios(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<UsuarioGestionResponse>>
+
+    @GET("v1/usuarios/catalogos/roles")
+    suspend fun listarRolesUsuarios(): Response<List<RolCatalogoResponse>>
+
+    @POST("v1/usuarios/{id}/galpones")
+    suspend fun asignarGalpon(
+        @Path("id") usuarioId: Int,
+        @Body request: AsignarGalponRequest
+    ): Response<UsuarioGalponResponse>
+
+    @GET("v1/usuarios/{id}/galpones")
+    suspend fun listarGalponesAsignados(
+        @Path("id") usuarioId: Int,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<UsuarioGalponResponse>>
+
+    @DELETE("v1/usuarios/{id}/galpones/{galponId}")
+    suspend fun desasignarGalpon(
+        @Path("id") usuarioId: Int,
+        @Path("galponId") galponId: Int
+    ): Response<Unit>
 
     // =========================================================
     // INSUMOS

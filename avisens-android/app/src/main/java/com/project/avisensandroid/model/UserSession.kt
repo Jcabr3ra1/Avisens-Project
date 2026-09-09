@@ -81,9 +81,9 @@ object UserSession {
     fun isLoggedIn(context: Context): Boolean =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getBoolean(KEY_SESSION_ACTIVE, false) &&
-            !context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .getString(KEY_TOKEN, null)
-                .isNullOrBlank()
+                !context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                    .getString(KEY_TOKEN, null)
+                    .isNullOrBlank()
 
     fun clear(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

@@ -42,6 +42,8 @@ import com.project.avisensandroid.ui.fragments.BodegaFragment
 import com.project.avisensandroid.ui.fragments.BitacoraEnfermoFragment
 import com.project.avisensandroid.ui.fragments.BitacoraFragment
 import com.project.avisensandroid.ui.fragments.InicioFragment
+import com.project.avisensandroid.ui.fragments.PropietarioFragment
+import com.project.avisensandroid.ui.fragments.GestionOperariosFragment
 import com.project.avisensandroid.ui.fragments.SensoresFragment
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -209,16 +211,26 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (rolActual == UserRole.OPERARIO) {
-
-            setContentView(R.layout.activity_main)
-
-            if (savedInstanceState == null) {
-                mostrarFragment(InicioFragment())
+        when (rolActual) {
+            UserRole.OPERARIO -> {
+                setContentView(R.layout.activity_main)
+                if (savedInstanceState == null) {
+                    mostrarFragment(InicioFragment())
+                }
             }
 
-        } else {
-            mostrarPantallaRolPendiente()
+            UserRole.PROPIETARIO -> {
+                setContentView(R.layout.activity_propietario)
+                if (savedInstanceState == null) {
+                    mostrarPanelPropietario()
+                }
+            }
+
+            UserRole.ADMINISTRADOR -> {
+                mostrarPantallaRolPendiente()
+            }
+
+            null -> irALogin()
         }
     }
 
@@ -239,6 +251,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun mostrarPanelPropietario() {
+        if (rolActual != UserRole.PROPIETARIO) return
+
+        supportFragmentManager
+            .beginTransaction()
+            .replace(R.id.propietarioFragmentContainer, PropietarioFragment())
+            .commit()
+    }
+
+    fun mostrarGestionOperarios() {
+        if (rolActual != UserRole.PROPIETARIO) return
+
+        supportFragmentManager
+            .beginTransaction()
+            .replace(R.id.propietarioFragmentContainer, GestionOperariosFragment())
+            .addToBackStack(null)
+            .commit()
+    }
+
+    fun cerrarSesionDesdeRol() {
+        cerrarSesion()
+    }
+
     private fun cerrarSesion() {
         UserSession.clear(this)
         irALogin()
@@ -251,55 +286,34 @@ class MainActivity : AppCompatActivity() {
     fun mostrarFragment(
         fragment: Fragment
     ) {
-
-        if (!esOperario()) return
+        if (rolActual != UserRole.OPERARIO && rolActual != UserRole.PROPIETARIO) return
 
         supportFragmentManager
             .beginTransaction()
             .replace(
-                R.id.mainFragmentContainer,
+                if (rolActual == UserRole.PROPIETARIO) R.id.propietarioFragmentContainer
+                else R.id.mainFragmentContainer,
                 fragment
             )
             .commit()
     }
 
-    fun navegarDesdeBottomNav(
-        itemId: Int
-    ) {
-
-        if (!esOperario()) return
-
-        when (itemId) {
-
-            R.id.nav_inicio -> {
-                mostrarFragment(
-                    InicioFragment()
-                )
+    fun navegarDesdeBottomNav(itemId: Int) {
+        when (rolActual) {
+            UserRole.OPERARIO -> when (itemId) {
+                R.id.nav_inicio -> mostrarFragment(InicioFragment())
+                R.id.nav_bodega -> mostrarFragment(BodegaFragment())
+                R.id.nav_alertas -> mostrarFragment(AlertasFragment())
+                R.id.nav_bitacora -> mostrarFragment(BitacoraFragment())
             }
-
-            R.id.nav_sensores -> {
-                mostrarFragment(
-                    SensoresFragment()
-                )
+            UserRole.PROPIETARIO -> when (itemId) {
+                R.id.nav_inicio -> mostrarFragment(PropietarioFragment())
+                R.id.nav_bodega -> mostrarFragment(BodegaFragment())
+                R.id.nav_alertas -> mostrarFragment(AlertasFragment())
+                R.id.nav_bitacora -> mostrarFragment(BitacoraFragment())
+                R.id.nav_usuarios -> mostrarGestionOperarios()
             }
-
-            R.id.nav_bodega -> {
-                mostrarFragment(
-                    BodegaFragment()
-                )
-            }
-
-            R.id.nav_alertas -> {
-                mostrarFragment(
-                    AlertasFragment()
-                )
-            }
-
-            R.id.nav_bitacora -> {
-                mostrarFragment(
-                    BitacoraFragment()
-                )
-            }
+            else -> Unit
         }
     }
 
@@ -2204,17 +2218,6 @@ class MainActivity : AppCompatActivity() {
                 ids.add(null)
 
                 data
-                    .filter {
-
-                        !it.estado.equals(
-                            "finalizado",
-                            ignoreCase = true
-                        ) &&
-                                !it.estado.equals(
-                                    "cerrado",
-                                    ignoreCase = true
-                                )
-                    }
                     .forEach { lote ->
 
                         nombres.add(
