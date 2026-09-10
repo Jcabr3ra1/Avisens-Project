@@ -74,6 +74,7 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/ordenes-compra':          [ROL_ADMIN, ROL_PROPIETARIO],
   '/recuperaciones-password': [ROL_ADMIN],
   '/auditoria':               [ROL_ADMIN],
+  '/catalogos':               [ROL_ADMIN],
   '/crm':                     [ROL_ADMIN],
   '/solicitudes-pqrs':        [ROL_ADMIN],
 }
@@ -161,6 +162,11 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/auditoria',
         label: 'Auditoría',
         icon: <IcDoc size={16} />,
+      },
+      {
+        path: '/catalogos',
+        label: 'Catálogos',
+        icon: <IcServer size={16} />,
       },
     ],
   },

@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export interface CatalogoSensor {
   id: number
@@ -13,11 +13,7 @@ export interface CatalogoSensor {
 }
 
 export async function listarCatalogoSensores(): Promise<CatalogoSensor[]> {
-  const { data } = await api.get<PaginatedResponse<CatalogoSensor>>(
-    '/catalogo-sensores',
-    { params: { limit: 100 } },
-  )
-  return data.data
+  return listarTodasLasPaginas<CatalogoSensor>('/catalogo-sensores')
 }
 
 export interface CrearCatalogoSensorPayload {

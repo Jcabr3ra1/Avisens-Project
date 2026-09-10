@@ -37,6 +37,7 @@ const OrdenesCompraPage = lazy(() => import('@features/ordenes-compra/OrdenesCom
 const ConsumosDiariosPage = lazy(() => import('@features/consumos-diarios/ConsumosDiariosPage'))
 const NotificacionesPage = lazy(() => import('@features/notificaciones/NotificacionesPage'))
 const AuditoriaPage = lazy(() => import('@features/auditoria/AuditoriaPage'))
+const CatalogosPage = lazy(() => import('@features/catalogos/CatalogosPage'))
 const RecuperarPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperarPasswordPage'))
 const CambiarPasswordPage = lazy(() => import('@features/recuperaciones-password/CambiarPasswordPage'))
 const RecuperacionesPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperacionesPasswordPage'))
@@ -86,6 +87,7 @@ function AppRoutes() {
         <Route path="/ordenes-compra"  element={cargarPagina(<OrdenesCompraPage />)} />
         <Route path="/recuperaciones-password" element={cargarPagina(<RecuperacionesPasswordPage />)} />
         <Route path="/auditoria"        element={cargarPagina(<AuditoriaPage />)} />
+        <Route path="/catalogos"        element={cargarPagina(<CatalogosPage />)} />
         <Route path="/granjas"         element={cargarPagina(<GranjasPage />)} />
         <Route path="/galpones"        element={cargarPagina(<GalponesPage />)} />
         <Route path="/lotes"           element={cargarPagina(<LotesPage />)} />
