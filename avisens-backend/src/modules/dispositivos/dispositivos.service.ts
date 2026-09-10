@@ -19,6 +19,7 @@ import {
   generarDeviceToken,
   hashDeviceToken,
 } from '../../common/security/device-token';
+import { esViolacionDeLlaveForanea } from '../../common/errores/llave-foranea';
 
 const DISPOSITIVO_SELECT = {
   id: true,
@@ -192,7 +193,7 @@ export class DispositivosService {
     try {
       await this.prisma.dispositivo.delete({ where: { id } });
     } catch (error) {
-      if (error instanceof Error && 'code' in error && error.code === 'P2003') {
+      if (esViolacionDeLlaveForanea(error)) {
         throw new ConflictException(
           'No se puede eliminar: el dispositivo tiene sensores asociados. Elimínalos primero, o desactiva el dispositivo en su lugar.',
         );
