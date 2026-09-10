@@ -1,4 +1,5 @@
 import { api } from '@shared/api'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 import type { PaginatedResponse } from '@shared/api'
 
 export type EstadoProspecto =
@@ -85,6 +86,15 @@ export async function listarProspectos(
     params: { page: 1, limit: 100, ...query },
   })
   return data
+}
+
+// La versión paginada de arriba se mantiene porque el panel de admin espera la
+// envoltura. Esta trae TODO: el CRM calcula sus tarjetas de resumen sumando la
+// lista, y con un tope de 100 los totales salían mal en cuanto se pasara.
+export async function listarTodosLosProspectos(
+  query: Omit<ProspectosQuery, 'page' | 'limit'> = {},
+): Promise<Prospecto[]> {
+  return listarTodasLasPaginas<Prospecto>('/prospectos', query)
 }
 
 export async function obtenerProspecto(id: number): Promise<ProspectoDetalle> {

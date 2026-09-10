@@ -1,4 +1,5 @@
 import Modal from '@shared/ui/Modal/Modal'
+import type { Usuario } from '@shared/api'
 import { IcPhone, IcPlus } from '@shared/ui/icons/icons'
 import {
   PUNTAJE_MAXIMO,
@@ -14,10 +15,13 @@ import { ETIQUETAS_ESTADO } from '@features/solicitudes-pqrs/model/solicitudPqrs
 
 type Props = {
   prospecto: ProspectoVista
+  asesores: Usuario[]
+  asignando: boolean
+  onAsignar: (asesorId: number) => void
   onCerrar: () => void
 }
 
-function PanelDetalle({ prospecto, onCerrar }: Props) {
+function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: Props) {
   const estilo = ESTILO_ETAPA[prospecto.etapa]
   const urgencia = urgenciaDe(prospecto.ultimaActividad, prospecto.etapa)
   const { cotizaciones, cargando, generando, generar } = useCotizaciones(
@@ -139,10 +143,21 @@ function PanelDetalle({ prospecto, onCerrar }: Props) {
             </div>
           )}
           <div className="crm-det-row">
-            <span className="crm-det-lbl">Asesor</span>
-            <span className="crm-det-val">
-              {prospecto.asesorId ? `Asesor #${prospecto.asesorId}` : 'Sin asignar'}
-            </span>
+            <label className="crm-det-lbl" htmlFor="crm-asesor">Asesor</label>
+            <select
+              id="crm-asesor"
+              className="crm-det-asesor"
+              value={prospecto.asesorId ?? ''}
+              disabled={asignando || asesores.length === 0}
+              onChange={(evento) => {
+                if (evento.target.value) onAsignar(Number(evento.target.value))
+              }}
+            >
+              <option value="">{asignando ? 'Asignando…' : 'Sin asignar'}</option>
+              {asesores.map((asesor) => (
+                <option key={asesor.id} value={asesor.id}>{asesor.nombre_completo}</option>
+              ))}
+            </select>
           </div>
 
           <div className="crm-det-sep" />

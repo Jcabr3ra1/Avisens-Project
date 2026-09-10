@@ -3,7 +3,6 @@ import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { useProspectos } from './hooks/useProspectos'
 import { useFiltroProspectos } from './hooks/useFiltroProspectos'
 import { useResumenProspectos } from './hooks/useResumenProspectos'
-import type { ProspectoVista } from './model/prospectoVista'
 import ResumenCrm from './components/ResumenCrm'
 import BarraHerramientas from './components/BarraHerramientas'
 import TablaProspectos from './components/TablaProspectos'
@@ -12,7 +11,10 @@ import '@shared/ui/admin/AdminKit.css'
 import './CrmPage.css'
 
 function CrmPage() {
-  const { prospectos, cargando, error, recargar } = useProspectos()
+  const {
+    prospectos, asesores, cargando, asignandoId, exportando, error,
+    recargar, asignar, exportar,
+  } = useProspectos()
   const {
     filtro,
     setFiltro,
@@ -24,7 +26,10 @@ function CrmPage() {
   } =
     useFiltroProspectos(prospectos)
   const resumen = useResumenProspectos(prospectos)
-  const [seleccionado, setSeleccionado] = useState<ProspectoVista | null>(null)
+  const [seleccionadoId, setSeleccionadoId] = useState<number | null>(null)
+  // Se busca en la lista en vez de guardar una copia: al asignar un asesor,
+  // el panel abierto tiene que reflejar el cambio y no la foto de antes.
+  const seleccionado = prospectos.find((prospecto) => prospecto.id === seleccionadoId) ?? null
 
   const sinProspectos = !cargando && !error && prospectos.length === 0
 
@@ -62,6 +67,8 @@ function CrmPage() {
             onBuscar={setBusqueda}
             filtroCanal={filtroCanal}
             onCambiarCanal={setFiltroCanal}
+            exportando={exportando}
+            onExportar={() => void exportar()}
           />
 
           <TablaProspectos
@@ -70,13 +77,19 @@ function CrmPage() {
             onFiltrar={setFiltro}
             conteos={resumen.porEtapa}
             total={resumen.total}
-            onAbrir={setSeleccionado}
+            onAbrir={(prospecto) => setSeleccionadoId(prospecto.id)}
           />
         </>
       )}
 
       {seleccionado && (
-        <PanelDetalle prospecto={seleccionado} onCerrar={() => setSeleccionado(null)} />
+        <PanelDetalle
+          prospecto={seleccionado}
+          asesores={asesores}
+          asignando={asignandoId === seleccionado.id}
+          onAsignar={(asesorId) => void asignar(seleccionado.id, asesorId)}
+          onCerrar={() => setSeleccionadoId(null)}
+        />
       )}
     </div>
   )
