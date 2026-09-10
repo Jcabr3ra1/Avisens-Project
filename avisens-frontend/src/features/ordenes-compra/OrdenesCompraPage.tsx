@@ -3,6 +3,7 @@ import { getUsuario } from '@shared/api/tokens'
 import BarraHerramientas, { type OpcionFiltro } from '@shared/ui/admin/BarraHerramientas'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcPlus } from '@shared/ui/icons/icons'
+import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
 import FormularioOrden from './components/FormularioOrden'
 import PanelOrden from './components/PanelOrden'
@@ -58,7 +59,9 @@ function OrdenesCompraPage() {
     if (!window.confirm(
       `¿Cancelar la orden ${orden.codigo}? Ya no podrá recibir insumos ni cambiar de estado.`,
     )) return
-    void gestion.cancelar(orden.id).catch(() => undefined)
+    void gestion.cancelar(orden.id).catch((error) => {
+      toast.error(mensajeDeError(error, 'No se pudo cancelar la orden.'))
+    })
   }
 
   return (
