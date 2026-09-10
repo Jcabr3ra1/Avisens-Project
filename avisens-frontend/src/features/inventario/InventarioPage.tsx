@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getRol } from '@shared/api'
 import { permisosDeInsumo, ROL_ADMIN } from '@shared/auth/permisos'
 import { IcAlert, IcBox, IcCoin, IcPlus, IcRefresh, IcSearch } from '@shared/ui/icons/icons'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import '@shared/ui/admin/AdminKit.css'
 import { listarGranjas, type Granja } from '@features/granjas/api/granjas'
@@ -101,7 +102,7 @@ function InventarioPage() {
 
   if (gestion.cargando && gestion.insumos.length === 0) {
     return (
-      <div className="page-container inv-page">
+      <div className="page-container inv-page adm-page">
         <div className="inv-esqueleto" aria-busy="true" aria-label="Cargando la bodega">
           <div className="inv-hueso inv-hueso--cabecera" />
           <div className="inv-hueso inv-hueso--resumen" />
@@ -114,21 +115,16 @@ function InventarioPage() {
   }
 
   return (
-    <div className="page-container inv-page">
-      <header className="inv-cabecera">
-        <div className="inv-cabecera-fila">
-          <div>
-            <span className="inv-eyebrow">
-              <span className="inv-eyebrow-punto" aria-hidden="true" />
-              {esAdministrador ? 'Control de bodega' : 'Bodega'}
-            </span>
-            <h1>Insumos</h1>
-            <p>Stock, movimientos y reposición. Cada insumo guarda su propio historial.</p>
-          </div>
-          <div className="inv-cabecera-acciones">
+    <div className="page-container inv-page adm-page">
+      <CabeceraAdmin
+        eyebrow={esAdministrador ? 'Control de bodega' : 'Bodega'}
+        titulo="Insumos"
+        subtitulo="Stock, movimientos y reposición. Cada insumo guarda su propio historial."
+        acciones={(
+          <>
             <button
               type="button"
-              className="inv-btn inv-btn--suave"
+              className="adm-btn adm-btn--secundario"
               onClick={() => void gestion.recargar()}
             >
               <IcRefresh size={14} aria-hidden="true" />
@@ -137,16 +133,16 @@ function InventarioPage() {
             {permisos.crear && (
               <button
                 type="button"
-                className="inv-btn inv-btn--primario"
+                className="adm-btn adm-btn--primario"
                 onClick={formulario.abrirCrear}
               >
                 <IcPlus size={15} aria-hidden="true" />
                 Nuevo insumo
               </button>
             )}
-          </div>
-        </div>
-      </header>
+          </>
+        )}
+      />
 
       <TarjetasResumen stats={stats} etiqueta="Resumen de la bodega" />
 
@@ -178,7 +174,7 @@ function InventarioPage() {
         </div>
       ) : (
         <section className="inv-panel" aria-label="Catálogo de insumos">
-          <div className="inv-barra">
+          <div className="inv-herramientas">
             <div className="inv-buscador">
               <IcSearch size={15} aria-hidden="true" />
               <input

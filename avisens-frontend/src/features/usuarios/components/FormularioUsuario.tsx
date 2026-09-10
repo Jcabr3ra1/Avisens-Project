@@ -131,7 +131,7 @@ function FormularioUsuario({
             />
           </label>
           <label className="modal-campo">
-            <span>Teléfono <em>(opcional)</em></span>
+            <span>Teléfono <em>(Opcional)</em></span>
             <input
               value={form.telefono ?? ''}
               onChange={(evento) => onCambiar('telefono', evento.target.value)}
@@ -164,7 +164,7 @@ function FormularioUsuario({
 
         {permiteNombreOrganizacion && (
           <label className="modal-campo">
-            <span>Nombre de la organización <em>(opcional)</em></span>
+            <span>Nombre de la organización <em>(Opcional)</em></span>
             <input
               value={form.organizacion_nombre ?? ''}
               onChange={(evento) => onCambiar('organizacion_nombre', evento.target.value)}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { IcSearch } from '@shared/ui/icons/icons'
 
 export type OpcionFiltro<T extends string> = {
@@ -16,6 +17,8 @@ interface Props<T extends string> {
   onCambiarFiltro: (valor: T) => void
   visibles: number
   total: number
+  extra?: ReactNode
+  acciones?: ReactNode
 }
 
 function BarraHerramientas<T extends string>({
@@ -29,6 +32,8 @@ function BarraHerramientas<T extends string>({
   onCambiarFiltro,
   visibles,
   total,
+  extra,
+  acciones,
 }: Props<T>) {
   return (
     <div className="adm-barra">
@@ -56,6 +61,10 @@ function BarraHerramientas<T extends string>({
           </button>
         ))}
       </div>
+
+      {extra && <div className="adm-barra-extra">{extra}</div>}
+
+      {acciones && <div className="adm-barra-acciones">{acciones}</div>}
 
       <span className="adm-conteo">
         {visibles === total ? `${total}` : `${visibles} de ${total}`}

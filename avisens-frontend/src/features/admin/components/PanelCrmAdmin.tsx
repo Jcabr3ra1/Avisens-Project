@@ -24,7 +24,7 @@ function PanelCrmAdmin({ etapas, cargando, conversion, onGestionar }: Props) {
   return (
     <section className="admin-card admin-crm" aria-label="Resumen de prospectos CRM">
       <div className="admin-card-head">
-        <span className="admin-card-title"><IcPhone size={15} /> Pipeline CRM</span>
+        <h2 className="admin-card-title"><IcPhone size={16} /> Pipeline CRM</h2>
         <button type="button" className="admin-card-link" onClick={onGestionar}>
           Ver todos <IcChevronRight size={13} />
         </button>
@@ -61,7 +61,7 @@ function PanelCrmAdmin({ etapas, cargando, conversion, onGestionar }: Props) {
         <span>Conversión total: leads calificados a cerrados</span>
         <div className="admin-crm-conv">
           <div className="admin-crm-conv-track">
-            <span className="admin-crm-conv-bar" style={{ width: `${conversion * 3}%` }} />
+            <span className="admin-crm-conv-bar" style={{ width: `${Math.min(conversion, 100)}%` }} />
           </div>
           <strong>{conversion}%</strong>
         </div>

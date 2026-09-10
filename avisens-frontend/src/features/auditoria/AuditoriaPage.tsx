@@ -1,7 +1,10 @@
 import { useState } from 'react'
-import { IcClose } from '@shared/ui/icons/icons'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
+import Modal from '@shared/ui/Modal/Modal'
+import { IcRefresh } from '@shared/ui/icons/icons'
 import type { RegistroAuditoria } from './model/auditoria'
 import { useAuditoria } from './hooks/useAuditoria'
+import '@shared/ui/admin/AdminKit.css'
 import './AuditoriaPage.css'
 
 const ENTIDADES_ETIQUETA: Record<string, string> = {
@@ -37,27 +40,21 @@ function AuditoriaPage() {
   const [detalle, setDetalle] = useState<RegistroAuditoria | null>(null)
 
   return (
-    <div className="page-container aud-page">
-      <header className="aud-cabecera">
-        <div>
-          <h1>Bitácora de auditoría</h1>
-          <p>
-            Registro de acciones realizadas en el sistema. {total} eventos
-            registrados.
-          </p>
-        </div>
-        <button
-          className="aud-boton"
-          type="button"
-          onClick={recargar}
-          disabled={cargando}
-        >
-          Actualizar
-        </button>
-      </header>
+    <div className="page-container aud-page adm-page">
+      <CabeceraAdmin
+        eyebrow="Trazabilidad del sistema"
+        titulo="Bitácora de auditoría"
+        subtitulo={`Consulta quién realizó cada cambio y cuándo ocurrió. ${total} eventos registrados.`}
+        acciones={(
+          <button className="adm-btn adm-btn--secundario" type="button" onClick={recargar} disabled={cargando}>
+            <IcRefresh size={16} aria-hidden="true" />
+            {cargando ? 'Actualizando…' : 'Actualizar'}
+          </button>
+        )}
+      />
 
       {error && (
-        <p className="aud-aviso" role="alert">
+        <p className="aud-aviso adm-alerta" role="alert">
           {error}{' '}
           <button type="button" onClick={recargar}>
             Reintentar
@@ -70,12 +67,12 @@ function AuditoriaPage() {
           Cargando bitácora…
         </p>
       ) : registros.length === 0 ? (
-        <section className="aud-vacio">
+        <section className="aud-vacio adm-panel">
           <h2>Sin registros</h2>
           <p>Cuando se realicen acciones en el sistema aparecerán aquí.</p>
         </section>
       ) : (
-        <section className="aud-listado">
+        <section className="aud-listado adm-panel">
           <div className="aud-tabla-contenedor">
             <table>
               <thead>
@@ -154,36 +151,13 @@ function AuditoriaPage() {
       )}
 
       {detalle && (
-        <div
-          className="aud-modal"
-          role="presentation"
-          onMouseDown={() => setDetalle(null)}
+        <Modal
+          titulo={detalle.accion}
+          subtitulo={`Registro #${detalle.id} · ${detalle.entidad_afectada}${detalle.registro_id !== null ? ` #${detalle.registro_id}` : ''}`}
+          onCerrar={() => setDetalle(null)}
+          ancho="ancho"
         >
-          <section
-            className="aud-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="aud-panel-titulo"
-            onMouseDown={(evento) => evento.stopPropagation()}
-          >
-            <header className="aud-panel-cabecera">
-              <div>
-                <p className="aud-kicker">
-                  Registro #{detalle.id} · {detalle.entidad_afectada}
-                  {detalle.registro_id !== null ? ` #${detalle.registro_id}` : ''}
-                </p>
-                <h2 id="aud-panel-titulo">{detalle.accion}</h2>
-              </div>
-              <button
-                className="aud-cerrar"
-                type="button"
-                onClick={() => setDetalle(null)}
-                aria-label="Cerrar detalle del registro"
-              >
-                <IcClose size={20} aria-hidden="true" />
-              </button>
-            </header>
-            <div className="aud-panel-contenido">
+          <div className="aud-panel-contenido">
               <dl className="aud-datos">
                 <div>
                   <dt>Usuario</dt>
@@ -220,9 +194,8 @@ function AuditoriaPage() {
                   Este registro no guarda datos del cambio.
                 </p>
               )}
-            </div>
-          </section>
-        </div>
+          </div>
+        </Modal>
       )}
     </div>
   )

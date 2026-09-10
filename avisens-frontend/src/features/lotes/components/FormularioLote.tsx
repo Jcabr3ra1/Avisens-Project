@@ -62,7 +62,7 @@ function FormularioLote({
       <form id={ID_FORMULARIO} onSubmit={onGuardar}>
         <div className="modal-fila">
           <label className="modal-campo">
-            <span>Galpón *</span>
+            <span>Galpón</span>
             <select
               value={form.galpon_id}
               onChange={(evento) =>
@@ -80,7 +80,7 @@ function FormularioLote({
             </select>
           </label>
           <label className="modal-campo">
-            <span>Proveedor</span>
+            <span>Proveedor <em>(Opcional)</em></span>
             <select
               value={form.proveedor_id ?? ''}
               onChange={(evento) => {
@@ -100,7 +100,7 @@ function FormularioLote({
 
         <div className="modal-fila">
           <label className="modal-campo">
-            <span>Fecha de ingreso *</span>
+            <span>Fecha de ingreso</span>
             <input
               type="date"
               value={form.fecha_ingreso}
@@ -111,7 +111,7 @@ function FormularioLote({
             />
           </label>
           <label className="modal-campo">
-            <span>Cantidad inicial *</span>
+            <span>Cantidad inicial</span>
             <input
               type="number"
               min="1"
@@ -146,7 +146,7 @@ function FormularioLote({
           >
             <div className="modal-fila">
               <label className="modal-campo">
-                <span>Raza</span>
+                <span>Raza <em>(Opcional)</em></span>
                 <input
                   value={form.raza}
                   onChange={(evento) =>
@@ -155,7 +155,7 @@ function FormularioLote({
                 />
               </label>
               <label className="modal-campo">
-                <span>Sexo</span>
+                <span>Sexo <em>(Opcional)</em></span>
                 <input
                   value={form.sexo}
                   onChange={(evento) =>
@@ -164,7 +164,7 @@ function FormularioLote({
                 />
               </label>
               <label className="modal-campo">
-                <span>Marca de alimento</span>
+                <span>Marca de alimento <em>(Opcional)</em></span>
                 <input
                   value={form.marca_alimento}
                   onChange={(evento) =>
@@ -175,7 +175,7 @@ function FormularioLote({
             </div>
             <div className="modal-fila">
               <label className="modal-campo">
-                <span>Costo por pollito</span>
+                <span>Costo por pollito <em>(Opcional)</em></span>
                 <input
                   type="number"
                   min="0"
@@ -190,7 +190,7 @@ function FormularioLote({
                 />
               </label>
               <label className="modal-campo">
-                <span>Presupuesto total</span>
+                <span>Presupuesto total <em>(Opcional)</em></span>
                 <input
                   type="number"
                   min="0"
@@ -205,7 +205,7 @@ function FormularioLote({
                 />
               </label>
               <label className="modal-campo">
-                <span>Salida estimada</span>
+                <span>Salida estimada <em>(Opcional)</em></span>
                 <input
                   type="date"
                   value={form.fecha_salida_estimada}
@@ -218,7 +218,7 @@ function FormularioLote({
             {modoEdicion && (
               <div className="modal-fila">
                 <label className="modal-campo">
-                  <span>Salida real</span>
+                  <span>Salida real <em>(Opcional)</em></span>
                   <input
                     type="date"
                     value={form.fecha_salida_real}

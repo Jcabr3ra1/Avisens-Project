@@ -1,6 +1,4 @@
-/* Diálogo compartido. Habla el mismo idioma visual que PantallaHija —cabecera
-   verde, entrada con peso, velo difuminado— para que la app no tenga dos
-   estilos de diálogo peleando. */
+/* Diálogo compartido para acciones breves y formularios de baja complejidad. */
 
 .modal-velo {
   position: fixed;
@@ -9,11 +7,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--space-4);
   overflow-y: auto;
-  background: rgba(7, 20, 14, 0.46);
-  backdrop-filter: blur(4px);
-  animation: modal-velo-entra 0.18s ease;
+  background: rgba(7, 20, 14, 0.52);
+  animation: modal-velo-entra var(--motion-base) var(--ease-standard);
 }
 
 @keyframes modal-velo-entra {
@@ -24,14 +21,15 @@
 .modal-tarjeta {
   display: flex;
   width: 100%;
-  max-width: 520px;
-  max-height: calc(100vh - 48px);
+  max-width: 560px;
+  max-height: calc(100dvh - 32px);
   flex-direction: column;
   overflow: hidden;
-  background: #ffffff;
-  border-radius: 22px;
-  box-shadow: 0 28px 70px rgba(7, 20, 14, 0.34);
-  animation: modal-entra 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-lg);
+  animation: modal-entra var(--motion-base) var(--ease-standard);
 }
 
 .modal-tarjeta--ancha { max-width: 760px; }
@@ -48,16 +46,16 @@
   gap: 1rem;
   flex-shrink: 0;
   padding: 1.25rem 1.4rem;
-  color: #ffffff;
-  background: var(--avisens-deep);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  background: var(--surface-base);
 }
 
 .modal-ident { min-width: 0; flex: 1; }
 
 .modal-titulo {
   margin: 0;
-  color: #ffffff;
-  font-family: 'Space Grotesk', sans-serif;
+  color: var(--text-primary);
   font-size: 1.16rem;
   font-weight: 800;
   letter-spacing: -0.01em;
@@ -66,29 +64,29 @@
 
 .modal-sub {
   margin: 3px 0 0;
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--text-muted);
   font-size: 0.8rem;
   line-height: 1.4;
 }
 
 .modal-cerrar {
   display: inline-flex;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 10px;
-  color: rgba(255, 255, 255, 0.78);
-  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  background: var(--surface-tinted);
   cursor: pointer;
   transition: color 150ms ease, background 150ms ease;
 }
 
-.modal-cerrar:hover { color: #ffffff; background: rgba(255, 255, 255, 0.24); }
+.modal-cerrar:hover { color: var(--primary); background: var(--primary-soft); }
 .modal-cerrar:focus-visible {
-  outline: 2px solid var(--avisens-yellow);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -104,14 +102,11 @@
   gap: 0.6rem;
   flex-shrink: 0;
   padding: 0.9rem 1.4rem;
-  border-top: 1px solid rgba(16, 44, 35, 0.09);
-  background: #fbfcfb;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-tinted);
 }
 
-/* ── Campos ───────────────────────────────────────────────────────────────
-   La etiqueta pequeña y en mayúsculas deja que el valor escrito pese más que
-   su nombre: es lo que separa un formulario cuidado de una rejilla de cajas
-   todas iguales. */
+/* ── Campos ─────────────────────────────────────────────────────────────── */
 
 .modal-campo {
   display: flex;
@@ -121,49 +116,46 @@
 }
 
 .modal-campo > span {
-  color: var(--dash-muted, #4a6b58);
-  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .modal-campo > span em {
-  color: var(--text3, #7b8a83);
+  color: var(--text-muted);
   font-style: normal;
   font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0;
 }
 
 .modal-campo input,
 .modal-campo select,
 .modal-campo textarea {
+  min-height: 44px;
   padding: 0.6rem 0.75rem;
-  border: 1px solid rgba(16, 44, 35, 0.16);
-  border-radius: 11px;
-  color: var(--dash-ink, #0a1a14);
-  background: #ffffff;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  background: var(--surface-base);
   font: inherit;
   font-size: 0.92rem;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.modal-campo input:focus,
-.modal-campo select:focus,
-.modal-campo textarea:focus {
-  outline: none;
-  border-color: var(--avisens-green);
-  box-shadow: 0 0 0 3px rgba(71, 187, 75, 0.16);
+.modal-campo input:focus-visible,
+.modal-campo select:focus-visible,
+.modal-campo textarea:focus-visible {
+  border-color: var(--focus-ring);
+  outline: 2px solid color-mix(in srgb, var(--focus-ring) 25%, transparent);
+  outline-offset: 1px;
 }
 
 .modal-campo input:disabled,
-.modal-campo select:disabled { background: #f5f7f6; opacity: 0.8; }
+.modal-campo select:disabled { background: var(--surface-subtle); opacity: 0.8; }
 
 .modal-fila {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.7rem;
+  grid-template-columns: 1fr;
+  gap: 0;
 }
 
 .modal-desplegar {
@@ -171,7 +163,7 @@
   margin: 0.2rem 0 0.9rem;
   padding: 0.6rem 0.75rem;
   border: 1px dashed rgba(0, 91, 72, 0.28);
-  border-radius: 11px;
+  border-radius: var(--radius-md);
   color: var(--avisens-deep);
   background: transparent;
   cursor: pointer;
@@ -201,7 +193,7 @@
   margin: 0 0 0.2rem;
   padding: 0.55rem 0.7rem;
   border: 1px solid rgba(232, 66, 0, 0.24);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   color: #b93300;
   background: rgba(232, 66, 0, 0.07);
   font-size: 0.83rem;
@@ -210,12 +202,12 @@
 /* ── Botones del pie ── */
 
 .modal-btn {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 1.1rem;
-  border: 1px solid rgba(16, 44, 35, 0.16);
-  border-radius: 11px;
-  color: var(--dash-ink, #0a1a14);
-  background: #ffffff;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  background: var(--surface-base);
   cursor: pointer;
   font: inherit;
   font-size: 0.88rem;
@@ -233,10 +225,19 @@
   font-weight: 700;
 }
 
-.modal-btn--primary:hover:not(:disabled) { background: #00735a; }
+.modal-btn--primary:hover:not(:disabled) { background: var(--primary-hover); }
+.modal-btn--danger {
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border-default));
+  color: var(--danger3);
+  background: var(--surface-base);
+}
+.modal-btn--danger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border-default));
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface-base));
+}
 .modal-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .modal-btn:focus-visible {
-  outline: 2px solid var(--avisens-green);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -244,8 +245,8 @@
   .modal-velo { padding: 0; align-items: flex-end; }
   .modal-tarjeta {
     max-width: none;
-    max-height: 92vh;
-    border-radius: 22px 22px 0 0;
+    max-height: 94dvh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   }
   .modal-fila { grid-template-columns: 1fr; }
 }

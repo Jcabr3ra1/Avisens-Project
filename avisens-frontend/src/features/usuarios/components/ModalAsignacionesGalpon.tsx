@@ -129,7 +129,7 @@ function ModalAsignacionesGalpon({
               </label>
 
               <label className="usuarios-campo">
-                <span>Responsabilidad <em>(opcional)</em></span>
+                <span>Responsabilidad <em>(Opcional)</em></span>
                 <input
                   value={rolAsignacion}
                   onChange={(evento) => setRolAsignacion(evento.target.value)}

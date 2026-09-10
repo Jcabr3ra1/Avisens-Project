@@ -78,7 +78,7 @@ function FormularioGranja({
       <form id={ID_FORMULARIO} onSubmit={onGuardar}>
         {esAdministrador && (
           <label className="modal-campo">
-            <span>Propietario *</span>
+            <span>Propietario</span>
             <select
               value={form.propietario_id ?? ''}
               onChange={(evento) =>
@@ -108,7 +108,7 @@ function FormularioGranja({
         )}
 
         <label className="modal-campo">
-          <span>Nombre *</span>
+          <span>Nombre</span>
           <input
             value={form.nombre}
             onChange={(evento) => onCambiar('nombre', evento.target.value)}
@@ -119,7 +119,7 @@ function FormularioGranja({
 
         <label className="modal-campo">
           <span>
-            Municipio <em>(opcional)</em>
+            Municipio <em>(Opcional)</em>
           </span>
           <input
             value={form.municipio ?? ''}
@@ -143,14 +143,14 @@ function FormularioGranja({
         {mostrarAdicional && (
           <div id="grj-informacion-adicional" className="modal-adicional">
             <label className="modal-campo">
-              <span>Dirección</span>
+              <span>Dirección <em>(Opcional)</em></span>
               <input
                 value={form.direccion ?? ''}
                 onChange={(evento) => onCambiar('direccion', evento.target.value)}
               />
             </label>
             <label className="modal-campo">
-              <span>Departamento</span>
+              <span>Departamento <em>(Opcional)</em></span>
               <input
                 value={form.departamento ?? ''}
                 onChange={(evento) =>
@@ -160,7 +160,7 @@ function FormularioGranja({
             </label>
             <div className="modal-fila">
               <label className="modal-campo">
-                <span>Latitud</span>
+                <span>Latitud <em>(Opcional)</em></span>
                 <input
                   type="number"
                   step="any"
@@ -171,7 +171,7 @@ function FormularioGranja({
                 />
               </label>
               <label className="modal-campo">
-                <span>Longitud</span>
+                <span>Longitud <em>(Opcional)</em></span>
                 <input
                   type="number"
                   step="any"
@@ -183,7 +183,7 @@ function FormularioGranja({
               </label>
             </div>
             <label className="modal-campo">
-              <span>Área total en m²</span>
+              <span>Área total en m² <em>(Opcional)</em></span>
               <input
                 type="number"
                 min="0"

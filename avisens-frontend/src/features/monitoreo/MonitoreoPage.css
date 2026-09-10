@@ -1,19 +1,8 @@
 /* MonitoreoPage — Módulo de Monitoreo Ambiental (EP-04) */
 
-.mon-header {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 1rem; margin-bottom: 1.6rem;
-  padding-bottom: 1.2rem;
-  border-bottom: 1px solid rgba(16,44,35,0.07);
-}
-.mon-title { font-size: 1.75rem; font-weight: 800; color: var(--dash-ink); margin: 0; letter-spacing: -0.03em; }
-.mon-sub   { font-size: 0.85rem; color: var(--text3); margin: 0.2rem 0 0; }
-
 .mon-cargando { padding: 1.5rem; text-align: center; font-size: 0.87rem; color: var(--text3); }
 .mon-alert {
-  border-radius: 8px; padding: 0.6rem 0.85rem; font-size: 0.85rem; margin: 0 0 1.2rem;
-  background: color-mix(in srgb, var(--danger, #ef4444) 12%, transparent);
-  border: 1px solid var(--danger, #ef4444); color: var(--danger, #ef4444);
+  font-size: 0.85rem;
 }
 
 .mon-resumen { display: flex; gap: 0.5rem; flex-wrap: wrap; }
@@ -26,15 +15,16 @@
 .mon-selector { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .mon-tab {
   display: flex; align-items: center; gap: 0.4rem;
+  min-height: 44px;
   padding: 0.55rem 1rem;
-  background: rgba(255,255,255,0.7);
-  border: 1px solid rgba(16,44,35,0.1);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
   border-radius: 12px;
   font-size: 0.84rem; font-weight: 600; cursor: pointer;
   transition: all 0.15s ease;
-  backdrop-filter: blur(6px);
 }
-.mon-tab:hover { background: rgba(255,255,255,0.9); border-color: rgba(16,185,129,0.25); }
+.mon-tab:hover { background: var(--color-superficie-secundaria); border-color: rgba(16,185,129,0.25); }
+.mon-tab:focus-visible, .mon-sensor-card:focus-visible { outline: 3px solid var(--color-foco); outline-offset: 2px; }
 .mon-tab--activo {
   border-color: rgba(16,185,129,0.35);
   background: rgba(16,185,129,0.07);
@@ -57,8 +47,7 @@
 .mon-offline-msg {
   display: flex; flex-direction: column; align-items: center;
   gap: 0.75rem; padding: 4rem 2rem; color: var(--text3); text-align: center;
-  background: rgba(255,255,255,0.5); border-radius: 20px;
-  border: 1.5px dashed rgba(16,44,35,0.1);
+  border-style: dashed;
 }
 .mon-offline-msg svg { color: var(--text4); }
 
@@ -70,13 +59,12 @@
 }
 
 .mon-sensor-card {
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(16, 44, 35, 0.09);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
   border-radius: 20px;
   padding: 1.1rem 1.2rem;
   display: flex; flex-direction: column; gap: 0.7rem;
   box-shadow: 0 6px 24px rgba(10, 40, 28, 0.06);
-  backdrop-filter: blur(8px);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   /* Las tarjetas son botones — quitamos estilos default de button */
   text-align: left; cursor: default;
@@ -105,21 +93,21 @@
   top: 0.7rem;
   right: 0.8rem;
   font-size: 1.1rem;
-  color: rgba(16,185,129,0.4);
+  color: var(--color-primario);
   font-weight: 700;
   transition: opacity 0.2s, transform 0.2s;
-  opacity: 0;
+  opacity: 1;
 }
 .mon-sensor-card--clickable:hover .mon-sensor-hint { opacity: 1; transform: translateX(2px); }
 
 /* Tinte de borde y fondo según estado */
 .mon-sensor-card--critico {
   border-color: rgba(239,68,68,0.3);
-  background: linear-gradient(135deg, rgba(239,68,68,0.05), rgba(255,255,255,0.88));
+  background: #fffafa;
 }
 .mon-sensor-card--advertencia {
   border-color: rgba(245,158,11,0.3);
-  background: linear-gradient(135deg, rgba(245,158,11,0.05), rgba(255,255,255,0.88));
+  background: #fffdf7;
 }
 .mon-sensor-card--offline { opacity: 0.5; }
 .mon-sensor-card--sin_umbral { opacity: 0.75; }
@@ -155,9 +143,8 @@
 .mon-section-sub   { font-size: 0.82rem; color: var(--text3); margin: 0 0 0.9rem; }
 
 .mon-tabla-card {
-  background: rgba(255,255,255,0.84); border: 1px solid rgba(16,44,35,0.09);
-  border-radius: 20px; box-shadow: 0 6px 24px rgba(10,40,28,0.06);
-  backdrop-filter: blur(8px); overflow: hidden;
+  padding: 0;
+  overflow: hidden;
 }
 .mon-tabla-head, .mon-tabla-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 0.5rem; padding: 0.75rem 1.1rem; }
 .mon-tabla-head { background: rgba(7,23,19,0.032); border-bottom: 1px solid rgba(16,44,35,0.08); font-size: 0.71rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); }
@@ -167,9 +154,16 @@
 
 /* ─── Responsive: celular ────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .mon-header { flex-direction: column; }
-  .mon-title  { font-size: 1.4rem; }
   .mon-tabla-head, .mon-tabla-row { grid-template-columns: 1.6fr 1fr 1fr; font-size: 0.78rem; padding: 0.65rem 0.8rem; }
   /* La unidad se puede leer junto al valor mín/máx; se oculta la columna para que quepa */
   .mon-tabla-head span:last-child, .mon-tabla-row span:last-child { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mon-tab,
+  .mon-sensor-card,
+  .mon-sensor-hint,
+  .mon-barra {
+    transition: none;
+  }
 }

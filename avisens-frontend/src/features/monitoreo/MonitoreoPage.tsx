@@ -1,6 +1,6 @@
 // MonitoreoPage.tsx — Módulo de Monitoreo Ambiental (EP-04 HU-18 a HU-21).
 // Consume /galpones, /lotes, /sensores, /mediciones y /umbrales vía el hook
-// compartido useMonitoreoAmbiental. Al tocar una tarjeta de sensor se abre un
+// compartido useMonitoreoAmbiental. Al seleccionar una tarjeta se abre un
 // panel lateral con gauge, estadísticas, histórico real y referencia Italcol.
 
 import { useEffect, useState } from 'react'
@@ -14,7 +14,9 @@ import {
 import { iconoSensor } from '@shared/ui/sensorIcon'
 import { semanaDeVida } from '@shared/utils/fechas'
 import { SensorDetail } from './SensorDetail'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcServer } from '@shared/ui/icons/icons'
+import '@shared/ui/admin/AdminKit.css'
 import './MonitoreoPage.css'
 
 // ─── Componente principal ─────────────────────────────────────────────────────
@@ -45,32 +47,30 @@ function MonitoreoPage() {
 
   if (cargando) {
     return (
-      <div className="page-container mon-page">
+      <div className="page-container mon-page adm-page">
         <p className="mon-cargando">Cargando monitoreo ambiental…</p>
       </div>
     )
   }
 
   return (
-    <div className="page-container mon-page">
+    <div className="page-container mon-page adm-page">
 
       {/* ── Encabezado ──────────────────────────────────────────────────────── */}
-      <header className="mon-header">
-        <div>
-          <h1 className="mon-title">Monitoreo Ambiental</h1>
-          <p className="mon-sub">Lecturas en tiempo real · Toca un sensor para más detalles</p>
-        </div>
-
-        {galpon && (
+      <CabeceraAdmin
+        eyebrow="Condiciones ambientales"
+        titulo="Monitoreo ambiental"
+        subtitulo="Lecturas en tiempo real. Selecciona un sensor para consultar sus detalles."
+        acciones={galpon ? (
           <div className="mon-resumen">
             {criticos    > 0 && <span className="mon-badge mon-badge--critico"><span className="mon-dot mon-dot--critico" /> {criticos} crítico{criticos > 1 ? 's' : ''}</span>}
             {advertencia > 0 && <span className="mon-badge mon-badge--advertencia"><span className="mon-dot mon-dot--advertencia" /> {advertencia} advertencia{advertencia > 1 ? 's' : ''}</span>}
             <span className="mon-badge mon-badge--optimo"><span className="mon-dot mon-dot--optimo" /> {optimos} óptimo{optimos > 1 ? 's' : ''}</span>
           </div>
-        )}
-      </header>
+        ) : undefined}
+      />
 
-      {error && <div className="mon-alert" role="alert">{error}</div>}
+      {error && <div className="mon-alert adm-alerta" role="alert">{error}</div>}
 
       {galpones.length === 0 ? (
         <p className="mon-cargando">No hay galpones registrados todavía.</p>
@@ -81,6 +81,7 @@ function MonitoreoPage() {
             {galpones.map(g => (
               <button
                 key={g.id}
+                type="button"
                 className={`mon-tab${g.id === galpon.id ? ' mon-tab--activo' : ''}`}
                 onClick={() => { setGalponId(g.id); setSensorActivo(null) }}
               >
@@ -101,12 +102,12 @@ function MonitoreoPage() {
 
           {/* ── Tarjetas de sensores (clickables) ───────────────────────────── */}
           {!galpon.loteActivo ? (
-            <div className="mon-offline-msg">
+            <div className="mon-offline-msg adm-panel">
               <IcServer size={32} />
               <p>Galpón vacío. Los sensores se activarán cuando ingrese un nuevo lote.</p>
             </div>
           ) : galpon.sensores.length === 0 ? (
-            <div className="mon-offline-msg">
+            <div className="mon-offline-msg adm-panel">
               <IcServer size={32} />
               <p>Este galpón todavía no tiene sensores registrados.</p>
             </div>
@@ -128,7 +129,7 @@ function MonitoreoPage() {
             <section className="mon-section">
               <h2 className="mon-section-title">Umbrales configurados · Semana {semanaDeVida(galpon.diaVida) + 1}</h2>
               <p className="mon-section-sub">El backend soporta umbral por temperatura, humedad y luminosidad — las demás variables se muestran sin rango.</p>
-              <div className="mon-tabla-card">
+              <div className="mon-tabla-card adm-panel">
                 <div className="mon-tabla-head">
                   <span>Variable</span><span>Mín.</span><span>Máx.</span><span>Unidad</span>
                 </div>
@@ -179,6 +180,7 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
 
   return (
     <button
+      type="button"
       className={[
         'mon-sensor-card',
         `mon-sensor-card--${sensor.estado}`,
