@@ -1,0 +1,34 @@
+meta {
+  name: [Admin · Propietario]  Listar categorías financieras
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/categorias-financieras?page=1&limit=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 20
+  ~tipo: egreso
+  ~solo_activas: false
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Es el catálogo con el que se clasifica un movimiento financiero: el
+  categoria_id de POST /v1/movimientos-financieros sale de aquí.
+
+  Por defecto devuelve sólo las activas. Con solo_activas=false salen todas,
+  que sirve para entender un movimiento viejo hecho con una categoría que
+  luego se desactivó.
+
+  El filtro tipo acepta 'ingreso' o 'egreso'. Una categoría sin tipo no sale
+  en ninguno de los dos: sirve para las dos cosas.
+}
