@@ -127,8 +127,9 @@ export class UsuariosController {
   }
 
   @Delete(':id/permanente')
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
-    summary: 'Eliminar un usuario de forma permanente (casos legales)',
+    summary: 'Eliminar una cuenta de forma permanente (solo Admin, casos legales)',
   })
   eliminarPermanente(
     @Param('id', ParseIntPipe) id: number,
