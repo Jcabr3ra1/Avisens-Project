@@ -270,3 +270,23 @@
   color: var(--text-secondary);
   font-size: 0.78rem;
 }
+
+/* Un campo de casilla se lee en horizontal: la casilla delante y su texto al
+   lado. Sin esto hereda la columna de .modal-campo y la casilla queda encima
+   de su propia etiqueta, separada de ella. */
+.modal-campo--check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.modal-campo--check input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.modal-campo--check > span {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
