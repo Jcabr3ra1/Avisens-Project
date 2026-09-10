@@ -4,6 +4,7 @@ import { ROL_ADMIN } from '@shared/auth/permisos'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcDoc, IcDrop, IcHeart, IcRefresh, IcScale, IcSeed } from '@shared/ui/icons/icons'
 import GestionConsumos from '@features/consumos-diarios/components/GestionConsumos'
+import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
 import AccionesRapidasBitacora from './components/AccionesRapidasBitacora'
 import FormularioRegistro from './components/FormularioRegistro'
@@ -156,7 +157,9 @@ function BitacoraPage() {
 
   const borrar = (tipo: TipoRegistro, id: number) => {
     if (window.confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) {
-      void datos.eliminar(tipo, id).catch(() => undefined)
+      void datos.eliminar(tipo, id).catch((error) => {
+        toast.error(mensajeDeError(error, 'No se pudo eliminar el registro.'))
+      })
     }
   }
 
