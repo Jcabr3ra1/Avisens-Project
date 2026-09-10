@@ -22,6 +22,7 @@ const COLUMNAS = [
   'Días',
   'Estado',
   'Contacto',
+  'Acciones',
 ]
 
 function TablaProspectos({ prospectos, filtro, onFiltrar, conteos, total, onAbrir }: Props) {
@@ -29,6 +30,7 @@ function TablaProspectos({ prospectos, filtro, onFiltrar, conteos, total, onAbri
     <>
       <div className="crm-filtros">
         <button
+          type="button"
           className={`crm-filtro${filtro === 'todos' ? ' crm-filtro--activo' : ''}`}
           onClick={() => onFiltrar('todos')}
         >
@@ -37,6 +39,7 @@ function TablaProspectos({ prospectos, filtro, onFiltrar, conteos, total, onAbri
         {ETAPAS.map((etapa) => (
           <button
             key={etapa}
+            type="button"
             className={`crm-filtro${filtro === etapa ? ' crm-filtro--activo' : ''}`}
             onClick={() => onFiltrar(etapa)}
           >
@@ -50,7 +53,7 @@ function TablaProspectos({ prospectos, filtro, onFiltrar, conteos, total, onAbri
           <thead>
             <tr>
               {COLUMNAS.map((columna) => (
-                <th key={columna}>{columna}</th>
+                <th key={columna} scope="col">{columna}</th>
               ))}
             </tr>
           </thead>

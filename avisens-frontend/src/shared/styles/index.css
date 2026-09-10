@@ -13,19 +13,65 @@
   --avisens-yellow: #ffdd67;
   --avisens-orange: #e84200;
 
-  --bg: #f5f9f7;
-  --bg2: #ffffff;
-  --bg3: #eaf3ee;
-  --bg-tint: #f0f7f3;
-  --card: #ffffff;
-  --card-h: #fafdfb;
-  --border: #e1ede5;
-  --border2: #c8d8d0;
-  --border3: #a5beb1;
-  --text: #0a1a14;
-  --text2: #4a6b58;
-  --text3: #7a8e84;
-  --text4: #a8b8b0;
+  /* Foundations. Los alias cortos se conservan porque los módulos actuales
+     todavía los consumen; todos apuntan al mismo sistema semántico. */
+  --surface-page: #f4f7f5;
+  --surface-base: #ffffff;
+  --surface-subtle: #edf3ef;
+  --surface-tinted: #f6faf7;
+  --surface-raised: #ffffff;
+  --surface-hover: #f8fbf9;
+
+  --border-subtle: #e2eae5;
+  --border-default: #cad8d0;
+  --border-strong: #9fb5a9;
+
+  --text-primary: #102019;
+  --text-secondary: #41594d;
+  --text-muted: #5f7469;
+  --text-disabled: #778a80;
+
+  --primary: #005b48;
+  --primary-hover: #004b3b;
+  --primary-soft: #e4f1eb;
+  --focus-ring: #0b8066;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 2.5rem;
+  --space-8: 3rem;
+
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(10, 40, 28, 0.05);
+  --shadow-md: 0 8px 24px rgba(10, 40, 28, 0.07);
+  --shadow-lg: 0 18px 42px rgba(10, 40, 28, 0.11);
+
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --bg: var(--surface-page);
+  --bg2: var(--surface-base);
+  --bg3: var(--surface-subtle);
+  --bg-tint: var(--surface-tinted);
+  --card: var(--surface-raised);
+  --card-h: var(--surface-hover);
+  --border: var(--border-subtle);
+  --border2: var(--border-default);
+  --border3: var(--border-strong);
+  --text: var(--text-primary);
+  --text2: var(--text-secondary);
+  --text3: var(--text-muted);
+  --text4: var(--text-disabled);
 
   --success: #10b981;
   --success2: #34d399;
@@ -63,22 +109,14 @@
 
 html {
   scroll-behavior: smooth;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-html::-webkit-scrollbar,
-body::-webkit-scrollbar,
-*::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
+  scrollbar-color: var(--border-strong) transparent;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', sans-serif;
+  min-width: 320px;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
@@ -107,6 +145,21 @@ button {
   border: none;
   cursor: pointer;
   font-family: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 @keyframes fadeUp {
@@ -172,6 +225,17 @@ button {
 .fade-up.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .grad-text {

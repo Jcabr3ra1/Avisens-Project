@@ -1,6 +1,8 @@
 import type { Granja } from '@features/granjas/api/granjas'
 import type { Prospecto } from '@features/crm/api/prospectos'
 import type { GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import type { AtencionAdminData } from '../api/admin'
+import { esCriticidadAlta } from '@features/alertas/model/alerta'
 
 export type KpiAdmin = {
   etiqueta: string
@@ -14,6 +16,78 @@ export type EtapaCrmAdmin = {
   descripcion: string
   cantidad: number
   color: string
+}
+
+export type TipoAtencionAdmin = 'alerta' | 'solicitud' | 'recuperacion'
+
+export type ItemAtencionAdmin = {
+  id: string
+  tipo: TipoAtencionAdmin
+  etiqueta: string
+  titulo: string
+  detalle: string
+  fecha: string
+  ruta: '/alertas' | '/crm' | '/usuarios'
+  prioridad: number
+}
+
+export type ResumenAtencionAdmin = {
+  items: ItemAtencionAdmin[]
+  alertasCriticas: number
+  solicitudesPendientes: number
+  recuperacionesPendientes: number
+}
+
+export function calcularAtencionAdmin(datos: AtencionAdminData): ResumenAtencionAdmin {
+  const alertasPendientes = datos.alertas.filter((alerta) => alerta.estado !== 'cerrada')
+  const solicitudesPendientes = datos.solicitudes.filter(
+    (solicitud) => solicitud.estado === 'abierta' || solicitud.estado === 'en_proceso',
+  )
+  const recuperacionesPendientes = datos.recuperaciones.filter(
+    (recuperacion) => recuperacion.estado === 'pendiente',
+  )
+
+  const items: ItemAtencionAdmin[] = [
+    ...alertasPendientes.map((alerta) => ({
+      id: `alerta-${alerta.id}`,
+      tipo: 'alerta' as const,
+      etiqueta: esCriticidadAlta(alerta.criticidad) ? 'Alerta crítica' : 'Alerta',
+      titulo: alerta.mensaje ?? `${alerta.tipo} fuera de rango`,
+      detalle: `${alerta.galpon.granja.nombre} · ${alerta.galpon.nombre}`,
+      fecha: alerta.fecha_creacion,
+      ruta: '/alertas' as const,
+      prioridad: esCriticidadAlta(alerta.criticidad) ? 3 : 2,
+    })),
+    ...solicitudesPendientes.map((solicitud) => ({
+      id: `solicitud-${solicitud.id}`,
+      tipo: 'solicitud' as const,
+      etiqueta: solicitud.estado === 'abierta' ? 'PQRS pendiente' : 'PQRS en atención',
+      titulo: solicitud.asunto ?? solicitud.categoria,
+      detalle: solicitud.prospecto.nombre ?? solicitud.prospecto.email ?? 'Prospecto sin nombre',
+      fecha: solicitud.fecha_creacion,
+      ruta: '/crm' as const,
+      prioridad: solicitud.estado === 'abierta' ? 2 : 1,
+    })),
+    ...recuperacionesPendientes.map((recuperacion) => ({
+      id: `recuperacion-${recuperacion.id}`,
+      tipo: 'recuperacion' as const,
+      etiqueta: 'Acceso pendiente',
+      titulo: `Recuperar acceso de ${recuperacion.usuario.nombre_completo}`,
+      detalle: recuperacion.usuario.email,
+      fecha: recuperacion.fecha_creacion,
+      ruta: '/usuarios' as const,
+      prioridad: 2,
+    })),
+  ]
+
+  items.sort((a, b) => b.prioridad - a.prioridad || new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+
+  return {
+    items: items.slice(0, 6),
+    alertasCriticas: alertasPendientes.filter((alerta) => esCriticidadAlta(alerta.criticidad)).length,
+    solicitudesPendientes: solicitudesPendientes.length,
+    recuperacionesPendientes: recuperacionesPendientes.length,
+  }
 }
 
 export function calcularKpisAdmin(granjas: Granja[], galpones: GalponMonitoreoVista[]): KpiAdmin[] {

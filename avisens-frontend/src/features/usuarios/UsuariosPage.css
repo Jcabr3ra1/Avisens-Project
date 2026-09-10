@@ -692,3 +692,31 @@
     transition: none;
   }
 }
+
+/* Capa administrativa común: conserva los flujos del módulo y elimina
+   superficies translúcidas heredadas de la primera versión. */
+.usuarios-card.adm-panel {
+  border-color: var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: none;
+}
+
+.usuarios-toolbar {
+  padding: 0.8rem 0.95rem;
+  border-color: var(--border-subtle);
+  background: var(--surface-tinted);
+}
+
+.usuarios-search {
+  border-color: var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+}
+
+.usuarios-search:focus-within {
+  border-color: var(--focus-ring);
+  background: var(--surface-base);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus-ring) 20%, transparent);
+}

@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { getRol } from '@shared/api'
 import { ROL_ADMIN } from '@shared/auth/permisos'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcDoc, IcDrop, IcHeart, IcRefresh, IcScale, IcSeed } from '@shared/ui/icons/icons'
 import GestionConsumos from '@features/consumos-diarios/components/GestionConsumos'
 import { mensajeDeError } from '@shared/utils/errores'
@@ -20,6 +21,7 @@ import {
   filtrarRegistrosPorLote,
   type VistaBitacora,
 } from './model/resumenBitacora'
+import '@shared/ui/admin/AdminKit.css'
 import './BitacoraPage.css'
 
 const ETIQUETA: Record<TipoRegistro, string> = {
@@ -153,35 +155,39 @@ function BitacoraPage() {
   }
 
   const borrar = (tipo: TipoRegistro, id: number) => {
-    if (window.confirm('¿Eliminar este registro?')) {
+    if (window.confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) {
       void datos.eliminar(tipo, id).catch(() => undefined)
     }
   }
 
   if (datos.cargando) {
     return (
-      <div className="page-container bit-page">
+      <div className="page-container bit-page adm-page">
         <p className="bit-vacio">Cargando bitácora…</p>
       </div>
     )
   }
 
   return (
-    <div className={`page-container bit-page${esAdministrador ? ' bit-page--admin' : ''}`}>
-      <header className="bit-header">
-        <div>
-          <p>{esAdministrador ? 'Control de organización' : 'Control productivo'}</p>
-          <h1>{esAdministrador ? 'Bitácora de producción' : 'Bitácora del lote'}</h1>
-          <span>
-            {esAdministrador
-              ? 'Consulta y registra la actividad de los lotes activos.'
-              : 'Registra y consulta el estado real de tus aves.'}
-          </span>
-        </div>
-        <div className="bit-header-controles">
-          <fieldset className="bit-selector-jerarquico">
-            <legend>Ubicación en seguimiento</legend>
-            <label>
+    <div className={`page-container bit-page adm-page${esAdministrador ? ' bit-page--admin' : ''}`}>
+      <CabeceraAdmin
+        eyebrow={esAdministrador ? 'Control de organización' : 'Control productivo'}
+        titulo={esAdministrador ? 'Bitácora de producción' : 'Bitácora del lote'}
+        subtitulo={esAdministrador
+          ? 'Consulta y registra la actividad de los lotes activos.'
+          : 'Registra y consulta el estado real de tus aves.'}
+        acciones={(
+          <button type="button" className="adm-btn adm-btn--secundario" onClick={() => void datos.recargar()}>
+            <IcRefresh size={15} aria-hidden="true" />
+            Actualizar
+          </button>
+        )}
+      />
+
+      <fieldset className="bit-selector-jerarquico adm-panel">
+        <legend>Ubicación en seguimiento</legend>
+        <div className="bit-selector-campos">
+          <label>
               <span>Granja</span>
               <select
                 value={granjaSeleccionadaId ?? ''}
@@ -195,8 +201,8 @@ function BitacoraPage() {
                 {!granjas.length && <option value="">Sin granjas con lotes activos</option>}
                 {granjas.map((granja) => <option key={granja.id} value={granja.id}>{granja.nombre}</option>)}
               </select>
-            </label>
-            <label>
+          </label>
+          <label>
               <span>Galpón</span>
               <select
                 value={galponSeleccionadoId ?? ''}
@@ -209,8 +215,8 @@ function BitacoraPage() {
                 {!galpones.length && <option value="">Sin galpones disponibles</option>}
                 {galpones.map((galpon) => <option key={galpon.id} value={galpon.id}>{galpon.nombre}</option>)}
               </select>
-            </label>
-            <label>
+          </label>
+          <label>
               <span>Lote activo</span>
               <select
                 value={loteSeleccionadoId ?? ''}
@@ -220,17 +226,12 @@ function BitacoraPage() {
                 {!lotesDelGalpon.length && <option value="">Sin lotes activos</option>}
                 {lotesDelGalpon.map((item) => <option key={item.id} value={item.id}>{item.codigo}</option>)}
               </select>
-            </label>
-          </fieldset>
-          <button type="button" className="bit-actualizar" onClick={() => void datos.recargar()}>
-            <IcRefresh size={15} aria-hidden="true" />
-            Actualizar
-          </button>
+          </label>
         </div>
-      </header>
+      </fieldset>
 
       {datos.error && (
-        <div className="bit-alert" role="alert">
+        <div className="bit-alert adm-alerta" role="alert">
           <span>{datos.error}</span>
           <button type="button" onClick={() => void datos.recargar()}>Reintentar</button>
         </div>

@@ -13,7 +13,7 @@ function FilaProspecto({ prospecto, onAbrir }: Props) {
   const urgencia = urgenciaDe(prospecto.ultimaActividad, prospecto.etapa)
 
   return (
-    <tr className={`crm-fila crm-fila--${prospecto.etapa}`} onClick={onAbrir}>
+    <tr className={`crm-fila crm-fila--${prospecto.etapa}`}>
       <td>
         <div className="crm-fila-nombre-wrap">
           <span className="crm-fila-avatar" style={{ background: estilo.color }}>
@@ -60,6 +60,11 @@ function FilaProspecto({ prospecto, onAbrir }: Props) {
             <small>{prospecto.correo}</small>
           </>
         )}
+      </td>
+      <td>
+        <button type="button" className="crm-fila-accion" onClick={onAbrir}>
+          Ver detalle
+        </button>
       </td>
     </tr>
   )

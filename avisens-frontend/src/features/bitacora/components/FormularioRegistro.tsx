@@ -57,7 +57,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
     >
       <form id={ID_FORMULARIO} onSubmit={onGuardar}>
         <label className="modal-campo">
-          <span>Fecha *</span>
+          <span>Fecha</span>
           <input
             ref={fechaRef}
             type="date"
@@ -70,7 +70,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
         {tipo === 'peso' && (
           <>
             <label className="modal-campo">
-              <span>Peso promedio (g) *</span>
+              <span>Peso promedio (g)</span>
               <input
                 type="number"
                 min="1"
@@ -81,7 +81,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
             </label>
             <div className="modal-fila">
               <label className="modal-campo">
-                <span>Aves pesadas</span>
+                <span>Aves pesadas <em>(Opcional)</em></span>
                 <input
                   type="number"
                   min="1"
@@ -90,7 +90,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
                 />
               </label>
               <label className="modal-campo">
-                <span>Peso objetivo (g)</span>
+                <span>Peso objetivo (g) <em>(Opcional)</em></span>
                 <input
                   type="number"
                   min="1"
@@ -105,7 +105,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
         {tipo === 'mortalidad' && (
           <>
             <label className="modal-campo">
-              <span>Aves fallecidas *</span>
+              <span>Aves fallecidas</span>
               <input
                 type="number"
                 min="1"
@@ -115,7 +115,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
               />
             </label>
             <label className="modal-campo">
-              <span>Causa probable</span>
+              <span>Causa probable <em>(Opcional)</em></span>
               <input
                 value={form.causa_presuntiva}
                 onChange={(evento) => onCambiar('causa_presuntiva', evento.target.value)}
@@ -127,7 +127,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
         {tipo === 'sanitario' && (
           <>
             <label className="modal-campo">
-              <span>Tipo de evento *</span>
+              <span>Tipo de evento</span>
               <select
                 value={form.tipo}
                 onChange={(evento) => onCambiar('tipo', evento.target.value)}
@@ -140,14 +140,14 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
               </select>
             </label>
             <label className="modal-campo">
-              <span>Producto o vacuna</span>
+              <span>Producto o vacuna <em>(Opcional)</em></span>
               <input
                 value={form.producto}
                 onChange={(evento) => onCambiar('producto', evento.target.value)}
               />
             </label>
             <label className="modal-campo">
-              <span>Diagnóstico</span>
+              <span>Diagnóstico <em>(Opcional)</em></span>
               <input
                 value={form.diagnostico}
                 onChange={(evento) => onCambiar('diagnostico', evento.target.value)}
@@ -157,7 +157,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
         )}
 
         <label className="modal-campo">
-          <span>Observaciones</span>
+          <span>Observaciones <em>(Opcional)</em></span>
           <textarea
             rows={3}
             value={form.observaciones}

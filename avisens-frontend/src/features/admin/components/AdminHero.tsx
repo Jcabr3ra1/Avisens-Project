@@ -5,6 +5,7 @@ type Props = {
   nombre: string
   fecha: string
   kpis: KpiAdmin[]
+  cargando: boolean
 }
 
 function iconoKpi(icono: KpiAdmin['icono']) {
@@ -17,45 +18,31 @@ function iconoKpi(icono: KpiAdmin['icono']) {
   return iconos[icono] ?? <IcGrid size={16} />
 }
 
-function AdminHero({ nombre, fecha, kpis }: Props) {
+function AdminHero({ nombre, fecha, kpis, cargando }: Props) {
   return (
-    <section className="admin-hero">
-      <svg className="admin-hero-pattern" aria-hidden="true">
-        <defs>
-          <pattern id="adm-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-            <circle cx="1" cy="1" r="0.9" fill="rgba(255,255,255,0.07)" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#adm-dots)" />
-      </svg>
-
-      <div className="admin-hero-top">
+    <>
+      <header className="admin-header">
         <div>
-          <p className="admin-hero-eyebrow">Panel de administración · Avisens</p>
-          <h1 className="admin-hero-title">Hola, {nombre}</h1>
+          <p className="admin-header-eyebrow">Panel de administración</p>
+          <h1 className="admin-header-title">Buen día, {nombre}</h1>
+          <p className="admin-header-subtitle">Revisa lo prioritario y continúa con la gestión de Avisens.</p>
         </div>
-        <div className="admin-hero-badges">
-          <div className="admin-hero-status">
-            <span className="admin-hero-pulse" />
-            <span>Sistema operativo</span>
-          </div>
-          <span className="admin-hero-fecha">{fecha}</span>
-        </div>
-      </div>
+        <time className="admin-header-date">{fecha}</time>
+      </header>
 
-      <div className="admin-hero-kpis">
+      <section className="admin-kpis" aria-label="Estado general" aria-busy={cargando}>
         {kpis.map((kpi) => (
-          <div key={kpi.etiqueta} className="admin-hero-kpi">
-            <div className="admin-hero-kpi-top">
-              <span className="admin-hero-kpi-icon">{iconoKpi(kpi.icono)}</span>
+          <article key={kpi.etiqueta} className="admin-kpi">
+            <span className="admin-kpi-icon" aria-hidden="true">{iconoKpi(kpi.icono)}</span>
+            <div className="admin-kpi-copy">
+              <span className="admin-kpi-label">{kpi.etiqueta}</span>
+              <strong className="admin-kpi-value">{cargando ? '—' : kpi.valor}</strong>
+              <span className="admin-kpi-detail">{cargando ? 'Actualizando datos…' : kpi.detalle}</span>
             </div>
-            <span className="admin-hero-kpi-valor">{kpi.valor}</span>
-            <span className="admin-hero-kpi-label">{kpi.etiqueta}</span>
-            <span className="admin-hero-kpi-sub">{kpi.detalle}</span>
-          </div>
+          </article>
         ))}
-      </div>
-    </section>
+      </section>
+    </>
   )
 }
 

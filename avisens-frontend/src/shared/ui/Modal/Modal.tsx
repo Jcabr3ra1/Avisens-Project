@@ -1,7 +1,7 @@
-import { useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { IcClose } from '@shared/ui/icons/icons'
-import { useFocoAtrapado } from './useFocoAtrapado'
+import { obtenerFocoDeRetorno, useFocoAtrapado } from './useFocoAtrapado'
 import './Modal.css'
 
 type Props = {
@@ -15,9 +15,29 @@ type Props = {
 
 function Modal({ titulo, subtitulo, onCerrar, children, acciones, ancho = 'normal' }: Props) {
   const tarjeta = useRef<HTMLDivElement>(null)
-  // El Modal siempre está montado mientras existe, así que "activo" es
-  // siempre true — la lógica de encendido/apagado vive en quien lo renderiza.
-  useFocoAtrapado(tarjeta, true, onCerrar)
+  const focoPrevio = useRef<HTMLElement | null>(obtenerFocoDeRetorno())
+
+  useEffect(() => {
+    const aplicacion = document.getElementById('root')
+    if (!aplicacion) return
+
+    const elementoRetorno = focoPrevio.current
+    const inertPrevio = aplicacion.inert
+    const ariaHiddenPrevio = aplicacion.getAttribute('aria-hidden')
+    aplicacion.inert = true
+    aplicacion.setAttribute('aria-hidden', 'true')
+
+    return () => {
+      aplicacion.inert = inertPrevio
+      if (ariaHiddenPrevio === null) aplicacion.removeAttribute('aria-hidden')
+      else aplicacion.setAttribute('aria-hidden', ariaHiddenPrevio)
+      window.setTimeout(() => elementoRetorno?.focus(), 0)
+    }
+  }, [])
+
+  // Se registra después del aislamiento del fondo para que, al desmontar,
+  // primero se reactive la aplicación y luego el foco vuelva al disparador.
+  useFocoAtrapado(tarjeta, true, onCerrar, focoPrevio.current)
 
   return createPortal(
     <div className="modal-velo" role="presentation" onClick={onCerrar}>

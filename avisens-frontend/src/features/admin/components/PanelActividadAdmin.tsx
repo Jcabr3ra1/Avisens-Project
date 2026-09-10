@@ -24,7 +24,7 @@ function PanelActividadAdmin({
   return (
     <section className="admin-card admin-actividad" aria-label="Actividad reciente de usuarios">
       <div className="admin-card-head">
-        <span className="admin-card-title"><IcBell size={15} /> Actividad reciente</span>
+        <h2 className="admin-card-title"><IcBell size={16} /> Actividad reciente</h2>
         <button type="button" className="admin-card-link" onClick={onGestionar}>
           Gestionar <IcChevronRight size={13} />
         </button>

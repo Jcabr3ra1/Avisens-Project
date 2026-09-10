@@ -5,6 +5,7 @@ import AccionesAdmin from './components/AccionesAdmin'
 import AdminHero from './components/AdminHero'
 import PanelActividadAdmin from './components/PanelActividadAdmin'
 import PanelCrmAdmin from './components/PanelCrmAdmin'
+import PanelAtencionAdmin from './components/PanelAtencionAdmin'
 import { useAdminDatos } from './hooks/useAdminDatos'
 import { useResumenAdmin } from './hooks/useResumenAdmin'
 import './AdminPage.css'
@@ -12,9 +13,19 @@ import './AdminPage.css'
 function AdminPage() {
   const navigate = useNavigate()
   const usuario = getUsuario()
-  const { usuarios, granjas, prospectos, cargandoGestion, cargandoCrm } = useAdminDatos()
-  const { galpones } = useMonitoreoAmbiental()
-  const resumen = useResumenAdmin({ usuarios, granjas, prospectos, galpones })
+  const {
+    usuarios,
+    granjas,
+    prospectos,
+    atencion,
+    cargandoGestion,
+    cargandoCrm,
+    cargandoAtencion,
+    errorAtencion,
+    recargarAtencion,
+  } = useAdminDatos()
+  const { galpones, cargando: cargandoMonitoreo } = useMonitoreoAmbiental()
+  const resumen = useResumenAdmin({ usuarios, granjas, prospectos, galpones, atencion })
   const fecha = new Date().toLocaleDateString('es-CO', {
     weekday: 'long',
     day: 'numeric',
@@ -27,14 +38,16 @@ function AdminPage() {
         nombre={usuario?.nombre?.split(' ')[0] ?? 'Administrador'}
         fecha={fecha}
         kpis={resumen.kpis}
+        cargando={cargandoGestion || cargandoMonitoreo}
       />
 
-      <div className="admin-mid-row">
-        <PanelCrmAdmin
-          etapas={resumen.etapasCrm}
-          cargando={cargandoCrm}
-          conversion={resumen.conversionCrm}
-          onGestionar={() => navigate('/crm')}
+      <div className="admin-primary-grid">
+        <PanelAtencionAdmin
+          {...resumen.atencion}
+          cargando={cargandoAtencion}
+          error={errorAtencion}
+          onAbrir={(item) => navigate(item.ruta)}
+          onReintentar={() => void recargarAtencion()}
         />
         <PanelActividadAdmin
           usuarios={resumen.actividadReciente}
@@ -47,15 +60,21 @@ function AdminPage() {
         />
       </div>
 
-      <AccionesAdmin
-        onUsuarios={() => navigate('/usuarios')}
-        onGranjas={() => navigate('/granjas')}
-        onGalpones={() => navigate('/galpones')}
-        onCrm={() => navigate('/crm')}
-        onSolicitudes={() => navigate('/solicitudes-pqrs')}
-        onProveedores={() => navigate('/proveedores')}
-        onCompras={() => navigate('/ordenes-compra')}
-      />
+      <div className="admin-secondary-grid">
+        <PanelCrmAdmin
+          etapas={resumen.etapasCrm}
+          cargando={cargandoCrm}
+          conversion={resumen.conversionCrm}
+          onGestionar={() => navigate('/crm')}
+        />
+        <AccionesAdmin
+          onUsuarios={() => navigate('/usuarios')}
+          onGranjas={() => navigate('/granjas')}
+          onCrm={() => navigate('/crm')}
+          onProveedores={() => navigate('/proveedores')}
+          onCompras={() => navigate('/ordenes-compra')}
+        />
+      </div>
 
     </div>
   )

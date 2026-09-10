@@ -12,6 +12,7 @@ import {
   IcSearch,
 } from '@shared/ui/icons/icons'
 import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import '@shared/ui/admin/AdminKit.css'
 import {
   activarGalpon,
@@ -144,7 +145,7 @@ function GranjasPage() {
   }
 
   async function eliminarGalpon(galpon: GalponConLotes) {
-    if (!window.confirm(`¿Eliminar permanentemente el galpón "${galpon.nombre}"?`)) return
+    if (!window.confirm(`¿Eliminar permanentemente el galpón "${galpon.nombre}"? Esta acción no se puede deshacer.`)) return
     await eliminarGalponPermanente(galpon.id)
     await recargarTodo()
   }
@@ -156,13 +157,13 @@ function GranjasPage() {
   }
 
   async function eliminarLote(lote: Lote) {
-    if (!window.confirm(`¿Eliminar permanentemente el lote "${lote.codigo}"?`)) return
+    if (!window.confirm(`¿Eliminar permanentemente el lote "${lote.codigo}"? Esta acción no se puede deshacer.`)) return
     await eliminarLotePermanente(lote.id)
     await recargarTodo()
   }
 
   function eliminarGranja(granja: Granja) {
-    if (!window.confirm(`¿Eliminar permanentemente la granja "${granja.nombre}"?`)) return
+    if (!window.confirm(`¿Eliminar permanentemente la granja "${granja.nombre}"? Esta acción no se puede deshacer.`)) return
     void gestionGranjas.eliminar(granja).then(recargarTodo)
   }
 
@@ -230,36 +231,30 @@ function GranjasPage() {
 
   if (cargando && estructura.length === 0) {
     return (
-      <div className="page-container gr-page">
+      <div className="page-container gr-page adm-page">
         <EsqueletoGranjas />
       </div>
     )
   }
 
   return (
-    <div className="page-container gr-page">
-      <header className="gr-cabecera">
-        <div className="gr-cabecera-fila">
-          <div>
-            <span className="gr-eyebrow">
-              <span className="gr-eyebrow-punto" aria-hidden="true" />
-              {contenidoPorRol.contexto}
-            </span>
-            <h1>{contenidoPorRol.titulo}</h1>
-            <p>{contenidoPorRol.descripcion}</p>
-          </div>
-          <div className="gr-cabecera-acciones">
-            <button
-              type="button"
-              className="gr-btn gr-btn--suave"
-              onClick={() => void recargarTodo()}
-            >
-              <IcRefresh size={14} aria-hidden="true" />
-              Actualizar
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="page-container gr-page adm-page">
+      <CabeceraAdmin
+        eyebrow={contenidoPorRol.contexto}
+        titulo={contenidoPorRol.titulo}
+        subtitulo={contenidoPorRol.descripcion}
+        acciones={(
+          <button
+            type="button"
+            className="adm-btn adm-btn--secundario"
+            onClick={() => void recargarTodo()}
+            disabled={cargando}
+          >
+            <IcRefresh size={16} aria-hidden="true" />
+            {cargando ? 'Actualizando…' : 'Actualizar'}
+          </button>
+        )}
+      />
 
       {esAdministrador ? (
         <section className="grj-resumen" aria-label={contenidoPorRol.resumen}>
