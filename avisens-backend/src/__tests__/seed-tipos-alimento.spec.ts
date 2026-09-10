@@ -22,7 +22,7 @@ describe('sembrarTiposAlimento', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('siembra el plan de alimentación de Italcol', async () => {
+  it('siembra el catálogo inicial de Italcol y Solla', async () => {
     prisma.tipoAlimento.findFirst.mockResolvedValue(null);
 
     await sembrar();
@@ -31,6 +31,8 @@ describe('sembrarTiposAlimento', () => {
       'Pollito Preiniciador',
       'Súper Pollito Iniciación',
       'Súper Pollo Engorde Granja',
+      'Nutrepollo',
+      'Broiler I',
     ]);
   });
 
@@ -42,7 +44,9 @@ describe('sembrarTiposAlimento', () => {
 
     await sembrar();
 
-    expect(creados().map((t) => t.consumo_total_esperado_g)).toEqual([
+    const italcol = creados().filter((t) => t.marca === 'italcol');
+
+    expect(italcol.map((t) => t.consumo_total_esperado_g)).toEqual([
       200, 1000, 2800,
     ]);
   });
@@ -54,7 +58,9 @@ describe('sembrarTiposAlimento', () => {
 
     await sembrar();
 
-    const tramos = creados().map((t) => [t.dia_inicio, t.dia_fin]);
+    const tramos = creados()
+      .filter((t) => t.marca === 'italcol')
+      .map((t) => [t.dia_inicio, t.dia_fin]);
     expect(tramos).toEqual([
       [1, 8],
       [9, 21],
@@ -67,10 +73,44 @@ describe('sembrarTiposAlimento', () => {
 
     await sembrar();
 
-    expect(creados().map((t) => t.etapa)).toEqual([
+    expect(
+      creados()
+        .filter((t) => t.marca === 'italcol')
+        .map((t) => t.etapa),
+    ).toEqual([
       'preiniciacion',
       'iniciacion',
       'engorde',
+    ]);
+  });
+
+  it('siembra las referencias Solla verificadas sin inventar consumo esperado', async () => {
+    prisma.tipoAlimento.findFirst.mockResolvedValue(null);
+
+    await sembrar();
+
+    const solla = creados()
+      .filter((t) => t.marca === 'solla')
+      .map((t) => ({
+        nombre: t.nombre,
+        dia_inicio: t.dia_inicio,
+        dia_fin: t.dia_fin,
+        consumo_total_esperado_g: t.consumo_total_esperado_g,
+      }));
+
+    expect(solla).toEqual([
+      {
+        nombre: 'Nutrepollo',
+        dia_inicio: 1,
+        dia_fin: 25,
+        consumo_total_esperado_g: undefined,
+      },
+      {
+        nombre: 'Broiler I',
+        dia_inicio: 26,
+        dia_fin: undefined,
+        consumo_total_esperado_g: undefined,
+      },
     ]);
   });
 
