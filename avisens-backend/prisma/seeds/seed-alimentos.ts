@@ -10,13 +10,9 @@ import type { PrismaClient } from '@prisma/client';
  * manual: los 200 g se pasan el día 8 (204 g) y los 1.200 g acumulados el día
  * 21 (1.218 g). Por eso los rangos son 1-8, 9-21 y 22 en adelante.
  *
- * El plan oficial de Solla para pollo de engorde usa Nutrepollo del día 1 al
- * 25 y Broiler I desde el día 26 hasta el sacrificio. La fuente no publica
- * gramos esperados por ave para esos dos tramos, así que ese valor se omite:
- * inventarlo alteraría los indicadores de consumo.
- *
- * Fuente: https://www.solla.com/sites/default/files/productos/secciones/
- * adjuntos/FO-108%20V3%20POLLO%20DE%20ENGORDE%20.pdf
+ * Solla no está: no tenemos su manual, y unos gramos inventados en un catálogo
+ * que después alimenta los indicadores hacen más daño que una fila de menos.
+ * El administrador puede crearlos desde la pantalla de catálogos.
  */
 const TIPOS_ALIMENTO = [
   {
@@ -45,17 +41,6 @@ const TIPOS_ALIMENTO = [
     dia_inicio: 22,
     dia_fin: 42,
     consumo_total_esperado_g: 2800,
-  },
-  {
-    nombre: 'Nutrepollo',
-    marca: 'solla',
-    dia_inicio: 1,
-    dia_fin: 25,
-  },
-  {
-    nombre: 'Broiler I',
-    marca: 'solla',
-    dia_inicio: 26,
   },
 ];
 
