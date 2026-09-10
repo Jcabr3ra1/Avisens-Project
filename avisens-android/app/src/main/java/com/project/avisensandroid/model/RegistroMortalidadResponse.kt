@@ -26,5 +26,6 @@ data class GalponMortalidadResponse(
 )
 
 data class GranjaMortalidadResponse(
-    val propietario_id: Int
+    val id: Int = 0,
+    val propietario_id: Int = 0
 )

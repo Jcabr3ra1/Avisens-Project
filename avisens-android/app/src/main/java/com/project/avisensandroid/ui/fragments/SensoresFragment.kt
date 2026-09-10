@@ -19,6 +19,7 @@ class SensoresFragment : BaseBottomNavFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        configurarBottomNav(R.id.nav_sensores)
         actualizarTemperatura(24f)
     }
 

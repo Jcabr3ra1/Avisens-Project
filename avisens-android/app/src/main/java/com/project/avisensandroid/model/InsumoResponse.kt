@@ -2,6 +2,7 @@ package com.project.avisensandroid.model
 
 data class InsumoResponse(
     val id: Int,
+    val granja_id: Int? = null,
     val nombre: String,
     val tipo: String?,
     val unidad_medida: String,

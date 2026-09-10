@@ -65,6 +65,13 @@ class BodegaFragment : BaseBottomNavFragment() {
         cargarDatosBodega()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (_binding != null) {
+            cargarDatosBodega()
+        }
+    }
+
     private fun cargarDatosBodega() {
         binding.progressInsumos.visibility = View.VISIBLE
         binding.txtSinInsumos.visibility = View.GONE
@@ -142,7 +149,13 @@ class BodegaFragment : BaseBottomNavFragment() {
     private fun mostrarInsumos(insumos: List<InsumoResponse>) {
         binding.contenedorInsumos.removeAllViews()
 
-        val activos = insumos.filter { it.activo }
+        val activity = requireActivity() as MainActivity
+        val granjaIdSeleccionada = activity.obtenerGranjaSeleccionadaId()
+
+        val activos = insumos.filter { insumo ->
+            insumo.activo &&
+                    (granjaIdSeleccionada == null || insumo.granja_id == granjaIdSeleccionada)
+        }
 
         if (activos.isEmpty()) {
             binding.txtSinInsumos.visibility = View.VISIBLE

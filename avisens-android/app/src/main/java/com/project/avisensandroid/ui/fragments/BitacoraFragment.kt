@@ -93,7 +93,21 @@ class BitacoraFragment : BaseBottomNavFragment() {
                     return@launch
                 }
 
-                mostrarRegistros(registros)
+                val activity = requireActivity() as MainActivity
+                val granjaIdSeleccionada = activity.obtenerGranjaSeleccionadaId()
+
+                val registrosFiltrados = if (granjaIdSeleccionada != null) {
+                    val idsLotesDeGranja =
+                        activity.obtenerIdsLotesDeGranjaSeleccionada()
+
+                    registros.filter {
+                        it.lote_id in idsLotesDeGranja
+                    }
+                } else {
+                    registros
+                }
+
+                mostrarRegistros(registrosFiltrados)
 
             } catch (e: Exception) {
                 if (_binding != null) {

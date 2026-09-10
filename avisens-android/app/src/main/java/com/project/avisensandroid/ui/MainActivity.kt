@@ -194,7 +194,17 @@ class MainActivity : AppCompatActivity() {
 
     private var rolActual: UserRole? = null
 
+    // Granja actualmente seleccionada por el usuario.
+    // Se conserva mientras navega entre las pantallas.
+    private var granjaSeleccionadaId: Int? = null
+
     fun obtenerRolActual(): UserRole? = rolActual
+
+    fun obtenerGranjaSeleccionadaId(): Int? = granjaSeleccionadaId
+
+    fun seleccionarGranja(granjaId: Int) {
+        granjaSeleccionadaId = granjaId
+    }
 
     fun obtenerNombreUsuario(): String =
         UserSession.name(this)
@@ -307,6 +317,7 @@ class MainActivity : AppCompatActivity() {
         when (rolActual) {
             UserRole.OPERARIO -> when (itemId) {
                 R.id.nav_inicio -> mostrarFragment(InicioFragment())
+                R.id.nav_sensores -> mostrarFragment(SensoresFragment())
                 R.id.nav_bodega -> mostrarFragment(BodegaFragment())
                 R.id.nav_alertas -> mostrarFragment(AlertasFragment())
                 R.id.nav_bitacora -> mostrarFragment(BitacoraFragment())
@@ -369,6 +380,43 @@ class MainActivity : AppCompatActivity() {
                 it.granja.id == granjaId
             }
             ?: emptyList()
+    }
+
+    /**
+     * Devuelve los IDs de los lotes pertenecientes a la granja actualmente
+     * seleccionada. Se usa para filtrar las bitácoras aunque el endpoint
+     * del registro no incluya directamente el id de la granja.
+     */
+    suspend fun obtenerIdsLotesDeGranjaSeleccionada(): Set<Int> {
+        val granjaId = granjaSeleccionadaId ?: return emptySet()
+        val todosLosLotes = mutableListOf<LoteSelectorResponse>()
+        var pagina = 1
+        var totalPaginas = 1
+
+        do {
+            val response = RetrofitClient.api.listarLotes(
+                page = pagina,
+                limit = 100
+            )
+
+            if (!response.isSuccessful) {
+                throw IllegalStateException(
+                    "No se pudieron cargar los lotes. Código: ${response.code()}"
+                )
+            }
+
+            val body = response.body()
+                ?: throw IllegalStateException("La API no devolvió información de lotes")
+
+            todosLosLotes += body.data
+            totalPaginas = body.meta.totalPages.coerceAtLeast(pagina)
+            pagina++
+        } while (pagina <= totalPaginas)
+
+        return todosLosLotes
+            .filter { it.galpon?.granja?.id == granjaId }
+            .map { it.id }
+            .toSet()
     }
 
     // =========================================================
@@ -1439,6 +1487,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private suspend fun obtenerGranjaActivaId(): Int {
+        granjaSeleccionadaId?.let { return it }
+
         val response = RetrofitClient.api.listarGranjas(
             page = 1,
             limit = 100
@@ -2286,6 +2336,13 @@ class MainActivity : AppCompatActivity() {
                     pagina++
                 } while (pagina <= totalPaginas)
 
+                val granjaIdSeleccionada = granjaSeleccionadaId
+                val lotesDeGranjaSeleccionada = if (granjaIdSeleccionada != null) {
+                    todosLosLotes.filter { it.galpon?.granja?.id == granjaIdSeleccionada }
+                } else {
+                    todosLosLotes
+                }
+
                 nombres.clear()
                 ids.clear()
                 nombres.add("Seleccionar lote")
@@ -2294,7 +2351,7 @@ class MainActivity : AppCompatActivity() {
                 // Para el selector solo necesitamos id y código. Así evitamos
                 // que un campo anidado opcional de la respuesta (/galpon o
                 // /proveedor) impida deserializar los lotes.
-                todosLosLotes
+                lotesDeGranjaSeleccionada
                     .filter { it.codigo.isNotBlank() }
                     .distinctBy { it.id }
                     .forEach { lote ->

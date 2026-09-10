@@ -20,7 +20,7 @@ import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.model.AsignarGalponRequest
 import com.project.avisensandroid.model.CreateUsuarioRequest
-import com.project.avisensandroid.model.GalponResponse
+import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.UsuarioGalponResponse
 import com.project.avisensandroid.model.UsuarioGestionResponse
 import kotlinx.coroutines.launch
@@ -203,7 +203,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             emptyCard.addView(title, LinearLayout.LayoutParams(-1, -2))
 
             val message = TextView(requireContext()).apply {
-                text = "Crea un operario para comenzar a asignarle galpones."
+                text = "Crea un operario para comenzar a asignarle granjas."
                 textSize = 13f
                 setTextColor(Color.parseColor("#78847E"))
                 gravity = android.view.Gravity.CENTER
@@ -303,7 +303,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 gravity = android.view.Gravity.CENTER_VERTICAL
             }
             val assignmentTitle = TextView(requireContext()).apply {
-                text = "Galpones asignados"
+                text = "Granjas asignadas"
                 textSize = 14f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.parseColor("#1F5C42"))
@@ -327,7 +327,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                     cornerRadius = dp(10).toFloat()
                     setStroke(dp(1), Color.parseColor("#2F8B5E"))
                 }
-                setOnClickListener { mostrarDialogAsignarGalpon(usuario.id) }
+                setOnClickListener { mostrarDialogAsignarGranja(usuario.id) }
             }
             assignmentHeader.addView(assignButton, LinearLayout.LayoutParams(dp(96), dp(36)))
             card.addView(assignmentHeader)
@@ -432,7 +432,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                         ).apply {
 
                             text =
-                                "Sin galpones asignados."
+                                "Sin granjas asignadas."
 
                             textSize = 13f
 
@@ -447,14 +447,21 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 } else {
 
                     // --------------------------------------------
-                    // Mostrar cada asignación
+                    // Agrupar los galpones asignados por granja,
+                    // para que el propietario vea/gestione la
+                    // asignación a nivel de granja (no de galpón).
                     // --------------------------------------------
 
-                    asignaciones.forEach {
+                    val asignacionesPorGranja =
+                        asignaciones.groupBy {
+                            it.galpon.granja.id
+                        }
 
-                        agregarAsignacion(
+                    asignacionesPorGranja.values.forEach { grupo ->
+
+                        agregarAsignacionGranja(
                             usuarioId,
-                            it,
+                            grupo,
                             contenedor
                         )
                     }
@@ -484,14 +491,20 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     }
 
     // ============================================================
-    // AGREGAR ASIGNACIÓN A LA TARJETA
+    // AGREGAR ASIGNACIÓN DE GRANJA A LA TARJETA
     // ============================================================
 
-    private fun agregarAsignacion(
+    private fun agregarAsignacionGranja(
         usuarioId: Int,
-        asignacion: UsuarioGalponResponse,
+        asignacionesDeGranja: List<UsuarioGalponResponse>,
         contenedor: LinearLayout
     ) {
+
+        val granja =
+            asignacionesDeGranja.first().galpon.granja
+
+        val galponIds =
+            asignacionesDeGranja.map { it.galpon_id }
 
         val fila =
             LinearLayout(
@@ -506,7 +519,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             }
 
         // --------------------------------------------------------
-        // Texto del galpón
+        // Texto de la granja
         // --------------------------------------------------------
 
         val texto =
@@ -515,9 +528,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             ).apply {
 
                 text =
-                    "${asignacion.galpon.codigo} - " +
-                            "${asignacion.galpon.nombre} " +
-                            "(${asignacion.galpon.granja.nombre})"
+                    "${granja.nombre} " +
+                            "(${galponIds.size} galpón${if (galponIds.size == 1) "" else "es"})"
 
                 textSize = 13f
 
@@ -586,9 +598,10 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
                 setOnClickListener {
 
-                    desasignar(
+                    desasignarGranja(
                         usuarioId,
-                        asignacion.galpon_id
+                        granja.nombre,
+                        galponIds
                     )
                 }
             }
@@ -607,10 +620,10 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     }
 
     // ============================================================
-    // DIALOG PARA ASIGNAR GALPÓN
+    // DIALOG PARA ASIGNAR GRANJA
     // ============================================================
 
-    private fun mostrarDialogAsignarGalpon(
+    private fun mostrarDialogAsignarGranja(
         usuarioId: Int
     ) {
 
@@ -619,7 +632,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             try {
 
                 val response =
-                    RetrofitClient.api.listarGalpones(
+                    RetrofitClient.api.listarGranjas(
                         page = 1,
                         limit = 100
                     )
@@ -627,54 +640,49 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 if (!response.isSuccessful) {
 
                     mostrarError(
-                        "No se pudieron cargar los galpones. " +
+                        "No se pudieron cargar las granjas. " +
                                 "Código: ${response.code()}"
                     )
 
                     return@launch
                 }
 
-                val galpones =
+                val granjas =
                     response.body()
                         ?.data
                         .orEmpty()
                         .filter {
-                            it.activo
+                            it.activa
                         }
 
-                if (galpones.isEmpty()) {
+                if (granjas.isEmpty()) {
 
                     mostrarError(
-                        "No hay galpones disponibles para asignar."
+                        "No hay granjas disponibles para asignar."
                     )
 
                     return@launch
                 }
 
                 val nombres =
-                    galpones
-                        .map {
-
-                            "${it.codigo} - " +
-                                    "${it.nombre} " +
-                                    "(${it.granja.nombre})"
-                        }
+                    granjas
+                        .map { it.nombre }
                         .toTypedArray()
 
                 AlertDialog.Builder(
                     requireContext()
                 )
                     .setTitle(
-                        "Asignar galpón"
+                        "Asignar granja"
                     )
                     .setSingleChoiceItems(
                         nombres,
                         -1
                     ) { dialog, which ->
 
-                        asignar(
+                        asignarGranja(
                             usuarioId,
-                            galpones[which]
+                            granjas[which]
                         )
 
                         dialog.dismiss()
@@ -688,7 +696,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             } catch (e: Exception) {
 
                 mostrarError(
-                    "Error al cargar galpones: " +
+                    "Error al cargar granjas: " +
                             (e.message
                                 ?: "sin detalle")
                 )
@@ -697,48 +705,91 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     }
 
     // ============================================================
-    // ASIGNAR GALPÓN
+    // ASIGNAR GRANJA (asigna todos sus galpones activos)
     // ============================================================
 
-    private fun asignar(
+    private fun asignarGranja(
         usuarioId: Int,
-        galpon: GalponResponse
+        granja: GranjaResponse
     ) {
 
         viewLifecycleOwner.lifecycleScope.launch {
 
             try {
 
-                val response =
-                    RetrofitClient.api.asignarGalpon(
-                        usuarioId,
-                        AsignarGalponRequest(
-                            galpon_id = galpon.id
-                        )
+                val responseGalpones =
+                    RetrofitClient.api.listarGalpones(
+                        page = 1,
+                        limit = 100
                     )
 
-                if (response.isSuccessful) {
+                if (!responseGalpones.isSuccessful) {
+
+                    mostrarError(
+                        "No se pudieron cargar los galpones de la granja. " +
+                                "Código: ${responseGalpones.code()}"
+                    )
+
+                    return@launch
+                }
+
+                val galponesDeGranja =
+                    responseGalpones.body()
+                        ?.data
+                        .orEmpty()
+                        .filter {
+                            it.activo && it.granja.id == granja.id
+                        }
+
+                if (galponesDeGranja.isEmpty()) {
+
+                    mostrarError(
+                        "\"${granja.nombre}\" todavía no tiene galpones activos. " +
+                                "Crea un galpón ahí antes de asignarla."
+                    )
+
+                    return@launch
+                }
+
+                var fallos = 0
+
+                galponesDeGranja.forEach { galpon ->
+
+                    val response =
+                        RetrofitClient.api.asignarGalpon(
+                            usuarioId,
+                            AsignarGalponRequest(
+                                galpon_id = galpon.id
+                            )
+                        )
+
+                    if (!response.isSuccessful) {
+                        fallos++
+                    }
+                }
+
+                if (fallos == 0) {
 
                     Toast.makeText(
                         requireContext(),
-                        "Galpón asignado correctamente",
+                        "Granja asignada correctamente " +
+                                "(${galponesDeGranja.size} galpón${if (galponesDeGranja.size == 1) "" else "es"})",
                         Toast.LENGTH_SHORT
                     ).show()
-
-                    cargarOperarios()
 
                 } else {
 
                     mostrarError(
-                        "No se pudo asignar el galpón. " +
-                                "Código: ${response.code()}"
+                        "Se asignó la granja, pero $fallos galpón(es) fallaron."
                     )
                 }
+
+                cargarOperarios()
 
             } catch (e: Exception) {
 
                 mostrarError(
-                    "Error al asignar galpón: " +
+                    "Error al asignar la granja: " +
                             (e.message
                                 ?: "sin detalle")
                 )
@@ -747,12 +798,13 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     }
 
     // ============================================================
-    // DESASIGNAR GALPÓN
+    // DESASIGNAR GRANJA (quita todos sus galpones asignados)
     // ============================================================
 
-    private fun desasignar(
+    private fun desasignarGranja(
         usuarioId: Int,
-        galponId: Int
+        nombreGranja: String,
+        galponIds: List<Int>
     ) {
 
         AlertDialog.Builder(
@@ -762,7 +814,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 "Quitar asignación"
             )
             .setMessage(
-                "¿Quieres quitar este galpón del operario?"
+                "¿Quieres quitar \"$nombreGranja\" del operario? " +
+                        "Se le quitarán sus ${galponIds.size} galpón${if (galponIds.size == 1) "" else "es"} asignados."
             )
             .setNegativeButton(
                 "Cancelar",
@@ -776,35 +829,43 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
                     try {
 
-                        val response =
-                            RetrofitClient.api
-                                .desasignarGalpon(
-                                    usuarioId,
-                                    galponId
-                                )
+                        var fallos = 0
 
-                        if (response.isSuccessful) {
+                        galponIds.forEach { galponId ->
+
+                            val response =
+                                RetrofitClient.api
+                                    .desasignarGalpon(
+                                        usuarioId,
+                                        galponId
+                                    )
+
+                            if (!response.isSuccessful) {
+                                fallos++
+                            }
+                        }
+
+                        if (fallos == 0) {
 
                             Toast.makeText(
                                 requireContext(),
-                                "Asignación retirada",
+                                "Granja retirada",
                                 Toast.LENGTH_SHORT
                             ).show()
-
-                            cargarOperarios()
 
                         } else {
 
                             mostrarError(
-                                "No se pudo quitar la asignación. " +
-                                        "Código: ${response.code()}"
+                                "Se retiró la granja, pero $fallos galpón(es) fallaron."
                             )
                         }
+
+                        cargarOperarios()
 
                     } catch (e: Exception) {
 
                         mostrarError(
-                            "Error al quitar asignación: " +
+                            "Error al quitar la asignación: " +
                                     (e.message
                                         ?: "sin detalle")
                         )

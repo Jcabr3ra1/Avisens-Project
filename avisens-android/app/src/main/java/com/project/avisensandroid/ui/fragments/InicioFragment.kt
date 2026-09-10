@@ -160,8 +160,29 @@ class InicioFragment : BaseBottomNavFragment() {
 
                 if (granjas.isNotEmpty()) {
 
+                    val granjaIdGuardada =
+                        activity.obtenerGranjaSeleccionadaId()
+
                     granjaSeleccionada =
-                        granjas.first()
+                        granjas.firstOrNull {
+                            it.id == granjaIdGuardada
+                        } ?: granjas.first()
+
+                    activity.seleccionarGranja(
+                        granjaSeleccionada!!.id
+                    )
+
+                    val posicionGranja =
+                        granjas.indexOfFirst {
+                            it.id == granjaSeleccionada!!.id
+                        }
+
+                    if (posicionGranja >= 0) {
+                        binding.spinnerGranjas.setSelection(
+                            posicionGranja,
+                            false
+                        )
+                    }
 
                     mostrarGalponesDeGranja(
                         granjaSeleccionada!!.id
@@ -234,6 +255,10 @@ class InicioFragment : BaseBottomNavFragment() {
 
                         granjaSeleccionada =
                             granjas[position]
+
+                        (requireActivity() as MainActivity).seleccionarGranja(
+                            granjas[position].id
+                        )
 
                         mostrarGalponesDeGranja(
                             granjas[position].id
