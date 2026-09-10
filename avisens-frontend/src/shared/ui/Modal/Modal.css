@@ -261,3 +261,12 @@
   .modal-campo select { transition: none; }
   .modal-btn:active:not(:disabled) { transform: none; }
 }
+
+/* Aclaración bajo un campo cuando su desplegable llega vacío o necesita
+   contexto. No es un error: no lleva rol de alerta. */
+.modal-ayuda {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
