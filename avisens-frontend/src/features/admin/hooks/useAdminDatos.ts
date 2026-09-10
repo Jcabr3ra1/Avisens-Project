@@ -41,8 +41,7 @@ export function useAdminDatos() {
   const cargarProspectos = useCallback(async () => {
     setCargandoCrm(true)
     try {
-      const { data } = await cargarProspectosAdmin()
-      setProspectos(data)
+      setProspectos(await cargarProspectosAdmin())
     } catch {
       return
     } finally {
