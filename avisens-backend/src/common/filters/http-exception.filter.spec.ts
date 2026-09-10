@@ -51,6 +51,24 @@ describe('HttpExceptionFilter', () => {
       );
     });
 
+    // La forma con la que de verdad llegó: sin `cause` que la clasifique, sólo
+    // el mensaje de Postgres. Por eso el primer arreglo no la atrapó.
+    const errorCrudo = () => {
+      const e = new Error(
+        'update or delete on table "lotes" violates RESTRICT setting of foreign ' +
+          'key constraint "registros_mortalidad_lote_id_fkey" on table "registros_mortalidad"',
+      );
+      e.name = 'DriverAdapterError';
+      return e;
+    };
+
+    it('responde 409 aunque el error no traiga cause', () => {
+      filtro.catch(errorCrudo(), host());
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+      expect(respuesta().message).toContain('registros de mortalidad');
+    });
+
     it('dice qué lo bloquea, para que el mensaje sirva de algo', () => {
       filtro.catch(errorDelDriver(), host());
 
