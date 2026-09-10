@@ -25,6 +25,24 @@ type Causa = {
  * `error.meta.driverAdapterError.cause`. Mirar sólo uno de los dos deja la
  * mitad de los casos sin nombre de tabla y el mensaje se queda en genérico.
  */
+/**
+ * El texto del error, mire donde mire.
+ *
+ * En producción la violación no llegaba ni con código P2003 ni con `kind`:
+ * subía como un DriverAdapterError crudo cuyo único rastro era el mensaje de
+ * Postgres. Se leen el mensaje propio y el del driver, que según la versión de
+ * Postgres dice «violates foreign key constraint» o «violates RESTRICT setting
+ * of foreign key constraint».
+ */
+const PATRON_MENSAJE = /violates (?:\w+ setting of )?foreign key constraint/i;
+
+function textoDe(error: unknown): string {
+  const { message } = error as { message?: unknown };
+  const propio = typeof message === 'string' ? message : '';
+  const delDriver = causaDe(error)?.originalMessage ?? '';
+  return `${propio} ${delDriver}`;
+}
+
 function causaDe(error: unknown): Causa | null {
   if (typeof error !== 'object' || error === null) return null;
 
@@ -48,11 +66,15 @@ export function esViolacionDeLlaveForanea(error: unknown): boolean {
 
   // Camino 2: subió desde el driver sin mapear.
   const causa = causaDe(error);
-  if (!causa) return false;
-  return (
-    causa.kind === 'ForeignKeyConstraintViolation' ||
-    causa.originalCode === CODIGO_POSTGRES
-  );
+  if (
+    causa?.kind === 'ForeignKeyConstraintViolation' ||
+    causa?.originalCode === CODIGO_POSTGRES
+  ) {
+    return true;
+  }
+
+  // Camino 3: subió crudo y sin clasificar, sólo con el mensaje de Postgres.
+  return PATRON_MENSAJE.test(textoDe(error));
 }
 
 /**
@@ -64,11 +86,15 @@ export function esViolacionDeLlaveForanea(error: unknown): boolean {
  */
 export function tablaQueBloquea(error: unknown): string | null {
   const causa = causaDe(error);
+  const desdeElMensaje = textoDe(error).match(
+    /foreign key constraint "([^"]+)"/i,
+  )?.[1];
   const indice =
     causa?.constraint?.index ??
     ((error as { meta?: { constraint?: unknown } }).meta?.constraint as
       | string
-      | undefined);
+      | undefined) ??
+    desdeElMensaje;
   if (typeof indice !== 'string') return null;
 
   const sinSufijo = indice.replace(/_fkey$/, '');
