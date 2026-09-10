@@ -43,9 +43,50 @@ const errorDePrisma = () =>
     },
   });
 
+/**
+ * La forma con la que de verdad llegó al filtro en producción: un
+ * DriverAdapterError crudo, sin `cause` que lo clasifique. El único rastro de
+ * que es una llave foránea está en el mensaje de Postgres. El primer arreglo
+ * dio por hecho que el `cause` venía puesto, así que las pruebas pasaban y el
+ * 500 seguía saliendo.
+ */
+const errorCrudoSinClasificar = () => {
+  const e = new Error(
+    'update or delete on table "lotes" violates RESTRICT setting of foreign key ' +
+      'constraint "registros_mortalidad_lote_id_fkey" on table "registros_mortalidad"',
+  );
+  e.name = 'DriverAdapterError';
+  return e;
+};
+
 describe('esViolacionDeLlaveForanea', () => {
   it('reconoce la que sube desde el driver sin código P', () => {
     expect(esViolacionDeLlaveForanea(errorDelDriver())).toBe(true);
+  });
+
+  it('reconoce la cruda que sólo trae el mensaje de Postgres', () => {
+    expect(esViolacionDeLlaveForanea(errorCrudoSinClasificar())).toBe(true);
+  });
+
+  it('reconoce las dos redacciones de Postgres', () => {
+    const conRestrict = new Error(
+      'update or delete on table "lotes" violates RESTRICT setting of foreign key constraint "x_lote_id_fkey" on table "x"',
+    );
+    const sinRestrict = new Error(
+      'update or delete on table "lotes" violates foreign key constraint "x_lote_id_fkey" on table "x"',
+    );
+    expect(esViolacionDeLlaveForanea(conRestrict)).toBe(true);
+    expect(esViolacionDeLlaveForanea(sinRestrict)).toBe(true);
+  });
+
+  it('lo reconoce también cuando el texto viene en originalMessage', () => {
+    const e = Object.assign(new Error('algo falló'), {
+      cause: {
+        originalMessage:
+          'update or delete on table "lotes" violates foreign key constraint "pesajes_lote_id_fkey" on table "pesajes"',
+      },
+    });
+    expect(esViolacionDeLlaveForanea(e)).toBe(true);
   });
 
   it('sigue reconociendo la que Prisma mapea como P2003', () => {
@@ -78,6 +119,12 @@ describe('tablaQueBloquea', () => {
   // nombre y el mensaje se quedaba en el genérico.
   it('también cuando viene anidado en el meta de Prisma', () => {
     expect(tablaQueBloquea(errorDePrisma())).toBe('pesajes');
+  });
+
+  it('la saca del mensaje cuando no viene la restricción aparte', () => {
+    expect(tablaQueBloquea(errorCrudoSinClasificar())).toBe(
+      'registros_mortalidad',
+    );
   });
 
   it('aguanta un nombre que no siga el patrón sin inventarse nada', () => {

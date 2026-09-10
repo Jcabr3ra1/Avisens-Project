@@ -97,14 +97,32 @@ export class MovimientosFinancierosService {
     return granja.id;
   }
 
-  private async validarCategoria(categoriaId: number) {
+  /**
+   * La categoría existe y encaja con el lado del balance del movimiento.
+   *
+   * Antes sólo se comprobaba que existiera, así que un ingreso con la
+   * categoría «Compra de alimento» se guardaba sin protestar: el movimiento
+   * sumaba de un lado y quedaba clasificado del otro, y el balance de la
+   * granja salía mal sin que nadie se enterara.
+   *
+   * Una categoría sin tipo sirve para las dos cosas y no se rechaza: la
+   * columna es opcional a propósito.
+   */
+  private async validarCategoria(categoriaId: number, tipo?: string) {
     const categoria = await this.prisma.categoriaFinanciera.findUnique({
       where: { id: categoriaId },
-      select: { id: true },
+      select: { id: true, nombre: true, tipo: true },
     });
 
     if (!categoria) {
       throw new NotFoundException('Categoria financiera no encontrada');
+    }
+
+    if (tipo && categoria.tipo && categoria.tipo !== tipo) {
+      throw new BadRequestException(
+        `La categoría "${categoria.nombre}" es de ${categoria.tipo}, ` +
+          `así que no puede clasificar un movimiento de ${tipo}`,
+      );
     }
   }
 
@@ -127,7 +145,7 @@ export class MovimientosFinancierosService {
       dto.lote_id,
       solicitante,
     );
-    await this.validarCategoria(dto.categoria_id);
+    await this.validarCategoria(dto.categoria_id, dto.tipo);
     await this.validarProveedor(dto.proveedor_id);
 
     return this.prisma.movimientoFinanciero.create({
@@ -188,8 +206,13 @@ export class MovimientosFinancierosService {
   ) {
     const movimiento = await this.obtener(id, solicitante);
 
-    if (dto.categoria_id !== undefined) {
-      await this.validarCategoria(dto.categoria_id);
+    // Se valida la combinación que va a QUEDAR, no la que llega. Cambiar sólo
+    // el tipo —dejando la categoría de antes— descuadra igual, y comprobar
+    // nada más lo que viene en el dto dejaba pasar justo ese caso.
+    const tipoResultante = dto.tipo ?? movimiento.tipo ?? undefined;
+    const categoriaResultante = dto.categoria_id ?? movimiento.categoria_id;
+    if (dto.categoria_id !== undefined || dto.tipo !== undefined) {
+      await this.validarCategoria(categoriaResultante, tipoResultante);
     }
     await this.validarProveedor(dto.proveedor_id);
 
