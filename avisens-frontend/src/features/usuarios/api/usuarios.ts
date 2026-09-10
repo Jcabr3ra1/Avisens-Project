@@ -1,8 +1,8 @@
 import { api } from '@shared/api/client'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 import type {
   ActualizarUsuarioPayload,
   CrearUsuarioPayload,
-  PaginatedResponse,
   RolResumen,
   Usuario,
 } from '@shared/api/types'
@@ -12,9 +12,7 @@ let solicitudListado: Promise<Usuario[]> | null = null
 export async function listarUsuarios(): Promise<Usuario[]> {
   if (solicitudListado) return solicitudListado
 
-  solicitudListado = api.get<PaginatedResponse<Usuario>>('/usuarios', {
-    params: { page: 1, limit: 100 },
-  }).then(({ data }) => data.data)
+  solicitudListado = listarTodasLasPaginas<Usuario>('/usuarios')
 
   solicitudListado.then(
     () => { solicitudListado = null },
