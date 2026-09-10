@@ -34,6 +34,8 @@ import {
 } from '@features/lotes/api/lotes'
 import FormularioLote from '@features/lotes/components/FormularioLote'
 import { useFormularioLote } from '@features/lotes/hooks/useFormularioLote'
+import { toast } from 'sonner'
+import { mensajeDeError } from '@shared/utils/errores'
 import type { Granja } from './api/granjas'
 import AcordeonGalpon from './components/AcordeonGalpon'
 import Badge from './components/Badge'
@@ -132,39 +134,64 @@ function GranjasPage() {
     await recargarTodo()
   })
 
+
   const formularioLote = useFormularioLote(async (datos, editandoId) => {
     if (editandoId === null) await crearLote(datos as CrearLotePayload)
     else await actualizarLote(editandoId, datos)
     await recargarTodo()
   })
 
-  async function alternarGalpon(galpon: GalponConLotes) {
-    if (galpon.activo) await desactivarGalpon(galpon.id)
-    else await activarGalpon(galpon.id)
-    await recargarTodo()
+  // Todas las acciones de esta página pasan por aquí. Antes cada una hacía
+  // `await` a secas y se invocaba con `void`, así que un fallo del servidor
+  // terminaba como «Uncaught (in promise)» en la consola y en pantalla no
+  // ocurría nada: la fila seguía ahí y el usuario no sabía si había pulsado mal.
+  async function ejecutar(accion: () => Promise<unknown>, respaldo: string) {
+    try {
+      await accion()
+      await recargarTodo()
+      return true
+    } catch (problema) {
+      toast.error(mensajeDeError(problema, respaldo))
+      return false
+    }
   }
 
-  async function eliminarGalpon(galpon: GalponConLotes) {
+  function alternarGalpon(galpon: GalponConLotes) {
+    void ejecutar(
+      () => (galpon.activo ? desactivarGalpon(galpon.id) : activarGalpon(galpon.id)),
+      galpon.activo ? 'No se pudo desactivar el galpón.' : 'No se pudo activar el galpón.',
+    )
+  }
+
+  function eliminarGalpon(galpon: GalponConLotes) {
     if (!window.confirm(`¿Eliminar permanentemente el galpón "${galpon.nombre}"? Esta acción no se puede deshacer.`)) return
-    await eliminarGalponPermanente(galpon.id)
-    await recargarTodo()
+    void ejecutar(
+      () => eliminarGalponPermanente(galpon.id),
+      'No se pudo eliminar el galpón. Puede que tenga lotes asociados.',
+    )
   }
 
-  async function alternarLote(lote: Lote) {
-    if (lote.estado === 'activo') await desactivarLote(lote.id)
-    else await activarLote(lote.id)
-    await recargarTodo()
+  function alternarLote(lote: Lote) {
+    void ejecutar(
+      () => (lote.estado === 'activo' ? desactivarLote(lote.id) : activarLote(lote.id)),
+      lote.estado === 'activo' ? 'No se pudo desactivar el lote.' : 'No se pudo activar el lote.',
+    )
   }
 
-  async function eliminarLote(lote: Lote) {
+  function eliminarLote(lote: Lote) {
     if (!window.confirm(`¿Eliminar permanentemente el lote "${lote.codigo}"? Esta acción no se puede deshacer.`)) return
-    await eliminarLotePermanente(lote.id)
-    await recargarTodo()
+    void ejecutar(
+      () => eliminarLotePermanente(lote.id),
+      'No se pudo eliminar el lote. Puede que tenga registros de producción asociados.',
+    )
   }
 
   function eliminarGranja(granja: Granja) {
     if (!window.confirm(`¿Eliminar permanentemente la granja "${granja.nombre}"? Esta acción no se puede deshacer.`)) return
-    void gestionGranjas.eliminar(granja).then(recargarTodo)
+    void ejecutar(
+      () => gestionGranjas.eliminar(granja),
+      'No se pudo eliminar la granja. Puede que tenga galpones asociados.',
+    )
   }
 
   const totales = useMemo(
@@ -493,8 +520,8 @@ function GranjasPage() {
                       onEliminarGalpon={(item) => void eliminarGalpon(item)}
                       onCrearLote={(item) => formularioLote.abrirCrear(item.id)}
                       onEditarLote={formularioLote.abrirEditar}
-                      onAlternarLote={(lote) => void alternarLote(lote)}
-                      onEliminarLote={(lote) => void eliminarLote(lote)}
+                      onAlternarLote={alternarLote}
+                      onEliminarLote={eliminarLote}
                     />
                   ))}
                 </div>
