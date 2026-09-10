@@ -1,11 +1,15 @@
 package com.project.avisensandroid.ui.fragments
 
+
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
+import android.graphics.Typeface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import kotlin.math.roundToInt
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -168,288 +172,200 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     private fun mostrarOperarios(
         operarios: List<UsuarioGestionResponse>
     ) {
-
         containerOperarios.removeAllViews()
 
-        // --------------------------------------------------------
-        // Sin operarios
-        // --------------------------------------------------------
-
         if (operarios.isEmpty()) {
-
-            val mensaje =
-                TextView(requireContext()).apply {
-
-                    text =
-                        "No hay operarios registrados " +
-                                "en tu organización."
-
-                    textSize = 15f
-
-                    setTextColor(
-                        Color.parseColor(
-                            "#6F7A74"
-                        )
-                    )
-
-                    setPadding(
-                        0,
-                        24,
-                        0,
-                        24
-                    )
+            val emptyCard = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER
+                setPadding(dp(24), dp(28), dp(24), dp(28))
+                background = GradientDrawable().apply {
+                    setColor(Color.WHITE)
+                    cornerRadius = dp(18).toFloat()
+                    setStroke(dp(1), Color.parseColor("#DDE8E2"))
                 }
+            }
 
-            containerOperarios.addView(
-                mensaje
-            )
+            val icon = TextView(requireContext()).apply {
+                text = "👥"
+                textSize = 30f
+                gravity = android.view.Gravity.CENTER
+            }
+            emptyCard.addView(icon, LinearLayout.LayoutParams(-1, dp(44)))
 
+            val title = TextView(requireContext()).apply {
+                text = "Aún no tienes operarios"
+                textSize = 16f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#1F5C42"))
+                gravity = android.view.Gravity.CENTER
+            }
+            emptyCard.addView(title, LinearLayout.LayoutParams(-1, -2))
+
+            val message = TextView(requireContext()).apply {
+                text = "Crea un operario para comenzar a asignarle galpones."
+                textSize = 13f
+                setTextColor(Color.parseColor("#78847E"))
+                gravity = android.view.Gravity.CENTER
+                setPadding(0, dp(5), 0, 0)
+            }
+            emptyCard.addView(message, LinearLayout.LayoutParams(-1, -2))
+
+            containerOperarios.addView(emptyCard)
             return
         }
 
-        // --------------------------------------------------------
-        // Crear tarjeta por operario
-        // --------------------------------------------------------
-
         operarios.forEach { usuario ->
+            val card = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(18), dp(18), dp(18), dp(16))
+                background = resources.getDrawable(R.drawable.bg_card_operario, null)
+            }
 
-            val card =
-                LinearLayout(
-                    requireContext()
-                ).apply {
+            // Encabezado: avatar + identidad + estado
+            val header = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
 
-                    orientation =
-                        LinearLayout.VERTICAL
-
-                    setPadding(
-                        20,
-                        18,
-                        20,
-                        18
-                    )
-
-                    setBackgroundResource(
-                        R.drawable.bg_card_simple
-                    )
+            val avatar = TextView(requireContext()).apply {
+                text = iniciales(usuario.nombre_completo)
+                textSize = 15f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = android.view.Gravity.CENTER
+                setTextColor(Color.WHITE)
+                background = GradientDrawable().apply {
+                    setColor(Color.parseColor("#2F8B5E"))
+                    shape = GradientDrawable.OVAL
                 }
+            }
+            header.addView(avatar, LinearLayout.LayoutParams(dp(48), dp(48)))
 
-            // ----------------------------------------------------
-            // Nombre
-            // ----------------------------------------------------
+            val identity = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(12), 0, dp(8), 0)
+            }
+            val name = TextView(requireContext()).apply {
+                text = usuario.nombre_completo
+                textSize = 17f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#183C2E"))
+                maxLines = 2
+            }
+            identity.addView(name, LinearLayout.LayoutParams(-1, -2))
 
-            val nombre =
-                TextView(
-                    requireContext()
-                ).apply {
+            val role = TextView(requireContext()).apply {
+                text = "Operario"
+                textSize = 11f
+                setTextColor(Color.parseColor("#2F8B5E"))
+                setPadding(0, dp(3), 0, 0)
+            }
+            identity.addView(role)
+            header.addView(identity, LinearLayout.LayoutParams(0, -2, 1f))
 
-                    text =
-                        usuario.nombre_completo
-
-                    textSize = 18f
-
-                    setTextColor(
-                        Color.parseColor(
-                            "#1A1A1A"
-                        )
-                    )
-
-                    setTypeface(
-                        null,
-                        android.graphics.Typeface.BOLD
-                    )
+            val status = TextView(requireContext()).apply {
+                text = if (usuario.activo) "Activo" else "Inactivo"
+                textSize = 11f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = android.view.Gravity.CENTER
+                setTextColor(
+                    Color.parseColor(if (usuario.activo) "#28744D" else "#A34A4A")
+                )
+                setPadding(dp(10), dp(6), dp(10), dp(6))
+                background = GradientDrawable().apply {
+                    setColor(Color.parseColor(if (usuario.activo) "#E8F5ED" else "#FBECEC"))
+                    cornerRadius = dp(20).toFloat()
                 }
+            }
+            header.addView(status, LinearLayout.LayoutParams(-2, dp(30)))
+            card.addView(header)
 
-            card.addView(
-                nombre
-            )
+            // Datos principales
+            val info = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(60), dp(12), 0, 0)
+            }
+            info.addView(infoRow("✉", usuario.email))
+            info.addView(infoRow("ID", "Cédula: ${usuario.cedula}"))
+            info.addView(infoRow("☎", "${usuario.telefono ?: "Teléfono no registrado"}"))
+            card.addView(info)
 
-            // ----------------------------------------------------
-            // Información
-            // ----------------------------------------------------
+            // Separador
+            card.addView(View(requireContext()).apply {
+                setBackgroundColor(Color.parseColor("#E7EEE9"))
+            }, LinearLayout.LayoutParams(-1, dp(1)).apply {
+                topMargin = dp(16)
+                bottomMargin = dp(12)
+            })
 
-            val informacion =
-                TextView(
-                    requireContext()
-                ).apply {
-
-                    text =
-                        buildString {
-
-                            append(
-                                usuario.email
-                            )
-
-                            append(
-                                "\nCédula: "
-                            )
-
-                            append(
-                                usuario.cedula
-                            )
-
-                            append(
-                                "\nTeléfono: "
-                            )
-
-                            append(
-                                usuario.telefono
-                                    ?: "No registrado"
-                            )
-
-                            append(
-                                "\nEstado: "
-                            )
-
-                            append(
-                                if (usuario.activo)
-                                    "Activo"
-                                else
-                                    "Inactivo"
-                            )
-                        }
-
-                    textSize = 14f
-
-                    setTextColor(
-                        Color.parseColor(
-                            "#6F7A74"
-                        )
-                    )
-
-                    setPadding(
-                        0,
-                        8,
-                        0,
-                        0
-                    )
+            val assignmentHeader = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+            val assignmentTitle = TextView(requireContext()).apply {
+                text = "Galpones asignados"
+                textSize = 14f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#1F5C42"))
+            }
+            assignmentHeader.addView(assignmentTitle, LinearLayout.LayoutParams(0, -2, 1f))
+            val assignButton = com.google.android.material.button.MaterialButton(
+                requireContext()
+            ).apply {
+                text = "＋ Asignar"
+                setAllCaps(false)
+                textSize = 11f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#2F8B5E"))
+                setPadding(dp(8), 0, dp(8), 0)
+                minWidth = 0
+                minimumWidth = 0
+                minHeight = 0
+                minimumHeight = 0
+                background = GradientDrawable().apply {
+                    setColor(Color.TRANSPARENT)
+                    cornerRadius = dp(10).toFloat()
+                    setStroke(dp(1), Color.parseColor("#2F8B5E"))
                 }
+                setOnClickListener { mostrarDialogAsignarGalpon(usuario.id) }
+            }
+            assignmentHeader.addView(assignButton, LinearLayout.LayoutParams(dp(96), dp(36)))
+            card.addView(assignmentHeader)
 
-            card.addView(
-                informacion
-            )
+            val assignments = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, dp(8), 0, 0)
+            }
+            card.addView(assignments)
+            cargarAsignaciones(usuario.id, assignments)
 
-            // ----------------------------------------------------
-            // Título de asignaciones
-            // ----------------------------------------------------
-
-            val tituloAsignaciones =
-                TextView(
-                    requireContext()
-                ).apply {
-
-                    text =
-                        "Asignaciones de galpón"
-
-                    textSize = 14f
-
-                    setTextColor(
-                        Color.parseColor(
-                            "#1F5C42"
-                        )
-                    )
-
-                    setTypeface(
-                        null,
-                        android.graphics.Typeface.BOLD
-                    )
-
-                    setPadding(
-                        0,
-                        16,
-                        0,
-                        6
-                    )
-                }
-
-            card.addView(
-                tituloAsignaciones
-            )
-
-            // ----------------------------------------------------
-            // Contenedor de asignaciones
-            // ----------------------------------------------------
-
-            val asignaciones =
-                LinearLayout(
-                    requireContext()
-                ).apply {
-
-                    orientation =
-                        LinearLayout.VERTICAL
-                }
-
-            card.addView(
-                asignaciones
-            )
-
-            cargarAsignaciones(
-                usuario.id,
-                asignaciones
-            )
-
-            // ----------------------------------------------------
-            // Asignar galpón
-            // ----------------------------------------------------
-
-            val btnAsignar =
-                TextView(
-                    requireContext()
-                ).apply {
-
-                    text =
-                        "＋ Asignar galpón"
-
-                    textSize = 14f
-
-                    setTextColor(
-                        Color.parseColor(
-                            "#2F8B5E"
-                        )
-                    )
-
-                    setTypeface(
-                        null,
-                        android.graphics.Typeface.BOLD
-                    )
-
-                    setPadding(
-                        0,
-                        16,
-                        0,
-                        6
-                    )
-
-                    setOnClickListener {
-
-                        mostrarDialogAsignarGalpon(
-                            usuario.id
-                        )
-                    }
-                }
-
-            card.addView(
-                btnAsignar
-            )
-
-            // ----------------------------------------------------
-            // Separación entre tarjetas
-            // ----------------------------------------------------
-
-            val params =
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-
-                    bottomMargin = 14
-                }
-
-            containerOperarios.addView(
-                card,
-                params
-            )
+            val params = LinearLayout.LayoutParams(-1, -2).apply {
+                bottomMargin = dp(14)
+            }
+            containerOperarios.addView(card, params)
         }
     }
+
+    private fun infoRow(icon: String, value: String): TextView =
+        TextView(requireContext()).apply {
+            text = "$icon   $value"
+            textSize = 12.5f
+            setTextColor(Color.parseColor("#68756E"))
+            setPadding(0, dp(3), 0, dp(3))
+            maxLines = 2
+        }
+
+    private fun iniciales(nombre: String): String {
+        val partes = nombre.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+        return when {
+            partes.size >= 2 -> "${partes[0].first()}${partes[1].first()}".uppercase()
+            partes.size == 1 -> partes[0].take(2).uppercase()
+            else -> "OP"
+        }
+    }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).roundToInt()
 
     // ============================================================
     // CARGAR ASIGNACIONES DE UN OPERARIO
@@ -628,14 +544,16 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         // --------------------------------------------------------
 
         val quitar =
-            TextView(
+            com.google.android.material.button.MaterialButton(
                 requireContext()
             ).apply {
 
                 text =
                     "Quitar"
 
-                textSize = 12f
+                setAllCaps(false)
+                textSize = 11f
+                typeface = Typeface.DEFAULT_BOLD
 
                 setTextColor(
                     Color.parseColor(
@@ -644,11 +562,27 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 )
 
                 setPadding(
-                    10,
-                    8,
+                    dp(8),
                     0,
-                    8
+                    dp(8),
+                    0
                 )
+
+                minWidth = 0
+                minimumWidth = 0
+                minHeight = 0
+                minimumHeight = 0
+
+                background = GradientDrawable().apply {
+                    setColor(Color.TRANSPARENT)
+                    cornerRadius = dp(10).toFloat()
+                    setStroke(
+                        dp(1),
+                        Color.parseColor(
+                            "#C94A4A"
+                        )
+                    )
+                }
 
                 setOnClickListener {
 
@@ -660,7 +594,11 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             }
 
         fila.addView(
-            quitar
+            quitar,
+            LinearLayout.LayoutParams(
+                dp(96),
+                dp(36)
+            )
         )
 
         contenedor.addView(

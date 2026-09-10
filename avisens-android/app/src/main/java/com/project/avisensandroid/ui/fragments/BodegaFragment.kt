@@ -51,6 +51,13 @@ class BodegaFragment : BaseBottomNavFragment() {
             // Ya estamos en insumos.
         }
 
+        binding.btnNuevoInsumo.visibility =
+            if (activity.obtenerRolActual() == com.project.avisensandroid.model.UserRole.PROPIETARIO) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
         binding.btnNuevoInsumo.setOnClickListener {
             activity.mostrarDialogNuevoInsumo()
         }
@@ -65,30 +72,8 @@ class BodegaFragment : BaseBottomNavFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 cargarProveedores()
-
-                val response = RetrofitClient.api.listarInsumos(page = 1, limit = 100)
-
-                if (!response.isSuccessful) {
-                    Toast.makeText(
-                        requireContext(),
-                        "No se pudieron cargar los insumos. Código: ${response.code()}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@launch
-                }
-
-                val insumos = response.body()?.data
-                if (insumos == null) {
-                    Toast.makeText(
-                        requireContext(),
-                        "La API no devolvió información de insumos",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@launch
-                }
-
+                val insumos = cargarTodosLosInsumos()
                 mostrarInsumos(insumos)
-
             } catch (e: Exception) {
                 if (isAdded) {
                     Toast.makeText(
@@ -105,6 +90,39 @@ class BodegaFragment : BaseBottomNavFragment() {
         }
     }
 
+    private suspend fun cargarTodosLosInsumos(): List<InsumoResponse> {
+        val todos = mutableListOf<InsumoResponse>()
+        var page = 1
+        var totalPages = 1
+
+        do {
+            val response = RetrofitClient.api.listarInsumos(
+                page = page,
+                limit = 100
+            )
+
+            if (!response.isSuccessful) {
+                val detalle = response.errorBody()?.string()?.take(180).orEmpty()
+                throw IllegalStateException(
+                    if (detalle.isBlank()) {
+                        "No se pudieron cargar los insumos. Código: ${response.code()}"
+                    } else {
+                        "No se pudieron cargar los insumos. Código: ${response.code()} $detalle"
+                    }
+                )
+            }
+
+            val body = response.body()
+                ?: throw IllegalStateException("La API no devolvió información de insumos")
+
+            todos += body.data
+            totalPages = body.meta.totalPages
+            page++
+        } while (page <= totalPages)
+
+        return todos.distinctBy { it.id }
+    }
+
     private suspend fun cargarProveedores() {
         try {
             val response = RetrofitClient.api.listarProveedores(page = 1, limit = 100)
@@ -117,7 +135,7 @@ class BodegaFragment : BaseBottomNavFragment() {
                     }
             }
         } catch (_: Exception) {
-            // Si proveedores falla, la tarjeta conserva el ID como respaldo.
+            // El proveedor solo se usa como dato informativo.
         }
     }
 
@@ -220,6 +238,10 @@ class BodegaFragment : BaseBottomNavFragment() {
             if (esCritico) R.drawable.bg_bodega_card_critico
             else R.drawable.bg_bodega_card
         )
+
+        itemBinding.btnMovimientoInsumo.setOnClickListener {
+            (requireActivity() as MainActivity).mostrarDialogMovimientoInsumo(insumo)
+        }
 
         val params = itemBinding.cardInsumo.layoutParams as ViewGroup.MarginLayoutParams
         params.topMargin = dp(11)

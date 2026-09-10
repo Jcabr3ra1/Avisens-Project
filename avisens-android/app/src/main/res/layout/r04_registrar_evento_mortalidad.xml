@@ -20,7 +20,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Registrar evento"
+            android:text="Registrar mortalidad"
             android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
@@ -44,33 +44,6 @@
 
             <Spinner
                 android:id="@+id/spinnerLote"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@android:color/transparent"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp" />
-
-        </FrameLayout>
-
-        <!-- TIPO DE EVENTO -->
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Tipo de evento"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="5dp" />
-
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="42dp"
-            android:background="@drawable/bg_input_event">
-
-            <Spinner
-                android:id="@+id/spinnerTipoEvento"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="@android:color/transparent"

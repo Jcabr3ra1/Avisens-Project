@@ -28,12 +28,17 @@ import com.project.avisensandroid.databinding.Co03PerfilOpBinding
 import com.project.avisensandroid.databinding.Co04SeguridadOpBinding
 import com.project.avisensandroid.databinding.R01RegistrarGalponBinding
 import com.project.avisensandroid.databinding.R03NuevoInsumoBinding
+import com.project.avisensandroid.databinding.R03MovimientoInsumoBinding
 import com.project.avisensandroid.databinding.R04RegistrarEventoMortalidadBinding
 import com.project.avisensandroid.databinding.R05RegistrarEventoEnfermoBinding
 import com.project.avisensandroid.model.EventoSanitarioRequest
 import com.project.avisensandroid.model.GalponResponse
 import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.InsumoRequest
+import com.project.avisensandroid.model.InsumoResponse
+import com.project.avisensandroid.model.LoteSelectorResponse
+import com.project.avisensandroid.model.RegistrarMovimientoRequest
+import com.project.avisensandroid.model.TipoAlimentoResponse
 import com.project.avisensandroid.model.RegistroMortalidadRequest
 import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.model.UserSession
@@ -1160,56 +1165,56 @@ class MainActivity : AppCompatActivity() {
     }
 
     // =========================================================
-    // DIALOG - NUEVO INSUMO
+    // DIALOG - NUEVO INSUMO (SOLO PROPIETARIO)
     // =========================================================
 
     fun mostrarDialogNuevoInsumo() {
 
-        val dialog =
-            Dialog(this)
+        if (rolActual != UserRole.PROPIETARIO) {
+            Toast.makeText(
+                this,
+                "Solo el Propietario puede crear nuevos insumos",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
 
-        val binding =
-            R03NuevoInsumoBinding.inflate(
-                layoutInflater
-            )
+        val dialog = Dialog(this)
+        val binding = R03NuevoInsumoBinding.inflate(layoutInflater)
 
-        dialog.setContentView(
-            binding.root
-        )
-
-        dialog.window
-            ?.setBackgroundDrawableResource(
-                android.R.color.transparent
-            )
-
+        dialog.setContentView(binding.root)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         dialog.show()
 
         dialog.window?.setLayout(
-            (
-                    resources.displayMetrics.widthPixels *
-                            0.90f
-                    ).toInt(),
+            (resources.displayMetrics.widthPixels * 0.90f).toInt(),
             WindowManager.LayoutParams.WRAP_CONTENT
         )
 
-        val nombresProveedores =
-            mutableListOf(
-                "Seleccionar proveedor"
-            )
+        val tiposAlimento = mutableListOf<TipoAlimentoResponse>()
+        val nombresTipos = mutableListOf("Cargando tipos de alimento...")
 
-        val idsProveedores =
-            mutableListOf<Int?>(null)
+        val adapterTipos = SpinnerAdapterEstilizado(
+            this,
+            nombresTipos
+        )
+        binding.spinnerTipoAlimento.adapter = adapterTipos
 
-        val adapterProveedores =
-            SpinnerAdapterEstilizado(
-                this,
-                nombresProveedores
-            )
+        val nombresProveedores = mutableListOf("Sin proveedor")
+        val idsProveedores = mutableListOf<Int?>(null)
 
-        binding
-            .spinnerProveedor
-            .adapter =
-            adapterProveedores
+        val adapterProveedores = SpinnerAdapterEstilizado(
+            this,
+            nombresProveedores
+        )
+        binding.spinnerProveedor.adapter = adapterProveedores
+
+        cargarTiposAlimentoParaInsumo(
+            tiposAlimento,
+            nombresTipos,
+            adapterTipos,
+            binding
+        )
 
         cargarProveedoresParaInsumo(
             nombresProveedores,
@@ -1217,134 +1222,120 @@ class MainActivity : AppCompatActivity() {
             adapterProveedores
         )
 
-        binding
-            .btnCancelarInsumo
-            .setOnClickListener {
+        binding.btnCancelarInsumo.setOnClickListener {
+            dialog.dismiss()
+        }
 
-                dialog.dismiss()
+        binding.btnAgregarInsumo.setOnClickListener {
+            val posicionTipo = binding.spinnerTipoAlimento.selectedItemPosition
+            val tipoAlimento = tiposAlimento.getOrNull(posicionTipo)
+
+            val cantidadTexto = binding.edtCantidadInsumo.text.toString().trim()
+            val unidad = binding.edtUnidadInsumo.text.toString().trim()
+            val cantidad = cantidadTexto.toDoubleOrNull()
+
+            if (tipoAlimento == null) {
+                Toast.makeText(
+                    this,
+                    "Selecciona un tipo de alimento",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
             }
 
-        binding
-            .btnAgregarInsumo
-            .setOnClickListener {
-
-                val nombre =
-                    binding
-                        .edtNombreInsumo
-                        .text
-                        .toString()
-                        .trim()
-
-                val categoria =
-                    binding
-                        .edtCategoriaInsumo
-                        .text
-                        .toString()
-                        .trim()
-
-                val cantidadTexto =
-                    binding
-                        .edtCantidadInsumo
-                        .text
-                        .toString()
-                        .trim()
-
-                val unidad =
-                    binding
-                        .edtUnidadInsumo
-                        .text
-                        .toString()
-                        .trim()
-
-                val posicion =
-                    binding
-                        .spinnerProveedor
-                        .selectedItemPosition
-
-                if (nombre.isEmpty()) {
-
-                    binding
-                        .edtNombreInsumo
-                        .error =
-                        "Ingresa el nombre del insumo"
-
-                    return@setOnClickListener
-                }
-
-                if (categoria.isEmpty()) {
-
-                    binding
-                        .edtCategoriaInsumo
-                        .error =
-                        "Ingresa la categoría"
-
-                    return@setOnClickListener
-                }
-
-                val cantidad =
-                    cantidadTexto.toDoubleOrNull()
-
-                if (
-                    cantidad == null ||
-                    cantidad < 0
-                ) {
-
-                    binding
-                        .edtCantidadInsumo
-                        .error =
-                        "Ingresa una cantidad válida"
-
-                    return@setOnClickListener
-                }
-
-                if (unidad.isEmpty()) {
-
-                    binding
-                        .edtUnidadInsumo
-                        .error =
-                        "Ingresa la unidad"
-
-                    return@setOnClickListener
-                }
-
-                if (
-                    posicion <= 0 ||
-                    posicion >= idsProveedores.size
-                ) {
-
-                    Toast.makeText(
-                        this,
-                        "Selecciona un proveedor",
-                        Toast.LENGTH_SHORT
-                    ).show()
-
-                    return@setOnClickListener
-                }
-
-                val proveedorId =
-                    idsProveedores[posicion]
-
-                if (proveedorId == null) {
-
-                    Toast.makeText(
-                        this,
-                        "Selecciona un proveedor válido",
-                        Toast.LENGTH_SHORT
-                    ).show()
-
-                    return@setOnClickListener
-                }
-
-                crearInsumo(
-                    dialog = dialog,
-                    binding = binding,
-                    nombre = nombre,
-                    categoria = categoria,
-                    cantidad = cantidad,
-                    unidad = unidad,
-                    proveedorId = proveedorId
-                )
+            if (cantidad == null || cantidad < 0.0) {
+                binding.edtCantidadInsumo.error = "Ingresa una cantidad válida"
+                return@setOnClickListener
             }
+
+            if (unidad.isEmpty()) {
+                binding.edtUnidadInsumo.error = "Ingresa la unidad"
+                return@setOnClickListener
+            }
+
+            val posicionProveedor = binding.spinnerProveedor.selectedItemPosition
+            val proveedorId = idsProveedores.getOrNull(posicionProveedor)
+
+            crearInsumo(
+                dialog = dialog,
+                binding = binding,
+                nombre = tipoAlimento.nombre.trim(),
+                categoria = "alimento",
+                cantidad = cantidad,
+                unidad = unidad,
+                proveedorId = proveedorId
+            )
+        }
+    }
+
+    private fun cargarTiposAlimentoParaInsumo(
+        tiposAlimento: MutableList<TipoAlimentoResponse>,
+        nombres: MutableList<String>,
+        adapter: ArrayAdapter<String>,
+        binding: R03NuevoInsumoBinding
+    ) {
+        lifecycleScope.launch {
+            try {
+                val todos = mutableListOf<TipoAlimentoResponse>()
+                var page = 1
+                var totalPages = 1
+
+                do {
+                    val response = RetrofitClient.api.listarTiposAlimento(
+                        page = page,
+                        limit = 100
+                    )
+
+                    if (!response.isSuccessful) {
+                        throw IllegalStateException(
+                            "No se pudieron cargar los tipos de alimento. Código: ${response.code()}"
+                        )
+                    }
+
+                    val body = response.body()
+                        ?: throw IllegalStateException("La API no devolvió tipos de alimento")
+
+                    todos += body.data.filter { it.activo }
+                    totalPages = body.meta.totalPages
+                    page++
+                } while (page <= totalPages)
+
+                tiposAlimento.clear()
+                tiposAlimento.addAll(todos.distinctBy { it.id })
+
+                nombres.clear()
+                if (tiposAlimento.isEmpty()) {
+                    nombres.add("No hay tipos de alimento disponibles")
+                    binding.btnAgregarInsumo.isEnabled = false
+                } else {
+                    nombres.addAll(tiposAlimento.map { tipo ->
+                        buildString {
+                            append(tipo.nombre)
+                            tipo.marca?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                                append(" — ").append(it)
+                            }
+                            tipo.etapa?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                                append(" · ").append(it)
+                            }
+                        }
+                    })
+                }
+
+                adapter.notifyDataSetChanged()
+
+            } catch (e: Exception) {
+                nombres.clear()
+                nombres.add("No se pudieron cargar los alimentos")
+                adapter.notifyDataSetChanged()
+                binding.btnAgregarInsumo.isEnabled = false
+
+                Toast.makeText(
+                    this@MainActivity,
+                    "Error al cargar tipos de alimento: ${e.message ?: "error desconocido"}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     private fun cargarProveedoresParaInsumo(
@@ -1352,67 +1343,33 @@ class MainActivity : AppCompatActivity() {
         ids: MutableList<Int?>,
         adapter: ArrayAdapter<String>
     ) {
-
         lifecycleScope.launch {
-
             try {
-
-                val response =
-                    RetrofitClient.api
-                        .listarProveedores(
-                            page = 1,
-                            limit = 100
-                        )
+                val response = RetrofitClient.api.listarProveedores(
+                    page = 1,
+                    limit = 100
+                )
 
                 if (!response.isSuccessful) {
-
-                    Toast.makeText(
-                        this@MainActivity,
-                        "No se pudieron cargar los proveedores. Código: ${response.code()}",
-                        Toast.LENGTH_LONG
-                    ).show()
-
                     return@launch
                 }
 
-                val data =
-                    response.body()
-                        ?.data
-                        ?: emptyList()
+                val data = response.body()?.data ?: emptyList()
 
                 nombres.clear()
                 ids.clear()
-
-                nombres.add(
-                    "Seleccionar proveedor"
-                )
-
+                nombres.add("Sin proveedor")
                 ids.add(null)
 
-                data
-                    .filter {
-                        it.activo
-                    }
-                    .forEach {
-
-                        nombres.add(
-                            it.nombre
-                        )
-
-                        ids.add(
-                            it.id
-                        )
-                    }
+                data.filter { it.activo }.forEach {
+                    nombres.add(it.nombre)
+                    ids.add(it.id)
+                }
 
                 adapter.notifyDataSetChanged()
 
-            } catch (e: Exception) {
-
-                Toast.makeText(
-                    this@MainActivity,
-                    "Error al cargar proveedores: ${e.message ?: "error desconocido"}",
-                    Toast.LENGTH_LONG
-                ).show()
+            } catch (_: Exception) {
+                // El proveedor es opcional; el formulario puede continuar sin él.
             }
         }
     }
@@ -1424,76 +1381,57 @@ class MainActivity : AppCompatActivity() {
         categoria: String,
         cantidad: Double,
         unidad: String,
-        proveedorId: Int
+        proveedorId: Int?
     ) {
-
-        binding
-            .btnAgregarInsumo
-            .isEnabled = false
+        binding.btnAgregarInsumo.isEnabled = false
 
         lifecycleScope.launch {
-
             try {
+                val granjaId = obtenerGranjaActivaId()
 
-                val granjaId =
-                    obtenerGranjaActivaId()
+                val request = InsumoRequest(
+                    granja_id = granjaId,
+                    nombre = nombre,
+                    tipo = categoria,
+                    unidad_medida = unidad,
+                    stock_actual = cantidad,
+                    stock_minimo = null,
+                    precio_unitario_cop = null,
+                    proveedor_habitual_id = proveedorId,
+                    ubicacion_almacen = null,
+                    fecha_vencimiento = null
+                )
 
-                val request =
-                    InsumoRequest(
-                        granja_id = granjaId,
-                        nombre = nombre,
-                        tipo = categoria,
-                        unidad_medida = unidad,
-                        stock_actual = cantidad,
-                        stock_minimo = null,
-                        precio_unitario_cop = null,
-                        proveedor_habitual_id = proveedorId,
-                        ubicacion_almacen = null,
-                        fecha_vencimiento = null
-                    )
-
-                val response =
-                    RetrofitClient.api
-                        .crearInsumo(
-                            request
-                        )
+                val response = RetrofitClient.api.crearInsumo(request)
 
                 if (response.isSuccessful) {
-
                     Toast.makeText(
                         this@MainActivity,
-                        "Insumo agregado correctamente",
+                        "Alimento agregado correctamente",
                         Toast.LENGTH_SHORT
                     ).show()
-
                     dialog.dismiss()
-
-                    mostrarFragment(
-                        BodegaFragment()
-                    )
-
+                    mostrarFragment(BodegaFragment())
                 } else {
-
-                    binding
-                        .btnAgregarInsumo
-                        .isEnabled = true
-
+                    binding.btnAgregarInsumo.isEnabled = true
+                    val detalle = response.errorBody()?.string()?.take(250).orEmpty()
+                    val mensaje = when (response.code()) {
+                        401 -> "Sesión no válida. Inicia sesión nuevamente."
+                        403 -> "El backend rechazó la creación del alimento (403)."
+                        400 -> "Los datos del alimento no son válidos."
+                        else -> "No se pudo crear el alimento. Código: ${response.code()}"
+                    }
                     Toast.makeText(
                         this@MainActivity,
-                        "No se pudo crear el insumo. Código: ${response.code()}",
+                        if (detalle.isBlank()) mensaje else "$mensaje\n$detalle",
                         Toast.LENGTH_LONG
                     ).show()
                 }
-
             } catch (e: Exception) {
-
-                binding
-                    .btnAgregarInsumo
-                    .isEnabled = true
-
+                binding.btnAgregarInsumo.isEnabled = true
                 Toast.makeText(
                     this@MainActivity,
-                    "Error al crear el insumo: ${e.message ?: "error desconocido"}",
+                    "Error al crear el alimento: ${e.message ?: "error desconocido"}",
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -1501,32 +1439,154 @@ class MainActivity : AppCompatActivity() {
     }
 
     private suspend fun obtenerGranjaActivaId(): Int {
-
-        val response =
-            RetrofitClient.api
-                .listarGranjas(
-                    page = 1,
-                    limit = 100
-                )
+        val response = RetrofitClient.api.listarGranjas(
+            page = 1,
+            limit = 100
+        )
 
         if (!response.isSuccessful) {
-
             throw IllegalStateException(
                 "No se pudieron cargar las granjas. Código: ${response.code()}"
             )
         }
 
-        val granja =
-            response.body()
-                ?.data
-                ?.firstOrNull {
-                    it.activa
-                }
-                ?: throw IllegalStateException(
-                    "No hay una granja activa disponible"
+        return response.body()
+            ?.data
+            ?.firstOrNull { it.activa }
+            ?.id
+            ?: throw IllegalStateException("No hay una granja activa disponible")
+    }
+
+    // =========================================================
+    // DIALOG - MOVIMIENTO DE INSUMO
+    // =========================================================
+
+    fun mostrarDialogMovimientoInsumo(insumo: InsumoResponse) {
+        if (rolActual != UserRole.PROPIETARIO && rolActual != UserRole.OPERARIO) {
+            Toast.makeText(
+                this,
+                "Este usuario no puede registrar movimientos de inventario",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        val dialog = Dialog(this)
+        val binding = R03MovimientoInsumoBinding.inflate(layoutInflater)
+
+        dialog.setContentView(binding.root)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.show()
+
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.90f).toInt(),
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
+
+        binding.txtNombreMovimiento.text = insumo.nombre
+        binding.txtStockMovimiento.text =
+            "Stock actual: ${formatearNumeroInsumo(insumo.stock_actual ?: 0.0)} ${insumo.unidad_medida}"
+
+        val tipos = mutableListOf("Entrada", "Salida")
+        binding.spinnerTipoMovimiento.adapter = SpinnerAdapterEstilizado(this, tipos)
+
+        binding.btnCancelarMovimiento.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        binding.btnGuardarMovimiento.setOnClickListener {
+            val cantidad = binding.edtCantidadMovimiento.text.toString()
+                .trim()
+                .replace(',', '.')
+                .toDoubleOrNull()
+            val motivo = binding.edtMotivoMovimiento.text.toString().trim()
+            val tipoMovimiento = if (binding.spinnerTipoMovimiento.selectedItemPosition == 0) {
+                "entrada"
+            } else {
+                "salida"
+            }
+
+            if (cantidad == null || cantidad <= 0.0) {
+                binding.edtCantidadMovimiento.error = "Ingresa una cantidad mayor que 0"
+                return@setOnClickListener
+            }
+
+            registrarMovimientoInsumo(
+                dialog = dialog,
+                binding = binding,
+                insumo = insumo,
+                tipoMovimiento = tipoMovimiento,
+                cantidad = cantidad,
+                motivo = motivo.ifBlank { null }
+            )
+        }
+    }
+
+    private fun registrarMovimientoInsumo(
+        dialog: Dialog,
+        binding: R03MovimientoInsumoBinding,
+        insumo: InsumoResponse,
+        tipoMovimiento: String,
+        cantidad: Double,
+        motivo: String?
+    ) {
+        binding.btnGuardarMovimiento.isEnabled = false
+
+        lifecycleScope.launch {
+            try {
+                val request = RegistrarMovimientoRequest(
+                    tipo_movimiento = tipoMovimiento,
+                    cantidad = cantidad,
+                    motivo = motivo,
+                    lote_id = null,
+                    comprobante_url = null
                 )
 
-        return granja.id
+                val response = RetrofitClient.api.registrarMovimientoInsumo(
+                    insumoId = insumo.id,
+                    request = request
+                )
+
+                if (response.isSuccessful) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Movimiento registrado correctamente",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    dialog.dismiss()
+                    mostrarFragment(BodegaFragment())
+                } else {
+                    binding.btnGuardarMovimiento.isEnabled = true
+                    val detalle = response.errorBody()?.string()?.take(250).orEmpty()
+                    val mensaje = when (response.code()) {
+                        401 -> "Sesión no válida. Inicia sesión nuevamente."
+                        403 -> "No tienes permiso para registrar este movimiento."
+                        400 -> "La cantidad o el tipo de movimiento no son válidos."
+                        404 -> "El insumo ya no existe o no está disponible."
+                        else -> "No se pudo registrar el movimiento. Código: ${response.code()}"
+                    }
+                    Toast.makeText(
+                        this@MainActivity,
+                        if (detalle.isBlank()) mensaje else "$mensaje\n$detalle",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            } catch (e: Exception) {
+                binding.btnGuardarMovimiento.isEnabled = true
+                Toast.makeText(
+                    this@MainActivity,
+                    "Error al registrar movimiento: ${e.message ?: "error desconocido"}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun formatearNumeroInsumo(numero: Double): String {
+        return java.text.NumberFormat.getNumberInstance(Locale.US).apply {
+            maximumFractionDigits = 2
+            minimumFractionDigits = 0
+        }.format(numero)
     }
 
     // =========================================================
@@ -2180,59 +2240,78 @@ class MainActivity : AppCompatActivity() {
         ids: MutableList<Int?>,
         adapter: ArrayAdapter<String>
     ) {
-
         lifecycleScope.launch {
-
             try {
+                val todosLosLotes = mutableListOf<LoteSelectorResponse>()
+                var pagina = 1
+                var totalPaginas = 1
 
-                val response =
-                    RetrofitClient.api
-                        .listarLotes(
-                            page = 1,
-                            limit = 100
-                        )
+                // GET /v1/lotes es paginado. Recorremos todas las páginas para
+                // que el Spinner no se quede limitado a los primeros 100 lotes.
+                do {
+                    val response = RetrofitClient.api.listarLotes(
+                        page = pagina,
+                        limit = 100
+                    )
 
-                if (!response.isSuccessful) {
+                    if (!response.isSuccessful) {
+                        val detalle = response.errorBody()?.string()?.take(220).orEmpty()
+                        Toast.makeText(
+                            this@MainActivity,
+                            if (detalle.isBlank()) {
+                                "No se pudieron cargar los lotes. Código: ${response.code()}"
+                            } else {
+                                "No se pudieron cargar los lotes. Código: ${response.code()}\n$detalle"
+                            },
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@launch
+                    }
 
-                    Toast.makeText(
-                        this@MainActivity,
-                        "No se pudieron cargar los lotes. Código: ${response.code()}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    val body = response.body()
+                    if (body == null) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "La API no devolvió información de lotes",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@launch
+                    }
 
-                    return@launch
-                }
-
-                val data =
-                    response.body()
-                        ?.data
-                        ?: emptyList()
+                    todosLosLotes.addAll(body.data)
+                    totalPaginas = body.meta.totalPages.coerceAtLeast(pagina)
+                    if (body.data.isEmpty()) {
+                        break
+                    }
+                    pagina++
+                } while (pagina <= totalPaginas)
 
                 nombres.clear()
                 ids.clear()
-
-                nombres.add(
-                    "Seleccionar lote"
-                )
-
+                nombres.add("Seleccionar lote")
                 ids.add(null)
 
-                data
+                // Para el selector solo necesitamos id y código. Así evitamos
+                // que un campo anidado opcional de la respuesta (/galpon o
+                // /proveedor) impida deserializar los lotes.
+                todosLosLotes
+                    .filter { it.codigo.isNotBlank() }
+                    .distinctBy { it.id }
                     .forEach { lote ->
-
-                        nombres.add(
-                            "${lote.codigo} - ${lote.galpon.nombre}"
-                        )
-
-                        ids.add(
-                            lote.id
-                        )
+                        nombres.add(lote.codigo)
+                        ids.add(lote.id)
                     }
 
                 adapter.notifyDataSetChanged()
 
+                if (ids.size == 1) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "No hay lotes registrados disponibles",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             } catch (e: Exception) {
-
                 Toast.makeText(
                     this@MainActivity,
                     "Error al cargar lotes: ${e.message ?: "error desconocido"}",

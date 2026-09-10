@@ -6,9 +6,11 @@ import com.project.avisensandroid.model.GalponResponse
 import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.InsumoRequest
 import com.project.avisensandroid.model.InsumoResponse
+import com.project.avisensandroid.model.RegistrarMovimientoRequest
+import com.project.avisensandroid.model.TipoAlimentoResponse
 import com.project.avisensandroid.model.LoginRequest
 import com.project.avisensandroid.model.LoginResponse
-import com.project.avisensandroid.model.LoteResponse
+import com.project.avisensandroid.model.LoteSelectorResponse
 import com.project.avisensandroid.model.PaginatedResponse
 import com.project.avisensandroid.model.ProveedorResponse
 import com.project.avisensandroid.model.RegistroMortalidadRequest
@@ -98,6 +100,22 @@ interface ApiService {
         @Query("limit") limit: Int = 20
     ): Response<PaginatedResponse<InsumoResponse>>
 
+    @POST("v1/insumos/{id}/movimientos")
+    suspend fun registrarMovimientoInsumo(
+        @Path("id") insumoId: Int,
+        @Body request: RegistrarMovimientoRequest
+    ): Response<Any>
+
+    // =========================================================
+    // TIPOS DE ALIMENTO
+    // =========================================================
+
+    @GET("v1/tipos-alimento")
+    suspend fun listarTiposAlimento(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<TipoAlimentoResponse>>
+
 
     // =========================================================
     // PROVEEDORES
@@ -140,7 +158,7 @@ interface ApiService {
     suspend fun listarLotes(
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 100
-    ): Response<PaginatedResponse<LoteResponse>>
+    ): Response<PaginatedResponse<LoteSelectorResponse>>
 
 
     // =========================================================

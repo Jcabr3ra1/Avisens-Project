@@ -11,16 +11,33 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Nuevo alimento"
+        android:text="Registrar movimiento"
         android:textSize="18sp"
         android:textStyle="bold"
+        android:textColor="#171D1A" />
+
+    <TextView
+        android:id="@+id/txtNombreMovimiento"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="7dp"
         android:textColor="#171D1A"
-        android:layout_marginBottom="12dp" />
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/txtStockMovimiento"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:textColor="#68736E"
+        android:textSize="12sp"
+        android:layout_marginBottom="14dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Tipo de alimento"
+        android:text="Tipo de movimiento"
         android:textSize="12sp"
         android:textStyle="bold"
         android:textColor="#171D1A"
@@ -33,7 +50,7 @@
         android:layout_marginBottom="11dp">
 
         <Spinner
-            android:id="@+id/spinnerTipoAlimento"
+            android:id="@+id/spinnerTipoMovimiento"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@android:color/transparent"
@@ -44,14 +61,14 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Unidad de medida"
+        android:text="Cantidad"
         android:textSize="12sp"
         android:textStyle="bold"
         android:textColor="#171D1A"
         android:layout_marginBottom="5dp" />
 
     <EditText
-        android:id="@+id/edtUnidadInsumo"
+        android:id="@+id/edtCantidadMovimiento"
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:background="@drawable/bg_input_verde"
@@ -60,87 +77,40 @@
         android:singleLine="true"
         android:textSize="12sp"
         android:textColor="@color/black"
-        android:hint="Ej. kg"
-        android:inputType="text"
+        android:hint="Ej. 50"
+        android:inputType="numberDecimal"
         android:layout_marginBottom="11dp" />
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <TextView
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="11dp">
+        android:text="Motivo (opcional)"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="#171D1A"
+        android:layout_marginBottom="5dp" />
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_marginEnd="6dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Cantidad inicial"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="#171D1A"
-                android:layout_marginBottom="5dp" />
-
-            <EditText
-                android:id="@+id/edtCantidadInsumo"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:background="@drawable/bg_input_verde"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:singleLine="true"
-                android:textSize="12sp"
-                android:textColor="@color/black"
-                android:hint="Ej. 100"
-                android:inputType="numberDecimal" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_marginStart="6dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Proveedor (opcional)"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="#171D1A"
-                android:layout_marginBottom="5dp" />
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:background="@drawable/bg_input_verde">
-
-                <Spinner
-                    android:id="@+id/spinnerProveedor"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@android:color/transparent"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp" />
-            </FrameLayout>
-        </LinearLayout>
-    </LinearLayout>
+    <EditText
+        android:id="@+id/edtMotivoMovimiento"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:background="@drawable/bg_input_verde"
+        android:padding="12dp"
+        android:textSize="12sp"
+        android:textColor="@color/black"
+        android:hint="Ej. Compra, entrega, consumo..."
+        android:gravity="top|start"
+        android:inputType="textCapSentences|textMultiLine"
+        android:layout_marginBottom="14dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:orientation="horizontal"
-        android:gravity="end"
-        android:layout_marginTop="4dp">
+        android:gravity="end">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCancelarInsumo"
+            android:id="@+id/btnCancelarMovimiento"
             android:layout_width="100dp"
             android:layout_height="40dp"
             android:text="Cancelar"
@@ -158,10 +128,10 @@
             android:insetBottom="0dp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnAgregarInsumo"
-            android:layout_width="135dp"
+            android:id="@+id/btnGuardarMovimiento"
+            android:layout_width="145dp"
             android:layout_height="40dp"
-            android:text="Agregar alimento"
+            android:text="Guardar movimiento"
             android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
