@@ -1,0 +1,150 @@
+.cat-tabs {
+  display: flex;
+  gap: .25rem;
+  margin: 1.25rem 0 0;
+  padding: .25rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-subtle);
+  overflow-x: auto;
+}
+
+.cat-tab {
+  flex: 1;
+  min-width: max-content;
+  padding: .5rem 1rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: .88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.cat-tab[aria-selected='true'] {
+  background: var(--surface-raised);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.cat-tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.cat-descripcion {
+  margin: .75rem 0 1rem;
+  color: var(--text-secondary);
+  font-size: .92rem;
+}
+
+.cat-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+
+.cat-filtros { display: flex; gap: .75rem; flex-wrap: wrap; }
+
+.cat-filtro { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
+.cat-filtro span { color: var(--text-secondary); font-weight: 600; }
+.cat-filtro select {
+  padding: .3rem .5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: .85rem;
+}
+
+/* Las tablas de catálogo son anchas: el scroll vive aquí para que la página
+   nunca se desplace en horizontal. */
+.cat-tabla-scroll { overflow-x: auto; }
+
+.cat-tabla { width: 100%; border-collapse: collapse; font-size: .88rem; }
+
+.cat-tabla th,
+.cat-tabla td {
+  padding: .6rem .7rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.cat-tabla th {
+  color: var(--text-secondary);
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.cat-tabla tr:last-child td { border-bottom: 0; }
+
+.cat-num { font-variant-numeric: tabular-nums; text-align: right; }
+.cat-desc { white-space: normal; min-width: 14rem; color: var(--text-secondary); }
+
+.cat-codigo {
+  padding: .12em .4em;
+  border-radius: 4px;
+  background: var(--surface-subtle);
+  font-size: .82em;
+}
+
+/* Una fila retirada se distingue por color, no solo por la etiqueta: se
+   reconoce de un vistazo al recorrer la tabla. */
+.cat-fila--inactiva td { opacity: .55; }
+
+.cat-estado {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.cat-estado--activo {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.cat-estado--retirado {
+  color: var(--text-secondary);
+  background: var(--surface-subtle);
+}
+
+.cat-acciones { display: flex; gap: .4rem; justify-content: flex-end; }
+
+.cat-vacio {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.cat-vacio h2 {
+  margin: 0 0 .4rem;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+}
+
+.cat-aviso {
+  margin-bottom: 1rem;
+  padding: .75rem .9rem;
+  border-left: 3px solid var(--primary);
+  border-radius: 0 8px 8px 0;
+  background: var(--surface-subtle);
+  font-size: .88rem;
+  color: var(--text-secondary);
+}
+
+.cat-aviso strong { color: var(--text-primary); }
+
+@media (max-width: 40rem) {
+  .cat-panel-head { flex-direction: column; align-items: stretch; }
+  .cat-acciones { justify-content: flex-start; }
+}

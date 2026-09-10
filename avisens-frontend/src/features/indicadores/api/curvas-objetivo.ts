@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export interface CurvaObjetivo {
   id: number
@@ -39,14 +39,13 @@ export interface CrearCurvaObjetivoPayload {
 
 export type ActualizarCurvaObjetivoPayload = Partial<CrearCurvaObjetivoPayload>
 
+// Una curva es (marca, sexo, día): con dos marcas, tres sexos y el ciclo
+// completo de 42 días la tabla pasa holgadamente de 100 filas en cuanto se
+// siembre entera, así que no puede pedirse una sola página.
 export async function listarCurvasObjetivo(
-  query: CurvasObjetivoQuery = {},
+  query: Omit<CurvasObjetivoQuery, 'page' | 'limit'> = {},
 ): Promise<CurvaObjetivo[]> {
-  const { data } = await api.get<PaginatedResponse<CurvaObjetivo>>(
-    '/curvas-objetivo',
-    { params: { page: 1, limit: 100, ...query } },
-  )
-  return data.data
+  return listarTodasLasPaginas<CurvaObjetivo>('/curvas-objetivo', query)
 }
 
 export async function obtenerCurvaObjetivo(id: number): Promise<CurvaObjetivo> {
