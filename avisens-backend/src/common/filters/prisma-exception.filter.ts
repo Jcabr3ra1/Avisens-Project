@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
+import { nombreLegible, tablaQueBloquea } from '../errores/llave-foranea';
 
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaExceptionFilter implements ExceptionFilter {
@@ -45,8 +46,12 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         // galpones describe justo la situación contraria a la que pasó.
         if (request.method === 'DELETE') {
           status = HttpStatus.CONFLICT;
-          message =
-            'No se puede eliminar: todavía hay registros que dependen de este';
+          // Nombrar lo que bloquea convierte un «no se pudo» en algo que el
+          // usuario puede resolver: sabe qué tiene que quitar antes.
+          const bloquea = nombreLegible(tablaQueBloquea(exception));
+          message = bloquea
+            ? `No se puede eliminar: todavía hay ${bloquea} asociados. Desactívalo en vez de eliminarlo.`
+            : 'No se puede eliminar: todavía hay registros que dependen de este';
         } else {
           status = HttpStatus.BAD_REQUEST;
           message = 'Referencia inválida: el registro relacionado no existe';
