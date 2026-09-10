@@ -215,4 +215,114 @@ describe('MovimientosFinancierosService', () => {
       });
     });
   });
+
+  /**
+   * La categoría clasifica el movimiento, así que tiene que estar del mismo
+   * lado del balance. Antes sólo se comprobaba que existiera: un ingreso con
+   * la categoría «Compra de alimento» se guardaba en silencio y el balance de
+   * la granja salía mal sin que nadie lo notara.
+   */
+  describe('la categoría tiene que encajar con el tipo', () => {
+    const conCategoria = (tipo: string | null, nombre = 'Compra de alimento') =>
+      prisma.categoriaFinanciera.findUnique.mockResolvedValue({
+        id: 3,
+        nombre,
+        tipo,
+      });
+
+    it('deja crear cuando concuerdan', async () => {
+      conCategoria('egreso');
+      prisma.movimientoFinanciero.create.mockResolvedValue({ id: 1 });
+
+      await expect(
+        service.crear({ ...dtoCrear, tipo: 'egreso' }, propietario),
+      ).resolves.toBeDefined();
+    });
+
+    it('rechaza un ingreso con categoría de egreso', async () => {
+      conCategoria('egreso');
+
+      await expect(
+        service.crear({ ...dtoCrear, tipo: 'ingreso' }, propietario),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.movimientoFinanciero.create).not.toHaveBeenCalled();
+    });
+
+    it('el mensaje nombra la categoría y los dos lados', async () => {
+      conCategoria('egreso', 'Compra de alimento');
+
+      await expect(
+        service.crear({ ...dtoCrear, tipo: 'ingreso' }, propietario),
+      ).rejects.toThrow(/Compra de alimento.*egreso.*ingreso/);
+    });
+
+    // La columna es opcional a propósito: sin tipo, la categoría sirve para
+    // las dos cosas y no se debe rechazar nada.
+    it('una categoría sin tipo vale para los dos', async () => {
+      conCategoria(null, 'Otros');
+      prisma.movimientoFinanciero.create.mockResolvedValue({ id: 1 });
+
+      await expect(
+        service.crear({ ...dtoCrear, tipo: 'ingreso' }, propietario),
+      ).resolves.toBeDefined();
+    });
+
+    // El caso que un arreglo ingenuo se salta: no llega categoria_id, así que
+    // parece que no hay nada que validar, pero el tipo nuevo choca con la
+    // categoría que ya tenía.
+    it('rechaza cambiar sólo el tipo si la categoría de antes ya no encaja', async () => {
+      prisma.movimientoFinanciero.findUnique.mockResolvedValue({
+        ...movimientoExistente,
+        tipo: 'egreso',
+        categoria_id: 3,
+      });
+      conCategoria('egreso');
+
+      await expect(
+        service.actualizar(1, { tipo: 'ingreso' }, propietario),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.movimientoFinanciero.update).not.toHaveBeenCalled();
+    });
+
+    it('rechaza cambiar sólo la categoría si no encaja con el tipo de antes', async () => {
+      prisma.movimientoFinanciero.findUnique.mockResolvedValue({
+        ...movimientoExistente,
+        tipo: 'ingreso',
+        categoria_id: 1,
+      });
+      conCategoria('egreso');
+
+      await expect(
+        service.actualizar(1, { categoria_id: 3 }, propietario),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('deja actualizar cuando el resultado concuerda', async () => {
+      prisma.movimientoFinanciero.findUnique.mockResolvedValue({
+        ...movimientoExistente,
+        tipo: 'egreso',
+        categoria_id: 3,
+      });
+      conCategoria('ingreso', 'Venta de aves');
+      prisma.movimientoFinanciero.update.mockResolvedValue({ id: 1 });
+
+      await expect(
+        service.actualizar(1, { tipo: 'ingreso', categoria_id: 1 }, propietario),
+      ).resolves.toBeDefined();
+    });
+
+    it('una actualización que no toca ni tipo ni categoría no se estorba', async () => {
+      prisma.movimientoFinanciero.findUnique.mockResolvedValue({
+        ...movimientoExistente,
+        tipo: 'egreso',
+        categoria_id: 3,
+      });
+      prisma.movimientoFinanciero.update.mockResolvedValue({ id: 1 });
+
+      await expect(
+        service.actualizar(1, { descripcion: 'otra nota' }, propietario),
+      ).resolves.toBeDefined();
+      expect(prisma.categoriaFinanciera.findUnique).not.toHaveBeenCalled();
+    });
+  });
 });
