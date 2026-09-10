@@ -1,11 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
+import { toast } from 'sonner'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import { IcArrowUp, IcCoin, IcRefresh } from '@shared/ui/icons/icons'
+import { mensajeDeError } from '@shared/utils/errores'
+import { fechaDeHoy } from '@shared/utils/fechas'
+import FormularioMovimiento from './components/FormularioMovimiento'
+import { useMovimientosFinancieros } from './hooks/useMovimientosFinancieros'
 import {
-  listarMovimientosFinancieros,
-  type MovimientoFinanciero,
-} from './api/movimientos-financieros'
+  errorDeFormulario,
+  formularioDesde,
+  formularioVacio,
+  payloadDesdeFormulario,
+  type FormularioMovimiento as DatosMovimiento,
+} from './model/movimiento'
+import type { MovimientoFinanciero } from './api/movimientos-financieros'
 import '@shared/ui/admin/AdminKit.css'
 import './FinanzasPage.css'
 
@@ -39,27 +48,70 @@ function presentarTipo(tipo: MovimientoFinanciero['tipo']): {
 }
 
 function FinanzasPage() {
-  const [movimientos, setMovimientos] = useState<MovimientoFinanciero[]>([])
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState('')
+  const datos = useMovimientosFinancieros()
+  const { movimientos, cargando, error } = datos
+  const cargar = datos.recargar
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos')
   const [filtroLote, setFiltroLote] = useState('todos')
+  const [form, setForm] = useState<DatosMovimiento | null>(null)
+  const [editandoId, setEditandoId] = useState<number | null>(null)
+  const [guardando, setGuardando] = useState(false)
+  const [errorFormulario, setErrorFormulario] = useState('')
 
-  const cargar = useCallback(async () => {
-    setCargando(true)
-    setError('')
-    try {
-      setMovimientos(await listarMovimientosFinancieros())
-    } catch {
-      setError('No se pudieron cargar los movimientos financieros. Inténtalo nuevamente.')
-    } finally {
-      setCargando(false)
+  function abrirNuevo() {
+    setEditandoId(null)
+    setErrorFormulario('')
+    setForm(formularioVacio(fechaDeHoy()))
+  }
+
+  function abrirEdicion(movimiento: MovimientoFinanciero) {
+    setEditandoId(movimiento.id)
+    setErrorFormulario('')
+    setForm(formularioDesde(movimiento))
+  }
+
+  function cambiarCampo<K extends keyof DatosMovimiento>(campo: K, valor: DatosMovimiento[K]) {
+    setForm((actual) => (actual === null ? actual : { ...actual, [campo]: valor }))
+  }
+
+  async function guardar(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault()
+    if (form === null) return
+    const problema = errorDeFormulario(form)
+    if (problema) {
+      setErrorFormulario(problema)
+      return
     }
-  }, [])
+    setGuardando(true)
+    setErrorFormulario('')
+    try {
+      const payload = payloadDesdeFormulario(form)
+      if (editandoId === null) {
+        await datos.crear(payload)
+        toast.success('Movimiento registrado')
+      } else {
+        await datos.actualizar(editandoId, payload)
+        toast.success('Movimiento actualizado')
+      }
+      setForm(null)
+      setEditandoId(null)
+    } catch (problemaAlGuardar) {
+      setErrorFormulario(mensajeDeError(problemaAlGuardar, 'No se pudo guardar el movimiento.'))
+    } finally {
+      setGuardando(false)
+    }
+  }
 
-  useEffect(() => {
-    void cargar()
-  }, [cargar])
+  function borrar(movimiento: MovimientoFinanciero) {
+    if (!window.confirm(
+      `¿Eliminar este movimiento de ${cop(Number(movimiento.valor_cop))}? Esta acción no se puede deshacer.`,
+    )) return
+    void datos.eliminar(movimiento.id)
+      .then(() => toast.success('Movimiento eliminado'))
+      .catch((problema) => {
+        toast.error(mensajeDeError(problema, 'No se pudo eliminar el movimiento.'))
+      })
+  }
 
   const lotes = useMemo(() => {
     const porId = new Map<number, string>()
@@ -101,10 +153,15 @@ function FinanzasPage() {
         titulo="Finanzas"
         subtitulo="Consulta los ingresos y egresos reales registrados para las granjas y sus lotes."
         acciones={(
-          <button type="button" className="adm-btn adm-btn--secundario" onClick={() => void cargar()} disabled={cargando}>
-            <IcRefresh size={16} aria-hidden="true" />
-            {cargando ? 'Actualizando…' : 'Actualizar'}
-          </button>
+          <>
+            <button type="button" className="adm-btn adm-btn--secundario" onClick={() => void cargar()} disabled={cargando}>
+              <IcRefresh size={16} aria-hidden="true" />
+              {cargando ? 'Actualizando…' : 'Actualizar'}
+            </button>
+            <button type="button" className="adm-btn adm-btn--primario" onClick={abrirNuevo}>
+              Nuevo movimiento
+            </button>
+          </>
         )}
       />
 
@@ -150,6 +207,9 @@ function FinanzasPage() {
           <div className="fin-vacio">
             <h2>Aún no hay movimientos financieros</h2>
             <p>Los ingresos y egresos registrados en la operación aparecerán aquí.</p>
+            <button type="button" className="adm-btn adm-btn--primario" onClick={abrirNuevo}>
+              Registrar el primero
+            </button>
           </div>
         ) : visibles.length === 0 ? (
           <div className="fin-vacio">
@@ -167,6 +227,7 @@ function FinanzasPage() {
                   <th scope="col">Descripción</th>
                   <th scope="col">Ubicación</th>
                   <th scope="col">Monto</th>
+                  <th scope="col"><span className="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -189,6 +250,14 @@ function FinanzasPage() {
                       <td className={`fin-monto fin-monto--${tipo.clase}`}>
                         {tipo.signo}{cop(Number(movimiento.valor_cop))}
                       </td>
+                      <td className="fin-acciones">
+                        <button type="button" className="adm-btn-fila" onClick={() => abrirEdicion(movimiento)}>
+                          Editar
+                        </button>
+                        <button type="button" className="adm-btn-fila adm-btn-fila--peligro" onClick={() => borrar(movimiento)}>
+                          Eliminar
+                        </button>
+                      </td>
                     </tr>
                   )
                 })}
@@ -197,6 +266,21 @@ function FinanzasPage() {
           </div>
         )}
       </section>
+
+      {form !== null && (
+        <FormularioMovimiento
+          form={form}
+          categorias={datos.categorias}
+          granjas={datos.granjas}
+          lotes={datos.lotes}
+          modoEdicion={editandoId !== null}
+          guardando={guardando}
+          error={errorFormulario}
+          onCambiar={cambiarCampo}
+          onGuardar={(evento) => void guardar(evento)}
+          onCerrar={() => { setForm(null); setEditandoId(null) }}
+        />
+      )}
     </div>
   )
 }

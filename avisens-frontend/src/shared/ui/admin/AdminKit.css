@@ -430,3 +430,45 @@ a.adm-miga:hover {
   .adm-barra-extra select,
   .adm-barra-acciones .adm-btn { width: 100%; }
 }
+
+/* Botones pequeños para las acciones dentro de una fila de tabla. */
+.adm-btn-fila {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--adm-line);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.adm-btn-fila:hover {
+  color: var(--adm-deep);
+  border-color: var(--adm-deep);
+}
+
+.adm-btn-fila:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.adm-btn-fila--peligro:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* Texto solo para lectores de pantalla: encabezados de columna sin título
+   visible, como la de acciones. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
