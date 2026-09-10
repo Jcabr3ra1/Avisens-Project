@@ -15,6 +15,7 @@ import { RecomendacionesController } from '../modules/recomendaciones/recomendac
 import { RegistrosMortalidadController } from '../modules/registros-mortalidad/registros-mortalidad.controller';
 import { RegistrosPlagasController } from '../modules/registros-plagas/registros-plagas.controller';
 import { SensoresController } from '../modules/sensores/sensores.controller';
+import { UsuariosController } from '../modules/usuarios/usuarios.controller';
 
 type ClaseControlador = { prototype: object };
 
@@ -118,6 +119,23 @@ describe('rutas habilitadas para Operarios', () => {
         ]);
       },
     );
+  });
+
+  // Borrar una cuenta de raíz se lleva por delante su rastro —sesiones,
+  // seguridad y asignaciones— y deja huérfano lo que esa persona registró. Es
+  // del administrador, igual que el resto de borrados permanentes. El
+  // propietario sigue desactivando, que revoca el acceso sin perder nada.
+  describe('cuentas: el borrado permanente es del administrador', () => {
+    it('UsuariosController reserva el borrado permanente al administrador', () => {
+      expect(rolesDeMetodo(UsuariosController, 'eliminarPermanente')).toEqual([
+        ROLES.ADMINISTRADOR,
+      ]);
+    });
+
+    it('el propietario conserva el desactivar, que es lo suyo', () => {
+      expect(rolesDeMetodo(UsuariosController, 'desactivar')).toBeUndefined();
+      expect(rolesDeClase(UsuariosController)).toContain(ROLES.PROPIETARIO);
+    });
   });
 
   // El estado de envío lo pone quien despacha la notificación, no una
