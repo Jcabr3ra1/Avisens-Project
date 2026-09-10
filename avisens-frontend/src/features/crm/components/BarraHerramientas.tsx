@@ -1,4 +1,4 @@
-import { IcClose, IcSearch } from '@shared/ui/icons/icons'
+import { IcClose, IcDoc, IcSearch } from '@shared/ui/icons/icons'
 import type { FiltroCanal } from '../hooks/useFiltroProspectos'
 
 type Props = {
@@ -6,6 +6,8 @@ type Props = {
   onBuscar: (texto: string) => void
   filtroCanal: FiltroCanal
   onCambiarCanal: (canal: FiltroCanal) => void
+  exportando: boolean
+  onExportar: () => void
 }
 
 function BarraHerramientas({
@@ -13,6 +15,8 @@ function BarraHerramientas({
   onBuscar,
   filtroCanal,
   onCambiarCanal,
+  exportando,
+  onExportar,
 }: Props) {
   return (
     <div className="crm-toolbar">
@@ -49,6 +53,16 @@ function BarraHerramientas({
           <option value="whatsapp">WhatsApp</option>
         </select>
       </label>
+
+      <button
+        type="button"
+        className="adm-btn adm-btn--secundario"
+        onClick={onExportar}
+        disabled={exportando}
+      >
+        <IcDoc size={16} aria-hidden="true" />
+        {exportando ? 'Exportando…' : 'Exportar CSV'}
+      </button>
     </div>
   )
 }
