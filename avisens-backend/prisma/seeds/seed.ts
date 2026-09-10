@@ -9,6 +9,7 @@ import {
   sembrarCatalogoSensores,
 } from './seed-chatbot';
 import { sembrarCategoriasFinancieras } from './seed-finanzas';
+import { sembrarTiposAlimento } from './seed-alimentos';
 
 const adapter = new PrismaPg({
   connectionString: process.env['DATABASE_URL']!,
@@ -23,6 +24,7 @@ async function main() {
   await sembrarPreguntasChatbot(prisma);
   await sembrarCategoriasFinancieras(prisma);
   await sembrarCatalogoSensores(prisma);
+  await sembrarTiposAlimento(prisma);
   console.log('Seed completado');
 }
 
