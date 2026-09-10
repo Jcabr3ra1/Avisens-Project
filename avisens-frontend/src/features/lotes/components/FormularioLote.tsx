@@ -2,7 +2,12 @@ import { useState, type FormEventHandler } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import type { Galpon } from '@features/galpones/api/galpones'
 import type { Proveedor } from '@features/proveedores/api/proveedores'
-import type { FormularioLoteDatos } from '../model/formularioLote'
+import {
+  MARCAS_ALIMENTO,
+  SEXOS_LOTE,
+  tieneCurvaObjetivo,
+  type FormularioLoteDatos,
+} from '../model/formularioLote'
 
 interface Props {
   form: FormularioLoteDatos
@@ -156,21 +161,37 @@ function FormularioLote({
               </label>
               <label className="modal-campo">
                 <span>Sexo <em>(Opcional)</em></span>
-                <input
+                <select
                   value={form.sexo}
-                  onChange={(evento) =>
-                    onCambiar('sexo', evento.target.value)
-                  }
-                />
+                  onChange={(evento) => onCambiar('sexo', evento.target.value)}
+                >
+                  <option value="">Sin especificar</option>
+                  {SEXOS_LOTE.map((sexo) => (
+                    <option key={sexo} value={sexo}>
+                      {sexo.charAt(0).toUpperCase() + sexo.slice(1)}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label className="modal-campo">
                 <span>Marca de alimento <em>(Opcional)</em></span>
-                <input
+                <select
                   value={form.marca_alimento}
-                  onChange={(evento) =>
-                    onCambiar('marca_alimento', evento.target.value)
-                  }
-                />
+                  onChange={(evento) => onCambiar('marca_alimento', evento.target.value)}
+                >
+                  <option value="">Sin especificar</option>
+                  {MARCAS_ALIMENTO.map((marca) => (
+                    <option key={marca} value={marca}>
+                      {marca.charAt(0).toUpperCase() + marca.slice(1)}
+                    </option>
+                  ))}
+                </select>
+                {form.marca_alimento && !tieneCurvaObjetivo(form.marca_alimento) && (
+                  <small className="modal-ayuda">
+                    Todavía no hay curva de referencia para esta marca: el peso del
+                    lote se registrará, pero no podrá compararse con un objetivo.
+                  </small>
+                )}
               </label>
             </div>
             <div className="modal-fila">
