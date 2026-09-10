@@ -93,3 +93,20 @@ export function actualizarPayloadLote(
     estado: form.estado,
   }
 }
+
+// El vocabulario real de `curvas_objetivo`, que es contra lo que se compara el
+// peso del lote. La búsqueda de curva usa (marca, sexo): si alguno no coincide
+// no hay comparación, y el único síntoma es un 'sin_referencia' aguas abajo.
+// Por eso son desplegables y no texto libre: una errata aquí apagaba el
+// seguimiento del lote entero sin un solo error.
+export const SEXOS_LOTE = ['macho', 'hembra', 'mixto'] as const
+
+// El backend acepta las cuatro, pero solo italcol y solla tienen curvas
+// sembradas. Se ofrecen igual —una granja que use Contegral debe poder
+// registrarlo— y el formulario avisa de que esa no tendrá referencia.
+export const MARCAS_ALIMENTO = ['italcol', 'solla', 'contegral', 'finca'] as const
+export const MARCAS_CON_CURVA: readonly string[] = ['italcol', 'solla']
+
+export function tieneCurvaObjetivo(marca: string): boolean {
+  return MARCAS_CON_CURVA.includes(marca.trim().toLowerCase())
+}

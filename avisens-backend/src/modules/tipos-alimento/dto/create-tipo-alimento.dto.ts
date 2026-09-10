@@ -16,7 +16,7 @@ export class CreateTipoAlimentoDto {
 
   @ApiPropertyOptional({
     example: 'iniciacion',
-    description: 'Etapa: iniciacion | engorde | finalizacion',
+    description: 'Etapa: preiniciacion | iniciacion | engorde',
   })
   @IsString()
   @IsOptional()
@@ -24,7 +24,7 @@ export class CreateTipoAlimentoDto {
 
   @ApiPropertyOptional({
     example: 'migaja',
-    description: 'Presentacion: harina | migaja | pellet',
+    description: 'Presentacion: harina | migaja | quebrantado | peletizado',
   })
   @IsString()
   @IsOptional()
