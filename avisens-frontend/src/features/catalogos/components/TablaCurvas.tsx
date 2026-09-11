@@ -6,10 +6,17 @@ type Props = {
   curvas: CurvaObjetivo[]
   cargando: boolean
   error: string
+  puedeGestionar: boolean
   onRecargar: () => void
+  onCrear: () => void
+  onEditar: (curva: CurvaObjetivo) => void
+  onEliminar: (curva: CurvaObjetivo) => void
 }
 
-function TablaCurvas({ curvas, cargando, error, onRecargar }: Props) {
+function TablaCurvas({
+  curvas, cargando, error, puedeGestionar,
+  onRecargar, onCrear, onEditar, onEliminar,
+}: Props) {
   const [marca, setMarca] = useState('todas')
   const [sexo, setSexo] = useState('todos')
 
@@ -30,9 +37,13 @@ function TablaCurvas({ curvas, cargando, error, onRecargar }: Props) {
   return (
     <section className="adm-panel" role="tabpanel" id="panel-curvas" aria-labelledby="tab-curvas">
       <div className="cat-aviso">
-        <strong>Estos valores son la referencia del fabricante.</strong> El peso y el
-        consumo de cada lote se comparan contra ellos, así que se muestran solo para
-        consulta: cambiarlos alteraría el resultado de todos los lotes de esa marca.
+        <strong>Las curvas del manual no se editan.</strong> El peso y el consumo de
+        cada lote se comparan contra ellas, así que cambiar el objetivo del día 21
+        de Italcol alteraría el resultado de todos los lotes de esa marca. El
+        servidor las protege: editarlas devuelve un error.
+        <br />
+        Las que se crean aquí sí se pueden corregir y borrar — sirven para marcas
+        que todavía no tienen curva sembrada.
       </div>
 
       <div className="cat-panel-head">
@@ -56,11 +67,18 @@ function TablaCurvas({ curvas, cargando, error, onRecargar }: Props) {
             </select>
           </label>
         </div>
-        <span className="adm-conteo">
-          {visibles.length === curvas.length
-            ? `${curvas.length} puntos`
-            : `${visibles.length} de ${curvas.length} puntos`}
-        </span>
+        <div className="cat-panel-head-derecha">
+          <span className="adm-conteo">
+            {visibles.length === curvas.length
+              ? `${curvas.length} puntos`
+              : `${visibles.length} de ${curvas.length} puntos`}
+          </span>
+          {puedeGestionar && (
+            <button type="button" className="adm-btn adm-btn--primario" onClick={onCrear}>
+              Nuevo punto
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -91,6 +109,8 @@ function TablaCurvas({ curvas, cargando, error, onRecargar }: Props) {
                 <th scope="col">FCR objetivo</th>
                 <th scope="col">Etapa</th>
                 <th scope="col">Temperatura</th>
+                <th scope="col">Origen</th>
+                {puedeGestionar && <th scope="col"><span className="sr-only">Acciones</span></th>}
               </tr>
             </thead>
             <tbody>
@@ -109,6 +129,30 @@ function TablaCurvas({ curvas, cargando, error, onRecargar }: Props) {
                       ? '—'
                       : `${curva.temperatura_min ?? '?'} – ${curva.temperatura_max ?? '?'} °C`}
                   </td>
+                  <td>
+                    <span className={`cat-origen cat-origen--${curva.origen}`}>
+                      {curva.origen === 'seed' ? 'Manual del fabricante' : 'Añadida aquí'}
+                    </span>
+                  </td>
+                  {puedeGestionar && (
+                    <td className="cat-acciones">
+                      {/* Sin botones en las del manual: el servidor las rechaza
+                          con un 403, así que ofrecerlos sería prometer algo que
+                          va a fallar. */}
+                      {curva.origen === 'manual' ? (
+                        <>
+                          <button type="button" className="adm-btn-fila" onClick={() => onEditar(curva)}>
+                            Editar
+                          </button>
+                          <button type="button" className="adm-btn-fila adm-btn-fila--peligro" onClick={() => onEliminar(curva)}>
+                            Eliminar
+                          </button>
+                        </>
+                      ) : (
+                        <span className="cat-protegida">Protegida</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
