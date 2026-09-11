@@ -1,18 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OpcionInteractiva, TrabajoMensaje } from './whatsapp.tipos';
+import { esIdentidadMeta } from '../../common/contacto/identidad-meta';
 
 const PROVEDOR = process.env.WHATSAPP_PROVIDER ?? 'simulado';
 const VERSION = process.env.WHATSAPP_API_VERSION ?? 'v25.0';
 const TIMEOUT_MS = 8000;
-
-const BSUID = /^[A-Z]{2}\.\d+$/;
 
 @Injectable()
 export class WhatsappSender {
   private readonly logger = new Logger(WhatsappSender.name);
 
   private destinatario(destino: string) {
-    return BSUID.test(destino)
+    return esIdentidadMeta(destino)
       ? { recipient_type: 'individual', recipient: destino }
       : { to: destino };
   }
