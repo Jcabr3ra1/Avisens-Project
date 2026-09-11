@@ -57,7 +57,6 @@ export class ProspectosController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AsignarAsesorDto,
   ) {
-    const adminId = dto.admin_id ?? dto.asesor_id;
-    return this.prospectosService.asignar(id, adminId);
+    return this.prospectosService.asignar(id, dto.asesor_id);
   }
 }
