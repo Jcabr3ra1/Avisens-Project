@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export type EstadoLote = 'activo' | 'finalizado' | 'inactivo'
 
@@ -44,10 +44,7 @@ export type ActualizarLotePayload = Omit<Partial<CrearLotePayload>, 'proveedor_i
 }
 
 export async function listarLotes(): Promise<Lote[]> {
-  const { data } = await api.get<PaginatedResponse<Lote>>('/lotes', {
-    params: { page: 1, limit: 100 },
-  })
-  return data.data
+  return listarTodasLasPaginas<Lote>('/lotes')
 }
 
 export async function obtenerLote(id: number): Promise<Lote> {

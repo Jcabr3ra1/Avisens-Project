@@ -22,6 +22,8 @@ function AdminPage() {
     cargandoCrm,
     cargandoAtencion,
     errorAtencion,
+    errorResumen,
+    recargarResumen,
     recargarAtencion,
   } = useAdminDatos()
   const { galpones, cargando: cargandoMonitoreo } = useMonitoreoAmbiental()
@@ -40,6 +42,15 @@ function AdminPage() {
         kpis={resumen.kpis}
         cargando={cargandoGestion || cargandoMonitoreo}
       />
+
+      {errorResumen && (
+        <div className="adm-alerta" role="alert">
+          <span>{errorResumen}</span>
+          <button type="button" onClick={() => void recargarResumen()}>
+            Reintentar
+          </button>
+        </div>
+      )}
 
       <div className="admin-primary-grid">
         <PanelAtencionAdmin

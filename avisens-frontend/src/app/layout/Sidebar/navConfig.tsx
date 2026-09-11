@@ -68,18 +68,65 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/alertas':                 [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/notificaciones':          [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/inventario':              [ROL_ADMIN, ROL_PROPIETARIO],
-  '/finanzas':                [ROL_ADMIN, ROL_PROPIETARIO],
+  // Solo el propietario. El estado de resultados de una granja es información
+  // financiera de su dueño y no tiene ninguna finalidad en la operación de la
+  // plataforma: darle acceso permanente al administrador contradice el
+  // principio de acceso restringido de la Ley 1581. El backend ya acota por
+  // propietario en `movimientos-financieros.service.ts`; esto cierra la puerta
+  // de la interfaz, que era la que estaba abierta.
+  '/finanzas':                [ROL_PROPIETARIO],
   '/usuarios':                [ROL_ADMIN, ROL_PROPIETARIO],
   '/proveedores':             [ROL_ADMIN],
   '/ordenes-compra':          [ROL_ADMIN, ROL_PROPIETARIO],
   '/recuperaciones-password': [ROL_ADMIN],
   '/auditoria':               [ROL_ADMIN],
   '/catalogos':               [ROL_ADMIN],
+  '/organizaciones':          [ROL_ADMIN],
   '/crm':                     [ROL_ADMIN],
   '/solicitudes-pqrs':        [ROL_ADMIN],
 }
 
 export const NAV_SECTIONS: NavSection[] = [
+  // La plataforma va primero y aparte. El administrador opera Avisens como
+  // producto: sus clientes, su soporte y sus listas maestras. Antes estos
+  // módulos estaban repartidos entre 'Gestión' y 'Comercial', debajo de la
+  // operación de las granjas, y el menú le contaba que era un granjero con
+  // permisos de más.
+  {
+    label: 'Plataforma',
+    items: [
+      {
+        path: '/organizaciones',
+        label: 'Organizaciones',
+        icon: <IcServer size={16} />,
+      },
+      {
+        path: '/crm',
+        label: 'Clientes',
+        icon: <IcUsers size={16} />,
+      },
+      {
+        path: '/solicitudes-pqrs',
+        label: 'Soporte',
+        icon: <IcAlert size={16} />,
+      },
+      {
+        path: '/recuperaciones-password',
+        label: 'Contraseñas',
+        icon: <IcUserCircle size={16} />,
+      },
+      {
+        path: '/catalogos',
+        label: 'Catálogos',
+        icon: <IcBox size={16} />,
+      },
+      {
+        path: '/auditoria',
+        label: 'Auditoría',
+        icon: <IcDoc size={16} />,
+      },
+    ],
+  },
   {
     label: 'Inicio',
     items: [
@@ -131,7 +178,7 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    label: 'Gestión',
+    label: 'Operación',
     items: [
       {
         path: '/inventario',
@@ -157,26 +204,6 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/ordenes-compra',
         label: 'Compras',
         icon: <IcDoc size={16} />,
-      },
-      {
-        path: '/auditoria',
-        label: 'Auditoría',
-        icon: <IcDoc size={16} />,
-      },
-      {
-        path: '/catalogos',
-        label: 'Catálogos',
-        icon: <IcServer size={16} />,
-      },
-    ],
-  },
-  {
-    label: 'Comercial',
-    items: [
-      {
-        path: '/crm',
-        label: 'Clientes',
-        icon: <IcUsers size={16} />,
       },
     ],
   },
