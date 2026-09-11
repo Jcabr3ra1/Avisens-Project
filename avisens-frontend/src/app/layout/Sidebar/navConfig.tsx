@@ -68,7 +68,13 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/alertas':                 [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/notificaciones':          [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/inventario':              [ROL_ADMIN, ROL_PROPIETARIO],
-  '/finanzas':                [ROL_ADMIN, ROL_PROPIETARIO],
+  // Solo el propietario. El estado de resultados de una granja es información
+  // financiera de su dueño y no tiene ninguna finalidad en la operación de la
+  // plataforma: darle acceso permanente al administrador contradice el
+  // principio de acceso restringido de la Ley 1581. El backend ya acota por
+  // propietario en `movimientos-financieros.service.ts`; esto cierra la puerta
+  // de la interfaz, que era la que estaba abierta.
+  '/finanzas':                [ROL_PROPIETARIO],
   '/usuarios':                [ROL_ADMIN, ROL_PROPIETARIO],
   '/proveedores':             [ROL_ADMIN],
   '/ordenes-compra':          [ROL_ADMIN, ROL_PROPIETARIO],

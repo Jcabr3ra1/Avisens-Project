@@ -42,3 +42,22 @@ describe('puedeAcceder', () => {
     expect(rutaInicioPorRol(ROL_OPERARIO)).toBe('/mi-jornada')
   })
 })
+
+describe('el administrador no ve datos financieros del cliente', () => {
+  it('/finanzas es solo del propietario', () => {
+    // El estado de resultados de una granja es información de su dueño y no
+    // tiene finalidad en la operación de la plataforma. El backend ya acota
+    // por propietario; esta tabla cierra la puerta de la interfaz.
+    expect(puedeAcceder('/finanzas', ROL_PROPIETARIO)).toBe(true)
+    expect(puedeAcceder('/finanzas', ROL_ADMIN)).toBe(false)
+    expect(puedeAcceder('/finanzas', ROL_OPERARIO)).toBe(false)
+  })
+
+  it('el administrador conserva lo que sí es suyo', () => {
+    // Operar la plataforma: soporte, trazabilidad, catálogos y el embudo
+    // comercial. Nada de eso son datos productivos de un cliente.
+    for (const ruta of ['/auditoria', '/catalogos', '/crm', '/solicitudes-pqrs']) {
+      expect(puedeAcceder(ruta, ROL_ADMIN)).toBe(true)
+    }
+  })
+})
