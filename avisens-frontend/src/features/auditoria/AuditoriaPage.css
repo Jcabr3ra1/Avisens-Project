@@ -144,6 +144,24 @@
   background: #fef3c7;
 }
 
+/* Consultar es leer, no cambiar: en gris queda claro de un vistazo que esa
+   fila no modificó nada. Sin estilo salía como texto suelto y se leía como un
+   registro roto. */
+.aud-accion--consultar,
+.aud-accion--leer,
+.aud-accion--read {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+/* Cualquier acción que el backend añada y aquí no esté. El componente la
+   resuelve a esta clase en vez de fabricar una que no existe: así una acción
+   nueva se ve como etiqueta y no como texto desnudo. */
+.aud-accion--otra {
+  color: #475569;
+  background: #e2e8f0;
+}
+
 .aud-enlace,
 .aud-paginado button {
   min-height: 44px;
