@@ -24,6 +24,10 @@ export function useAdminDatos() {
   const [atencion, setAtencion] = useState<AtencionAdminData>(ATENCION_INICIAL)
   const [cargandoAtencion, setCargandoAtencion] = useState(true)
   const [errorAtencion, setErrorAtencion] = useState('')
+  // Los KPIs de la cabecera se calculan sumando usuarios, granjas y
+  // prospectos. Si alguna de esas cargas falla y no se dice, las tarjetas
+  // muestran un número menor del real sin que nada lo indique.
+  const [errorResumen, setErrorResumen] = useState('')
 
   const cargarGestion = useCallback(async () => {
     setCargandoGestion(true)
@@ -31,8 +35,9 @@ export function useAdminDatos() {
       const [usuariosData, granjasData] = await cargarGestionAdmin()
       setUsuarios(usuariosData)
       setGranjas(granjasData)
+      setErrorResumen('')
     } catch {
-      return
+      setErrorResumen('No se pudieron cargar usuarios y granjas, así que los totales de arriba están incompletos.')
     } finally {
       setCargandoGestion(false)
     }
@@ -43,7 +48,7 @@ export function useAdminDatos() {
     try {
       setProspectos(await cargarProspectosAdmin())
     } catch {
-      return
+      setErrorResumen('No se pudieron cargar los prospectos, así que el total comercial está incompleto.')
     } finally {
       setCargandoCrm(false)
     }
@@ -76,6 +81,10 @@ export function useAdminDatos() {
     cargandoCrm,
     cargandoAtencion,
     errorAtencion,
+    errorResumen,
     recargarAtencion: cargarAtencion,
+    recargarResumen: async () => {
+      await Promise.all([cargarGestion(), cargarProspectos()])
+    },
   }
 }
