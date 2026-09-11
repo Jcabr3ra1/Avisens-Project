@@ -134,8 +134,12 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: P
               <a href={`tel:${prospecto.telefono}`} className="crm-det-link">
                 {prospecto.telefono}
               </a>
-            ) : prospecto.telefono ? (
-              <span className="crm-det-val crm-det-val--identidad">{prospecto.telefono}</span>
+            ) : esIdentidadWhatsapp(prospecto.telefono) ? (
+              /* El identificador NO se muestra: es un id interno de Meta que
+                 solo sirve por la API. Nadie puede escribirlo en WhatsApp para
+                 buscar a esta persona, así que enseñarlo solo ocupa sitio y
+                 parece un dato roto. El sistema lo conserva para responder. */
+              <span className="crm-det-val">Sin número</span>
             ) : (
               <span className="crm-det-val">—</span>
             )}
@@ -143,7 +147,8 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: P
           {esIdentidadWhatsapp(prospecto.telefono) && (
             <p className="crm-det-nota">
               Escribió por WhatsApp sin compartir su número, así que no se le puede
-              llamar. Respóndele por WhatsApp con este identificador.
+              llamar. Para responderle, busca su conversación en el WhatsApp de
+              Avisens.
             </p>
           )}
           {prospecto.correo && (

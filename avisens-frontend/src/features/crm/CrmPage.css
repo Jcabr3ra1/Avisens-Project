@@ -472,15 +472,6 @@
 .crm-det-asesor:disabled { opacity: .6; cursor: not-allowed; }
 .crm-det-asesor:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-/* Una identidad de WhatsApp no es un enlace: no se puede marcar. Se muestra
-   en monoespaciada para que se lea como un identificador y no como un
-   teléfono mal guardado. */
-.crm-det-val--identidad {
-  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  font-size: .82rem;
-  word-break: break-all;
-}
-
 .crm-det-nota {
   margin: .35rem 0 0;
   font-size: .78rem;
