@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
@@ -165,12 +166,30 @@ export class UsuariosService {
     return galpon;
   }
 
-  async crear(dto: CreateUsuarioDto, solicitante: Solicitante) {
+  /**
+   * El alta de un usuario, dentro de una transaccion que abre quien llama.
+   *
+   * Lo usan dos caminos: el alta normal y la conversion de un prospecto en
+   * cliente. Si la conversion copiara esta logica —validar el rol, resolver la
+   * organizacion, decidir si hay que crearla— las dos se separarian en cuanto
+   * alguien tocara una, y entonces un cliente creado desde el CRM tendria
+   * reglas distintas a uno creado desde Personas.
+   *
+   * El hash de la contrasena se recibe hecho: cuesta unos 100 ms y no toca la
+   * base, asi que no tiene por que mantener una transaccion abierta.
+   */
+  async altaDeUsuario(
+    tx: Prisma.TransactionClient,
+    dto: CreateUsuarioDto,
+    solicitante: Solicitante,
+    password_hash: string,
+  ) {
     let rolId = dto.rol_id;
     let organizacionId: number | undefined;
     let nuevaOrganizacion: string | undefined;
+
     if (esPropietario(solicitante)) {
-      const rolOperario = await this.prisma.rol.findUnique({
+      const rolOperario = await tx.rol.findUnique({
         where: { nombre: ROLES.OPERARIO },
       });
       if (!rolOperario)
@@ -178,13 +197,17 @@ export class UsuariosService {
       rolId = rolOperario.id;
       organizacionId = this.organizacionDelPropietario(solicitante);
     } else {
-      const rol = await this.prisma.rol.findUnique({
-        where: { id: dto.rol_id },
-      });
+      const rol = await tx.rol.findUnique({ where: { id: dto.rol_id } });
       if (!rol) throw new NotFoundException('Rol no encontrado');
 
       if (dto.organizacion_id) {
-        await this.validarOrganizacion(dto.organizacion_id);
+        const organizacion = await tx.organizacion.findFirst({
+          where: { id: dto.organizacion_id, activa: true },
+          select: { id: true },
+        });
+        if (!organizacion) {
+          throw new NotFoundException('Organización no encontrada o inactiva');
+        }
         organizacionId = dto.organizacion_id;
       } else if (rol.nombre === ROLES.PROPIETARIO) {
         nuevaOrganizacion =
@@ -197,31 +220,35 @@ export class UsuariosService {
       }
     }
 
-    const password_hash = await bcrypt.hash(dto.password, 12);
-
-    return this.prisma.$transaction(async (tx) => {
-      if (nuevaOrganizacion) {
-        const organizacion = await tx.organizacion.create({
-          data: { nombre: nuevaOrganizacion },
-          select: { id: true },
-        });
-        organizacionId = organizacion.id;
-      }
-
-      return tx.usuario.create({
-        data: {
-          nombre_completo: dto.nombre_completo,
-          cedula: dto.cedula,
-          email: dto.email,
-          password_hash,
-          telefono: dto.telefono,
-          rol_id: rolId,
-          organizacion_id: organizacionId,
-        },
-        select: USUARIO_SELECT,
+    if (nuevaOrganizacion) {
+      const organizacion = await tx.organizacion.create({
+        data: { nombre: nuevaOrganizacion },
+        select: { id: true },
       });
+      organizacionId = organizacion.id;
+    }
+
+    return tx.usuario.create({
+      data: {
+        nombre_completo: dto.nombre_completo,
+        cedula: dto.cedula,
+        email: dto.email,
+        password_hash,
+        telefono: dto.telefono,
+        rol_id: rolId,
+        organizacion_id: organizacionId,
+      },
+      select: USUARIO_SELECT,
     });
   }
+
+  async crear(dto: CreateUsuarioDto, solicitante: Solicitante) {
+    const password_hash = await bcrypt.hash(dto.password, 12);
+    return this.prisma.$transaction((tx) =>
+      this.altaDeUsuario(tx, dto, solicitante, password_hash),
+    );
+  }
+
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
     const where = esPropietario(solicitante)
