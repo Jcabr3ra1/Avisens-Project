@@ -28,3 +28,23 @@ export const CRITICIDADES_GRAVES: readonly Criticidad[] = ['alta'];
 export function esCriticidadGrave(valor: string): boolean {
   return (CRITICIDADES_GRAVES as readonly string[]).includes(valor);
 }
+
+/**
+ * El nivel inmediatamente por debajo, sin pasarse del suelo.
+ *
+ * Lo usa el cálculo de alertas: quien roza la banda no merece la misma
+ * criticidad que quien se fue lejos, pero tampoco deja de ser un aviso. Sin
+ * esto, 'baja' era un nivel que la escala declaraba y ningún camino producía.
+ */
+export function unNivelPorDebajo(criticidad: string): Criticidad {
+  const posicion = (CRITICIDADES as readonly string[]).indexOf(criticidad);
+  if (posicion <= 0) return CRITICIDADES[0];
+  return CRITICIDADES[posicion - 1];
+}
+
+/** La del umbral si es una de las tres; si no, el nivel intermedio. */
+export function criticidadValida(valor?: string | null): Criticidad {
+  return (CRITICIDADES as readonly string[]).includes(valor ?? '')
+    ? (valor as Criticidad)
+    : 'media';
+}

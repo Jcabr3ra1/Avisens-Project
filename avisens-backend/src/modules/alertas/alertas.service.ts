@@ -15,7 +15,21 @@ import {
   verificarAccesoSensor,
 } from '../../common/auth/alcance';
 import { diaDeVida, semanaDeVida } from '../../common/fechas/dias-de-vida';
-import { CRITICIDADES_GRAVES } from '../../common/criticidad/criticidad';
+import {
+  CRITICIDADES_GRAVES,
+  Criticidad,
+  criticidadValida,
+  unNivelPorDebajo,
+} from '../../common/criticidad/criticidad';
+
+/**
+ * Hasta donde se considera que la lectura solo roza la banda.
+ *
+ * Es una fraccion del ancho del umbral: 15 % de 3 °C son 45 centesimas, y de
+ * 20 puntos de humedad son 3. Rozar baja un nivel; pasarse de ahi deja la
+ * criticidad que declaro el umbral.
+ */
+const MARGEN_ROCE = 0.15;
 
 const ALERTA_SELECT = {
   id: true,
@@ -125,6 +139,7 @@ export class AlertasService {
       select: {
         valor_minimo: true,
         valor_maximo: true,
+        criticidad: true,
       },
     });
     if (!umbral || this.estaEnRango(valor, umbral.valor_minimo, umbral.valor_maximo)) {
@@ -150,6 +165,7 @@ export class AlertasService {
       valor,
       umbral.valor_minimo,
       umbral.valor_maximo,
+      umbral.criticidad,
     );
     const alerta = await this.prisma.alerta.create({
       data: {
@@ -189,10 +205,34 @@ export class AlertasService {
     return valor >= minimo && valor <= maximo;
   }
 
-  private calcularCriticidad(valor: number, minimo: number, maximo: number) {
-    const rango = Math.max(maximo - minimo, maximo, 1);
+  /**
+   * Lo grave que es esta lectura: lo dice el umbral, lo matiza el desvio.
+   *
+   * Quien configura el umbral ya declaro lo que le importa esa variable esa
+   * semana —el frio en la cria no pesa lo mismo que en engorde—, y eso se
+   * guardaba sin que nada lo mirara: la criticidad salia solo de cuanto se
+   * habia desviado la lectura. Un umbral marcado 'alta' producia alertas
+   * 'media' y nadie entendia por que.
+   *
+   * El desvio sigue contando, pero como matiz: rozar la banda baja un nivel,
+   * irse lejos deja la criticidad que el umbral declaro.
+   *
+   * El ancho es el de la banda. Antes se tomaba `max(maximo - minimo, maximo)`,
+   * que para una banda de 21-24 °C daba 24 en vez de 3: el corte para que algo
+   * fuera grave quedaba en 3,6 °C de desvio, una barbaridad en temperatura.
+   */
+  private calcularCriticidad(
+    valor: number,
+    minimo: number,
+    maximo: number,
+    criticidadUmbral?: string | null,
+  ): Criticidad {
+    const declarada = criticidadValida(criticidadUmbral);
+    const ancho = Math.max(maximo - minimo, 1);
     const distancia = valor > maximo ? valor - maximo : minimo - valor;
-    return distancia <= rango * 0.15 ? 'media' : 'alta';
+    return distancia <= ancho * MARGEN_ROCE
+      ? unNivelPorDebajo(declarada)
+      : declarada;
   }
 
   private async notificarNuevaAlerta(
