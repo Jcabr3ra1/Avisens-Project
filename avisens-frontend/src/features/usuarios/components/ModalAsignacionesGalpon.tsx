@@ -63,6 +63,10 @@ function ModalAsignacionesGalpon({
       setRolAsignacion('')
       selectorRef.current?.focus()
     } catch {
+      // No se descarta el error: `useAsignacionesGalpon` ya lo guardó en su
+      // estado y este modal lo pinta abajo. Aquí solo se detiene el relanzado
+      // para que no quede una promesa sin capturar, y se evita limpiar el
+      // formulario, que es lo que distingue el fallo del acierto.
       return
     }
   }
