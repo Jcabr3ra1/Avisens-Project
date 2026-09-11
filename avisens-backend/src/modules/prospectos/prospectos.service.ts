@@ -6,6 +6,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '../../common/pagination/paginate';
+import { ROLES } from '../../common/auth/roles';
 import { ListarProspectosDto } from './dto/listar-prospectos.dto';
 
 const PROSPECTO_LISTA = {
@@ -85,12 +86,22 @@ export class ProspectosService {
       );
     }
 
+    // Un prospecto es alguien que todavia NO es cliente, y quien lo atiende es
+    // del equipo de Avisens. Un Propietario o un Operario SON clientes:
+    // asignarles un prospecto pondria a un cliente a llevar las ventas de su
+    // proveedor, y le daria visibilidad sobre prospectos que son competencia
+    // suya. El `where` miraba solo que el usuario existiera y estuviera activo.
     const admin = await this.prisma.usuario.findFirst({
       where: { id: asesorId, activo: true },
-      select: { id: true, nombre_completo: true },
+      select: { id: true, nombre_completo: true, rol: { select: { nombre: true } } },
     });
     if (!admin) {
       throw new NotFoundException('El administrador no existe o esta inactivo');
+    }
+    if (admin.rol?.nombre !== ROLES.ADMINISTRADOR) {
+      throw new BadRequestException(
+        `${admin.nombre_completo} no es administrador: solo un administrador puede atender un prospecto`,
+      );
     }
 
     await this.prisma.prospecto.update({

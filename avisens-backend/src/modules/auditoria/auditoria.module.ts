@@ -10,5 +10,6 @@ import { AuditoriaController } from './auditoria.controller';
     AuditoriaService,
     { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor },
   ],
+  exports: [AuditoriaService],
 })
 export class AuditoriaModule {}
