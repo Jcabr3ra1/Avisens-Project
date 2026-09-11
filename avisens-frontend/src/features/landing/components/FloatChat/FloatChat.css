@@ -158,7 +158,8 @@
   content: '';
   width: 6px;
   height: 6px;
-  background: var(--avisens-yellow);
+  /* Verde: el punto dice «estoy disponible». En amarillo se leía como aviso. */
+  background: #4ade80;
   border-radius: 50%;
   box-shadow: 0 0 0 3px rgba(247, 245, 247, 0.28);
   animation: pulse 2s infinite;
@@ -224,7 +225,8 @@
   flex-direction: column;
   flex: 1;
   gap: 0.7rem;
-  min-height: min(220px, 28svh);
+  /* Sin min-height: con un solo saludo, 220px forzados dejaban un agujero
+     entre el mensaje y las acciones. El área crece con la conversación. */
   max-height: min(46vh, 340px);
   overflow-y: auto;
   padding: 1rem;
@@ -383,20 +385,16 @@
   gap: 0.55rem;
 }
 
-.float-chat-menu button {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.2rem;
-  padding: 0.6rem 0.9rem;
-}
-
+/* El botón se dispone en `.float-accion`: icono, texto y flecha en fila. Aquí
+   solo quedan los tamaños del texto, que antes vivían mezclados con un
+   `flex-direction: column` que ganaba por especificidad al layout nuevo. */
 .float-chat-menu button strong {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
 .float-chat-menu button small {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 400;
   line-height: 1.3;
   color: rgba(16, 51, 2, 0.62);
@@ -609,4 +607,85 @@
     animation: none;
     transition-duration: 0.01ms;
   }
+}
+
+
+/* ── Cabecera: nombre, identidad y estado ─────────────────── */
+
+.float-chat-tagline {
+  align-self: flex-start;
+  margin: 0.15rem 0 0.25rem;
+  padding: 0.08rem 0.42rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.63rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.float-chat-heading { display: flex; flex-direction: column; }
+
+/* Terminada la conversación el punto deja de decir «disponible». */
+.float-chat-online--fin::before { background: rgba(255, 255, 255, 0.5); }
+
+/* ── Acciones rápidas ─────────────────────────────────────── */
+
+.float-chat-rotulo {
+  margin: 0 0 0.1rem;
+  color: var(--landing-text-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Se cualifica con `.float-chat-menu` para ganarle a `.float-chat-options
+   button`, que es (0,1,1) y si no impondría su propio padding. */
+.float-chat-menu .float-accion {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.62rem 0.75rem;
+  text-align: left;
+}
+
+.float-accion-icono {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+}
+
+/* El color categoriza: cotizar es negocio, dudas es consulta, soporte es un
+   problema que ya existe. Se distinguen antes de leer el texto. */
+.float-accion--cotizar .float-accion-icono { color: #0f7a3d; background: rgba(15, 122, 61, 0.12); }
+.float-accion--dudas   .float-accion-icono { color: #1d5fb0; background: rgba(29, 95, 176, 0.12); }
+.float-accion--soporte .float-accion-icono { color: #b06a12; background: rgba(176, 106, 18, 0.14); }
+
+.float-accion-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.float-accion-flecha {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--landing-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.float-accion:hover .float-accion-flecha { transform: translateX(2px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .float-accion-flecha { transition: none; }
+  .float-accion:hover .float-accion-flecha { transform: none; }
 }
