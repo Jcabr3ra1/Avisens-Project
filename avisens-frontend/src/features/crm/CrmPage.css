@@ -507,3 +507,12 @@
 
 .crm-det-cambiar:disabled { opacity: .5; cursor: not-allowed; }
 .crm-det-cambiar:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
+
+.crm-clave-fila {
+  display: flex;
+  gap: .5rem;
+  align-items: stretch;
+}
+
+.crm-clave-fila input { flex: 1; min-width: 0; }
+.crm-clave-fila .modal-btn { flex: 0 0 auto; white-space: nowrap; }

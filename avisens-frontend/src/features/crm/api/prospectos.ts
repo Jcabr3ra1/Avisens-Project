@@ -28,7 +28,12 @@ export interface Prospecto {
   area_galpon_m2: number | null
   rol_prospecto: string | null
   tipo_produccion: string | null
+  // `telefono` es SIEMPRE un número marcable o null; `whatsapp_id` es la
+  // dirección por la que el bot responde, que puede ser una identidad de Meta.
+  // Antes iban mezclados en `telefono` y por eso el panel enseñaba un id como
+  // si fuera un teléfono.
   telefono: string | null
+  whatsapp_id: string | null
   email: string | null
   canal_origen: string | null
   contacto_decisor: string | null
