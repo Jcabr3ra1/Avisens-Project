@@ -399,6 +399,65 @@ describe('ChatbotService', () => {
       expect(datosDe(prisma.prospecto.create).pregunta_actual).toBe('A5');
     });
 
+    // Por WhatsApp el telefono se daba por sabido, pero Meta manda una
+    // identidad (`CO.1639...`) cuando la persona escribe desde una cuenta con
+    // nombre de usuario. A eso no se le llama: el prospecto quedaba sin forma
+    // de contacto y el asesor sin a quien telefonear.
+    describe('el telefono solo se omite si se puede marcar', () => {
+      const avanzarDesde = async (telefono: string | null) => {
+        prisma.prospecto.findUnique.mockResolvedValue({
+          ...enCurso,
+          pregunta_actual: 'A20',
+          canal_origen: 'whatsapp',
+          telefono,
+        });
+        const a20 = pregunta({
+          codigo: 'A20',
+          tipo: 'texto_libre',
+          opciones: null,
+          campo_prospecto: null,
+          siguiente: 'C1',
+          omitir_si_canal: null,
+        });
+        const c1 = pregunta({
+          codigo: 'C1',
+          campo_prospecto: 'telefono',
+          omitir_si_canal: 'whatsapp',
+          siguiente: 'C2',
+        });
+        const c2 = pregunta({
+          codigo: 'C2',
+          campo_prospecto: 'email',
+          omitir_si_canal: 'whatsapp',
+          siguiente: 'FIN',
+        });
+        prisma.preguntaChatbot.findFirst
+          .mockResolvedValueOnce(a20)
+          .mockResolvedValueOnce(c1)
+          .mockResolvedValueOnce(c2)
+          .mockResolvedValue(null);
+        await service.responder({
+          sesion_id: enCurso.sesion_id,
+          respuesta: 'lo que sea',
+        });
+        // Lo que importa es el paso que queda guardado, no la pregunta que
+        // devuelve el mock al formatearla.
+        return ultimosDatos(prisma.prospecto.update).pregunta_actual;
+      };
+
+      it('lo pregunta cuando lo que hay es una identidad de Meta', async () => {
+        expect(await avanzarDesde('CO.1639897497563370')).toBe('C1');
+      });
+
+      it('lo pregunta cuando no hay nada', async () => {
+        expect(await avanzarDesde(null)).toBe('C1');
+      });
+
+      it('no lo pregunta cuando ya hay un numero de verdad', async () => {
+        expect(await avanzarDesde('573001234567')).not.toBe('C1');
+      });
+    });
+
     it('no salta esa misma pregunta en otro canal', async () => {
       prisma.prospecto.create.mockResolvedValue({ id: 1, sesion_id: 'u' });
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
