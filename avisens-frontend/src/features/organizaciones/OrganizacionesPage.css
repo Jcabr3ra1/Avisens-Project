@@ -1,0 +1,63 @@
+.org-tabla-scroll { overflow-x: auto; }
+
+.org-tabla { width: 100%; border-collapse: collapse; font-size: .9rem; }
+
+.org-tabla th,
+.org-tabla td {
+  padding: .65rem .75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.org-tabla th {
+  color: var(--text-secondary);
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.org-tabla tr:last-child td { border-bottom: 0; }
+
+.org-num { font-variant-numeric: tabular-nums; text-align: right; }
+
+/* Una organización suspendida se distingue por color y no solo por la
+   etiqueta: se reconoce de un vistazo al recorrer la tabla. */
+.org-fila--suspendida td { opacity: .55; }
+
+.org-plan {
+  display: inline-block;
+  padding: .12rem .5rem;
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  font-size: .78rem;
+  font-weight: 600;
+}
+
+.org-estado {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.org-estado--activa {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.org-estado--suspendida {
+  color: var(--text-secondary);
+  background: var(--surface-subtle);
+}
+
+.org-acciones { display: flex; gap: .4rem; justify-content: flex-end; }
+
+.org-vacio { padding: 2.5rem 1rem; text-align: center; color: var(--text-secondary); }
+.org-vacio h2 { margin: 0 0 .4rem; color: var(--text-primary); font-size: 1.05rem; }
+
+@media (max-width: 40rem) {
+  .org-acciones { justify-content: flex-start; }
+}
