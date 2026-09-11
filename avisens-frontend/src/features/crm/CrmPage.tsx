@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { useProspectos } from './hooks/useProspectos'
+import { payloadDeConversion } from './model/conversion'
 import { useFiltroProspectos } from './hooks/useFiltroProspectos'
 import { useResumenProspectos } from './hooks/useResumenProspectos'
 import ResumenCrm from './components/ResumenCrm'
@@ -13,7 +14,7 @@ import './CrmPage.css'
 function CrmPage() {
   const {
     prospectos, asesores, cargando, asignandoId, exportando, error,
-    recargar, asignar, exportar,
+    recargar, asignar, exportar, convertir,
   } = useProspectos()
   const {
     filtro,
@@ -88,6 +89,7 @@ function CrmPage() {
           asesores={asesores}
           asignando={asignandoId === seleccionado.id}
           onAsignar={(asesorId) => void asignar(seleccionado.id, asesorId)}
+          onConvertir={(form) => convertir(seleccionado.id, payloadDeConversion(form))}
           onCerrar={() => setSeleccionadoId(null)}
         />
       )}

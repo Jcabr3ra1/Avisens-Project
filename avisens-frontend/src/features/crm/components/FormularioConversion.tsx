@@ -96,7 +96,14 @@ function FormularioConversion({ prospecto, onConvertir, onCerrar }: Props) {
         <label className="modal-campo">
           <span>Correo</span>
           <input type="email" value={form.email} onChange={(e) => cambiar('email', e.target.value)} required />
-          <small className="modal-ayuda">Con este correo entra al sistema.</small>
+          {/* Por WhatsApp el chatbot no lo pregunta, así que un prospecto de
+              ese canal llega sin correo. Decirlo evita que el asesor busque un
+              dato que nunca se pidió. */}
+          <small className="modal-ayuda">
+            {prospecto.email
+              ? 'Lo dio en el chat. Con él entra al sistema: confírmalo antes de crear la cuenta.'
+              : 'No lo pedimos por WhatsApp, así que hay que pedírselo. Con él entra al sistema.'}
+          </small>
         </label>
 
         <label className="modal-campo">

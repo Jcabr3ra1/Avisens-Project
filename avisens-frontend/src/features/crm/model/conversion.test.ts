@@ -3,7 +3,7 @@ import type { ProspectoDetalle } from '../api/prospectos'
 import {
   contrasenaSugerida,
   errorDeConversion,
-  payloadDeUsuario,
+  payloadDeConversion,
   prellenarDesde,
   type FormularioConversion,
 } from './conversion'
@@ -77,15 +77,20 @@ describe('errorDeConversion', () => {
   })
 })
 
-describe('payloadDeUsuario', () => {
+describe('payloadDeConversion', () => {
   it('normaliza el correo y omite los opcionales vacíos', () => {
-    const payload = payloadDeUsuario(
+    const payload = payloadDeConversion(
       formulario({ email: '  Juan@Ejemplo.COM ', telefono: '  ' }),
-      2,
     )
     expect(payload.email).toBe('juan@ejemplo.com')
     expect('telefono' in payload).toBe(false)
-    expect(payload.rol_id).toBe(2)
+  })
+
+  it('no manda el rol: un prospecto convertido es siempre Propietario', () => {
+    // Dejar que la pantalla eligiera el rol sería abrir la puerta a crear un
+    // administrador desde el CRM.
+    const payload = payloadDeConversion(formulario())
+    expect('rol_id' in payload).toBe(false)
   })
 })
 

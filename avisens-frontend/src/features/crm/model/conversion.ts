@@ -1,4 +1,4 @@
-import type { CrearUsuarioPayload } from '@shared/api'
+import type { ConvertirProspectoPayload } from '../api/prospectos'
 import type { ProspectoDetalle } from '../api/prospectos'
 
 export interface FormularioConversion {
@@ -46,16 +46,17 @@ export function errorDeConversion(form: FormularioConversion): string {
   return ''
 }
 
-export function payloadDeUsuario(
+// La ruta de conversión no pide `rol_id`: el cliente que sale de un prospecto
+// es siempre Propietario, y dejar que la pantalla eligiera el rol sería abrir
+// la puerta a crear un administrador desde el CRM.
+export function payloadDeConversion(
   form: FormularioConversion,
-  rolPropietarioId: number,
-): CrearUsuarioPayload {
-  const payload: CrearUsuarioPayload = {
+): ConvertirProspectoPayload {
+  const payload: ConvertirProspectoPayload = {
     nombre_completo: form.nombre_completo.trim(),
     cedula: form.cedula.trim(),
     email: form.email.trim().toLowerCase(),
     password: form.password,
-    rol_id: rolPropietarioId,
   }
   if (form.telefono.trim()) payload.telefono = form.telefono.trim()
   if (form.organizacion_nombre.trim()) {
@@ -63,6 +64,7 @@ export function payloadDeUsuario(
   }
   return payload
 }
+
 
 // Una contraseña que el asesor pueda dictar por teléfono sin equivocarse: sin
 // caracteres que se confundan al oído ni al leerlos (l/1, O/0, I/i).

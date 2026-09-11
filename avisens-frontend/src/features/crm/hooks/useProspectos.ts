@@ -6,8 +6,10 @@ import { mensajeDeError } from '@shared/utils/errores'
 import { descargarBlob, nombreConFecha } from '@shared/utils/descargas'
 import {
   asignarAsesor,
+  convertirProspecto,
   exportarProspectosCsv,
   listarTodosLosProspectos,
+  type ConvertirProspectoPayload,
 } from '../api/prospectos'
 import { asesoresPosibles } from '../model/asesores'
 import { aProspectoVista, type ProspectoVista } from '../model/prospectoVista'
@@ -93,8 +95,22 @@ export function useProspectos() {
     }
   }, [])
 
+  const convertir = useCallback(async (
+    prospectoId: number,
+    payload: ConvertirProspectoPayload,
+  ) => {
+    const resultado = await convertirProspecto(prospectoId, payload)
+    // Se recarga entero: el prospecto cambia de estado y sale de la lista de
+    // pendientes, así que un parche local dejaría la tabla mintiendo.
+    await cargar()
+    toast.success(
+      `${resultado.usuario.nombre_completo} ya es cliente · ${resultado.usuario.organizacion.nombre}`,
+    )
+    return resultado
+  }, [cargar])
+
   return {
     prospectos, asesores, cargando, asignandoId, exportando, error,
-    recargar: cargar, asignar, exportar,
+    recargar: cargar, asignar, exportar, convertir,
   }
 }
