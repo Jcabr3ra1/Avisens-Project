@@ -1,19 +1,25 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  ETAPAS_ALIMENTACION,
+  MARCAS_ALIMENTO,
+  SEXOS_LOTE,
+} from '../../../common/ganaderia/vocabulario';
 
 export class CreateCurvaObjetivoDto {
   @ApiProperty({
     example: 'italcol',
-    description: 'Marca de alimento: italcol | solla | contegral | finca',
+    description: 'Marca de alimento. Es media llave de la curva, con el sexo.',
+    enum: MARCAS_ALIMENTO,
   })
-  @IsString()
+  @IsIn(MARCAS_ALIMENTO)
   marca: string;
 
   @ApiProperty({
     example: 'macho',
     description: 'Sexo: macho | hembra | mixto',
   })
-  @IsIn(['macho', 'hembra', 'mixto'])
+  @IsIn(SEXOS_LOTE)
   sexo: string;
 
   @ApiProperty({ example: 21, description: 'Dia de vida del pollo' })
@@ -62,9 +68,10 @@ export class CreateCurvaObjetivoDto {
 
   @ApiPropertyOptional({
     example: 'iniciacion',
-    description: 'Etapa: preiniciador | iniciacion | engorde',
+    description: 'Etapa de alimentación, la misma lista que el catálogo.',
+    enum: ETAPAS_ALIMENTACION,
   })
-  @IsString()
+  @IsIn(ETAPAS_ALIMENTACION)
   @IsOptional()
   etapa_alimentacion?: string;
 
