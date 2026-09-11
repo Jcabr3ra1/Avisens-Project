@@ -1,4 +1,5 @@
 import { PUNTAJE_MAXIMO, type ProspectoVista } from '../model/prospectoVista'
+import { esIdentidadWhatsapp } from '../model/contacto'
 import { ESTILO_ETAPA } from '../model/etapas'
 import { urgenciaDe } from '../model/urgencia'
 import { iniciales, metros } from '../model/formato'
@@ -53,7 +54,14 @@ function FilaProspecto({ prospecto, onAbrir }: Props) {
         </span>
       </td>
       <td>
-        <span>{prospecto.telefono || '—'}</span>
+        {esIdentidadWhatsapp(prospecto.telefono) ? (
+          /* En la tabla no cabe el identificador entero y tampoco aporta: lo
+             que el asesor necesita saber de un vistazo es que ese contacto
+             llegó por WhatsApp y no tiene número al que llamar. */
+          <span className="crm-canal-chip">Por WhatsApp</span>
+        ) : (
+          <span>{prospecto.telefono || '—'}</span>
+        )}
         {prospecto.correo && (
           <>
             <br />
