@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import { ETAPAS_ALIMENTACION } from '../../../common/ganaderia/vocabulario';
 
 export class CreateTipoAlimentoDto {
   @ApiProperty({
@@ -16,9 +17,12 @@ export class CreateTipoAlimentoDto {
 
   @ApiPropertyOptional({
     example: 'iniciacion',
-    description: 'Etapa: preiniciacion | iniciacion | engorde',
+    description:
+      'Etapa de alimentación. Las mismas que usan las curvas objetivo, para ' +
+      'poder cruzar el alimento que se dio con la curva que le tocaba.',
+    enum: ETAPAS_ALIMENTACION,
   })
-  @IsString()
+  @IsIn(ETAPAS_ALIMENTACION)
   @IsOptional()
   etapa?: string;
 
