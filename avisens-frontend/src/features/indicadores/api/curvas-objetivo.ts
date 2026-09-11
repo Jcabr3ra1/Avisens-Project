@@ -12,6 +12,10 @@ export interface CurvaObjetivo {
   consumo_acumulado_g: number | null
   fcr_objetivo: number | null
   etapa_alimentacion: string | null
+  // De dónde salió el punto. Las sembradas vienen del manual del fabricante y
+  // el backend rechaza editarlas o borrarlas con un 403: el peso objetivo del
+  // día 21 de Italcol lo dice el manual, no nosotros.
+  origen: 'seed' | 'manual'
   temperatura_min: number | null
   temperatura_max: number | null
 }

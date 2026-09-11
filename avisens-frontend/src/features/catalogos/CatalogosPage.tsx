@@ -5,7 +5,9 @@ import { getRol } from '@shared/api'
 import { permisosDeGestion } from '@shared/auth/permisos'
 import type { TipoAlimento } from '@features/consumos-diarios/api/tipos-alimento'
 import type { CatalogoSensor } from '@features/sensores/api/catalogoSensores'
+import type { CurvaObjetivo } from '@features/indicadores/api/curvas-objetivo'
 import FormularioSensor from './components/FormularioSensor'
+import FormularioCurva from './components/FormularioCurva'
 import FormularioTipoAlimento from './components/FormularioTipoAlimento'
 import TablaCurvas from './components/TablaCurvas'
 import { useCatalogoSensores } from './hooks/useCatalogoSensores'
@@ -38,6 +40,16 @@ function CatalogosPage() {
   const [formSensor, setFormSensor] = useState<{ abierto: boolean; editando: CatalogoSensor | null }>(
     { abierto: false, editando: null },
   )
+  const [formCurva, setFormCurva] = useState<{ abierto: boolean; editando: CurvaObjetivo | null }>(
+    { abierto: false, editando: null },
+  )
+
+  function borrarCurva(curva: CurvaObjetivo) {
+    if (!window.confirm(
+      `¿Eliminar el punto de ${curva.marca} · ${curva.sexo} · día ${curva.dia}? Los lotes de esa marca dejarán de compararse contra él.`,
+    )) return
+    void curvas.eliminar(curva)
+  }
 
   const activa = useMemo(
     () => PESTANAS.find((item) => item.id === pestana) ?? PESTANAS[0],
@@ -187,7 +199,11 @@ function CatalogosPage() {
           curvas={curvas.curvas}
           cargando={curvas.cargando}
           error={curvas.error}
+          puedeGestionar={puedeGestionar}
           onRecargar={() => void curvas.recargar()}
+          onCrear={() => setFormCurva({ abierto: true, editando: null })}
+          onEditar={(curva) => setFormCurva({ abierto: true, editando: curva })}
+          onEliminar={borrarCurva}
         />
       )}
 
@@ -268,6 +284,14 @@ function CatalogosPage() {
           editando={formAlimento.editando}
           onGuardar={alimentos.guardar}
           onCerrar={() => setFormAlimento({ abierto: false, editando: null })}
+        />
+      )}
+
+      {formCurva.abierto && (
+        <FormularioCurva
+          editando={formCurva.editando}
+          onGuardar={curvas.guardar}
+          onCerrar={() => setFormCurva({ abierto: false, editando: null })}
         />
       )}
 
