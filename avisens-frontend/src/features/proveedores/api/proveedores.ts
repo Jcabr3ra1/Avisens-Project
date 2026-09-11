@@ -1,4 +1,5 @@
-import { api, type PaginatedResponse } from '@shared/api'
+import { api } from '@shared/api'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 import type {
   ActualizarProveedorPayload,
   CrearProveedorPayload,
@@ -12,11 +13,7 @@ export type {
 } from '../model/proveedor'
 
 export async function listarProveedores(): Promise<Proveedor[]> {
-  const { data } = await api.get<PaginatedResponse<Proveedor>>('/proveedores', {
-    params: { page: 1, limit: 100 },
-  })
-
-  return data.data
+  return listarTodasLasPaginas<Proveedor>('/proveedores')
 }
 
 export async function crearProveedor(payload: CrearProveedorPayload): Promise<Proveedor> {
