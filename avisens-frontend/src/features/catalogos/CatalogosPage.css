@@ -148,3 +148,36 @@
   .cat-panel-head { flex-direction: column; align-items: stretch; }
   .cat-acciones { justify-content: flex-start; }
 }
+
+.cat-panel-head-derecha {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+/* El origen no es decoración: dice si esa fila se puede tocar. Por eso lleva
+   color propio y no solo texto. */
+.cat-origen {
+  display: inline-block;
+  padding: .12rem .5rem;
+  border-radius: 999px;
+  font-size: .74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cat-origen--seed {
+  color: var(--text-secondary);
+  background: var(--surface-subtle);
+}
+
+.cat-origen--manual {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.cat-protegida {
+  color: var(--text-secondary);
+  font-size: .78rem;
+  font-style: italic;
+}
