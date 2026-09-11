@@ -8,6 +8,11 @@ import {
 } from '../model/prospectoVista'
 import { ESTILO_ETAPA } from '../model/etapas'
 import { urgenciaDe } from '../model/urgencia'
+import {
+  esIdentidadWhatsapp,
+  etiquetaContacto,
+  sePuedeLlamar,
+} from '../model/contacto'
 import { pesos } from '../model/formato'
 import { useCotizaciones } from '../hooks/useCotizaciones'
 import { useSolicitudesDeProspecto } from '@features/solicitudes-pqrs/hooks/useSolicitudesDeProspecto'
@@ -41,9 +46,11 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: P
       subtitulo={prospecto.rol}
       onCerrar={onCerrar}
       ancho="ancho"
-      acciones={prospecto.telefono || prospecto.correo ? (
+      acciones={sePuedeLlamar(prospecto.telefono) || prospecto.correo ? (
         <div className="crm-detalle-acciones">
-          {prospecto.telefono && (
+          {/* Sin botón de llamar cuando el contacto es una identidad de
+              WhatsApp: `tel:CO.1639…` abre el marcador con basura. */}
+          {sePuedeLlamar(prospecto.telefono) && (
             <a href={`tel:${prospecto.telefono}`} className="crm-det-btn crm-det-btn--primary">
               <IcPhone size={15} /> Llamar ahora
             </a>
@@ -122,15 +129,23 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: P
 
           <p className="crm-det-section">Contacto</p>
           <div className="crm-det-row">
-            <span className="crm-det-lbl">Teléfono</span>
-            {prospecto.telefono ? (
+            <span className="crm-det-lbl">{etiquetaContacto(prospecto.telefono)}</span>
+            {sePuedeLlamar(prospecto.telefono) ? (
               <a href={`tel:${prospecto.telefono}`} className="crm-det-link">
                 {prospecto.telefono}
               </a>
+            ) : prospecto.telefono ? (
+              <span className="crm-det-val crm-det-val--identidad">{prospecto.telefono}</span>
             ) : (
               <span className="crm-det-val">—</span>
             )}
           </div>
+          {esIdentidadWhatsapp(prospecto.telefono) && (
+            <p className="crm-det-nota">
+              Escribió por WhatsApp sin compartir su número, así que no se le puede
+              llamar. Respóndele por WhatsApp con este identificador.
+            </p>
+          )}
           {prospecto.correo && (
             <div className="crm-det-row">
               <span className="crm-det-lbl">Correo</span>
