@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -55,8 +56,27 @@ export class CurvasObjetivoService {
     return curva;
   }
 
+  /**
+   * Las curvas del manual no se tocan.
+   *
+   * Son datos de referencia del fabricante, no configuracion de la granja.
+   * Cambiarle el peso objetivo del dia 21 a la curva de Italcol no arregla
+   * nada: mueve la referencia contra la que se comparan los indicadores
+   * durante todo el ciclo, y nadie nota que la comparacion dejo de significar
+   * lo que decia. Lo que si hace falta es poder anadir marcas que no tenemos
+   * —contegral y finca no tienen curva—, y esas si se editan y se borran.
+   */
+  private negarSiVieneDelManual(curva: { origen: string; marca: string }) {
+    if (curva.origen !== 'seed') return;
+    throw new ForbiddenException(
+      `La curva de ${curva.marca} viene del manual del fabricante y no se edita. ` +
+        'Puedes crear la curva de otra marca, o pedir que se corrija el seed.',
+    );
+  }
+
   async actualizar(id: number, dto: UpdateCurvaObjetivoDto) {
     const actual = await this.obtener(id);
+    this.negarSiVieneDelManual(actual);
     const marca = dto.marca ?? actual.marca;
     const sexo = dto.sexo ?? actual.sexo;
     const dia = dto.dia ?? actual.dia;
@@ -82,7 +102,8 @@ export class CurvasObjetivoService {
   }
 
   async eliminar(id: number) {
-    await this.obtener(id);
+    const curva = await this.obtener(id);
+    this.negarSiVieneDelManual(curva);
     await this.prisma.curvaObjetivo.delete({ where: { id } });
     return { id, eliminado: true };
   }
