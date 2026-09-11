@@ -6,6 +6,7 @@ import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
 import { InterpreteRespuestaService } from './interprete-respuesta.service';
 
 import {
+  A14_DOLOR,
   A16_MORTALIDAD,
   A20_DECIDE,
   DOLOR,
@@ -687,7 +688,7 @@ describe('ChatbotService', () => {
         [
           A('A20', A20_DECIDE[0].texto),
           A('A16', A16_MORTALIDAD[2].texto),
-          A('A14', 'Mortalidad por calor o frío'),
+          A('A14', A14_DOLOR[0].texto),
         ],
         8,
       );
