@@ -7,6 +7,23 @@ import { useAuditoria } from './hooks/useAuditoria'
 import '@shared/ui/admin/AdminKit.css'
 import './AuditoriaPage.css'
 
+// Las acciones con estilo propio. Cualquier otra cae en 'otra', que existe en
+// el CSS: antes se fabricaba la clase con el valor crudo, así que una acción
+// nueva del backend —como 'consultar', que apareció al empezar a registrar las
+// lecturas— salía sin formato, como texto suelto dentro de la tabla.
+const ACCIONES_CON_ESTILO = [
+  'crear', 'create', 'registro',
+  'actualizar', 'update', 'edicion',
+  'eliminar', 'delete', 'anular',
+  'login', 'logout', 'sesion',
+  'consultar', 'leer', 'read',
+]
+
+function claseDeAccion(accion: string): string {
+  const normalizada = accion.trim().toLowerCase()
+  return ACCIONES_CON_ESTILO.includes(normalizada) ? normalizada : 'otra'
+}
+
 const ENTIDADES_ETIQUETA: Record<string, string> = {
   usuario: 'Usuario',
   granja: 'Granja',
@@ -98,7 +115,7 @@ function AuditoriaPage() {
                       <span>{registro.usuario?.email ?? '—'}</span>
                     </td>
                     <td>
-                      <span className={`aud-accion aud-accion--${registro.accion}`}>
+                      <span className={`aud-accion aud-accion--${claseDeAccion(registro.accion)}`}>
                         {registro.accion}
                       </span>
                     </td>
