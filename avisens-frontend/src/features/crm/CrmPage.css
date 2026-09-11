@@ -488,3 +488,22 @@
   font-size: .74rem;
   font-weight: 600;
 }
+
+/* «Cambiar» es una acción secundaria: se ve, pero no compite con el nombre
+   del responsable, que es el dato. */
+.crm-det-cambiar {
+  margin-left: .55rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.crm-det-cambiar:disabled { opacity: .5; cursor: not-allowed; }
+.crm-det-cambiar:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
