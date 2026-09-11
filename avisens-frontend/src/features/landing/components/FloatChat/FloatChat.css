@@ -689,3 +689,17 @@
   .float-accion-flecha { transition: none; }
   .float-accion:hover .float-accion-flecha { transform: none; }
 }
+
+/* Dos opciones cortas van de lado: se leen como una decisión y no como una
+   lista. La regla base es una sola columna a propósito —las respuestas suelen
+   ser frases— así que esto solo se aplica cuando las dos caben. */
+.float-chat-options--par {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Cualificado para ganarle a `.float-chat-options button`, que es (0,1,1) y si
+   no impondría su alineación a la izquierda. */
+.float-chat-options--par button {
+  justify-content: center;
+  text-align: center;
+}

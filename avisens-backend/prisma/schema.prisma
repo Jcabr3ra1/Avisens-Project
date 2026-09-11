@@ -781,6 +781,7 @@ model Prospecto {
   rol_prospecto              String?
   tipo_produccion            String?
   telefono                   String?
+  whatsapp_id                String?
   email                      String?
   canal_origen               String?
   contacto_decisor           String?

@@ -9,6 +9,7 @@ import {
 } from '@features/landing/api/chatbot'
 import { IcAlert, IcRefresh, IcSend } from '@shared/ui/icons/icons'
 import Ic from '@shared/ui/Ic/Ic'
+import { seLeenEnPar } from '@features/landing/model/opcionesChat'
 import './FloatChat.css'
 
 const RobotLottie = lazy(() => import('./RobotLottie'))
@@ -286,6 +287,7 @@ function FloatChat() {
   }, [cerrarChat, open])
 
   const opciones = pregunta?.opciones ?? []
+  const enPar = seLeenEnPar(opciones)
   // La identidad («Asistente AVISENS») es fija y va en su propia línea; el
   // estado cambia. Antes compartían sitio, así que en cuanto AVIA escribía
   // desaparecía el nombre del producto.
@@ -458,7 +460,12 @@ function FloatChat() {
               ))}
             </div>
           ) : opciones.length > 0 && !resultado ? (
-          <div className="float-chat-options">
+          <div className={`float-chat-options${enPar ? ' float-chat-options--par' : ''}`}>
+            {/* Un sí o no se responde de un vistazo: en pareja y horizontal se
+                lee como una decisión, mientras que apilado a lo ancho parece
+                una lista de la que hay que escoger. Es también como los pinta
+                WhatsApp, que usa botones hasta tres opciones y lista a partir
+                de ahí, así que los dos canales se leen igual. */}
             {opciones.map((opcion) => (
               <button
                 key={opcion}
