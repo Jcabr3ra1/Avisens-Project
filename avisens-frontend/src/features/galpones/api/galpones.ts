@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export interface Galpon {
   id: number
@@ -33,10 +33,7 @@ export type ActualizarGalponPayload = Partial<CrearGalponPayload> & {
 }
 
 export async function listarGalpones(): Promise<Galpon[]> {
-  const { data } = await api.get<PaginatedResponse<Galpon>>('/galpones', {
-    params: { page: 1, limit: 100 },
-  })
-  return data.data
+  return listarTodasLasPaginas<Galpon>('/galpones')
 }
 
 export async function obtenerGalpon(id: number): Promise<Galpon> {

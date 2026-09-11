@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export interface GalponAsignado {
   id: number
@@ -25,11 +25,7 @@ export interface AsignacionGalpon {
 }
 
 export async function listarAsignacionesGalpon(usuarioId: number): Promise<AsignacionGalpon[]> {
-  const { data } = await api.get<PaginatedResponse<AsignacionGalpon>>(
-    `/usuarios/${usuarioId}/galpones`,
-    { params: { page: 1, limit: 100 } },
-  )
-  return data.data
+  return listarTodasLasPaginas<AsignacionGalpon>(`/usuarios/${usuarioId}/galpones`)
 }
 
 export async function asignarGalpon(

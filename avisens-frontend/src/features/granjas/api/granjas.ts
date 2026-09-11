@@ -1,4 +1,5 @@
 import { api } from '@shared/api/client'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 import type { PaginatedResponse } from '@shared/api/types'
 
 export interface Granja {
@@ -57,17 +58,7 @@ export async function listarPropietariosGranja(): Promise<PropietarioGranja[]> {
 }
 
 export async function listarGranjas(): Promise<Granja[]> {
-  const { data } = await api.get<PaginatedResponse<Granja>>(
-    '/granjas',
-    {
-      params: {
-        page: 1,
-        limit: 100,
-      },
-    },
-  )
-
-  return data.data
+  return listarTodasLasPaginas<Granja>('/granjas')
 }
 
 export async function obtenerGranja(id: number): Promise<Granja> {
