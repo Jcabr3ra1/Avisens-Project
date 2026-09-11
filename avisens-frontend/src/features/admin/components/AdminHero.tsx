@@ -1,4 +1,4 @@
-import { IcBox, IcEgg, IcGrid, IcLeaf, IcServer } from '@shared/ui/icons/icons'
+import { IcAlert, IcGrid, IcServer, IcUserCircle, IcUsers } from '@shared/ui/icons/icons'
 import type { KpiAdmin } from '../model/adminResumen'
 
 type Props = {
@@ -10,9 +10,9 @@ type Props = {
 
 function iconoKpi(icono: KpiAdmin['icono']) {
   const iconos = {
-    granja: <IcLeaf size={16} />,
-    galpon: <IcBox size={16} />,
-    aves: <IcEgg size={16} />,
+    organizacion: <IcUsers size={16} />,
+    usuarios: <IcUserCircle size={16} />,
+    soporte: <IcAlert size={16} />,
     sensor: <IcServer size={16} />,
   }
   return iconos[icono] ?? <IcGrid size={16} />
