@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -8,6 +9,10 @@ import {
   IsString,
   Min,
 } from 'class-validator';
+import {
+  MARCAS_ALIMENTO,
+  SEXOS_LOTE,
+} from '../../../common/ganaderia/vocabulario';
 
 export class CreateLoteDto {
   @ApiProperty({
@@ -50,18 +55,21 @@ export class CreateLoteDto {
 
   @ApiPropertyOptional({
     example: 'mixto',
-    description: 'Sexo del lote (macho, hembra, mixto)',
+    description: 'Sexo del lote: macho | hembra | mixto',
+    enum: SEXOS_LOTE,
   })
-  @IsString()
+  @IsIn(SEXOS_LOTE)
   @IsOptional()
   sexo?: string;
 
   @ApiPropertyOptional({
     example: 'italcol',
     description:
-      'Marca de alimento del lote: italcol | solla | contegral | finca',
+      'Marca de alimento del lote. Sólo italcol y solla tienen curva sembrada: ' +
+      'con las otras el lote sale sin referencia con la que compararse.',
+    enum: MARCAS_ALIMENTO,
   })
-  @IsString()
+  @IsIn(MARCAS_ALIMENTO)
   @IsOptional()
   marca_alimento?: string;
 
