@@ -180,12 +180,17 @@ const CURVAS_OBJETIVO = [...CURVA_ITALCOL, ...CURVA_SOLLA];
 
 export async function sembrarCurvasObjetivo(prisma: PrismaClient) {
   for (const fila of CURVAS_OBJETIVO) {
+    // `origen: seed` marca las que vienen del manual del fabricante. Son las
+    // unicas que el seed puede pisar, y las unicas que la API no deja editar:
+    // cambiarles un peso objetivo falsea la referencia contra la que se
+    // comparan los indicadores durante todo el ciclo.
+    const datos = { ...fila, origen: 'seed' };
     await prisma.curvaObjetivo.upsert({
       where: {
         marca_sexo_dia: { marca: fila.marca, sexo: fila.sexo, dia: fila.dia },
       },
-      update: fila,
-      create: fila,
+      update: datos,
+      create: datos,
     });
   }
 }
