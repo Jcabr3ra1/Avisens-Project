@@ -47,8 +47,8 @@ export type NavSection = {
 //
 // Cada rol inicia en una experiencia distinta: Administrador en el control
 // global, Propietario en la operación de su granja y Operario en su jornada.
-// El detalle completo y las reglas para nuevos módulos están en
-// PANELES-POR-ROL.md.
+// El criterio para clasificar un módulo nuevo: ¿opera la plataforma o la
+// granja? Lo primero va en 'Plataforma'; lo segundo, debajo.
 //
 // Permiso de acceso por ruta. Es la ÚNICA fuente de verdad: el sidebar
 // dibuja lo que esta tabla permite, y la guardia de rutas la consulta.
