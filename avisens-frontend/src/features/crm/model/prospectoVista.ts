@@ -1,6 +1,10 @@
 import type { Prospecto } from '@features/crm/api/prospectos'
 
-export const PUNTAJE_MAXIMO = 16
+// La escala del backend: NECESIDAD 4 + PRESUPUESTO 3 + MOMENTO 3 + AUTORIDAD 2.
+// Estaba en 16, de cuando las siete preguntas repartían los puntos por igual.
+// Con 16 un prospecto de 9 se leía como un 56 % cuando en realidad es un 75 %.
+// Fuente: `dominio/calificacion.ts` en el backend.
+export const PUNTAJE_MAXIMO = 12
 
 export type EtapaProspecto = 'caliente' | 'tibio' | 'frio' | 'descartado' | 'cerrado'
 
@@ -21,9 +25,13 @@ export type ProspectoVista = {
 }
 
 export const RANGOS_PUNTAJE: Record<EtapaProspecto, string> = {
-  caliente: '12 - 16 pts',
-  tibio: '7 - 11 pts',
-  frio: '0 - 6 pts',
+  // Umbrales reales: UMBRAL_CALIENTE = 8, UMBRAL_TIBIO = 5 en chatbot.service.ts.
+  // Los de antes eran de la escala de 16: decían que «caliente» empezaba en 12,
+  // así que un prospecto de 9 salía con la etiqueta Caliente y un rango que lo
+  // desmentía en la misma línea.
+  caliente: '8 - 12 pts',
+  tibio: '5 - 7 pts',
+  frio: '0 - 4 pts',
   descartado: 'N/A',
   cerrado: 'Convertido',
 }

@@ -6,7 +6,6 @@ import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
 import { InterpreteRespuestaService } from './interprete-respuesta.service';
 
 import {
-  A13_INTERNET,
   A16_MORTALIDAD,
   A20_DECIDE,
   DOLOR,
@@ -615,24 +614,6 @@ describe('ChatbotService', () => {
       expect(datos.fecha_callback).toBeUndefined();
     });
 
-    it('la zona rural sin senal se registra sin descartar al prospecto', async () => {
-      const datos = await cerrarCon(
-        [A('A20', A20_DECIDE[0].texto), A('A13', A13_INTERNET.SIN_SENAL)],
-        13,
-      );
-
-      expect(datos.conectividad_limitada).toBe(true);
-      expect(datos.clasificacion).toBe('caliente');
-      expect(datos.accion_siguiente).toBe('VISITA_PRESENCIAL');
-    });
-
-    it('la conectividad estable no marca la condicion', async () => {
-      const datos = await cerrarCon(
-        [A('A20', 'Sí'), A('A13', 'Sí, estable')],
-        13,
-      );
-      expect(datos.conectividad_limitada).toBe(false);
-    });
 
     it('la mortalidad ambiental repetida marca senal caliente', async () => {
       const datos = await cerrarCon(
@@ -820,6 +801,56 @@ describe('ChatbotService', () => {
       });
 
       expect(datosDe(prisma.prospecto.update).area_granja_m2).toBe(1200.5);
+    });
+  });
+
+  // Meta no siempre manda un teléfono: cuando la persona escribe desde una
+  // cuenta con nombre de usuario llega un `CO.1639897497563370`. Enseñárselo
+  // como «tu teléfono» y pedirle que lo confirme sólo siembra duda justo antes
+  // de cerrar.
+  describe('el resumen no enseña identificadores de Meta', () => {
+    const pedirResumen = async (telefono: string) => {
+      prisma.prospecto.findUnique
+        .mockResolvedValueOnce({
+          ...enCurso,
+          pregunta_actual: 'FIX:C1',
+          canal_origen: 'whatsapp',
+        })
+        .mockResolvedValue({
+          id: 7,
+          nombre: 'Ganadero',
+          telefono,
+          email: 'g@granja.com',
+        });
+      prisma.preguntaChatbot.findFirst.mockResolvedValue(
+        pregunta({
+          codigo: 'C1',
+          tipo: 'texto_libre',
+          opciones: null,
+          campo_prospecto: 'telefono',
+          siguiente: 'C2',
+        }),
+      );
+      // El identificador de Meta no se teclea: entra por el canal de WhatsApp
+      // al crear el prospecto. Lo que se contesta aquí es un teléfono válido.
+      const r = await service.responder({
+        sesion_id: enCurso.sesion_id,
+        respuesta: '573001234567',
+      });
+      return r.pregunta?.texto ?? '';
+    };
+
+    it('omite la línea entera cuando el contacto es una identidad', async () => {
+      const texto = await pedirResumen('CO.1639897497563370');
+
+      expect(texto).not.toContain('CO.1639897497563370');
+      expect(texto).not.toContain('Teléfono:');
+    });
+
+    it('un teléfono de verdad sí se enseña para confirmarlo', async () => {
+      const texto = await pedirResumen('573001234567');
+
+      expect(texto).toContain('573001234567');
     });
   });
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { activarSensor, crearSensor, desactivarSensor, eliminarSensor, listarSensores, type CrearSensorPayload, type Sensor } from '@features/sensores/api/sensores'
+import { activarSensor, actualizarSensor, crearSensor, desactivarSensor, eliminarSensor, listarSensores, type ActualizarSensorPayload, type CrearSensorPayload, type Sensor } from '@features/sensores/api/sensores'
 import { mensajeDeError } from '@shared/utils/errores'
 
 export function useSensores(galponId?: number) {
@@ -52,5 +52,13 @@ export function useSensores(galponId?: number) {
     setSensores((actuales) => actuales.filter((actual) => actual.id !== id))
   }, [])
 
-  return { sensores, cargando, error, crear, alternar, eliminar, recargar: cargar }
+  // Corregir un sensor sin borrarlo: un código mal tecleado se arreglaba
+  // eliminando y volviendo a crear, y eso se lleva por delante sus mediciones.
+  async function actualizar(id: number, payload: ActualizarSensorPayload) {
+    const actualizado = await actualizarSensor(id, payload)
+    await cargar()
+    return actualizado
+  }
+
+  return { sensores, cargando, error, crear, actualizar, alternar, eliminar, recargar: cargar }
 }

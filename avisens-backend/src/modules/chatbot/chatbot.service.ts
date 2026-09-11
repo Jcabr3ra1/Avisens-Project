@@ -10,13 +10,12 @@ import { CotizacionesService } from '../cotizaciones/cotizaciones.service';
 import { InterpreteRespuestaService } from './interprete-respuesta.service';
 import { IniciarChatDto } from './dto/iniciar-chat.dto';
 import { ResponderChatDto } from './dto/responder-chat.dto';
+import { esIdentidadMeta } from '../../common/contacto/identidad-meta';
 import {
   NO_DECIDE,
-  SIN_SENAL,
   clasificarSoporte,
   radicadoDe,
   tieneDolor,
-  viabilidadTecnica,
 } from './dominio/calificacion';
 
 const PRIMERA_PREGUNTA = 'M1';
@@ -35,8 +34,6 @@ const PREFIJO_CORRECCION = 'FIX:';
 // vez de rehacer el cuestionario entero.
 const CORREGIBLES: Array<[string, string]> = [
   ['Nombre', 'A2'],
-  ['Número de galpones', 'A5'],
-  ['Tamaño del galpón', 'A6'],
   ['Teléfono', 'C1'],
   ['Correo', 'C2'],
 ];
@@ -119,7 +116,7 @@ export class ChatbotService {
       pregunta: this.formatearPregunta(pregunta),
       mensaje_transicion: null as string | null,
       progreso: 0 as number | null,
-      total_pasos: null as number | null,
+      total_pasos: (await this.totalPasos()) as number | null,
       finalizado: false,
       puntaje_total: null as number | null,
       clasificacion: null as string | null,
@@ -354,11 +351,17 @@ export class ChatbotService {
     );
   }
 
+  /**
+   * Cuántas del cuestionario lleva respondidas, para la barra de progreso.
+   *
+   * Sólo las del bloque A, que son las que cuenta `totalPasos`. Contándolas
+   * todas, la respuesta del menú de entrada sumaba una que no está en el
+   * total: la barra marcaba 9 de 9 cuando aún faltaba el correo.
+   */
   private async contarRespondidas(prospectoId: number): Promise<number> {
-    const count = await this.prisma.respuestaChatbot.count({
-      where: { prospecto_id: prospectoId },
+    return this.prisma.respuestaChatbot.count({
+      where: { prospecto_id: prospectoId, bloque: 'A' },
     });
-    return count;
   }
 
   private menuCorreccion() {
@@ -397,7 +400,12 @@ export class ChatbotService {
     if (prospecto.municipio) lineas.push(`📍 *Ubicación:* ${prospecto.municipio}`);
     if (prospecto.area_granja_m2) lineas.push(`🌾 *Tamaño granja:* ${prospecto.area_granja_m2} m²`);
     if (prospecto.area_galpon_m2) lineas.push(`🏠 *Tamaño galpón:* ${prospecto.area_galpon_m2} m²`);
-    if (prospecto.telefono) lineas.push(`📞 *Teléfono:* ${prospecto.telefono}`);
+    // Si el remitente llegó como identidad de Meta y no como número, la línea
+    // se omite entera: escribió por WhatsApp, ya sabe cómo lo vamos a
+    // contactar, y pedirle que confirme un `CO.1639…` sólo siembra duda.
+    if (prospecto.telefono && !esIdentidadMeta(prospecto.telefono)) {
+      lineas.push(`📞 *Teléfono:* ${prospecto.telefono}`);
+    }
     if (prospecto.email) lineas.push(`📧 *Email:* ${prospecto.email}`);
 
     lineas.push('\n¿Confirmas que estos datos son correctos?');
@@ -710,14 +718,6 @@ export class ChatbotService {
         clasificacion,
         accion_siguiente: accion,
         senal_caliente: dolor,
-        conectividad_limitada: porCodigo.get('A13') === SIN_SENAL,
-        // Semaforo tecnico, aparte del puntaje comercial: dice si se le puede
-        // instalar hoy, no si quiere comprar.
-        viabilidad_tecnica: viabilidadTecnica(
-          porCodigo.get('A9'),
-          porCodigo.get('A11'),
-          porCodigo.get('A13'),
-        ),
         estado: 'calificado',
         pregunta_actual: FIN,
         fecha_finalizacion: new Date(),
