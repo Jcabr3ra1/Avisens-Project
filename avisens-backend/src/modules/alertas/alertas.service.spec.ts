@@ -235,6 +235,7 @@ describe('AlertasService', () => {
       prisma.umbralAmbiental.findFirst.mockResolvedValue({
         valor_minimo: 20,
         valor_maximo: 30,
+        criticidad: 'alta',
       });
       prisma.alerta.findFirst.mockResolvedValue(null);
       prisma.alerta.create.mockResolvedValue({
@@ -283,6 +284,7 @@ describe('AlertasService', () => {
       prisma.umbralAmbiental.findFirst.mockResolvedValue({
         valor_minimo: 20,
         valor_maximo: 30,
+        criticidad: 'alta',
       });
       prisma.alerta.findFirst.mockResolvedValue({ id: 12 });
 
