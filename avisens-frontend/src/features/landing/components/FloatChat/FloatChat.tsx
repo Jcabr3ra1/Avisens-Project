@@ -82,6 +82,39 @@ function etiquetaClasificacion(clasificacion: string | null): string {
   return normalizada.charAt(0).toUpperCase() + normalizada.slice(1)
 }
 
+// Las tres puertas de entrada al asistente. Cada una lleva icono y color
+// propios para que se distingan antes de leerlas: quien viene a cotizar y quien
+// viene con un problema no buscan lo mismo.
+const ACCIONES_RAPIDAS: {
+  ruta: RutaChat
+  tono: 'cotizar' | 'dudas' | 'soporte'
+  titulo: string
+  detalle: string
+  icono: string
+}[] = [
+  {
+    ruta: 'cotizacion',
+    tono: 'cotizar',
+    titulo: 'Quiero cotizar',
+    detalle: 'Un asesor visita tu granja y te arma la propuesta',
+    icono: 'M9 7h6M9 11h6M9 15h3M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z',
+  },
+  {
+    ruta: 'general',
+    tono: 'dudas',
+    titulo: 'Tengo dudas primero',
+    detalle: 'Resolvemos tus preguntas antes de decidir',
+    icono: 'M12 17h.01M9.1 9a3 3 0 115.8 1c0 2-2.9 2.5-2.9 4M12 3a9 9 0 100 18 9 9 0 000-18z',
+  },
+  {
+    ruta: 'soporte',
+    tono: 'soporte',
+    titulo: 'Ya soy cliente y tengo un problema',
+    detalle: 'Radica una PQRS y te damos número de seguimiento',
+    icono: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z',
+  },
+]
+
 function FloatChat() {
   const [open, setOpen] = useState(false)
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
@@ -251,13 +284,14 @@ function FloatChat() {
 
   const progreso = Math.min(respondidas, TOTAL_PREGUNTAS)
   const opciones = pregunta?.opciones ?? []
+  // La identidad («Asistente AVISENS») es fija y va en su propia línea; el
+  // estado cambia. Antes compartían sitio, así que en cuanto AVIA escribía
+  // desaparecía el nombre del producto.
   const estado = resultado
-    ? resultado.clasificacion === SIN_CONSENTIMIENTO || resultado.clasificacion === 'pqrs'
-      ? 'Conversación terminada'
-      : 'Conversación terminada'
+    ? 'Conversación terminada'
     : enviando
-      ? 'Escribiendo'
-      : 'Asistente AVISENS'
+      ? 'Escribiendo…'
+      : 'En línea ahora'
   const placeholder = resultado
     ? 'La conversación terminó'
     : pregunta?.tipo === 'numero'
@@ -280,7 +314,13 @@ function FloatChat() {
           </div>
           <div className="float-chat-heading">
             <div className="float-chat-name" id="avia-chat-title">AVIA</div>
-            <div className="float-chat-online" aria-live="polite">{estado}</div>
+            <div className="float-chat-tagline">Asistente AVISENS</div>
+            <div
+              className={`float-chat-online${resultado ? ' float-chat-online--fin' : ''}`}
+              aria-live="polite"
+            >
+              {estado}
+            </div>
           </div>
           <button
             type="button"
@@ -383,19 +423,26 @@ function FloatChat() {
 
           {porElegirRuta && !enviando ? (
             <div className="float-chat-options float-chat-menu">
-              <p className="float-chat-pregunta">¿Qué necesitas hoy?</p>
-              <button type="button" onClick={() => void iniciar('cotizacion')}>
-                <strong>Solicitar acompañamiento</strong>
-                <small>Un asesor visita tu granja y te ayuda con una cotización</small>
-              </button>
-              <button type="button" onClick={() => void iniciar('general')}>
-                <strong>Tengo dudas primero</strong>
-                <small>Resolvemos tus preguntas antes de decidir</small>
-              </button>
-              <button type="button" onClick={() => void iniciar('soporte')}>
-                <strong>Ya soy cliente y tengo un problema</strong>
-                <small>Radicar una PQRS con número de radicado para seguimiento</small>
-              </button>
+              <p className="float-chat-rotulo">Acciones rápidas</p>
+              {ACCIONES_RAPIDAS.map((accion) => (
+                <button
+                  key={accion.ruta}
+                  type="button"
+                  className={`float-accion float-accion--${accion.tono}`}
+                  onClick={() => void iniciar(accion.ruta)}
+                >
+                  <span className="float-accion-icono" aria-hidden="true">
+                    <Ic d={accion.icono} size={17} />
+                  </span>
+                  <span className="float-accion-texto">
+                    <strong>{accion.titulo}</strong>
+                    <small>{accion.detalle}</small>
+                  </span>
+                  <span className="float-accion-flecha" aria-hidden="true">
+                    <Ic d="M9 18l6-6-6-6" size={14} />
+                  </span>
+                </button>
+              ))}
             </div>
           ) : opciones.length > 0 && !resultado ? (
           <div className="float-chat-options">
