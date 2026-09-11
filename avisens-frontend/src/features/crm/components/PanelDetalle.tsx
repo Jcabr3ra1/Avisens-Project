@@ -1,5 +1,6 @@
 import Modal from '@shared/ui/Modal/Modal'
-import type { Usuario } from '@shared/api'
+import { useState } from 'react'
+import { getUsuario, type Usuario } from '@shared/api'
 import { IcPhone, IcPlus } from '@shared/ui/icons/icons'
 import {
   PUNTAJE_MAXIMO,
@@ -27,6 +28,14 @@ type Props = {
 }
 
 function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: Props) {
+  const [cambiandoAsesor, setCambiandoAsesor] = useState(false)
+  const asesorAsignado = asesores.find((asesor) => asesor.id === prospecto.asesorId) ?? null
+  const esMio = asesorAsignado !== null && asesorAsignado.id === getUsuario()?.id
+  // Puede haber prospecto asignado a alguien que ya no sale en la lista: un
+  // usuario desactivado, o un propietario de antes de restringir los asesores
+  // a administradores. Decirlo es mejor que mostrar «Sin asignar», que es
+  // falso y haría que alguien lo tomara creyendo que está libre.
+  const asignadoDesconocido = prospecto.asesorId !== null && asesorAsignado === null
   const estilo = ESTILO_ETAPA[prospecto.etapa]
   const urgencia = urgenciaDe(prospecto.ultimaActividad, prospecto.etapa)
   const { cotizaciones, cargando, generando, generar } = useCotizaciones(
@@ -162,25 +171,55 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: P
               </a>
             </div>
           )}
-          <div className="crm-det-row">
-            <label className="crm-det-lbl" htmlFor="crm-asesor">Quién lo atiende</label>
-            <select
-              id="crm-asesor"
-              className="crm-det-asesor"
-              value={prospecto.asesorId ?? ''}
-              disabled={asignando || asesores.length === 0}
-              onChange={(evento) => {
-                if (evento.target.value) onAsignar(Number(evento.target.value))
-              }}
-            >
-              <option value="">{asignando ? 'Asignando…' : 'Sin asignar'}</option>
-              {/* Solo se ofrecen administradores: el prospecto lo atiende
-                  alguien del equipo de Avisens, no un cliente. */}
-              {asesores.map((asesor) => (
-                <option key={asesor.id} value={asesor.id}>{asesor.nombre_completo}</option>
-              ))}
-            </select>
-          </div>
+          {/* Ya asignado se afirma, no se pregunta: un desplegable permanente
+              se lee como «esto sigue pendiente» aunque tenga un nombre dentro.
+              Para cambiarlo hay que pedirlo, que además evita reasignar sin
+              querer al rozar la rueda del ratón sobre el campo. */}
+          {(asesorAsignado || asignadoDesconocido) && !cambiandoAsesor ? (
+            <div className="crm-det-row">
+              <span className="crm-det-lbl">Lo atiende</span>
+              <span className="crm-det-val">
+                <strong>
+                  {asignadoDesconocido
+                    ? 'Alguien que ya no está disponible'
+                    : esMio
+                      ? 'Tú'
+                      : asesorAsignado?.nombre_completo}
+                </strong>
+                <button
+                  type="button"
+                  className="crm-det-cambiar"
+                  onClick={() => setCambiandoAsesor(true)}
+                  disabled={asignando}
+                >
+                  Cambiar
+                </button>
+              </span>
+            </div>
+          ) : (
+            <div className="crm-det-row">
+              <label className="crm-det-lbl" htmlFor="crm-asesor">Quién lo atiende</label>
+              <select
+                id="crm-asesor"
+                className="crm-det-asesor"
+                value={prospecto.asesorId ?? ''}
+                disabled={asignando || asesores.length === 0}
+                onChange={(evento) => {
+                  if (evento.target.value) {
+                    onAsignar(Number(evento.target.value))
+                    setCambiandoAsesor(false)
+                  }
+                }}
+              >
+                <option value="">{asignando ? 'Asignando…' : 'Sin asignar'}</option>
+                {/* Solo se ofrecen administradores: el prospecto lo atiende
+                    alguien del equipo de Avisens, no un cliente. */}
+                {asesores.map((asesor) => (
+                  <option key={asesor.id} value={asesor.id}>{asesor.nombre_completo}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="crm-det-sep" />
 
