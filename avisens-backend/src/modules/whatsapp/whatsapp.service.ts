@@ -217,7 +217,7 @@ export class WhatsappService {
         pregunta_actual: { not: FIN },
         ultima_actividad: { lt: limite },
       },
-      select: { id: true, telefono: true, pregunta_actual: true },
+      select: { id: true, whatsapp_id: true, pregunta_actual: true },
     });
 
     for (const prospecto of abandonadas) {
@@ -231,8 +231,8 @@ export class WhatsappService {
         },
       });
 
-      if (prospecto.telefono) {
-        await this.encolarSalida(prospecto.telefono, { texto: DESPEDIDA });
+      if (prospecto.whatsapp_id) {
+        await this.encolarSalida(prospecto.whatsapp_id, { texto: DESPEDIDA });
       }
     }
 
@@ -342,7 +342,7 @@ export class WhatsappService {
 
     const abierto = await this.prisma.prospecto.findFirst({
       where: {
-        telefono: entrante.de,
+        whatsapp_id: entrante.de,
         canal_origen: 'whatsapp',
         pregunta_actual: { not: FIN },
       },
@@ -353,7 +353,7 @@ export class WhatsappService {
     if (!abierto) {
       const abandonado = await this.prisma.prospecto.findFirst({
         where: {
-          telefono: entrante.de,
+          whatsapp_id: entrante.de,
           canal_origen: 'whatsapp',
           estado: 'abandonado',
           pregunta_actual: FIN,
@@ -388,7 +388,7 @@ export class WhatsappService {
             const inicio = await this.chatbot.iniciar({ canal_origen: 'whatsapp' });
             await this.prisma.prospecto.update({
               where: { sesion_id: inicio.sesion_id },
-              data: { telefono: entrante.de },
+              data: { whatsapp_id: entrante.de },
             });
             await this.encolarSalida(entrante.de, this.formatear(inicio.pregunta));
             return;
@@ -410,7 +410,7 @@ export class WhatsappService {
       const inicio = await this.chatbot.iniciar({ canal_origen: 'whatsapp' });
       await this.prisma.prospecto.update({
         where: { sesion_id: inicio.sesion_id },
-        data: { telefono: entrante.de },
+        data: { whatsapp_id: entrante.de },
       });
       await this.encolarSalida(entrante.de, this.formatear(inicio.pregunta));
       return;

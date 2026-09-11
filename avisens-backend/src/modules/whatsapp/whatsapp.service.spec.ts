@@ -204,7 +204,7 @@ describe('WhatsappService', () => {
       wamid: 'wamid.ABC',
     };
 
-    it('abre conversacion y guarda el telefono cuando el numero es nuevo', async () => {
+    it('abre conversacion y guarda la direccion de whatsapp, no el telefono', async () => {
       prisma.prospecto.findFirst.mockResolvedValue(null);
       chatbot.iniciar.mockResolvedValue({
         sesion_id: 'uuid-1',
@@ -222,11 +222,11 @@ describe('WhatsappService', () => {
       });
       expect(prisma.prospecto.update).toHaveBeenCalledWith({
         where: { sesion_id: 'uuid-1' },
-        data: { telefono: '573001112233' },
+        data: { whatsapp_id: '573001112233' },
       });
     });
 
-    it('busca la conversacion abierta de ese numero en el canal whatsapp', async () => {
+    it('busca la conversacion abierta por la direccion de whatsapp', async () => {
       prisma.prospecto.findFirst.mockResolvedValue({ sesion_id: 'uuid-9' });
       chatbot.responder.mockResolvedValue({
         finalizado: false,
@@ -239,7 +239,7 @@ describe('WhatsappService', () => {
         { where: Record<string, unknown> },
       ];
       expect(args.where).toEqual({
-        telefono: '573001112233',
+        whatsapp_id: '573001112233',
         canal_origen: 'whatsapp',
         pregunta_actual: { not: 'FIN' },
       });
@@ -408,7 +408,7 @@ describe('WhatsappService', () => {
   describe('cerrarInactivas', () => {
     it('cierra la conversacion y se despide de quien dejo de responder', async () => {
       prisma.prospecto.findMany.mockResolvedValue([
-        { id: 3, telefono: '573001112233' },
+        { id: 3, whatsapp_id: '573001112233' },
       ]);
 
       const cerradas = await service.cerrarInactivas();

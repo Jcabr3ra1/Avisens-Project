@@ -222,7 +222,11 @@ export class ChatbotService {
     // la persona ya lo recorrio entero.
     const siguiente = corrigiendo
       ? CONFIRMAR
-      : await this.primeraVisible(candidato, prospecto.canal_origen);
+      : await this.primeraVisible(
+          candidato,
+          prospecto.canal_origen,
+          prospecto.telefono,
+        );
 
     const datosProspecto: Record<string, unknown> = {
       pregunta_actual: siguiente,
@@ -317,19 +321,45 @@ export class ChatbotService {
     return fila?.puntaje ?? 0;
   }
 
-  private async primeraVisible(codigo: string, canal: string | null) {
+  /**
+   * Si el teléfono que ya tenemos sirve para llamar.
+   *
+   * Por WhatsApp se daba por sabido el número del remitente, pero Meta manda
+   * una identidad (`CO.1639…`) cuando la persona escribe desde una cuenta con
+   * nombre de usuario. A eso no se le marca: el prospecto quedaba sin forma de
+   * contacto y el asesor sin a quién llamar.
+   */
+  private tieneTelefonoContactable(telefono?: string | null): boolean {
+    return !!telefono && !esIdentidadMeta(telefono);
+  }
+
+  private async primeraVisible(
+    codigo: string,
+    canal: string | null,
+    telefono?: string | null,
+  ) {
     let actual = codigo;
     for (let saltos = 0; saltos < 50; saltos++) {
       if (actual === FIN) return FIN;
       const pregunta = await this.prisma.preguntaChatbot.findFirst({
         where: { codigo: actual, activa: true },
-        select: { omitir_si_canal: true, siguiente: true },
+        select: {
+          omitir_si_canal: true,
+          siguiente: true,
+          campo_prospecto: true,
+        },
       });
       if (!pregunta) return FIN;
       // Solo se omite si la pregunta declara un canal Y es el del prospecto.
       // Con `!==` a secas, dos null se consideraban distintos y la saltaba.
-      const omitir =
+      const omitePorCanal =
         !!pregunta.omitir_si_canal && pregunta.omitir_si_canal === canal;
+      // El teléfono es la excepción: sólo se salta si el que ya tenemos se
+      // puede marcar. Si no, se pregunta aunque el canal lo diera por sabido.
+      const omitir =
+        omitePorCanal &&
+        (pregunta.campo_prospecto !== 'telefono' ||
+          this.tieneTelefonoContactable(telefono));
       if (!omitir) return actual;
       actual = pregunta.siguiente ?? FIN;
     }
