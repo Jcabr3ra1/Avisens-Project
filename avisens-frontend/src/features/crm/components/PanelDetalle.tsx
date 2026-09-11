@@ -143,7 +143,7 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: P
             </div>
           )}
           <div className="crm-det-row">
-            <label className="crm-det-lbl" htmlFor="crm-asesor">Asesor</label>
+            <label className="crm-det-lbl" htmlFor="crm-asesor">Quién lo atiende</label>
             <select
               id="crm-asesor"
               className="crm-det-asesor"
@@ -154,6 +154,8 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: P
               }}
             >
               <option value="">{asignando ? 'Asignando…' : 'Sin asignar'}</option>
+              {/* Solo se ofrecen administradores: el prospecto lo atiende
+                  alguien del equipo de Avisens, no un cliente. */}
               {asesores.map((asesor) => (
                 <option key={asesor.id} value={asesor.id}>{asesor.nombre_completo}</option>
               ))}

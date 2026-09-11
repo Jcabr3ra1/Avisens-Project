@@ -9,6 +9,7 @@ import {
   exportarProspectosCsv,
   listarTodosLosProspectos,
 } from '../api/prospectos'
+import { asesoresPosibles } from '../model/asesores'
 import { aProspectoVista, type ProspectoVista } from '../model/prospectoVista'
 
 export function useProspectos() {
@@ -40,11 +41,17 @@ export function useProspectos() {
       if (montado.current) setCargando(false)
     }
 
-    // Los asesores solo llenan el desplegable de asignación: si fallan, la
-    // tabla se sigue viendo en lugar de caerse la página entera.
+    // Solo administradores. El CRM es el embudo comercial de Avisens: un
+    // prospecto es alguien que todavía NO es cliente, así que quien lo atiende
+    // es del equipo de Avisens. Un propietario o un operario son clientes, y
+    // asignarles un prospecto significaría que un cliente lleva las ventas.
+    //
+    // No existe un rol 'Asesor': asesor es la función, no el rol. El backend
+    // tampoco lo valida —solo comprueba que el usuario esté activo—, así que
+    // esto es una ayuda de la interfaz y no una defensa.
     try {
       const usuarios = await listarUsuarios()
-      if (montado.current) setAsesores(usuarios.filter((usuario) => usuario.activo))
+      if (montado.current) setAsesores(asesoresPosibles(usuarios))
     } catch {
       if (montado.current) setAsesores([])
     }
