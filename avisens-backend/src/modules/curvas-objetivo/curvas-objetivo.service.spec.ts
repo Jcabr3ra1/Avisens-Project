@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CurvasObjetivoService } from './curvas-objetivo.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -72,11 +76,93 @@ describe('CurvasObjetivoService', () => {
         marca: 'italcol',
         sexo: 'macho',
         dia: 21,
+        origen: 'manual',
       });
       prisma.curvaObjetivo.update.mockResolvedValue({ id: 1 });
       await service.actualizar(1, { peso_esperado_g: 1040 });
       expect(prisma.curvaObjetivo.findUnique).toHaveBeenCalledTimes(1);
       expect(prisma.curvaObjetivo.update).toHaveBeenCalled();
+    });
+  });
+
+  // Las curvas sembradas son el manual del fabricante, no configuracion de la
+  // granja. Cambiarle el peso objetivo del dia 21 a Italcol mueve la referencia
+  // contra la que se comparan los indicadores durante todo el ciclo, y nadie
+  // nota que la comparacion dejo de significar lo que decia.
+  describe('las curvas del manual no se tocan', () => {
+    const delManual = {
+      id: 1,
+      marca: 'italcol',
+      sexo: 'macho',
+      dia: 21,
+      origen: 'seed',
+    };
+
+    it('no deja editar una curva sembrada', async () => {
+      prisma.curvaObjetivo.findUnique.mockResolvedValue(delManual);
+
+      await expect(
+        service.actualizar(1, { peso_esperado_g: 9999 }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.curvaObjetivo.update).not.toHaveBeenCalled();
+    });
+
+    it('no deja borrar una curva sembrada', async () => {
+      prisma.curvaObjetivo.findUnique.mockResolvedValue(delManual);
+
+      await expect(service.eliminar(1)).rejects.toThrow(ForbiddenException);
+      expect(prisma.curvaObjetivo.delete).not.toHaveBeenCalled();
+    });
+
+    it('el mensaje dice de qué marca es y qué sí se puede hacer', async () => {
+      prisma.curvaObjetivo.findUnique.mockResolvedValue(delManual);
+
+      await expect(service.actualizar(1, {})).rejects.toThrow(
+        /italcol.*manual del fabricante/s,
+      );
+      await expect(service.actualizar(1, {})).rejects.toThrow(/crear la curva/);
+    });
+
+    // Lo que sí hace falta: añadir marcas que no tenemos. Contegral y finca no
+    // tienen curva, y un lote con esas marcas sale sin referencia.
+    it('una curva añadida a mano sí se edita', async () => {
+      prisma.curvaObjetivo.findUnique.mockResolvedValue({
+        ...delManual,
+        marca: 'contegral',
+        origen: 'manual',
+      });
+      prisma.curvaObjetivo.update.mockResolvedValue({ id: 1 });
+
+      await service.actualizar(1, { peso_esperado_g: 1040 });
+
+      expect(prisma.curvaObjetivo.update).toHaveBeenCalled();
+    });
+
+    it('una curva añadida a mano sí se borra', async () => {
+      prisma.curvaObjetivo.findUnique.mockResolvedValue({
+        ...delManual,
+        marca: 'contegral',
+        origen: 'manual',
+      });
+      prisma.curvaObjetivo.delete.mockResolvedValue({ id: 1 });
+
+      await expect(service.eliminar(1)).resolves.toBeDefined();
+    });
+
+    // El origen lo pone el seed o el valor por defecto de la columna: si el
+    // servicio lo escribiera, bastaria con mandarlo para saltarse el candado.
+    it('crear no decide el origen', async () => {
+      prisma.curvaObjetivo.findUnique.mockResolvedValue(null);
+      prisma.curvaObjetivo.create.mockResolvedValue({ id: 2 });
+
+      await service.crear({ marca: 'contegral', sexo: 'macho', dia: 7 });
+
+      const datos = (
+        prisma.curvaObjetivo.create.mock.calls as Array<
+          [{ data: Record<string, unknown> }]
+        >
+      )[0][0].data;
+      expect(datos).not.toHaveProperty('origen');
     });
   });
 
@@ -87,6 +173,7 @@ describe('CurvasObjetivoService', () => {
         marca: 'italcol',
         sexo: 'macho',
         dia: 21,
+        origen: 'manual',
       });
       prisma.curvaObjetivo.delete.mockResolvedValue({ id: 1 });
       const r = await service.eliminar(1);
