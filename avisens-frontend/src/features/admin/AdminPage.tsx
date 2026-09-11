@@ -15,7 +15,7 @@ function AdminPage() {
   const usuario = getUsuario()
   const {
     usuarios,
-    granjas,
+    organizaciones,
     prospectos,
     atencion,
     cargandoGestion,
@@ -27,7 +27,7 @@ function AdminPage() {
     recargarAtencion,
   } = useAdminDatos()
   const { galpones, cargando: cargandoMonitoreo } = useMonitoreoAmbiental()
-  const resumen = useResumenAdmin({ usuarios, granjas, prospectos, galpones, atencion })
+  const resumen = useResumenAdmin({ usuarios, organizaciones, prospectos, galpones, atencion })
   const fecha = new Date().toLocaleDateString('es-CO', {
     weekday: 'long',
     day: 'numeric',

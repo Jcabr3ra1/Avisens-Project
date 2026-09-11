@@ -1,4 +1,5 @@
-import type { Granja } from '@features/granjas/api/granjas'
+import type { Organizacion } from '@features/organizaciones/api/organizaciones'
+import type { Usuario } from '@shared/api'
 import type { Prospecto } from '@features/crm/api/prospectos'
 import type { GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { AtencionAdminData } from '../api/admin'
@@ -8,7 +9,7 @@ export type KpiAdmin = {
   etiqueta: string
   valor: string | number
   detalle: string
-  icono: 'granja' | 'galpon' | 'aves' | 'sensor'
+  icono: 'organizacion' | 'usuarios' | 'soporte' | 'sensor'
 }
 
 export type EtapaCrmAdmin = {
@@ -90,48 +91,55 @@ export function calcularAtencionAdmin(datos: AtencionAdminData): ResumenAtencion
   }
 }
 
-export function calcularKpisAdmin(granjas: Granja[], galpones: GalponMonitoreoVista[]): KpiAdmin[] {
+export function calcularKpisAdmin(
+  organizaciones: Organizacion[],
+  usuarios: Usuario[],
+  atencion: ResumenAtencionAdmin,
+  galpones: GalponMonitoreoVista[],
+): KpiAdmin[] {
   const sensores = galpones.flatMap((galpon) => galpon.sensores)
   const sensoresOnline = sensores.filter((sensor) => sensor.estado !== 'offline').length
   const porcentajeOnline = sensores.length > 0
     ? Math.round((sensoresOnline / sensores.length) * 1000) / 10
     : 0
-  const granjasActivas = granjas.filter((granja) =>
-    galpones.some((galpon) => galpon.granjaId === granja.id && galpon.loteActivo),
-  ).length
-  const galponesActivos = galpones.filter((galpon) => galpon.loteActivo).length
-  const avesEnSistema = galpones.reduce(
-    (total, galpon) => total + (galpon.loteActivo?.cantidad_inicial ?? 0),
-    0,
-  )
 
+  const organizacionesActivas = organizaciones.filter((item) => item.activa).length
+  const usuariosActivos = usuarios.filter((usuario) => usuario.activo).length
+  const enCola = atencion.solicitudesPendientes + atencion.recuperacionesPendientes
+
+  // El administrador opera la plataforma, así que su portada abre con sus
+  // clientes y su cola de trabajo. Las granjas, los galpones y las aves no
+  // desaparecen: viven en su propia sección, que es donde se supervisan.
+  // Los sensores sí se quedan aquí porque son infraestructura instalada por
+  // la plataforma y su caída es un problema suyo, no del propietario.
   return [
     {
-      etiqueta: 'Granjas activas',
-      valor: granjasActivas,
-      detalle: `de ${granjas.length} granjas registradas`,
-      icono: 'granja',
+      etiqueta: 'Organizaciones activas',
+      valor: organizacionesActivas,
+      detalle: `de ${organizaciones.length} clientes registrados`,
+      icono: 'organizacion',
     },
     {
-      etiqueta: 'Galpones',
-      valor: galpones.length,
-      detalle: `${galponesActivos} activos`,
-      icono: 'galpon',
+      etiqueta: 'Usuarios',
+      valor: usuarios.length,
+      detalle: `${usuariosActivos} con acceso`,
+      icono: 'usuarios',
     },
     {
-      etiqueta: 'Aves en sistema',
-      valor: avesEnSistema.toLocaleString('es-CO'),
-      detalle: 'en lotes activos',
-      icono: 'aves',
+      etiqueta: 'En espera de respuesta',
+      valor: enCola,
+      detalle: `${atencion.solicitudesPendientes} PQRS · ${atencion.recuperacionesPendientes} contraseñas`,
+      icono: 'soporte',
     },
     {
-      etiqueta: 'Sensores online',
+      etiqueta: 'Sensores en línea',
       valor: `${sensoresOnline}/${sensores.length}`,
       detalle: `${porcentajeOnline}% en línea`,
       icono: 'sensor',
     },
   ]
 }
+
 
 export function calcularEtapasCrmAdmin(prospectos: Prospecto[]): EtapaCrmAdmin[] {
   const cantidadPorClasificacion = (clasificacion: string) =>

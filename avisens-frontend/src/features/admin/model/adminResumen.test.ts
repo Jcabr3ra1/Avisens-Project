@@ -72,3 +72,69 @@ describe('calcularAtencionAdmin', () => {
     expect(resumen.items[0]).toMatchObject({ tipo: 'recuperacion', ruta: '/usuarios' })
   })
 })
+
+// ─── KPIs de la portada del administrador ────────────────────────────────────
+
+import type { Organizacion } from '@features/organizaciones/api/organizaciones'
+import type { Usuario } from '@shared/api'
+import type { GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import { calcularKpisAdmin, type ResumenAtencionAdmin } from './adminResumen'
+
+function organizacion(id: number, activa = true): Organizacion {
+  return {
+    id, nombre: `Cliente ${id}`, nit: null, plan: 'free', activa,
+    fecha_creacion: '2026-08-26T14:51:59.674Z',
+    _count: { granjas: 1, usuarios: 2 },
+  }
+}
+
+function usuario(id: number, activo = true): Usuario {
+  return { id, activo } as Usuario
+}
+
+function colaVacia(): ResumenAtencionAdmin {
+  return { items: [], alertasCriticas: 0, solicitudesPendientes: 0, recuperacionesPendientes: 0 }
+}
+
+describe('calcularKpisAdmin', () => {
+  it('la portada abre con los clientes, no con las granjas', () => {
+    const kpis = calcularKpisAdmin(
+      [organizacion(1), organizacion(2), organizacion(3, false)],
+      [usuario(1), usuario(2, false)],
+      colaVacia(),
+      [],
+    )
+    expect(kpis[0].etiqueta).toBe('Organizaciones activas')
+    expect(kpis[0].valor).toBe(2)
+    expect(kpis[0].detalle).toBe('de 3 clientes registrados')
+  })
+
+  it('los usuarios distinguen el total de los que tienen acceso', () => {
+    const kpis = calcularKpisAdmin([], [usuario(1), usuario(2, false)], colaVacia(), [])
+    expect(kpis[1].valor).toBe(2)
+    expect(kpis[1].detalle).toBe('1 con acceso')
+  })
+
+  it('la cola suma PQRS y contraseñas, que son las dos que exigen respuesta', () => {
+    const cola = { ...colaVacia(), solicitudesPendientes: 3, recuperacionesPendientes: 2 }
+    const kpis = calcularKpisAdmin([], [], cola, [])
+    expect(kpis[2].valor).toBe(5)
+    expect(kpis[2].detalle).toBe('3 PQRS · 2 contraseñas')
+  })
+
+  it('sin sensores no divide por cero', () => {
+    // Una instalación recién creada no tiene ni un sensor: el porcentaje debe
+    // salir 0, no NaN.
+    const kpis = calcularKpisAdmin([], [], colaVacia(), [])
+    expect(kpis[3].valor).toBe('0/0')
+    expect(kpis[3].detalle).toBe('0% en línea')
+  })
+
+  it('cuenta en línea todo sensor que no esté offline', () => {
+    const galpones = [
+      { sensores: [{ estado: 'ok' }, { estado: 'offline' }, { estado: 'alerta' }] },
+    ] as unknown as GalponMonitoreoVista[]
+    const kpis = calcularKpisAdmin([], [], colaVacia(), galpones)
+    expect(kpis[3].valor).toBe('2/3')
+  })
+})

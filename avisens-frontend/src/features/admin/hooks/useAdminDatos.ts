@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Usuario } from '@shared/api'
 import type { Granja } from '@features/granjas/api/granjas'
 import type { Prospecto } from '@features/crm/api/prospectos'
+import type { Organizacion } from '@features/organizaciones/api/organizaciones'
 import {
   cargarAtencionAdmin,
   cargarGestionAdmin,
@@ -18,6 +19,7 @@ const ATENCION_INICIAL: AtencionAdminData = {
 export function useAdminDatos() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [granjas, setGranjas] = useState<Granja[]>([])
+  const [organizaciones, setOrganizaciones] = useState<Organizacion[]>([])
   const [prospectos, setProspectos] = useState<Prospecto[]>([])
   const [cargandoGestion, setCargandoGestion] = useState(true)
   const [cargandoCrm, setCargandoCrm] = useState(true)
@@ -32,9 +34,10 @@ export function useAdminDatos() {
   const cargarGestion = useCallback(async () => {
     setCargandoGestion(true)
     try {
-      const [usuariosData, granjasData] = await cargarGestionAdmin()
+      const [usuariosData, granjasData, organizacionesData] = await cargarGestionAdmin()
       setUsuarios(usuariosData)
       setGranjas(granjasData)
+      setOrganizaciones(organizacionesData)
       setErrorResumen('')
     } catch {
       setErrorResumen('No se pudieron cargar usuarios y granjas, así que los totales de arriba están incompletos.')
@@ -75,6 +78,7 @@ export function useAdminDatos() {
   return {
     usuarios,
     granjas,
+    organizaciones,
     prospectos,
     atencion,
     cargandoGestion,

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { Usuario } from '@shared/api'
-import type { Granja } from '@features/granjas/api/granjas'
+import type { Organizacion } from '@features/organizaciones/api/organizaciones'
 import type { Prospecto } from '@features/crm/api/prospectos'
 import type { GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { AtencionAdminData } from '../api/admin'
@@ -13,13 +13,13 @@ import {
 
 type Datos = {
   usuarios: Usuario[]
-  granjas: Granja[]
+  organizaciones: Organizacion[]
   prospectos: Prospecto[]
   galpones: GalponMonitoreoVista[]
   atencion: AtencionAdminData
 }
 
-export function useResumenAdmin({ usuarios, granjas, prospectos, galpones, atencion }: Datos) {
+export function useResumenAdmin({ usuarios, organizaciones, prospectos, galpones, atencion }: Datos) {
   return useMemo(() => {
     const etapasCrm = calcularEtapasCrmAdmin(prospectos)
     const totalPropietarios = usuarios.filter((usuario) => usuario.rol.nombre === 'Propietario').length
@@ -28,7 +28,7 @@ export function useResumenAdmin({ usuarios, granjas, prospectos, galpones, atenc
       .slice(0, 5)
 
     return {
-      kpis: calcularKpisAdmin(granjas, galpones),
+      kpis: calcularKpisAdmin(organizaciones, usuarios, calcularAtencionAdmin(atencion), galpones),
       atencion: calcularAtencionAdmin(atencion),
       etapasCrm,
       conversionCrm: calcularConversionCrm(prospectos, etapasCrm),
@@ -37,5 +37,5 @@ export function useResumenAdmin({ usuarios, granjas, prospectos, galpones, atenc
       totalOperarios: usuarios.filter((usuario) => usuario.rol.nombre === 'Operario').length,
       totalActivos: usuarios.filter((usuario) => usuario.activo).length,
     }
-  }, [atencion, galpones, granjas, prospectos, usuarios])
+  }, [atencion, galpones, organizaciones, prospectos, usuarios])
 }
