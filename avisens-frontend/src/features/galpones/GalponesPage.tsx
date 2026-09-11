@@ -9,6 +9,7 @@ import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
 import DispositivosDeGalpon from '@features/dispositivos/components/DispositivosDeGalpon'
 import EquiposDeGalpon from '@features/equipos/components/EquiposDeGalpon'
 import SensoresDeGalpon from '@features/sensores/components/SensoresDeGalpon'
+import UmbralesDeGalpon from './components/UmbralesDeGalpon'
 import type { Galpon } from './api/galpones'
 import BarraGalpones from './components/BarraGalpones'
 import FormularioGalpon from './components/FormularioGalpon'
@@ -45,6 +46,7 @@ function GalponesPage() {
   const formulario = useFormularioGalpon(gestion.guardar)
   const resumen = useMemo(() => calcularResumenGalpones(galponesDeGranja), [galponesDeGranja])
   const [galponSensores, setGalponSensores] = useState<Galpon | null>(null)
+  const [galponUmbrales, setGalponUmbrales] = useState<Galpon | null>(null)
   const [galponDispositivos, setGalponDispositivos] = useState<Galpon | null>(null)
   const [galponEquipos, setGalponEquipos] = useState<Galpon | null>(null)
 
@@ -137,6 +139,7 @@ function GalponesPage() {
           onEliminar={confirmarEliminacion}
           onVerLotes={(galpon) => navigate(`/lotes?galpon=${galpon.id}`)}
           onVerSensores={setGalponSensores}
+          onVerUmbrales={setGalponUmbrales}
           onVerDispositivos={setGalponDispositivos}
           onVerEquipos={setGalponEquipos}
         />
@@ -173,6 +176,16 @@ function GalponesPage() {
           onCerrar={() => setGalponSensores(null)}
         >
           <SensoresDeGalpon galpon={galponSensores} />
+        </PantallaHija>
+      )}
+
+      {galponUmbrales && (
+        <PantallaHija
+          titulo={`Umbrales ambientales · ${galponUmbrales.nombre}`}
+          subtitulo={`${galponUmbrales.codigo} · ${galponUmbrales.granja.nombre}`}
+          onCerrar={() => setGalponUmbrales(null)}
+        >
+          <UmbralesDeGalpon galpon={galponUmbrales} />
         </PantallaHija>
       )}
     </div>
