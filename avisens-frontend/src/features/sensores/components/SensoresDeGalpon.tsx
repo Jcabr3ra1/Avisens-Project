@@ -4,10 +4,13 @@ import {
   listarDispositivos,
   type Dispositivo,
 } from '@features/dispositivos/api/dispositivos'
+import { getRol } from '@shared/api'
+import { gestionaAlgo, permisosDeGestion } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { Galpon } from '@features/galpones/api/galpones'
 import { useCatalogoSensores } from '../hooks/useCatalogoSensores'
 import { useSensores } from '../hooks/useSensores'
+import FormularioSensor from './FormularioSensor'
 import {
   FORMULARIO_SENSOR_INICIAL,
   type DatosSensor,
@@ -17,12 +20,17 @@ import '../SensoresPage.css'
 import { toast } from 'sonner'
 
 function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
-  const { sensores, cargando, error, crear, alternar, eliminar } = useSensores(
+  const { sensores, cargando, error, crear, actualizar, alternar, eliminar } = useSensores(
     galpon.id,
   )
   const { tipos } = useCatalogoSensores()
   const [dispositivos, setDispositivos] = useState<Dispositivo[]>([])
   const [form, setForm] = useState<DatosSensor>(FORMULARIO_SENSOR_INICIAL)
+  const [editando, setEditando] = useState<Sensor | null>(null)
+  // Instalar y configurar sensores es del administrador: el propietario
+  // llega aquí desde Galpones y solo debe consultar. Un botón sin permiso
+  // se oculta, no se deshabilita.
+  const permisos = permisosDeGestion(getRol())
   const [dispositivoId, setDispositivoId] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -139,6 +147,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
         </div>
       )}
 
+      {permisos.crear && (
       <form className="sn-card sn-form" onSubmit={handleCrear}>
         <h2 className="sn-form-titulo">Registrar sensor</h2>
         <div className="sn-grid">
@@ -242,6 +251,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
           </button>
         </div>
       </form>
+      )}
 
       <div className="sn-card">
         {cargando ? (
@@ -266,7 +276,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
                   <th>Unidad</th>
                   <th>Dispositivo</th>
                   <th>Estado</th>
-                  <th aria-label="Acciones"></th>
+                  {gestionaAlgo(permisos) && <th aria-label="Acciones"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -287,20 +297,34 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
                         {s.estado}
                       </span>
                     </td>
+                    {gestionaAlgo(permisos) && (
                     <td className="sn-acciones">
-                      <button
-                        className="sn-btn sn-btn--sm"
-                        onClick={() => handleAlternar(s)}
-                      >
-                        {s.estado === 'activo' ? 'Desactivar' : 'Activar'}
-                      </button>
-                      <button
-                        className="sn-btn sn-btn--sm sn-btn--danger"
-                        onClick={() => handleEliminar(s)}
-                      >
-                        Eliminar
-                      </button>
+                      {permisos.editar && (
+                        <button
+                          className="sn-btn sn-btn--sm"
+                          onClick={() => setEditando(s)}
+                        >
+                          Editar
+                        </button>
+                      )}
+                      {permisos.alternarActivo && (
+                        <button
+                          className="sn-btn sn-btn--sm"
+                          onClick={() => handleAlternar(s)}
+                        >
+                          {s.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                        </button>
+                      )}
+                      {permisos.eliminar && (
+                        <button
+                          className="sn-btn sn-btn--sm sn-btn--danger"
+                          onClick={() => handleEliminar(s)}
+                        >
+                          Eliminar
+                        </button>
+                      )}
                     </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -310,6 +334,14 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
       </div>
 
       <MedicionesVivas sensores={sensores} />
+
+      {editando && (
+        <FormularioSensor
+          sensor={editando}
+          onGuardar={actualizar}
+          onCerrar={() => setEditando(null)}
+        />
+      )}
     </div>
   )
 }
