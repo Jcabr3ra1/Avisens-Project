@@ -35,6 +35,12 @@ export const PUNTAJE_MAXIMO =
   DIMENSIONES.MOMENTO_DE_COMPRA +
   DIMENSIONES.AUTORIDAD;
 
+// Los textos tienen tope de largo por como los pinta WhatsApp: un boton se
+// trunca pasados 20 caracteres y una fila de lista pasados 24. Si una sola
+// opcion se pasa, la pregunta entera cae a texto numerado y la persona tiene
+// que escribir "3" en vez de tocar. Al cambiarlos hay que mirar tambien la
+// migracion que los lleva a la base: el seed no corre en produccion.
+
 // NECESIDAD — el dolor real pesa mas que cualquier otra cosa
 export const A16_MORTALIDAD: OpcionCalificada[] = [
   { texto: 'Sí, varias veces', puntaje: 3 },
@@ -44,10 +50,10 @@ export const A16_MORTALIDAD: OpcionCalificada[] = [
 ];
 
 export const A14_DOLOR: OpcionCalificada[] = [
-  { texto: 'Mortalidad por calor o frío', puntaje: 1 },
-  { texto: 'Consumo de alimento descontrolado', puntaje: 1 },
+  { texto: 'Muertes por calor o frío', puntaje: 1 },
+  { texto: 'Consumo de alimento', puntaje: 1 },
   { texto: 'Humedad y amoniaco', puntaje: 1 },
-  { texto: 'Enfermedades respiratorias', puntaje: 1 },
+  { texto: 'Problemas respiratorios', puntaje: 1 },
   { texto: 'Nada en particular', puntaje: 0 },
 ];
 
@@ -64,16 +70,16 @@ export const A18_PAGO: OpcionCalificada[] = [
 // otros vendedores en la mesa. Se llamaba URGENCIA, que prometia un plazo
 // que estas opciones no miden.
 export const A19_MOMENTO: OpcionCalificada[] = [
-  { texto: 'Ya tengo otras cotizaciones', puntaje: 3 },
+  { texto: 'Ya tengo cotizaciones', puntaje: 3 },
   { texto: 'Estoy comparando', puntaje: 1 },
-  { texto: 'Solo los estoy viendo a ustedes', puntaje: 0 },
+  { texto: 'Solo a ustedes', puntaje: 0 },
   { texto: 'No sé qué más hay', puntaje: 0 },
 ];
 
 // AUTORIDAD — antes no sumaba nada, solo enrutaba a callback
 export const A20_DECIDE: OpcionCalificada[] = [
   { texto: 'Sí, yo decido', puntaje: 2 },
-  { texto: 'No, decide otra persona', puntaje: 0 },
+  { texto: 'Decide otra persona', puntaje: 0 },
 ];
 
 export const OPCIONES_CALIFICADAS: Record<string, OpcionCalificada[]> = {
