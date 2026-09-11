@@ -6,11 +6,14 @@ import {
 } from '@nestjs/common';
 import { MovimientosFinancierosService } from './movimientos-financieros.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 import { ROLES } from '../../common/auth/roles';
 import type { Solicitante } from '../../common/auth/acceso';
 
 describe('MovimientosFinancierosService', () => {
   let service: MovimientosFinancierosService;
+
+  const auditoria = { registrar: jest.fn() };
 
   const prisma = {
     movimientoFinanciero: {
@@ -51,6 +54,7 @@ describe('MovimientosFinancierosService', () => {
       providers: [
         MovimientosFinancierosService,
         { provide: PrismaService, useValue: prisma },
+        { provide: AuditoriaService, useValue: auditoria },
       ],
     }).compile();
     service = module.get<MovimientosFinancierosService>(
@@ -162,6 +166,56 @@ describe('MovimientosFinancierosService', () => {
           where: { granja: { propietario_id: propietario.id } },
         }),
       );
+    });
+  });
+
+  // El administrador ve los movimientos de todos los propietarios, y eso es a
+  // propósito: en un servicio gestionado a veces tiene que mirar las cuentas de
+  // un cliente para ayudarlo. Lo que protege al cliente no es esconderlo, sino
+  // que quede rastro. La bitácora sólo guardaba escrituras —el interceptor deja
+  // fuera el GET— así que estas consultas se registran a mano.
+  describe('mirar las cuentas de otro deja rastro', () => {
+    it('el administrador que lista queda registrado', async () => {
+      await service.listar(admin, { page: 1, limit: 10 });
+
+      expect(auditoria.registrar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          usuario_id: admin.id,
+          accion: 'consultar',
+          entidad_afectada: 'movimientos_financieros',
+        }),
+      );
+    });
+
+    it('el propietario mirando lo suyo no se registra', async () => {
+      await service.listar(propietario, { page: 1, limit: 10 });
+
+      expect(auditoria.registrar).not.toHaveBeenCalled();
+    });
+
+    it('el administrador que abre un movimiento queda registrado, con el id', async () => {
+      prisma.movimientoFinanciero.findUnique.mockResolvedValue(
+        movimientoExistente,
+      );
+
+      await service.obtener(movimientoExistente.id, admin);
+
+      expect(auditoria.registrar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accion: 'consultar',
+          registro_id: movimientoExistente.id,
+        }),
+      );
+    });
+
+    // Si registrar fallara y tumbara la consulta, la auditoría dejaría de ser
+    // un rastro para convertirse en un punto de caída.
+    it('un fallo al registrar no tumba la consulta', async () => {
+      auditoria.registrar.mockRejectedValueOnce(new Error('bitácora caída'));
+
+      await expect(
+        service.listar(admin, { page: 1, limit: 10 }),
+      ).resolves.toBeDefined();
     });
   });
 
