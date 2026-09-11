@@ -13,10 +13,6 @@ import './FloatChat.css'
 
 const RobotLottie = lazy(() => import('./RobotLottie'))
 
-// El cuestionario son 15 pasos y el puntaje comercial llega a 12. Estaban en
-// 20 y 16 desde antes del rediseño: el resultado mostraba "12/16" y la barra de
-// progreso se quedaba corta.
-const TOTAL_PREGUNTAS = 15
 const SIN_CONSENTIMIENTO = 'sin_consentimiento'
 const PUNTAJE_MAXIMO = 12
 
@@ -120,7 +116,11 @@ function FloatChat() {
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [sesionId, setSesionId] = useState<string | null>(null)
   const [pregunta, setPregunta] = useState<PreguntaChatbot | null>(null)
-  const [respondidas, setRespondidas] = useState(0)
+  // El progreso lo manda el servidor en cada respuesta. Antes se contaba aquí
+  // contra una constante de 15, y la API decía 16: la barra nunca llegaba al
+  // final. Duplicar el número en dos repos es lo que garantiza que se separen.
+  const [progreso, setProgreso] = useState(0)
+  const [totalPasos, setTotalPasos] = useState<number | null>(null)
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -132,8 +132,9 @@ function FloatChat() {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const autoAbierto = useRef(false)
 
-  const aplicar = useCallback((respuesta: RespuestaChatbot, cuenta: boolean) => {
-    if (cuenta) setRespondidas((n) => n + 1)
+  const aplicar = useCallback((respuesta: RespuestaChatbot) => {
+    if (respuesta.progreso !== null) setProgreso(respuesta.progreso)
+    if (respuesta.total_pasos !== null) setTotalPasos(respuesta.total_pasos)
 
     if (respuesta.finalizado) {
       const sinConsentimiento = respuesta.clasificacion === SIN_CONSENTIMIENTO
@@ -180,7 +181,8 @@ function FloatChat() {
     setSesionId(null)
     setPregunta(null)
     setResultado(null)
-    setRespondidas(0)
+    setProgreso(0)
+    setTotalPasos(null)
     setTexto('')
     setPorElegirRuta(false)
 
@@ -188,7 +190,7 @@ function FloatChat() {
       const respuesta = await iniciarConversacion('web', ruta)
       setSesionId(respuesta.sesion_id)
       setIniciado(true)
-      aplicar(respuesta, false)
+      aplicar(respuesta)
     } catch (err) {
       setError(traducirError(err, 'No se pudo iniciar la conversación.'))
       setIniciado(false)
@@ -202,7 +204,8 @@ function FloatChat() {
     setSesionId(null)
     setPregunta(null)
     setResultado(null)
-    setRespondidas(0)
+    setProgreso(0)
+    setTotalPasos(null)
     setTexto('')
     setError(null)
     setPorElegirRuta(true)
@@ -218,7 +221,7 @@ function FloatChat() {
     setEnviando(true)
 
     try {
-      aplicar(await responderPregunta(sesionId, valor), true)
+      aplicar(await responderPregunta(sesionId, valor))
     } catch (err) {
       const fallo = traducirError(err, 'No se pudo enviar la respuesta.')
       if (fallo.reiniciar) {
@@ -282,7 +285,6 @@ function FloatChat() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [cerrarChat, open])
 
-  const progreso = Math.min(respondidas, TOTAL_PREGUNTAS)
   const opciones = pregunta?.opciones ?? []
   // La identidad («Asistente AVISENS») es fija y va en su propia línea; el
   // estado cambia. Antes compartían sitio, así que en cuanto AVIA escribía
@@ -337,9 +339,20 @@ function FloatChat() {
           </button>
         </div>
 
-        <div className="float-chat-progress" aria-label={`Progreso ${progreso} de ${TOTAL_PREGUNTAS}`}>
-          <div style={{ width: `${Math.round((progreso / TOTAL_PREGUNTAS) * 100)}%` }} />
-        </div>
+        {/* Sin total no se dibuja nada: una barra que divide por un número
+            inventado miente con aspecto de dato. */}
+        {totalPasos !== null && totalPasos > 0 && (
+          <div
+            className="float-chat-progress"
+            role="progressbar"
+            aria-valuenow={progreso}
+            aria-valuemin={0}
+            aria-valuemax={totalPasos}
+            aria-label={`Pregunta ${progreso} de ${totalPasos}`}
+          >
+            <div style={{ width: `${Math.min(Math.round((progreso / totalPasos) * 100), 100)}%` }} />
+          </div>
+        )}
 
         <div className="float-chat-msgs" ref={scrollRef}>
           {porElegirRuta ? (
