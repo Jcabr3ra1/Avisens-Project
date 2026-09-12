@@ -100,10 +100,10 @@ class MainActivity : AppCompatActivity() {
             0xFF171D1A.toInt()
 
         private val colorTextoDropdown =
-            0xFFFFFFFF.toInt()
+            0xFF171D1A.toInt()
 
         private val colorFondoDropdown =
-            0xFF171D1A.toInt()
+            0xFFFFFFFF.toInt()
 
         init {
             setDropDownViewResource(
@@ -206,6 +206,10 @@ class MainActivity : AppCompatActivity() {
         granjaSeleccionadaId = granjaId
     }
 
+    fun limpiarGranjaSeleccionada() {
+        granjaSeleccionadaId = null
+    }
+
     fun obtenerNombreUsuario(): String =
         UserSession.name(this)
 
@@ -271,7 +275,7 @@ class MainActivity : AppCompatActivity() {
 
         supportFragmentManager
             .beginTransaction()
-            .replace(R.id.propietarioFragmentContainer, PropietarioFragment())
+            .replace(R.id.propietarioFragmentContainer, InicioFragment())
             .commit()
     }
 
@@ -323,7 +327,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_bitacora -> mostrarFragment(BitacoraFragment())
             }
             UserRole.PROPIETARIO -> when (itemId) {
-                R.id.nav_inicio -> mostrarFragment(PropietarioFragment())
+                R.id.nav_inicio -> mostrarFragment(InicioFragment())
                 R.id.nav_bodega -> mostrarFragment(BodegaFragment())
                 R.id.nav_alertas -> mostrarFragment(AlertasFragment())
                 R.id.nav_bitacora -> mostrarFragment(BitacoraFragment())
@@ -425,13 +429,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun volverAlInicio() {
 
-        setContentView(
-            R.layout.activity_main
-        )
+        if (rolActual == UserRole.PROPIETARIO) {
+            setContentView(R.layout.activity_propietario)
+        } else {
+            setContentView(R.layout.activity_main)
+        }
 
-        mostrarFragment(
-            InicioFragment()
-        )
+        mostrarFragment(InicioFragment())
     }
 
     // =========================================================
@@ -667,7 +671,7 @@ class MainActivity : AppCompatActivity() {
 
     fun mostrarConfiguracion() {
 
-        if (!esOperario()) return
+        if (rolActual != UserRole.OPERARIO && rolActual != UserRole.PROPIETARIO) return
 
         configuracionBinding =
             Co01ConfiguracionOpBinding.inflate(
