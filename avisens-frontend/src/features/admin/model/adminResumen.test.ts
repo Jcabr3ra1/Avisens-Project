@@ -107,12 +107,14 @@ describe('calcularKpisAdmin', () => {
     expect(kpis[0].etiqueta).toBe('Organizaciones activas')
     expect(kpis[0].valor).toBe(2)
     expect(kpis[0].detalle).toBe('de 3 clientes registrados')
+    expect(kpis[0].progreso).toBe(67)
   })
 
   it('los usuarios distinguen el total de los que tienen acceso', () => {
     const kpis = calcularKpisAdmin([], [usuario(1), usuario(2, false)], colaVacia(), [])
     expect(kpis[1].valor).toBe(2)
     expect(kpis[1].detalle).toBe('1 con acceso')
+    expect(kpis[1].progresoTexto).toBe('1 de 2 con acceso')
   })
 
   it('la cola suma PQRS y contraseñas, que son las dos que exigen respuesta', () => {
@@ -122,12 +124,11 @@ describe('calcularKpisAdmin', () => {
     expect(kpis[2].detalle).toBe('3 PQRS · 2 contraseñas')
   })
 
-  it('sin sensores no divide por cero', () => {
-    // Una instalación recién creada no tiene ni un sensor: el porcentaje debe
-    // salir 0, no NaN.
+  it('sin sensores informa que todavía no hay infraestructura instalada', () => {
     const kpis = calcularKpisAdmin([], [], colaVacia(), [])
-    expect(kpis[3].valor).toBe('0/0')
-    expect(kpis[3].detalle).toBe('0% en línea')
+    expect(kpis[3].valor).toBe('—')
+    expect(kpis[3].detalle).toBe('Sin sensores instalados')
+    expect(kpis[3].progreso).toBeNull()
   })
 
   it('cuenta en línea todo sensor que no esté offline', () => {
@@ -136,5 +137,6 @@ describe('calcularKpisAdmin', () => {
     ] as unknown as GalponMonitoreoVista[]
     const kpis = calcularKpisAdmin([], [], colaVacia(), galpones)
     expect(kpis[3].valor).toBe('2/3')
+    expect(kpis[3].progreso).toBe(66.7)
   })
 })

@@ -35,6 +35,7 @@ export function useResumenAdmin({ usuarios, organizaciones, prospectos, galpones
       actividadReciente,
       totalPropietarios,
       totalOperarios: usuarios.filter((usuario) => usuario.rol.nombre === 'Operario').length,
+      totalAdministradores: usuarios.filter((usuario) => usuario.rol.nombre === 'Administrador').length,
       totalActivos: usuarios.filter((usuario) => usuario.activo).length,
     }
   }, [atencion, galpones, organizaciones, prospectos, usuarios])

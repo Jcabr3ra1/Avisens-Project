@@ -29,30 +29,28 @@ function PanelCrmAdmin({ etapas, cargando, conversion, onGestionar }: Props) {
           Ver todos <IcChevronRight size={13} />
         </button>
       </div>
-      <p className="admin-card-sub">Prospectos captados por el chatbot, por etapa</p>
+      <p className="admin-card-sub">Prospectos captados por el chatbot, clasificados por oportunidad</p>
 
-      <div className="admin-funnel">
+      <div className="admin-pipeline-chart" aria-label="Distribución de prospectos por etapa">
         {etapas.map((etapa) => (
-          <div key={etapa.nombre} className="admin-funnel-row">
-            <div className="admin-funnel-meta">
-              <span className="admin-funnel-label">
-                <span className="admin-funnel-icon" style={{ color: etapa.color }}>{iconoEtapa(etapa.nombre)}</span>
-                {etapa.nombre}
-              </span>
-              <span className="admin-funnel-desc">{etapa.descripcion}</span>
-            </div>
-            <div className="admin-funnel-track">
-              <div
-                className="admin-funnel-bar"
+          <div key={etapa.nombre} className="admin-pipeline-stage">
+            <div className="admin-pipeline-plot" aria-hidden="true">
+              <span
+                className="admin-pipeline-bar"
                 style={{
-                  width: `${(etapa.cantidad / maximo) * 100}%`,
-                  background: `linear-gradient(90deg, ${etapa.color}99, ${etapa.color})`,
+                  height: etapa.cantidad > 0 ? `${Math.max(14, (etapa.cantidad / maximo) * 100)}%` : '2px',
+                  backgroundColor: etapa.color,
                 }}
               />
             </div>
-            <span className="admin-funnel-count" style={{ color: etapa.color }}>
-              {cargando ? '…' : etapa.cantidad}
-            </span>
+            <strong className="admin-pipeline-count">{cargando ? '…' : etapa.cantidad}</strong>
+            <div className="admin-pipeline-meta">
+              <span className="admin-pipeline-label">
+                <span className="admin-funnel-icon" style={{ color: etapa.color }}>{iconoEtapa(etapa.nombre)}</span>
+                {etapa.nombre}
+              </span>
+              <span>{etapa.descripcion}</span>
+            </div>
           </div>
         ))}
       </div>

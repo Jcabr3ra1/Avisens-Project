@@ -1,15 +1,28 @@
 import { useState } from 'react'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
+import BarraHerramientas, { type OpcionFiltro } from '@shared/ui/admin/BarraHerramientas'
+import { IcDoc } from '@shared/ui/icons/icons'
 import { useProspectos } from './hooks/useProspectos'
 import { payloadDeConversion } from './model/conversion'
-import { useFiltroProspectos } from './hooks/useFiltroProspectos'
+import {
+  useFiltroProspectos,
+  type Filtro,
+  type FiltroCanal,
+} from './hooks/useFiltroProspectos'
 import { useResumenProspectos } from './hooks/useResumenProspectos'
+import { ETAPAS } from './model/prospectoVista'
+import { ESTILO_ETAPA } from './model/etapas'
 import ResumenCrm from './components/ResumenCrm'
-import BarraHerramientas from './components/BarraHerramientas'
 import TablaProspectos from './components/TablaProspectos'
 import PanelDetalle from './components/PanelDetalle'
 import '@shared/ui/admin/AdminKit.css'
 import './CrmPage.css'
+
+const OPCIONES_CANAL: { valor: FiltroCanal; label: string }[] = [
+  { valor: 'todos', label: 'Todos' },
+  { valor: 'web', label: 'Web' },
+  { valor: 'whatsapp', label: 'WhatsApp' },
+]
 
 function CrmPage() {
   const {
@@ -28,11 +41,17 @@ function CrmPage() {
     useFiltroProspectos(prospectos)
   const resumen = useResumenProspectos(prospectos)
   const [seleccionadoId, setSeleccionadoId] = useState<number | null>(null)
-  // Se busca en la lista en vez de guardar una copia: al asignar un asesor,
-  // el panel abierto tiene que reflejar el cambio y no la foto de antes.
   const seleccionado = prospectos.find((prospecto) => prospecto.id === seleccionadoId) ?? null
 
   const sinProspectos = !cargando && !error && prospectos.length === 0
+
+  const opcionesEtapa: OpcionFiltro<Filtro>[] = [
+    { valor: 'todos', label: `Todos (${resumen.total})` },
+    ...ETAPAS.map((etapa) => ({
+      valor: etapa,
+      label: `${ESTILO_ETAPA[etapa].label} (${resumen.porEtapa[etapa]})`,
+    })),
+  ]
 
   return (
     <div className="page-container crm-page adm-page">
@@ -62,25 +81,49 @@ function CrmPage() {
       )}
 
       {!cargando && !error && prospectos.length > 0 && (
-        <>
+        <section className="adm-panel" aria-label="Prospectos">
           <BarraHerramientas
             busqueda={busqueda}
+            placeholder="Buscar prospecto, granja o municipio…"
+            etiquetaBusqueda="Buscar prospectos"
             onBuscar={setBusqueda}
-            filtroCanal={filtroCanal}
-            onCambiarCanal={setFiltroCanal}
-            exportando={exportando}
-            onExportar={() => void exportar()}
+            filtro={filtro}
+            opciones={opcionesEtapa}
+            etiquetaFiltro="Filtrar prospectos por etapa"
+            onCambiarFiltro={setFiltro}
+            visibles={visibles.length}
+            total={prospectos.length}
+            extra={(
+              <label>
+                Origen
+                <select
+                  value={filtroCanal}
+                  onChange={(evento) => setFiltroCanal(evento.target.value as FiltroCanal)}
+                >
+                  {OPCIONES_CANAL.map((opcion) => (
+                    <option key={opcion.valor} value={opcion.valor}>{opcion.label}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            acciones={(
+              <button
+                type="button"
+                className="adm-btn adm-btn--secundario"
+                onClick={() => void exportar()}
+                disabled={exportando}
+              >
+                <IcDoc size={16} aria-hidden="true" />
+                {exportando ? 'Exportando…' : 'Exportar CSV'}
+              </button>
+            )}
           />
 
           <TablaProspectos
             prospectos={visibles}
-            filtro={filtro}
-            onFiltrar={setFiltro}
-            conteos={resumen.porEtapa}
-            total={resumen.total}
             onAbrir={(prospecto) => setSeleccionadoId(prospecto.id)}
           />
-        </>
+        </section>
       )}
 
       {seleccionado && (

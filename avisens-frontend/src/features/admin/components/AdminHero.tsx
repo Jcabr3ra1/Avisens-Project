@@ -23,11 +23,13 @@ function AdminHero({ nombre, fecha, kpis, cargando }: Props) {
     <>
       <header className="admin-header">
         <div>
-          <p className="admin-header-eyebrow">Panel de administración</p>
-          <h1 className="admin-header-title">Buen día, {nombre}</h1>
-          <p className="admin-header-subtitle">Revisa lo prioritario y continúa con la gestión de Avisens.</p>
+          <h1 className="admin-header-title">Centro de control</h1>
+          <p className="admin-header-subtitle">Hola, {nombre}. Supervisa clientes, accesos y prioridades de la plataforma desde un solo lugar.</p>
         </div>
-        <time className="admin-header-date">{fecha}</time>
+        <div className="admin-header-context">
+          <span>Vista administrativa</span>
+          <time className="admin-header-date">{fecha}</time>
+        </div>
       </header>
 
       <section className="admin-kpis" aria-label="Estado general" aria-busy={cargando}>
@@ -38,6 +40,18 @@ function AdminHero({ nombre, fecha, kpis, cargando }: Props) {
               <span className="admin-kpi-label">{kpi.etiqueta}</span>
               <strong className="admin-kpi-value">{cargando ? '—' : kpi.valor}</strong>
               <span className="admin-kpi-detail">{cargando ? 'Actualizando datos…' : kpi.detalle}</span>
+              {!cargando && kpi.progreso !== null && kpi.progresoTexto && (
+                <div
+                  className="admin-kpi-meter"
+                  role="progressbar"
+                  aria-label={kpi.progresoTexto}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={kpi.progreso}
+                >
+                  <span style={{ transform: `scaleX(${kpi.progreso / 100})` }} />
+                </div>
+              )}
             </div>
           </article>
         ))}

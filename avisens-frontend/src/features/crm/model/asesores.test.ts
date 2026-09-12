@@ -8,9 +8,6 @@ function usuario(id: number, rol: string, activo = true): Usuario {
 
 describe('asesoresPosibles', () => {
   it('solo ofrece administradores', () => {
-    // Un prospecto es alguien que todavía no es cliente, así que lo atiende el
-    // equipo de Avisens. Ofrecer un propietario significaría que un cliente
-    // lleva las ventas de su propio proveedor.
     const posibles = asesoresPosibles([
       usuario(1, 'Administrador'),
       usuario(2, 'Propietario'),
@@ -28,8 +25,6 @@ describe('asesoresPosibles', () => {
   })
 
   it('aguanta que el usuario llegue sin rol', () => {
-    // El listado viene del backend y `rol` podría faltar en una respuesta
-    // parcial: antes de reventar, mejor no ofrecerlo como asesor.
     const sinRol = { id: 9, activo: true } as Usuario
     expect(asesoresPosibles([sinRol])).toEqual([])
   })

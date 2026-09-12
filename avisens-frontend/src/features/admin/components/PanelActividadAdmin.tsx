@@ -7,6 +7,7 @@ type Props = {
   total: number
   propietarios: number
   operarios: number
+  administradores: number
   activos: number
   cargando: boolean
   onGestionar: () => void
@@ -17,10 +18,17 @@ function PanelActividadAdmin({
   total,
   propietarios,
   operarios,
+  administradores,
   activos,
   cargando,
   onGestionar,
 }: Props) {
+  const roles = [
+    { etiqueta: 'Administradores', cantidad: administradores, clase: 'admin-role-segment--administrador' },
+    { etiqueta: 'Propietarios', cantidad: propietarios, clase: 'admin-role-segment--propietario' },
+    { etiqueta: 'Operarios', cantidad: operarios, clase: 'admin-role-segment--operario' },
+  ]
+
   return (
     <section className="admin-card admin-actividad" aria-label="Actividad reciente de usuarios">
       <div className="admin-card-head">
@@ -29,13 +37,27 @@ function PanelActividadAdmin({
           Gestionar <IcChevronRight size={13} />
         </button>
       </div>
-      <p className="admin-card-sub">Usuarios del sistema y últimos registros</p>
+      <p className="admin-card-sub">Composición del equipo y últimos registros</p>
 
-      <div className="admin-act-counters">
-        <div className="admin-act-counter"><strong>{cargando ? '…' : total}</strong><span>Total</span></div>
-        <div className="admin-act-counter"><strong>{cargando ? '…' : propietarios}</strong><span>Propietarios</span></div>
-        <div className="admin-act-counter"><strong>{cargando ? '…' : operarios}</strong><span>Operarios</span></div>
-        <div className="admin-act-counter admin-act-counter--activo"><strong>{cargando ? '…' : activos}</strong><span>Activos</span></div>
+      <div className="admin-role-overview" aria-label="Distribución de cuentas por rol">
+        <div className="admin-role-overview-head">
+          <span>Distribución de cuentas</span>
+          <strong>{cargando ? '…' : `${activos}/${total}`} <small>con acceso</small></strong>
+        </div>
+        <div className={`admin-role-chart${total === 0 ? ' admin-role-chart--empty' : ''}`} aria-hidden="true">
+          {roles.filter((rol) => rol.cantidad > 0).map((rol) => (
+            <span key={rol.etiqueta} className={`admin-role-segment ${rol.clase}`} style={{ flexGrow: rol.cantidad }} />
+          ))}
+        </div>
+        <ul className="admin-role-legend">
+          {roles.map((rol) => (
+            <li key={rol.etiqueta}>
+              <span className={`admin-role-dot ${rol.clase}`} aria-hidden="true" />
+              <span>{rol.etiqueta}</span>
+              <strong>{cargando ? '…' : rol.cantidad}</strong>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {usuarios.length === 0 ? (
