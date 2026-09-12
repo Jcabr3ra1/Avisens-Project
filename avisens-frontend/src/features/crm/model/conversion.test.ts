@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ProspectoDetalle } from '../api/prospectos'
 import {
-  campoDuplicado,
+  campoSenalado,
   contrasenaSugerida,
   errorDeConversion,
   payloadDeConversion,
@@ -28,6 +28,8 @@ function formulario(cambios: Partial<FormularioConversion> = {}): FormularioConv
     email: 'juan@ejemplo.com',
     telefono: '3001234567',
     organizacion_nombre: 'La Esperanza',
+    granja_nombre: 'La Esperanza',
+    granja_municipio: 'Montería',
     password: 'Abcd2345efgh',
     ...cambios,
   }
@@ -111,22 +113,74 @@ describe('campoDuplicado', () => {
   it('saca el campo del mensaje del backend', () => {
     // «Ya existe un registro con ese valor en: cedula» es el 409 más frecuente
     // al convertir: es fácil teclear una cédula que ya existe.
-    expect(campoDuplicado('Ya existe un registro con ese valor en: cedula')).toBe('cedula')
-    expect(campoDuplicado('Ya existe un registro con ese valor en: email')).toBe('email')
+    expect(campoSenalado('Ya existe un registro con ese valor en: cedula')).toBe('cedula')
+    expect(campoSenalado('Ya existe un registro con ese valor en: email')).toBe('email')
   })
 
   it('acepta que el backend lo llame correo', () => {
-    expect(campoDuplicado('Ya existe un registro con ese valor en: correo')).toBe('email')
+    expect(campoSenalado('Ya existe un registro con ese valor en: correo')).toBe('email')
   })
 
   it('no señala nada si el mensaje es otro', () => {
     // Un 400 de «este prospecto ya está cerrado» no apunta a ningún campo:
     // marcar uno al azar sería peor que no marcar ninguno.
-    expect(campoDuplicado('Este prospecto ya esta cerrado')).toBeNull()
-    expect(campoDuplicado('')).toBeNull()
+    expect(campoSenalado('Este prospecto ya esta cerrado')).toBeNull()
+    expect(campoSenalado('')).toBeNull()
   })
 
   it('ignora un campo que el formulario no tiene', () => {
-    expect(campoDuplicado('Ya existe un registro con ese valor en: nit')).toBeNull()
+    expect(campoSenalado('Ya existe un registro con ese valor en: nit')).toBeNull()
+  })
+})
+
+describe('la granja del cliente nuevo', () => {
+  it('no se prellena del prospecto, porque el chatbot ya no la pregunta', () => {
+    // A5, A6 y A6B escribían `nombre_granja` y `municipio`, y se retiraron en
+    // el recorte a nueve pasos. Prellenar de ahí sería una rama muerta.
+    const form = prellenarDesde(prospecto({ nombre_granja: 'La Esperanza' }))
+    expect(form.granja_nombre).toBe('')
+    expect(form.granja_municipio).toBe('')
+  })
+
+  it('sin nombre de granja no se convierte', () => {
+    // Sin granja no hay galpones, ni lotes, ni monitoreo: la cuenta nace rota.
+    expect(errorDeConversion(formulario({ granja_nombre: '' }))).toMatch(/granja/i)
+    expect(errorDeConversion(formulario({ granja_nombre: '   ' }))).toMatch(/granja/i)
+    expect(errorDeConversion(formulario({ granja_nombre: 'A' }))).toMatch(/corto/i)
+  })
+
+  it('el municipio es opcional y no viaja vacío', () => {
+    const sin = payloadDeConversion(formulario({ granja_municipio: '  ' }))
+    expect(sin).not.toHaveProperty('granja_municipio')
+    const con = payloadDeConversion(formulario({ granja_municipio: ' Montería ' }))
+    expect(con.granja_municipio).toBe('Montería')
+  })
+
+  it('el nombre de la granja viaja siempre y sin espacios', () => {
+    expect(payloadDeConversion(formulario({ granja_nombre: '  La Esperanza  ' })).granja_nombre)
+      .toBe('La Esperanza')
+  })
+})
+
+describe('campoSenalado con el 400 de class-validator', () => {
+  it('marca el campo que nombra el mensaje', () => {
+    // Backend devuelve esto tal cual cuando la granja viene vacía. El patrón
+    // del 409 («ese valor en: x») no lo reconoce: es otra forma de mensaje.
+    expect(campoSenalado('granja_nombre must be longer than or equal to 2 characters'))
+      .toBe('granja_nombre')
+  })
+
+  it('con varios errores marca el primero', () => {
+    expect(campoSenalado('cedula should not be empty, granja_nombre must be a string'))
+      .toBe('cedula')
+  })
+
+  it('sigue reconociendo el 409 de duplicados', () => {
+    expect(campoSenalado('Ya existe un registro con ese valor en: cedula')).toBe('cedula')
+  })
+
+  it('no inventa un campo cuando el mensaje no nombra ninguno', () => {
+    expect(campoSenalado('Los datos enviados no son válidos.')).toBeNull()
+    expect(campoSenalado('organizacion must be active')).toBeNull()
   })
 })

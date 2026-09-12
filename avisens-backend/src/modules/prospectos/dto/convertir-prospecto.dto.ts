@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Length,
+  MinLength,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
 
 /**
  * Los datos que hacen falta para volver cliente a un prospecto.
@@ -50,4 +57,31 @@ export class ConvertirProspectoDto {
   @IsString()
   @IsOptional()
   organizacion_nombre?: string;
+
+  @ApiProperty({
+    example: 'Granja La Esperanza',
+    minLength: 2,
+    maxLength: 120,
+    description:
+      'Obligatorio. Sin granja no hay galpones, sin galpones no hay lotes, y el ' +
+      'cliente entra a una cuenta que no hace nada. El asesor está en la llamada: ' +
+      'que pregunte el nombre real en vez de dejar una «Granja principal» vacía.',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @Length(2, 120)
+  granja_nombre: string;
+
+  @ApiPropertyOptional({
+    example: 'Tuluá',
+    description: 'Municipio de la granja. El cuestionario ya no lo pregunta.',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @IsOptional()
+  granja_municipio?: string;
 }

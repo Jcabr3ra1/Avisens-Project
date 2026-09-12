@@ -20,6 +20,7 @@ describe('convertir un prospecto en cliente', () => {
 
   const tx = {
     prospecto: { update: jest.fn() },
+    granja: { create: jest.fn() },
   };
 
   const prisma = {
@@ -40,6 +41,8 @@ describe('convertir un prospecto en cliente', () => {
     password: 'Clave123Seg',
     telefono: '573001234567',
     organizacion_nombre: 'Avícola La Esperanza',
+    granja_nombre: 'Granja La Esperanza',
+    granja_municipio: 'Tuluá',
   };
 
   beforeEach(async () => {
@@ -54,7 +57,12 @@ describe('convertir un prospecto en cliente', () => {
 
     prisma.prospecto.findUnique.mockResolvedValue(calificado);
     prisma.rol.findUnique.mockResolvedValue({ id: 2 });
-    usuarios.altaDeUsuario.mockResolvedValue({ id: 42, email: datos.email });
+    usuarios.altaDeUsuario.mockResolvedValue({
+      id: 42,
+      email: datos.email,
+      organizacion_id: 8,
+    });
+    tx.granja.create.mockResolvedValue({ id: 9 });
     tx.prospecto.update.mockResolvedValue({
       id: 7,
       estado: 'cerrado',
@@ -115,6 +123,61 @@ describe('convertir un prospecto en cliente', () => {
     const hash = llamadas[0][3];
     expect(hash).not.toBe(datos.password);
     expect(hash.length).toBeGreaterThan(20);
+  });
+
+  // Sin granja no hay galpones, sin galpones no hay lotes, y el cliente entra a
+  // una cuenta donde no puede hacer nada. Antes la conversión creaba
+  // organización y usuario y ahí se quedaba.
+  it('crea la granja del cliente', async () => {
+    await service.convertir(7, datos, solicitante);
+
+    const datosGranja = (
+      tx.granja.create.mock.calls as Array<[{ data: Record<string, unknown> }]>
+    )[0][0].data;
+    expect(datosGranja).toMatchObject({
+      propietario_id: 42,
+      organizacion_id: 8,
+      nombre: 'Granja La Esperanza',
+      municipio: 'Tuluá',
+    });
+  });
+
+  // La llave foránea es compuesta: (propietario_id, organizacion_id) contra
+  // Usuario(id, organizacion_id). Con la organización de otro, revienta.
+  it('la granja usa la organización del usuario recién creado', async () => {
+    usuarios.altaDeUsuario.mockResolvedValue({
+      id: 55,
+      email: datos.email,
+      organizacion_id: 77,
+    });
+
+    await service.convertir(7, datos, solicitante);
+
+    const datosGranja = (
+      tx.granja.create.mock.calls as Array<[{ data: Record<string, unknown> }]>
+    )[0][0].data;
+    expect(datosGranja.propietario_id).toBe(55);
+    expect(datosGranja.organizacion_id).toBe(77);
+  });
+
+  // El área que recogía el cuestionario era la de UN galpón, no la de la
+  // granja. Y desde el recorte ya ni se pregunta.
+  it('no le inventa un área a la granja', async () => {
+    await service.convertir(7, datos, solicitante);
+
+    const datosGranja = (
+      tx.granja.create.mock.calls as Array<[{ data: Record<string, unknown> }]>
+    )[0][0].data;
+    expect(datosGranja).not.toHaveProperty('area_total_m2');
+  });
+
+  // Lo peor que puede pasar: un prospecto marcado «ganado» sin cliente
+  // utilizable detrás, que además ya no se puede volver a convertir.
+  it('si la granja falla, el prospecto no se cierra', async () => {
+    tx.granja.create.mockRejectedValue(new Error('llave foránea'));
+
+    await expect(service.convertir(7, datos, solicitante)).rejects.toThrow();
+    expect(tx.prospecto.update).not.toHaveBeenCalled();
   });
 
   it('no convierte un prospecto ya cerrado', async () => {
