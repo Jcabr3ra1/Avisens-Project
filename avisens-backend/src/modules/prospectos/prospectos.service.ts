@@ -278,6 +278,22 @@ export class ProspectosService {
         password_hash,
       );
 
+      // La granja va DESPUES del usuario y con el `organizacion_id` de ese
+      // mismo usuario: la llave foranea es compuesta —(propietario_id,
+      // organizacion_id) contra Usuario(id, organizacion_id)— y con cualquier
+      // otra organizacion revienta.
+      //
+      // No se le pone `area_total_m2`: el cuestionario recogia el area de UN
+      // galpon, no la de la granja, y desde el recorte ya ni eso.
+      await tx.granja.create({
+        data: {
+          propietario_id: usuario.id,
+          organizacion_id: usuario.organizacion_id!,
+          nombre: dto.granja_nombre,
+          municipio: dto.granja_municipio,
+        },
+      });
+
       const cerrado = await tx.prospecto.update({
         where: { id },
         data: {
