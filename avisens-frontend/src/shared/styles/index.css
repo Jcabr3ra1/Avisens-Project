@@ -102,6 +102,26 @@
   --glow-warning: 0 0 20px rgba(245, 158, 11, 0.3);
   --glow-danger: 0 0 20px rgba(239, 68, 68, 0.3);
 
+  /* Nombres en español que nueve features llevaban usando sin que nadie los
+     definiera: 97 referencias a variables inexistentes. Una declaración con
+     `var()` sin valor se descarta entera, así que el botón de convertir salía
+     blanco sobre blanco —solo se veía el resplandor, que sí era literal— y las
+     tarjetas de Alertas o Notificaciones se quedaban sin fondo ni borde.
+     El destino de cada una sale de cómo se usaban, no del nombre. */
+  --color-primario: var(--green);
+  --color-primario-oscuro: var(--green-dd);
+  --color-borde: var(--border);
+  --color-borde-fuerte: var(--border2);
+  --color-foco: var(--green);
+  --color-superficie: var(--card);
+  --color-superficie-secundaria: var(--bg3);
+  --color-texto: var(--text);
+  --color-texto-secundario: var(--text2);
+  --radio-md: var(--radius-md);
+  --radio-lg: var(--radius-lg);
+  --sombra-sm: var(--shadow-sm);
+  --dash-muted: var(--text-muted);
+
   --ga: rgba(16, 185, 129, 0.1);
   --go: rgba(245, 158, 11, 0.1);
   --gg: rgba(16, 185, 129, 0.12);
