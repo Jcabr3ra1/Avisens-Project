@@ -4,7 +4,7 @@ import { getUsuario, type Usuario } from '@shared/api'
 import FormularioConversion from './FormularioConversion'
 import type { ProspectoDetalle } from '../api/prospectos'
 import type { FormularioConversion as DatosConversion } from '../model/conversion'
-import { IcPhone, IcPlus } from '@shared/ui/icons/icons'
+import { IcChevronRight, IcPhone, IcPlus } from '@shared/ui/icons/icons'
 import {
   PUNTAJE_MAXIMO,
   RANGOS_PUNTAJE,
@@ -65,15 +65,6 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
       ancho="ancho"
       acciones={(
         <div className="crm-detalle-acciones">
-          {!yaCerrado && (
-            <button
-              type="button"
-              className="crm-det-btn crm-det-btn--principal"
-              onClick={() => setConvirtiendo(true)}
-            >
-              Convertir en cliente
-            </button>
-          )}
           {/* Sin botón de llamar cuando el contacto es una identidad de
               WhatsApp: `tel:CO.1639…` abre el marcador con basura. */}
           {sePuedeLlamar(prospecto.telefono) && (
@@ -130,6 +121,25 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
               {urgencia.etiqueta === 'Hoy' ? 'Hoy' : `Hace ${urgencia.etiqueta}`}
             </span>
           </div>
+
+          {/* Cerrar la venta vivía en el pie del panel, debajo de Cotizaciones
+              y PQRS: había que bajar hasta el fondo para encontrarlo. Va aquí,
+              pegado al estado y al puntaje, que es lo que el asesor mira para
+              decidir si esta persona ya merece el paso. Y dice lo que hace:
+              nadie adivinaba que el botón crea una cuenta. */}
+          {!yaCerrado && (
+            <button
+              type="button"
+              className="crm-det-convertir"
+              onClick={() => setConvirtiendo(true)}
+            >
+              <span className="crm-det-convertir-txt">
+                <strong>Convertir en cliente</strong>
+                <span>Crea la organización, la granja y su usuario de acceso</span>
+              </span>
+              <IcChevronRight size={17} />
+            </button>
+          )}
 
           <div className="crm-det-sep" />
 
@@ -358,20 +368,12 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
         </div>
 
       {convirtiendo && (
-
         <FormularioConversion
-
           prospecto={prospecto as unknown as ProspectoDetalle}
-
           onConvertir={onConvertir}
-
           onCerrar={() => setConvirtiendo(false)}
-
         />
-
       )}
-
-
     </Modal>
   )
 }

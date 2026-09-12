@@ -62,7 +62,6 @@ const Sidebar = ({ collapsed, mobileOpen, onCloseMobile, onToggle, rol }: Props)
     const badge = item.badge
     const contenido = (
       <>
-        <span className="dash-side-accent" />
         <span className="dash-side-item-icon" aria-hidden="true">
           {item.icon}
           {badge ? <span className="dash-side-item-icon-dot" /> : null}
@@ -144,7 +143,9 @@ const Sidebar = ({ collapsed, mobileOpen, onCloseMobile, onToggle, rol }: Props)
       <nav className="dash-side-nav" aria-label="Navegación principal">
         {secciones.map((section) => (
           <div className="dash-side-section" key={section.label}>
-            <div className="dash-side-section-label">{section.label}</div>
+            {!section.sinEncabezado && (
+              <div className="dash-side-section-label">{section.label}</div>
+            )}
             {section.items.map((item) => renderLink(item))}
           </div>
         ))}

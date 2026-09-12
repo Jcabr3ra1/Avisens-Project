@@ -1,5 +1,7 @@
+import type { ReactElement } from 'react'
 import { describe, expect, it } from 'vitest'
 import {
+  NAV_SECTIONS,
   puedeAcceder,
   rutaInicioPorRol,
   ROL_ADMIN,
@@ -58,6 +60,34 @@ describe('el administrador no ve datos financieros del cliente', () => {
     // comercial. Nada de eso son datos productivos de un cliente.
     for (const ruta of ['/auditoria', '/catalogos', '/crm', '/solicitudes-pqrs']) {
       expect(puedeAcceder(ruta, ROL_ADMIN)).toBe(true)
+    }
+  })
+})
+
+describe('NAV_SECTIONS', () => {
+  it('ningún ítem repite icono', () => {
+    // Contraído, el sidebar esconde las etiquetas y solo quedan los iconos:
+    // dos ítems con el mismo dibujo son indistinguibles hasta pasar el ratón.
+    // Había seis parejas repetidas (Auditoría/Bitácora/Compras compartían una).
+    const vistos = new Map<unknown, string>()
+    for (const seccion of NAV_SECTIONS) {
+      for (const item of seccion.items) {
+        const tipo = (item.icon as ReactElement).type
+        const previo = vistos.get(tipo)
+        expect(previo, `«${item.label}» repite el icono de «${previo}»`).toBeUndefined()
+        vistos.set(tipo, item.label)
+      }
+    }
+  })
+
+  it('cada ítem del menú apunta a una ruta con permisos declarados', () => {
+    for (const seccion of NAV_SECTIONS) {
+      for (const item of seccion.items) {
+        const alcanzable = [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO].some((rol) =>
+          puedeAcceder(item.path, rol),
+        )
+        expect(alcanzable, `«${item.label}» no lo puede abrir ningún rol`).toBe(true)
+      }
     }
   })
 })
