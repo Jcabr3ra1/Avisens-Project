@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ProspectoDetalle } from '../api/prospectos'
 import {
+  campoDuplicado,
   contrasenaSugerida,
   errorDeConversion,
   payloadDeConversion,
@@ -103,5 +104,29 @@ describe('contrasenaSugerida', () => {
 
   it('tiene el largo pedido', () => {
     expect(contrasenaSugerida(12)).toHaveLength(12)
+  })
+})
+
+describe('campoDuplicado', () => {
+  it('saca el campo del mensaje del backend', () => {
+    // «Ya existe un registro con ese valor en: cedula» es el 409 más frecuente
+    // al convertir: es fácil teclear una cédula que ya existe.
+    expect(campoDuplicado('Ya existe un registro con ese valor en: cedula')).toBe('cedula')
+    expect(campoDuplicado('Ya existe un registro con ese valor en: email')).toBe('email')
+  })
+
+  it('acepta que el backend lo llame correo', () => {
+    expect(campoDuplicado('Ya existe un registro con ese valor en: correo')).toBe('email')
+  })
+
+  it('no señala nada si el mensaje es otro', () => {
+    // Un 400 de «este prospecto ya está cerrado» no apunta a ningún campo:
+    // marcar uno al azar sería peor que no marcar ninguno.
+    expect(campoDuplicado('Este prospecto ya esta cerrado')).toBeNull()
+    expect(campoDuplicado('')).toBeNull()
+  })
+
+  it('ignora un campo que el formulario no tiene', () => {
+    expect(campoDuplicado('Ya existe un registro con ese valor en: nit')).toBeNull()
   })
 })

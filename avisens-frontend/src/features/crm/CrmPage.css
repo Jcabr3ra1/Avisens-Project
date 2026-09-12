@@ -516,3 +516,11 @@
 
 .crm-clave-fila input { flex: 1; min-width: 0; }
 .crm-clave-fila .modal-btn { flex: 0 0 auto; white-space: nowrap; }
+
+/* El campo que ya existe se señala: sin esto el asesor relee el formulario
+   entero buscando cuál de los dos choca. */
+.crm-campo--choca {
+  border-color: var(--danger) !important;
+  outline: 2px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  outline-offset: 1px;
+}

@@ -3,6 +3,7 @@ import Modal from '@shared/ui/Modal/Modal'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { ProspectoDetalle } from '../api/prospectos'
 import {
+  campoDuplicado,
   contrasenaSugerida,
   errorDeConversion,
   prellenarDesde,
@@ -21,9 +22,13 @@ function FormularioConversion({ prospecto, onConvertir, onCerrar }: Props) {
   const [form, setForm] = useState<Datos>(() => prellenarDesde(prospecto))
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+  const [campoConflicto, setCampoConflicto] = useState<keyof Datos | null>(null)
 
   function cambiar<K extends keyof Datos>(campo: K, valor: Datos[K]) {
     setForm((actual) => ({ ...actual, [campo]: valor }))
+    // Al corregir el campo señalado se quita la marca: dejarla puesta haría
+    // pensar que sigue repetido cuando ya se cambió.
+    if (campoConflicto === campo) setCampoConflicto(null)
   }
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
@@ -39,7 +44,9 @@ function FormularioConversion({ prospecto, onConvertir, onCerrar }: Props) {
       await onConvertir(form)
       onCerrar()
     } catch (problemaAlConvertir) {
-      setError(mensajeDeError(problemaAlConvertir, 'No se pudo convertir el prospecto.'))
+      const mensaje = mensajeDeError(problemaAlConvertir, 'No se pudo convertir el prospecto.')
+      setError(mensaje)
+      setCampoConflicto(campoDuplicado(mensaje))
     } finally {
       setGuardando(false)
     }
@@ -74,6 +81,8 @@ function FormularioConversion({ prospecto, onConvertir, onCerrar }: Props) {
               value={form.cedula}
               onChange={(e) => cambiar('cedula', e.target.value)}
               required
+              aria-invalid={campoConflicto === 'cedula'}
+              className={campoConflicto === 'cedula' ? 'crm-campo--choca' : undefined}
               autoFocus={form.cedula === ''}
               inputMode="numeric"
             />
@@ -95,7 +104,14 @@ function FormularioConversion({ prospecto, onConvertir, onCerrar }: Props) {
 
         <label className="modal-campo">
           <span>Correo</span>
-          <input type="email" value={form.email} onChange={(e) => cambiar('email', e.target.value)} required />
+          <input
+            type="email"
+            value={form.email}
+            onChange={(e) => cambiar('email', e.target.value)}
+            required
+            aria-invalid={campoConflicto === 'email'}
+            className={campoConflicto === 'email' ? 'crm-campo--choca' : undefined}
+          />
           {/* Por WhatsApp el chatbot no lo pregunta, así que un prospecto de
               ese canal llega sin correo. Decirlo evita que el asesor busque un
               dato que nunca se pidió. */}

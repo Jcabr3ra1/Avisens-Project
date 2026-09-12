@@ -75,3 +75,17 @@ export function contrasenaSugerida(largo = 12): string {
   crypto.getRandomValues(valores)
   return Array.from(valores, (n) => SIN_AMBIGUOS[n % SIN_AMBIGUOS.length]).join('')
 }
+
+// El 409 de cédula o correo repetidos es el error más frecuente al convertir:
+// es fácil que el asesor teclee una cédula que ya existe. El backend nombra el
+// campo en el mensaje —«Ya existe un registro con ese valor en: cedula»— así que
+// se extrae para señalarlo en vez de dejar al asesor releyendo el formulario
+// entero buscando qué está mal.
+export function campoDuplicado(mensaje: string): keyof FormularioConversion | null {
+  const coincide = /ese valor en:\s*([a-z_]+)/i.exec(mensaje)
+  if (!coincide) return null
+  const campo = coincide[1].toLowerCase()
+  if (campo === 'cedula') return 'cedula'
+  if (campo === 'email' || campo === 'correo') return 'email'
+  return null
+}
