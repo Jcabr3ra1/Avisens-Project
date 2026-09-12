@@ -1,6 +1,9 @@
 import Modal from '@shared/ui/Modal/Modal'
 import { useState } from 'react'
 import { getUsuario, type Usuario } from '@shared/api'
+import FormularioConversion from './FormularioConversion'
+import type { ProspectoDetalle } from '../api/prospectos'
+import type { FormularioConversion as DatosConversion } from '../model/conversion'
 import { IcPhone, IcPlus } from '@shared/ui/icons/icons'
 import {
   PUNTAJE_MAXIMO,
@@ -21,14 +24,19 @@ import { ETIQUETAS_ESTADO } from '@features/solicitudes-pqrs/model/solicitudPqrs
 
 type Props = {
   prospecto: ProspectoVista
+  onConvertir: (form: DatosConversion) => Promise<unknown>
   asesores: Usuario[]
   asignando: boolean
   onAsignar: (asesorId: number) => void
   onCerrar: () => void
 }
 
-function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: Props) {
+function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, onCerrar }: Props) {
   const [cambiandoAsesor, setCambiandoAsesor] = useState(false)
+  const [convirtiendo, setConvirtiendo] = useState(false)
+  // Un prospecto cerrado ya no se convierte: el backend lo rechaza con un 400,
+  // así que ofrecerlo sería prometer algo que va a fallar.
+  const yaCerrado = prospecto.etapa === 'cerrado' || prospecto.etapa === 'descartado'
   const asesorAsignado = asesores.find((asesor) => asesor.id === prospecto.asesorId) ?? null
   const esMio = asesorAsignado !== null && asesorAsignado.id === getUsuario()?.id
   // Puede haber prospecto asignado a alguien que ya no sale en la lista: un
@@ -55,8 +63,17 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: P
       subtitulo={prospecto.rol}
       onCerrar={onCerrar}
       ancho="ancho"
-      acciones={sePuedeLlamar(prospecto.telefono) || prospecto.correo ? (
+      acciones={(
         <div className="crm-detalle-acciones">
+          {!yaCerrado && (
+            <button
+              type="button"
+              className="crm-det-btn crm-det-btn--primary"
+              onClick={() => setConvirtiendo(true)}
+            >
+              Convertir en cliente
+            </button>
+          )}
           {/* Sin botón de llamar cuando el contacto es una identidad de
               WhatsApp: `tel:CO.1639…` abre el marcador con basura. */}
           {sePuedeLlamar(prospecto.telefono) && (
@@ -70,7 +87,7 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: P
             </a>
           )}
         </div>
-      ) : undefined}
+      )}
     >
         <div className="crm-detalle-body">
           <div className="crm-det-row">
@@ -339,6 +356,21 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onCerrar }: P
             </ul>
           )}
         </div>
+
+      {convirtiendo && (
+
+        <FormularioConversion
+
+          prospecto={prospecto as unknown as ProspectoDetalle}
+
+          onConvertir={onConvertir}
+
+          onCerrar={() => setConvirtiendo(false)}
+
+        />
+
+      )}
+
 
     </Modal>
   )
