@@ -265,7 +265,14 @@
 /* Acciones del panel */
 .crm-detalle-acciones {
   display: flex; gap: 0.6rem; flex-shrink: 0;
+  align-items: center;
   width: 100%;
+}
+
+/* Sin acción principal —un prospecto ya cerrado— las de apoyo no se estiran a
+   lo ancho fingiendo importancia: se quedan a su tamaño, a la derecha. */
+.crm-detalle-acciones:not(:has(.crm-det-btn--principal)) {
+  justify-content: flex-end;
 }
 .crm-det-btn {
   display: inline-flex; align-items: center; gap: 0.45rem;
@@ -274,16 +281,27 @@
   font-size: 0.86rem; font-weight: 700; text-decoration: none;
   cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
-.crm-det-btn--primary {
+/* Una sola acción principal por panel. Antes `--primary` llevaba `flex: 1`, así
+   que dos botones primarios se repartían el ancho y competían como si valieran
+   lo mismo: convertir es el final del embudo y llamar es una acción de apoyo. */
+.crm-det-btn--principal {
   flex: 1; justify-content: center;
   background: var(--color-primario);
   color: #fff; border: none;
   box-shadow: 0 4px 12px rgba(16,185,129,0.28);
 }
-.crm-det-btn--primary:hover {
+.crm-det-btn--principal:hover {
   transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16,185,129,0.38);
 }
+
+/* Se conserva para quien la use fuera del pie: es el color, no el tamaño. */
+.crm-det-btn--primary {
+  justify-content: center;
+  background: var(--color-primario);
+  color: #fff; border: none;
+}
 .crm-det-btn--ghost {
+  flex: 0 0 auto;
   background: transparent; color: var(--text2);
   border: 1px solid rgba(16,44,35,0.14);
 }
@@ -295,6 +313,11 @@
 }
 @media (max-width: 500px) {
   .crm-hero-funnel-stage { padding: 0.45rem 0.7rem; }
+  /* En móvil no caben tres en fila sin partirse: la principal arriba, entera,
+     y las de apoyo debajo compartiendo el ancho. */
+  .crm-detalle-acciones { flex-wrap: wrap; }
+  .crm-detalle-acciones .crm-det-btn--principal { flex: 1 0 100%; }
+  .crm-detalle-acciones .crm-det-btn--ghost { flex: 1; justify-content: center; }
 }
 
 /* Cotizaciones del prospecto (PanelDetalle) */
