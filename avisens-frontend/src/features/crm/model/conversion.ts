@@ -94,16 +94,43 @@ export function contrasenaSugerida(largo = 12): string {
   return Array.from(valores, (n) => SIN_AMBIGUOS[n % SIN_AMBIGUOS.length]).join('')
 }
 
-// El 409 de cédula o correo repetidos es el error más frecuente al convertir:
-// es fácil que el asesor teclee una cédula que ya existe. El backend nombra el
-// campo en el mensaje —«Ya existe un registro con ese valor en: cedula»— así que
-// se extrae para señalarlo en vez de dejar al asesor releyendo el formulario
-// entero buscando qué está mal.
-export function campoDuplicado(mensaje: string): keyof FormularioConversion | null {
-  const coincide = /ese valor en:\s*([a-z_]+)/i.exec(mensaje)
-  if (!coincide) return null
-  const campo = coincide[1].toLowerCase()
-  if (campo === 'cedula') return 'cedula'
-  if (campo === 'email' || campo === 'correo') return 'email'
+const CAMPOS: readonly string[] = [
+  'nombre_completo',
+  'cedula',
+  'email',
+  'telefono',
+  'organizacion_nombre',
+  'granja_nombre',
+  'granja_municipio',
+  'password',
+]
+
+// Señala el campo que el backend rechazó, en vez de dejar al asesor releyendo
+// el formulario entero para adivinar qué está mal. Hay dos formas de mensaje y
+// no se parecen en nada:
+//
+//   409  «Ya existe un registro con ese valor en: cedula»
+//   400  «granja_nombre must be longer than or equal to 2 characters»
+//
+// El 409 es el más frecuente —es fácil teclear una cédula que ya existe—, pero
+// el 400 de class-validator nombra el campo al principio del mensaje, y esa
+// forma hay que reconocerla aparte.
+export function campoSenalado(mensaje: string): keyof FormularioConversion | null {
+  const duplicado = /ese valor en:\s*([a-z_]+)/i.exec(mensaje)
+  if (duplicado) {
+    const campo = duplicado[1].toLowerCase()
+    if (campo === 'cedula') return 'cedula'
+    if (campo === 'email' || campo === 'correo') return 'email'
+    return null
+  }
+
+  // `mensajeDelCuerpo` une el array `errors` con comas, así que puede venir más
+  // de uno: se marca el primero, que es por donde el asesor va a empezar.
+  for (const tramo of mensaje.split(',')) {
+    const nombrado = /^\s*([a-z_]+)\s+(?:must|should|has|is)\b/i.exec(tramo)
+    if (nombrado && CAMPOS.includes(nombrado[1].toLowerCase())) {
+      return nombrado[1].toLowerCase() as keyof FormularioConversion
+    }
+  }
   return null
 }

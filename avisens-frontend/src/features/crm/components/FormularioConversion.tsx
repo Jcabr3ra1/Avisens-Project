@@ -3,7 +3,7 @@ import Modal from '@shared/ui/Modal/Modal'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { ProspectoDetalle } from '../api/prospectos'
 import {
-  campoDuplicado,
+  campoSenalado,
   contrasenaSugerida,
   errorDeConversion,
   prellenarDesde,
@@ -46,7 +46,7 @@ function FormularioConversion({ prospecto, onConvertir, onCerrar }: Props) {
     } catch (problemaAlConvertir) {
       const mensaje = mensajeDeError(problemaAlConvertir, 'No se pudo convertir el prospecto.')
       setError(mensaje)
-      setCampoConflicto(campoDuplicado(mensaje))
+      setCampoConflicto(campoSenalado(mensaje))
     } finally {
       setGuardando(false)
     }
@@ -136,6 +136,8 @@ function FormularioConversion({ prospecto, onConvertir, onCerrar }: Props) {
               onChange={(e) => cambiar('granja_nombre', e.target.value)}
               required
               maxLength={120}
+              aria-invalid={campoConflicto === 'granja_nombre'}
+              className={campoConflicto === 'granja_nombre' ? 'crm-campo--choca' : undefined}
             />
             {/* Obligatorio: sin granja no hay galpones, ni lotes, ni monitoreo.
                 El cuestionario dejó de preguntarlo al recortarse a nueve pasos,
