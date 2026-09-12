@@ -136,6 +136,8 @@ export interface ConvertirProspectoPayload {
   password: string
   telefono?: string
   organizacion_nombre?: string
+  granja_nombre: string
+  granja_municipio?: string
 }
 
 export interface ProspectoConvertido {

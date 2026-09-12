@@ -28,6 +28,8 @@ function formulario(cambios: Partial<FormularioConversion> = {}): FormularioConv
     email: 'juan@ejemplo.com',
     telefono: '3001234567',
     organizacion_nombre: 'La Esperanza',
+    granja_nombre: 'La Esperanza',
+    granja_municipio: 'Montería',
     password: 'Abcd2345efgh',
     ...cambios,
   }
@@ -128,5 +130,34 @@ describe('campoDuplicado', () => {
 
   it('ignora un campo que el formulario no tiene', () => {
     expect(campoDuplicado('Ya existe un registro con ese valor en: nit')).toBeNull()
+  })
+})
+
+describe('la granja del cliente nuevo', () => {
+  it('no se prellena del prospecto, porque el chatbot ya no la pregunta', () => {
+    // A5, A6 y A6B escribían `nombre_granja` y `municipio`, y se retiraron en
+    // el recorte a nueve pasos. Prellenar de ahí sería una rama muerta.
+    const form = prellenarDesde(prospecto({ nombre_granja: 'La Esperanza' }))
+    expect(form.granja_nombre).toBe('')
+    expect(form.granja_municipio).toBe('')
+  })
+
+  it('sin nombre de granja no se convierte', () => {
+    // Sin granja no hay galpones, ni lotes, ni monitoreo: la cuenta nace rota.
+    expect(errorDeConversion(formulario({ granja_nombre: '' }))).toMatch(/granja/i)
+    expect(errorDeConversion(formulario({ granja_nombre: '   ' }))).toMatch(/granja/i)
+    expect(errorDeConversion(formulario({ granja_nombre: 'A' }))).toMatch(/corto/i)
+  })
+
+  it('el municipio es opcional y no viaja vacío', () => {
+    const sin = payloadDeConversion(formulario({ granja_municipio: '  ' }))
+    expect(sin).not.toHaveProperty('granja_municipio')
+    const con = payloadDeConversion(formulario({ granja_municipio: ' Montería ' }))
+    expect(con.granja_municipio).toBe('Montería')
+  })
+
+  it('el nombre de la granja viaja siempre y sin espacios', () => {
+    expect(payloadDeConversion(formulario({ granja_nombre: '  La Esperanza  ' })).granja_nombre)
+      .toBe('La Esperanza')
   })
 })

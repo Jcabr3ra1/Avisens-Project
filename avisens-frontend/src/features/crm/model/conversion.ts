@@ -7,6 +7,8 @@ export interface FormularioConversion {
   email: string
   telefono: string
   organizacion_nombre: string
+  granja_nombre: string
+  granja_municipio: string
   password: string
 }
 
@@ -25,6 +27,13 @@ export function prellenarDesde(prospecto: ProspectoDetalle): FormularioConversio
     // de un usuario no sirve para nada.
     telefono: prospecto.telefono ?? '',
     organizacion_nombre: prospecto.nombre_granja?.trim() || nombreDeOrganizacion(prospecto.nombre),
+    // Vacíos a propósito. El cuestionario preguntaba la granja y el municipio
+    // en A5, A6 y A6B, y esas preguntas se retiraron en el recorte a nueve
+    // pasos: hoy nada escribe `nombre_granja` ni `municipio`, y en producción
+    // los tres prospectos los tienen en null. Prellenar de ahí sería una rama
+    // que no se ejecuta nunca. Los escribe el asesor, que está al teléfono.
+    granja_nombre: '',
+    granja_municipio: '',
     password: '',
   }
 }
@@ -42,6 +51,11 @@ export function errorDeConversion(form: FormularioConversion): string {
   if (!form.cedula.trim()) return 'La cédula es obligatoria: pídesela al cliente.'
   if (!form.email.trim()) return 'El correo es obligatorio: con él entra al sistema.'
   if (!form.email.includes('@')) return 'Ese correo no parece válido.'
+  // Sin granja el cliente no puede hacer nada: no hay galpones, ni lotes, ni
+  // monitoreo, ni alertas. Convertir sin ella entrega una cuenta que no sirve
+  // y que nadie descubre rota hasta que el cliente entra y no ve dónde pulsar.
+  if (!form.granja_nombre.trim()) return 'El nombre de la granja es obligatorio: sin ella el cliente entra a un sistema vacío.'
+  if (form.granja_nombre.trim().length < 2) return 'El nombre de la granja es demasiado corto.'
   if (form.password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.'
   return ''
 }
@@ -57,10 +71,14 @@ export function payloadDeConversion(
     cedula: form.cedula.trim(),
     email: form.email.trim().toLowerCase(),
     password: form.password,
+    granja_nombre: form.granja_nombre.trim(),
   }
   if (form.telefono.trim()) payload.telefono = form.telefono.trim()
   if (form.organizacion_nombre.trim()) {
     payload.organizacion_nombre = form.organizacion_nombre.trim()
+  }
+  if (form.granja_municipio.trim()) {
+    payload.granja_municipio = form.granja_municipio.trim()
   }
   return payload
 }
