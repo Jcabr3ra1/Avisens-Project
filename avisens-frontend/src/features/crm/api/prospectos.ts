@@ -28,7 +28,12 @@ export interface Prospecto {
   area_galpon_m2: number | null
   rol_prospecto: string | null
   tipo_produccion: string | null
+  // `telefono` es SIEMPRE un número marcable o null; `whatsapp_id` es la
+  // dirección por la que el bot responde, que puede ser una identidad de Meta.
+  // Antes iban mezclados en `telefono` y por eso el panel enseñaba un id como
+  // si fuera un teléfono.
   telefono: string | null
+  whatsapp_id: string | null
   email: string | null
   canal_origen: string | null
   contacto_decisor: string | null
@@ -120,4 +125,54 @@ export async function exportarProspectosCsv(
     responseType: 'blob',
   })
   return data as Blob
+}
+
+// ── Convertir un prospecto en cliente ────────────────────────────────────────
+
+export interface ConvertirProspectoPayload {
+  nombre_completo: string
+  cedula: string
+  email: string
+  password: string
+  telefono?: string
+  organizacion_nombre?: string
+}
+
+export interface ProspectoConvertido {
+  prospecto: { id: number; estado: string; resultado_cierre: string }
+  usuario: {
+    id: number
+    nombre_completo: string
+    email: string
+    organizacion: { id: number; nombre: string }
+  }
+}
+
+// Crea la organización, el usuario propietario y cierra el prospecto en una
+// sola transacción del servidor. Encadenar dos llamadas desde aquí dejaría, si
+// la segunda falla, un cliente creado y un prospecto abierto que alguien
+// convertiría otra vez.
+export async function convertirProspecto(
+  id: number,
+  payload: ConvertirProspectoPayload,
+): Promise<ProspectoConvertido> {
+  const { data } = await api.post<ProspectoConvertido>(
+    `/prospectos/${id}/convertir`,
+    payload,
+  )
+  return data
+}
+
+export interface CerrarProspectoPayload {
+  resultado: 'ganado' | 'perdido'
+  motivo?: string
+  usuario_id?: number
+}
+
+export async function cerrarProspecto(
+  id: number,
+  payload: CerrarProspectoPayload,
+): Promise<Prospecto> {
+  const { data } = await api.patch<Prospecto>(`/prospectos/${id}/cerrar`, payload)
+  return data
 }
