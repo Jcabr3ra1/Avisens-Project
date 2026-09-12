@@ -68,7 +68,7 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
           {!yaCerrado && (
             <button
               type="button"
-              className="crm-det-btn crm-det-btn--primary"
+              className="crm-det-btn crm-det-btn--principal"
               onClick={() => setConvirtiendo(true)}
             >
               Convertir en cliente
@@ -77,13 +77,13 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
           {/* Sin botón de llamar cuando el contacto es una identidad de
               WhatsApp: `tel:CO.1639…` abre el marcador con basura. */}
           {sePuedeLlamar(prospecto.telefono) && (
-            <a href={`tel:${prospecto.telefono}`} className="crm-det-btn crm-det-btn--primary">
-              <IcPhone size={15} /> Llamar ahora
+            <a href={`tel:${prospecto.telefono}`} className="crm-det-btn crm-det-btn--ghost">
+              <IcPhone size={15} /> Llamar
             </a>
           )}
           {prospecto.correo && (
             <a href={`mailto:${prospecto.correo}`} className="crm-det-btn crm-det-btn--ghost">
-              Enviar correo
+              Correo
             </a>
           )}
         </div>
