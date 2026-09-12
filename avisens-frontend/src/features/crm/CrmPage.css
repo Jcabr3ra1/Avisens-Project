@@ -269,11 +269,9 @@
   width: 100%;
 }
 
-/* Sin acción principal —un prospecto ya cerrado— las de apoyo no se estiran a
-   lo ancho fingiendo importancia: se quedan a su tamaño, a la derecha. */
-.crm-detalle-acciones:not(:has(.crm-det-btn--principal)) {
-  justify-content: flex-end;
-}
+/* El pie solo lleva acciones de contacto: se quedan a su tamaño, a la derecha,
+   en vez de estirarse a lo ancho fingiendo la importancia que no tienen. */
+.crm-detalle-acciones { justify-content: flex-end; }
 .crm-det-btn {
   display: inline-flex; align-items: center; gap: 0.45rem;
   min-height: 44px;
@@ -281,25 +279,25 @@
   font-size: 0.86rem; font-weight: 700; text-decoration: none;
   cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
-/* Una sola acción principal por panel. Antes `--primary` llevaba `flex: 1`, así
-   que dos botones primarios se repartían el ancho y competían como si valieran
-   lo mismo: convertir es el final del embudo y llamar es una acción de apoyo. */
-.crm-det-btn--principal {
-  flex: 1; justify-content: center;
-  background: var(--color-primario);
-  color: #fff; border: none;
-  box-shadow: 0 4px 12px rgba(16,185,129,0.28);
+/* Cerrar la venta. Vive dentro del panel, junto al puntaje, no en el pie: es
+   una decisión, no una acción de contacto. Ocupa el ancho y lleva subtítulo
+   porque crea una cuenta real y conviene decirlo antes de pulsarlo. */
+.crm-det-convertir {
+  display: flex; width: 100%; align-items: center; gap: 0.8rem;
+  margin: 0.9rem 0 0.2rem;
+  padding: 0.8rem 1rem; border: none; border-radius: 12px;
+  background: var(--color-primario); color: #fff;
+  text-align: left; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16,185,129,0.26);
+  transition: transform 0.15s, box-shadow 0.15s;
 }
-.crm-det-btn--principal:hover {
-  transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16,185,129,0.38);
+.crm-det-convertir:hover {
+  transform: translateY(-1px); box-shadow: 0 7px 20px rgba(16,185,129,0.36);
 }
-
-/* Se conserva para quien la use fuera del pie: es el color, no el tamaño. */
-.crm-det-btn--primary {
-  justify-content: center;
-  background: var(--color-primario);
-  color: #fff; border: none;
-}
+.crm-det-convertir svg { flex-shrink: 0; }
+.crm-det-convertir-txt { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 0.15rem; }
+.crm-det-convertir-txt strong { font-size: 0.9rem; font-weight: 700; }
+.crm-det-convertir-txt span { font-size: 0.76rem; font-weight: 500; opacity: 0.85; }
 .crm-det-btn--ghost {
   flex: 0 0 auto;
   background: transparent; color: var(--text2);
@@ -313,10 +311,6 @@
 }
 @media (max-width: 500px) {
   .crm-hero-funnel-stage { padding: 0.45rem 0.7rem; }
-  /* En móvil no caben tres en fila sin partirse: la principal arriba, entera,
-     y las de apoyo debajo compartiendo el ancho. */
-  .crm-detalle-acciones { flex-wrap: wrap; }
-  .crm-detalle-acciones .crm-det-btn--principal { flex: 1 0 100%; }
   .crm-detalle-acciones .crm-det-btn--ghost { flex: 1; justify-content: center; }
 }
 
