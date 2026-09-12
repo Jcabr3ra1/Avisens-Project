@@ -65,6 +65,7 @@ function AdminPage() {
           total={usuarios.length}
           propietarios={resumen.totalPropietarios}
           operarios={resumen.totalOperarios}
+          administradores={resumen.totalAdministradores}
           activos={resumen.totalActivos}
           cargando={cargandoGestion}
           onGestionar={() => navigate('/usuarios')}

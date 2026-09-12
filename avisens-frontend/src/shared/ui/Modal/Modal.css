@@ -115,7 +115,8 @@
   margin-bottom: 0.9rem;
 }
 
-.modal-campo > span {
+.modal-campo > span,
+.modal-campo > .modal-campo-etiqueta {
   color: var(--text-secondary);
   font-size: 0.82rem;
   font-weight: 700;
@@ -169,6 +170,28 @@
   align-items: start;
 }
 
+.modal-seccion {
+  min-width: 0;
+  margin: 0 0 1.2rem;
+  padding: 0;
+  border: 0;
+}
+
+.modal-seccion:last-of-type { margin-bottom: 0.2rem; }
+
+.modal-seccion > legend {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.45rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
 .modal-desplegar {
   width: 100%;
   margin: 0.2rem 0 0.9rem;
@@ -209,6 +232,8 @@
   background: rgba(232, 66, 0, 0.07);
   font-size: 0.83rem;
 }
+
+.modal-error--campo { display: block; }
 
 /* ── Botones del pie ── */
 

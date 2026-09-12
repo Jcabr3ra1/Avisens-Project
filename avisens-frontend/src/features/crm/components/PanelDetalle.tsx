@@ -34,15 +34,9 @@ type Props = {
 function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, onCerrar }: Props) {
   const [cambiandoAsesor, setCambiandoAsesor] = useState(false)
   const [convirtiendo, setConvirtiendo] = useState(false)
-  // Un prospecto cerrado ya no se convierte: el backend lo rechaza con un 400,
-  // así que ofrecerlo sería prometer algo que va a fallar.
   const yaCerrado = prospecto.etapa === 'cerrado' || prospecto.etapa === 'descartado'
   const asesorAsignado = asesores.find((asesor) => asesor.id === prospecto.asesorId) ?? null
   const esMio = asesorAsignado !== null && asesorAsignado.id === getUsuario()?.id
-  // Puede haber prospecto asignado a alguien que ya no sale en la lista: un
-  // usuario desactivado, o un propietario de antes de restringir los asesores
-  // a administradores. Decirlo es mejor que mostrar «Sin asignar», que es
-  // falso y haría que alguien lo tomara creyendo que está libre.
   const asignadoDesconocido = prospecto.asesorId !== null && asesorAsignado === null
   const estilo = ESTILO_ETAPA[prospecto.etapa]
   const urgencia = urgenciaDe(prospecto.ultimaActividad, prospecto.etapa)
@@ -65,8 +59,7 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
       ancho="ancho"
       acciones={(
         <div className="crm-detalle-acciones">
-          {/* Sin botón de llamar cuando el contacto es una identidad de
-              WhatsApp: `tel:CO.1639…` abre el marcador con basura. */}
+
           {sePuedeLlamar(prospecto.telefono) && (
             <a href={`tel:${prospecto.telefono}`} className="crm-det-btn crm-det-btn--ghost">
               <IcPhone size={15} /> Llamar
@@ -122,15 +115,6 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
             </span>
           </div>
 
-          {/* Cerrar la venta vivía en el pie del panel, debajo de Cotizaciones
-              y PQRS: había que bajar hasta el fondo para encontrarlo. Va aquí,
-              pegado al estado y al puntaje, que es lo que el asesor mira para
-              decidir si esta persona ya merece el paso. Y dice lo que hace:
-              nadie adivinaba que el botón crea una cuenta.
-
-              El subtítulo nombra lo que `convertir()` crea: organización,
-              granja y usuario. La granja es obligatoria en el formulario
-              porque sin ella el cliente no tiene dónde colgar galpones. */}
           {!yaCerrado && (
             <button
               type="button"
@@ -175,10 +159,7 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
                 {prospecto.telefono}
               </a>
             ) : esIdentidadWhatsapp(prospecto.telefono) ? (
-              /* El identificador NO se muestra: es un id interno de Meta que
-                 solo sirve por la API. Nadie puede escribirlo en WhatsApp para
-                 buscar a esta persona, así que enseñarlo solo ocupa sitio y
-                 parece un dato roto. El sistema lo conserva para responder. */
+
               <span className="crm-det-val">Sin número</span>
             ) : (
               <span className="crm-det-val">—</span>
@@ -202,10 +183,7 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
               </a>
             </div>
           )}
-          {/* Ya asignado se afirma, no se pregunta: un desplegable permanente
-              se lee como «esto sigue pendiente» aunque tenga un nombre dentro.
-              Para cambiarlo hay que pedirlo, que además evita reasignar sin
-              querer al rozar la rueda del ratón sobre el campo. */}
+
           {(asesorAsignado || asignadoDesconocido) && !cambiandoAsesor ? (
             <div className="crm-det-row">
               <span className="crm-det-lbl">Lo atiende</span>
@@ -243,8 +221,7 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
                 }}
               >
                 <option value="">{asignando ? 'Asignando…' : 'Sin asignar'}</option>
-                {/* Solo se ofrecen administradores: el prospecto lo atiende
-                    alguien del equipo de Avisens, no un cliente. */}
+
                 {asesores.map((asesor) => (
                   <option key={asesor.id} value={asesor.id}>{asesor.nombre_completo}</option>
                 ))}

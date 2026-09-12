@@ -10,6 +10,8 @@ export type KpiAdmin = {
   valor: string | number
   detalle: string
   icono: 'organizacion' | 'usuarios' | 'soporte' | 'sensor'
+  progreso: number | null
+  progresoTexto: string | null
 }
 
 export type EtapaCrmAdmin = {
@@ -64,7 +66,7 @@ export function calcularAtencionAdmin(datos: AtencionAdminData): ResumenAtencion
       tipo: 'solicitud' as const,
       etiqueta: solicitud.estado === 'abierta' ? 'PQRS pendiente' : 'PQRS en atención',
       titulo: solicitud.asunto ?? solicitud.categoria,
-      detalle: solicitud.prospecto.nombre ?? solicitud.prospecto.email ?? 'Prospecto sin nombre',
+      detalle: solicitud.prospecto.nombre ?? solicitud.prospecto.email ?? 'Sin contacto asociado',
       fecha: solicitud.fecha_creacion,
       ruta: '/crm' as const,
       prioridad: solicitud.estado === 'abierta' ? 2 : 1,
@@ -101,7 +103,7 @@ export function calcularKpisAdmin(
   const sensoresOnline = sensores.filter((sensor) => sensor.estado !== 'offline').length
   const porcentajeOnline = sensores.length > 0
     ? Math.round((sensoresOnline / sensores.length) * 1000) / 10
-    : 0
+    : null
 
   const organizacionesActivas = organizaciones.filter((item) => item.activa).length
   const usuariosActivos = usuarios.filter((usuario) => usuario.activo).length
@@ -118,24 +120,32 @@ export function calcularKpisAdmin(
       valor: organizacionesActivas,
       detalle: `de ${organizaciones.length} clientes registrados`,
       icono: 'organizacion',
+      progreso: organizaciones.length > 0 ? Math.round((organizacionesActivas / organizaciones.length) * 100) : null,
+      progresoTexto: organizaciones.length > 0 ? `${organizacionesActivas} de ${organizaciones.length} activas` : null,
     },
     {
       etiqueta: 'Usuarios',
       valor: usuarios.length,
       detalle: `${usuariosActivos} con acceso`,
       icono: 'usuarios',
+      progreso: usuarios.length > 0 ? Math.round((usuariosActivos / usuarios.length) * 100) : null,
+      progresoTexto: usuarios.length > 0 ? `${usuariosActivos} de ${usuarios.length} con acceso` : null,
     },
     {
       etiqueta: 'En espera de respuesta',
       valor: enCola,
       detalle: `${atencion.solicitudesPendientes} PQRS · ${atencion.recuperacionesPendientes} contraseñas`,
       icono: 'soporte',
+      progreso: null,
+      progresoTexto: null,
     },
     {
       etiqueta: 'Sensores en línea',
-      valor: `${sensoresOnline}/${sensores.length}`,
-      detalle: `${porcentajeOnline}% en línea`,
+      valor: sensores.length > 0 ? `${sensoresOnline}/${sensores.length}` : '—',
+      detalle: porcentajeOnline === null ? 'Sin sensores instalados' : `${porcentajeOnline}% en línea`,
       icono: 'sensor',
+      progreso: porcentajeOnline,
+      progresoTexto: sensores.length > 0 ? `${sensoresOnline} de ${sensores.length} sensores en línea` : null,
     },
   ]
 }

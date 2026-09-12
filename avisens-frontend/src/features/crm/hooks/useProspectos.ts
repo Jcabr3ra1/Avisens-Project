@@ -43,14 +43,6 @@ export function useProspectos() {
       if (montado.current) setCargando(false)
     }
 
-    // Solo administradores. El CRM es el embudo comercial de Avisens: un
-    // prospecto es alguien que todavía NO es cliente, así que quien lo atiende
-    // es del equipo de Avisens. Un propietario o un operario son clientes, y
-    // asignarles un prospecto significaría que un cliente lleva las ventas.
-    //
-    // No existe un rol 'Asesor': asesor es la función, no el rol. El backend
-    // tampoco lo valida —solo comprueba que el usuario esté activo—, así que
-    // esto es una ayuda de la interfaz y no una defensa.
     try {
       const usuarios = await listarUsuarios()
       if (montado.current) setAsesores(asesoresPosibles(usuarios))
@@ -100,8 +92,6 @@ export function useProspectos() {
     payload: ConvertirProspectoPayload,
   ) => {
     const resultado = await convertirProspecto(prospectoId, payload)
-    // Se recarga entero: el prospecto cambia de estado y sale de la lista de
-    // pendientes, así que un parche local dejaría la tabla mintiendo.
     await cargar()
     toast.success(
       `${resultado.usuario.nombre_completo} ya es cliente · ${resultado.usuario.organizacion.nombre}`,

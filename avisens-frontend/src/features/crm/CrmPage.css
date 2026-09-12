@@ -1,6 +1,3 @@
-/* ════════ CrmPage — CRM de Prospectos (EP-01) ══════════════════════════════ */
-
-/* Flujo visual del embudo (frío → tibio → caliente → cliente) */
 .crm-hero-funnel {
   display: flex; align-items: center; justify-content: center;
   gap: 0.5rem; flex-wrap: wrap; position: relative; z-index: 1;
@@ -21,7 +18,7 @@
   display: inline-flex; align-items: center; gap: 0.25rem;
   font-size: 0.7rem; color: rgba(255,255,255,0.5); white-space: nowrap;
 }
-/* Rango de puntaje de la etapa */
+
 .crm-hero-funnel-rango {
   font-size: 0.62rem; color: rgba(255,255,255,0.28); white-space: nowrap;
 }
@@ -29,7 +26,7 @@
   font-size: 1.4rem; color: rgba(255,255,255,0.18); line-height: 1;
   user-select: none; align-self: center;
 }
-/* Descartados como nota al margen, separados del flujo principal */
+
 .crm-hero-funnel-desc {
   display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
   padding: 0.4rem 0.8rem;
@@ -38,51 +35,6 @@
   font-size: 0.68rem; color: rgba(255,255,255,0.4);
 }
 
-/* (Pipeline cards eliminadas — info integrada en el embudo del hero) */
-
-/* ─── Barra de herramientas ──────────────────────────────────────────────── */
-.crm-toolbar {
-  display: flex; align-items: center; gap: 0.75rem;
-  margin-bottom: 1.15rem; flex-wrap: wrap;
-}
-.crm-search {
-  flex: 1; min-width: 220px;
-  display: flex; align-items: center; gap: 0.5rem;
-  min-height: 44px; padding: 0 0.45rem 0 0.85rem;
-  background: var(--color-superficie); border: 1px solid rgba(16,44,35,0.1);
-  border-radius: 12px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.crm-search:focus-within {
-  border-color: var(--green); box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
-}
-.crm-search-icon  { color: var(--text3); flex-shrink: 0; }
-.crm-search-input {
-  flex: 1; background: none; border: none; outline: none;
-  align-self: stretch; min-height: 42px; font-size: 0.86rem;
-  font-family: inherit; color: var(--dash-ink); min-width: 0;
-}
-.crm-search-input::placeholder { color: var(--text3); }
-.crm-search-clear {
-  display: flex; align-items: center; justify-content: center;
-  width: 44px; height: 44px; border-radius: 50%;
-  background: rgba(16,44,35,0.07); border: none; cursor: pointer;
-  color: var(--text3); flex-shrink: 0; transition: background 0.15s;
-}
-.crm-search-clear:hover { background: rgba(16,44,35,0.13); }
-
-.crm-canal-filtro {
-  display: inline-flex; align-items: center; gap: 0.45rem;
-  min-height: 44px; padding: 0 0.25rem 0 0.65rem;
-  border: 1px solid rgba(16,44,35,0.1); border-radius: 10px;
-  color: var(--text3); font-size: 0.76rem; font-weight: 700;
-  background: rgba(255,255,255,0.7);
-}
-.crm-canal-filtro select {
-  min-height: 42px; border: 0; outline: 0; color: var(--dash-ink); background: transparent;
-  font: inherit; font-weight: 700; cursor: pointer;
-}
-.crm-canal-filtro:focus-within { outline: 3px solid var(--color-foco); outline-offset: 2px; }
 .crm-canal-badge {
   display: inline-flex; width: fit-content; align-items: center;
   margin-top: 0.22rem; padding: 0.1rem 0.38rem; border-radius: 999px;
@@ -92,41 +44,6 @@
 .crm-canal-badge--whatsapp { color: #087b51; background: rgba(16,185,129,0.13); }
 .crm-canal-badge--otro { color: var(--text3); background: rgba(100,116,139,0.1); }
 
-/* ─── Filtros (vista Lista) ───────────────────────────────────────────────── */
-.crm-filtros {
-  display: flex; gap: 0.3rem; margin-bottom: 1.1rem; flex-wrap: wrap;
-  background: rgba(7,23,19,0.032); border: 1px solid rgba(16,44,35,0.07);
-  border-radius: 14px; padding: 0.35rem; width: fit-content;
-}
-.crm-filtro {
-  display: inline-flex; align-items: center; gap: 0.35rem;
-  min-height: 44px;
-  padding: 0.45rem 0.9rem; background: transparent; border: none;
-  border-radius: 10px; font-size: 0.84rem; font-weight: 600;
-  cursor: pointer; color: var(--text3); transition: background 0.15s, color 0.15s;
-}
-.crm-filtro:hover   { background: rgba(255,255,255,0.6); color: var(--text2); }
-.crm-filtro--activo { background: #fff; color: var(--dash-ink); box-shadow: 0 2px 8px rgba(10,40,28,0.08); }
-
-/* ─── Tabla de leads (vista Lista) ───────────────────────────────────────── */
-.crm-tabla-card {
-  background: var(--color-superficie); border: 1px solid var(--color-borde);
-  border-radius: var(--radio-lg); box-shadow: var(--sombra-sm);
-  overflow: hidden; overflow-x: auto;
-}
-.crm-tabla { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
-.crm-tabla th {
-  padding: 0.8rem 1rem; background: rgba(7,23,19,0.032);
-  border-bottom: 1px solid rgba(16,44,35,0.08);
-  text-align: left; font-size: 0.68rem; font-weight: 700;
-  letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); white-space: nowrap;
-}
-.crm-tabla td { padding: 0.82rem 1rem; border-bottom: 1px solid rgba(16,44,35,0.055); vertical-align: middle; }
-.crm-tabla tbody tr:last-child td { border-bottom: none; }
-.crm-tabla tbody tr { transition: background 0.12s; }
-.crm-tabla tbody tr:hover td { background: rgba(16,185,129,0.032); }
-
-/* Acento de color en la primera celda según estado */
 .crm-fila--caliente   td:first-child { border-left: 3px solid #ef4444; }
 .crm-fila--tibio      td:first-child { border-left: 3px solid #f59e0b; }
 .crm-fila--cerrado    td:first-child { border-left: 3px solid #10b981; }
@@ -141,24 +58,8 @@
 }
 .crm-rol { display: block; color: var(--text3); font-size: 0.76rem; }
 
-.crm-fila-accion {
-  min-height: 44px;
-  padding: 0.45rem 0.75rem;
-  border: 1px solid var(--color-borde);
-  border-radius: var(--radio-md);
-  color: var(--color-primario-oscuro);
-  background: var(--color-superficie);
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-/* Badge de días en la tabla */
 .crm-tabla-dias { font-size: 0.82rem; font-weight: 700; }
 
-/* Barra de puntaje en la tabla */
 .crm-puntaje { display: flex; align-items: center; gap: 0.5rem; }
 .crm-puntaje-num { font-weight: 800; font-size: 0.93rem; color: var(--dash-ink); min-width: 18px; }
 .crm-puntaje-barra-wrap { flex: 1; height: 5px; background: rgba(10,26,20,0.07); border-radius: 999px; overflow: hidden; min-width: 50px; }
@@ -169,7 +70,6 @@
 .crm-puntaje-barra--descartado { background: var(--text4); }
 .crm-puntaje-barra--cerrado    { background: linear-gradient(90deg,#34d399,#10b981); }
 
-/* Badges de estado */
 .crm-estado-badge            { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.18rem 0.6rem; border-radius: 999px; font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
 .crm-estado-badge--caliente  { background: rgba(239,68,68,0.12);   color: #dc2626; }
 .crm-estado-badge--tibio     { background: rgba(245,158,11,0.12);  color: #d97706; }
@@ -177,15 +77,17 @@
 .crm-estado-badge--descartado{ background: rgba(100,116,139,0.1);  color: var(--text3); }
 .crm-estado-badge--cerrado   { background: rgba(16,185,129,0.12);  color: #059669; }
 
-/* Estado vacío de búsqueda */
-.crm-vacio {
-  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
-  padding: 3rem 2rem; text-align: center;
+.crm-aviso {
+  margin: 0;
+  padding: 2rem 1.5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  text-align: center;
 }
-.crm-vacio-emoji { display: inline-flex; color: var(--text4); }
-.crm-vacio p     { font-size: 0.88rem; color: var(--text3); margin: 0; }
 
-/* Cuerpo del detalle */
 .crm-detalle-body {
   display: flex;
   flex: 1;
@@ -193,7 +95,6 @@
   gap: 0;
 }
 
-/* Filas de dato */
 .crm-det-row {
   display: flex; align-items: center; justify-content: space-between;
   gap: 0.75rem; padding: 0.55rem 0;
@@ -212,16 +113,13 @@
 .crm-det-score-max   { font-size: 0.8rem; color: var(--text3); }
 .crm-det-score-rango { font-size: 0.74rem; color: var(--text3); }
 
-/* Separador interno */
 .crm-det-sep { height: 1px; background: rgba(16,44,35,0.06); margin: 0.65rem 0; }
 
-/* Título de sección */
 .crm-det-section {
   font-size: 0.69rem; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.09em; color: var(--text3); margin: 0.4rem 0 0.3rem;
 }
 
-/* Selector de asesor para asignar un prospecto calificado */
 .crm-det-asesor { display: flex; gap: 0.5rem; padding: 0.4rem 0; }
 .crm-det-asesor-select {
   flex: 1; min-width: 0; font-size: 0.82rem; padding: 0.4rem 0.6rem;
@@ -238,7 +136,6 @@
   font-size: 0.8rem; color: var(--text3); margin: 0.5rem 0;
 }
 
-/* Transcripción de la conversación con el chatbot */
 .crm-det-transcript { display: flex; flex-direction: column; gap: 0.7rem; padding: 0.2rem 0; }
 .crm-det-transcript-item {
   padding: 0.6rem 0.7rem; border-radius: 10px;
@@ -251,7 +148,6 @@
   font-size: 0.84rem; color: var(--dash-ink); margin: 0;
 }
 
-/* Links de contacto */
 .crm-det-link {
   font-size: 0.84rem; color: var(--green-d); font-weight: 600;
   text-decoration: none; transition: color 0.15s;
@@ -262,15 +158,12 @@
   white-space: nowrap; display: inline-block;
 }
 
-/* Acciones del panel */
 .crm-detalle-acciones {
   display: flex; gap: 0.6rem; flex-shrink: 0;
   align-items: center;
   width: 100%;
 }
 
-/* El pie solo lleva acciones de contacto: se quedan a su tamaño, a la derecha,
-   en vez de estirarse a lo ancho fingiendo la importancia que no tienen. */
 .crm-detalle-acciones { justify-content: flex-end; }
 .crm-det-btn {
   display: inline-flex; align-items: center; gap: 0.45rem;
@@ -279,9 +172,7 @@
   font-size: 0.86rem; font-weight: 700; text-decoration: none;
   cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
-/* Cerrar la venta. Vive dentro del panel, junto al puntaje, no en el pie: es
-   una decisión, no una acción de contacto. Ocupa el ancho y lleva subtítulo
-   porque crea una cuenta real y conviene decirlo antes de pulsarlo. */
+
 .crm-det-convertir {
   display: flex; width: 100%; align-items: center; gap: 0.8rem;
   margin: 0.9rem 0 0.2rem;
@@ -306,16 +197,11 @@
 }
 .crm-det-btn--ghost:hover { background: rgba(7,23,19,0.04); border-color: rgba(16,44,35,0.22); }
 
-/* ─── Responsive ──────────────────────────────────────────────────────────── */
-@media (max-width: 700px) {
-  .crm-toolbar { flex-direction: column; align-items: stretch; }
-}
 @media (max-width: 500px) {
   .crm-hero-funnel-stage { padding: 0.45rem 0.7rem; }
   .crm-detalle-acciones .crm-det-btn--ghost { flex: 1; justify-content: center; }
 }
 
-/* Cotizaciones del prospecto (PanelDetalle) */
 .crm-det-cotiza-head {
   display: flex; align-items: center; justify-content: space-between;
   gap: 0.5rem;
@@ -378,7 +264,6 @@
   background: rgba(7, 23, 19, 0.03); border-radius: 10px;
 }
 
-/* Resumen operativo claro y consistente con el resto de Administración. */
 .crm-embudo {
   display: flex;
   align-items: center;
@@ -432,33 +317,6 @@
   opacity: 1;
 }
 
-.crm-search {
-  min-height: 44px;
-  border-color: var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--surface-base);
-  backdrop-filter: none;
-}
-
-.crm-canal-filtro {
-  min-height: 44px;
-  border-color: var(--border-default);
-  background: var(--surface-base);
-}
-
-.crm-search-clear {
-  width: 44px;
-  height: 44px;
-}
-
-.crm-filtro:focus-visible,
-.crm-fila-accion:focus-visible,
-.crm-det-btn:focus-visible,
-.crm-det-btn-generar:focus-visible {
-  outline: 3px solid var(--color-foco);
-  outline-offset: 2px;
-}
-
 @media (max-width: 760px) {
   .crm-embudo {
     align-items: flex-start;
@@ -473,6 +331,12 @@
   .crm-embudo .crm-hero-funnel-sep {
     display: none;
   }
+}
+
+.crm-det-btn:focus-visible,
+.crm-det-btn-generar:focus-visible {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
 }
 
 .crm-det-asesor {
@@ -507,8 +371,6 @@
   font-weight: 600;
 }
 
-/* «Cambiar» es una acción secundaria: se ve, pero no compite con el nombre
-   del responsable, que es el dato. */
 .crm-det-cambiar {
   margin-left: .55rem;
   padding: 0;
@@ -535,8 +397,48 @@
 .crm-clave-fila input { flex: 1; min-width: 0; }
 .crm-clave-fila .modal-btn { flex: 0 0 auto; white-space: nowrap; }
 
-/* El campo que ya existe se señala: sin esto el asesor relee el formulario
-   entero buscando cuál de los dos choca. */
+@media (max-width: 460px) {
+  .crm-clave-fila { flex-wrap: wrap; }
+  .crm-clave-fila input { flex-basis: 100%; }
+}
+
+.crm-conv-resumen {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.crm-conv-resumen-item { min-width: 0; }
+
+.crm-conv-resumen-item span {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.crm-conv-resumen-item strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .crm-conv-resumen { grid-template-columns: 1fr; }
+}
+
 .crm-campo--choca {
   border-color: var(--danger) !important;
   outline: 2px solid color-mix(in srgb, var(--danger) 30%, transparent);

@@ -28,10 +28,6 @@ export interface Prospecto {
   area_galpon_m2: number | null
   rol_prospecto: string | null
   tipo_produccion: string | null
-  // `telefono` es SIEMPRE un número marcable o null; `whatsapp_id` es la
-  // dirección por la que el bot responde, que puede ser una identidad de Meta.
-  // Antes iban mezclados en `telefono` y por eso el panel enseñaba un id como
-  // si fuera un teléfono.
   telefono: string | null
   whatsapp_id: string | null
   email: string | null
@@ -93,9 +89,6 @@ export async function listarProspectos(
   return data
 }
 
-// La versión paginada de arriba se mantiene porque el panel de admin espera la
-// envoltura. Esta trae TODO: el CRM calcula sus tarjetas de resumen sumando la
-// lista, y con un tope de 100 los totales salían mal en cuanto se pasara.
 export async function listarTodosLosProspectos(
   query: Omit<ProspectosQuery, 'page' | 'limit'> = {},
 ): Promise<Prospecto[]> {
@@ -127,8 +120,6 @@ export async function exportarProspectosCsv(
   return data as Blob
 }
 
-// ── Convertir un prospecto en cliente ────────────────────────────────────────
-
 export interface ConvertirProspectoPayload {
   nombre_completo: string
   cedula: string
@@ -150,10 +141,6 @@ export interface ProspectoConvertido {
   }
 }
 
-// Crea la organización, el usuario propietario y cierra el prospecto en una
-// sola transacción del servidor. Encadenar dos llamadas desde aquí dejaría, si
-// la segunda falla, un cliente creado y un prospecto abierto que alguien
-// convertiría otra vez.
 export async function convertirProspecto(
   id: number,
   payload: ConvertirProspectoPayload,
