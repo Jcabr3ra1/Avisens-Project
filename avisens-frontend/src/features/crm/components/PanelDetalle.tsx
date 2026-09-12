@@ -128,10 +128,9 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
               decidir si esta persona ya merece el paso. Y dice lo que hace:
               nadie adivinaba que el botón crea una cuenta.
 
-              El subtítulo nombra solo lo que `convertir()` crea de verdad:
-              organización y usuario. La granja NO se crea —`granja.create`
-              vive únicamente en granjas.service— así que el cliente entra a
-              un sistema vacío y hay que darle de alta la granja a mano. */}
+              El subtítulo nombra lo que `convertir()` crea: organización,
+              granja y usuario. La granja es obligatoria en el formulario
+              porque sin ella el cliente no tiene dónde colgar galpones. */}
           {!yaCerrado && (
             <button
               type="button"
@@ -140,7 +139,7 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
             >
               <span className="crm-det-convertir-txt">
                 <strong>Convertir en cliente</strong>
-                <span>Crea la organización y su usuario de acceso</span>
+                <span>Crea la organización, su granja y el usuario de acceso</span>
               </span>
               <IcChevronRight size={17} />
             </button>

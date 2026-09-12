@@ -3,7 +3,7 @@ import Modal from '@shared/ui/Modal/Modal'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { ProspectoDetalle } from '../api/prospectos'
 import {
-  campoDuplicado,
+  campoSenalado,
   contrasenaSugerida,
   errorDeConversion,
   prellenarDesde,
@@ -46,7 +46,7 @@ function FormularioConversion({ prospecto, onConvertir, onCerrar }: Props) {
     } catch (problemaAlConvertir) {
       const mensaje = mensajeDeError(problemaAlConvertir, 'No se pudo convertir el prospecto.')
       setError(mensaje)
-      setCampoConflicto(campoDuplicado(mensaje))
+      setCampoConflicto(campoSenalado(mensaje))
     } finally {
       setGuardando(false)
     }
@@ -55,7 +55,7 @@ function FormularioConversion({ prospecto, onConvertir, onCerrar }: Props) {
   return (
     <Modal
       titulo="Convertir en cliente"
-      subtitulo="Se crea el propietario y su organización. Los galpones y lotes se registran después, en la visita."
+      subtitulo="Se crean el propietario, su organización y su primera granja. Los galpones y lotes se registran después, en la visita."
       onCerrar={onCerrar}
       acciones={
         <>
@@ -127,6 +127,36 @@ function FormularioConversion({ prospecto, onConvertir, onCerrar }: Props) {
           <input value={form.organizacion_nombre} onChange={(e) => cambiar('organizacion_nombre', e.target.value)} />
           <small className="modal-ayuda">La empresa cliente. De ella colgarán sus granjas y sus usuarios.</small>
         </label>
+
+        <div className="modal-fila">
+          <label className="modal-campo">
+            <span>Nombre de la granja</span>
+            <input
+              value={form.granja_nombre}
+              onChange={(e) => cambiar('granja_nombre', e.target.value)}
+              required
+              maxLength={120}
+              aria-invalid={campoConflicto === 'granja_nombre'}
+              className={campoConflicto === 'granja_nombre' ? 'crm-campo--choca' : undefined}
+            />
+            {/* Obligatorio: sin granja no hay galpones, ni lotes, ni monitoreo.
+                El cuestionario dejó de preguntarlo al recortarse a nueve pasos,
+                así que sale de la llamada. */}
+            <small className="modal-ayuda">
+              Es la finca, no la empresa: una organización puede tener varias.
+              Sin ella el cliente entra a un sistema vacío.
+            </small>
+          </label>
+          <label className="modal-campo">
+            <span>Municipio <em>(Opcional)</em></span>
+            <input
+              value={form.granja_municipio}
+              onChange={(e) => cambiar('granja_municipio', e.target.value)}
+              maxLength={80}
+            />
+            <small className="modal-ayuda">Se puede completar después, en la visita.</small>
+          </label>
+        </div>
 
         <label className="modal-campo">
           <span>Contraseña inicial</span>
