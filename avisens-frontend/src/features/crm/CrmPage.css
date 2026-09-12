@@ -289,9 +289,10 @@
   background: var(--color-primario); color: #fff;
   text-align: left; cursor: pointer;
   box-shadow: 0 4px 14px rgba(16,185,129,0.26);
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
 .crm-det-convertir:hover {
+  background: var(--color-primario-oscuro);
   transform: translateY(-1px); box-shadow: 0 7px 20px rgba(16,185,129,0.36);
 }
 .crm-det-convertir svg { flex-shrink: 0; }
