@@ -75,7 +75,8 @@ model Usuario {
   recuperaciones_solicitadas RecuperacionPassword[] @relation("RecuperacionSolicitante")
   recuperaciones_atendidas   RecuperacionPassword[] @relation("RecuperacionAdministrador")
   usuarios_galpones          UsuarioGalpon[]
-  prospectos_asesorados      Prospecto[]
+  prospectos_asesorados      Prospecto[] @relation("AsesorDelProspecto")
+  prospectos_convertidos     Prospecto[] @relation("ProspectoConvertido")
   solicitudes_pqrs           SolicitudPqrs[]
   notificaciones             Notificacion[]
   comandos_voz               ComandoVoz[]
@@ -796,6 +797,9 @@ model Prospecto {
   pregunta_actual            String?
   ultima_pregunta            String?
   asesor_asignado_id         Int?
+  usuario_convertido_id      Int?
+  resultado_cierre           String?
+  motivo_cierre              String?
   ip_origen                  String?
   user_agent                 String?
   consentimiento_habeas_data Boolean         @default(false)
@@ -803,13 +807,15 @@ model Prospecto {
   ultima_actividad           DateTime        @default(now()) @updatedAt
   fecha_finalizacion         DateTime?
 
-  asesor        Usuario?             @relation(fields: [asesor_asignado_id], references: [id])
+  asesor        Usuario?             @relation("AsesorDelProspecto", fields: [asesor_asignado_id], references: [id])
+  usuario_convertido Usuario?        @relation("ProspectoConvertido", fields: [usuario_convertido_id], references: [id])
   respuestas    RespuestaChatbot[]
   cotizaciones  Cotizacion[]
   interacciones InteraccionChatbot[]
   solicitudes   SolicitudPqrs[]
 
   @@index([asesor_asignado_id])
+  @@index([usuario_convertido_id])
   @@map("prospectos")
 }
 

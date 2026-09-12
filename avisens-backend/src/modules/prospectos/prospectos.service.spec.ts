@@ -2,9 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProspectosService } from './prospectos.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { UsuariosService } from '../usuarios/usuarios.service';
 
 describe('ProspectosService', () => {
   let service: ProspectosService;
+
+  const usuarios = { altaDeUsuario: jest.fn() };
 
   const prisma = {
     prospecto: {
@@ -26,6 +29,7 @@ describe('ProspectosService', () => {
       providers: [
         ProspectosService,
         { provide: PrismaService, useValue: prisma },
+        { provide: UsuariosService, useValue: usuarios },
       ],
     }).compile();
     service = module.get<ProspectosService>(ProspectosService);
