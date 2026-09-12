@@ -152,10 +152,21 @@
 .modal-campo input:disabled,
 .modal-campo select:disabled { background: var(--surface-subtle); opacity: 0.8; }
 
+/* Pares de campos lado a lado: Cédula + Teléfono, Granja + Municipio. Estaba
+   fijada a `1fr`, así que NUNCA llegaba a dos columnas en ninguna anchura, y
+   con `gap: 0` los campos quedaban pegados. Catorce formularios la usan.
+
+   `auto-fit` en vez de `1fr 1fr` porque hay filas de tres (umbrales, galpones,
+   lotes, curvas): con 150px de mínimo entran las tres en los 560px del modal,
+   y las de dos siguen repartiéndose a la mitad.
+
+   El hueco es solo entre columnas. Las filas ya las separa el `margin-bottom`
+   de `.modal-campo`; poner también `row-gap` daría doble espacio. */
 .modal-fila {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0 var(--space-3);
+  align-items: start;
 }
 
 .modal-desplegar {
@@ -248,6 +259,9 @@
     max-height: 94dvh;
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   }
+  /* En el móvil el modal es una hoja a pantalla completa y el operario lo usa
+     con una mano dentro del galpón: una columna, campos anchos. Antes esta
+     regla repetía el valor que ya tenía la base y no cambiaba nada. */
   .modal-fila { grid-template-columns: 1fr; }
 }
 
