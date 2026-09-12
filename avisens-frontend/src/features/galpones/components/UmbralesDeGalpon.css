@@ -1,0 +1,117 @@
+.umb-bloque { display: flex; flex-direction: column; gap: 1rem; }
+
+/* El aviso de huecos va arriba y en ámbar: no es cosmético, dice que hay
+   lecturas que no se están comparando con nada. */
+.umb-aviso {
+  padding: .85rem 1rem;
+  border-left: 3px solid var(--warning);
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  font-size: .92rem;
+  line-height: 1.45;
+}
+
+.umb-error {
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  padding: .75rem 1rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+  font-size: .9rem;
+}
+
+.umb-scroll { overflow-x: auto; }
+
+.umb-tabla { width: 100%; border-collapse: collapse; font-size: .86rem; }
+
+.umb-tabla th,
+.umb-tabla td {
+  padding: .55rem .6rem;
+  text-align: left;
+  border: 1px solid var(--border-subtle);
+  vertical-align: top;
+}
+
+.umb-tabla thead th {
+  background: var(--surface-subtle);
+  font-size: .7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.umb-semana { display: block; color: var(--text-primary); }
+.umb-dias {
+  display: block;
+  margin-top: .1rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+  font-size: .66rem;
+}
+
+.umb-variable {
+  background: var(--surface-subtle);
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.umb-faltan {
+  display: block;
+  margin-top: .15rem;
+  color: var(--warning);
+  font-size: .68rem;
+  font-weight: 600;
+  text-transform: none;
+}
+
+/* Una celda vacía tiene que verse vacía de lejos: es el hueco por el que se
+   escapa una alerta. */
+.umb-celda--vacia { background: color-mix(in srgb, var(--warning) 6%, transparent); }
+
+.umb-rango {
+  display: block;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.umb-crit {
+  display: inline-block;
+  margin-top: .2rem;
+  padding: .04rem .35rem;
+  border-radius: 999px;
+  font-size: .64rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.umb-crit--alta  { color: var(--danger);  background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.umb-crit--media { color: var(--warning); background: color-mix(in srgb, var(--warning) 14%, transparent); }
+.umb-crit--baja  { color: var(--text-secondary); background: var(--surface-subtle); }
+
+.umb-acciones { display: flex; gap: .3rem; margin-top: .3rem; }
+
+.umb-acciones button,
+.umb-definir {
+  padding: .12rem .4rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: .7rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.umb-acciones button:hover,
+.umb-definir:hover { color: var(--primary); border-color: var(--primary); }
+.umb-btn--peligro:hover { color: var(--danger) !important; border-color: var(--danger) !important; }
+
+.umb-acciones button:focus-visible,
+.umb-definir:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.umb-definir { color: var(--primary); border-style: dashed; }
+
+.umb-sin { color: var(--text-secondary); font-size: .78rem; font-style: italic; }
+
+.umb-vacio { padding: 2rem 1rem; text-align: center; color: var(--text-secondary); }
