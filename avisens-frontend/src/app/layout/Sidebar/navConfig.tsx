@@ -2,12 +2,19 @@ import type { ReactNode } from 'react'
 import {
   IcAlert,
   IcBox,
+  IcChat,
   IcClock,
   IcCoin,
   IcDoc,
   IcEye,
   IcGrid,
+  IcHome,
   IcLeaf,
+  IcNote,
+  IcRefresh,
+  IcSearch,
+  IcSeed,
+  IcSend,
   IcServer,
   IcUserCircle,
   IcUsers,
@@ -37,6 +44,9 @@ export type NavItem = NavLinkItem | NavGroupItem
 
 export type NavSection = {
   label: string
+  // El inicio de cada rol no lleva encabezado: es un solo ítem, y poner
+  // «INICIO» encima de «Panel Admin» repite lo que el propio botón ya dice.
+  sinEncabezado?: boolean
   items: NavItem[]
 }
 
@@ -87,11 +97,36 @@ const PERMISOS_RUTA: Record<string, string[]> = {
 }
 
 export const NAV_SECTIONS: NavSection[] = [
-  // La plataforma va primero y aparte. El administrador opera Avisens como
-  // producto: sus clientes, su soporte y sus listas maestras. Antes estos
-  // módulos estaban repartidos entre 'Gestión' y 'Comercial', debajo de la
-  // operación de las granjas, y el menú le contaba que era un granjero con
-  // permisos de más.
+  // El inicio del rol va primero: es a donde lleva el logo y a donde vuelve
+  // uno al perderse. Antes estaba debajo de los seis módulos de plataforma,
+  // así que para el administrador el botón de inicio era el séptimo de la
+  // lista.
+  {
+    label: 'Inicio',
+    sinEncabezado: true,
+    items: [
+      {
+        path: '/admin',
+        label: 'Panel Admin',
+        icon: <IcHome size={16} />,
+      },
+      {
+        path: '/dashboard',
+        label: 'Resumen',
+        icon: <IcGrid size={16} />,
+      },
+      {
+        path: '/mi-jornada',
+        label: 'Mi jornada',
+        icon: <IcClock size={16} />,
+      },
+    ],
+  },
+  // La plataforma va aparte. El administrador opera Avisens como producto:
+  // sus clientes, su soporte y sus listas maestras. Antes estos módulos
+  // estaban repartidos entre 'Gestión' y 'Comercial', debajo de la operación
+  // de las granjas, y el menú le contaba que era un granjero con permisos de
+  // más.
   {
     label: 'Plataforma',
     items: [
@@ -108,47 +143,30 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         path: '/solicitudes-pqrs',
         label: 'Soporte',
-        icon: <IcAlert size={16} />,
+        icon: <IcChat size={16} />,
       },
       {
         path: '/recuperaciones-password',
         label: 'Contraseñas',
-        icon: <IcUserCircle size={16} />,
+        icon: <IcRefresh size={16} />,
       },
       {
         path: '/catalogos',
         label: 'Catálogos',
-        icon: <IcBox size={16} />,
+        icon: <IcNote size={16} />,
       },
       {
         path: '/auditoria',
         label: 'Auditoría',
-        icon: <IcDoc size={16} />,
+        icon: <IcSearch size={16} />,
       },
     ],
   },
+  // Producción y Monitoreo eran dos secciones de dos ítems cada una: más
+  // encabezado que contenido, y para el operario tres títulos sobre cuatro
+  // botones. Es todo lo mismo —lo que pasa en la granja— y va junto.
   {
-    label: 'Inicio',
-    items: [
-      {
-        path: '/admin',
-        label: 'Panel Admin',
-        icon: <IcServer size={16} />,
-      },
-      {
-        path: '/dashboard',
-        label: 'Resumen',
-        icon: <IcGrid size={16} />,
-      },
-      {
-        path: '/mi-jornada',
-        label: 'Mi jornada',
-        icon: <IcClock size={16} />,
-      },
-    ],
-  },
-  {
-    label: 'Producción',
+    label: 'Granja',
     items: [
       {
         path: '/granjas',
@@ -160,11 +178,6 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Bitácora',
         icon: <IcDoc size={16} />,
       },
-    ],
-  },
-  {
-    label: 'Monitoreo',
-    items: [
       {
         path: '/monitoreo',
         label: 'Monitoreo',
@@ -177,13 +190,26 @@ export const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
+  // Se llamaba 'Operación', pero dentro no hay nada operativo: es el papeleo
+  // de la granja. Los tres primeros son una cadena —lo que hay, lo que se
+  // pide, a quién— y están en ese orden a propósito.
   {
-    label: 'Operación',
+    label: 'Administración',
     items: [
       {
         path: '/inventario',
         label: 'Bodega',
         icon: <IcBox size={16} />,
+      },
+      {
+        path: '/ordenes-compra',
+        label: 'Compras',
+        icon: <IcSend size={16} />,
+      },
+      {
+        path: '/proveedores',
+        label: 'Proveedores',
+        icon: <IcSeed size={16} />,
       },
       {
         path: '/finanzas',
@@ -194,16 +220,6 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/usuarios',
         label: 'Personas',
         icon: <IcUserCircle size={16} />,
-      },
-      {
-        path: '/proveedores',
-        label: 'Proveedores',
-        icon: <IcUsers size={16} />,
-      },
-      {
-        path: '/ordenes-compra',
-        label: 'Compras',
-        icon: <IcDoc size={16} />,
       },
     ],
   },
