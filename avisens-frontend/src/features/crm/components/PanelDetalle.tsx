@@ -126,7 +126,12 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
               y PQRS: había que bajar hasta el fondo para encontrarlo. Va aquí,
               pegado al estado y al puntaje, que es lo que el asesor mira para
               decidir si esta persona ya merece el paso. Y dice lo que hace:
-              nadie adivinaba que el botón crea una cuenta. */}
+              nadie adivinaba que el botón crea una cuenta.
+
+              El subtítulo nombra solo lo que `convertir()` crea de verdad:
+              organización y usuario. La granja NO se crea —`granja.create`
+              vive únicamente en granjas.service— así que el cliente entra a
+              un sistema vacío y hay que darle de alta la granja a mano. */}
           {!yaCerrado && (
             <button
               type="button"
@@ -135,7 +140,7 @@ function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, 
             >
               <span className="crm-det-convertir-txt">
                 <strong>Convertir en cliente</strong>
-                <span>Crea la organización, la granja y su usuario de acceso</span>
+                <span>Crea la organización y su usuario de acceso</span>
               </span>
               <IcChevronRight size={17} />
             </button>
