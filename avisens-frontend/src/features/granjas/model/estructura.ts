@@ -2,7 +2,7 @@
 // nada al servidor vive aquí, puro y probado, para que los componentes solo
 // se ocupen de pintar.
 
-import type { EstadoSensorVista, SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import { tieneLecturaUtil, type EstadoSensorVista, type SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 
 export { diasDeVida } from '@shared/utils/fechas'
 
@@ -26,7 +26,7 @@ export function estadoOperativoDeGalpon(
   if (sensores.length === 0) return 'sin_datos'
   if (sensores.some((sensor) => sensor.estado === 'critico')) return 'alerta'
   if (sensores.some((sensor) => sensor.estado === 'advertencia')) return 'atencion'
-  if (sensores.every((sensor) => sensor.estado === 'offline')) return 'sin_datos'
+  if (sensores.every((sensor) => !tieneLecturaUtil(sensor.estado))) return 'sin_datos'
   return 'normal'
 }
 
@@ -35,6 +35,7 @@ export type ConteoSensores = {
   total: number
   enLinea: number
   offline: number
+  noDisponible: number
   conAlerta: number
 }
 
@@ -42,8 +43,9 @@ export function contarSensores(sensores: SensorVista[]): ConteoSensores {
   const esAlerta = (estado: EstadoSensorVista) => estado === 'critico' || estado === 'advertencia'
   return {
     total: sensores.length,
-    enLinea: sensores.filter((sensor) => sensor.estado !== 'offline').length,
+    enLinea: sensores.filter((sensor) => tieneLecturaUtil(sensor.estado)).length,
     offline: sensores.filter((sensor) => sensor.estado === 'offline').length,
+    noDisponible: sensores.filter((sensor) => sensor.estado === 'lectura_no_disponible').length,
     conAlerta: sensores.filter((sensor) => esAlerta(sensor.estado)).length,
   }
 }

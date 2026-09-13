@@ -16,6 +16,7 @@ import { ROLES } from '../../common/auth/roles';
 import { MedicionesService } from './mediciones.service';
 import { CreateMedicionDto } from './dto/create-medicion.dto';
 import { QueryMedicionesDto } from './dto/query-mediciones.dto';
+import { QueryUltimasLecturasDto } from './dto/query-ultimas-lecturas.dto';
 
 interface AuthRequest extends Request {
   user: { id: number; email: string; rol: string };
@@ -43,5 +44,13 @@ export class MedicionesController {
   })
   listar(@Query() query: QueryMedicionesDto, @Req() req: AuthRequest) {
     return this.medicionesService.listar(query, req.user);
+  }
+  @Get('ultimas')
+  @ApiOperation({
+    summary:
+      'Última lectura de cada sensor del alcance (opcional: acotar con galpon_id)',
+  })
+  ultimas(@Query() query: QueryUltimasLecturasDto, @Req() req: AuthRequest) {
+    return this.medicionesService.ultimasPorSensores(req.user, query.galpon_id);
   }
 }
