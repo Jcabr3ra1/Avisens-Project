@@ -455,7 +455,7 @@ model Lote {
   estado                 EstadoLote @default(activo)
 
   galpon    Galpon    @relation(fields: [galpon_id], references: [id])
-  proveedor Proveedor? @relation(fields: [proveedor_id], references: [id])
+  proveedor Proveedor? @relation(fields: [proveedor_id], references: [id], onDelete: Restrict)
 
   pesajes                 Pesaje[]
   registros_mortalidad    RegistroMortalidad[]
@@ -816,6 +816,7 @@ model Prospecto {
 
   @@index([asesor_asignado_id])
   @@index([usuario_convertido_id])
+  @@index([whatsapp_id])
   @@map("prospectos")
 }
 
