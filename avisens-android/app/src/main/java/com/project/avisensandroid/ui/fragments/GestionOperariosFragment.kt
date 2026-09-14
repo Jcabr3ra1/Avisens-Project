@@ -10,7 +10,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import kotlin.math.roundToInt
+import android.widget.ArrayAdapter
 import android.widget.LinearLayout
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -18,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputEditText
 import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
+import com.project.avisensandroid.model.ActualizarEstadoUsuarioRequest
 import com.project.avisensandroid.model.AsignarGalponRequest
 import com.project.avisensandroid.model.CreateUsuarioRequest
 import com.project.avisensandroid.model.GranjaResponse
@@ -222,7 +225,6 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 background = resources.getDrawable(R.drawable.bg_card_operario, null)
             }
 
-            // Encabezado: avatar + identidad + estado
             val header = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = android.view.Gravity.CENTER_VERTICAL
@@ -245,22 +247,19 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(12), 0, dp(8), 0)
             }
-            val name = TextView(requireContext()).apply {
+            identity.addView(TextView(requireContext()).apply {
                 text = usuario.nombre_completo
                 textSize = 17f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.parseColor("#183C2E"))
                 maxLines = 2
-            }
-            identity.addView(name, LinearLayout.LayoutParams(-1, -2))
-
-            val role = TextView(requireContext()).apply {
+            })
+            identity.addView(TextView(requireContext()).apply {
                 text = "Operario"
                 textSize = 11f
                 setTextColor(Color.parseColor("#2F8B5E"))
                 setPadding(0, dp(3), 0, 0)
-            }
-            identity.addView(role)
+            })
             header.addView(identity, LinearLayout.LayoutParams(0, -2, 1f))
 
             val status = TextView(requireContext()).apply {
@@ -268,9 +267,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 textSize = 11f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = android.view.Gravity.CENTER
-                setTextColor(
-                    Color.parseColor(if (usuario.activo) "#28744D" else "#A34A4A")
-                )
+                setTextColor(Color.parseColor(if (usuario.activo) "#28744D" else "#A34A4A"))
                 setPadding(dp(10), dp(6), dp(10), dp(6))
                 background = GradientDrawable().apply {
                     setColor(Color.parseColor(if (usuario.activo) "#E8F5ED" else "#FBECEC"))
@@ -280,17 +277,15 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             header.addView(status, LinearLayout.LayoutParams(-2, dp(30)))
             card.addView(header)
 
-            // Datos principales
             val info = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(60), dp(12), 0, 0)
             }
             info.addView(infoRow("✉", usuario.email))
             info.addView(infoRow("ID", "Cédula: ${usuario.cedula}"))
-            info.addView(infoRow("☎", "${usuario.telefono ?: "Teléfono no registrado"}"))
+            info.addView(infoRow("☎", usuario.telefono ?: "Teléfono no registrado"))
             card.addView(info)
 
-            // Separador
             card.addView(View(requireContext()).apply {
                 setBackgroundColor(Color.parseColor("#E7EEE9"))
             }, LinearLayout.LayoutParams(-1, dp(1)).apply {
@@ -298,46 +293,44 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 bottomMargin = dp(12)
             })
 
-            val assignmentHeader = LinearLayout(requireContext()).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
-            }
             val assignmentTitle = TextView(requireContext()).apply {
                 text = "Granjas asignadas"
                 textSize = 14f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.parseColor("#1F5C42"))
             }
-            assignmentHeader.addView(assignmentTitle, LinearLayout.LayoutParams(0, -2, 1f))
-            val assignButton = com.google.android.material.button.MaterialButton(
-                requireContext()
-            ).apply {
-                text = "＋ Asignar"
-                setAllCaps(false)
-                textSize = 11f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor("#2F8B5E"))
-                setPadding(dp(8), 0, dp(8), 0)
-                minWidth = 0
-                minimumWidth = 0
-                minHeight = 0
-                minimumHeight = 0
-                background = GradientDrawable().apply {
-                    setColor(Color.TRANSPARENT)
-                    cornerRadius = dp(10).toFloat()
-                    setStroke(dp(1), Color.parseColor("#2F8B5E"))
-                }
-                setOnClickListener { mostrarDialogAsignarGranja(usuario.id) }
-            }
-            assignmentHeader.addView(assignButton, LinearLayout.LayoutParams(dp(96), dp(36)))
-            card.addView(assignmentHeader)
+            card.addView(assignmentTitle)
 
             val assignments = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(0, dp(8), 0, 0)
+                setPadding(0, dp(7), 0, 0)
             }
             card.addView(assignments)
-            cargarAsignaciones(usuario.id, assignments)
+            cargarAsignaciones(usuario.id, assignments, false)
+
+            val editButton = com.google.android.material.button.MaterialButton(requireContext()).apply {
+                text = "✎  Editar"
+                setAllCaps(false)
+                textSize = 12f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.WHITE)
+                minHeight = 0
+                minimumHeight = 0
+                minWidth = 0
+                minimumWidth = 0
+                setPadding(dp(10), 0, dp(10), 0)
+                backgroundTintList = android.content.res.ColorStateList.valueOf(
+                    Color.parseColor("#2F8B5E")
+                )
+                cornerRadius = dp(10)
+                rippleColor = android.content.res.ColorStateList.valueOf(
+                    Color.parseColor("#245F42")
+                )
+                setOnClickListener { mostrarDialogEditarOperario(usuario) }
+            }
+            card.addView(editButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
+                topMargin = dp(12)
+            })
 
             val params = LinearLayout.LayoutParams(-1, -2).apply {
                 bottomMargin = dp(14)
@@ -373,7 +366,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
     private fun cargarAsignaciones(
         usuarioId: Int,
-        contenedor: LinearLayout
+        contenedor: LinearLayout,
+        mostrarQuitar: Boolean = true
     ) {
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -462,7 +456,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                         agregarAsignacionGranja(
                             usuarioId,
                             grupo,
-                            contenedor
+                            contenedor,
+                            mostrarQuitar
                         )
                     }
                 }
@@ -497,7 +492,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     private fun agregarAsignacionGranja(
         usuarioId: Int,
         asignacionesDeGranja: List<UsuarioGalponResponse>,
-        contenedor: LinearLayout
+        contenedor: LinearLayout,
+        mostrarQuitar: Boolean = true
     ) {
 
         val granja =
@@ -606,17 +602,17 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 }
             }
 
-        fila.addView(
-            quitar,
-            LinearLayout.LayoutParams(
-                dp(96),
-                dp(36)
+        if (mostrarQuitar) {
+            fila.addView(
+                quitar,
+                LinearLayout.LayoutParams(
+                    dp(96),
+                    dp(36)
+                )
             )
-        )
+        }
 
-        contenedor.addView(
-            fila
-        )
+        contenedor.addView(fila)
     }
 
     // ============================================================
@@ -873,6 +869,249 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 }
             }
             .show()
+    }
+
+    // ============================================================
+    // DIALOG EDITAR OPERARIO
+    // ============================================================
+
+    private fun mostrarDialogEditarOperario(usuario: UsuarioGestionResponse) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_editar_operario, null)
+        val tvNombre = dialogView.findViewById<TextView>(R.id.tvNombreEditarOperario)
+        val tvDatos = dialogView.findViewById<TextView>(R.id.tvDatosEditarOperario)
+        val switchActivo = dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchUsuarioActivo)
+        val container = dialogView.findViewById<LinearLayout>(R.id.containerGranjasEditar)
+        val spinnerGranjas = dialogView.findViewById<Spinner>(R.id.spinnerGranjasEditar)
+        val btnCancelar = dialogView.findViewById<View>(R.id.btnCancelarEditarOperario)
+        val btnGuardar = dialogView.findViewById<View>(R.id.btnGuardarEditarOperario)
+
+        tvNombre.text = usuario.nombre_completo
+        tvDatos.text = "${usuario.email}  •  Cédula: ${usuario.cedula}"
+        switchActivo.isChecked = usuario.activo
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .create()
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.92).toInt(),
+            (resources.displayMetrics.heightPixels * 0.82).toInt()
+        )
+
+        fun cargarGranjasDelDialog() {
+            container.removeAllViews()
+            cargarAsignaciones(usuario.id, container, true)
+            cargarGranjasDisponiblesEnSpinner(usuario.id, spinnerGranjas)
+        }
+
+        // Al seleccionar una granja, se asigna automáticamente.
+        spinnerGranjas.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: android.widget.AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                val granjasDisponibles = spinnerGranjas.tag as? List<GranjaResponse> ?: return
+                if (position <= 0 || position - 1 !in granjasDisponibles.indices) return
+
+                val granjaSeleccionada = granjasDisponibles[position - 1]
+
+                // Volvemos al placeholder mientras termina la petición.
+                spinnerGranjas.isEnabled = false
+                asignarGranjaEnDialog(usuario.id, granjaSeleccionada) {
+                    cargarGranjasDelDialog()
+                    cargarOperarios()
+                }
+            }
+
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+        }
+
+        cargarGranjasDelDialog()
+
+        btnCancelar.setOnClickListener { dialog.dismiss() }
+
+        btnGuardar.setOnClickListener {
+            val nuevoEstado = switchActivo.isChecked
+            if (nuevoEstado == usuario.activo) {
+                dialog.dismiss()
+                return@setOnClickListener
+            }
+
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val response = RetrofitClient.api.actualizarEstadoUsuario(
+                        usuario.id,
+                        ActualizarEstadoUsuarioRequest(activo = nuevoEstado)
+                    )
+
+                    if (response.isSuccessful) {
+                        Toast.makeText(
+                            requireContext(),
+                            if (nuevoEstado) "Usuario activado" else "Usuario desactivado",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        dialog.dismiss()
+                        cargarOperarios()
+                    } else {
+                        switchActivo.isChecked = usuario.activo
+                        mostrarError("No se pudo actualizar el estado. Código: ${response.code()}")
+                    }
+                } catch (e: Exception) {
+                    switchActivo.isChecked = usuario.activo
+                    mostrarError("Error al actualizar el estado: ${e.message ?: "sin detalle"}")
+                }
+            }
+        }
+    }
+
+    private fun cargarGranjasDisponiblesEnSpinner(
+        usuarioId: Int,
+        spinner: Spinner
+    ) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val asignacionesResponse =
+                    RetrofitClient.api.listarGalponesAsignados(
+                        usuarioId,
+                        page = 1,
+                        limit = 100
+                    )
+
+                val granjasResponse =
+                    RetrofitClient.api.listarGranjas(
+                        page = 1,
+                        limit = 100
+                    )
+
+                if (!asignacionesResponse.isSuccessful || !granjasResponse.isSuccessful) {
+                    spinner.isEnabled = false
+                    spinner.adapter = crearAdapterGranjas(listOf("No se pudieron cargar las granjas"))
+                    spinner.tag = emptyList<GranjaResponse>()
+                    return@launch
+                }
+
+                val idsGranjasAsignadas =
+                    asignacionesResponse.body()
+                        ?.data
+                        .orEmpty()
+                        .filter { it.activa }
+                        .map { it.galpon.granja.id }
+                        .toSet()
+
+                val granjasDisponibles =
+                    granjasResponse.body()
+                        ?.data
+                        .orEmpty()
+                        .filter { it.activa && it.id !in idsGranjasAsignadas }
+
+                spinner.tag = granjasDisponibles
+
+                val nombres = buildList {
+                    add("Selecciona una granja")
+                    addAll(granjasDisponibles.map { it.nombre })
+                }
+
+                spinner.adapter = crearAdapterGranjas(nombres)
+                spinner.isEnabled = granjasDisponibles.isNotEmpty()
+
+            } catch (e: Exception) {
+                spinner.isEnabled = false
+                spinner.adapter = crearAdapterGranjas(listOf("No se pudieron cargar las granjas"))
+                spinner.tag = emptyList<GranjaResponse>()
+            }
+        }
+    }
+
+    private fun crearAdapterGranjas(opciones: List<String>): ArrayAdapter<String> {
+        return object : ArrayAdapter<String>(
+            requireContext(),
+            R.layout.spinner_item,
+            opciones
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                view.setBackgroundColor(Color.TRANSPARENT)
+                view.setPadding(0, 0, 0, 0)
+                return view
+            }
+
+            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getDropDownView(position, convertView, parent)
+                view.setBackgroundResource(R.drawable.bg_spinner_dropdown)
+                view.setPadding(dp(14), dp(10), dp(14), dp(10))
+                return view
+            }
+        }.apply {
+            setDropDownViewResource(R.layout.spinner_dropdown_item)
+        }
+    }
+
+    private fun asignarGranjaEnDialog(
+        usuarioId: Int,
+        granja: GranjaResponse,
+        alTerminar: () -> Unit
+    ) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val responseGalpones =
+                    RetrofitClient.api.listarGalpones(
+                        page = 1,
+                        limit = 100
+                    )
+
+                if (!responseGalpones.isSuccessful) {
+                    mostrarError(
+                        "No se pudieron cargar los galpones de la granja. Código: ${responseGalpones.code()}"
+                    )
+                    return@launch
+                }
+
+                val galponesDeGranja =
+                    responseGalpones.body()
+                        ?.data
+                        .orEmpty()
+                        .filter { it.activo && it.granja.id == granja.id }
+
+                if (galponesDeGranja.isEmpty()) {
+                    mostrarError(
+                        "\"${granja.nombre}\" todavía no tiene galpones activos. Crea un galpón ahí antes de asignarla."
+                    )
+                    return@launch
+                }
+
+                var fallos = 0
+
+                galponesDeGranja.forEach { galpon ->
+                    val response = RetrofitClient.api.asignarGalpon(
+                        usuarioId,
+                        AsignarGalponRequest(galpon_id = galpon.id)
+                    )
+                    if (!response.isSuccessful) fallos++
+                }
+
+                if (fallos == 0) {
+                    Toast.makeText(
+                        requireContext(),
+                        "${granja.nombre} asignada correctamente.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    alTerminar()
+                } else {
+                    mostrarError(
+                        "Se asignó la granja, pero $fallos galpón(es) fallaron."
+                    )
+                    alTerminar()
+                }
+            } catch (e: Exception) {
+                mostrarError(
+                    "Error al asignar la granja: ${e.message ?: "sin detalle"}"
+                )
+            }
+        }
     }
 
     // ============================================================

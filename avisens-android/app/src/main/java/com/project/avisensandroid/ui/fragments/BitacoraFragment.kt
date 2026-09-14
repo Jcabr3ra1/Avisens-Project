@@ -16,6 +16,7 @@ import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.Po06BitacoraMortalidadOpBinding
 import com.project.avisensandroid.model.RegistroMortalidadResponse
 import com.project.avisensandroid.ui.MainActivity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class BitacoraFragment : BaseBottomNavFragment() {
@@ -109,6 +110,10 @@ class BitacoraFragment : BaseBottomNavFragment() {
 
                 mostrarRegistros(registrosFiltrados)
 
+            } catch (e: CancellationException) {
+                // La cancelación del job es normal cuando el fragment sale de pantalla.
+                // No debe mostrarse como un error al usuario.
+                throw e
             } catch (e: Exception) {
                 if (_binding != null) {
                     Toast.makeText(

@@ -19,6 +19,7 @@ import com.project.avisensandroid.model.CreateUsuarioRequest
 import com.project.avisensandroid.model.UsuarioGestionResponse
 import com.project.avisensandroid.model.RolCatalogoResponse
 import com.project.avisensandroid.model.AsignarGalponRequest
+import com.project.avisensandroid.model.ActualizarEstadoUsuarioRequest
 import com.project.avisensandroid.model.UsuarioGalponResponse
 import com.project.avisensandroid.model.UserResponse
 import retrofit2.Response
@@ -65,6 +66,12 @@ interface ApiService {
 
     @GET("v1/usuarios/catalogos/roles")
     suspend fun listarRolesUsuarios(): Response<List<RolCatalogoResponse>>
+
+    @PATCH("v1/usuarios/{id}")
+    suspend fun actualizarEstadoUsuario(
+        @Path("id") usuarioId: Int,
+        @Body request: ActualizarEstadoUsuarioRequest
+    ): Response<UsuarioGestionResponse>
 
     @POST("v1/usuarios/{id}/galpones")
     suspend fun asignarGalpon(
