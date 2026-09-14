@@ -25,6 +25,21 @@ import { ZonasGalponModule } from '../src/modules/zonas-galpon/zonas-galpon.modu
 import { AnalisisBioacusticoModule } from '../src/modules/analisis-bioacustico/analisis-bioacustico.module';
 import { AnalisisVisionModule } from '../src/modules/analisis-vision/analisis-vision.module';
 import { UmbralesModule } from '../src/modules/umbrales/umbrales.module';
+import { MedicionesModule } from '../src/modules/mediciones/mediciones.module';
+import { AlertasService } from '../src/modules/alertas/alertas.service';
+
+// main.ts aplica este mismo parche en bootstrap(); esta suite arma su propia
+// app con Test.createTestingModule() y nunca pasa por ahi. Sin esto, una
+// respuesta HTTP con un id BigInt (Medicion.id) revienta con
+// "Do not know how to serialize a BigInt" al serializar el JSON.
+declare global {
+  interface BigInt {
+    toJSON(): string;
+  }
+}
+BigInt.prototype.toJSON = function (this: bigint): string {
+  return this.toString();
+};
 
 describe('Núcleo multi-tenant (e2e)', () => {
   let app: INestApplication;
@@ -67,6 +82,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         AnalisisBioacusticoModule,
         AnalisisVisionModule,
         UmbralesModule,
+        MedicionesModule,
       ],
     }).compile();
     app = modulo.createNestApplication();
@@ -610,5 +626,49 @@ describe('Núcleo multi-tenant (e2e)', () => {
         criticidad: 'alta',
       })
       .expect(409);
+  });
+
+  describe('POST /mediciones — fallo de evaluarLectura no rompe el registro', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('la medición se guarda y la respuesta trae la advertencia genérica', async () => {
+      jest
+        .spyOn(AlertasService.prototype, 'evaluarLectura')
+        .mockRejectedValueOnce(new Error('fallo simulado'));
+
+      const respuesta = await request(servidor)
+        .post('/v1/mediciones')
+        .set('Authorization', `Bearer ${tokenPropietario}`)
+        .send({ sensor_id: ids.sensor, valor: 24.5 })
+        .expect(201);
+
+      const cuerpo = JSON.parse(respuesta.text) as {
+        sensor_id: number;
+        valor: number;
+        advertencia_evaluacion?: string;
+      };
+      expect(cuerpo.advertencia_evaluacion).toBe(
+        'No se pudo completar el procesamiento de alertas para esta lectura',
+      );
+      expect(cuerpo.sensor_id).toBe(ids.sensor);
+      expect(cuerpo.valor).toBe(24.5);
+
+      await expect(
+        prisma.medicion.count({
+          where: { sensor_id: ids.sensor, valor: 24.5 },
+        }),
+      ).resolves.toBe(1);
+    });
+
+    it('sin fallo (evaluarLectura real, sin umbral configurado), la respuesta no trae advertencia', async () => {
+      const respuesta = await request(servidor)
+        .post('/v1/mediciones')
+        .set('Authorization', `Bearer ${tokenPropietario}`)
+        .send({ sensor_id: ids.sensor, valor: 25 })
+        .expect(201);
+
+      const cuerpo = JSON.parse(respuesta.text) as Record<string, unknown>;
+      expect(cuerpo.advertencia_evaluacion).toBeUndefined();
+    });
   });
 });
