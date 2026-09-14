@@ -45,3 +45,28 @@ export async function listarTodasLasMediciones(
 ): Promise<Medicion[]> {
   return listarTodasLasPaginas<Medicion>('/mediciones', { ...query })
 }
+
+export interface UltimaLecturaSensor {
+  sensor_id: number
+  galpon_id: number
+  codigo: string
+  tipo: string
+  unidad_medida: string
+  estado_sensor: string
+  ultima_lectura: {
+    valor: number
+    fecha_hora: string
+    calidad: string
+    antiguedad_segundos: number
+  } | null
+}
+
+interface RespuestaUltimasLecturas {
+  generado_en: string
+  sensores: UltimaLecturaSensor[]
+}
+
+export async function listarUltimasLecturas(): Promise<UltimaLecturaSensor[]> {
+  const { data } = await api.get<RespuestaUltimasLecturas>('/mediciones/ultimas')
+  return data.sensores
+}

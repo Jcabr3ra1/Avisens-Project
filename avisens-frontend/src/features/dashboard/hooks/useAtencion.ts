@@ -36,6 +36,7 @@ export function useAtencion({ alertas, galponId, indicadores, comparacion }: Arg
       (s) => s.estado === 'critico' || s.estado === 'advertencia',
     ).length
     const offline = sensores.filter((s) => s.estado === 'offline').length
+    const noDisponible = sensores.filter((s) => s.estado === 'lectura_no_disponible').length
 
     const mortalidadHoy = indicadores[0]?.mortalidadAcumuladaPct ?? null
     const mortalidadAyer = indicadores[1]?.mortalidadAcumuladaPct ?? null
@@ -51,10 +52,10 @@ export function useAtencion({ alertas, galponId, indicadores, comparacion }: Arg
       },
       {
         id: 'sensores',
-        tono: tonoPorSensores(fueraDeRango, offline),
+        tono: tonoPorSensores(fueraDeRango, offline, noDisponible),
         valor: String(sensores.length),
         etiqueta: sensores.length === 1 ? 'sensor' : 'sensores',
-        detalle: detallePorSensores(fueraDeRango, offline),
+        detalle: detallePorSensores(fueraDeRango, offline, noDisponible),
         destino: '/monitoreo',
       },
       {
