@@ -504,10 +504,10 @@ describe('Núcleo multi-tenant (e2e)', () => {
   });
 
   it('el indice parcial rechaza una segunda version vigente de la misma combinacion', async () => {
-    // Bypasea el servicio a proposito: UmbralesService.crear() nunca
-    // produce dos versiones vigentes a la vez (siempre usa version 1),
-    // asi que la unica forma de ejercer el indice parcial nuevo es
-    // insertar directo con Prisma dos versiones distintas.
+    // Bypasea el servicio a proposito: esta prueba busca el indice de la
+    // base, no el comportamiento de crear(). Insertar directo con Prisma
+    // dos versiones distintas es la unica forma de aislar la garantia de
+    // "un solo vigente" de las protecciones que ya aplica el servicio.
     const primero = await prisma.umbralAmbiental.create({
       data: {
         galpon_id: ids.galpones[0],
