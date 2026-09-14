@@ -24,6 +24,7 @@ import { MovimientosInventarioModule } from '../src/modules/movimientos-inventar
 import { ZonasGalponModule } from '../src/modules/zonas-galpon/zonas-galpon.module';
 import { AnalisisBioacusticoModule } from '../src/modules/analisis-bioacustico/analisis-bioacustico.module';
 import { AnalisisVisionModule } from '../src/modules/analisis-vision/analisis-vision.module';
+import { UmbralesModule } from '../src/modules/umbrales/umbrales.module';
 
 describe('Núcleo multi-tenant (e2e)', () => {
   let app: INestApplication;
@@ -44,6 +45,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
     zonas: [] as number[],
     analisisBioacustico: [] as number[],
     analisisVision: [] as number[],
+    umbrales: [] as number[],
   };
   const sufijo = `${Date.now()}-${process.pid}`;
   const password = 'Prueba-e2e-123';
@@ -64,6 +66,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         ZonasGalponModule,
         AnalisisBioacusticoModule,
         AnalisisVisionModule,
+        UmbralesModule,
       ],
     }).compile();
     app = modulo.createNestApplication();
@@ -237,6 +240,9 @@ describe('Núcleo multi-tenant (e2e)', () => {
       await prisma.dispositivo.deleteMany({ where: { id: ids.dispositivo } });
       await prisma.catalogoSensor.deleteMany({
         where: { id: ids.catalogoSensor },
+      });
+      await prisma.umbralAmbiental.deleteMany({
+        where: { id: { in: ids.umbrales } },
       });
       await prisma.galpon.deleteMany({ where: { id: { in: ids.galpones } } });
       await prisma.granja.deleteMany({ where: { id: { in: ids.granjas } } });
@@ -495,5 +501,114 @@ describe('Núcleo multi-tenant (e2e)', () => {
         },
       }),
     ).resolves.toBe(1);
+  });
+
+  it('el indice parcial rechaza una segunda version vigente de la misma combinacion', async () => {
+    // Bypasea el servicio a proposito: UmbralesService.crear() nunca
+    // produce dos versiones vigentes a la vez (siempre usa version 1),
+    // asi que la unica forma de ejercer el indice parcial nuevo es
+    // insertar directo con Prisma dos versiones distintas.
+    const primero = await prisma.umbralAmbiental.create({
+      data: {
+        galpon_id: ids.galpones[0],
+        variable: 'temperatura',
+        semana_vida: 77,
+        valor_minimo: 18,
+        valor_maximo: 24,
+        unidad: 'C',
+        criticidad: 'alta',
+        version: 1,
+        vigente: true,
+      },
+    });
+    ids.umbrales.push(primero.id);
+
+    await expect(
+      prisma.umbralAmbiental.create({
+        data: {
+          galpon_id: ids.galpones[0],
+          variable: 'temperatura',
+          semana_vida: 77,
+          valor_minimo: 19,
+          valor_maximo: 25,
+          unidad: 'C',
+          criticidad: 'alta',
+          version: 2,
+          vigente: true,
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'P2002' });
+  });
+
+  it('crear -> jubilar -> crear sube de version en vez de chocar, y sigue rechazando mientras hay vigente', async () => {
+    const combinacion = {
+      galpon_id: ids.galpones[0],
+      variable: 'humedad',
+      semana_vida: 88,
+    };
+
+    const primero = await request(servidor)
+      .post('/v1/umbrales')
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .send({
+        ...combinacion,
+        valor_minimo: 55,
+        valor_maximo: 70,
+        unidad: '%',
+        criticidad: 'media',
+      })
+      .expect(201);
+    const primerCuerpo = JSON.parse(primero.text) as {
+      id: number;
+      version: number;
+      vigente: boolean;
+    };
+    ids.umbrales.push(primerCuerpo.id);
+    expect(primerCuerpo).toMatchObject({ version: 1, vigente: true });
+
+    await request(servidor)
+      .delete(`/v1/umbrales/${primerCuerpo.id}`)
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .expect(200);
+
+    const segundo = await request(servidor)
+      .post('/v1/umbrales')
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .send({
+        ...combinacion,
+        valor_minimo: 50,
+        valor_maximo: 75,
+        unidad: '%',
+        criticidad: 'alta',
+      })
+      .expect(201);
+    const segundoCuerpo = JSON.parse(segundo.text) as {
+      id: number;
+      version: number;
+      vigente: boolean;
+    };
+    ids.umbrales.push(segundoCuerpo.id);
+    expect(segundoCuerpo).toMatchObject({ version: 2, vigente: true });
+
+    const primeroTrasJubilar = await request(servidor)
+      .get(`/v1/umbrales/${primerCuerpo.id}`)
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .expect(200);
+    expect(JSON.parse(primeroTrasJubilar.text)).toMatchObject({
+      version: 1,
+      vigente: false,
+    });
+
+    await request(servidor)
+      .post('/v1/umbrales')
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .send({
+        ...combinacion,
+        valor_minimo: 50,
+        valor_maximo: 75,
+        unidad: '%',
+        criticidad: 'alta',
+      })
+      .expect(409);
   });
 });
