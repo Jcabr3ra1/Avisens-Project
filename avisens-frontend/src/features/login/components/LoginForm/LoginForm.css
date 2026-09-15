@@ -124,9 +124,22 @@
   padding: 0.6rem 0.75rem;
   color: var(--danger3);
   background: rgba(239, 68, 68, 0.08);
-  border-left: 3px solid var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
   border-radius: 6px;
   font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.lf-error p {
+  margin: 0;
+}
+
+.lf-error a {
+  display: inline-block;
+  margin-top: 0.35rem;
+  color: inherit;
+  font-weight: 700;
+  text-underline-offset: 0.16em;
 }
 
 /* ---------- Botón principal ---------- */
@@ -190,7 +203,8 @@
 .lf-input:focus-visible,
 .lf-eye-btn:focus-visible,
 .lf-btn-primary:focus-visible,
-.lf-back a:focus-visible {
+.lf-back a:focus-visible,
+.lf-error a:focus-visible {
   outline: 2px solid var(--avisens-deep);
   outline-offset: 2px;
 }
