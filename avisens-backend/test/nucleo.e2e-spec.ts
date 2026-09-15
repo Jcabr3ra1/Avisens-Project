@@ -28,9 +28,9 @@ import { UmbralesModule } from '../src/modules/umbrales/umbrales.module';
 import { MedicionesModule } from '../src/modules/mediciones/mediciones.module';
 import { AlertasService } from '../src/modules/alertas/alertas.service';
 
-// main.ts aplica este mismo parche en bootstrap(); esta suite arma su propia
-// app con Test.createTestingModule() y nunca pasa por ahi. Sin esto, una
-// respuesta HTTP con un id BigInt (Medicion.id) revienta con
+// main.ts declara este mismo parche antes de bootstrap(); esta suite arma su
+// propia app con Test.createTestingModule() y nunca pasa por ese archivo.
+// Sin esto, una respuesta HTTP con un id BigInt (Medicion.id) revienta con
 // "Do not know how to serialize a BigInt" al serializar el JSON.
 declare global {
   interface BigInt {
