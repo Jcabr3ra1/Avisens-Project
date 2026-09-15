@@ -671,4 +671,138 @@ describe('Núcleo multi-tenant (e2e)', () => {
       expect(cuerpo.advertencia_evaluacion).toBeUndefined();
     });
   });
+
+  describe('exclusividad de alertas automáticas por sensor', () => {
+    afterEach(async () => {
+      const alertasDelSensor = await prisma.alerta.findMany({
+        where: { sensor_id: ids.sensor },
+        select: { id: true },
+      });
+      await prisma.notificacion.deleteMany({
+        where: {
+          referencia_tipo: 'alerta',
+          referencia_id: { in: alertasDelSensor.map((a) => a.id) },
+        },
+      });
+      await prisma.alerta.deleteMany({ where: { sensor_id: ids.sensor } });
+      await prisma.umbralAmbiental.deleteMany({
+        where: {
+          galpon_id: ids.galpones[0],
+          variable: 'temperatura',
+          semana_vida: 0,
+        },
+      });
+    });
+
+    it('una alerta manual no absorbe una lectura automática fuera de rango', async () => {
+      const manual = await request(servidor)
+        .post('/v1/alertas')
+        .set('Authorization', `Bearer ${tokenPropietario}`)
+        .send({
+          galpon_id: ids.galpones[0],
+          sensor_id: ids.sensor,
+          tipo: 'revision_manual',
+          criticidad: 'baja',
+          mensaje: 'Sensor en revisión física',
+        })
+        .expect(201);
+      const manualCuerpo = JSON.parse(manual.text) as {
+        id: number;
+        origen: string;
+      };
+      expect(manualCuerpo.origen).toBe('manual');
+
+      await prisma.umbralAmbiental.create({
+        data: {
+          galpon_id: ids.galpones[0],
+          variable: 'temperatura',
+          semana_vida: 0,
+          valor_minimo: 20,
+          valor_maximo: 25,
+          unidad: 'C',
+          criticidad: 'alta',
+        },
+      });
+
+      const medicion = await request(servidor)
+        .post('/v1/mediciones')
+        .set('Authorization', `Bearer ${tokenPropietario}`)
+        .send({ sensor_id: ids.sensor, valor: 40 })
+        .expect(201);
+      const medicionCuerpo = JSON.parse(medicion.text) as {
+        advertencia_evaluacion?: string;
+      };
+      expect(medicionCuerpo.advertencia_evaluacion).toBeUndefined();
+
+      const manualTrasLectura = await request(servidor)
+        .get(`/v1/alertas/${manualCuerpo.id}`)
+        .set('Authorization', `Bearer ${tokenPropietario}`)
+        .expect(200);
+      expect(JSON.parse(manualTrasLectura.text)).toMatchObject({
+        origen: 'manual',
+        valor_detectado: null,
+      });
+
+      const alertasDelSensor = await prisma.alerta.findMany({
+        where: { sensor_id: ids.sensor },
+      });
+      const automaticas = alertasDelSensor.filter(
+        (a) => a.origen === 'automatica',
+      );
+      expect(automaticas).toHaveLength(1);
+      expect(automaticas[0].valor_detectado).toBe(40);
+      expect(automaticas[0].estado).toBe('abierta');
+    });
+
+    it('una alerta manual y una automática conviven para el mismo sensor', async () => {
+      const automatica = await prisma.alerta.create({
+        data: {
+          galpon_id: ids.galpones[0],
+          sensor_id: ids.sensor,
+          tipo: 'temperatura',
+          origen: 'automatica',
+          criticidad: 'alta',
+          estado: 'abierta',
+        },
+      });
+      const manual = await prisma.alerta.create({
+        data: {
+          galpon_id: ids.galpones[0],
+          sensor_id: ids.sensor,
+          tipo: 'revision_manual',
+          origen: 'manual',
+          criticidad: 'baja',
+          estado: 'abierta',
+        },
+      });
+
+      expect(manual.id).not.toBe(automatica.id);
+    });
+
+    it('el índice único rechaza una segunda alerta automática activa para el mismo sensor', async () => {
+      await prisma.alerta.create({
+        data: {
+          galpon_id: ids.galpones[0],
+          sensor_id: ids.sensor,
+          tipo: 'temperatura',
+          origen: 'automatica',
+          criticidad: 'alta',
+          estado: 'abierta',
+        },
+      });
+
+      await expect(
+        prisma.alerta.create({
+          data: {
+            galpon_id: ids.galpones[0],
+            sensor_id: ids.sensor,
+            tipo: 'temperatura',
+            origen: 'automatica',
+            criticidad: 'alta',
+            estado: 'abierta',
+          },
+        }),
+      ).rejects.toMatchObject({ code: 'P2002' });
+    });
+  });
 });

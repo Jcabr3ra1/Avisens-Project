@@ -1029,6 +1029,7 @@ model Alerta {
   lote_id           Int?
   sensor_id         Int?
   tipo              String
+  origen            String       @default("desconocido")
   criticidad        String
   valor_detectado   Float?
   valor_umbral      Float?
