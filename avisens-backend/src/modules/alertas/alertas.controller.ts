@@ -28,7 +28,10 @@ import { AlertasService } from './alertas.service';
 import { CreateAlertasDto } from './dto/create-alertas.dto';
 import { UpdateAlertasDto } from './dto/update-alertas.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
-import { AlertaRespuestaDto } from './dto/alerta-respuesta.dto';
+import {
+  AlertaPaginadaDto,
+  AlertaRespuestaDto,
+} from './dto/alerta-respuesta.dto';
 
 interface AuthRequest extends Request {
   user: { id: number; email: string; rol: string; organizacion_id?: number };
@@ -59,6 +62,7 @@ export class AlertasController {
     summary:
       'Listar alertas paginado (Admin: todas · Propietario: sus granjas)',
   })
+  @ApiOkResponse({ type: AlertaPaginadaDto })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.alertasService.listar(req.user, paginacion);
   }
@@ -122,6 +126,7 @@ export class AlertasController {
 
   @Get('galpon/:galponId')
   @ApiOperation({ summary: 'Obtener alertas de un galpón específico' })
+  @ApiOkResponse({ type: AlertaPaginadaDto })
   obtenerPorGalpon(
     @Param('galponId', ParseIntPipe) galponId: number,
     @Query() paginacion: PaginationQueryDto,
@@ -132,6 +137,7 @@ export class AlertasController {
 
   @Get('lote/:loteId')
   @ApiOperation({ summary: 'Obtener alertas de un lote específico' })
+  @ApiOkResponse({ type: AlertaPaginadaDto })
   obtenerPorLote(
     @Param('loteId', ParseIntPipe) loteId: number,
     @Query() paginacion: PaginationQueryDto,

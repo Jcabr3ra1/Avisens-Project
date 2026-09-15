@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { OrigenAlerta } from '@prisma/client';
 
 class GranjaEnAlertaDto {
@@ -66,10 +66,14 @@ export class AlertaRespuestaDto {
   @ApiProperty({ example: 1 })
   galpon_id: number;
 
-  @ApiPropertyOptional({ example: 1, nullable: true })
+  // lote_id siempre viene en la respuesta (ALERTA_SELECT la selecciona
+  // siempre); lo que varía es si su valor es null, no si la clave falta.
+  // type explícito: sin él, una unión con null (number | null) se refleja
+  // como Object y el schema sale con "type":"object" en vez de "integer".
+  @ApiProperty({ type: Number, example: 1, nullable: true })
   lote_id: number | null;
 
-  @ApiPropertyOptional({ example: 3, nullable: true })
+  @ApiProperty({ type: Number, example: 3, nullable: true })
   sensor_id: number | null;
 
   @ApiProperty({ example: 'temperatura' })
@@ -86,13 +90,14 @@ export class AlertaRespuestaDto {
   @ApiProperty({ example: 'alta', enum: ['baja', 'media', 'alta'] })
   criticidad: string;
 
-  @ApiPropertyOptional({ example: 35.2, nullable: true })
+  @ApiProperty({ type: Number, example: 35.2, nullable: true })
   valor_detectado: number | null;
 
-  @ApiPropertyOptional({ example: 30, nullable: true })
+  @ApiProperty({ type: Number, example: 30, nullable: true })
   valor_umbral: number | null;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
+    type: String,
     example: 'Temperatura fuera del rango seguro en Galpón Norte.',
     nullable: true,
   })
@@ -104,36 +109,58 @@ export class AlertaRespuestaDto {
   })
   estado: string;
 
-  @ApiPropertyOptional({ example: 8, nullable: true })
+  @ApiProperty({ type: Number, example: 8, nullable: true })
   responsable_id: number | null;
 
-  @ApiPropertyOptional({ example: null, nullable: true })
+  @ApiProperty({ type: Number, example: null, nullable: true })
   escalado_a_id: number | null;
 
-  @ApiPropertyOptional({ example: null, nullable: true })
+  @ApiProperty({ type: String, example: null, nullable: true })
   accion_correctiva: string | null;
 
   @ApiProperty({ example: '2026-09-14T12:00:00.000Z' })
   fecha_creacion: Date;
 
-  @ApiPropertyOptional({ example: null, nullable: true })
+  @ApiProperty({ type: Date, example: null, nullable: true })
   fecha_aceptacion: Date | null;
 
-  @ApiPropertyOptional({ example: null, nullable: true })
+  @ApiProperty({ type: Date, example: null, nullable: true })
   fecha_cierre: Date | null;
 
   @ApiProperty({ type: GalponEnAlertaDto })
   galpon: GalponEnAlertaDto;
 
-  @ApiPropertyOptional({ type: LoteEnAlertaDto, nullable: true })
+  @ApiProperty({ type: LoteEnAlertaDto, nullable: true })
   lote: LoteEnAlertaDto | null;
 
-  @ApiPropertyOptional({ type: SensorEnAlertaDto, nullable: true })
+  @ApiProperty({ type: SensorEnAlertaDto, nullable: true })
   sensor: SensorEnAlertaDto | null;
 
-  @ApiPropertyOptional({ type: UsuarioEnAlertaDto, nullable: true })
+  @ApiProperty({ type: UsuarioEnAlertaDto, nullable: true })
   responsable: UsuarioEnAlertaDto | null;
 
-  @ApiPropertyOptional({ type: UsuarioEnAlertaDto, nullable: true })
+  @ApiProperty({ type: UsuarioEnAlertaDto, nullable: true })
   escalado_a: UsuarioEnAlertaDto | null;
+}
+
+class MetaPaginacionDto {
+  @ApiProperty({ example: 42 })
+  total: number;
+
+  @ApiProperty({ example: 1 })
+  page: number;
+
+  @ApiProperty({ example: 10 })
+  limit: number;
+
+  @ApiProperty({ example: 5 })
+  totalPages: number;
+}
+
+export class AlertaPaginadaDto {
+  @ApiProperty({ type: [AlertaRespuestaDto] })
+  data: AlertaRespuestaDto[];
+
+  @ApiProperty({ type: MetaPaginacionDto })
+  meta: MetaPaginacionDto;
 }
