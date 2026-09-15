@@ -804,5 +804,21 @@ describe('Núcleo multi-tenant (e2e)', () => {
         }),
       ).rejects.toMatchObject({ code: 'P2002' });
     });
+
+    it('Postgres rechaza un origen fuera de los tres valores permitidos', async () => {
+      // $executeRawUnsafe, a proposito: evita que el cliente de Prisma
+      // intercepte el valor antes de llegar a la base -- esto prueba que el
+      // propio tipo enum de Postgres lo rechaza, no solo TypeScript.
+      await expect(
+        prisma.$executeRawUnsafe(
+          `INSERT INTO alertas (galpon_id, tipo, origen, criticidad, estado) VALUES ($1, $2, $3, $4, $5)`,
+          ids.galpones[0],
+          'prueba_enum',
+          'invalido',
+          'alta',
+          'abierta',
+        ),
+      ).rejects.toThrow(/invalid input value for enum/i);
+    });
   });
 });
