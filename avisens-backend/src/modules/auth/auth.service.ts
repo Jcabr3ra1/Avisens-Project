@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -9,9 +10,12 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { permisosDelRol } from '../../common/auth/permisos';
+import { ROLES } from '../../common/auth/roles';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
@@ -44,7 +48,7 @@ export class AuthService {
     );
 
     if (!passwordOk) {
-      await this.registrarIntentoFallido(usuario.id, seguridad);
+      await this.registrarIntentoFallido(usuario, seguridad);
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
@@ -207,7 +211,7 @@ export class AuthService {
   }
 
   private async registrarIntentoFallido(
-    userId: number,
+    usuario: { id: number; nombre_completo: string },
     seguridad: { id: number; intentos_fallidos: number } | null,
   ) {
     const intentos = (seguridad?.intentos_fallidos ?? 0) + 1;
@@ -215,14 +219,52 @@ export class AuthService {
       intentos >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
 
     await this.prisma.seguridadCuenta.upsert({
-      where: { usuario_id: userId },
+      where: { usuario_id: usuario.id },
       create: {
-        usuario_id: userId,
+        usuario_id: usuario.id,
         intentos_fallidos: intentos,
         bloqueado_hasta,
       },
       update: { intentos_fallidos: intentos, bloqueado_hasta },
     });
+
+    if (intentos === 3 || intentos === 5) {
+      await this.notificarAdministradoresDeAcceso(usuario, intentos);
+    }
+  }
+
+  private async notificarAdministradoresDeAcceso(
+    usuario: { id: number; nombre_completo: string },
+    intentos: 3 | 5,
+  ) {
+    try {
+      const administradores = await this.prisma.usuario.findMany({
+        where: { activo: true, rol: { nombre: ROLES.ADMINISTRADOR } },
+        select: { id: true },
+      });
+
+      if (administradores.length === 0) return;
+
+      const bloqueada = intentos === 5;
+      await this.prisma.notificacion.createMany({
+        data: administradores.map(({ id }) => ({
+          usuario_id: id,
+          tipo: 'seguridad_cuenta',
+          titulo: bloqueada
+            ? 'Cuenta bloqueada temporalmente'
+            : 'Intentos de acceso por revisar',
+          mensaje: bloqueada
+            ? `La cuenta de ${usuario.nombre_completo} fue bloqueada durante 15 minutos tras cinco intentos fallidos. Puedes orientar a la persona para recuperar su contraseña.`
+            : `La cuenta de ${usuario.nombre_completo} acumula tres intentos de acceso fallidos. Confirma con la persona si necesita recuperar su contraseña.`,
+          referencia_tipo: 'seguridad_cuenta',
+          referencia_id: usuario.id,
+        })),
+      });
+    } catch {
+      this.logger.error(
+        'No fue posible crear las notificaciones de seguridad de la cuenta',
+      );
+    }
   }
 
   private async resetearIntentosFallidos(userId: number) {
