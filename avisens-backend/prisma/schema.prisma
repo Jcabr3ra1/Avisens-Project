@@ -1023,12 +1023,19 @@ enum EstadoAlerta {
   cerrada
 }
 
+enum OrigenAlerta {
+  automatica
+  manual
+  desconocido
+}
+
 model Alerta {
   id                Int          @id @default(autoincrement())
   galpon_id         Int
   lote_id           Int?
   sensor_id         Int?
   tipo              String
+  origen            OrigenAlerta @default(desconocido)
   criticidad        String
   valor_detectado   Float?
   valor_umbral      Float?
