@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,6 +15,7 @@ describe('LotesService', () => {
     lote: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
@@ -66,6 +68,7 @@ describe('LotesService', () => {
       granja: { propietario_id: 5 },
     });
     prisma.proveedor.findUnique.mockResolvedValue({ id: 7 });
+    prisma.lote.findFirst.mockResolvedValue(null);
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -113,6 +116,15 @@ describe('LotesService', () => {
 
       await expect(service.crear(dtoCrear, admin)).rejects.toThrow(
         NotFoundException,
+      );
+      expect(prisma.lote.create).not.toHaveBeenCalled();
+    });
+
+    it('rechaza (409) si el galpón ya tiene un lote activo', async () => {
+      prisma.lote.findFirst.mockResolvedValue({ id: 99 });
+
+      await expect(service.crear(dtoCrear, propietario)).rejects.toThrow(
+        ConflictException,
       );
       expect(prisma.lote.create).not.toHaveBeenCalled();
     });
@@ -211,6 +223,75 @@ describe('LotesService', () => {
 
       expect(dataDe(prisma.lote.update).proveedor_id).toBeNull();
       expect(prisma.proveedor.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('rechaza (409) poner estado activo si el galpón ya tiene otro lote activo', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.findFirst.mockResolvedValue({ id: 42 });
+
+      await expect(
+        service.actualizar(1, { estado: 'activo' }, propietario),
+      ).rejects.toThrow(ConflictException);
+      expect(prisma.lote.update).not.toHaveBeenCalled();
+    });
+
+    it('no verifica exclusividad si el PATCH no cambia el estado', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.update.mockResolvedValue({ id: 1 });
+
+      await service.actualizar(1, { raza: 'Cobb 500' }, propietario);
+
+      expect(prisma.lote.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('activar', () => {
+    it('activa el lote cuando el galpón no tiene otro activo', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.update.mockResolvedValue({ id: 1, estado: 'activo' });
+
+      const res = await service.activar(1, propietario);
+
+      expect(dataDe(prisma.lote.update)).toEqual({ estado: 'activo' });
+      expect(res.estado).toBe('activo');
+    });
+
+    it('rechaza (409) si el galpón ya tiene otro lote activo', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.findFirst.mockResolvedValue({ id: 42 });
+
+      await expect(service.activar(1, propietario)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prisma.lote.update).not.toHaveBeenCalled();
+    });
+
+    it('excluye al propio lote de la búsqueda de otro activo', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.update.mockResolvedValue({ id: 1, estado: 'activo' });
+
+      await service.activar(1, propietario);
+
+      expect(whereDe(prisma.lote.findFirst)).toMatchObject({
+        galpon_id: 3,
+        estado: 'activo',
+        id: { not: 1 },
+      });
     });
   });
 
