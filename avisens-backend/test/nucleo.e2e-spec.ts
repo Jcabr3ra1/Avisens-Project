@@ -821,4 +821,88 @@ describe('Núcleo multi-tenant (e2e)', () => {
       ).rejects.toThrow(/invalid input value for enum/i);
     });
   });
+
+  describe('exclusividad de lote activo por galpón', () => {
+    afterEach(async () => {
+      await prisma.lote.deleteMany({
+        where: { codigo: { startsWith: 'E2E-LOTE-' } },
+      });
+    });
+
+    it('el índice único rechaza un segundo lote activo en el mismo galpón', async () => {
+      await prisma.lote.create({
+        data: {
+          galpon_id: ids.galpones[0],
+          codigo: `E2E-LOTE-A-${randomUUID()}`,
+          fecha_ingreso: new Date('2026-01-01'),
+          cantidad_inicial: 100,
+          estado: 'activo',
+        },
+      });
+
+      await expect(
+        prisma.lote.create({
+          data: {
+            galpon_id: ids.galpones[0],
+            codigo: `E2E-LOTE-A-${randomUUID()}`,
+            fecha_ingreso: new Date('2026-02-01'),
+            cantidad_inicial: 200,
+            estado: 'activo',
+          },
+        }),
+      ).rejects.toMatchObject({ code: 'P2002' });
+    });
+
+    it('dos galpones distintos pueden tener lotes activos simultáneamente', async () => {
+      const [a, b] = await Promise.all([
+        prisma.lote.create({
+          data: {
+            galpon_id: ids.galpones[0],
+            codigo: `E2E-LOTE-B-${randomUUID()}`,
+            fecha_ingreso: new Date('2026-01-01'),
+            cantidad_inicial: 100,
+            estado: 'activo',
+          },
+        }),
+        prisma.lote.create({
+          data: {
+            galpon_id: ids.galpones[1],
+            codigo: `E2E-LOTE-B-${randomUUID()}`,
+            fecha_ingreso: new Date('2026-01-01'),
+            cantidad_inicial: 100,
+            estado: 'activo',
+          },
+        }),
+      ]);
+
+      expect(a.galpon_id).not.toBe(b.galpon_id);
+      expect(a.estado).toBe('activo');
+      expect(b.estado).toBe('activo');
+    });
+
+    it('un lote histórico (inactivo) convive con el activo del mismo galpón', async () => {
+      const activo = await prisma.lote.create({
+        data: {
+          galpon_id: ids.galpones[0],
+          codigo: `E2E-LOTE-C-ACTIVO-${randomUUID()}`,
+          fecha_ingreso: new Date('2026-03-01'),
+          cantidad_inicial: 100,
+          estado: 'activo',
+        },
+      });
+      const historico = await prisma.lote.create({
+        data: {
+          galpon_id: ids.galpones[0],
+          codigo: `E2E-LOTE-C-HIST-${randomUUID()}`,
+          fecha_ingreso: new Date('2026-01-01'),
+          fecha_salida_real: new Date('2026-02-28'),
+          cantidad_inicial: 100,
+          estado: 'inactivo',
+        },
+      });
+
+      expect(activo.estado).toBe('activo');
+      expect(historico.estado).toBe('inactivo');
+    });
+  });
 });
