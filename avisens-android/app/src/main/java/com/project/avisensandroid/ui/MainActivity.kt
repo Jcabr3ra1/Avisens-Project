@@ -1713,22 +1713,6 @@ class MainActivity : AppCompatActivity() {
             adapterLotes
         )
 
-        val metodos =
-            mutableListOf(
-                "manual",
-                "automatico"
-            )
-
-        val adapterMetodo =
-            SpinnerAdapterEstilizado(
-                this,
-                metodos
-            )
-
-        binding
-            .spinnerMetodoRegistro
-            .adapter = adapterMetodo
-
         binding
             .edtFecha
             .setOnClickListener {
@@ -1787,23 +1771,6 @@ class MainActivity : AppCompatActivity() {
                             null
                         }
 
-                val disposicion =
-                    binding
-                        .edtDisposicion
-                        .text
-                        .toString()
-                        .trim()
-                        .ifBlank {
-                            null
-                        }
-
-                val metodo =
-                    binding
-                        .spinnerMetodoRegistro
-                        .selectedItem
-                        ?.toString()
-                        ?.trim()
-
                 when {
 
                     loteId == null -> {
@@ -1850,10 +1817,6 @@ class MainActivity : AppCompatActivity() {
                             cantidad.toInt(),
                         causa_presuntiva =
                             causa,
-                        disposicion =
-                            disposicion,
-                        metodo_registro =
-                            metodo,
                         observaciones =
                             binding
                                 .edtObservaciones
@@ -2039,22 +2002,6 @@ class MainActivity : AppCompatActivity() {
             .spinnerViaAplicacionEnfermo
             .adapter = adapterVia
 
-        val metodos =
-            mutableListOf(
-                "manual",
-                "automatico"
-            )
-
-        val adapterMetodo =
-            SpinnerAdapterEstilizado(
-                this,
-                metodos
-            )
-
-        binding
-            .spinnerMetodoRegistroEnfermo
-            .adapter = adapterMetodo
-
         binding
             .edtFechaEnfermo
             .setOnClickListener {
@@ -2190,16 +2137,6 @@ class MainActivity : AppCompatActivity() {
                             null
                         }
 
-                val metodo =
-                    binding
-                        .spinnerMetodoRegistroEnfermo
-                        .selectedItem
-                        ?.toString()
-                        ?.trim()
-                        ?.ifBlank {
-                            null
-                        }
-
                 val request =
                     EventoSanitarioRequest(
                         lote_id = loteId,
@@ -2215,7 +2152,6 @@ class MainActivity : AppCompatActivity() {
                         via_aplicacion = via,
                         cantidad_aves =
                             cantidad.toInt(),
-                        metodo_registro = metodo,
                         observaciones =
                             binding
                                 .edtObservacionesEnfermo

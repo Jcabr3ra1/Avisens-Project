@@ -238,34 +238,6 @@
 
         </LinearLayout>
 
-        <!-- MÉTODO DE REGISTRO -->
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Método de registro"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="5dp" />
-
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="42dp"
-            android:background="@drawable/bg_input_event">
-
-            <Spinner
-                android:id="@+id/spinnerMetodoRegistroEnfermo"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@android:color/transparent"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp" android:popupBackground="@drawable/bg_spinner_dropdown"
-                />
-
-        </FrameLayout>
-
         <!-- OBSERVACIONES -->
 
         <TextView

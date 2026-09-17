@@ -61,6 +61,27 @@ object UserSession {
             .apply()
     }
 
+    fun updateTokens(
+        context: Context,
+        accessToken: String,
+        refreshToken: String
+    ) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_TOKEN, accessToken)
+            .putString(KEY_REFRESH_TOKEN, refreshToken)
+            .putBoolean(KEY_SESSION_ACTIVE, true)
+            .apply()
+    }
+
+    fun accessToken(context: Context): String? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_TOKEN, null)
+
+    fun refreshToken(context: Context): String? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_REFRESH_TOKEN, null)
+
     fun role(context: Context): UserRole? =
         UserRole.fromApiValue(
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

@@ -5,7 +5,5 @@ data class RegistroMortalidadRequest(
     val fecha: String,
     val cantidad_aves: Int,
     val causa_presuntiva: String? = null,
-    val disposicion: String? = null,
-    val metodo_registro: String? = null,
     val observaciones: String? = null
 )

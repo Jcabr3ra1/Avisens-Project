@@ -6,6 +6,7 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.Typeface
 import android.os.Bundle
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -367,7 +368,9 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     private fun cargarAsignaciones(
         usuarioId: Int,
         contenedor: LinearLayout,
-        mostrarQuitar: Boolean = true
+        mostrarQuitar: Boolean = true,
+        onCambio: (() -> Unit)? = null,
+        onQuitarPendiente: ((List<Int>) -> Unit)? = null
     ) {
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -457,7 +460,9 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                             usuarioId,
                             grupo,
                             contenedor,
-                            mostrarQuitar
+                            mostrarQuitar,
+                            onCambio,
+                            onQuitarPendiente
                         )
                     }
                 }
@@ -493,7 +498,9 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         usuarioId: Int,
         asignacionesDeGranja: List<UsuarioGalponResponse>,
         contenedor: LinearLayout,
-        mostrarQuitar: Boolean = true
+        mostrarQuitar: Boolean = true,
+        onCambio: (() -> Unit)? = null,
+        onQuitarPendiente: ((List<Int>) -> Unit)? = null
     ) {
 
         val granja =
@@ -597,7 +604,14 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                     desasignarGranja(
                         usuarioId,
                         granja.nombre,
-                        galponIds
+                        galponIds,
+                        onSuccess = onCambio,
+                        onSolicitudPendiente = { ids ->
+                            onQuitarPendiente?.invoke(ids)
+                            if (onQuitarPendiente != null) {
+                                contenedor.removeView(fila)
+                            }
+                        }
                     )
                 }
             }
@@ -800,7 +814,9 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     private fun desasignarGranja(
         usuarioId: Int,
         nombreGranja: String,
-        galponIds: List<Int>
+        galponIds: List<Int>,
+        onSuccess: (() -> Unit)? = null,
+        onSolicitudPendiente: ((List<Int>) -> Unit)? = null
     ) {
 
         AlertDialog.Builder(
@@ -820,6 +836,18 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             .setPositiveButton(
                 "Quitar"
             ) { _, _ ->
+
+                // En el formulario de Editar Operario la eliminación
+                // es solo visual y queda pendiente hasta pulsar Guardar.
+                if (onSolicitudPendiente != null) {
+                    onSolicitudPendiente.invoke(galponIds)
+                    Toast.makeText(
+                        requireContext(),
+                        "Granja marcada para quitar. Pulsa Guardar para aplicar los cambios.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@setPositiveButton
+                }
 
                 viewLifecycleOwner.lifecycleScope.launch {
 
@@ -856,6 +884,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                             )
                         }
 
+                        onSuccess?.invoke()
                         cargarOperarios()
 
                     } catch (e: Exception) {
@@ -900,9 +929,19 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             (resources.displayMetrics.heightPixels * 0.82).toInt()
         )
 
+        val galponesPendientesDeQuitar = mutableSetOf<Int>()
+
         fun cargarGranjasDelDialog() {
             container.removeAllViews()
-            cargarAsignaciones(usuario.id, container, true)
+            cargarAsignaciones(
+                usuario.id,
+                container,
+                true,
+                onCambio = null,
+                onQuitarPendiente = { ids ->
+                    galponesPendientesDeQuitar.addAll(ids)
+                }
+            )
             cargarGranjasDisponiblesEnSpinner(usuario.id, spinnerGranjas)
         }
 
@@ -919,7 +958,6 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
                 val granjaSeleccionada = granjasDisponibles[position - 1]
 
-                // Volvemos al placeholder mientras termina la petición.
                 spinnerGranjas.isEnabled = false
                 asignarGranjaEnDialog(usuario.id, granjaSeleccionada) {
                     cargarGranjasDelDialog()
@@ -932,37 +970,74 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
         cargarGranjasDelDialog()
 
-        btnCancelar.setOnClickListener { dialog.dismiss() }
+        btnCancelar.setOnClickListener {
+            // Como las eliminaciones están pendientes, Cancelar simplemente
+            // cierra el diálogo y no toca el backend.
+            dialog.dismiss()
+        }
 
         btnGuardar.setOnClickListener {
             val nuevoEstado = switchActivo.isChecked
-            if (nuevoEstado == usuario.activo) {
-                dialog.dismiss()
-                return@setOnClickListener
-            }
 
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
-                    val response = RetrofitClient.api.actualizarEstadoUsuario(
-                        usuario.id,
-                        ActualizarEstadoUsuarioRequest(activo = nuevoEstado)
-                    )
+                    // ----------------------------------------------------
+                    // 1. Aplicar primero las granjas marcadas para quitar.
+                    // ----------------------------------------------------
+                    var fallosAlQuitar = 0
 
-                    if (response.isSuccessful) {
+                    galponesPendientesDeQuitar.toList().forEach { galponId ->
+                        val response = RetrofitClient.api.desasignarGalpon(
+                            usuario.id,
+                            galponId
+                        )
+
+                        if (response.isSuccessful) {
+                            galponesPendientesDeQuitar.remove(galponId)
+                        } else {
+                            fallosAlQuitar++
+                        }
+                    }
+
+                    if (fallosAlQuitar > 0) {
+                        cargarGranjasDelDialog()
+                        mostrarError(
+                            "No se pudieron quitar $fallosAlQuitar galpón(es). Revisa las asignaciones e inténtalo nuevamente."
+                        )
+                        return@launch
+                    }
+
+                    // ----------------------------------------------------
+                    // 2. Guardar el cambio de estado, si hubo uno.
+                    // ----------------------------------------------------
+                    if (nuevoEstado != usuario.activo) {
+                        val response = RetrofitClient.api.actualizarEstadoUsuario(
+                            usuario.id,
+                            ActualizarEstadoUsuarioRequest(activo = nuevoEstado)
+                        )
+
+                        if (!response.isSuccessful) {
+                            switchActivo.isChecked = usuario.activo
+                            mostrarError(
+                                "No se pudo actualizar el estado. Código: ${response.code()}"
+                            )
+                            return@launch
+                        }
+
                         Toast.makeText(
                             requireContext(),
                             if (nuevoEstado) "Usuario activado" else "Usuario desactivado",
                             Toast.LENGTH_SHORT
                         ).show()
-                        dialog.dismiss()
-                        cargarOperarios()
-                    } else {
-                        switchActivo.isChecked = usuario.activo
-                        mostrarError("No se pudo actualizar el estado. Código: ${response.code()}")
                     }
+
+                    cargarOperarios()
+                    dialog.dismiss()
+
                 } catch (e: Exception) {
-                    switchActivo.isChecked = usuario.activo
-                    mostrarError("Error al actualizar el estado: ${e.message ?: "sin detalle"}")
+                    mostrarError(
+                        "Error al guardar los cambios: ${e.message ?: "sin detalle"}"
+                    )
                 }
             }
         }
@@ -1029,24 +1104,69 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     private fun crearAdapterGranjas(opciones: List<String>): ArrayAdapter<String> {
         return object : ArrayAdapter<String>(
             requireContext(),
-            R.layout.spinner_item,
+            android.R.layout.simple_spinner_item,
             opciones
         ) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val view = super.getView(position, convertView, parent)
-                view.setBackgroundColor(Color.TRANSPARENT)
-                view.setPadding(0, 0, 0, 0)
+
+            private val colorTextoSeleccionado =
+                0xFF171D1A.toInt()
+
+            private val colorTextoDropdown =
+                0xFF171D1A.toInt()
+
+            private val colorFondoDropdown =
+                0xFFFFFFFF.toInt()
+
+            init {
+                setDropDownViewResource(
+                    android.R.layout.simple_spinner_dropdown_item
+                )
+            }
+
+            override fun getView(
+                position: Int,
+                convertView: View?,
+                parent: ViewGroup
+            ): View {
+
+                val view = super.getView(
+                    position,
+                    convertView,
+                    parent
+                )
+
+                if (view is TextView) {
+                    view.setTextColor(colorTextoSeleccionado)
+                    view.textSize = 13f
+                    view.setPadding(8, 0, 8, 0)
+                    view.gravity = Gravity.CENTER_VERTICAL
+                }
+
                 return view
             }
 
-            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val view = super.getDropDownView(position, convertView, parent)
-                view.setBackgroundResource(R.drawable.bg_spinner_dropdown)
-                view.setPadding(dp(14), dp(10), dp(14), dp(10))
+            override fun getDropDownView(
+                position: Int,
+                convertView: View?,
+                parent: ViewGroup
+            ): View {
+
+                val view = super.getDropDownView(
+                    position,
+                    convertView,
+                    parent
+                )
+
+                if (view is TextView) {
+                    view.setTextColor(colorTextoDropdown)
+                    view.setBackgroundColor(colorFondoDropdown)
+                    view.textSize = 13f
+                    view.setPadding(16, 14, 16, 14)
+                    view.gravity = Gravity.CENTER_VERTICAL
+                }
+
                 return view
             }
-        }.apply {
-            setDropDownViewResource(R.layout.spinner_dropdown_item)
         }
     }
 

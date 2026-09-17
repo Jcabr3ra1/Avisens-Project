@@ -22,6 +22,16 @@ import com.project.avisensandroid.model.AsignarGalponRequest
 import com.project.avisensandroid.model.ActualizarEstadoUsuarioRequest
 import com.project.avisensandroid.model.UsuarioGalponResponse
 import com.project.avisensandroid.model.UserResponse
+import com.project.avisensandroid.model.PesajeResponse
+import com.project.avisensandroid.model.ConsumoDiarioResponse
+import com.project.avisensandroid.model.SensorResponse
+import com.project.avisensandroid.model.MedicionResponse
+import com.project.avisensandroid.model.AlertaResponse
+import com.project.avisensandroid.model.IndicadorLoteResponse
+import com.project.avisensandroid.model.ComparacionIndicadorResponse
+import com.project.avisensandroid.model.LoteResponse
+import com.project.avisensandroid.model.RefreshTokenResponse
+
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -42,6 +52,11 @@ interface ApiService {
     suspend fun login(
         @Body request: LoginRequest
     ): Response<LoginResponse>
+
+    @POST("v1/auth/refresh")
+    suspend fun refreshToken(
+        @Header("Authorization") refreshAuthorization: String
+    ): Response<RefreshTokenResponse>
 
     @GET("v1/auth/me")
     suspend fun getCurrentUser(
@@ -92,6 +107,7 @@ interface ApiService {
         @Path("galponId") galponId: Int
     ): Response<Unit>
 
+
     // =========================================================
     // INSUMOS
     // =========================================================
@@ -112,6 +128,7 @@ interface ApiService {
         @Path("id") insumoId: Int,
         @Body request: RegistrarMovimientoRequest
     ): Response<Any>
+
 
     // =========================================================
     // TIPOS DE ALIMENTO
@@ -166,6 +183,59 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 100
     ): Response<PaginatedResponse<LoteSelectorResponse>>
+
+
+    // =========================================================
+    // DATOS DEL DASHBOARD DE INICIO
+    // =========================================================
+
+    @GET("v1/lotes")
+    suspend fun listarLotesCompletos(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<LoteResponse>>
+
+    @GET("v1/pesajes")
+    suspend fun listarPesajes(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<PesajeResponse>>
+
+    @GET("v1/consumos-diarios")
+    suspend fun listarConsumosDiarios(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<ConsumoDiarioResponse>>
+
+    @GET("v1/sensores")
+    suspend fun listarSensores(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<SensorResponse>>
+
+    @GET("v1/mediciones")
+    suspend fun listarMediciones(
+        @Query("sensor_id") sensorId: Int? = null,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Response<PaginatedResponse<MedicionResponse>>
+
+    @GET("v1/alertas/galpon/{galponId}")
+    suspend fun listarAlertasDeGalpon(
+        @Path("galponId") galponId: Int,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<AlertaResponse>>
+
+    @GET("v1/indicadores/{loteId}")
+    suspend fun listarIndicadoresLote(
+        @Path("loteId") loteId: Int
+    ): Response<List<IndicadorLoteResponse>>
+
+    @GET("v1/indicadores/{loteId}/comparacion")
+    suspend fun compararIndicadorLote(
+        @Path("loteId") loteId: Int
+    ): Response<ComparacionIndicadorResponse>
 
 
     // =========================================================
