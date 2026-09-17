@@ -26,6 +26,7 @@ import { AnalisisBioacusticoModule } from '../src/modules/analisis-bioacustico/a
 import { AnalisisVisionModule } from '../src/modules/analisis-vision/analisis-vision.module';
 import { UmbralesModule } from '../src/modules/umbrales/umbrales.module';
 import { MedicionesModule } from '../src/modules/mediciones/mediciones.module';
+import { LotesModule } from '../src/modules/lotes/lotes.module';
 import { AlertasService } from '../src/modules/alertas/alertas.service';
 
 // main.ts declara este mismo parche antes de bootstrap(); esta suite arma su
@@ -83,6 +84,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         AnalisisVisionModule,
         UmbralesModule,
         MedicionesModule,
+        LotesModule,
       ],
     }).compile();
     app = modulo.createNestApplication();
@@ -819,6 +821,233 @@ describe('Núcleo multi-tenant (e2e)', () => {
           'abierta',
         ),
       ).rejects.toThrow(/invalid input value for enum/i);
+    });
+  });
+
+  describe('exclusividad de lote activo por galpón', () => {
+    // Crear/activar/actualizar un lote exige ADMINISTRADOR (ver
+    // LotesController) -- ninguno de los tokens del fixture compartido tiene
+    // ese rol, asi que este bloque arma el suyo propio, autocontenido.
+    let tokenAdminLotes: string;
+    let idAdminLotes: number;
+    let orgAdminLotesId: number;
+    const idsLotesCreados: number[] = [];
+
+    beforeAll(async () => {
+      const rolAdmin = await prisma.rol.upsert({
+        where: { nombre: 'Administrador' },
+        update: {},
+        create: { nombre: 'Administrador' },
+      });
+      const org = await prisma.organizacion.create({
+        data: { nombre: `E2E Lotes Admin ${sufijo}` },
+      });
+      orgAdminLotesId = org.id;
+      const hash = await bcrypt.hash(password, 4);
+      const admin = await prisma.usuario.create({
+        data: {
+          nombre_completo: 'admin-lotes',
+          cedula: `admin-lotes-${sufijo}`,
+          email: `admin-lotes-${sufijo}@e2e.local`,
+          password_hash: hash,
+          rol_id: rolAdmin.id,
+          organizacion_id: orgAdminLotesId,
+        },
+      });
+      idAdminLotes = admin.id;
+
+      const login = await request(servidor)
+        .post('/v1/auth/login')
+        .send({ email: admin.email, password })
+        .expect(200);
+      tokenAdminLotes = (JSON.parse(login.text) as { access_token: string })
+        .access_token;
+    });
+
+    afterAll(async () => {
+      await prisma.sesion.deleteMany({ where: { usuario_id: idAdminLotes } });
+      await prisma.seguridadCuenta.deleteMany({
+        where: { usuario_id: idAdminLotes },
+      });
+      await prisma.usuario.deleteMany({ where: { id: idAdminLotes } });
+      await prisma.organizacion.deleteMany({ where: { id: orgAdminLotesId } });
+    });
+
+    // Registra solo los ids que esta ejecucion crea -- nunca un patron
+    // global de codigo, para no arrastrar filas de otra corrida.
+    afterEach(async () => {
+      if (idsLotesCreados.length > 0) {
+        await prisma.lote.deleteMany({
+          where: { id: { in: idsLotesCreados } },
+        });
+        idsLotesCreados.length = 0;
+      }
+    });
+
+    const crearLoteDirecto = async (
+      estado: 'activo' | 'inactivo' | 'finalizado',
+      galponId = ids.galpones[0],
+    ) => {
+      const lote = await prisma.lote.create({
+        data: {
+          galpon_id: galponId,
+          codigo: `E2E-LOTE-${randomUUID()}`,
+          fecha_ingreso: new Date('2026-01-01'),
+          cantidad_inicial: 100,
+          estado,
+        },
+      });
+      idsLotesCreados.push(lote.id);
+      return lote;
+    };
+
+    describe('por HTTP', () => {
+      it('POST /lotes responde 409 si el galpón ya tiene un lote activo, y no crea nada', async () => {
+        const activo = await crearLoteDirecto('activo');
+
+        await request(servidor)
+          .post('/v1/lotes')
+          .set('Authorization', `Bearer ${tokenAdminLotes}`)
+          .send({
+            galpon_id: ids.galpones[0],
+            fecha_ingreso: '2026-02-01',
+            cantidad_inicial: 200,
+          })
+          .expect(409);
+
+        const activosEnGalpon = await prisma.lote.count({
+          where: { galpon_id: ids.galpones[0], estado: 'activo' },
+        });
+        expect(activosEnGalpon).toBe(1);
+        const sigueActivo = await prisma.lote.findUnique({
+          where: { id: activo.id },
+        });
+        expect(sigueActivo?.estado).toBe('activo');
+      });
+
+      it('PATCH /lotes/:id/activar responde 409 si otro lote del galpón ya está activo, y no cambia ninguno de los dos', async () => {
+        const activo = await crearLoteDirecto('activo');
+        const candidato = await crearLoteDirecto('inactivo');
+
+        await request(servidor)
+          .patch(`/v1/lotes/${candidato.id}/activar`)
+          .set('Authorization', `Bearer ${tokenAdminLotes}`)
+          .expect(409);
+
+        const [activoTrasIntento, candidatoTrasIntento] = await Promise.all([
+          prisma.lote.findUnique({ where: { id: activo.id } }),
+          prisma.lote.findUnique({ where: { id: candidato.id } }),
+        ]);
+        expect(activoTrasIntento?.estado).toBe('activo');
+        expect(candidatoTrasIntento?.estado).toBe('inactivo');
+      });
+
+      it('PATCH /lotes/:id con estado activo responde 409 si otro lote del galpón ya está activo, y no cambia ninguno de los dos', async () => {
+        const activo = await crearLoteDirecto('activo');
+        const candidato = await crearLoteDirecto('inactivo');
+
+        await request(servidor)
+          .patch(`/v1/lotes/${candidato.id}`)
+          .set('Authorization', `Bearer ${tokenAdminLotes}`)
+          .send({ estado: 'activo' })
+          .expect(409);
+
+        const [activoTrasIntento, candidatoTrasIntento] = await Promise.all([
+          prisma.lote.findUnique({ where: { id: activo.id } }),
+          prisma.lote.findUnique({ where: { id: candidato.id } }),
+        ]);
+        expect(activoTrasIntento?.estado).toBe('activo');
+        expect(candidatoTrasIntento?.estado).toBe('inactivo');
+      });
+
+      it('activar el propio lote ya activo no se rechaza por encontrarse a sí mismo', async () => {
+        const activo = await crearLoteDirecto('activo');
+
+        await request(servidor)
+          .patch(`/v1/lotes/${activo.id}/activar`)
+          .set('Authorization', `Bearer ${tokenAdminLotes}`)
+          .expect(200);
+      });
+
+      it('actualizar el propio lote ya activo con estado activo no se rechaza por encontrarse a sí mismo', async () => {
+        const activo = await crearLoteDirecto('activo');
+
+        await request(servidor)
+          .patch(`/v1/lotes/${activo.id}`)
+          .set('Authorization', `Bearer ${tokenAdminLotes}`)
+          .send({ estado: 'activo' })
+          .expect(200);
+      });
+
+      it('tras desactivar el activo, sí se puede activar otro; un finalizado convive como histórico', async () => {
+        const activo = await crearLoteDirecto('activo');
+        const candidato = await crearLoteDirecto('inactivo');
+        const finalizado = await crearLoteDirecto('finalizado');
+
+        await request(servidor)
+          .patch(`/v1/lotes/${activo.id}`)
+          .set('Authorization', `Bearer ${tokenAdminLotes}`)
+          .send({ estado: 'inactivo' })
+          .expect(200);
+
+        await request(servidor)
+          .patch(`/v1/lotes/${candidato.id}/activar`)
+          .set('Authorization', `Bearer ${tokenAdminLotes}`)
+          .expect(200);
+
+        const [candidatoAhora, finalizadoSigue] = await Promise.all([
+          prisma.lote.findUnique({ where: { id: candidato.id } }),
+          prisma.lote.findUnique({ where: { id: finalizado.id } }),
+        ]);
+        expect(candidatoAhora?.estado).toBe('activo');
+        expect(finalizadoSigue?.estado).toBe('finalizado');
+      });
+    });
+
+    describe('inserciones/actualizaciones directas contra la base', () => {
+      it('el índice único rechaza un segundo lote activo insertado directo', async () => {
+        await crearLoteDirecto('activo');
+
+        await expect(crearLoteDirecto('activo')).rejects.toMatchObject({
+          code: 'P2002',
+        });
+      });
+
+      it('el índice único rechaza actualizar un lote inactivo a activo si ya existe otro activo', async () => {
+        const activo = await crearLoteDirecto('activo');
+        const candidato = await crearLoteDirecto('inactivo');
+
+        await expect(
+          prisma.lote.update({
+            where: { id: candidato.id },
+            data: { estado: 'activo' },
+          }),
+        ).rejects.toMatchObject({ code: 'P2002' });
+
+        const [activoSigue, candidatoSigue] = await Promise.all([
+          prisma.lote.findUnique({ where: { id: activo.id } }),
+          prisma.lote.findUnique({ where: { id: candidato.id } }),
+        ]);
+        expect(activoSigue?.estado).toBe('activo');
+        expect(candidatoSigue?.estado).toBe('inactivo');
+      });
+
+      it('dos galpones distintos pueden tener lotes activos simultáneamente', async () => {
+        const a = await crearLoteDirecto('activo', ids.galpones[0]);
+        const b = await crearLoteDirecto('activo', ids.galpones[1]);
+
+        expect(a.galpon_id).not.toBe(b.galpon_id);
+        expect(a.estado).toBe('activo');
+        expect(b.estado).toBe('activo');
+      });
+
+      it('un lote histórico (inactivo) convive con el activo del mismo galpón', async () => {
+        const activo = await crearLoteDirecto('activo');
+        const historico = await crearLoteDirecto('inactivo');
+
+        expect(activo.estado).toBe('activo');
+        expect(historico.estado).toBe('inactivo');
+      });
     });
   });
 });

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -63,8 +64,25 @@ export class LotesService {
     if (!proveedor) throw new NotFoundException(`Proveedor no encontrado`);
   }
 
+  private async verificarSinLoteActivo(galponId: number, idPropio?: number) {
+    const otroActivo = await this.prisma.lote.findFirst({
+      where: {
+        galpon_id: galponId,
+        estado: 'activo',
+        ...(idPropio !== undefined ? { id: { not: idPropio } } : {}),
+      },
+      select: { id: true },
+    });
+    if (otroActivo) {
+      throw new ConflictException(
+        'Este galpón ya tiene un lote activo. Desactívalo antes de crear o activar otro.',
+      );
+    }
+  }
+
   async crear(dto: CreateLoteDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
+    await this.verificarSinLoteActivo(dto.galpon_id);
     if (dto.proveedor_id !== undefined && dto.proveedor_id !== null) {
       await this.validarProveedor(dto.proveedor_id);
     }
@@ -145,6 +163,9 @@ export class LotesService {
     if (dto.proveedor_id !== undefined && dto.proveedor_id !== null) {
       await this.validarProveedor(dto.proveedor_id);
     }
+    if (dto.estado === 'activo') {
+      await this.verificarSinLoteActivo(actual.galpon.id, id);
+    }
 
     return this.prisma.lote.update({
       where: { id },
@@ -181,7 +202,8 @@ export class LotesService {
   }
 
   async activar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    const lote = await this.obtener(id, solicitante);
+    await this.verificarSinLoteActivo(lote.galpon.id, id);
     return this.prisma.lote.update({
       where: { id },
       data: { estado: 'activo' },
