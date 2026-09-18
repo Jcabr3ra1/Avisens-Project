@@ -68,6 +68,7 @@ import { JobsModule } from './common/jobs/jobs.module';
 import { ObservabilityModule } from './common/observability/observability.module';
 import { RequestObservabilityInterceptor } from './common/observability/request-observability.interceptor';
 import { CaptacionProspectosModule } from './modules/captacion-prospectos/captacion-prospectos.module';
+import { PlanLoteModule } from './modules/plan-lote/plan-lote.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -146,6 +147,7 @@ import { CaptacionProspectosModule } from './modules/captacion-prospectos/captac
     CatalogoSensoresModule,
     LineasGeneticasModule,
     CurvasGeneticasModule,
+    PlanLoteModule,
     ComandosVozModule,
     ZonasGalponModule,
     UsuariosGalponesModule,

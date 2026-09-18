@@ -41,7 +41,10 @@ export function inicioDelDiaEnZonaGranja(instante: Date = new Date()): Date {
  * Se comparan días de calendario, no duraciones: dos fechas seguidas son
  * siempre un día de diferencia, sin importar a qué hora se pregunte.
  */
-export function diaDeVida(fechaIngreso: Date, ahora: Date = new Date()): number {
+export function diaDeVida(
+  fechaIngreso: Date,
+  ahora: Date = new Date(),
+): number {
   // fecha_ingreso es @db.Date: una fecha del calendario, sin hora. Prisma la
   // entrega como medianoche UTC, y eso NO es un instante que haya que mover a
   // otra zona — pasarla por la zona de la granja la correría un día hacia
@@ -66,4 +69,22 @@ export function diaDeVida(fechaIngreso: Date, ahora: Date = new Date()): number 
  */
 export function semanaDeVida(dia: number): number {
   return Math.max(0, Math.floor((dia - 1) / 7));
+}
+
+/**
+ * Inversa de diaDeVida: la fecha de calendario en que cae un día de vida dado.
+ *
+ * fecha_ingreso es @db.Date (medianoche UTC, sin hora que mover de zona), y el
+ * resultado también es una fecha de calendario pura: se opera sobre los
+ * componentes UTC de fechaIngreso, igual que diaDeVida, para no correrla un
+ * día por culpa del huso horario de la granja.
+ */
+
+export function fechaDeVida(fechaIngreso: Date, diaVida: number): Date {
+  const ingreso = Date.UTC(
+    fechaIngreso.getUTCFullYear(),
+    fechaIngreso.getUTCMonth(),
+    fechaIngreso.getUTCDate(),
+  );
+  return new Date(ingreso + (diaVida - 1) * MS_POR_DIA);
 }

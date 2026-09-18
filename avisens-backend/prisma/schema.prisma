@@ -84,6 +84,7 @@ model Usuario {
   alertas_responsable        Alerta[]               @relation("AlertaResponsable")
   alertas_escalado           Alerta[]               @relation("AlertaEscalado")
   curvas_geneticas_publicadas CurvaGeneticaVersion[]
+  planes_lote_creados        PlanLote[]
   evidencias_alertas         EvidenciaAlerta[]
   ordenes_compra             OrdenCompra[]
   movimientos_financieros    MovimientoFinanciero[]
@@ -454,9 +455,11 @@ model Lote {
   fecha_salida_estimada  DateTime?  @db.Date
   fecha_salida_real      DateTime?  @db.Date
   estado                 EstadoLote @default(activo)
+  linea_genetica_id      Int?
 
-  galpon    Galpon    @relation(fields: [galpon_id], references: [id])
-  proveedor Proveedor? @relation(fields: [proveedor_id], references: [id], onDelete: Restrict)
+  galpon         Galpon         @relation(fields: [galpon_id], references: [id])
+  proveedor      Proveedor?     @relation(fields: [proveedor_id], references: [id], onDelete: Restrict)
+  linea_genetica LineaGenetica? @relation(fields: [linea_genetica_id], references: [id], onDelete: Restrict)
 
   pesajes                 Pesaje[]
   registros_mortalidad    RegistroMortalidad[]
@@ -472,6 +475,7 @@ model Lote {
   indicadores             IndicadorLote[]
   analisis_bioacustico    AnalisisBioacustico[]
   analisis_vision         AnalisisVision[]
+  planes                  PlanLote[]
 
   @@index([galpon_id, estado])
   @@map("lotes")
@@ -987,7 +991,9 @@ model LineaGenetica {
   activo Boolean @default(true)
   fecha_actualizacion DateTime @updatedAt
 
-  curvas CurvaGeneticaVersion[]
+  curvas               CurvaGeneticaVersion[]
+  lotes                Lote[]
+  planes_como_snapshot PlanLote[]
 
   @@map("lineas_geneticas")
 }
@@ -1022,6 +1028,7 @@ model CurvaGeneticaVersion {
   linea_genetica LineaGenetica        @relation(fields: [linea_genetica_id], references: [id], onDelete: Restrict)
   publicada_por  Usuario?             @relation(fields: [publicada_por_id], references: [id], onDelete: Restrict)
   puntos         PuntoCurvaGenetica[]
+  planes         PlanLote[]
 
   @@unique([linea_genetica_id, sexo, version])
   @@index([linea_genetica_id, sexo])
@@ -1043,6 +1050,45 @@ model PuntoCurvaGenetica {
   @@map("puntos_curva_genetica")
 }
 
+// ---------------------------------------------------------------------------
+// Plan de produccion del lote (Fase 1)
+// ---------------------------------------------------------------------------
+enum EstadoCalculoPlan {
+  calculado
+  sin_curva
+  fuera_de_rango
+  datos_insuficientes
+}
+
+// La version es del plan completo, igual que CurvaGeneticaVersion: cambiar el
+// objetivo o recalcular crea una version nueva, nunca edita la vigente.
+model PlanLote {
+  id                         Int               @id @default(autoincrement())
+  lote_id                    Int
+  version                    Int
+  vigente                    Boolean           @default(true)
+  peso_objetivo_g            Decimal           @db.Decimal(10, 2)
+  estado_dia                 EstadoCalculoPlan
+  curva_version_id           Int?
+  linea_genetica_id_snapshot Int?
+  sexo_curva_snapshot        SexoCurva
+  fecha_ingreso_snapshot     DateTime          @db.Date
+  dia_objetivo               Int?
+  dia_objetivo_interpolado   Decimal?          @db.Decimal(9, 6)
+  fecha_salida_calculada     DateTime?         @db.Date
+  motivo                     String?
+  creado_por_id              Int
+  fecha_creacion             DateTime          @default(now())
+
+  lote                    Lote                  @relation(fields: [lote_id], references: [id], onDelete: Restrict)
+  curva_version           CurvaGeneticaVersion? @relation(fields: [curva_version_id], references: [id], onDelete: Restrict)
+  linea_genetica_snapshot LineaGenetica?        @relation(fields: [linea_genetica_id_snapshot], references: [id], onDelete: Restrict)
+  creado_por              Usuario               @relation(fields: [creado_por_id], references: [id], onDelete: Restrict)
+
+  @@unique([lote_id, version])
+  @@index([lote_id])
+  @@map("planes_lote")
+}
 
 // ---------------------------------------------------------------------------
 // Accionamientos de equipos (historial de encendido/apagado, manual o automatico)
