@@ -325,10 +325,16 @@ describe('PlanLoteService', () => {
     const planVigente = (overrides: Record<string, unknown> = {}) => ({
       id: 1,
       lote_id: 3,
-      linea_genetica_id_snapshot: 10,
+      linea_genetica_snapshot: { id: 10, codigo: 'ross', nombre: 'Ross' },
       sexo_curva_snapshot: 'macho',
       fecha_ingreso_snapshot: new Date('2026-07-30T00:00:00.000Z'),
-      curva_version_id: 7,
+      curva_version: {
+        id: 7,
+        sexo: 'macho',
+        version: 1,
+        fuente: 'test',
+        linea_genetica: { id: 10, codigo: 'ross', nombre: 'Ross' },
+      },
       estado_dia: 'calculado',
       ...overrides,
     });
@@ -406,7 +412,7 @@ describe('PlanLoteService', () => {
 
     it('desactualizado=true si un plan sin_curva ahora tiene una curva vigente disponible', async () => {
       prisma.planLote.findFirst.mockResolvedValue(
-        planVigente({ estado_dia: 'sin_curva', curva_version_id: null }),
+        planVigente({ estado_dia: 'sin_curva', curva_version: null }),
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         linea_genetica_id: 10,
@@ -421,7 +427,7 @@ describe('PlanLoteService', () => {
 
     it('desactualizado=false si sigue sin haber curva vigente para un plan sin_curva', async () => {
       prisma.planLote.findFirst.mockResolvedValue(
-        planVigente({ estado_dia: 'sin_curva', curva_version_id: null }),
+        planVigente({ estado_dia: 'sin_curva', curva_version: null }),
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         linea_genetica_id: 10,
@@ -437,9 +443,9 @@ describe('PlanLoteService', () => {
     it('desactualizado=false si el lote nunca tuvo linea genetica y sigue sin ella', async () => {
       prisma.planLote.findFirst.mockResolvedValue(
         planVigente({
-          linea_genetica_id_snapshot: null,
+          linea_genetica_snapshot: null,
           estado_dia: 'sin_curva',
-          curva_version_id: null,
+          curva_version: null,
         }),
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
@@ -463,44 +469,54 @@ describe('PlanLoteService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('pagina resultados y agrega desactualizado por fila de forma independiente', async () => {
-      const planActual = {
-        id: 2,
+    it('pagina resultados mapeados (curva/snapshot/creado_por) sin desactualizado ni consultas por fila', async () => {
+      const filaPlan = (id: number, version: number) => ({
+        id,
         lote_id: 3,
-        version: 2,
-        linea_genetica_id_snapshot: 10,
+        version,
+        vigente: version === 2,
+        peso_objetivo_g: new Prisma.Decimal(2500),
+        estado_dia: 'calculado',
+        motivo: null,
+        fecha_creacion: new Date('2026-09-18T00:00:00.000Z'),
+        creado_por: { id: 1, nombre_completo: 'Admin' },
+        linea_genetica_snapshot: { id: 10, codigo: 'ross', nombre: 'Ross' },
         sexo_curva_snapshot: 'macho',
         fecha_ingreso_snapshot: new Date('2026-07-30T00:00:00.000Z'),
-        curva_version_id: 7,
-        estado_dia: 'calculado',
-      };
-      const planViejo = {
-        id: 1,
-        lote_id: 3,
-        version: 1,
-        linea_genetica_id_snapshot: 3,
-        sexo_curva_snapshot: 'macho',
-        fecha_ingreso_snapshot: new Date('2026-07-30T00:00:00.000Z'),
-        curva_version_id: 4,
-        estado_dia: 'calculado',
-      };
-      prisma.$transaction.mockResolvedValueOnce([[planActual, planViejo], 2]);
-      prisma.lote.findUniqueOrThrow.mockResolvedValue({
-        linea_genetica_id: 10,
-        sexo: 'macho',
-        fecha_ingreso: new Date('2026-07-30T00:00:00.000Z'),
+        curva_version: {
+          id: 7,
+          sexo: 'macho',
+          version: 1,
+          fuente: 'test',
+          linea_genetica: { id: 10, codigo: 'ross', nombre: 'Ross' },
+        },
+        dia_objetivo: 35,
+        dia_objetivo_interpolado: new Prisma.Decimal(35),
+        fecha_salida_calculada: new Date('2026-09-02T00:00:00.000Z'),
       });
-      prisma.curvaGeneticaVersion.findFirst.mockResolvedValue({ id: 7 });
+      prisma.$transaction.mockResolvedValueOnce([
+        [filaPlan(2, 2), filaPlan(1, 1)],
+        2,
+      ]);
 
       const res = await service.historial(3, { page: 1, limit: 20 }, admin);
 
       expect(res.data).toHaveLength(2);
-      expect(
-        res.data.find((p: { id: number }) => p.id === 2)?.desactualizado,
-      ).toBe(false);
-      expect(
-        res.data.find((p: { id: number }) => p.id === 1)?.desactualizado,
-      ).toBe(true);
+      expect(res.data[0]).not.toHaveProperty('desactualizado');
+      expect(res.data[0].curva).toMatchObject({
+        version_id: 7,
+        linea_genetica: { id: 10, codigo: 'ross', nombre: 'Ross' },
+      });
+      expect(res.data[0].snapshot).toMatchObject({
+        linea_genetica: { id: 10, codigo: 'ross', nombre: 'Ross' },
+        sexo_curva: 'macho',
+      });
+      expect(res.data[0].creado_por).toEqual({
+        id: 1,
+        nombre_completo: 'Admin',
+      });
+      expect(prisma.lote.findUniqueOrThrow).not.toHaveBeenCalled();
+      expect(prisma.curvaGeneticaVersion.findFirst).not.toHaveBeenCalled();
       expect(res.meta.total).toBe(2);
     });
   });

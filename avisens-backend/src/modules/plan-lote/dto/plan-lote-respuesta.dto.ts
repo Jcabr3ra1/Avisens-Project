@@ -1,7 +1,69 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { EstadoCalculoPlan, SexoCurva } from '@prisma/client';
 
-export class PlanLoteRespuestaDto {
+export class LineaGeneticaResumenPlanDto {
+  @ApiProperty({ example: 1 })
+  id: number;
+
+  @ApiProperty({ example: 'ross_308' })
+  codigo: string;
+
+  @ApiProperty({ example: 'Ross 308' })
+  nombre: string;
+}
+
+export class CreadoPorPlanDto {
+  @ApiProperty({ example: 4 })
+  id: number;
+
+  @ApiProperty({ example: 'Admin Plan' })
+  nombre_completo: string;
+}
+
+export class SnapshotPlanDto {
+  @ApiProperty({ type: LineaGeneticaResumenPlanDto, nullable: true })
+  linea_genetica: LineaGeneticaResumenPlanDto | null;
+
+  @ApiProperty({ enum: SexoCurva, example: SexoCurva.mixto })
+  sexo_curva: SexoCurva;
+
+  @ApiProperty({ example: '2026-07-30T00:00:00.000Z' })
+  fecha_ingreso: Date;
+}
+
+export class CurvaPlanDto {
+  @ApiProperty({ example: 3 })
+  version_id: number;
+
+  @ApiProperty({ type: LineaGeneticaResumenPlanDto })
+  linea_genetica: LineaGeneticaResumenPlanDto;
+
+  @ApiProperty({ enum: SexoCurva, example: SexoCurva.macho })
+  sexo: SexoCurva;
+
+  @ApiProperty({ example: 1, description: 'Versión de la curva, no del plan' })
+  version: number;
+
+  @ApiProperty({ example: 'aviagen-ross308-po-2022' })
+  fuente: string;
+}
+
+export class ResultadoCalculoPlanDto {
+  @ApiProperty({ type: Number, example: 35, nullable: true })
+  dia_objetivo: number | null;
+
+  @ApiProperty({ type: Number, example: 34.821543, nullable: true })
+  dia_objetivo_interpolado: number | null;
+
+  @ApiProperty({
+    type: Date,
+    example: '2026-09-02T00:00:00.000Z',
+    nullable: true,
+  })
+  fecha_salida_calculada: Date | null;
+}
+
+export class PlanLoteHistorialItemDto {
   @ApiProperty({ example: 1 })
   id: number;
 
@@ -23,40 +85,28 @@ export class PlanLoteRespuestaDto {
   })
   estado_dia: EstadoCalculoPlan;
 
-  @ApiProperty({ type: Number, example: 3, nullable: true })
-  curva_version_id: number | null;
-
-  @ApiProperty({ type: Number, example: 1, nullable: true })
-  linea_genetica_id_snapshot: number | null;
-
-  @ApiProperty({ enum: SexoCurva, example: SexoCurva.mixto })
-  sexo_curva_snapshot: SexoCurva;
-
-  @ApiProperty({ example: '2026-07-30T00:00:00.000Z' })
-  fecha_ingreso_snapshot: Date;
-
-  @ApiProperty({ type: Number, example: 35, nullable: true })
-  dia_objetivo: number | null;
-
-  @ApiProperty({ type: Number, example: 34.821543, nullable: true })
-  dia_objetivo_interpolado: number | null;
-
-  @ApiProperty({
-    type: Date,
-    example: '2026-09-02T00:00:00.000Z',
-    nullable: true,
-  })
-  fecha_salida_calculada: Date | null;
-
   @ApiProperty({ type: String, example: null, nullable: true })
   motivo: string | null;
-
-  @ApiProperty({ example: 4 })
-  creado_por_id: number;
 
   @ApiProperty({ example: '2026-09-18T00:00:00.000Z' })
   fecha_creacion: Date;
 
+  @ApiProperty({ type: CreadoPorPlanDto })
+  creado_por: CreadoPorPlanDto;
+
+  @ApiProperty({ type: SnapshotPlanDto })
+  snapshot: SnapshotPlanDto;
+
+  @ApiProperty({ type: CurvaPlanDto, nullable: true })
+  curva: CurvaPlanDto | null;
+
+  @ApiProperty({ type: ResultadoCalculoPlanDto })
+  resultado: ResultadoCalculoPlanDto;
+}
+
+// vigente/crear/recalcular agregan desactualizado; el historial no -- una
+// version jubilada no se compara contra el lote actual (ver PlanLoteService).
+export class PlanLoteRespuestaDto extends PlanLoteHistorialItemDto {
   @ApiProperty({
     example: false,
     description:
@@ -79,9 +129,9 @@ class MetaPaginacionPlanesDto {
   totalPages: number;
 }
 
-export class PlanLotePaginadoDto {
-  @ApiProperty({ type: [PlanLoteRespuestaDto] })
-  data: PlanLoteRespuestaDto[];
+export class PlanLoteHistorialPaginadoDto {
+  @ApiProperty({ type: [PlanLoteHistorialItemDto] })
+  data: PlanLoteHistorialItemDto[];
 
   @ApiProperty({ type: MetaPaginacionPlanesDto })
   meta: MetaPaginacionPlanesDto;

@@ -35,6 +35,7 @@ const LOTE_SELECT = {
     },
   },
   proveedor: { select: { id: true, nombre: true } },
+  linea_genetica: { select: { id: true, codigo: true, nombre: true } },
 } as const;
 
 @Injectable()
@@ -64,6 +65,20 @@ export class LotesService {
     if (!proveedor) throw new NotFoundException(`Proveedor no encontrado`);
   }
 
+  private async validarLineaGenetica(lineaGeneticaId: number) {
+    const linea = await this.prisma.lineaGenetica.findUnique({
+      where: { id: lineaGeneticaId },
+      select: { id: true, activo: true },
+    });
+
+    if (!linea) throw new NotFoundException('Línea genética no encontrada');
+    if (!linea.activo) {
+      throw new BadRequestException(
+        'No se puede asignar una línea genética inactiva',
+      );
+    }
+  }
+
   private async verificarSinLoteActivo(galponId: number, idPropio?: number) {
     const otroActivo = await this.prisma.lote.findFirst({
       where: {
@@ -86,6 +101,9 @@ export class LotesService {
     if (dto.proveedor_id !== undefined && dto.proveedor_id !== null) {
       await this.validarProveedor(dto.proveedor_id);
     }
+    if (dto.linea_genetica_id !== undefined && dto.linea_genetica_id !== null) {
+      await this.validarLineaGenetica(dto.linea_genetica_id);
+    }
 
     return this.prisma.$transaction(async (transaccion) => {
       const creado = await transaccion.lote.create({
@@ -97,6 +115,7 @@ export class LotesService {
           cantidad_inicial: dto.cantidad_inicial,
           raza: dto.raza,
           sexo: dto.sexo,
+          linea_genetica_id: dto.linea_genetica_id ?? null,
           marca_alimento: dto.marca_alimento,
           costo_pollito_unitario: dto.costo_pollito_unitario,
           presupuesto_total_cop: dto.presupuesto_total_cop,
@@ -163,6 +182,9 @@ export class LotesService {
     if (dto.proveedor_id !== undefined && dto.proveedor_id !== null) {
       await this.validarProveedor(dto.proveedor_id);
     }
+    if (dto.linea_genetica_id !== undefined && dto.linea_genetica_id !== null) {
+      await this.validarLineaGenetica(dto.linea_genetica_id);
+    }
     if (dto.estado === 'activo') {
       await this.verificarSinLoteActivo(actual.galpon.id, id);
     }
@@ -178,6 +200,7 @@ export class LotesService {
         cantidad_inicial: dto.cantidad_inicial,
         raza: dto.raza,
         sexo: dto.sexo,
+        linea_genetica_id: dto.linea_genetica_id,
         marca_alimento: dto.marca_alimento,
         costo_pollito_unitario: dto.costo_pollito_unitario,
         presupuesto_total_cop: dto.presupuesto_total_cop,

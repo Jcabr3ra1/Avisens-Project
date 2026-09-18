@@ -71,19 +71,27 @@ ALTER TABLE "planes_lote"
   ADD CONSTRAINT "planes_lote_dia_objetivo_positivo"
   CHECK ("dia_objetivo" IS NULL OR "dia_objetivo" >= 1);
 
--- Matriz de estado <-> presencia de curva y resultados derivados:
---   calculado            -> curva y los tres resultados derivados obligatorios
---   sin_curva             -> curva y resultados derivados nulos
---   fuera_de_rango        -> curva obligatoria, resultados derivados nulos
---   datos_insuficientes   -> curva obligatoria, resultados derivados nulos
+-- dia objetivo interpolado, cuando existe, siempre positivo.
+ALTER TABLE "planes_lote"
+  ADD CONSTRAINT "planes_lote_dia_objetivo_interpolado_positivo"
+  CHECK ("dia_objetivo_interpolado" IS NULL OR "dia_objetivo_interpolado" > 0);
+
+-- Matriz de estado <-> presencia de linea/curva y resultados derivados:
+--   calculado            -> linea+curva y los tres resultados derivados obligatorios
+--   sin_curva             -> curva y resultados derivados nulos (la linea puede o no existir)
+--   fuera_de_rango        -> linea+curva obligatorias, resultados derivados nulos
+--   datos_insuficientes   -> linea+curva obligatorias, resultados derivados nulos
 -- Si esta CHECK no existiera, una escritura directa (o un bug futuro en el
--- servicio) podria dejar un plan "calculado" sin dia_objetivo, o un plan
--- "sin_curva" con una curva_version_id colgada.
+-- servicio) podria dejar un plan "calculado" sin dia_objetivo, un plan
+-- "calculado"/"fuera_de_rango"/"datos_insuficientes" sin la fotografia de la
+-- linea genetica que produjo ese resultado, o un plan "sin_curva" con una
+-- curva_version_id colgada.
 ALTER TABLE "planes_lote"
   ADD CONSTRAINT "planes_lote_matriz_estado_dia"
   CHECK (
     (
       "estado_dia" = 'calculado'::"EstadoCalculoPlan"
+      AND "linea_genetica_id_snapshot" IS NOT NULL
       AND "curva_version_id" IS NOT NULL
       AND "dia_objetivo" IS NOT NULL
       AND "dia_objetivo_interpolado" IS NOT NULL
@@ -98,6 +106,7 @@ ALTER TABLE "planes_lote"
     )
     OR (
       "estado_dia" IN ('fuera_de_rango'::"EstadoCalculoPlan", 'datos_insuficientes'::"EstadoCalculoPlan")
+      AND "linea_genetica_id_snapshot" IS NOT NULL
       AND "curva_version_id" IS NOT NULL
       AND "dia_objetivo" IS NULL
       AND "dia_objetivo_interpolado" IS NULL

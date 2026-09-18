@@ -1588,6 +1588,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
     let idAdminPlan: number;
     let orgAdminPlanId: number;
     let lineaId: number;
+    let segundaLineaId: number;
     const codigoBase = `${sufijo.replace(/-/g, '_')}_plan`;
     const idsLotesCreados: number[] = [];
 
@@ -1658,6 +1659,15 @@ describe('Núcleo multi-tenant (e2e)', () => {
         .patch(`/v1/curvas-geneticas/${curvaId}/activar`)
         .set('Authorization', `Bearer ${tokenAdminPlan}`)
         .expect(200);
+
+      // Segunda linea sin curva, solo para probar "cambiar" la linea del
+      // lote (a otra distinta) por API, sin necesitar una curva propia.
+      const segundaLinea = await request(servidor)
+        .post('/v1/lineas-geneticas')
+        .set('Authorization', `Bearer ${tokenAdminPlan}`)
+        .send({ codigo: `segunda_${codigoBase}`, nombre: 'Segunda Linea E2E' })
+        .expect(201);
+      segundaLineaId = (JSON.parse(segundaLinea.text) as { id: number }).id;
     });
 
     afterAll(async () => {
@@ -1670,7 +1680,9 @@ describe('Núcleo multi-tenant (e2e)', () => {
       await prisma.curvaGeneticaVersion.deleteMany({
         where: { linea_genetica_id: lineaId },
       });
-      await prisma.lineaGenetica.deleteMany({ where: { id: lineaId } });
+      await prisma.lineaGenetica.deleteMany({
+        where: { id: { in: [lineaId, segundaLineaId] } },
+      });
       await prisma.sesion.deleteMany({ where: { usuario_id: idAdminPlan } });
       await prisma.seguridadCuenta.deleteMany({
         where: { usuario_id: idAdminPlan },
@@ -1766,7 +1778,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         });
       });
 
-      it('estado_dia=calculado con snapshots correctos y fecha_salida_calculada derivada', async () => {
+      it('estado_dia=calculado con snapshot/curva anidados y fecha_salida_calculada derivada', async () => {
         const lote = await crearLoteDirecto();
 
         const res = await request(servidor)
@@ -1777,17 +1789,35 @@ describe('Núcleo multi-tenant (e2e)', () => {
         const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
         expect(cuerpo).toMatchObject({
           estado_dia: 'calculado',
-          linea_genetica_id_snapshot: lineaId,
-          sexo_curva_snapshot: 'macho',
-          dia_objetivo: 35,
           desactualizado: false,
         });
-        expect(typeof cuerpo.curva_version_id).toBe('number');
-        expect(cuerpo.fecha_salida_calculada).toBe('2026-09-02T00:00:00.000Z');
-        expect(cuerpo.fecha_ingreso_snapshot).toBe('2026-07-30T00:00:00.000Z');
+
+        const snapshot = cuerpo.snapshot as Record<string, unknown>;
+        expect(snapshot).toMatchObject({
+          linea_genetica: { id: lineaId },
+          sexo_curva: 'macho',
+          fecha_ingreso: '2026-07-30T00:00:00.000Z',
+        });
+
+        const curva = cuerpo.curva as Record<string, unknown>;
+        expect(curva).toMatchObject({
+          linea_genetica: { id: lineaId },
+          sexo: 'macho',
+        });
+        expect(typeof curva.version_id).toBe('number');
+
+        const resultado = cuerpo.resultado as Record<string, unknown>;
+        expect(resultado.dia_objetivo).toBe(35);
+        expect(resultado.fecha_salida_calculada).toBe(
+          '2026-09-02T00:00:00.000Z',
+        );
+
+        expect((cuerpo.creado_por as Record<string, unknown>).id).toBe(
+          idAdminPlan,
+        );
       });
 
-      it('estado_dia=sin_curva cuando el lote no tiene linea genetica', async () => {
+      it('estado_dia=sin_curva (curva=null) cuando el lote no tiene linea genetica', async () => {
         const lote = await crearLoteDirecto({ linea_genetica_id: null });
 
         const res = await request(servidor)
@@ -1795,11 +1825,11 @@ describe('Núcleo multi-tenant (e2e)', () => {
           .set('Authorization', `Bearer ${tokenAdminPlan}`)
           .send({ peso_objetivo_g: 2500 })
           .expect(201);
-        expect(JSON.parse(res.text)).toMatchObject({
-          estado_dia: 'sin_curva',
-          curva_version_id: null,
-          dia_objetivo: null,
-        });
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+        expect(cuerpo).toMatchObject({ estado_dia: 'sin_curva', curva: null });
+        expect(
+          (cuerpo.resultado as Record<string, unknown>).dia_objetivo,
+        ).toBeNull();
       });
 
       it('estado_dia=fuera_de_rango cuando el objetivo excede el ultimo peso de la curva', async () => {
@@ -1810,11 +1840,12 @@ describe('Núcleo multi-tenant (e2e)', () => {
           .set('Authorization', `Bearer ${tokenAdminPlan}`)
           .send({ peso_objetivo_g: 99999 })
           .expect(201);
-        expect(JSON.parse(res.text)).toMatchObject({
-          estado_dia: 'fuera_de_rango',
-          dia_objetivo: null,
-          fecha_salida_calculada: null,
-        });
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+        expect(cuerpo.estado_dia).toBe('fuera_de_rango');
+        expect(cuerpo.curva).not.toBeNull();
+        const resultado = cuerpo.resultado as Record<string, unknown>;
+        expect(resultado.dia_objetivo).toBeNull();
+        expect(resultado.fecha_salida_calculada).toBeNull();
       });
 
       it('cambiar el objetivo crea una version nueva y jubila la anterior', async () => {
@@ -1830,11 +1861,14 @@ describe('Núcleo multi-tenant (e2e)', () => {
           .set('Authorization', `Bearer ${tokenAdminPlan}`)
           .send({ peso_objetivo_g: 3000, motivo: 'ajuste comercial' })
           .expect(201);
-        expect(JSON.parse(segunda.text)).toMatchObject({
-          version: 2,
-          vigente: true,
-          dia_objetivo: 42,
-        });
+        const cuerpoSegunda = JSON.parse(segunda.text) as Record<
+          string,
+          unknown
+        >;
+        expect(cuerpoSegunda).toMatchObject({ version: 2, vigente: true });
+        expect(
+          (cuerpoSegunda.resultado as Record<string, unknown>).dia_objetivo,
+        ).toBe(42);
 
         const vigente = await request(servidor)
           .get(`/v1/lotes/${lote.id}/plan`)
@@ -1847,7 +1881,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
           .set('Authorization', `Bearer ${tokenAdminPlan}`)
           .expect(200);
         const cuerpoHistorial = JSON.parse(historial.text) as {
-          data: Array<{ version: number; vigente: boolean }>;
+          data: Array<Record<string, unknown>>;
           meta: { total: number };
         };
         expect(cuerpoHistorial.meta.total).toBe(2);
@@ -1855,6 +1889,10 @@ describe('Núcleo multi-tenant (e2e)', () => {
           expect.objectContaining({ version: 2, vigente: true }),
           expect.objectContaining({ version: 1, vigente: false }),
         ]);
+        // El historial no expone desactualizado: una version jubilada no se
+        // compara contra el lote actual (ver PlanLoteService.esDesactualizado).
+        expect(cuerpoHistorial.data[0]).not.toHaveProperty('desactualizado');
+        expect(cuerpoHistorial.data[0].snapshot).toBeDefined();
       });
 
       it('GET /plan responde 404 si el lote no tiene un plan vigente', async () => {
@@ -1891,7 +1929,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
           .expect(403);
       });
 
-      it('recalcular reusa el peso objetivo y refleja un cambio real del lote', async () => {
+      it('recalcular reusa el peso objetivo y refleja una linea genetica asignada por API', async () => {
         const lote = await crearLoteDirecto({ linea_genetica_id: null });
         const creado = await request(servidor)
           .post(`/v1/lotes/${lote.id}/plan`)
@@ -1902,12 +1940,11 @@ describe('Núcleo multi-tenant (e2e)', () => {
           estado_dia: 'sin_curva',
         });
 
-        // Cambio real, fuera de la API publica (linea_genetica_id no es
-        // asignable por CreateLoteDto/UpdateLoteDto en esta fase).
-        await prisma.lote.update({
-          where: { id: lote.id },
-          data: { linea_genetica_id: lineaId },
-        });
+        await request(servidor)
+          .patch(`/v1/lotes/${lote.id}`)
+          .set('Authorization', `Bearer ${tokenAdminPlan}`)
+          .send({ linea_genetica_id: lineaId })
+          .expect(200);
 
         const recalculado = await request(servidor)
           .post(`/v1/lotes/${lote.id}/plan/recalcular`)
@@ -1918,16 +1955,64 @@ describe('Núcleo multi-tenant (e2e)', () => {
         expect(cuerpo).toMatchObject({
           version: 2,
           estado_dia: 'calculado',
-          dia_objetivo: 35,
           desactualizado: false,
         });
+        expect((cuerpo.resultado as Record<string, unknown>).dia_objetivo).toBe(
+          35,
+        );
         // Sin DecimalInterceptor (solo registrado via APP_INTERCEPTOR en
         // AppModule, que este harness de e2e no monta), un Decimal viaja
         // como string en el JSON de la respuesta.
         expect(cuerpo.peso_objetivo_g).toBe('2500');
       });
 
-      it('desactualizado=true cuando la linea genetica del lote cambia por fuera del plan', async () => {
+      it('asignar la linea genetica al lote por API -> crear plan -> estado calculado', async () => {
+        const lote = await crearLoteDirecto({ linea_genetica_id: null });
+
+        const patch = await request(servidor)
+          .patch(`/v1/lotes/${lote.id}`)
+          .set('Authorization', `Bearer ${tokenAdminPlan}`)
+          .send({ linea_genetica_id: lineaId })
+          .expect(200);
+        expect(
+          (JSON.parse(patch.text) as Record<string, unknown>).linea_genetica,
+        ).toMatchObject({ id: lineaId });
+
+        const plan = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan`)
+          .set('Authorization', `Bearer ${tokenAdminPlan}`)
+          .send({ peso_objetivo_g: 2500 })
+          .expect(201);
+        expect(JSON.parse(plan.text)).toMatchObject({
+          estado_dia: 'calculado',
+        });
+      });
+
+      it('una linea genetica inactiva no puede asignarse a un lote por API (400)', async () => {
+        const lineaInactiva = await request(servidor)
+          .post('/v1/lineas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminPlan}`)
+          .send({ codigo: `inactiva_${codigoBase}`, nombre: 'Inactiva E2E' })
+          .expect(201);
+        const lineaInactivaId = (
+          JSON.parse(lineaInactiva.text) as { id: number }
+        ).id;
+        await request(servidor)
+          .delete(`/v1/lineas-geneticas/${lineaInactivaId}`)
+          .set('Authorization', `Bearer ${tokenAdminPlan}`)
+          .expect(200);
+
+        const lote = await crearLoteDirecto({ linea_genetica_id: null });
+        await request(servidor)
+          .patch(`/v1/lotes/${lote.id}`)
+          .set('Authorization', `Bearer ${tokenAdminPlan}`)
+          .send({ linea_genetica_id: lineaInactivaId })
+          .expect(400);
+
+        await prisma.lineaGenetica.delete({ where: { id: lineaInactivaId } });
+      });
+
+      it('desvincular la linea genetica por API marca el plan vigente como desactualizado', async () => {
         const lote = await crearLoteDirecto();
         await request(servidor)
           .post(`/v1/lotes/${lote.id}/plan`)
@@ -1935,10 +2020,11 @@ describe('Núcleo multi-tenant (e2e)', () => {
           .send({ peso_objetivo_g: 2500 })
           .expect(201);
 
-        await prisma.lote.update({
-          where: { id: lote.id },
-          data: { linea_genetica_id: null },
-        });
+        await request(servidor)
+          .patch(`/v1/lotes/${lote.id}`)
+          .set('Authorization', `Bearer ${tokenAdminPlan}`)
+          .send({ linea_genetica_id: null })
+          .expect(200);
 
         const res = await request(servidor)
           .get(`/v1/lotes/${lote.id}/plan`)
@@ -1947,8 +2033,33 @@ describe('Núcleo multi-tenant (e2e)', () => {
         const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
         // El registro persistido no se recalcula solo con leerlo -- sigue
         // mostrando el dia que se calculo en su momento.
-        expect(cuerpo.dia_objetivo).toBe(35);
+        expect((cuerpo.resultado as Record<string, unknown>).dia_objetivo).toBe(
+          35,
+        );
         expect(cuerpo.desactualizado).toBe(true);
+      });
+
+      it('cambiar la linea genetica del lote por API a otra distinta marca el plan vigente como desactualizado', async () => {
+        const lote = await crearLoteDirecto();
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan`)
+          .set('Authorization', `Bearer ${tokenAdminPlan}`)
+          .send({ peso_objetivo_g: 2500 })
+          .expect(201);
+
+        await request(servidor)
+          .patch(`/v1/lotes/${lote.id}`)
+          .set('Authorization', `Bearer ${tokenAdminPlan}`)
+          .send({ linea_genetica_id: segundaLineaId })
+          .expect(200);
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan`)
+          .set('Authorization', `Bearer ${tokenAdminPlan}`)
+          .expect(200);
+        expect(
+          (JSON.parse(res.text) as Record<string, unknown>).desactualizado,
+        ).toBe(true);
       });
     });
 
@@ -2040,10 +2151,65 @@ describe('Núcleo multi-tenant (e2e)', () => {
               peso_objetivo_g: 2500,
               estado_dia: 'calculado',
               curva_version_id: curva.id,
+              // valido a proposito: aisla la violacion en dia_objetivo, no
+              // en linea_genetica_id_snapshot ni en dia_objetivo_interpolado.
+              linea_genetica_id_snapshot: lineaId,
               sexo_curva_snapshot: 'macho',
               fecha_ingreso_snapshot: lote.fecha_ingreso,
               dia_objetivo: 0,
+              dia_objetivo_interpolado: 1,
+              fecha_salida_calculada: lote.fecha_ingreso,
+              creado_por_id: idAdminPlan,
+            },
+          }),
+        ).rejects.toThrow(/violat|check/i);
+      });
+
+      it('el CHECK escalar rechaza dia_objetivo_interpolado no positivo', async () => {
+        const lote = await crearLoteDirecto();
+        const curva = await prisma.curvaGeneticaVersion.findFirstOrThrow({
+          where: { linea_genetica_id: lineaId, vigente: true },
+        });
+
+        await expect(
+          prisma.planLote.create({
+            data: {
+              lote_id: lote.id,
+              version: 1,
+              peso_objetivo_g: 2500,
+              estado_dia: 'calculado',
+              curva_version_id: curva.id,
+              linea_genetica_id_snapshot: lineaId,
+              sexo_curva_snapshot: 'macho',
+              fecha_ingreso_snapshot: lote.fecha_ingreso,
+              dia_objetivo: 5,
               dia_objetivo_interpolado: 0,
+              fecha_salida_calculada: lote.fecha_ingreso,
+              creado_por_id: idAdminPlan,
+            },
+          }),
+        ).rejects.toThrow(/violat|check/i);
+      });
+
+      it('el CHECK de matriz rechaza calculado con linea_genetica_id_snapshot nulo', async () => {
+        const lote = await crearLoteDirecto();
+        const curva = await prisma.curvaGeneticaVersion.findFirstOrThrow({
+          where: { linea_genetica_id: lineaId, vigente: true },
+        });
+
+        await expect(
+          prisma.planLote.create({
+            data: {
+              lote_id: lote.id,
+              version: 1,
+              peso_objetivo_g: 2500,
+              estado_dia: 'calculado',
+              curva_version_id: curva.id,
+              linea_genetica_id_snapshot: null,
+              sexo_curva_snapshot: 'macho',
+              fecha_ingreso_snapshot: lote.fecha_ingreso,
+              dia_objetivo: 35,
+              dia_objetivo_interpolado: 35,
               fecha_salida_calculada: lote.fecha_ingreso,
               creado_por_id: idAdminPlan,
             },

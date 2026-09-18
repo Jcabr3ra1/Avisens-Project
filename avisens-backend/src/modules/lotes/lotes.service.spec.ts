@@ -23,6 +23,7 @@ describe('LotesService', () => {
     },
     galpon: { findUnique: jest.fn() },
     proveedor: { findUnique: jest.fn() },
+    lineaGenetica: { findUnique: jest.fn() },
     $transaction: jest.fn(),
   };
 
@@ -68,6 +69,7 @@ describe('LotesService', () => {
       granja: { propietario_id: 5 },
     });
     prisma.proveedor.findUnique.mockResolvedValue({ id: 7 });
+    prisma.lineaGenetica.findUnique.mockResolvedValue({ id: 2, activo: true });
     prisma.lote.findFirst.mockResolvedValue(null);
   });
 
@@ -146,6 +148,56 @@ describe('LotesService', () => {
 
       expect(prisma.proveedor.findUnique).not.toHaveBeenCalled();
       expect(dataDe(prisma.lote.create).proveedor_id).toBeNull();
+    });
+
+    it('crea el lote con la linea genetica indicada, ya validada como activa', async () => {
+      prisma.lote.create.mockResolvedValue({ id: 27 });
+      prisma.lote.update.mockResolvedValue({
+        id: 27,
+        codigo: 'LOT-2026-000027',
+      });
+
+      await service.crear({ ...dtoCrear, linea_genetica_id: 2 }, admin);
+
+      expect(prisma.lineaGenetica.findUnique).toHaveBeenCalledWith({
+        where: { id: 2 },
+        select: { id: true, activo: true },
+      });
+      expect(dataDe(prisma.lote.create).linea_genetica_id).toBe(2);
+    });
+
+    it('rechaza (404) si la linea genetica no existe', async () => {
+      prisma.lineaGenetica.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.crear({ ...dtoCrear, linea_genetica_id: 2 }, admin),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.lote.create).not.toHaveBeenCalled();
+    });
+
+    it('rechaza (400) si la linea genetica esta inactiva', async () => {
+      prisma.lineaGenetica.findUnique.mockResolvedValue({
+        id: 2,
+        activo: false,
+      });
+
+      await expect(
+        service.crear({ ...dtoCrear, linea_genetica_id: 2 }, admin),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.lote.create).not.toHaveBeenCalled();
+    });
+
+    it('crea el lote sin linea genetica cuando no se indica (no valida nada)', async () => {
+      prisma.lote.create.mockResolvedValue({ id: 28 });
+      prisma.lote.update.mockResolvedValue({
+        id: 28,
+        codigo: 'LOT-2026-000028',
+      });
+
+      await service.crear(dtoCrear, admin);
+
+      expect(prisma.lineaGenetica.findUnique).not.toHaveBeenCalled();
+      expect(dataDe(prisma.lote.create).linea_genetica_id).toBeNull();
     });
   });
 
@@ -248,6 +300,51 @@ describe('LotesService', () => {
       await service.actualizar(1, { raza: 'Cobb 500' }, propietario);
 
       expect(prisma.lote.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('asigna la linea genetica indicada, ya validada como activa', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.update.mockResolvedValue({ id: 1 });
+
+      await service.actualizar(1, { linea_genetica_id: 2 }, propietario);
+
+      expect(prisma.lineaGenetica.findUnique).toHaveBeenCalledWith({
+        where: { id: 2 },
+        select: { id: true, activo: true },
+      });
+      expect(dataDe(prisma.lote.update).linea_genetica_id).toBe(2);
+    });
+
+    it('rechaza (400) asignar una linea genetica inactiva', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lineaGenetica.findUnique.mockResolvedValue({
+        id: 2,
+        activo: false,
+      });
+
+      await expect(
+        service.actualizar(1, { linea_genetica_id: 2 }, propietario),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.lote.update).not.toHaveBeenCalled();
+    });
+
+    it('permite desvincular la linea genetica con null, sin validar nada', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.update.mockResolvedValue({ id: 1 });
+
+      await service.actualizar(1, { linea_genetica_id: null }, propietario);
+
+      expect(prisma.lineaGenetica.findUnique).not.toHaveBeenCalled();
+      expect(dataDe(prisma.lote.update).linea_genetica_id).toBeNull();
     });
   });
 

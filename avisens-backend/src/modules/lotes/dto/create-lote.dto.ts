@@ -63,6 +63,17 @@ export class CreateLoteDto {
   sexo?: string;
 
   @ApiPropertyOptional({
+    example: 1,
+    description:
+      'ID de la línea genética del lote. null desvincula la línea asignada.',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  linea_genetica_id?: number | null;
+
+  @ApiPropertyOptional({
     example: 'italcol',
     description:
       'Marca de alimento del lote. Sólo italcol y solla tienen curva sembrada: ' +

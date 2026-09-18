@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -25,7 +26,7 @@ import { PlanLoteService } from './plan-lote.service';
 import { CrearPlanLoteDto } from './dto/crear-plan-lote.dto';
 import { RecalcularPlanLoteDto } from './dto/recalcular-plan-lote.dto';
 import {
-  PlanLotePaginadoDto,
+  PlanLoteHistorialPaginadoDto,
   PlanLoteRespuestaDto,
 } from './dto/plan-lote-respuesta.dto';
 
@@ -46,7 +47,7 @@ export class PlanLoteController {
   @ApiOperation({
     summary: 'Crear o cambiar el objetivo comercial del plan de un lote',
   })
-  @ApiOkResponse({ type: PlanLoteRespuestaDto })
+  @ApiCreatedResponse({ type: PlanLoteRespuestaDto })
   crear(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CrearPlanLoteDto,
@@ -66,7 +67,7 @@ export class PlanLoteController {
   @ApiOperation({
     summary: 'Historial paginado de versiones del plan de un lote',
   })
-  @ApiOkResponse({ type: PlanLotePaginadoDto })
+  @ApiOkResponse({ type: PlanLoteHistorialPaginadoDto })
   historial(
     @Param('id', ParseIntPipe) id: number,
     @Query() paginacion: PaginationQueryDto,
@@ -80,7 +81,7 @@ export class PlanLoteController {
   @ApiOperation({
     summary: 'Recalcular el plan vigente contra el estado actual del lote',
   })
-  @ApiOkResponse({ type: PlanLoteRespuestaDto })
+  @ApiCreatedResponse({ type: PlanLoteRespuestaDto })
   recalcular(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: RecalcularPlanLoteDto,

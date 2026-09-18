@@ -14,6 +14,12 @@ import { resolverDiaObjetivo } from './interpolacion';
 import { CrearPlanLoteDto } from './dto/crear-plan-lote.dto';
 import { RecalcularPlanLoteDto } from './dto/recalcular-plan-lote.dto';
 
+const LINEA_GENETICA_RESUMEN_SELECT = {
+  id: true,
+  codigo: true,
+  nombre: true,
+} as const;
+
 const PLAN_SELECT = {
   id: true,
   lote_id: true,
@@ -21,17 +27,29 @@ const PLAN_SELECT = {
   vigente: true,
   peso_objetivo_g: true,
   estado_dia: true,
-  curva_version_id: true,
-  linea_genetica_id_snapshot: true,
   sexo_curva_snapshot: true,
   fecha_ingreso_snapshot: true,
   dia_objetivo: true,
   dia_objetivo_interpolado: true,
   fecha_salida_calculada: true,
   motivo: true,
-  creado_por_id: true,
   fecha_creacion: true,
+  creado_por: { select: { id: true, nombre_completo: true } },
+  linea_genetica_snapshot: { select: LINEA_GENETICA_RESUMEN_SELECT },
+  curva_version: {
+    select: {
+      id: true,
+      sexo: true,
+      version: true,
+      fuente: true,
+      linea_genetica: { select: LINEA_GENETICA_RESUMEN_SELECT },
+    },
+  },
 } as const;
+
+type PlanConRelaciones = Prisma.PlanLoteGetPayload<{
+  select: typeof PLAN_SELECT;
+}>;
 
 interface ResultadoEstadoPlan {
   estado_dia: EstadoCalculoPlan;
@@ -39,15 +57,6 @@ interface ResultadoEstadoPlan {
   dia_objetivo: number | null;
   dia_objetivo_interpolado: Prisma.Decimal | null;
   fecha_salida_calculada: Date | null;
-}
-
-interface SnapshotPlan {
-  lote_id: number;
-  linea_genetica_id_snapshot: number | null;
-  sexo_curva_snapshot: SexoCurva;
-  fecha_ingreso_snapshot: Date;
-  curva_version_id: number | null;
-  estado_dia: EstadoCalculoPlan;
 }
 
 @Injectable()
@@ -162,22 +171,61 @@ export class PlanLoteService {
     };
   }
 
+  // Aplana las relaciones incluidas en PLAN_SELECT al contrato aprobado:
+  // curva/snapshot/creado_por/resultado en vez de ids sueltos.
+  private mapearPlan(plan: PlanConRelaciones) {
+    return {
+      id: plan.id,
+      lote_id: plan.lote_id,
+      version: plan.version,
+      vigente: plan.vigente,
+      peso_objetivo_g: plan.peso_objetivo_g,
+      estado_dia: plan.estado_dia,
+      motivo: plan.motivo,
+      fecha_creacion: plan.fecha_creacion,
+      creado_por: plan.creado_por,
+      snapshot: {
+        linea_genetica: plan.linea_genetica_snapshot,
+        sexo_curva: plan.sexo_curva_snapshot,
+        fecha_ingreso: plan.fecha_ingreso_snapshot,
+      },
+      curva: plan.curva_version
+        ? {
+            version_id: plan.curva_version.id,
+            linea_genetica: plan.curva_version.linea_genetica,
+            sexo: plan.curva_version.sexo,
+            version: plan.curva_version.version,
+            fuente: plan.curva_version.fuente,
+          }
+        : null,
+      resultado: {
+        dia_objetivo: plan.dia_objetivo,
+        dia_objetivo_interpolado: plan.dia_objetivo_interpolado,
+        fecha_salida_calculada: plan.fecha_salida_calculada,
+      },
+    };
+  }
+
   /**
-   * desactualizado se deriva siempre en la lectura, nunca se persiste: compara
-   * el snapshot de este plan contra el estado ACTUAL del lote y su curva
-   * vigente compatible. Cualquier diferencia en linea, sexo resuelto o fecha
-   * de ingreso ya lo marca; si esos tres coinciden, todavia puede haber
-   * cambiado la curva vigente para esa combinacion (o haber aparecido una
-   * donde antes no habia ninguna).
+   * desactualizado se deriva siempre en la lectura, nunca se persiste, y
+   * SOLO tiene sentido para el plan vigente (GET /plan, y el que devuelven
+   * crear()/recalcular(), que siempre es false por ser recien calculado):
+   * una version jubilada del historial no se compara contra el lote actual.
+   * Compara el snapshot de este plan contra el estado ACTUAL del lote y su
+   * curva vigente compatible. Cualquier diferencia en linea, sexo resuelto o
+   * fecha de ingreso ya lo marca; si esos tres coinciden, todavia puede
+   * haber cambiado la curva vigente para esa combinacion (o haber aparecido
+   * una donde antes no habia ninguna).
    */
-  private async esDesactualizado(plan: SnapshotPlan): Promise<boolean> {
+  private async esDesactualizado(plan: PlanConRelaciones): Promise<boolean> {
     const lote = await this.prisma.lote.findUniqueOrThrow({
       where: { id: plan.lote_id },
       select: { linea_genetica_id: true, sexo: true, fecha_ingreso: true },
     });
     const sexoActual = (lote.sexo ?? 'mixto') as SexoCurva;
+    const lineaSnapshotId = plan.linea_genetica_snapshot?.id ?? null;
 
-    if (lote.linea_genetica_id !== plan.linea_genetica_id_snapshot) {
+    if (lote.linea_genetica_id !== lineaSnapshotId) {
       return true;
     }
     if (sexoActual !== plan.sexo_curva_snapshot) {
@@ -204,14 +252,14 @@ export class PlanLoteService {
     if (plan.estado_dia === 'sin_curva') {
       return curvaVigente !== null;
     }
-    return curvaVigente?.id !== plan.curva_version_id;
+    return curvaVigente?.id !== plan.curva_version?.id;
   }
 
   async crear(loteId: number, dto: CrearPlanLoteDto, solicitante: Solicitante) {
     await this.validarLote(loteId, solicitante);
     const pesoObjetivoG = new Prisma.Decimal(dto.peso_objetivo_g);
 
-    return this.prisma.$transaction(async (tx) => {
+    const plan = await this.prisma.$transaction(async (tx) => {
       const [fila] = await tx.$queryRaw<
         Array<{
           linea_genetica_id: number | null;
@@ -249,7 +297,7 @@ export class PlanLoteService {
       const version = ultima ? ultima.version + 1 : 1;
 
       try {
-        const plan = await tx.planLote.create({
+        return await tx.planLote.create({
           data: {
             lote_id: loteId,
             version,
@@ -267,7 +315,6 @@ export class PlanLoteService {
           },
           select: PLAN_SELECT,
         });
-        return { ...plan, desactualizado: false };
       } catch (error: unknown) {
         if (this.esConflictoUnico(error)) {
           throw new ConflictException(
@@ -277,6 +324,8 @@ export class PlanLoteService {
         throw error;
       }
     });
+
+    return { ...this.mapearPlan(plan), desactualizado: false };
   }
 
   async recalcular(
@@ -286,7 +335,7 @@ export class PlanLoteService {
   ) {
     await this.validarLote(loteId, solicitante);
 
-    return this.prisma.$transaction(async (tx) => {
+    const plan = await this.prisma.$transaction(async (tx) => {
       const [fila] = await tx.$queryRaw<
         Array<{
           linea_genetica_id: number | null;
@@ -332,7 +381,7 @@ export class PlanLoteService {
       const version = ultima ? ultima.version + 1 : 1;
 
       try {
-        const plan = await tx.planLote.create({
+        return await tx.planLote.create({
           data: {
             lote_id: loteId,
             version,
@@ -350,7 +399,6 @@ export class PlanLoteService {
           },
           select: PLAN_SELECT,
         });
-        return { ...plan, desactualizado: false };
       } catch (error: unknown) {
         if (this.esConflictoUnico(error)) {
           throw new ConflictException(
@@ -360,6 +408,8 @@ export class PlanLoteService {
         throw error;
       }
     });
+
+    return { ...this.mapearPlan(plan), desactualizado: false };
   }
 
   async obtener(loteId: number, solicitante: Solicitante) {
@@ -373,7 +423,10 @@ export class PlanLoteService {
       throw new NotFoundException('Este lote no tiene un plan vigente');
     }
 
-    return { ...plan, desactualizado: await this.esDesactualizado(plan) };
+    return {
+      ...this.mapearPlan(plan),
+      desactualizado: await this.esDesactualizado(plan),
+    };
   }
 
   async historial(
@@ -394,13 +447,14 @@ export class PlanLoteService {
       this.prisma.planLote.count({ where: { lote_id: loteId } }),
     ]);
 
-    const conDesactualizado = await Promise.all(
-      data.map(async (plan) => ({
-        ...plan,
-        desactualizado: await this.esDesactualizado(plan),
-      })),
+    // Sin desactualizado: una version jubilada no se compara contra el lote
+    // actual (ver esDesactualizado), y sin consultas extra por fila -- ya
+    // todo lo necesario viene de PLAN_SELECT en una sola consulta.
+    return paginate(
+      data.map((plan) => this.mapearPlan(plan)),
+      total,
+      page,
+      limit,
     );
-
-    return paginate(conDesactualizado, total, page, limit);
   }
 }
