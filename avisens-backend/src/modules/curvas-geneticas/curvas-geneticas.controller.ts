@@ -29,6 +29,7 @@ import { CurvasGeneticasService } from './curvas-geneticas.service';
 import { CreateCurvaGeneticaDto } from './dto/create-curva-genetica.dto';
 import { ReemplazarPuntosCurvaDto } from './dto/reemplazar-puntos-curva.dto';
 import {
+  CurvaGeneticaEliminadaRespuestaDto,
   CurvaGeneticaPaginadaDto,
   CurvaGeneticaRespuestaDto,
 } from './dto/curva-genetica-respuesta.dto';
@@ -109,6 +110,7 @@ export class CurvasGeneticasController {
   @ApiOperation({
     summary: 'Eliminar un borrador (una publicada no se elimina)',
   })
+  @ApiOkResponse({ type: CurvaGeneticaEliminadaRespuestaDto })
   eliminar(@Param('id', ParseIntPipe) id: number) {
     return this.servicio.eliminar(id);
   }

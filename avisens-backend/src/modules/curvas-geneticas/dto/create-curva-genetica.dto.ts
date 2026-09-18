@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { SexoCurva } from '@prisma/client';
-import { IsEnum, IsInt, IsString, Min } from 'class-validator';
+import { IsEnum, IsInt, IsNotEmpty, IsString, Min } from 'class-validator';
 
 export class CreateCurvaGeneticaDto {
   @ApiProperty({ example: 1, description: 'ID de la línea genética' })
@@ -17,5 +17,6 @@ export class CreateCurvaGeneticaDto {
     description: 'Procedencia de esta versión de la curva',
   })
   @IsString()
+  @IsNotEmpty()
   fuente: string;
 }

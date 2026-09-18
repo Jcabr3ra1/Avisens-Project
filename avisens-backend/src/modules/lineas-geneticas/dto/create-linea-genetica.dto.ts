@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, Matches } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
 
 export class CreateLineaGeneticaDto {
   @ApiProperty({
@@ -7,6 +8,9 @@ export class CreateLineaGeneticaDto {
     description:
       'Código único de la línea genética. Se normaliza a minúsculas al guardar.',
   })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @Matches(/^[a-zA-Z0-9_]+$/, {
     message: 'codigo solo puede contener letras, números y guión bajo',
@@ -15,6 +19,7 @@ export class CreateLineaGeneticaDto {
 
   @ApiProperty({ example: 'Ross 308' })
   @IsString()
+  @IsNotEmpty()
   nombre: string;
 
   @ApiPropertyOptional({ example: 'Línea de engorde de Aviagen' })

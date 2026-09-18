@@ -10,7 +10,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { PERMISOS } from '../../common/auth/permisos';
 import { Permisos } from '../../common/decorators/permisos.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -19,6 +25,11 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 import { LineasGeneticasService } from './lineas-geneticas.service';
 import { CreateLineaGeneticaDto } from './dto/create-linea-genetica.dto';
 import { UpdateLineaGeneticaDto } from './dto/update-linea-genetica.dto';
+import {
+  LineaGeneticaEstadoRespuestaDto,
+  LineaGeneticaPaginadaDto,
+  LineaGeneticaRespuestaDto,
+} from './dto/linea-genetica-respuesta.dto';
 
 @ApiTags('lineas-geneticas')
 @ApiBearerAuth()
@@ -31,18 +42,21 @@ export class LineasGeneticasController {
   @Post()
   @Permisos(PERMISOS.CATALOGOS_GESTIONAR)
   @ApiOperation({ summary: 'Crear una línea genética' })
+  @ApiCreatedResponse({ type: LineaGeneticaRespuestaDto })
   crear(@Body() dto: CreateLineaGeneticaDto) {
     return this.servicio.crear(dto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Listar líneas genéticas paginado' })
+  @ApiOkResponse({ type: LineaGeneticaPaginadaDto })
   listar(@Query() query: PaginationQueryDto) {
     return this.servicio.listar(query);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener una línea genética por ID' })
+  @ApiOkResponse({ type: LineaGeneticaRespuestaDto })
   obtener(@Param('id', ParseIntPipe) id: number) {
     return this.servicio.obtener(id);
   }
@@ -52,6 +66,7 @@ export class LineasGeneticasController {
   @ApiOperation({
     summary: 'Actualizar nombre/descripción (codigo es inmutable)',
   })
+  @ApiOkResponse({ type: LineaGeneticaRespuestaDto })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateLineaGeneticaDto,
@@ -62,6 +77,7 @@ export class LineasGeneticasController {
   @Patch(':id/activar')
   @Permisos(PERMISOS.CATALOGOS_GESTIONAR)
   @ApiOperation({ summary: 'Reactivar una línea genética' })
+  @ApiOkResponse({ type: LineaGeneticaEstadoRespuestaDto })
   activar(@Param('id', ParseIntPipe) id: number) {
     return this.servicio.cambiarEstado(id, true);
   }
@@ -69,6 +85,7 @@ export class LineasGeneticasController {
   @Delete(':id')
   @Permisos(PERMISOS.CATALOGOS_GESTIONAR)
   @ApiOperation({ summary: 'Desactivar una línea genética (borrado suave)' })
+  @ApiOkResponse({ type: LineaGeneticaEstadoRespuestaDto })
   desactivar(@Param('id', ParseIntPipe) id: number) {
     return this.servicio.cambiarEstado(id, false);
   }

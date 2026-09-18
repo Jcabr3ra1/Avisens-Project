@@ -27,6 +27,8 @@ describe('CurvasGeneticasService', () => {
       findMany: jest.fn(),
     },
     curvaGeneticaVersion: {
+      findFirst: jest.fn(),
+      create: jest.fn(),
       findUniqueOrThrow: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
@@ -71,31 +73,68 @@ describe('CurvasGeneticasService', () => {
       await expect(
         service.crear({ linea_genetica_id: 1, sexo: 'macho', fuente: 'x' }),
       ).rejects.toThrow(NotFoundException);
-      expect(prisma.curvaGeneticaVersion.create).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('rechaza (409) si la linea genetica esta inactiva', async () => {
+      prisma.lineaGenetica.findUnique.mockResolvedValue({
+        id: 1,
+        activo: false,
+      });
+
+      await expect(
+        service.crear({ linea_genetica_id: 1, sexo: 'macho', fuente: 'x' }),
+      ).rejects.toThrow(ConflictException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
     it('usa version 1 cuando no hay historial para esa linea+sexo', async () => {
-      prisma.lineaGenetica.findUnique.mockResolvedValue({ id: 1 });
-      prisma.curvaGeneticaVersion.findFirst.mockResolvedValue(null);
-      prisma.curvaGeneticaVersion.create.mockResolvedValue({ id: 10 });
+      prisma.lineaGenetica.findUnique.mockResolvedValue({
+        id: 1,
+        activo: true,
+      });
+      conCallback();
+      tx.$executeRaw.mockResolvedValue(undefined);
+      tx.curvaGeneticaVersion.findFirst.mockResolvedValue(null);
+      tx.curvaGeneticaVersion.create.mockResolvedValue({ id: 10 });
 
       await service.crear({ linea_genetica_id: 1, sexo: 'macho', fuente: 'x' });
 
-      expect(dataDe(prisma.curvaGeneticaVersion.create)).toMatchObject({
+      expect(dataDe(tx.curvaGeneticaVersion.create)).toMatchObject({
         version: 1,
       });
     });
 
     it('usa la version siguiente al maximo historico, nunca 1 fijo', async () => {
-      prisma.lineaGenetica.findUnique.mockResolvedValue({ id: 1 });
-      prisma.curvaGeneticaVersion.findFirst.mockResolvedValue({ version: 3 });
-      prisma.curvaGeneticaVersion.create.mockResolvedValue({ id: 10 });
+      prisma.lineaGenetica.findUnique.mockResolvedValue({
+        id: 1,
+        activo: true,
+      });
+      conCallback();
+      tx.$executeRaw.mockResolvedValue(undefined);
+      tx.curvaGeneticaVersion.findFirst.mockResolvedValue({ version: 3 });
+      tx.curvaGeneticaVersion.create.mockResolvedValue({ id: 10 });
 
       await service.crear({ linea_genetica_id: 1, sexo: 'macho', fuente: 'x' });
 
-      expect(dataDe(prisma.curvaGeneticaVersion.create)).toMatchObject({
+      expect(dataDe(tx.curvaGeneticaVersion.create)).toMatchObject({
         version: 4,
       });
+    });
+
+    it('traduce un choque de version unica (P2002, carrera dentro del lock) a un 409 de dominio', async () => {
+      prisma.lineaGenetica.findUnique.mockResolvedValue({
+        id: 1,
+        activo: true,
+      });
+      conCallback();
+      tx.$executeRaw.mockResolvedValue(undefined);
+      tx.curvaGeneticaVersion.findFirst.mockResolvedValue(null);
+      tx.curvaGeneticaVersion.create.mockRejectedValue({ code: 'P2002' });
+
+      await expect(
+        service.crear({ linea_genetica_id: 1, sexo: 'macho', fuente: 'x' }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
@@ -290,11 +329,24 @@ describe('CurvasGeneticasService', () => {
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
+    it('rechaza (409) si la linea genetica de la curva esta inactiva', async () => {
+      prisma.curvaGeneticaVersion.findUnique.mockResolvedValue({
+        id: 1,
+        linea_genetica_id: 5,
+        sexo: 'macho',
+        linea_genetica: { activo: false },
+      });
+
+      await expect(service.activar(1)).rejects.toThrow(ConflictException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
     it('rechaza (409) si el estado no es publicada', async () => {
       prisma.curvaGeneticaVersion.findUnique.mockResolvedValue({
         id: 1,
         linea_genetica_id: 5,
         sexo: 'macho',
+        linea_genetica: { activo: true },
       });
       conCallback();
       tx.$executeRaw.mockResolvedValue(undefined);
@@ -309,6 +361,7 @@ describe('CurvasGeneticasService', () => {
         id: 1,
         linea_genetica_id: 5,
         sexo: 'macho',
+        linea_genetica: { activo: true },
       });
       conCallback();
       tx.$executeRaw.mockResolvedValue(undefined);

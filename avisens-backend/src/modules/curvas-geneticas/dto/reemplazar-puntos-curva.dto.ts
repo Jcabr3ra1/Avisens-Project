@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsInt,
   IsNumber,
   IsOptional,
@@ -46,7 +47,12 @@ export class PuntoCurvaGeneticaDto {
 }
 
 export class ReemplazarPuntosCurvaDto {
-  @ApiProperty({ type: [PuntoCurvaGeneticaDto] })
+  @ApiProperty({
+    type: [PuntoCurvaGeneticaDto],
+    description:
+      'Conjunto completo de puntos. Un arreglo vacío es válido: borra todos los puntos del borrador.',
+  })
+  @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PuntoCurvaGeneticaDto)
   puntos: PuntoCurvaGeneticaDto[];

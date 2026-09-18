@@ -1331,6 +1331,155 @@ describe('Núcleo multi-tenant (e2e)', () => {
           .set('Authorization', `Bearer ${token}`)
           .expect(200);
       });
+
+      it('PUT /puntos responde 400 si puntos esta ausente, es un objeto, o es null', async () => {
+        const linea = await request(servidor)
+          .post('/v1/lineas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ codigo: `validacion_${codigoBase}`, nombre: 'Validacion' })
+          .expect(201);
+        const lineaId = (JSON.parse(linea.text) as { id: number }).id;
+        idsLineasCreadas.push(lineaId);
+        const curva = await request(servidor)
+          .post('/v1/curvas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ linea_genetica_id: lineaId, sexo: 'macho', fuente: 'test' })
+          .expect(201);
+        const curvaId = (JSON.parse(curva.text) as { id: number }).id;
+
+        await request(servidor)
+          .put(`/v1/curvas-geneticas/${curvaId}/puntos`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({})
+          .expect(400);
+        await request(servidor)
+          .put(`/v1/curvas-geneticas/${curvaId}/puntos`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ puntos: { dia: 7, peso_esperado_g: 100 } })
+          .expect(400);
+        await request(servidor)
+          .put(`/v1/curvas-geneticas/${curvaId}/puntos`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ puntos: null })
+          .expect(400);
+
+        // El arreglo vacio sigue siendo valido: borra todos los puntos.
+        await request(servidor)
+          .put(`/v1/curvas-geneticas/${curvaId}/puntos`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ puntos: [] })
+          .expect(200);
+      });
+
+      it('dos POST /curvas-geneticas concurrentes crean dos borradores con versiones consecutivas', async () => {
+        const linea = await request(servidor)
+          .post('/v1/lineas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({
+            codigo: `concurrencia_${codigoBase}`,
+            nombre: 'Concurrencia',
+          })
+          .expect(201);
+        const lineaId = (JSON.parse(linea.text) as { id: number }).id;
+        idsLineasCreadas.push(lineaId);
+
+        const crear = () =>
+          request(servidor)
+            .post('/v1/curvas-geneticas')
+            .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+            .send({
+              linea_genetica_id: lineaId,
+              sexo: 'hembra',
+              fuente: 'test',
+            })
+            .expect(201);
+
+        const [a, b] = await Promise.all([crear(), crear()]);
+        const versiones = [
+          (JSON.parse(a.text) as { version: number }).version,
+          (JSON.parse(b.text) as { version: number }).version,
+        ].sort((x, y) => x - y);
+
+        expect(versiones).toEqual([1, 2]);
+      });
+
+      it('crear curva sobre linea inactiva responde 409; reactivar permite continuar', async () => {
+        const linea = await request(servidor)
+          .post('/v1/lineas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ codigo: `inactiva_${codigoBase}`, nombre: 'Inactiva E2E' })
+          .expect(201);
+        const lineaId = (JSON.parse(linea.text) as { id: number }).id;
+        idsLineasCreadas.push(lineaId);
+
+        await request(servidor)
+          .delete(`/v1/lineas-geneticas/${lineaId}`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .expect(200);
+
+        await request(servidor)
+          .post('/v1/curvas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ linea_genetica_id: lineaId, sexo: 'macho', fuente: 'test' })
+          .expect(409);
+
+        await request(servidor)
+          .patch(`/v1/lineas-geneticas/${lineaId}/activar`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .expect(200);
+
+        await request(servidor)
+          .post('/v1/curvas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ linea_genetica_id: lineaId, sexo: 'macho', fuente: 'test' })
+          .expect(201);
+      });
+
+      it('activar una curva cuya linea esta inactiva responde 409; las curvas existentes siguen consultables', async () => {
+        const linea = await request(servidor)
+          .post('/v1/lineas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ codigo: `inactiva2_${codigoBase}`, nombre: 'Inactiva 2' })
+          .expect(201);
+        const lineaId = (JSON.parse(linea.text) as { id: number }).id;
+        idsLineasCreadas.push(lineaId);
+        const curva = await request(servidor)
+          .post('/v1/curvas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ linea_genetica_id: lineaId, sexo: 'macho', fuente: 'test' })
+          .expect(201);
+        const curvaId = (JSON.parse(curva.text) as { id: number }).id;
+        await request(servidor)
+          .put(`/v1/curvas-geneticas/${curvaId}/puntos`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({
+            puntos: [
+              { dia: 7, peso_esperado_g: 200 },
+              { dia: 14, peso_esperado_g: 400 },
+            ],
+          })
+          .expect(200);
+        await request(servidor)
+          .patch(`/v1/curvas-geneticas/${curvaId}/publicar`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .expect(200);
+
+        await request(servidor)
+          .delete(`/v1/lineas-geneticas/${lineaId}`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .expect(200);
+
+        await request(servidor)
+          .patch(`/v1/curvas-geneticas/${curvaId}/activar`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .expect(409);
+
+        // El histórico sigue siendo consultable aunque la linea este inactiva.
+        await request(servidor)
+          .get(`/v1/curvas-geneticas/${curvaId}`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .expect(200);
+      });
     });
 
     describe('inserciones/actualizaciones directas contra la base', () => {

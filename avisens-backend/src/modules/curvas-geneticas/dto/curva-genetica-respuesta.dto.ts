@@ -86,3 +86,11 @@ export class CurvaGeneticaPaginadaDto {
   @ApiProperty({ type: MetaPaginacionCurvasDto })
   meta: MetaPaginacionCurvasDto;
 }
+
+export class CurvaGeneticaEliminadaRespuestaDto {
+  @ApiProperty({ example: 1 })
+  id: number;
+
+  @ApiProperty({ example: true })
+  eliminado: boolean;
+}

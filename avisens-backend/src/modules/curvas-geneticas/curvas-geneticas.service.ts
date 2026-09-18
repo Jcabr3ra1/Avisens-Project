@@ -55,31 +55,62 @@ const ORDINAL_SEXO: Record<SexoCurva, number> = {
 export class CurvasGeneticasService {
   constructor(private prisma: PrismaService) {}
 
+  private esConflictoUnico(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2002'
+    );
+  }
+
   async crear(dto: CreateCurvaGeneticaDto) {
     const linea = await this.prisma.lineaGenetica.findUnique({
       where: { id: dto.linea_genetica_id },
-      select: { id: true },
+      select: { id: true, activo: true },
     });
     if (!linea) throw new NotFoundException('Línea genética no encontrada');
+    if (!linea.activo) {
+      throw new ConflictException(
+        'No se pueden crear curvas nuevas para una línea genética inactiva',
+      );
+    }
 
-    // version = maximo historico + 1, nunca 1 fijo: es el mismo bug que
-    // crear->jubilar->crear dejo en Umbrales cuando la version se asumia
-    // siempre 1 en vez de leer el historial.
-    const ultima = await this.prisma.curvaGeneticaVersion.findFirst({
-      where: { linea_genetica_id: dto.linea_genetica_id, sexo: dto.sexo },
-      orderBy: { version: 'desc' },
-      select: { version: true },
-    });
-    const version = ultima ? ultima.version + 1 : 1;
+    return this.prisma.$transaction(async (tx) => {
+      // Serializa por (linea_genetica_id, sexo): sin este lock, dos POST
+      // concurrentes podrian ambos leer el mismo maximo historico y calcular
+      // la misma version -- uno chocaria con P2002 crudo en vez de recibir
+      // la version siguiente real.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${dto.linea_genetica_id}, ${ORDINAL_SEXO[dto.sexo]})`;
 
-    return this.prisma.curvaGeneticaVersion.create({
-      data: {
-        linea_genetica_id: dto.linea_genetica_id,
-        sexo: dto.sexo,
-        version,
-        fuente: dto.fuente,
-      },
-      select: CURVA_SELECT_CON_PUNTOS,
+      // version = maximo historico + 1, nunca 1 fijo: es el mismo bug que
+      // crear->jubilar->crear dejo en Umbrales cuando la version se asumia
+      // siempre 1 en vez de leer el historial.
+      const ultima = await tx.curvaGeneticaVersion.findFirst({
+        where: { linea_genetica_id: dto.linea_genetica_id, sexo: dto.sexo },
+        orderBy: { version: 'desc' },
+        select: { version: true },
+      });
+      const version = ultima ? ultima.version + 1 : 1;
+
+      try {
+        return await tx.curvaGeneticaVersion.create({
+          data: {
+            linea_genetica_id: dto.linea_genetica_id,
+            sexo: dto.sexo,
+            version,
+            fuente: dto.fuente,
+          },
+          select: CURVA_SELECT_CON_PUNTOS,
+        });
+      } catch (error: unknown) {
+        if (this.esConflictoUnico(error)) {
+          throw new ConflictException(
+            'Ya existe una versión con ese número para esta línea y sexo; vuelve a intentarlo',
+          );
+        }
+        throw error;
+      }
     });
   }
 
@@ -239,9 +270,19 @@ export class CurvasGeneticasService {
   async activar(id: number) {
     const curva = await this.prisma.curvaGeneticaVersion.findUnique({
       where: { id },
-      select: { id: true, linea_genetica_id: true, sexo: true },
+      select: {
+        id: true,
+        linea_genetica_id: true,
+        sexo: true,
+        linea_genetica: { select: { activo: true } },
+      },
     });
     if (!curva) throw new NotFoundException('Curva genética no encontrada');
+    if (!curva.linea_genetica.activo) {
+      throw new ConflictException(
+        'No se puede activar una curva cuya línea genética está inactiva',
+      );
+    }
 
     return this.prisma.$transaction(async (tx) => {
       // Serializa por (linea_genetica_id, sexo). El indice unico parcial
