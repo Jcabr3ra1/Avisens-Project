@@ -28,6 +28,8 @@ import { UmbralesModule } from '../src/modules/umbrales/umbrales.module';
 import { MedicionesModule } from '../src/modules/mediciones/mediciones.module';
 import { LotesModule } from '../src/modules/lotes/lotes.module';
 import { AlertasService } from '../src/modules/alertas/alertas.service';
+import { LineasGeneticasModule } from '../src/modules/lineas-geneticas/lineas-geneticas.module';
+import { CurvasGeneticasModule } from '../src/modules/curvas-geneticas/curvas-geneticas.module';
 
 // main.ts declara este mismo parche antes de bootstrap(); esta suite arma su
 // propia app con Test.createTestingModule() y nunca pasa por ese archivo.
@@ -85,6 +87,8 @@ describe('Núcleo multi-tenant (e2e)', () => {
         UmbralesModule,
         MedicionesModule,
         LotesModule,
+        LineasGeneticasModule,
+        CurvasGeneticasModule,
       ],
     }).compile();
     app = modulo.createNestApplication();
@@ -1047,6 +1051,377 @@ describe('Núcleo multi-tenant (e2e)', () => {
 
         expect(activo.estado).toBe('activo');
         expect(historico.estado).toBe('inactivo');
+      });
+    });
+  });
+
+  describe('fundacion genetica (lineas + curvas geneticas)', () => {
+    // Crear/publicar/activar exige CATALOGOS_GESTIONAR (solo ADMINISTRADOR);
+    // ninguno de los tokens del fixture compartido tiene ese rol, asi que
+    // este bloque arma el suyo propio, autocontenido -- mismo patron que el
+    // admin de "exclusividad de lote activo".
+    let tokenAdminGenetica: string;
+    let idAdminGenetica: number;
+    let orgAdminGeneticaId: number;
+    const codigoBase = sufijo.replace(/-/g, '_');
+    // Registra solo las lineas que esta ejecucion crea por HTTP -- nunca un
+    // patron global de codigo, para no arrastrar filas de otra corrida (ver
+    // correccion en "exclusividad de lote activo"). curvaGeneticaVersion se
+    // limpia por linea_genetica_id antes de borrar la linea (FK Restrict).
+    const idsLineasCreadas: number[] = [];
+
+    beforeAll(async () => {
+      const rolAdmin = await prisma.rol.upsert({
+        where: { nombre: 'Administrador' },
+        update: {},
+        create: { nombre: 'Administrador' },
+      });
+      const org = await prisma.organizacion.create({
+        data: { nombre: `E2E Genetica Admin ${sufijo}` },
+      });
+      orgAdminGeneticaId = org.id;
+      const hash = await bcrypt.hash(password, 4);
+      const admin = await prisma.usuario.create({
+        data: {
+          nombre_completo: 'admin-genetica',
+          cedula: `admin-genetica-${sufijo}`,
+          email: `admin-genetica-${sufijo}@e2e.local`,
+          password_hash: hash,
+          rol_id: rolAdmin.id,
+          organizacion_id: orgAdminGeneticaId,
+        },
+      });
+      idAdminGenetica = admin.id;
+
+      const login = await request(servidor)
+        .post('/v1/auth/login')
+        .send({ email: admin.email, password })
+        .expect(200);
+      tokenAdminGenetica = (JSON.parse(login.text) as { access_token: string })
+        .access_token;
+    });
+
+    afterAll(async () => {
+      // curvas_geneticas_version.publicada_por_id referencia al admin de
+      // prueba (Restrict): hay que borrar las curvas (y con ellas sus
+      // puntos, via cascade) antes de poder borrar el usuario.
+      await prisma.curvaGeneticaVersion.deleteMany({
+        where: { linea_genetica_id: { in: idsLineasCreadas } },
+      });
+      await prisma.lineaGenetica.deleteMany({
+        where: { id: { in: idsLineasCreadas } },
+      });
+      await prisma.sesion.deleteMany({
+        where: { usuario_id: idAdminGenetica },
+      });
+      await prisma.seguridadCuenta.deleteMany({
+        where: { usuario_id: idAdminGenetica },
+      });
+      await prisma.usuario.deleteMany({ where: { id: idAdminGenetica } });
+      await prisma.organizacion.deleteMany({
+        where: { id: orgAdminGeneticaId },
+      });
+    });
+
+    describe('por HTTP', () => {
+      it('ciclo completo: crear linea -> crear curva -> PUT puntos -> publicar -> activar', async () => {
+        const linea = await request(servidor)
+          .post('/v1/lineas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ codigo: `ciclo_${codigoBase}`, nombre: 'Ciclo E2E' })
+          .expect(201);
+        const lineaId = (JSON.parse(linea.text) as { id: number }).id;
+        idsLineasCreadas.push(lineaId);
+
+        const curva = await request(servidor)
+          .post('/v1/curvas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ linea_genetica_id: lineaId, sexo: 'macho', fuente: 'test' })
+          .expect(201);
+        const curvaCuerpo = JSON.parse(curva.text) as {
+          id: number;
+          estado: string;
+          vigente: boolean;
+        };
+        expect(curvaCuerpo).toMatchObject({
+          estado: 'borrador',
+          vigente: false,
+        });
+
+        const conPuntos = await request(servidor)
+          .put(`/v1/curvas-geneticas/${curvaCuerpo.id}/puntos`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({
+            puntos: [
+              { dia: 7, peso_esperado_g: 211 },
+              { dia: 14, peso_esperado_g: 535 },
+            ],
+          })
+          .expect(200);
+        expect(
+          (JSON.parse(conPuntos.text) as { puntos: unknown[] }).puntos,
+        ).toHaveLength(2);
+
+        const publicada = await request(servidor)
+          .patch(`/v1/curvas-geneticas/${curvaCuerpo.id}/publicar`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .expect(200);
+        expect(JSON.parse(publicada.text)).toMatchObject({
+          estado: 'publicada',
+          vigente: false,
+        });
+
+        const activada = await request(servidor)
+          .patch(`/v1/curvas-geneticas/${curvaCuerpo.id}/activar`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .expect(200);
+        expect(JSON.parse(activada.text)).toMatchObject({
+          estado: 'publicada',
+          vigente: true,
+        });
+      });
+
+      it('PUT de puntos reemplaza el conjunto entero, no lo mezcla con el anterior', async () => {
+        const linea = await request(servidor)
+          .post('/v1/lineas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ codigo: `reemplazo_${codigoBase}`, nombre: 'Reemplazo E2E' })
+          .expect(201);
+        const lineaId = (JSON.parse(linea.text) as { id: number }).id;
+        idsLineasCreadas.push(lineaId);
+        const curva = await request(servidor)
+          .post('/v1/curvas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ linea_genetica_id: lineaId, sexo: 'hembra', fuente: 'test' })
+          .expect(201);
+        const curvaId = (JSON.parse(curva.text) as { id: number }).id;
+
+        await request(servidor)
+          .put(`/v1/curvas-geneticas/${curvaId}/puntos`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ puntos: [{ dia: 7, peso_esperado_g: 200 }] })
+          .expect(200);
+
+        const segundo = await request(servidor)
+          .put(`/v1/curvas-geneticas/${curvaId}/puntos`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({
+            puntos: [
+              { dia: 14, peso_esperado_g: 500 },
+              { dia: 21, peso_esperado_g: 900 },
+            ],
+          })
+          .expect(200);
+        const cuerpo = JSON.parse(segundo.text) as {
+          puntos: Array<{ dia: number }>;
+        };
+        expect(cuerpo.puntos.map((p) => p.dia)).toEqual([14, 21]);
+      });
+
+      it('PATCH/DELETE sobre una curva publicada responde 409', async () => {
+        const linea = await request(servidor)
+          .post('/v1/lineas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ codigo: `inmutable_${codigoBase}`, nombre: 'Inmutable E2E' })
+          .expect(201);
+        const lineaId = (JSON.parse(linea.text) as { id: number }).id;
+        idsLineasCreadas.push(lineaId);
+        const curva = await request(servidor)
+          .post('/v1/curvas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ linea_genetica_id: lineaId, sexo: 'mixto', fuente: 'test' })
+          .expect(201);
+        const curvaId = (JSON.parse(curva.text) as { id: number }).id;
+        await request(servidor)
+          .put(`/v1/curvas-geneticas/${curvaId}/puntos`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({
+            puntos: [
+              { dia: 7, peso_esperado_g: 200 },
+              { dia: 14, peso_esperado_g: 400 },
+            ],
+          })
+          .expect(200);
+        await request(servidor)
+          .patch(`/v1/curvas-geneticas/${curvaId}/publicar`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .expect(200);
+
+        await request(servidor)
+          .put(`/v1/curvas-geneticas/${curvaId}/puntos`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({ puntos: [{ dia: 21, peso_esperado_g: 900 }] })
+          .expect(409);
+        await request(servidor)
+          .delete(`/v1/curvas-geneticas/${curvaId}`)
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .expect(409);
+      });
+
+      it('activar una segunda version deja exactamente una vigente para esa linea+sexo', async () => {
+        const linea = await request(servidor)
+          .post('/v1/lineas-geneticas')
+          .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+          .send({
+            codigo: `dosversiones_${codigoBase}`,
+            nombre: 'Dos versiones',
+          })
+          .expect(201);
+        const lineaId = (JSON.parse(linea.text) as { id: number }).id;
+        idsLineasCreadas.push(lineaId);
+
+        const publicarYActivar = async (peso7: number) => {
+          const curva = await request(servidor)
+            .post('/v1/curvas-geneticas')
+            .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+            .send({ linea_genetica_id: lineaId, sexo: 'macho', fuente: 'test' })
+            .expect(201);
+          const curvaId = (JSON.parse(curva.text) as { id: number }).id;
+          await request(servidor)
+            .put(`/v1/curvas-geneticas/${curvaId}/puntos`)
+            .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+            .send({
+              puntos: [
+                { dia: 7, peso_esperado_g: peso7 },
+                { dia: 14, peso_esperado_g: peso7 + 300 },
+              ],
+            })
+            .expect(200);
+          await request(servidor)
+            .patch(`/v1/curvas-geneticas/${curvaId}/publicar`)
+            .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+            .expect(200);
+          await request(servidor)
+            .patch(`/v1/curvas-geneticas/${curvaId}/activar`)
+            .set('Authorization', `Bearer ${tokenAdminGenetica}`)
+            .expect(200);
+          return curvaId;
+        };
+
+        const primeraId = await publicarYActivar(200);
+        const segundaId = await publicarYActivar(210);
+
+        const vigentes = await prisma.curvaGeneticaVersion.count({
+          where: { linea_genetica_id: lineaId, sexo: 'macho', vigente: true },
+        });
+        expect(vigentes).toBe(1);
+        const primera = await prisma.curvaGeneticaVersion.findUnique({
+          where: { id: primeraId },
+        });
+        const segunda = await prisma.curvaGeneticaVersion.findUnique({
+          where: { id: segundaId },
+        });
+        expect(primera?.vigente).toBe(false);
+        expect(segunda?.vigente).toBe(true);
+      });
+
+      it('un rol sin CATALOGOS_GESTIONAR recibe 403 al escribir y 200 al leer', async () => {
+        await request(servidor)
+          .post('/v1/lineas-geneticas')
+          .set('Authorization', `Bearer ${token}`)
+          .send({ codigo: `sinpermiso_${codigoBase}`, nombre: 'x' })
+          .expect(403);
+
+        await request(servidor)
+          .get('/v1/lineas-geneticas')
+          .set('Authorization', `Bearer ${token}`)
+          .expect(200);
+        await request(servidor)
+          .get('/v1/curvas-geneticas')
+          .set('Authorization', `Bearer ${token}`)
+          .expect(200);
+      });
+    });
+
+    describe('inserciones/actualizaciones directas contra la base', () => {
+      it('el CHECK rechaza codigo con mayusculas', async () => {
+        await expect(
+          prisma.lineaGenetica.create({
+            data: { codigo: `Directo_${codigoBase}`, nombre: 'x' },
+          }),
+        ).rejects.toThrow(/violat|check/i);
+      });
+
+      it('el CHECK rechaza dia menor a 1 y peso no positivo', async () => {
+        const linea = await prisma.lineaGenetica.create({
+          data: { codigo: `check_dia_${codigoBase}`, nombre: 'x' },
+        });
+        const curva = await prisma.curvaGeneticaVersion.create({
+          data: {
+            linea_genetica_id: linea.id,
+            sexo: 'macho',
+            version: 1,
+            fuente: 'test',
+          },
+        });
+
+        await expect(
+          prisma.puntoCurvaGenetica.create({
+            data: { curva_version_id: curva.id, dia: 0, peso_esperado_g: 100 },
+          }),
+        ).rejects.toThrow(/violat|check/i);
+        await expect(
+          prisma.puntoCurvaGenetica.create({
+            data: { curva_version_id: curva.id, dia: 7, peso_esperado_g: 0 },
+          }),
+        ).rejects.toThrow(/violat|check/i);
+
+        await prisma.curvaGeneticaVersion.delete({ where: { id: curva.id } });
+        await prisma.lineaGenetica.delete({ where: { id: linea.id } });
+      });
+
+      it('el CHECK rechaza vigente=true con estado=borrador', async () => {
+        const linea = await prisma.lineaGenetica.create({
+          data: { codigo: `check_vigente_${codigoBase}`, nombre: 'x' },
+        });
+
+        await expect(
+          prisma.curvaGeneticaVersion.create({
+            data: {
+              linea_genetica_id: linea.id,
+              sexo: 'macho',
+              version: 1,
+              fuente: 'test',
+              vigente: true,
+            },
+          }),
+        ).rejects.toThrow(/violat|check/i);
+
+        await prisma.lineaGenetica.delete({ where: { id: linea.id } });
+      });
+
+      it('el indice unico rechaza dos curvas vigentes de la misma linea+sexo', async () => {
+        const linea = await prisma.lineaGenetica.create({
+          data: { codigo: `check_indice_${codigoBase}`, nombre: 'x' },
+        });
+        await prisma.curvaGeneticaVersion.create({
+          data: {
+            linea_genetica_id: linea.id,
+            sexo: 'macho',
+            version: 1,
+            fuente: 'test',
+            estado: 'publicada',
+            vigente: true,
+          },
+        });
+
+        await expect(
+          prisma.curvaGeneticaVersion.create({
+            data: {
+              linea_genetica_id: linea.id,
+              sexo: 'macho',
+              version: 2,
+              fuente: 'test',
+              estado: 'publicada',
+              vigente: true,
+            },
+          }),
+        ).rejects.toMatchObject({ code: 'P2002' });
+
+        await prisma.curvaGeneticaVersion.deleteMany({
+          where: { linea_genetica_id: linea.id },
+        });
+        await prisma.lineaGenetica.delete({ where: { id: linea.id } });
       });
     });
   });

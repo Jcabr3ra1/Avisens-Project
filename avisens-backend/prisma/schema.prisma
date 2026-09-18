@@ -83,6 +83,7 @@ model Usuario {
   accionamientos             AccionamientoEquipo[]
   alertas_responsable        Alerta[]               @relation("AlertaResponsable")
   alertas_escalado           Alerta[]               @relation("AlertaEscalado")
+  curvas_geneticas_publicadas CurvaGeneticaVersion[]
   evidencias_alertas         EvidenciaAlerta[]
   ordenes_compra             OrdenCompra[]
   movimientos_financieros    MovimientoFinanciero[]
@@ -969,6 +970,79 @@ model CurvaObjetivo {
   @@unique([marca, sexo, dia])
   @@map("curvas_objetivo")
 }
+
+// ---------------------------------------------------------------------------
+// Referencia genetica (Fase 0)
+//
+// La curva de peso/consumo/FCR es de la LINEA GENETICA (Ross, Cobb), no de la
+// marca de alimento: todas las marcas reproducen el estandar del genetista.
+// CurvaObjetivo sigue intacta sirviendo a indicadores y predicciones; esto es
+// una referencia nueva y aparte, que nace vacia.
+// ---------------------------------------------------------------------------
+model LineaGenetica {
+  id        Int   @id @default(autoincrement())
+  codigo String @unique
+  nombre String
+  descripcion String?
+  activo Boolean @default(true)
+  fecha_actualizacion DateTime @updatedAt
+
+  curvas CurvaGeneticaVersion[]
+
+  @@map("lineas_geneticas")
+}
+
+enum SexoCurva {
+  macho
+  hembra
+  mixto
+}
+
+enum EstadoCurvaVersion {
+  borrador
+  publicada
+}
+
+// La version es del CONJUNTO, no de la fila: versionar por punto permitiria
+// mezclar el dia 7 de una version con el dia 14 de otra y construir una curva
+// que nunca existio.
+
+model CurvaGeneticaVersion {
+  id                Int                @id @default(autoincrement())
+  linea_genetica_id Int
+  sexo              SexoCurva
+  version           Int
+  estado            EstadoCurvaVersion @default(borrador)
+  vigente           Boolean            @default(false)
+  fuente            String
+  fecha_publicacion DateTime?
+  publicada_por_id  Int?
+  fecha_creacion    DateTime           @default(now())
+
+  linea_genetica LineaGenetica        @relation(fields: [linea_genetica_id], references: [id], onDelete: Restrict)
+  publicada_por  Usuario?             @relation(fields: [publicada_por_id], references: [id], onDelete: Restrict)
+  puntos         PuntoCurvaGenetica[]
+
+  @@unique([linea_genetica_id, sexo, version])
+  @@index([linea_genetica_id, sexo])
+  @@map("curvas_geneticas_version")
+}
+
+model PuntoCurvaGenetica {
+  id                  Int      @id @default(autoincrement())
+  curva_version_id    Int
+  dia                 Int
+  peso_esperado_g     Decimal  @db.Decimal(10, 2)
+  consumo_diario_g    Decimal? @db.Decimal(10, 2)
+  consumo_acumulado_g Decimal? @db.Decimal(12, 2)
+  fcr_objetivo        Decimal? @db.Decimal(6, 3)
+
+  curva_version CurvaGeneticaVersion @relation(fields: [curva_version_id], references: [id], onDelete: Cascade)
+
+  @@unique([curva_version_id, dia])
+  @@map("puntos_curva_genetica")
+}
+
 
 // ---------------------------------------------------------------------------
 // Accionamientos de equipos (historial de encendido/apagado, manual o automatico)

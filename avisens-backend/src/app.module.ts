@@ -55,6 +55,8 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { DecimalInterceptor } from './common/decimal.interceptor';
 import { RecuperacionesPasswordModule } from './modules/recuperaciones-password/recuperaciones-password.module';
 import { CatalogoSensoresModule } from './modules/catalogo-sensores/catalogo-sensores.module';
+import { LineasGeneticasModule } from './modules/lineas-geneticas/lineas-geneticas.module';
+import { CurvasGeneticasModule } from './modules/curvas-geneticas/curvas-geneticas.module';
 import { ComandosVozModule } from './modules/comandos-voz/comandos-voz.module';
 import { ZonasGalponModule } from './modules/zonas-galpon/zonas-galpon.module';
 import { UsuariosGalponesModule } from './modules/usuarios-galpones/usuarios-galpones.module';
@@ -142,6 +144,8 @@ import { CaptacionProspectosModule } from './modules/captacion-prospectos/captac
     OrganizacionesModule,
     RecuperacionesPasswordModule,
     CatalogoSensoresModule,
+    LineasGeneticasModule,
+    CurvasGeneticasModule,
     ComandosVozModule,
     ZonasGalponModule,
     UsuariosGalponesModule,
