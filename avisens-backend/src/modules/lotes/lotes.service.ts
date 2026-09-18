@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
@@ -65,12 +66,26 @@ export class LotesService {
     if (!proveedor) throw new NotFoundException(`Proveedor no encontrado`);
   }
 
-  private async validarLineaGenetica(lineaGeneticaId: number) {
-    const linea = await this.prisma.lineaGenetica.findUnique({
-      where: { id: lineaGeneticaId },
-      select: { id: true, activo: true },
-    });
-
+  /**
+   * Bloquea la fila de la linea y decide "activa" con ESTA lectura, dentro
+   * de la misma transaccion que crea/actualiza el lote -- no con una
+   * consulta previa fuera de la transaccion. Sin este orden, una
+   * desactivacion concurrente (LineasGeneticasService.cambiarEstado(), un
+   * UPDATE simple) podria confirmar entre el chequeo y el create()/update()
+   * del lote, dejando pasar una asignacion sobre una linea ya inactiva. Si
+   * la desactivacion ya tomo este mismo lock de fila, esta consulta espera
+   * a que termine antes de decidir (mismo patron que CurvasGeneticasService
+   * en Fase 0).
+   */
+  private async bloquearYValidarLineaGenetica(
+    tx: Prisma.TransactionClient,
+    lineaGeneticaId: number,
+  ) {
+    const [linea] = await tx.$queryRaw<Array<{ id: number; activo: boolean }>>`
+      SELECT "id", "activo" FROM "lineas_geneticas"
+      WHERE "id" = ${lineaGeneticaId}
+      FOR UPDATE
+    `;
     if (!linea) throw new NotFoundException('Línea genética no encontrada');
     if (!linea.activo) {
       throw new BadRequestException(
@@ -101,11 +116,18 @@ export class LotesService {
     if (dto.proveedor_id !== undefined && dto.proveedor_id !== null) {
       await this.validarProveedor(dto.proveedor_id);
     }
-    if (dto.linea_genetica_id !== undefined && dto.linea_genetica_id !== null) {
-      await this.validarLineaGenetica(dto.linea_genetica_id);
-    }
 
     return this.prisma.$transaction(async (transaccion) => {
+      if (
+        dto.linea_genetica_id !== undefined &&
+        dto.linea_genetica_id !== null
+      ) {
+        await this.bloquearYValidarLineaGenetica(
+          transaccion,
+          dto.linea_genetica_id,
+        );
+      }
+
       const creado = await transaccion.lote.create({
         data: {
           galpon_id: dto.galpon_id,
@@ -182,37 +204,46 @@ export class LotesService {
     if (dto.proveedor_id !== undefined && dto.proveedor_id !== null) {
       await this.validarProveedor(dto.proveedor_id);
     }
-    if (dto.linea_genetica_id !== undefined && dto.linea_genetica_id !== null) {
-      await this.validarLineaGenetica(dto.linea_genetica_id);
-    }
     if (dto.estado === 'activo') {
       await this.verificarSinLoteActivo(actual.galpon.id, id);
     }
 
-    return this.prisma.lote.update({
-      where: { id },
-      data: {
-        galpon_id: undefined,
-        proveedor_id: dto.proveedor_id,
-        fecha_ingreso: dto.fecha_ingreso
-          ? new Date(dto.fecha_ingreso)
-          : undefined,
-        cantidad_inicial: dto.cantidad_inicial,
-        raza: dto.raza,
-        sexo: dto.sexo,
-        linea_genetica_id: dto.linea_genetica_id,
-        marca_alimento: dto.marca_alimento,
-        costo_pollito_unitario: dto.costo_pollito_unitario,
-        presupuesto_total_cop: dto.presupuesto_total_cop,
-        fecha_salida_estimada: dto.fecha_salida_estimada
-          ? new Date(dto.fecha_salida_estimada)
-          : undefined,
-        fecha_salida_real: dto.fecha_salida_real
-          ? new Date(dto.fecha_salida_real)
-          : undefined,
-        estado: dto.estado,
-      },
-      select: LOTE_SELECT,
+    return this.prisma.$transaction(async (transaccion) => {
+      if (
+        dto.linea_genetica_id !== undefined &&
+        dto.linea_genetica_id !== null
+      ) {
+        await this.bloquearYValidarLineaGenetica(
+          transaccion,
+          dto.linea_genetica_id,
+        );
+      }
+
+      return transaccion.lote.update({
+        where: { id },
+        data: {
+          galpon_id: undefined,
+          proveedor_id: dto.proveedor_id,
+          fecha_ingreso: dto.fecha_ingreso
+            ? new Date(dto.fecha_ingreso)
+            : undefined,
+          cantidad_inicial: dto.cantidad_inicial,
+          raza: dto.raza,
+          sexo: dto.sexo,
+          linea_genetica_id: dto.linea_genetica_id,
+          marca_alimento: dto.marca_alimento,
+          costo_pollito_unitario: dto.costo_pollito_unitario,
+          presupuesto_total_cop: dto.presupuesto_total_cop,
+          fecha_salida_estimada: dto.fecha_salida_estimada
+            ? new Date(dto.fecha_salida_estimada)
+            : undefined,
+          fecha_salida_real: dto.fecha_salida_real
+            ? new Date(dto.fecha_salida_real)
+            : undefined,
+          estado: dto.estado,
+        },
+        select: LOTE_SELECT,
+      });
     });
   }
   async desactivar(id: number, solicitante: Solicitante) {
