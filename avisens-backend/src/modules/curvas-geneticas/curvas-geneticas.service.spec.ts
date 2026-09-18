@@ -67,34 +67,37 @@ describe('CurvasGeneticasService', () => {
   });
 
   describe('crear', () => {
-    it('rechaza (404) si la linea genetica no existe', async () => {
-      prisma.lineaGenetica.findUnique.mockResolvedValue(null);
+    // El chequeo de existencia/activo de la linea vive DENTRO de la
+    // transaccion (SELECT ... FOR UPDATE via tx.$queryRaw), no en una
+    // consulta previa: por eso estos tests configuran tx.$queryRaw, no
+    // prisma.lineaGenetica.findUnique -- esa consulta ya no existe en
+    // crear(). Demuestra que la decision se toma con la lectura bloqueada.
+    it('rechaza (404) si la linea genetica no existe (leida dentro de la transaccion)', async () => {
+      conCallback();
+      tx.$executeRaw.mockResolvedValue(undefined);
+      tx.$queryRaw.mockResolvedValue([]);
 
       await expect(
         service.crear({ linea_genetica_id: 1, sexo: 'macho', fuente: 'x' }),
       ).rejects.toThrow(NotFoundException);
-      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(tx.curvaGeneticaVersion.create).not.toHaveBeenCalled();
     });
 
-    it('rechaza (409) si la linea genetica esta inactiva', async () => {
-      prisma.lineaGenetica.findUnique.mockResolvedValue({
-        id: 1,
-        activo: false,
-      });
+    it('rechaza (409) si la linea genetica esta inactiva (leida dentro de la transaccion)', async () => {
+      conCallback();
+      tx.$executeRaw.mockResolvedValue(undefined);
+      tx.$queryRaw.mockResolvedValue([{ id: 1, activo: false }]);
 
       await expect(
         service.crear({ linea_genetica_id: 1, sexo: 'macho', fuente: 'x' }),
       ).rejects.toThrow(ConflictException);
-      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(tx.curvaGeneticaVersion.create).not.toHaveBeenCalled();
     });
 
     it('usa version 1 cuando no hay historial para esa linea+sexo', async () => {
-      prisma.lineaGenetica.findUnique.mockResolvedValue({
-        id: 1,
-        activo: true,
-      });
       conCallback();
       tx.$executeRaw.mockResolvedValue(undefined);
+      tx.$queryRaw.mockResolvedValue([{ id: 1, activo: true }]);
       tx.curvaGeneticaVersion.findFirst.mockResolvedValue(null);
       tx.curvaGeneticaVersion.create.mockResolvedValue({ id: 10 });
 
@@ -106,12 +109,9 @@ describe('CurvasGeneticasService', () => {
     });
 
     it('usa la version siguiente al maximo historico, nunca 1 fijo', async () => {
-      prisma.lineaGenetica.findUnique.mockResolvedValue({
-        id: 1,
-        activo: true,
-      });
       conCallback();
       tx.$executeRaw.mockResolvedValue(undefined);
+      tx.$queryRaw.mockResolvedValue([{ id: 1, activo: true }]);
       tx.curvaGeneticaVersion.findFirst.mockResolvedValue({ version: 3 });
       tx.curvaGeneticaVersion.create.mockResolvedValue({ id: 10 });
 
@@ -123,12 +123,9 @@ describe('CurvasGeneticasService', () => {
     });
 
     it('traduce un choque de version unica (P2002, carrera dentro del lock) a un 409 de dominio', async () => {
-      prisma.lineaGenetica.findUnique.mockResolvedValue({
-        id: 1,
-        activo: true,
-      });
       conCallback();
       tx.$executeRaw.mockResolvedValue(undefined);
+      tx.$queryRaw.mockResolvedValue([{ id: 1, activo: true }]);
       tx.curvaGeneticaVersion.findFirst.mockResolvedValue(null);
       tx.curvaGeneticaVersion.create.mockRejectedValue({ code: 'P2002' });
 
@@ -329,28 +326,36 @@ describe('CurvasGeneticasService', () => {
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
-    it('rechaza (409) si la linea genetica de la curva esta inactiva', async () => {
+    // La consulta previa (findUnique, fuera de la transaccion) solo sirve
+    // para conocer linea_genetica_id/sexo y armar la clave del advisory
+    // lock -- por eso aqui NO trae linea_genetica.activo. La decision sobre
+    // "activa" se demuestra con la lectura BLOQUEADA (tx.$queryRaw) dentro
+    // de la transaccion: el primer valor de la secuencia decide.
+    it('rechaza (409) si la linea genetica esta inactiva (leida dentro de la transaccion, no en la consulta previa)', async () => {
       prisma.curvaGeneticaVersion.findUnique.mockResolvedValue({
         id: 1,
         linea_genetica_id: 5,
         sexo: 'macho',
-        linea_genetica: { activo: false },
-      });
-
-      await expect(service.activar(1)).rejects.toThrow(ConflictException);
-      expect(prisma.$transaction).not.toHaveBeenCalled();
-    });
-
-    it('rechaza (409) si el estado no es publicada', async () => {
-      prisma.curvaGeneticaVersion.findUnique.mockResolvedValue({
-        id: 1,
-        linea_genetica_id: 5,
-        sexo: 'macho',
-        linea_genetica: { activo: true },
       });
       conCallback();
       tx.$executeRaw.mockResolvedValue(undefined);
-      tx.$queryRaw.mockResolvedValue([{ estado: 'borrador' }]);
+      tx.$queryRaw.mockResolvedValueOnce([{ activo: false }]);
+
+      await expect(service.activar(1)).rejects.toThrow(ConflictException);
+      expect(tx.curvaGeneticaVersion.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rechaza (409) si el estado no es publicada, aun con la linea activa', async () => {
+      prisma.curvaGeneticaVersion.findUnique.mockResolvedValue({
+        id: 1,
+        linea_genetica_id: 5,
+        sexo: 'macho',
+      });
+      conCallback();
+      tx.$executeRaw.mockResolvedValue(undefined);
+      tx.$queryRaw
+        .mockResolvedValueOnce([{ activo: true }])
+        .mockResolvedValueOnce([{ estado: 'borrador' }]);
 
       await expect(service.activar(1)).rejects.toThrow(ConflictException);
       expect(tx.curvaGeneticaVersion.updateMany).not.toHaveBeenCalled();
@@ -361,11 +366,12 @@ describe('CurvasGeneticasService', () => {
         id: 1,
         linea_genetica_id: 5,
         sexo: 'macho',
-        linea_genetica: { activo: true },
       });
       conCallback();
       tx.$executeRaw.mockResolvedValue(undefined);
-      tx.$queryRaw.mockResolvedValue([{ estado: 'publicada' }]);
+      tx.$queryRaw
+        .mockResolvedValueOnce([{ activo: true }])
+        .mockResolvedValueOnce([{ estado: 'publicada' }]);
       tx.curvaGeneticaVersion.update.mockResolvedValue({
         id: 1,
         vigente: true,

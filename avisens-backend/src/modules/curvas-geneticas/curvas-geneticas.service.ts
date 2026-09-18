@@ -65,23 +65,32 @@ export class CurvasGeneticasService {
   }
 
   async crear(dto: CreateCurvaGeneticaDto) {
-    const linea = await this.prisma.lineaGenetica.findUnique({
-      where: { id: dto.linea_genetica_id },
-      select: { id: true, activo: true },
-    });
-    if (!linea) throw new NotFoundException('Línea genética no encontrada');
-    if (!linea.activo) {
-      throw new ConflictException(
-        'No se pueden crear curvas nuevas para una línea genética inactiva',
-      );
-    }
-
     return this.prisma.$transaction(async (tx) => {
       // Serializa por (linea_genetica_id, sexo): sin este lock, dos POST
       // concurrentes podrian ambos leer el mismo maximo historico y calcular
       // la misma version -- uno chocaria con P2002 crudo en vez de recibir
       // la version siguiente real.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${dto.linea_genetica_id}, ${ORDINAL_SEXO[dto.sexo]})`;
+
+      // Bloquea la fila de la linea y decide "activa" con ESTA lectura, no
+      // con una consulta previa fuera de la transaccion: sin este orden, una
+      // desactivacion concurrente podria confirmar entre el chequeo y el
+      // create(), dejando pasar una curva sobre una linea ya inactiva. Si la
+      // desactivacion ya tomo este mismo lock de fila, esta consulta espera
+      // a que termine antes de decidir.
+      const [linea] = await tx.$queryRaw<
+        Array<{ id: number; activo: boolean }>
+      >`
+        SELECT "id", "activo" FROM "lineas_geneticas"
+        WHERE "id" = ${dto.linea_genetica_id}
+        FOR UPDATE
+      `;
+      if (!linea) throw new NotFoundException('Línea genética no encontrada');
+      if (!linea.activo) {
+        throw new ConflictException(
+          'No se pueden crear curvas nuevas para una línea genética inactiva',
+        );
+      }
 
       // version = maximo historico + 1, nunca 1 fijo: es el mismo bug que
       // crear->jubilar->crear dejo en Umbrales cuando la version se asumia
@@ -268,21 +277,15 @@ export class CurvasGeneticasService {
   }
 
   async activar(id: number) {
+    // Solo para conocer linea_genetica_id y sexo -- la clave que arma el
+    // advisory lock antes de entrar a la transaccion. La decision definitiva
+    // sobre "activa" NO se toma con esta lectura; ocurre mas abajo, con la
+    // fila bloqueada dentro de la transaccion.
     const curva = await this.prisma.curvaGeneticaVersion.findUnique({
       where: { id },
-      select: {
-        id: true,
-        linea_genetica_id: true,
-        sexo: true,
-        linea_genetica: { select: { activo: true } },
-      },
+      select: { id: true, linea_genetica_id: true, sexo: true },
     });
     if (!curva) throw new NotFoundException('Curva genética no encontrada');
-    if (!curva.linea_genetica.activo) {
-      throw new ConflictException(
-        'No se puede activar una curva cuya línea genética está inactiva',
-      );
-    }
 
     return this.prisma.$transaction(async (tx) => {
       // Serializa por (linea_genetica_id, sexo). El indice unico parcial
@@ -290,6 +293,23 @@ export class CurvasGeneticasService {
       // concurrentes para la misma combinacion podrian ambas leer "no hay
       // vigente" y ambas intentar activarse antes de que la otra confirme.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${curva.linea_genetica_id}, ${ORDINAL_SEXO[curva.sexo]})`;
+
+      // Mismo orden que crear(): advisory por (linea, sexo) primero, y solo
+      // despues el lock de fila de la linea. La decision sobre "activa" se
+      // toma con ESTA lectura bloqueada -- si una desactivacion concurrente
+      // ya confirmo, esta consulta lo refleja; si todavia no corrio, espera
+      // a que esta transaccion termine antes de poder tomar el mismo lock.
+      const [linea] = await tx.$queryRaw<Array<{ activo: boolean }>>`
+        SELECT "activo" FROM "lineas_geneticas"
+        WHERE "id" = ${curva.linea_genetica_id}
+        FOR UPDATE
+      `;
+      if (!linea) throw new NotFoundException('Línea genética no encontrada');
+      if (!linea.activo) {
+        throw new ConflictException(
+          'No se puede activar una curva cuya línea genética está inactiva',
+        );
+      }
 
       const [fresca] = await tx.$queryRaw<Array<{ estado: string }>>`
         SELECT "estado" FROM "curvas_geneticas_version"
