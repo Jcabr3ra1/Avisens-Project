@@ -1,5 +1,6 @@
 import {
   diaDeVida,
+  fechaDeVida,
   fechaEnZonaGranja,
   inicioDelDiaEnZonaGranja,
   semanaDeVida,
@@ -85,5 +86,45 @@ describe('inicioDelDiaEnZonaGranja', () => {
     expect(
       inicioDelDiaEnZonaGranja(new Date('2026-09-03T02:00:00.000Z')),
     ).toEqual(new Date('2026-09-02T00:00:00.000Z'));
+  });
+});
+
+describe('fechaDeVida', () => {
+  it('el día 1 es la fecha de ingreso misma', () => {
+    expect(fechaDeVida(ingreso, 1)).toEqual(ingreso);
+  });
+
+  it('el día 2 es el día siguiente', () => {
+    expect(fechaDeVida(ingreso, 2)).toEqual(
+      new Date('2026-07-31T00:00:00.000Z'),
+    );
+  });
+
+  it('el día 35 cae treinta y cuatro días después del ingreso', () => {
+    expect(fechaDeVida(ingreso, 35)).toEqual(
+      new Date('2026-09-02T00:00:00.000Z'),
+    );
+  });
+
+  it('cruza correctamente el límite de mes', () => {
+    // getMonth() (local) vs getUTCMonth() habría corrido este caso un mes si
+    // el servidor no corriera en UTC: 31 de julio -> 1 de agosto.
+    expect(fechaDeVida(ingreso, 2)).toEqual(
+      new Date('2026-07-31T00:00:00.000Z'),
+    );
+    expect(fechaDeVida(ingreso, 3)).toEqual(
+      new Date('2026-08-01T00:00:00.000Z'),
+    );
+  });
+
+  it('es la inversa de diaDeVida para cualquier día de vida', () => {
+    // diaDeVida espera un instante real como "ahora": mediodía UTC cae dentro
+    // del mismo día de granja (ver 05:00 UTC como el corte, arriba), a
+    // diferencia de la medianoche UTC que devuelve fechaDeVida.
+    for (let dia = 1; dia <= 42; dia += 1) {
+      const fecha = fechaDeVida(ingreso, dia);
+      const ahora = new Date(fecha.getTime() + 12 * 60 * 60 * 1000);
+      expect(diaDeVida(ingreso, ahora)).toBe(dia);
+    }
   });
 });
