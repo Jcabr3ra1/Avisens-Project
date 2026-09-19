@@ -51,19 +51,23 @@
         android:textColor="#171D1A"
         android:layout_marginBottom="5dp" />
 
-    <EditText
-        android:id="@+id/edtUnidadInsumo"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:background="@drawable/bg_input_verde"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:singleLine="true"
-        android:textSize="12sp"
-        android:textColor="@color/black"
-        android:hint="Ej. kg"
-        android:inputType="text"
-        android:layout_marginBottom="11dp" />
+        android:layout_marginBottom="11dp">
+
+        <Spinner
+            android:id="@+id/spinnerUnidadInsumo"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:popupBackground="@drawable/bg_spinner_dropdown"
+            android:spinnerMode="dropdown" />
+
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="match_parent"

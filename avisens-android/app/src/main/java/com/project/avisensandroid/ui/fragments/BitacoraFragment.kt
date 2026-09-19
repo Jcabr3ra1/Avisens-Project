@@ -95,17 +95,15 @@ class BitacoraFragment : BaseBottomNavFragment() {
                 }
 
                 val activity = requireActivity() as MainActivity
-                val granjaIdSeleccionada = activity.obtenerGranjaSeleccionadaId()
+                val galponIdSeleccionado = activity.obtenerGalponSeleccionadoId()
 
-                val registrosFiltrados = if (granjaIdSeleccionada != null) {
-                    val idsLotesDeGranja =
-                        activity.obtenerIdsLotesDeGranjaSeleccionada()
+                val registrosFiltrados = if (galponIdSeleccionado != null) {
+                    val idsLotesDelGalpon =
+                        activity.obtenerIdsLotesDeGalponSeleccionado()
 
-                    registros.filter {
-                        it.lote_id in idsLotesDeGranja
-                    }
+                    registros.filter { it.lote_id in idsLotesDelGalpon }
                 } else {
-                    registros
+                    emptyList()
                 }
 
                 mostrarRegistros(registrosFiltrados)

@@ -11,11 +11,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.ArrayAdapter
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.core.os.bundleOf
 import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.Au02RecuperarContrasenaBinding
@@ -31,6 +33,7 @@ import com.project.avisensandroid.databinding.R03NuevoInsumoBinding
 import com.project.avisensandroid.databinding.R03MovimientoInsumoBinding
 import com.project.avisensandroid.databinding.R04RegistrarEventoMortalidadBinding
 import com.project.avisensandroid.databinding.R05RegistrarEventoEnfermoBinding
+import com.project.avisensandroid.databinding.R06RegistrarSeguimientoSanitarioBinding
 import com.project.avisensandroid.model.EventoSanitarioRequest
 import com.project.avisensandroid.model.GalponResponse
 import com.project.avisensandroid.model.GranjaResponse
@@ -55,6 +58,11 @@ import java.util.Calendar
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
+
+    companion object {
+        private const val STATE_GRANJA_ID = "state_granja_id"
+        private const val STATE_GALPON_ID = "state_galpon_id"
+    }
 
     // =========================================================
     // BINDINGS
@@ -198,6 +206,10 @@ class MainActivity : AppCompatActivity() {
     // Se conserva mientras navega entre las pantallas.
     private var granjaSeleccionadaId: Int? = null
 
+    // Galpón actualmente seleccionado dentro de la granja.
+    // Se conserva mientras el usuario navega entre las pantallas.
+    private var galponSeleccionadoId: Int? = null
+
     fun obtenerRolActual(): UserRole? = rolActual
 
     fun obtenerGranjaSeleccionadaId(): Int? = granjaSeleccionadaId
@@ -206,8 +218,19 @@ class MainActivity : AppCompatActivity() {
         granjaSeleccionadaId = granjaId
     }
 
+    fun obtenerGalponSeleccionadoId(): Int? = galponSeleccionadoId
+
+    fun seleccionarGalpon(galponId: Int) {
+        galponSeleccionadoId = galponId
+    }
+
+    fun limpiarGalponSeleccionado() {
+        galponSeleccionadoId = null
+    }
+
     fun limpiarGranjaSeleccionada() {
         granjaSeleccionadaId = null
+        galponSeleccionadoId = null
     }
 
     fun obtenerNombreUsuario(): String =
@@ -220,6 +243,9 @@ class MainActivity : AppCompatActivity() {
         savedInstanceState: Bundle?
     ) {
         super.onCreate(savedInstanceState)
+
+        granjaSeleccionadaId = savedInstanceState?.getInt(STATE_GRANJA_ID)?.takeIf { it != 0 }
+        galponSeleccionadoId = savedInstanceState?.getInt(STATE_GALPON_ID)?.takeIf { it != 0 }
 
         RetrofitClient.inicializar(applicationContext)
 
@@ -251,6 +277,12 @@ class MainActivity : AppCompatActivity() {
 
             null -> irALogin()
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_GRANJA_ID, granjaSeleccionadaId ?: 0)
+        outState.putInt(STATE_GALPON_ID, galponSeleccionadoId ?: 0)
     }
 
     private fun mostrarPantallaRolPendiente() {
@@ -419,6 +451,43 @@ class MainActivity : AppCompatActivity() {
 
         return todosLosLotes
             .filter { it.galpon?.granja?.id == granjaId }
+            .map { it.id }
+            .toSet()
+    }
+
+    /**
+     * Devuelve los IDs de los lotes pertenecientes al galpón actualmente
+     * seleccionado. Se usa para que las bitácoras muestren únicamente los
+     * registros del galpón activo.
+     */
+    suspend fun obtenerIdsLotesDeGalponSeleccionado(): Set<Int> {
+        val galponId = galponSeleccionadoId ?: return emptySet()
+        val todosLosLotes = mutableListOf<LoteSelectorResponse>()
+        var pagina = 1
+        var totalPaginas = 1
+
+        do {
+            val response = RetrofitClient.api.listarLotes(
+                page = pagina,
+                limit = 100
+            )
+
+            if (!response.isSuccessful) {
+                throw IllegalStateException(
+                    "No se pudieron cargar los lotes. Código: ${response.code()}"
+                )
+            }
+
+            val body = response.body()
+                ?: throw IllegalStateException("La API no devolvió información de lotes")
+
+            todosLosLotes += body.data
+            totalPaginas = body.meta.totalPages.coerceAtLeast(pagina)
+            pagina++
+        } while (pagina <= totalPaginas)
+
+        return todosLosLotes
+            .filter { it.galpon?.id == galponId }
             .map { it.id }
             .toSet()
     }
@@ -1252,6 +1321,20 @@ class MainActivity : AppCompatActivity() {
         )
         binding.spinnerTipoAlimento.adapter = adapterTipos
 
+        val unidadesMedida = mutableListOf(
+            "Seleccionar unidad",
+            "Kg",
+            "Gramos",
+            "Bultos",
+            "Toneladas"
+        )
+
+        val adapterUnidades = SpinnerAdapterEstilizado(
+            this,
+            unidadesMedida
+        )
+        binding.spinnerUnidadInsumo.adapter = adapterUnidades
+
         val nombresProveedores = mutableListOf("Sin proveedor")
         val idsProveedores = mutableListOf<Int?>(null)
 
@@ -1283,7 +1366,8 @@ class MainActivity : AppCompatActivity() {
             val tipoAlimento = tiposAlimento.getOrNull(posicionTipo)
 
             val cantidadTexto = binding.edtCantidadInsumo.text.toString().trim()
-            val unidad = binding.edtUnidadInsumo.text.toString().trim()
+            val unidadSeleccionada = binding.spinnerUnidadInsumo.selectedItemPosition
+            val unidad = binding.spinnerUnidadInsumo.selectedItem?.toString()?.trim().orEmpty()
             val cantidad = cantidadTexto.toDoubleOrNull()
 
             if (tipoAlimento == null) {
@@ -1300,8 +1384,12 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            if (unidad.isEmpty()) {
-                binding.edtUnidadInsumo.error = "Ingresa la unidad"
+            if (unidadSeleccionada <= 0 || unidad.isEmpty()) {
+                Toast.makeText(
+                    this,
+                    "Selecciona una unidad de medida",
+                    Toast.LENGTH_SHORT
+                ).show()
                 return@setOnClickListener
             }
 
@@ -1887,6 +1975,105 @@ class MainActivity : AppCompatActivity() {
     }
 
     // =========================================================
+    // DIALOG - SEGUIMIENTO SANITARIO (DISEÑO / DEMO)
+    // =========================================================
+
+    fun mostrarDialogRegistrarSeguimientoSanitario(lotePreseleccionado: String? = null) {
+
+        val dialog = Dialog(this)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        val binding =
+            R06RegistrarSeguimientoSanitarioBinding.inflate(layoutInflater)
+
+        dialog.setContentView(binding.root)
+        dialog.show()
+
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.92f).toInt(),
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
+
+        val nombresLotes = mutableListOf("Seleccionar lote")
+        val idsLotes = mutableListOf<Int?>(null)
+
+        val adapterLotes = SpinnerAdapterEstilizado(this, nombresLotes)
+        binding.spinnerLoteSeguimiento.adapter = adapterLotes
+
+        cargarLotes(
+            nombresLotes,
+            idsLotes,
+            adapterLotes,
+            binding.spinnerLoteSeguimiento,
+            lotePreseleccionado
+        )
+
+        binding.edtFechaSeguimiento.setOnClickListener {
+            mostrarSelectorFecha(binding.edtFechaSeguimiento)
+        }
+
+        binding.btnCancelarSeguimiento.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        binding.btnGuardarSeguimiento.setOnClickListener {
+            val lotePosition = binding.spinnerLoteSeguimiento.selectedItemPosition
+            val loteId = idsLotes.getOrNull(lotePosition)
+            val fecha = binding.edtFechaSeguimiento.text.toString().trim()
+            val cantidadTexto = binding.edtCantidadAvesSeguimiento.text.toString().trim()
+            val observacion = binding.edtObservacionesSeguimiento.text.toString().trim()
+
+            val cantidad = cantidadTexto.toIntOrNull()
+
+            when {
+                lotePosition <= 0 || loteId == null -> {
+                    Toast.makeText(
+                        this,
+                        "Selecciona un lote",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@setOnClickListener
+                }
+                fecha.isEmpty() -> {
+                    binding.edtFechaSeguimiento.error = "Selecciona una fecha"
+                    return@setOnClickListener
+                }
+                cantidad == null || cantidad < 0 -> {
+                    binding.edtCantidadAvesSeguimiento.error = "Ingresa una cantidad válida"
+                    return@setOnClickListener
+                }
+            }
+
+            // El estado pertenece a cada seguimiento y se determina de forma
+            // automática para esta versión demo, sin pedir otro campo al usuario.
+            val estadoAutomatico = if (cantidad == 0) {
+                "Recuperadas"
+            } else {
+                "En tratamiento"
+            }
+
+            supportFragmentManager.setFragmentResult(
+                "seguimiento_demo_guardado",
+                bundleOf(
+                    "lote_id" to loteId,
+                    "lote" to nombresLotes[lotePosition],
+                    "fecha" to fecha,
+                    "aves" to cantidad,
+                    "estado" to estadoAutomatico,
+                    "observacion" to observacion
+                )
+            )
+
+            Toast.makeText(
+                this,
+                "Seguimiento guardado (demo)",
+                Toast.LENGTH_SHORT
+            ).show()
+            dialog.dismiss()
+        }
+    }
+
+    // =========================================================
     // DIALOG - TRATAMIENTO
     // =========================================================
 
@@ -2228,7 +2415,9 @@ class MainActivity : AppCompatActivity() {
     private fun cargarLotes(
         nombres: MutableList<String>,
         ids: MutableList<Int?>,
-        adapter: ArrayAdapter<String>
+        adapter: ArrayAdapter<String>,
+        spinner: Spinner? = null,
+        codigoLotePreseleccionado: String? = null
     ) {
         lifecycleScope.launch {
             try {
@@ -2276,11 +2465,20 @@ class MainActivity : AppCompatActivity() {
                     pagina++
                 } while (pagina <= totalPaginas)
 
+                val galponIdSeleccionado = galponSeleccionadoId
                 val granjaIdSeleccionada = granjaSeleccionadaId
-                val lotesDeGranjaSeleccionada = if (granjaIdSeleccionada != null) {
-                    todosLosLotes.filter { it.galpon?.granja?.id == granjaIdSeleccionada }
-                } else {
-                    todosLosLotes
+
+                // Los formularios de mortalidad/enfermo trabajan sobre el
+                // galpón activo de Inicio. Si existe una selección de galpón,
+                // los lotes de otros galpones no deben aparecer en el Spinner.
+                val lotesDeSeleccion = when {
+                    galponIdSeleccionado != null -> {
+                        todosLosLotes.filter { it.galpon?.id == galponIdSeleccionado }
+                    }
+                    granjaIdSeleccionada != null -> {
+                        todosLosLotes.filter { it.galpon?.granja?.id == granjaIdSeleccionada }
+                    }
+                    else -> todosLosLotes
                 }
 
                 nombres.clear()
@@ -2291,7 +2489,7 @@ class MainActivity : AppCompatActivity() {
                 // Para el selector solo necesitamos id y código. Así evitamos
                 // que un campo anidado opcional de la respuesta (/galpon o
                 // /proveedor) impida deserializar los lotes.
-                lotesDeGranjaSeleccionada
+                lotesDeSeleccion
                     .filter { it.codigo.isNotBlank() }
                     .distinctBy { it.id }
                     .forEach { lote ->
@@ -2300,6 +2498,17 @@ class MainActivity : AppCompatActivity() {
                     }
 
                 adapter.notifyDataSetChanged()
+
+                // Si se pidió dejar un lote ya elegido (por ejemplo, al
+                // continuar el seguimiento de un caso puntual), lo busca
+                // por su código una vez que el spinner ya tiene los datos
+                // reales cargados.
+                if (spinner != null && codigoLotePreseleccionado != null) {
+                    val posicion = nombres.indexOf(codigoLotePreseleccionado)
+                    if (posicion >= 0) {
+                        spinner.setSelection(posicion)
+                    }
+                }
 
                 if (ids.size == 1) {
                     Toast.makeText(

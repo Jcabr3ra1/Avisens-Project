@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -7,10 +6,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_app">
-
-    <!-- ===================================================== -->
-    <!-- CONTENIDO SCROLLABLE                                  -->
-    <!-- ===================================================== -->
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scrollBitacora"
@@ -30,37 +25,36 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="vertical">
-
-            <!-- ================================================= -->
-            <!-- TÍTULO                                            -->
-            <!-- ================================================= -->
+            android:orientation="vertical"
+            android:layout_marginTop="8dp">
 
             <TextView
                 android:id="@+id/txtTituloBitacora"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="Bitácora productiva"
+                android:text="Seguimiento sanitario"
                 android:textColor="@color/text_primary"
                 android:textSize="28sp"
                 android:textStyle="bold" />
 
-            <!-- ================================================= -->
-            <!-- PESTAÑAS                                          -->
-            <!-- ================================================= -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Control y evolución de aves enfermas"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
 
             <LinearLayout
                 android:id="@+id/tabsBitacora"
                 android:layout_width="match_parent"
                 android:layout_height="44dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_bitacora_tabs"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_bitacora_selector"
+                android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:padding="4dp">
-
-                <!-- MORTALIDAD -->
 
                 <TextView
                     android:id="@+id/tbnEnfermo"
@@ -69,13 +63,9 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:text="Mortalidad"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp"
+                    android:textColor="#89938E"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
-
-
-                <!-- CONSUMO -->
-
 
                 <TextView
                     android:id="@+id/tabMortalidad"
@@ -86,10 +76,8 @@
                     android:gravity="center"
                     android:text="Enfermo"
                     android:textColor="@color/text_primary"
-                    android:textSize="11sp"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
-
-                <!-- CONSUMO -->
 
                 <TextView
                     android:id="@+id/tbnConsumo"
@@ -98,15 +86,11 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:text="Consumo"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp"
+                    android:textColor="#89938E"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
 
             </LinearLayout>
-
-            <!-- ================================================= -->
-            <!-- BOTÓN REGISTRAR                                   -->
-            <!-- ================================================= -->
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -122,7 +106,7 @@
                     android:gravity="center"
                     android:paddingStart="14dp"
                     android:paddingEnd="14dp"
-                    android:text="+ Registrar Evento"
+                    android:text="+ Registrar Seguimiento"
                     android:textColor="@android:color/white"
                     android:textSize="13sp"
                     android:textStyle="bold" />
@@ -130,22 +114,86 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/containerRegistros"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:background="@drawable/bg_bitacora_card"
-                android:orientation="vertical"
-                android:paddingStart="13dp"
-                android:paddingEnd="13dp"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp">
+                android:orientation="horizontal">
 
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_input_verde"
+                    android:orientation="vertical"
+                    android:padding="12dp">
 
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Casos activos"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvCasosActivos"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="2"
+                        android:textColor="#1F5C42"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <Space
+                    android:layout_width="8dp"
+                    android:layout_height="1dp" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_input_verde"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Aves en seguimiento"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvAvesSeguimiento"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="7"
+                        android:textColor="#1F5C42"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
             </LinearLayout>
 
-        </LinearLayout>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:text="Casos sanitarios"
+                android:textColor="#1F5C42"
+                android:textSize="15sp"
+                android:textStyle="bold" />
 
+            <LinearLayout
+                android:id="@+id/containerRegistros"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
+
+
+        </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

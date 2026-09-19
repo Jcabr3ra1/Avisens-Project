@@ -155,6 +155,7 @@ class InicioFragment : BaseBottomNavFragment() {
                 if (granjas.isEmpty()) {
                     granjaSeleccionada = null
                     activity.limpiarGranjaSeleccionada()
+                    activity.limpiarGalponSeleccionado()
                     binding.txtCantidadGalpones.text = "0 galpones"
                     binding.containerGalpones.removeAllViews()
                     limpiarDashboard("Sin datos")
@@ -271,19 +272,26 @@ class InicioFragment : BaseBottomNavFragment() {
             binding.spinnerGranjas.setSelection(posicion, false)
         }
 
-        val galponesDeGranja = mostrarGalponesDeGranja(granja.id)
-        galponSeleccionadoId = galponesDeGranja.firstOrNull()?.id
+        // Respeta el galpón guardado previamente si sigue perteneciendo
+        // a esta granja; si no (o es la primera vez), cae en el primero.
+        val idGalponGuardado = activity.obtenerGalponSeleccionadoId()
+        val galponesDeGranja = mostrarGalponesDeGranja(granja.id, idGalponGuardado)
+        galponSeleccionadoId = galponesDeGranja
+            .firstOrNull { it.id == idGalponGuardado }?.id
+            ?: galponesDeGranja.firstOrNull()?.id
 
         if (galponSeleccionadoId == null) {
+            activity.limpiarGalponSeleccionado()
             limpiarDashboard("Sin galpones activos")
             return
         }
 
+        activity.seleccionarGalpon(galponSeleccionadoId!!)
         marcarGalponSeleccionado(galponSeleccionadoId!!)
         cargarDashboardDelGalpon(galponSeleccionadoId!!)
     }
 
-    private fun mostrarGalponesDeGranja(granjaId: Int): List<GalponResponse> {
+    private fun mostrarGalponesDeGranja(granjaId: Int, idGalponGuardado: Int?): List<GalponResponse> {
         val galponesDeGranja = galpones.filter { it.granja.id == granjaId }
 
         binding.txtCantidadGalpones.text = when (galponesDeGranja.size) {
@@ -306,6 +314,9 @@ class InicioFragment : BaseBottomNavFragment() {
             return emptyList()
         }
 
+        val indiceInicial = galponesDeGranja.indexOfFirst { it.id == idGalponGuardado }
+            .takeIf { it >= 0 } ?: 0
+
         galponesDeGranja.forEachIndexed { index, galpon ->
             if (index > 0) {
                 binding.containerGalpones.addView(
@@ -314,7 +325,7 @@ class InicioFragment : BaseBottomNavFragment() {
                 )
             }
             binding.containerGalpones.addView(
-                crearChipGalpon(galpon, index == 0)
+                crearChipGalpon(galpon, index == indiceInicial)
             )
         }
 
@@ -347,7 +358,7 @@ class InicioFragment : BaseBottomNavFragment() {
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { marginStart = dp(8) }
-            text = "${galpon.nombre} · ${galpon.codigo}"
+            text = galpon.nombre
             textSize = 13f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
@@ -359,6 +370,7 @@ class InicioFragment : BaseBottomNavFragment() {
 
         chip.setOnClickListener {
             galponSeleccionadoId = galpon.id
+            (requireActivity() as MainActivity).seleccionarGalpon(galpon.id)
             marcarGalponSeleccionado(galpon.id)
             cargarDashboardDelGalpon(galpon.id)
         }

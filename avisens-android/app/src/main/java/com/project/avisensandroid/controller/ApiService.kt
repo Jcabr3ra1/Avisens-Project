@@ -27,6 +27,7 @@ import com.project.avisensandroid.model.ConsumoDiarioResponse
 import com.project.avisensandroid.model.SensorResponse
 import com.project.avisensandroid.model.MedicionResponse
 import com.project.avisensandroid.model.AlertaResponse
+import com.project.avisensandroid.model.CerrarAlertaRequest
 import com.project.avisensandroid.model.IndicadorLoteResponse
 import com.project.avisensandroid.model.ComparacionIndicadorResponse
 import com.project.avisensandroid.model.LoteResponse
@@ -226,6 +227,23 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 100
     ): Response<PaginatedResponse<AlertaResponse>>
+
+    @PATCH("v1/alertas/{id}/aceptar")
+    suspend fun aceptarAlerta(
+        @Path("id") alertaId: Int
+    ): Response<AlertaResponse>
+
+    @PATCH("v1/alertas/{id}/cerrar")
+    suspend fun cerrarAlerta(
+        @Path("id") alertaId: Int,
+        @Body request: CerrarAlertaRequest
+    ): Response<AlertaResponse>
+
+    @PATCH("v1/alertas/{id}/escalar/{usuarioId}")
+    suspend fun escalarAlerta(
+        @Path("id") alertaId: Int,
+        @Path("usuarioId") usuarioId: Int
+    ): Response<AlertaResponse>
 
     @GET("v1/indicadores/{loteId}")
     suspend fun listarIndicadoresLote(
