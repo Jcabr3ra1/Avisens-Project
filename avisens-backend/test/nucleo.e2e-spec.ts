@@ -31,6 +31,7 @@ import { AlertasService } from '../src/modules/alertas/alertas.service';
 import { LineasGeneticasModule } from '../src/modules/lineas-geneticas/lineas-geneticas.module';
 import { CurvasGeneticasModule } from '../src/modules/curvas-geneticas/curvas-geneticas.module';
 import { PlanLoteModule } from '../src/modules/plan-lote/plan-lote.module';
+import { PlanAlimentoModule } from '../src/modules/plan-alimento/plan-alimento.module';
 
 // main.ts declara este mismo parche antes de bootstrap(); esta suite arma su
 // propia app con Test.createTestingModule() y nunca pasa por ese archivo.
@@ -91,6 +92,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         LineasGeneticasModule,
         CurvasGeneticasModule,
         PlanLoteModule,
+        PlanAlimentoModule,
       ],
     }).compile();
     app = modulo.createNestApplication();
@@ -2246,6 +2248,560 @@ describe('Núcleo multi-tenant (e2e)', () => {
             },
           }),
         ).rejects.toMatchObject({ code: 'P2002' });
+      });
+    });
+  });
+
+  describe('estimacion de alimento del plan (Fase 2A)', () => {
+    // Crear/recalcular exige ADMINISTRADOR o PROPIETARIO (mismo RolesGuard
+    // que PlanLoteController); leer lo puede el Operario tambien. Bloque
+    // autocontenido, mismo patron que "plan de lote".
+    let tokenAdminAlimento: string;
+    let idAdminAlimento: number;
+    let orgAdminAlimentoId: number;
+    let lineaId: number;
+    const codigoBase = `${sufijo.replace(/-/g, '_')}_alimento`;
+    const idsLotesCreados: number[] = [];
+
+    beforeAll(async () => {
+      const rolAdmin = await prisma.rol.upsert({
+        where: { nombre: 'Administrador' },
+        update: {},
+        create: { nombre: 'Administrador' },
+      });
+      const org = await prisma.organizacion.create({
+        data: { nombre: `E2E Alimento Admin ${sufijo}` },
+      });
+      orgAdminAlimentoId = org.id;
+      const hash = await bcrypt.hash(password, 4);
+      const admin = await prisma.usuario.create({
+        data: {
+          nombre_completo: 'admin-alimento',
+          cedula: `admin-alimento-${sufijo}`,
+          email: `admin-alimento-${sufijo}@e2e.local`,
+          password_hash: hash,
+          rol_id: rolAdmin.id,
+          organizacion_id: orgAdminAlimentoId,
+        },
+      });
+      idAdminAlimento = admin.id;
+
+      const login = await request(servidor)
+        .post('/v1/auth/login')
+        .send({ email: admin.email, password })
+        .expect(200);
+      tokenAdminAlimento = (JSON.parse(login.text) as { access_token: string })
+        .access_token;
+
+      // Curva con peso Y consumo: dia 7 -> 211g/140g, dia 14 -> 535g/490g,
+      // dia 21 -> 900g/1190g -- el mismo ejemplo verificado a mano en el
+      // diseño de Fase 2A (da 1161.850 kg con la mortalidad de las pruebas).
+      const linea = await request(servidor)
+        .post('/v1/lineas-geneticas')
+        .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+        .send({ codigo: `alimento_${codigoBase}`, nombre: 'Alimento E2E' })
+        .expect(201);
+      lineaId = (JSON.parse(linea.text) as { id: number }).id;
+
+      const curva = await request(servidor)
+        .post('/v1/curvas-geneticas')
+        .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+        .send({ linea_genetica_id: lineaId, sexo: 'macho', fuente: 'test' })
+        .expect(201);
+      const curvaId = (JSON.parse(curva.text) as { id: number }).id;
+
+      await request(servidor)
+        .put(`/v1/curvas-geneticas/${curvaId}/puntos`)
+        .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+        .send({
+          puntos: [
+            { dia: 7, peso_esperado_g: 211, consumo_acumulado_g: 140 },
+            { dia: 14, peso_esperado_g: 535, consumo_acumulado_g: 490 },
+            { dia: 21, peso_esperado_g: 900, consumo_acumulado_g: 1190 },
+          ],
+        })
+        .expect(200);
+      await request(servidor)
+        .patch(`/v1/curvas-geneticas/${curvaId}/publicar`)
+        .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+        .expect(200);
+      await request(servidor)
+        .patch(`/v1/curvas-geneticas/${curvaId}/activar`)
+        .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+        .expect(200);
+    });
+
+    afterAll(async () => {
+      await prisma.estimacionAlimentoPlan.deleteMany({
+        where: { plan: { lote_id: { in: idsLotesCreados } } },
+      });
+      await prisma.registroMortalidad.deleteMany({
+        where: { lote_id: { in: idsLotesCreados } },
+      });
+      await prisma.planLote.deleteMany({
+        where: { lote_id: { in: idsLotesCreados } },
+      });
+      await prisma.lote.deleteMany({ where: { id: { in: idsLotesCreados } } });
+      await prisma.curvaGeneticaVersion.deleteMany({
+        where: { linea_genetica_id: lineaId },
+      });
+      await prisma.lineaGenetica.deleteMany({ where: { id: lineaId } });
+      await prisma.sesion.deleteMany({
+        where: { usuario_id: idAdminAlimento },
+      });
+      await prisma.seguridadCuenta.deleteMany({
+        where: { usuario_id: idAdminAlimento },
+      });
+      await prisma.usuario.deleteMany({ where: { id: idAdminAlimento } });
+      await prisma.organizacion.deleteMany({
+        where: { id: orgAdminAlimentoId },
+      });
+    });
+
+    afterEach(async () => {
+      if (idsLotesCreados.length > 0) {
+        await prisma.estimacionAlimentoPlan.deleteMany({
+          where: { plan: { lote_id: { in: idsLotesCreados } } },
+        });
+        await prisma.registroMortalidad.deleteMany({
+          where: { lote_id: { in: idsLotesCreados } },
+        });
+        await prisma.planLote.deleteMany({
+          where: { lote_id: { in: idsLotesCreados } },
+        });
+        await prisma.lote.deleteMany({
+          where: { id: { in: idsLotesCreados } },
+        });
+        idsLotesCreados.length = 0;
+      }
+    });
+
+    // Fecha de ingreso lejana: dia_corte siempre >> dia_objetivo (21), asi
+    // ningun test depende de que dia sea "hoy" cuando se ejecute la suite.
+    const crearLoteDirecto = async (
+      overrides: {
+        galpon_id?: number;
+        linea_genetica_id?: number | null;
+        cantidad_inicial?: number;
+      } = {},
+    ) => {
+      const lote = await prisma.lote.create({
+        data: {
+          galpon_id: overrides.galpon_id ?? ids.galpones[0],
+          codigo: `E2E-ALIM-${randomUUID()}`,
+          fecha_ingreso: new Date('2020-01-01'),
+          cantidad_inicial: overrides.cantidad_inicial ?? 1000,
+          linea_genetica_id:
+            overrides.linea_genetica_id === undefined
+              ? lineaId
+              : overrides.linea_genetica_id,
+          sexo: 'macho',
+        },
+      });
+      idsLotesCreados.push(lote.id);
+      return lote;
+    };
+
+    const crearPlanCalculado = async (loteId: number, pesoObjetivoG = 900) => {
+      await request(servidor)
+        .post(`/v1/lotes/${loteId}/plan`)
+        .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+        .send({ peso_objetivo_g: pesoObjetivoG })
+        .expect(201);
+    };
+
+    describe('por HTTP', () => {
+      it('un Operario no puede crear la estimación (403), pero sí puede leerla', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id);
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${token}`)
+          .send({})
+          .expect(403);
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+
+        await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${token}`)
+          .expect(200);
+      });
+
+      it('un Propietario no puede crear la estimación de un lote ajeno (403)', async () => {
+        const loteAjeno = await crearLoteDirecto({
+          galpon_id: ids.galpones[1],
+        });
+        await crearPlanCalculado(loteAjeno.id);
+
+        await request(servidor)
+          .post(`/v1/lotes/${loteAjeno.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenPropietario}`)
+          .send({})
+          .expect(403);
+      });
+
+      it('estado_alimento=calculado sin mortalidad', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id);
+
+        const res = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo).toMatchObject({
+          version: 1,
+          vigente: true,
+          estado_alimento: 'calculado',
+          version_algoritmo: 'consumo_acumulado_lineal_muerte_fin_dia_v1',
+          efectiva: true,
+          desactualizado: false,
+          motivos_desactualizacion: [],
+        });
+        expect(
+          (cuerpo.plan_vigente as Record<string, unknown>).es_el_mismo,
+        ).toBe(true);
+        const corte = cuerpo.corte as Record<string, unknown>;
+        expect(corte.muertes).toBe(0);
+        expect(corte.aves_vivas).toBe(1000);
+      });
+
+      it('estado_alimento=calculado con mortalidad: reproduce el ejemplo verificado del diseño', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id);
+
+        await prisma.registroMortalidad.create({
+          data: {
+            lote_id: lote.id,
+            fecha: new Date('2020-01-02'),
+            cantidad_aves: 15,
+            usuario_id: idAdminAlimento,
+          },
+        });
+        await prisma.registroMortalidad.create({
+          data: {
+            lote_id: lote.id,
+            fecha: new Date('2020-01-05'),
+            cantidad_aves: 10,
+            usuario_id: idAdminAlimento,
+          },
+        });
+
+        const res = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+        const corte = cuerpo.corte as Record<string, unknown>;
+
+        expect(corte.muertes).toBe(25);
+        expect(corte.aves_vivas).toBe(975);
+        expect(corte.mortalidad_por_dia).toEqual([
+          { dia: 2, muertes: 15 },
+          { dia: 5, muertes: 10 },
+        ]);
+      });
+
+      it('estado_alimento=plan_sin_dia_objetivo si el lote no tiene línea genética (no consulta mortalidad ni curva)', async () => {
+        const lote = await crearLoteDirecto({ linea_genetica_id: null });
+        await crearPlanCalculado(lote.id);
+
+        const res = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo.estado_alimento).toBe('plan_sin_dia_objetivo');
+        const resultado = cuerpo.resultado as Record<string, unknown>;
+        expect(resultado.consumo_total_kg).toBeNull();
+        expect(
+          (cuerpo.corte as Record<string, unknown>).mortalidad_por_dia,
+        ).toEqual([]);
+      });
+
+      it('cada POST crea una versión nueva; jubila la anterior', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id);
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const segunda = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({ motivo: 'recalculo manual' })
+          .expect(201);
+
+        expect(JSON.parse(segunda.text)).toMatchObject({
+          version: 2,
+          vigente: true,
+        });
+
+        const vigentesEnBase = await prisma.estimacionAlimentoPlan.count({
+          where: { plan: { lote_id: lote.id }, vigente: true },
+        });
+        expect(vigentesEnBase).toBe(1);
+      });
+
+      it('GET devuelve la estimación más reciente aunque el plan haya cambiado (plan_cambio)', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id, 900);
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+
+        // Nuevo PlanLote (v2): no importa a qué estado quede, solo que sea
+        // un plan distinto del que usó la estimación.
+        await crearPlanCalculado(lote.id, 211);
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+        const planVigente = cuerpo.plan_vigente as Record<string, unknown>;
+
+        expect(planVigente.es_el_mismo).toBe(false);
+        expect(cuerpo.desactualizado).toBe(true);
+        expect(cuerpo.motivos_desactualizacion).toContain('plan_cambio');
+      });
+
+      it('historial pagina estimaciones y marca efectiva solo en la más reciente, sin exponer desactualizado', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id);
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+
+        const historial = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento/historial`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(historial.text) as {
+          data: Array<Record<string, unknown>>;
+          meta: { total: number };
+        };
+
+        expect(cuerpo.meta.total).toBe(2);
+        expect(cuerpo.data.filter((e) => e.efectiva === true)).toHaveLength(1);
+        expect(cuerpo.data.find((e) => e.version === 2)?.efectiva).toBe(true);
+        expect(cuerpo.data[0]).not.toHaveProperty('desactualizado');
+        expect(cuerpo.data[0]).not.toHaveProperty('plan_vigente');
+      });
+
+      it('responde 409 si el lote está finalizado, y no crea ninguna fila', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id);
+
+        await request(servidor)
+          .patch(`/v1/lotes/${lote.id}`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({ estado: 'finalizado' })
+          .expect(200);
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(409);
+
+        const total = await prisma.estimacionAlimentoPlan.count({
+          where: { plan: { lote_id: lote.id } },
+        });
+        expect(total).toBe(0);
+      });
+
+      it('responde 409 si la mortalidad excede la cantidad inicial, sin persistir', async () => {
+        const lote = await crearLoteDirecto({ cantidad_inicial: 100 });
+        await crearPlanCalculado(lote.id);
+        await prisma.registroMortalidad.create({
+          data: {
+            lote_id: lote.id,
+            fecha: new Date('2020-01-02'),
+            cantidad_aves: 500,
+            usuario_id: idAdminAlimento,
+          },
+        });
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(409);
+
+        const total = await prisma.estimacionAlimentoPlan.count({
+          where: { plan: { lote_id: lote.id } },
+        });
+        expect(total).toBe(0);
+      });
+
+      it('concurrencia: dos POST paralelos completan ambos con 201, versiones consecutivas, una sola vigente', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id);
+
+        const [r1, r2] = await Promise.all([
+          request(servidor)
+            .post(`/v1/lotes/${lote.id}/plan/alimento`)
+            .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+            .send({}),
+          request(servidor)
+            .post(`/v1/lotes/${lote.id}/plan/alimento`)
+            .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+            .send({}),
+        ]);
+
+        expect(r1.status).toBe(201);
+        expect(r2.status).toBe(201);
+
+        const versiones = [
+          (JSON.parse(r1.text) as { version: number }).version,
+          (JSON.parse(r2.text) as { version: number }).version,
+        ].sort((a, b) => a - b);
+        expect(versiones).toEqual([1, 2]);
+
+        const vigentes = await prisma.estimacionAlimentoPlan.count({
+          where: { plan: { lote_id: lote.id }, vigente: true },
+        });
+        expect(vigentes).toBe(1);
+      });
+    });
+
+    describe('inserciones directas contra la base', () => {
+      it('el CHECK de matriz rechaza calculado sin consumo_total_kg', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id);
+        const filaPlan = await prisma.planLote.findFirstOrThrow({
+          where: { lote_id: lote.id, vigente: true },
+        });
+
+        await expect(
+          prisma.estimacionAlimentoPlan.create({
+            data: {
+              plan_lote_id: filaPlan.id,
+              version: 1,
+              estado_alimento: 'calculado',
+              version_algoritmo: 'test',
+              cantidad_inicial_snapshot: lote.cantidad_inicial,
+              dia_corte: 100,
+              mortalidad_snapshot: [],
+              muertes_al_corte: 0,
+              aves_vivas_al_corte: lote.cantidad_inicial,
+              dia_objetivo_snapshot: filaPlan.dia_objetivo,
+              curva_version_id_snapshot: filaPlan.curva_version_id,
+              creado_por_id: idAdminAlimento,
+            },
+          }),
+        ).rejects.toThrow(/violat|check/i);
+      });
+
+      it('el CHECK de aves_coherentes rechaza aves_vivas_al_corte inconsistente', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id);
+        const filaPlan = await prisma.planLote.findFirstOrThrow({
+          where: { lote_id: lote.id, vigente: true },
+        });
+
+        await expect(
+          prisma.estimacionAlimentoPlan.create({
+            data: {
+              plan_lote_id: filaPlan.id,
+              version: 1,
+              estado_alimento: 'sin_consumo_en_curva',
+              version_algoritmo: 'test',
+              cantidad_inicial_snapshot: lote.cantidad_inicial,
+              dia_corte: 10,
+              mortalidad_snapshot: [],
+              muertes_al_corte: 10,
+              aves_vivas_al_corte: 995, // deberia ser 1000 - 10 = 990
+              dia_objetivo_snapshot: filaPlan.dia_objetivo,
+              curva_version_id_snapshot: filaPlan.curva_version_id,
+              creado_por_id: idAdminAlimento,
+            },
+          }),
+        ).rejects.toThrow(/violat|check/i);
+      });
+
+      it('el indice único parcial rechaza dos estimaciones vigentes para el mismo plan', async () => {
+        const lote = await crearLoteDirecto({ linea_genetica_id: null });
+        await crearPlanCalculado(lote.id);
+        const filaPlan = await prisma.planLote.findFirstOrThrow({
+          where: { lote_id: lote.id, vigente: true },
+        });
+
+        await prisma.estimacionAlimentoPlan.create({
+          data: {
+            plan_lote_id: filaPlan.id,
+            version: 1,
+            estado_alimento: 'plan_sin_dia_objetivo',
+            version_algoritmo: 'test',
+            cantidad_inicial_snapshot: lote.cantidad_inicial,
+            dia_corte: 0,
+            creado_por_id: idAdminAlimento,
+            vigente: true,
+          },
+        });
+
+        await expect(
+          prisma.estimacionAlimentoPlan.create({
+            data: {
+              plan_lote_id: filaPlan.id,
+              version: 2,
+              estado_alimento: 'plan_sin_dia_objetivo',
+              version_algoritmo: 'test',
+              cantidad_inicial_snapshot: lote.cantidad_inicial,
+              dia_corte: 0,
+              creado_por_id: idAdminAlimento,
+              vigente: true,
+            },
+          }),
+        ).rejects.toMatchObject({ code: 'P2002' });
+      });
+
+      it('el CHECK rechaza mortalidad_snapshot que no sea un arreglo JSON', async () => {
+        const lote = await crearLoteDirecto({ linea_genetica_id: null });
+        await crearPlanCalculado(lote.id);
+        const filaPlan = await prisma.planLote.findFirstOrThrow({
+          where: { lote_id: lote.id, vigente: true },
+        });
+
+        await expect(
+          prisma.estimacionAlimentoPlan.create({
+            data: {
+              plan_lote_id: filaPlan.id,
+              version: 1,
+              estado_alimento: 'plan_sin_dia_objetivo',
+              version_algoritmo: 'test',
+              cantidad_inicial_snapshot: lote.cantidad_inicial,
+              dia_corte: 0,
+              mortalidad_snapshot: { esto: 'no es un arreglo' },
+              creado_por_id: idAdminAlimento,
+            },
+          }),
+        ).rejects.toThrow(/violat|check/i);
       });
     });
   });

@@ -1,5 +1,6 @@
 import {
   diaDeVida,
+  diaDeVidaDeFecha,
   fechaDeVida,
   fechaEnZonaGranja,
   inicioDelDiaEnZonaGranja,
@@ -126,5 +127,53 @@ describe('fechaDeVida', () => {
       const ahora = new Date(fecha.getTime() + 12 * 60 * 60 * 1000);
       expect(diaDeVida(ingreso, ahora)).toBe(dia);
     }
+  });
+
+  // Fase 2A: dia_corte = 0 describe un lote que aun no ha ingresado
+  // (planificacion). El dia 0 es el dia anterior al ingreso -- no un caso
+  // especial, sale de la misma resta que cualquier otro dia.
+  it('el día 0 es el día anterior al ingreso', () => {
+    expect(fechaDeVida(ingreso, 0)).toEqual(
+      new Date('2026-07-29T00:00:00.000Z'),
+    );
+  });
+});
+
+describe('diaDeVidaDeFecha', () => {
+  it('la fecha de ingreso misma es el día 1', () => {
+    expect(diaDeVidaDeFecha(ingreso, ingreso)).toBe(1);
+  });
+
+  it('el día siguiente es el día 2', () => {
+    expect(
+      diaDeVidaDeFecha(ingreso, new Date('2026-07-31T00:00:00.000Z')),
+    ).toBe(2);
+  });
+
+  it('una fecha anterior al ingreso da 0 o negativo (el llamador decide si es un error)', () => {
+    expect(
+      diaDeVidaDeFecha(ingreso, new Date('2026-07-29T00:00:00.000Z')),
+    ).toBe(0);
+    expect(
+      diaDeVidaDeFecha(ingreso, new Date('2026-07-28T00:00:00.000Z')),
+    ).toBe(-1);
+  });
+
+  it('es la inversa exacta de fechaDeVida, incluido el día 0', () => {
+    for (let dia = 0; dia <= 42; dia += 1) {
+      const fecha = fechaDeVida(ingreso, dia);
+      expect(diaDeVidaDeFecha(ingreso, fecha)).toBe(dia);
+    }
+  });
+
+  it('no cruza por la zona de la granja: opera sobre componentes UTC puros de ambas fechas', () => {
+    // A diferencia de diaDeVida(ingreso, ahora), donde `ahora` SI se mueve a
+    // zona granja: aqui las dos fechas son @db.Date, ninguna se convierte.
+    const fechaMortalidad = new Date('2026-09-03T02:00:00.000Z');
+    const esperado =
+      Math.round(
+        (Date.UTC(2026, 8, 3) - Date.UTC(2026, 6, 30)) / (24 * 60 * 60 * 1000),
+      ) + 1;
+    expect(diaDeVidaDeFecha(ingreso, fechaMortalidad)).toBe(esperado);
   });
 });
