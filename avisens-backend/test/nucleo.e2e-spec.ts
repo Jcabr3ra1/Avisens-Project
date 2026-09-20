@@ -2582,6 +2582,81 @@ describe('Núcleo multi-tenant (e2e)', () => {
         expect(cuerpo.motivos_desactualizacion).toContain('plan_cambio');
       });
 
+      it('una mortalidad real posterior a D-1 pero anterior a hoy no marca mortalidad_actual_incoherente ni mortalidad_cambio', async () => {
+        // dia_objetivo=21 (peso 900) -> D-1=20. fecha_ingreso='2020-01-01'
+        // deja dia_corte muy por encima de D, asi que la mortalidad de la
+        // creacion es real y sin congelar.
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id);
+        await prisma.registroMortalidad.create({
+          data: {
+            lote_id: lote.id,
+            fecha: new Date('2020-01-02'),
+            cantidad_aves: 15,
+            usuario_id: idAdminAlimento,
+          },
+        });
+        await prisma.registroMortalidad.create({
+          data: {
+            lote_id: lote.id,
+            fecha: new Date('2020-01-05'),
+            cantidad_aves: 10,
+            usuario_id: idAdminAlimento,
+          },
+        });
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+
+        // Mortalidad real, posterior al dia 20 (D-1), pero muy anterior a
+        // "hoy" (estamos en 2026, el lote ingreso en 2020). Con el bug de
+        // d_rel como corte de VALIDACION, esto se habria clasificado como
+        // mortalidad_futura por error.
+        await prisma.registroMortalidad.create({
+          data: {
+            lote_id: lote.id,
+            fecha: new Date('2020-01-25'), // dia 25 de vida
+            cantidad_aves: 5,
+            usuario_id: idAdminAlimento,
+          },
+        });
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo.desactualizado).toBe(false);
+        expect(cuerpo.motivos_desactualizacion).toEqual([]);
+      });
+
+      it('un mortalidad_snapshot corrupto en la base responde 500 controlado, no 200 ni mortalidad_actual_incoherente', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id);
+        const creada = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const estimacionId = (JSON.parse(creada.text) as { id: number }).id;
+
+        // Valido para el CHECK de Postgres (es un arreglo JSON), invalido
+        // para nuestro contrato (dia deberia ser un entero, no un string).
+        await prisma.estimacionAlimentoPlan.update({
+          where: { id: estimacionId },
+          data: { mortalidad_snapshot: [{ dia: 'dos', muertes: 10 }] },
+        });
+
+        await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(500);
+      });
+
       it('historial pagina estimaciones y marca efectiva solo en la más reciente, sin exponer desactualizado', async () => {
         const lote = await crearLoteDirecto();
         await crearPlanCalculado(lote.id);

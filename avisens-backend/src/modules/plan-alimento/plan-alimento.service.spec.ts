@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   ConflictException,
   ForbiddenException,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -20,17 +21,20 @@ const loteDePropietario = (propietarioId: number) => ({
 
 const filaLote = (overrides: Record<string, unknown> = {}) => ({
   estado: 'activo',
-  fecha_ingreso: new Date('2026-07-30T00:00:00.000Z'),
   cantidad_inicial: 1000,
   fecha_salida_real: null,
   ...overrides,
 });
 
+// El reloj de la estimacion es SIEMPRE fecha_ingreso_snapshot del plan, nunca
+// Lote.fecha_ingreso -- este ultimo es editable por PATCH despues de que el
+// plan ya se calculo.
 const filaPlan = (overrides: Record<string, unknown> = {}) => ({
   id: 31,
   estado_dia: 'calculado',
   dia_objetivo: 21,
   curva_version_id: 7,
+  fecha_ingreso_snapshot: new Date('2026-07-30T00:00:00.000Z'),
   ...overrides,
 });
 
@@ -76,6 +80,7 @@ const estimacionCreada = () => ({
     id: 31,
     version: 1,
     lote_id: 3,
+    fecha_ingreso_snapshot: new Date('2026-07-30T00:00:00.000Z'),
     fecha_salida_calculada: null,
   },
   curva_version_snapshot: null,
@@ -399,13 +404,15 @@ describe('PlanAlimentoService', () => {
       );
     });
 
-    it('dia_corte=0 para un lote con fecha de ingreso futura (planificación)', async () => {
+    it('dia_corte=0 para un plan con fecha de ingreso futura (planificación)', async () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-07-25T15:00:00.000Z'));
       conCallback();
+      tx.$queryRaw.mockResolvedValueOnce([filaLote()]);
       tx.$queryRaw.mockResolvedValueOnce([
-        filaLote({ fecha_ingreso: new Date('2026-08-01T00:00:00.000Z') }),
+        filaPlan({
+          fecha_ingreso_snapshot: new Date('2026-08-01T00:00:00.000Z'),
+        }),
       ]);
-      tx.$queryRaw.mockResolvedValueOnce([filaPlan()]);
       tx.registroMortalidad.findMany.mockResolvedValue([]);
       tx.puntoCurvaGenetica.findMany.mockResolvedValue(puntosCurva);
       tx.estimacionAlimentoPlan.findFirst.mockResolvedValue(null);
@@ -468,6 +475,7 @@ describe('PlanAlimentoService', () => {
         id: 31,
         version: 1,
         lote_id: 3,
+        fecha_ingreso_snapshot: new Date('2026-07-30T00:00:00.000Z'),
         fecha_salida_calculada: new Date('2026-08-19T00:00:00.000Z'),
       },
       curva_version_snapshot: {
@@ -496,7 +504,6 @@ describe('PlanAlimentoService', () => {
       prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(estimacion);
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
-        fecha_ingreso: new Date('2026-07-30T00:00:00.000Z'),
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([]);
       planLoteService.obtener.mockResolvedValue({
@@ -516,7 +523,6 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
-        fecha_ingreso: new Date('2026-07-30T00:00:00.000Z'),
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([
         { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
@@ -540,7 +546,6 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
-        fecha_ingreso: new Date('2026-07-30T00:00:00.000Z'),
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([]);
       planLoteService.obtener.mockRejectedValue(new ForbiddenException());
@@ -556,7 +561,6 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 900,
-        fecha_ingreso: new Date('2026-07-30T00:00:00.000Z'),
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([]);
       jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
@@ -573,7 +577,6 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
-        fecha_ingreso: new Date('2026-07-30T00:00:00.000Z'),
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([]);
       jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
@@ -589,7 +592,6 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
-        fecha_ingreso: new Date('2026-07-30T00:00:00.000Z'),
       });
       // snapshot original: dia 2 -> 15, dia 5 -> 10 (total 25). Ahora las 25
       // estan repartidas distinto: dia 3 -> 25. Misma suma, otro reparto.
@@ -609,7 +611,6 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
-        fecha_ingreso: new Date('2026-07-30T00:00:00.000Z'),
       });
       // Misma mortalidad que el snapshot original.
       prisma.registroMortalidad.findMany.mockResolvedValue([
@@ -631,7 +632,6 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
-        fecha_ingreso: new Date('2026-07-30T00:00:00.000Z'),
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([
         { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 2000 },
@@ -646,6 +646,33 @@ describe('PlanAlimentoService', () => {
       ]);
     });
 
+    it('una mortalidad real posterior a D-1 pero anterior a hoy NO marca mortalidad_actual_incoherente ni mortalidad_cambio (bug de d_rel como corte de validacion)', async () => {
+      // dia_objetivo_snapshot=21 -> D-1=20. Una muerte real en el dia 25 es
+      // historica y valida (ya paso, es anterior a "hoy"), pero queda fuera
+      // de la ventana de comparacion (dRel=20). Con el bug corregido, esto
+      // NO debe reportarse como mortalidad_futura durante la validacion --
+      // solo se excluye de la COMPARACION, nunca de la validacion.
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion(),
+      );
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+      });
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 }, // dia 2 (igual al snapshot)
+        { fecha: new Date('2026-08-03T00:00:00.000Z'), cantidad_aves: 10 }, // dia 5 (igual al snapshot)
+        { fecha: new Date('2026-08-23T00:00:00.000Z'), cantidad_aves: 5 }, // dia 25: > D-1, real, valida
+      ]);
+      // "hoy" = dia 30 de vida: muy despues del dia 25, para que sea
+      // inequivocamente pasado, no mortalidad_futura.
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-28T15:00:00.000Z'));
+
+      const res = await service.obtener(3, admin);
+
+      expect(res.desactualizado).toBe(false);
+      expect(res.motivos_desactualizacion).toEqual([]);
+    });
+
     it('no compara mortalidad cuando la estimación es plan_sin_dia_objetivo (sin snapshot que reconstruir)', async () => {
       prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
         filaEstimacion({
@@ -656,7 +683,6 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
-        fecha_ingreso: new Date('2026-07-30T00:00:00.000Z'),
       });
 
       await service.obtener(3, admin);
@@ -670,7 +696,6 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
-        fecha_ingreso: new Date('2026-07-30T00:00:00.000Z'),
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([]);
       jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
@@ -678,6 +703,29 @@ describe('PlanAlimentoService', () => {
       const res = await service.obtener(3, admin);
 
       expect(res.efectiva).toBe(true);
+    });
+
+    it('un mortalidad_snapshot persistido corrupto falla como 500 controlado, nunca como mortalidad_actual_incoherente', async () => {
+      // El CHECK de Postgres solo garantiza "es un arreglo JSON" -- una
+      // escritura SQL directa pudo dejar esto, que cumple esa unica regla
+      // pero no el contrato (dia deberia ser un entero).
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion({
+          mortalidad_snapshot: [{ dia: 'dos', muertes: 10 }],
+        }),
+      );
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+      });
+      // La mortalidad ACTUAL (registros reales) es intachable: el problema
+      // es solo el snapshot ya persistido, que se valida al reconstruirlo
+      // para la comparacion.
+      prisma.registroMortalidad.findMany.mockResolvedValue([]);
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
+
+      await expect(service.obtener(3, admin)).rejects.toThrow(
+        InternalServerErrorException,
+      );
     });
   });
 

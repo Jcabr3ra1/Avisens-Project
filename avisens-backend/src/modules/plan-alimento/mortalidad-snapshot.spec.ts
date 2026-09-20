@@ -1,6 +1,7 @@
 import {
   avesVivasEnDia,
   clasificarMortalidad,
+  validarSnapshotMortalidad,
   RegistroMortalidadCrudo,
 } from './mortalidad-snapshot';
 
@@ -200,5 +201,134 @@ describe('avesVivasEnDia', () => {
     for (let dia = 1; dia <= 21; dia++) {
       expect(avesVivasEnDia([], cantidadInicial, diaCorte, dia)).toBe(1000);
     }
+  });
+});
+
+describe('validarSnapshotMortalidad', () => {
+  // El CHECK de Postgres solo garantiza "es un arreglo JSON": todo lo demas
+  // (forma de los elementos, orden, coherencia de sumas) es responsabilidad
+  // de este validador, la unica defensa real contra una escritura SQL directa.
+  const params = {
+    diaCorte: 10,
+    cantidadInicialSnapshot: 1000,
+    muertesAlCorteEsperadas: 25,
+    avesVivasAlCorteEsperadas: 975,
+  };
+  const snapshotValido = [
+    { dia: 2, muertes: 15 },
+    { dia: 5, muertes: 10 },
+  ];
+
+  it('acepta un snapshot valido', () => {
+    expect(validarSnapshotMortalidad(snapshotValido, params)).toBe(true);
+  });
+
+  it('acepta un arreglo vacio cuando lo esperado es 0 muertes', () => {
+    expect(
+      validarSnapshotMortalidad([], {
+        diaCorte: 10,
+        cantidadInicialSnapshot: 1000,
+        muertesAlCorteEsperadas: 0,
+        avesVivasAlCorteEsperadas: 1000,
+      }),
+    ).toBe(true);
+  });
+
+  it('rechaza si el valor no es un arreglo', () => {
+    expect(validarSnapshotMortalidad({ dia: 2, muertes: 15 }, params)).toBe(
+      false,
+    );
+    expect(validarSnapshotMortalidad('no es json', params)).toBe(false);
+    expect(validarSnapshotMortalidad(null, params)).toBe(false);
+  });
+
+  it('rechaza elementos sin la forma {dia, muertes}', () => {
+    expect(validarSnapshotMortalidad([{ dia: 2 }], params)).toBe(false);
+    expect(validarSnapshotMortalidad([null], params)).toBe(false);
+    expect(validarSnapshotMortalidad([[2, 15]], params)).toBe(false);
+  });
+
+  // El caso concreto que pediste: JSON valido para Postgres, invalido para
+  // nuestro contrato (dia como string, no como numero entero).
+  it('rechaza dia no numerico, ej. [{ dia: "dos", muertes: 10 }]', () => {
+    expect(
+      validarSnapshotMortalidad([{ dia: 'dos', muertes: 10 }], params),
+    ).toBe(false);
+  });
+
+  it('rechaza dia no entero', () => {
+    expect(validarSnapshotMortalidad([{ dia: 2.5, muertes: 15 }], params)).toBe(
+      false,
+    );
+  });
+
+  it('rechaza dia <= 0', () => {
+    expect(validarSnapshotMortalidad([{ dia: 0, muertes: 15 }], params)).toBe(
+      false,
+    );
+  });
+
+  it('rechaza dia mayor a dia_corte', () => {
+    expect(validarSnapshotMortalidad([{ dia: 11, muertes: 15 }], params)).toBe(
+      false,
+    );
+  });
+
+  it('rechaza muertes no entero o no positivo', () => {
+    expect(validarSnapshotMortalidad([{ dia: 2, muertes: 1.5 }], params)).toBe(
+      false,
+    );
+    expect(validarSnapshotMortalidad([{ dia: 2, muertes: 0 }], params)).toBe(
+      false,
+    );
+    expect(validarSnapshotMortalidad([{ dia: 2, muertes: -5 }], params)).toBe(
+      false,
+    );
+  });
+
+  it('rechaza dias no estrictamente crecientes (duplicado)', () => {
+    expect(
+      validarSnapshotMortalidad(
+        [
+          { dia: 2, muertes: 10 },
+          { dia: 2, muertes: 5 },
+        ],
+        {
+          ...params,
+          muertesAlCorteEsperadas: 15,
+          avesVivasAlCorteEsperadas: 985,
+        },
+      ),
+    ).toBe(false);
+  });
+
+  it('rechaza dias desordenados', () => {
+    expect(
+      validarSnapshotMortalidad(
+        [
+          { dia: 5, muertes: 10 },
+          { dia: 2, muertes: 15 },
+        ],
+        params,
+      ),
+    ).toBe(false);
+  });
+
+  it('rechaza si la suma no coincide con muertes_al_corte', () => {
+    expect(
+      validarSnapshotMortalidad(snapshotValido, {
+        ...params,
+        muertesAlCorteEsperadas: 30,
+      }),
+    ).toBe(false);
+  });
+
+  it('rechaza si cantidad_inicial - suma no coincide con aves_vivas_al_corte', () => {
+    expect(
+      validarSnapshotMortalidad(snapshotValido, {
+        ...params,
+        avesVivasAlCorteEsperadas: 900,
+      }),
+    ).toBe(false);
   });
 });

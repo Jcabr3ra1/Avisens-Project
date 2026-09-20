@@ -113,6 +113,67 @@ export function clasificarMortalidad(
   };
 }
 
+export interface ParametrosValidacionSnapshot {
+  diaCorte: number;
+  cantidadInicialSnapshot: number;
+  muertesAlCorteEsperadas: number;
+  avesVivasAlCorteEsperadas: number;
+}
+
+/**
+ * Valida un mortalidad_snapshot ya persistido (o a punto de persistirse)
+ * contra el contrato completo de Fase 2A. El CHECK de Postgres solo
+ * garantiza que la columna sea un arreglo JSON -- NUNCA que sus elementos
+ * tengan {dia, muertes}, que los dias sean enteros positivos <= dia_corte,
+ * que esten ordenados sin repetirse, ni que la suma cuadre con
+ * muertes_al_corte/aves_vivas_al_corte. Esas invariantes solo las puede
+ * expresar codigo, no SQL (son un agregado entre elementos de un jsonb).
+ *
+ * Se usa en dos momentos: al escribir (defensa en profundidad -- si
+ * clasificarMortalidad alguna vez rompe su propia invariante, esto lo
+ * atrapa antes de persistir) y al leer (unica defensa real contra una
+ * escritura SQL directa que deje un arreglo corrupto).
+ */
+export function validarSnapshotMortalidad(
+  valor: unknown,
+  params: ParametrosValidacionSnapshot,
+): valor is EntradaMortalidad[] {
+  if (!Array.isArray(valor)) return false;
+
+  let diaAnterior = 0;
+  let sumaMuertes = 0;
+
+  for (const entrada of valor) {
+    if (
+      typeof entrada !== 'object' ||
+      entrada === null ||
+      Array.isArray(entrada)
+    ) {
+      return false;
+    }
+    const { dia, muertes } = entrada as Record<string, unknown>;
+    if (typeof dia !== 'number' || !Number.isInteger(dia)) return false;
+    if (typeof muertes !== 'number' || !Number.isInteger(muertes)) {
+      return false;
+    }
+    if (dia <= 0 || dia > params.diaCorte) return false;
+    if (muertes <= 0) return false;
+    if (dia <= diaAnterior) return false; // estrictamente creciente
+    diaAnterior = dia;
+    sumaMuertes += muertes;
+  }
+
+  if (sumaMuertes !== params.muertesAlCorteEsperadas) return false;
+  if (
+    params.cantidadInicialSnapshot - sumaMuertes !==
+    params.avesVivasAlCorteEsperadas
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 /**
  * N(d) = cantidad_inicial - M(min(d-1, dia_corte)), convencion FIN DEL DIA,
  * aprobada: las muertes del dia d se descuentan desde d+1, porque

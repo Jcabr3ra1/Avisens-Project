@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { EstadoCalculoAlimento, Prisma } from '@prisma/client';
@@ -14,6 +15,7 @@ import { PlanLoteService } from '../plan-lote/plan-lote.service';
 import {
   clasificarMortalidad,
   avesVivasEnDia,
+  validarSnapshotMortalidad,
   EntradaMortalidad,
 } from './mortalidad-snapshot';
 import { integrarConsumo, ALGORITMO_ACTUAL } from './consumo-curva';
@@ -53,6 +55,7 @@ const ESTIMACION_SELECT = {
       id: true,
       version: true,
       lote_id: true,
+      fecha_ingreso_snapshot: true,
       fecha_salida_calculada: true,
     },
   },
@@ -151,6 +154,37 @@ export class PlanAlimentoService {
   }
 
   /**
+   * Unica puerta de lectura de mortalidad_snapshot: el CHECK de Postgres
+   * solo garantiza "es un arreglo JSON", nunca la forma de sus elementos ni
+   * la coherencia de sus sumas. Una escritura SQL directa puede dejar un
+   * arreglo corrupto -- si eso pasa, es un problema de integridad del
+   * servidor, no del cliente, y se reporta como 500, nunca como
+   * mortalidad_actual_incoherente (que es sobre los REGISTROS actuales del
+   * lote, no sobre esta fila ya persistida).
+   */
+  private extraerSnapshotValidado(
+    estimacion: EstimacionConRelaciones,
+  ): EntradaMortalidad[] {
+    if (estimacion.mortalidad_snapshot === null) return [];
+
+    if (
+      !validarSnapshotMortalidad(estimacion.mortalidad_snapshot, {
+        diaCorte: estimacion.dia_corte,
+        cantidadInicialSnapshot: estimacion.cantidad_inicial_snapshot,
+        muertesAlCorteEsperadas: estimacion.muertes_al_corte ?? 0,
+        avesVivasAlCorteEsperadas:
+          estimacion.aves_vivas_al_corte ??
+          estimacion.cantidad_inicial_snapshot,
+      })
+    ) {
+      throw new InternalServerErrorException(
+        `La estimación de alimento ${estimacion.id} tiene un mortalidad_snapshot corrupto`,
+      );
+    }
+    return estimacion.mortalidad_snapshot;
+  }
+
+  /**
    * Motivos de desactualizacion de la estimacion (no del plan -- eso es
    * planVigente.desactualizado, un campo aparte). La mortalidad solo se
    * compara si el plan snapshot tuvo dia_objetivo: sin horizonte, no hay
@@ -159,10 +193,22 @@ export class PlanAlimentoService {
    * d_rel = max(0, min(diaActualEfectivo, dia_objetivo_snapshot - 1)):
    * una muerte registrada exactamente el dia D nunca pesa en N(d) bajo la
    * convencion fin-del-dia, asi que compararla marcaria un falso positivo.
+   * Pero d_rel es SOLO el corte de comparacion, nunca el corte de
+   * validacion: una muerte real ocurrida despues de D-1 y antes de hoy
+   * sigue siendo mortalidad valida del lote, y validarla contra d_rel la
+   * marcaria como mortalidad_futura por error. La mortalidad se valida
+   * siempre contra diaActualEfectivo (el dia real de hoy); d_rel solo
+   * filtra QUE PARTE de esa mortalidad ya validada entra en la comparacion.
+   *
+   * El reloj es SIEMPRE plan.fecha_ingreso_snapshot, nunca Lote.fecha_ingreso:
+   * ese campo es editable por PATCH /lotes/:id, y esta estimacion se
+   * calculo (y debe releerse) contra la fecha de ingreso que tenia el
+   * plan en su momento -- si cambia, es el plan el que queda desactualizado
+   * (plan_vigente.desactualizado, via PlanLoteService), no esta fecha.
    */
   private async calcularDesactualizado(
     estimacion: EstimacionConRelaciones,
-    loteActual: { cantidad_inicial: number; fecha_ingreso: Date },
+    cantidadInicialActual: number,
     planVigente: PlanVigenteInfo | null,
   ): Promise<{ desactualizado: boolean; motivos: MotivoDesactualizacion[] }> {
     const motivos: MotivoDesactualizacion[] = [];
@@ -173,7 +219,7 @@ export class PlanAlimentoService {
       motivos.push('plan_cambio');
     }
 
-    if (loteActual.cantidad_inicial !== estimacion.cantidad_inicial_snapshot) {
+    if (cantidadInicialActual !== estimacion.cantidad_inicial_snapshot) {
       motivos.push('cantidad_inicial_cambio');
     }
 
@@ -182,10 +228,8 @@ export class PlanAlimentoService {
     }
 
     if (estimacion.dia_objetivo_snapshot !== null) {
-      const diaActualEfectivo = Math.max(
-        0,
-        diaDeVida(loteActual.fecha_ingreso),
-      );
+      const fechaIngresoSnapshot = estimacion.plan.fecha_ingreso_snapshot;
+      const diaActualEfectivo = Math.max(0, diaDeVida(fechaIngresoSnapshot));
       const dRel = Math.max(
         0,
         Math.min(diaActualEfectivo, estimacion.dia_objetivo_snapshot - 1),
@@ -196,24 +240,28 @@ export class PlanAlimentoService {
         select: { fecha: true, cantidad_aves: true },
       });
       const clasificacionActual = clasificarMortalidad(
-        loteActual.fecha_ingreso,
+        fechaIngresoSnapshot,
         registrosActuales.map((r) => ({
           fecha: r.fecha,
           cantidadAves: r.cantidad_aves,
         })),
-        dRel,
-        loteActual.cantidad_inicial,
+        diaActualEfectivo, // corte de VALIDACION: el dia real de hoy, no d_rel
+        cantidadInicialActual,
       );
 
       if (!clasificacionActual.valido) {
         motivos.push('mortalidad_actual_incoherente');
       } else {
-        const snapshotOriginal =
-          (estimacion.mortalidad_snapshot as EntradaMortalidad[] | null) ?? [];
-        const snapshotRel = snapshotOriginal.filter((e) => e.dia <= dRel);
+        const snapshotOriginal = this.extraerSnapshotValidado(estimacion);
+        const snapshotOriginalRel = snapshotOriginal.filter(
+          (e) => e.dia <= dRel,
+        );
+        const snapshotActualRel = clasificacionActual.snapshot.filter(
+          (e) => e.dia <= dRel,
+        );
         if (
-          JSON.stringify(snapshotRel) !==
-          JSON.stringify(clasificacionActual.snapshot)
+          JSON.stringify(snapshotOriginalRel) !==
+          JSON.stringify(snapshotActualRel)
         ) {
           motivos.push('mortalidad_cambio');
         }
@@ -279,6 +327,22 @@ export class PlanAlimentoService {
           'Los registros de mortalidad del lote no permiten calcular el alimento',
         detalles: clasificacion.violaciones,
       });
+    }
+
+    // Defensa en profundidad: clasificarMortalidad ya garantiza estas
+    // invariantes por construccion. Si esto llega a fallar es un bug en nuestro
+    // propio codigo, no un error de negocio -- por eso Error, no ConflictException.
+    if (
+      !validarSnapshotMortalidad(clasificacion.snapshot, {
+        diaCorte,
+        cantidadInicialSnapshot: cantidadInicial,
+        muertesAlCorteEsperadas: clasificacion.muertesAlCorte,
+        avesVivasAlCorteEsperadas: clasificacion.avesVivasAlCorte,
+      })
+    ) {
+      throw new Error(
+        'clasificarMortalidad produjo un snapshot que no pasa su propia validacion de invariantes',
+      );
     }
 
     const puntos = await tx.puntoCurvaGenetica.findMany({
@@ -356,8 +420,7 @@ export class PlanAlimentoService {
         cantidad_inicial: estimacion.cantidad_inicial_snapshot,
         muertes: estimacion.muertes_al_corte,
         aves_vivas: estimacion.aves_vivas_al_corte,
-        mortalidad_por_dia:
-          (estimacion.mortalidad_snapshot as EntradaMortalidad[] | null) ?? [],
+        mortalidad_por_dia: this.extraerSnapshotValidado(estimacion),
       },
       resultado: {
         consumo_por_ave_g: estimacion.consumo_por_ave_g,
@@ -380,12 +443,11 @@ export class PlanAlimentoService {
       const [lote] = await tx.$queryRaw<
         Array<{
           estado: string;
-          fecha_ingreso: Date;
           cantidad_inicial: number;
           fecha_salida_real: Date | null;
         }>
       >`
-        SELECT "estado", "fecha_ingreso", "cantidad_inicial", "fecha_salida_real"
+        SELECT "estado", "cantidad_inicial", "fecha_salida_real"
         FROM "lotes"
         WHERE "id" = ${loteId}
         FOR UPDATE
@@ -407,9 +469,11 @@ export class PlanAlimentoService {
           estado_dia: string;
           dia_objetivo: number | null;
           curva_version_id: number | null;
+          fecha_ingreso_snapshot: Date;
         }>
       >`
-        SELECT "id", "estado_dia", "dia_objetivo", "curva_version_id"
+        SELECT "id", "estado_dia", "dia_objetivo", "curva_version_id",
+               "fecha_ingreso_snapshot"
         FROM "planes_lote"
         WHERE "lote_id" = ${loteId} AND "vigente"
         FOR UPDATE
@@ -420,16 +484,20 @@ export class PlanAlimentoService {
         );
       }
 
+      // El reloj es el del PLAN (fecha_ingreso_snapshot), nunca el de
+      // Lote.fecha_ingreso: ese campo es editable por PATCH /lotes/:id
+      // despues de que el plan ya se calculo, y esta estimacion debe
+      // seguir siendo reproducible contra la fecha que el plan congelo.
       // Lote con ingreso futuro (planificacion): diaDeVida da 0 o negativo,
       // el max lo deja en 0. Ver diseño Fase 2A, "dia_corte = 0".
-      const diaCorte = Math.max(0, diaDeVida(lote.fecha_ingreso));
+      const diaCorte = Math.max(0, diaDeVida(plan.fecha_ingreso_snapshot));
 
       // Se calcula ANTES de jubilar/versionar: un 409 aqui no debe dejar
       // rastro (ni version quemada, ni fila jubilada de mas).
       const datosCalculo = await this.calcularAlimento(
         tx,
         loteId,
-        lote.fecha_ingreso,
+        plan.fecha_ingreso_snapshot,
         lote.cantidad_inicial,
         plan,
         diaCorte,
@@ -507,7 +575,7 @@ export class PlanAlimentoService {
 
     const loteActual = await this.prisma.lote.findUniqueOrThrow({
       where: { id: loteId },
-      select: { cantidad_inicial: true, fecha_ingreso: true },
+      select: { cantidad_inicial: true },
     });
 
     const planVigente = await this.construirPlanVigente(
@@ -518,12 +586,14 @@ export class PlanAlimentoService {
 
     const { desactualizado, motivos } = await this.calcularDesactualizado(
       estimacion,
-      loteActual,
+      loteActual.cantidad_inicial,
       planVigente,
     );
 
+    // El reloj es el del plan que produjo ESTA estimacion, no el lote actual.
     const antiguedadDias =
-      Math.max(0, diaDeVida(loteActual.fecha_ingreso)) - estimacion.dia_corte;
+      Math.max(0, diaDeVida(estimacion.plan.fecha_ingreso_snapshot)) -
+      estimacion.dia_corte;
 
     return {
       ...this.mapearEstimacion(estimacion),
