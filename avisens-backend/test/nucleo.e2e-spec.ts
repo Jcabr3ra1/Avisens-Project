@@ -3153,6 +3153,56 @@ describe('Núcleo multi-tenant (e2e)', () => {
           'algoritmo_desglose_cambio',
         );
       });
+
+      it('fila temporal del escritor anterior (CHECK de compatibilidad): desglose no disponible, sin inventar cambio de marca', async () => {
+        // Reproduce contra Postgres real lo que el CHECK temporal de
+        // compatibilidad de despliegue permite: estado_alimento='calculado'
+        // con estado_desglose/version_desglose/marca_alimento_snapshot en
+        // NULL y sin renglones -- la forma en que un escritor de la version
+        // anterior sigue insertando mientras dura el rollout.
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 21 });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        const creada = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const estimacionId = (JSON.parse(creada.text) as { id: number }).id;
+
+        await prisma.renglonEstimacionAlimento.deleteMany({
+          where: { estimacion_id: estimacionId },
+        });
+        await prisma.estimacionAlimentoPlan.update({
+          where: { id: estimacionId },
+          data: {
+            estado_desglose: null,
+            version_desglose: null,
+            marca_alimento_snapshot: null,
+          },
+        });
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo.desglose).toMatchObject({
+          no_disponible: true,
+          estado: null,
+          version: null,
+          renglones: [],
+        });
+        expect(cuerpo.desactualizado).toBe(true);
+        expect(cuerpo.motivos_desactualizacion).toContain(
+          'algoritmo_desglose_cambio',
+        );
+        expect(cuerpo.motivos_desactualizacion).not.toContain(
+          'marca_alimento_cambio',
+        );
+      });
     });
 
     describe('inserciones directas contra la base', () => {

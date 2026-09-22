@@ -252,7 +252,16 @@ export class PlanAlimentoService {
     }
 
     return {
-      no_disponible: estimacion.estado_desglose === 'legado_sin_desglose',
+      // Solo tiene sentido cuando el estado_alimento es 'calculado': para
+      // los demas estados la ausencia de desglose ya es evidente por el
+      // propio estado_alimento. estado_desglose=NULL cubre tanto legado
+      // (backfill nunca corrio sobre esta fila) como la fila temporal del
+      // escritor anterior durante el rollout -- las dos son "nunca se
+      // fotografio nada", indistinguibles desde la lectura.
+      no_disponible:
+        estimacion.estado_alimento === 'calculado' &&
+        (estimacion.estado_desglose === null ||
+          estimacion.estado_desglose === 'legado_sin_desglose'),
       estado: estimacion.estado_desglose,
       version: estimacion.version_desglose,
       marca_alimento_snapshot: estimacion.marca_alimento_snapshot,
@@ -327,12 +336,25 @@ export class PlanAlimentoService {
         motivos.push('algoritmo_desglose_cambio');
       }
 
-      const marcaActualNormalizada =
-        marcaAlimentoActual === null
-          ? null
-          : normalizarMarcaCatalogo(marcaAlimentoActual);
-      if (marcaActualNormalizada !== estimacion.marca_alimento_snapshot) {
-        motivos.push('marca_alimento_cambio');
+      // marca_alimento_snapshot=NULL solo significa "el lote no tenia marca"
+      // cuando estado_desglose SI pertenece a Fase 2B (incluido
+      // lote_sin_marca_alimento, cuyo NULL es deliberado). En
+      // legado_sin_desglose y en la fila temporal del escritor anterior
+      // (estado_desglose NULL por compatibilidad de despliegue), NULL
+      // significa "nunca se fotografio la marca" -- comparar ahi afirmaria
+      // un cambio contra un dato que nunca existio.
+      const desgloseTieneSnapshotDeMarca =
+        estimacion.estado_desglose !== null &&
+        estimacion.estado_desglose !== 'legado_sin_desglose';
+
+      if (desgloseTieneSnapshotDeMarca) {
+        const marcaActualNormalizada =
+          marcaAlimentoActual === null
+            ? null
+            : normalizarMarcaCatalogo(marcaAlimentoActual);
+        if (marcaActualNormalizada !== estimacion.marca_alimento_snapshot) {
+          motivos.push('marca_alimento_cambio');
+        }
       }
     }
 

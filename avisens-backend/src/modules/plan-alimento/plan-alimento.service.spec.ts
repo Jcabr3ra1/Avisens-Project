@@ -842,8 +842,22 @@ describe('PlanAlimentoService', () => {
     it('motivo marca_alimento_cambio si Lote.marca_alimento cambio despues de calcular', async () => {
       prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
         filaEstimacion({
+          estado_desglose: 'calculado',
           version_desglose: VERSION_DESGLOSE_ACTUAL,
           marca_alimento_snapshot: 'italcol',
+          renglones_alimento: [
+            {
+              orden: 1,
+              tipo_alimento_id: 9,
+              tipo_alimento_nombre_snapshot: 'Unico',
+              etapa_snapshot: 'preiniciacion',
+              dia_inicio: 1,
+              dia_fin: 21,
+              extendido_hasta_dia_objetivo: false,
+              consumo_por_ave_g: new Prisma.Decimal(1190),
+              consumo_total_kg: new Prisma.Decimal('1161.850'),
+            },
+          ],
         }),
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
@@ -897,8 +911,22 @@ describe('PlanAlimentoService', () => {
     it('una marca equivalente solo por espacios o mayusculas NO produce un falso positivo', async () => {
       prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
         filaEstimacion({
+          estado_desglose: 'calculado',
           version_desglose: VERSION_DESGLOSE_ACTUAL,
           marca_alimento_snapshot: 'italcol',
+          renglones_alimento: [
+            {
+              orden: 1,
+              tipo_alimento_id: 9,
+              tipo_alimento_nombre_snapshot: 'Unico',
+              etapa_snapshot: 'preiniciacion',
+              dia_inicio: 1,
+              dia_fin: 21,
+              extendido_hasta_dia_objetivo: false,
+              consumo_por_ave_g: new Prisma.Decimal(1190),
+              consumo_total_kg: new Prisma.Decimal('1161.850'),
+            },
+          ],
         }),
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
@@ -920,8 +948,22 @@ describe('PlanAlimentoService', () => {
     it('una estimacion vigente sin cambios (marca y version de desglose exactas) permanece desactualizado=false', async () => {
       prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
         filaEstimacion({
+          estado_desglose: 'calculado',
           version_desglose: VERSION_DESGLOSE_ACTUAL,
           marca_alimento_snapshot: 'italcol',
+          renglones_alimento: [
+            {
+              orden: 1,
+              tipo_alimento_id: 9,
+              tipo_alimento_nombre_snapshot: 'Unico',
+              etapa_snapshot: 'preiniciacion',
+              dia_inicio: 1,
+              dia_fin: 21,
+              extendido_hasta_dia_objetivo: false,
+              consumo_por_ave_g: new Prisma.Decimal(1190),
+              consumo_total_kg: new Prisma.Decimal('1161.850'),
+            },
+          ],
         }),
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
@@ -938,6 +980,107 @@ describe('PlanAlimentoService', () => {
 
       expect(res.desactualizado).toBe(false);
       expect(res.motivos_desactualizacion).toEqual([]);
+    });
+
+    it('legado con marca actual no nula: algoritmo_desglose_cambio si, marca_alimento_cambio no (el snapshot nunca se fotografio)', async () => {
+      // legado_sin_desglose + marca_alimento_snapshot=NULL no significa "el
+      // lote no tenia marca" -- significa "esta fila nunca supo de Fase 2B".
+      // Afirmar un cambio de marca ahi seria comparar contra un dato que
+      // nunca existio.
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion(), // default: legado_sin_desglose, marca_alimento_snapshot=null
+      );
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+        marca_alimento: 'italcol',
+      });
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
+        { fecha: new Date('2026-08-03T00:00:00.000Z'), cantidad_aves: 10 },
+      ]);
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-15T15:00:00.000Z'));
+
+      const res = await service.obtener(3, admin);
+
+      expect(res.motivos_desactualizacion).toContain(
+        'algoritmo_desglose_cambio',
+      );
+      expect(res.motivos_desactualizacion).not.toContain(
+        'marca_alimento_cambio',
+      );
+    });
+
+    it('fila temporal del escritor anterior (estado_desglose NULL): desglose no disponible, sin inventar cambio de marca', async () => {
+      // El CHECK temporal de compatibilidad de despliegue permite
+      // estado_alimento='calculado' con estado_desglose/version_desglose/
+      // marca_alimento_snapshot en NULL y sin renglones -- exactamente lo
+      // que un escritor de la version anterior deja mientras la instancia
+      // nueva no esta lista. Leerla antes del backfill posterior no debe
+      // inventar un cambio de marca ni exponer un estado inexistente.
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion({
+          estado_desglose: null,
+          version_desglose: null,
+          marca_alimento_snapshot: null,
+          renglones_alimento: [],
+        }),
+      );
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+        marca_alimento: 'italcol',
+      });
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
+        { fecha: new Date('2026-08-03T00:00:00.000Z'), cantidad_aves: 10 },
+      ]);
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-15T15:00:00.000Z'));
+
+      const res = await service.obtener(3, admin);
+
+      expect(res.desglose).toMatchObject({
+        no_disponible: true,
+        estado: null,
+        version: null,
+        renglones: [],
+      });
+      expect(res.desactualizado).toBe(true);
+      expect(res.motivos_desactualizacion).toContain(
+        'algoritmo_desglose_cambio',
+      );
+      expect(res.motivos_desactualizacion).not.toContain(
+        'marca_alimento_cambio',
+      );
+    });
+
+    it('lote_sin_marca_alimento al que despues se le asigna una marca SI produce marca_alimento_cambio', async () => {
+      // Aqui el NULL del snapshot es deliberado (el lote genuinamente no
+      // tenia marca cuando se calculo) -- a diferencia de legado/temporal,
+      // este estado SI pertenece a Fase 2B, y un NULL -> valor real es un
+      // cambio real que debe reportarse.
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion({
+          estado_desglose: 'lote_sin_marca_alimento',
+          version_desglose: VERSION_DESGLOSE_ACTUAL,
+          marca_alimento_snapshot: null,
+          renglones_alimento: [],
+        }),
+      );
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+        marca_alimento: 'italcol',
+      });
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
+        { fecha: new Date('2026-08-03T00:00:00.000Z'), cantidad_aves: 10 },
+      ]);
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-15T15:00:00.000Z'));
+
+      const res = await service.obtener(3, admin);
+
+      expect(res.motivos_desactualizacion).toContain('marca_alimento_cambio');
+      expect(res.motivos_desactualizacion).not.toContain(
+        'algoritmo_desglose_cambio',
+      );
     });
 
     it('no compara mortalidad cuando la estimación es plan_sin_dia_objetivo (sin snapshot que reconstruir)', async () => {
