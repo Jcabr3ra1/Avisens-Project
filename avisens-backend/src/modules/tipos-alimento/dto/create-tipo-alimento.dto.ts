@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
-import { ETAPAS_ALIMENTACION } from '../../../common/ganaderia/vocabulario';
+import { ETAPAS_ALIMENTACION } from '../../../common/avicultura/vocabulario';
 
 export class CreateTipoAlimentoDto {
   @ApiProperty({

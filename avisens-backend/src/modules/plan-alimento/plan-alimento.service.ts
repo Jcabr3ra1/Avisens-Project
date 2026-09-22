@@ -11,6 +11,7 @@ import { paginate } from '../../common/pagination/paginate';
 import type { Solicitante } from '../../common/auth/acceso';
 import { verificarAccesoLote } from '../../common/auth/alcance';
 import { diaDeVida } from '../../common/fechas/dias-de-vida';
+import { esViolacionDeLlaveForanea } from '../../common/errores/llave-foranea';
 import { PlanLoteService } from '../plan-lote/plan-lote.service';
 import {
   clasificarMortalidad,
@@ -19,6 +20,13 @@ import {
   EntradaMortalidad,
 } from './mortalidad-snapshot';
 import { integrarConsumo, ALGORITMO_ACTUAL } from './consumo-curva';
+import {
+  construirDesgloseAlimento,
+  validarDesgloseAlimento,
+  VERSION_DESGLOSE_ACTUAL,
+  RenglonDesglose,
+} from './desglose-alimento';
+import { normalizarMarcaCatalogo } from '../../common/avicultura/vocabulario';
 import { CrearEstimacionAlimentoDto } from './dto/crear-estimacion-alimento.dto';
 
 export const MOTIVOS_DESACTUALIZACION = [
@@ -28,6 +36,8 @@ export const MOTIVOS_DESACTUALIZACION = [
   'algoritmo_cambio',
   'mortalidad_cambio',
   'mortalidad_actual_incoherente',
+  'algoritmo_desglose_cambio',
+  'marca_alimento_cambio',
 ] as const;
 
 export type MotivoDesactualizacion = (typeof MOTIVOS_DESACTUALIZACION)[number];
@@ -47,6 +57,23 @@ const ESTIMACION_SELECT = {
   dia_objetivo_snapshot: true,
   consumo_por_ave_g: true,
   consumo_total_kg: true,
+  estado_desglose: true,
+  version_desglose: true,
+  marca_alimento_snapshot: true,
+  renglones_alimento: {
+    orderBy: { orden: 'asc' },
+    select: {
+      orden: true,
+      tipo_alimento_id: true,
+      tipo_alimento_nombre_snapshot: true,
+      etapa_snapshot: true,
+      dia_inicio: true,
+      dia_fin: true,
+      extendido_hasta_dia_objetivo: true,
+      consumo_por_ave_g: true,
+      consumo_total_kg: true,
+    },
+  },
   motivo: true,
   fecha_creacion: true,
   creado_por: { select: { id: true, nombre_completo: true } },
@@ -185,6 +212,74 @@ export class PlanAlimentoService {
   }
 
   /**
+   * Unica puerta de lectura del desglose por etapa: el CHECK de Postgres
+   * garantiza invariantes escalares por renglon, nunca cobertura, ausencia
+   * de solapes, ni las dos sumas contra el total ya persistido -- igual que
+   * extraerSnapshotValidado, un desglose corrupto es un problema de
+   * integridad del servidor (500), nunca un caso de negocio.
+   *
+   * legado_sin_desglose (estimaciones anteriores a Fase 2B) nunca se
+   * reconstruye retroactivamente: el snapshot de catalogo de ese momento ya
+   * no existe. Se expone explicitamente como no disponible, no como un
+   * estado mas a interpretar.
+   */
+  private extraerDesgloseValidado(estimacion: EstimacionConRelaciones) {
+    const renglones: RenglonDesglose[] = estimacion.renglones_alimento.map(
+      (r) => ({
+        orden: r.orden,
+        tipoAlimentoId: r.tipo_alimento_id,
+        tipoAlimentoNombreSnapshot: r.tipo_alimento_nombre_snapshot,
+        etapaSnapshot: r.etapa_snapshot,
+        diaInicio: r.dia_inicio,
+        diaFin: r.dia_fin,
+        extendidoHastaDiaObjetivo: r.extendido_hasta_dia_objetivo,
+        consumoPorAveG: r.consumo_por_ave_g,
+        consumoTotalKg: r.consumo_total_kg,
+      }),
+    );
+
+    if (
+      !validarDesgloseAlimento(renglones, {
+        estadoDesglose: estimacion.estado_desglose,
+        diaObjetivoSnapshot: estimacion.dia_objetivo_snapshot,
+        consumoPorAveGEsperado: estimacion.consumo_por_ave_g,
+        consumoTotalKgEsperado: estimacion.consumo_total_kg,
+      })
+    ) {
+      throw new InternalServerErrorException(
+        `La estimación de alimento ${estimacion.id} tiene un desglose corrupto`,
+      );
+    }
+
+    return {
+      // Solo tiene sentido cuando el estado_alimento es 'calculado': para
+      // los demas estados la ausencia de desglose ya es evidente por el
+      // propio estado_alimento. estado_desglose=NULL cubre tanto legado
+      // (backfill nunca corrio sobre esta fila) como la fila temporal del
+      // escritor anterior durante el rollout -- las dos son "nunca se
+      // fotografio nada", indistinguibles desde la lectura.
+      no_disponible:
+        estimacion.estado_alimento === 'calculado' &&
+        (estimacion.estado_desglose === null ||
+          estimacion.estado_desglose === 'legado_sin_desglose'),
+      estado: estimacion.estado_desglose,
+      version: estimacion.version_desglose,
+      marca_alimento_snapshot: estimacion.marca_alimento_snapshot,
+      renglones: renglones.map((r) => ({
+        orden: r.orden,
+        tipo_alimento_id: r.tipoAlimentoId,
+        tipo_alimento_nombre_snapshot: r.tipoAlimentoNombreSnapshot,
+        etapa: r.etapaSnapshot,
+        dia_inicio: r.diaInicio,
+        dia_fin: r.diaFin,
+        extendido_hasta_dia_objetivo: r.extendidoHastaDiaObjetivo,
+        consumo_por_ave_g: r.consumoPorAveG,
+        consumo_total_kg: r.consumoTotalKg,
+      })),
+    };
+  }
+
+  /**
    * Motivos de desactualizacion de la estimacion (no del plan -- eso es
    * planVigente.desactualizado, un campo aparte). La mortalidad solo se
    * compara si el plan snapshot tuvo dia_objetivo: sin horizonte, no hay
@@ -205,10 +300,19 @@ export class PlanAlimentoService {
    * calculo (y debe releerse) contra la fecha de ingreso que tenia el
    * plan en su momento -- si cambia, es el plan el que queda desactualizado
    * (plan_vigente.desactualizado, via PlanLoteService), no esta fecha.
+   *
+   * El desglose de Fase 2B solo se compara cuando estado_alimento='calculado'
+   * (los demas estados nunca tuvieron desglose que envejecer). Una fila
+   * legado_sin_desglose tiene version_desglose=NULL, que nunca coincide con
+   * VERSION_DESGLOSE_ACTUAL -- queda desactualizada por diseño, no como caso
+   * especial. La marca se compara normalizada en ambos lados para que un
+   * simple cambio de mayusculas/espacios en el catalogo no dispare un falso
+   * positivo.
    */
   private async calcularDesactualizado(
     estimacion: EstimacionConRelaciones,
     cantidadInicialActual: number,
+    marcaAlimentoActual: string | null,
     planVigente: PlanVigenteInfo | null,
   ): Promise<{ desactualizado: boolean; motivos: MotivoDesactualizacion[] }> {
     const motivos: MotivoDesactualizacion[] = [];
@@ -225,6 +329,33 @@ export class PlanAlimentoService {
 
     if (estimacion.version_algoritmo !== ALGORITMO_ACTUAL) {
       motivos.push('algoritmo_cambio');
+    }
+
+    if (estimacion.estado_alimento === 'calculado') {
+      if (estimacion.version_desglose !== VERSION_DESGLOSE_ACTUAL) {
+        motivos.push('algoritmo_desglose_cambio');
+      }
+
+      // marca_alimento_snapshot=NULL solo significa "el lote no tenia marca"
+      // cuando estado_desglose SI pertenece a Fase 2B (incluido
+      // lote_sin_marca_alimento, cuyo NULL es deliberado). En
+      // legado_sin_desglose y en la fila temporal del escritor anterior
+      // (estado_desglose NULL por compatibilidad de despliegue), NULL
+      // significa "nunca se fotografio la marca" -- comparar ahi afirmaria
+      // un cambio contra un dato que nunca existio.
+      const desgloseTieneSnapshotDeMarca =
+        estimacion.estado_desglose !== null &&
+        estimacion.estado_desglose !== 'legado_sin_desglose';
+
+      if (desgloseTieneSnapshotDeMarca) {
+        const marcaActualNormalizada =
+          marcaAlimentoActual === null
+            ? null
+            : normalizarMarcaCatalogo(marcaAlimentoActual);
+        if (marcaActualNormalizada !== estimacion.marca_alimento_snapshot) {
+          motivos.push('marca_alimento_cambio');
+        }
+      }
     }
 
     if (estimacion.dia_objetivo_snapshot !== null) {
@@ -281,6 +412,7 @@ export class PlanAlimentoService {
     loteId: number,
     fechaIngreso: Date,
     cantidadInicial: number,
+    marcaAlimento: string | null,
     plan: {
       estado_dia: string;
       dia_objetivo: number | null;
@@ -302,6 +434,10 @@ export class PlanAlimentoService {
         curva_version_id_snapshot: null,
         consumo_por_ave_g: null,
         consumo_total_kg: null,
+        estado_desglose: null,
+        version_desglose: null,
+        marca_alimento_snapshot: null,
+        renglones: [] as RenglonDesglose[],
       };
     }
 
@@ -379,14 +515,51 @@ export class PlanAlimentoService {
         estado_alimento: resultado.estado as EstadoCalculoAlimento,
         consumo_por_ave_g: null,
         consumo_total_kg: null,
+        estado_desglose: null,
+        version_desglose: null,
+        marca_alimento_snapshot: null,
+        renglones: [] as RenglonDesglose[],
       };
     }
+
+    const filasCatalogo = await tx.tipoAlimento.findMany({
+      where: { activo: true, marca: { not: null } },
+      select: {
+        id: true,
+        nombre: true,
+        marca: true,
+        etapa: true,
+        dia_inicio: true,
+        dia_fin: true,
+      },
+    });
+
+    const desglose = construirDesgloseAlimento({
+      marcaAlimento,
+      diaObjetivoSnapshot: plan.dia_objetivo,
+      consumoPorAveGEsperado: resultado.consumoPorAveG,
+      consumoTotalKgEsperado: resultado.consumoTotalKg,
+      catalogo: filasCatalogo.map((f) => ({
+        id: f.id,
+        nombre: f.nombre,
+        marca: f.marca,
+        etapa: f.etapa,
+        diaInicio: f.dia_inicio,
+        diaFin: f.dia_fin,
+      })),
+      acumuladoPorAveEnDia: resultado.acumuladoPorAveEnDia,
+      acumuladoTotalKgEnDia: resultado.acumuladoTotalKgEnDia,
+    });
 
     return {
       ...base,
       estado_alimento: 'calculado' as EstadoCalculoAlimento,
       consumo_por_ave_g: resultado.consumoPorAveG,
       consumo_total_kg: resultado.consumoTotalKg,
+      estado_desglose: desglose.estado,
+      version_desglose: desglose.versionDesglose,
+      marca_alimento_snapshot: desglose.marcaAlimentoSnapshot,
+      renglones: desglose.renglones,
     };
   }
 
@@ -426,6 +599,7 @@ export class PlanAlimentoService {
         consumo_por_ave_g: estimacion.consumo_por_ave_g,
         consumo_total_kg: estimacion.consumo_total_kg,
       },
+      desglose: this.extraerDesgloseValidado(estimacion),
     };
   }
 
@@ -445,9 +619,10 @@ export class PlanAlimentoService {
           estado: string;
           cantidad_inicial: number;
           fecha_salida_real: Date | null;
+          marca_alimento: string | null;
         }>
       >`
-        SELECT "estado", "cantidad_inicial", "fecha_salida_real"
+        SELECT "estado", "cantidad_inicial", "fecha_salida_real", "marca_alimento"
         FROM "lotes"
         WHERE "id" = ${loteId}
         FOR UPDATE
@@ -499,6 +674,7 @@ export class PlanAlimentoService {
         loteId,
         plan.fecha_ingreso_snapshot,
         lote.cantidad_inicial,
+        lote.marca_alimento,
         plan,
         diaCorte,
       );
@@ -516,6 +692,8 @@ export class PlanAlimentoService {
       });
       const version = ultima ? ultima.version + 1 : 1;
 
+      const { renglones, ...datosParaGuardar } = datosCalculo;
+
       try {
         return await tx.estimacionAlimentoPlan.create({
           data: {
@@ -526,7 +704,20 @@ export class PlanAlimentoService {
             cantidad_inicial_snapshot: lote.cantidad_inicial,
             motivo: dto.motivo,
             creado_por_id: solicitante.id,
-            ...datosCalculo,
+            ...datosParaGuardar,
+            renglones_alimento: {
+              create: renglones.map((r) => ({
+                orden: r.orden,
+                tipo_alimento_id: r.tipoAlimentoId,
+                tipo_alimento_nombre_snapshot: r.tipoAlimentoNombreSnapshot,
+                etapa_snapshot: r.etapaSnapshot,
+                dia_inicio: r.diaInicio,
+                dia_fin: r.diaFin,
+                extendido_hasta_dia_objetivo: r.extendidoHastaDiaObjetivo,
+                consumo_por_ave_g: r.consumoPorAveG,
+                consumo_total_kg: r.consumoTotalKg,
+              })),
+            },
           },
           select: ESTIMACION_SELECT,
         });
@@ -534,6 +725,11 @@ export class PlanAlimentoService {
         if (this.esConflictoUnico(error)) {
           throw new ConflictException(
             'Ya existe una estimación vigente para este plan; vuelve a intentarlo',
+          );
+        }
+        if (esViolacionDeLlaveForanea(error)) {
+          throw new ConflictException(
+            'El catálogo de alimentos cambió mientras se calculaba la estimación; vuelve a intentarlo',
           );
         }
         throw error;
@@ -575,7 +771,7 @@ export class PlanAlimentoService {
 
     const loteActual = await this.prisma.lote.findUniqueOrThrow({
       where: { id: loteId },
-      select: { cantidad_inicial: true },
+      select: { cantidad_inicial: true, marca_alimento: true },
     });
 
     const planVigente = await this.construirPlanVigente(
@@ -587,6 +783,7 @@ export class PlanAlimentoService {
     const { desactualizado, motivos } = await this.calcularDesactualizado(
       estimacion,
       loteActual.cantidad_inicial,
+      loteActual.marca_alimento,
       planVigente,
     );
 

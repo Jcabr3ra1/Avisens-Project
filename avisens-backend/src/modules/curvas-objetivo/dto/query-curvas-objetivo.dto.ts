@@ -4,7 +4,7 @@ import { PaginationQueryDto } from '../../../common/pagination/pagination-query.
 import {
   MARCAS_ALIMENTO,
   SEXOS_LOTE,
-} from '../../../common/ganaderia/vocabulario';
+} from '../../../common/avicultura/vocabulario';
 
 export class QueryCurvasObjetivoDto extends PaginationQueryDto {
   @ApiPropertyOptional({

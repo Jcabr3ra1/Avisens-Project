@@ -2383,6 +2383,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         galpon_id?: number;
         linea_genetica_id?: number | null;
         cantidad_inicial?: number;
+        marca_alimento?: string | null;
       } = {},
     ) => {
       const lote = await prisma.lote.create({
@@ -2396,6 +2397,10 @@ describe('Núcleo multi-tenant (e2e)', () => {
               ? lineaId
               : overrides.linea_genetica_id,
           sexo: 'macho',
+          marca_alimento:
+            overrides.marca_alimento === undefined
+              ? null
+              : overrides.marca_alimento,
         },
       });
       idsLotesCreados.push(lote.id);
@@ -2762,6 +2767,441 @@ describe('Núcleo multi-tenant (e2e)', () => {
           where: { plan: { lote_id: lote.id }, vigente: true },
         });
         expect(vigentes).toBe(1);
+      });
+    });
+
+    describe('desglose de alimento por etapa (Fase 2B)', () => {
+      let marcaTest: string;
+      let tipoAlimentoIds: number[];
+
+      beforeEach(() => {
+        marcaTest = `marca_2b_${randomUUID().slice(0, 8)}`;
+        tipoAlimentoIds = [];
+      });
+
+      afterEach(async () => {
+        if (tipoAlimentoIds.length > 0) {
+          // Restrict protege renglones_alimento: hay que soltar las
+          // estimaciones (cascada a sus renglones) antes de poder borrar el
+          // TipoAlimento de prueba. El afterEach de afuera repetira este
+          // delete sobre las mismas filas -- no-op, no error.
+          await prisma.estimacionAlimentoPlan.deleteMany({
+            where: { plan: { lote_id: { in: idsLotesCreados } } },
+          });
+          await prisma.tipoAlimento.deleteMany({
+            where: { id: { in: tipoAlimentoIds } },
+          });
+        }
+      });
+
+      const seedTipoAlimento = async (
+        overrides: {
+          nombre?: string;
+          etapa?: string | null;
+          dia_inicio?: number | null;
+          dia_fin?: number | null;
+          activo?: boolean;
+        } = {},
+      ) => {
+        const fila = await prisma.tipoAlimento.create({
+          data: {
+            nombre: overrides.nombre ?? 'Preiniciador',
+            marca: marcaTest,
+            etapa:
+              overrides.etapa === undefined ? 'preiniciacion' : overrides.etapa,
+            dia_inicio:
+              overrides.dia_inicio === undefined ? 1 : overrides.dia_inicio,
+            dia_fin: overrides.dia_fin === undefined ? 21 : overrides.dia_fin,
+            activo: overrides.activo ?? true,
+          },
+        });
+        tipoAlimentoIds.push(fila.id);
+        return fila;
+      };
+
+      it('lote_sin_marca_alimento: desglose vacio, sin tocar el total ya calculado', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id);
+
+        const res = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+        const desglose = cuerpo.desglose as Record<string, unknown>;
+
+        expect(desglose.no_disponible).toBe(false);
+        expect(desglose.estado).toBe('lote_sin_marca_alimento');
+        expect(desglose.marca_alimento_snapshot).toBeNull();
+        expect(desglose.renglones).toEqual([]);
+        expect(
+          (cuerpo.resultado as Record<string, unknown>).consumo_total_kg,
+        ).not.toBeNull();
+      });
+
+      it('marca_sin_catalogo: el lote tiene marca pero ninguna fila activa la referencia', async () => {
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        const res = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const desglose = (JSON.parse(res.text) as Record<string, unknown>)
+          .desglose as Record<string, unknown>;
+
+        expect(desglose.estado).toBe('marca_sin_catalogo');
+        expect(desglose.marca_alimento_snapshot).toBe(marcaTest);
+        expect(desglose.renglones).toEqual([]);
+      });
+
+      it('catalogo_invalido: una fila con etapa fuera de ETAPAS_ALIMENTACION invalida toda la marca', async () => {
+        await seedTipoAlimento({ etapa: 'desconocida' });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        const res = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const desglose = (JSON.parse(res.text) as Record<string, unknown>)
+          .desglose as Record<string, unknown>;
+
+        expect(desglose.estado).toBe('catalogo_invalido');
+        expect(desglose.renglones).toEqual([]);
+      });
+
+      it('catalogo_ambiguo: dos filas se solapan (rango inclusivo, terminar e iniciar el mismo dia)', async () => {
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 10 });
+        await seedTipoAlimento({
+          nombre: 'Iniciador',
+          etapa: 'iniciacion',
+          dia_inicio: 10,
+          dia_fin: 21,
+        });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        const res = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const desglose = (JSON.parse(res.text) as Record<string, unknown>)
+          .desglose as Record<string, unknown>;
+
+        expect(desglose.estado).toBe('catalogo_ambiguo');
+        expect(desglose.renglones).toEqual([]);
+      });
+
+      it('catalogo_incompleto: una etapa finita mas corta que dia_objetivo deja un hueco de cola sin extenderse', async () => {
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 15 });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id); // dia_objetivo = 21 (peso 900)
+
+        const res = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+        const desglose = cuerpo.desglose as {
+          estado: string;
+          renglones: Array<Record<string, unknown>>;
+        };
+
+        expect(desglose.estado).toBe('catalogo_incompleto');
+        expect(desglose.renglones).toHaveLength(2);
+        expect(desglose.renglones[0]).toMatchObject({
+          dia_inicio: 1,
+          dia_fin: 15,
+          extendido_hasta_dia_objetivo: false,
+        });
+        expect(desglose.renglones[1]).toMatchObject({
+          tipo_alimento_id: null,
+          etapa: null,
+          dia_inicio: 16,
+          dia_fin: 21,
+        });
+
+        const sumaTotalKg = desglose.renglones.reduce(
+          (acc, r) => acc + Number(r.consumo_total_kg),
+          0,
+        );
+        expect(sumaTotalKg).toBeCloseTo(
+          Number((cuerpo.resultado as Record<string, unknown>).consumo_total_kg),
+          3,
+        );
+      });
+
+      it('calculado: la ultima etapa abierta (dia_fin null) se extiende hasta dia_objetivo y las sumas cuadran exacto', async () => {
+        await seedTipoAlimento({
+          nombre: 'Preiniciador',
+          etapa: 'preiniciacion',
+          dia_inicio: 1,
+          dia_fin: 8,
+        });
+        await seedTipoAlimento({
+          nombre: 'Iniciador',
+          etapa: 'iniciacion',
+          dia_inicio: 9,
+          dia_fin: null,
+        });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+        await prisma.registroMortalidad.create({
+          data: {
+            lote_id: lote.id,
+            fecha: new Date('2020-01-02'),
+            cantidad_aves: 15,
+            usuario_id: idAdminAlimento,
+          },
+        });
+        await prisma.registroMortalidad.create({
+          data: {
+            lote_id: lote.id,
+            fecha: new Date('2020-01-05'),
+            cantidad_aves: 10,
+            usuario_id: idAdminAlimento,
+          },
+        });
+
+        const res = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+        const desglose = cuerpo.desglose as {
+          estado: string;
+          marca_alimento_snapshot: string;
+          renglones: Array<Record<string, unknown>>;
+        };
+
+        expect(desglose.estado).toBe('calculado');
+        expect(desglose.marca_alimento_snapshot).toBe(marcaTest);
+        expect(desglose.renglones).toHaveLength(2);
+        expect(desglose.renglones[1]).toMatchObject({
+          dia_inicio: 9,
+          dia_fin: 21,
+          extendido_hasta_dia_objetivo: true,
+        });
+
+        const resultado = cuerpo.resultado as Record<string, unknown>;
+        const sumaTotalKg = desglose.renglones.reduce(
+          (acc, r) => acc + Number(r.consumo_total_kg),
+          0,
+        );
+        expect(sumaTotalKg).toBeCloseTo(Number(resultado.consumo_total_kg), 3);
+        const sumaPorAveG = desglose.renglones.reduce(
+          (acc, r) => acc + Number(r.consumo_por_ave_g),
+          0,
+        );
+        expect(sumaPorAveG).toBeCloseTo(Number(resultado.consumo_por_ave_g), 2);
+      });
+
+      it('GET expone los renglones ordenados, y un desglose corrupto en la base responde 500 controlado', async () => {
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 21 });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        const creada = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const estimacionId = (JSON.parse(creada.text) as { id: number }).id;
+
+        const get1 = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        expect(
+          (JSON.parse(get1.text) as Record<string, unknown>).desglose,
+        ).toMatchObject({ estado: 'calculado', no_disponible: false });
+
+        // Valido para el CHECK por fila (coherencia interna del renglon),
+        // invalido para la invariante agregada: solapa exactamente con el
+        // unico renglon real ya existente (dia 10 en adelante).
+        await prisma.renglonEstimacionAlimento.create({
+          data: {
+            estimacion_id: estimacionId,
+            orden: 2,
+            dia_inicio: 10,
+            dia_fin: 21,
+            consumo_por_ave_g: 0,
+            consumo_total_kg: 0,
+          },
+        });
+
+        await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(500);
+      });
+
+      it('sin ningun cambio, una estimacion calculada permanece desactualizado=false', async () => {
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 21 });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo.desactualizado).toBe(false);
+        expect(cuerpo.motivos_desactualizacion).toEqual([]);
+      });
+
+      it('motivo marca_alimento_cambio si Lote.marca_alimento cambia despues de calcular', async () => {
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 21 });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+
+        // Lote.marca_alimento esta restringido por @IsIn(MARCAS_ALIMENTO) en
+        // el DTO -- una marca de prueba libre solo puede llegar ahi por
+        // escritura directa, como cualquier otro estado no alcanzable por API
+        // en este archivo (mortalidad_snapshot corrupto, renglon duplicado).
+        await prisma.lote.update({
+          where: { id: lote.id },
+          data: { marca_alimento: `otra_${randomUUID().slice(0, 8)}` },
+        });
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo.desactualizado).toBe(true);
+        expect(cuerpo.motivos_desactualizacion).toContain(
+          'marca_alimento_cambio',
+        );
+      });
+
+      it('una marca equivalente solo por espacios o mayusculas NO produce un falso positivo', async () => {
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 21 });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+
+        // Misma razon que arriba: @IsIn(MARCAS_ALIMENTO) no deja pasar esta
+        // forma por HTTP, pero es la forma real en la que puede llegar un
+        // dato asi (una migracion o import que no paso por el DTO).
+        await prisma.lote.update({
+          where: { id: lote.id },
+          data: { marca_alimento: `  ${marcaTest.toUpperCase()}  ` },
+        });
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo.desactualizado).toBe(false);
+        expect(cuerpo.motivos_desactualizacion).toEqual([]);
+      });
+
+      it('motivo algoritmo_desglose_cambio con una version de desglose vieja', async () => {
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 21 });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        const creada = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const estimacionId = (JSON.parse(creada.text) as { id: number }).id;
+
+        await prisma.estimacionAlimentoPlan.update({
+          where: { id: estimacionId },
+          data: { version_desglose: 'desglose_etapas_rango_dias_v0' },
+        });
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo.desactualizado).toBe(true);
+        expect(cuerpo.motivos_desactualizacion).toContain(
+          'algoritmo_desglose_cambio',
+        );
+      });
+
+      it('fila temporal del escritor anterior (CHECK de compatibilidad): desglose no disponible, sin inventar cambio de marca', async () => {
+        // Reproduce contra Postgres real lo que el CHECK temporal de
+        // compatibilidad de despliegue permite: estado_alimento='calculado'
+        // con estado_desglose/version_desglose/marca_alimento_snapshot en
+        // NULL y sin renglones -- la forma en que un escritor de la version
+        // anterior sigue insertando mientras dura el rollout.
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 21 });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        const creada = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const estimacionId = (JSON.parse(creada.text) as { id: number }).id;
+
+        await prisma.renglonEstimacionAlimento.deleteMany({
+          where: { estimacion_id: estimacionId },
+        });
+        await prisma.estimacionAlimentoPlan.update({
+          where: { id: estimacionId },
+          data: {
+            estado_desglose: null,
+            version_desglose: null,
+            marca_alimento_snapshot: null,
+          },
+        });
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo.desglose).toMatchObject({
+          no_disponible: true,
+          estado: null,
+          version: null,
+          renglones: [],
+        });
+        expect(cuerpo.desactualizado).toBe(true);
+        expect(cuerpo.motivos_desactualizacion).toContain(
+          'algoritmo_desglose_cambio',
+        );
+        expect(cuerpo.motivos_desactualizacion).not.toContain(
+          'marca_alimento_cambio',
+        );
       });
     });
 
