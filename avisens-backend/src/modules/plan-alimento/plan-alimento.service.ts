@@ -11,6 +11,7 @@ import { paginate } from '../../common/pagination/paginate';
 import type { Solicitante } from '../../common/auth/acceso';
 import { verificarAccesoLote } from '../../common/auth/alcance';
 import { diaDeVida } from '../../common/fechas/dias-de-vida';
+import { esViolacionDeLlaveForanea } from '../../common/errores/llave-foranea';
 import { PlanLoteService } from '../plan-lote/plan-lote.service';
 import {
   clasificarMortalidad,
@@ -22,8 +23,10 @@ import { integrarConsumo, ALGORITMO_ACTUAL } from './consumo-curva';
 import {
   construirDesgloseAlimento,
   validarDesgloseAlimento,
+  VERSION_DESGLOSE_ACTUAL,
   RenglonDesglose,
 } from './desglose-alimento';
+import { normalizarMarcaCatalogo } from '../../common/avicultura/vocabulario';
 import { CrearEstimacionAlimentoDto } from './dto/crear-estimacion-alimento.dto';
 
 export const MOTIVOS_DESACTUALIZACION = [
@@ -33,6 +36,8 @@ export const MOTIVOS_DESACTUALIZACION = [
   'algoritmo_cambio',
   'mortalidad_cambio',
   'mortalidad_actual_incoherente',
+  'algoritmo_desglose_cambio',
+  'marca_alimento_cambio',
 ] as const;
 
 export type MotivoDesactualizacion = (typeof MOTIVOS_DESACTUALIZACION)[number];
@@ -117,15 +122,6 @@ export class PlanAlimentoService {
       error !== null &&
       'code' in error &&
       error.code === 'P2002'
-    );
-  }
-
-  private esViolacionForeignKey(error: unknown): boolean {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      error.code === 'P2003'
     );
   }
 
@@ -295,10 +291,19 @@ export class PlanAlimentoService {
    * calculo (y debe releerse) contra la fecha de ingreso que tenia el
    * plan en su momento -- si cambia, es el plan el que queda desactualizado
    * (plan_vigente.desactualizado, via PlanLoteService), no esta fecha.
+   *
+   * El desglose de Fase 2B solo se compara cuando estado_alimento='calculado'
+   * (los demas estados nunca tuvieron desglose que envejecer). Una fila
+   * legado_sin_desglose tiene version_desglose=NULL, que nunca coincide con
+   * VERSION_DESGLOSE_ACTUAL -- queda desactualizada por diseño, no como caso
+   * especial. La marca se compara normalizada en ambos lados para que un
+   * simple cambio de mayusculas/espacios en el catalogo no dispare un falso
+   * positivo.
    */
   private async calcularDesactualizado(
     estimacion: EstimacionConRelaciones,
     cantidadInicialActual: number,
+    marcaAlimentoActual: string | null,
     planVigente: PlanVigenteInfo | null,
   ): Promise<{ desactualizado: boolean; motivos: MotivoDesactualizacion[] }> {
     const motivos: MotivoDesactualizacion[] = [];
@@ -315,6 +320,20 @@ export class PlanAlimentoService {
 
     if (estimacion.version_algoritmo !== ALGORITMO_ACTUAL) {
       motivos.push('algoritmo_cambio');
+    }
+
+    if (estimacion.estado_alimento === 'calculado') {
+      if (estimacion.version_desglose !== VERSION_DESGLOSE_ACTUAL) {
+        motivos.push('algoritmo_desglose_cambio');
+      }
+
+      const marcaActualNormalizada =
+        marcaAlimentoActual === null
+          ? null
+          : normalizarMarcaCatalogo(marcaAlimentoActual);
+      if (marcaActualNormalizada !== estimacion.marca_alimento_snapshot) {
+        motivos.push('marca_alimento_cambio');
+      }
     }
 
     if (estimacion.dia_objetivo_snapshot !== null) {
@@ -686,7 +705,7 @@ export class PlanAlimentoService {
             'Ya existe una estimación vigente para este plan; vuelve a intentarlo',
           );
         }
-        if (this.esViolacionForeignKey(error)) {
+        if (esViolacionDeLlaveForanea(error)) {
           throw new ConflictException(
             'El catálogo de alimentos cambió mientras se calculaba la estimación; vuelve a intentarlo',
           );
@@ -730,7 +749,7 @@ export class PlanAlimentoService {
 
     const loteActual = await this.prisma.lote.findUniqueOrThrow({
       where: { id: loteId },
-      select: { cantidad_inicial: true },
+      select: { cantidad_inicial: true, marca_alimento: true },
     });
 
     const planVigente = await this.construirPlanVigente(
@@ -742,6 +761,7 @@ export class PlanAlimentoService {
     const { desactualizado, motivos } = await this.calcularDesactualizado(
       estimacion,
       loteActual.cantidad_inicial,
+      loteActual.marca_alimento,
       planVigente,
     );
 

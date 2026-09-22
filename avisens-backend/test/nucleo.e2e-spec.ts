@@ -3042,6 +3042,117 @@ describe('Núcleo multi-tenant (e2e)', () => {
           .set('Authorization', `Bearer ${tokenAdminAlimento}`)
           .expect(500);
       });
+
+      it('sin ningun cambio, una estimacion calculada permanece desactualizado=false', async () => {
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 21 });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo.desactualizado).toBe(false);
+        expect(cuerpo.motivos_desactualizacion).toEqual([]);
+      });
+
+      it('motivo marca_alimento_cambio si Lote.marca_alimento cambia despues de calcular', async () => {
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 21 });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+
+        // Lote.marca_alimento esta restringido por @IsIn(MARCAS_ALIMENTO) en
+        // el DTO -- una marca de prueba libre solo puede llegar ahi por
+        // escritura directa, como cualquier otro estado no alcanzable por API
+        // en este archivo (mortalidad_snapshot corrupto, renglon duplicado).
+        await prisma.lote.update({
+          where: { id: lote.id },
+          data: { marca_alimento: `otra_${randomUUID().slice(0, 8)}` },
+        });
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo.desactualizado).toBe(true);
+        expect(cuerpo.motivos_desactualizacion).toContain(
+          'marca_alimento_cambio',
+        );
+      });
+
+      it('una marca equivalente solo por espacios o mayusculas NO produce un falso positivo', async () => {
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 21 });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+
+        // Misma razon que arriba: @IsIn(MARCAS_ALIMENTO) no deja pasar esta
+        // forma por HTTP, pero es la forma real en la que puede llegar un
+        // dato asi (una migracion o import que no paso por el DTO).
+        await prisma.lote.update({
+          where: { id: lote.id },
+          data: { marca_alimento: `  ${marcaTest.toUpperCase()}  ` },
+        });
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo.desactualizado).toBe(false);
+        expect(cuerpo.motivos_desactualizacion).toEqual([]);
+      });
+
+      it('motivo algoritmo_desglose_cambio con una version de desglose vieja', async () => {
+        await seedTipoAlimento({ dia_inicio: 1, dia_fin: 21 });
+        const lote = await crearLoteDirecto({ marca_alimento: marcaTest });
+        await crearPlanCalculado(lote.id);
+
+        const creada = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({})
+          .expect(201);
+        const estimacionId = (JSON.parse(creada.text) as { id: number }).id;
+
+        await prisma.estimacionAlimentoPlan.update({
+          where: { id: estimacionId },
+          data: { version_desglose: 'desglose_etapas_rango_dias_v0' },
+        });
+
+        const res = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        const cuerpo = JSON.parse(res.text) as Record<string, unknown>;
+
+        expect(cuerpo.desactualizado).toBe(true);
+        expect(cuerpo.motivos_desactualizacion).toContain(
+          'algoritmo_desglose_cambio',
+        );
+      });
     });
 
     describe('inserciones directas contra la base', () => {

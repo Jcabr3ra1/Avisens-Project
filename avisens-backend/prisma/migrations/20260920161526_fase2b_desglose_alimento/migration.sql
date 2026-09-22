@@ -63,10 +63,32 @@ ALTER TABLE "renglones_estimacion_alimento" ADD CONSTRAINT "renglones_alimento_s
 
 -- CheckConstraint: matriz de estado del desglose (Fase 2B) -- separada de la
 -- matriz de estado_alimento de Fase 2A, no la reinterpreta ni la reemplaza
+--
+-- COMPATIBILIDAD TEMPORAL DE DESPLIEGUE PROGRESIVO: la rama
+-- "estado_alimento = 'calculado' AND estado_desglose IS NULL AND
+-- version_desglose IS NULL AND marca_alimento_snapshot IS NULL" no es un
+-- estado de negocio -- es la forma en que un escritor de la version ANTERIOR
+-- (que no conoce estas columnas) sigue insertando filas 'calculado' mientras
+-- la migracion ya corrio mas la instancia nueva todavia no esta saludable.
+-- Sin esta rama, ese INSERT viola el CHECK y la version vieja deja de poder
+-- escribir durante toda la ventana del rollout.
+--
+-- HITO OBLIGATORIO DESPUES DEL DESPLIEGUE REAL (no incluido en este PR: si
+-- se aplicara en el mismo despliegue, las dos migraciones correrian antes de
+-- que arrancara el codigo nuevo y no resolverian nada):
+--   1. Confirmar que ya no quedan instancias corriendo la version anterior.
+--   2. Volver a ejecutar el backfill (arriba) por si el escritor viejo creo
+--      filas 'calculado' con las tres columnas en NULL durante la ventana.
+--   3. Migracion nueva: DROP de este CHECK y ADD del CHECK estricto sin la
+--      rama de compatibilidad (elimina el bloque OR de abajo).
 ALTER TABLE "estimaciones_alimento_plan" ADD CONSTRAINT "estimaciones_alimento_matriz_desglose" CHECK (
   (estado_alimento <> 'calculado' AND estado_desglose IS NULL AND version_desglose IS NULL AND marca_alimento_snapshot IS NULL)
   OR
   (estado_alimento = 'calculado' AND estado_desglose = 'legado_sin_desglose' AND version_desglose IS NULL AND marca_alimento_snapshot IS NULL)
+  OR
+  -- TEMPORAL: escritor de la version anterior durante el rollout. Retirar en
+  -- el hito de endurecimiento posterior al despliegue (ver comentario arriba).
+  (estado_alimento = 'calculado' AND estado_desglose IS NULL AND version_desglose IS NULL AND marca_alimento_snapshot IS NULL)
   OR
   (estado_alimento = 'calculado' AND estado_desglose = 'lote_sin_marca_alimento' AND version_desglose IS NOT NULL AND btrim(version_desglose) <> '' AND marca_alimento_snapshot IS NULL)
   OR

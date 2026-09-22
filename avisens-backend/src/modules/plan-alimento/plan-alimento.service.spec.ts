@@ -10,6 +10,7 @@ import { PlanAlimentoService } from './plan-alimento.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PlanLoteService } from '../plan-lote/plan-lote.service';
 import { ALGORITMO_ACTUAL } from './consumo-curva';
+import { VERSION_DESGLOSE_ACTUAL } from './desglose-alimento';
 
 const admin = { id: 1, rol: 'Administrador' };
 const propietario = { id: 5, rol: 'Propietario' };
@@ -367,6 +368,45 @@ describe('PlanAlimentoService', () => {
       );
     });
 
+    it('traduce una violacion de llave foranea real del driver (sin code P2003) al insertar renglones a un 409', async () => {
+      // Prisma 7 con adapter-pg no siempre mapea la violacion a
+      // PrismaClientKnownRequestError -- puede subir como DriverAdapterError
+      // crudo, sin `code`. esViolacionDeLlaveForanea() la reconoce igual por
+      // el `cause`/mensaje de Postgres; un catch que solo mirara `.code`
+      // dejaria pasar esta forma y el 500 crudo llegaria al cliente.
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
+      conCallback();
+      tx.$queryRaw.mockResolvedValueOnce([
+        filaLote({ marca_alimento: 'italcol' }),
+      ]);
+      tx.$queryRaw.mockResolvedValueOnce([filaPlan()]);
+      tx.registroMortalidad.findMany.mockResolvedValue([]);
+      tx.puntoCurvaGenetica.findMany.mockResolvedValue(puntosCurva);
+      tx.tipoAlimento.findMany.mockResolvedValue([
+        {
+          id: 9,
+          nombre: 'Unico',
+          marca: 'italcol',
+          etapa: 'preiniciacion',
+          dia_inicio: 1,
+          dia_fin: 21,
+        },
+      ]);
+      tx.estimacionAlimentoPlan.findFirst.mockResolvedValue(null);
+      const errorDelDriver = Object.assign(
+        new Error(
+          'insert or update on table "renglones_estimacion_alimento" violates foreign key ' +
+            'constraint "renglones_estimacion_alimento_tipo_alimento_id_fkey"',
+        ),
+        { name: 'DriverAdapterError' },
+      );
+      tx.estimacionAlimentoPlan.create.mockRejectedValue(errorDelDriver);
+
+      await expect(service.crear(3, {}, admin)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
     it('estado_alimento=sin_consumo_en_curva si ningún punto tiene consumo_acumulado_g', async () => {
       conCallback();
       tx.$queryRaw.mockResolvedValueOnce([filaLote()]);
@@ -618,6 +658,7 @@ describe('PlanAlimentoService', () => {
       prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(estimacion);
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([]);
       planLoteService.obtener.mockResolvedValue({
@@ -637,6 +678,7 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([
         { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
@@ -660,6 +702,7 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([]);
       planLoteService.obtener.mockRejectedValue(new ForbiddenException());
@@ -675,6 +718,7 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 900,
+        marca_alimento: null,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([]);
       jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
@@ -691,6 +735,7 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([]);
       jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
@@ -706,6 +751,7 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       // snapshot original: dia 2 -> 15, dia 5 -> 10 (total 25). Ahora las 25
       // estan repartidas distinto: dia 3 -> 25. Misma suma, otro reparto.
@@ -721,10 +767,14 @@ describe('PlanAlimentoService', () => {
 
     it('desactualizado=false cuando solo pasa el tiempo, sin cambios de mortalidad', async () => {
       prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
-        filaEstimacion(),
+        // version_desglose actual y marca_alimento_snapshot=null (coincide
+        // con el lote mockeado abajo): aisla esta prueba de los motivos de
+        // desglose para verificar solo el comportamiento de mortalidad.
+        filaEstimacion({ version_desglose: VERSION_DESGLOSE_ACTUAL }),
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       // Misma mortalidad que el snapshot original.
       prisma.registroMortalidad.findMany.mockResolvedValue([
@@ -742,10 +792,11 @@ describe('PlanAlimentoService', () => {
 
     it('motivo mortalidad_actual_incoherente si la mortalidad actual ya no es reconstruible, sin convertir el GET en 409', async () => {
       prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
-        filaEstimacion(),
+        filaEstimacion({ version_desglose: VERSION_DESGLOSE_ACTUAL }),
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([
         { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 2000 },
@@ -767,10 +818,11 @@ describe('PlanAlimentoService', () => {
       // NO debe reportarse como mortalidad_futura durante la validacion --
       // solo se excluye de la COMPARACION, nunca de la validacion.
       prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
-        filaEstimacion(),
+        filaEstimacion({ version_desglose: VERSION_DESGLOSE_ACTUAL }),
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([
         { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 }, // dia 2 (igual al snapshot)
@@ -780,6 +832,107 @@ describe('PlanAlimentoService', () => {
       // "hoy" = dia 30 de vida: muy despues del dia 25, para que sea
       // inequivocamente pasado, no mortalidad_futura.
       jest.useFakeTimers().setSystemTime(new Date('2026-08-28T15:00:00.000Z'));
+
+      const res = await service.obtener(3, admin);
+
+      expect(res.desactualizado).toBe(false);
+      expect(res.motivos_desactualizacion).toEqual([]);
+    });
+
+    it('motivo marca_alimento_cambio si Lote.marca_alimento cambio despues de calcular', async () => {
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion({
+          version_desglose: VERSION_DESGLOSE_ACTUAL,
+          marca_alimento_snapshot: 'italcol',
+        }),
+      );
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+        marca_alimento: 'solla',
+      });
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
+        { fecha: new Date('2026-08-03T00:00:00.000Z'), cantidad_aves: 10 },
+      ]);
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-15T15:00:00.000Z'));
+
+      const res = await service.obtener(3, admin);
+
+      expect(res.desactualizado).toBe(true);
+      expect(res.motivos_desactualizacion).toContain('marca_alimento_cambio');
+    });
+
+    it('motivo algoritmo_desglose_cambio con una version de desglose vieja o nula (legado)', async () => {
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion({ version_desglose: 'desglose_viejo_v0' }),
+      );
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+        marca_alimento: null,
+      });
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
+        { fecha: new Date('2026-08-03T00:00:00.000Z'), cantidad_aves: 10 },
+      ]);
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-15T15:00:00.000Z'));
+
+      const res = await service.obtener(3, admin);
+
+      expect(res.desactualizado).toBe(true);
+      expect(res.motivos_desactualizacion).toContain(
+        'algoritmo_desglose_cambio',
+      );
+
+      // Legado (version_desglose=NULL) es el mismo caso, no una excepcion:
+      // NULL nunca coincide con VERSION_DESGLOSE_ACTUAL.
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion(), // default: estado_desglose='legado_sin_desglose', version_desglose=null
+      );
+      const resLegado = await service.obtener(3, admin);
+      expect(resLegado.motivos_desactualizacion).toContain(
+        'algoritmo_desglose_cambio',
+      );
+    });
+
+    it('una marca equivalente solo por espacios o mayusculas NO produce un falso positivo', async () => {
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion({
+          version_desglose: VERSION_DESGLOSE_ACTUAL,
+          marca_alimento_snapshot: 'italcol',
+        }),
+      );
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+        marca_alimento: '  ITALCOL  ',
+      });
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
+        { fecha: new Date('2026-08-03T00:00:00.000Z'), cantidad_aves: 10 },
+      ]);
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-15T15:00:00.000Z'));
+
+      const res = await service.obtener(3, admin);
+
+      expect(res.desactualizado).toBe(false);
+      expect(res.motivos_desactualizacion).toEqual([]);
+    });
+
+    it('una estimacion vigente sin cambios (marca y version de desglose exactas) permanece desactualizado=false', async () => {
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion({
+          version_desglose: VERSION_DESGLOSE_ACTUAL,
+          marca_alimento_snapshot: 'italcol',
+        }),
+      );
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+        marca_alimento: 'italcol',
+      });
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
+        { fecha: new Date('2026-08-03T00:00:00.000Z'), cantidad_aves: 10 },
+      ]);
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-15T15:00:00.000Z'));
 
       const res = await service.obtener(3, admin);
 
@@ -797,6 +950,7 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
 
       await service.obtener(3, admin);
@@ -810,6 +964,7 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([]);
       jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
@@ -830,6 +985,7 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       // La mortalidad ACTUAL (registros reales) es intachable: el problema
       // es solo el snapshot ya persistido, que se valida al reconstruirlo
@@ -848,6 +1004,7 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([]);
       jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
@@ -882,6 +1039,7 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([
         { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
@@ -941,6 +1099,7 @@ describe('PlanAlimentoService', () => {
       );
       prisma.lote.findUniqueOrThrow.mockResolvedValue({
         cantidad_inicial: 1000,
+        marca_alimento: null,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([]);
       jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
