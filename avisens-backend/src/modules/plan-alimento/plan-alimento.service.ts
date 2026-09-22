@@ -19,6 +19,11 @@ import {
   EntradaMortalidad,
 } from './mortalidad-snapshot';
 import { integrarConsumo, ALGORITMO_ACTUAL } from './consumo-curva';
+import {
+  construirDesgloseAlimento,
+  validarDesgloseAlimento,
+  RenglonDesglose,
+} from './desglose-alimento';
 import { CrearEstimacionAlimentoDto } from './dto/crear-estimacion-alimento.dto';
 
 export const MOTIVOS_DESACTUALIZACION = [
@@ -47,6 +52,23 @@ const ESTIMACION_SELECT = {
   dia_objetivo_snapshot: true,
   consumo_por_ave_g: true,
   consumo_total_kg: true,
+  estado_desglose: true,
+  version_desglose: true,
+  marca_alimento_snapshot: true,
+  renglones_alimento: {
+    orderBy: { orden: 'asc' },
+    select: {
+      orden: true,
+      tipo_alimento_id: true,
+      tipo_alimento_nombre_snapshot: true,
+      etapa_snapshot: true,
+      dia_inicio: true,
+      dia_fin: true,
+      extendido_hasta_dia_objetivo: true,
+      consumo_por_ave_g: true,
+      consumo_total_kg: true,
+    },
+  },
   motivo: true,
   fecha_creacion: true,
   creado_por: { select: { id: true, nombre_completo: true } },
@@ -95,6 +117,15 @@ export class PlanAlimentoService {
       error !== null &&
       'code' in error &&
       error.code === 'P2002'
+    );
+  }
+
+  private esViolacionForeignKey(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2003'
     );
   }
 
@@ -182,6 +213,65 @@ export class PlanAlimentoService {
       );
     }
     return estimacion.mortalidad_snapshot;
+  }
+
+  /**
+   * Unica puerta de lectura del desglose por etapa: el CHECK de Postgres
+   * garantiza invariantes escalares por renglon, nunca cobertura, ausencia
+   * de solapes, ni las dos sumas contra el total ya persistido -- igual que
+   * extraerSnapshotValidado, un desglose corrupto es un problema de
+   * integridad del servidor (500), nunca un caso de negocio.
+   *
+   * legado_sin_desglose (estimaciones anteriores a Fase 2B) nunca se
+   * reconstruye retroactivamente: el snapshot de catalogo de ese momento ya
+   * no existe. Se expone explicitamente como no disponible, no como un
+   * estado mas a interpretar.
+   */
+  private extraerDesgloseValidado(estimacion: EstimacionConRelaciones) {
+    const renglones: RenglonDesglose[] = estimacion.renglones_alimento.map(
+      (r) => ({
+        orden: r.orden,
+        tipoAlimentoId: r.tipo_alimento_id,
+        tipoAlimentoNombreSnapshot: r.tipo_alimento_nombre_snapshot,
+        etapaSnapshot: r.etapa_snapshot,
+        diaInicio: r.dia_inicio,
+        diaFin: r.dia_fin,
+        extendidoHastaDiaObjetivo: r.extendido_hasta_dia_objetivo,
+        consumoPorAveG: r.consumo_por_ave_g,
+        consumoTotalKg: r.consumo_total_kg,
+      }),
+    );
+
+    if (
+      !validarDesgloseAlimento(renglones, {
+        estadoDesglose: estimacion.estado_desglose,
+        diaObjetivoSnapshot: estimacion.dia_objetivo_snapshot,
+        consumoPorAveGEsperado: estimacion.consumo_por_ave_g,
+        consumoTotalKgEsperado: estimacion.consumo_total_kg,
+      })
+    ) {
+      throw new InternalServerErrorException(
+        `La estimación de alimento ${estimacion.id} tiene un desglose corrupto`,
+      );
+    }
+
+    return {
+      no_disponible: estimacion.estado_desglose === 'legado_sin_desglose',
+      estado: estimacion.estado_desglose,
+      version: estimacion.version_desglose,
+      marca_alimento_snapshot: estimacion.marca_alimento_snapshot,
+      renglones: renglones.map((r) => ({
+        orden: r.orden,
+        tipo_alimento_id: r.tipoAlimentoId,
+        tipo_alimento_nombre_snapshot: r.tipoAlimentoNombreSnapshot,
+        etapa: r.etapaSnapshot,
+        dia_inicio: r.diaInicio,
+        dia_fin: r.diaFin,
+        extendido_hasta_dia_objetivo: r.extendidoHastaDiaObjetivo,
+        consumo_por_ave_g: r.consumoPorAveG,
+        consumo_total_kg: r.consumoTotalKg,
+      })),
+    };
   }
 
   /**
@@ -281,6 +371,7 @@ export class PlanAlimentoService {
     loteId: number,
     fechaIngreso: Date,
     cantidadInicial: number,
+    marcaAlimento: string | null,
     plan: {
       estado_dia: string;
       dia_objetivo: number | null;
@@ -302,6 +393,10 @@ export class PlanAlimentoService {
         curva_version_id_snapshot: null,
         consumo_por_ave_g: null,
         consumo_total_kg: null,
+        estado_desglose: null,
+        version_desglose: null,
+        marca_alimento_snapshot: null,
+        renglones: [] as RenglonDesglose[],
       };
     }
 
@@ -379,14 +474,51 @@ export class PlanAlimentoService {
         estado_alimento: resultado.estado as EstadoCalculoAlimento,
         consumo_por_ave_g: null,
         consumo_total_kg: null,
+        estado_desglose: null,
+        version_desglose: null,
+        marca_alimento_snapshot: null,
+        renglones: [] as RenglonDesglose[],
       };
     }
+
+    const filasCatalogo = await tx.tipoAlimento.findMany({
+      where: { activo: true, marca: { not: null } },
+      select: {
+        id: true,
+        nombre: true,
+        marca: true,
+        etapa: true,
+        dia_inicio: true,
+        dia_fin: true,
+      },
+    });
+
+    const desglose = construirDesgloseAlimento({
+      marcaAlimento,
+      diaObjetivoSnapshot: plan.dia_objetivo,
+      consumoPorAveGEsperado: resultado.consumoPorAveG,
+      consumoTotalKgEsperado: resultado.consumoTotalKg,
+      catalogo: filasCatalogo.map((f) => ({
+        id: f.id,
+        nombre: f.nombre,
+        marca: f.marca,
+        etapa: f.etapa,
+        diaInicio: f.dia_inicio,
+        diaFin: f.dia_fin,
+      })),
+      acumuladoPorAveEnDia: resultado.acumuladoPorAveEnDia,
+      acumuladoTotalKgEnDia: resultado.acumuladoTotalKgEnDia,
+    });
 
     return {
       ...base,
       estado_alimento: 'calculado' as EstadoCalculoAlimento,
       consumo_por_ave_g: resultado.consumoPorAveG,
       consumo_total_kg: resultado.consumoTotalKg,
+      estado_desglose: desglose.estado,
+      version_desglose: desglose.versionDesglose,
+      marca_alimento_snapshot: desglose.marcaAlimentoSnapshot,
+      renglones: desglose.renglones,
     };
   }
 
@@ -426,6 +558,7 @@ export class PlanAlimentoService {
         consumo_por_ave_g: estimacion.consumo_por_ave_g,
         consumo_total_kg: estimacion.consumo_total_kg,
       },
+      desglose: this.extraerDesgloseValidado(estimacion),
     };
   }
 
@@ -445,9 +578,10 @@ export class PlanAlimentoService {
           estado: string;
           cantidad_inicial: number;
           fecha_salida_real: Date | null;
+          marca_alimento: string | null;
         }>
       >`
-        SELECT "estado", "cantidad_inicial", "fecha_salida_real"
+        SELECT "estado", "cantidad_inicial", "fecha_salida_real", "marca_alimento"
         FROM "lotes"
         WHERE "id" = ${loteId}
         FOR UPDATE
@@ -499,6 +633,7 @@ export class PlanAlimentoService {
         loteId,
         plan.fecha_ingreso_snapshot,
         lote.cantidad_inicial,
+        lote.marca_alimento,
         plan,
         diaCorte,
       );
@@ -516,6 +651,8 @@ export class PlanAlimentoService {
       });
       const version = ultima ? ultima.version + 1 : 1;
 
+      const { renglones, ...datosParaGuardar } = datosCalculo;
+
       try {
         return await tx.estimacionAlimentoPlan.create({
           data: {
@@ -526,7 +663,20 @@ export class PlanAlimentoService {
             cantidad_inicial_snapshot: lote.cantidad_inicial,
             motivo: dto.motivo,
             creado_por_id: solicitante.id,
-            ...datosCalculo,
+            ...datosParaGuardar,
+            renglones_alimento: {
+              create: renglones.map((r) => ({
+                orden: r.orden,
+                tipo_alimento_id: r.tipoAlimentoId,
+                tipo_alimento_nombre_snapshot: r.tipoAlimentoNombreSnapshot,
+                etapa_snapshot: r.etapaSnapshot,
+                dia_inicio: r.diaInicio,
+                dia_fin: r.diaFin,
+                extendido_hasta_dia_objetivo: r.extendidoHastaDiaObjetivo,
+                consumo_por_ave_g: r.consumoPorAveG,
+                consumo_total_kg: r.consumoTotalKg,
+              })),
+            },
           },
           select: ESTIMACION_SELECT,
         });
@@ -534,6 +684,11 @@ export class PlanAlimentoService {
         if (this.esConflictoUnico(error)) {
           throw new ConflictException(
             'Ya existe una estimación vigente para este plan; vuelve a intentarlo',
+          );
+        }
+        if (this.esViolacionForeignKey(error)) {
+          throw new ConflictException(
+            'El catálogo de alimentos cambió mientras se calculaba la estimación; vuelve a intentarlo',
           );
         }
         throw error;

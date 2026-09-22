@@ -23,6 +23,7 @@ const filaLote = (overrides: Record<string, unknown> = {}) => ({
   estado: 'activo',
   cantidad_inicial: 1000,
   fecha_salida_real: null,
+  marca_alimento: null,
   ...overrides,
 });
 
@@ -73,6 +74,9 @@ const estimacionCreada = () => ({
   dia_objetivo_snapshot: null,
   consumo_por_ave_g: null,
   consumo_total_kg: null,
+  estado_desglose: null,
+  version_desglose: null,
+  marca_alimento_snapshot: null,
   motivo: null,
   fecha_creacion: new Date('2026-08-08T00:00:00.000Z'),
   creado_por: { id: 1, nombre_completo: 'Admin' },
@@ -84,6 +88,7 @@ const estimacionCreada = () => ({
     fecha_salida_calculada: null,
   },
   curva_version_snapshot: null,
+  renglones_alimento: [] as unknown[],
 });
 
 describe('PlanAlimentoService', () => {
@@ -93,6 +98,7 @@ describe('PlanAlimentoService', () => {
     $queryRaw: jest.fn(),
     registroMortalidad: { findMany: jest.fn() },
     puntoCurvaGenetica: { findMany: jest.fn() },
+    tipoAlimento: { findMany: jest.fn() },
     estimacionAlimentoPlan: {
       updateMany: jest.fn(),
       findFirst: jest.fn(),
@@ -138,6 +144,7 @@ describe('PlanAlimentoService', () => {
     prisma.$transaction.mockResolvedValue([[], 0]);
     prisma.lote.findUnique.mockResolvedValue(loteDePropietario(5));
     planLoteService.obtener.mockResolvedValue(planVigenteBase);
+    tx.tipoAlimento.findMany.mockResolvedValue([]);
   });
 
   afterEach(() => jest.useRealTimers());
@@ -225,6 +232,11 @@ describe('PlanAlimentoService', () => {
       expect(data.curva_version_id_snapshot).toBeNull();
       expect(tx.registroMortalidad.findMany).not.toHaveBeenCalled();
       expect(tx.puntoCurvaGenetica.findMany).not.toHaveBeenCalled();
+      expect(tx.tipoAlimento.findMany).not.toHaveBeenCalled();
+      expect(data.estado_desglose).toBeNull();
+      expect(data.version_desglose).toBeNull();
+      expect(data.marca_alimento_snapshot).toBeNull();
+      expect(data.renglones_alimento).toEqual({ create: [] });
     });
 
     it('estado_alimento=calculado: reproduce el ejemplo numérico verificado del diseño (1161.850 kg)', async () => {
@@ -258,6 +270,101 @@ describe('PlanAlimentoService', () => {
         { dia: 2, muertes: 15 },
         { dia: 5, muertes: 10 },
       ]);
+      // filaLote() no trae marca_alimento: el desglose de Fase 2B queda en
+      // lote_sin_marca_alimento, sin tocar el total ya calculado arriba.
+      expect(tx.tipoAlimento.findMany).toHaveBeenCalledWith({
+        where: { activo: true, marca: { not: null } },
+        select: {
+          id: true,
+          nombre: true,
+          marca: true,
+          etapa: true,
+          dia_inicio: true,
+          dia_fin: true,
+        },
+      });
+      expect(data.estado_desglose).toBe('lote_sin_marca_alimento');
+      expect(data.marca_alimento_snapshot).toBeNull();
+      expect(data.renglones_alimento).toEqual({ create: [] });
+    });
+
+    it('estado_alimento=calculado con marca y catalogo: persiste el desglose como escritura anidada renglones_alimento.create', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
+      conCallback();
+      tx.$queryRaw.mockResolvedValueOnce([
+        filaLote({ marca_alimento: 'italcol' }),
+      ]);
+      tx.$queryRaw.mockResolvedValueOnce([filaPlan()]);
+      tx.registroMortalidad.findMany.mockResolvedValue([]);
+      tx.puntoCurvaGenetica.findMany.mockResolvedValue(puntosCurva);
+      tx.tipoAlimento.findMany.mockResolvedValue([
+        {
+          id: 9,
+          nombre: 'Unico',
+          marca: 'ITALCOL',
+          etapa: 'preiniciacion',
+          dia_inicio: 1,
+          dia_fin: 21,
+        },
+      ]);
+      tx.estimacionAlimentoPlan.findFirst.mockResolvedValue(null);
+      tx.estimacionAlimentoPlan.create.mockResolvedValue(estimacionCreada());
+
+      await service.crear(3, {}, admin);
+
+      const data = dataDe(tx.estimacionAlimentoPlan.create);
+      expect(data.estado_desglose).toBe('calculado');
+      expect(data.marca_alimento_snapshot).toBe('italcol');
+      expect(data.renglones_alimento).toEqual({
+        create: [
+          expect.objectContaining({
+            orden: 1,
+            tipo_alimento_id: 9,
+            tipo_alimento_nombre_snapshot: 'Unico',
+            etapa_snapshot: 'preiniciacion',
+            dia_inicio: 1,
+            dia_fin: 21,
+            extendido_hasta_dia_objetivo: false,
+          }),
+        ],
+      });
+      const renglon = (
+        data.renglones_alimento as { create: Array<Record<string, unknown>> }
+      ).create[0];
+      expect(
+        (renglon.consumo_por_ave_g as Prisma.Decimal).toFixed(2),
+      ).toBe('1190.00');
+      // sin mortalidad registrada, N(d) = 1000 constante: 1190 g x 1000 aves.
+      expect((renglon.consumo_total_kg as Prisma.Decimal).toFixed(3)).toBe(
+        '1190.000',
+      );
+    });
+
+    it('traduce una violacion de llave foranea (P2003) al insertar renglones a un 409', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
+      conCallback();
+      tx.$queryRaw.mockResolvedValueOnce([
+        filaLote({ marca_alimento: 'italcol' }),
+      ]);
+      tx.$queryRaw.mockResolvedValueOnce([filaPlan()]);
+      tx.registroMortalidad.findMany.mockResolvedValue([]);
+      tx.puntoCurvaGenetica.findMany.mockResolvedValue(puntosCurva);
+      tx.tipoAlimento.findMany.mockResolvedValue([
+        {
+          id: 9,
+          nombre: 'Unico',
+          marca: 'italcol',
+          etapa: 'preiniciacion',
+          dia_inicio: 1,
+          dia_fin: 21,
+        },
+      ]);
+      tx.estimacionAlimentoPlan.findFirst.mockResolvedValue(null);
+      tx.estimacionAlimentoPlan.create.mockRejectedValue({ code: 'P2003' });
+
+      await expect(service.crear(3, {}, admin)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('estado_alimento=sin_consumo_en_curva si ningún punto tiene consumo_acumulado_g', async () => {
@@ -468,6 +575,13 @@ describe('PlanAlimentoService', () => {
       dia_objetivo_snapshot: 21,
       consumo_por_ave_g: new Prisma.Decimal(1190),
       consumo_total_kg: new Prisma.Decimal('1161.850'),
+      // Estas filas representan estimaciones anteriores a Fase 2B: el
+      // backfill de la migracion las marca legado_sin_desglose (nunca se
+      // reconstruye retroactivamente).
+      estado_desglose: 'legado_sin_desglose',
+      version_desglose: null,
+      marca_alimento_snapshot: null,
+      renglones_alimento: [] as unknown[],
       motivo: null,
       fecha_creacion: new Date('2026-08-08T00:00:00.000Z'),
       creado_por: { id: 1, nombre_completo: 'Admin' },
@@ -727,6 +841,114 @@ describe('PlanAlimentoService', () => {
         InternalServerErrorException,
       );
     });
+
+    it('desglose.no_disponible=true para una estimacion anterior a Fase 2B (legado_sin_desglose), sin renglones', async () => {
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion(),
+      );
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+      });
+      prisma.registroMortalidad.findMany.mockResolvedValue([]);
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
+
+      const res = await service.obtener(3, admin);
+
+      expect(res.desglose.no_disponible).toBe(true);
+      expect(res.desglose.estado).toBe('legado_sin_desglose');
+      expect(res.desglose.renglones).toEqual([]);
+    });
+
+    it('surfaces los renglones de una estimacion calculada bajo Fase 2B', async () => {
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion({
+          estado_desglose: 'calculado',
+          version_desglose: 'desglose_etapas_rango_dias_v1',
+          marca_alimento_snapshot: 'italcol',
+          renglones_alimento: [
+            {
+              orden: 1,
+              tipo_alimento_id: 9,
+              tipo_alimento_nombre_snapshot: 'Unico',
+              etapa_snapshot: 'preiniciacion',
+              dia_inicio: 1,
+              dia_fin: 21,
+              extendido_hasta_dia_objetivo: false,
+              consumo_por_ave_g: new Prisma.Decimal(1190),
+              consumo_total_kg: new Prisma.Decimal('1161.850'),
+            },
+          ],
+        }),
+      );
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+      });
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
+        { fecha: new Date('2026-08-03T00:00:00.000Z'), cantidad_aves: 10 },
+      ]);
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
+
+      const res = await service.obtener(3, admin);
+
+      expect(res.desglose.no_disponible).toBe(false);
+      expect(res.desglose.marca_alimento_snapshot).toBe('italcol');
+      expect(res.desglose.renglones).toEqual([
+        expect.objectContaining({
+          orden: 1,
+          tipo_alimento_id: 9,
+          tipo_alimento_nombre_snapshot: 'Unico',
+          etapa: 'preiniciacion',
+          dia_inicio: 1,
+          dia_fin: 21,
+        }),
+      ]);
+    });
+
+    it('un desglose persistido corrupto (renglones que no cuadran) falla como 500 controlado', async () => {
+      // Solape entre renglones: dos filas reclaman el dia 5. El CHECK por
+      // fila no lo detecta -- solo la validacion agregada, al leer.
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+        filaEstimacion({
+          estado_desglose: 'calculado',
+          version_desglose: 'desglose_etapas_rango_dias_v1',
+          marca_alimento_snapshot: 'italcol',
+          renglones_alimento: [
+            {
+              orden: 1,
+              tipo_alimento_id: 9,
+              tipo_alimento_nombre_snapshot: 'Preiniciador',
+              etapa_snapshot: 'preiniciacion',
+              dia_inicio: 1,
+              dia_fin: 5,
+              extendido_hasta_dia_objetivo: false,
+              consumo_por_ave_g: new Prisma.Decimal(500),
+              consumo_total_kg: new Prisma.Decimal('0.500'),
+            },
+            {
+              orden: 2,
+              tipo_alimento_id: 10,
+              tipo_alimento_nombre_snapshot: 'Iniciador',
+              etapa_snapshot: 'iniciacion',
+              dia_inicio: 5,
+              dia_fin: 21,
+              extendido_hasta_dia_objetivo: true,
+              consumo_por_ave_g: new Prisma.Decimal(690),
+              consumo_total_kg: new Prisma.Decimal('0.661850'),
+            },
+          ],
+        }),
+      );
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+      });
+      prisma.registroMortalidad.findMany.mockResolvedValue([]);
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
+
+      await expect(service.obtener(3, admin)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
   });
 
   describe('historial', () => {
@@ -754,6 +976,10 @@ describe('PlanAlimentoService', () => {
         dia_objetivo_snapshot: 21,
         consumo_por_ave_g: new Prisma.Decimal(1190),
         consumo_total_kg: new Prisma.Decimal(1190),
+        estado_desglose: 'legado_sin_desglose',
+        version_desglose: null,
+        marca_alimento_snapshot: null,
+        renglones_alimento: [] as unknown[],
         motivo: null,
         fecha_creacion: new Date('2026-08-08T00:00:00.000Z'),
         creado_por: { id: 1, nombre_completo: 'Admin' },
@@ -801,6 +1027,10 @@ describe('PlanAlimentoService', () => {
         dia_objetivo_snapshot: 21,
         consumo_por_ave_g: new Prisma.Decimal(1190),
         consumo_total_kg: new Prisma.Decimal(1190),
+        estado_desglose: 'legado_sin_desglose',
+        version_desglose: null,
+        marca_alimento_snapshot: null,
+        renglones_alimento: [] as unknown[],
         motivo: null,
         fecha_creacion: new Date('2026-08-08T00:00:00.000Z'),
         creado_por: { id: 1, nombre_completo: 'Admin' },

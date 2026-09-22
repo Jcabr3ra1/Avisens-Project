@@ -121,4 +121,60 @@ describe('integrarConsumo', () => {
       );
     });
   });
+
+  describe('acumuladoPorAveEnDia y acumuladoTotalKgEnDia', () => {
+    const puntos = [punto(7, 140), punto(14, 490), punto(21, 1190)];
+
+    it('el acumulado en el dia 0 es cero en las dos escalas (ancla virtual)', () => {
+      const resultado = integrarConsumo(puntos, 21, () => 1000);
+      expect(resultado.estado).toBe('calculado');
+      if (resultado.estado !== 'calculado') return;
+
+      expect(resultado.acumuladoPorAveEnDia(0).toFixed(2)).toBe('0.00');
+      expect(resultado.acumuladoTotalKgEnDia(0).toFixed(3)).toBe('0.000');
+    });
+
+    it('el acumulado en el dia objetivo coincide exacto con el total ya redondeado', () => {
+      const resultado = integrarConsumo(puntos, 21, () => 1000);
+      expect(resultado.estado).toBe('calculado');
+      if (resultado.estado !== 'calculado') return;
+
+      expect(
+        resultado
+          .acumuladoPorAveEnDia(21)
+          .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP)
+          .equals(resultado.consumoPorAveG),
+      ).toBe(true);
+      expect(
+        resultado
+          .acumuladoTotalKgEnDia(21)
+          .toDecimalPlaces(3, Prisma.Decimal.ROUND_HALF_UP)
+          .equals(resultado.consumoTotalKg),
+      ).toBe(true);
+    });
+
+    it('el acumulado en un dia intermedio es estrictamente menor que en el dia objetivo', () => {
+      const resultado = integrarConsumo(puntos, 21, () => 1000);
+      expect(resultado.estado).toBe('calculado');
+      if (resultado.estado !== 'calculado') return;
+
+      expect(
+        resultado.acumuladoPorAveEnDia(14).lessThan(resultado.acumuladoPorAveEnDia(21)),
+      ).toBe(true);
+      expect(
+        resultado
+          .acumuladoTotalKgEnDia(14)
+          .lessThan(resultado.acumuladoTotalKgEnDia(21)),
+      ).toBe(true);
+    });
+
+    it('lanza si se pide un dia fuera de 0..diaObjetivo', () => {
+      const resultado = integrarConsumo(puntos, 14, () => 1000);
+      expect(resultado.estado).toBe('calculado');
+      if (resultado.estado !== 'calculado') return;
+
+      expect(() => resultado.acumuladoPorAveEnDia(15)).toThrow(/fuera de/);
+      expect(() => resultado.acumuladoTotalKgEnDia(-1)).toThrow(/fuera de/);
+    });
+  });
 });

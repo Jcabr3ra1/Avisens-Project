@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { EstadoCalculoAlimento, SexoCurva } from '@prisma/client';
+import {
+  EstadoCalculoAlimento,
+  EstadoDesgloseAlimento,
+  SexoCurva,
+} from '@prisma/client';
 import {
   MOTIVOS_DESACTUALIZACION,
   MotivoDesactualizacion,
@@ -95,6 +99,64 @@ export class ResultadoEstimacionDto {
   consumo_total_kg: number | null;
 }
 
+export class RenglonDesgloseAlimentoDto {
+  @ApiProperty({ example: 1 })
+  orden: number;
+
+  @ApiProperty({ type: Number, example: 9, nullable: true })
+  tipo_alimento_id: number | null;
+
+  @ApiProperty({ type: String, example: 'Preiniciador', nullable: true })
+  tipo_alimento_nombre_snapshot: string | null;
+
+  @ApiProperty({ type: String, example: 'preiniciacion', nullable: true })
+  etapa: string | null;
+
+  @ApiProperty({ example: 1 })
+  dia_inicio: number;
+
+  @ApiProperty({ example: 8 })
+  dia_fin: number;
+
+  @ApiProperty({ example: false })
+  extendido_hasta_dia_objetivo: boolean;
+
+  @ApiProperty({ type: Number, example: 80.0 })
+  consumo_por_ave_g: number;
+
+  @ApiProperty({ type: Number, example: 0.8 })
+  consumo_total_kg: number;
+}
+
+export class DesgloseAlimentoDto {
+  @ApiProperty({
+    example: false,
+    description:
+      'true solo si la estimacion es anterior a Fase 2B: nunca se reconstruye retroactivamente.',
+  })
+  no_disponible: boolean;
+
+  @ApiProperty({
+    enum: EstadoDesgloseAlimento,
+    nullable: true,
+    example: EstadoDesgloseAlimento.calculado,
+  })
+  estado: EstadoDesgloseAlimento | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'desglose_etapas_rango_dias_v1',
+    nullable: true,
+  })
+  version: string | null;
+
+  @ApiProperty({ type: String, example: 'italcol', nullable: true })
+  marca_alimento_snapshot: string | null;
+
+  @ApiProperty({ type: [RenglonDesgloseAlimentoDto] })
+  renglones: RenglonDesgloseAlimentoDto[];
+}
+
 export class PlanVigenteInfoDto {
   @ApiProperty({ example: 31 })
   id: number;
@@ -148,6 +210,9 @@ export class EstimacionAlimentoHistorialItemDto {
 
   @ApiProperty({ type: ResultadoEstimacionDto })
   resultado: ResultadoEstimacionDto;
+
+  @ApiProperty({ type: DesgloseAlimentoDto })
+  desglose: DesgloseAlimentoDto;
 
   @ApiProperty({
     example: true,

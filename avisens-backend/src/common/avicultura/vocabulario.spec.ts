@@ -2,6 +2,7 @@ import {
   ETAPAS_ALIMENTACION,
   MARCAS_ALIMENTO,
   SEXOS_LOTE,
+  normalizarMarcaCatalogo,
 } from './vocabulario';
 
 /**
@@ -36,5 +37,22 @@ describe('vocabulario ganadero', () => {
       expect(new Set(lista).size).toBe(lista.length);
       expect(lista.every((v) => v.trim().length > 0)).toBe(true);
     }
+  });
+});
+
+describe('normalizarMarcaCatalogo', () => {
+  it('recorta espacios y pasa a minusculas', () => {
+    expect(normalizarMarcaCatalogo('  Italcol  ')).toBe('italcol');
+  });
+
+  it('dos formas distintas de escribir la misma marca normalizan igual', () => {
+    expect(normalizarMarcaCatalogo('ITALCOL')).toBe(
+      normalizarMarcaCatalogo(' italcol '),
+    );
+  });
+
+  it('es idempotente', () => {
+    const normalizada = normalizarMarcaCatalogo('Italcol');
+    expect(normalizarMarcaCatalogo(normalizada)).toBe(normalizada);
   });
 });

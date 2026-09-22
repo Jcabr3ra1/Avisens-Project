@@ -15,6 +15,11 @@ export type ResultadoIntegracionAlimento =
       estado: 'calculado';
       consumoPorAveG: Prisma.Decimal;
       consumoTotalKg: Prisma.Decimal;
+      // Acumulados SIN redondear, dominio 0..diaObjetivo, acumuladoXxxEnDia(0)
+      // === 0 (mismo ancla virtual). Los usa Fase 2B para partir el total por
+      // etapa; el total y el algoritmo de 2A no cambian.
+      acumuladoPorAveEnDia: (dia: number) => Prisma.Decimal;
+      acumuladoTotalKgEnDia: (dia: number) => Prisma.Decimal;
     };
 
 // Requiere puntos ordenados ascendentemente por dia (orderBy: { dia: 'asc' }),
@@ -67,6 +72,13 @@ export function integrarConsumo(
     ...puntos,
   ];
 
+  const acumuladoPorAve = new Map<number, Prisma.Decimal>([
+    [0, new Prisma.Decimal(0)],
+  ]);
+  const acumuladoTotalKg = new Map<number, Prisma.Decimal>([
+    [0, new Prisma.Decimal(0)],
+  ]);
+
   let totalGramos = new Prisma.Decimal(0);
   let acumuladoAnterior = new Prisma.Decimal(0);
   for (let dia = 1; dia <= diaObjetivo; dia++) {
@@ -79,6 +91,22 @@ export function integrarConsumo(
     }
     totalGramos = totalGramos.plus(consumoDelDia.mul(avesVivasEnDia(dia)));
     acumuladoAnterior = acumuladoHoy;
+
+    acumuladoPorAve.set(dia, acumuladoHoy);
+    acumuladoTotalKg.set(dia, totalGramos.div(1000));
+  }
+
+  function buscarAcumulado(
+    mapa: Map<number, Prisma.Decimal>,
+    dia: number,
+  ): Prisma.Decimal {
+    const valor = mapa.get(dia);
+    if (valor === undefined) {
+      throw new Error(
+        `Acumulado solicitado para el dia ${dia}, fuera de 0..${diaObjetivo}`,
+      );
+    }
+    return valor;
   }
 
   return {
@@ -90,5 +118,7 @@ export function integrarConsumo(
     consumoTotalKg: totalGramos
       .div(1000)
       .toDecimalPlaces(3, Prisma.Decimal.ROUND_HALF_UP),
+    acumuladoPorAveEnDia: (dia) => buscarAcumulado(acumuladoPorAve, dia),
+    acumuladoTotalKgEnDia: (dia) => buscarAcumulado(acumuladoTotalKg, dia),
   };
 }
