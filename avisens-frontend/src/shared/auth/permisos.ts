@@ -67,3 +67,16 @@ export function permisosDeInsumo(rol: string | null): PermisosInsumo {
       rol === ROL_ADMIN || rol === ROL_PROPIETARIO || rol === ROL_OPERARIO,
   }
 }
+
+// Plan de crecimiento y estimación de alimento del lote (Fase 1 / 2A / 2B).
+// El administrador y el propietario calculan o recalculan; el operario solo
+// consulta el resultado.
+// Fuente: avisens-backend/src/modules/plan-lote/plan-lote.controller.ts,
+// avisens-backend/src/modules/plan-alimento/plan-alimento.controller.ts
+export type PermisosPlan = {
+  registrar: boolean
+}
+
+export function permisosDePlan(rol: string | null): PermisosPlan {
+  return { registrar: rol === ROL_ADMIN || rol === ROL_PROPIETARIO }
+}
