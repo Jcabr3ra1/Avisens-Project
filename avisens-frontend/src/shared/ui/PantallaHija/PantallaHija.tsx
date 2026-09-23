@@ -1,6 +1,8 @@
 import { useEffect, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { IcClose } from '@shared/ui/icons/icons'
 import './PantallaHija.css'
+
 
 type Props = {
   titulo: string
@@ -18,7 +20,7 @@ function PantallaHija({ titulo, subtitulo, onCerrar, children }: Props) {
     return () => window.removeEventListener('keydown', alTeclear)
   }, [onCerrar])
 
-  return (
+   return createPortal(
     <div className="hija-overlay" onClick={onCerrar}>
       <section
         className="hija-panel"
@@ -38,7 +40,8 @@ function PantallaHija({ titulo, subtitulo, onCerrar, children }: Props) {
         </header>
         <div className="hija-body">{children}</div>
       </section>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
