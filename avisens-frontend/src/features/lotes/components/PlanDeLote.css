@@ -6,7 +6,10 @@
 
 .pdl-bloque {
   padding: 1rem 1.25rem;
-  border: 1px solid var(--adm-line);
+  /* --adm-line lo define .adm-page; PantallaHija saca este bloque a un
+     portal en document.body, así que necesita el respaldo directo al
+     token que --adm-line solo alias (ver PantallaHija.css:101). */
+  border: 1px solid var(--adm-line, var(--border-subtle));
   border-radius: var(--radius-lg);
   background: var(--card);
 }
