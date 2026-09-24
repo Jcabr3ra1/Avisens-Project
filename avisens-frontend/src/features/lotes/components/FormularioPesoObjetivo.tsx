@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import '@shared/ui/Modal/Modal.css'
 import { mensajeDeError } from '@shared/utils/errores'
-import { gramosALibras, librasAGramos } from '../model/pesoObjetivo'
+import { gramosALibras, librasAGramos, pesoAEnviar } from '../model/pesoObjetivo'
 
 interface Props {
   pesoActualG: number | null
@@ -12,6 +12,9 @@ function FormularioPesoObjetivo({ pesoActualG, onEnviar }: Props) {
   const [libras, setLibras] = useState(
     pesoActualG !== null ? gramosALibras(pesoActualG).toFixed(2) : '',
   )
+  // Solo true si el usuario tocó el campo -- distingue "reenviar tal cual"
+  // de "convertir lo que hay", ver pesoAEnviar en pesoObjetivo.ts.
+  const [editado, setEditado] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
 
@@ -25,7 +28,7 @@ function FormularioPesoObjetivo({ pesoActualG, onEnviar }: Props) {
     setError('')
     setEnviando(true)
     try {
-      await onEnviar(librasAGramos(valor))
+      await onEnviar(pesoAEnviar(pesoActualG, editado, valor))
     } catch (fallo) {
       setError(mensajeDeError(fallo, 'No se pudo guardar el peso objetivo.'))
     } finally {
@@ -45,7 +48,10 @@ function FormularioPesoObjetivo({ pesoActualG, onEnviar }: Props) {
           min="0"
           step="0.01"
           value={libras}
-          onChange={(evento) => setLibras(evento.target.value)}
+          onChange={(evento) => {
+            setLibras(evento.target.value)
+            setEditado(true)
+          }}
           required
         />
         {gramosPrevios !== null && (

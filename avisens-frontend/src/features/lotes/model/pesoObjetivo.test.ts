@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { gramosALibras, librasAGramos } from './pesoObjetivo'
+import { gramosALibras, librasAGramos, pesoAEnviar } from './pesoObjetivo'
 
 describe('librasAGramos', () => {
   it('convierte 1 libra a 454 gramos redondeados', () => {
@@ -34,5 +34,23 @@ describe('ida y vuelta', () => {
     const libras = 6.2
     const gramos = librasAGramos(libras)
     expect(gramosALibras(gramos)).toBeCloseTo(libras, 2)
+  })
+})
+
+describe('pesoAEnviar', () => {
+  it('sin editar, reenvía el gramo original tal cual -- sin pasar por libras', () => {
+    // 2500 g -> "5.51" lb -> librasAGramos(5.51) = 2499: por eso no debe
+    // usarse esa ruta cuando el usuario no tocó el campo.
+    const libras = Number(gramosALibras(2500).toFixed(2))
+    expect(pesoAEnviar(2500, false, libras)).toBe(2500)
+  })
+
+  it('editado, convierte lo que hay en el campo aunque coincida con el original', () => {
+    const libras = Number(gramosALibras(2500).toFixed(2))
+    expect(pesoAEnviar(2500, true, libras)).toBe(librasAGramos(libras))
+  })
+
+  it('sin peso previo (plan nuevo), siempre convierte lo escrito', () => {
+    expect(pesoAEnviar(null, false, 5.51)).toBe(librasAGramos(5.51))
   })
 })

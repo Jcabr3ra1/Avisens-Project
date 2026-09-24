@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { crearGuardaDeSecuencia } from '@shared/utils/secuencia'
 import { mensajeDeError } from '@shared/utils/errores'
 import {
   crearPlanLote,
@@ -27,6 +28,10 @@ export function usePlanCrecimiento(loteId: number) {
   // Aviso NO bloqueante: el alimento pudo fallar sin invalidar un plan que
   // sí se guardó bien. Se muestra aparte del error de carga de `alimento`.
   const [avisoAlimento, setAvisoAlimento] = useState('')
+  // `alimento` lo escriben cargarAlimento (al montar) y dispararAlimento
+  // (después de crear/recalcular): sin esto, la respuesta que llegue última
+  // gana aunque sea la más vieja.
+  const secuenciaAlimento = useRef(crearGuardaDeSecuencia())
 
   const cargarPlan = useCallback(async () => {
     setPlan((actual) => ({ ...actual, cargando: true, error: '' }))
@@ -39,11 +44,14 @@ export function usePlanCrecimiento(loteId: number) {
   }, [loteId])
 
   const cargarAlimento = useCallback(async () => {
+    const id = secuenciaAlimento.current.iniciar()
     setAlimento((actual) => ({ ...actual, cargando: true, error: '' }))
     try {
       const data = await obtenerEstimacionAlimento(loteId)
+      if (!secuenciaAlimento.current.esVigente(id)) return
       setAlimento({ data, cargando: false, error: '' })
     } catch (error) {
+      if (!secuenciaAlimento.current.esVigente(id)) return
       setAlimento({ data: null, cargando: false, error: mensajeDeError(error, 'No se pudo cargar la estimación de alimento.') })
     }
   }, [loteId])
@@ -55,12 +63,15 @@ export function usePlanCrecimiento(loteId: number) {
   }, [cargarPlan, cargarAlimento])
 
   const dispararAlimento = useCallback(async () => {
+    const id = secuenciaAlimento.current.iniciar()
     setAvisoAlimento('')
     setAlimento((actual) => ({ ...actual, cargando: true }))
     try {
       const data = await crearEstimacionAlimento(loteId)
+      if (!secuenciaAlimento.current.esVigente(id)) return
       setAlimento({ data, cargando: false, error: '' })
     } catch (error) {
+      if (!secuenciaAlimento.current.esVigente(id)) return
       // El calculo fallo: no dejamos la estimacion anterior (de otra version
       // del plan) puesta como si siguiera vigente -- se relee por GET, que
       // recalcula plan_vigente/desactualizado contra el plan actual.
