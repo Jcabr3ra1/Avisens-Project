@@ -42,6 +42,7 @@ const OrganizacionesPage = lazy(() => import('@features/organizaciones/Organizac
 const RecuperarPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperarPasswordPage'))
 const CambiarPasswordPage = lazy(() => import('@features/recuperaciones-password/CambiarPasswordPage'))
 const RecuperacionesPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperacionesPasswordPage'))
+const MecicinasPage = lazy(() => import('@features/medicinas/MedicinasPage'))
 
 function cargarPagina(page: ReactNode) {
   return (
@@ -94,6 +95,7 @@ function AppRoutes() {
         <Route path="/galpones"        element={cargarPagina(<GalponesPage />)} />
         <Route path="/lotes"           element={cargarPagina(<LotesPage />)} />
         <Route path="/sensores"        element={cargarPagina(<SensoresPage />)} />
+        <Route path='/medicinas'       element={cargarPagina(<MecicinasPage />)} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

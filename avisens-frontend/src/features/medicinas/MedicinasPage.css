@@ -1,0 +1,140 @@
+.med-page {
+  --med-deep: #005b48;
+  --med-line: rgba(10, 26, 20, 0.09);
+  --med-shadow: 0 1px 2px rgba(10, 40, 28, 0.04), 0 8px 24px rgba(10, 40, 28, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+/* ─── Filtros ─────────────────────────────────────────────────────────── */
+
+.med-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--med-line);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--med-shadow);
+}
+
+.med-filtros label {
+  display: flex;
+  min-width: min(100%, 210px);
+  flex: 1;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--text3);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.med-filtros input,
+.med-filtros select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--bg);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.med-filtros input:focus-visible,
+.med-filtros select:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+
+/* ─── Historial ───────────────────────────────────────────────────────── */
+
+.med-panel {
+  overflow: hidden;
+  border: 1px solid var(--med-line);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--med-shadow);
+}
+
+.med-tabla-scroll { overflow-x: auto; }
+
+.med-tabla {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.med-tabla th,
+.med-tabla td {
+  padding: 0.78rem 0.9rem;
+  border-bottom: 1px solid var(--med-line);
+  text-align: left;
+}
+
+.med-tabla th {
+  color: var(--text3);
+  background: var(--color-superficie-secundaria);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.med-tabla td {
+  color: var(--text2);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  vertical-align: top;
+}
+
+.med-tabla td:nth-child(2) { color: var(--dash-ink); font-weight: 750; }
+.med-tabla td:nth-child(3) { color: var(--med-deep); font-weight: 700; }
+.med-tabla tr:last-child td { border-bottom: 0; }
+.med-tabla tbody tr:hover { background: var(--bg-tint); }
+
+/* ─── Estados ─────────────────────────────────────────────────────────── */
+
+.med-cargando {
+  margin: 0;
+  padding: 2rem 1rem;
+  color: var(--text3);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.med-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 3.5rem 1.5rem;
+  border: 1px solid var(--med-line);
+  border-radius: 18px;
+  color: var(--text3);
+  background: var(--card);
+  box-shadow: var(--med-shadow);
+  text-align: center;
+}
+
+.med-vacio h2 { margin: 0; color: var(--dash-ink); font-size: 1.1rem; font-weight: 750; }
+.med-vacio p { max-width: 46ch; margin: 0; font-size: 0.86rem; line-height: 1.5; }
+
+@media (max-width: 640px) {
+  .med-filtros { flex-direction: column; }
+  .med-filtros label { width: 100%; }
+  .med-vacio { padding: 2.5rem 1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .med-tabla tbody tr { transition: none; }
+}

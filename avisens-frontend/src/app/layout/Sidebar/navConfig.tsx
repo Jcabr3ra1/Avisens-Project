@@ -78,6 +78,7 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/alertas':                 [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/notificaciones':          [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/inventario':              [ROL_ADMIN, ROL_PROPIETARIO],
+  '/medicinas':               [ROL_ADMIN, ROL_PROPIETARIO],
   // Solo el propietario. El estado de resultados de una granja es información
   // financiera de su dueño y no tiene ninguna finalidad en la operación de la
   // plataforma: darle acceso permanente al administrador contradice el
