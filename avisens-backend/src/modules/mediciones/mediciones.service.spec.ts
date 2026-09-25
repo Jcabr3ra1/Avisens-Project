@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
   ForbiddenException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { MedicionesService } from './mediciones.service';
@@ -83,6 +84,60 @@ describe('MedicionesService', () => {
         NotFoundException,
       );
       expect(prisma.medicion.create).not.toHaveBeenCalled();
+    });
+
+    describe('fallo aislado de evaluarLectura', () => {
+      afterEach(() => jest.restoreAllMocks());
+
+      it('un fallo de alertas no rompe el registro, agrega advertencia y queda registrado aparte', async () => {
+        prisma.medicion.create.mockResolvedValue({ id: 7 });
+        alertas.evaluarLectura.mockRejectedValue(new Error('fallo simulado'));
+        const errorSpy = jest
+          .spyOn(Logger.prototype, 'error')
+          .mockImplementation();
+
+        const res = await service.registrar(dtoRegistrar, admin);
+
+        expect(res).toEqual({
+          id: 7,
+          advertencia_evaluacion:
+            'No se pudo completar el procesamiento de alertas para esta lectura',
+        });
+
+        expect(errorSpy).toHaveBeenCalledTimes(1);
+        const [linea] = errorSpy.mock.calls[0] as [string];
+        const registro = JSON.parse(linea) as Record<string, unknown>;
+        expect(registro.evento).toBe('mediciones.alerta.fallida');
+        expect(registro.medicion_id).toBe('7');
+        expect(registro.sensor_id).toBe(1);
+        expect(registro.clasificacion).toBe('desconocida');
+      });
+
+      it('sin fallos, no agrega advertencia ni emite log', async () => {
+        prisma.medicion.create.mockResolvedValue({ id: 8 });
+        alertas.evaluarLectura.mockResolvedValue({ id: 99 });
+        const errorSpy = jest
+          .spyOn(Logger.prototype, 'error')
+          .mockImplementation();
+
+        const res = await service.registrar(dtoRegistrar, admin);
+
+        expect(res).toEqual({ id: 8 });
+        expect(errorSpy).not.toHaveBeenCalled();
+      });
+
+      it('cuando evaluarLectura devuelve null, tampoco agrega advertencia', async () => {
+        prisma.medicion.create.mockResolvedValue({ id: 9 });
+        alertas.evaluarLectura.mockResolvedValue(null);
+        const errorSpy = jest
+          .spyOn(Logger.prototype, 'error')
+          .mockImplementation();
+
+        const res = await service.registrar(dtoRegistrar, admin);
+
+        expect(res).toEqual({ id: 9 });
+        expect(errorSpy).not.toHaveBeenCalled();
+      });
     });
   });
 

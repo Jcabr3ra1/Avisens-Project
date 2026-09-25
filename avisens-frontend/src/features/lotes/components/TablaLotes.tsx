@@ -1,19 +1,28 @@
 import TablaGestion, { type ColumnaGestion } from '@shared/ui/TablaGestion/TablaGestion'
 import EstadoBadge from '@shared/ui/TablaGestion/EstadoBadge'
 import '@shared/ui/TablaGestion/TablaGestion.css'
-import { gestionaAlgo, type PermisosGestion } from '@shared/auth/permisos'
+import type { PermisosGestion } from '@shared/auth/permisos'
 import type { Lote } from '../api/lotes'
 
 interface Props {
   lotes: Lote[]
   cargando: boolean
   permisos: PermisosGestion
+  onVerPlan: (lote: Lote) => void
   onEditar: (lote: Lote) => void
   onAlternar: (lote: Lote) => void
   onEliminar: (lote: Lote) => void
 }
 
-function TablaLotes({ lotes, cargando, permisos, onEditar, onAlternar, onEliminar }: Props) {
+function TablaLotes({
+  lotes,
+  cargando,
+  permisos,
+  onVerPlan,
+  onEditar,
+  onAlternar,
+  onEliminar,
+}: Props) {
   const columnas: ColumnaGestion<Lote>[] = [
     {
       encabezado: 'Lote',
@@ -47,8 +56,11 @@ function TablaLotes({ lotes, cargando, permisos, onEditar, onAlternar, onElimina
       mensajeVacio="No hay lotes para mostrar."
       pistaVacio="Registra un lote para empezar el seguimiento productivo del galpón."
       filaClase={(lote) => (lote.estado === 'activo' ? undefined : 'tg-fila-inactiva')}
-      renderAcciones={!gestionaAlgo(permisos) ? undefined : (lote) => (
+      renderAcciones={(lote) => (
         <>
+          <button type="button" className="tg-btn" onClick={() => onVerPlan(lote)}>
+            Ver plan
+          </button>
           {permisos.editar && (
             <button type="button" className="tg-btn" onClick={() => onEditar(lote)}>
               Editar

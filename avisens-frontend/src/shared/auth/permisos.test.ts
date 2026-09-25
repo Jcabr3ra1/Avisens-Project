@@ -3,6 +3,7 @@ import {
   gestionaAlgo,
   permisosDeGestion,
   permisosDeInsumo,
+  permisosDePlan,
   ROL_ADMIN,
   ROL_OPERARIO,
   ROL_PROPIETARIO,
@@ -66,5 +67,24 @@ describe('permisosDeInsumo', () => {
 
   it('sin sesión no se puede ni mover stock', () => {
     expect(permisosDeInsumo(null).registrarMovimiento).toBe(false)
+  })
+})
+
+describe('permisosDePlan', () => {
+  it('administrador y propietario pueden calcular o recalcular', () => {
+    expect(permisosDePlan(ROL_ADMIN).registrar).toBe(true)
+    expect(permisosDePlan(ROL_PROPIETARIO).registrar).toBe(true)
+  })
+
+  it('el operario solo consulta', () => {
+    expect(permisosDePlan(ROL_OPERARIO).registrar).toBe(false)
+  })
+
+  it('sin sesión no se puede registrar', () => {
+    expect(permisosDePlan(null).registrar).toBe(false)
+  })
+
+  it('un rol desconocido no hereda permisos por accidente', () => {
+    expect(permisosDePlan('Auditor').registrar).toBe(false)
   })
 })

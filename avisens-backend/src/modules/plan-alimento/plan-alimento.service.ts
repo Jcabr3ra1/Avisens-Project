@@ -1,0 +1,843 @@
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { EstadoCalculoAlimento, Prisma } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { paginate } from '../../common/pagination/paginate';
+import type { Solicitante } from '../../common/auth/acceso';
+import { verificarAccesoLote } from '../../common/auth/alcance';
+import { diaDeVida } from '../../common/fechas/dias-de-vida';
+import { esViolacionDeLlaveForanea } from '../../common/errores/llave-foranea';
+import { PlanLoteService } from '../plan-lote/plan-lote.service';
+import {
+  clasificarMortalidad,
+  avesVivasEnDia,
+  validarSnapshotMortalidad,
+  EntradaMortalidad,
+} from './mortalidad-snapshot';
+import { integrarConsumo, ALGORITMO_ACTUAL } from './consumo-curva';
+import {
+  construirDesgloseAlimento,
+  validarDesgloseAlimento,
+  VERSION_DESGLOSE_ACTUAL,
+  RenglonDesglose,
+} from './desglose-alimento';
+import { normalizarMarcaCatalogo } from '../../common/avicultura/vocabulario';
+import { CrearEstimacionAlimentoDto } from './dto/crear-estimacion-alimento.dto';
+
+export const MOTIVOS_DESACTUALIZACION = [
+  'plan_cambio',
+  'sin_plan_vigente',
+  'cantidad_inicial_cambio',
+  'algoritmo_cambio',
+  'mortalidad_cambio',
+  'mortalidad_actual_incoherente',
+  'algoritmo_desglose_cambio',
+  'marca_alimento_cambio',
+] as const;
+
+export type MotivoDesactualizacion = (typeof MOTIVOS_DESACTUALIZACION)[number];
+
+const ESTIMACION_SELECT = {
+  id: true,
+  plan_lote_id: true,
+  version: true,
+  vigente: true,
+  estado_alimento: true,
+  version_algoritmo: true,
+  cantidad_inicial_snapshot: true,
+  dia_corte: true,
+  mortalidad_snapshot: true,
+  muertes_al_corte: true,
+  aves_vivas_al_corte: true,
+  dia_objetivo_snapshot: true,
+  consumo_por_ave_g: true,
+  consumo_total_kg: true,
+  estado_desglose: true,
+  version_desglose: true,
+  marca_alimento_snapshot: true,
+  renglones_alimento: {
+    orderBy: { orden: 'asc' },
+    select: {
+      orden: true,
+      tipo_alimento_id: true,
+      tipo_alimento_nombre_snapshot: true,
+      etapa_snapshot: true,
+      dia_inicio: true,
+      dia_fin: true,
+      extendido_hasta_dia_objetivo: true,
+      consumo_por_ave_g: true,
+      consumo_total_kg: true,
+    },
+  },
+  motivo: true,
+  fecha_creacion: true,
+  creado_por: { select: { id: true, nombre_completo: true } },
+  plan: {
+    select: {
+      id: true,
+      version: true,
+      lote_id: true,
+      fecha_ingreso_snapshot: true,
+      fecha_salida_calculada: true,
+    },
+  },
+  curva_version_snapshot: {
+    select: {
+      id: true,
+      sexo: true,
+      version: true,
+      fuente: true,
+      linea_genetica: { select: { id: true, codigo: true, nombre: true } },
+    },
+  },
+} as const;
+
+type EstimacionConRelaciones = Prisma.EstimacionAlimentoPlanGetPayload<{
+  select: typeof ESTIMACION_SELECT;
+}>;
+
+export interface PlanVigenteInfo {
+  id: number;
+  version: number;
+  dia_objetivo: number | null;
+  desactualizado: boolean;
+  es_el_mismo: boolean;
+}
+
+@Injectable()
+export class PlanAlimentoService {
+  constructor(
+    private prisma: PrismaService,
+    private planLoteService: PlanLoteService,
+  ) {}
+
+  private esConflictoUnico(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2002'
+    );
+  }
+
+  private async validarLote(loteId: number, solicitante: Solicitante) {
+    const lote = await this.prisma.lote.findUnique({
+      where: { id: loteId },
+      select: {
+        id: true,
+        galpon: {
+          select: {
+            granja: {
+              select: { propietario_id: true },
+            },
+          },
+        },
+      },
+    });
+    if (!lote) throw new NotFoundException('Lote no encontrado');
+    await verificarAccesoLote(
+      this.prisma,
+      loteId,
+      solicitante,
+      'No tienes acceso al plan de alimento de este lote',
+      lote.galpon.granja.propietario_id,
+    );
+  }
+
+  /**
+   * Reusa PlanLoteService.obtener() -- ese es el unico lugar que sabe
+   * calcular el 'desactualizado' de un PlanLote (Fase 1). Si el lote no
+   * tiene plan vigente, obtener() lanza 404: aqui se atrapa para devolver
+   * null, nunca se deja que tumbe toda la consulta de alimento (el indice
+   * unico parcial de PlanLote garantiza como maximo un vigente, no que
+   * exista uno obligatoriamente).
+   */
+  private async construirPlanVigente(
+    loteId: number,
+    solicitante: Solicitante,
+    planLoteIdDeLaEstimacion: number,
+  ): Promise<PlanVigenteInfo | null> {
+    try {
+      const planVigente = await this.planLoteService.obtener(
+        loteId,
+        solicitante,
+      );
+      return {
+        id: planVigente.id,
+        version: planVigente.version,
+        dia_objetivo: planVigente.resultado.dia_objetivo,
+        desactualizado: planVigente.desactualizado,
+        es_el_mismo: planVigente.id === planLoteIdDeLaEstimacion,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) return null;
+      throw error;
+    }
+  }
+
+  /**
+   * Unica puerta de lectura de mortalidad_snapshot: el CHECK de Postgres
+   * solo garantiza "es un arreglo JSON", nunca la forma de sus elementos ni
+   * la coherencia de sus sumas. Una escritura SQL directa puede dejar un
+   * arreglo corrupto -- si eso pasa, es un problema de integridad del
+   * servidor, no del cliente, y se reporta como 500, nunca como
+   * mortalidad_actual_incoherente (que es sobre los REGISTROS actuales del
+   * lote, no sobre esta fila ya persistida).
+   */
+  private extraerSnapshotValidado(
+    estimacion: EstimacionConRelaciones,
+  ): EntradaMortalidad[] {
+    if (estimacion.mortalidad_snapshot === null) return [];
+
+    if (
+      !validarSnapshotMortalidad(estimacion.mortalidad_snapshot, {
+        diaCorte: estimacion.dia_corte,
+        cantidadInicialSnapshot: estimacion.cantidad_inicial_snapshot,
+        muertesAlCorteEsperadas: estimacion.muertes_al_corte ?? 0,
+        avesVivasAlCorteEsperadas:
+          estimacion.aves_vivas_al_corte ??
+          estimacion.cantidad_inicial_snapshot,
+      })
+    ) {
+      throw new InternalServerErrorException(
+        `La estimación de alimento ${estimacion.id} tiene un mortalidad_snapshot corrupto`,
+      );
+    }
+    return estimacion.mortalidad_snapshot;
+  }
+
+  /**
+   * Unica puerta de lectura del desglose por etapa: el CHECK de Postgres
+   * garantiza invariantes escalares por renglon, nunca cobertura, ausencia
+   * de solapes, ni las dos sumas contra el total ya persistido -- igual que
+   * extraerSnapshotValidado, un desglose corrupto es un problema de
+   * integridad del servidor (500), nunca un caso de negocio.
+   *
+   * legado_sin_desglose (estimaciones anteriores a Fase 2B) nunca se
+   * reconstruye retroactivamente: el snapshot de catalogo de ese momento ya
+   * no existe. Se expone explicitamente como no disponible, no como un
+   * estado mas a interpretar.
+   */
+  private extraerDesgloseValidado(estimacion: EstimacionConRelaciones) {
+    const renglones: RenglonDesglose[] = estimacion.renglones_alimento.map(
+      (r) => ({
+        orden: r.orden,
+        tipoAlimentoId: r.tipo_alimento_id,
+        tipoAlimentoNombreSnapshot: r.tipo_alimento_nombre_snapshot,
+        etapaSnapshot: r.etapa_snapshot,
+        diaInicio: r.dia_inicio,
+        diaFin: r.dia_fin,
+        extendidoHastaDiaObjetivo: r.extendido_hasta_dia_objetivo,
+        consumoPorAveG: r.consumo_por_ave_g,
+        consumoTotalKg: r.consumo_total_kg,
+      }),
+    );
+
+    if (
+      !validarDesgloseAlimento(renglones, {
+        estadoDesglose: estimacion.estado_desglose,
+        diaObjetivoSnapshot: estimacion.dia_objetivo_snapshot,
+        consumoPorAveGEsperado: estimacion.consumo_por_ave_g,
+        consumoTotalKgEsperado: estimacion.consumo_total_kg,
+      })
+    ) {
+      throw new InternalServerErrorException(
+        `La estimación de alimento ${estimacion.id} tiene un desglose corrupto`,
+      );
+    }
+
+    return {
+      // Solo tiene sentido cuando el estado_alimento es 'calculado': para
+      // los demas estados la ausencia de desglose ya es evidente por el
+      // propio estado_alimento. estado_desglose=NULL cubre tanto legado
+      // (backfill nunca corrio sobre esta fila) como la fila temporal del
+      // escritor anterior durante el rollout -- las dos son "nunca se
+      // fotografio nada", indistinguibles desde la lectura.
+      no_disponible:
+        estimacion.estado_alimento === 'calculado' &&
+        (estimacion.estado_desglose === null ||
+          estimacion.estado_desglose === 'legado_sin_desglose'),
+      estado: estimacion.estado_desglose,
+      version: estimacion.version_desglose,
+      marca_alimento_snapshot: estimacion.marca_alimento_snapshot,
+      renglones: renglones.map((r) => ({
+        orden: r.orden,
+        tipo_alimento_id: r.tipoAlimentoId,
+        tipo_alimento_nombre_snapshot: r.tipoAlimentoNombreSnapshot,
+        etapa: r.etapaSnapshot,
+        dia_inicio: r.diaInicio,
+        dia_fin: r.diaFin,
+        extendido_hasta_dia_objetivo: r.extendidoHastaDiaObjetivo,
+        consumo_por_ave_g: r.consumoPorAveG,
+        consumo_total_kg: r.consumoTotalKg,
+      })),
+    };
+  }
+
+  /**
+   * Motivos de desactualizacion de la estimacion (no del plan -- eso es
+   * planVigente.desactualizado, un campo aparte). La mortalidad solo se
+   * compara si el plan snapshot tuvo dia_objetivo: sin horizonte, no hay
+   * ventana relevante que reconstruir.
+   *
+   * d_rel = max(0, min(diaActualEfectivo, dia_objetivo_snapshot - 1)):
+   * una muerte registrada exactamente el dia D nunca pesa en N(d) bajo la
+   * convencion fin-del-dia, asi que compararla marcaria un falso positivo.
+   * Pero d_rel es SOLO el corte de comparacion, nunca el corte de
+   * validacion: una muerte real ocurrida despues de D-1 y antes de hoy
+   * sigue siendo mortalidad valida del lote, y validarla contra d_rel la
+   * marcaria como mortalidad_futura por error. La mortalidad se valida
+   * siempre contra diaActualEfectivo (el dia real de hoy); d_rel solo
+   * filtra QUE PARTE de esa mortalidad ya validada entra en la comparacion.
+   *
+   * El reloj es SIEMPRE plan.fecha_ingreso_snapshot, nunca Lote.fecha_ingreso:
+   * ese campo es editable por PATCH /lotes/:id, y esta estimacion se
+   * calculo (y debe releerse) contra la fecha de ingreso que tenia el
+   * plan en su momento -- si cambia, es el plan el que queda desactualizado
+   * (plan_vigente.desactualizado, via PlanLoteService), no esta fecha.
+   *
+   * El desglose de Fase 2B solo se compara cuando estado_alimento='calculado'
+   * (los demas estados nunca tuvieron desglose que envejecer). Una fila
+   * legado_sin_desglose tiene version_desglose=NULL, que nunca coincide con
+   * VERSION_DESGLOSE_ACTUAL -- queda desactualizada por diseño, no como caso
+   * especial. La marca se compara normalizada en ambos lados para que un
+   * simple cambio de mayusculas/espacios en el catalogo no dispare un falso
+   * positivo.
+   */
+  private async calcularDesactualizado(
+    estimacion: EstimacionConRelaciones,
+    cantidadInicialActual: number,
+    marcaAlimentoActual: string | null,
+    planVigente: PlanVigenteInfo | null,
+  ): Promise<{ desactualizado: boolean; motivos: MotivoDesactualizacion[] }> {
+    const motivos: MotivoDesactualizacion[] = [];
+
+    if (planVigente === null) {
+      motivos.push('sin_plan_vigente');
+    } else if (planVigente.id !== estimacion.plan_lote_id) {
+      motivos.push('plan_cambio');
+    }
+
+    if (cantidadInicialActual !== estimacion.cantidad_inicial_snapshot) {
+      motivos.push('cantidad_inicial_cambio');
+    }
+
+    if (estimacion.version_algoritmo !== ALGORITMO_ACTUAL) {
+      motivos.push('algoritmo_cambio');
+    }
+
+    if (estimacion.estado_alimento === 'calculado') {
+      if (estimacion.version_desglose !== VERSION_DESGLOSE_ACTUAL) {
+        motivos.push('algoritmo_desglose_cambio');
+      }
+
+      // marca_alimento_snapshot=NULL solo significa "el lote no tenia marca"
+      // cuando estado_desglose SI pertenece a Fase 2B (incluido
+      // lote_sin_marca_alimento, cuyo NULL es deliberado). En
+      // legado_sin_desglose y en la fila temporal del escritor anterior
+      // (estado_desglose NULL por compatibilidad de despliegue), NULL
+      // significa "nunca se fotografio la marca" -- comparar ahi afirmaria
+      // un cambio contra un dato que nunca existio.
+      const desgloseTieneSnapshotDeMarca =
+        estimacion.estado_desglose !== null &&
+        estimacion.estado_desglose !== 'legado_sin_desglose';
+
+      if (desgloseTieneSnapshotDeMarca) {
+        const marcaActualNormalizada =
+          marcaAlimentoActual === null
+            ? null
+            : normalizarMarcaCatalogo(marcaAlimentoActual);
+        if (marcaActualNormalizada !== estimacion.marca_alimento_snapshot) {
+          motivos.push('marca_alimento_cambio');
+        }
+      }
+    }
+
+    if (estimacion.dia_objetivo_snapshot !== null) {
+      const fechaIngresoSnapshot = estimacion.plan.fecha_ingreso_snapshot;
+      const diaActualEfectivo = Math.max(0, diaDeVida(fechaIngresoSnapshot));
+      const dRel = Math.max(
+        0,
+        Math.min(diaActualEfectivo, estimacion.dia_objetivo_snapshot - 1),
+      );
+
+      const registrosActuales = await this.prisma.registroMortalidad.findMany({
+        where: { lote_id: estimacion.plan.lote_id },
+        select: { fecha: true, cantidad_aves: true },
+      });
+      const clasificacionActual = clasificarMortalidad(
+        fechaIngresoSnapshot,
+        registrosActuales.map((r) => ({
+          fecha: r.fecha,
+          cantidadAves: r.cantidad_aves,
+        })),
+        diaActualEfectivo, // corte de VALIDACION: el dia real de hoy, no d_rel
+        cantidadInicialActual,
+      );
+
+      if (!clasificacionActual.valido) {
+        motivos.push('mortalidad_actual_incoherente');
+      } else {
+        const snapshotOriginal = this.extraerSnapshotValidado(estimacion);
+        const snapshotOriginalRel = snapshotOriginal.filter(
+          (e) => e.dia <= dRel,
+        );
+        const snapshotActualRel = clasificacionActual.snapshot.filter(
+          (e) => e.dia <= dRel,
+        );
+        if (
+          JSON.stringify(snapshotOriginalRel) !==
+          JSON.stringify(snapshotActualRel)
+        ) {
+          motivos.push('mortalidad_cambio');
+        }
+      }
+    }
+
+    return { desactualizado: motivos.length > 0, motivos };
+  }
+
+  /**
+   * El plan decide antes que la mortalidad: sin dia_objetivo no hay
+   * horizonte que fotografiar ni integrar, y las filas plan_sin_dia_objetivo
+   * quedan baratas (sin snapshot de mortalidad ni lectura de curva).
+   */
+  private async calcularAlimento(
+    tx: Prisma.TransactionClient,
+    loteId: number,
+    fechaIngreso: Date,
+    cantidadInicial: number,
+    marcaAlimento: string | null,
+    plan: {
+      estado_dia: string;
+      dia_objetivo: number | null;
+      curva_version_id: number | null;
+    },
+    diaCorte: number,
+  ) {
+    if (
+      plan.estado_dia !== 'calculado' ||
+      plan.dia_objetivo === null ||
+      plan.curva_version_id === null
+    ) {
+      return {
+        estado_alimento: 'plan_sin_dia_objetivo' as EstadoCalculoAlimento,
+        mortalidad_snapshot: Prisma.DbNull,
+        muertes_al_corte: null,
+        aves_vivas_al_corte: null,
+        dia_objetivo_snapshot: null,
+        curva_version_id_snapshot: null,
+        consumo_por_ave_g: null,
+        consumo_total_kg: null,
+        estado_desglose: null,
+        version_desglose: null,
+        marca_alimento_snapshot: null,
+        renglones: [] as RenglonDesglose[],
+      };
+    }
+
+    const registros = await tx.registroMortalidad.findMany({
+      where: { lote_id: loteId },
+      select: { fecha: true, cantidad_aves: true },
+    });
+
+    const clasificacion = clasificarMortalidad(
+      fechaIngreso,
+      registros.map((r) => ({
+        fecha: r.fecha,
+        cantidadAves: r.cantidad_aves,
+      })),
+      diaCorte,
+      cantidadInicial,
+    );
+
+    if (!clasificacion.valido) {
+      throw new ConflictException({
+        codigo: 'mortalidad_incoherente',
+        message:
+          'Los registros de mortalidad del lote no permiten calcular el alimento',
+        detalles: clasificacion.violaciones,
+      });
+    }
+
+    // Defensa en profundidad: clasificarMortalidad ya garantiza estas
+    // invariantes por construccion. Si esto llega a fallar es un bug en nuestro
+    // propio codigo, no un error de negocio -- por eso Error, no ConflictException.
+    if (
+      !validarSnapshotMortalidad(clasificacion.snapshot, {
+        diaCorte,
+        cantidadInicialSnapshot: cantidadInicial,
+        muertesAlCorteEsperadas: clasificacion.muertesAlCorte,
+        avesVivasAlCorteEsperadas: clasificacion.avesVivasAlCorte,
+      })
+    ) {
+      throw new Error(
+        'clasificarMortalidad produjo un snapshot que no pasa su propia validacion de invariantes',
+      );
+    }
+
+    const puntos = await tx.puntoCurvaGenetica.findMany({
+      where: {
+        curva_version_id: plan.curva_version_id,
+        consumo_acumulado_g: { not: null },
+      },
+      orderBy: { dia: 'asc' },
+      select: { dia: true, consumo_acumulado_g: true },
+    });
+
+    const resultado = integrarConsumo(
+      puntos.map((p) => ({
+        dia: p.dia,
+        consumoAcumuladoG: p.consumo_acumulado_g as Prisma.Decimal,
+      })),
+      plan.dia_objetivo,
+      (dia) =>
+        avesVivasEnDia(clasificacion.snapshot, cantidadInicial, diaCorte, dia),
+    );
+
+    const base = {
+      mortalidad_snapshot:
+        clasificacion.snapshot as unknown as Prisma.InputJsonValue,
+      muertes_al_corte: clasificacion.muertesAlCorte,
+      aves_vivas_al_corte: clasificacion.avesVivasAlCorte,
+      dia_objetivo_snapshot: plan.dia_objetivo,
+      curva_version_id_snapshot: plan.curva_version_id,
+    };
+
+    if (resultado.estado !== 'calculado') {
+      return {
+        ...base,
+        estado_alimento: resultado.estado as EstadoCalculoAlimento,
+        consumo_por_ave_g: null,
+        consumo_total_kg: null,
+        estado_desglose: null,
+        version_desglose: null,
+        marca_alimento_snapshot: null,
+        renglones: [] as RenglonDesglose[],
+      };
+    }
+
+    const filasCatalogo = await tx.tipoAlimento.findMany({
+      where: { activo: true, marca: { not: null } },
+      select: {
+        id: true,
+        nombre: true,
+        marca: true,
+        etapa: true,
+        dia_inicio: true,
+        dia_fin: true,
+      },
+    });
+
+    const desglose = construirDesgloseAlimento({
+      marcaAlimento,
+      diaObjetivoSnapshot: plan.dia_objetivo,
+      consumoPorAveGEsperado: resultado.consumoPorAveG,
+      consumoTotalKgEsperado: resultado.consumoTotalKg,
+      catalogo: filasCatalogo.map((f) => ({
+        id: f.id,
+        nombre: f.nombre,
+        marca: f.marca,
+        etapa: f.etapa,
+        diaInicio: f.dia_inicio,
+        diaFin: f.dia_fin,
+      })),
+      acumuladoPorAveEnDia: resultado.acumuladoPorAveEnDia,
+      acumuladoTotalKgEnDia: resultado.acumuladoTotalKgEnDia,
+    });
+
+    return {
+      ...base,
+      estado_alimento: 'calculado' as EstadoCalculoAlimento,
+      consumo_por_ave_g: resultado.consumoPorAveG,
+      consumo_total_kg: resultado.consumoTotalKg,
+      estado_desglose: desglose.estado,
+      version_desglose: desglose.versionDesglose,
+      marca_alimento_snapshot: desglose.marcaAlimentoSnapshot,
+      renglones: desglose.renglones,
+    };
+  }
+
+  private mapearEstimacion(estimacion: EstimacionConRelaciones) {
+    return {
+      id: estimacion.id,
+      version: estimacion.version,
+      vigente: estimacion.vigente,
+      estado_alimento: estimacion.estado_alimento,
+      version_algoritmo: estimacion.version_algoritmo,
+      motivo: estimacion.motivo,
+      fecha_creacion: estimacion.fecha_creacion,
+      creado_por: estimacion.creado_por,
+      plan: {
+        id: estimacion.plan.id,
+        version: estimacion.plan.version,
+        dia_objetivo: estimacion.dia_objetivo_snapshot,
+        fecha_salida_calculada: estimacion.plan.fecha_salida_calculada,
+        curva: estimacion.curva_version_snapshot
+          ? {
+              version_id: estimacion.curva_version_snapshot.id,
+              linea_genetica: estimacion.curva_version_snapshot.linea_genetica,
+              sexo: estimacion.curva_version_snapshot.sexo,
+              version: estimacion.curva_version_snapshot.version,
+              fuente: estimacion.curva_version_snapshot.fuente,
+            }
+          : null,
+      },
+      corte: {
+        dia: estimacion.dia_corte,
+        cantidad_inicial: estimacion.cantidad_inicial_snapshot,
+        muertes: estimacion.muertes_al_corte,
+        aves_vivas: estimacion.aves_vivas_al_corte,
+        mortalidad_por_dia: this.extraerSnapshotValidado(estimacion),
+      },
+      resultado: {
+        consumo_por_ave_g: estimacion.consumo_por_ave_g,
+        consumo_total_kg: estimacion.consumo_total_kg,
+      },
+      desglose: this.extraerDesgloseValidado(estimacion),
+    };
+  }
+
+  async crear(
+    loteId: number,
+    dto: CrearEstimacionAlimentoDto,
+    solicitante: Solicitante,
+  ) {
+    await this.validarLote(loteId, solicitante);
+
+    const estimacion = await this.prisma.$transaction(async (tx) => {
+      // Orden de bloqueo OBLIGATORIO: lotes primero, planes_lote despues --
+      // el mismo que plan-lote.service.ts. Invertirlo puede deadlockear dos
+      // transacciones concurrentes que tomen los locks en orden distinto.
+      const [lote] = await tx.$queryRaw<
+        Array<{
+          estado: string;
+          cantidad_inicial: number;
+          fecha_salida_real: Date | null;
+          marca_alimento: string | null;
+        }>
+      >`
+        SELECT "estado", "cantidad_inicial", "fecha_salida_real", "marca_alimento"
+        FROM "lotes"
+        WHERE "id" = ${loteId}
+        FOR UPDATE
+      `;
+      if (!lote) throw new NotFoundException('Lote no encontrado');
+      if (
+        lote.estado === 'inactivo' ||
+        lote.estado === 'finalizado' ||
+        lote.fecha_salida_real !== null
+      ) {
+        throw new ConflictException(
+          'Un lote inactivo, finalizado o con fecha de salida real no admite nuevas estimaciones de alimento',
+        );
+      }
+
+      const [plan] = await tx.$queryRaw<
+        Array<{
+          id: number;
+          estado_dia: string;
+          dia_objetivo: number | null;
+          curva_version_id: number | null;
+          fecha_ingreso_snapshot: Date;
+        }>
+      >`
+        SELECT "id", "estado_dia", "dia_objetivo", "curva_version_id",
+               "fecha_ingreso_snapshot"
+        FROM "planes_lote"
+        WHERE "lote_id" = ${loteId} AND "vigente"
+        FOR UPDATE
+      `;
+      if (!plan) {
+        throw new NotFoundException(
+          'Este lote no tiene un plan vigente al que estimarle alimento',
+        );
+      }
+
+      // El reloj es el del PLAN (fecha_ingreso_snapshot), nunca el de
+      // Lote.fecha_ingreso: ese campo es editable por PATCH /lotes/:id
+      // despues de que el plan ya se calculo, y esta estimacion debe
+      // seguir siendo reproducible contra la fecha que el plan congelo.
+      // Lote con ingreso futuro (planificacion): diaDeVida da 0 o negativo,
+      // el max lo deja en 0. Ver diseño Fase 2A, "dia_corte = 0".
+      const diaCorte = Math.max(0, diaDeVida(plan.fecha_ingreso_snapshot));
+
+      // Se calcula ANTES de jubilar/versionar: un 409 aqui no debe dejar
+      // rastro (ni version quemada, ni fila jubilada de mas).
+      const datosCalculo = await this.calcularAlimento(
+        tx,
+        loteId,
+        plan.fecha_ingreso_snapshot,
+        lote.cantidad_inicial,
+        lote.marca_alimento,
+        plan,
+        diaCorte,
+      );
+
+      await tx.estimacionAlimentoPlan.updateMany({
+        where: { plan_lote_id: plan.id, vigente: true },
+        data: { vigente: false },
+      });
+
+      // version = maximo historico + 1, nunca 1 fijo (el bug de Umbrales).
+      const ultima = await tx.estimacionAlimentoPlan.findFirst({
+        where: { plan_lote_id: plan.id },
+        orderBy: { version: 'desc' },
+        select: { version: true },
+      });
+      const version = ultima ? ultima.version + 1 : 1;
+
+      const { renglones, ...datosParaGuardar } = datosCalculo;
+
+      try {
+        return await tx.estimacionAlimentoPlan.create({
+          data: {
+            plan_lote_id: plan.id,
+            version,
+            version_algoritmo: ALGORITMO_ACTUAL,
+            dia_corte: diaCorte,
+            cantidad_inicial_snapshot: lote.cantidad_inicial,
+            motivo: dto.motivo,
+            creado_por_id: solicitante.id,
+            ...datosParaGuardar,
+            renglones_alimento: {
+              create: renglones.map((r) => ({
+                orden: r.orden,
+                tipo_alimento_id: r.tipoAlimentoId,
+                tipo_alimento_nombre_snapshot: r.tipoAlimentoNombreSnapshot,
+                etapa_snapshot: r.etapaSnapshot,
+                dia_inicio: r.diaInicio,
+                dia_fin: r.diaFin,
+                extendido_hasta_dia_objetivo: r.extendidoHastaDiaObjetivo,
+                consumo_por_ave_g: r.consumoPorAveG,
+                consumo_total_kg: r.consumoTotalKg,
+              })),
+            },
+          },
+          select: ESTIMACION_SELECT,
+        });
+      } catch (error: unknown) {
+        if (this.esConflictoUnico(error)) {
+          throw new ConflictException(
+            'Ya existe una estimación vigente para este plan; vuelve a intentarlo',
+          );
+        }
+        if (esViolacionDeLlaveForanea(error)) {
+          throw new ConflictException(
+            'El catálogo de alimentos cambió mientras se calculaba la estimación; vuelve a intentarlo',
+          );
+        }
+        throw error;
+      }
+    });
+
+    const planVigente = await this.construirPlanVigente(
+      loteId,
+      solicitante,
+      estimacion.plan_lote_id,
+    );
+
+    return {
+      ...this.mapearEstimacion(estimacion),
+      efectiva: true,
+      plan_vigente: planVigente,
+      desactualizado: false,
+      motivos_desactualizacion: [] as MotivoDesactualizacion[],
+      antiguedad_dias: 0,
+    };
+  }
+
+  async obtener(loteId: number, solicitante: Solicitante) {
+    await this.validarLote(loteId, solicitante);
+
+    // La MAS RECIENTE del lote, no solo del plan vigente: puede pertenecer
+    // a un PlanLote ya jubilado. GET nunca da 404 solo porque el plan
+    // vigente todavia no tiene estimacion propia.
+    const estimacion = await this.prisma.estimacionAlimentoPlan.findFirst({
+      where: { plan: { lote_id: loteId } },
+      orderBy: [{ plan: { version: 'desc' } }, { version: 'desc' }],
+      select: ESTIMACION_SELECT,
+    });
+    if (!estimacion) {
+      throw new NotFoundException(
+        'Este lote no tiene ninguna estimación de alimento',
+      );
+    }
+
+    const loteActual = await this.prisma.lote.findUniqueOrThrow({
+      where: { id: loteId },
+      select: { cantidad_inicial: true, marca_alimento: true },
+    });
+
+    const planVigente = await this.construirPlanVigente(
+      loteId,
+      solicitante,
+      estimacion.plan_lote_id,
+    );
+
+    const { desactualizado, motivos } = await this.calcularDesactualizado(
+      estimacion,
+      loteActual.cantidad_inicial,
+      loteActual.marca_alimento,
+      planVigente,
+    );
+
+    // El reloj es el del plan que produjo ESTA estimacion, no el lote actual.
+    const antiguedadDias =
+      Math.max(0, diaDeVida(estimacion.plan.fecha_ingreso_snapshot)) -
+      estimacion.dia_corte;
+
+    return {
+      ...this.mapearEstimacion(estimacion),
+      efectiva: true,
+      plan_vigente: planVigente,
+      desactualizado,
+      motivos_desactualizacion: motivos,
+      antiguedad_dias: antiguedadDias,
+    };
+  }
+
+  async historial(
+    loteId: number,
+    { page, limit }: PaginationQueryDto,
+    solicitante: Solicitante,
+  ) {
+    await this.validarLote(loteId, solicitante);
+
+    const where = { plan: { lote_id: loteId } };
+
+    // Una sola consulta extra para saber cual id es la globalmente mas
+    // reciente -- NUNCA una consulta por fila. En una pagina puede haber
+    // cero o una 'efectiva: true'; en todo el historial, siempre una sola.
+    const [data, total, masReciente] = await this.prisma.$transaction([
+      this.prisma.estimacionAlimentoPlan.findMany({
+        where,
+        select: ESTIMACION_SELECT,
+        orderBy: [{ plan: { version: 'desc' } }, { version: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.estimacionAlimentoPlan.count({ where }),
+      this.prisma.estimacionAlimentoPlan.findFirst({
+        where,
+        orderBy: [{ plan: { version: 'desc' } }, { version: 'desc' }],
+        select: { id: true },
+      }),
+    ]);
+
+    return paginate(
+      data.map((estimacion) => ({
+        ...this.mapearEstimacion(estimacion),
+        efectiva: masReciente?.id === estimacion.id,
+      })),
+      total,
+      page,
+      limit,
+    );
+  }
+}

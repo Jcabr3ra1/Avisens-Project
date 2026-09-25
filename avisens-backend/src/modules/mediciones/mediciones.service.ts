@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -14,6 +15,7 @@ import {
 } from '../../common/auth/alcance';
 import { AlertasService } from '../alertas/alertas.service';
 import { EstadoSensor, Prisma } from '@prisma/client';
+import { clasificarFalloAlerta } from '../../common/errores/clasificar-error';
 
 const MEDICION_SELECT = {
   id: true,
@@ -46,6 +48,7 @@ export interface UltimasLecturasPorSensor {
 }
 @Injectable()
 export class MedicionesService {
+  private readonly logger = new Logger(MedicionesService.name);
   constructor(
     private prisma: PrismaService,
     private alertas: AlertasService,
@@ -81,11 +84,31 @@ export class MedicionesService {
       },
       select: MEDICION_SELECT,
     });
-    await this.alertas.evaluarLectura(
-      dto.sensor_id,
-      dto.valor,
-      dto.fecha_hora ? new Date(dto.fecha_hora) : undefined,
-    );
+
+    try {
+      await this.alertas.evaluarLectura(
+        dto.sensor_id,
+        dto.valor,
+        dto.fecha_hora ? new Date(dto.fecha_hora) : undefined,
+      );
+    } catch (error: unknown) {
+      const { clasificacion, codigo } = clasificarFalloAlerta(error);
+      this.logger.error(
+        JSON.stringify({
+          evento: 'mediciones.alerta.fallida',
+          medicion_id: medicion.id.toString(),
+          sensor_id: dto.sensor_id,
+          clasificacion,
+          codigo,
+        }),
+      );
+      return {
+        ...medicion,
+        advertencia_evaluacion:
+          'No se pudo completar el procesamiento de alertas para esta lectura',
+      };
+    }
+
     return medicion;
   }
 

@@ -83,6 +83,9 @@ model Usuario {
   accionamientos             AccionamientoEquipo[]
   alertas_responsable        Alerta[]               @relation("AlertaResponsable")
   alertas_escalado           Alerta[]               @relation("AlertaEscalado")
+  curvas_geneticas_publicadas CurvaGeneticaVersion[]
+  planes_lote_creados        PlanLote[]
+  estimaciones_alimento_creadas EstimacionAlimentoPlan[]
   evidencias_alertas         EvidenciaAlerta[]
   ordenes_compra             OrdenCompra[]
   movimientos_financieros    MovimientoFinanciero[]
@@ -453,9 +456,11 @@ model Lote {
   fecha_salida_estimada  DateTime?  @db.Date
   fecha_salida_real      DateTime?  @db.Date
   estado                 EstadoLote @default(activo)
+  linea_genetica_id      Int?
 
-  galpon    Galpon    @relation(fields: [galpon_id], references: [id])
-  proveedor Proveedor? @relation(fields: [proveedor_id], references: [id])
+  galpon         Galpon         @relation(fields: [galpon_id], references: [id])
+  proveedor      Proveedor?     @relation(fields: [proveedor_id], references: [id], onDelete: Restrict)
+  linea_genetica LineaGenetica? @relation(fields: [linea_genetica_id], references: [id], onDelete: Restrict)
 
   pesajes                 Pesaje[]
   registros_mortalidad    RegistroMortalidad[]
@@ -471,6 +476,7 @@ model Lote {
   indicadores             IndicadorLote[]
   analisis_bioacustico    AnalisisBioacustico[]
   analisis_vision         AnalisisVision[]
+  planes                  PlanLote[]
 
   @@index([galpon_id, estado])
   @@map("lotes")
@@ -491,7 +497,8 @@ model TipoAlimento {
   consumo_total_esperado_g Float?
   activo                   Boolean @default(true)
 
-  consumos_diarios ConsumoDiario[]
+  consumos_diarios              ConsumoDiario[]
+  renglones_estimacion_alimento RenglonEstimacionAlimento[]
 
   @@map("tipos_alimento")
 }
@@ -816,6 +823,7 @@ model Prospecto {
 
   @@index([asesor_asignado_id])
   @@index([usuario_convertido_id])
+  @@index([whatsapp_id])
   @@map("prospectos")
 }
 
@@ -970,6 +978,220 @@ model CurvaObjetivo {
 }
 
 // ---------------------------------------------------------------------------
+// Referencia genetica (Fase 0)
+//
+// La curva de peso/consumo/FCR es de la LINEA GENETICA (Ross, Cobb), no de la
+// marca de alimento: todas las marcas reproducen el estandar del genetista.
+// CurvaObjetivo sigue intacta sirviendo a indicadores y predicciones; esto es
+// una referencia nueva y aparte, que nace vacia.
+// ---------------------------------------------------------------------------
+model LineaGenetica {
+  id        Int   @id @default(autoincrement())
+  codigo String @unique
+  nombre String
+  descripcion String?
+  activo Boolean @default(true)
+  fecha_actualizacion DateTime @updatedAt
+
+  curvas               CurvaGeneticaVersion[]
+  lotes                Lote[]
+  planes_como_snapshot PlanLote[]
+
+  @@map("lineas_geneticas")
+}
+
+enum SexoCurva {
+  macho
+  hembra
+  mixto
+}
+
+enum EstadoCurvaVersion {
+  borrador
+  publicada
+}
+
+// La version es del CONJUNTO, no de la fila: versionar por punto permitiria
+// mezclar el dia 7 de una version con el dia 14 de otra y construir una curva
+// que nunca existio.
+
+model CurvaGeneticaVersion {
+  id                Int                @id @default(autoincrement())
+  linea_genetica_id Int
+  sexo              SexoCurva
+  version           Int
+  estado            EstadoCurvaVersion @default(borrador)
+  vigente           Boolean            @default(false)
+  fuente            String
+  fecha_publicacion DateTime?
+  publicada_por_id  Int?
+  fecha_creacion    DateTime           @default(now())
+
+  linea_genetica LineaGenetica        @relation(fields: [linea_genetica_id], references: [id], onDelete: Restrict)
+  publicada_por  Usuario?             @relation(fields: [publicada_por_id], references: [id], onDelete: Restrict)
+  puntos         PuntoCurvaGenetica[]
+  planes         PlanLote[]
+  estimaciones_como_snapshot EstimacionAlimentoPlan[]
+
+  @@unique([linea_genetica_id, sexo, version])
+  @@index([linea_genetica_id, sexo])
+  @@map("curvas_geneticas_version")
+}
+
+model PuntoCurvaGenetica {
+  id                  Int      @id @default(autoincrement())
+  curva_version_id    Int
+  dia                 Int
+  peso_esperado_g     Decimal  @db.Decimal(10, 2)
+  consumo_diario_g    Decimal? @db.Decimal(10, 2)
+  consumo_acumulado_g Decimal? @db.Decimal(12, 2)
+  fcr_objetivo        Decimal? @db.Decimal(6, 3)
+
+  curva_version CurvaGeneticaVersion @relation(fields: [curva_version_id], references: [id], onDelete: Cascade)
+
+  @@unique([curva_version_id, dia])
+  @@map("puntos_curva_genetica")
+}
+
+// ---------------------------------------------------------------------------
+// Plan de produccion del lote (Fase 1)
+// ---------------------------------------------------------------------------
+enum EstadoCalculoPlan {
+  calculado
+  sin_curva
+  fuera_de_rango
+  datos_insuficientes
+}
+
+// La version es del plan completo, igual que CurvaGeneticaVersion: cambiar el
+// objetivo o recalcular crea una version nueva, nunca edita la vigente.
+model PlanLote {
+  id                         Int               @id @default(autoincrement())
+  lote_id                    Int
+  version                    Int
+  vigente                    Boolean           @default(true)
+  peso_objetivo_g            Decimal           @db.Decimal(10, 2)
+  estado_dia                 EstadoCalculoPlan
+  curva_version_id           Int?
+  linea_genetica_id_snapshot Int?
+  sexo_curva_snapshot        SexoCurva
+  fecha_ingreso_snapshot     DateTime          @db.Date
+  dia_objetivo               Int?
+  dia_objetivo_interpolado   Decimal?          @db.Decimal(9, 6)
+  fecha_salida_calculada     DateTime?         @db.Date
+  motivo                     String?
+  creado_por_id              Int
+  fecha_creacion             DateTime          @default(now())
+
+  lote                    Lote                  @relation(fields: [lote_id], references: [id], onDelete: Restrict)
+  curva_version           CurvaGeneticaVersion? @relation(fields: [curva_version_id], references: [id], onDelete: Restrict)
+  linea_genetica_snapshot LineaGenetica?        @relation(fields: [linea_genetica_id_snapshot], references: [id], onDelete: Restrict)
+  creado_por              Usuario               @relation(fields: [creado_por_id], references: [id], onDelete: Restrict)
+  estimaciones_alimento   EstimacionAlimentoPlan[]
+
+  @@unique([lote_id, version])
+  @@index([lote_id])
+  @@map("planes_lote")
+}
+
+// ---------------------------------------------------------------------------
+// Estimacion de alimento del plan (Fase 2A)
+//
+// Hija de PlanLote y versionada por su cuenta: sus disparadores de recalculo
+// (pasa el tiempo, se registra mortalidad, cambia el algoritmo) son ajenos a
+// los de PlanLote y no deben forzar una version nueva de plan ni reescribir
+// su matriz de estados. El FK a planes_lote.id congela todo el lado del plan:
+// esas filas nunca se editan, solo se voltea su bandera vigente.
+//
+// Cada fila es "una estimacion hecha en una fecha concreta", no el plan del
+// dia cero: usa mortalidad real hasta dia_corte y la congela hacia adelante
+// (convencion fin del dia: N(d) = inicial - M(min(d-1, dia_corte))).
+// ---------------------------------------------------------------------------
+
+enum EstadoCalculoAlimento {
+  calculado
+  plan_sin_dia_objetivo
+  sin_consumo_en_curva
+  consumo_insuficiente
+  consumo_fuera_de_rango
+}
+
+enum EstadoDesgloseAlimento {
+  legado_sin_desglose
+  lote_sin_marca_alimento
+  marca_sin_catalogo
+  catalogo_invalido
+  catalogo_ambiguo
+  catalogo_incompleto
+  calculado
+}
+
+model EstimacionAlimentoPlan {
+  id           Int     @id @default(autoincrement())
+  plan_lote_id Int
+  version      Int
+  vigente      Boolean @default(true)
+
+  estado_alimento EstadoCalculoAlimento
+
+  // Cubre interpolacion + diferenciacion diaria + convencion de mortalidad +
+  // disciplina de redondeo. Si cualquiera cambia, se bumpea esta constante.
+  version_algoritmo String
+  cantidad_inicial_snapshot Int
+  dia_corte                 Int
+  mortalidad_snapshot       Json?
+  muertes_al_corte          Int?
+  aves_vivas_al_corte       Int?
+  dia_objetivo_snapshot     Int?
+  curva_version_id_snapshot Int?
+
+  consumo_por_ave_g Decimal? @db.Decimal(12, 2)
+  consumo_total_kg  Decimal? @db.Decimal(14, 3)
+
+  estado_desglose         EstadoDesgloseAlimento?
+  version_desglose        String?
+  marca_alimento_snapshot String?
+
+  motivo         String?
+  creado_por_id  Int
+  fecha_creacion DateTime @default(now())
+
+  plan                   PlanLote                    @relation(fields: [plan_lote_id], references: [id], onDelete: Restrict)
+  curva_version_snapshot CurvaGeneticaVersion?       @relation(fields: [curva_version_id_snapshot], references: [id], onDelete: Restrict)
+  creado_por             Usuario                     @relation(fields: [creado_por_id], references: [id], onDelete: Restrict)
+  renglones_alimento     RenglonEstimacionAlimento[]
+
+  @@unique([plan_lote_id, version])
+  @@index([plan_lote_id])
+  @@map("estimaciones_alimento_plan")
+}
+
+model RenglonEstimacionAlimento {
+  id            Int @id @default(autoincrement())
+  estimacion_id Int
+  orden         Int
+
+  tipo_alimento_id              Int?
+  tipo_alimento_nombre_snapshot String?
+  etapa_snapshot                String?
+
+  dia_inicio                   Int
+  dia_fin                      Int
+  extendido_hasta_dia_objetivo Boolean @default(false)
+
+  consumo_por_ave_g Decimal @db.Decimal(12, 2)
+  consumo_total_kg  Decimal @db.Decimal(14, 3)
+
+  estimacion    EstimacionAlimentoPlan @relation(fields: [estimacion_id], references: [id], onDelete: Cascade)
+  tipo_alimento TipoAlimento?          @relation(fields: [tipo_alimento_id], references: [id], onDelete: Restrict)
+
+  @@unique([estimacion_id, orden])
+  @@index([estimacion_id])
+  @@index([tipo_alimento_id])
+  @@map("renglones_estimacion_alimento")
+}
+
+// ---------------------------------------------------------------------------
 // Accionamientos de equipos (historial de encendido/apagado, manual o automatico)
 // ---------------------------------------------------------------------------
 enum EstadoAccionamiento {
@@ -1022,12 +1244,19 @@ enum EstadoAlerta {
   cerrada
 }
 
+enum OrigenAlerta {
+  automatica
+  manual
+  desconocido
+}
+
 model Alerta {
   id                Int          @id @default(autoincrement())
   galpon_id         Int
   lote_id           Int?
   sensor_id         Int?
   tipo              String
+  origen            OrigenAlerta @default(desconocido)
   criticidad        String
   valor_detectado   Float?
   valor_umbral      Float?

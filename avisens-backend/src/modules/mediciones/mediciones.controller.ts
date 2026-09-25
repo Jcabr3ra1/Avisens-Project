@@ -7,7 +7,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -17,6 +22,7 @@ import { MedicionesService } from './mediciones.service';
 import { CreateMedicionDto } from './dto/create-medicion.dto';
 import { QueryMedicionesDto } from './dto/query-mediciones.dto';
 import { QueryUltimasLecturasDto } from './dto/query-ultimas-lecturas.dto';
+import { MedicionRegistradaDto } from './dto/medicion-registrada.dto';
 
 interface AuthRequest extends Request {
   user: { id: number; email: string; rol: string };
@@ -33,6 +39,11 @@ export class MedicionesController {
   @Post()
   @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Registrar una medición de un sensor' })
+  @ApiCreatedResponse({
+    type: MedicionRegistradaDto,
+    description:
+      'La medición siempre queda guardada. advertencia_evaluacion solo aparece si falló el procesamiento de alertas para esta lectura.',
+  })
   registrar(@Body() dto: CreateMedicionDto, @Req() req: AuthRequest) {
     return this.medicionesService.registrar(dto, req.user);
   }

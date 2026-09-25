@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { IngestService } from './ingest.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -139,5 +140,66 @@ describe('IngestService', () => {
     expect(res.duplicada).toBe(true);
     expect(prisma.sensor.findMany).not.toHaveBeenCalled();
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  describe('fallo aislado de evaluarLectura', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('un fallo de alertas no rompe la ingesta, y queda registrado aparte', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 1, codigo: 'TEMP-G1-01' },
+        { id: 2, codigo: 'HUM-G1-01' },
+      ]);
+      alertas.evaluarLectura
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('fallo simulado'));
+      const errorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+
+      const res = await service.registrar(
+        {
+          lecturas: [
+            { codigo: 'TEMP-G1-01', valor: 24.8 },
+            { codigo: 'HUM-G1-01', valor: 69 },
+          ],
+        },
+        dispositivo,
+      );
+
+      expect(res.registradas).toBe(2);
+      expect(Object.keys(res)).toEqual([
+        'id_lote',
+        'duplicada',
+        'registradas',
+        'ignoradas',
+      ]);
+
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      const [linea] = errorSpy.mock.calls[0] as [string];
+      const registro = JSON.parse(linea) as Record<string, unknown>;
+      expect(registro.evento).toBe('iot.alerta.fallida');
+      expect(registro.mediciones_guardadas).toBe(2);
+      expect(registro.alertas_fallidas).toBe(1);
+      expect(registro.sensores).toEqual([2]);
+      expect(registro.clasificacion).toEqual({ desconocida: 1 });
+    });
+
+    it('sin fallos, no emite la línea de alerta fallida', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 1, codigo: 'TEMP-G1-01' },
+      ]);
+      alertas.evaluarLectura.mockResolvedValue(undefined);
+      const errorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+
+      await service.registrar(
+        { lecturas: [{ codigo: 'TEMP-G1-01', valor: 24.8 }] },
+        dispositivo,
+      );
+
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
   });
 });

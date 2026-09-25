@@ -26,7 +26,7 @@ describe('AuthService', () => {
   let service: AuthService;
 
   const prisma = {
-    usuario: { findUnique: jest.fn() },
+    usuario: { findUnique: jest.fn(), findMany: jest.fn() },
     sesion: {
       create: jest.fn(),
       findMany: jest.fn(),
@@ -34,6 +34,7 @@ describe('AuthService', () => {
       deleteMany: jest.fn(),
     },
     seguridadCuenta: { upsert: jest.fn() },
+    notificacion: { createMany: jest.fn() },
   };
   const jwt = { signAsync: jest.fn() };
   const config = { getOrThrow: jest.fn(), get: jest.fn() };
@@ -113,6 +114,58 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
 
       expect(prisma.seguridadCuenta.upsert).toHaveBeenCalled();
+    });
+
+    it('avisa a administración al tercer intento fallido', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(
+        usuarioFalso({
+          seguridad_cuenta: { id: 1, intentos_fallidos: 2 },
+        }),
+      );
+      prisma.usuario.findMany.mockResolvedValue([{ id: 9 }]);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      await expect(
+        service.login({ email: 'test@avisens.com', password: 'mala' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(prisma.notificacion.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            usuario_id: 9,
+            tipo: 'seguridad_cuenta',
+            titulo: 'Intentos de acceso por revisar',
+            referencia_tipo: 'seguridad_cuenta',
+            referencia_id: 1,
+          }),
+        ],
+      });
+    });
+
+    it('avisa a administración cuando bloquea una cuenta', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(
+        usuarioFalso({
+          seguridad_cuenta: { id: 1, intentos_fallidos: 4 },
+        }),
+      );
+      prisma.usuario.findMany.mockResolvedValue([{ id: 9 }]);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      await expect(
+        service.login({ email: 'test@avisens.com', password: 'mala' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(prisma.notificacion.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            usuario_id: 9,
+            tipo: 'seguridad_cuenta',
+            titulo: 'Cuenta bloqueada temporalmente',
+            referencia_tipo: 'seguridad_cuenta',
+            referencia_id: 1,
+          }),
+        ],
+      });
     });
 
     it('con credenciales correctas devuelve tokens, crea sesión y resetea intentos', async () => {
