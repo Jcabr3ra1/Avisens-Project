@@ -8,7 +8,7 @@ import { IndicadoresService } from '../src/modules/indicadores/indicadores.servi
 
 // Contra Postgres real (no Prisma simulado): Pesaje.fecha es @db.Date, así
 // que varios pesajes del mismo día empatan de verdad en la base. Los tests
-// unitarios de cada servicio (mediciones.service.spec.ts / pesajes.service.spec.ts)
+// unitarios de cada servicio (indicadores.service.spec.ts / pesajes.service.spec.ts)
 // solo verifican que se envía el orderBy correcto a Prisma -- esto verifica
 // que Postgres, con ese orderBy, desempata como se espera.
 describe('Pesajes -- desempate por id cuando la fecha empata (e2e, Postgres real)', () => {
