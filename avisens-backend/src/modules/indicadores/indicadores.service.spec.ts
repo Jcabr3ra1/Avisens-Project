@@ -295,13 +295,34 @@ describe('IndicadoresService · generarAlertaDesvio', () => {
     expect(prisma.alerta.create).not.toHaveBeenCalled();
   });
 
-  it('no duplica si ya existe una alerta de desvio abierta', async () => {
-    ponerPorDebajo();
-    prisma.alerta.findFirst.mockResolvedValue({ id: 99 });
+  it.each(['abierta', 'en_proceso'] as const)(
+    'no duplica si ya existe una alerta de desvio automatica en estado %s',
+    async (estado) => {
+      // en_proceso es una alerta abierta pero ya aceptada por alguien -- si
+      // solo se mirara 'abierta', aceptarla dejaba la puerta abierta para
+      // que el siguiente calculo creara otra alerta de desvio duplicada.
+      ponerPorDebajo();
+      prisma.alerta.findFirst.mockResolvedValue({ id: 99, estado });
 
-    const r = await service.generarAlertaDesvio(1);
-    expect(r).toBeNull();
-    expect(prisma.alerta.create).not.toHaveBeenCalled();
+      const r = await service.generarAlertaDesvio(1);
+      expect(r).toBeNull();
+      expect(prisma.alerta.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it('la busqueda de "ya existe" considera abierta y en_proceso como activas', async () => {
+    ponerPorDebajo();
+    prisma.alerta.findFirst.mockResolvedValue(null);
+    prisma.alerta.create.mockResolvedValue({ id: 1 });
+
+    await service.generarAlertaDesvio(1);
+
+    const calls = prisma.alerta.findFirst.mock.calls as Array<
+      [{ where: Record<string, unknown> }]
+    >;
+    expect(calls[0][0].where.estado).toEqual({
+      in: ['abierta', 'en_proceso'],
+    });
   });
 
   it('crea la alerta cuando va por debajo y no hay una abierta', async () => {
@@ -319,7 +340,28 @@ describe('IndicadoresService · generarAlertaDesvio', () => {
       galpon_id: 7,
       lote_id: 1,
       tipo: 'desvio_peso',
+      origen: 'automatica',
       criticidad: 'media',
+    });
+  });
+
+  it('la busqueda de "ya existe" filtra por origen automatica -- no una manual del mismo tipo', async () => {
+    // Antes de este fix, esta busqueda no filtraba por origen: una alerta
+    // manual creada con el mismo tipo ('desvio_peso') bloqueaba en silencio
+    // la alerta automatica real, sin que nadie lo notara.
+    ponerPorDebajo();
+    prisma.alerta.findFirst.mockResolvedValue(null);
+    prisma.alerta.create.mockResolvedValue({ id: 1 });
+
+    await service.generarAlertaDesvio(1);
+
+    const calls = prisma.alerta.findFirst.mock.calls as Array<
+      [{ where: Record<string, unknown> }]
+    >;
+    expect(calls[0][0].where).toMatchObject({
+      lote_id: 1,
+      tipo: 'desvio_peso',
+      origen: 'automatica',
     });
   });
 });
