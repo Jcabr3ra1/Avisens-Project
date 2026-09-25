@@ -222,7 +222,7 @@ export class IndicadoresService {
         lote_id: loteId,
         tipo: ALERTA_TIPO_DESVIO,
         origen: 'automatica',
-        estado: 'abierta',
+        estado: { in: ['abierta', 'en_proceso'] },
       },
     });
     if (yaExiste) return null;
