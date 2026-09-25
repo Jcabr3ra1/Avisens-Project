@@ -453,3 +453,39 @@ describe('IndicadoresService · kpisFinancieros', () => {
   });
 
 });
+
+describe('IndicadoresService · listar', () => {
+  let service: IndicadoresService;
+
+  const prisma = {
+    lote: { findUnique: jest.fn() },
+    indicadorLote: { findMany: jest.fn() },
+  };
+
+  const admin = { id: 1, rol: 'Administrador' };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        IndicadoresService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get<IndicadoresService>(IndicadoresService);
+    prisma.lote.findUnique.mockResolvedValue({
+      galpon: { granja: { propietario_id: 1 } },
+    });
+    prisma.indicadorLote.findMany.mockResolvedValue([]);
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  it('devuelve el historico en orden cronologico (fecha ascendente) -- lote_id+fecha ya es unico, sin necesidad de desempate', async () => {
+    await service.listar(1, admin);
+
+    const calls = prisma.indicadorLote.findMany.mock.calls as Array<
+      [{ orderBy: unknown }]
+    >;
+    expect(calls[0][0].orderBy).toEqual({ fecha: 'asc' });
+  });
+});

@@ -17,7 +17,6 @@ describe('Pesajes -- desempate por id cuando la fecha empata (e2e, Postgres real
   let pesajesService: PesajesService;
   let indicadoresService: IndicadoresService;
 
-  const admin = { id: 0, rol: 'Administrador' };
   const sufijo = `${Date.now()}-${process.pid}`;
   const fechaEmpate = new Date('2026-06-15');
 
@@ -43,9 +42,13 @@ describe('Pesajes -- desempate por id cuando la fecha empata (e2e, Postgres real
     pesajesService = modulo.get(PesajesService);
     indicadoresService = modulo.get(IndicadoresService);
 
-    const rolPropietario = await prisma.rol.findFirstOrThrow({
+    // Autosuficiente: no asume que otra suite ya creo este rol. Mismo
+    // patron de nucleo.e2e-spec.ts (upsert, nunca se borra -- es dato de
+    // referencia compartido, no basura de este test).
+    const rolPropietario = await prisma.rol.upsert({
       where: { nombre: 'Propietario' },
-      select: { id: true },
+      update: {},
+      create: { nombre: 'Propietario' },
     });
 
     const organizacion = await prisma.organizacion.create({
@@ -129,12 +132,16 @@ describe('Pesajes -- desempate por id cuando la fecha empata (e2e, Postgres real
   });
 
   it('PesajesService.listar mantiene el orden id DESC entre pesajes con la misma fecha', async () => {
-    const pagina = await pesajesService.listar(admin, { page: 1, limit: 500 });
+    // Propietario acotado a sus propios lotes (no Admin con una pagina
+    // global): asi el alcance por rol ya garantiza que solo aparecen los
+    // 3 pesajes de este test, sin depender de una pagina lo bastante
+    // grande para no perderlos entre datos de otras pruebas.
+    const propietario = { id: ids.usuario, rol: 'Propietario' };
+    const pagina = await pesajesService.listar(propietario, {
+      page: 1,
+      limit: 10,
+    });
 
-    const misIds = pagina.data
-      .map((p) => p.id)
-      .filter((id) => ids.pesajes.includes(id));
-
-    expect(misIds).toEqual([...ids.pesajes].reverse());
+    expect(pagina.data.map((p) => p.id)).toEqual([...ids.pesajes].reverse());
   });
 });

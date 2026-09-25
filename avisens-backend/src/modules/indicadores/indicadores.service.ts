@@ -125,7 +125,7 @@ export class IndicadoresService {
     await this.verificarPropiedad(loteId, solicitante);
     return this.prisma.indicadorLote.findMany({
       where: { lote_id: loteId },
-      orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
+      orderBy: { fecha: 'asc' },
     });
   }
 
