@@ -139,4 +139,23 @@ describe('calcularKpisAdmin', () => {
     expect(kpis[3].valor).toBe('2/3')
     expect(kpis[3].progreso).toBe(66.7)
   })
+
+  it('si la consulta de últimas lecturas falló, avisa que no se pudo consultar en vez de decir "0% en línea"', () => {
+    const galpones = [
+      { sensores: [{ estado: 'lectura_no_disponible' }, { estado: 'lectura_no_disponible' }] },
+    ] as unknown as GalponMonitoreoVista[]
+    const kpis = calcularKpisAdmin([], [], colaVacia(), galpones)
+    expect(kpis[3].valor).toBe('—')
+    expect(kpis[3].detalle).toBe('No se pudo consultar el estado de los sensores')
+    expect(kpis[3].progreso).toBeNull()
+    expect(kpis[3].progresoTexto).toBeNull()
+  })
+
+  it('con una mezcla de caídos y no disponibles, prioriza avisar que faltó la consulta', () => {
+    const galpones = [
+      { sensores: [{ estado: 'offline' }, { estado: 'lectura_no_disponible' }] },
+    ] as unknown as GalponMonitoreoVista[]
+    const kpis = calcularKpisAdmin([], [], colaVacia(), galpones)
+    expect(kpis[3].detalle).toBe('No se pudo consultar el estado de los sensores')
+  })
 })

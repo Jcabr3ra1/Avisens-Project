@@ -1,7 +1,7 @@
 import type { Organizacion } from '@features/organizaciones/api/organizaciones'
 import type { Usuario } from '@shared/api'
 import type { Prospecto } from '@features/crm/api/prospectos'
-import type { GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import { tieneLecturaUtil, type GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { AtencionAdminData } from '../api/admin'
 import { esCriticidadAlta } from '@features/alertas/model/alerta'
 
@@ -100,8 +100,12 @@ export function calcularKpisAdmin(
   galpones: GalponMonitoreoVista[],
 ): KpiAdmin[] {
   const sensores = galpones.flatMap((galpon) => galpon.sensores)
-  const sensoresOnline = sensores.filter((sensor) => sensor.estado !== 'offline').length
-  const porcentajeOnline = sensores.length > 0
+  const sensoresOnline = sensores.filter((sensor) => tieneLecturaUtil(sensor.estado)).length
+  // Si la consulta de últimas lecturas falló, todo sensor activo queda en
+  // 'lectura_no_disponible' — no hay porcentaje que calcular, porque no
+  // comprobamos nada: "0% en línea" mentiría diciendo que sí lo hicimos.
+  const sensoresNoDisponibles = sensores.filter((sensor) => sensor.estado === 'lectura_no_disponible').length
+  const porcentajeOnline = sensores.length > 0 && sensoresNoDisponibles === 0
     ? Math.round((sensoresOnline / sensores.length) * 1000) / 10
     : null
 
@@ -141,11 +145,15 @@ export function calcularKpisAdmin(
     },
     {
       etiqueta: 'Sensores en línea',
-      valor: sensores.length > 0 ? `${sensoresOnline}/${sensores.length}` : '—',
-      detalle: porcentajeOnline === null ? 'Sin sensores instalados' : `${porcentajeOnline}% en línea`,
+      valor: sensoresNoDisponibles > 0 || sensores.length === 0 ? '—' : `${sensoresOnline}/${sensores.length}`,
+      detalle: sensoresNoDisponibles > 0
+        ? 'No se pudo consultar el estado de los sensores'
+        : porcentajeOnline === null ? 'Sin sensores instalados' : `${porcentajeOnline}% en línea`,
       icono: 'sensor',
       progreso: porcentajeOnline,
-      progresoTexto: sensores.length > 0 ? `${sensoresOnline} de ${sensores.length} sensores en línea` : null,
+      progresoTexto: sensoresNoDisponibles === 0 && sensores.length > 0
+        ? `${sensoresOnline} de ${sensores.length} sensores en línea`
+        : null,
     },
   ]
 }

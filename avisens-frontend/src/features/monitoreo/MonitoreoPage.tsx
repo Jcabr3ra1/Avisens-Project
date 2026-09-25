@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import {
   useMonitoreoAmbiental,
   formatearUltimaLectura,
+  tieneLecturaUtil,
   type GalponMonitoreoVista,
   type SensorVista,
   type EstadoSensorVista,
@@ -21,7 +22,7 @@ import './MonitoreoPage.css'
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 function MonitoreoPage() {
-  const { galpones, cargando, error } = useMonitoreoAmbiental()
+  const { galpones, cargando, error, avisoUltimas } = useMonitoreoAmbiental()
 
   // Galpón seleccionado en el selector superior
   const [galponId, setGalponId] = useState<number | null>(null)
@@ -40,8 +41,8 @@ function MonitoreoPage() {
   const advertencia = galpon?.sensores.filter(s => s.estado === 'advertencia').length ?? 0
   const optimos     = galpon?.sensores.filter(s => s.estado === 'optimo').length ?? 0
 
-  function abrirDetalle(sensor: SensorVista) {
-    if (sensor.estado === 'offline') return
+ function abrirDetalle(sensor: SensorVista) {
+    if (!tieneLecturaUtil(sensor.estado)) return
     setSensorActivo(sensor)
   }
 
@@ -71,6 +72,7 @@ function MonitoreoPage() {
       />
 
       {error && <div className="mon-alert adm-alerta" role="alert">{error}</div>}
+      {!error && avisoUltimas && <div className="mon-alert adm-aviso" role="status">{avisoUltimas}</div>}
 
       {galpones.length === 0 ? (
         <p className="mon-cargando">No hay galpones registrados todavía.</p>
@@ -171,11 +173,12 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
     : 50
 
   const etiquetaEstado: Record<EstadoSensorVista, string> = {
-    optimo:      'Óptimo',
-    advertencia: 'Advertencia',
-    critico:     'Crítico',
-    sin_umbral:  'Sin umbral',
-    offline:     'Sin señal',
+    optimo:               'Óptimo',
+    advertencia:          'Advertencia',
+    critico:               'Crítico',
+    sin_umbral:            'Sin umbral',
+    offline:               'Sin señal',
+    lectura_no_disponible: 'No disponible',
   }
 
   return (
@@ -185,12 +188,16 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
         'mon-sensor-card',
         `mon-sensor-card--${sensor.estado}`,
         activo ? 'mon-sensor-card--activo' : '',
-        sensor.estado !== 'offline' ? 'mon-sensor-card--clickable' : '',
+        tieneLecturaUtil(sensor.estado) ? 'mon-sensor-card--clickable' : '',
       ].filter(Boolean).join(' ')}
       onClick={onClick}
-      title={sensor.estado !== 'offline' ? `Ver detalle de ${sensor.tipo}` : 'Sensor sin señal'}
+      title={
+        tieneLecturaUtil(sensor.estado)
+          ? `Ver detalle de ${sensor.tipo}`
+          : sensor.estado === 'lectura_no_disponible' ? 'Sin dato disponible' : 'Sensor sin señal'
+      }
       aria-pressed={activo}
-      disabled={sensor.estado === 'offline'}
+      disabled={!tieneLecturaUtil(sensor.estado)}
     >
       <div className="mon-sensor-icon">{iconoSensor(sensor.tipo, 22)}</div>
 
@@ -206,7 +213,7 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
         }
       </div>
 
-      {sensor.estado !== 'offline' && rango > 0 && (
+      {tieneLecturaUtil(sensor.estado) && rango > 0 && (
         <div className="mon-barra-wrap">
           <div className="mon-barra" style={{ width: `${relativo}%` }} />
         </div>
@@ -219,7 +226,7 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
         <span className="mon-ultima">{formatearUltimaLectura(sensor.ultimaLecturaTs)}</span>
       </div>
 
-      {sensor.estado !== 'offline' && (
+      {tieneLecturaUtil(sensor.estado) && (
         <span className="mon-sensor-hint" aria-hidden="true">›</span>
       )}
     </button>
@@ -229,8 +236,9 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
 // ─── Estado global de un galpón según sus sensores ───────────────────────────
 function estadoGlobal(galpon: GalponMonitoreoVista): EstadoSensorVista {
   if (!galpon.loteActivo || galpon.sensores.length === 0) return 'offline'
-  if (galpon.sensores.some(s => s.estado === 'critico'))    return 'critico'
-  if (galpon.sensores.some(s => s.estado === 'advertencia')) return 'advertencia'
+  if (galpon.sensores.some(s => s.estado === 'critico'))              return 'critico'
+  if (galpon.sensores.some(s => s.estado === 'advertencia'))           return 'advertencia'
+  if (galpon.sensores.some(s => s.estado === 'lectura_no_disponible')) return 'lectura_no_disponible'
   return 'optimo'
 }
 

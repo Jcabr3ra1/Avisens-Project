@@ -6,30 +6,20 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { isAxiosError } from 'axios'
 import { listarUmbrales, type Umbral } from '@features/galpones/api/umbrales'
-import { listarMediciones, type Medicion } from '@features/sensores/api/mediciones'
-import { LIMITE_POR_PAGINA } from '@shared/api/paginacion'
+import { listarUltimasLecturas, type UltimaLecturaSensor } from '@features/sensores/api/mediciones'
 import { diasDeVida, semanaDeVida } from '@shared/utils/fechas'
 import { listarSensores, type Sensor } from '@features/sensores/api/sensores'
 import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
+import { mensajeDeError } from '@shared/utils/errores'
 
-// Cuántas mediciones recientes se piden para derivar "la última lectura de
-// cada sensor" — no hay filtro por galpón en /mediciones, así que se trae un
-// lote amplio y se reduce en el cliente.
-const LIMITE_MEDICIONES = 500
+export type EstadoSensorVista = 'optimo' | 'advertencia' | 'critico' | 'sin_umbral' | 'offline' | 'lectura_no_disponible'
 
-
-async function listarMedicionesRecientes(): Promise<Medicion[]> {
-  const paginas = Math.ceil(LIMITE_MEDICIONES / LIMITE_POR_PAGINA)
-  const lotes = await Promise.all(
-    Array.from({ length: paginas }, (_, i) =>
-      listarMediciones({ page: i + 1, limit: LIMITE_POR_PAGINA }),
-    ),
-  )
-  return lotes.flat()
+// Ni "óptimo", ni "conectado", ni "sin señal": no hay dato que mostrar
+// porque la consulta al backend falló, no porque el sensor esté apagado.
+export function tieneLecturaUtil(estado: EstadoSensorVista): boolean {
+  return estado !== 'offline' && estado !== 'lectura_no_disponible'
 }
-
-export type EstadoSensorVista = 'optimo' | 'advertencia' | 'critico' | 'sin_umbral' | 'offline'
 
 // A qué variable de umbral (las 3 que soporta el backend) corresponde el
 // texto libre de `sensor.tipo`. Null = variable sin umbral configurable
@@ -81,6 +71,7 @@ type MonitoreoState = {
   galpones: GalponMonitoreoVista[]
   cargando: boolean
   error: string
+  avisoUltimas: string
 }
 
 function calcularEstado(valor: number, min: number, max: number): 'optimo' | 'advertencia' | 'critico' {
@@ -99,20 +90,17 @@ function calcularEstado(valor: number, min: number, max: number): 'optimo' | 'ad
   return 'critico'
 }
 
-function construirVista(
+export function construirVista(
   galpones: Galpon[],
   lotes: Lote[],
   sensores: Sensor[],
-  mediciones: Medicion[],
+  ultimas: UltimaLecturaSensor[],
   umbrales: Umbral[],
+  ultimasNoDisponibles: boolean,
 ): GalponMonitoreoVista[] {
-  // Última medición por sensor: `mediciones` viene ordenada más reciente
-  // primero (el backend ordena por fecha_hora desc), así que el primer match
-  // por sensor_id ya es el más nuevo.
-  const ultimaPorSensor = new Map<number, Medicion>()
-  for (const m of mediciones) {
-    if (!ultimaPorSensor.has(m.sensor_id)) ultimaPorSensor.set(m.sensor_id, m)
-  }
+  // El backend ya entrega una fila por sensor — no hace falta reducir nada
+  // en el cliente como antes con las 5 páginas de /mediciones.
+  const ultimaPorSensor = new Map(ultimas.map((u) => [u.sensor_id, u]))
 
   return galpones.map((g) => {
     const loteActivo = lotes.find((l) => l.galpon.id === g.id && l.estado === 'activo') ?? null
@@ -128,11 +116,13 @@ function construirVista(
               (u) => u.galpon_id === g.id && u.variable === variableUmbral && u.semana_vida === semanaVida,
             )
           : undefined
-        const medicion = ultimaPorSensor.get(s.id)
-        const valor = medicion ? medicion.valor : null
+        const entrada = ultimaPorSensor.get(s.id)
+        const valor = entrada?.ultima_lectura?.valor ?? null
 
         let estado: EstadoSensorVista
-        if (s.estado !== 'activo' || valor === null) estado = 'offline'
+        if (s.estado !== 'activo') estado = 'offline'
+        else if (ultimasNoDisponibles) estado = 'lectura_no_disponible'
+        else if (valor === null) estado = 'offline'
         else if (!umbral) estado = 'sin_umbral'
         else estado = calcularEstado(valor, umbral.valor_minimo, umbral.valor_maximo)
 
@@ -146,7 +136,9 @@ function construirVista(
           minUmbral: umbral?.valor_minimo ?? null,
           maxUmbral: umbral?.valor_maximo ?? null,
           estado,
-          ultimaLecturaTs: medicion ? new Date(medicion.fecha_hora).getTime() : null,
+          ultimaLecturaTs: entrada?.ultima_lectura
+            ? new Date(entrada.ultima_lectura.fecha_hora).getTime()
+            : null,
           x: s.coordenada_x,
           y: s.coordenada_y,
         }
@@ -174,7 +166,7 @@ function construirVista(
 // duplicaban porque el sidebar usa la misma fuente. La promesa compartida
 // también evita la doble petición que StrictMode provoca en desarrollo.
 const CACHE_MS = 30_000
-let estadoMonitoreo: MonitoreoState = { galpones: [], cargando: true, error: '' }
+let estadoMonitoreo: MonitoreoState = { galpones: [], cargando: true, error: '', avisoUltimas: '' }
 let cargaEnCurso: Promise<void> | null = null
 let ultimaCarga = 0
 const suscriptores = new Set<() => void>()
@@ -196,22 +188,33 @@ async function cargarMonitoreo(forzar = false): Promise<void> {
   if (cargaEnCurso) return cargaEnCurso
   if (!forzar && ultimaCarga > 0 && Date.now() - ultimaCarga < CACHE_MS) return
 
-  estadoMonitoreo = { ...estadoMonitoreo, cargando: true, error: '' }
+ estadoMonitoreo = { ...estadoMonitoreo, cargando: true, error: '', avisoUltimas: '' }
   notificar()
 
   cargaEnCurso = (async () => {
     try {
-      const [galpones, lotes, sensores, mediciones, umbrales] = await Promise.all([
+      const [galpones, lotes, sensores, umbrales] = await Promise.all([
         listarGalpones(),
         listarLotes(),
         listarSensores(),
-        listarMedicionesRecientes(),
         listarUmbrales(),
       ])
+
+      let ultimas: UltimaLecturaSensor[] = []
+      let ultimasNoDisponibles = false
+      let avisoUltimas = ''
+      try {
+        ultimas = await listarUltimasLecturas()
+      } catch (err) {
+        ultimasNoDisponibles = true
+        avisoUltimas = mensajeDeError(err, 'No se pudieron cargar las últimas lecturas.')
+      }
+
       estadoMonitoreo = {
-        galpones: construirVista(galpones, lotes, sensores, mediciones, umbrales),
+        galpones: construirVista(galpones, lotes, sensores, ultimas, umbrales, ultimasNoDisponibles),
         cargando: false,
         error: '',
+        avisoUltimas,
       }
     } catch (err) {
       estadoMonitoreo = {
@@ -220,6 +223,7 @@ async function cargarMonitoreo(forzar = false): Promise<void> {
         error: isAxiosError(err) && err.response?.status === 403
           ? 'No tienes permisos para ver el monitoreo ambiental.'
           : 'No se pudo cargar el monitoreo ambiental.',
+        avisoUltimas: '',
       }
     } finally {
       ultimaCarga = Date.now()

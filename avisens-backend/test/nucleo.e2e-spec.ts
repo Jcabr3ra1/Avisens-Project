@@ -26,6 +26,8 @@ import { AnalisisBioacusticoModule } from '../src/modules/analisis-bioacustico/a
 import { AnalisisVisionModule } from '../src/modules/analisis-vision/analisis-vision.module';
 import { UmbralesModule } from '../src/modules/umbrales/umbrales.module';
 import { MedicionesModule } from '../src/modules/mediciones/mediciones.module';
+import { MedicionesService } from '../src/modules/mediciones/mediciones.service';
+import { ROLES } from '../src/common/auth/roles';
 import { LotesModule } from '../src/modules/lotes/lotes.module';
 import { AlertasService } from '../src/modules/alertas/alertas.service';
 import { LineasGeneticasModule } from '../src/modules/lineas-geneticas/lineas-geneticas.module';
@@ -52,6 +54,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
   let servidor: Server;
   let token: string;
   let tokenPropietario: string;
+  let medicionesService: MedicionesService;
   const ids = {
     organizaciones: [] as number[],
     usuarios: [] as number[],
@@ -65,6 +68,9 @@ describe('Núcleo multi-tenant (e2e)', () => {
     zonas: [] as number[],
     analisisBioacustico: [] as number[],
     analisisVision: [] as number[],
+    sensoresUltimasLecturas: [] as number[],
+    dispositivoOrgB: 0,
+    sensorOrgB: 0,
     umbrales: [] as number[],
   };
   const sufijo = `${Date.now()}-${process.pid}`;
@@ -107,6 +113,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
     await app.init();
     servidor = app.getHttpServer() as Server;
     prisma = app.get(PrismaService);
+    medicionesService = app.get(MedicionesService);
 
     const [rolPropietario, rolOperario] = await Promise.all([
       prisma.rol.upsert({
@@ -196,6 +203,111 @@ describe('Núcleo multi-tenant (e2e)', () => {
       },
     });
     ids.sensor = sensor.id;
+
+    // Sensores dedicados a probar el LATERAL de ultimasPorSensores: cada uno
+    // ejerce una rama distinta que un mock de Prisma no puede probar por sí
+    // solo (aquí el SQL corre contra Postgres real).
+    const [conDosLecturas, conUnaLectura, sinLecturas, conEmpate] =
+      await Promise.all([
+        prisma.sensor.create({
+          data: {
+            galpon_id: galponA.id,
+            dispositivo_id: dispositivo.id,
+            codigo: `ULT-A-${sufijo}`,
+            tipo: 'temperatura',
+            unidad_medida: 'C',
+          },
+        }),
+        prisma.sensor.create({
+          data: {
+            galpon_id: galponA.id,
+            dispositivo_id: dispositivo.id,
+            codigo: `ULT-B-${sufijo}`,
+            tipo: 'humedad',
+            unidad_medida: '%',
+          },
+        }),
+        prisma.sensor.create({
+          data: {
+            galpon_id: galponA.id,
+            dispositivo_id: dispositivo.id,
+            codigo: `ULT-C-${sufijo}`,
+            tipo: 'temperatura',
+            unidad_medida: 'C',
+          },
+        }),
+        prisma.sensor.create({
+          data: {
+            galpon_id: galponA.id,
+            dispositivo_id: dispositivo.id,
+            codigo: `ULT-D-${sufijo}`,
+            tipo: 'temperatura',
+            unidad_medida: 'C',
+          },
+        }),
+      ]);
+    ids.sensoresUltimasLecturas.push(
+      conDosLecturas.id,
+      conUnaLectura.id,
+      sinLecturas.id,
+      conEmpate.id,
+    );
+
+    await prisma.medicion.createMany({
+      data: [
+        {
+          sensor_id: conDosLecturas.id,
+          fecha_hora: new Date(Date.now() - 2 * 60_000),
+          valor: 20,
+        },
+        {
+          sensor_id: conDosLecturas.id,
+          fecha_hora: new Date(Date.now() - 60_000),
+          valor: 99,
+        },
+        { sensor_id: conUnaLectura.id, fecha_hora: new Date(), valor: 55 },
+      ],
+    });
+
+    // Empate real en fecha_hora: dos INSERT separados (no createMany) para
+    // que el id más alto sea, con certeza, el segundo en escribirse — es la
+    // fila que ORDER BY fecha_hora DESC, id DESC debe elegir.
+    const fechaEmpate = new Date();
+    await prisma.medicion.create({
+      data: { sensor_id: conEmpate.id, fecha_hora: fechaEmpate, valor: 111 },
+    });
+    await prisma.medicion.create({
+      data: { sensor_id: conEmpate.id, fecha_hora: fechaEmpate, valor: 222 },
+    });
+
+    // Sensor de la OTRA organización: sin esto, la prueba de aislamiento de
+    // /mediciones/ultimas no tendría nada real que filtrar y pasaría aunque
+    // el alcance estuviera roto.
+    const dispositivoOrgB = await prisma.dispositivo.create({
+      data: {
+        galpon_id: galponB.id,
+        mac_address: `MAC-B-${sufijo}`,
+        codigo_topic: `topic-b-${sufijo}`,
+        nombre: 'Nodo E2E B',
+        token_ingesta_hash: hashDeviceToken(`otro-${deviceToken}`),
+      },
+    });
+    ids.dispositivoOrgB = dispositivoOrgB.id;
+
+    const sensorOrgB = await prisma.sensor.create({
+      data: {
+        galpon_id: galponB.id,
+        dispositivo_id: dispositivoOrgB.id,
+        codigo: `ULT-ORGB-${sufijo}`,
+        tipo: 'temperatura',
+        unidad_medida: 'C',
+      },
+    });
+    ids.sensorOrgB = sensorOrgB.id;
+    await prisma.medicion.create({
+      data: { sensor_id: sensorOrgB.id, fecha_hora: new Date(), valor: 30 },
+    });
+
     const catalogo = await prisma.catalogoSensor.create({
       data: {
         tipo_sensor: `temperatura-${sufijo}`,
@@ -259,10 +371,23 @@ describe('Núcleo multi-tenant (e2e)', () => {
         where: { usuario_id: { in: ids.usuarios } },
       });
       await prisma.medicion.deleteMany({ where: { sensor_id: ids.sensor } });
+      await prisma.medicion.deleteMany({
+        where: { sensor_id: { in: ids.sensoresUltimasLecturas } },
+      });
+      await prisma.medicion.deleteMany({
+        where: { sensor_id: ids.sensorOrgB },
+      });
       await prisma.ingestaDispositivo.deleteMany({
         where: { dispositivo_id: ids.dispositivo },
       });
       await prisma.sensor.deleteMany({ where: { id: ids.sensor } });
+      await prisma.sensor.deleteMany({
+        where: { id: { in: ids.sensoresUltimasLecturas } },
+      });
+      await prisma.sensor.deleteMany({ where: { id: ids.sensorOrgB } });
+      await prisma.dispositivo.deleteMany({
+        where: { id: ids.dispositivoOrgB },
+      });
       await prisma.dispositivo.deleteMany({ where: { id: ids.dispositivo } });
       await prisma.catalogoSensor.deleteMany({
         where: { id: ids.catalogoSensor },
@@ -449,6 +574,63 @@ describe('Núcleo multi-tenant (e2e)', () => {
     await expect(
       prisma.medicion.count({ where: { sensor_id: ids.sensor } }),
     ).resolves.toBe(1);
+  });
+
+  it('calcula la última lectura de cada sensor con SQL crudo (LATERAL)', async () => {
+    const solicitantePropietario = {
+      id: ids.usuarios[0],
+      rol: ROLES.PROPIETARIO,
+      organizacion_id: ids.organizaciones[0],
+    };
+
+    const resultado = await medicionesService.ultimasPorSensores(
+      solicitantePropietario,
+      [ids.galpones[0]],
+    );
+
+    const [idDosLecturas, idUnaLectura, idSinLecturas, idEmpate] =
+      ids.sensoresUltimasLecturas;
+
+    const entradaDosLecturas = resultado.sensores.find(
+      (s) => s.sensor_id === idDosLecturas,
+    );
+    const entradaUnaLectura = resultado.sensores.find(
+      (s) => s.sensor_id === idUnaLectura,
+    );
+    const entradaSinLecturas = resultado.sensores.find(
+      (s) => s.sensor_id === idSinLecturas,
+    );
+    const entradaEmpate = resultado.sensores.find(
+      (s) => s.sensor_id === idEmpate,
+    );
+
+    expect(entradaDosLecturas?.ultima_lectura?.valor).toBe(99);
+    expect(entradaUnaLectura?.ultima_lectura?.valor).toBe(55);
+    expect(entradaSinLecturas?.ultima_lectura).toBeNull();
+    expect(entradaEmpate?.ultima_lectura?.valor).toBe(222);
+  });
+
+  it('GET /v1/mediciones/ultimas rechaza un galpon_id mal formado (400)', async () => {
+    await request(servidor)
+      .get('/v1/mediciones/ultimas?galpon_id=abc')
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .expect(400);
+  });
+
+  it('GET /v1/mediciones/ultimas: un Propietario no recibe sensores de otra organización', async () => {
+    const respuesta = await request(servidor)
+      .get('/v1/mediciones/ultimas')
+      .set('Authorization', `Bearer ${tokenPropietario}`)
+      .expect(200);
+
+    const idsDevueltos = (
+      JSON.parse(respuesta.text) as {
+        sensores: Array<{ sensor_id: number }>;
+      }
+    ).sensores.map((s) => s.sensor_id);
+
+    expect(idsDevueltos).toContain(ids.sensoresUltimasLecturas[0]);
+    expect(idsDevueltos).not.toContain(ids.sensorOrgB);
   });
 
   it('consulta el ambiente por voz sin habilitar acciones peligrosas', async () => {
