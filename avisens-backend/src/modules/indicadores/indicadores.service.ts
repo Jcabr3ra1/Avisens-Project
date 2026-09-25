@@ -49,7 +49,7 @@ export class IndicadoresService {
 
     const ultimoPesaje = await this.prisma.pesaje.findFirst({
       where: { lote_id: loteId },
-      orderBy: { fecha: 'desc' },
+      orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
       select: { peso_promedio_g: true },
     });
 
@@ -125,7 +125,7 @@ export class IndicadoresService {
     await this.verificarPropiedad(loteId, solicitante);
     return this.prisma.indicadorLote.findMany({
       where: { lote_id: loteId },
-      orderBy: { fecha: 'asc' },
+      orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
     });
   }
 

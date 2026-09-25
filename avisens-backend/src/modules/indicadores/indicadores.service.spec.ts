@@ -62,6 +62,29 @@ describe('IndicadoresService · calcularParaLote', () => {
     expect(guardado.peso_promedio_g).toBe(1000);
   });
 
+  it('desempata el ultimo pesaje por id -- fecha es solo el dia, varios pesajes del mismo dia empatan', async () => {
+    prisma.lote.findUnique.mockResolvedValue({
+      id: 1,
+      fecha_ingreso: hace(21),
+      cantidad_inicial: 1000,
+      sexo: 'macho',
+    });
+    prisma.pesaje.findFirst.mockResolvedValue({ peso_promedio_g: 1000 });
+    prisma.consumoDiario.aggregate.mockResolvedValue({
+      _sum: { alimento_kg: 1150 },
+    });
+    prisma.registroMortalidad.aggregate.mockResolvedValue({
+      _sum: { cantidad_aves: 30 },
+    });
+
+    await service.calcularParaLote(1);
+
+    const calls = prisma.pesaje.findFirst.mock.calls as Array<
+      [{ orderBy: unknown }]
+    >;
+    expect(calls[0][0].orderBy).toEqual([{ fecha: 'desc' }, { id: 'desc' }]);
+  });
+
   it('deja el FCR en null cuando el lote no tiene pesajes', async () => {
     prisma.lote.findUnique.mockResolvedValue({
       id: 1,
