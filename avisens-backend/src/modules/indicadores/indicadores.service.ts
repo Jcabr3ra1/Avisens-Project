@@ -221,6 +221,7 @@ export class IndicadoresService {
       where: {
         lote_id: loteId,
         tipo: ALERTA_TIPO_DESVIO,
+        origen: 'automatica',
         estado: 'abierta',
       },
     });
@@ -232,6 +233,7 @@ export class IndicadoresService {
         lote_id: loteId,
         tipo: ALERTA_TIPO_DESVIO,
         criticidad: 'media',
+        origen: 'automatica',
         mensaje: `El lote va ${desvio}% por debajo de la curva objetivo (dia ${comparacion.dia_vida})`,
       },
     });
