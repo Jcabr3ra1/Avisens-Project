@@ -362,6 +362,15 @@
 
             </LinearLayout>
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAbrirLia"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="16dp"
+                android:text="Hablar con Lía"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/green_accent" />
 
             <!-- ================================================= -->
             <!-- FILA 1: AVES / DÍA DEL LOTE -->
