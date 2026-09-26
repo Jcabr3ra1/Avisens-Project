@@ -173,6 +173,7 @@ void tareaGalpon(void *pvParameters)
       {
         LOG_DEBUG("Comando de tara (HX711) recibido");
         sensorPeso.tara();
+        sensorPeso.setFactor(HX711_FACTOR_ESCALA);
         calibracionCompletada = true;
       }
     }
@@ -196,6 +197,11 @@ void tareaGalpon(void *pvParameters)
       // Transición automática después de cierto tiempo o si se completa manualmente
       if (calibracionCompletada || ciclosTarea > 150)
       {
+        if (!calibracionCompletada)
+        {
+          LOG_WARN("Calibración omitida — Usando factor por defecto.");
+          sensorPeso.setFactor(HX711_FACTOR_ESCALA);
+        }
         estadoSistema = EstadoSistema::MONITORING;
         Serial.println("[FSM Global] CALIBRATION → MONITORING (Variable T=true)");
       }
@@ -282,14 +288,23 @@ void tareaGalpon(void *pvParameters)
       // ─── Actualizar Actuadores y FSMs Locales ────────────────────
       if (estadoSistema == EstadoSistema::MONITORING)
       {
-        gestorActuadores.actualizar(
-            temperatura,
-            humedad,
-            rawNH3,
-            lecturaUltrasonico.distancia,
-            lecturaUltrasonico.estado,
-            sensorDHT.enError(),
-            sensorUltrasonico.enError());
+        if (lecturaDHT.valida)
+        {
+          gestorActuadores.actualizar(
+              temperatura,
+              humedad,
+              rawNH3,
+              lecturaUltrasonico.distancia,
+              lecturaUltrasonico.estado,
+              sensorDHT.enError(),
+              sensorUltrasonico.enError());
+        }
+        else
+        {
+          // No se recalcula el clima con un 0.0f fabricado: los relés
+          // K1/K2/K3 quedan en la última decisión tomada con dato real.
+          LOG_WARN("Control de clima omitido: DHT sin lectura válida este ciclo");
+        }
 
         controlServo.actualizar(lecturaKY032.presencia);
         alimentador.actualizar();
@@ -396,18 +411,18 @@ void setup()
   Serial.printf("[WDT] Configurado a %d segundos.\n", WDT_TIMEOUT_S);
 
   //  Inicialización de Módulos
-  Serial.println("\n[SETUP] Inicializando sensores...");
+  Serial.println("\n[SETUP] Inicializando actuadores...");
+  gestorActuadores.begin();
+  controlServo.begin();
+  alimentador.begin();
+  persiana.begin();
+
+  Serial.println("[SETUP] Inicializando sensores...");
   sensorDHT.begin();
   sensorMQ135.begin();
   sensorKY032.begin();
   sensorUltrasonico.begin();
   sensorPeso.begin();
-
-  Serial.println("[SETUP] Inicializando actuadores...");
-  gestorActuadores.begin();
-  controlServo.begin();
-  alimentador.begin();
-  persiana.begin();
 
   Serial.println("[SETUP] Iniciando enlace WiFi asíncrono...");
   conexionWiFi.comenzar();
@@ -433,41 +448,8 @@ void setup()
       NULL,
       1);
 
-  // ─── Calibración Inicial HX711 ───────────────────────────
-  Serial.println("\n[SETUP] Esperando calibración HX711 (15s timeout)...");
+  Serial.println("\n[SETUP] Calibración a cargo de tareaGalpon (Core 0).");
   Serial.println("Envía 'TARA' por el monitor Serial para calibrar.");
-
-  unsigned long tiempoCalib = millis();
-
-  while ((millis() - tiempoCalib) < 15000)
-  {
-    if (Serial.available())
-    {
-      String cmd = Serial.readStringUntil('\n');
-      cmd.trim();
-      cmd.toUpperCase();
-
-      if (cmd == "TARA")
-      {
-        Serial.println("⏳ Ejecutando tara del HX711...");
-        sensorPeso.setFactor(HX711_FACTOR_ESCALA);
-        sensorPeso.tara();
-        calibracionCompletada = true;
-        Serial.println("✓ Tara completada.");
-        break;
-      }
-    }
-    delay(100);
-  }
-
-  if (!calibracionCompletada)
-  {
-    LOG_WARN("Calibración omitida — Usando factor por defecto.");
-    sensorPeso.setFactor(HX711_FACTOR_ESCALA);
-  }
-
-  estadoSistema = EstadoSistema::MONITORING;
-  Serial.println("[SETUP] Sistema listo y en modo MONITORING ✓\n");
   Serial.println("Comandos disponibles:");
   Serial.println("  TARA  - Calibrar celda de carga");
   Serial.println("  REARME - Reiniciar sistema desde INIT");

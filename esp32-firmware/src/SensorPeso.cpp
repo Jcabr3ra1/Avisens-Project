@@ -175,6 +175,7 @@ long SensorPeso::promediarLecturas(uint16_t muestras) {
   long suma = 0;
   for (uint16_t i = 0; i < muestras; i++) {
     suma += leerADC();
+    esp_task_wdt_reset();  // leerADC() puede tardar hasta 1s si el HX711 no responde
     delay(100);  // Espacio entre lecturas
   }
   return suma / muestras;

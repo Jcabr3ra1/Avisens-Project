@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "config.h"
+#include "esp_task_wdt.h"
 
 /**
  * @struct LecturaPeso

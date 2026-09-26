@@ -60,11 +60,34 @@ bool enviarLecturaConReintentos(float temperatura, float humedad, const String &
       continue;
     }
 
-    JsonArray ignoradas = doc["ignoradas"].as<JsonArray>();
-    if (ignoradas.size() > 0) {
+    // Un 2xx con JSON valido pero sin el contrato esperado (otro servicio,
+    // un proxy, una respuesta generica) no cuenta como exito solo por ser
+    // JSON parseable -- se exige la forma real de la respuesta de /ingest.
+    const int LECTURAS_ENVIADAS = 2;  // DHT: temperatura + humedad
+    JsonVariant campoIgnoradas = doc["ignoradas"];
+    JsonVariant campoRegistradas = doc["registradas"];
+    JsonVariant campoIdLote = doc["id_lote"];
+
+    bool contratoValido =
+        campoIgnoradas.is<JsonArray>() &&
+        campoRegistradas.is<int>() &&
+        campoIdLote.is<const char *>() &&
+        idLote.equals(campoIdLote.as<const char *>());
+
+    if (!contratoValido) {
+      Serial.println("[Ingesta] 2xx pero el cuerpo no cumple el contrato esperado de /ingest");
+      if (intento < MAX_REINTENTOS_INGESTA) {
+        vTaskDelay(pdMS_TO_TICKS(BACKOFF_INGESTA_MS));
+      }
+      continue;
+    }
+
+    JsonArray ignoradas = campoIgnoradas.as<JsonArray>();
+    int registradas = campoRegistradas.as<int>();
+    if (ignoradas.size() > 0 || registradas != LECTURAS_ENVIADAS) {
       // Reintentar no arregla un codigo mal configurado -- se abandona
       // sin gastar los reintentos que quedan.
-      LOG_ERROR("Ingesta: el backend ignoro codigos de sensor (revisar "
+      LOG_ERROR("Ingesta: el backend no registro todas las lecturas (revisar "
                 "CODIGO_SENSOR_TEMP/HUM en config.h vs sensores registrados)");
       return false;
     }
