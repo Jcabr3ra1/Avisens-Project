@@ -286,25 +286,22 @@ void tareaGalpon(void *pvParameters)
       }
 
       // ─── Actualizar Actuadores y FSMs Locales ────────────────────
+      // Clima (K1/K2/K3) y agua (K4) se actualizan por separado: un
+      // fallo del DHT no debe congelar ni forzar la bomba, que depende
+      // solo del ultrasónico (ver GestorActuadores::actualizarClima/Agua).
       if (estadoSistema == EstadoSistema::MONITORING)
       {
-        if (lecturaDHT.valida)
-        {
-          gestorActuadores.actualizar(
-              temperatura,
-              humedad,
-              rawNH3,
-              lecturaUltrasonico.distancia,
-              lecturaUltrasonico.estado,
-              sensorDHT.enError(),
-              sensorUltrasonico.enError());
-        }
-        else
-        {
-          // No se recalcula el clima con un 0.0f fabricado: los relés
-          // K1/K2/K3 quedan en la última decisión tomada con dato real.
-          LOG_WARN("Control de clima omitido: DHT sin lectura válida este ciclo");
-        }
+        gestorActuadores.actualizarClima(
+            temperatura,
+            humedad,
+            rawNH3,
+            lecturaDHT.valida,
+            sensorDHT.enError());
+
+        gestorActuadores.actualizarAgua(
+            lecturaUltrasonico.distancia,
+            lecturaUltrasonico.estado,
+            sensorUltrasonico.enError());
 
         controlServo.actualizar(lecturaKY032.presencia);
         alimentador.actualizar();

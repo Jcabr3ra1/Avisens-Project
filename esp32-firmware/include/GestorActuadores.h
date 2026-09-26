@@ -31,23 +31,39 @@ class GestorActuadores {
   void begin();
 
   /**
-   * @brief Aplica lógica de control basada en lecturas de sensores.
-   * 
-   * @param temperatura Temperatura en °C (DHT22)
-   * @param humedad Humedad relativa % (DHT22)
+   * @brief Aplica lógica de clima (K1/K2/K3) según DHT22 + MQ135.
+   *
+   * Independiente de actualizarAgua(): un fallo del DHT nunca debe
+   * afectar la bomba (K4), que depende solo del sensor ultrasónico.
+   *
+   * @param temperatura Temperatura en °C (DHT22) -- ignorada si lecturaValida es false
+   * @param humedad Humedad relativa % (DHT22) -- ignorada si lecturaValida es false
    * @param rawNH3 Valor raw del MQ135
-   * @param distanciaAgua Distancia en cm (HC-SR04)
-   * @param estadoSensorUltrasonico Estado del sensor ultrasónico
-   * @param enErrorDHT true si DHT22 está en error
-   * @param enErrorUltrasonico true si HC-SR04 está en error
+   * @param lecturaValida true si la lectura DHT de ESTE ciclo es válida
+   * @param enErrorDHT true si el DHT22 lleva fallos consecutivos persistentes
    */
-  void actualizar(
+  void actualizarClima(
     float temperatura,
     float humedad,
     int rawNH3,
+    bool lecturaValida,
+    bool enErrorDHT
+  );
+
+  /**
+   * @brief Aplica lógica de bomba de agua (K4) según el sensor ultrasónico.
+   *
+   * Independiente de actualizarClima(): la política de fail-safe de K4
+   * ante fallo del ultrasónico está SIN DECIDIR (pendiente confirmar si
+   * la bomba llena o drena) -- por eso conserva failSafe() sin cambios.
+   *
+   * @param distanciaAgua Distancia en cm (HC-SR04)
+   * @param estadoSensorUltrasonico Estado del sensor ultrasónico
+   * @param enErrorUltrasonico true si HC-SR04 está en error
+   */
+  void actualizarAgua(
     float distanciaAgua,
     EstadoSensorUltrasonico estadoSensorUltrasonico,
-    bool enErrorDHT,
     bool enErrorUltrasonico
   );
 
@@ -147,10 +163,9 @@ class GestorActuadores {
   bool manualK4_ = false;
 
   // Métodos de lógica interna
-  void aplicarControl(
+  void aplicarControlClima(
     bool activarCalefaccion,
-    bool activarVentilacion,
-    bool activarBomba
+    bool activarVentilacion
   );
 
   bool calcularActivacionBomba(

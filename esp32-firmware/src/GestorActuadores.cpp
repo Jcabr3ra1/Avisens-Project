@@ -17,21 +17,27 @@ void GestorActuadores::begin() {
   LOG_DEBUG("GestorActuadores inicializado");
 }
 
-void GestorActuadores::actualizar(
+void GestorActuadores::actualizarClima(
     float temperatura,
     float humedad,
     int rawNH3,
-    float distanciaAgua,
-    EstadoSensorUltrasonico estadoSensorUltrasonico,
-    bool enErrorDHT,
-    bool enErrorUltrasonico) {
+    bool lecturaValida,
+    bool enErrorDHT) {
 
-  unsigned long ahora = millis();
+  // ─── Fail-Safe de clima: solo K1/K2/K3 ─────────────────
+  // K4 (bomba) no depende del DHT -- separado en actualizarAgua() para
+  // que un fallo de temperatura/humedad nunca congele ni fuerce la bomba.
+  if (enErrorDHT) {
+    if (!manualK1_) k1_.desactivar();
+    if (!manualK2_) k2_.desactivar();
+    if (!manualK3_) k3_.desactivar();
+    LOG_ERROR("Clima en Fail-Safe (DHT en error persistente) — K1/K2/K3 OFF");
+    return;
+  }
 
-  // ─── Fail-Safe: Si hay error crítico en sensores ───────
-  if (enErrorDHT || enErrorUltrasonico) {
-    LOG_WARN("Sensor en error — Entrando en Fail-Safe");
-    failSafe();
+  // Fallo puntual (aun no persistente): no se recalcula con un dato
+  // fabricado -- los reles quedan en la ultima decision con dato real.
+  if (!lecturaValida) {
     return;
   }
 
@@ -53,14 +59,11 @@ void GestorActuadores::actualizar(
                              humedad > HUM_EXTRACTORES ||
                              gasesAltos);
 
-  // Bomba: Uso de histéresis (ON si dist > NIVEL_BOMBA_ON, OFF si dist <= NIVEL_BOMBA_OFF)
-  bool activarBomba = calcularActivacionBomba(distanciaAgua, estadoSensorUltrasonico);
-
   // ─── Aplicar estados ──────────────────────────────────
-  aplicarControl(activarCalefaccion, activarVentilacion, activarBomba);
+  aplicarControlClima(activarCalefaccion, activarVentilacion);
 
   // ─── Log de monitoreo ──────────────────────────────────
-  Serial.println("\n================================");
+  Serial.println("\n--- CLIMA ---");
   Serial.print("Temp: ");
   Serial.print(temperatura, 1);
   Serial.print("°C | Hum: ");
@@ -73,6 +76,38 @@ void GestorActuadores::actualizar(
   else if (rawNH3 < NH3_ALTO) Serial.print("MODERADO");
   else Serial.print("ALTO");
   Serial.println("]");
+  Serial.print("K1 (Calef): ");
+  Serial.println(k1_.getEstado() ? "ON" : "off");
+  Serial.print("K2 (Ventil): ");
+  Serial.println(k2_.getEstado() ? "ON" : "off");
+  Serial.print("K3 (Extract): ");
+  Serial.println(k3_.getEstado() ? "ON" : "off");
+}
+
+void GestorActuadores::actualizarAgua(
+    float distanciaAgua,
+    EstadoSensorUltrasonico estadoSensorUltrasonico,
+    bool enErrorUltrasonico) {
+
+  // Politica de K4 ante fallo del ultrasonico: SIN DECIDIR (ver A2).
+  // Se conserva failSafe() sin cambios hasta confirmar con el
+  // responsable del montaje si la bomba llena o drena.
+  if (enErrorUltrasonico) {
+    LOG_WARN("Ultrasonico en error — Entrando en Fail-Safe (bomba, ver A2)");
+    failSafe();
+    return;
+  }
+
+  // Bomba: Uso de histéresis (ON si dist > NIVEL_BOMBA_ON, OFF si dist <= NIVEL_BOMBA_OFF)
+  bool activarBomba = calcularActivacionBomba(distanciaAgua, estadoSensorUltrasonico);
+  if (!manualK4_) {
+    if (activarBomba) {
+      k4_.activar();
+    } else {
+      k4_.desactivar();
+    }
+  }
+
   Serial.print("Agua: ");
   if (estadoSensorUltrasonico == EstadoSensorUltrasonico::OK) {
     Serial.print(distanciaAgua, 1);
@@ -80,16 +115,8 @@ void GestorActuadores::actualizar(
   } else {
     Serial.println("ERROR/TIMEOUT");
   }
-  Serial.println("--- ACTUADORES ---");
-  Serial.print("K1 (Calef): ");
-  Serial.println(k1_.getEstado() ? "ON" : "off");
-  Serial.print("K2 (Ventil): ");
-  Serial.println(k2_.getEstado() ? "ON" : "off");
-  Serial.print("K3 (Extract): ");
-  Serial.println(k3_.getEstado() ? "ON" : "off");
   Serial.print("K4 (Bomba): ");
   Serial.println(k4_.getEstado() ? "ON" : "off");
-  Serial.println("================================");
 }
 
 void GestorActuadores::failSafe() {
@@ -103,10 +130,9 @@ void GestorActuadores::failSafe() {
   LOG_ERROR("FAIL-SAFE ACTIVADO — Bomba forzada ON");
 }
 
-void GestorActuadores::aplicarControl(
+void GestorActuadores::aplicarControlClima(
     bool activarCalefaccion,
-    bool activarVentilacion,
-    bool activarBomba) {
+    bool activarVentilacion) {
 
   // K1: Calefacción (solo si no hay ventilación) — omitido si está en MANUAL
   if (!manualK1_) {
@@ -132,15 +158,6 @@ void GestorActuadores::aplicarControl(
       k3_.activar();
     } else {
       k3_.desactivar();
-    }
-  }
-
-  // K4: Bomba
-  if (!manualK4_) {
-    if (activarBomba) {
-      k4_.activar();
-    } else {
-      k4_.desactivar();
     }
   }
 }
