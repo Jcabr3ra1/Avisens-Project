@@ -1,7 +1,7 @@
 import type { ComparacionIndicador } from '@features/indicadores/api/indicadores'
 import { IcChevronRight } from '@shared/ui/icons/icons'
 import type { DashboardIndicador, DashboardLote } from '../model/dashboard'
-import { lineaSparkline, textoComparacion, type Fila } from '../model/estadoLote'
+import { comparacionVigente, lineaSparkline, textoComparacion, textoComparacionFcr, type Fila } from '../model/estadoLote'
 
 type Props = {
   lote: DashboardLote | null
@@ -14,6 +14,7 @@ type Props = {
 
 function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrirBitacora }: Props) {
   const reciente = indicadores[0] ?? null
+  const notaVigente = comparacionVigente(comparacion?.fecha_del_dato_usado, reciente?.fecha)
 
   const filas: Fila[] = [
     { etiqueta: 'Edad', valor: diaLote === null ? '—' : `${diaLote} días`, mono: true },
@@ -29,13 +30,17 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
     {
       etiqueta: 'Peso promedio',
       valor: reciente?.pesoPromedioG == null ? '—' : `${reciente.pesoPromedioG} g`,
-      nota: textoComparacion(comparacion?.desvio_peso_pct ?? null, comparacion?.peso_objetivo ?? null, 'g'),
+      nota: notaVigente
+        ? textoComparacion(comparacion?.desvio_peso_pct ?? null, comparacion?.objetivo?.peso_esperado_g ?? null, 'g')
+        : undefined,
       mono: true,
     },
     {
       etiqueta: 'Conversión',
       valor: reciente?.fcr == null ? '—' : String(reciente.fcr),
-      nota: textoComparacion(comparacion?.desvio_fcr_pct ?? null, comparacion?.fcr_objetivo ?? null, ''),
+      nota: notaVigente
+        ? textoComparacionFcr(comparacion?.desvio_fcr ?? null, comparacion?.objetivo?.fcr_objetivo ?? null)
+        : undefined,
       mono: true,
     },
     { etiqueta: 'Lote', valor: lote?.codigo ?? '—', mono: true },
