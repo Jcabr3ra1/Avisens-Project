@@ -2,9 +2,15 @@ package com.project.avisensandroid.ui.fragments
 
 import android.graphics.Color
 import android.os.Bundle
+import android.content.Context
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.view.Gravity
+import android.widget.TextView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.net.Uri
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -21,6 +27,13 @@ class ProveedoresFragment : BaseBottomNavFragment() {
 
     private var _binding: Po04BodegaProveedoresOpBinding? = null
     private val binding get() = _binding!!
+
+    private val calificacionesPrefs by lazy {
+        requireContext().getSharedPreferences(
+            "proveedores_calificaciones",
+            Context.MODE_PRIVATE
+        )
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -161,9 +174,141 @@ class ProveedoresFragment : BaseBottomNavFragment() {
             )
         }
 
+        configurarCalificacion(itemBinding, proveedor.id)
+        configurarAccionesContacto(itemBinding, proveedor)
+
         binding.contenedorProveedores.addView(
             itemBinding.root
         )
+    }
+
+
+
+    private fun configurarAccionesContacto(
+        itemBinding: ItemProveedorBinding,
+        proveedor: ProveedorResponse
+    ) {
+        val telefono = proveedor.telefono?.trim().orEmpty()
+        val direccion = proveedor.direccion?.trim().orEmpty()
+
+        itemBinding.btnLlamarProveedor.isEnabled = telefono.isNotBlank()
+        itemBinding.btnVerDireccionProveedor.isEnabled = direccion.isNotBlank()
+
+        itemBinding.btnLlamarProveedor.setOnClickListener {
+            if (telefono.isBlank()) {
+                Toast.makeText(
+                    requireContext(),
+                    "Este proveedor no tiene teléfono registrado",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+
+            try {
+                val intent = Intent(Intent.ACTION_DIAL).apply {
+                    data = Uri.parse("tel:${Uri.encode(telefono)}")
+                }
+                startActivity(intent)
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(
+                    requireContext(),
+                    "No se encontró una aplicación para realizar llamadas",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
+        itemBinding.btnVerDireccionProveedor.setOnClickListener {
+            if (direccion.isBlank()) {
+                Toast.makeText(
+                    requireContext(),
+                    "Este proveedor no tiene dirección registrada",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+
+            try {
+                val uri = Uri.parse("geo:0,0?q=${Uri.encode(direccion)}")
+                val intent = Intent(Intent.ACTION_VIEW, uri)
+                startActivity(intent)
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(
+                    requireContext(),
+                    "No se encontró una aplicación de mapas",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun configurarCalificacion(
+        itemBinding: ItemProveedorBinding,
+        proveedorId: Int
+    ) {
+        val contenedor = itemBinding.contenedorEstrellasProveedor
+        contenedor.removeAllViews()
+
+        val puntuacionGuardada = calificacionesPrefs.getInt(
+            "proveedor_$proveedorId",
+            0
+        )
+
+        fun actualizarEstrellas(puntuacion: Int) {
+            for (i in 0 until contenedor.childCount) {
+                val estrella = contenedor.getChildAt(i) as TextView
+                estrella.text = if (i < puntuacion) "★" else "☆"
+                estrella.setTextColor(
+                    if (i < puntuacion) {
+                        Color.parseColor("#E3A629")
+                    } else {
+                        Color.parseColor("#B8C1BC")
+                    }
+                )
+            }
+            itemBinding.txtCalificacionProveedor.text =
+                if (puntuacion > 0) {
+                    "Tu calificación: $puntuacion/5"
+                } else {
+                    "Sin calificación"
+                }
+        }
+
+        for (i in 1..5) {
+            val estrella = TextView(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    dp(25),
+                    dp(30)
+                )
+                gravity = Gravity.CENTER
+                textSize = 20f
+                text = if (i <= puntuacionGuardada) "★" else "☆"
+                setTextColor(
+                    if (i <= puntuacionGuardada) {
+                        Color.parseColor("#E3A629")
+                    } else {
+                        Color.parseColor("#B8C1BC")
+                    }
+                )
+                isClickable = true
+                isFocusable = true
+
+                setOnClickListener {
+                    calificacionesPrefs.edit()
+                        .putInt("proveedor_$proveedorId", i)
+                        .apply()
+                    actualizarEstrellas(i)
+                    Toast.makeText(
+                        requireContext(),
+                        "Calificación guardada",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            contenedor.addView(estrella)
+        }
+
+        actualizarEstrellas(puntuacionGuardada)
     }
 
     private fun mostrarMensajeSinProveedores() {
