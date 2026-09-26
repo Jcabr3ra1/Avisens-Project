@@ -21,6 +21,16 @@ export function tieneLecturaUtil(estado: EstadoSensorVista): boolean {
   return estado !== 'offline' && estado !== 'lectura_no_disponible'
 }
 
+// Distinto de tieneLecturaUtil: esto responde "¿esta lectura es reciente,
+// confiable para el estado operativo AHORA?", no "¿hay un valor histórico
+// que se pueda consultar?". Un sensor 'obsoleta' tiene un valor -- se puede
+// abrir su detalle e historial -- pero no cuenta como "en línea" para un
+// semáforo o un contador operativo: mostrarlo así diría que el sistema
+// comprobó algo reciente cuando en realidad no lo hizo.
+export function esLecturaVigente(estado: EstadoSensorVista): boolean {
+  return tieneLecturaUtil(estado) && estado !== 'obsoleta'
+}
+
 // A qué variable de umbral (las 3 que soporta el backend) corresponde el
 // texto libre de `sensor.tipo`. Null = variable sin umbral configurable
 // todavía en el backend (p. ej. CO₂, NH₃) — se muestra la lectura igual,
