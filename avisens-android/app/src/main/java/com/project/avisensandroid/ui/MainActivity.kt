@@ -23,6 +23,7 @@ import com.project.avisensandroid.ui.fragments.BodegaFragment
 import com.project.avisensandroid.ui.fragments.BitacoraFragment
 import com.project.avisensandroid.ui.fragments.InicioFragment
 import com.project.avisensandroid.ui.fragments.SensoresFragment
+import com.project.avisensandroid.ui.fragments.AsistenteVozFragment
 import com.project.avisensandroid.R
 import com.project.avisensandroid.databinding.Au02RecuperarContrasenaBinding
 import com.project.avisensandroid.databinding.Au03VerificarCodigoBinding
@@ -111,6 +112,10 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.beginTransaction()
             .replace(R.id.mainFragmentContainer, fragment)
             .commit()
+    }
+
+    fun mostrarAsistenteVoz() {
+        mostrarFragment(AsistenteVozFragment())
     }
 
     fun navegarDesdeBottomNav(itemId: Int) {

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:app="http://schemas.android.com/apk/res-auto"
+android:layout_width="match_parent"
+android:layout_height="match_parent"
+android:background="@color/bg_app"
+android:padding="24dp">
+
+
+
+<TextView
+    android:id="@+id/txtTituloLia"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:text="Lía, tu asistente de voz"
+    android:textColor="@color/text_primary"
+    android:textSize="26sp"
+    android:textStyle="bold"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toTopOf="parent" />
+
+<TextView
+    android:id="@+id/txtSubtituloLia"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="8dp"
+    android:text="Pregunta por la temperatura o humedad de tu galpón."
+    android:textColor="@color/text_secondary"
+    android:textSize="15sp"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/txtTituloLia" />
+
+<TextView
+    android:id="@+id/txtEstadoVoz"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="32dp"
+    android:background="@drawable/bg_stat_card"
+    android:gravity="center"
+    android:padding="20dp"
+    android:text="Toca el botón para hablar con Lía"
+    android:textColor="@color/green_accent"
+    android:textSize="16sp"
+    android:textStyle="bold"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/txtSubtituloLia" />
+
+<TextView
+    android:id="@+id/txtTranscripcion"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="24dp"
+    android:background="@drawable/bg_stat_card"
+    android:padding="18dp"
+    android:text="Aquí aparecerá lo que digas."
+    android:textColor="@color/text_secondary"
+    android:textSize="15sp"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/txtEstadoVoz" />
+
+<TextView
+    android:id="@+id/txtRespuestaLia"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="16dp"
+    android:background="@drawable/bg_stat_card"
+    android:padding="18dp"
+    android:text="La respuesta de Lía aparecerá aquí."
+    android:textColor="@color/text_primary"
+    android:textSize="15sp"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/txtTranscripcion" />
+
+<com.google.android.material.button.MaterialButton
+    android:id="@+id/btnHablarConLia"
+    android:layout_width="0dp"
+    android:layout_height="56dp"
+    android:layout_marginTop="32dp"
+    android:text="Hablar con Lía"
+    android:textSize="17sp"
+    android:textStyle="bold"
+    app:backgroundTint="@color/green_accent"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/txtRespuestaLia" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
