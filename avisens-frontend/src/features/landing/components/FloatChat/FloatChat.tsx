@@ -9,14 +9,11 @@ import {
 } from '@features/landing/api/chatbot'
 import { IcAlert, IcRefresh, IcSend } from '@shared/ui/icons/icons'
 import Ic from '@shared/ui/Ic/Ic'
+import { seLeenEnPar } from '@features/landing/model/opcionesChat'
 import './FloatChat.css'
 
 const RobotLottie = lazy(() => import('./RobotLottie'))
 
-// El cuestionario son 15 pasos y el puntaje comercial llega a 12. Estaban en
-// 20 y 16 desde antes del rediseño: el resultado mostraba "12/16" y la barra de
-// progreso se quedaba corta.
-const TOTAL_PREGUNTAS = 15
 const SIN_CONSENTIMIENTO = 'sin_consentimiento'
 const PUNTAJE_MAXIMO = 12
 
@@ -82,12 +79,49 @@ function etiquetaClasificacion(clasificacion: string | null): string {
   return normalizada.charAt(0).toUpperCase() + normalizada.slice(1)
 }
 
+// Las tres puertas de entrada al asistente. Cada una lleva icono y color
+// propios para que se distingan antes de leerlas: quien viene a cotizar y quien
+// viene con un problema no buscan lo mismo.
+const ACCIONES_RAPIDAS: {
+  ruta: RutaChat
+  tono: 'cotizar' | 'dudas' | 'soporte'
+  titulo: string
+  detalle: string
+  icono: string
+}[] = [
+  {
+    ruta: 'cotizacion',
+    tono: 'cotizar',
+    titulo: 'Quiero cotizar',
+    detalle: 'Un asesor visita tu granja y te arma la propuesta',
+    icono: 'M9 7h6M9 11h6M9 15h3M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z',
+  },
+  {
+    ruta: 'general',
+    tono: 'dudas',
+    titulo: 'Tengo dudas primero',
+    detalle: 'Resolvemos tus preguntas antes de decidir',
+    icono: 'M12 17h.01M9.1 9a3 3 0 115.8 1c0 2-2.9 2.5-2.9 4M12 3a9 9 0 100 18 9 9 0 000-18z',
+  },
+  {
+    ruta: 'soporte',
+    tono: 'soporte',
+    titulo: 'Ya soy cliente y tengo un problema',
+    detalle: 'Radica una PQRS y te damos número de seguimiento',
+    icono: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z',
+  },
+]
+
 function FloatChat() {
   const [open, setOpen] = useState(false)
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [sesionId, setSesionId] = useState<string | null>(null)
   const [pregunta, setPregunta] = useState<PreguntaChatbot | null>(null)
-  const [respondidas, setRespondidas] = useState(0)
+  // El progreso lo manda el servidor en cada respuesta. Antes se contaba aquí
+  // contra una constante de 15, y la API decía 16: la barra nunca llegaba al
+  // final. Duplicar el número en dos repos es lo que garantiza que se separen.
+  const [progreso, setProgreso] = useState(0)
+  const [totalPasos, setTotalPasos] = useState<number | null>(null)
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -99,8 +133,9 @@ function FloatChat() {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const autoAbierto = useRef(false)
 
-  const aplicar = useCallback((respuesta: RespuestaChatbot, cuenta: boolean) => {
-    if (cuenta) setRespondidas((n) => n + 1)
+  const aplicar = useCallback((respuesta: RespuestaChatbot) => {
+    if (respuesta.progreso !== null) setProgreso(respuesta.progreso)
+    if (respuesta.total_pasos !== null) setTotalPasos(respuesta.total_pasos)
 
     if (respuesta.finalizado) {
       const sinConsentimiento = respuesta.clasificacion === SIN_CONSENTIMIENTO
@@ -147,7 +182,8 @@ function FloatChat() {
     setSesionId(null)
     setPregunta(null)
     setResultado(null)
-    setRespondidas(0)
+    setProgreso(0)
+    setTotalPasos(null)
     setTexto('')
     setPorElegirRuta(false)
 
@@ -155,7 +191,7 @@ function FloatChat() {
       const respuesta = await iniciarConversacion('web', ruta)
       setSesionId(respuesta.sesion_id)
       setIniciado(true)
-      aplicar(respuesta, false)
+      aplicar(respuesta)
     } catch (err) {
       setError(traducirError(err, 'No se pudo iniciar la conversación.'))
       setIniciado(false)
@@ -169,7 +205,8 @@ function FloatChat() {
     setSesionId(null)
     setPregunta(null)
     setResultado(null)
-    setRespondidas(0)
+    setProgreso(0)
+    setTotalPasos(null)
     setTexto('')
     setError(null)
     setPorElegirRuta(true)
@@ -185,7 +222,7 @@ function FloatChat() {
     setEnviando(true)
 
     try {
-      aplicar(await responderPregunta(sesionId, valor), true)
+      aplicar(await responderPregunta(sesionId, valor))
     } catch (err) {
       const fallo = traducirError(err, 'No se pudo enviar la respuesta.')
       if (fallo.reiniciar) {
@@ -249,15 +286,16 @@ function FloatChat() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [cerrarChat, open])
 
-  const progreso = Math.min(respondidas, TOTAL_PREGUNTAS)
   const opciones = pregunta?.opciones ?? []
+  const enPar = seLeenEnPar(opciones)
+  // La identidad («Asistente AVISENS») es fija y va en su propia línea; el
+  // estado cambia. Antes compartían sitio, así que en cuanto AVIA escribía
+  // desaparecía el nombre del producto.
   const estado = resultado
-    ? resultado.clasificacion === SIN_CONSENTIMIENTO || resultado.clasificacion === 'pqrs'
-      ? 'Conversación terminada'
-      : 'Conversación terminada'
+    ? 'Conversación terminada'
     : enviando
-      ? 'Escribiendo'
-      : 'Asistente AVISENS'
+      ? 'Escribiendo…'
+      : 'En línea ahora'
   const placeholder = resultado
     ? 'La conversación terminó'
     : pregunta?.tipo === 'numero'
@@ -280,7 +318,13 @@ function FloatChat() {
           </div>
           <div className="float-chat-heading">
             <div className="float-chat-name" id="avia-chat-title">AVIA</div>
-            <div className="float-chat-online" aria-live="polite">{estado}</div>
+            <div className="float-chat-tagline">Asistente AVISENS</div>
+            <div
+              className={`float-chat-online${resultado ? ' float-chat-online--fin' : ''}`}
+              aria-live="polite"
+            >
+              {estado}
+            </div>
           </div>
           <button
             type="button"
@@ -297,9 +341,20 @@ function FloatChat() {
           </button>
         </div>
 
-        <div className="float-chat-progress" aria-label={`Progreso ${progreso} de ${TOTAL_PREGUNTAS}`}>
-          <div style={{ width: `${Math.round((progreso / TOTAL_PREGUNTAS) * 100)}%` }} />
-        </div>
+        {/* Sin total no se dibuja nada: una barra que divide por un número
+            inventado miente con aspecto de dato. */}
+        {totalPasos !== null && totalPasos > 0 && (
+          <div
+            className="float-chat-progress"
+            role="progressbar"
+            aria-valuenow={progreso}
+            aria-valuemin={0}
+            aria-valuemax={totalPasos}
+            aria-label={`Pregunta ${progreso} de ${totalPasos}`}
+          >
+            <div style={{ width: `${Math.min(Math.round((progreso / totalPasos) * 100), 100)}%` }} />
+          </div>
+        )}
 
         <div className="float-chat-msgs" ref={scrollRef}>
           {porElegirRuta ? (
@@ -383,22 +438,34 @@ function FloatChat() {
 
           {porElegirRuta && !enviando ? (
             <div className="float-chat-options float-chat-menu">
-              <p className="float-chat-pregunta">¿Qué necesitas hoy?</p>
-              <button type="button" onClick={() => void iniciar('cotizacion')}>
-                <strong>Solicitar acompañamiento</strong>
-                <small>Un asesor visita tu granja y te ayuda con una cotización</small>
-              </button>
-              <button type="button" onClick={() => void iniciar('general')}>
-                <strong>Tengo dudas primero</strong>
-                <small>Resolvemos tus preguntas antes de decidir</small>
-              </button>
-              <button type="button" onClick={() => void iniciar('soporte')}>
-                <strong>Ya soy cliente y tengo un problema</strong>
-                <small>Radicar una PQRS con número de radicado para seguimiento</small>
-              </button>
+              <p className="float-chat-rotulo">Acciones rápidas</p>
+              {ACCIONES_RAPIDAS.map((accion) => (
+                <button
+                  key={accion.ruta}
+                  type="button"
+                  className={`float-accion float-accion--${accion.tono}`}
+                  onClick={() => void iniciar(accion.ruta)}
+                >
+                  <span className="float-accion-icono" aria-hidden="true">
+                    <Ic d={accion.icono} size={17} />
+                  </span>
+                  <span className="float-accion-texto">
+                    <strong>{accion.titulo}</strong>
+                    <small>{accion.detalle}</small>
+                  </span>
+                  <span className="float-accion-flecha" aria-hidden="true">
+                    <Ic d="M9 18l6-6-6-6" size={14} />
+                  </span>
+                </button>
+              ))}
             </div>
           ) : opciones.length > 0 && !resultado ? (
-          <div className="float-chat-options">
+          <div className={`float-chat-options${enPar ? ' float-chat-options--par' : ''}`}>
+            {/* Un sí o no se responde de un vistazo: en pareja y horizontal se
+                lee como una decisión, mientras que apilado a lo ancho parece
+                una lista de la que hay que escoger. Es también como los pinta
+                WhatsApp, que usa botones hasta tres opciones y lista a partir
+                de ahí, así que los dos canales se leen igual. */}
             {opciones.map((opcion) => (
               <button
                 key={opcion}

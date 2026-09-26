@@ -1,4 +1,5 @@
 import { api } from '@shared/api'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 import type { PaginatedResponse } from '@shared/api'
 
 export type EstadoProspecto =
@@ -28,6 +29,7 @@ export interface Prospecto {
   rol_prospecto: string | null
   tipo_produccion: string | null
   telefono: string | null
+  whatsapp_id: string | null
   email: string | null
   canal_origen: string | null
   contacto_decisor: string | null
@@ -87,6 +89,12 @@ export async function listarProspectos(
   return data
 }
 
+export async function listarTodosLosProspectos(
+  query: Omit<ProspectosQuery, 'page' | 'limit'> = {},
+): Promise<Prospecto[]> {
+  return listarTodasLasPaginas<Prospecto>('/prospectos', query)
+}
+
 export async function obtenerProspecto(id: number): Promise<ProspectoDetalle> {
   const { data } = await api.get<ProspectoDetalle>(`/prospectos/${id}`)
   return data
@@ -110,4 +118,50 @@ export async function exportarProspectosCsv(
     responseType: 'blob',
   })
   return data as Blob
+}
+
+export interface ConvertirProspectoPayload {
+  nombre_completo: string
+  cedula: string
+  email: string
+  password: string
+  telefono?: string
+  organizacion_nombre?: string
+  granja_nombre: string
+  granja_municipio?: string
+}
+
+export interface ProspectoConvertido {
+  prospecto: { id: number; estado: string; resultado_cierre: string }
+  usuario: {
+    id: number
+    nombre_completo: string
+    email: string
+    organizacion: { id: number; nombre: string }
+  }
+}
+
+export async function convertirProspecto(
+  id: number,
+  payload: ConvertirProspectoPayload,
+): Promise<ProspectoConvertido> {
+  const { data } = await api.post<ProspectoConvertido>(
+    `/prospectos/${id}/convertir`,
+    payload,
+  )
+  return data
+}
+
+export interface CerrarProspectoPayload {
+  resultado: 'ganado' | 'perdido'
+  motivo?: string
+  usuario_id?: number
+}
+
+export async function cerrarProspecto(
+  id: number,
+  payload: CerrarProspectoPayload,
+): Promise<Prospecto> {
+  const { data } = await api.patch<Prospecto>(`/prospectos/${id}/cerrar`, payload)
+  return data
 }

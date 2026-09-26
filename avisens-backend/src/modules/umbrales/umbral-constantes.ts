@@ -4,4 +4,5 @@ export const VARIABLES_AMBIENTALES = [
   'luminosidad',
 ] as const;
 
-export const CRITICIDADES = ['baja', 'media', 'alta', 'critica'] as const;
+// La escala vive en common: la comparten alertas, políticas y umbrales.
+export { CRITICIDADES } from '../../common/criticidad/criticidad';

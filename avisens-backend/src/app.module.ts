@@ -30,6 +30,7 @@ import { CurvasObjetivoModule } from './modules/curvas-objetivo/curvas-objetivo.
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClimaModule } from './modules/clima/clima.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
+import { CategoriasFinancierasModule } from './modules/categorias-financieras/categorias-financieras.module';
 import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-alerta.module';
 import { AlertasCanalesModule } from './modules/alertas-canales/alertas-canales.module';
 import { EvidenciaAlertaModule } from './modules/evidencia-alerta/evidencia-alerta.module';
@@ -54,6 +55,8 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { DecimalInterceptor } from './common/decimal.interceptor';
 import { RecuperacionesPasswordModule } from './modules/recuperaciones-password/recuperaciones-password.module';
 import { CatalogoSensoresModule } from './modules/catalogo-sensores/catalogo-sensores.module';
+import { LineasGeneticasModule } from './modules/lineas-geneticas/lineas-geneticas.module';
+import { CurvasGeneticasModule } from './modules/curvas-geneticas/curvas-geneticas.module';
 import { ComandosVozModule } from './modules/comandos-voz/comandos-voz.module';
 import { ZonasGalponModule } from './modules/zonas-galpon/zonas-galpon.module';
 import { UsuariosGalponesModule } from './modules/usuarios-galpones/usuarios-galpones.module';
@@ -65,6 +68,9 @@ import { JobsModule } from './common/jobs/jobs.module';
 import { ObservabilityModule } from './common/observability/observability.module';
 import { RequestObservabilityInterceptor } from './common/observability/request-observability.interceptor';
 import { CaptacionProspectosModule } from './modules/captacion-prospectos/captacion-prospectos.module';
+import { PlanLoteModule } from './modules/plan-lote/plan-lote.module';
+import { PlanAlimentoModule } from './modules/plan-alimento/plan-alimento.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -117,6 +123,7 @@ import { CaptacionProspectosModule } from './modules/captacion-prospectos/captac
     CurvasObjetivoModule,
     ClimaModule,
     AlertasModule,
+    CategoriasFinancierasModule,
     HealthModule,
     LegalModule,
     PoliticasAlertaModule,
@@ -140,6 +147,10 @@ import { CaptacionProspectosModule } from './modules/captacion-prospectos/captac
     OrganizacionesModule,
     RecuperacionesPasswordModule,
     CatalogoSensoresModule,
+    LineasGeneticasModule,
+    CurvasGeneticasModule,
+    PlanLoteModule,
+    PlanAlimentoModule,
     ComandosVozModule,
     ZonasGalponModule,
     UsuariosGalponesModule,

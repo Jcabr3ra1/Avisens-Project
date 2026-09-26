@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import { CRITICIDADES } from '../../../common/criticidad/criticidad';
 
 export class CreateAlertasDto {
   @ApiProperty({
@@ -16,11 +17,8 @@ export class CreateAlertasDto {
   @IsString()
   tipo: string;
 
-  @ApiProperty({
-    example: 'critica',
-    description: 'Nivel de criticidad: baja | media | critica',
-  })
-  @IsString()
+  @ApiProperty({ example: 'alta', enum: CRITICIDADES })
+  @IsIn(CRITICIDADES)
   criticidad: string;
 
   @ApiPropertyOptional({

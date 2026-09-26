@@ -90,7 +90,7 @@ function AcordeonInsumo({
             <em>mín. {insumo.stock_minimo.toLocaleString()}</em>
           </span>
 
-          <div className="inv-barra" aria-hidden="true">
+          <div className="inv-barra-stock" aria-hidden="true">
             <span
               className={`inv-barra-nivel inv-barra-nivel--${estado}`}
               style={{ width: `${porcentajeDeStock(insumo)}%` }}

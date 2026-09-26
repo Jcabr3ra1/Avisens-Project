@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export interface Organizacion {
   id: number
@@ -8,11 +8,10 @@ export interface Organizacion {
   plan: string
   activa: boolean
   fecha_creacion: string
-}
-
-export interface OrganizacionesQuery {
-  page?: number
-  limit?: number
+  // Lo calcula el servidor con un `_count` de Prisma sobre las relaciones, así
+  // que cuenta las filas reales y no depende de lo que este usuario alcance a
+  // ver en los listados de granjas y usuarios.
+  _count: { granjas: number; usuarios: number }
 }
 
 export interface CrearOrganizacionPayload {
@@ -21,14 +20,8 @@ export interface CrearOrganizacionPayload {
   plan?: string
 }
 
-export async function listarOrganizaciones(
-  query: OrganizacionesQuery = {},
-): Promise<Organizacion[]> {
-  const { data } = await api.get<PaginatedResponse<Organizacion>>(
-    '/organizaciones',
-    { params: { page: 1, limit: 100, ...query } },
-  )
-  return data.data
+export async function listarOrganizaciones(): Promise<Organizacion[]> {
+  return listarTodasLasPaginas<Organizacion>('/organizaciones')
 }
 
 export async function crearOrganizacion(

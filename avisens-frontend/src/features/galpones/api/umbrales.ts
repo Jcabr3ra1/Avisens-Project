@@ -6,7 +6,10 @@ import { listarTodasLasPaginas } from '@shared/api/paginacion'
 // (ver umbral-constantes.ts del backend) — CO₂ y NH₃ todavía no tienen umbral
 // configurable ahí.
 export const VARIABLES_UMBRAL = ['temperatura', 'humedad', 'luminosidad'] as const
-export const CRITICIDADES_UMBRAL = ['baja', 'media', 'alta', 'critica'] as const
+// La escala quedó en tres niveles: 'critica' se eliminó porque ningún camino
+// automático la producía y la UI la mostraba igual que 'alta'. El backend ahora
+// la rechaza con 400, así que ofrecerla en un formulario sería un 400 seguro.
+export const CRITICIDADES_UMBRAL = ['baja', 'media', 'alta'] as const
 
 export interface GalponResumenUmbral {
   id: number

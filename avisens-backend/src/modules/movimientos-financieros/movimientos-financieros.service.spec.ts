@@ -6,11 +6,14 @@ import {
 } from '@nestjs/common';
 import { MovimientosFinancierosService } from './movimientos-financieros.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 import { ROLES } from '../../common/auth/roles';
 import type { Solicitante } from '../../common/auth/acceso';
 
 describe('MovimientosFinancierosService', () => {
   let service: MovimientosFinancierosService;
+
+  const auditoria = { registrar: jest.fn() };
 
   const prisma = {
     movimientoFinanciero: {
@@ -51,6 +54,7 @@ describe('MovimientosFinancierosService', () => {
       providers: [
         MovimientosFinancierosService,
         { provide: PrismaService, useValue: prisma },
+        { provide: AuditoriaService, useValue: auditoria },
       ],
     }).compile();
     service = module.get<MovimientosFinancierosService>(
@@ -165,6 +169,56 @@ describe('MovimientosFinancierosService', () => {
     });
   });
 
+  // El administrador ve los movimientos de todos los propietarios, y eso es a
+  // propósito: en un servicio gestionado a veces tiene que mirar las cuentas de
+  // un cliente para ayudarlo. Lo que protege al cliente no es esconderlo, sino
+  // que quede rastro. La bitácora sólo guardaba escrituras —el interceptor deja
+  // fuera el GET— así que estas consultas se registran a mano.
+  describe('mirar las cuentas de otro deja rastro', () => {
+    it('el administrador que lista queda registrado', async () => {
+      await service.listar(admin, { page: 1, limit: 10 });
+
+      expect(auditoria.registrar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          usuario_id: admin.id,
+          accion: 'consultar',
+          entidad_afectada: 'movimientos_financieros',
+        }),
+      );
+    });
+
+    it('el propietario mirando lo suyo no se registra', async () => {
+      await service.listar(propietario, { page: 1, limit: 10 });
+
+      expect(auditoria.registrar).not.toHaveBeenCalled();
+    });
+
+    it('el administrador que abre un movimiento queda registrado, con el id', async () => {
+      prisma.movimientoFinanciero.findUnique.mockResolvedValue(
+        movimientoExistente,
+      );
+
+      await service.obtener(movimientoExistente.id, admin);
+
+      expect(auditoria.registrar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accion: 'consultar',
+          registro_id: movimientoExistente.id,
+        }),
+      );
+    });
+
+    // Si registrar fallara y tumbara la consulta, la auditoría dejaría de ser
+    // un rastro para convertirse en un punto de caída.
+    it('un fallo al registrar no tumba la consulta', async () => {
+      auditoria.registrar.mockRejectedValueOnce(new Error('bitácora caída'));
+
+      await expect(
+        service.listar(admin, { page: 1, limit: 10 }),
+      ).resolves.toBeDefined();
+    });
+  });
+
   describe('obtener', () => {
     it('lanza NotFound cuando el movimiento no existe', async () => {
       prisma.movimientoFinanciero.findUnique.mockResolvedValue(null);
@@ -213,6 +267,116 @@ describe('MovimientosFinancierosService', () => {
         id: 1,
         eliminado: true,
       });
+    });
+  });
+
+  /**
+   * La categoría clasifica el movimiento, así que tiene que estar del mismo
+   * lado del balance. Antes sólo se comprobaba que existiera: un ingreso con
+   * la categoría «Compra de alimento» se guardaba en silencio y el balance de
+   * la granja salía mal sin que nadie lo notara.
+   */
+  describe('la categoría tiene que encajar con el tipo', () => {
+    const conCategoria = (tipo: string | null, nombre = 'Compra de alimento') =>
+      prisma.categoriaFinanciera.findUnique.mockResolvedValue({
+        id: 3,
+        nombre,
+        tipo,
+      });
+
+    it('deja crear cuando concuerdan', async () => {
+      conCategoria('egreso');
+      prisma.movimientoFinanciero.create.mockResolvedValue({ id: 1 });
+
+      await expect(
+        service.crear({ ...dtoCrear, tipo: 'egreso' }, propietario),
+      ).resolves.toBeDefined();
+    });
+
+    it('rechaza un ingreso con categoría de egreso', async () => {
+      conCategoria('egreso');
+
+      await expect(
+        service.crear({ ...dtoCrear, tipo: 'ingreso' }, propietario),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.movimientoFinanciero.create).not.toHaveBeenCalled();
+    });
+
+    it('el mensaje nombra la categoría y los dos lados', async () => {
+      conCategoria('egreso', 'Compra de alimento');
+
+      await expect(
+        service.crear({ ...dtoCrear, tipo: 'ingreso' }, propietario),
+      ).rejects.toThrow(/Compra de alimento.*egreso.*ingreso/);
+    });
+
+    // La columna es opcional a propósito: sin tipo, la categoría sirve para
+    // las dos cosas y no se debe rechazar nada.
+    it('una categoría sin tipo vale para los dos', async () => {
+      conCategoria(null, 'Otros');
+      prisma.movimientoFinanciero.create.mockResolvedValue({ id: 1 });
+
+      await expect(
+        service.crear({ ...dtoCrear, tipo: 'ingreso' }, propietario),
+      ).resolves.toBeDefined();
+    });
+
+    // El caso que un arreglo ingenuo se salta: no llega categoria_id, así que
+    // parece que no hay nada que validar, pero el tipo nuevo choca con la
+    // categoría que ya tenía.
+    it('rechaza cambiar sólo el tipo si la categoría de antes ya no encaja', async () => {
+      prisma.movimientoFinanciero.findUnique.mockResolvedValue({
+        ...movimientoExistente,
+        tipo: 'egreso',
+        categoria_id: 3,
+      });
+      conCategoria('egreso');
+
+      await expect(
+        service.actualizar(1, { tipo: 'ingreso' }, propietario),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.movimientoFinanciero.update).not.toHaveBeenCalled();
+    });
+
+    it('rechaza cambiar sólo la categoría si no encaja con el tipo de antes', async () => {
+      prisma.movimientoFinanciero.findUnique.mockResolvedValue({
+        ...movimientoExistente,
+        tipo: 'ingreso',
+        categoria_id: 1,
+      });
+      conCategoria('egreso');
+
+      await expect(
+        service.actualizar(1, { categoria_id: 3 }, propietario),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('deja actualizar cuando el resultado concuerda', async () => {
+      prisma.movimientoFinanciero.findUnique.mockResolvedValue({
+        ...movimientoExistente,
+        tipo: 'egreso',
+        categoria_id: 3,
+      });
+      conCategoria('ingreso', 'Venta de aves');
+      prisma.movimientoFinanciero.update.mockResolvedValue({ id: 1 });
+
+      await expect(
+        service.actualizar(1, { tipo: 'ingreso', categoria_id: 1 }, propietario),
+      ).resolves.toBeDefined();
+    });
+
+    it('una actualización que no toca ni tipo ni categoría no se estorba', async () => {
+      prisma.movimientoFinanciero.findUnique.mockResolvedValue({
+        ...movimientoExistente,
+        tipo: 'egreso',
+        categoria_id: 3,
+      });
+      prisma.movimientoFinanciero.update.mockResolvedValue({ id: 1 });
+
+      await expect(
+        service.actualizar(1, { descripcion: 'otra nota' }, propietario),
+      ).resolves.toBeDefined();
+      expect(prisma.categoriaFinanciera.findUnique).not.toHaveBeenCalled();
     });
   });
 });

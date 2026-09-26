@@ -1,14 +1,23 @@
-import { useState, type FormEventHandler } from 'react'
+import { useMemo, useState, type FormEventHandler } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import type { Galpon } from '@features/galpones/api/galpones'
 import type { Proveedor } from '@features/proveedores/api/proveedores'
-import type { FormularioLoteDatos } from '../model/formularioLote'
+import type { LineaGenetica } from '../api/lineas-geneticas'
+import {
+  MARCAS_ALIMENTO,
+  SEXOS_LOTE,
+  opcionesLineaGenetica,
+  tieneCurvaObjetivo,
+  type FormularioLoteDatos,
+} from '../model/formularioLote'
 
 interface Props {
   form: FormularioLoteDatos
   modoEdicion: boolean
   galpones: Galpon[]
   proveedores: Proveedor[]
+  lineasGeneticas: LineaGenetica[]
+  errorLineasGeneticas: string
   guardando: boolean
   error: string
   onCambiar: <K extends keyof FormularioLoteDatos>(
@@ -30,6 +39,8 @@ function FormularioLote({
   modoEdicion,
   galpones,
   proveedores,
+  lineasGeneticas,
+  errorLineasGeneticas,
   guardando,
   error,
   onCambiar,
@@ -37,6 +48,10 @@ function FormularioLote({
   onCerrar,
 }: Props) {
   const [mostrarAdicional, setMostrarAdicional] = useState(modoEdicion)
+  const opcionesLinea = useMemo(
+    () => opcionesLineaGenetica(lineasGeneticas, form.linea_genetica_id),
+    [lineasGeneticas, form.linea_genetica_id],
+  )
 
   return (
     <Modal
@@ -62,7 +77,7 @@ function FormularioLote({
       <form id={ID_FORMULARIO} onSubmit={onGuardar}>
         <div className="modal-fila">
           <label className="modal-campo">
-            <span>Galpón *</span>
+            <span>Galpón</span>
             <select
               value={form.galpon_id}
               onChange={(evento) =>
@@ -80,7 +95,7 @@ function FormularioLote({
             </select>
           </label>
           <label className="modal-campo">
-            <span>Proveedor</span>
+            <span>Proveedor <em>(Opcional)</em></span>
             <select
               value={form.proveedor_id ?? ''}
               onChange={(evento) => {
@@ -100,7 +115,7 @@ function FormularioLote({
 
         <div className="modal-fila">
           <label className="modal-campo">
-            <span>Fecha de ingreso *</span>
+            <span>Fecha de ingreso</span>
             <input
               type="date"
               value={form.fecha_ingreso}
@@ -111,7 +126,7 @@ function FormularioLote({
             />
           </label>
           <label className="modal-campo">
-            <span>Cantidad inicial *</span>
+            <span>Cantidad inicial</span>
             <input
               type="number"
               min="1"
@@ -146,7 +161,7 @@ function FormularioLote({
           >
             <div className="modal-fila">
               <label className="modal-campo">
-                <span>Raza</span>
+                <span>Raza <em>(Opcional)</em></span>
                 <input
                   value={form.raza}
                   onChange={(evento) =>
@@ -155,27 +170,71 @@ function FormularioLote({
                 />
               </label>
               <label className="modal-campo">
-                <span>Sexo</span>
-                <input
+                <span>Sexo <em>(Opcional)</em></span>
+                <select
                   value={form.sexo}
-                  onChange={(evento) =>
-                    onCambiar('sexo', evento.target.value)
-                  }
-                />
+                  onChange={(evento) => onCambiar('sexo', evento.target.value)}
+                >
+                  <option value="">Sin especificar</option>
+                  {SEXOS_LOTE.map((sexo) => (
+                    <option key={sexo} value={sexo}>
+                      {sexo.charAt(0).toUpperCase() + sexo.slice(1)}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label className="modal-campo">
-                <span>Marca de alimento</span>
-                <input
+                <span>Marca de alimento <em>(Opcional)</em></span>
+                <select
                   value={form.marca_alimento}
-                  onChange={(evento) =>
-                    onCambiar('marca_alimento', evento.target.value)
-                  }
-                />
+                  onChange={(evento) => onCambiar('marca_alimento', evento.target.value)}
+                >
+                  <option value="">Sin especificar</option>
+                  {MARCAS_ALIMENTO.map((marca) => (
+                    <option key={marca} value={marca}>
+                      {marca.charAt(0).toUpperCase() + marca.slice(1)}
+                    </option>
+                  ))}
+                </select>
+                {form.marca_alimento && !tieneCurvaObjetivo(form.marca_alimento) && (
+                  <small className="modal-ayuda">
+                    Todavía no hay curva de referencia para esta marca: el peso del
+                    lote se registrará, pero no podrá compararse con un objetivo.
+                  </small>
+                )}
               </label>
             </div>
             <div className="modal-fila">
               <label className="modal-campo">
-                <span>Costo por pollito</span>
+                <span>Línea genética <em>(Opcional)</em></span>
+                <select
+                  value={form.linea_genetica_id ?? ''}
+                  onChange={(evento) => {
+                    const valor = evento.target.value
+                    onCambiar('linea_genetica_id', valor === '' ? null : Number(valor))
+                  }}
+                >
+                  <option value="">Sin especificar</option>
+                  {opcionesLinea.map((opcion) => (
+                    <option key={opcion.id} value={opcion.id}>
+                      {opcion.etiqueta}
+                    </option>
+                  ))}
+                </select>
+                {!form.linea_genetica_id && (
+                  <small className="modal-ayuda">
+                    Sin línea genética, el plan de crecimiento del lote no podrá
+                    calcularse.
+                  </small>
+                )}
+                {errorLineasGeneticas && (
+                  <small className="modal-ayuda">{errorLineasGeneticas}</small>
+                )}
+              </label>
+            </div>
+            <div className="modal-fila">
+              <label className="modal-campo">
+                <span>Costo por pollito <em>(Opcional)</em></span>
                 <input
                   type="number"
                   min="0"
@@ -190,7 +249,7 @@ function FormularioLote({
                 />
               </label>
               <label className="modal-campo">
-                <span>Presupuesto total</span>
+                <span>Presupuesto total <em>(Opcional)</em></span>
                 <input
                   type="number"
                   min="0"
@@ -205,7 +264,7 @@ function FormularioLote({
                 />
               </label>
               <label className="modal-campo">
-                <span>Salida estimada</span>
+                <span>Salida estimada <em>(Opcional)</em></span>
                 <input
                   type="date"
                   value={form.fecha_salida_estimada}
@@ -218,7 +277,7 @@ function FormularioLote({
             {modoEdicion && (
               <div className="modal-fila">
                 <label className="modal-campo">
-                  <span>Salida real</span>
+                  <span>Salida real <em>(Opcional)</em></span>
                   <input
                     type="date"
                     value={form.fecha_salida_real}

@@ -1,9 +1,11 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 import { CreateMovimientoFinancieroDto } from './dto/create-movimiento-financiero.dto';
 import { UpdateMovimientoFinancieroDto } from './dto/update-movimiento-financiero.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
@@ -40,7 +42,48 @@ const MOVIMIENTO_SELECT = {
 
 @Injectable()
 export class MovimientosFinancierosService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(MovimientosFinancierosService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private auditoria: AuditoriaService,
+  ) {}
+
+  /**
+   * Deja constancia de que alguien que no es el dueño miró estas cuentas.
+   *
+   * El administrador ve los movimientos de todos los propietarios, y eso es a
+   * propósito: en un servicio gestionado a veces tiene que mirar las cuentas de
+   * un cliente para ayudarlo. Lo que protege al cliente no es esconderlo —la
+   * ruta está abierta de todos modos— sino que quede rastro de quién miró qué
+   * y cuándo.
+   *
+   * La bitácora sólo guardaba escrituras: el interceptor mapea POST, PATCH,
+   * PUT y DELETE, y deja fuera el GET. Por eso se registra aquí a mano.
+   */
+  private async registrarConsultaAjena(
+    solicitante: Solicitante,
+    detalle: Record<string, unknown>,
+  ) {
+    if (esPropietario(solicitante)) return;
+    // Si la bitácora falla, se pierde el rastro de esta consulta, pero la
+    // consulta se responde igual: la auditoría no puede convertirse en un
+    // punto de caída de una ruta que sí funciona.
+    try {
+      await this.auditoria.registrar({
+        usuario_id: solicitante.id,
+        accion: 'consultar',
+        entidad_afectada: 'movimientos_financieros',
+        registro_id: typeof detalle.id === 'number' ? detalle.id : null,
+        datos_despues: detalle,
+      });
+    } catch (error) {
+      this.logger.error(
+        'No se pudo registrar la consulta de cuentas ajenas',
+        error as Error,
+      );
+    }
+  }
 
   private async resolverGranja(
     granjaId: number | undefined,
@@ -97,14 +140,32 @@ export class MovimientosFinancierosService {
     return granja.id;
   }
 
-  private async validarCategoria(categoriaId: number) {
+  /**
+   * La categoría existe y encaja con el lado del balance del movimiento.
+   *
+   * Antes sólo se comprobaba que existiera, así que un ingreso con la
+   * categoría «Compra de alimento» se guardaba sin protestar: el movimiento
+   * sumaba de un lado y quedaba clasificado del otro, y el balance de la
+   * granja salía mal sin que nadie se enterara.
+   *
+   * Una categoría sin tipo sirve para las dos cosas y no se rechaza: la
+   * columna es opcional a propósito.
+   */
+  private async validarCategoria(categoriaId: number, tipo?: string) {
     const categoria = await this.prisma.categoriaFinanciera.findUnique({
       where: { id: categoriaId },
-      select: { id: true },
+      select: { id: true, nombre: true, tipo: true },
     });
 
     if (!categoria) {
       throw new NotFoundException('Categoria financiera no encontrada');
+    }
+
+    if (tipo && categoria.tipo && categoria.tipo !== tipo) {
+      throw new BadRequestException(
+        `La categoría "${categoria.nombre}" es de ${categoria.tipo}, ` +
+          `así que no puede clasificar un movimiento de ${tipo}`,
+      );
     }
   }
 
@@ -127,7 +188,7 @@ export class MovimientosFinancierosService {
       dto.lote_id,
       solicitante,
     );
-    await this.validarCategoria(dto.categoria_id);
+    await this.validarCategoria(dto.categoria_id, dto.tipo);
     await this.validarProveedor(dto.proveedor_id);
 
     return this.prisma.movimientoFinanciero.create({
@@ -164,6 +225,12 @@ export class MovimientosFinancierosService {
       this.prisma.movimientoFinanciero.count({ where }),
     ]);
 
+    await this.registrarConsultaAjena(solicitante, {
+      alcance: 'listado',
+      total,
+      granjas: [...new Set(data.map((m) => m.granja.nombre))],
+    });
+
     return paginate(data, total, page, limit);
   }
 
@@ -178,6 +245,14 @@ export class MovimientosFinancierosService {
     }
 
     verificarDueno(solicitante, movimiento.granja.propietario_id, SIN_ACCESO);
+
+    await this.registrarConsultaAjena(solicitante, {
+      alcance: 'detalle',
+      id: movimiento.id,
+      granja: movimiento.granja.nombre,
+      valor_cop: movimiento.valor_cop,
+    });
+
     return movimiento;
   }
 
@@ -188,8 +263,13 @@ export class MovimientosFinancierosService {
   ) {
     const movimiento = await this.obtener(id, solicitante);
 
-    if (dto.categoria_id !== undefined) {
-      await this.validarCategoria(dto.categoria_id);
+    // Se valida la combinación que va a QUEDAR, no la que llega. Cambiar sólo
+    // el tipo —dejando la categoría de antes— descuadra igual, y comprobar
+    // nada más lo que viene en el dto dejaba pasar justo ese caso.
+    const tipoResultante = dto.tipo ?? movimiento.tipo ?? undefined;
+    const categoriaResultante = dto.categoria_id ?? movimiento.categoria_id;
+    if (dto.categoria_id !== undefined || dto.tipo !== undefined) {
+      await this.validarCategoria(categoriaResultante, tipoResultante);
     }
     await this.validarProveedor(dto.proveedor_id);
 

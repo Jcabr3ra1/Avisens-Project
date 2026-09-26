@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   eliminarSolicitudPqrs,
-  listarSolicitudesPqrs,
+  listarTodasLasSolicitudesPqrs,
   responderSolicitudPqrs,
 } from '../api/solicitudesPqrs'
 import type {
@@ -9,8 +9,6 @@ import type {
   SolicitudPqrs,
   SolicitudesPqrsQuery,
 } from '../model/solicitudPqrs'
-
-const POR_PAGINA = 100
 
 export function useSolicitudesPqrs() {
   const [solicitudes, setSolicitudes] = useState<SolicitudPqrs[]>([])
@@ -24,11 +22,7 @@ export function useSolicitudesPqrs() {
     setError('')
 
     try {
-      const { data } = await listarSolicitudesPqrs({
-        ...query,
-        limit: POR_PAGINA,
-      })
-      setSolicitudes(data)
+      setSolicitudes(await listarTodasLasSolicitudesPqrs(query))
     } catch {
       setError('No se pudieron cargar las solicitudes. Intenta actualizar la página.')
     } finally {

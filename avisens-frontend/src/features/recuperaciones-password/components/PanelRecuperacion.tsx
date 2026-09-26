@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
-import { IcClose } from '@shared/ui/icons/icons'
+import Modal from '@shared/ui/Modal/Modal'
 import type {
   AprobacionRecuperacion,
   RecuperacionPassword,
@@ -19,14 +19,6 @@ function PanelRecuperacion({ solicitud, onCerrar, onAprobar, onRechazar }: Props
   const [observacion, setObservacion] = useState(solicitud.observacion ?? '')
   const [procesando, setProcesando] = useState(false)
   const [credencial, setCredencial] = useState<AprobacionRecuperacion | null>(null)
-
-  useEffect(() => {
-    const cerrarConEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !procesando) onCerrar()
-    }
-    window.addEventListener('keydown', cerrarConEscape)
-    return () => window.removeEventListener('keydown', cerrarConEscape)
-  }, [onCerrar, procesando])
 
   const aprobar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -58,17 +50,11 @@ function PanelRecuperacion({ solicitud, onCerrar, onAprobar, onRechazar }: Props
   const pendiente = solicitud.estado === 'pendiente'
 
   return (
-    <div className="rec-modal" role="presentation" onMouseDown={onCerrar}>
-      <section className="rec-panel" role="dialog" aria-modal="true" aria-labelledby="rec-panel-titulo" onMouseDown={(event) => event.stopPropagation()}>
-        <header className="rec-panel-cabecera">
-          <div>
-            <p className="rec-kicker">Solicitud #{solicitud.id}</p>
-            <h2 id="rec-panel-titulo">{solicitud.usuario.nombre_completo}</h2>
-          </div>
-          <button className="rec-cerrar" type="button" onClick={onCerrar} aria-label="Cerrar detalle de la recuperación" disabled={procesando}>
-            <IcClose size={20} aria-hidden="true" />
-          </button>
-        </header>
+    <Modal
+      titulo={solicitud.usuario.nombre_completo}
+      subtitulo={`Solicitud #${solicitud.id}`}
+      onCerrar={() => !procesando && onCerrar()}
+    >
         <div className="rec-panel-contenido">
           <dl className="rec-datos">
             <div><dt>Correo</dt><dd>{solicitud.usuario.email}</dd></div>
@@ -103,8 +89,7 @@ function PanelRecuperacion({ solicitud, onCerrar, onAprobar, onRechazar }: Props
             </section>
           )}
         </div>
-      </section>
-    </div>
+    </Modal>
   )
 }
 

@@ -7,7 +7,7 @@ const CURVA_ITALCOL = [
     peso_esperado_g: 211,
     consumo_acumulado_g: 164,
     fcr_objetivo: 0.78,
-    etapa_alimentacion: 'preiniciador',
+    etapa_alimentacion: 'preiniciacion',
     temperatura_min: 28,
     temperatura_max: 30,
   },
@@ -68,7 +68,7 @@ const CURVA_ITALCOL = [
     peso_esperado_g: 211,
     consumo_acumulado_g: 178,
     fcr_objetivo: 0.84,
-    etapa_alimentacion: 'preiniciador',
+    etapa_alimentacion: 'preiniciacion',
     temperatura_min: 28,
     temperatura_max: 30,
   },
@@ -180,12 +180,17 @@ const CURVAS_OBJETIVO = [...CURVA_ITALCOL, ...CURVA_SOLLA];
 
 export async function sembrarCurvasObjetivo(prisma: PrismaClient) {
   for (const fila of CURVAS_OBJETIVO) {
+    // `origen: seed` marca las que vienen del manual del fabricante. Son las
+    // unicas que el seed puede pisar, y las unicas que la API no deja editar:
+    // cambiarles un peso objetivo falsea la referencia contra la que se
+    // comparan los indicadores durante todo el ciclo.
+    const datos = { ...fila, origen: 'seed' };
     await prisma.curvaObjetivo.upsert({
       where: {
         marca_sexo_dia: { marca: fila.marca, sexo: fila.sexo, dia: fila.dia },
       },
-      update: fila,
-      create: fila,
+      update: datos,
+      create: datos,
     });
   }
 }

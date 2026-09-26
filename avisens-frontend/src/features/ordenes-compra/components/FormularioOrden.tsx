@@ -59,7 +59,7 @@ function FormularioOrden({
       <form id={ID_FORMULARIO} onSubmit={onGuardar}>
         <div className="modal-fila">
           <label className="modal-campo">
-            <span>Granja *</span>
+            <span>Granja</span>
             <select
               value={form.granja_id}
               onChange={(evento) => {
@@ -77,7 +77,7 @@ function FormularioOrden({
             </select>
           </label>
           <label className="modal-campo">
-            <span>Proveedor *</span>
+            <span>Proveedor</span>
             <select
               value={form.proveedor_id}
               onChange={(evento) => onCambiar('proveedor_id', evento.target.value)}
@@ -94,7 +94,7 @@ function FormularioOrden({
         </div>
 
         <label className="modal-campo">
-          <span>Lote relacionado</span>
+          <span>Lote relacionado <em>(Opcional)</em></span>
           <select
             value={form.lote_id}
             onChange={(evento) => onCambiar('lote_id', evento.target.value)}
@@ -111,7 +111,7 @@ function FormularioOrden({
 
         <div className="modal-fila">
           <label className="modal-campo">
-            <span>Fecha del pedido</span>
+            <span>Fecha del pedido <em>(Opcional)</em></span>
             <input
               type="date"
               value={form.fecha_pedido}
@@ -119,7 +119,7 @@ function FormularioOrden({
             />
           </label>
           <label className="modal-campo">
-            <span>Entrega estimada</span>
+            <span>Entrega estimada <em>(Opcional)</em></span>
             <input
               type="date"
               value={form.fecha_entrega_estimada}

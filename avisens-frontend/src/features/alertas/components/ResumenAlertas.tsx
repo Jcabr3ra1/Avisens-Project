@@ -1,4 +1,5 @@
 import { IcAlert, IcCheck, IcClock } from '@shared/ui/icons/icons'
+import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import type { ResumenAlertas as Resumen } from '../model/alerta'
 
 interface ResumenAlertasProps {
@@ -6,24 +7,14 @@ interface ResumenAlertasProps {
 }
 
 function ResumenAlertas({ resumen }: ResumenAlertasProps) {
-  const tarjetas = [
-    { etiqueta: 'Alertas registradas', valor: resumen.total, icono: <IcAlert size={20} /> },
-    { etiqueta: 'Por atender', valor: resumen.abiertas, icono: <IcAlert size={20} /> },
-    { etiqueta: 'En atención', valor: resumen.enProceso, icono: <IcClock size={20} /> },
-    { etiqueta: 'Críticas activas', valor: resumen.criticas, icono: <IcCheck size={20} /> },
+  const tarjetas: Stat[] = [
+    { label: 'Alertas registradas', valor: resumen.total, icono: <IcAlert size={20} />, tono: 'neutral' },
+    { label: 'Por atender', valor: resumen.abiertas, icono: <IcAlert size={20} />, tono: 'aviso' },
+    { label: 'En atención', valor: resumen.enProceso, icono: <IcClock size={20} />, tono: 'info' },
+    { label: 'Críticas activas', valor: resumen.criticas, icono: <IcCheck size={20} />, tono: 'peligro' },
   ]
 
-  return (
-    <section className="ale-resumen" aria-label="Resumen de alertas">
-      {tarjetas.map((tarjeta, indice) => (
-        <article key={tarjeta.etiqueta} className={`ale-resumen-tarjeta ale-resumen-tarjeta--${indice}`}>
-          <span className="ale-resumen-icono" aria-hidden="true">{tarjeta.icono}</span>
-          <strong>{tarjeta.valor}</strong>
-          <span>{tarjeta.etiqueta}</span>
-        </article>
-      ))}
-    </section>
-  )
+  return <TarjetasResumen stats={tarjetas} etiqueta="Resumen de alertas" />
 }
 
 export default ResumenAlertas

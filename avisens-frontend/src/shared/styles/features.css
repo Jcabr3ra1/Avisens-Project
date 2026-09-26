@@ -3,17 +3,20 @@
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* Este archivo define el lenguaje visual de las páginas de features.          */
 /* Se importa globalmente desde main.tsx y aplica sobre .page-container.       */
-/* Los patrones siguen el mismo glass-morphism del Dashboard (PanelLayout).    */
+/* Las superficies son neutras y sólidas: la jerarquía la crean el espacio,
+   la tipografía y el contraste, no los efectos decorativos. */
 
 /* ─── Contenedor base de página ──────────────────────────────────────────── */
 /* Mejora el padding y agrega max-width para pantallas muy anchas */
 .page-container {
-  padding: 28px 32px 52px;
+  width: 100%;
+  padding: var(--space-6) clamp(var(--space-4), 2.4vw, var(--space-6)) var(--space-8);
   max-width: 1440px;
+  margin-inline: auto;
   color: var(--dash-ink);
 }
 @media (max-width: 640px) {
-  .page-container { padding: 16px 14px 32px; }
+  .page-container { padding: var(--space-4) var(--space-3) var(--space-7); }
 }
 
 /* ─── Tablas: scroll horizontal en vez de romper el layout en celular ────── */
@@ -27,14 +30,14 @@
   }
 }
 
-/* ─── Kicker: etiqueta decorativa sobre el título (DM Mono en verde) ─────── */
+/* ─── Kicker: contexto breve sobre el título ─────────────────────────────── */
 .fp-kicker {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.14em;
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--green-d);
   margin-bottom: 0.35rem;
@@ -48,25 +51,23 @@
   border-radius: 2px;
 }
 
-/* ─── Card glass — estilo principal de tarjetas en features ──────────────── */
-/* Misma filosofía del Dashboard: fondo semi-transparente + blur + sombra verde*/
+/* ─── Superficie agrupadora ──────────────────────────────────────────────── */
 .fp-card {
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(16, 44, 35, 0.09);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(10, 40, 28, 0.07);
-  backdrop-filter: blur(8px);
+  background: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
 /* ─── Card interactiva — versión con hover ───────────────────────────────── */
 .fp-card-hover {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: background var(--motion-base) var(--ease-standard), border-color var(--motion-base) var(--ease-standard), box-shadow var(--motion-base) var(--ease-standard);
 }
 .fp-card-hover:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 44px rgba(10, 40, 28, 0.11);
-  border-color: rgba(16, 185, 129, 0.28);
+  background: var(--surface-hover);
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-md);
 }
 
 /* ─── Separador de sección ───────────────────────────────────────────────── */
@@ -167,42 +168,45 @@
 
 /* ─── Select / input de filtro ───────────────────────────────────────────── */
 .fp-select, .fp-input {
+  min-height: 44px;
   padding: 0.5rem 0.8rem;
-  border: 1px solid rgba(16,44,35,0.12);
-  border-radius: 10px;
-  background: rgba(255,255,255,0.7);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
   color: var(--text);
   font-size: 0.88rem;
-  outline: none;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color var(--motion-base) var(--ease-standard), box-shadow var(--motion-base) var(--ease-standard);
 }
-.fp-select:focus, .fp-input:focus {
-  border-color: var(--green);
-  background: #fff;
+.fp-select:focus-visible, .fp-input:focus-visible {
+  border-color: var(--focus-ring);
+  outline: 2px solid color-mix(in srgb, var(--focus-ring) 28%, transparent);
+  outline-offset: 1px;
 }
 
 /* ─── Botones primario / ghost ───────────────────────────────────────────── */
 .fp-btn-primary {
+  min-height: 44px;
   padding: 0.6rem 1.1rem;
-  background: linear-gradient(135deg, var(--green), var(--green-d));
+  background: var(--primary);
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(16,185,129,0.3);
-  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: var(--shadow-sm);
+  transition: background var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
 }
-.fp-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16,185,129,0.38); }
-.fp-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.fp-btn-primary:hover { background: var(--primary-hover); box-shadow: var(--shadow-md); }
+.fp-btn-primary:disabled { opacity: 0.55; }
 
 .fp-btn-ghost {
+  min-height: 44px;
   padding: 0.6rem 1.1rem;
   background: transparent;
   color: var(--text);
-  border: 1px solid rgba(16,44,35,0.14);
-  border-radius: 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
@@ -220,6 +224,6 @@
   padding: 3.5rem 2rem;
   text-align: center;
 }
-.fp-empty-icon { font-size: 2.8rem; line-height: 1; filter: grayscale(0.2); }
+.fp-empty-icon { display: grid; width: 40px; height: 40px; place-items: center; color: var(--text-muted); }
 .fp-empty-title { font-size: 1rem; font-weight: 700; color: var(--text2); margin: 0; }
 .fp-empty-sub   { font-size: 0.85rem; color: var(--text3); margin: 0; }

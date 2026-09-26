@@ -1,24 +1,28 @@
 // MonitoreoPage.tsx — Módulo de Monitoreo Ambiental (EP-04 HU-18 a HU-21).
 // Consume /galpones, /lotes, /sensores, /mediciones y /umbrales vía el hook
-// compartido useMonitoreoAmbiental. Al tocar una tarjeta de sensor se abre un
+// compartido useMonitoreoAmbiental. Al seleccionar una tarjeta se abre un
 // panel lateral con gauge, estadísticas, histórico real y referencia Italcol.
 
 import { useEffect, useState } from 'react'
 import {
   useMonitoreoAmbiental,
   formatearUltimaLectura,
+  tieneLecturaUtil,
   type GalponMonitoreoVista,
   type SensorVista,
   type EstadoSensorVista,
 } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { iconoSensor } from '@shared/ui/sensorIcon'
+import { semanaDeVida } from '@shared/utils/fechas'
 import { SensorDetail } from './SensorDetail'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcServer } from '@shared/ui/icons/icons'
+import '@shared/ui/admin/AdminKit.css'
 import './MonitoreoPage.css'
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 function MonitoreoPage() {
-  const { galpones, cargando, error } = useMonitoreoAmbiental()
+  const { galpones, cargando, error, avisoUltimas } = useMonitoreoAmbiental()
 
   // Galpón seleccionado en el selector superior
   const [galponId, setGalponId] = useState<number | null>(null)
@@ -37,39 +41,38 @@ function MonitoreoPage() {
   const advertencia = galpon?.sensores.filter(s => s.estado === 'advertencia').length ?? 0
   const optimos     = galpon?.sensores.filter(s => s.estado === 'optimo').length ?? 0
 
-  function abrirDetalle(sensor: SensorVista) {
-    if (sensor.estado === 'offline') return
+ function abrirDetalle(sensor: SensorVista) {
+    if (!tieneLecturaUtil(sensor.estado)) return
     setSensorActivo(sensor)
   }
 
   if (cargando) {
     return (
-      <div className="page-container mon-page">
+      <div className="page-container mon-page adm-page">
         <p className="mon-cargando">Cargando monitoreo ambiental…</p>
       </div>
     )
   }
 
   return (
-    <div className="page-container mon-page">
+    <div className="page-container mon-page adm-page">
 
       {/* ── Encabezado ──────────────────────────────────────────────────────── */}
-      <header className="mon-header">
-        <div>
-          <h1 className="mon-title">Monitoreo Ambiental</h1>
-          <p className="mon-sub">Lecturas en tiempo real · Toca un sensor para más detalles</p>
-        </div>
-
-        {galpon && (
+      <CabeceraAdmin
+        eyebrow="Condiciones ambientales"
+        titulo="Monitoreo ambiental"
+        subtitulo="Lecturas en tiempo real. Selecciona un sensor para consultar sus detalles."
+        acciones={galpon ? (
           <div className="mon-resumen">
             {criticos    > 0 && <span className="mon-badge mon-badge--critico"><span className="mon-dot mon-dot--critico" /> {criticos} crítico{criticos > 1 ? 's' : ''}</span>}
             {advertencia > 0 && <span className="mon-badge mon-badge--advertencia"><span className="mon-dot mon-dot--advertencia" /> {advertencia} advertencia{advertencia > 1 ? 's' : ''}</span>}
             <span className="mon-badge mon-badge--optimo"><span className="mon-dot mon-dot--optimo" /> {optimos} óptimo{optimos > 1 ? 's' : ''}</span>
           </div>
-        )}
-      </header>
+        ) : undefined}
+      />
 
-      {error && <div className="mon-alert" role="alert">{error}</div>}
+      {error && <div className="mon-alert adm-alerta" role="alert">{error}</div>}
+      {!error && avisoUltimas && <div className="mon-alert adm-aviso" role="status">{avisoUltimas}</div>}
 
       {galpones.length === 0 ? (
         <p className="mon-cargando">No hay galpones registrados todavía.</p>
@@ -80,6 +83,7 @@ function MonitoreoPage() {
             {galpones.map(g => (
               <button
                 key={g.id}
+                type="button"
                 className={`mon-tab${g.id === galpon.id ? ' mon-tab--activo' : ''}`}
                 onClick={() => { setGalponId(g.id); setSensorActivo(null) }}
               >
@@ -100,12 +104,12 @@ function MonitoreoPage() {
 
           {/* ── Tarjetas de sensores (clickables) ───────────────────────────── */}
           {!galpon.loteActivo ? (
-            <div className="mon-offline-msg">
+            <div className="mon-offline-msg adm-panel">
               <IcServer size={32} />
               <p>Galpón vacío. Los sensores se activarán cuando ingrese un nuevo lote.</p>
             </div>
           ) : galpon.sensores.length === 0 ? (
-            <div className="mon-offline-msg">
+            <div className="mon-offline-msg adm-panel">
               <IcServer size={32} />
               <p>Este galpón todavía no tiene sensores registrados.</p>
             </div>
@@ -125,9 +129,9 @@ function MonitoreoPage() {
           {/* ── Tabla de umbrales configurados (HU-21) ──────────────────────── */}
           {galpon.sensores.length > 0 && (
             <section className="mon-section">
-              <h2 className="mon-section-title">Umbrales configurados · Semana {Math.floor(galpon.diaVida / 7) + 1}</h2>
+              <h2 className="mon-section-title">Umbrales configurados · Semana {semanaDeVida(galpon.diaVida) + 1}</h2>
               <p className="mon-section-sub">El backend soporta umbral por temperatura, humedad y luminosidad — las demás variables se muestran sin rango.</p>
-              <div className="mon-tabla-card">
+              <div className="mon-tabla-card adm-panel">
                 <div className="mon-tabla-head">
                   <span>Variable</span><span>Mín.</span><span>Máx.</span><span>Unidad</span>
                 </div>
@@ -169,25 +173,31 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
     : 50
 
   const etiquetaEstado: Record<EstadoSensorVista, string> = {
-    optimo:      'Óptimo',
-    advertencia: 'Advertencia',
-    critico:     'Crítico',
-    sin_umbral:  'Sin umbral',
-    offline:     'Sin señal',
+    optimo:               'Óptimo',
+    advertencia:          'Advertencia',
+    critico:               'Crítico',
+    sin_umbral:            'Sin umbral',
+    offline:               'Sin señal',
+    lectura_no_disponible: 'No disponible',
   }
 
   return (
     <button
+      type="button"
       className={[
         'mon-sensor-card',
         `mon-sensor-card--${sensor.estado}`,
         activo ? 'mon-sensor-card--activo' : '',
-        sensor.estado !== 'offline' ? 'mon-sensor-card--clickable' : '',
+        tieneLecturaUtil(sensor.estado) ? 'mon-sensor-card--clickable' : '',
       ].filter(Boolean).join(' ')}
       onClick={onClick}
-      title={sensor.estado !== 'offline' ? `Ver detalle de ${sensor.tipo}` : 'Sensor sin señal'}
+      title={
+        tieneLecturaUtil(sensor.estado)
+          ? `Ver detalle de ${sensor.tipo}`
+          : sensor.estado === 'lectura_no_disponible' ? 'Sin dato disponible' : 'Sensor sin señal'
+      }
       aria-pressed={activo}
-      disabled={sensor.estado === 'offline'}
+      disabled={!tieneLecturaUtil(sensor.estado)}
     >
       <div className="mon-sensor-icon">{iconoSensor(sensor.tipo, 22)}</div>
 
@@ -203,7 +213,7 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
         }
       </div>
 
-      {sensor.estado !== 'offline' && rango > 0 && (
+      {tieneLecturaUtil(sensor.estado) && rango > 0 && (
         <div className="mon-barra-wrap">
           <div className="mon-barra" style={{ width: `${relativo}%` }} />
         </div>
@@ -216,7 +226,7 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
         <span className="mon-ultima">{formatearUltimaLectura(sensor.ultimaLecturaTs)}</span>
       </div>
 
-      {sensor.estado !== 'offline' && (
+      {tieneLecturaUtil(sensor.estado) && (
         <span className="mon-sensor-hint" aria-hidden="true">›</span>
       )}
     </button>
@@ -226,8 +236,9 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
 // ─── Estado global de un galpón según sus sensores ───────────────────────────
 function estadoGlobal(galpon: GalponMonitoreoVista): EstadoSensorVista {
   if (!galpon.loteActivo || galpon.sensores.length === 0) return 'offline'
-  if (galpon.sensores.some(s => s.estado === 'critico'))    return 'critico'
-  if (galpon.sensores.some(s => s.estado === 'advertencia')) return 'advertencia'
+  if (galpon.sensores.some(s => s.estado === 'critico'))              return 'critico'
+  if (galpon.sensores.some(s => s.estado === 'advertencia'))           return 'advertencia'
+  if (galpon.sensores.some(s => s.estado === 'lectura_no_disponible')) return 'lectura_no_disponible'
   return 'optimo'
 }
 

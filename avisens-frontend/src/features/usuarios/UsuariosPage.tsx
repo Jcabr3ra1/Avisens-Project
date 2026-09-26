@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react'
 import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
 import { crearOrganizacion } from '@features/organizaciones/api/organizaciones'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
+import { IcPlus } from '@shared/ui/icons/icons'
 import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
 import RecuperacionesDeUsuario from '@features/recuperaciones-password/components/RecuperacionesDeUsuario'
 import BarraUsuarios from './components/BarraUsuarios'
@@ -14,6 +16,7 @@ import { useFiltroUsuarios } from './hooks/useFiltroUsuarios'
 import { useFormularioUsuario } from './hooks/useFormularioUsuario'
 import { useResumenUsuarios } from './hooks/useResumenUsuarios'
 import { useUsuarios } from './hooks/useUsuarios'
+import '@shared/ui/admin/AdminKit.css'
 import './UsuariosPage.css'
 
 function UsuariosPage() {
@@ -33,6 +36,13 @@ function UsuariosPage() {
     eliminar,
   } = useUsuarios()
   const catalogos = useCatalogosUsuarios(esPropietario)
+  const {
+    roles: rolesCatalogo,
+    organizaciones,
+    cargando: catalogosCargando,
+    error: catalogosError,
+    recargar: recargarCatalogos,
+  } = catalogos
   const asignaciones = useAsignacionesGalpon()
   const filtro = useFiltroUsuarios(usuarios)
   const resumen = useResumenUsuarios(usuarios)
@@ -52,7 +62,7 @@ function UsuariosPage() {
         return
       }
 
-      const rol = catalogos.roles.find((r) => r.id === datos.rol_id)
+      const rol = rolesCatalogo.find((r) => r.id === datos.rol_id)
       const nombreOrgNueva = datos.organizacion_nombre?.trim() || undefined
       let organizacionId = datos.organizacion_id
 
@@ -64,7 +74,7 @@ function UsuariosPage() {
       if (rol?.nombre === 'Operario' && !organizacionId && nombreOrgNueva) {
         const nueva = await crearOrganizacion({ nombre: nombreOrgNueva })
         organizacionId = nueva.id
-        void catalogos.recargar()
+        void recargarCatalogos()
       }
 
       await crear({
@@ -77,15 +87,15 @@ function UsuariosPage() {
         organizacion_nombre: rol?.nombre === 'Propietario' ? nombreOrgNueva : undefined,
       })
     },
-    [actualizar, crear, catalogos.roles, catalogos.recargar],
+    [actualizar, crear, recargarCatalogos, rolesCatalogo],
   )
 
   const formulario = useFormularioUsuario(guardarUsuario)
 
   async function abrirCrearUsuario() {
-    const roles = catalogos.roles.length > 0
-      ? catalogos.roles
-      : await catalogos.recargar()
+    const roles = rolesCatalogo.length > 0
+      ? rolesCatalogo
+      : await recargarCatalogos()
     if (roles.length === 0) return
 
     formulario.abrirCrear(roles.length === 1 ? roles[0].id : 0)
@@ -103,41 +113,41 @@ function UsuariosPage() {
     : `Nuevo ${esPropietario ? 'operario' : 'usuario'}`
 
   return (
-    <div className="page-container usuarios">
-      <header className="usuarios-head">
-        <div>
-          <h1 className="usuarios-title">{esPropietario ? 'Operarios' : 'Usuarios y roles'}</h1>
-          <p className="usuarios-sub">
-            {esPropietario
-              ? 'Gestiona los operarios de tu organización.'
-              : 'Gestiona las cuentas que acceden al sistema.'}
-          </p>
-        </div>
-        <button
-          type="button"
-          className="usuarios-btn-primary"
-          onClick={() => void abrirCrearUsuario()}
-          disabled={catalogos.cargando}
-        >
-          + {esPropietario ? 'Nuevo operario' : 'Nuevo usuario'}
-        </button>
-      </header>
+    <div className="page-container usuarios adm-page">
+      <CabeceraAdmin
+        eyebrow={esPropietario ? 'Equipo de trabajo' : 'Administración de acceso'}
+        titulo={esPropietario ? 'Operarios' : 'Usuarios y roles'}
+        subtitulo={esPropietario
+          ? 'Gestiona los operarios de tu organización y sus asignaciones.'
+          : 'Administra las cuentas, roles y recuperaciones de acceso del sistema.'}
+        acciones={(
+          <button
+            type="button"
+            className="adm-btn adm-btn--primario"
+            onClick={() => void abrirCrearUsuario()}
+            disabled={catalogosCargando}
+          >
+            <IcPlus size={17} aria-hidden="true" />
+            {esPropietario ? 'Nuevo operario' : 'Nuevo usuario'}
+          </button>
+        )}
+      />
 
       <ResumenUsuarios resumen={resumen} esPropietario={esPropietario} />
 
-      {(error || catalogos.error) && (
-        <div className="usuarios-alert" role="alert">
-          <span>{error || catalogos.error}</span>
+      {(error || catalogosError) && (
+        <div className="adm-alerta" role="alert">
+          <span>{error || catalogosError}</span>
           <button
             type="button"
-            onClick={() => void (error ? recargar() : catalogos.recargar())}
+            onClick={() => void (error ? recargar() : recargarCatalogos())}
           >
             Reintentar
           </button>
         </div>
       )}
 
-      <section className="usuarios-card" aria-label="Listado de usuarios">
+      <section className="usuarios-card adm-panel" aria-label="Listado de usuarios">
         {!cargando && usuarios.length > 0 && (
           <BarraUsuarios
             busqueda={filtro.busqueda}
@@ -166,8 +176,8 @@ function UsuariosPage() {
           guardando={formulario.guardando}
           error={formulario.error}
           verPassword={formulario.verPassword}
-          roles={catalogos.roles}
-          organizaciones={catalogos.organizaciones}
+          roles={rolesCatalogo}
+          organizaciones={organizaciones}
           rolBloqueado={esPropietario}
           titulo={tituloFormulario}
           onCambiar={formulario.cambiar}

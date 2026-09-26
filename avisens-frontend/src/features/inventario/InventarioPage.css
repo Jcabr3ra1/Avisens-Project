@@ -23,7 +23,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0.5rem 0.9rem;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -38,7 +38,7 @@
 .inv-btn:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 
 .inv-btn--primario {
-  background: linear-gradient(180deg, var(--green-d), #04835c);
+  background: var(--color-primario);
   color: #fff;
   box-shadow: 0 1px 2px rgba(4, 120, 87, 0.28), 0 6px 16px rgba(4, 120, 87, 0.2);
 }
@@ -50,7 +50,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.28rem;
-  padding: 0.26rem 0.58rem;
+  min-height: 44px;
+  padding: 0.42rem 0.68rem;
   border: 1px dashed var(--border3);
   border-radius: 8px;
   background: transparent;
@@ -65,66 +66,6 @@
 .inv-accion-suave:hover { border-style: solid; background: rgba(0, 91, 72, 0.06); }
 .inv-accion-suave:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 
-/* ─── Cabecera ───────────────────────────────────────────────── */
-
-.inv-cabecera {
-  position: relative;
-  overflow: hidden;
-  padding: 1.3rem 1.5rem;
-  border: 1px solid var(--inv-line);
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(0, 91, 72, 0.05), transparent 55%), var(--card);
-  box-shadow: var(--inv-sombra);
-}
-
-.inv-cabecera::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 3px;
-  background: linear-gradient(180deg, var(--inv-deep), var(--inv-ok));
-}
-
-.inv-cabecera-fila {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.25rem;
-}
-
-.inv-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.45rem;
-  color: var(--inv-deep);
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-}
-
-.inv-eyebrow-punto {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--inv-ok);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
-}
-
-.inv-cabecera h1 {
-  margin: 0;
-  color: var(--dash-ink);
-  font-size: 1.6rem;
-  font-weight: 750;
-  letter-spacing: -0.022em;
-}
-
-.inv-cabecera p { margin: 0.32rem 0 0; color: var(--text2); font-size: 0.86rem; }
-.inv-cabecera-acciones { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 0.55rem; }
-
 /* ─── Panel y barra de herramientas ──────────────────────────── */
 
 .inv-panel {
@@ -135,14 +76,14 @@
   box-shadow: var(--inv-sombra);
 }
 
-.inv-barra {
+.inv-herramientas {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.7rem;
   padding: 0.8rem 0.95rem;
   border-bottom: 1px solid var(--inv-line);
-  background: linear-gradient(180deg, rgba(0, 91, 72, 0.022), transparent);
+  background: var(--color-superficie-secundaria);
 }
 
 .inv-buscador { position: relative; flex: 1; min-width: 210px; }
@@ -158,7 +99,7 @@
 
 .inv-buscador input {
   width: 100%;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0.5rem 0.7rem 0.5rem 2.1rem;
   border: 1px solid var(--border2);
   border-radius: 10px;
@@ -180,6 +121,7 @@
 }
 
 .inv-segmento {
+  min-height: 44px;
   padding: 0.36rem 0.68rem;
   border: none;
   border-radius: 8px;
@@ -240,6 +182,7 @@
   gap: 0.5rem;
   flex: 1;
   min-width: 0;
+  min-height: 44px;
   padding: 0.2rem;
   border: none;
   background: transparent;
@@ -275,7 +218,7 @@
 .inv-stock em { margin-left: 0.35rem; color: var(--text4); font-size: 0.72rem; font-style: normal; }
 
 .inv-barra-nivel { display: block; height: 100%; border-radius: 999px; }
-.inv-barra { width: 84px; height: 5px; overflow: hidden; border-radius: 999px; background: var(--bg3); }
+.inv-barra-stock { width: 84px; height: 5px; overflow: hidden; border-radius: 999px; background: var(--bg3); }
 
 .inv-barra-nivel--ok { background: var(--inv-ok); }
 .inv-barra-nivel--bajo { background: var(--inv-bajo); }
@@ -416,6 +359,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.12rem;
+  min-height: 44px;
   padding: 0.6rem 0.65rem;
   border: 1px solid var(--border2);
   border-radius: 11px;
@@ -502,8 +446,7 @@
 }
 
 @media (max-width: 640px) {
-  .inv-cabecera-fila { flex-direction: column; }
-  .inv-barra { align-items: stretch; flex-direction: column; }
+  .inv-herramientas { align-items: stretch; flex-direction: column; }
   .inv-conteo { margin-left: 0; align-self: flex-start; }
   .inv-tipos { grid-template-columns: 1fr; }
   .inv-insumo-panel { padding-left: 0.9rem; }

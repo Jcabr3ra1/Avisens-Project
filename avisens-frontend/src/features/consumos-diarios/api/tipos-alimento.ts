@@ -27,8 +27,17 @@ export type ActualizarTipoAlimentoPayload = Partial<CrearTipoAlimentoPayload> & 
   activo?: boolean
 }
 
-export async function listarTiposAlimento(): Promise<TipoAlimento[]> {
-  return listarTodasLasPaginas<TipoAlimento>('/tipos-alimento')
+// Por defecto el backend devuelve solo los activos, que es lo que debe ofrecer
+// el desplegable del consumo diario: un alimento retirado no debería poder
+// escogerse en un registro nuevo. La pantalla de catálogos pide `false` porque
+// necesita ver los desactivados para poder reactivarlos.
+export async function listarTiposAlimento(
+  soloActivos = true,
+): Promise<TipoAlimento[]> {
+  return listarTodasLasPaginas<TipoAlimento>(
+    '/tipos-alimento',
+    soloActivos ? {} : { solo_activos: false },
+  )
 }
 
 export async function obtenerTipoAlimento(id: number): Promise<TipoAlimento> {

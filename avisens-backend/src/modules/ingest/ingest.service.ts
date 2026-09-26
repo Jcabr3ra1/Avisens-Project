@@ -5,6 +5,7 @@ import { IngestDto } from './dto/ingest.dto';
 import type { DispositivoAutenticado } from '../../common/guards/device-token.guard';
 import { ObservabilityService } from '../../common/observability/observability.service';
 import { AlertasService } from '../alertas/alertas.service';
+import { clasificarFalloAlerta } from '../../common/errores/clasificar-error';
 
 interface MedicionNueva {
   sensor_id: number;
@@ -126,7 +127,7 @@ export class IngestService {
       }),
     );
     this.observability.registrarIngesta(aInsertar.length);
-    await Promise.allSettled(
+    const resultadosAlertas = await Promise.allSettled(
       aInsertar.map((medicion) =>
         this.alertas.evaluarLectura(
           medicion.sensor_id,
@@ -135,6 +136,29 @@ export class IngestService {
         ),
       ),
     );
+
+    const sensoresConFallo: number[] = [];
+    const porClasificacion: Record<string, number> = {};
+    resultadosAlertas.forEach((resultado, indice) => {
+      if (resultado.status !== 'rejected') return;
+      sensoresConFallo.push(aInsertar[indice].sensor_id);
+      const { clasificacion } = clasificarFalloAlerta(resultado.reason);
+      porClasificacion[clasificacion] =
+        (porClasificacion[clasificacion] ?? 0) + 1;
+    });
+
+    if (sensoresConFallo.length > 0) {
+      this.logger.error(
+        JSON.stringify({
+          evento: 'iot.alerta.fallida',
+          dispositivo_id: dispositivo.id,
+          mediciones_guardadas: aInsertar.length,
+          alertas_fallidas: sensoresConFallo.length,
+          sensores: sensoresConFallo,
+          clasificacion: porClasificacion,
+        }),
+      );
+    }
 
     return {
       id_lote: claveIdempotencia,

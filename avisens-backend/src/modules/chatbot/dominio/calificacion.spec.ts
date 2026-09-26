@@ -1,10 +1,7 @@
 import {
   A14_DOLOR,
-  A11_ENERGIA,
-  A13_INTERNET,
   A16_MORTALIDAD,
   A20_DECIDE,
-  A9_GALPON,
   DOLOR,
   NO_DECIDE,
   OPCIONES_CALIFICADAS,
@@ -12,66 +9,7 @@ import {
   clasificarSoporte,
   radicadoDe,
   tieneDolor,
-  viabilidadTecnica,
 } from './calificacion';
-
-describe('viabilidadTecnica', () => {
-  it('es instalable solo si las tres condiciones estan al maximo', () => {
-    expect(
-      viabilidadTecnica(
-        A9_GALPON.BUENO,
-        A11_ENERGIA.ESTABLE,
-        A13_INTERNET.ESTABLE,
-      ),
-    ).toBe('instalable');
-  });
-
-  it('un galpon sin construir no es viable, aunque todo lo demas este bien', () => {
-    expect(
-      viabilidadTecnica(
-        A9_GALPON.SIN_CONSTRUIR,
-        A11_ENERGIA.ESTABLE,
-        A13_INTERNET.ESTABLE,
-      ),
-    ).toBe('no_viable');
-  });
-
-  it('sin energia estable ni planta no es viable', () => {
-    expect(
-      viabilidadTecnica(
-        A9_GALPON.BUENO,
-        A11_ENERGIA.INESTABLE,
-        A13_INTERNET.ESTABLE,
-      ),
-    ).toBe('no_viable');
-  });
-
-  it('sin señal requiere adecuacion, no descarta', () => {
-    // La zona rural sin señal es el caso tipico del cliente objetivo: se le
-    // instala con otra conectividad, no se le descarta.
-    expect(
-      viabilidadTecnica(
-        A9_GALPON.BUENO,
-        A11_ENERGIA.ESTABLE,
-        A13_INTERNET.SIN_SENAL,
-      ),
-    ).toBe('requiere_adecuacion');
-  });
-
-  it('un galpon deteriorado requiere adecuacion', () => {
-    expect(
-      viabilidadTecnica(
-        A9_GALPON.DETERIORADO,
-        A11_ENERGIA.ESTABLE,
-        A13_INTERNET.ESTABLE,
-      ),
-    ).toBe('requiere_adecuacion');
-  });
-
-  it('sin respuestas no asume que sea instalable', () => {
-    expect(viabilidadTecnica()).toBe('requiere_adecuacion');
-  });
-});
 
 describe('modelo de calificacion', () => {
   it('los puntajes maximos de cada dimension suman el total', () => {

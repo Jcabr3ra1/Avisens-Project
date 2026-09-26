@@ -14,6 +14,22 @@ import {
   verificarAccesoLote,
   verificarAccesoSensor,
 } from '../../common/auth/alcance';
+import { diaDeVida, semanaDeVida } from '../../common/fechas/dias-de-vida';
+import {
+  CRITICIDADES_GRAVES,
+  Criticidad,
+  criticidadValida,
+  unNivelPorDebajo,
+} from '../../common/criticidad/criticidad';
+
+/**
+ * Hasta donde se considera que la lectura solo roza la banda.
+ *
+ * Es una fraccion del ancho del umbral: 15 % de 3 °C son 45 centesimas, y de
+ * 20 puntos de humedad son 3. Rozar baja un nivel; pasarse de ahi deja la
+ * criticidad que declaro el umbral.
+ */
+const MARGEN_ROCE = 0.15;
 
 const ALERTA_SELECT = {
   id: true,
@@ -21,6 +37,7 @@ const ALERTA_SELECT = {
   lote_id: true,
   sensor_id: true,
   tipo: true,
+  origen: true,
   criticidad: true,
   valor_detectado: true,
   valor_umbral: true,
@@ -107,14 +124,11 @@ export class AlertasService {
     if (!variable) return null;
 
     const loteActivo = sensor.galpon.lotes[0] ?? null;
+    // Misma cuenta que en indicadores: días de calendario de la granja, con
+    // el ingreso como día 1. Dividir milisegundos entre siete días arrastraba
+    // el desfase horario hasta el umbral ambiental que se elige.
     const semanaVida = loteActivo
-      ? Math.max(
-          0,
-          Math.floor(
-            (fecha.getTime() - loteActivo.fecha_ingreso.getTime()) /
-              (7 * 24 * 60 * 60 * 1000),
-          ),
-        )
+      ? semanaDeVida(diaDeVida(loteActivo.fecha_ingreso, fecha))
       : 0;
     const umbral = await this.prisma.umbralAmbiental.findFirst({
       where: {
@@ -126,6 +140,7 @@ export class AlertasService {
       select: {
         valor_minimo: true,
         valor_maximo: true,
+        criticidad: true,
       },
     });
     if (!umbral || this.estaEnRango(valor, umbral.valor_minimo, umbral.valor_maximo)) {
@@ -135,6 +150,7 @@ export class AlertasService {
     const existente = await this.prisma.alerta.findFirst({
       where: {
         sensor_id: sensor.id,
+        origen: 'automatica',
         estado: { in: ['abierta', 'en_proceso'] },
       },
       select: { id: true },
@@ -151,6 +167,7 @@ export class AlertasService {
       valor,
       umbral.valor_minimo,
       umbral.valor_maximo,
+      umbral.criticidad,
     );
     const alerta = await this.prisma.alerta.create({
       data: {
@@ -158,6 +175,7 @@ export class AlertasService {
         lote_id: loteActivo?.id,
         sensor_id: sensor.id,
         tipo: sensor.tipo,
+        origen: 'automatica',
         criticidad,
         valor_detectado: valor,
         valor_umbral:
@@ -190,10 +208,34 @@ export class AlertasService {
     return valor >= minimo && valor <= maximo;
   }
 
-  private calcularCriticidad(valor: number, minimo: number, maximo: number) {
-    const rango = Math.max(maximo - minimo, maximo, 1);
+  /**
+   * Lo grave que es esta lectura: lo dice el umbral, lo matiza el desvio.
+   *
+   * Quien configura el umbral ya declaro lo que le importa esa variable esa
+   * semana —el frio en la cria no pesa lo mismo que en engorde—, y eso se
+   * guardaba sin que nada lo mirara: la criticidad salia solo de cuanto se
+   * habia desviado la lectura. Un umbral marcado 'alta' producia alertas
+   * 'media' y nadie entendia por que.
+   *
+   * El desvio sigue contando, pero como matiz: rozar la banda baja un nivel,
+   * irse lejos deja la criticidad que el umbral declaro.
+   *
+   * El ancho es el de la banda. Antes se tomaba `max(maximo - minimo, maximo)`,
+   * que para una banda de 21-24 °C daba 24 en vez de 3: el corte para que algo
+   * fuera grave quedaba en 3,6 °C de desvio, una barbaridad en temperatura.
+   */
+  private calcularCriticidad(
+    valor: number,
+    minimo: number,
+    maximo: number,
+    criticidadUmbral?: string | null,
+  ): Criticidad {
+    const declarada = criticidadValida(criticidadUmbral);
+    const ancho = Math.max(maximo - minimo, 1);
     const distancia = valor > maximo ? valor - maximo : minimo - valor;
-    return distancia <= rango * 0.15 ? 'media' : 'alta';
+    return distancia <= ancho * MARGEN_ROCE
+      ? unNivelPorDebajo(declarada)
+      : declarada;
   }
 
   private async notificarNuevaAlerta(
@@ -315,10 +357,6 @@ export class AlertasService {
     return usuario;
   }
 
-  // ============================================================
-  // MÉTODOS PÚBLICOS
-  // ============================================================
-
   async crear(dto: CreateAlertasDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
 
@@ -336,6 +374,7 @@ export class AlertasService {
         lote_id: dto.lote_id,
         sensor_id: dto.sensor_id,
         tipo: dto.tipo,
+        origen: 'manual',
         criticidad: dto.criticidad,
         valor_detectado: dto.valor_detectado,
         valor_umbral: dto.valor_umbral,
@@ -514,7 +553,12 @@ export class AlertasService {
       this.prisma.alerta.count({ where: { ...where, estado: 'abierta' } }),
       this.prisma.alerta.count({ where: { ...where, estado: 'en_proceso' } }),
       this.prisma.alerta.count({ where: { ...where, estado: 'cerrada' } }),
-      this.prisma.alerta.count({ where: { ...where, criticidad: 'critica' } }),
+      // Contaba 'critica', un valor que ningún camino automático escribe:
+      // el tablero decía cero mientras había lecturas muy fuera de rango sin
+      // atender. Ahora cuenta el nivel más alto que el sistema sí alcanza.
+      this.prisma.alerta.count({
+        where: { ...where, criticidad: { in: [...CRITICIDADES_GRAVES] } },
+      }),
     ]);
 
     return {

@@ -12,6 +12,7 @@ import {
   IcSearch,
 } from '@shared/ui/icons/icons'
 import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import '@shared/ui/admin/AdminKit.css'
 import {
   activarGalpon,
@@ -33,6 +34,8 @@ import {
 } from '@features/lotes/api/lotes'
 import FormularioLote from '@features/lotes/components/FormularioLote'
 import { useFormularioLote } from '@features/lotes/hooks/useFormularioLote'
+import { toast } from 'sonner'
+import { mensajeDeError } from '@shared/utils/errores'
 import type { Granja } from './api/granjas'
 import AcordeonGalpon from './components/AcordeonGalpon'
 import Badge from './components/Badge'
@@ -55,8 +58,16 @@ function GranjasPage() {
   const esAdministrador = rol === ROL_ADMIN
   const permisos = permisosDeGestion(rol)
 
-  const { estructura, proveedores, consumoPorLote, cargando, error, recargar } =
-    useEstructuraGranjas()
+  const {
+    estructura,
+    proveedores,
+    lineasGeneticas,
+    lineasGeneticasError,
+    consumoPorLote,
+    cargando,
+    error,
+    recargar,
+  } = useEstructuraGranjas()
   const gestionGranjas = useGranjas()
   const catalogoPropietarios = usePropietariosGranja(esAdministrador)
 
@@ -131,39 +142,64 @@ function GranjasPage() {
     await recargarTodo()
   })
 
+
   const formularioLote = useFormularioLote(async (datos, editandoId) => {
     if (editandoId === null) await crearLote(datos as CrearLotePayload)
     else await actualizarLote(editandoId, datos)
     await recargarTodo()
   })
 
-  async function alternarGalpon(galpon: GalponConLotes) {
-    if (galpon.activo) await desactivarGalpon(galpon.id)
-    else await activarGalpon(galpon.id)
-    await recargarTodo()
+  // Todas las acciones de esta página pasan por aquí. Antes cada una hacía
+  // `await` a secas y se invocaba con `void`, así que un fallo del servidor
+  // terminaba como «Uncaught (in promise)» en la consola y en pantalla no
+  // ocurría nada: la fila seguía ahí y el usuario no sabía si había pulsado mal.
+  async function ejecutar(accion: () => Promise<unknown>, respaldo: string) {
+    try {
+      await accion()
+      await recargarTodo()
+      return true
+    } catch (problema) {
+      toast.error(mensajeDeError(problema, respaldo))
+      return false
+    }
   }
 
-  async function eliminarGalpon(galpon: GalponConLotes) {
-    if (!window.confirm(`¿Eliminar permanentemente el galpón "${galpon.nombre}"?`)) return
-    await eliminarGalponPermanente(galpon.id)
-    await recargarTodo()
+  function alternarGalpon(galpon: GalponConLotes) {
+    void ejecutar(
+      () => (galpon.activo ? desactivarGalpon(galpon.id) : activarGalpon(galpon.id)),
+      galpon.activo ? 'No se pudo desactivar el galpón.' : 'No se pudo activar el galpón.',
+    )
   }
 
-  async function alternarLote(lote: Lote) {
-    if (lote.estado === 'activo') await desactivarLote(lote.id)
-    else await activarLote(lote.id)
-    await recargarTodo()
+  function eliminarGalpon(galpon: GalponConLotes) {
+    if (!window.confirm(`¿Eliminar permanentemente el galpón "${galpon.nombre}"? Esta acción no se puede deshacer.`)) return
+    void ejecutar(
+      () => eliminarGalponPermanente(galpon.id),
+      'No se pudo eliminar el galpón. Puede que tenga lotes asociados.',
+    )
   }
 
-  async function eliminarLote(lote: Lote) {
-    if (!window.confirm(`¿Eliminar permanentemente el lote "${lote.codigo}"?`)) return
-    await eliminarLotePermanente(lote.id)
-    await recargarTodo()
+  function alternarLote(lote: Lote) {
+    void ejecutar(
+      () => (lote.estado === 'activo' ? desactivarLote(lote.id) : activarLote(lote.id)),
+      lote.estado === 'activo' ? 'No se pudo desactivar el lote.' : 'No se pudo activar el lote.',
+    )
+  }
+
+  function eliminarLote(lote: Lote) {
+    if (!window.confirm(`¿Eliminar permanentemente el lote "${lote.codigo}"? Esta acción no se puede deshacer.`)) return
+    void ejecutar(
+      () => eliminarLotePermanente(lote.id),
+      'No se pudo eliminar el lote. Puede que tenga registros de producción asociados.',
+    )
   }
 
   function eliminarGranja(granja: Granja) {
-    if (!window.confirm(`¿Eliminar permanentemente la granja "${granja.nombre}"?`)) return
-    void gestionGranjas.eliminar(granja).then(recargarTodo)
+    if (!window.confirm(`¿Eliminar permanentemente la granja "${granja.nombre}"? Esta acción no se puede deshacer.`)) return
+    void ejecutar(
+      () => gestionGranjas.eliminar(granja),
+      'No se pudo eliminar la granja. Puede que tenga galpones asociados.',
+    )
   }
 
   const totales = useMemo(
@@ -230,36 +266,30 @@ function GranjasPage() {
 
   if (cargando && estructura.length === 0) {
     return (
-      <div className="page-container gr-page">
+      <div className="page-container gr-page adm-page">
         <EsqueletoGranjas />
       </div>
     )
   }
 
   return (
-    <div className="page-container gr-page">
-      <header className="gr-cabecera">
-        <div className="gr-cabecera-fila">
-          <div>
-            <span className="gr-eyebrow">
-              <span className="gr-eyebrow-punto" aria-hidden="true" />
-              {contenidoPorRol.contexto}
-            </span>
-            <h1>{contenidoPorRol.titulo}</h1>
-            <p>{contenidoPorRol.descripcion}</p>
-          </div>
-          <div className="gr-cabecera-acciones">
-            <button
-              type="button"
-              className="gr-btn gr-btn--suave"
-              onClick={() => void recargarTodo()}
-            >
-              <IcRefresh size={14} aria-hidden="true" />
-              Actualizar
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="page-container gr-page adm-page">
+      <CabeceraAdmin
+        eyebrow={contenidoPorRol.contexto}
+        titulo={contenidoPorRol.titulo}
+        subtitulo={contenidoPorRol.descripcion}
+        acciones={(
+          <button
+            type="button"
+            className="adm-btn adm-btn--secundario"
+            onClick={() => void recargarTodo()}
+            disabled={cargando}
+          >
+            <IcRefresh size={16} aria-hidden="true" />
+            {cargando ? 'Actualizando…' : 'Actualizar'}
+          </button>
+        )}
+      />
 
       {esAdministrador ? (
         <section className="grj-resumen" aria-label={contenidoPorRol.resumen}>
@@ -498,8 +528,8 @@ function GranjasPage() {
                       onEliminarGalpon={(item) => void eliminarGalpon(item)}
                       onCrearLote={(item) => formularioLote.abrirCrear(item.id)}
                       onEditarLote={formularioLote.abrirEditar}
-                      onAlternarLote={(lote) => void alternarLote(lote)}
-                      onEliminarLote={(lote) => void eliminarLote(lote)}
+                      onAlternarLote={alternarLote}
+                      onEliminarLote={eliminarLote}
                     />
                   ))}
                 </div>
@@ -545,6 +575,8 @@ function GranjasPage() {
           modoEdicion={formularioLote.modoEdicion}
           galpones={seleccionada.galpones.map((galpon) => galpon.origen)}
           proveedores={proveedores}
+          lineasGeneticas={lineasGeneticas}
+          errorLineasGeneticas={lineasGeneticasError}
           guardando={formularioLote.guardando}
           error={formularioLote.error}
           onCambiar={formularioLote.cambiar}

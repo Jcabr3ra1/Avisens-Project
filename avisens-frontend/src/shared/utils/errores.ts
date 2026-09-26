@@ -35,3 +35,9 @@ export function mensajeDeError(err: unknown, respaldo: string): string {
     respaldo
   )
 }
+
+// GET de un recurso "vigente" que todavia no existe (sin plan, sin
+// estimacion) responde 404 -- es un estado de negocio, no un fallo.
+export function esNotFound(error: unknown): boolean {
+  return isAxiosError(error) && error.response?.status === 404
+}

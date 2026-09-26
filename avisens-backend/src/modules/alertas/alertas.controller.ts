@@ -12,7 +12,13 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -22,6 +28,10 @@ import { AlertasService } from './alertas.service';
 import { CreateAlertasDto } from './dto/create-alertas.dto';
 import { UpdateAlertasDto } from './dto/update-alertas.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import {
+  AlertaPaginadaDto,
+  AlertaRespuestaDto,
+} from './dto/alerta-respuesta.dto';
 
 interface AuthRequest extends Request {
   user: { id: number; email: string; rol: string; organizacion_id?: number };
@@ -42,6 +52,7 @@ export class AlertasController {
   @Post()
   @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Crear una nueva alerta' })
+  @ApiCreatedResponse({ type: AlertaRespuestaDto })
   crear(@Body() dto: CreateAlertasDto, @Req() req: AuthRequest) {
     return this.alertasService.crear(dto, req.user);
   }
@@ -51,6 +62,7 @@ export class AlertasController {
     summary:
       'Listar alertas paginado (Admin: todas · Propietario: sus granjas)',
   })
+  @ApiOkResponse({ type: AlertaPaginadaDto })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.alertasService.listar(req.user, paginacion);
   }
@@ -58,6 +70,7 @@ export class AlertasController {
   @Patch(':id')
   @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Actualizar una alerta' })
+  @ApiOkResponse({ type: AlertaRespuestaDto })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateAlertasDto,
@@ -79,12 +92,14 @@ export class AlertasController {
 
   @Patch(':id/aceptar')
   @ApiOperation({ summary: 'Aceptar una alerta (asignarse como responsable)' })
+  @ApiOkResponse({ type: AlertaRespuestaDto })
   aceptar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.alertasService.aceptar(id, req.user);
   }
 
   @Patch(':id/cerrar')
   @ApiOperation({ summary: 'Cerrar una alerta con acción correctiva' })
+  @ApiOkResponse({ type: AlertaRespuestaDto })
   cerrar(
     @Param('id', ParseIntPipe) id: number,
     @Body('accion_correctiva') accion_correctiva: string,
@@ -96,6 +111,7 @@ export class AlertasController {
   @Patch(':id/escalar/:usuarioId')
   @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Escalar una alerta a otro usuario' })
+  @ApiOkResponse({ type: AlertaRespuestaDto })
   escalar(
     @Param('id', ParseIntPipe) id: number,
     @Param('usuarioId', ParseIntPipe) usuarioId: number,
@@ -110,6 +126,7 @@ export class AlertasController {
 
   @Get('galpon/:galponId')
   @ApiOperation({ summary: 'Obtener alertas de un galpón específico' })
+  @ApiOkResponse({ type: AlertaPaginadaDto })
   obtenerPorGalpon(
     @Param('galponId', ParseIntPipe) galponId: number,
     @Query() paginacion: PaginationQueryDto,
@@ -120,6 +137,7 @@ export class AlertasController {
 
   @Get('lote/:loteId')
   @ApiOperation({ summary: 'Obtener alertas de un lote específico' })
+  @ApiOkResponse({ type: AlertaPaginadaDto })
   obtenerPorLote(
     @Param('loteId', ParseIntPipe) loteId: number,
     @Query() paginacion: PaginationQueryDto,
@@ -140,6 +158,7 @@ export class AlertasController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener una alerta por ID' })
+  @ApiOkResponse({ type: AlertaRespuestaDto })
   obtener(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.alertasService.obtener(id, req.user);
   }

@@ -18,7 +18,7 @@ import { PERMISOS } from '../../common/auth/permisos';
 import { TiposAlimentoService } from './tipos-alimento.service';
 import { CreateTipoAlimentoDto } from './dto/create-tipo-alimento.dto';
 import { UpdateTipoAlimentoDto } from './dto/update-tipo-alimento.dto';
-import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { ListarTiposAlimentoDto } from './dto/listar-tipos-alimento.dto';
 
 @ApiTags('tipos-alimento')
 @ApiBearerAuth()
@@ -37,10 +37,11 @@ export class TiposAlimentoController {
 
   @Get()
   @ApiOperation({
-    summary: 'Listar tipos de alimento paginado (Admin y Propietario)',
+    summary:
+      'Listar tipos de alimento paginado (por defecto sólo los activos)',
   })
-  listar(@Query() paginacion: PaginationQueryDto) {
-    return this.tiposAlimentoService.listar(paginacion);
+  listar(@Query() filtros: ListarTiposAlimentoDto) {
+    return this.tiposAlimentoService.listar(filtros);
   }
 
   @Get(':id')

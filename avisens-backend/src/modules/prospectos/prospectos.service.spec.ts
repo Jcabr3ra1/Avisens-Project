@@ -2,9 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProspectosService } from './prospectos.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { UsuariosService } from '../usuarios/usuarios.service';
 
 describe('ProspectosService', () => {
   let service: ProspectosService;
+
+  const usuarios = { altaDeUsuario: jest.fn() };
 
   const prisma = {
     prospecto: {
@@ -26,6 +29,7 @@ describe('ProspectosService', () => {
       providers: [
         ProspectosService,
         { provide: PrismaService, useValue: prisma },
+        { provide: UsuariosService, useValue: usuarios },
       ],
     }).compile();
     service = module.get<ProspectosService>(ProspectosService);
@@ -114,7 +118,11 @@ describe('ProspectosService', () => {
       estado: 'calificado',
       clasificacion: 'caliente',
     };
-    const asesor = { id: 1, nombre_completo: 'Ana Gomez' };
+    const asesor = {
+      id: 1,
+      nombre_completo: 'Ana Gomez',
+      rol: { nombre: 'Administrador' },
+    };
 
     it('lanza NotFound cuando el prospecto no existe', async () => {
       prisma.prospecto.findUnique.mockResolvedValue(null);
@@ -138,6 +146,51 @@ describe('ProspectosService', () => {
       expect(prisma.usuario.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: 99, activo: true } }),
       );
+    });
+
+    // Un prospecto es alguien que todavia NO es cliente. Un Propietario o un
+    // Operario si lo son: asignarles un prospecto pondria a un cliente a
+    // llevar las ventas de su proveedor, y le daria visibilidad sobre
+    // prospectos que son competencia suya.
+    it.each(['Propietario', 'Operario'])(
+      'rechaza asignar el prospecto a un %s',
+      async (rol) => {
+        prisma.prospecto.findUnique.mockResolvedValue(calificado);
+        prisma.usuario.findFirst.mockResolvedValue({
+          id: 20,
+          nombre_completo: 'Maria Lopez',
+          rol: { nombre: rol },
+        });
+
+        await expect(service.asignar(5, 20)).rejects.toThrow(
+          /no es administrador/,
+        );
+        expect(prisma.prospecto.update).not.toHaveBeenCalled();
+      },
+    );
+
+    it('el mensaje dice quien es, para que se entienda el rechazo', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue(calificado);
+      prisma.usuario.findFirst.mockResolvedValue({
+        id: 20,
+        nombre_completo: 'Maria Lopez',
+        rol: { nombre: 'Propietario' },
+      });
+
+      await expect(service.asignar(5, 20)).rejects.toThrow(/Maria Lopez/);
+    });
+
+    it('pide el rol al buscar al asesor, no solo que exista', async () => {
+      prisma.prospecto.findUnique.mockResolvedValue(calificado);
+      prisma.usuario.findFirst.mockResolvedValue(asesor);
+      prisma.prospecto.update.mockResolvedValue({});
+
+      await service.asignar(5, 1);
+
+      const args = (
+        prisma.usuario.findFirst.mock.calls as Array<[{ select: object }]>
+      )[0][0];
+      expect(args.select).toHaveProperty('rol');
     });
 
     it('asigna y mueve el prospecto al estado asignado', async () => {

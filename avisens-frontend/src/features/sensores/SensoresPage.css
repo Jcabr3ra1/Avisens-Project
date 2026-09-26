@@ -104,6 +104,7 @@
 
 .sn-campo input,
 .sn-campo select {
+  min-height: 44px;
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -119,10 +120,11 @@
   opacity: 0.75;
 }
 
-.sn-campo input:focus,
-.sn-campo select:focus {
-  outline: none;
-  border-color: var(--green, #22c55e);
+.sn-campo input:focus-visible,
+.sn-campo select:focus-visible {
+  border-color: var(--focus-ring);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .sn-form-acciones {
@@ -133,6 +135,7 @@
 
 /* ── Botones ──────────────────────────────────────────────────────────── */
 .sn-btn {
+  min-height: 44px;
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -151,6 +154,11 @@
 .sn-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.sn-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .sn-btn--primary {

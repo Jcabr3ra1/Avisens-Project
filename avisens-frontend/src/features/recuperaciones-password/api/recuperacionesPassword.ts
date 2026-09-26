@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 import type {
   AprobacionRecuperacion,
   RecuperacionPassword,
@@ -18,11 +18,7 @@ export async function solicitarRecuperacion(
 }
 
 export async function listarRecuperaciones(): Promise<RecuperacionPassword[]> {
-  const { data } = await api.get<PaginatedResponse<RecuperacionPassword>>(
-    '/recuperaciones-password',
-    { params: { page: 1, limit: 100 } },
-  )
-  return data.data
+  return listarTodasLasPaginas<RecuperacionPassword>('/recuperaciones-password')
 }
 
 export async function listarRecuperacionesDeUsuario(

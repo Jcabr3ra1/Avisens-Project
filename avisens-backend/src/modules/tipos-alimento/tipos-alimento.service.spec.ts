@@ -32,6 +32,8 @@ describe('TiposAlimentoService', () => {
     }).compile();
     service = module.get<TiposAlimentoService>(TiposAlimentoService);
 
+    prisma.tipoAlimento.findMany.mockResolvedValue([]);
+    prisma.tipoAlimento.count.mockResolvedValue(0);
     prisma.$transaction.mockResolvedValue([[], 0]);
   });
 
@@ -45,6 +47,58 @@ describe('TiposAlimentoService', () => {
 
       expect(prisma.tipoAlimento.create).toHaveBeenCalled();
       expect(dataDe(prisma.tipoAlimento.create).nombre).toBe('Iniciación');
+    });
+  });
+
+  describe('listar', () => {
+    const argsDeFindMany = (): Record<string, unknown> => {
+      const calls = prisma.tipoAlimento.findMany.mock.calls as Array<
+        [Record<string, unknown>]
+      >;
+      return calls[0][0];
+    };
+
+    // El desplegable del consumo diario no debe ofrecer un alimento retirado.
+    it('por defecto deja fuera los inactivos', async () => {
+      await service.listar({ page: 1, limit: 20 });
+
+      expect(argsDeFindMany().where).toEqual({ activo: true });
+    });
+
+    // La pantalla de catálogos necesita verlos todos para reactivar uno.
+    it('con solo_activos en false los trae todos', async () => {
+      await service.listar({ page: 1, limit: 20, solo_activos: false });
+
+      expect(argsDeFindMany().where).toEqual({});
+    });
+
+    it('filtra por marca sin perder el filtro de activos', async () => {
+      await service.listar({ page: 1, limit: 20, marca: 'italcol' });
+
+      expect(argsDeFindMany().where).toEqual({
+        marca: 'italcol',
+        activo: true,
+      });
+    });
+
+    // Se usan en orden de vida del pollo: preiniciador primero, engorde al
+    // final. Por id salía primero el último que alguien creó.
+    it('ordena por día de vida, no por id', async () => {
+      await service.listar({ page: 1, limit: 20 });
+
+      expect(argsDeFindMany().orderBy).toEqual([
+        { dia_inicio: 'asc' },
+        { nombre: 'asc' },
+      ]);
+    });
+
+    it('cuenta con el mismo filtro que lista', async () => {
+      await service.listar({ page: 1, limit: 20, marca: 'solla' });
+
+      const calls = prisma.tipoAlimento.count.mock.calls as Array<
+        [{ where: unknown }]
+      >;
+      expect(calls[0][0].where).toEqual(argsDeFindMany().where);
     });
   });
 

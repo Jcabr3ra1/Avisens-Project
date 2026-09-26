@@ -52,6 +52,7 @@ CLAUDE.md
 # Documentación: la carpeta docs/ NO se versiona (notas de trabajo locales).
 # MER.md se movió a la raíz para conservarlo en git.
 docs/
+documentacion/
 # Temporales de Office (Word deja estos archivos mientras un .docx está abierto).
 ~$*
 

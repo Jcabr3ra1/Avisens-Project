@@ -24,35 +24,33 @@ function PanelCrmAdmin({ etapas, cargando, conversion, onGestionar }: Props) {
   return (
     <section className="admin-card admin-crm" aria-label="Resumen de prospectos CRM">
       <div className="admin-card-head">
-        <span className="admin-card-title"><IcPhone size={15} /> Pipeline CRM</span>
+        <h2 className="admin-card-title"><IcPhone size={16} /> Pipeline CRM</h2>
         <button type="button" className="admin-card-link" onClick={onGestionar}>
           Ver todos <IcChevronRight size={13} />
         </button>
       </div>
-      <p className="admin-card-sub">Prospectos captados por el chatbot, por etapa</p>
+      <p className="admin-card-sub">Prospectos captados por el chatbot, clasificados por oportunidad</p>
 
-      <div className="admin-funnel">
+      <div className="admin-pipeline-chart" aria-label="Distribución de prospectos por etapa">
         {etapas.map((etapa) => (
-          <div key={etapa.nombre} className="admin-funnel-row">
-            <div className="admin-funnel-meta">
-              <span className="admin-funnel-label">
-                <span className="admin-funnel-icon" style={{ color: etapa.color }}>{iconoEtapa(etapa.nombre)}</span>
-                {etapa.nombre}
-              </span>
-              <span className="admin-funnel-desc">{etapa.descripcion}</span>
-            </div>
-            <div className="admin-funnel-track">
-              <div
-                className="admin-funnel-bar"
+          <div key={etapa.nombre} className="admin-pipeline-stage">
+            <div className="admin-pipeline-plot" aria-hidden="true">
+              <span
+                className="admin-pipeline-bar"
                 style={{
-                  width: `${(etapa.cantidad / maximo) * 100}%`,
-                  background: `linear-gradient(90deg, ${etapa.color}99, ${etapa.color})`,
+                  height: etapa.cantidad > 0 ? `${Math.max(14, (etapa.cantidad / maximo) * 100)}%` : '2px',
+                  backgroundColor: etapa.color,
                 }}
               />
             </div>
-            <span className="admin-funnel-count" style={{ color: etapa.color }}>
-              {cargando ? '…' : etapa.cantidad}
-            </span>
+            <strong className="admin-pipeline-count">{cargando ? '…' : etapa.cantidad}</strong>
+            <div className="admin-pipeline-meta">
+              <span className="admin-pipeline-label">
+                <span className="admin-funnel-icon" style={{ color: etapa.color }}>{iconoEtapa(etapa.nombre)}</span>
+                {etapa.nombre}
+              </span>
+              <span>{etapa.descripcion}</span>
+            </div>
           </div>
         ))}
       </div>
@@ -61,7 +59,7 @@ function PanelCrmAdmin({ etapas, cargando, conversion, onGestionar }: Props) {
         <span>Conversión total: leads calificados a cerrados</span>
         <div className="admin-crm-conv">
           <div className="admin-crm-conv-track">
-            <span className="admin-crm-conv-bar" style={{ width: `${conversion * 3}%` }} />
+            <span className="admin-crm-conv-bar" style={{ width: `${Math.min(conversion, 100)}%` }} />
           </div>
           <strong>{conversion}%</strong>
         </div>

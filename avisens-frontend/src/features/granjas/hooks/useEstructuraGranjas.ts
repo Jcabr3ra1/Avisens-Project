@@ -7,6 +7,10 @@ import {
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
 import { listarProveedores, type Proveedor } from '@features/proveedores/api/proveedores'
 import {
+  listarLineasGeneticas,
+  type LineaGenetica,
+} from '@features/lotes/api/lineas-geneticas'
+import {
   useMonitoreoAmbiental,
   type GalponMonitoreoVista,
 } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
@@ -42,6 +46,8 @@ export function useEstructuraGranjas() {
   const [alertas, setAlertas] = useState<Alerta[]>([])
   const [consumos, setConsumos] = useState<ConsumoDiario[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
+  const [lineasGeneticas, setLineasGeneticas] = useState<LineaGenetica[]>([])
+  const [lineasGeneticasError, setLineasGeneticasError] = useState('')
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -64,12 +70,20 @@ export function useEstructuraGranjas() {
       setCargando(false)
     }
 
-    // Consumos y proveedores son de apoyo: si fallan, la página sigue
-    // funcionando sin ese dato en lugar de caerse entera.
+    // Consumos, proveedores y líneas genéticas son de apoyo: si fallan, la
+    // página sigue funcionando sin ese dato en lugar de caerse entera.
     void listarConsumosDiarios().then(setConsumos).catch(() => setConsumos([]))
     void listarProveedores()
       .then((lista) => setProveedores(lista.filter((proveedor) => proveedor.activo)))
       .catch(() => setProveedores([]))
+    void listarLineasGeneticas()
+      .then((lista) => {
+        setLineasGeneticas(lista)
+        setLineasGeneticasError('')
+      })
+      .catch(() =>
+        setLineasGeneticasError('No se pudo cargar el catálogo de líneas genéticas.'),
+      )
   }, [])
 
   useEffect(() => {
@@ -143,6 +157,8 @@ export function useEstructuraGranjas() {
   return {
     estructura,
     proveedores,
+    lineasGeneticas,
+    lineasGeneticasError,
     consumoPorLote,
     cargando: cargando || monitoreo.cargando,
     error: error || monitoreo.error,

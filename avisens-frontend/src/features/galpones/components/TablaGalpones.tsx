@@ -13,6 +13,7 @@ interface Props {
   onEliminar: (galpon: Galpon) => void
   onVerLotes: (galpon: Galpon) => void
   onVerSensores: (galpon: Galpon) => void
+  onVerUmbrales: (galpon: Galpon) => void
   onVerDispositivos: (galpon: Galpon) => void
   onVerEquipos: (galpon: Galpon) => void
 }
@@ -31,6 +32,7 @@ function TablaGalpones({
   onEliminar,
   onVerLotes,
   onVerSensores,
+  onVerUmbrales,
   onVerDispositivos,
   onVerEquipos,
 }: Props) {
@@ -82,6 +84,9 @@ function TablaGalpones({
           </button>
           <button type="button" className="tg-chip" onClick={() => onVerSensores(galpon)}>
             Sensores
+          </button>
+          <button type="button" className="tg-chip" onClick={() => onVerUmbrales(galpon)}>
+            Umbrales
           </button>
           <button type="button" className="tg-chip" onClick={() => onVerDispositivos(galpon)}>
             Dispositivos

@@ -1,61 +1,62 @@
-import { IcBox, IcEgg, IcGrid, IcLeaf, IcServer } from '@shared/ui/icons/icons'
+import { IcAlert, IcGrid, IcServer, IcUserCircle, IcUsers } from '@shared/ui/icons/icons'
 import type { KpiAdmin } from '../model/adminResumen'
 
 type Props = {
   nombre: string
   fecha: string
   kpis: KpiAdmin[]
+  cargando: boolean
 }
 
 function iconoKpi(icono: KpiAdmin['icono']) {
   const iconos = {
-    granja: <IcLeaf size={16} />,
-    galpon: <IcBox size={16} />,
-    aves: <IcEgg size={16} />,
+    organizacion: <IcUsers size={16} />,
+    usuarios: <IcUserCircle size={16} />,
+    soporte: <IcAlert size={16} />,
     sensor: <IcServer size={16} />,
   }
   return iconos[icono] ?? <IcGrid size={16} />
 }
 
-function AdminHero({ nombre, fecha, kpis }: Props) {
+function AdminHero({ nombre, fecha, kpis, cargando }: Props) {
   return (
-    <section className="admin-hero">
-      <svg className="admin-hero-pattern" aria-hidden="true">
-        <defs>
-          <pattern id="adm-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-            <circle cx="1" cy="1" r="0.9" fill="rgba(255,255,255,0.07)" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#adm-dots)" />
-      </svg>
-
-      <div className="admin-hero-top">
+    <>
+      <header className="admin-header">
         <div>
-          <p className="admin-hero-eyebrow">Panel de administración · Avisens</p>
-          <h1 className="admin-hero-title">Hola, {nombre}</h1>
+          <h1 className="admin-header-title">Centro de control</h1>
+          <p className="admin-header-subtitle">Hola, {nombre}. Supervisa clientes, accesos y prioridades de la plataforma desde un solo lugar.</p>
         </div>
-        <div className="admin-hero-badges">
-          <div className="admin-hero-status">
-            <span className="admin-hero-pulse" />
-            <span>Sistema operativo</span>
-          </div>
-          <span className="admin-hero-fecha">{fecha}</span>
+        <div className="admin-header-context">
+          <span>Vista administrativa</span>
+          <time className="admin-header-date">{fecha}</time>
         </div>
-      </div>
+      </header>
 
-      <div className="admin-hero-kpis">
+      <section className="admin-kpis" aria-label="Estado general" aria-busy={cargando}>
         {kpis.map((kpi) => (
-          <div key={kpi.etiqueta} className="admin-hero-kpi">
-            <div className="admin-hero-kpi-top">
-              <span className="admin-hero-kpi-icon">{iconoKpi(kpi.icono)}</span>
+          <article key={kpi.etiqueta} className="admin-kpi">
+            <span className="admin-kpi-icon" aria-hidden="true">{iconoKpi(kpi.icono)}</span>
+            <div className="admin-kpi-copy">
+              <span className="admin-kpi-label">{kpi.etiqueta}</span>
+              <strong className="admin-kpi-value">{cargando ? '—' : kpi.valor}</strong>
+              <span className="admin-kpi-detail">{cargando ? 'Actualizando datos…' : kpi.detalle}</span>
+              {!cargando && kpi.progreso !== null && kpi.progresoTexto && (
+                <div
+                  className="admin-kpi-meter"
+                  role="progressbar"
+                  aria-label={kpi.progresoTexto}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={kpi.progreso}
+                >
+                  <span style={{ transform: `scaleX(${kpi.progreso / 100})` }} />
+                </div>
+              )}
             </div>
-            <span className="admin-hero-kpi-valor">{kpi.valor}</span>
-            <span className="admin-hero-kpi-label">{kpi.etiqueta}</span>
-            <span className="admin-hero-kpi-sub">{kpi.detalle}</span>
-          </div>
+          </article>
         ))}
-      </div>
-    </section>
+      </section>
+    </>
   )
 }
 

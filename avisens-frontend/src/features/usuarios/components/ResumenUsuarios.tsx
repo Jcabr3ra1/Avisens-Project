@@ -1,4 +1,6 @@
 import type { ResumenDeUsuarios } from '../hooks/useResumenUsuarios'
+import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
+import { IcCheck, IcUsers } from '@shared/ui/icons/icons'
 
 type Props = {
   resumen: ResumenDeUsuarios
@@ -6,30 +8,28 @@ type Props = {
 }
 
 function ResumenUsuarios({ resumen, esPropietario }: Props) {
-  return (
-    <div className="usuarios-resumen">
-      <div className="usuarios-stat">
-        <span className="usuarios-stat-valor">{resumen.total}</span>
-        <span className="usuarios-stat-label">{esPropietario ? 'Operarios' : 'Total'}</span>
-      </div>
-      <div className="usuarios-stat usuarios-stat--activo">
-        <span className="usuarios-stat-valor">{resumen.activos}</span>
-        <span className="usuarios-stat-label">Activos</span>
-      </div>
-      {!esPropietario && (
-        <>
-          <div className="usuarios-stat">
-            <span className="usuarios-stat-valor">{resumen.propietarios}</span>
-            <span className="usuarios-stat-label">Propietarios</span>
-          </div>
-          <div className="usuarios-stat">
-            <span className="usuarios-stat-valor">{resumen.operarios}</span>
-            <span className="usuarios-stat-label">Operarios</span>
-          </div>
-        </>
-      )}
-    </div>
-  )
+  const stats: Stat[] = [
+    {
+      label: esPropietario ? 'Operarios' : 'Usuarios',
+      valor: resumen.total,
+      icono: <IcUsers size={19} />,
+    },
+    {
+      label: 'Activos',
+      valor: resumen.activos,
+      icono: <IcCheck size={19} />,
+      tono: 'ok',
+    },
+  ]
+
+  if (!esPropietario) {
+    stats.push(
+      { label: 'Propietarios', valor: resumen.propietarios, icono: <IcUsers size={19} /> },
+      { label: 'Operarios', valor: resumen.operarios, icono: <IcUsers size={19} />, tono: 'info' },
+    )
+  }
+
+  return <TarjetasResumen stats={stats} etiqueta="Resumen de usuarios" />
 }
 
 export default ResumenUsuarios

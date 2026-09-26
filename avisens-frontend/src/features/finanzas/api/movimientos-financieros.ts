@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export interface GranjaDeMovimiento {
   id: number
@@ -54,19 +54,27 @@ export interface CrearMovimientoFinancieroPayload {
 export type ActualizarMovimientoFinancieroPayload =
   Partial<CrearMovimientoFinancieroPayload>
 
-export interface MovimientosFinancierosQuery {
-  page?: number
-  limit?: number
+// Trae TODOS los movimientos, no la primera página: las tarjetas de ingresos,
+// egresos y balance se calculan sumando esta lista. Con un tope de 100 las tres
+// cifras quedaban mal en cuanto la granja pasara ese número de movimientos, y
+// sin ningún aviso — que en una pantalla de dinero es el peor modo de fallar.
+export async function listarMovimientosFinancieros(): Promise<MovimientoFinanciero[]> {
+  return listarTodasLasPaginas<MovimientoFinanciero>('/movimientos-financieros')
 }
 
-export async function listarMovimientosFinancieros(
-  query: MovimientosFinancierosQuery = {},
-): Promise<MovimientoFinanciero[]> {
-  const { data } = await api.get<PaginatedResponse<MovimientoFinanciero>>(
-    '/movimientos-financieros',
-    { params: { page: 1, limit: 100, ...query } },
-  )
-  return data.data
+// El backend todavía no expone un listado de categorías, así que si la ruta no
+// existe se reconstruyen a partir de las que ya aparecen en los movimientos:
+// son categorías reales y válidas. Cuando exista el endpoint, este respaldo
+// deja de usarse solo.
+export async function listarCategoriasFinancieras(
+  respaldo: CategoriaFinanciera[] = [],
+): Promise<CategoriaFinanciera[]> {
+  try {
+    return await listarTodasLasPaginas<CategoriaFinanciera>('/categorias-financieras')
+  } catch {
+    const porId = new Map(respaldo.map((categoria) => [categoria.id, categoria]))
+    return [...porId.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+  }
 }
 
 export async function obtenerMovimientoFinanciero(

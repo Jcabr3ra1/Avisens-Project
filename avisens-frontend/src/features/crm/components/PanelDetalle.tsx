@@ -1,4 +1,10 @@
-import { IcClose, IcPhone, IcPlus } from '@shared/ui/icons/icons'
+import Modal from '@shared/ui/Modal/Modal'
+import { useState } from 'react'
+import { getUsuario, type Usuario } from '@shared/api'
+import FormularioConversion from './FormularioConversion'
+import type { ProspectoDetalle } from '../api/prospectos'
+import type { FormularioConversion as DatosConversion } from '../model/conversion'
+import { IcChevronRight, IcPhone, IcPlus } from '@shared/ui/icons/icons'
 import {
   PUNTAJE_MAXIMO,
   RANGOS_PUNTAJE,
@@ -6,17 +12,32 @@ import {
 } from '../model/prospectoVista'
 import { ESTILO_ETAPA } from '../model/etapas'
 import { urgenciaDe } from '../model/urgencia'
-import { iniciales, pesos } from '../model/formato'
+import {
+  esIdentidadWhatsapp,
+  etiquetaContacto,
+  sePuedeLlamar,
+} from '../model/contacto'
+import { pesos } from '../model/formato'
 import { useCotizaciones } from '../hooks/useCotizaciones'
 import { useSolicitudesDeProspecto } from '@features/solicitudes-pqrs/hooks/useSolicitudesDeProspecto'
 import { ETIQUETAS_ESTADO } from '@features/solicitudes-pqrs/model/solicitudPqrs'
 
 type Props = {
   prospecto: ProspectoVista
+  onConvertir: (form: DatosConversion) => Promise<unknown>
+  asesores: Usuario[]
+  asignando: boolean
+  onAsignar: (asesorId: number) => void
   onCerrar: () => void
 }
 
-function PanelDetalle({ prospecto, onCerrar }: Props) {
+function PanelDetalle({ prospecto, asesores, asignando, onAsignar, onConvertir, onCerrar }: Props) {
+  const [cambiandoAsesor, setCambiandoAsesor] = useState(false)
+  const [convirtiendo, setConvirtiendo] = useState(false)
+  const yaCerrado = prospecto.etapa === 'cerrado' || prospecto.etapa === 'descartado'
+  const asesorAsignado = asesores.find((asesor) => asesor.id === prospecto.asesorId) ?? null
+  const esMio = asesorAsignado !== null && asesorAsignado.id === getUsuario()?.id
+  const asignadoDesconocido = prospecto.asesorId !== null && asesorAsignado === null
   const estilo = ESTILO_ETAPA[prospecto.etapa]
   const urgencia = urgenciaDe(prospecto.ultimaActividad, prospecto.etapa)
   const { cotizaciones, cargando, generando, generar } = useCotizaciones(
@@ -31,21 +52,27 @@ function PanelDetalle({ prospecto, onCerrar }: Props) {
   } = useSolicitudesDeProspecto(prospecto.id)
 
   return (
-    <div className="crm-overlay" onClick={onCerrar}>
-      <aside className="crm-detalle" onClick={(e) => e.stopPropagation()}>
-        <div className="crm-detalle-head" style={{ borderBottomColor: estilo.color }}>
-          <span className="crm-detalle-avatar" style={{ background: estilo.color }}>
-            {iniciales(prospecto.nombre)}
-          </span>
-          <div className="crm-detalle-ident">
-            <h2 className="crm-detalle-nombre">{prospecto.nombre}</h2>
-            <span className="crm-detalle-rol">{prospecto.rol}</span>
-          </div>
-          <button className="crm-detalle-cerrar" onClick={onCerrar} aria-label="Cerrar">
-            <IcClose size={17} />
-          </button>
-        </div>
+    <Modal
+      titulo={prospecto.nombre}
+      subtitulo={prospecto.rol}
+      onCerrar={onCerrar}
+      ancho="ancho"
+      acciones={(
+        <div className="crm-detalle-acciones">
 
+          {sePuedeLlamar(prospecto.telefono) && (
+            <a href={`tel:${prospecto.telefono}`} className="crm-det-btn crm-det-btn--ghost">
+              <IcPhone size={15} /> Llamar
+            </a>
+          )}
+          {prospecto.correo && (
+            <a href={`mailto:${prospecto.correo}`} className="crm-det-btn crm-det-btn--ghost">
+              Correo
+            </a>
+          )}
+        </div>
+      )}
+    >
         <div className="crm-detalle-body">
           <div className="crm-det-row">
             <span className="crm-det-lbl">Estado</span>
@@ -88,6 +115,20 @@ function PanelDetalle({ prospecto, onCerrar }: Props) {
             </span>
           </div>
 
+          {!yaCerrado && (
+            <button
+              type="button"
+              className="crm-det-convertir"
+              onClick={() => setConvirtiendo(true)}
+            >
+              <span className="crm-det-convertir-txt">
+                <strong>Convertir en cliente</strong>
+                <span>Crea la organización, su granja y el usuario de acceso</span>
+              </span>
+              <IcChevronRight size={17} />
+            </button>
+          )}
+
           <div className="crm-det-sep" />
 
           <p className="crm-det-section">Granja</p>
@@ -112,15 +153,25 @@ function PanelDetalle({ prospecto, onCerrar }: Props) {
 
           <p className="crm-det-section">Contacto</p>
           <div className="crm-det-row">
-            <span className="crm-det-lbl">Teléfono</span>
-            {prospecto.telefono ? (
+            <span className="crm-det-lbl">{etiquetaContacto(prospecto.telefono)}</span>
+            {sePuedeLlamar(prospecto.telefono) ? (
               <a href={`tel:${prospecto.telefono}`} className="crm-det-link">
                 {prospecto.telefono}
               </a>
+            ) : esIdentidadWhatsapp(prospecto.telefono) ? (
+
+              <span className="crm-det-val">Sin número</span>
             ) : (
               <span className="crm-det-val">—</span>
             )}
           </div>
+          {esIdentidadWhatsapp(prospecto.telefono) && (
+            <p className="crm-det-nota">
+              Escribió por WhatsApp sin compartir su número, así que no se le puede
+              llamar. Para responderle, busca su conversación en el WhatsApp de
+              Avisens.
+            </p>
+          )}
           {prospecto.correo && (
             <div className="crm-det-row">
               <span className="crm-det-lbl">Correo</span>
@@ -132,12 +183,51 @@ function PanelDetalle({ prospecto, onCerrar }: Props) {
               </a>
             </div>
           )}
-          <div className="crm-det-row">
-            <span className="crm-det-lbl">Asesor</span>
-            <span className="crm-det-val">
-              {prospecto.asesorId ? `Asesor #${prospecto.asesorId}` : 'Sin asignar'}
-            </span>
-          </div>
+
+          {(asesorAsignado || asignadoDesconocido) && !cambiandoAsesor ? (
+            <div className="crm-det-row">
+              <span className="crm-det-lbl">Lo atiende</span>
+              <span className="crm-det-val">
+                <strong>
+                  {asignadoDesconocido
+                    ? 'Alguien que ya no está disponible'
+                    : esMio
+                      ? 'Tú'
+                      : asesorAsignado?.nombre_completo}
+                </strong>
+                <button
+                  type="button"
+                  className="crm-det-cambiar"
+                  onClick={() => setCambiandoAsesor(true)}
+                  disabled={asignando}
+                >
+                  Cambiar
+                </button>
+              </span>
+            </div>
+          ) : (
+            <div className="crm-det-row">
+              <label className="crm-det-lbl" htmlFor="crm-asesor">Quién lo atiende</label>
+              <select
+                id="crm-asesor"
+                className="crm-det-asesor"
+                value={prospecto.asesorId ?? ''}
+                disabled={asignando || asesores.length === 0}
+                onChange={(evento) => {
+                  if (evento.target.value) {
+                    onAsignar(Number(evento.target.value))
+                    setCambiandoAsesor(false)
+                  }
+                }}
+              >
+                <option value="">{asignando ? 'Asignando…' : 'Sin asignar'}</option>
+
+                {asesores.map((asesor) => (
+                  <option key={asesor.id} value={asesor.id}>{asesor.nombre_completo}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="crm-det-sep" />
 
@@ -258,20 +348,14 @@ function PanelDetalle({ prospecto, onCerrar }: Props) {
           )}
         </div>
 
-        <div className="crm-detalle-acciones">
-          {prospecto.telefono && (
-            <a href={`tel:${prospecto.telefono}`} className="crm-det-btn crm-det-btn--primary">
-              <IcPhone size={15} /> Llamar ahora
-            </a>
-          )}
-          {prospecto.correo && (
-            <a href={`mailto:${prospecto.correo}`} className="crm-det-btn crm-det-btn--ghost">
-              Enviar correo
-            </a>
-          )}
-        </div>
-      </aside>
-    </div>
+      {convirtiendo && (
+        <FormularioConversion
+          prospecto={prospecto as unknown as ProspectoDetalle}
+          onConvertir={onConvertir}
+          onCerrar={() => setConvirtiendo(false)}
+        />
+      )}
+    </Modal>
   )
 }
 

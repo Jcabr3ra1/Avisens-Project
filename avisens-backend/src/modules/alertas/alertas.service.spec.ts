@@ -84,6 +84,18 @@ describe('AlertasService', () => {
       expect(r).toEqual({ id: 1 });
     });
 
+    it('guarda origen "manual"', async () => {
+      prisma.galpon.findUnique.mockResolvedValue(galponPropio);
+      prisma.alerta.create.mockResolvedValue({ id: 1 });
+
+      await service.crear(dtoCrear, propietario);
+
+      const llamadas = prisma.alerta.create.mock.calls as unknown as Array<
+        [{ data: Record<string, unknown> }]
+      >;
+      expect(llamadas[0][0].data).toMatchObject({ origen: 'manual' });
+    });
+
     it('lanza NotFound cuando el galpon no existe', async () => {
       prisma.galpon.findUnique.mockResolvedValue(null);
       await expect(service.crear(dtoCrear, admin)).rejects.toThrow(
@@ -171,6 +183,56 @@ describe('AlertasService', () => {
   });
 
   describe('evaluarLectura', () => {
+    // semana_vida elige el rango ambiental del galpón. Se cuenta desde el día
+    // de vida, que empieza en 1, así que la primera semana va del día 1 al 7.
+    // Sin el ajuste, el día 7 caería en la semana siguiente y se compararía
+    // contra el umbral equivocado un día antes cada semana.
+    describe('semana de vida con la que busca el umbral', () => {
+      const prepararSensorConLote = (fechaIngreso: Date) => {
+        prisma.sensor.findUnique.mockResolvedValue({
+          id: 3,
+          tipo: 'Temperatura',
+          galpon_id: 1,
+          galpon: {
+            nombre: 'Galpón Norte',
+            granja: { propietario_id: 5 },
+            lotes: [{ fecha_ingreso: fechaIngreso }],
+          },
+        });
+        prisma.umbralAmbiental.findFirst.mockResolvedValue(null);
+      };
+
+      const semanaConsultada = (): number => {
+        const llamadas = prisma.umbralAmbiental.findFirst.mock
+          .calls as unknown as Array<[{ where: { semana_vida: number } }]>;
+        return llamadas[0][0].where.semana_vida;
+      };
+
+      it('el día 1 y el día 7 caen en la semana 0', async () => {
+        prepararSensorConLote(new Date('2026-08-01T00:00:00.000Z'));
+        await service.evaluarLectura(3, 25, new Date('2026-08-01T15:00:00Z'));
+        expect(semanaConsultada()).toBe(0);
+
+        jest.clearAllMocks();
+        prepararSensorConLote(new Date('2026-08-01T00:00:00.000Z'));
+        await service.evaluarLectura(3, 25, new Date('2026-08-07T15:00:00Z'));
+        expect(semanaConsultada()).toBe(0);
+      });
+
+      it('el día 8 ya es la semana 1', async () => {
+        prepararSensorConLote(new Date('2026-08-01T00:00:00.000Z'));
+        await service.evaluarLectura(3, 25, new Date('2026-08-08T15:00:00Z'));
+        expect(semanaConsultada()).toBe(1);
+      });
+
+      // A las 02:00 UTC en la granja son las 21:00 del día anterior.
+      it('usa el día de la granja, no el del servidor', async () => {
+        prepararSensorConLote(new Date('2026-08-01T00:00:00.000Z'));
+        await service.evaluarLectura(3, 25, new Date('2026-08-08T02:00:00Z'));
+        expect(semanaConsultada()).toBe(0);
+      });
+    });
+
     it('crea una alerta y notifica cuando una lectura supera el umbral', async () => {
       prisma.sensor.findUnique.mockResolvedValue({
         id: 3,
@@ -185,6 +247,7 @@ describe('AlertasService', () => {
       prisma.umbralAmbiental.findFirst.mockResolvedValue({
         valor_minimo: 20,
         valor_maximo: 30,
+        criticidad: 'alta',
       });
       prisma.alerta.findFirst.mockResolvedValue(null);
       prisma.alerta.create.mockResolvedValue({
@@ -195,13 +258,11 @@ describe('AlertasService', () => {
 
       await service.evaluarLectura(3, 35, new Date('2026-08-30T12:00:00Z'));
 
-      const llamadasCrear = prisma.alerta.create.mock.calls as unknown as Array<[
-        { data: Record<string, unknown> },
-      ]>;
-      const llamadasNotificar =
-        prisma.notificacion.createMany.mock.calls as unknown as Array<[
-          { data: Array<Record<string, unknown>> },
-        ]>;
+      const llamadasCrear = prisma.alerta.create.mock.calls as unknown as Array<
+        [{ data: Record<string, unknown> }]
+      >;
+      const llamadasNotificar = prisma.notificacion.createMany.mock
+        .calls as unknown as Array<[{ data: Array<Record<string, unknown>> }]>;
       const llamadaCrear = llamadasCrear[0]?.[0];
       const llamadaNotificar = llamadasNotificar[0]?.[0];
 
@@ -219,6 +280,65 @@ describe('AlertasService', () => {
       );
     });
 
+    it('busca "existente" solo entre alertas automaticas', async () => {
+      prisma.sensor.findUnique.mockResolvedValue({
+        id: 3,
+        tipo: 'Temperatura',
+        galpon_id: 1,
+        galpon: {
+          nombre: 'Galpón Norte',
+          granja: { propietario_id: 5 },
+          lotes: [],
+        },
+      });
+      prisma.umbralAmbiental.findFirst.mockResolvedValue({
+        valor_minimo: 20,
+        valor_maximo: 30,
+        criticidad: 'alta',
+      });
+      prisma.alerta.findFirst.mockResolvedValue(null);
+      prisma.alerta.create.mockResolvedValue({ id: 20 });
+      prisma.usuarioGalpon.findMany.mockResolvedValue([]);
+
+      await service.evaluarLectura(3, 35);
+
+      const llamadasExistente = prisma.alerta.findFirst.mock
+        .calls as unknown as Array<[{ where: Record<string, unknown> }]>;
+      expect(llamadasExistente[0][0].where).toMatchObject({
+        origen: 'automatica',
+      });
+    });
+
+    it('crea la alerta automatica con origen "automatica"', async () => {
+      prisma.sensor.findUnique.mockResolvedValue({
+        id: 3,
+        tipo: 'Temperatura',
+        galpon_id: 1,
+        galpon: {
+          nombre: 'Galpón Norte',
+          granja: { propietario_id: 5 },
+          lotes: [],
+        },
+      });
+      prisma.umbralAmbiental.findFirst.mockResolvedValue({
+        valor_minimo: 20,
+        valor_maximo: 30,
+        criticidad: 'alta',
+      });
+      prisma.alerta.findFirst.mockResolvedValue(null);
+      prisma.alerta.create.mockResolvedValue({ id: 21 });
+      prisma.usuarioGalpon.findMany.mockResolvedValue([]);
+
+      await service.evaluarLectura(3, 35);
+
+      const llamadasCrear = prisma.alerta.create.mock.calls as unknown as Array<
+        [{ data: Record<string, unknown> }]
+      >;
+      expect(llamadasCrear[0][0].data).toMatchObject({
+        origen: 'automatica',
+      });
+    });
+
     it('actualiza la alerta abierta sin crear una duplicada', async () => {
       prisma.sensor.findUnique.mockResolvedValue({
         id: 3,
@@ -233,6 +353,7 @@ describe('AlertasService', () => {
       prisma.umbralAmbiental.findFirst.mockResolvedValue({
         valor_minimo: 20,
         valor_maximo: 30,
+        criticidad: 'alta',
       });
       prisma.alerta.findFirst.mockResolvedValue({ id: 12 });
 
@@ -606,8 +727,11 @@ describe('AlertasService', () => {
       expect(prisma.alerta.count).toHaveBeenCalledWith({
         where: { ...soloDelPropietario, estado: 'abierta' },
       });
+      // Contaba 'critica', que ningún camino automático escribe. Ahora cuenta
+      // 'alta', que es el techo del cálculo desde umbrales: si no, el tablero
+      // decía cero mientras había lecturas muy fuera de rango.
       expect(prisma.alerta.count).toHaveBeenCalledWith({
-        where: { ...soloDelPropietario, criticidad: 'critica' },
+        where: { ...soloDelPropietario, criticidad: { in: ['alta'] } },
       });
     });
   });

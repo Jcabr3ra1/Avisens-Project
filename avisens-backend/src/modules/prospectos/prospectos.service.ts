@@ -6,6 +6,12 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '../../common/pagination/paginate';
+import { ROLES } from '../../common/auth/roles';
+import * as bcrypt from 'bcrypt';
+import type { Solicitante } from '../../common/auth/acceso';
+import { UsuariosService } from '../usuarios/usuarios.service';
+import { ConvertirProspectoDto } from './dto/convertir-prospecto.dto';
+import { CerrarProspectoDto } from './dto/cerrar-prospecto.dto';
 import { ListarProspectosDto } from './dto/listar-prospectos.dto';
 
 const PROSPECTO_LISTA = {
@@ -25,7 +31,10 @@ const PROSPECTO_LISTA = {
 
 @Injectable()
 export class ProspectosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private usuarios: UsuariosService,
+  ) {}
 
   async listar(dto: ListarProspectosDto) {
     const { page, limit, clasificacion, estado, sin_asignar } = dto;
@@ -85,12 +94,22 @@ export class ProspectosService {
       );
     }
 
+    // Un prospecto es alguien que todavia NO es cliente, y quien lo atiende es
+    // del equipo de Avisens. Un Propietario o un Operario SON clientes:
+    // asignarles un prospecto pondria a un cliente a llevar las ventas de su
+    // proveedor, y le daria visibilidad sobre prospectos que son competencia
+    // suya. El `where` miraba solo que el usuario existiera y estuviera activo.
     const admin = await this.prisma.usuario.findFirst({
       where: { id: asesorId, activo: true },
-      select: { id: true, nombre_completo: true },
+      select: { id: true, nombre_completo: true, rol: { select: { nombre: true } } },
     });
     if (!admin) {
       throw new NotFoundException('El administrador no existe o esta inactivo');
+    }
+    if (admin.rol?.nombre !== ROLES.ADMINISTRADOR) {
+      throw new BadRequestException(
+        `${admin.nombre_completo} no es administrador: solo un administrador puede atender un prospecto`,
+      );
     }
 
     await this.prisma.prospecto.update({
@@ -155,5 +174,138 @@ export class ProspectosService {
     ];
 
     return lineas.join('\n');
+  }
+
+  /**
+   * Un prospecto que ya no esta en juego, con el porque.
+   *
+   * `cerrado` no distingue ganado de perdido, asi que el resultado va aparte.
+   * Un "ganado" tiene que apuntar a un cliente: un prospecto ganado que no
+   * corresponde a nadie es justo el agujero que esto viene a cerrar.
+   */
+  async cerrar(id: number, dto: CerrarProspectoDto) {
+    const prospecto = await this.prisma.prospecto.findUnique({
+      where: { id },
+      select: { id: true, estado: true },
+    });
+    if (!prospecto) throw new NotFoundException('Prospecto no encontrado');
+    if (prospecto.estado === 'cerrado') {
+      throw new BadRequestException('Este prospecto ya esta cerrado');
+    }
+
+    if (dto.resultado === 'ganado') {
+      if (!dto.usuario_id) {
+        throw new BadRequestException(
+          'Un prospecto ganado tiene que apuntar al cliente en que se convirtio: indica usuario_id, o usa la conversion para crearlo',
+        );
+      }
+      const usuario = await this.prisma.usuario.findUnique({
+        where: { id: dto.usuario_id },
+        select: { id: true },
+      });
+      if (!usuario) throw new NotFoundException('Usuario no encontrado');
+    }
+
+    return this.prisma.prospecto.update({
+      where: { id },
+      data: {
+        estado: 'cerrado',
+        resultado_cierre: dto.resultado,
+        motivo_cierre: dto.motivo,
+        usuario_convertido_id: dto.usuario_id,
+        fecha_finalizacion: new Date(),
+      },
+      select: {
+        id: true,
+        estado: true,
+        resultado_cierre: true,
+        motivo_cierre: true,
+        usuario_convertido_id: true,
+      },
+    });
+  }
+
+  /**
+   * Volver cliente a un prospecto, en una sola transaccion.
+   *
+   * Encadenar "crear usuario" y "cerrar prospecto" desde el navegador deja un
+   * hueco: si la primera funciona y la segunda falla, queda un cliente creado y
+   * un prospecto abierto, nadie sabe que ya se convirtio, y alguien puede
+   * convertirlo otra vez. Aqui o pasan las tres cosas o no pasa ninguna.
+   *
+   * El alta del usuario la hace `UsuariosService` con el mismo `tx`, para que
+   * un cliente creado desde el CRM siga las mismas reglas que uno creado desde
+   * Personas.
+   */
+  async convertir(
+    id: number,
+    dto: ConvertirProspectoDto,
+    solicitante: Solicitante,
+  ) {
+    const prospecto = await this.prisma.prospecto.findUnique({
+      where: { id },
+      select: { id: true, estado: true, nombre: true },
+    });
+    if (!prospecto) throw new NotFoundException('Prospecto no encontrado');
+    if (prospecto.estado === 'cerrado') {
+      throw new BadRequestException('Este prospecto ya esta cerrado');
+    }
+
+    const rolPropietario = await this.prisma.rol.findUnique({
+      where: { nombre: ROLES.PROPIETARIO },
+      select: { id: true },
+    });
+    if (!rolPropietario) {
+      throw new NotFoundException('Rol Propietario no encontrado');
+    }
+
+    // Fuera de la transaccion: cuesta unos 100 ms y no toca la base.
+    const password_hash = await bcrypt.hash(dto.password, 12);
+
+    return this.prisma.$transaction(async (tx) => {
+      const usuario = await this.usuarios.altaDeUsuario(
+        tx,
+        {
+          nombre_completo: dto.nombre_completo,
+          cedula: dto.cedula,
+          email: dto.email,
+          telefono: dto.telefono,
+          password: dto.password,
+          rol_id: rolPropietario.id,
+          organizacion_nombre: dto.organizacion_nombre,
+        },
+        solicitante,
+        password_hash,
+      );
+
+      // La granja va DESPUES del usuario y con el `organizacion_id` de ese
+      // mismo usuario: la llave foranea es compuesta —(propietario_id,
+      // organizacion_id) contra Usuario(id, organizacion_id)— y con cualquier
+      // otra organizacion revienta.
+      //
+      // No se le pone `area_total_m2`: el cuestionario recogia el area de UN
+      // galpon, no la de la granja, y desde el recorte ya ni eso.
+      await tx.granja.create({
+        data: {
+          propietario_id: usuario.id,
+          organizacion_id: usuario.organizacion_id!,
+          nombre: dto.granja_nombre,
+          municipio: dto.granja_municipio,
+        },
+      });
+
+      const cerrado = await tx.prospecto.update({
+        where: { id },
+        data: {
+          estado: 'cerrado',
+          resultado_cierre: 'ganado',
+          usuario_convertido_id: usuario.id,
+          fecha_finalizacion: new Date(),
+        },
+        select: { id: true, estado: true, resultado_cierre: true },
+      });
+
+      return { prospecto: cerrado, usuario };
+    });
   }
 }

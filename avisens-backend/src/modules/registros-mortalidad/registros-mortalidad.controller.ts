@@ -69,7 +69,12 @@ export class RegistrosMortalidadController {
     return this.registrosMortalidadService.actualizar(id, dto, req.user);
   }
 
+  // Borrar no es registrar. El operario carga y corrige lo del día con POST y
+  // PATCH, pero un registro borrado desaparece del histórico que alimenta los
+  // indicadores y las alertas de desvío, y el alcance por galpón le dejaba
+  // borrar también lo que cargó un compañero días atrás.
   @Delete(':id')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Eliminar un registro de mortalidad' })
   eliminar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.registrosMortalidadService.eliminar(id, req.user);

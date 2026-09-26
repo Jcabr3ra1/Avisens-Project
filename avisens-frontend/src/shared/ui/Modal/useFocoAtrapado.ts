@@ -3,6 +3,27 @@ import { useEffect, useRef, type RefObject } from 'react'
 const FOCUSABLES =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
+let ultimoFocoFueraDeDialogo: HTMLElement | null = null
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('focusin', (evento) => {
+    const objetivo = evento.target
+    if (
+      objetivo instanceof HTMLElement
+      && objetivo !== document.body
+      && !objetivo.closest('[role="dialog"]')
+    ) {
+      ultimoFocoFueraDeDialogo = objetivo
+    }
+  })
+}
+
+export function obtenerFocoDeRetorno(): HTMLElement | null {
+  const activo = document.activeElement
+  if (activo instanceof HTMLElement && activo !== document.body) return activo
+  return ultimoFocoFueraDeDialogo?.isConnected ? ultimoFocoFueraDeDialogo : null
+}
+
 /**
  * Atrapa el foco dentro de `contenedor` mientras `activo` es verdadero: el Tab
  * deja de escaparse al resto de la página, Escape llama a `onCerrar`, el
@@ -17,6 +38,7 @@ export function useFocoAtrapado(
   contenedor: RefObject<HTMLElement | null>,
   activo: boolean,
   onCerrar: () => void,
+  retornoFoco?: HTMLElement | null,
 ): void {
   const onCerrarRef = useRef(onCerrar)
 
@@ -27,7 +49,7 @@ export function useFocoAtrapado(
   useEffect(() => {
     if (!activo) return
 
-    const previo = document.activeElement as HTMLElement | null
+    const previo = retornoFoco ?? document.activeElement as HTMLElement | null
     const primero = contenedor.current?.querySelector<HTMLElement>(FOCUSABLES)
     primero?.focus()
 
@@ -65,5 +87,5 @@ export function useFocoAtrapado(
       document.body.style.overflow = overflowPrevio
       previo?.focus()
     }
-  }, [activo, contenedor])
+  }, [activo, contenedor, retornoFoco])
 }

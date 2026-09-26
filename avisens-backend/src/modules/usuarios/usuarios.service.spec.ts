@@ -471,7 +471,7 @@ describe('UsuariosService', () => {
         rol: { nombre: 'Operario' },
       });
 
-      await service.eliminarPermanente(20, propietario);
+      await service.eliminarPermanente(20, admin);
 
       expect(prisma.usuarioGalpon.deleteMany).toHaveBeenCalledWith({
         where: { usuario_id: 20 },

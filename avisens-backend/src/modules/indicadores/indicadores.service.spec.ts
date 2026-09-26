@@ -62,6 +62,29 @@ describe('IndicadoresService · calcularParaLote', () => {
     expect(guardado.peso_promedio_g).toBe(1000);
   });
 
+  it('desempata el ultimo pesaje por id -- fecha es solo el dia, varios pesajes del mismo dia empatan', async () => {
+    prisma.lote.findUnique.mockResolvedValue({
+      id: 1,
+      fecha_ingreso: hace(21),
+      cantidad_inicial: 1000,
+      sexo: 'macho',
+    });
+    prisma.pesaje.findFirst.mockResolvedValue({ peso_promedio_g: 1000 });
+    prisma.consumoDiario.aggregate.mockResolvedValue({
+      _sum: { alimento_kg: 1150 },
+    });
+    prisma.registroMortalidad.aggregate.mockResolvedValue({
+      _sum: { cantidad_aves: 30 },
+    });
+
+    await service.calcularParaLote(1);
+
+    const calls = prisma.pesaje.findFirst.mock.calls as Array<
+      [{ orderBy: unknown }]
+    >;
+    expect(calls[0][0].orderBy).toEqual([{ fecha: 'desc' }, { id: 'desc' }]);
+  });
+
   it('deja el FCR en null cuando el lote no tiene pesajes', async () => {
     prisma.lote.findUnique.mockResolvedValue({
       id: 1,
@@ -88,6 +111,64 @@ describe('IndicadoresService · calcularParaLote', () => {
     await expect(service.calcularParaLote(99)).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  // El job corre a las 02:00 UTC, que son las 21:00 en la granja: allá
+  // todavía es el día anterior. Antes se restaban milisegundos contra la
+  // hora del servidor, así que la fila salía estampada con la fecha de
+  // mañana y el lote se comparaba contra la curva del día siguiente.
+  describe('a la hora en que corre el job', () => {
+    const ingreso = new Date('2026-07-30T00:00:00.000Z');
+
+    const prepararLote = () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        fecha_ingreso: ingreso,
+        cantidad_inicial: 1000,
+        sexo: 'macho',
+      });
+      prisma.pesaje.findFirst.mockResolvedValue({ peso_promedio_g: 1000 });
+      prisma.consumoDiario.aggregate.mockResolvedValue({
+        _sum: { alimento_kg: 1000 },
+      });
+      prisma.registroMortalidad.aggregate.mockResolvedValue({
+        _sum: { cantidad_aves: 0 },
+      });
+    };
+
+    afterEach(() => jest.useRealTimers());
+
+    it('cuenta el día que vive la granja, no el del servidor', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-03T02:00:00.000Z'));
+      prepararLote();
+
+      await service.calcularParaLote(1);
+
+      const guardado = guardadoDe(prisma.indicadorLote.upsert);
+      // En Colombia son las 21:00 del 2 de septiembre: día 35 de vida.
+      expect(guardado.dia_vida).toBe(35);
+      expect(guardado.fecha).toEqual(new Date('2026-09-02T00:00:00.000Z'));
+    });
+
+    it('cinco horas después ya es el día siguiente', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-03T05:00:00.000Z'));
+      prepararLote();
+
+      await service.calcularParaLote(1);
+
+      const guardado = guardadoDe(prisma.indicadorLote.upsert);
+      expect(guardado.dia_vida).toBe(36);
+      expect(guardado.fecha).toEqual(new Date('2026-09-03T00:00:00.000Z'));
+    });
+
+    it('el día de ingreso es el día 1, no el 0', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-07-30T15:00:00.000Z'));
+      prepararLote();
+
+      await service.calcularParaLote(1);
+
+      expect(guardadoDe(prisma.indicadorLote.upsert).dia_vida).toBe(1);
+    });
   });
 });
 
@@ -237,13 +318,34 @@ describe('IndicadoresService · generarAlertaDesvio', () => {
     expect(prisma.alerta.create).not.toHaveBeenCalled();
   });
 
-  it('no duplica si ya existe una alerta de desvio abierta', async () => {
-    ponerPorDebajo();
-    prisma.alerta.findFirst.mockResolvedValue({ id: 99 });
+  it.each(['abierta', 'en_proceso'] as const)(
+    'no duplica si ya existe una alerta de desvio automatica en estado %s',
+    async (estado) => {
+      // en_proceso es una alerta abierta pero ya aceptada por alguien -- si
+      // solo se mirara 'abierta', aceptarla dejaba la puerta abierta para
+      // que el siguiente calculo creara otra alerta de desvio duplicada.
+      ponerPorDebajo();
+      prisma.alerta.findFirst.mockResolvedValue({ id: 99, estado });
 
-    const r = await service.generarAlertaDesvio(1);
-    expect(r).toBeNull();
-    expect(prisma.alerta.create).not.toHaveBeenCalled();
+      const r = await service.generarAlertaDesvio(1);
+      expect(r).toBeNull();
+      expect(prisma.alerta.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it('la busqueda de "ya existe" considera abierta y en_proceso como activas', async () => {
+    ponerPorDebajo();
+    prisma.alerta.findFirst.mockResolvedValue(null);
+    prisma.alerta.create.mockResolvedValue({ id: 1 });
+
+    await service.generarAlertaDesvio(1);
+
+    const calls = prisma.alerta.findFirst.mock.calls as Array<
+      [{ where: Record<string, unknown> }]
+    >;
+    expect(calls[0][0].where.estado).toEqual({
+      in: ['abierta', 'en_proceso'],
+    });
   });
 
   it('crea la alerta cuando va por debajo y no hay una abierta', async () => {
@@ -261,7 +363,28 @@ describe('IndicadoresService · generarAlertaDesvio', () => {
       galpon_id: 7,
       lote_id: 1,
       tipo: 'desvio_peso',
+      origen: 'automatica',
       criticidad: 'media',
+    });
+  });
+
+  it('la busqueda de "ya existe" filtra por origen automatica -- no una manual del mismo tipo', async () => {
+    // Antes de este fix, esta busqueda no filtraba por origen: una alerta
+    // manual creada con el mismo tipo ('desvio_peso') bloqueaba en silencio
+    // la alerta automatica real, sin que nadie lo notara.
+    ponerPorDebajo();
+    prisma.alerta.findFirst.mockResolvedValue(null);
+    prisma.alerta.create.mockResolvedValue({ id: 1 });
+
+    await service.generarAlertaDesvio(1);
+
+    const calls = prisma.alerta.findFirst.mock.calls as Array<
+      [{ where: Record<string, unknown> }]
+    >;
+    expect(calls[0][0].where).toMatchObject({
+      lote_id: 1,
+      tipo: 'desvio_peso',
+      origen: 'automatica',
     });
   });
 });
@@ -327,5 +450,42 @@ describe('IndicadoresService · kpisFinancieros', () => {
     expect(r.ingreso_total_cop.toString()).toBe('0');
     expect(r.kg_producidos).toBe(0);
     expect(r.costo_por_kg_cop).toBeNull();
+  });
+
+});
+
+describe('IndicadoresService · listar', () => {
+  let service: IndicadoresService;
+
+  const prisma = {
+    lote: { findUnique: jest.fn() },
+    indicadorLote: { findMany: jest.fn() },
+  };
+
+  const admin = { id: 1, rol: 'Administrador' };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        IndicadoresService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = module.get<IndicadoresService>(IndicadoresService);
+    prisma.lote.findUnique.mockResolvedValue({
+      galpon: { granja: { propietario_id: 1 } },
+    });
+    prisma.indicadorLote.findMany.mockResolvedValue([]);
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  it('devuelve el historico en orden cronologico (fecha ascendente) -- lote_id+fecha ya es unico, sin necesidad de desempate', async () => {
+    await service.listar(1, admin);
+
+    const calls = prisma.indicadorLote.findMany.mock.calls as Array<
+      [{ orderBy: unknown }]
+    >;
+    expect(calls[0][0].orderBy).toEqual({ fecha: 'asc' });
   });
 });

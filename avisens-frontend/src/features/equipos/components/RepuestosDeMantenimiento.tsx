@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { mensajeDeError } from '@shared/utils/errores'
+import { nuevaClaveIdempotencia } from '@shared/utils/idempotencia'
 import { useRepuestos } from '../hooks/useRepuestos'
 import type { MantenimientoRepuesto } from '../api/mantenimientos'
 
@@ -9,7 +10,11 @@ function RepuestosDeMantenimiento({ mantenimientoId }: { mantenimientoId: number
   const [insumoId, setInsumoId] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [revirtiendo, setRevirtiendo] = useState<number | null>(null)
   const [errorForm, setErrorForm] = useState('')
+  // Identifica UN intento. Se conserva si el envío falla, para que reintentar
+  // no descuente el stock dos veces, y se descarta al cambiar los datos.
+  const claveIntento = useRef<string | null>(null)
 
   const insumo = insumos.find((i) => i.id === Number(insumoId))
 
@@ -29,9 +34,11 @@ function RepuestosDeMantenimiento({ mantenimientoId }: { mantenimientoId: number
       return
     }
 
+    claveIntento.current ??= nuevaClaveIdempotencia('repuesto')
     setGuardando(true)
     try {
-      await agregar(Number(insumoId), unidades)
+      await agregar(Number(insumoId), unidades, claveIntento.current)
+      claveIntento.current = null
       setInsumoId('')
       setCantidad('')
     } catch (err) {
@@ -48,10 +55,13 @@ function RepuestosDeMantenimiento({ mantenimientoId }: { mantenimientoId: number
     )
     if (!confirmar) return
     setErrorForm('')
+    setRevirtiendo(repuesto.id)
     try {
       await revertir(repuesto.id)
     } catch (err) {
       setErrorForm(mensajeDeError(err, 'No se pudo revertir el repuesto.'))
+    } finally {
+      setRevirtiendo(null)
     }
   }
 
@@ -81,9 +91,10 @@ function RepuestosDeMantenimiento({ mantenimientoId }: { mantenimientoId: number
                 <button
                   type="button"
                   className="eq-btn eq-btn--sm"
+                  disabled={revirtiendo === repuesto.id}
                   onClick={() => void handleRevertir(repuesto)}
                 >
-                  Revertir
+                  {revirtiendo === repuesto.id ? 'Revirtiendo…' : 'Revertir'}
                 </button>
               )}
             </li>
@@ -92,7 +103,7 @@ function RepuestosDeMantenimiento({ mantenimientoId }: { mantenimientoId: number
       )}
 
       <form className="eq-repuesto-form" onSubmit={handleAgregar}>
-        <select value={insumoId} onChange={(e) => setInsumoId(e.target.value)}>
+        <select value={insumoId} onChange={(e) => { claveIntento.current = null; setInsumoId(e.target.value) }}>
           <option value="">Insumo de bodega…</option>
           {insumos.map((item) => (
             <option key={item.id} value={item.id}>
@@ -105,7 +116,7 @@ function RepuestosDeMantenimiento({ mantenimientoId }: { mantenimientoId: number
           min={1}
           step="any"
           value={cantidad}
-          onChange={(e) => setCantidad(e.target.value)}
+          onChange={(e) => { claveIntento.current = null; setCantidad(e.target.value) }}
           placeholder="Cantidad"
         />
         <button type="submit" className="eq-btn eq-btn--sm" disabled={guardando}>

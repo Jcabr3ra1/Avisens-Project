@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { login } from '@shared/api'
 import { ROL_ADMIN, ROL_OPERARIO } from '@shared/auth/permisos'
+import { mensajeDeError } from '@shared/utils/errores'
 import './LoginForm.css'
 
 function LoginForm() {
@@ -12,10 +13,12 @@ function LoginForm() {
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [mostrarRecuperacion, setMostrarRecuperacion] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setMostrarRecuperacion(false)
 
     if (!email || !password) {
       setError('Por favor complete todos los campos.')
@@ -41,10 +44,12 @@ function LoginForm() {
       }
     } catch (err) {
       if (isAxiosError(err) && err.response) {
+        const esErrorDeAcceso = err.response.status === 401 || err.response.status === 403
+        setMostrarRecuperacion(esErrorDeAcceso)
         setError(
           err.response.status === 401
-            ? 'Correo o contraseña incorrectos.'
-            : 'No se pudo iniciar sesión. Intente de nuevo.',
+            ? 'No pudimos verificar el correo o la contraseña.'
+            : mensajeDeError(err, 'No se pudo iniciar sesión. Intente de nuevo.'),
         )
       } else {
         setError('No se pudo conectar. Revisa tu conexión a internet e inténtalo de nuevo.')
@@ -118,7 +123,16 @@ function LoginForm() {
           </div>
         </div>
 
-        {error && <p id="lf-error-msg" className="lf-error" role="alert">{error}</p>}
+        {error && (
+          <div id="lf-error-msg" className="lf-error" role="alert">
+            <p>{error}</p>
+            {mostrarRecuperacion && (
+              <Link to="/recuperar-password">
+                ¿Confirmaste los datos? Restablece tu contraseña.
+              </Link>
+            )}
+          </div>
+        )}
 
         <div className="lf-row">
           <Link className="lf-link" to="/recuperar-password">¿Olvidó su contraseña?</Link>

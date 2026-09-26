@@ -58,7 +58,7 @@ function FormularioConsumo({
     >
       <form id={ID_FORMULARIO} onSubmit={onGuardar}>
         <label className="modal-campo">
-          <span>Lote *</span>
+          <span>Lote</span>
           <select
             ref={loteRef}
             value={form.lote_id}
@@ -76,7 +76,7 @@ function FormularioConsumo({
 
         <div className="modal-fila">
           <label className="modal-campo">
-            <span>Fecha *</span>
+            <span>Fecha</span>
             <input
               type="date"
               value={form.fecha}
@@ -85,7 +85,7 @@ function FormularioConsumo({
             />
           </label>
           <label className="modal-campo">
-            <span>Tipo de alimento</span>
+            <span>Tipo de alimento <em>(Opcional)</em></span>
             <select
               value={form.tipo_alimento_id}
               onChange={(evento) => onCambiar('tipo_alimento_id', evento.target.value)}
@@ -103,7 +103,7 @@ function FormularioConsumo({
 
         <div className="modal-fila">
           <label className="modal-campo">
-            <span>Alimento consumido (kg)</span>
+            <span>Alimento consumido (kg) <em>(Opcional)</em></span>
             <input
               type="number"
               inputMode="decimal"
@@ -114,7 +114,7 @@ function FormularioConsumo({
             />
           </label>
           <label className="modal-campo">
-            <span>Agua consumida (litros)</span>
+            <span>Agua consumida (litros) <em>(Opcional)</em></span>
             <input
               type="number"
               inputMode="decimal"

@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export interface CurvaObjetivo {
   id: number
@@ -12,6 +12,10 @@ export interface CurvaObjetivo {
   consumo_acumulado_g: number | null
   fcr_objetivo: number | null
   etapa_alimentacion: string | null
+  // De dónde salió el punto. Las sembradas vienen del manual del fabricante y
+  // el backend rechaza editarlas o borrarlas con un 403: el peso objetivo del
+  // día 21 de Italcol lo dice el manual, no nosotros.
+  origen: 'seed' | 'manual'
   temperatura_min: number | null
   temperatura_max: number | null
 }
@@ -39,14 +43,13 @@ export interface CrearCurvaObjetivoPayload {
 
 export type ActualizarCurvaObjetivoPayload = Partial<CrearCurvaObjetivoPayload>
 
+// Una curva es (marca, sexo, día): con dos marcas, tres sexos y el ciclo
+// completo de 42 días la tabla pasa holgadamente de 100 filas en cuanto se
+// siembre entera, así que no puede pedirse una sola página.
 export async function listarCurvasObjetivo(
-  query: CurvasObjetivoQuery = {},
+  query: Omit<CurvasObjetivoQuery, 'page' | 'limit'> = {},
 ): Promise<CurvaObjetivo[]> {
-  const { data } = await api.get<PaginatedResponse<CurvaObjetivo>>(
-    '/curvas-objetivo',
-    { params: { page: 1, limit: 100, ...query } },
-  )
-  return data.data
+  return listarTodasLasPaginas<CurvaObjetivo>('/curvas-objetivo', query)
 }
 
 export async function obtenerCurvaObjetivo(id: number): Promise<CurvaObjetivo> {

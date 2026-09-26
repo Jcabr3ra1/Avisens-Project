@@ -59,7 +59,7 @@ function FormularioGalpon({
       <form id={ID_FORMULARIO} onSubmit={onGuardar}>
         <div className="modal-fila">
           <label className="modal-campo">
-            <span>Granja *</span>
+            <span>Granja</span>
             <select
               value={form.granja_id}
               onChange={(evento) =>
@@ -77,7 +77,7 @@ function FormularioGalpon({
             </select>
           </label>
           <label className="modal-campo">
-            <span>Nombre *</span>
+            <span>Nombre</span>
             <input
               value={form.nombre}
               onChange={(evento) => onCambiar('nombre', evento.target.value)}
@@ -86,7 +86,7 @@ function FormularioGalpon({
           </label>
           <label className="modal-campo">
             <span>
-              Capacidad de aves <em>(opcional)</em>
+              Capacidad de aves <em>(Opcional)</em>
             </span>
             <input
               type="number"
@@ -121,7 +121,7 @@ function FormularioGalpon({
           >
             <div className="modal-fila">
               <label className="modal-campo">
-                <span>Ancho en metros</span>
+                <span>Ancho en metros <em>(Opcional)</em></span>
                 <input
                   type="number"
                   min="0"
@@ -136,7 +136,7 @@ function FormularioGalpon({
                 />
               </label>
               <label className="modal-campo">
-                <span>Largo en metros</span>
+                <span>Largo en metros <em>(Opcional)</em></span>
                 <input
                   type="number"
                   min="0"
@@ -151,7 +151,7 @@ function FormularioGalpon({
                 />
               </label>
               <label className="modal-campo">
-                <span>Orientación</span>
+                <span>Orientación <em>(Opcional)</em></span>
                 <input
                   value={form.orientacion}
                   onChange={(evento) =>
@@ -162,7 +162,7 @@ function FormularioGalpon({
             </div>
             <div className="modal-fila">
               <label className="modal-campo">
-                <span>Tipo de techo</span>
+                <span>Tipo de techo <em>(Opcional)</em></span>
                 <input
                   value={form.tipo_techo}
                   onChange={(evento) =>
@@ -171,7 +171,7 @@ function FormularioGalpon({
                 />
               </label>
               <label className="modal-campo">
-                <span>Fecha de construcción</span>
+                <span>Fecha de construcción <em>(Opcional)</em></span>
                 <input
                   type="date"
                   value={form.fecha_construccion}
@@ -182,7 +182,7 @@ function FormularioGalpon({
               </label>
             </div>
             <label className="galpones-form-ancho">
-              <span>URL del plano</span>
+              <span>URL del plano <em>(Opcional)</em></span>
               <input
                 type="url"
                 value={form.plano_url}

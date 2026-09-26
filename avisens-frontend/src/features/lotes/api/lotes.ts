@@ -1,5 +1,5 @@
 import { api } from '@shared/api/client'
-import type { PaginatedResponse } from '@shared/api/types'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export type EstadoLote = 'activo' | 'finalizado' | 'inactivo'
 
@@ -11,6 +11,7 @@ export interface Lote {
   raza: string | null
   sexo: string | null
   marca_alimento: string | null
+  linea_genetica: { id: number; codigo: string; nombre: string } | null
   costo_pollito_unitario: number | null
   presupuesto_total_cop: number | null
   fecha_salida_estimada: string | null
@@ -27,6 +28,7 @@ export interface Lote {
 export interface CrearLotePayload {
   galpon_id: number
   proveedor_id?: number
+  linea_genetica_id?: number | null
   fecha_ingreso: string
   cantidad_inicial: number
   raza?: string
@@ -44,10 +46,7 @@ export type ActualizarLotePayload = Omit<Partial<CrearLotePayload>, 'proveedor_i
 }
 
 export async function listarLotes(): Promise<Lote[]> {
-  const { data } = await api.get<PaginatedResponse<Lote>>('/lotes', {
-    params: { page: 1, limit: 100 },
-  })
-  return data.data
+  return listarTodasLasPaginas<Lote>('/lotes')
 }
 
 export async function obtenerLote(id: number): Promise<Lote> {

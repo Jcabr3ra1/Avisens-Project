@@ -18,6 +18,8 @@ export const Icon = ({ children, size = 18, style, ...rest }: IconProps) => (
     width={size}
     height={size}
     viewBox="0 0 24 24"
+    aria-hidden="true"
+    focusable="false"
     {...iconBase}
     style={{ display: 'block', ...style }}
     {...rest}

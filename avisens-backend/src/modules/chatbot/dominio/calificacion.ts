@@ -2,7 +2,7 @@
 //
 // Antes el texto de cada opcion vivia en tres sitios a la vez: el seed que lo
 // muestra, la matriz que le asigna puntaje y las constantes del servicio que
-// deciden reglas de negocio (SIN_SENAL, NO_DECIDE, DOLOR). Cambiar una coma en
+// deciden reglas de negocio (NO_DECIDE, DOLOR). Cambiar una coma en
 // una de ellas rompia el puntaje o una regla sin que fallara nada: el
 // cuestionario seguia funcionando y calificaba mal.
 //
@@ -25,15 +25,21 @@ export interface OpcionCalificada {
 export const DIMENSIONES = {
   NECESIDAD: 4,
   PRESUPUESTO: 3,
-  URGENCIA: 3,
+  MOMENTO_DE_COMPRA: 3,
   AUTORIDAD: 2,
 } as const;
 
 export const PUNTAJE_MAXIMO =
   DIMENSIONES.NECESIDAD +
   DIMENSIONES.PRESUPUESTO +
-  DIMENSIONES.URGENCIA +
+  DIMENSIONES.MOMENTO_DE_COMPRA +
   DIMENSIONES.AUTORIDAD;
+
+// Los textos tienen tope de largo por como los pinta WhatsApp: un boton se
+// trunca pasados 20 caracteres y una fila de lista pasados 24. Si una sola
+// opcion se pasa, la pregunta entera cae a texto numerado y la persona tiene
+// que escribir "3" en vez de tocar. Al cambiarlos hay que mirar tambien la
+// migracion que los lleva a la base: el seed no corre en produccion.
 
 // NECESIDAD — el dolor real pesa mas que cualquier otra cosa
 export const A16_MORTALIDAD: OpcionCalificada[] = [
@@ -44,10 +50,10 @@ export const A16_MORTALIDAD: OpcionCalificada[] = [
 ];
 
 export const A14_DOLOR: OpcionCalificada[] = [
-  { texto: 'Mortalidad por calor o frío', puntaje: 1 },
-  { texto: 'Consumo de alimento descontrolado', puntaje: 1 },
+  { texto: 'Muertes por calor o frío', puntaje: 1 },
+  { texto: 'Consumo de alimento', puntaje: 1 },
   { texto: 'Humedad y amoniaco', puntaje: 1 },
-  { texto: 'Enfermedades respiratorias', puntaje: 1 },
+  { texto: 'Problemas respiratorios', puntaje: 1 },
   { texto: 'Nada en particular', puntaje: 0 },
 ];
 
@@ -59,25 +65,28 @@ export const A18_PAGO: OpcionCalificada[] = [
   { texto: 'Todavía no sé', puntaje: 0 },
 ];
 
-// URGENCIA — quien ya pidio cotizaciones esta comprando ahora
-export const A19_URGENCIA: OpcionCalificada[] = [
-  { texto: 'Ya tengo otras cotizaciones', puntaje: 3 },
+// MOMENTO_DE_COMPRA — quien ya pidio cotizaciones esta comprando ahora.
+// No es la T de BANT: no pregunta para cuando lo necesita, sino si ya hay
+// otros vendedores en la mesa. Se llamaba URGENCIA, que prometia un plazo
+// que estas opciones no miden.
+export const A19_MOMENTO: OpcionCalificada[] = [
+  { texto: 'Ya tengo cotizaciones', puntaje: 3 },
   { texto: 'Estoy comparando', puntaje: 1 },
-  { texto: 'Solo los estoy viendo a ustedes', puntaje: 0 },
+  { texto: 'Solo a ustedes', puntaje: 0 },
   { texto: 'No sé qué más hay', puntaje: 0 },
 ];
 
 // AUTORIDAD — antes no sumaba nada, solo enrutaba a callback
 export const A20_DECIDE: OpcionCalificada[] = [
   { texto: 'Sí, yo decido', puntaje: 2 },
-  { texto: 'No, decide otra persona', puntaje: 0 },
+  { texto: 'Decide otra persona', puntaje: 0 },
 ];
 
 export const OPCIONES_CALIFICADAS: Record<string, OpcionCalificada[]> = {
   A16: A16_MORTALIDAD,
   A14: A14_DOLOR,
   A18: A18_PAGO,
-  A19: A19_URGENCIA,
+  A19: A19_MOMENTO,
   A20: A20_DECIDE,
 };
 
@@ -89,55 +98,6 @@ export const OPCIONES_CALIFICADAS: Record<string, OpcionCalificada[]> = {
 // enorme se enfriaba solo porque su galpon estaba viejo. Eso no es un
 // prospecto frio, es uno caliente con una obra previa.
 
-export const A9_GALPON = {
-  BUENO: 'En buen estado',
-  DETERIORADO: 'Construidos pero deteriorados',
-  SIN_CONSTRUIR: 'Todavía sin construir',
-} as const;
-
-export const A11_ENERGIA = {
-  ESTABLE: 'Estable todo el día',
-  CON_PLANTA: 'Se va, pero tengo planta',
-  SOLO_PLANTA: 'Solo planta eléctrica',
-  INESTABLE: 'Muy inestable',
-} as const;
-
-export const A13_INTERNET = {
-  ESTABLE: 'Sí, estable',
-  INTERMITENTE: 'Sí, pero se cae a ratos',
-  SIN_SENAL: 'No hay señal',
-} as const;
-
-export type Viabilidad = 'instalable' | 'requiere_adecuacion' | 'no_viable';
-
-export function viabilidadTecnica(
-  galpon?: string | null,
-  energia?: string | null,
-  internet?: string | null,
-): Viabilidad {
-  // Sin galpon o sin forma de dar energia no hay nada que instalar todavia.
-  if (
-    galpon === A9_GALPON.SIN_CONSTRUIR ||
-    energia === A11_ENERGIA.INESTABLE
-  ) {
-    return 'no_viable';
-  }
-  if (
-    galpon === A9_GALPON.BUENO &&
-    energia === A11_ENERGIA.ESTABLE &&
-    internet === A13_INTERNET.ESTABLE
-  ) {
-    return 'instalable';
-  }
-  return 'requiere_adecuacion';
-}
-
-// ---------------------------------------------------------------------------
-// Reglas de negocio que dependen del texto de una opcion
-// ---------------------------------------------------------------------------
-// Se derivan de las listas de arriba en vez de repetir el texto a mano.
-
-export const SIN_SENAL = A13_INTERNET.SIN_SENAL;
 export const NO_DECIDE = A20_DECIDE[1].texto;
 export const DOLOR = A16_MORTALIDAD.filter((o) => o.puntaje > 0).map(
   (o) => o.texto,

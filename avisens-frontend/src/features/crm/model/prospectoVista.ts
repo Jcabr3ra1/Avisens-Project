@@ -1,6 +1,6 @@
 import type { Prospecto } from '@features/crm/api/prospectos'
 
-export const PUNTAJE_MAXIMO = 16
+export const PUNTAJE_MAXIMO = 12
 
 export type EtapaProspecto = 'caliente' | 'tibio' | 'frio' | 'descartado' | 'cerrado'
 
@@ -21,9 +21,9 @@ export type ProspectoVista = {
 }
 
 export const RANGOS_PUNTAJE: Record<EtapaProspecto, string> = {
-  caliente: '12 - 16 pts',
-  tibio: '7 - 11 pts',
-  frio: '0 - 6 pts',
+  caliente: '8 - 12 pts',
+  tibio: '5 - 7 pts',
+  frio: '0 - 4 pts',
   descartado: 'N/A',
   cerrado: 'Convertido',
 }

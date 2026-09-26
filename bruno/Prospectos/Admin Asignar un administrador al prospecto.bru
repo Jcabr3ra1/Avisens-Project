@@ -20,12 +20,16 @@ auth:bearer {
 
 body:json {
   {
-    "admin_id": 1
+    "asesor_id": 1
   }
 }
 
 docs {
-  Asigna un prospecto calificado a un administrador. Acepta `admin_id` o `asesor_id` (compatibilidad).
+  Asigna un prospecto calificado a un administrador. El unico campo es `asesor_id`.
+
+  Hubo un alias `admin_id` que se quito: estaba declarado opcional en TypeScript
+  pero sin `@IsOptional()`, asi que class-validator exigia los dos campos y la
+  ruta devolvia 400 mandara lo que mandara el cliente.
 
   Guardas:
     400  el prospecto no esta en estado 'calificado'

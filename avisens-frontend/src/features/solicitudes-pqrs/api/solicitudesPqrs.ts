@@ -1,4 +1,5 @@
 import { api, type PaginatedResponse } from '@shared/api'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 import type {
   ResponderSolicitudPqrsDto,
   SolicitudPqrs,
@@ -14,6 +15,15 @@ export async function listarSolicitudesPqrs(
   )
 
   return data
+}
+
+// Trae todas las que cumplan el filtro. El volumen se acota filtrando (por
+// estado, por prospecto), nunca limitando filas: los contadores del panel de
+// admin y de la propia pantalla se calculan sumando esta lista.
+export async function listarTodasLasSolicitudesPqrs(
+  query: Omit<SolicitudesPqrsQuery, 'page' | 'limit'> = {},
+): Promise<SolicitudPqrs[]> {
+  return listarTodasLasPaginas<SolicitudPqrs>('/solicitudes-pqrs', query)
 }
 
 export async function listarSolicitudesPqrsDeProspecto(

@@ -16,6 +16,7 @@ import {
   verificarAccesoGalpon,
 } from '../../common/auth/alcance';
 import { randomUUID } from 'node:crypto';
+import { esViolacionDeLlaveForanea } from '../../common/errores/llave-foranea';
 
 const GALPON_SELECT = {
   id: true,
@@ -172,7 +173,7 @@ export class GalponesService {
         this.prisma.galpon.delete({ where: { id } }),
       ]);
     } catch (error) {
-      if (error instanceof Error && 'code' in error && error.code === 'P2003') {
+      if (esViolacionDeLlaveForanea(error)) {
         throw new ConflictException(
           'No se puede eliminar: el galpón tiene lotes, sensores, equipos u otros registros asociados. Elimínalos primero, o desactiva el galpón en su lugar.',
         );

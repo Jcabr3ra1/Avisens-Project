@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
+import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
 import FormularioConsumo from './FormularioConsumo'
 import ResumenConsumos from './ResumenConsumos'
@@ -98,7 +99,9 @@ function GestionConsumos({ loteFijo = null, completo = false }: Props) {
   }
   const eliminar = (c: ConsumoDiario) => {
     if (!window.confirm(`¿Eliminar el consumo del lote ${c.lote.codigo}?`)) return
-    void gestion.eliminar(c.id).catch(() => undefined)
+    void gestion.eliminar(c.id).catch((error) => {
+      toast.error(mensajeDeError(error, 'No se pudo eliminar el consumo.'))
+    })
   }
   const alertaError = gestion.error && (
     <div className="cd-alerta" role="alert">

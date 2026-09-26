@@ -75,41 +75,15 @@ export class AlertasCanalesController {
     return this.alertasCanalesService.eliminar(id, req.user);
   }
 
-  // ============================================================
-  // ACCIONES ESPECÍFICAS POR ESTADO
-  // ============================================================
-
-  @Patch(':id/enviado')
-  @ApiOperation({ summary: 'Marcar canal de alerta como enviado' })
-  marcarComoEnviado(
-    @Param('id', ParseIntPipe) id: number,
-    @Req() req: AuthRequest,
-  ) {
-    return this.alertasCanalesService.marcarComoEnviado(id, req.user);
-  }
-
-  @Patch(':id/fallido')
-  @ApiOperation({ summary: 'Marcar canal de alerta como fallido' })
-  marcarComoFallido(
-    @Param('id', ParseIntPipe) id: number,
-    @Req() req: AuthRequest,
-  ) {
-    return this.alertasCanalesService.marcarComoFallido(id, req.user);
-  }
-
-  @Patch(':id/estado')
-  @ApiOperation({ summary: 'Actualizar estado de envío de un canal' })
-  actualizarEstado(
-    @Param('id', ParseIntPipe) id: number,
-    @Body('estado') estado: string,
-    @Req() req: AuthRequest,
-  ) {
-    return this.alertasCanalesService.actualizarEstadoEnvio(
-      id,
-      estado,
-      req.user,
-    );
-  }
+  // Aquí vivían PATCH :id/enviado, :id/fallido y :id/estado, y no deberían
+  // haber sido rutas: el estado de envío lo pone quien despacha la
+  // notificación, no una persona. Que un usuario pudiera marcar "enviado" a
+  // mano permitía tapar que un aviso nunca salió, y ese registro es
+  // precisamente el que sirve para saber si la alerta llegó.
+  //
+  // Los métodos siguen en el servicio (marcarComoEnviado, marcarComoFallido,
+  // actualizarEstadoEnvio) para que el despachador los llame en proceso
+  // cuando exista.
 
   // ============================================================
   // FILTROS POR RELACIÓN
