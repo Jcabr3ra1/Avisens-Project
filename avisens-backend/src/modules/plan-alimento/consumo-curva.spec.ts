@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { integrarConsumo, PuntoConsumo } from './consumo-curva';
-import { avesVivasEnDia } from './mortalidad-snapshot';
+import { avesVivasEnDia } from '../../common/mortalidad/mortalidad-snapshot';
 
 function punto(dia: number, consumoAcumuladoG: number | string): PuntoConsumo {
   return { dia, consumoAcumuladoG: new Prisma.Decimal(consumoAcumuladoG) };

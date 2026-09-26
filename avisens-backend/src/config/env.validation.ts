@@ -72,6 +72,13 @@ class EnvironmentVariables {
   @IsOptional()
   ML_TIMEOUT_MS: string;
 
+  // Antigüedad máxima aceptable del pesaje (en días) para que
+  // generarAlertaDesvio() confíe en él. Sin definir a propósito: se fija
+  // cuando se conozca la frecuencia real de pesaje, no antes.
+  @IsNumberString()
+  @IsOptional()
+  UMBRAL_PESAJE_DIAS: string;
+
   @IsString()
   @MinLength(32)
   @IsOptional()
