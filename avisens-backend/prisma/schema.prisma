@@ -603,7 +603,7 @@ model ConsumoDiario {
   fecha_registro   DateTime @default(now())
 
   lote          Lote          @relation(fields: [lote_id], references: [id])
-  tipo_alimento TipoAlimento? @relation(fields: [tipo_alimento_id], references: [id])
+  tipo_alimento TipoAlimento? @relation(fields: [tipo_alimento_id], references: [id], onDelete: Restrict)
   usuario       Usuario       @relation(fields: [usuario_id], references: [id])
 
   @@index([lote_id])
