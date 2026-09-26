@@ -13,12 +13,22 @@ import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
 import { mensajeDeError } from '@shared/utils/errores'
 
-export type EstadoSensorVista = 'optimo' | 'advertencia' | 'critico' | 'sin_umbral' | 'offline' | 'lectura_no_disponible'
+export type EstadoSensorVista = 'optimo' | 'advertencia' | 'critico' | 'sin_umbral' | 'offline' | 'lectura_no_disponible' | 'obsoleta'
 
 // Ni "óptimo", ni "conectado", ni "sin señal": no hay dato que mostrar
 // porque la consulta al backend falló, no porque el sensor esté apagado.
 export function tieneLecturaUtil(estado: EstadoSensorVista): boolean {
   return estado !== 'offline' && estado !== 'lectura_no_disponible'
+}
+
+// Distinto de tieneLecturaUtil: esto responde "¿esta lectura es reciente,
+// confiable para el estado operativo AHORA?", no "¿hay un valor histórico
+// que se pueda consultar?". Un sensor 'obsoleta' tiene un valor -- se puede
+// abrir su detalle e historial -- pero no cuenta como "en línea" para un
+// semáforo o un contador operativo: mostrarlo así diría que el sistema
+// comprobó algo reciente cuando en realidad no lo hizo.
+export function esLecturaVigente(estado: EstadoSensorVista): boolean {
+  return tieneLecturaUtil(estado) && estado !== 'obsoleta'
 }
 
 // A qué variable de umbral (las 3 que soporta el backend) corresponde el
@@ -123,6 +133,7 @@ export function construirVista(
         if (s.estado !== 'activo') estado = 'offline'
         else if (ultimasNoDisponibles) estado = 'lectura_no_disponible'
         else if (valor === null) estado = 'offline'
+        else if ((entrada?.ultima_lectura?.antiguedad_segundos ?? 0) > UMBRAL_LECTURA_OBSOLETA_SEG) estado = 'obsoleta'
         else if (!umbral) estado = 'sin_umbral'
         else estado = calcularEstado(valor, umbral.valor_minimo, umbral.valor_maximo)
 
@@ -166,6 +177,11 @@ export function construirVista(
 // duplicaban porque el sidebar usa la misma fuente. La promesa compartida
 // también evita la doble petición que StrictMode provoca en desarrollo.
 const CACHE_MS = 30_000
+
+// Más de esto sin una lectura nueva: no importa si el valor está "en
+// rango", ya no es confiable mostrarlo como si fuera el estado actual.
+// Independiente de la cadencia de un dispositivo en particular.
+const UMBRAL_LECTURA_OBSOLETA_SEG = 120
 let estadoMonitoreo: MonitoreoState = { galpones: [], cargando: true, error: '', avisoUltimas: '' }
 let cargaEnCurso: Promise<void> | null = null
 let ultimaCarga = 0
@@ -244,6 +260,16 @@ export function useMonitoreoAmbiental() {
 
   useEffect(() => {
     void cargarMonitoreo()
+  }, [])
+
+  useEffect(() => {
+    // Sin esto, el store solo se carga al montar: alguien viendo Monitoreo
+    // nunca vería una lectura nueva sin salir y volver a entrar. El
+    // intervalo es más corto que CACHE_MS a propósito -- el propio cache
+    // de cargarMonitoreo() decide cuándo pega de verdad al backend, esto
+    // solo dispara el chequeo con margen.
+    const id = setInterval(() => { void cargarMonitoreo() }, CACHE_MS / 2)
+    return () => clearInterval(id)
   }, [])
 
   return { ...estado, recargar: recargarMonitoreo }

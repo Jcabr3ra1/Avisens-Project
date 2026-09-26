@@ -113,6 +113,10 @@
 .mon-sensor-card--offline { opacity: 0.5; }
 .mon-sensor-card--sin_umbral { opacity: 0.75; }
 .mon-sensor-card--lectura_no_disponible { opacity: 0.75; }
+.mon-sensor-card--obsoleta {
+  border-color: rgba(245,158,11,0.2);
+  opacity: 0.75;
+}
 
 .mon-sensor-icon   { font-size: 1.7rem; line-height: 1; }
 .mon-sensor-info   { display: flex; flex-direction: column; gap: 0.1rem; }
@@ -138,6 +142,7 @@
 .mon-estado-badge--offline     { background: rgba(100,116,139,0.12); color: var(--text3); }
 .mon-estado-badge--sin_umbral  { background: rgba(100,116,139,0.12); color: var(--text3); }
 .mon-estado-badge--lectura_no_disponible { background: rgba(59,130,246,0.13); color: var(--info3); }
+.mon-estado-badge--obsoleta    { background: rgba(245,158,11,0.10); color: var(--text3); }
 .mon-ultima { font-size: 0.71rem; color: var(--text4); }
 
 /* ─── Tabla de umbrales ──────────────────────────────────────────────────── */
