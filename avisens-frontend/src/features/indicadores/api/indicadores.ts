@@ -35,6 +35,8 @@ export type EstadoCalculoIndicador =
   | 'calculado'
   | 'mortalidad_incoherente'
 
+export type EstadoPesoIndicador = 'disponible' | 'pesaje_fecha_futura' | 'sin_pesaje'
+
 export type VeredictoComparacion =
   | 'sin_dato_valido'
   | 'peso_no_disponible'
@@ -50,6 +52,7 @@ export interface ComparacionIndicador {
   fecha_del_dato_usado: string | null
   dia_vida: number | null
   veredicto: VeredictoComparacion
+  motivo?: Exclude<EstadoPesoIndicador, 'disponible'>
   mensaje?: string
   real: { peso_promedio_g: number | null; fcr: number | null } | null
   objetivo: { peso_esperado_g: number | null; fcr_objetivo: number | null } | null
@@ -63,6 +66,7 @@ export interface FinanzasLote {
   estado_actual: EstadoCalculoIndicador
   fecha_estado_actual: string | null
   fecha_del_dato_usado: string | null
+  estado_peso_del_dato_usado: EstadoPesoIndicador | null
   costo_total_cop: number
   ingreso_total_cop: number
   margen_cop: number

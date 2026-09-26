@@ -430,6 +430,39 @@ describe('IndicadoresService · compararConCurva', () => {
     expect(prisma.curvaObjetivo.findFirst).not.toHaveBeenCalled();
   });
 
+  it.each(['sin_pesaje', 'pesaje_fecha_futura'] as const)(
+    'peso_no_disponible informa motivo=%s, el valor exacto de estado_peso',
+    async (estadoPeso) => {
+      prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+      const fila = filaCalculada({
+        estado_peso: estadoPeso,
+        peso_promedio_g: null,
+        fcr: null,
+      });
+      prisma.indicadorLote.findFirst.mockResolvedValueOnce(fila);
+      prisma.indicadorLote.findFirst.mockResolvedValueOnce(fila);
+
+      const r = await service.compararConCurva(1, admin);
+      if (r.veredicto !== 'peso_no_disponible') throw new Error('unreachable');
+      expect(r.motivo).toBe(estadoPeso);
+      expect(prisma.curvaObjetivo.findFirst).not.toHaveBeenCalled();
+    },
+  );
+
+  it('sin_pesaje y pesaje_fecha_futura producen motivos distintos, no uno generico', async () => {
+    const motivos: unknown[] = [];
+    for (const estadoPeso of ['sin_pesaje', 'pesaje_fecha_futura']) {
+      prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+      const fila = filaCalculada({ estado_peso: estadoPeso });
+      prisma.indicadorLote.findFirst.mockResolvedValueOnce(fila);
+      prisma.indicadorLote.findFirst.mockResolvedValueOnce(fila);
+      const r = await service.compararConCurva(1, admin);
+      if (r.veredicto !== 'peso_no_disponible') throw new Error('unreachable');
+      motivos.push(r.motivo);
+    }
+    expect(motivos).toEqual(['sin_pesaje', 'pesaje_fecha_futura']);
+  });
+
   it('devuelve sin_referencia cuando no hay curva para la marca y sexo', async () => {
     prisma.lote.findUnique.mockResolvedValue(loteConDueno);
     prisma.indicadorLote.findFirst.mockResolvedValue(filaCalculada());
@@ -838,6 +871,7 @@ describe('IndicadoresService · kpisFinancieros', () => {
     expect(r.estado_actual).toBe('calculado');
     expect(r.fecha_estado_actual).toBe(fechaReciente);
     expect(r.fecha_del_dato_usado).toBe(fechaReciente);
+    expect(r.estado_peso_del_dato_usado).toBe('disponible');
     expect(r.costo_total_cop.toString()).toBe('5000000');
     expect(r.ingreso_total_cop.toString()).toBe('8000000');
     expect(r.margen_cop.toString()).toBe('3000000');
@@ -859,6 +893,7 @@ describe('IndicadoresService · kpisFinancieros', () => {
     expect(r.estado_actual).toBe('sin_indicador');
     expect(r.fecha_estado_actual).toBeNull();
     expect(r.fecha_del_dato_usado).toBeNull();
+    expect(r.estado_peso_del_dato_usado).toBeNull();
     expect(r.costo_total_cop.toString()).toBe('1000000');
     expect(r.ingreso_total_cop.toString()).toBe('0');
     expect(r.kg_producidos).toBeNull();
@@ -878,9 +913,33 @@ describe('IndicadoresService · kpisFinancieros', () => {
     expect(r.estado_actual).toBe('mortalidad_incoherente');
     expect(r.fecha_estado_actual).toBe(fechaReciente);
     expect(r.fecha_del_dato_usado).toBeNull();
+    expect(r.estado_peso_del_dato_usado).toBeNull();
     expect(r.kg_producidos).toBeNull();
     expect(r.costo_por_kg_cop).toBeNull();
   });
+
+  it.each(['sin_pesaje', 'pesaje_fecha_futura'] as const)(
+    'estado_peso_del_dato_usado=%s distingue la causa de kg_producidos null',
+    async (estadoPeso) => {
+      prisma.indicadorLote.findFirst
+        .mockResolvedValueOnce({ estado_calculo: 'calculado', fecha: fechaReciente })
+        .mockResolvedValueOnce({
+          fecha: fechaReciente,
+          estado_peso: estadoPeso,
+          peso_promedio_g: null,
+          mortalidad_acumulada_pct: 5,
+        });
+      prisma.movimientoFinanciero.aggregate
+        .mockResolvedValueOnce({ _sum: { valor_cop: new Prisma.Decimal(1000000) } })
+        .mockResolvedValueOnce({ _sum: { valor_cop: new Prisma.Decimal(0) } });
+
+      const r = await service.kpisFinancieros(1, admin);
+
+      expect(r.estado_peso_del_dato_usado).toBe(estadoPeso);
+      expect(r.kg_producidos).toBeNull();
+      expect(r.fecha_del_dato_usado).toBe(fechaReciente);
+    },
+  );
 
   it('calculado pero con peso no disponible: hay fecha_del_dato_usado, pero kg sigue null (no se inventa produccion)', async () => {
     prisma.indicadorLote.findFirst

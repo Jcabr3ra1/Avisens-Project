@@ -244,6 +244,7 @@ export class IndicadoresService {
       return {
         ...base,
         veredicto: 'peso_no_disponible' as const,
+        motivo: indicador.estado_peso,
         mensaje: 'El peso del dato usado no esta disponible',
         real: null,
         objetivo: null,
@@ -520,6 +521,7 @@ export class IndicadoresService {
       estado_actual: masReciente?.estado_calculo ?? 'sin_indicador',
       fecha_estado_actual: masReciente?.fecha ?? null,
       fecha_del_dato_usado: indicador?.fecha ?? null,
+      estado_peso_del_dato_usado: indicador?.estado_peso ?? null,
       costo_total_cop: costoTotal,
       ingreso_total_cop: ingresoTotal,
       margen_cop: margen,
