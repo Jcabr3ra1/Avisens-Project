@@ -359,9 +359,16 @@ void tareaWiFi(void *pvParameters)
       ultimaEnvioTelemetria = millis();
 
       LecturaDHT lectura = leerSnapshotDht();
+      unsigned long antiguedadSnapshot = millis() - lectura.timestamp;
+
       if (!lectura.valida)
       {
         LOG_WARN("Ingesta: DHT sin lectura válida, se omite este ciclo");
+      }
+      else if (antiguedadSnapshot > UMBRAL_SNAPSHOT_OBSOLETO_MS)
+      {
+        LOG_WARN("Ingesta: snapshot DHT obsoleto (" + String(antiguedadSnapshot) +
+                  "ms) -- tareaGalpon dejó de refrescarlo, se omite");
       }
       else
       {

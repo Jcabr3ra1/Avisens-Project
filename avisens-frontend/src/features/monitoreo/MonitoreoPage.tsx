@@ -179,6 +179,7 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
     sin_umbral:            'Sin umbral',
     offline:               'Sin señal',
     lectura_no_disponible: 'No disponible',
+    obsoleta:              'Desactualizado',
   }
 
   return (
@@ -238,6 +239,7 @@ function estadoGlobal(galpon: GalponMonitoreoVista): EstadoSensorVista {
   if (!galpon.loteActivo || galpon.sensores.length === 0) return 'offline'
   if (galpon.sensores.some(s => s.estado === 'critico'))              return 'critico'
   if (galpon.sensores.some(s => s.estado === 'advertencia'))           return 'advertencia'
+  if (galpon.sensores.some(s => s.estado === 'obsoleta'))              return 'obsoleta'
   if (galpon.sensores.some(s => s.estado === 'lectura_no_disponible')) return 'lectura_no_disponible'
   return 'optimo'
 }

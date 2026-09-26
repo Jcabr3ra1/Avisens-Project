@@ -102,6 +102,12 @@
 #define MAX_REINTENTOS_INGESTA 3     // agotados => se abandona el ciclo
 #define BACKOFF_INGESTA_MS 1000      // espera fija entre intentos
 
+// Si tareaGalpon() deja de refrescar el snapshot (colgado, o Core 0 con
+// problemas), esto evita reenviar indefinidamente el mismo dato viejo
+// como si fuera nuevo. El doble de INTERVALO_SENSORES es un margen
+// generoso, no acoplado a INTERVALO_ENVIO_MS de ningún dispositivo.
+#define UMBRAL_SNAPSHOT_OBSOLETO_MS (INTERVALO_SENSORES * 2)
+
 // ═══════════════════════════════════════════════════════════
 // ─── MÁQUINAS DE ESTADO (enum class) ──────────────────────
 // ═══════════════════════════════════════════════════════════

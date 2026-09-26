@@ -1,6 +1,7 @@
 #include "ServicioIngesta.h"
 #include <esp_system.h>
 #include <HTTPClient.h>
+#include <ArduinoJson.h>
 #include "config.h"
 
 String generarIdLote() {
@@ -38,20 +39,39 @@ bool enviarLecturaConReintentos(float temperatura, float humedad, const String &
     http.setTimeout(TIMEOUT_INGESTA_MS);
 
     int codigo = http.POST(body);
-    if (codigo >= 200 && codigo < 300) {
-      Serial.printf("[Ingesta] OK (%d) intento %d/%d, id_lote=%s\n",
-                    codigo, intento, MAX_REINTENTOS_INGESTA, idLote.c_str());
-      http.end();
-      return true;
-    }
-
-    Serial.printf("[Ingesta] Fallo intento %d/%d (codigo %d)\n",
-                  intento, MAX_REINTENTOS_INGESTA, codigo);
+    String respuesta = http.getString();
     http.end();
 
-    if (intento < MAX_REINTENTOS_INGESTA) {
-      vTaskDelay(pdMS_TO_TICKS(BACKOFF_INGESTA_MS));
+    if (codigo < 200 || codigo >= 300) {
+      Serial.printf("[Ingesta] Fallo intento %d/%d (codigo %d)\n",
+                    intento, MAX_REINTENTOS_INGESTA, codigo);
+      if (intento < MAX_REINTENTOS_INGESTA) {
+        vTaskDelay(pdMS_TO_TICKS(BACKOFF_INGESTA_MS));
+      }
+      continue;
     }
+
+    JsonDocument doc;
+    if (deserializeJson(doc, respuesta) != DeserializationError::Ok) {
+      Serial.println("[Ingesta] 2xx pero el cuerpo no es JSON valido");
+      if (intento < MAX_REINTENTOS_INGESTA) {
+        vTaskDelay(pdMS_TO_TICKS(BACKOFF_INGESTA_MS));
+      }
+      continue;
+    }
+
+    JsonArray ignoradas = doc["ignoradas"].as<JsonArray>();
+    if (ignoradas.size() > 0) {
+      // Reintentar no arregla un codigo mal configurado -- se abandona
+      // sin gastar los reintentos que quedan.
+      LOG_ERROR("Ingesta: el backend ignoro codigos de sensor (revisar "
+                "CODIGO_SENSOR_TEMP/HUM en config.h vs sensores registrados)");
+      return false;
+    }
+
+    Serial.printf("[Ingesta] OK (%d) intento %d/%d, id_lote=%s\n",
+                  codigo, intento, MAX_REINTENTOS_INGESTA, idLote.c_str());
+    return true;
   }
 
   LOG_ERROR("Ingesta: se agotaron los reintentos, ciclo abandonado (id_lote=" + idLote + ")");
