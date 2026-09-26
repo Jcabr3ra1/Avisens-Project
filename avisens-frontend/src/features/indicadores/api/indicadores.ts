@@ -30,23 +30,44 @@ export async function listarIndicadores(
   return data
 }
 
+export type EstadoCalculoIndicador =
+  | 'legado_sin_verificar'
+  | 'calculado'
+  | 'mortalidad_incoherente'
+
+export type VeredictoComparacion =
+  | 'sin_dato_valido'
+  | 'peso_no_disponible'
+  | 'sin_referencia'
+  | 'sin_datos'
+  | 'por_debajo'
+  | 'por_encima'
+  | 'en_objetivo'
+
 export interface ComparacionIndicador {
-  lote_id: number
-  dia_vida: number
-  peso_real: number | null
-  peso_objetivo: number | null
-  fcr_real: number | null
-  fcr_objetivo: number | null
-  desvio_peso_pct: number | null
-  desvio_fcr_pct: number | null
+  estado_actual: EstadoCalculoIndicador
+  fecha_estado_actual: string
+  fecha_del_dato_usado: string | null
+  dia_vida: number | null
+  veredicto: VeredictoComparacion
+  mensaje?: string
+  real: { peso_promedio_g: number | null; fcr: number | null } | null
+  objetivo: { peso_esperado_g: number | null; fcr_objetivo: number | null } | null
+  dia_curva?: number
+  desvio_peso_pct?: number | null
+  desvio_fcr?: number | null
 }
 
 export interface FinanzasLote {
   lote_id: number
-  costo_total_cop: number | null
+  estado_actual: EstadoCalculoIndicador
+  fecha_estado_actual: string | null
+  fecha_del_dato_usado: string | null
+  costo_total_cop: number
+  ingreso_total_cop: number
+  margen_cop: number
+  kg_producidos: number | null
   costo_por_kg_cop: number | null
-  ingreso_estimado_cop: number | null
-  margen_cop: number | null
   roi_pct: number | null
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { lineaSparkline, textoComparacion } from './estadoLote'
+import { comparacionVigente, lineaSparkline, textoComparacion, textoComparacionFcr } from './estadoLote'
 
 describe('textoComparacion', () => {
   it('no dice nada cuando no hay curva con qué comparar', () => {
@@ -19,6 +19,42 @@ describe('textoComparacion', () => {
 
   it('no agrega unidad cuando la métrica no tiene, como el FCR', () => {
     expect(textoComparacion(-2, 1.62, '')).toBe('-2% bajo la curva · meta 1.62')
+  })
+})
+
+describe('textoComparacionFcr', () => {
+  it('no agrega "%": el desvio de FCR es una diferencia absoluta, no un porcentaje', () => {
+    expect(textoComparacionFcr(-0.15, 1.62)).toBe('-0.15 bajo la curva · meta 1.62')
+    expect(textoComparacionFcr(0.08, 1.5)).toBe('+0.08 sobre la curva · meta 1.5')
+  })
+
+  it('no dice nada cuando no hay con qué comparar', () => {
+    expect(textoComparacionFcr(null, 1.62)).toBeUndefined()
+    expect(textoComparacionFcr(undefined, 1.62)).toBeUndefined()
+  })
+
+  it('omite la meta si no viene', () => {
+    expect(textoComparacionFcr(-0.1, null)).toBe('-0.1 bajo la curva')
+  })
+
+  it('dice "en la curva" cuando el desvio es exactamente cero', () => {
+    expect(textoComparacionFcr(0, 1.62)).toBe('en la curva · meta 1.62')
+  })
+})
+
+describe('comparacionVigente', () => {
+  it('es vigente cuando la fecha del dato usado coincide con la del indicador mostrado', () => {
+    expect(comparacionVigente('2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z')).toBe(true)
+  })
+
+  it('no es vigente cuando la comparacion viene de un dia distinto al que se muestra', () => {
+    expect(comparacionVigente('2026-09-19T00:00:00.000Z', '2026-09-20T00:00:00.000Z')).toBe(false)
+  })
+
+  it('no es vigente si falta cualquiera de las dos fechas', () => {
+    expect(comparacionVigente(null, '2026-09-20T00:00:00.000Z')).toBe(false)
+    expect(comparacionVigente('2026-09-20T00:00:00.000Z', undefined)).toBe(false)
+    expect(comparacionVigente(null, null)).toBe(false)
   })
 })
 
