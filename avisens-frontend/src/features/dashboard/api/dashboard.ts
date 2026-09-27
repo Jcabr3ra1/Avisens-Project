@@ -1,5 +1,6 @@
 import { api } from '@shared/api/client'
 import type { PaginatedResponse } from '@shared/api/types'
+import type { EstadoCalculoIndicador } from '@features/indicadores/api/indicadores'
 import type {
   DashboardAlerta,
   DashboardFuentes,
@@ -49,6 +50,7 @@ interface IndicadorApi {
   fcr: number | null
   epef: number | null
   mortalidad_acumulada_pct: number | null
+  estado_calculo: EstadoCalculoIndicador
 }
 
 const parametrosListado = { page: 1, limit: 100 }
@@ -105,6 +107,7 @@ function aIndicador(reciente: IndicadorApi): DashboardIndicador {
     fcr: reciente.fcr,
     epef: reciente.epef,
     mortalidadAcumuladaPct: reciente.mortalidad_acumulada_pct,
+    estadoCalculo: reciente.estado_calculo,
   }
 }
 

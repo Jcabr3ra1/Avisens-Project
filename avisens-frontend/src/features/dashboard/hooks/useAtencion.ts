@@ -14,6 +14,7 @@ import {
   type ChipAtencion,
 } from '../model/atencion'
 import { esCriticidadAlta } from '@features/alertas/model/alerta'
+import { desvioPesoVigente, esDatoVerificado } from '../model/estadoLote'
 
 type Args = {
   alertas: DashboardAlerta[]
@@ -24,7 +25,12 @@ type Args = {
 
 export function useAtencion({ alertas, galponId, indicadores, comparacion }: Args) {
   const { galpones } = useMonitoreoAmbiental()
-  const desvioPesoPct = comparacion?.desvio_peso_pct ?? null
+  const desvioPesoPct = desvioPesoVigente(
+    comparacion?.desvio_peso_pct,
+    comparacion?.fecha_del_dato_usado,
+    indicadores[0]?.fecha,
+    indicadores[0]?.estadoCalculo,
+  )
 
   return useMemo<ChipAtencion[]>(() => {
     const activas = alertas.filter((alerta) => alerta.estado !== 'cerrada')
@@ -38,8 +44,10 @@ export function useAtencion({ alertas, galponId, indicadores, comparacion }: Arg
     const offline = sensores.filter((s) => s.estado === 'offline').length
     const noDisponible = sensores.filter((s) => s.estado === 'lectura_no_disponible').length
 
-    const mortalidadHoy = indicadores[0]?.mortalidadAcumuladaPct ?? null
-    const mortalidadAyer = indicadores[1]?.mortalidadAcumuladaPct ?? null
+    const hoy = indicadores[0]
+    const ayer = indicadores[1]
+    const mortalidadHoy = hoy && esDatoVerificado(hoy.estadoCalculo) ? hoy.mortalidadAcumuladaPct : null
+    const mortalidadAyer = ayer && esDatoVerificado(ayer.estadoCalculo) ? ayer.mortalidadAcumuladaPct : null
 
     return [
       {

@@ -18,7 +18,7 @@ import {
   avesVivasEnDia,
   validarSnapshotMortalidad,
   EntradaMortalidad,
-} from './mortalidad-snapshot';
+} from '../../common/mortalidad/mortalidad-snapshot';
 import { integrarConsumo, ALGORITMO_ACTUAL } from './consumo-curva';
 import {
   construirDesgloseAlimento,

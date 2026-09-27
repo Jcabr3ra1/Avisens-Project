@@ -1,5 +1,6 @@
 import { diasDeVida } from '@shared/utils/fechas'
 import { esCriticidadAlta } from '@features/alertas/model/alerta'
+import type { EstadoCalculoIndicador } from '@features/indicadores/api/indicadores'
 export type EstadoDashboard = 'correcto' | 'atencion' | 'urgente' | 'sin_lote'
 
 export interface DashboardGranja {
@@ -42,6 +43,7 @@ export interface DashboardIndicador {
   fcr: number | null
   epef: number | null
   mortalidadAcumuladaPct: number | null
+  estadoCalculo: EstadoCalculoIndicador
 }
 
 export interface DashboardFuentes {

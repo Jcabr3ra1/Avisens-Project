@@ -1571,6 +1571,19 @@ model Organizacion {
 // ---------------------------------------------------------------------------
 // Indicadores del lote (KPIs historicos: FCR, EPEF, uniformidad por fecha)
 // ---------------------------------------------------------------------------
+
+enum EstadoCalculoIndicador {
+  legado_sin_verificar
+  calculado
+  mortalidad_incoherente
+}
+
+enum EstadoPesoIndicador {
+  disponible
+  pesaje_fecha_futura
+  sin_pesaje
+}
+
 model IndicadorLote {
   id                       Int      @id @default(autoincrement())
   lote_id                  Int
@@ -1583,6 +1596,11 @@ model IndicadorLote {
   mortalidad_acumulada_pct Float?
   consumo_acumulado_g      Float?
   calculado_en             DateTime @default(now())
+  estado_calculo           EstadoCalculoIndicador @default(legado_sin_verificar)
+  estado_peso              EstadoPesoIndicador?
+  pesaje_id_snapshot       Int?
+  pesaje_fecha_snapshot    DateTime?              @db.Date
+  revision_calculo         Int                    @default(0)
 
   lote Lote @relation(fields: [lote_id], references: [id])
 

@@ -1,3 +1,6 @@
+import type { EstadoCalculoIndicador } from '@features/indicadores/api/indicadores'
+import type { DashboardIndicador } from './dashboard'
+
 export type Fila = {
   etiqueta: string
   valor: string
@@ -20,6 +23,71 @@ export function textoComparacion(
   if (desvioPct > 0) return `+${desvioPct}% sobre la curva${meta}`
   if (desvioPct < 0) return `${desvioPct}% bajo la curva${meta}`
   return `en la curva${meta}`
+}
+
+// FCR no es un porcentaje: el backend manda la diferencia absoluta
+// (real - objetivo). Un texto separado evita el "%" que solo aplica al peso.
+export function textoComparacionFcr(
+  desvio: number | null | undefined,
+  objetivo: number | null | undefined,
+): string | undefined {
+  if (desvio === null || desvio === undefined) return undefined
+  const meta = objetivo === null || objetivo === undefined ? '' : ` · meta ${objetivo}`
+  if (desvio > 0) return `+${desvio} sobre la curva${meta}`
+  if (desvio < 0) return `${desvio} bajo la curva${meta}`
+  return `en la curva${meta}`
+}
+
+// La comparacion contra la curva puede venir de un dia distinto al que se
+// muestra como cifra principal (p. ej. hoy quedo mortalidad_incoherente y
+// el ultimo indicador "calculado" es de ayer). Sin este chequeo, la nota de
+// desvio parece hablar del dato de hoy cuando en realidad es de otro dia.
+export function comparacionVigente(
+  fechaDatoUsado: string | null | undefined,
+  fechaReciente: string | null | undefined,
+): boolean {
+  if (!fechaDatoUsado || !fechaReciente) return false
+  return new Date(fechaDatoUsado).getTime() === new Date(fechaReciente).getTime()
+}
+
+// legado_sin_verificar es dato real de antes de la migracion de coherencia:
+// nunca paso por el chequeo nuevo. No se retrocede a otra fila ni se borra
+// el historico -- solo se deja de presentar el numero como valido cuando
+// la fila que se muestra no es un calculo verificado.
+export function esDatoVerificado(estadoCalculo: EstadoCalculoIndicador | undefined): boolean {
+  return estadoCalculo === 'calculado'
+}
+
+// El resumen del sparkline es "el peso actual" -- no puede venir de una fila
+// distinta a la que se muestra como estado actual (aunque una fila anterior
+// tenga un peso real y verificado), ni de una fila sin peso verificado.
+export function pesoActualParaSparkline(reciente: DashboardIndicador | null): number | null {
+  if (!reciente || !esDatoVerificado(reciente.estadoCalculo)) return null
+  return reciente.pesoPromedioG
+}
+
+// El sparkline es una serie de crecimiento VERIFICADO: una fila
+// legado_sin_verificar puede traer un peso real, pero nunca paso por el
+// chequeo nuevo -- no cuenta como parte de la tendencia confiable.
+export function serieDePesoVerificado(indicadores: DashboardIndicador[]): number[] {
+  return indicadores
+    .filter((indicador) => esDatoVerificado(indicador.estadoCalculo))
+    .map((indicador) => indicador.pesoPromedioG)
+    .filter((peso): peso is number => peso !== null)
+}
+
+// El chip "vs. curva" solo puede mostrar el desvio si la comparacion es del
+// mismo dia que la fila mas reciente -- si no, estaria hablando de un dia
+// pasado como si fuera el estado de hoy.
+export function desvioPesoVigente(
+  desvioPesoPct: number | null | undefined,
+  fechaDatoUsado: string | null | undefined,
+  fechaReciente: string | null | undefined,
+  estadoCalculoReciente: EstadoCalculoIndicador | undefined,
+): number | null {
+  if (!esDatoVerificado(estadoCalculoReciente)) return null
+  if (!comparacionVigente(fechaDatoUsado, fechaReciente)) return null
+  return desvioPesoPct ?? null
 }
 
 // Puntos de un sparkline escalado a su propio rango. Con todos los valores
