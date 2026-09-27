@@ -66,6 +66,16 @@ export function pesoActualParaSparkline(reciente: DashboardIndicador | null): nu
   return reciente.pesoPromedioG
 }
 
+// El sparkline es una serie de crecimiento VERIFICADO: una fila
+// legado_sin_verificar puede traer un peso real, pero nunca paso por el
+// chequeo nuevo -- no cuenta como parte de la tendencia confiable.
+export function serieDePesoVerificado(indicadores: DashboardIndicador[]): number[] {
+  return indicadores
+    .filter((indicador) => esDatoVerificado(indicador.estadoCalculo))
+    .map((indicador) => indicador.pesoPromedioG)
+    .filter((peso): peso is number => peso !== null)
+}
+
 // El chip "vs. curva" solo puede mostrar el desvio si la comparacion es del
 // mismo dia que la fila mas reciente -- si no, estaria hablando de un dia
 // pasado como si fuera el estado de hoy.
@@ -73,7 +83,9 @@ export function desvioPesoVigente(
   desvioPesoPct: number | null | undefined,
   fechaDatoUsado: string | null | undefined,
   fechaReciente: string | null | undefined,
+  estadoCalculoReciente: EstadoCalculoIndicador | undefined,
 ): number | null {
+  if (!esDatoVerificado(estadoCalculoReciente)) return null
   if (!comparacionVigente(fechaDatoUsado, fechaReciente)) return null
   return desvioPesoPct ?? null
 }

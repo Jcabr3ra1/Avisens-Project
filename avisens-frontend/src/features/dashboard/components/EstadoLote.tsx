@@ -1,7 +1,7 @@
 import type { ComparacionIndicador } from '@features/indicadores/api/indicadores'
 import { IcChevronRight } from '@shared/ui/icons/icons'
 import type { DashboardIndicador, DashboardLote } from '../model/dashboard'
-import { comparacionVigente, esDatoVerificado, lineaSparkline, pesoActualParaSparkline, textoComparacion, textoComparacionFcr, type Fila } from '../model/estadoLote'
+import { comparacionVigente, esDatoVerificado, lineaSparkline, pesoActualParaSparkline, serieDePesoVerificado, textoComparacion, textoComparacionFcr, type Fila } from '../model/estadoLote'
 
 type Props = {
   lote: DashboardLote | null
@@ -15,7 +15,7 @@ type Props = {
 function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrirBitacora }: Props) {
   const reciente = indicadores[0] ?? null
   const datosVerificados = reciente !== null && esDatoVerificado(reciente.estadoCalculo)
-  const notaVigente = comparacionVigente(comparacion?.fecha_del_dato_usado, reciente?.fecha)
+  const notaVigente = datosVerificados && comparacionVigente(comparacion?.fecha_del_dato_usado, reciente?.fecha)
 
   const filas: Fila[] = [
     { etiqueta: 'Edad', valor: diaLote === null ? '—' : `${diaLote} días`, mono: true },
@@ -49,10 +49,7 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
 
   // La serie va del indicador más antiguo al más reciente: el sparkline se
   // lee de izquierda a derecha, igual que la gráfica de mediciones.
-  const seriePeso = [...indicadores]
-    .reverse()
-    .map((indicador) => indicador.pesoPromedioG)
-    .filter((peso): peso is number => peso !== null)
+  const seriePeso = serieDePesoVerificado([...indicadores].reverse())
   const pesoRecienteVerificado = pesoActualParaSparkline(reciente)
 
   return (

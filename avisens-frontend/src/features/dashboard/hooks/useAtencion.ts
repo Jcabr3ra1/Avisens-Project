@@ -29,6 +29,7 @@ export function useAtencion({ alertas, galponId, indicadores, comparacion }: Arg
     comparacion?.desvio_peso_pct,
     comparacion?.fecha_del_dato_usado,
     indicadores[0]?.fecha,
+    indicadores[0]?.estadoCalculo,
   )
 
   return useMemo<ChipAtencion[]>(() => {

@@ -5,6 +5,7 @@ import {
   esDatoVerificado,
   lineaSparkline,
   pesoActualParaSparkline,
+  serieDePesoVerificado,
   textoComparacion,
   textoComparacionFcr,
 } from './estadoLote'
@@ -122,16 +123,52 @@ describe('pesoActualParaSparkline', () => {
 
 describe('desvioPesoVigente', () => {
   it('muestra el desvio cuando la ultima fila es calculada y la comparacion es del mismo dia', () => {
-    expect(desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z')).toBe(-3.2)
+    expect(desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado')).toBe(-3.2)
   })
 
   it('no muestra el desvio cuando la comparacion viene de un dia distinto al mostrado', () => {
-    expect(desvioPesoVigente(-3.2, '2026-09-19T00:00:00.000Z', '2026-09-20T00:00:00.000Z')).toBeNull()
+    expect(desvioPesoVigente(-3.2, '2026-09-19T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado')).toBeNull()
+  })
+
+  it('misma fecha, pero la fila reciente no es un calculo verificado: no muestra el desvio', () => {
+    // obtenerIndicadoresDeLote y compararConCurva son dos peticiones HTTP
+    // independientes, sin lectura atomica compartida: que coincida la fecha
+    // no garantiza que el estado que se tiene a mano de esa fila siga
+    // siendo 'calculado' (p. ej. una recategorizacion entre ambas).
+    expect(
+      desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'legado_sin_verificar'),
+    ).toBeNull()
+    expect(
+      desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'mortalidad_incoherente'),
+    ).toBeNull()
+    expect(
+      desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', undefined),
+    ).toBeNull()
   })
 
   it('sin desvio numerico, aunque la comparacion sea vigente: null', () => {
-    expect(desvioPesoVigente(null, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z')).toBeNull()
-    expect(desvioPesoVigente(undefined, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z')).toBeNull()
+    expect(desvioPesoVigente(null, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado')).toBeNull()
+    expect(desvioPesoVigente(undefined, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado')).toBeNull()
+  })
+})
+
+describe('serieDePesoVerificado', () => {
+  it('mezcla de puntos historicos: cuenta solo los verificados (calculado), descarta legado_sin_verificar aunque traiga peso real', () => {
+    const indicadores = [
+      indicador({ pesoPromedioG: 1000, estadoCalculo: 'calculado' }),
+      indicador({ pesoPromedioG: 900, estadoCalculo: 'legado_sin_verificar' }),
+      indicador({ pesoPromedioG: 800, estadoCalculo: 'calculado' }),
+      indicador({ pesoPromedioG: null, estadoCalculo: 'mortalidad_incoherente' }),
+    ]
+    expect(serieDePesoVerificado(indicadores)).toEqual([1000, 800])
+  })
+
+  it('sin ningun punto verificado: serie vacia, no muestra ninguno sin verificar', () => {
+    const indicadores = [
+      indicador({ pesoPromedioG: 900, estadoCalculo: 'legado_sin_verificar' }),
+      indicador({ pesoPromedioG: 850, estadoCalculo: 'legado_sin_verificar' }),
+    ]
+    expect(serieDePesoVerificado(indicadores)).toEqual([])
   })
 })
 
