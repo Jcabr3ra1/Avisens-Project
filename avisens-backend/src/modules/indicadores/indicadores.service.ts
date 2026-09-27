@@ -259,6 +259,7 @@ export class IndicadoresService {
         estado_actual: masReciente.estado_calculo,
         fecha_estado_actual: masReciente.fecha,
         fecha_del_dato_usado: null,
+        fecha_pesaje_usado: null,
         dia_vida: null,
         veredicto: 'sin_dato_valido' as const,
         mensaje: 'No hay un indicador calculado todavia para comparar',
