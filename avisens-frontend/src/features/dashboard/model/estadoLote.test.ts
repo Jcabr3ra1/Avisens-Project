@@ -8,6 +8,7 @@ import {
   serieDePesoVerificado,
   textoComparacion,
   textoComparacionFcr,
+  textoFechaPesaje,
 } from './estadoLote'
 import type { DashboardIndicador } from './dashboard'
 
@@ -19,6 +20,7 @@ const indicador = (extra: Partial<DashboardIndicador> = {}): DashboardIndicador 
   epef: 300,
   mortalidadAcumuladaPct: 1,
   estadoCalculo: 'calculado',
+  pesajeFechaSnapshot: '2026-09-20T00:00:00.000Z',
   ...extra,
 })
 
@@ -60,6 +62,18 @@ describe('textoComparacionFcr', () => {
 
   it('dice "en la curva" cuando el desvio es exactamente cero', () => {
     expect(textoComparacionFcr(0, 1.62)).toBe('en la curva · meta 1.62')
+  })
+})
+
+describe('textoFechaPesaje', () => {
+  it('sin fecha: no dice nada', () => {
+    expect(textoFechaPesaje(null)).toBeUndefined()
+    expect(textoFechaPesaje(undefined)).toBeUndefined()
+  })
+
+  it('formatea el dia (solo-fecha o con hora) anclado a mediodia local', () => {
+    expect(textoFechaPesaje('2026-09-20')).toBe('al 20 de sept')
+    expect(textoFechaPesaje('2026-09-20T00:00:00.000Z')).toBe('al 20 de sept')
   })
 })
 

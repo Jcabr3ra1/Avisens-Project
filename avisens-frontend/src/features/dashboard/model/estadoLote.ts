@@ -38,6 +38,16 @@ export function textoComparacionFcr(
   return `en la curva${meta}`
 }
 
+// FCR/EPEF van al corte del pesaje, no de hoy -- sin la fecha, "1.18" no
+// dice si es de hoy o de hace una semana. Se ancla a mediodia local para
+// no cruzar de dia por el desfase UTC (mismo criterio que el resto del
+// frontend al mostrar fechas de solo-dia).
+export function textoFechaPesaje(fecha: string | null | undefined): string | undefined {
+  if (!fecha) return undefined
+  const dia = new Date(`${fecha.slice(0, 10)}T12:00:00`)
+  return `al ${dia.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}`
+}
+
 // La comparacion contra la curva puede venir de un dia distinto al que se
 // muestra como cifra principal (p. ej. hoy quedo mortalidad_incoherente y
 // el ultimo indicador "calculado" es de ayer). Sin este chequeo, la nota de

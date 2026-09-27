@@ -58,6 +58,9 @@ export interface ComparacionIndicador {
   estado_actual: EstadoCalculoIndicador
   fecha_estado_actual: string
   fecha_del_dato_usado: string | null
+  // Fecha del pesaje que usan fcr/epef (contrato "al corte del pesaje") --
+  // distinta de fecha_del_dato_usado, que es el dia del indicador (hoy).
+  fecha_pesaje_usado: string | null
   dia_vida: number | null
   veredicto: VeredictoComparacion
   motivo?: Exclude<EstadoPesoIndicador, 'disponible'>
