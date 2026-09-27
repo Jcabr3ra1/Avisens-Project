@@ -6,18 +6,18 @@ Actuador::Actuador(uint8_t pin)
 }
 
 void Actuador::begin() {
-  digitalWrite(pin_, HIGH);  // Estado seguro (relé activo en LOW) ANTES de fijar OUTPUT
+  digitalWrite(pin_, HIGH);  // Estado seguro (relé desactivado) antes de fijar el pin como salida
   pinMode(pin_, OUTPUT);
-  estado_ = false;
+  desactivar();
 }
 
 void Actuador::activar() {
-  digitalWrite(pin_, LOW);  // Relé activo con LOW
+  digitalWrite(pin_, LOW);  // Módulo de relé activo en LOW
   estado_ = true;
 }
 
 void Actuador::desactivar() {
-  digitalWrite(pin_, HIGH);  // Relé inactivo con HIGH
+  digitalWrite(pin_, HIGH);  // HIGH es el estado seguro de la línea
   estado_ = false;
 }
 
