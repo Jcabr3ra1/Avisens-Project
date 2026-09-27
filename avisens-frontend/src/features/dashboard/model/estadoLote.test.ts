@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import { comparacionVigente, esDatoVerificado, lineaSparkline, textoComparacion, textoComparacionFcr } from './estadoLote'
+import {
+  comparacionVigente,
+  desvioPesoVigente,
+  esDatoVerificado,
+  lineaSparkline,
+  pesoActualParaSparkline,
+  textoComparacion,
+  textoComparacionFcr,
+} from './estadoLote'
+import type { DashboardIndicador } from './dashboard'
+
+const indicador = (extra: Partial<DashboardIndicador> = {}): DashboardIndicador => ({
+  fecha: '2026-09-20T00:00:00.000Z',
+  diaVida: 21,
+  pesoPromedioG: 1200,
+  fcr: 1.2,
+  epef: 300,
+  mortalidadAcumuladaPct: 1,
+  estadoCalculo: 'calculado',
+  ...extra,
+})
 
 describe('textoComparacion', () => {
   it('no dice nada cuando no hay curva con qué comparar', () => {
@@ -73,6 +93,45 @@ describe('esDatoVerificado', () => {
 
   it('sin estado (fila ausente) no es dato verificado', () => {
     expect(esDatoVerificado(undefined)).toBe(false)
+  })
+})
+
+describe('pesoActualParaSparkline', () => {
+  it('no retrocede a un dato anterior valido cuando la ultima fila es legado_sin_verificar', () => {
+    // La fila reciente trae un peso real (1200g), pero no verificado -- un
+    // dato anterior valido (p. ej. 1100g de una fila 'calculado') no debe
+    // aparecer en su lugar: la funcion ni siquiera recibe esa fila anterior.
+    const reciente = indicador({ pesoPromedioG: 1200, estadoCalculo: 'legado_sin_verificar' })
+    expect(pesoActualParaSparkline(reciente)).toBeNull()
+  })
+
+  it('no retrocede a un dato anterior valido cuando la ultima fila es mortalidad_incoherente', () => {
+    const reciente = indicador({ pesoPromedioG: null, estadoCalculo: 'mortalidad_incoherente' })
+    expect(pesoActualParaSparkline(reciente)).toBeNull()
+  })
+
+  it('muestra el peso cuando la ultima fila SI es un calculo verificado', () => {
+    const reciente = indicador({ pesoPromedioG: 1200, estadoCalculo: 'calculado' })
+    expect(pesoActualParaSparkline(reciente)).toBe(1200)
+  })
+
+  it('sin fila reciente (lote sin indicadores): null', () => {
+    expect(pesoActualParaSparkline(null)).toBeNull()
+  })
+})
+
+describe('desvioPesoVigente', () => {
+  it('muestra el desvio cuando la ultima fila es calculada y la comparacion es del mismo dia', () => {
+    expect(desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z')).toBe(-3.2)
+  })
+
+  it('no muestra el desvio cuando la comparacion viene de un dia distinto al mostrado', () => {
+    expect(desvioPesoVigente(-3.2, '2026-09-19T00:00:00.000Z', '2026-09-20T00:00:00.000Z')).toBeNull()
+  })
+
+  it('sin desvio numerico, aunque la comparacion sea vigente: null', () => {
+    expect(desvioPesoVigente(null, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z')).toBeNull()
+    expect(desvioPesoVigente(undefined, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z')).toBeNull()
   })
 })
 

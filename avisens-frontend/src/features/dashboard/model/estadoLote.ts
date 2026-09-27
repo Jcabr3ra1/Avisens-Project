@@ -1,4 +1,5 @@
 import type { EstadoCalculoIndicador } from '@features/indicadores/api/indicadores'
+import type { DashboardIndicador } from './dashboard'
 
 export type Fila = {
   etiqueta: string
@@ -55,6 +56,26 @@ export function comparacionVigente(
 // la fila que se muestra no es un calculo verificado.
 export function esDatoVerificado(estadoCalculo: EstadoCalculoIndicador | undefined): boolean {
   return estadoCalculo === 'calculado'
+}
+
+// El resumen del sparkline es "el peso actual" -- no puede venir de una fila
+// distinta a la que se muestra como estado actual (aunque una fila anterior
+// tenga un peso real y verificado), ni de una fila sin peso verificado.
+export function pesoActualParaSparkline(reciente: DashboardIndicador | null): number | null {
+  if (!reciente || !esDatoVerificado(reciente.estadoCalculo)) return null
+  return reciente.pesoPromedioG
+}
+
+// El chip "vs. curva" solo puede mostrar el desvio si la comparacion es del
+// mismo dia que la fila mas reciente -- si no, estaria hablando de un dia
+// pasado como si fuera el estado de hoy.
+export function desvioPesoVigente(
+  desvioPesoPct: number | null | undefined,
+  fechaDatoUsado: string | null | undefined,
+  fechaReciente: string | null | undefined,
+): number | null {
+  if (!comparacionVigente(fechaDatoUsado, fechaReciente)) return null
+  return desvioPesoPct ?? null
 }
 
 // Puntos de un sparkline escalado a su propio rango. Con todos los valores

@@ -1,7 +1,7 @@
 import type { ComparacionIndicador } from '@features/indicadores/api/indicadores'
 import { IcChevronRight } from '@shared/ui/icons/icons'
 import type { DashboardIndicador, DashboardLote } from '../model/dashboard'
-import { comparacionVigente, esDatoVerificado, lineaSparkline, textoComparacion, textoComparacionFcr, type Fila } from '../model/estadoLote'
+import { comparacionVigente, esDatoVerificado, lineaSparkline, pesoActualParaSparkline, textoComparacion, textoComparacionFcr, type Fila } from '../model/estadoLote'
 
 type Props = {
   lote: DashboardLote | null
@@ -53,6 +53,7 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
     .reverse()
     .map((indicador) => indicador.pesoPromedioG)
     .filter((peso): peso is number => peso !== null)
+  const pesoRecienteVerificado = pesoActualParaSparkline(reciente)
 
   return (
     <section className="dash-lote" aria-labelledby="dash-lote-titulo">
@@ -92,11 +93,11 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
             </p>
           )}
 
-          {seriePeso.length > 1 && (
+          {pesoRecienteVerificado !== null && seriePeso.length > 1 && (
             <div className="dash-lote-pie">
               <div className="dash-lote-pie-fila">
                 <span>Peso promedio ({seriePeso.length} registros)</span>
-                <span className="mono">{seriePeso[seriePeso.length - 1]} g</span>
+                <span className="mono">{pesoRecienteVerificado} g</span>
               </div>
               <svg
                 className="dash-lote-spark"

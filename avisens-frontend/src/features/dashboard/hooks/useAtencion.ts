@@ -14,7 +14,7 @@ import {
   type ChipAtencion,
 } from '../model/atencion'
 import { esCriticidadAlta } from '@features/alertas/model/alerta'
-import { esDatoVerificado } from '../model/estadoLote'
+import { desvioPesoVigente, esDatoVerificado } from '../model/estadoLote'
 
 type Args = {
   alertas: DashboardAlerta[]
@@ -25,7 +25,11 @@ type Args = {
 
 export function useAtencion({ alertas, galponId, indicadores, comparacion }: Args) {
   const { galpones } = useMonitoreoAmbiental()
-  const desvioPesoPct = comparacion?.desvio_peso_pct ?? null
+  const desvioPesoPct = desvioPesoVigente(
+    comparacion?.desvio_peso_pct,
+    comparacion?.fecha_del_dato_usado,
+    indicadores[0]?.fecha,
+  )
 
   return useMemo<ChipAtencion[]>(() => {
     const activas = alertas.filter((alerta) => alerta.estado !== 'cerrada')
