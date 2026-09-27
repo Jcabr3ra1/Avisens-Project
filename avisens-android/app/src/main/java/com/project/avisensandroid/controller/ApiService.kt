@@ -32,6 +32,8 @@ import com.project.avisensandroid.model.IndicadorLoteResponse
 import com.project.avisensandroid.model.ComparacionIndicadorResponse
 import com.project.avisensandroid.model.LoteResponse
 import com.project.avisensandroid.model.RefreshTokenResponse
+import com.project.avisensandroid.model.InterpretarComandoVozRequest
+import com.project.avisensandroid.model.RespuestaComandoVoz
 
 import retrofit2.Response
 import retrofit2.http.Body
@@ -63,6 +65,16 @@ interface ApiService {
     suspend fun getCurrentUser(
         @Header("Authorization") token: String
     ): Response<UserResponse>
+
+
+    // =========================================================
+    // ASISTENTE DE VOZ
+    // =========================================================
+
+    @POST("v1/comandos-voz/interpretar")
+    suspend fun interpretarComandoVoz(
+        @Body request: InterpretarComandoVozRequest
+    ): Response<RespuestaComandoVoz>
 
 
     // =========================================================

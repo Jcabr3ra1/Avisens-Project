@@ -46,6 +46,7 @@ import com.project.avisensandroid.model.RegistroMortalidadRequest
 import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.model.UserSession
 import com.project.avisensandroid.ui.fragments.AlertasFragment
+import com.project.avisensandroid.ui.fragments.AsistenteVozFragment
 import com.project.avisensandroid.ui.fragments.BodegaFragment
 import com.project.avisensandroid.ui.fragments.BitacoraEnfermoFragment
 import com.project.avisensandroid.ui.fragments.BitacoraFragment
@@ -347,6 +348,10 @@ class MainActivity : AppCompatActivity() {
                 fragment
             )
             .commit()
+    }
+
+    fun mostrarAsistenteVoz() {
+        mostrarFragment(AsistenteVozFragment())
     }
 
     fun navegarDesdeBottomNav(itemId: Int) {

@@ -93,6 +93,10 @@ class InicioFragment : BaseBottomNavFragment() {
             activity.mostrarConfiguracion()
         }
 
+        binding.btnAbrirLia.setOnClickListener {
+            activity.mostrarAsistenteVoz()
+        }
+
         cargarDatosIniciales()
     }
 

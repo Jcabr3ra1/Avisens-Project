@@ -167,6 +167,20 @@
             </LinearLayout>
 
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAbrirLia"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="16dp"
+                android:text="Hablar con Lía"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                app:backgroundTint="@color/green_accent"
+                app:cornerRadius="12dp"
+                app:rippleColor="#245F42" />
+
             <!-- MONITOREO AMBIENTAL: datos reales del galpón seleccionado -->
             <LinearLayout
                 android:id="@+id/sectionSensoresInicio"
