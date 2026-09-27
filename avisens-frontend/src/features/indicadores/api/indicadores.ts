@@ -37,6 +37,13 @@ export type EstadoCalculoIndicador =
 
 export type EstadoPesoIndicador = 'disponible' | 'pesaje_fecha_futura' | 'sin_pesaje'
 
+// Meta-estado de FinanzasLote (respuesta agregada, no una fila real): el
+// lote nunca tuvo un IndicadorLote calculado. No se agrega a
+// EstadoCalculoIndicador porque ese enum describe el estado_calculo de una
+// fila persistida (CHECK en Postgres) y esto no es una fila -- es la
+// ausencia de todas.
+export type EstadoActualFinanzas = EstadoCalculoIndicador | 'sin_indicador'
+
 export type VeredictoComparacion =
   | 'sin_dato_valido'
   | 'peso_no_disponible'
@@ -64,7 +71,7 @@ export interface ComparacionIndicador {
 
 export interface FinanzasLote {
   lote_id: number
-  estado_actual: EstadoCalculoIndicador
+  estado_actual: EstadoActualFinanzas
   fecha_estado_actual: string | null
   fecha_del_dato_usado: string | null
   estado_peso_del_dato_usado: EstadoPesoIndicador | null
