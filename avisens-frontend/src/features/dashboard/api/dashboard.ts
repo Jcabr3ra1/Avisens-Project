@@ -52,6 +52,7 @@ interface IndicadorApi {
   mortalidad_acumulada_pct: number | null
   estado_calculo: EstadoCalculoIndicador
   pesaje_fecha_snapshot: string | null
+  revision_calculo: number
 }
 
 const parametrosListado = { page: 1, limit: 100 }
@@ -110,6 +111,7 @@ function aIndicador(reciente: IndicadorApi): DashboardIndicador {
     mortalidadAcumuladaPct: reciente.mortalidad_acumulada_pct,
     estadoCalculo: reciente.estado_calculo,
     pesajeFechaSnapshot: reciente.pesaje_fecha_snapshot,
+    revisionCalculo: reciente.revision_calculo,
   }
 }
 

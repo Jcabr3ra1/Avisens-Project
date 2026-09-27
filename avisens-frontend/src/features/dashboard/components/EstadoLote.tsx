@@ -1,7 +1,7 @@
 import type { ComparacionIndicador } from '@features/indicadores/api/indicadores'
 import { IcChevronRight } from '@shared/ui/icons/icons'
 import type { DashboardIndicador, DashboardLote } from '../model/dashboard'
-import { comparacionVigente, esDatoVerificado, lineaSparkline, pesoActualParaSparkline, serieDePesoVerificado, textoComparacion, textoComparacionFcr, textoFechaPesaje, type Fila } from '../model/estadoLote'
+import { comparacionVigente, esDatoVerificado, lineaSparkline, mismaRevision, pesoActualParaSparkline, serieDePesoVerificado, textoComparacion, textoComparacionFcr, textoFechaPesaje, type Fila } from '../model/estadoLote'
 
 type Props = {
   lote: DashboardLote | null
@@ -15,7 +15,10 @@ type Props = {
 function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrirBitacora }: Props) {
   const reciente = indicadores[0] ?? null
   const datosVerificados = reciente !== null && esDatoVerificado(reciente.estadoCalculo)
-  const notaVigente = datosVerificados && comparacionVigente(comparacion?.fecha_del_dato_usado, reciente?.fecha)
+  const notaVigente =
+    datosVerificados &&
+    comparacionVigente(comparacion?.fecha_del_dato_usado, reciente?.fecha) &&
+    mismaRevision(comparacion?.revision_calculo, reciente?.revisionCalculo)
   // Fecha propia de "reciente" (misma peticion que su fcr), no la de
   // "comparacion" -- son dos llamadas HTTP independientes.
   const fechaFcr = datosVerificados ? textoFechaPesaje(reciente?.pesajeFechaSnapshot) : undefined

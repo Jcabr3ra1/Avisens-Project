@@ -60,6 +60,18 @@ export function comparacionVigente(
   return new Date(fechaDatoUsado).getTime() === new Date(fechaReciente).getTime()
 }
 
+// Dos peticiones HTTP independientes (indicadores y comparacion) pueden
+// ver revisiones distintas de la MISMA fila si hubo un recalculo entre
+// una y otra -- coincidir en fecha no garantiza coincidir en la version
+// exacta de esa fila.
+export function mismaRevision(
+  revisionDatoUsado: number | null | undefined,
+  revisionReciente: number | null | undefined,
+): boolean {
+  if (revisionDatoUsado == null || revisionReciente == null) return false
+  return revisionDatoUsado === revisionReciente
+}
+
 // legado_sin_verificar es dato real de antes de la migracion de coherencia:
 // nunca paso por el chequeo nuevo. No se retrocede a otra fila ni se borra
 // el historico -- solo se deja de presentar el numero como valido cuando
@@ -94,9 +106,12 @@ export function desvioPesoVigente(
   fechaDatoUsado: string | null | undefined,
   fechaReciente: string | null | undefined,
   estadoCalculoReciente: EstadoCalculoIndicador | undefined,
+  revisionDatoUsado: number | null | undefined,
+  revisionReciente: number | null | undefined,
 ): number | null {
   if (!esDatoVerificado(estadoCalculoReciente)) return null
   if (!comparacionVigente(fechaDatoUsado, fechaReciente)) return null
+  if (!mismaRevision(revisionDatoUsado, revisionReciente)) return null
   return desvioPesoPct ?? null
 }
 

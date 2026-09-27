@@ -260,6 +260,7 @@ export class IndicadoresService {
         fecha_estado_actual: masReciente.fecha,
         fecha_del_dato_usado: null,
         fecha_pesaje_usado: null,
+        revision_calculo: null,
         dia_vida: null,
         veredicto: 'sin_dato_valido' as const,
         mensaje: 'No hay un indicador calculado todavia para comparar',
@@ -277,6 +278,10 @@ export class IndicadoresService {
       // pesaje") -- no es fecha_del_dato_usado, que es el dia del
       // indicador (hoy). Null cuando no hay pesaje disponible.
       fecha_pesaje_usado: indicador.pesaje_fecha_snapshot,
+      // Version exacta de la fila usada -- comparacionVigente solo mira
+      // la fecha, y dos peticiones independientes pueden ver revisiones
+      // distintas del MISMO dia si hubo un recalculo entre una y otra.
+      revision_calculo: indicador.revision_calculo,
     };
 
     if (indicador.estado_peso !== 'disponible') {

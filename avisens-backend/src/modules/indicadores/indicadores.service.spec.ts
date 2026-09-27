@@ -80,9 +80,17 @@ describe('IndicadoresService · calcularParaLote', () => {
     expect(guardado.estado_calculo).toBe('calculado');
     expect(guardado.estado_peso).toBe('disponible');
     expect(guardado.pesaje_id_snapshot).toBe(5);
-    // 1150 / (1000g/1000 * 970 aves vivas) -- sin restar PESO_INICIAL_G,
-    // coincide con la curva Italcol (docs/hito-fcr-epef-corte-pesaje.md).
-    expect(guardado.fcr as number).toBeCloseTo(1.19, 1);
+    // 1150 / (1000g/1000 * 970 aves vivas) = 1.185567... -- sin restar
+    // PESO_INICIAL_G, coincide con la curva Italcol
+    // (docs/hito-fcr-epef-corte-pesaje.md). Precision 3 (no 1): a
+    // precision 1 tanto esta formula como la vieja (restando 42g, que da
+    // 1150/929.26=1.237577) caen dentro del margen de 1.19 -- no
+    // discriminaba nada.
+    expect(guardado.fcr as number).toBeCloseTo(1.1856, 3);
+    // Control negativo: si alguien reintrodujera la resta de
+    // PESO_INICIAL_G, este valor (1150/((1000-42)/1000*970)) seria el
+    // resultado -- y NO debe pasar.
+    expect(guardado.fcr as number).not.toBeCloseTo(1.2376, 3);
     expect(guardado.mortalidad_acumulada_pct as number).toBeCloseTo(3, 1);
     expect(guardado.peso_promedio_g).toBe(1000);
   });
@@ -320,7 +328,12 @@ describe('IndicadoresService · calcularParaLote', () => {
       await service.calcularParaLote(1);
 
       const guardado = guardadoDe(prisma.indicadorLote.upsert);
-      expect(guardado.fcr as number).toBeCloseTo(1.18, 1);
+      // 1218/1035 = 1.176812... A precision 1 (margen 0.05), el valor de
+      // la formula vieja (1218/993 = 1.226586) tambien queda "cerca" de
+      // 1.18 -- no discriminaba nada. Precision 3 (margen 0.0005) si.
+      expect(guardado.fcr as number).toBeCloseTo(1.1768, 3);
+      // Control negativo: el resultado que daria restando PESO_INICIAL_G.
+      expect(guardado.fcr as number).not.toBeCloseTo(1.2266, 3);
     });
 
     it('sin ningun pesaje: no consulta un segundo alimento acotado', async () => {
