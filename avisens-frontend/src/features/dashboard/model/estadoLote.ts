@@ -1,3 +1,5 @@
+import type { EstadoCalculoIndicador } from '@features/indicadores/api/indicadores'
+
 export type Fila = {
   etiqueta: string
   valor: string
@@ -45,6 +47,14 @@ export function comparacionVigente(
 ): boolean {
   if (!fechaDatoUsado || !fechaReciente) return false
   return new Date(fechaDatoUsado).getTime() === new Date(fechaReciente).getTime()
+}
+
+// legado_sin_verificar es dato real de antes de la migracion de coherencia:
+// nunca paso por el chequeo nuevo. No se retrocede a otra fila ni se borra
+// el historico -- solo se deja de presentar el numero como valido cuando
+// la fila que se muestra no es un calculo verificado.
+export function esDatoVerificado(estadoCalculo: EstadoCalculoIndicador | undefined): boolean {
+  return estadoCalculo === 'calculado'
 }
 
 // Puntos de un sparkline escalado a su propio rango. Con todos los valores

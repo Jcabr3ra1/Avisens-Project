@@ -1,7 +1,7 @@
 import type { ComparacionIndicador } from '@features/indicadores/api/indicadores'
 import { IcChevronRight } from '@shared/ui/icons/icons'
 import type { DashboardIndicador, DashboardLote } from '../model/dashboard'
-import { comparacionVigente, lineaSparkline, textoComparacion, textoComparacionFcr, type Fila } from '../model/estadoLote'
+import { comparacionVigente, esDatoVerificado, lineaSparkline, textoComparacion, textoComparacionFcr, type Fila } from '../model/estadoLote'
 
 type Props = {
   lote: DashboardLote | null
@@ -14,6 +14,7 @@ type Props = {
 
 function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrirBitacora }: Props) {
   const reciente = indicadores[0] ?? null
+  const datosVerificados = reciente !== null && esDatoVerificado(reciente.estadoCalculo)
   const notaVigente = comparacionVigente(comparacion?.fecha_del_dato_usado, reciente?.fecha)
 
   const filas: Fila[] = [
@@ -21,15 +22,15 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
     { etiqueta: 'Aves alojadas', valor: lote ? lote.cantidadInicial.toLocaleString('es-CO') : '—', mono: true },
     {
       etiqueta: 'Mortalidad',
-      valor: reciente?.mortalidadAcumuladaPct === null || reciente === null
+      valor: !datosVerificados || reciente?.mortalidadAcumuladaPct === null
         ? '—'
         : `${reciente.mortalidadAcumuladaPct} %`,
-      alerta: (reciente?.mortalidadAcumuladaPct ?? 0) >= 2,
+      alerta: datosVerificados && (reciente?.mortalidadAcumuladaPct ?? 0) >= 2,
       mono: true,
     },
     {
       etiqueta: 'Peso promedio',
-      valor: reciente?.pesoPromedioG == null ? '—' : `${reciente.pesoPromedioG} g`,
+      valor: !datosVerificados || reciente?.pesoPromedioG == null ? '—' : `${reciente.pesoPromedioG} g`,
       nota: notaVigente
         ? textoComparacion(comparacion?.desvio_peso_pct ?? null, comparacion?.objetivo?.peso_esperado_g ?? null, 'g')
         : undefined,
@@ -37,7 +38,7 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
     },
     {
       etiqueta: 'Conversión',
-      valor: reciente?.fcr == null ? '—' : String(reciente.fcr),
+      valor: !datosVerificados || reciente?.fcr == null ? '—' : String(reciente.fcr),
       nota: notaVigente
         ? textoComparacionFcr(comparacion?.desvio_fcr ?? null, comparacion?.objetivo?.fcr_objetivo ?? null)
         : undefined,

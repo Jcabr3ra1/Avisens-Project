@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { comparacionVigente, lineaSparkline, textoComparacion, textoComparacionFcr } from './estadoLote'
+import { comparacionVigente, esDatoVerificado, lineaSparkline, textoComparacion, textoComparacionFcr } from './estadoLote'
 
 describe('textoComparacion', () => {
   it('no dice nada cuando no hay curva con qué comparar', () => {
@@ -55,6 +55,24 @@ describe('comparacionVigente', () => {
     expect(comparacionVigente(null, '2026-09-20T00:00:00.000Z')).toBe(false)
     expect(comparacionVigente('2026-09-20T00:00:00.000Z', undefined)).toBe(false)
     expect(comparacionVigente(null, null)).toBe(false)
+  })
+})
+
+describe('esDatoVerificado', () => {
+  it('es verificado solo cuando el estado es calculado', () => {
+    expect(esDatoVerificado('calculado')).toBe(true)
+  })
+
+  it('legado_sin_verificar no es dato verificado, aunque traiga numeros reales', () => {
+    expect(esDatoVerificado('legado_sin_verificar')).toBe(false)
+  })
+
+  it('mortalidad_incoherente no es dato verificado', () => {
+    expect(esDatoVerificado('mortalidad_incoherente')).toBe(false)
+  })
+
+  it('sin estado (fila ausente) no es dato verificado', () => {
+    expect(esDatoVerificado(undefined)).toBe(false)
   })
 })
 
