@@ -72,9 +72,12 @@ class EnvironmentVariables {
   @IsOptional()
   ML_TIMEOUT_MS: string;
 
-  // Antigüedad máxima aceptable del pesaje (en días) para que
-  // generarAlertaDesvio() confíe en él. Sin definir a propósito: se fija
-  // cuando se conozca la frecuencia real de pesaje, no antes.
+  // Antiguedad maxima aceptable del pesaje (en dias) para que
+  // generarAlertaDesvio() confie en el. Tolerancia operativa de la
+  // alerta (decision de negocio, 2026-09-27: 2 dias) -- no confundir con
+  // el calendario de pesaje real, que es mas espaciado. Sigue opcional y
+  // sin valor por defecto en codigo: sin ella, la alerta se detiene con
+  // motivo='umbral_no_configurado', nunca inventa un umbral.
   @IsNumberString()
   @IsOptional()
   UMBRAL_PESAJE_DIAS: string;

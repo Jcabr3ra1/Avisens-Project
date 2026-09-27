@@ -6,6 +6,7 @@ import { verificarAccesoLote } from '../../common/auth/alcance';
 import { Prisma, Alerta } from '@prisma/client';
 import {
   diaDeVida,
+  diaDeVidaDeFecha,
   inicioDelDiaEnZonaGranja,
 } from '../../common/fechas/dias-de-vida';
 import { clasificarMortalidad } from '../../common/mortalidad/mortalidad-snapshot';
@@ -202,7 +203,7 @@ export class IndicadoresService {
 
     const lote = await this.prisma.lote.findUnique({
       where: { id: loteId },
-      select: { sexo: true, marca_alimento: true },
+      select: { sexo: true, marca_alimento: true, fecha_ingreso: true },
     });
     if (!lote) throw new NotFoundException('Lote no encontrado');
 
@@ -251,19 +252,32 @@ export class IndicadoresService {
       };
     }
 
-    const curva = await this.prisma.curvaObjetivo.findFirst({
+    // A partir de aqui, estado_peso === 'disponible' garantiza (por el
+    // CHECK de la matriz) que pesaje_fecha_snapshot no es null. El peso se
+    // compara contra la curva del dia en que se PESO, no contra el dia de
+    // vida de hoy -- son el mismo numero solo si el pesaje es de hoy.
+    const diaVidaPesaje = diaDeVidaDeFecha(
+      lote.fecha_ingreso,
+      indicador.pesaje_fecha_snapshot!,
+    );
+
+    // Una sola lectura para el rango y para el punto: con dos consultas
+    // separadas (aggregate + findFirst), borrar el extremo justo entre
+    // ambas dejaba el rango certificando un dia que la segunda consulta ya
+    // no podia cubrir, y el resultado caia de vuelta a un punto anterior
+    // como si el rango vigente lo permitiera.
+    const puntosCurva = await this.prisma.curvaObjetivo.findMany({
       where: {
         marca: {
           equals: lote.marca_alimento ?? 'italcol',
           mode: 'insensitive',
         },
         sexo: { equals: lote.sexo ?? 'mixto', mode: 'insensitive' },
-        dia: { lte: indicador.dia_vida },
       },
-      orderBy: { dia: 'desc' },
+      orderBy: { dia: 'asc' },
     });
 
-    if (!curva) {
+    if (puntosCurva.length === 0) {
       return {
         ...base,
         veredicto: 'sin_referencia' as const,
@@ -273,7 +287,82 @@ export class IndicadoresService {
           fcr: indicador.fcr,
         },
         objetivo: null,
+        desvio_fcr: null,
+        dia_curva: undefined,
       };
+    }
+
+    // El rango valido sale solo de puntos CON peso: una fila sin peso no
+    // extiende el rango que decide si el dia del pesaje tiene con que
+    // compararse -- existir en la tabla no es lo mismo que tener con que
+    // comparar.
+    const puntosConPeso = puntosCurva.filter(
+      (p) => p.peso_esperado_g != null,
+    );
+    if (puntosConPeso.length === 0) {
+      // Decision de contrato: SI hay filas para esta marca y sexo -- lo que
+      // falta es un peso utilizable, no la curva en si. Se responde
+      // sin_referencia para el crecimiento (no hay con que comparar el
+      // peso, en ningun dia), pero sin descartar lo demas que la fila del
+      // dia pueda tener: si el dia del pesaje cae dentro de la curva
+      // publicada (mismo criterio de "mas cercano por debajo o igual" que
+      // el resto de la funcion), se conserva su fcr_objetivo.
+      let curvaSinPeso: (typeof puntosCurva)[number] | null = null;
+      if (
+        diaVidaPesaje >= puntosCurva[0].dia &&
+        diaVidaPesaje <= puntosCurva[puntosCurva.length - 1].dia
+      ) {
+        curvaSinPeso = puntosCurva[0];
+        for (const punto of puntosCurva) {
+          if (punto.dia > diaVidaPesaje) break;
+          curvaSinPeso = punto;
+        }
+      }
+      return {
+        ...base,
+        veredicto: 'sin_referencia' as const,
+        mensaje:
+          'Hay curva objetivo para la marca y sexo de este lote, pero ninguna fila tiene peso esperado registrado',
+        real: {
+          peso_promedio_g: indicador.peso_promedio_g,
+          fcr: indicador.fcr,
+        },
+        objetivo: curvaSinPeso
+          ? { peso_esperado_g: null, fcr_objetivo: curvaSinPeso.fcr_objetivo }
+          : null,
+        desvio_fcr:
+          indicador.fcr != null && curvaSinPeso?.fcr_objetivo != null
+            ? indicador.fcr - curvaSinPeso.fcr_objetivo
+            : null,
+        dia_curva: curvaSinPeso?.dia,
+      };
+    }
+    const diaMinimo = puntosConPeso[0].dia;
+    const diaMaximo = puntosConPeso[puntosConPeso.length - 1].dia;
+
+    if (diaVidaPesaje < diaMinimo || diaVidaPesaje > diaMaximo) {
+      return {
+        ...base,
+        veredicto: 'sin_curva_para_dia' as const,
+        mensaje: `No hay un punto de la curva que cubra el dia ${diaVidaPesaje}`,
+        real: {
+          peso_promedio_g: indicador.peso_promedio_g,
+          fcr: indicador.fcr,
+        },
+        objetivo: null,
+      };
+    }
+
+    // Mismo comportamiento de siempre entre puntos publicados: el mas
+    // cercano por debajo o igual, sin interpolar (D6 sin decidir). Busca
+    // sobre TODOS los puntos (incluidos los sin peso): si el dia exacto
+    // cae en una fila sin peso, se usa esa fila -- no se retrocede a un
+    // peso valido anterior. puntosCurva ya esta ordenado ascendente, asi
+    // que el ultimo que cumple es el mas cercano.
+    let curva = puntosCurva[0];
+    for (const punto of puntosCurva) {
+      if (punto.dia > diaVidaPesaje) break;
+      curva = punto;
     }
 
     let desvioPesoPct: number | null = null;
@@ -395,25 +484,74 @@ export class IndicadoresService {
 
     const lote = await this.prisma.lote.findUnique({
       where: { id: loteId },
-      select: { galpon_id: true, sexo: true, marca_alimento: true },
+      select: {
+        galpon_id: true,
+        sexo: true,
+        marca_alimento: true,
+        fecha_ingreso: true,
+      },
     });
     if (!lote || indicador.dia_vida == null) {
       return { alerta: null, motivo: 'sin_indicador' };
     }
 
-    const curva = await this.prisma.curvaObjetivo.findFirst({
+    // Igual que en compararConCurva: llegado aqui estado_peso === 'disponible'
+    // (paradas 4 y 5 ya descartaron 'pesaje_fecha_futura' y 'sin_pesaje'),
+    // asi que pesaje_fecha_snapshot no es null. Se compara contra la curva
+    // del dia en que se PESO, no contra el dia de vida de hoy.
+    const diaVidaPesaje = diaDeVidaDeFecha(
+      lote.fecha_ingreso,
+      indicador.pesaje_fecha_snapshot!,
+    );
+
+    // Una sola lectura para el rango y para el punto: con dos consultas
+    // separadas (aggregate + findFirst), borrar el extremo justo entre
+    // ambas dejaba el rango certificando un dia que la segunda consulta ya
+    // no podia cubrir, y el resultado caia de vuelta a un punto anterior
+    // como si el rango vigente lo permitiera.
+    const puntosCurva = await this.prisma.curvaObjetivo.findMany({
       where: {
         marca: {
           equals: lote.marca_alimento ?? 'italcol',
           mode: 'insensitive',
         },
         sexo: { equals: lote.sexo ?? 'mixto', mode: 'insensitive' },
-        dia: { lte: indicador.dia_vida },
       },
-      orderBy: { dia: 'desc' },
+      orderBy: { dia: 'asc' },
     });
+
+    if (puntosCurva.length === 0) {
+      return { alerta: null, motivo: 'sin_referencia' };
+    }
+
+    // El rango valido sale solo de puntos CON peso: una fila sin peso no
+    // extiende el rango que decide si el dia del pesaje tiene con que
+    // compararse -- existir en la tabla no es lo mismo que tener con que
+    // comparar.
+    const puntosConPeso = puntosCurva.filter(
+      (p) => p.peso_esperado_g != null,
+    );
+    if (puntosConPeso.length === 0) {
+      return { alerta: null, motivo: 'sin_referencia' };
+    }
+    const diaMinimo = puntosConPeso[0].dia;
+    const diaMaximo = puntosConPeso[puntosConPeso.length - 1].dia;
+
+    if (diaVidaPesaje < diaMinimo || diaVidaPesaje > diaMaximo) {
+      return { alerta: null, motivo: 'sin_curva_para_dia' };
+    }
+
+    // Mismo comportamiento de siempre entre puntos publicados: el mas
+    // cercano por debajo o igual, sin interpolar (D6 sin decidir). Busca
+    // sobre TODOS los puntos (incluidos los sin peso): si el dia exacto
+    // cae en una fila sin peso, se usa esa fila -- no se retrocede a un
+    // peso valido anterior.
+    let curva = puntosCurva[0];
+    for (const punto of puntosCurva) {
+      if (punto.dia > diaVidaPesaje) break;
+      curva = punto;
+    }
     if (
-      !curva ||
       indicador.peso_promedio_g == null ||
       curva.peso_esperado_g == null
     ) {
@@ -446,7 +584,7 @@ export class IndicadoresService {
         tipo: ALERTA_TIPO_DESVIO,
         criticidad: 'media',
         origen: 'automatica',
-        mensaje: `El lote va ${desvioPesoPct.toFixed(1)}% por debajo de la curva objetivo (dia ${indicador.dia_vida})`,
+        mensaje: `El pesaje del dia de vida ${diaVidaPesaje} quedo ${Math.abs(desvioPesoPct).toFixed(1)}% por debajo de la curva objetivo`,
       },
     });
     return { alerta, motivo: null };

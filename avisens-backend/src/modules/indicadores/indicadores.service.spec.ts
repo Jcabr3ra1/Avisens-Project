@@ -356,7 +356,7 @@ describe('IndicadoresService · compararConCurva', () => {
   const prisma = {
     lote: { findUnique: jest.fn() },
     indicadorLote: { findFirst: jest.fn() },
-    curvaObjetivo: { findFirst: jest.fn() },
+    curvaObjetivo: { findMany: jest.fn() },
   };
 
   const admin = { id: 1, rol: 'Administrador' };
@@ -365,6 +365,7 @@ describe('IndicadoresService · compararConCurva', () => {
     galpon: { granja: { propietario_id: 1 } },
     sexo: 'macho',
     marca_alimento: 'italcol',
+    fecha_ingreso: new Date('2026-08-31T00:00:00.000Z'),
   };
 
   beforeEach(async () => {
@@ -385,6 +386,10 @@ describe('IndicadoresService · compararConCurva', () => {
     estado_calculo: 'calculado',
     estado_peso: 'disponible',
     dia_vida: 21,
+    // dia 21 relativo a loteConDueno.fecha_ingreso (2026-08-31): coherente
+    // con dia_vida por defecto para no romper implicitamente las pruebas
+    // que no les importa la fecha exacta del pesaje.
+    pesaje_fecha_snapshot: new Date('2026-09-20T00:00:00.000Z'),
     peso_promedio_g: 1000,
     fcr: 1.2,
     ...extra,
@@ -427,7 +432,7 @@ describe('IndicadoresService · compararConCurva', () => {
     expect(r.fecha_del_dato_usado).toEqual(fila.fecha);
     expect(r.real).toBeNull();
     // no debe llegar a consultar la curva -- no hay con que comparar
-    expect(prisma.curvaObjetivo.findFirst).not.toHaveBeenCalled();
+    expect(prisma.curvaObjetivo.findMany).not.toHaveBeenCalled();
   });
 
   it.each(['sin_pesaje', 'pesaje_fecha_futura'] as const)(
@@ -445,7 +450,7 @@ describe('IndicadoresService · compararConCurva', () => {
       const r = await service.compararConCurva(1, admin);
       if (r.veredicto !== 'peso_no_disponible') throw new Error('unreachable');
       expect(r.motivo).toBe(estadoPeso);
-      expect(prisma.curvaObjetivo.findFirst).not.toHaveBeenCalled();
+      expect(prisma.curvaObjetivo.findMany).not.toHaveBeenCalled();
     },
   );
 
@@ -463,14 +468,215 @@ describe('IndicadoresService · compararConCurva', () => {
     expect(motivos).toEqual(['sin_pesaje', 'pesaje_fecha_futura']);
   });
 
-  it('devuelve sin_referencia cuando no hay curva para la marca y sexo', async () => {
+  it('H1: compara contra la curva del dia en que se peso, no el dia de vida de hoy', async () => {
+    // dia_vida=21 es el dia de HOY (cuando se calculo la fila). El pesaje
+    // usado es del dia 14 -- si se comparara contra el dia 21 (el bug de
+    // H1), un peso identico al esperado el dia 14 saldria "por_debajo"
+    // porque el dia 21 espera mas.
+    prisma.lote.findUnique.mockResolvedValue(loteConDueno); // ingreso 2026-08-31
+    prisma.indicadorLote.findFirst.mockResolvedValue(
+      filaCalculada({
+        dia_vida: 21,
+        pesaje_fecha_snapshot: new Date('2026-09-13T00:00:00.000Z'), // dia 14
+        peso_promedio_g: 535,
+      }),
+    );
+    prisma.curvaObjetivo.findMany.mockResolvedValue([
+      { dia: 7, peso_esperado_g: 211, fcr_objetivo: 1.0 },
+      { dia: 14, peso_esperado_g: 535, fcr_objetivo: 1.1 },
+      { dia: 21, peso_esperado_g: 1035, fcr_objetivo: 1.18 },
+      { dia: 42, peso_esperado_g: 2900, fcr_objetivo: 1.9 },
+    ]);
+
+    const r = await service.compararConCurva(1, admin);
+
+    expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+
+    // dia_vida en la respuesta conserva su significado anterior: el dia
+    // del indicador (hoy), no el dia del pesaje usado para la curva.
+    expect(r.dia_vida).toBe(21);
+    expect(r.veredicto).toBe('en_objetivo');
+    if (r.veredicto !== 'en_objetivo') throw new Error('unreachable');
+    // El punto usado SI corresponde al dia del pesaje (14), no a dia_vida
+    // (21): con una sola lectura de toda la curva, la seleccion ocurre en
+    // memoria, asi que se verifica en el punto usado (dia_curva), no en
+    // el filtro de la consulta.
+    expect(r.dia_curva).toBe(14);
+    expect(r.desvio_peso_pct as number).toBeCloseTo(0, 5);
+  });
+
+  describe('R2: limites de la curva (dia 7 a 42, Italcol/Solla)', () => {
+    // fecha_ingreso de loteConDueno: 2026-08-31 (dia 1).
+    const fechaDelDia = (dia: number) =>
+      new Date(
+        new Date('2026-08-31T00:00:00.000Z').getTime() +
+          (dia - 1) * 24 * 60 * 60 * 1000,
+      );
+
+    // Los 4 puntos publicados: rango y punto salen de la MISMA lectura
+    // (findMany), nunca de dos consultas separadas.
+    const curvaCompleta = [
+      { dia: 7, peso_esperado_g: 211, fcr_objetivo: 1.0 },
+      { dia: 14, peso_esperado_g: 535, fcr_objetivo: 1.1 },
+      { dia: 21, peso_esperado_g: 1035, fcr_objetivo: 1.18 },
+      { dia: 42, peso_esperado_g: 2900, fcr_objetivo: 1.9 },
+    ];
+
+    it('dia exactamente en el minimo (7) sigue el camino normal, no sin_curva_para_dia', async () => {
+      prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+      prisma.indicadorLote.findFirst.mockResolvedValue(
+        filaCalculada({ pesaje_fecha_snapshot: fechaDelDia(7) }),
+      );
+      prisma.curvaObjetivo.findMany.mockResolvedValue(curvaCompleta);
+
+      const r = await service.compararConCurva(1, admin);
+      expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+      expect(r.veredicto).not.toBe('sin_curva_para_dia');
+    });
+
+    it('dia exactamente en el maximo (42) sigue el camino normal, no sin_curva_para_dia', async () => {
+      prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+      prisma.indicadorLote.findFirst.mockResolvedValue(
+        filaCalculada({ pesaje_fecha_snapshot: fechaDelDia(42) }),
+      );
+      prisma.curvaObjetivo.findMany.mockResolvedValue(curvaCompleta);
+
+      const r = await service.compararConCurva(1, admin);
+      expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+      expect(r.veredicto).not.toBe('sin_curva_para_dia');
+    });
+
+    it('dia 3 (antes del primer punto): sin_curva_para_dia', async () => {
+      prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+      prisma.indicadorLote.findFirst.mockResolvedValue(
+        filaCalculada({ pesaje_fecha_snapshot: fechaDelDia(3) }),
+      );
+      prisma.curvaObjetivo.findMany.mockResolvedValue(curvaCompleta);
+
+      const r = await service.compararConCurva(1, admin);
+      expect(r.veredicto).toBe('sin_curva_para_dia');
+      // la lectura SI ocurre -- rango y punto vienen de ella. Lo que no
+      // ocurre es una SEGUNDA consulta para buscar el punto.
+      expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('E9 -- dia 45 (despues del ultimo punto): sin_curva_para_dia, no se extrapola el dia 42', async () => {
+      prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+      prisma.indicadorLote.findFirst.mockResolvedValue(
+        filaCalculada({ pesaje_fecha_snapshot: fechaDelDia(45) }),
+      );
+      prisma.curvaObjetivo.findMany.mockResolvedValue(curvaCompleta);
+
+      const r = await service.compararConCurva(1, admin);
+      expect(r.veredicto).toBe('sin_curva_para_dia');
+      expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+      expect(r.real).not.toBeNull();
+      expect(r.objetivo).toBeNull();
+    });
+
+    it('consistencia: si el punto que certificaba el maximo no esta en la MISMA lectura, el dia que dependia de el deja de estar en rango', async () => {
+      // Con dos consultas (aggregate + findFirst) por separado, borrar el
+      // punto 42 justo entre ambas dejaba el aggregate certificando
+      // max=42 mientras el findFirst ya no lo encontraba, y el resultado
+      // caia de vuelta al dia 21 como si el rango vigente lo cubriera.
+      // Con una sola lectura, el maximo SIEMPRE sale del mismo array que
+      // se usa para buscar el punto: si el 42 no esta, el maximo real es
+      // 21 y el dia 42 queda fuera de rango.
+      prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+      prisma.indicadorLote.findFirst.mockResolvedValue(
+        filaCalculada({ pesaje_fecha_snapshot: fechaDelDia(42) }),
+      );
+      prisma.curvaObjetivo.findMany.mockResolvedValue([
+        { dia: 7, peso_esperado_g: 211, fcr_objetivo: 1.0 },
+        { dia: 14, peso_esperado_g: 535, fcr_objetivo: 1.1 },
+        { dia: 21, peso_esperado_g: 1035, fcr_objetivo: 1.18 },
+        // dia 42 ausente en esta lectura -- no debe caer de vuelta al 21.
+      ]);
+
+      const r = await service.compararConCurva(1, admin);
+      expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+      expect(r.veredicto).toBe('sin_curva_para_dia');
+      expect(r.objetivo).toBeNull();
+    });
+
+    it('el rango solo cuenta puntos CON peso: una fila del dia 45 sin peso no extiende el rango mas alla del dia 42', async () => {
+      // El peso valido llega hasta el dia 42. La fila del dia 45 EXISTE en
+      // la tabla pero con peso_esperado_g NULL -- no debe contar como
+      // limite del rango. Un pesaje del dia 44 (entre 42 y 45) tiene que
+      // quedar fuera de rango, no comparado contra el 42 ni extrapolado.
+      prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+      prisma.indicadorLote.findFirst.mockResolvedValue(
+        filaCalculada({ pesaje_fecha_snapshot: fechaDelDia(44) }),
+      );
+      prisma.curvaObjetivo.findMany.mockResolvedValue([
+        ...curvaCompleta,
+        { dia: 45, peso_esperado_g: null, fcr_objetivo: null },
+      ]);
+
+      const r = await service.compararConCurva(1, admin);
+      expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+      expect(r.veredicto).toBe('sin_curva_para_dia');
+      expect(r.objetivo).toBeNull();
+    });
+
+    it('una fila sin peso DENTRO del rango valido da sin_datos, sin retroceder a un peso anterior', async () => {
+      // Dia 21 existe en la curva pero con peso_esperado_g NULL. El rango
+      // (7-42, por los otros puntos) SI cubre el dia 21 -- el problema no
+      // es el rango, es que esa fila puntual no tiene con que comparar.
+      // No debe retroceder al dia 14 (535g, el anterior con peso).
+      prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+      prisma.indicadorLote.findFirst.mockResolvedValue(
+        filaCalculada({ pesaje_fecha_snapshot: fechaDelDia(21) }),
+      );
+      prisma.curvaObjetivo.findMany.mockResolvedValue([
+        { dia: 7, peso_esperado_g: 211, fcr_objetivo: 1.0 },
+        { dia: 14, peso_esperado_g: 535, fcr_objetivo: 1.1 },
+        { dia: 21, peso_esperado_g: null, fcr_objetivo: null },
+        { dia: 42, peso_esperado_g: 2900, fcr_objetivo: 1.9 },
+      ]);
+
+      const r = await service.compararConCurva(1, admin);
+      expect(r.veredicto).toBe('sin_datos');
+      if (r.veredicto !== 'sin_datos') throw new Error('unreachable');
+      expect(r.dia_curva).toBe(21);
+      expect(r.objetivo?.peso_esperado_g).toBeNull();
+    });
+
+    it('filas existentes para la marca y sexo, pero TODAS sin peso: sin_referencia con mensaje claro, conserva el fcr_objetivo del dia', async () => {
+      // Decision de contrato: hay curva (4 filas, dias 7-42), pero ninguna
+      // tiene peso_esperado_g -- no es "no hay curva objetivo", es "no hay
+      // peso con que comparar". El mensaje debe distinguir ese matiz, y no
+      // debe descartar otros datos de la fila del dia (aqui, fcr_objetivo).
+      prisma.lote.findUnique.mockResolvedValue(loteConDueno);
+      prisma.indicadorLote.findFirst.mockResolvedValue(
+        filaCalculada({ pesaje_fecha_snapshot: fechaDelDia(21), fcr: 1.3 }),
+      );
+      prisma.curvaObjetivo.findMany.mockResolvedValue([
+        { dia: 7, peso_esperado_g: null, fcr_objetivo: 1.0 },
+        { dia: 14, peso_esperado_g: null, fcr_objetivo: 1.1 },
+        { dia: 21, peso_esperado_g: null, fcr_objetivo: 1.18 },
+        { dia: 42, peso_esperado_g: null, fcr_objetivo: 1.9 },
+      ]);
+
+      const r = await service.compararConCurva(1, admin);
+      expect(r.veredicto).toBe('sin_referencia');
+      if (r.veredicto !== 'sin_referencia') throw new Error('unreachable');
+      expect(r.mensaje).not.toMatch(/no hay curva objetivo/i);
+      expect(r.objetivo).toEqual({ peso_esperado_g: null, fcr_objetivo: 1.18 });
+      expect(r.desvio_fcr as number).toBeCloseTo(1.3 - 1.18, 5);
+      expect(r.dia_curva).toBe(21);
+    });
+  });
+
+  it('ninguna fila para la marca y sexo del lote: sin_referencia', async () => {
     prisma.lote.findUnique.mockResolvedValue(loteConDueno);
     prisma.indicadorLote.findFirst.mockResolvedValue(filaCalculada());
-    prisma.curvaObjetivo.findFirst.mockResolvedValue(null);
+    prisma.curvaObjetivo.findMany.mockResolvedValue([]);
 
     const r = await service.compararConCurva(1, admin);
     expect(r.veredicto).toBe('sin_referencia');
     expect(r.objetivo).toBeNull();
+    expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
   });
 
   it('veredicto por_debajo cuando el peso real esta bajo la curva', async () => {
@@ -478,11 +684,9 @@ describe('IndicadoresService · compararConCurva', () => {
     prisma.indicadorLote.findFirst.mockResolvedValue(
       filaCalculada({ peso_promedio_g: 900, fcr: 1.3 }),
     );
-    prisma.curvaObjetivo.findFirst.mockResolvedValue({
-      dia: 21,
-      peso_esperado_g: 1035,
-      fcr_objetivo: 1.18,
-    });
+    prisma.curvaObjetivo.findMany.mockResolvedValue([
+      { dia: 21, peso_esperado_g: 1035, fcr_objetivo: 1.18 },
+    ]);
 
     const r = await service.compararConCurva(1, admin);
     expect(r.veredicto).toBe('por_debajo');
@@ -498,11 +702,9 @@ describe('IndicadoresService · compararConCurva', () => {
     prisma.indicadorLote.findFirst.mockResolvedValue(
       filaCalculada({ peso_promedio_g: 1035, fcr: 1.18 }),
     );
-    prisma.curvaObjetivo.findFirst.mockResolvedValue({
-      dia: 21,
-      peso_esperado_g: 1035,
-      fcr_objetivo: 1.18,
-    });
+    prisma.curvaObjetivo.findMany.mockResolvedValue([
+      { dia: 21, peso_esperado_g: 1035, fcr_objetivo: 1.18 },
+    ]);
 
     const r = await service.compararConCurva(1, admin);
     expect(r.veredicto).toBe('en_objetivo');
@@ -518,23 +720,33 @@ describe('IndicadoresService · generarAlertaDesvio', () => {
     lote: { findUnique: jest.fn() },
     pesaje: { findFirst: jest.fn() },
     indicadorLote: { findFirst: jest.fn() },
-    curvaObjetivo: { findFirst: jest.fn() },
+    curvaObjetivo: { findMany: jest.fn() },
     alerta: { findFirst: jest.fn(), create: jest.fn() },
   };
+
+  // La fila tiene que ser "de hoy" de verdad -- la parada 2 compara contra
+  // inicioDelDiaEnZonaGranja(), no contra una fecha fija del calendario.
+  const hoy = inicioDelDiaEnZonaGranja();
+  const pesajeSnapshot = { id: 50, fecha: hoy, peso_promedio_g: 900 };
 
   const lote = {
     galpon: { granja: { propietario_id: 1 } },
     galpon_id: 7,
     sexo: 'macho',
     marca_alimento: 'italcol',
+    // ingreso 20 dias antes de "hoy": el pesaje (fecha=hoy) cae en el dia
+    // 21, coherente con dia_vida:21 y curvaDia21 de abajo.
+    fecha_ingreso: new Date(hoy.getTime() - 20 * 24 * 60 * 60 * 1000),
   };
 
-  const curvaDia21 = { dia: 21, peso_esperado_g: 1035, fcr_objetivo: 1.18 };
-
-  // La fila tiene que ser "de hoy" de verdad -- la parada 2 compara contra
-  // inicioDelDiaEnZonaGranja(), no contra una fecha fija del calendario.
-  const hoy = inicioDelDiaEnZonaGranja();
-  const pesajeSnapshot = { id: 50, fecha: hoy, peso_promedio_g: 900 };
+  // Rango 7-42: rango y punto de estas pruebas salen de la MISMA lectura
+  // (findMany), nunca de dos consultas separadas.
+  const curvaCompleta = [
+    { dia: 7, peso_esperado_g: 211, fcr_objetivo: 1.0 },
+    { dia: 14, peso_esperado_g: 535, fcr_objetivo: 1.1 },
+    { dia: 21, peso_esperado_g: 1035, fcr_objetivo: 1.18 },
+    { dia: 42, peso_esperado_g: 2900, fcr_objetivo: 1.9 },
+  ];
 
   const indicadorPorDebajo = (extra: Record<string, unknown> = {}) => ({
     fecha: hoy,
@@ -554,7 +766,7 @@ describe('IndicadoresService · generarAlertaDesvio', () => {
     prisma.lote.findUnique.mockResolvedValue(lote);
     prisma.indicadorLote.findFirst.mockResolvedValue(indicadorPorDebajo());
     prisma.pesaje.findFirst.mockResolvedValue(pesajeSnapshot);
-    prisma.curvaObjetivo.findFirst.mockResolvedValue(curvaDia21);
+    prisma.curvaObjetivo.findMany.mockResolvedValue(curvaCompleta);
   };
 
   beforeEach(async () => {
@@ -727,6 +939,78 @@ describe('IndicadoresService · generarAlertaDesvio', () => {
     });
   });
 
+  describe('UMBRAL_PESAJE_DIAS=2 (decision de negocio, 2026-09-27): tolerancia operativa de la alerta, no el calendario de pesaje', () => {
+    it('pesaje de HOY (0 dias de antiguedad): genera alerta si cumple las demas condiciones', async () => {
+      ponerPorDebajo();
+      prisma.alerta.findFirst.mockResolvedValue(null);
+      prisma.alerta.create.mockResolvedValue({ id: 1 });
+      configSinUmbral.get.mockReturnValueOnce('2');
+
+      const r = await service.generarAlertaDesvio(1);
+      expect(r.motivo).toBeNull();
+      expect(r.alerta).not.toBeNull();
+    });
+
+    it('pesaje de HACE 2 DIAS (el limite exacto del umbral): todavia genera alerta, no se detiene', async () => {
+      // antiguedadDias=2 no es > 2 (umbral): el limite es inclusive, no se
+      // detiene aqui. La antiguedad se mide contra hoy = fecha de la
+      // granja (inicioDelDiaEnZonaGranja()), no la hora del servidor.
+      const hace2Dias = new Date(hoy.getTime() - 2 * 24 * 60 * 60 * 1000);
+      prisma.lote.findUnique.mockResolvedValue(lote);
+      prisma.indicadorLote.findFirst.mockResolvedValue(
+        indicadorPorDebajo({
+          pesaje_id_snapshot: 80,
+          pesaje_fecha_snapshot: hace2Dias,
+          peso_promedio_g: 900,
+        }),
+      );
+      prisma.pesaje.findFirst.mockResolvedValue({
+        id: 80,
+        fecha: hace2Dias,
+        peso_promedio_g: 900,
+      });
+      // Punto unico en el dia exacto del pesaje: aisla esta prueba del
+      // dia de vida resultante, que no es lo que se quiere probar aqui.
+      prisma.curvaObjetivo.findMany.mockResolvedValue([
+        { dia: 19, peso_esperado_g: 1000, fcr_objetivo: 1.15 },
+      ]);
+      configSinUmbral.get.mockReturnValueOnce('2');
+      prisma.alerta.findFirst.mockResolvedValue(null);
+      prisma.alerta.create.mockResolvedValue({ id: 2 });
+
+      const r = await service.generarAlertaDesvio(1);
+      expect(r.motivo).not.toBe('pesaje_desactualizado');
+      expect(r.motivo).toBeNull();
+      expect(r.alerta).not.toBeNull();
+      expect(prisma.alerta.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('pesaje de HACE 3 DIAS: excede el umbral, se detiene como pesaje_desactualizado', async () => {
+      const hace3Dias = new Date(hoy.getTime() - 3 * 24 * 60 * 60 * 1000);
+      prisma.lote.findUnique.mockResolvedValue(lote);
+      prisma.indicadorLote.findFirst.mockResolvedValue(
+        indicadorPorDebajo({
+          pesaje_id_snapshot: 81,
+          pesaje_fecha_snapshot: hace3Dias,
+          peso_promedio_g: 900,
+        }),
+      );
+      prisma.pesaje.findFirst.mockResolvedValue({
+        id: 81,
+        fecha: hace3Dias,
+        peso_promedio_g: 900,
+      });
+      configSinUmbral.get.mockReturnValueOnce('2');
+
+      const r = await service.generarAlertaDesvio(1);
+      expect(r).toEqual({ alerta: null, motivo: 'pesaje_desactualizado' });
+      expect(prisma.alerta.create).not.toHaveBeenCalled();
+      // se detiene ANTES de llegar a la curva -- no hay con que comparar
+      // un pesaje que ya se dio por desactualizado.
+      expect(prisma.curvaObjetivo.findMany).not.toHaveBeenCalled();
+    });
+  });
+
   it('no genera alerta cuando el lote no va por debajo', async () => {
     prisma.lote.findUnique.mockResolvedValue(lote);
     prisma.indicadorLote.findFirst.mockResolvedValue(
@@ -736,7 +1020,7 @@ describe('IndicadoresService · generarAlertaDesvio', () => {
       ...pesajeSnapshot,
       peso_promedio_g: 1035,
     });
-    prisma.curvaObjetivo.findFirst.mockResolvedValue(curvaDia21);
+    prisma.curvaObjetivo.findMany.mockResolvedValue(curvaCompleta);
     configSinUmbral.get.mockReturnValueOnce('9999');
 
     const r = await service.generarAlertaDesvio(1);
@@ -796,6 +1080,214 @@ describe('IndicadoresService · generarAlertaDesvio', () => {
       origen: 'automatica',
       criticidad: 'media',
     });
+  });
+
+  it('H1: compara contra la curva del dia en que se peso, no dia_vida de hoy -- no alerta con un pesaje viejo pero correcto', async () => {
+    // dia_vida=21 (hoy), pero el pesaje es de hace 7 dias (dia 14) y su peso
+    // (535g) es EXACTO para el dia 14. Si se comparara contra curvaDia21
+    // (1035g, el bug de H1), 535g se veria "por_debajo" y crearia una
+    // alerta falsa. Con el dia correcto (14), no hay desvio.
+    const pesajeDia14Fecha = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
+    prisma.lote.findUnique.mockResolvedValue(lote);
+    prisma.indicadorLote.findFirst.mockResolvedValue(
+      indicadorPorDebajo({
+        peso_promedio_g: 535,
+        pesaje_id_snapshot: 61,
+        pesaje_fecha_snapshot: pesajeDia14Fecha,
+      }),
+    );
+    prisma.pesaje.findFirst.mockResolvedValue({
+      id: 61,
+      fecha: pesajeDia14Fecha,
+      peso_promedio_g: 535,
+    });
+    prisma.curvaObjetivo.findMany.mockResolvedValue(curvaCompleta);
+    configSinUmbral.get.mockReturnValueOnce('9999');
+
+    const r = await service.generarAlertaDesvio(1);
+
+    // El punto usado SI corresponde al dia del pesaje (14): si se hubiera
+    // comparado contra dia_vida (21, 1035g) el desvio seria enorme y el
+    // motivo saldria 'null' con una alerta creada, no 'no_por_debajo'.
+    expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+    expect(r).toEqual({ alerta: null, motivo: 'no_por_debajo' });
+    expect(prisma.alerta.create).not.toHaveBeenCalled();
+  });
+
+  it('un pesaje viejo pero dentro del umbral SI genera alerta, con el dia del pesaje y el desvio en positivo', async () => {
+    // Dia 14, peso 480g contra 535g esperados: -10.28% -> por debajo.
+    // El mensaje debe decir "dia de vida 14" (no dia_vida=21, el de hoy) y
+    // "10.3%" (positivo), no "-10.3%".
+    const pesajeDia14Fecha = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
+    prisma.lote.findUnique.mockResolvedValue(lote);
+    prisma.indicadorLote.findFirst.mockResolvedValue(
+      indicadorPorDebajo({
+        peso_promedio_g: 480,
+        pesaje_id_snapshot: 62,
+        pesaje_fecha_snapshot: pesajeDia14Fecha,
+      }),
+    );
+    prisma.pesaje.findFirst.mockResolvedValue({
+      id: 62,
+      fecha: pesajeDia14Fecha,
+      peso_promedio_g: 480,
+    });
+    prisma.curvaObjetivo.findMany.mockResolvedValue(curvaCompleta);
+    configSinUmbral.get.mockReturnValueOnce('9999');
+    prisma.alerta.findFirst.mockResolvedValue(null);
+    prisma.alerta.create.mockResolvedValue({ id: 5 });
+
+    const r = await service.generarAlertaDesvio(1);
+
+    expect(r.motivo).toBeNull();
+    expect(prisma.alerta.create).toHaveBeenCalledTimes(1);
+    const llamadas = prisma.alerta.create.mock.calls as Array<
+      [{ data: { mensaje: string } }]
+    >;
+    expect(llamadas[0][0].data.mensaje).toBe(
+      'El pesaje del dia de vida 14 quedo 10.3% por debajo de la curva objetivo',
+    );
+  });
+
+  describe('R2: limites de la curva (dia 7 a 42, Italcol/Solla)', () => {
+    // Cada prueba arma su propio lote: fecha_ingreso corrida para que "hoy"
+    // (la fila del indicador siempre es de hoy, Parada 2) caiga justo en
+    // el dia que se quiere probar.
+    const loteConIngresoEnDia = (diaDeHoy: number) => ({
+      galpon: { granja: { propietario_id: 1 } },
+      galpon_id: 7,
+      sexo: 'macho',
+      marca_alimento: 'italcol',
+      fecha_ingreso: new Date(
+        hoy.getTime() - (diaDeHoy - 1) * 24 * 60 * 60 * 1000,
+      ),
+    });
+
+    const prepararPesajeDeHoy = (dia: number) => {
+      prisma.lote.findUnique.mockResolvedValue(loteConIngresoEnDia(dia));
+      prisma.indicadorLote.findFirst.mockResolvedValue(
+        indicadorPorDebajo({
+          pesaje_id_snapshot: 70,
+          pesaje_fecha_snapshot: hoy,
+          peso_promedio_g: 900,
+        }),
+      );
+      prisma.pesaje.findFirst.mockResolvedValue({
+        id: 70,
+        fecha: hoy,
+        peso_promedio_g: 900,
+      });
+      configSinUmbral.get.mockReturnValueOnce('9999');
+    };
+
+    it('dia exactamente en el minimo (7) sigue el camino normal', async () => {
+      prepararPesajeDeHoy(7);
+      // sin desvio: se detiene en no_por_debajo, no en sin_curva_para_dia.
+      // Rango de un solo punto (min=max=7): justo el caso limite.
+      prisma.curvaObjetivo.findMany.mockResolvedValue([
+        { dia: 7, peso_esperado_g: 900, fcr_objetivo: 1.0 },
+      ]);
+
+      const r = await service.generarAlertaDesvio(1);
+      expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+      expect(r.motivo).not.toBe('sin_curva_para_dia');
+    });
+
+    it('dia exactamente en el maximo (42) sigue el camino normal', async () => {
+      prepararPesajeDeHoy(42);
+      prisma.curvaObjetivo.findMany.mockResolvedValue([
+        { dia: 42, peso_esperado_g: 900, fcr_objetivo: 1.9 },
+      ]);
+
+      const r = await service.generarAlertaDesvio(1);
+      expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+      expect(r.motivo).not.toBe('sin_curva_para_dia');
+    });
+
+    it('dia 3 (antes del primer punto): motivo sin_curva_para_dia', async () => {
+      prepararPesajeDeHoy(3);
+      prisma.curvaObjetivo.findMany.mockResolvedValue(curvaCompleta);
+
+      const r = await service.generarAlertaDesvio(1);
+      expect(r).toEqual({ alerta: null, motivo: 'sin_curva_para_dia' });
+      // la lectura SI ocurre -- rango y punto vienen de ella. Lo que no
+      // ocurre es una SEGUNDA consulta para buscar el punto.
+      expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.alerta.create).not.toHaveBeenCalled();
+    });
+
+    it('E9 -- dia 45 (despues del ultimo punto): motivo sin_curva_para_dia, no se extrapola el dia 42', async () => {
+      prepararPesajeDeHoy(45);
+      prisma.curvaObjetivo.findMany.mockResolvedValue(curvaCompleta);
+
+      const r = await service.generarAlertaDesvio(1);
+      expect(r).toEqual({ alerta: null, motivo: 'sin_curva_para_dia' });
+      expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.alerta.create).not.toHaveBeenCalled();
+    });
+
+    it('consistencia: si el punto que certificaba el maximo no esta en la MISMA lectura, el dia que dependia de el deja de estar en rango', async () => {
+      // Mismo argumento que en compararConCurva: con dos consultas por
+      // separado, borrar el punto 42 entre el aggregate y el findFirst
+      // dejaba el rango certificando un dia que el punto ya no cubria, y
+      // el resultado caia de vuelta al dia 21 como si siguiera vigente.
+      prepararPesajeDeHoy(42);
+      prisma.curvaObjetivo.findMany.mockResolvedValue([
+        { dia: 7, peso_esperado_g: 211, fcr_objetivo: 1.0 },
+        { dia: 14, peso_esperado_g: 535, fcr_objetivo: 1.1 },
+        { dia: 21, peso_esperado_g: 1035, fcr_objetivo: 1.18 },
+        // dia 42 ausente en esta lectura -- no debe caer de vuelta al 21.
+      ]);
+
+      const r = await service.generarAlertaDesvio(1);
+      expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+      expect(r).toEqual({ alerta: null, motivo: 'sin_curva_para_dia' });
+    });
+
+    it('el rango solo cuenta puntos CON peso: una fila del dia 45 sin peso no extiende el rango mas alla del dia 42, sin alerta', async () => {
+      // El peso valido llega hasta el dia 42. La fila del dia 45 EXISTE
+      // pero con peso_esperado_g NULL -- no cuenta como limite del rango.
+      // Un pesaje del dia 44 tiene que quedar fuera de rango, no generar
+      // alerta.
+      prepararPesajeDeHoy(44);
+      prisma.curvaObjetivo.findMany.mockResolvedValue([
+        ...curvaCompleta,
+        { dia: 45, peso_esperado_g: null, fcr_objetivo: null },
+      ]);
+
+      const r = await service.generarAlertaDesvio(1);
+      expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+      expect(r).toEqual({ alerta: null, motivo: 'sin_curva_para_dia' });
+      expect(prisma.alerta.create).not.toHaveBeenCalled();
+    });
+
+    it('una fila sin peso DENTRO del rango valido da sin_referencia, sin retroceder a un peso anterior ni crear alerta', async () => {
+      // Dia 21 existe en la curva pero con peso_esperado_g NULL. El rango
+      // (7-42, por los otros puntos) SI cubre el dia 21. No debe
+      // retroceder al dia 14 (535g, el anterior con peso).
+      prepararPesajeDeHoy(21);
+      prisma.curvaObjetivo.findMany.mockResolvedValue([
+        { dia: 7, peso_esperado_g: 211, fcr_objetivo: 1.0 },
+        { dia: 14, peso_esperado_g: 535, fcr_objetivo: 1.1 },
+        { dia: 21, peso_esperado_g: null, fcr_objetivo: null },
+        { dia: 42, peso_esperado_g: 2900, fcr_objetivo: 1.9 },
+      ]);
+
+      const r = await service.generarAlertaDesvio(1);
+      expect(r).toEqual({ alerta: null, motivo: 'sin_referencia' });
+      expect(prisma.alerta.create).not.toHaveBeenCalled();
+    });
+  });
+
+  it('ninguna fila para la marca y sexo del lote: motivo sin_referencia', async () => {
+    ponerPorDebajo();
+    prisma.curvaObjetivo.findMany.mockResolvedValue([]);
+    configSinUmbral.get.mockReturnValueOnce('9999');
+
+    const r = await service.generarAlertaDesvio(1);
+    expect(r).toEqual({ alerta: null, motivo: 'sin_referencia' });
+    expect(prisma.curvaObjetivo.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.alerta.create).not.toHaveBeenCalled();
   });
 
   it('la busqueda de "ya existe" filtra por origen automatica -- no una manual del mismo tipo', async () => {

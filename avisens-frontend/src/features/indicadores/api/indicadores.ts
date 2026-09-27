@@ -41,6 +41,7 @@ export type VeredictoComparacion =
   | 'sin_dato_valido'
   | 'peso_no_disponible'
   | 'sin_referencia'
+  | 'sin_curva_para_dia'
   | 'sin_datos'
   | 'por_debajo'
   | 'por_encima'
