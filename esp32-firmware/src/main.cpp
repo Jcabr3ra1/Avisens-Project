@@ -1,14 +1,3 @@
-// main.cpp — Firmware del nodo ESP32 de Avisens (arquitectura modular v7.0).
-//
-// Adaptado del firmware del compañero: sensores, actuadores, WiFi, watchdog
-// y máquina de estados quedan igual. Se excluye ServicioAPI (apuntaba a un
-// backend distinto: JWT + rutas /sensors, /actuators, /events que no
-// existen aquí, y el backend enviando comandos de actuador, algo que este
-// proyecto decidió NO hacer -- ver docs/proyecto_arquitectura_iot). El
-// envía temperatura/humedad reales contra /ingest (ver ServicioIngesta);
-// el resto de sensores (MQ135, ultrasónico, peso) quedan para una
-// iteración siguiente, uno a la vez.
-
 #include <Arduino.h>
 #include <esp_task_wdt.h>
 #include <freertos/task.h>
@@ -46,12 +35,10 @@ ControlServo controlServo;
 Alimentador alimentador;
 Persiana persiana;
 
-// WiFi (Core 1)
-#if defined(WIFI_SSID) && defined(WIFI_PASSWORD)
-ConexionWiFi conexionWiFi(WIFI_SSID, WIFI_PASSWORD);
-#else
-ConexionWiFi conexionWiFi("prueba", "123456789");
+#if !defined(WIFI_SSID) || !defined(WIFI_PASSWORD)
+#error "Define WIFI_SSID y WIFI_PASSWORD en include/config.h (ver config.example.h) antes de compilar."
 #endif
+ConexionWiFi conexionWiFi(WIFI_SSID, WIFI_PASSWORD);
 
 // ─── Variables de sincronización ─────────────────────────
 unsigned long ultimaLecturaSensores = 0;
@@ -77,24 +64,18 @@ struct HistorialTemperatura
 // Filtro de picos para temperatura
 MovingAverage<float, 10> filtroTemperatura;
 
-// ─── Snapshot de la última lectura DHT, compartido entre núcleos ────────
-// SensorDHT::getUltimaLectura() NO sirve para saber si el intento MÁS
-// RECIENTE fue válido: esa caché solo se actualiza en el camino exitoso
-// (ver SensorDHT.cpp), así que después del primer acierto queda con
-// valida=true para siempre aunque el sensor lleve minutos fallando. Aquí
-// se guarda el resultado de CADA leer() -- válido o no -- protegido por
-// un spinlock porque tareaGalpon() (Core 0, productor) y tareaWiFi()
-// (Core 1, consumidor) corren en núcleos distintos.
 static portMUX_TYPE muxLecturaDht = portMUX_INITIALIZER_UNLOCKED;
 static LecturaDHT snapshotDht = {0.0f, 0.0f, false, 0};
 
-void publicarLecturaDht(const LecturaDHT &lectura) {
+void publicarLecturaDht(const LecturaDHT &lectura)
+{
   portENTER_CRITICAL(&muxLecturaDht);
   snapshotDht = lectura;
   portEXIT_CRITICAL(&muxLecturaDht);
 }
 
-LecturaDHT leerSnapshotDht() {
+LecturaDHT leerSnapshotDht()
+{
   portENTER_CRITICAL(&muxLecturaDht);
   LecturaDHT copia = snapshotDht;
   portEXIT_CRITICAL(&muxLecturaDht);
@@ -102,10 +83,6 @@ LecturaDHT leerSnapshotDht() {
 }
 
 // FUNCIÓN: Registrar falla crítica (local)
-
-// Deja constancia local de una falla crítica. El envío al backend queda
-// pendiente (paso aparte, contra /ingest) -- por ahora solo registra por
-// Serial, igual que el resto del log del sistema.
 void registrarFallaCritica(
     const String &origen,
     const String &mensaje,
@@ -279,16 +256,10 @@ void tareaGalpon(void *pvParameters)
       // ─── Detectar gradiente térmico (ΔT > 10°C en 5s) ──────────────
       if (lecturaDHT.valida)
       {
-        // detectarGradienteTermico ya deja el LOG_WARN si detecta el salto;
-        // el envío de este evento al backend queda para cuando se conecte
-        // el transporte real (ver registrarFallaCritica).
         detectarGradienteTermico(temperatura, ahora);
       }
 
       // ─── Actualizar Actuadores y FSMs Locales ────────────────────
-      // Clima (K1/K2/K3) y agua (K4) se actualizan por separado: un
-      // fallo del DHT no debe congelar ni forzar la bomba, que depende
-      // solo del ultrasónico (ver GestorActuadores::actualizarClima/Agua).
       if (estadoSistema == EstadoSistema::MONITORING)
       {
         gestorActuadores.actualizarClima(
@@ -322,12 +293,21 @@ void tareaGalpon(void *pvParameters)
           LOG_ERROR("Fallos acumulados >= 3 — Transición a ERROR (Variable F)");
         }
       }
-      else if (estadoSistema == EstadoSistema::ERROR)
+      else
       {
-        // Auto-recuperación cuando los sensores vuelven a responder
-        estadoSistema = EstadoSistema::MONITORING;
+        // Los sensores están sanos en este ciclo: el contador deja de
+        // arrastrar episodios ya resueltos. Antes solo se reiniciaba al
+        // salir de ERROR, así que fallos breves y separados en el tiempo
+        // (sin llegar nunca a ERROR) se sumaban entre sí indefinidamente.
+        // El umbral (3) y la propia FSM no cambian.
         fallosAcumulados = 0;
-        Serial.println("\n✓ [FSM Global] Sensores restablecidos: ERROR → MONITORING");
+
+        if (estadoSistema == EstadoSistema::ERROR)
+        {
+          // Auto-recuperación cuando los sensores vuelven a responder
+          estadoSistema = EstadoSistema::MONITORING;
+          Serial.println("\n✓ [FSM Global] Sensores restablecidos: ERROR → MONITORING");
+        }
       }
 
       // ─── Alerta de Tolva ──────────────────────────────────────────
@@ -350,8 +330,6 @@ void tareaGalpon(void *pvParameters)
 }
 
 // Mantiene la conexión WiFi viva en Core 1 y envía cada INTERVALO_ENVIO_MS
-// la última lectura DHT válida contra /ingest -- nunca la caché de
-// SensorDHT (ver comentario del snapshot), sino leerSnapshotDht().
 void tareaWiFi(void *pvParameters)
 {
   Serial.println("[WiFi Task] Iniciada en Core 1");
@@ -380,7 +358,7 @@ void tareaWiFi(void *pvParameters)
       else if (antiguedadSnapshot > UMBRAL_SNAPSHOT_OBSOLETO_MS)
       {
         LOG_WARN("Ingesta: snapshot DHT obsoleto (" + String(antiguedadSnapshot) +
-                  "ms) -- tareaGalpon dejó de refrescarlo, se omite");
+                 "ms) -- tareaGalpon dejó de refrescarlo, se omite");
       }
       else
       {

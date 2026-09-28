@@ -43,6 +43,18 @@ bool enviarLecturaConReintentos(float temperatura, float humedad, const String &
     http.end();
 
     if (codigo < 200 || codigo >= 300) {
+      // 4xx (401/403 token invalido, 404 ruta o dispositivo inexistente,
+      // etc.): es un problema de configuracion/autenticacion, no de red
+      // -- reintentar de inmediato no lo arregla. Se abandona el ciclo
+      // sin gastar los reintentos restantes. Los codigos negativos
+      // (timeout/sin conexion de HTTPClient) y los 5xx siguen
+      // reintentando igual que antes.
+      if (codigo >= 400 && codigo < 500) {
+        LOG_ERROR("Ingesta: error " + String(codigo) +
+                  " del backend (no se reintenta -- revisar DEVICE_TOKEN/BACKEND_URL)");
+        return false;
+      }
+
       Serial.printf("[Ingesta] Fallo intento %d/%d (codigo %d)\n",
                     intento, MAX_REINTENTOS_INGESTA, codigo);
       if (intento < MAX_REINTENTOS_INGESTA) {

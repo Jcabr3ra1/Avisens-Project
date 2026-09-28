@@ -110,12 +110,21 @@ void SensorPeso::reset() {
 // ─── Métodos privados ───────────────────────────────────
 
 /**
- * @brief Lee 24 bits del HX711 (protocolo SPI simplificado).
- * 
+ * @brief Lee 24 bits del HX711 (protocolo estándar, canal A ganancia 128).
+ *
  * Formato:
  *   DT pasa a LOW cuando datos disponibles
- *   Lee 24 bits en flancos de SCK
- *   25º pulso = selecciona próxima ganancia
+ *   Lee 24 bits en flancos de SCK -- el HX711 deja el bit vigente en DOUT
+ *   mientras SCK está en HIGH (se muestrea ahí, no tras bajarlo)
+ *   25º pulso = selecciona próxima ganancia (128, canal A)
+ *
+ * Corrección de auditoría: la lectura de cada bit estaba invertida
+ * (`DT == LOW` en vez de `DT == HIGH`) y el valor de 24 bits no se
+ * extendía de signo -- el HX711 entrega un complemento a dos de 24 bits,
+ * así que sin la extensión toda lectura negativa (habitual cerca del
+ * offset de tara) se leía como un número positivo cercano a 16 millones.
+ * Se corrigen ambos puntos; el resto del protocolo (timeout, 25º pulso,
+ * temporización) no cambia.
  */
 long SensorPeso::leerADC() {
   // Esperar a que datos estén listos (DT = LOW)
@@ -128,7 +137,7 @@ long SensorPeso::leerADC() {
     delayMicroseconds(1);
   }
 
-  long resultado = 0;
+  uint32_t resultado = 0;
 
   // Leer 24 bits (MSB primero)
   for (int i = 0; i < 24; i++) {
@@ -136,7 +145,7 @@ long SensorPeso::leerADC() {
     delayMicroseconds(1);
 
     resultado <<= 1;
-    if (digitalRead(pinDT_) == LOW) {
+    if (digitalRead(pinDT_) == HIGH) {
       resultado |= 1;
     }
 
@@ -150,7 +159,12 @@ long SensorPeso::leerADC() {
   digitalWrite(pinSCK_, LOW);
   delayMicroseconds(1);
 
-  return resultado;
+  // Extensión de signo: complemento a dos de 24 bits -> long de 32 bits.
+  if (resultado & 0x00800000UL) {
+    resultado |= 0xFF000000UL;
+  }
+
+  return static_cast<long>(resultado);
 }
 
 /**
