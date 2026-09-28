@@ -4,10 +4,12 @@ import {
   desvioPesoVigente,
   esDatoVerificado,
   lineaSparkline,
+  mismaRevision,
   pesoActualParaSparkline,
   serieDePesoVerificado,
   textoComparacion,
   textoComparacionFcr,
+  textoFechaPesaje,
 } from './estadoLote'
 import type { DashboardIndicador } from './dashboard'
 
@@ -19,6 +21,8 @@ const indicador = (extra: Partial<DashboardIndicador> = {}): DashboardIndicador 
   epef: 300,
   mortalidadAcumuladaPct: 1,
   estadoCalculo: 'calculado',
+  pesajeFechaSnapshot: '2026-09-20T00:00:00.000Z',
+  revisionCalculo: 1,
   ...extra,
 })
 
@@ -60,6 +64,18 @@ describe('textoComparacionFcr', () => {
 
   it('dice "en la curva" cuando el desvio es exactamente cero', () => {
     expect(textoComparacionFcr(0, 1.62)).toBe('en la curva · meta 1.62')
+  })
+})
+
+describe('textoFechaPesaje', () => {
+  it('sin fecha: no dice nada', () => {
+    expect(textoFechaPesaje(null)).toBeUndefined()
+    expect(textoFechaPesaje(undefined)).toBeUndefined()
+  })
+
+  it('formatea el dia (solo-fecha o con hora) anclado a mediodia local', () => {
+    expect(textoFechaPesaje('2026-09-20')).toBe('al 20 de sept')
+    expect(textoFechaPesaje('2026-09-20T00:00:00.000Z')).toBe('al 20 de sept')
   })
 })
 
@@ -122,12 +138,12 @@ describe('pesoActualParaSparkline', () => {
 })
 
 describe('desvioPesoVigente', () => {
-  it('muestra el desvio cuando la ultima fila es calculada y la comparacion es del mismo dia', () => {
-    expect(desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado')).toBe(-3.2)
+  it('muestra el desvio cuando la ultima fila es calculada, la comparacion es del mismo dia y la misma revision', () => {
+    expect(desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado', 1, 1)).toBe(-3.2)
   })
 
   it('no muestra el desvio cuando la comparacion viene de un dia distinto al mostrado', () => {
-    expect(desvioPesoVigente(-3.2, '2026-09-19T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado')).toBeNull()
+    expect(desvioPesoVigente(-3.2, '2026-09-19T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado', 1, 1)).toBeNull()
   })
 
   it('misma fecha, pero la fila reciente no es un calculo verificado: no muestra el desvio', () => {
@@ -136,19 +152,54 @@ describe('desvioPesoVigente', () => {
     // no garantiza que el estado que se tiene a mano de esa fila siga
     // siendo 'calculado' (p. ej. una recategorizacion entre ambas).
     expect(
-      desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'legado_sin_verificar'),
+      desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'legado_sin_verificar', 1, 1),
     ).toBeNull()
     expect(
-      desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'mortalidad_incoherente'),
+      desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'mortalidad_incoherente', 1, 1),
     ).toBeNull()
     expect(
-      desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', undefined),
+      desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', undefined, 1, 1),
+    ).toBeNull()
+  })
+
+  it('mismo dia, pero un recalculo entre las dos peticiones cambio la revision: no muestra el desvio (intercalado)', () => {
+    // El job recalculo el lote (o alguien corrigio un pesaje) justo entre
+    // obtenerIndicadoresDeLote y compararConCurva: misma fecha, pero
+    // "reciente" ya quedo en la revision 3 mientras "comparacion" todavia
+    // trae la 2 -- emparejarían un peso/fcr de una version con un desvio
+    // de otra.
+    expect(
+      desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado', 2, 3),
+    ).toBeNull()
+  })
+
+  it('sin revision en cualquiera de los dos lados: no muestra el desvio', () => {
+    expect(
+      desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado', null, 1),
+    ).toBeNull()
+    expect(
+      desvioPesoVigente(-3.2, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado', 1, undefined),
     ).toBeNull()
   })
 
   it('sin desvio numerico, aunque la comparacion sea vigente: null', () => {
-    expect(desvioPesoVigente(null, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado')).toBeNull()
-    expect(desvioPesoVigente(undefined, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado')).toBeNull()
+    expect(desvioPesoVigente(null, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado', 1, 1)).toBeNull()
+    expect(desvioPesoVigente(undefined, '2026-09-20T00:00:00.000Z', '2026-09-20T00:00:00.000Z', 'calculado', 1, 1)).toBeNull()
+  })
+})
+
+describe('mismaRevision', () => {
+  it('es la misma revision cuando ambos numeros coinciden', () => {
+    expect(mismaRevision(2, 2)).toBe(true)
+  })
+
+  it('no es la misma revision cuando difieren (recalculo entre dos peticiones)', () => {
+    expect(mismaRevision(2, 3)).toBe(false)
+  })
+
+  it('sin revision en cualquiera de los dos lados: no es la misma', () => {
+    expect(mismaRevision(null, 1)).toBe(false)
+    expect(mismaRevision(1, undefined)).toBe(false)
   })
 })
 

@@ -146,22 +146,55 @@ export class IndicadoresService {
     const avesVivas = clasificacion.avesVivasAlCorte;
     const mortalidadPct =
       (clasificacion.muertesAlCorte / lote.cantidad_inicial) * 100;
-
-    let fcr: number | null = null;
-    if (pesoActualG !== null && avesVivas > 0) {
-      const gananciaKg = ((pesoActualG - PESO_INICIAL_G) / 1000) * avesVivas;
-      if (gananciaKg > 0) {
-        fcr = alimentoKg / gananciaKg;
-      }
-    }
-    let epef: number | null = null;
-    if (fcr !== null && diaVida > 0 && pesoActualG !== null) {
-      const viabilidadPct = 100 - mortalidadPct;
-      const pesoKg = pesoActualG / 1000;
-      epef = ((viabilidadPct * pesoKg) / (diaVida * fcr)) * 100;
-    }
     const consumoAcumuladoG =
       avesVivas > 0 ? (alimentoKg * 1000) / avesVivas : null;
+
+    // FCR y EPEF se anclan en la fecha del pesaje, no en hoy: el alimento y
+    // las aves vivas de HOY (arriba) siguen siendo el indicador de consumo
+    // y de mortalidad -- son cifras independientes, no cambian. Sin este
+    // corte, el alimento acumulado hasta hoy se divide por un peso de
+    // hace dias (ver docs/diagnostico-fcr-ventana-alimento.md).
+    let fcr: number | null = null;
+    let epef: number | null = null;
+    if (pesoActualG !== null) {
+      const diaVidaAlPesaje = diaDeVidaDeFecha(
+        lote.fecha_ingreso,
+        pesajeFechaSnapshot!,
+      );
+      const alimentoAlPesaje = await this.prisma.consumoDiario.aggregate({
+        where: { lote_id: loteId, fecha: { lte: pesajeFechaSnapshot! } },
+        _sum: { alimento_kg: true },
+      });
+      const alimentoAlPesajeKg = alimentoAlPesaje._sum.alimento_kg ?? 0;
+
+      // NO se vuelve a llamar clasificarMortalidad() con un diaCorte mas
+      // atras: esa funcion trata "dia > diaCorte" como un registro
+      // invalido (piensa que diaCorte es siempre hoy), y una muerte
+      // registrada DESPUES del pesaje pero ANTES de hoy es normal, no un
+      // error. clasificacion.snapshot ya paso esa validacion contra hoy;
+      // sumar su prefijo hasta diaVidaAlPesaje es seguro y monotono.
+      const muertesAlPesaje = clasificacion.snapshot
+        .filter((entrada) => entrada.dia <= diaVidaAlPesaje)
+        .reduce((total, entrada) => total + entrada.muertes, 0);
+      const avesVivasAlPesaje = lote.cantidad_inicial - muertesAlPesaje;
+
+      // Peso vivo total, sin restar nada -- coincide con la curva Italcol
+      // y con el EPEF de abajo, que ya usa peso total, no ganancia.
+      if (avesVivasAlPesaje > 0) {
+        const pesoTotalKg = (pesoActualG / 1000) * avesVivasAlPesaje;
+        if (pesoTotalKg > 0) {
+          fcr = alimentoAlPesajeKg / pesoTotalKg;
+        }
+      }
+      if (fcr !== null && diaVidaAlPesaje > 0) {
+        const mortalidadPctAlPesaje =
+          (muertesAlPesaje / lote.cantidad_inicial) * 100;
+        const viabilidadPctAlPesaje = 100 - mortalidadPctAlPesaje;
+        const pesoKg = pesoActualG / 1000;
+        epef =
+          ((viabilidadPctAlPesaje * pesoKg) / (diaVidaAlPesaje * fcr)) * 100;
+      }
+    }
 
     const datosCalculado = {
       ...datosComunes,
@@ -226,6 +259,8 @@ export class IndicadoresService {
         estado_actual: masReciente.estado_calculo,
         fecha_estado_actual: masReciente.fecha,
         fecha_del_dato_usado: null,
+        fecha_pesaje_usado: null,
+        revision_calculo: null,
         dia_vida: null,
         veredicto: 'sin_dato_valido' as const,
         mensaje: 'No hay un indicador calculado todavia para comparar',
@@ -239,6 +274,14 @@ export class IndicadoresService {
       fecha_estado_actual: masReciente.fecha,
       fecha_del_dato_usado: indicador.fecha,
       dia_vida: indicador.dia_vida,
+      // Fecha del pesaje que usan fcr/epef (contrato "al corte del
+      // pesaje") -- no es fecha_del_dato_usado, que es el dia del
+      // indicador (hoy). Null cuando no hay pesaje disponible.
+      fecha_pesaje_usado: indicador.pesaje_fecha_snapshot,
+      // Version exacta de la fila usada -- comparacionVigente solo mira
+      // la fecha, y dos peticiones independientes pueden ver revisiones
+      // distintas del MISMO dia si hubo un recalculo entre una y otra.
+      revision_calculo: indicador.revision_calculo,
     };
 
     if (indicador.estado_peso !== 'disponible') {

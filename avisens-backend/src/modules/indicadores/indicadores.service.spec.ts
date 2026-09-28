@@ -80,7 +80,17 @@ describe('IndicadoresService · calcularParaLote', () => {
     expect(guardado.estado_calculo).toBe('calculado');
     expect(guardado.estado_peso).toBe('disponible');
     expect(guardado.pesaje_id_snapshot).toBe(5);
-    expect(guardado.fcr as number).toBeCloseTo(1.24, 1);
+    // 1150 / (1000g/1000 * 970 aves vivas) = 1.185567... -- sin restar
+    // PESO_INICIAL_G, coincide con la curva Italcol
+    // (docs/hito-fcr-epef-corte-pesaje.md). Precision 3 (no 1): a
+    // precision 1 tanto esta formula como la vieja (restando 42g, que da
+    // 1150/929.26=1.237577) caen dentro del margen de 1.19 -- no
+    // discriminaba nada.
+    expect(guardado.fcr as number).toBeCloseTo(1.1856, 3);
+    // Control negativo: si alguien reintrodujera la resta de
+    // PESO_INICIAL_G, este valor (1150/((1000-42)/1000*970)) seria el
+    // resultado -- y NO debe pasar.
+    expect(guardado.fcr as number).not.toBeCloseTo(1.2376, 3);
     expect(guardado.mortalidad_acumulada_pct as number).toBeCloseTo(3, 1);
     expect(guardado.peso_promedio_g).toBe(1000);
   });
@@ -244,6 +254,103 @@ describe('IndicadoresService · calcularParaLote', () => {
       expect(guardado.estado_peso).toBe('disponible');
       expect(guardado.pesaje_id_snapshot).toBe(5);
       expect(guardado.peso_promedio_g).toBeNull();
+    });
+  });
+
+  describe('FCR y EPEF al corte del pesaje', () => {
+    it('fcr/epef usan SOLO el alimento y las aves vivas hasta el pesaje -- consumo_acumulado_g y mortalidad_acumulada_pct siguen con los de hoy', async () => {
+      const fechaIngreso = hace(30);
+      const fechaPesaje = hace(9); // dia 22
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        fecha_ingreso: fechaIngreso,
+        cantidad_inicial: 1000,
+        sexo: 'macho',
+      });
+      prisma.pesaje.findFirst.mockResolvedValue({
+        id: 7,
+        fecha: fechaPesaje,
+        peso_promedio_g: 1000,
+      });
+      // Primera llamada (sin filtro, "hoy"): 1500kg. Segunda llamada
+      // (fecha <= pesaje): 1000kg -- deben quedar separadas.
+      prisma.consumoDiario.aggregate
+        .mockResolvedValueOnce({ _sum: { alimento_kg: 1500 } })
+        .mockResolvedValueOnce({ _sum: { alimento_kg: 1000 } });
+      // Una muerte DESPUES del pesaje (dia 26) pero antes de hoy: cuenta
+      // para mortalidad/consumo de hoy, NO para aves vivas al pesaje --
+      // es una muerte real, no un dato invalido.
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: hace(5), cantidad_aves: 100 },
+      ]);
+
+      await service.calcularParaLote(1);
+
+      const guardado = guardadoDe(prisma.indicadorLote.upsert);
+      // fcr = 1000kg / (1000g/1000 * 1000 aves vivas al pesaje) = 1.0
+      expect(guardado.fcr as number).toBeCloseTo(1.0, 5);
+      // consumo_acumulado_g = 1500kg*1000 / 900 aves vivas HOY = 1666.67
+      expect(guardado.consumo_acumulado_g as number).toBeCloseTo(1666.67, 1);
+      // mortalidad de HOY (900/1000 vivas -> 10%), no la del pesaje (0%)
+      expect(guardado.mortalidad_acumulada_pct as number).toBeCloseTo(10, 5);
+      // epef = (100 * 1.0) / (22 * 1.0) * 100
+      expect(guardado.epef as number).toBeCloseTo((100 / 22) * 100, 1);
+
+      const llamadas = prisma.consumoDiario.aggregate.mock.calls as Array<
+        [{ where: Record<string, unknown> }]
+      >;
+      expect(llamadas).toHaveLength(2);
+      expect(llamadas[0][0].where).toEqual({ lote_id: 1 });
+      expect(llamadas[1][0].where).toEqual({
+        lote_id: 1,
+        fecha: { lte: fechaPesaje },
+      });
+    });
+
+    it('formula sin restar PESO_INICIAL_G: coincide con la curva Italcol (dia 21 macho)', async () => {
+      // consumo 1218g/ave, peso 1035g/ave -> fcr_objetivo publicado 1.18.
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        fecha_ingreso: hace(21),
+        cantidad_inicial: 1000,
+        sexo: 'macho',
+      });
+      prisma.pesaje.findFirst.mockResolvedValue({
+        id: 8,
+        fecha: hace(1),
+        peso_promedio_g: 1035,
+      });
+      prisma.consumoDiario.aggregate
+        .mockResolvedValueOnce({ _sum: { alimento_kg: 1218 } })
+        .mockResolvedValueOnce({ _sum: { alimento_kg: 1218 } });
+      prisma.registroMortalidad.findMany.mockResolvedValue([]);
+
+      await service.calcularParaLote(1);
+
+      const guardado = guardadoDe(prisma.indicadorLote.upsert);
+      // 1218/1035 = 1.176812... A precision 1 (margen 0.05), el valor de
+      // la formula vieja (1218/993 = 1.226586) tambien queda "cerca" de
+      // 1.18 -- no discriminaba nada. Precision 3 (margen 0.0005) si.
+      expect(guardado.fcr as number).toBeCloseTo(1.1768, 3);
+      // Control negativo: el resultado que daria restando PESO_INICIAL_G.
+      expect(guardado.fcr as number).not.toBeCloseTo(1.2266, 3);
+    });
+
+    it('sin ningun pesaje: no consulta un segundo alimento acotado', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        fecha_ingreso: hace(10),
+        cantidad_inicial: 1000,
+        sexo: 'macho',
+      });
+      prisma.pesaje.findFirst.mockResolvedValue(null);
+      prisma.consumoDiario.aggregate.mockResolvedValue({
+        _sum: { alimento_kg: 500 },
+      });
+
+      await service.calcularParaLote(1);
+
+      expect(prisma.consumoDiario.aggregate).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -495,6 +602,9 @@ describe('IndicadoresService · compararConCurva', () => {
     // dia_vida en la respuesta conserva su significado anterior: el dia
     // del indicador (hoy), no el dia del pesaje usado para la curva.
     expect(r.dia_vida).toBe(21);
+    // fecha_pesaje_usado es la fecha real del pesaje (dia 14) -- distinta
+    // de fecha_del_dato_usado, que es el dia del indicador (hoy).
+    expect(r.fecha_pesaje_usado).toEqual(new Date('2026-09-13T00:00:00.000Z'));
     expect(r.veredicto).toBe('en_objetivo');
     if (r.veredicto !== 'en_objetivo') throw new Error('unreachable');
     // El punto usado SI corresponde al dia del pesaje (14), no a dia_vida

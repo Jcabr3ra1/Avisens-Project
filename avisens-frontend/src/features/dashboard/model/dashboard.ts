@@ -44,6 +44,9 @@ export interface DashboardIndicador {
   epef: number | null
   mortalidadAcumuladaPct: number | null
   estadoCalculo: EstadoCalculoIndicador
+  // Fecha del pesaje que usan fcr/epef (contrato "al corte del pesaje").
+  pesajeFechaSnapshot: string | null
+  revisionCalculo: number
 }
 
 export interface DashboardFuentes {
