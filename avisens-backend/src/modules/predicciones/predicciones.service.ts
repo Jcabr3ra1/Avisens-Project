@@ -20,8 +20,8 @@ const MS_POR_DIA = 1000 * 60 * 60 * 24;
 // default que cada uno tenia por separado en avisens-ml/main.py -- antes
 // nadie lo enviaba, asi que los tres dependian de que sus defaults de
 // Python coincidieran por casualidad. Cambiar este numero (o derivarlo
-// de dias_al_objetivo) es una decision de negocio aparte, sin decidir
-// todavia -- ver docs/auditoria-fcr-proyectado-predicciones.md.
+// de dias_al_objetivo, hoy calculado por el ML y descartado) es una
+// decision de negocio aparte, sin decidir todavia -- ver PR #292.
 const DIA_FAENA_PROYECCION = 42;
 
 const PREDICCION_SELECT = {
