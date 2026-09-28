@@ -375,7 +375,13 @@ describe('PrediccionesService', () => {
 
     const r = await service.predecir(1, admin);
 
-    expect(r.fcr_proyectado).toBeCloseTo(1.3, 2);
+    // 4550.75 / (3661/1000 * 965 aves vivas) = 1.29 -- sin restar
+    // PESO_INICIAL_G, misma convencion que indicadores.service.ts desde
+    // el PR #291.
+    expect(r.fcr_proyectado).toBeCloseTo(1.29, 2);
+    // Control negativo: el resultado que daria restando PESO_INICIAL_G
+    // (4550.75 / ((3661-42)/1000 * 965) = 1.30).
+    expect(r.fcr_proyectado).not.toBeCloseTo(1.3, 2);
   });
 
   it('deja el FCR en null cuando no hay consumo proyectado', async () => {
@@ -401,10 +407,12 @@ describe('PrediccionesService', () => {
       { fecha: new Date('2026-07-22'), alimento_kg: 610 },
     ]);
     global.fetch = jest.fn((url: string) => {
+      // peso 0: sin restar PESO_INICIAL_G, ya no hay ningun peso positivo
+      // que produzca una ganancia <= 0 salvo el propio cero.
       const body = url.includes('predecir-consumo')
         ? { consumo_proyectado_kg: 4550.75, dia_faena: 42 }
         : {
-            peso_proyectado_faena_g: 40,
+            peso_proyectado_faena_g: 0,
             dia_faena: 42,
             dias_al_objetivo: null,
             peso_objetivo_g: 2500,
@@ -418,6 +426,122 @@ describe('PrediccionesService', () => {
     const r = await service.predecir(1, admin);
     expect(r.fcr_proyectado).toBeNull();
   });
+
+  describe('correspondencia de dia_faena entre las tres llamadas ML', () => {
+    const tresConsumos = [
+      { fecha: new Date('2026-07-08'), alimento_kg: 165 },
+      { fecha: new Date('2026-07-15'), alimento_kg: 355 },
+      { fecha: new Date('2026-07-22'), alimento_kg: 610 },
+    ];
+    const tresMortalidades = [
+      { fecha: new Date('2026-07-08'), cantidad_aves: 10 },
+      { fecha: new Date('2026-07-15'), cantidad_aves: 5 },
+      { fecha: new Date('2026-07-22'), cantidad_aves: 5 },
+    ];
+
+    it('pide el mismo dia_faena a las tres llamadas ML', async () => {
+      prisma.consumoDiario.findMany.mockResolvedValue(tresConsumos);
+      prisma.registroMortalidad.findMany.mockResolvedValue(tresMortalidades);
+      const fetchMock = jest.fn((url: string) => {
+        const body = url.includes('predecir-consumo')
+          ? { consumo_proyectado_kg: 4550.75, dia_faena: 42 }
+          : url.includes('predecir-mortalidad')
+            ? { mortalidad_proyectada_pct: 3.5, dia_faena: 42 }
+            : {
+                peso_proyectado_faena_g: 3661,
+                dia_faena: 42,
+                dias_al_objetivo: 35,
+                peso_objetivo_g: 2500,
+              };
+        return Promise.resolve({
+          ok: true,
+          json: jest.fn().mockResolvedValue(body),
+        });
+      });
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      await service.predecir(1, admin);
+
+      const calls = fetchMock.mock.calls as unknown as Array<
+        [string, { body: string }]
+      >;
+      const diasFaenaEnviados = calls.map(
+        ([, init]) => (JSON.parse(init.body) as { dia_faena: number }).dia_faena,
+      );
+      expect(diasFaenaEnviados).toEqual([42, 42, 42]);
+    });
+
+    it('el modelo de peso devuelve un dia_faena discordante: detiene con error, no sigue con ese peso', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          peso_proyectado_faena_g: 3661,
+          dia_faena: 45, // se pidio 42 (DIA_FAENA_PROYECCION)
+          dias_al_objetivo: 35,
+          peso_objetivo_g: 2500,
+        }),
+      });
+
+      await expect(service.predecir(1, admin)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('la mortalidad proyectada devuelve un dia_faena discordante: se descarta esa magnitud, no rompe la prediccion', async () => {
+      prisma.consumoDiario.findMany.mockResolvedValue(tresConsumos);
+      prisma.registroMortalidad.findMany.mockResolvedValue(tresMortalidades);
+      global.fetch = jest.fn((url: string) => {
+        const body = url.includes('predecir-consumo')
+          ? { consumo_proyectado_kg: 4550.75, dia_faena: 42 }
+          : url.includes('predecir-mortalidad')
+            ? { mortalidad_proyectada_pct: 3.5, dia_faena: 40 } // discordante: se pidio 42
+            : {
+                peso_proyectado_faena_g: 3661,
+                dia_faena: 42,
+                dias_al_objetivo: 35,
+                peso_objetivo_g: 2500,
+              };
+        return Promise.resolve({
+          ok: true,
+          json: jest.fn().mockResolvedValue(body),
+        });
+      }) as unknown as typeof fetch;
+
+      const r = await service.predecir(1, admin);
+
+      // No se combina el 3.5% del dia 40 con el peso del dia 42.
+      expect(r.mortalidad_proyectada_pct).toBeNull();
+      // El resto de la prediccion sigue -- fcr cae al mismo supuesto que
+      // ya usa cuando no hay mortalidad en absoluto (0% de mortalidad).
+      expect(r.fcr_proyectado).not.toBeNull();
+    });
+
+    it('el consumo proyectado devuelve un dia_faena discordante: se descarta esa magnitud y el fcr queda en null', async () => {
+      prisma.consumoDiario.findMany.mockResolvedValue(tresConsumos);
+      global.fetch = jest.fn((url: string) => {
+        const body = url.includes('predecir-consumo')
+          ? { consumo_proyectado_kg: 4550.75, dia_faena: 38 } // discordante: se pidio 42
+          : {
+              peso_proyectado_faena_g: 3661,
+              dia_faena: 42,
+              dias_al_objetivo: 35,
+              peso_objetivo_g: 2500,
+            };
+        return Promise.resolve({
+          ok: true,
+          json: jest.fn().mockResolvedValue(body),
+        });
+      }) as unknown as typeof fetch;
+
+      const r = await service.predecir(1, admin);
+
+      expect(r.consumo_proyectado_kg).toBeNull();
+      // calcularFcrProyectado() ya devuelve null sin consumo -- no se
+      // combina un consumo de otro dia con el peso del dia 42.
+      expect(r.fcr_proyectado).toBeNull();
+    });
+  });
+
   const curvaFaena = {
     dia: 42,
     marca: 'italcol',

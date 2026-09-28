@@ -8,7 +8,6 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Solicitante } from '../../common/auth/acceso';
 import { verificarAccesoLote } from '../../common/auth/alcance';
-import { PESO_INICIAL_G } from '../indicadores/indicadores.service';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
 import { ConfigService } from '@nestjs/config';
@@ -16,6 +15,14 @@ import { ConfigService } from '@nestjs/config';
 const UMBRAL_DESVIO_PCT = 5;
 const UMBRAL_DESVIO_FCR = 0.05;
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
+
+// Dia de faena que se le pide a los tres modelos ML. Coincide con el
+// default que cada uno tenia por separado en avisens-ml/main.py -- antes
+// nadie lo enviaba, asi que los tres dependian de que sus defaults de
+// Python coincidieran por casualidad. Cambiar este numero (o derivarlo
+// de dias_al_objetivo, hoy calculado por el ML y descartado) es una
+// decision de negocio aparte, sin decidir todavia -- ver PR #292.
+const DIA_FAENA_PROYECCION = 42;
 
 const PREDICCION_SELECT = {
   id: true,
@@ -142,6 +149,7 @@ export class PrediccionesService {
 
     const respuesta = await this.llamarMl('/predecir', {
       pesajes: pesajesParaMl,
+      dia_faena: DIA_FAENA_PROYECCION,
     });
 
     if (!respuesta?.ok) {
@@ -155,13 +163,22 @@ export class PrediccionesService {
       );
     }
     const prediccion = cuerpoPrediccion;
+    if (prediccion.dia_faena !== DIA_FAENA_PROYECCION) {
+      this.logger.warn(
+        `El modelo de peso devolvio dia_faena=${prediccion.dia_faena}, se pidio ${DIA_FAENA_PROYECCION}`,
+      );
+      throw new BadRequestException(
+        'El servicio de predicción devolvió un día de faena inconsistente',
+      );
+    }
     const mortalidad = await this.mortalidadProyectada(
       loteId,
       inicio,
       lote.cantidad_inicial,
+      prediccion.dia_faena,
     );
 
-    const consumo = await this.consumoProyectado(loteId, inicio);
+    const consumo = await this.consumoProyectado(loteId, inicio, prediccion.dia_faena);
 
     const fcr = this.calcularFcrProyectado(
       prediccion.peso_proyectado_faena_g,
@@ -356,6 +373,7 @@ export class PrediccionesService {
     loteId: number,
     inicio: number,
     cantidadInicial: number,
+    diaFaena: number,
   ) {
     const registros = await this.prisma.registroMortalidad.findMany({
       where: { lote_id: loteId },
@@ -380,6 +398,7 @@ export class PrediccionesService {
 
     const respuesta = await this.llamarMl('/predecir-mortalidad', {
       mortalidades: mortalidadesParaMl,
+      dia_faena: diaFaena,
     });
     if (!respuesta?.ok) return null;
 
@@ -388,9 +407,15 @@ export class PrediccionesService {
       this.logger.warn('Respuesta inválida del modelo de mortalidad');
       return null;
     }
+    if (cuerpo.dia_faena !== diaFaena) {
+      this.logger.warn(
+        `Mortalidad proyectada devolvio dia_faena=${cuerpo.dia_faena}, se pidio ${diaFaena} -- se descarta para no combinar horizontes distintos`,
+      );
+      return null;
+    }
     return cuerpo;
   }
-  private async consumoProyectado(loteId: number, inicio: number) {
+  private async consumoProyectado(loteId: number, inicio: number, diaFaena: number) {
     const registros = await this.prisma.consumoDiario.findMany({
       where: { lote_id: loteId },
       orderBy: { fecha: 'asc' },
@@ -414,12 +439,19 @@ export class PrediccionesService {
 
     const respuesta = await this.llamarMl('/predecir-consumo', {
       consumos: consumosParaMl,
+      dia_faena: diaFaena,
     });
     if (!respuesta?.ok) return null;
 
     const cuerpo = await this.leerJson(respuesta);
     if (!this.esRespuestaConsumo(cuerpo)) {
       this.logger.warn('Respuesta inválida del modelo de consumo');
+      return null;
+    }
+    if (cuerpo.dia_faena !== diaFaena) {
+      this.logger.warn(
+        `Consumo proyectado devolvio dia_faena=${cuerpo.dia_faena}, se pidio ${diaFaena} -- se descarta para no combinar horizontes distintos`,
+      );
       return null;
     }
     return cuerpo;
@@ -434,7 +466,7 @@ export class PrediccionesService {
 
     const avesVivas =
       cantidadInicial * (1 - (mortalidadProyectadaPct ?? 0) / 100);
-    const gananciaKg = ((pesoProyectadoG - PESO_INICIAL_G) / 1000) * avesVivas;
+    const gananciaKg = (pesoProyectadoG / 1000) * avesVivas;
 
     if (gananciaKg <= 0) return null;
 
