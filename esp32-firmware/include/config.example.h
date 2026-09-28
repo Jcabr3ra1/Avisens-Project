@@ -16,9 +16,12 @@
 // backend. `codigo_topic` es el prefijo único de este nodo (p. ej. "galpon1").
 #define DEVICE_CODIGO_TOPIC "galpon1"
 
-// ── Backend (pendiente: el envío real contra /ingest queda como paso aparte,
-// no lo hace todavía main.cpp) ───────────────────────────────────────────────
-// Opción HTTP: URL del endpoint de ingesta + token del dispositivo.
+// ── Backend ─────────────────────────────────────────────────────────────────
+// Opción HTTP (la que usa ServicioIngesta): URL COMPLETA del endpoint de
+// ingesta, con la IP LAN del equipo que corre el backend. Nunca `localhost`:
+// desde el ESP32, localhost es el propio ESP32.
+// DEVICE_TOKEN: el que devuelve el backend al registrar el dispositivo
+// (POST /v1/dispositivos) o al regenerarlo (POST /v1/dispositivos/:id/token).
 #define BACKEND_URL   "http://192.168.1.100:3000/ingest"
 #define DEVICE_TOKEN  "PON_AQUI_EL_TOKEN_DEL_DISPOSITIVO"
 // Opción MQTT: broker Mosquitto.
@@ -61,6 +64,8 @@
 #define SERVO_NEUTRO 93
 #define SERVO_DURACION_GIRO 300
 #define SERVO_TIEMPO_ABIERTA 2000
+#define ANGULO_CERRADA 0
+#define ANGULO_ABIERTA 90
 
 // ─── HX711 (Celda de Carga) ──────────────────────────────
 #define HX711_DT 15                  // DATA pin (GPIO15)

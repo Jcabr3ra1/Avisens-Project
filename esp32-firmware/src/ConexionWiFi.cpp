@@ -34,6 +34,9 @@ void ConexionWiFi::actualizar()
       conectado_ = true;
       Serial.print("✓ WiFi conectado. IP: ");
       Serial.println(WiFi.localIP());
+      // La MAC es la que se registra en el backend (dispositivos.mac_address).
+      Serial.print("  MAC: ");
+      Serial.println(WiFi.macAddress());
     }
   }
   else
