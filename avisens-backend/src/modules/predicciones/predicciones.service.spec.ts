@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { PrediccionesService } from './predicciones.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ROLES } from '../../common/auth/roles';
@@ -157,7 +161,7 @@ describe('PrediccionesService', () => {
     const body = JSON.parse(calls[0][1].body) as {
       pesajes: Array<{ dia: number; peso: number }>;
     };
-    expect(body.pesajes[0]).toEqual({ dia: 7, peso: 190 });
+    expect(body.pesajes[0]).toEqual({ dia: 8, peso: 190 });
   });
 
   it('lanza BadRequest cuando el servicio ML responde con error', async () => {
@@ -204,9 +208,9 @@ describe('PrediccionesService', () => {
       pesajes: Array<{ dia: number; peso: number }>;
     };
     expect(body.pesajes).toEqual([
-      { dia: 7, peso: 180 },
-      { dia: 14, peso: 500 },
-      { dia: 21, peso: 1000 },
+      { dia: 8, peso: 180 },
+      { dia: 15, peso: 500 },
+      { dia: 22, peso: 1000 },
     ]);
   });
 
@@ -319,9 +323,9 @@ describe('PrediccionesService', () => {
       consumos: Array<{ dia: number; consumo_acum_kg: number }>;
     };
     expect(body.consumos).toEqual([
-      { dia: 7, consumo_acum_kg: 165 },
-      { dia: 14, consumo_acum_kg: 520 },
-      { dia: 21, consumo_acum_kg: 1130 },
+      { dia: 8, consumo_acum_kg: 165 },
+      { dia: 15, consumo_acum_kg: 520 },
+      { dia: 22, consumo_acum_kg: 1130 },
     ]);
   });
 
@@ -539,6 +543,208 @@ describe('PrediccionesService', () => {
       // calcularFcrProyectado() ya devuelve null sin consumo -- no se
       // combina un consumo de otro dia con el peso del dia 42.
       expect(r.fcr_proyectado).toBeNull();
+    });
+  });
+
+  describe('T2: horizonte de proyeccion vencido y fechas anteriores al ingreso', () => {
+    // fecha_ingreso es 2026-07-01 (dia 1). fechaDeVida(ingreso, dia) cae en:
+    // dia 39 -> 2026-08-08, dia 40 -> 08-09, dia 41 -> 08-10,
+    // dia 42 -> 08-11, dia 43 -> 08-12 (DIA_FAENA_PROYECCION = 42).
+    it('peso vencido (ultimo pesaje >= dia_faena): 422 con codigo horizonte_vencido, no llama al ML, no persiste nada', async () => {
+      prisma.pesaje.findMany.mockResolvedValue([
+        { fecha: new Date('2026-08-10'), peso_promedio_g: 3000 },
+        { fecha: new Date('2026-08-11'), peso_promedio_g: 3100 },
+        { fecha: new Date('2026-08-12'), peso_promedio_g: 3200 },
+      ]);
+      const fetchMock = jest.fn();
+      global.fetch = fetchMock;
+
+      let error: unknown;
+      try {
+        await service.predecir(1, admin, true);
+      } catch (e) {
+        error = e;
+      }
+
+      expect(error).toBeInstanceOf(UnprocessableEntityException);
+      const respuesta = (error as UnprocessableEntityException).getResponse();
+      expect(respuesta).toMatchObject({
+        codigo: 'horizonte_vencido',
+        dia_faena: 42,
+        ultimo_dia_observado: 43,
+      });
+      expect((respuesta as { message: string }).message).toMatch(/43/);
+      expect((respuesta as { message: string }).message).toMatch(/42/);
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(prisma.prediccion.createMany).not.toHaveBeenCalled();
+    });
+
+    it('borde: el ultimo pesaje en dia_faena - 1 si proyecta', async () => {
+      prisma.pesaje.findMany.mockResolvedValue([
+        { fecha: new Date('2026-08-08'), peso_promedio_g: 2900 },
+        { fecha: new Date('2026-08-09'), peso_promedio_g: 2950 },
+        { fecha: new Date('2026-08-10'), peso_promedio_g: 3000 },
+      ]);
+      mlResponde();
+
+      await expect(service.predecir(1, admin)).resolves.toMatchObject({
+        peso_proyectado_faena_g: respuestaMl.peso_proyectado_faena_g,
+      });
+    });
+
+    it('solo la mortalidad vencida: 200 con mortalidad_proyectada_pct null, omisiones, y el FCR conserva el supuesto de 0% de mortalidad', async () => {
+      sembrarSerieCompleta();
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-08-10'), cantidad_aves: 5 },
+        { fecha: new Date('2026-08-11'), cantidad_aves: 3 },
+        { fecha: new Date('2026-08-12'), cantidad_aves: 2 },
+      ]);
+      const fetchMock = mockMlCompleto();
+      global.fetch = fetchMock;
+
+      const r = await service.predecir(1, admin);
+
+      expect(r.mortalidad_proyectada_pct).toBeNull();
+      expect(r.omisiones).toEqual([
+        {
+          magnitud: 'mortalidad',
+          motivo: 'horizonte_vencido',
+          ultimo_dia_observado: 43,
+        },
+      ]);
+      // El consumo si se pudo proyectar, asi que el FCR sigue el supuesto
+      // preexistente de 0% de mortalidad -- no queda en null.
+      expect(r.fcr_proyectado).not.toBeNull();
+
+      const llamadas = (fetchMock as unknown as jest.Mock).mock
+        .calls as Array<[string]>;
+      expect(
+        llamadas.some(([url]) => url.includes('predecir-mortalidad')),
+      ).toBe(false);
+    });
+
+    it('solo el consumo vencido: 200 con consumo_proyectado_kg null, FCR en null, y omisiones', async () => {
+      sembrarSerieCompleta();
+      prisma.consumoDiario.findMany.mockResolvedValue([
+        { fecha: new Date('2026-08-10'), alimento_kg: 3900 },
+        { fecha: new Date('2026-08-11'), alimento_kg: 3950 },
+        { fecha: new Date('2026-08-12'), alimento_kg: 4000 },
+      ]);
+      const fetchMock = mockMlCompleto();
+      global.fetch = fetchMock;
+
+      const r = await service.predecir(1, admin);
+
+      expect(r.consumo_proyectado_kg).toBeNull();
+      expect(r.fcr_proyectado).toBeNull();
+      expect(r.omisiones).toEqual([
+        {
+          magnitud: 'consumo',
+          motivo: 'horizonte_vencido',
+          ultimo_dia_observado: 43,
+        },
+      ]);
+
+      const llamadas = (fetchMock as unknown as jest.Mock).mock
+        .calls as Array<[string]>;
+      expect(
+        llamadas.some(([url]) => url.includes('predecir-consumo')),
+      ).toBe(false);
+    });
+
+    it('pesaje anterior al ingreso: se excluye antes de agrupar; si quedan menos de 3 dias, sigue el 400 actual', async () => {
+      prisma.pesaje.findMany.mockResolvedValue([
+        { fecha: new Date('2026-06-25'), peso_promedio_g: 999 },
+        { fecha: new Date('2026-07-08'), peso_promedio_g: 180 },
+        { fecha: new Date('2026-07-15'), peso_promedio_g: 500 },
+      ]);
+
+      await expect(service.predecir(1, admin)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('pesaje anterior al ingreso: se excluye y se cuenta, sin romper la prediccion si sobran dias validos', async () => {
+      prisma.pesaje.findMany.mockResolvedValue([
+        { fecha: new Date('2026-06-25'), peso_promedio_g: 999 },
+        ...tresPesajes,
+      ]);
+      mlResponde();
+
+      const r = await service.predecir(1, admin);
+
+      expect(r.pesajes_usados).toBe(3);
+      expect(r.observaciones_descartadas).toMatchObject({ pesajes: 1 });
+    });
+
+    it('mortalidad anterior al ingreso: no entra al acumulado y se cuenta aparte', async () => {
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-06-25'), cantidad_aves: 100 },
+        { fecha: new Date('2026-07-08'), cantidad_aves: 10 },
+        { fecha: new Date('2026-07-15'), cantidad_aves: 5 },
+        { fecha: new Date('2026-07-22'), cantidad_aves: 5 },
+      ]);
+      const fetchMock = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue(respuestaMl),
+      });
+      global.fetch = fetchMock;
+
+      const r = await service.predecir(1, admin);
+
+      expect(r.observaciones_descartadas).toMatchObject({ mortalidades: 1 });
+      const llamadas = fetchMock.mock.calls as Array<[string, { body: string }]>;
+      const llamada = llamadas.find(([url]) =>
+        url.includes('predecir-mortalidad'),
+      );
+      const cuerpo = JSON.parse(llamada![1].body) as {
+        mortalidades: Array<{ dia: number; mortalidad_pct: number }>;
+      };
+      // Con cantidad_inicial=1000: si el registro anterior al ingreso (100
+      // aves) entrara al acumulado, el primer punto seria 11% (100+10)/1000.
+      // Excluido, el primer punto es 1% (solo los 10 del dia valido).
+      expect(cuerpo.mortalidades[0].mortalidad_pct).toBe(1);
+    });
+
+    it('consumo anterior al ingreso: no entra al acumulado y se cuenta aparte', async () => {
+      prisma.consumoDiario.findMany.mockResolvedValue([
+        { fecha: new Date('2026-06-25'), alimento_kg: 500 },
+        { fecha: new Date('2026-07-08'), alimento_kg: 165 },
+        { fecha: new Date('2026-07-15'), alimento_kg: 355 },
+        { fecha: new Date('2026-07-22'), alimento_kg: 610 },
+      ]);
+      const fetchMock = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue(respuestaMl),
+      });
+      global.fetch = fetchMock;
+
+      const r = await service.predecir(1, admin);
+
+      expect(r.observaciones_descartadas).toMatchObject({ consumos: 1 });
+      const llamadas = fetchMock.mock.calls as Array<[string, { body: string }]>;
+      const llamada = llamadas.find(([url]) =>
+        url.includes('predecir-consumo'),
+      );
+      const cuerpo = JSON.parse(llamada![1].body) as {
+        consumos: Array<{ dia: number; consumo_acum_kg: number }>;
+      };
+      // Si el registro anterior al ingreso (500 kg) entrara al acumulado, el
+      // primer punto seria 665 kg (500+165). Excluido, es 165 kg.
+      expect(cuerpo.consumos[0].consumo_acum_kg).toBe(165);
+    });
+
+    it('el ML caido sigue devolviendo el 400 actual, distinto del 422 de horizonte vencido', async () => {
+      global.fetch = jest.fn().mockResolvedValue({ ok: false });
+
+      let error: unknown;
+      try {
+        await service.predecir(1, admin);
+      } catch (e) {
+        error = e;
+      }
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect(error).not.toBeInstanceOf(UnprocessableEntityException);
     });
   });
 
@@ -800,9 +1006,10 @@ describe('PrediccionesService', () => {
       const [args] = prisma.prediccion.createMany.mock.calls[0] as [
         { data: Array<{ fecha_objetivo: Date }> },
       ];
-      // 2026-07-01 + 42 dias
+      // fechaDeVida(2026-07-01, 42): el ingreso cuenta como dia 1, asi que
+      // el dia 42 cae 41 dias despues, no 42.
       expect(args.data[0].fecha_objetivo.toISOString().slice(0, 10)).toBe(
-        '2026-08-12',
+        '2026-08-11',
       );
     });
 
@@ -815,6 +1022,45 @@ describe('PrediccionesService', () => {
         { data: Array<{ datos_entrada: { pesajes: unknown[] } }> },
       ];
       expect(args.data[0].datos_entrada.pesajes).toHaveLength(3);
+    });
+
+    it('marca cada fila nueva con la convencion de dia y las omisiones, para no confundirla con el historial legado', async () => {
+      mlResponde();
+
+      await service.predecir(1, admin, true);
+
+      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
+        {
+          data: Array<{
+            datos_entrada: {
+              version_calculo: string;
+              convencion_dia: string;
+              origen_dia_faena: string;
+              peso_objetivo_origen: string;
+              omisiones: unknown[];
+              observaciones_descartadas: {
+                pesajes: number;
+                mortalidades: number;
+                consumos: number;
+                motivo: string;
+              };
+            };
+          }>,
+        },
+      ];
+      expect(args.data[0].datos_entrada).toMatchObject({
+        version_calculo: 'predicciones-v2',
+        convencion_dia: 'dia_vida_desde_1',
+        origen_dia_faena: 'fijo',
+        peso_objetivo_origen: 'default_ml',
+        omisiones: [],
+        observaciones_descartadas: {
+          pesajes: 0,
+          mortalidades: 0,
+          consumos: 0,
+          motivo: 'antes_del_ingreso',
+        },
+      });
     });
   });
 

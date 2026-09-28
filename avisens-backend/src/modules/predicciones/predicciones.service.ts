@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -11,10 +12,10 @@ import { verificarAccesoLote } from '../../common/auth/alcance';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
 import { ConfigService } from '@nestjs/config';
+import { diaDeVidaDeFecha, fechaDeVida } from '../../common/fechas/dias-de-vida';
 
 const UMBRAL_DESVIO_PCT = 5;
 const UMBRAL_DESVIO_FCR = 0.05;
-const MS_POR_DIA = 1000 * 60 * 60 * 24;
 
 // Dia de faena que se le pide a los tres modelos ML. Coincide con el
 // default que cada uno tenia por separado en avisens-ml/main.py -- antes
@@ -76,12 +77,36 @@ interface RespuestaConsumoMl {
   modelo?: MetadataModelo;
 }
 
+type MagnitudProyectada<T> =
+  | { estado: 'calculado'; datos: T; descartadasPorIngreso: number }
+  | { estado: 'sin_datos'; descartadasPorIngreso: number }
+  | {
+      estado: 'horizonte_vencido';
+      ultimoDiaObservado: number;
+      descartadasPorIngreso: number;
+    };
+
+export interface OmisionMagnitud {
+  magnitud: 'mortalidad' | 'consumo';
+  motivo: 'horizonte_vencido';
+  ultimo_dia_observado: number;
+}
+
+export interface ObservacionesDescartadas {
+  pesajes: number;
+  mortalidades: number;
+  consumos: number;
+  motivo: 'antes_del_ingreso';
+}
+
 interface ResultadoPrediccion {
   peso_proyectado_faena_g: number;
   dia_faena: number;
   mortalidad_proyectada_pct: number | null;
   consumo_proyectado_kg: number | null;
   fcr_proyectado: number | null;
+  omisiones: OmisionMagnitud[];
+  observaciones_descartadas: ObservacionesDescartadas;
   modelos?: {
     peso?: MetadataModelo;
     mortalidad?: MetadataModelo;
@@ -124,12 +149,14 @@ export class PrediccionesService {
       select: { fecha: true, peso_promedio_g: true },
     });
 
-    const inicio = lote.fecha_ingreso.getTime();
+    let pesajesDescartados = 0;
     const pesoPorDia = new Map<number, { total: number; cantidad: number }>();
     for (const pesaje of pesajes) {
-      const dia = Math.round(
-        (pesaje.fecha.getTime() - inicio) / (1000 * 60 * 60 * 24),
-      );
+      const dia = diaDeVidaDeFecha(lote.fecha_ingreso, pesaje.fecha);
+      if (dia < 1) {
+        pesajesDescartados++;
+        continue;
+      }
       const acumulado = pesoPorDia.get(dia) ?? { total: 0, cantidad: 0 };
       acumulado.total += pesaje.peso_promedio_g;
       acumulado.cantidad += 1;
@@ -145,6 +172,16 @@ export class PrediccionesService {
       throw new BadRequestException(
         'Se necesitan pesajes de al menos 3 días distintos para predecir',
       );
+    }
+
+    const ultimoDiaPesaje = pesajesParaMl[pesajesParaMl.length - 1].dia;
+    if (ultimoDiaPesaje >= DIA_FAENA_PROYECCION) {
+      throw new UnprocessableEntityException({
+        codigo: 'horizonte_vencido',
+        message: `El lote ya superó el día de proyección: el último pesaje es del día ${ultimoDiaPesaje} y el día de faena proyectado es ${DIA_FAENA_PROYECCION}`,
+        dia_faena: DIA_FAENA_PROYECCION,
+        ultimo_dia_observado: ultimoDiaPesaje,
+      });
     }
 
     const respuesta = await this.llamarMl('/predecir', {
@@ -173,17 +210,28 @@ export class PrediccionesService {
     }
     const mortalidad = await this.mortalidadProyectada(
       loteId,
-      inicio,
+      lote.fecha_ingreso,
       lote.cantidad_inicial,
       prediccion.dia_faena,
     );
 
-    const consumo = await this.consumoProyectado(loteId, inicio, prediccion.dia_faena);
+    const consumo = await this.consumoProyectado(
+      loteId,
+      lote.fecha_ingreso,
+      prediccion.dia_faena,
+    );
+
+    const mortalidadPct =
+      mortalidad.estado === 'calculado'
+        ? mortalidad.datos.mortalidad_proyectada_pct
+        : null;
+    const consumoKg =
+      consumo.estado === 'calculado' ? consumo.datos.consumo_proyectado_kg : null;
 
     const fcr = this.calcularFcrProyectado(
       prediccion.peso_proyectado_faena_g,
-      consumo?.consumo_proyectado_kg ?? null,
-      mortalidad?.mortalidad_proyectada_pct ?? null,
+      consumoKg,
+      mortalidadPct,
       lote.cantidad_inicial,
     );
 
@@ -195,26 +243,64 @@ export class PrediccionesService {
       fcr,
     );
 
+    const omisiones: OmisionMagnitud[] = [
+      ...(mortalidad.estado === 'horizonte_vencido'
+        ? [
+            {
+              magnitud: 'mortalidad' as const,
+              motivo: 'horizonte_vencido' as const,
+              ultimo_dia_observado: mortalidad.ultimoDiaObservado,
+            },
+          ]
+        : []),
+      ...(consumo.estado === 'horizonte_vencido'
+        ? [
+            {
+              magnitud: 'consumo' as const,
+              motivo: 'horizonte_vencido' as const,
+              ultimo_dia_observado: consumo.ultimoDiaObservado,
+            },
+          ]
+        : []),
+    ];
+
+    const observacionesDescartadas: ObservacionesDescartadas = {
+      pesajes: pesajesDescartados,
+      mortalidades: mortalidad.descartadasPorIngreso,
+      consumos: consumo.descartadasPorIngreso,
+      motivo: 'antes_del_ingreso',
+    };
+
     const { modelo: modeloPeso, ...valoresPrediccion } = prediccion;
-    const resultado = {
+    const resultado: ResultadoPrediccion & {
+      lote_id: number;
+      pesajes_usados: number;
+      comparacion_objetivo: typeof comparacion;
+    } = {
       lote_id: loteId,
       pesajes_usados: pesajesParaMl.length,
       ...valoresPrediccion,
-      mortalidad_proyectada_pct: mortalidad?.mortalidad_proyectada_pct ?? null,
-      consumo_proyectado_kg: consumo?.consumo_proyectado_kg ?? null,
+      mortalidad_proyectada_pct: mortalidadPct,
+      consumo_proyectado_kg: consumoKg,
       fcr_proyectado: fcr,
       comparacion_objetivo: comparacion,
+      omisiones,
+      observaciones_descartadas: observacionesDescartadas,
       modelos: {
         ...(modeloPeso ? { peso: modeloPeso } : {}),
-        ...(mortalidad?.modelo ? { mortalidad: mortalidad.modelo } : {}),
-        ...(consumo?.modelo ? { consumo: consumo.modelo } : {}),
+        ...(mortalidad.estado === 'calculado' && mortalidad.datos.modelo
+          ? { mortalidad: mortalidad.datos.modelo }
+          : {}),
+        ...(consumo.estado === 'calculado' && consumo.datos.modelo
+          ? { consumo: consumo.datos.modelo }
+          : {}),
       },
     };
 
     // El mismo objeto en los dos casos, para que quien consuma la respuesta no
     // tenga que distinguir entre dos formas: null significa "no se guardo".
     const guardadas = persistir
-      ? await this.guardar(loteId, inicio, resultado, pesajesParaMl)
+      ? await this.guardar(loteId, lote.fecha_ingreso, resultado, pesajesParaMl)
       : null;
     return { ...resultado, predicciones_guardadas: guardadas };
   }
@@ -226,14 +312,23 @@ export class PrediccionesService {
   // dijo lo que dijo.
   private async guardar(
     loteId: number,
-    inicioMs: number,
+    fechaIngreso: Date,
     r: ResultadoPrediccion,
     pesajes: Array<{ dia: number; peso: number }>,
   ) {
-    const fechaObjetivo = new Date(inicioMs + r.dia_faena * MS_POR_DIA);
+    const fechaObjetivo = fechaDeVida(fechaIngreso, r.dia_faena);
     const ultimoDia = pesajes[pesajes.length - 1]?.dia ?? 0;
     const horizonte = r.dia_faena - ultimoDia;
-    const datosEntrada = { pesajes, dia_faena: r.dia_faena };
+    const datosEntrada = {
+      pesajes,
+      dia_faena: r.dia_faena,
+      version_calculo: 'predicciones-v2' as const,
+      convencion_dia: 'dia_vida_desde_1' as const,
+      origen_dia_faena: 'fijo' as const,
+      peso_objetivo_origen: 'default_ml' as const,
+      omisiones: r.omisiones,
+      observaciones_descartadas: r.observaciones_descartadas,
+    } as unknown as Prisma.InputJsonValue;
     const [modeloPesoId, modeloMortalidadId, modeloConsumoId] =
       await Promise.all([
         this.resolverModeloOpcional(r.modelos?.peso),
@@ -371,10 +466,10 @@ export class PrediccionesService {
 
   private async mortalidadProyectada(
     loteId: number,
-    inicio: number,
+    fechaIngreso: Date,
     cantidadInicial: number,
     diaFaena: number,
-  ) {
+  ): Promise<MagnitudProyectada<RespuestaMortalidadMl>> {
     const registros = await this.prisma.registroMortalidad.findMany({
       where: { lote_id: loteId },
       orderBy: { fecha: 'asc' },
@@ -382,40 +477,58 @@ export class PrediccionesService {
     });
 
     let acumulado = 0;
+    let descartadasPorIngreso = 0;
     const porDia = new Map<number, number>();
     for (const r of registros) {
+      const dia = diaDeVidaDeFecha(fechaIngreso, r.fecha);
+      if (dia < 1) {
+        descartadasPorIngreso++;
+        continue;
+      }
       acumulado += r.cantidad_aves ?? 0;
-      const dia = Math.round(
-        (r.fecha.getTime() - inicio) / (1000 * 60 * 60 * 24),
-      );
       porDia.set(dia, (acumulado / cantidadInicial) * 100);
     }
     const mortalidadesParaMl = [...porDia.entries()].map(
       ([dia, mortalidad_pct]) => ({ dia, mortalidad_pct }),
     );
 
-    if (mortalidadesParaMl.length < 3) return null;
+    if (mortalidadesParaMl.length < 3) {
+      return { estado: 'sin_datos', descartadasPorIngreso };
+    }
+
+    const ultimoDia = mortalidadesParaMl[mortalidadesParaMl.length - 1].dia;
+    if (ultimoDia >= diaFaena) {
+      return {
+        estado: 'horizonte_vencido',
+        ultimoDiaObservado: ultimoDia,
+        descartadasPorIngreso,
+      };
+    }
 
     const respuesta = await this.llamarMl('/predecir-mortalidad', {
       mortalidades: mortalidadesParaMl,
       dia_faena: diaFaena,
     });
-    if (!respuesta?.ok) return null;
+    if (!respuesta?.ok) return { estado: 'sin_datos', descartadasPorIngreso };
 
     const cuerpo = await this.leerJson(respuesta);
     if (!this.esRespuestaMortalidad(cuerpo)) {
       this.logger.warn('Respuesta inválida del modelo de mortalidad');
-      return null;
+      return { estado: 'sin_datos', descartadasPorIngreso };
     }
     if (cuerpo.dia_faena !== diaFaena) {
       this.logger.warn(
         `Mortalidad proyectada devolvio dia_faena=${cuerpo.dia_faena}, se pidio ${diaFaena} -- se descarta para no combinar horizontes distintos`,
       );
-      return null;
+      return { estado: 'sin_datos', descartadasPorIngreso };
     }
-    return cuerpo;
+    return { estado: 'calculado', datos: cuerpo, descartadasPorIngreso };
   }
-  private async consumoProyectado(loteId: number, inicio: number, diaFaena: number) {
+  private async consumoProyectado(
+    loteId: number,
+    fechaIngreso: Date,
+    diaFaena: number,
+  ): Promise<MagnitudProyectada<RespuestaConsumoMl>> {
     const registros = await this.prisma.consumoDiario.findMany({
       where: { lote_id: loteId },
       orderBy: { fecha: 'asc' },
@@ -423,38 +536,52 @@ export class PrediccionesService {
     });
 
     let acumulado = 0;
+    let descartadasPorIngreso = 0;
     const porDia = new Map<number, number>();
     for (const r of registros) {
+      const dia = diaDeVidaDeFecha(fechaIngreso, r.fecha);
+      if (dia < 1) {
+        descartadasPorIngreso++;
+        continue;
+      }
       acumulado += r.alimento_kg ?? 0;
-      const dia = Math.round(
-        (r.fecha.getTime() - inicio) / (1000 * 60 * 60 * 24),
-      );
       porDia.set(dia, acumulado);
     }
 
     const consumosParaMl = [...porDia.entries()].map(
       ([dia, consumo_acum_kg]) => ({ dia, consumo_acum_kg }),
     );
-    if (consumosParaMl.length < 3) return null;
+    if (consumosParaMl.length < 3) {
+      return { estado: 'sin_datos', descartadasPorIngreso };
+    }
+
+    const ultimoDia = consumosParaMl[consumosParaMl.length - 1].dia;
+    if (ultimoDia >= diaFaena) {
+      return {
+        estado: 'horizonte_vencido',
+        ultimoDiaObservado: ultimoDia,
+        descartadasPorIngreso,
+      };
+    }
 
     const respuesta = await this.llamarMl('/predecir-consumo', {
       consumos: consumosParaMl,
       dia_faena: diaFaena,
     });
-    if (!respuesta?.ok) return null;
+    if (!respuesta?.ok) return { estado: 'sin_datos', descartadasPorIngreso };
 
     const cuerpo = await this.leerJson(respuesta);
     if (!this.esRespuestaConsumo(cuerpo)) {
       this.logger.warn('Respuesta inválida del modelo de consumo');
-      return null;
+      return { estado: 'sin_datos', descartadasPorIngreso };
     }
     if (cuerpo.dia_faena !== diaFaena) {
       this.logger.warn(
         `Consumo proyectado devolvio dia_faena=${cuerpo.dia_faena}, se pidio ${diaFaena} -- se descarta para no combinar horizontes distintos`,
       );
-      return null;
+      return { estado: 'sin_datos', descartadasPorIngreso };
     }
-    return cuerpo;
+    return { estado: 'calculado', datos: cuerpo, descartadasPorIngreso };
   }
   private calcularFcrProyectado(
     pesoProyectadoG: number,
