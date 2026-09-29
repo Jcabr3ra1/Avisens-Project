@@ -226,5 +226,23 @@ describe('HttpExceptionFilter', () => {
       expect(cuerpo.codigo).toBe('plan_desactualizado');
       expect(cuerpo.estado_plan).toBeUndefined();
     });
+
+    it('plan_excede_limites_ml reenvia dia_faena y peso_objetivo_g, ambos numericos', () => {
+      filtro.catch(
+        new UnprocessableEntityException({
+          codigo: 'plan_excede_limites_ml',
+          message: 'x',
+          dia_faena: 120,
+          peso_objetivo_g: 15000,
+        }),
+        host(),
+      );
+
+      expect(respuesta()).toMatchObject({
+        codigo: 'plan_excede_limites_ml',
+        dia_faena: 120,
+        peso_objetivo_g: 15000,
+      });
+    });
   });
 });

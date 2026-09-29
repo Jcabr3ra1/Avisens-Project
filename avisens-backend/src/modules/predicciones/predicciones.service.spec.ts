@@ -241,7 +241,7 @@ describe('PrediccionesService', () => {
       ).toMatchObject({ codigo: 'plan_desactualizado' });
     });
 
-    it('estado_dia calculado pero dia_objetivo null (fila corrupta): no revienta, cae a sin_plan_utilizable', async () => {
+    it('estado_dia calculado pero dia_objetivo null (fila corrupta): no revienta, cae a sin_plan_utilizable con estado_plan=datos_insuficientes, no "calculado"', async () => {
       planLoteService.obtener.mockResolvedValue({
         ...planCalculado,
         resultado: { ...planCalculado.resultado, dia_objetivo: null },
@@ -254,9 +254,84 @@ describe('PrediccionesService', () => {
         error = e;
       }
       expect(error).toBeInstanceOf(UnprocessableEntityException);
+      // "calculado" no esta en la lista blanca del filtro (ESTADOS_PLAN_VALIDOS);
+      // reportarlo tal cual haria que el filtro lo descarte en silencio.
       expect(
         (error as UnprocessableEntityException).getResponse(),
-      ).toMatchObject({ codigo: 'sin_plan_utilizable' });
+      ).toMatchObject({
+        codigo: 'sin_plan_utilizable',
+        estado_plan: 'datos_insuficientes',
+      });
+    });
+
+    it.each([
+      { dia_objetivo: 0, peso_objetivo_g: 2400 },
+      { dia_objetivo: 101, peso_objetivo_g: 2400 },
+      { dia_objetivo: 42, peso_objetivo_g: 0 },
+      { dia_objetivo: 42, peso_objetivo_g: 10001 },
+    ])(
+      'plan con dia_objetivo=$dia_objetivo, peso_objetivo_g=$peso_objetivo_g (fuera de lo que acepta el ML): 422 plan_excede_limites_ml, no llama al ML',
+      async ({ dia_objetivo, peso_objetivo_g }) => {
+        planLoteService.obtener.mockResolvedValue({
+          ...planCalculado,
+          peso_objetivo_g,
+          resultado: { ...planCalculado.resultado, dia_objetivo },
+        });
+        const fetchMock = jest.fn();
+        global.fetch = fetchMock;
+
+        let error: unknown;
+        try {
+          await service.predecir(1, admin);
+        } catch (e) {
+          error = e;
+        }
+
+        expect(error).toBeInstanceOf(UnprocessableEntityException);
+        expect(
+          (error as UnprocessableEntityException).getResponse(),
+        ).toMatchObject({
+          codigo: 'plan_excede_limites_ml',
+          dia_faena: dia_objetivo,
+          peso_objetivo_g,
+        });
+        // No es "el servicio no respondio" (eso es para cuando el ML de
+        // verdad falla): explica el limite excedido, sin llegar a llamarlo.
+        const mensaje = (
+          (error as UnprocessableEntityException).getResponse() as {
+            message: string;
+          }
+        ).message;
+        expect(mensaje).not.toMatch(/no respondió/);
+        expect(fetchMock).not.toHaveBeenCalled();
+      },
+    );
+
+    it('plan dentro de los limites del ML (borde: dia 100, peso 10000): si llama al ML', async () => {
+      planLoteService.obtener.mockResolvedValue({
+        ...planCalculado,
+        peso_objetivo_g: 10000,
+        resultado: { ...planCalculado.resultado, dia_objetivo: 100 },
+      });
+      prisma.pesaje.findMany.mockResolvedValue([
+        { fecha: new Date('2026-08-08'), peso_promedio_g: 4000 },
+        { fecha: new Date('2026-08-09'), peso_promedio_g: 4050 },
+        { fecha: new Date('2026-08-10'), peso_promedio_g: 4100 },
+      ]);
+      const fetchMock = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          peso_proyectado_faena_g: 4200,
+          dia_faena: 100,
+          dias_al_objetivo: null,
+          peso_objetivo_g: 10000,
+        }),
+      });
+      global.fetch = fetchMock;
+
+      await service.predecir(1, admin);
+
+      expect(fetchMock).toHaveBeenCalled();
     });
 
     it('usa el peso objetivo y el dia de faena del plan vigente, no un valor fijo', async () => {

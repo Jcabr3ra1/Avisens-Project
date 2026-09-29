@@ -14,18 +14,9 @@ export interface Prediccion {
   fecha_generacion: string
 }
 
-export type VeredictoCurva = 'mejor_que_objetivo' | 'en_objetivo' | 'peor_que_objetivo'
-
-export interface ComparacionObjetivo {
-  dia_curva: number
-  marca: string
-  sexo: string
-  peso_esperado_g: number | null
-  fcr_objetivo: number | null
-  desvio_peso_pct: number | null
-  veredicto_peso: VeredictoCurva | null
-  desvio_fcr: number | null
-  veredicto_fcr: VeredictoCurva | null
+export interface LlegadaProyectada {
+  dia_vida: number
+  fecha: string
 }
 
 export interface ResultadoPrediccion {
@@ -33,10 +24,18 @@ export interface ResultadoPrediccion {
   pesajes_usados: number
   peso_proyectado_faena_g: number
   dia_faena: number
+  peso_objetivo_g: number
+  plan_lote_id: number
+  plan_version: number
   mortalidad_proyectada_pct: number | null
   consumo_proyectado_kg: number | null
   fcr_proyectado: number | null
-  comparacion_objetivo: ComparacionObjetivo | null
+  // El plan usa la curva genetica (linea+sexo); ComparacionObjetivo compara
+  // contra curvas_objetivo por marca -- son referencias distintas que no se
+  // combinan hasta resolver N3/N4, por eso queda en null con un motivo.
+  comparacion_objetivo: null
+  comparacion_objetivo_motivo: string
+  llegada_proyectada: LlegadaProyectada | null
   predicciones_guardadas: Prediccion[] | null
 }
 

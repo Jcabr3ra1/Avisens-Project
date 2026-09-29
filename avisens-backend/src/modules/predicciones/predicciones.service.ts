@@ -17,6 +17,8 @@ import { diaDeVidaDeFecha, fechaDeVida } from '../../common/fechas/dias-de-vida'
 
 const UMBRAL_DESVIO_PCT = 5;
 const UMBRAL_DESVIO_FCR = 0.05;
+const LIMITE_DIA_FAENA_ML = { min: 1, max: 100 } as const;
+const LIMITE_PESO_OBJETIVO_ML = { min: 0, max: 10000 } as const;
 
 const PREDICCION_SELECT = {
   id: true,
@@ -173,12 +175,29 @@ export class PrediccionesService {
       throw new UnprocessableEntityException({
         codigo: 'sin_plan_utilizable',
         message: 'El lote no tiene un plan con día objetivo calculado',
-        estado_plan: plan.estado_dia,
+        estado_plan:
+          plan.estado_dia === 'calculado'
+            ? 'datos_insuficientes'
+            : plan.estado_dia,
       });
     }
 
     const diaFaenaPlan = plan.resultado.dia_objetivo;
     const pesoObjetivoPlan = Number(plan.peso_objetivo_g);
+
+    if (
+      diaFaenaPlan < LIMITE_DIA_FAENA_ML.min ||
+      diaFaenaPlan > LIMITE_DIA_FAENA_ML.max ||
+      pesoObjetivoPlan <= LIMITE_PESO_OBJETIVO_ML.min ||
+      pesoObjetivoPlan > LIMITE_PESO_OBJETIVO_ML.max
+    ) {
+      throw new UnprocessableEntityException({
+        codigo: 'plan_excede_limites_ml',
+        message: `El plan del lote pide un día de faena o un peso objetivo fuera de lo que el modelo acepta (día entre ${LIMITE_DIA_FAENA_ML.min} y ${LIMITE_DIA_FAENA_ML.max}, peso hasta ${LIMITE_PESO_OBJETIVO_ML.max} g): día ${diaFaenaPlan}, peso ${pesoObjetivoPlan} g`,
+        dia_faena: diaFaenaPlan,
+        peso_objetivo_g: pesoObjetivoPlan,
+      });
+    }
 
     const pesajes = await this.prisma.pesaje.findMany({
       where: { lote_id: loteId },
