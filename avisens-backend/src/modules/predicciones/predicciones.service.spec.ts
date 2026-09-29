@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrediccionesService } from './predicciones.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PlanLoteService } from '../plan-lote/plan-lote.service';
 import { ROLES } from '../../common/auth/roles';
 import type { Solicitante } from '../../common/auth/acceso';
 import { ConfigService } from '@nestjs/config';
@@ -28,6 +29,7 @@ describe('PrediccionesService', () => {
     $transaction: jest.fn(),
   };
   const config = { get: jest.fn() };
+  const planLoteService = { obtener: jest.fn() };
 
   const admin: Solicitante = { id: 1, rol: ROLES.ADMINISTRADOR };
   const propietario: Solicitante = { id: 5, rol: ROLES.PROPIETARIO };
@@ -36,6 +38,25 @@ describe('PrediccionesService', () => {
     fecha_ingreso: new Date('2026-07-01'),
     cantidad_inicial: 1000,
     galpon: { granja: { propietario_id: 5 } },
+  };
+
+  // dia_objetivo=42 y peso_objetivo_g=2400: elegidos para no desplazar
+  // ninguna fecha/pesaje ya fijado en el resto del archivo -- antes esos
+  // dos numeros salian de DIA_FAENA_PROYECCION y del default 2500g del ML;
+  // ahora salen del plan vigente del lote.
+  const planCalculado = {
+    id: 501,
+    lote_id: 1,
+    version: 3,
+    vigente: true,
+    peso_objetivo_g: 2400,
+    estado_dia: 'calculado' as const,
+    desactualizado: false,
+    resultado: {
+      dia_objetivo: 42,
+      dia_objetivo_interpolado: 42,
+      fecha_salida_calculada: new Date('2026-08-11'),
+    },
   };
 
   const tresPesajes = [
@@ -51,6 +72,7 @@ describe('PrediccionesService', () => {
         PrediccionesService,
         { provide: PrismaService, useValue: prisma },
         { provide: ConfigService, useValue: config },
+        { provide: PlanLoteService, useValue: planLoteService },
       ],
     }).compile();
     service = module.get<PrediccionesService>(PrediccionesService);
@@ -63,6 +85,7 @@ describe('PrediccionesService', () => {
     prisma.modeloMl.upsert.mockResolvedValue({ id: 11 });
     config.get.mockImplementation((clave: string, defecto?: string) => defecto);
     prisma.$transaction.mockResolvedValue([[], 0]);
+    planLoteService.obtener.mockResolvedValue({ ...planCalculado });
   });
 
   const respuestaMl = {
@@ -121,6 +144,162 @@ describe('PrediccionesService', () => {
     await expect(service.predecir(1, propietario)).rejects.toThrow(
       /propios lotes/,
     );
+  });
+
+  describe('plan vigente del lote', () => {
+    it('convierte la ausencia de plan vigente en 422 sin_plan_utilizable, sin llegar a leer pesajes', async () => {
+      planLoteService.obtener.mockRejectedValue(
+        new NotFoundException('Este lote no tiene un plan vigente'),
+      );
+
+      let error: unknown;
+      try {
+        await service.predecir(1, admin);
+      } catch (e) {
+        error = e;
+      }
+
+      expect(error).toBeInstanceOf(UnprocessableEntityException);
+      const respuesta = (error as UnprocessableEntityException).getResponse();
+      expect(respuesta).toMatchObject({
+        codigo: 'sin_plan_utilizable',
+        estado_plan: 'sin_plan',
+      });
+      expect(prisma.pesaje.findMany).not.toHaveBeenCalled();
+    });
+
+    it('no convierte un 404 ajeno al plan -- lo relanza tal cual', async () => {
+      planLoteService.obtener.mockRejectedValue(
+        new NotFoundException('Lote no encontrado'),
+      );
+
+      await expect(service.predecir(1, admin)).rejects.toThrow(
+        'Lote no encontrado',
+      );
+    });
+
+    it.each(['sin_curva', 'fuera_de_rango', 'datos_insuficientes'] as const)(
+      'plan con estado_dia=%s -> 422 sin_plan_utilizable con ese estado',
+      async (estado) => {
+        planLoteService.obtener.mockResolvedValue({
+          ...planCalculado,
+          estado_dia: estado,
+          resultado: { ...planCalculado.resultado, dia_objetivo: null },
+        });
+
+        let error: unknown;
+        try {
+          await service.predecir(1, admin);
+        } catch (e) {
+          error = e;
+        }
+
+        expect(error).toBeInstanceOf(UnprocessableEntityException);
+        expect(
+          (error as UnprocessableEntityException).getResponse(),
+        ).toMatchObject({ codigo: 'sin_plan_utilizable', estado_plan: estado });
+      },
+    );
+
+    it('plan desactualizado -> 422 plan_desactualizado, no llama al ML', async () => {
+      planLoteService.obtener.mockResolvedValue({
+        ...planCalculado,
+        desactualizado: true,
+      });
+      const fetchMock = jest.fn();
+      global.fetch = fetchMock;
+
+      let error: unknown;
+      try {
+        await service.predecir(1, admin);
+      } catch (e) {
+        error = e;
+      }
+      expect(error).toBeInstanceOf(UnprocessableEntityException);
+      expect(
+        (error as UnprocessableEntityException).getResponse(),
+      ).toMatchObject({ codigo: 'plan_desactualizado' });
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('plan desactualizado y sin curva a la vez: gana plan_desactualizado', async () => {
+      planLoteService.obtener.mockResolvedValue({
+        ...planCalculado,
+        desactualizado: true,
+        estado_dia: 'sin_curva',
+        resultado: { ...planCalculado.resultado, dia_objetivo: null },
+      });
+
+      let error: unknown;
+      try {
+        await service.predecir(1, admin);
+      } catch (e) {
+        error = e;
+      }
+      expect(
+        (error as UnprocessableEntityException).getResponse(),
+      ).toMatchObject({ codigo: 'plan_desactualizado' });
+    });
+
+    it('estado_dia calculado pero dia_objetivo null (fila corrupta): no revienta, cae a sin_plan_utilizable', async () => {
+      planLoteService.obtener.mockResolvedValue({
+        ...planCalculado,
+        resultado: { ...planCalculado.resultado, dia_objetivo: null },
+      });
+
+      let error: unknown;
+      try {
+        await service.predecir(1, admin);
+      } catch (e) {
+        error = e;
+      }
+      expect(error).toBeInstanceOf(UnprocessableEntityException);
+      expect(
+        (error as UnprocessableEntityException).getResponse(),
+      ).toMatchObject({ codigo: 'sin_plan_utilizable' });
+    });
+
+    it('usa el peso objetivo y el dia de faena del plan vigente, no un valor fijo', async () => {
+      planLoteService.obtener.mockResolvedValue({
+        ...planCalculado,
+        peso_objetivo_g: 2800,
+        resultado: { ...planCalculado.resultado, dia_objetivo: 35 },
+      });
+      const fetchMock = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          peso_proyectado_faena_g: 3000,
+          dia_faena: 35,
+          dias_al_objetivo: null,
+          peso_objetivo_g: 2800,
+        }),
+      });
+      global.fetch = fetchMock;
+
+      await service.predecir(1, admin);
+
+      expect(planLoteService.obtener).toHaveBeenCalledWith(1, admin);
+      const body = JSON.parse(
+        (fetchMock.mock.calls[0] as [string, { body: string }])[1].body,
+      ) as { dia_faena: number; peso_objetivo_g: number };
+      expect(body).toMatchObject({ dia_faena: 35, peso_objetivo_g: 2800 });
+    });
+
+    it('peso_objetivo_g discordante devuelto por el ML: 400, no se combina con el plan', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          peso_proyectado_faena_g: 3256,
+          dia_faena: 42,
+          dias_al_objetivo: 37,
+          peso_objetivo_g: 2500, // el plan pide 2400
+        }),
+      });
+
+      await expect(service.predecir(1, admin)).rejects.toThrow(
+        /peso objetivo inconsistente/,
+      );
+    });
   });
 
   it('lanza BadRequest cuando hay menos de 3 pesajes', async () => {
@@ -182,14 +361,14 @@ describe('PrediccionesService', () => {
     );
   });
 
-  it('devuelve la prediccion del servicio ML con los dias calculados', async () => {
+  it('devuelve la prediccion del servicio ML, con la llegada proyectada aparte', async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
       json: jest.fn().mockResolvedValue({
         peso_proyectado_faena_g: 3256,
         dia_faena: 42,
         dias_al_objetivo: 37,
-        peso_objetivo_g: 2500,
+        peso_objetivo_g: 2400,
       }),
     });
     global.fetch = fetchMock;
@@ -200,8 +379,14 @@ describe('PrediccionesService', () => {
       lote_id: 1,
       pesajes_usados: 3,
       peso_proyectado_faena_g: 3256,
-      dias_al_objetivo: 37,
     });
+    // dias_al_objetivo ya no viaja suelto: es informativo, dentro de
+    // llegada_proyectada. fechaDeVida(2026-07-01, 37) = 2026-08-06.
+    expect((r as { dias_al_objetivo?: unknown }).dias_al_objetivo).toBeUndefined();
+    expect(r.llegada_proyectada?.dia_vida).toBe(37);
+    expect(
+      r.llegada_proyectada?.fecha.toISOString().slice(0, 10),
+    ).toBe('2026-08-06');
 
     const calls = fetchMock.mock.calls as Array<[string, { body: string }]>;
     const body = JSON.parse(calls[0][1].body) as {
@@ -212,6 +397,21 @@ describe('PrediccionesService', () => {
       { dia: 15, peso: 500 },
       { dia: 22, peso: 1000 },
     ]);
+  });
+
+  it('llegada_proyectada queda en null cuando el ML no calcula ninguna', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        peso_proyectado_faena_g: 3256,
+        dia_faena: 42,
+        dias_al_objetivo: null,
+        peso_objetivo_g: 2400,
+      }),
+    });
+
+    const r = await service.predecir(1, admin);
+    expect(r.llegada_proyectada).toBeNull();
   });
 
   it('incluye la mortalidad proyectada cuando hay 3+ registros', async () => {
@@ -227,7 +427,7 @@ describe('PrediccionesService', () => {
             peso_proyectado_faena_g: 3256,
             dia_faena: 42,
             dias_al_objetivo: 37,
-            peso_objetivo_g: 2500,
+            peso_objetivo_g: 2400,
           };
       return Promise.resolve({
         ok: true,
@@ -253,7 +453,7 @@ describe('PrediccionesService', () => {
         peso_proyectado_faena_g: 3256,
         dia_faena: 42,
         dias_al_objetivo: 37,
-        peso_objetivo_g: 2500,
+        peso_objetivo_g: 2400,
       }),
     });
 
@@ -273,7 +473,7 @@ describe('PrediccionesService', () => {
             peso_proyectado_faena_g: 3256,
             dia_faena: 42,
             dias_al_objetivo: 37,
-            peso_objetivo_g: 2500,
+            peso_objetivo_g: 2400,
           };
       return Promise.resolve({
         ok: true,
@@ -304,7 +504,7 @@ describe('PrediccionesService', () => {
             peso_proyectado_faena_g: 3256,
             dia_faena: 42,
             dias_al_objetivo: 37,
-            peso_objetivo_g: 2500,
+            peso_objetivo_g: 2400,
           };
       return Promise.resolve({
         ok: true,
@@ -339,7 +539,7 @@ describe('PrediccionesService', () => {
         peso_proyectado_faena_g: 3256,
         dia_faena: 42,
         dias_al_objetivo: 37,
-        peso_objetivo_g: 2500,
+        peso_objetivo_g: 2400,
       }),
     });
 
@@ -368,7 +568,7 @@ describe('PrediccionesService', () => {
           peso_proyectado_faena_g: 3661,
           dia_faena: 42,
           dias_al_objetivo: 35,
-          peso_objetivo_g: 2500,
+          peso_objetivo_g: 2400,
         };
       }
       return Promise.resolve({
@@ -395,7 +595,7 @@ describe('PrediccionesService', () => {
         peso_proyectado_faena_g: 3661,
         dia_faena: 42,
         dias_al_objetivo: 35,
-        peso_objetivo_g: 2500,
+        peso_objetivo_g: 2400,
       }),
     });
 
@@ -419,7 +619,7 @@ describe('PrediccionesService', () => {
             peso_proyectado_faena_g: 0,
             dia_faena: 42,
             dias_al_objetivo: null,
-            peso_objetivo_g: 2500,
+            peso_objetivo_g: 2400,
           };
       return Promise.resolve({
         ok: true,
@@ -455,7 +655,7 @@ describe('PrediccionesService', () => {
                 peso_proyectado_faena_g: 3661,
                 dia_faena: 42,
                 dias_al_objetivo: 35,
-                peso_objetivo_g: 2500,
+                peso_objetivo_g: 2400,
               };
         return Promise.resolve({
           ok: true,
@@ -480,9 +680,9 @@ describe('PrediccionesService', () => {
         ok: true,
         json: jest.fn().mockResolvedValue({
           peso_proyectado_faena_g: 3661,
-          dia_faena: 45, // se pidio 42 (DIA_FAENA_PROYECCION)
+          dia_faena: 45, // se pidio 42 (el dia_objetivo del plan)
           dias_al_objetivo: 35,
-          peso_objetivo_g: 2500,
+          peso_objetivo_g: 2400,
         }),
       });
 
@@ -503,7 +703,7 @@ describe('PrediccionesService', () => {
                 peso_proyectado_faena_g: 3661,
                 dia_faena: 42,
                 dias_al_objetivo: 35,
-                peso_objetivo_g: 2500,
+                peso_objetivo_g: 2400,
               };
         return Promise.resolve({
           ok: true,
@@ -529,7 +729,7 @@ describe('PrediccionesService', () => {
               peso_proyectado_faena_g: 3661,
               dia_faena: 42,
               dias_al_objetivo: 35,
-              peso_objetivo_g: 2500,
+              peso_objetivo_g: 2400,
             };
         return Promise.resolve({
           ok: true,
@@ -546,10 +746,283 @@ describe('PrediccionesService', () => {
     });
   });
 
+  const mockMlCompleto = () =>
+    jest.fn((url: string) => {
+      let body: Record<string, number | null>;
+      if (url.includes('predecir-consumo')) {
+        body = { consumo_proyectado_kg: 4550.75, dia_faena: 42 };
+      } else if (url.includes('predecir-mortalidad')) {
+        body = { mortalidad_proyectada_pct: 3.5, dia_faena: 42 };
+      } else {
+        body = {
+          peso_proyectado_faena_g: 3661,
+          dia_faena: 42,
+          dias_al_objetivo: 35,
+          peso_objetivo_g: 2400,
+        };
+      }
+      return Promise.resolve({
+        ok: true,
+        json: jest.fn().mockResolvedValue(body),
+      });
+    }) as unknown as typeof fetch;
+
+  const sembrarSerieCompleta = () => {
+    prisma.consumoDiario.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), alimento_kg: 165 },
+      { fecha: new Date('2026-07-15'), alimento_kg: 355 },
+      { fecha: new Date('2026-07-22'), alimento_kg: 610 },
+    ]);
+    prisma.registroMortalidad.findMany.mockResolvedValue([
+      { fecha: new Date('2026-07-08'), cantidad_aves: 10 },
+      { fecha: new Date('2026-07-15'), cantidad_aves: 5 },
+      { fecha: new Date('2026-07-22'), cantidad_aves: 5 },
+    ]);
+  };
+
+  // compararConObjetivo() queda definida en el servicio pero sin llamarse:
+  // el plan usa la curva GENETICA (por linea+sexo) y curvas_objetivo es por
+  // MARCA -- son referencias distintas, no se combinan. Se restablece en el
+  // hito que resuelva N3/N4.
+  it('comparacion_objetivo queda en null con un motivo explicito; no se consulta curvas_objetivo', async () => {
+    sembrarSerieCompleta();
+    global.fetch = mockMlCompleto();
+
+    const r = await service.predecir(1, admin);
+
+    expect(r.comparacion_objetivo).toBeNull();
+    expect(r.comparacion_objetivo_motivo).toBe(
+      'plan_usa_curva_genetica_no_unificada_con_curvas_objetivo',
+    );
+    expect(prisma.curvaObjetivo.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('corta la llamada al servicio ML con un timeout', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        peso_proyectado_faena_g: 3661,
+        dia_faena: 42,
+        dias_al_objetivo: 35,
+        peso_objetivo_g: 2400,
+      }),
+    });
+    global.fetch = fetchMock;
+
+    await service.predecir(1, admin);
+
+    const llamadas = fetchMock.mock.calls as Array<
+      [string, { signal?: AbortSignal }]
+    >;
+    const opciones = llamadas[0][1];
+    expect(opciones.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('lanza BadRequest cuando el servicio ML se cuelga y aborta', async () => {
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(
+        Object.assign(new Error('timeout'), { name: 'TimeoutError' }),
+      );
+
+    await expect(service.predecir(1, admin)).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('deja mortalidad y consumo en null cuando esas llamadas al ML se cuelgan', async () => {
+    sembrarSerieCompleta();
+    global.fetch = jest.fn((url: string) => {
+      if (
+        url.includes('predecir-mortalidad') ||
+        url.includes('predecir-consumo')
+      ) {
+        return Promise.reject(new Error('timeout'));
+      }
+      return Promise.resolve({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          peso_proyectado_faena_g: 3661,
+          dia_faena: 42,
+          dias_al_objetivo: 35,
+          peso_objetivo_g: 2400,
+        }),
+      });
+    }) as unknown as typeof fetch;
+
+    const r = await service.predecir(1, admin);
+
+    expect(r.peso_proyectado_faena_g).toBe(3661);
+    expect(r.mortalidad_proyectada_pct).toBeNull();
+    expect(r.consumo_proyectado_kg).toBeNull();
+    expect(r.fcr_proyectado).toBeNull();
+  });
+
+  describe('persistencia', () => {
+    it('por defecto NO guarda nada: el GET solo calcula', async () => {
+      mlResponde();
+
+      await service.predecir(1, admin);
+
+      expect(prisma.prediccion.createMany).not.toHaveBeenCalled();
+    });
+
+    it('con persistir=true guarda una fila por magnitud proyectada', async () => {
+      mlResponde();
+      prisma.registroMortalidad.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-08'), cantidad_aves: 10 },
+        { fecha: new Date('2026-07-15'), cantidad_aves: 12 },
+        { fecha: new Date('2026-07-22'), cantidad_aves: 15 },
+      ]);
+      prisma.consumoDiario.findMany.mockResolvedValue([
+        { fecha: new Date('2026-07-08'), alimento_kg: 100 },
+        { fecha: new Date('2026-07-15'), alimento_kg: 300 },
+        { fecha: new Date('2026-07-22'), alimento_kg: 600 },
+      ]);
+
+      const r = await service.predecir(1, admin, true);
+
+      const tipos = filasGuardadas().map((f) => f.tipo);
+      expect(tipos).toEqual(['peso_faena', 'mortalidad', 'consumo', 'fcr']);
+      expect(r.predicciones_guardadas).toBe(4);
+    });
+
+    it('guarda el peso proyectado con su unidad', async () => {
+      mlResponde();
+
+      await service.predecir(1, admin, true);
+
+      const peso = filasGuardadas().find((f) => f.tipo === 'peso_faena');
+      expect(peso?.valor_predicho).toBe(2400);
+      expect(peso?.unidad).toBe('g');
+    });
+
+    it('registra la versión del modelo y la enlaza con la predicción', async () => {
+      mlResponde();
+
+      await service.predecir(1, admin, true);
+
+      const llamadasModelo = prisma.modeloMl.upsert.mock.calls as Array<
+        [
+          {
+            create: { nombre: string; version: string; framework: string };
+          },
+        ]
+      >;
+      expect(llamadasModelo[0][0].create).toMatchObject({
+        nombre: 'crecimiento_aves',
+        version: '1.1.0',
+        framework: 'numpy',
+      });
+      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
+        { data: Array<{ modelo_id?: number; confianza?: number }> },
+      ];
+      expect(args.data[0]).toMatchObject({
+        modelo_id: 11,
+        confianza: 0.94,
+      });
+    });
+
+    it('reutiliza un modelo ya registrado', async () => {
+      mlResponde();
+      prisma.modeloMl.upsert.mockResolvedValue({ id: 8 });
+
+      await service.predecir(1, admin, true);
+
+      expect(prisma.modeloMl.upsert).toHaveBeenCalledTimes(1);
+      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
+        { data: Array<{ modelo_id?: number }> },
+      ];
+      expect(args.data[0].modelo_id).toBe(8);
+    });
+
+    it('no guarda las magnitudes que no se pudieron calcular', async () => {
+      mlResponde();
+      // Sin registros de mortalidad ni de consumo, esas proyecciones son null
+      // y no deben quedar como filas con valor vacio.
+      await service.predecir(1, admin, true);
+
+      expect(filasGuardadas().map((f) => f.tipo)).toEqual(['peso_faena']);
+    });
+
+    it('la fecha objetivo es la de ingreso mas el dia de faena del plan', async () => {
+      mlResponde();
+
+      await service.predecir(1, admin, true);
+
+      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
+        { data: Array<{ fecha_objetivo: Date }> },
+      ];
+      // fechaDeVida(2026-07-01, 42): el ingreso cuenta como dia 1, asi que
+      // el dia 42 cae 41 dias despues, no 42.
+      expect(args.data[0].fecha_objetivo.toISOString().slice(0, 10)).toBe(
+        '2026-08-11',
+      );
+    });
+
+    it('conserva los pesajes usados como datos de entrada, para poder auditar', async () => {
+      mlResponde();
+
+      await service.predecir(1, admin, true);
+
+      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
+        { data: Array<{ datos_entrada: { pesajes: unknown[] } }> },
+      ];
+      expect(args.data[0].datos_entrada.pesajes).toHaveLength(3);
+    });
+
+    it('marca cada fila nueva con el origen real (plan_lote) y la trazabilidad del plan usado', async () => {
+      mlResponde();
+
+      await service.predecir(1, admin, true);
+
+      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
+        {
+          data: Array<{
+            datos_entrada: {
+              version_calculo: string;
+              convencion_dia: string;
+              origen_dia_faena: string;
+              peso_objetivo_origen: string;
+              peso_objetivo_g: number;
+              plan_lote_id: number;
+              plan_version: number;
+              llegada_proyectada_dia: number | null;
+              omisiones: unknown[];
+              observaciones_descartadas: {
+                pesajes: number;
+                mortalidades: number;
+                consumos: number;
+                motivo: string;
+              };
+            };
+          }>,
+        },
+      ];
+      expect(args.data[0].datos_entrada).toMatchObject({
+        version_calculo: 'predicciones-v2',
+        convencion_dia: 'dia_vida_desde_1',
+        origen_dia_faena: 'plan_lote',
+        peso_objetivo_origen: 'plan_lote',
+        peso_objetivo_g: 2400,
+        plan_lote_id: 501,
+        plan_version: 3,
+        llegada_proyectada_dia: 5,
+        omisiones: [],
+        observaciones_descartadas: {
+          pesajes: 0,
+          mortalidades: 0,
+          consumos: 0,
+          motivo: 'antes_del_ingreso',
+        },
+      });
+    });
+  });
+
   describe('T2: horizonte de proyeccion vencido y fechas anteriores al ingreso', () => {
     // fecha_ingreso es 2026-07-01 (dia 1). fechaDeVida(ingreso, dia) cae en:
     // dia 39 -> 2026-08-08, dia 40 -> 08-09, dia 41 -> 08-10,
-    // dia 42 -> 08-11, dia 43 -> 08-12 (DIA_FAENA_PROYECCION = 42).
+    // dia 42 -> 08-11, dia 43 -> 08-12 (el plan por defecto pide dia 42).
     it('peso vencido (ultimo pesaje >= dia_faena): 422 con codigo horizonte_vencido, no llama al ML, no persiste nada', async () => {
       prisma.pesaje.findMany.mockResolvedValue([
         { fecha: new Date('2026-08-10'), peso_promedio_g: 3000 },
@@ -745,322 +1218,6 @@ describe('PrediccionesService', () => {
       }
       expect(error).toBeInstanceOf(BadRequestException);
       expect(error).not.toBeInstanceOf(UnprocessableEntityException);
-    });
-  });
-
-  const curvaFaena = {
-    dia: 42,
-    marca: 'italcol',
-    sexo: 'macho',
-    peso_esperado_g: 3100,
-    fcr_objetivo: 1.57,
-  };
-
-  const mockMlCompleto = () =>
-    jest.fn((url: string) => {
-      let body: Record<string, number | null>;
-      if (url.includes('predecir-consumo')) {
-        body = { consumo_proyectado_kg: 4550.75, dia_faena: 42 };
-      } else if (url.includes('predecir-mortalidad')) {
-        body = { mortalidad_proyectada_pct: 3.5, dia_faena: 42 };
-      } else {
-        body = {
-          peso_proyectado_faena_g: 3661,
-          dia_faena: 42,
-          dias_al_objetivo: 35,
-          peso_objetivo_g: 2500,
-        };
-      }
-      return Promise.resolve({
-        ok: true,
-        json: jest.fn().mockResolvedValue(body),
-      });
-    }) as unknown as typeof fetch;
-
-  const sembrarSerieCompleta = () => {
-    prisma.consumoDiario.findMany.mockResolvedValue([
-      { fecha: new Date('2026-07-08'), alimento_kg: 165 },
-      { fecha: new Date('2026-07-15'), alimento_kg: 355 },
-      { fecha: new Date('2026-07-22'), alimento_kg: 610 },
-    ]);
-    prisma.registroMortalidad.findMany.mockResolvedValue([
-      { fecha: new Date('2026-07-08'), cantidad_aves: 10 },
-      { fecha: new Date('2026-07-15'), cantidad_aves: 5 },
-      { fecha: new Date('2026-07-22'), cantidad_aves: 5 },
-    ]);
-  };
-
-  it('compara la proyeccion contra la curva objetivo de la marca', async () => {
-    sembrarSerieCompleta();
-    prisma.curvaObjetivo.findFirst.mockResolvedValue(curvaFaena);
-    global.fetch = mockMlCompleto();
-
-    const r = await service.predecir(1, admin);
-
-    expect(r.comparacion_objetivo).toMatchObject({
-      dia_curva: 42,
-      marca: 'italcol',
-      peso_esperado_g: 3100,
-      fcr_objetivo: 1.57,
-      veredicto_peso: 'por_encima',
-      veredicto_fcr: 'mejor_que_objetivo',
-    });
-  });
-
-  it('busca la curva sin distinguir mayusculas en marca y sexo', async () => {
-    sembrarSerieCompleta();
-    prisma.lote.findUnique.mockResolvedValue({
-      ...loteConDueno,
-      sexo: 'Macho',
-      marca_alimento: 'Italcol',
-    });
-    prisma.curvaObjetivo.findFirst.mockResolvedValue(curvaFaena);
-    global.fetch = mockMlCompleto();
-
-    await service.predecir(1, admin);
-
-    const llamadas = prisma.curvaObjetivo.findFirst.mock.calls as Array<
-      [{ where: Record<string, { equals: string; mode: string }> }]
-    >;
-    const where = llamadas[0][0].where;
-    expect(where.marca).toEqual({ equals: 'Italcol', mode: 'insensitive' });
-    expect(where.sexo).toEqual({ equals: 'Macho', mode: 'insensitive' });
-  });
-
-  it('marca el FCR como peor_que_objetivo cuando supera la curva', async () => {
-    sembrarSerieCompleta();
-    prisma.curvaObjetivo.findFirst.mockResolvedValue({
-      ...curvaFaena,
-      fcr_objetivo: 1.1,
-    });
-    global.fetch = mockMlCompleto();
-
-    const r = await service.predecir(1, admin);
-
-    expect(r.comparacion_objetivo).toMatchObject({
-      veredicto_fcr: 'peor_que_objetivo',
-    });
-  });
-
-  it('deja la comparacion en null cuando no hay curva para el lote', async () => {
-    sembrarSerieCompleta();
-    prisma.curvaObjetivo.findFirst.mockResolvedValue(null);
-    global.fetch = mockMlCompleto();
-
-    const r = await service.predecir(1, admin);
-    expect(r.comparacion_objetivo).toBeNull();
-  });
-  it('corta la llamada al servicio ML con un timeout', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({
-      ok: true,
-      json: jest.fn().mockResolvedValue({
-        peso_proyectado_faena_g: 3661,
-        dia_faena: 42,
-        dias_al_objetivo: 35,
-        peso_objetivo_g: 2500,
-      }),
-    });
-    global.fetch = fetchMock;
-
-    await service.predecir(1, admin);
-
-    const llamadas = fetchMock.mock.calls as Array<
-      [string, { signal?: AbortSignal }]
-    >;
-    const opciones = llamadas[0][1];
-    expect(opciones.signal).toBeInstanceOf(AbortSignal);
-  });
-
-  it('lanza BadRequest cuando el servicio ML se cuelga y aborta', async () => {
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(
-        Object.assign(new Error('timeout'), { name: 'TimeoutError' }),
-      );
-
-    await expect(service.predecir(1, admin)).rejects.toThrow(
-      BadRequestException,
-    );
-  });
-
-  it('deja mortalidad y consumo en null cuando esas llamadas al ML se cuelgan', async () => {
-    sembrarSerieCompleta();
-    global.fetch = jest.fn((url: string) => {
-      if (
-        url.includes('predecir-mortalidad') ||
-        url.includes('predecir-consumo')
-      ) {
-        return Promise.reject(new Error('timeout'));
-      }
-      return Promise.resolve({
-        ok: true,
-        json: jest.fn().mockResolvedValue({
-          peso_proyectado_faena_g: 3661,
-          dia_faena: 42,
-          dias_al_objetivo: 35,
-          peso_objetivo_g: 2500,
-        }),
-      });
-    }) as unknown as typeof fetch;
-
-    const r = await service.predecir(1, admin);
-
-    expect(r.peso_proyectado_faena_g).toBe(3661);
-    expect(r.mortalidad_proyectada_pct).toBeNull();
-    expect(r.consumo_proyectado_kg).toBeNull();
-    expect(r.fcr_proyectado).toBeNull();
-  });
-
-  describe('persistencia', () => {
-    it('por defecto NO guarda nada: el GET solo calcula', async () => {
-      mlResponde();
-
-      await service.predecir(1, admin);
-
-      expect(prisma.prediccion.createMany).not.toHaveBeenCalled();
-    });
-
-    it('con persistir=true guarda una fila por magnitud proyectada', async () => {
-      mlResponde();
-      prisma.registroMortalidad.findMany.mockResolvedValue([
-        { fecha: new Date('2026-07-08'), cantidad_aves: 10 },
-        { fecha: new Date('2026-07-15'), cantidad_aves: 12 },
-        { fecha: new Date('2026-07-22'), cantidad_aves: 15 },
-      ]);
-      prisma.consumoDiario.findMany.mockResolvedValue([
-        { fecha: new Date('2026-07-08'), alimento_kg: 100 },
-        { fecha: new Date('2026-07-15'), alimento_kg: 300 },
-        { fecha: new Date('2026-07-22'), alimento_kg: 600 },
-      ]);
-
-      const r = await service.predecir(1, admin, true);
-
-      const tipos = filasGuardadas().map((f) => f.tipo);
-      expect(tipos).toEqual(['peso_faena', 'mortalidad', 'consumo', 'fcr']);
-      expect(r.predicciones_guardadas).toBe(4);
-    });
-
-    it('guarda el peso proyectado con su unidad', async () => {
-      mlResponde();
-
-      await service.predecir(1, admin, true);
-
-      const peso = filasGuardadas().find((f) => f.tipo === 'peso_faena');
-      expect(peso?.valor_predicho).toBe(2400);
-      expect(peso?.unidad).toBe('g');
-    });
-
-    it('registra la versión del modelo y la enlaza con la predicción', async () => {
-      mlResponde();
-
-      await service.predecir(1, admin, true);
-
-      const llamadasModelo = prisma.modeloMl.upsert.mock.calls as Array<
-        [
-          {
-            create: { nombre: string; version: string; framework: string };
-          },
-        ]
-      >;
-      expect(llamadasModelo[0][0].create).toMatchObject({
-        nombre: 'crecimiento_aves',
-        version: '1.1.0',
-        framework: 'numpy',
-      });
-      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
-        { data: Array<{ modelo_id?: number; confianza?: number }> },
-      ];
-      expect(args.data[0]).toMatchObject({
-        modelo_id: 11,
-        confianza: 0.94,
-      });
-    });
-
-    it('reutiliza un modelo ya registrado', async () => {
-      mlResponde();
-      prisma.modeloMl.upsert.mockResolvedValue({ id: 8 });
-
-      await service.predecir(1, admin, true);
-
-      expect(prisma.modeloMl.upsert).toHaveBeenCalledTimes(1);
-      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
-        { data: Array<{ modelo_id?: number }> },
-      ];
-      expect(args.data[0].modelo_id).toBe(8);
-    });
-
-    it('no guarda las magnitudes que no se pudieron calcular', async () => {
-      mlResponde();
-      // Sin registros de mortalidad ni de consumo, esas proyecciones son null
-      // y no deben quedar como filas con valor vacio.
-      await service.predecir(1, admin, true);
-
-      expect(filasGuardadas().map((f) => f.tipo)).toEqual(['peso_faena']);
-    });
-
-    it('la fecha objetivo es la de ingreso mas el dia de faena', async () => {
-      mlResponde();
-
-      await service.predecir(1, admin, true);
-
-      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
-        { data: Array<{ fecha_objetivo: Date }> },
-      ];
-      // fechaDeVida(2026-07-01, 42): el ingreso cuenta como dia 1, asi que
-      // el dia 42 cae 41 dias despues, no 42.
-      expect(args.data[0].fecha_objetivo.toISOString().slice(0, 10)).toBe(
-        '2026-08-11',
-      );
-    });
-
-    it('conserva los pesajes usados como datos de entrada, para poder auditar', async () => {
-      mlResponde();
-
-      await service.predecir(1, admin, true);
-
-      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
-        { data: Array<{ datos_entrada: { pesajes: unknown[] } }> },
-      ];
-      expect(args.data[0].datos_entrada.pesajes).toHaveLength(3);
-    });
-
-    it('marca cada fila nueva con la convencion de dia y las omisiones, para no confundirla con el historial legado', async () => {
-      mlResponde();
-
-      await service.predecir(1, admin, true);
-
-      const [args] = prisma.prediccion.createMany.mock.calls[0] as [
-        {
-          data: Array<{
-            datos_entrada: {
-              version_calculo: string;
-              convencion_dia: string;
-              origen_dia_faena: string;
-              peso_objetivo_origen: string;
-              omisiones: unknown[];
-              observaciones_descartadas: {
-                pesajes: number;
-                mortalidades: number;
-                consumos: number;
-                motivo: string;
-              };
-            };
-          }>,
-        },
-      ];
-      expect(args.data[0].datos_entrada).toMatchObject({
-        version_calculo: 'predicciones-v2',
-        convencion_dia: 'dia_vida_desde_1',
-        origen_dia_faena: 'fijo',
-        peso_objetivo_origen: 'default_ml',
-        omisiones: [],
-        observaciones_descartadas: {
-          pesajes: 0,
-          mortalidades: 0,
-          consumos: 0,
-          motivo: 'antes_del_ingreso',
-        },
-      });
     });
   });
 
