@@ -13,35 +13,30 @@ import {
   tablaQueBloquea,
 } from '../errores/llave-foranea';
 
-const CLAVES_RESERVADAS = new Set(['message', 'statusCode', 'error']);
+// Lista blanca deliberadamente estrecha: un solo codigo de dominio y dos
+// claves numericas fijas. No es "cualquier codigo con cualquier primitivo" --
+// eso reenviaria de mas apenas alguien agregue un campo nuevo al cuerpo de
+// una excepcion sin pensar en que es publico. Ampliar esta lista es una
+// decision explicita, campo por campo, no un efecto secundario.
+const CAMPOS_DETALLE_HORIZONTE_VENCIDO = [
+  'dia_faena',
+  'ultimo_dia_observado',
+] as const;
 
-// Solo se reenvia si la excepcion declara "codigo" -- ese campo es el gesto
-// explicito de "esto es un error de dominio estructurado a proposito", no
-// un accidente. Aun asi, solo se copian valores primitivos: un objeto o
-// array en el cuerpo de la excepcion se descarta, para no reenviar datos
-// arbitrarios de excepciones que no pensaron en esto.
-
-function extraerCodigoYDetalle(respuesta: unknown): {
+function extraerDetalleHorizonteVencido(respuesta: unknown): {
   codigo?: string;
-  detalle: Record<string, string | number | boolean>;
+  detalle: Record<string, number>;
 } {
   if (!respuesta || typeof respuesta !== 'object') return { detalle: {} };
   const objeto = respuesta as Record<string, unknown>;
-  const codigo = typeof objeto.codigo === 'string' ? objeto.codigo : undefined;
-  if (!codigo) return { detalle: {} };
+  if (objeto.codigo !== 'horizonte_vencido') return { detalle: {} };
 
-  const detalle: Record<string, string | number | boolean> = {};
-  for (const [clave, valor] of Object.entries(objeto)) {
-    if (CLAVES_RESERVADAS.has(clave) || clave === 'codigo') continue;
-    if (
-      typeof valor === 'string' ||
-      typeof valor === 'number' ||
-      typeof valor === 'boolean'
-    ) {
-      detalle[clave] = valor;
-    }
+  const detalle: Record<string, number> = {};
+  for (const clave of CAMPOS_DETALLE_HORIZONTE_VENCIDO) {
+    const valor = objeto[clave];
+    if (typeof valor === 'number') detalle[clave] = valor;
   }
-  return { codigo, detalle };
+  return { codigo: 'horizonte_vencido', detalle };
 }
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -98,7 +93,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
           message = detalleMensaje;
         }
       }
-      ({ codigo, detalle } = extraerCodigoYDetalle(respuesta));
+      ({ codigo, detalle } = extraerDetalleHorizonteVencido(respuesta));
     }
 
     if (!(exception instanceof HttpException)) {

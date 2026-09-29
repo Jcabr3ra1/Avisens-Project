@@ -116,8 +116,10 @@ describe('HttpExceptionFilter', () => {
   // El filtro reconstruye la respuesta desde cero (statusCode, message,
   // timestamp, path, requestId): sin este bloque, cualquier campo propio del
   // cuerpo de la excepcion (codigo, dia_faena, etc.) se perdia en silencio.
-  describe('codigo de dominio y detalle acotado', () => {
-    it('reenvia codigo y los campos primitivos cuando la excepcion lo declara', () => {
+  // La lista blanca es deliberadamente estrecha: un solo codigo, dos claves
+  // numericas fijas -- no "cualquier codigo con cualquier primitivo".
+  describe('codigo de dominio y detalle acotado a horizonte_vencido', () => {
+    it('reenvia codigo, dia_faena y ultimo_dia_observado cuando el codigo es horizonte_vencido', () => {
       filtro.catch(
         new UnprocessableEntityException({
           codigo: 'horizonte_vencido',
@@ -137,21 +139,36 @@ describe('HttpExceptionFilter', () => {
       });
     });
 
-    it('descarta valores no primitivos del cuerpo, aunque haya codigo', () => {
+    it('no reenvia ningun otro campo, aunque venga junto al codigo permitido', () => {
       filtro.catch(
         new UnprocessableEntityException({
           codigo: 'horizonte_vencido',
           message: 'x',
+          token: 'secreto',
           detalleAnidado: { secreto: 'no deberia salir' },
-          lista: [1, 2, 3],
         }),
         host(),
       );
 
       const cuerpo = respuesta();
       expect(cuerpo.codigo).toBe('horizonte_vencido');
+      expect(cuerpo.token).toBeUndefined();
       expect(cuerpo.detalleAnidado).toBeUndefined();
-      expect(cuerpo.lista).toBeUndefined();
+    });
+
+    it('no reenvia nada extra cuando el codigo no es horizonte_vencido', () => {
+      filtro.catch(
+        new UnprocessableEntityException({
+          codigo: 'otro_codigo',
+          message: 'x',
+          dia_faena: 42,
+        }),
+        host(),
+      );
+
+      const cuerpo = respuesta();
+      expect(cuerpo.codigo).toBeUndefined();
+      expect(cuerpo.dia_faena).toBeUndefined();
     });
 
     it('no agrega ningun campo extra cuando la excepcion no declara codigo', () => {
@@ -159,9 +176,6 @@ describe('HttpExceptionFilter', () => {
 
       const cuerpo = respuesta();
       expect(cuerpo.codigo).toBeUndefined();
-      expect(Object.keys(cuerpo)).not.toEqual(
-        expect.arrayContaining(['dia_faena', 'ultimo_dia_observado']),
-      );
     });
   });
 });
