@@ -1,4 +1,9 @@
-import { ArgumentsHost, HttpStatus, NotFoundException } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  HttpStatus,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { HttpExceptionFilter } from './http-exception.filter';
 
 describe('HttpExceptionFilter', () => {
@@ -106,5 +111,71 @@ describe('HttpExceptionFilter', () => {
     filtro.catch(new Error('se cayó la conexión'), host());
 
     expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+  });
+
+  // El filtro reconstruye la respuesta desde cero (statusCode, message,
+  // timestamp, path, requestId): sin este bloque, cualquier campo propio del
+  // cuerpo de la excepcion (codigo, dia_faena, etc.) se perdia en silencio.
+  // La lista blanca es deliberadamente estrecha: un solo codigo, dos claves
+  // numericas fijas -- no "cualquier codigo con cualquier primitivo".
+  describe('codigo de dominio y detalle acotado a horizonte_vencido', () => {
+    it('reenvia codigo, dia_faena y ultimo_dia_observado cuando el codigo es horizonte_vencido', () => {
+      filtro.catch(
+        new UnprocessableEntityException({
+          codigo: 'horizonte_vencido',
+          message: 'El lote ya superó el día de proyección',
+          dia_faena: 42,
+          ultimo_dia_observado: 43,
+        }),
+        host(),
+      );
+
+      expect(status).toHaveBeenCalledWith(422);
+      expect(respuesta()).toMatchObject({
+        codigo: 'horizonte_vencido',
+        message: 'El lote ya superó el día de proyección',
+        dia_faena: 42,
+        ultimo_dia_observado: 43,
+      });
+    });
+
+    it('no reenvia ningun otro campo, aunque venga junto al codigo permitido', () => {
+      filtro.catch(
+        new UnprocessableEntityException({
+          codigo: 'horizonte_vencido',
+          message: 'x',
+          token: 'secreto',
+          detalleAnidado: { secreto: 'no deberia salir' },
+        }),
+        host(),
+      );
+
+      const cuerpo = respuesta();
+      expect(cuerpo.codigo).toBe('horizonte_vencido');
+      expect(cuerpo.token).toBeUndefined();
+      expect(cuerpo.detalleAnidado).toBeUndefined();
+    });
+
+    it('no reenvia nada extra cuando el codigo no es horizonte_vencido', () => {
+      filtro.catch(
+        new UnprocessableEntityException({
+          codigo: 'otro_codigo',
+          message: 'x',
+          dia_faena: 42,
+        }),
+        host(),
+      );
+
+      const cuerpo = respuesta();
+      expect(cuerpo.codigo).toBeUndefined();
+      expect(cuerpo.dia_faena).toBeUndefined();
+    });
+
+    it('no agrega ningun campo extra cuando la excepcion no declara codigo', () => {
+      filtro.catch(new NotFoundException('Lote no encontrado'), host());
+
+      const cuerpo = respuesta();
+      expect(cuerpo.codigo).toBeUndefined();
+    });
   });
 });
