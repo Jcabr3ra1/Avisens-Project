@@ -1,4 +1,9 @@
-import { ArgumentsHost, HttpStatus, NotFoundException } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  HttpStatus,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { HttpExceptionFilter } from './http-exception.filter';
 
 describe('HttpExceptionFilter', () => {
@@ -106,5 +111,57 @@ describe('HttpExceptionFilter', () => {
     filtro.catch(new Error('se cayó la conexión'), host());
 
     expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+  });
+
+  // El filtro reconstruye la respuesta desde cero (statusCode, message,
+  // timestamp, path, requestId): sin este bloque, cualquier campo propio del
+  // cuerpo de la excepcion (codigo, dia_faena, etc.) se perdia en silencio.
+  describe('codigo de dominio y detalle acotado', () => {
+    it('reenvia codigo y los campos primitivos cuando la excepcion lo declara', () => {
+      filtro.catch(
+        new UnprocessableEntityException({
+          codigo: 'horizonte_vencido',
+          message: 'El lote ya superó el día de proyección',
+          dia_faena: 42,
+          ultimo_dia_observado: 43,
+        }),
+        host(),
+      );
+
+      expect(status).toHaveBeenCalledWith(422);
+      expect(respuesta()).toMatchObject({
+        codigo: 'horizonte_vencido',
+        message: 'El lote ya superó el día de proyección',
+        dia_faena: 42,
+        ultimo_dia_observado: 43,
+      });
+    });
+
+    it('descarta valores no primitivos del cuerpo, aunque haya codigo', () => {
+      filtro.catch(
+        new UnprocessableEntityException({
+          codigo: 'horizonte_vencido',
+          message: 'x',
+          detalleAnidado: { secreto: 'no deberia salir' },
+          lista: [1, 2, 3],
+        }),
+        host(),
+      );
+
+      const cuerpo = respuesta();
+      expect(cuerpo.codigo).toBe('horizonte_vencido');
+      expect(cuerpo.detalleAnidado).toBeUndefined();
+      expect(cuerpo.lista).toBeUndefined();
+    });
+
+    it('no agrega ningun campo extra cuando la excepcion no declara codigo', () => {
+      filtro.catch(new NotFoundException('Lote no encontrado'), host());
+
+      const cuerpo = respuesta();
+      expect(cuerpo.codigo).toBeUndefined();
+      expect(Object.keys(cuerpo)).not.toEqual(
+        expect.arrayContaining(['dia_faena', 'ultimo_dia_observado']),
+      );
+    });
   });
 });
