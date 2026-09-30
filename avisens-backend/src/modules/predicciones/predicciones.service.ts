@@ -171,15 +171,25 @@ export class PrediccionesService {
       });
     }
 
-    if (plan.estado_dia !== 'calculado' || plan.resultado.dia_objetivo === null) {
+    if (plan.estado_dia !== 'calculado') {
       throw new UnprocessableEntityException({
         codigo: 'sin_plan_utilizable',
         message: 'El lote no tiene un plan con día objetivo calculado',
-        estado_plan:
-          plan.estado_dia === 'calculado'
-            ? 'datos_insuficientes'
-            : plan.estado_dia,
+        estado_plan: plan.estado_dia,
       });
+    }
+
+    if (plan.resultado.dia_objetivo === null) {
+      // planes_lote_matriz_estado_dia (constraint de base de datos) exige
+      // que estado_dia='calculado' venga siempre con dia_objetivo no nulo.
+      // Si llega aqui es un problema de datos, no un estado de negocio --
+      // falla como error interno (el filtro global lo convierte en un 500
+      // generico, sin exponer nada de esta fila), sin llamar al ML. El id
+      // y la version quedan solo en el log del servidor, para poder
+      // encontrar la fila -- nunca en la respuesta al cliente.
+      throw new Error(
+        `PlanLote id=${plan.id} version=${plan.version} tiene estado_dia='calculado' con dia_objetivo null`,
+      );
     }
 
     const diaFaenaPlan = plan.resultado.dia_objetivo;

@@ -241,11 +241,13 @@ describe('PrediccionesService', () => {
       ).toMatchObject({ codigo: 'plan_desactualizado' });
     });
 
-    it('estado_dia calculado pero dia_objetivo null (fila corrupta): no revienta, cae a sin_plan_utilizable con estado_plan=datos_insuficientes, no "calculado"', async () => {
+    it('estado_dia calculado pero dia_objetivo null (combinacion que planes_lote_matriz_estado_dia deberia impedir): falla como error interno, no como sin_plan_utilizable, sin llamar al ML', async () => {
       planLoteService.obtener.mockResolvedValue({
         ...planCalculado,
         resultado: { ...planCalculado.resultado, dia_objetivo: null },
       });
+      const fetchMock = jest.fn();
+      global.fetch = fetchMock;
 
       let error: unknown;
       try {
@@ -253,15 +255,15 @@ describe('PrediccionesService', () => {
       } catch (e) {
         error = e;
       }
-      expect(error).toBeInstanceOf(UnprocessableEntityException);
-      // "calculado" no esta en la lista blanca del filtro (ESTADOS_PLAN_VALIDOS);
-      // reportarlo tal cual haria que el filtro lo descarte en silencio.
-      expect(
-        (error as UnprocessableEntityException).getResponse(),
-      ).toMatchObject({
-        codigo: 'sin_plan_utilizable',
-        estado_plan: 'datos_insuficientes',
-      });
+
+      // No es un estado de negocio (no hay "estado_plan" que informar):
+      // es una fila que el constraint de base de datos no deberia permitir.
+      // Reportarlo como sin_plan_utilizable/datos_insuficientes informaria
+      // una causa falsa (sugiere falta de dato, cuando hay una inconsistencia).
+      expect(error).not.toBeInstanceOf(UnprocessableEntityException);
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toMatch(/dia_objetivo null/);
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it.each([
