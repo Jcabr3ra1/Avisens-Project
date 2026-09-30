@@ -37,8 +37,22 @@ describe('IndicadoresService · calcularParaLote', () => {
     return calls[0][0].update;
   };
 
-  const hace = (dias: number) =>
-    new Date(Date.now() - dias * 24 * 60 * 60 * 1000);
+  // fecha_ingreso/pesaje.fecha/registro_mortalidad.fecha son @db.Date: dias
+  // de calendario de la granja, sin hora. Restar N*86400000 a Date.now() y
+  // dejarlo asi conserva la hora actual -- cerca de medianoche UTC, cuando
+  // la zona de la granja (UTC-5) ya esta en el dia de calendario anterior,
+  // eso hace que "ayer" (con hora) quede DESPUES de "hoy" (medianoche pura),
+  // y el pesaje se clasifica como pesaje_fecha_futura. Normalizar con
+  // inicioDelDiaEnZonaGranja (la misma funcion que usa el servicio para
+  // "hoy") lo evita: Bogota no tiene horario de verano, asi que restar horas
+  // exactas y normalizar el resultado siempre da el dia de calendario
+  // correcto, sin importar la hora real en que corra la prueba.
+  const diaRelativo = (deltaDias: number) =>
+    inicioDelDiaEnZonaGranja(
+      new Date(Date.now() + deltaDias * 24 * 60 * 60 * 1000),
+    );
+  const hace = (dias: number) => diaRelativo(-dias);
+  const enDias = (dias: number) => diaRelativo(dias);
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -162,7 +176,7 @@ describe('IndicadoresService · calcularParaLote', () => {
       // Postgres con el orderBy real. No hay "caer" al anterior.
       prisma.pesaje.findFirst.mockResolvedValue({
         id: 9,
-        fecha: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+        fecha: enDias(5),
         peso_promedio_g: 1200,
       });
       prisma.consumoDiario.aggregate.mockResolvedValue({
@@ -208,7 +222,7 @@ describe('IndicadoresService · calcularParaLote', () => {
         peso_promedio_g: 1000,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([
-        { fecha: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), cantidad_aves: 5 },
+        { fecha: enDias(5), cantidad_aves: 5 },
       ]);
 
       await expect(service.calcularParaLote(1)).resolves.not.toThrow();
@@ -244,7 +258,7 @@ describe('IndicadoresService · calcularParaLote', () => {
         peso_promedio_g: 1000,
       });
       prisma.registroMortalidad.findMany.mockResolvedValue([
-        { fecha: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), cantidad_aves: 5 },
+        { fecha: enDias(5), cantidad_aves: 5 },
       ]);
 
       await service.calcularParaLote(1);
