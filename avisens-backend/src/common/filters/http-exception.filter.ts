@@ -13,30 +13,61 @@ import {
   tablaQueBloquea,
 } from '../errores/llave-foranea';
 
-// Lista blanca deliberadamente estrecha: un solo codigo de dominio y dos
-// claves numericas fijas. No es "cualquier codigo con cualquier primitivo" --
-// eso reenviaria de mas apenas alguien agregue un campo nuevo al cuerpo de
-// una excepcion sin pensar en que es publico. Ampliar esta lista es una
-// decision explicita, campo por campo, no un efecto secundario.
-const CAMPOS_DETALLE_HORIZONTE_VENCIDO = [
-  'dia_faena',
-  'ultimo_dia_observado',
-] as const;
+// Lista blanca deliberadamente estrecha, por codigo. Ampliar a un codigo o
+// campo nuevo es una decision explicita, campo por campo, no un efecto
+// secundario de esta funcion.
+const ESTADOS_PLAN_VALIDOS = new Set([
+  'sin_plan',
+  'sin_curva',
+  'fuera_de_rango',
+  'datos_insuficientes',
+]);
 
-function extraerDetalleHorizonteVencido(respuesta: unknown): {
+interface CampoPermitido {
+  clave: string;
+  tipo: 'number' | 'string';
+  valoresPermitidos?: Set<string>;
+}
+
+const CAMPOS_POR_CODIGO: Record<string, CampoPermitido[]> = {
+  horizonte_vencido: [
+    { clave: 'dia_faena', tipo: 'number' },
+    { clave: 'ultimo_dia_observado', tipo: 'number' },
+  ],
+  sin_plan_utilizable: [
+    { clave: 'estado_plan', tipo: 'string', valoresPermitidos: ESTADOS_PLAN_VALIDOS },
+  ],
+  plan_desactualizado: [],
+  plan_excede_limites_ml: [
+    { clave: 'dia_faena', tipo: 'number' },
+    { clave: 'peso_objetivo_g', tipo: 'number' },
+  ],
+};
+
+function extraerDetalleDeCodigo(respuesta: unknown): {
   codigo?: string;
-  detalle: Record<string, number>;
+  detalle: Record<string, string | number>;
 } {
   if (!respuesta || typeof respuesta !== 'object') return { detalle: {} };
   const objeto = respuesta as Record<string, unknown>;
-  if (objeto.codigo !== 'horizonte_vencido') return { detalle: {} };
+  const codigo = typeof objeto.codigo === 'string' ? objeto.codigo : undefined;
+  const camposPermitidos = codigo ? CAMPOS_POR_CODIGO[codigo] : undefined;
+  if (!codigo || !camposPermitidos) return { detalle: {} };
 
-  const detalle: Record<string, number> = {};
-  for (const clave of CAMPOS_DETALLE_HORIZONTE_VENCIDO) {
-    const valor = objeto[clave];
-    if (typeof valor === 'number') detalle[clave] = valor;
+  const detalle: Record<string, string | number> = {};
+  for (const campo of camposPermitidos) {
+    const valor = objeto[campo.clave];
+    if (campo.tipo === 'number' && typeof valor === 'number') {
+      detalle[campo.clave] = valor;
+    } else if (
+      campo.tipo === 'string' &&
+      typeof valor === 'string' &&
+      (!campo.valoresPermitidos || campo.valoresPermitidos.has(valor))
+    ) {
+      detalle[campo.clave] = valor;
+    }
   }
-  return { codigo: 'horizonte_vencido', detalle };
+  return { codigo, detalle };
 }
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -78,7 +109,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message = 'Error interno del servidor';
     let errors: string[] | undefined;
     let codigo: string | undefined;
-    let detalle: Record<string, string | number | boolean> = {};
+    let detalle: Record<string, string | number> = {};
 
     if (exception instanceof HttpException) {
       const respuesta = exception.getResponse();
@@ -93,7 +124,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
           message = detalleMensaje;
         }
       }
-      ({ codigo, detalle } = extraerDetalleHorizonteVencido(respuesta));
+      ({ codigo, detalle } = extraerDetalleDeCodigo(respuesta));
     }
 
     if (!(exception instanceof HttpException)) {

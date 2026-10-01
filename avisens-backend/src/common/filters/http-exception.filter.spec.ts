@@ -178,4 +178,71 @@ describe('HttpExceptionFilter', () => {
       expect(cuerpo.codigo).toBeUndefined();
     });
   });
+
+  describe('sin_plan_utilizable y plan_desactualizado', () => {
+    it('reenvia codigo y estado_plan cuando es uno de los 4 valores permitidos', () => {
+      filtro.catch(
+        new UnprocessableEntityException({
+          codigo: 'sin_plan_utilizable',
+          message: 'El lote no tiene un plan con día objetivo calculado',
+          estado_plan: 'sin_curva',
+        }),
+        host(),
+      );
+
+      expect(status).toHaveBeenCalledWith(422);
+      expect(respuesta()).toMatchObject({
+        codigo: 'sin_plan_utilizable',
+        estado_plan: 'sin_curva',
+      });
+    });
+
+    it('no reenvia estado_plan si su valor no esta en la lista blanca de 4', () => {
+      filtro.catch(
+        new UnprocessableEntityException({
+          codigo: 'sin_plan_utilizable',
+          message: 'x',
+          estado_plan: 'calculado', // no es uno de los 4 estados "sin plan"
+        }),
+        host(),
+      );
+
+      const cuerpo = respuesta();
+      expect(cuerpo.codigo).toBe('sin_plan_utilizable');
+      expect(cuerpo.estado_plan).toBeUndefined();
+    });
+
+    it('plan_desactualizado no reenvia ningun campo extra, ni siquiera estado_plan', () => {
+      filtro.catch(
+        new UnprocessableEntityException({
+          codigo: 'plan_desactualizado',
+          message: 'x',
+          estado_plan: 'sin_plan',
+        }),
+        host(),
+      );
+
+      const cuerpo = respuesta();
+      expect(cuerpo.codigo).toBe('plan_desactualizado');
+      expect(cuerpo.estado_plan).toBeUndefined();
+    });
+
+    it('plan_excede_limites_ml reenvia dia_faena y peso_objetivo_g, ambos numericos', () => {
+      filtro.catch(
+        new UnprocessableEntityException({
+          codigo: 'plan_excede_limites_ml',
+          message: 'x',
+          dia_faena: 120,
+          peso_objetivo_g: 15000,
+        }),
+        host(),
+      );
+
+      expect(respuesta()).toMatchObject({
+        codigo: 'plan_excede_limites_ml',
+        dia_faena: 120,
+        peso_objetivo_g: 15000,
+      });
+    });
+  });
 });

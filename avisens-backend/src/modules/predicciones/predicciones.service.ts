@@ -12,18 +12,13 @@ import { verificarAccesoLote } from '../../common/auth/alcance';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
 import { ConfigService } from '@nestjs/config';
+import { PlanLoteService } from '../plan-lote/plan-lote.service';
 import { diaDeVidaDeFecha, fechaDeVida } from '../../common/fechas/dias-de-vida';
 
 const UMBRAL_DESVIO_PCT = 5;
 const UMBRAL_DESVIO_FCR = 0.05;
-
-// Dia de faena que se le pide a los tres modelos ML. Coincide con el
-// default que cada uno tenia por separado en avisens-ml/main.py -- antes
-// nadie lo enviaba, asi que los tres dependian de que sus defaults de
-// Python coincidieran por casualidad. Cambiar este numero (o derivarlo
-// de dias_al_objetivo, hoy calculado por el ML y descartado) es una
-// decision de negocio aparte, sin decidir todavia -- ver PR #292.
-const DIA_FAENA_PROYECCION = 42;
+const LIMITE_DIA_FAENA_ML = { min: 1, max: 100 } as const;
+const LIMITE_PESO_OBJETIVO_ML = { min: 0, max: 10000 } as const;
 
 const PREDICCION_SELECT = {
   id: true,
@@ -102,9 +97,15 @@ export interface ObservacionesDescartadas {
 interface ResultadoPrediccion {
   peso_proyectado_faena_g: number;
   dia_faena: number;
+  peso_objetivo_g: number;
+  plan_lote_id: number;
+  plan_version: number;
   mortalidad_proyectada_pct: number | null;
   consumo_proyectado_kg: number | null;
   fcr_proyectado: number | null;
+  comparacion_objetivo: null;
+  comparacion_objetivo_motivo: string;
+  llegada_proyectada: { dia_vida: number; fecha: Date } | null;
   omisiones: OmisionMagnitud[];
   observaciones_descartadas: ObservacionesDescartadas;
   modelos?: {
@@ -121,6 +122,7 @@ export class PrediccionesService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
+    private planLoteService: PlanLoteService,
   ) {}
 
   async predecir(loteId: number, solicitante: Solicitante, persistir = false) {
@@ -143,6 +145,70 @@ export class PrediccionesService {
       'Solo puedes predecir tus propios lotes',
       lote.galpon.granja.propietario_id,
     );
+
+    let plan: Awaited<ReturnType<PlanLoteService['obtener']>>;
+    try {
+      plan = await this.planLoteService.obtener(loteId, solicitante);
+    } catch (e) {
+      if (
+        e instanceof NotFoundException &&
+        e.message === 'Este lote no tiene un plan vigente'
+      ) {
+        throw new UnprocessableEntityException({
+          codigo: 'sin_plan_utilizable',
+          message: 'El lote no tiene un plan con día objetivo calculado',
+          estado_plan: 'sin_plan',
+        });
+      }
+      throw e;
+    }
+
+    if (plan.desactualizado) {
+      throw new UnprocessableEntityException({
+        codigo: 'plan_desactualizado',
+        message:
+          'El plan del lote está desactualizado; recalcúlalo antes de predecir',
+      });
+    }
+
+    if (plan.estado_dia !== 'calculado') {
+      throw new UnprocessableEntityException({
+        codigo: 'sin_plan_utilizable',
+        message: 'El lote no tiene un plan con día objetivo calculado',
+        estado_plan: plan.estado_dia,
+      });
+    }
+
+    if (plan.resultado.dia_objetivo === null) {
+      // planes_lote_matriz_estado_dia (constraint de base de datos) exige
+      // que estado_dia='calculado' venga siempre con dia_objetivo no nulo.
+      // Si llega aqui es un problema de datos, no un estado de negocio --
+      // falla como error interno (el filtro global lo convierte en un 500
+      // generico, sin exponer nada de esta fila), sin llamar al ML. El id
+      // y la version quedan solo en el log del servidor, para poder
+      // encontrar la fila -- nunca en la respuesta al cliente.
+      throw new Error(
+        `PlanLote id=${plan.id} version=${plan.version} tiene estado_dia='calculado' con dia_objetivo null`,
+      );
+    }
+
+    const diaFaenaPlan = plan.resultado.dia_objetivo;
+    const pesoObjetivoPlan = Number(plan.peso_objetivo_g);
+
+    if (
+      diaFaenaPlan < LIMITE_DIA_FAENA_ML.min ||
+      diaFaenaPlan > LIMITE_DIA_FAENA_ML.max ||
+      pesoObjetivoPlan <= LIMITE_PESO_OBJETIVO_ML.min ||
+      pesoObjetivoPlan > LIMITE_PESO_OBJETIVO_ML.max
+    ) {
+      throw new UnprocessableEntityException({
+        codigo: 'plan_excede_limites_ml',
+        message: `El plan del lote pide un día de faena o un peso objetivo fuera de lo que el modelo acepta (día entre ${LIMITE_DIA_FAENA_ML.min} y ${LIMITE_DIA_FAENA_ML.max}, peso hasta ${LIMITE_PESO_OBJETIVO_ML.max} g): día ${diaFaenaPlan}, peso ${pesoObjetivoPlan} g`,
+        dia_faena: diaFaenaPlan,
+        peso_objetivo_g: pesoObjetivoPlan,
+      });
+    }
+
     const pesajes = await this.prisma.pesaje.findMany({
       where: { lote_id: loteId },
       orderBy: { fecha: 'asc' },
@@ -175,18 +241,19 @@ export class PrediccionesService {
     }
 
     const ultimoDiaPesaje = pesajesParaMl[pesajesParaMl.length - 1].dia;
-    if (ultimoDiaPesaje >= DIA_FAENA_PROYECCION) {
+    if (ultimoDiaPesaje >= diaFaenaPlan) {
       throw new UnprocessableEntityException({
         codigo: 'horizonte_vencido',
-        message: `El lote ya superó el día de proyección: el último pesaje es del día ${ultimoDiaPesaje} y el día de faena proyectado es ${DIA_FAENA_PROYECCION}`,
-        dia_faena: DIA_FAENA_PROYECCION,
+        message: `El lote ya superó el día de proyección: el último pesaje es del día ${ultimoDiaPesaje} y el día de faena proyectado es ${diaFaenaPlan}`,
+        dia_faena: diaFaenaPlan,
         ultimo_dia_observado: ultimoDiaPesaje,
       });
     }
 
     const respuesta = await this.llamarMl('/predecir', {
       pesajes: pesajesParaMl,
-      dia_faena: DIA_FAENA_PROYECCION,
+      dia_faena: diaFaenaPlan,
+      peso_objetivo_g: pesoObjetivoPlan,
     });
 
     if (!respuesta?.ok) {
@@ -200,12 +267,20 @@ export class PrediccionesService {
       );
     }
     const prediccion = cuerpoPrediccion;
-    if (prediccion.dia_faena !== DIA_FAENA_PROYECCION) {
+    if (prediccion.dia_faena !== diaFaenaPlan) {
       this.logger.warn(
-        `El modelo de peso devolvio dia_faena=${prediccion.dia_faena}, se pidio ${DIA_FAENA_PROYECCION}`,
+        `El modelo de peso devolvio dia_faena=${prediccion.dia_faena}, se pidio ${diaFaenaPlan}`,
       );
       throw new BadRequestException(
         'El servicio de predicción devolvió un día de faena inconsistente',
+      );
+    }
+    if (prediccion.peso_objetivo_g !== pesoObjetivoPlan) {
+      this.logger.warn(
+        `El modelo de peso devolvio peso_objetivo_g=${prediccion.peso_objetivo_g}, se pidio ${pesoObjetivoPlan}`,
+      );
+      throw new BadRequestException(
+        'El servicio de predicción devolvió un peso objetivo inconsistente',
       );
     }
     const mortalidad = await this.mortalidadProyectada(
@@ -234,14 +309,15 @@ export class PrediccionesService {
       mortalidadPct,
       lote.cantidad_inicial,
     );
-
-    const comparacion = await this.compararConObjetivo(
-      lote.sexo,
-      lote.marca_alimento,
-      prediccion.dia_faena,
-      prediccion.peso_proyectado_faena_g,
-      fcr,
-    );
+    const { modelo: modeloPeso, dias_al_objetivo, ...valoresPrediccion } =
+      prediccion;
+    const llegadaProyectada =
+      dias_al_objetivo !== null
+        ? {
+            dia_vida: dias_al_objetivo,
+            fecha: fechaDeVida(lote.fecha_ingreso, dias_al_objetivo),
+          }
+        : null;
 
     const omisiones: OmisionMagnitud[] = [
       ...(mortalidad.estado === 'horizonte_vencido'
@@ -271,19 +347,22 @@ export class PrediccionesService {
       motivo: 'antes_del_ingreso',
     };
 
-    const { modelo: modeloPeso, ...valoresPrediccion } = prediccion;
     const resultado: ResultadoPrediccion & {
       lote_id: number;
       pesajes_usados: number;
-      comparacion_objetivo: typeof comparacion;
     } = {
       lote_id: loteId,
       pesajes_usados: pesajesParaMl.length,
+      plan_lote_id: plan.id,
+      plan_version: plan.version,
       ...valoresPrediccion,
       mortalidad_proyectada_pct: mortalidadPct,
       consumo_proyectado_kg: consumoKg,
       fcr_proyectado: fcr,
-      comparacion_objetivo: comparacion,
+      comparacion_objetivo: null,
+      comparacion_objetivo_motivo:
+        'plan_usa_curva_genetica_no_unificada_con_curvas_objetivo',
+      llegada_proyectada: llegadaProyectada,
       omisiones,
       observaciones_descartadas: observacionesDescartadas,
       modelos: {
@@ -324,8 +403,12 @@ export class PrediccionesService {
       dia_faena: r.dia_faena,
       version_calculo: 'predicciones-v2' as const,
       convencion_dia: 'dia_vida_desde_1' as const,
-      origen_dia_faena: 'fijo' as const,
-      peso_objetivo_origen: 'default_ml' as const,
+      origen_dia_faena: 'plan_lote' as const,
+      peso_objetivo_origen: 'plan_lote' as const,
+      peso_objetivo_g: r.peso_objetivo_g,
+      plan_lote_id: r.plan_lote_id,
+      plan_version: r.plan_version,
+      llegada_proyectada_dia: r.llegada_proyectada?.dia_vida ?? null,
       omisiones: r.omisiones,
       observaciones_descartadas: r.observaciones_descartadas,
     } as unknown as Prisma.InputJsonValue;

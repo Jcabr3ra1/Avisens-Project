@@ -21,8 +21,10 @@ import { PrismaExceptionFilter } from '../src/common/filters/prisma-exception.fi
 // message, timestamp, path, requestId) y descartaba cualquier otro campo,
 // asi que codigo/dia_faena/ultimo_dia_observado del 422 de horizonte_vencido
 // nunca le llegaban a quien llama a la API -- solo un mock del filtro no lo
-// hubiera mostrado, porque no pasa por el filtro de verdad.
-describe('Predicciones · horizonte_vencido llega completo por HTTP (e2e, Postgres real)', () => {
+// hubiera mostrado, porque no pasa por el filtro de verdad. PrediccionesModule
+// importa PlanLoteModule internamente, asi que basta importar el primero para
+// que PlanLoteService quede disponible via el DI real (no un mock).
+describe('Predicciones · 422 con cuerpo completo por HTTP (e2e, Postgres real)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let servidor: Server;
@@ -36,7 +38,11 @@ describe('Predicciones · horizonte_vencido llega completo por HTTP (e2e, Postgr
     usuario: 0,
     granja: 0,
     galpon: 0,
+    galponSinPlan: 0,
+    lineaGenetica: 0,
+    curva: 0,
     lote: 0,
+    loteSinPlan: 0,
   };
 
   beforeAll(async () => {
@@ -115,19 +121,67 @@ describe('Predicciones · horizonte_vencido llega completo por HTTP (e2e, Postgr
     });
     ids.galpon = galpon.id;
 
+    // Un PlanLote con estado_dia='calculado' exige, por constraint de base
+    // de datos, linea_genetica_id_snapshot y curva_version_id no nulos --
+    // hace falta una linea y una curva vigente reales, no solo el plan.
+    // codigo canonico exige minusculas y solo [a-z0-9_] -- sufijo trae un
+    // guion (Date.now()-pid) que hay que cambiar por guion bajo.
+    const lineaGenetica = await prisma.lineaGenetica.create({
+      data: {
+        codigo: `lg_hv_${sufijo.replace(/-/g, '_')}`,
+        nombre: 'Linea e2e horizonte-vencido',
+      },
+    });
+    ids.lineaGenetica = lineaGenetica.id;
+
+    const curva = await prisma.curvaGeneticaVersion.create({
+      data: {
+        linea_genetica_id: lineaGenetica.id,
+        sexo: 'mixto',
+        version: 1,
+        estado: 'publicada',
+        vigente: true,
+        fuente: 'seed-e2e',
+        fecha_publicacion: new Date(),
+      },
+    });
+    ids.curva = curva.id;
+
     const lote = await prisma.lote.create({
       data: {
         galpon_id: galpon.id,
         codigo: `LOT-HV-${sufijo}`,
         fecha_ingreso: fechaIngreso,
         cantidad_inicial: 1000,
+        linea_genetica_id: lineaGenetica.id,
+        sexo: 'mixto',
       },
     });
     ids.lote = lote.id;
 
+    // El snapshot (linea, sexo, fecha de ingreso, curva) coincide con el
+    // lote y la curva vigente actual, asi que esDesactualizado() da false.
+    await prisma.planLote.create({
+      data: {
+        lote_id: lote.id,
+        version: 1,
+        vigente: true,
+        peso_objetivo_g: 2400,
+        estado_dia: 'calculado',
+        curva_version_id: curva.id,
+        linea_genetica_id_snapshot: lineaGenetica.id,
+        sexo_curva_snapshot: 'mixto',
+        fecha_ingreso_snapshot: fechaIngreso,
+        dia_objetivo: 42,
+        dia_objetivo_interpolado: 42,
+        fecha_salida_calculada: new Date('2026-08-11'),
+        creado_por_id: usuario.id,
+      },
+    });
+
     // fecha_ingreso 2026-07-01 = dia 1. dia 41 -> 2026-08-10, dia 42 ->
-    // 08-11, dia 43 -> 08-12. DIA_FAENA_PROYECCION = 42, asi que el ultimo
-    // pesaje (dia 43) ya vencio el horizonte.
+    // 08-11, dia 43 -> 08-12. El plan pide dia_objetivo=42, asi que el
+    // ultimo pesaje (dia 43) ya vencio el horizonte.
     await prisma.pesaje.createMany({
       data: [
         {
@@ -150,11 +204,38 @@ describe('Predicciones · horizonte_vencido llega completo por HTTP (e2e, Postgr
         },
       ],
     });
+
+    // galpon_id es unico en Lote (un galpon, un lote), asi que el lote
+    // hermano -- sin ningun PlanLote, el otro 422 nuevo de este hito --
+    // necesita su propio galpon.
+    const galponSinPlan = await prisma.galpon.create({
+      data: {
+        granja_id: granja.id,
+        codigo: 'galpon-sin-plan',
+        nombre: 'Galpón sin plan e2e',
+      },
+    });
+    ids.galponSinPlan = galponSinPlan.id;
+
+    const loteSinPlan = await prisma.lote.create({
+      data: {
+        galpon_id: galponSinPlan.id,
+        codigo: `LOT-SP-${sufijo}`,
+        fecha_ingreso: fechaIngreso,
+        cantidad_inicial: 1000,
+      },
+    });
+    ids.loteSinPlan = loteSinPlan.id;
   });
 
   afterAll(async () => {
     await prisma.pesaje.deleteMany({ where: { lote_id: ids.lote } });
+    await prisma.planLote.deleteMany({ where: { lote_id: ids.lote } });
     await prisma.lote.delete({ where: { id: ids.lote } });
+    await prisma.lote.delete({ where: { id: ids.loteSinPlan } });
+    await prisma.curvaGeneticaVersion.delete({ where: { id: ids.curva } });
+    await prisma.lineaGenetica.delete({ where: { id: ids.lineaGenetica } });
+    await prisma.galpon.delete({ where: { id: ids.galponSinPlan } });
     await prisma.galpon.delete({ where: { id: ids.galpon } });
     await prisma.granja.delete({ where: { id: ids.granja } });
     await prisma.usuario.delete({ where: { id: ids.usuario } });
@@ -162,7 +243,7 @@ describe('Predicciones · horizonte_vencido llega completo por HTTP (e2e, Postgr
     await app.close();
   });
 
-  it('GET /v1/predicciones/:loteId responde 422 con el cuerpo completo (codigo, dia_faena, ultimo_dia_observado), no solo el message', async () => {
+  it('GET /v1/predicciones/:loteId responde 422 horizonte_vencido con el cuerpo completo (codigo, dia_faena, ultimo_dia_observado), no solo el message', async () => {
     const res = await request(servidor)
       .get(`/v1/predicciones/${ids.lote}`)
       .set('Authorization', `Bearer ${token}`);
@@ -182,5 +263,18 @@ describe('Predicciones · horizonte_vencido llega completo por HTTP (e2e, Postgr
       where: { lote_id: ids.lote },
     });
     expect(guardadas).toBe(0);
+  });
+
+  it('GET /v1/predicciones/:loteId con un lote sin plan vigente responde 422 sin_plan_utilizable con estado_plan', async () => {
+    const res = await request(servidor)
+      .get(`/v1/predicciones/${ids.loteSinPlan}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(422);
+    expect(res.body).toMatchObject({
+      statusCode: 422,
+      codigo: 'sin_plan_utilizable',
+      estado_plan: 'sin_plan',
+    });
   });
 });
