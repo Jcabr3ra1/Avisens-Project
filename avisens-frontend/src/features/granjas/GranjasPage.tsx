@@ -58,8 +58,16 @@ function GranjasPage() {
   const esAdministrador = rol === ROL_ADMIN
   const permisos = permisosDeGestion(rol)
 
-  const { estructura, proveedores, consumoPorLote, cargando, error, recargar } =
-    useEstructuraGranjas()
+  const {
+    estructura,
+    proveedores,
+    lineasGeneticas,
+    lineasGeneticasError,
+    consumoPorLote,
+    cargando,
+    error,
+    recargar,
+  } = useEstructuraGranjas()
   const gestionGranjas = useGranjas()
   const catalogoPropietarios = usePropietariosGranja(esAdministrador)
 
@@ -567,6 +575,8 @@ function GranjasPage() {
           modoEdicion={formularioLote.modoEdicion}
           galpones={seleccionada.galpones.map((galpon) => galpon.origen)}
           proveedores={proveedores}
+          lineasGeneticas={lineasGeneticas}
+          errorLineasGeneticas={lineasGeneticasError}
           guardando={formularioLote.guardando}
           error={formularioLote.error}
           onCambiar={formularioLote.cambiar}

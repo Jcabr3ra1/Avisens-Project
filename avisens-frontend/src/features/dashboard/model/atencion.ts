@@ -25,8 +25,9 @@ export function tonoPorMortalidad(porcentaje: number | null): TonoAtencion {
   return porcentaje >= MORTALIDAD_ADVERTENCIA_PCT ? 'advertencia' : 'ok'
 }
 
-export function tonoPorSensores(fueraDeRango: number, offline: number): TonoAtencion {
+export function tonoPorSensores(fueraDeRango: number, offline: number, noDisponible: number): TonoAtencion {
   if (fueraDeRango > 0) return 'peligro'
+  if (noDisponible > 0) return 'info'
   if (offline > 0) return 'advertencia'
   return 'ok'
 }
@@ -48,11 +49,12 @@ export function detallePorCriticidad(altas: number, medias: number): string {
   return partes.join(' · ')
 }
 
-export function detallePorSensores(fueraDeRango: number, offline: number): string {
-  if (fueraDeRango === 0 && offline === 0) return 'todos en rango'
+export function detallePorSensores(fueraDeRango: number, offline: number, noDisponible: number): string {
+  if (fueraDeRango === 0 && offline === 0 && noDisponible === 0) return 'todos en rango'
   const partes: string[] = []
   if (fueraDeRango > 0) partes.push(`${fueraDeRango} fuera de rango`)
   if (offline > 0) partes.push(`${offline} sin señal`)
+  if (noDisponible > 0) partes.push(`${noDisponible} sin dato disponible`)
   return partes.join(' · ')
 }
 

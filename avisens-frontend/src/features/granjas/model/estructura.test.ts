@@ -54,6 +54,16 @@ describe('estadoOperativoDeGalpon', () => {
     expect(estadoOperativoDeGalpon(true, sensores)).toBe('sin_datos')
   })
 
+  it('con la consulta de lecturas caída tampoco se afirma que esté normal', () => {
+    const sensores = [sensor({ estado: 'lectura_no_disponible' }), sensor({ id: 2, estado: 'lectura_no_disponible' })]
+    expect(estadoOperativoDeGalpon(true, sensores)).toBe('sin_datos')
+  })
+
+  it('una mezcla de sensores caídos y sin dato disponible tampoco es normal', () => {
+    const sensores = [sensor({ estado: 'offline' }), sensor({ id: 2, estado: 'lectura_no_disponible' })]
+    expect(estadoOperativoDeGalpon(true, sensores)).toBe('sin_datos')
+  })
+
   it('sensores sin umbral configurado no bastan para declarar alerta', () => {
     expect(estadoOperativoDeGalpon(true, [sensor({ estado: 'sin_umbral' })])).toBe('normal')
   })
@@ -71,7 +81,23 @@ describe('contarSensores', () => {
       total: 4,
       enLinea: 3,
       offline: 1,
+      noDisponible: 0,
       conAlerta: 2,
+    })
+  })
+
+  it('cuenta aparte los sensores sin dato disponible: no son "en línea" ni "offline"', () => {
+    const sensores = [
+      sensor({ id: 1, estado: 'lectura_no_disponible' }),
+      sensor({ id: 2, estado: 'lectura_no_disponible' }),
+      sensor({ id: 3, estado: 'offline' }),
+    ]
+    expect(contarSensores(sensores)).toEqual({
+      total: 3,
+      enLinea: 0,
+      offline: 1,
+      noDisponible: 2,
+      conAlerta: 0,
     })
   })
 })

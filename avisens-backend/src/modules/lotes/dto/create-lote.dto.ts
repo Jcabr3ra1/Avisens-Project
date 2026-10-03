@@ -12,7 +12,7 @@ import {
 import {
   MARCAS_ALIMENTO,
   SEXOS_LOTE,
-} from '../../../common/ganaderia/vocabulario';
+} from '../../../common/avicultura/vocabulario';
 
 export class CreateLoteDto {
   @ApiProperty({

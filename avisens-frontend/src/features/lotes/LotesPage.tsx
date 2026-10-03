@@ -1,12 +1,15 @@
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { permisosDeGestion } from '@shared/auth/permisos'
 import { IcPlus } from '@shared/ui/icons/icons'
 import CabeceraAdmin, { type Miga } from '@shared/ui/admin/CabeceraAdmin'
 import '@shared/ui/admin/AdminKit.css'
+import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
 import type { Lote } from './api/lotes'
 import BarraLotes from './components/BarraLotes'
 import FormularioLote from './components/FormularioLote'
+import PlanDeLote from './components/PlanDeLote'
 import ResumenLotes from './components/ResumenLotes'
 import TablaLotes from './components/TablaLotes'
 import { useFiltroLotes } from './hooks/useFiltroLotes'
@@ -39,6 +42,7 @@ function LotesPage() {
   const filtro = useFiltroLotes(lotesDelGalpon)
   const resumen = useResumenLotes(lotesDelGalpon)
   const formulario = useFormularioLote(gestion.guardar)
+  const [loteConPlan, setLoteConPlan] = useState<Lote | null>(null)
 
   const galponActivo = galponesDisponibles.find((galpon) => galpon.activo)
   const { puedeCrear, motivoBloqueo } = evaluarAltaDeLote(galponesDisponibles)
@@ -127,11 +131,22 @@ function LotesPage() {
           lotes={filtro.visibles}
           cargando={gestion.cargando}
           permisos={permisos}
+          onVerPlan={setLoteConPlan}
           onEditar={formulario.abrirEditar}
           onAlternar={(lote) => void gestion.alternarActivo(lote)}
           onEliminar={confirmarEliminacion}
         />
       </section>
+
+      {loteConPlan && (
+        <PantallaHija
+          titulo={`Plan de crecimiento · ${loteConPlan.codigo}`}
+          subtitulo={`${loteConPlan.galpon.nombre} · ${loteConPlan.galpon.granja.nombre}`}
+          onCerrar={() => setLoteConPlan(null)}
+        >
+          <PlanDeLote lote={loteConPlan} />
+        </PantallaHija>
+      )}
 
       {formulario.abierto && (
         <FormularioLote
@@ -139,6 +154,8 @@ function LotesPage() {
           modoEdicion={formulario.modoEdicion}
           galpones={galponesDisponibles}
           proveedores={gestion.proveedores}
+          lineasGeneticas={gestion.lineasGeneticas}
+          errorLineasGeneticas={gestion.lineasGeneticasError}
           guardando={formulario.guardando}
           error={formulario.error}
           onCambiar={formulario.cambiar}

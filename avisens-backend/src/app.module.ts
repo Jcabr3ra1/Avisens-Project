@@ -69,6 +69,8 @@ import { ObservabilityModule } from './common/observability/observability.module
 import { RequestObservabilityInterceptor } from './common/observability/request-observability.interceptor';
 import { CaptacionProspectosModule } from './modules/captacion-prospectos/captacion-prospectos.module';
 import { PlanLoteModule } from './modules/plan-lote/plan-lote.module';
+import { PlanAlimentoModule } from './modules/plan-alimento/plan-alimento.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
@@ -148,6 +150,7 @@ import { PlanLoteModule } from './modules/plan-lote/plan-lote.module';
     LineasGeneticasModule,
     CurvasGeneticasModule,
     PlanLoteModule,
+    PlanAlimentoModule,
     ComandosVozModule,
     ZonasGalponModule,
     UsuariosGalponesModule,

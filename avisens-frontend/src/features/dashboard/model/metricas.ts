@@ -55,6 +55,7 @@ export function etiquetaEstado(estado: string): string {
   if (estado === 'advertencia') return 'Atención'
   if (estado === 'critico') return 'Crítico'
   if (estado === 'offline') return 'Sin señal'
+  if (estado === 'lectura_no_disponible') return 'No disponible'
   return 'Sin umbral'
 }
 

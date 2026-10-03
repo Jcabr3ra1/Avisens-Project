@@ -98,7 +98,7 @@ export class PesajesService {
       this.prisma.pesaje.findMany({
         where,
         select: PESAJE_SELECT,
-        orderBy: { fecha: 'desc' },
+        orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * limit,
         take: limit,
       }),

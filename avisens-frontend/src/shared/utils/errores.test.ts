@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders } from 'axios'
 import { describe, expect, it } from 'vitest'
-import { mensajeDeError } from './errores'
+import { esNotFound, mensajeDeError } from './errores'
 
 function errorConRespuesta(status: number, data: unknown): AxiosError {
   const error = new AxiosError('fallo')
@@ -30,5 +30,23 @@ describe('mensajeDeError', () => {
 
   it('traduce el estado cuando el cuerpo no explica nada', () => {
     expect(mensajeDeError(errorConRespuesta(403, {}), 'respaldo')).not.toBe('respaldo')
+  })
+})
+
+describe('esNotFound', () => {
+  it('reconoce un 404 de axios', () => {
+    expect(esNotFound(errorConRespuesta(404, {}))).toBe(true)
+  })
+
+  it('no confunde otro estado con un 404', () => {
+    expect(esNotFound(errorConRespuesta(403, {}))).toBe(false)
+  })
+
+  it('no confunde un fallo de red (sin respuesta) con un 404', () => {
+    expect(esNotFound(new AxiosError('Network Error'))).toBe(false)
+  })
+
+  it('no confunde un error que no viene de axios', () => {
+    expect(esNotFound(new Error('roto'))).toBe(false)
   })
 })
