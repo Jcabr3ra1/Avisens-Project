@@ -10,6 +10,7 @@ import {
 import { IcAlert, IcRefresh, IcSend } from '@shared/ui/icons/icons'
 import Ic from '@shared/ui/Ic/Ic'
 import { seLeenEnPar } from '@features/landing/model/opcionesChat'
+import AviaProgress from './AviaProgress'
 import './FloatChat.css'
 
 const RobotLottie = lazy(() => import('./RobotLottie'))
@@ -250,6 +251,10 @@ function FloatChat() {
     setOpen(true)
   }
 
+  function manejarClickAvia() {
+    toggleChat()
+  }
+
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     void enviar(texto)
@@ -312,9 +317,11 @@ function FloatChat() {
       >
         <div className="float-chat-topbar">
           <div className="float-chat-avatar">
-            <Suspense fallback={null}>
-              <RobotLottie size={30} animando={enviando} />
-            </Suspense>
+            <AviaProgress
+              progreso={progreso}
+              totalPasos={totalPasos}
+              finalizado={resultado !== null}
+            />
           </div>
           <div className="float-chat-heading">
             <div className="float-chat-name" id="avia-chat-title">AVIA</div>
@@ -505,7 +512,7 @@ function FloatChat() {
         ref={triggerRef}
         className="float-btn"
         type="button"
-        onClick={toggleChat}
+        onClick={manejarClickAvia}
         aria-label={open ? 'Cerrar chat con AVIA' : 'Hablar con AVIA'}
         data-tip={open ? 'Cerrar' : 'Hablar con AVIA'}
         aria-controls="avia-chat-panel"
@@ -522,7 +529,11 @@ function FloatChat() {
                 <Ic d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" size={26} />
               }
             >
-              <RobotLottie size={118} className="float-btn-robot" />
+              <RobotLottie
+                size={112}
+                animando
+                className="float-btn-robot"
+              />
             </Suspense>
           )}
         </span>
