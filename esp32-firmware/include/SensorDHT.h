@@ -2,7 +2,11 @@
 #define SENSOR_DHT_H
 
 #include <Arduino.h>
-#include "DHT.h"
+// DHTesp y no la librería de Adafruit: Adafruit lee los 80 pulsos con las
+// interrupciones apagadas y solo revisa el timeout al final, así que un
+// sensor que se cuelga a mitad de trama bloquea la CPU varios segundos y
+// el Interrupt WDT reinicia el ESP32. DHTesp aborta en el primer timeout.
+#include "DHTesp.h"
 #include "config.h"
 
 /**
@@ -54,7 +58,7 @@ class SensorDHT {
   void reset();
 
  private:
-  DHT dht_;
+  DHTesp dht_;
   LecturaDHT ultimaLectura_;
   int contadorFallos_;
   unsigned long ultimoIntento_;

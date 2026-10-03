@@ -11,23 +11,23 @@
 #include "SensorDHT.h"
 
 SensorDHT::SensorDHT()
-    : dht_(DHTPIN, DHTTYPE),
-      contadorFallos_(0),
+    : contadorFallos_(0),
       ultimoIntento_(0) {
   ultimaLectura_ = {0.0f, 0.0f, false, 0};
 }
 
 void SensorDHT::begin() {
-  dht_.begin();
+  dht_.setup(DHTPIN, DHTesp::DHT22);
   LOG_DEBUG("SensorDHT inicializado");
 }
 
 LecturaDHT SensorDHT::leer() {
   unsigned long ahora = millis();
 
-  // Lectura no bloqueante: DHT22 requiere ~2.25ms
-  float humedad = dht_.readHumidity();
-  float temperatura = dht_.readTemperature();
+  // Una sola trama trae temperatura y humedad; si falla, DHTesp devuelve NaN.
+  TempAndHumidity th = dht_.getTempAndHumidity();
+  float humedad = th.humidity;
+  float temperatura = th.temperature;
 
   LecturaDHT lectura;
   lectura.timestamp = ahora;
@@ -37,8 +37,12 @@ LecturaDHT SensorDHT::leer() {
     contadorFallos_++;
     lectura.valida = false;
 
+    // TIMEOUT = el sensor no contesta (alimentación/conexión);
+    // CHECKSUM = contesta con datos corruptos (ruido, cables largos o flojos).
     Serial.print("⚠ DHT22 fallo (NaN) #");
-    Serial.println(contadorFallos_);
+    Serial.print(contadorFallos_);
+    Serial.print(" — ");
+    Serial.println(dht_.getStatusString());
 
     if (contadorFallos_ >= MAX_FALLOS_SENSOR) {
       LOG_ERROR("DHT22 fallo persistente (desconectado) — Entrando en ERROR");
@@ -103,6 +107,6 @@ void SensorDHT::reiniciarFallos() {
 void SensorDHT::reset() {
   contadorFallos_ = 0;
   ultimaLectura_ = {0.0f, 0.0f, false, 0};
-  dht_.begin();
+  dht_.setup(DHTPIN, DHTesp::DHT22);
   LOG_DEBUG("SensorDHT reseteado");
 }
