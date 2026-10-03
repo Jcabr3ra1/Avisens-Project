@@ -4,12 +4,22 @@
 # carga ademas docker-compose.override.yml, que le agrega hot-reload, el seed y
 # los puertos de depuracion.
 #
-# Levantar en desarrollo:  docker compose up --build
+# Levantar en desarrollo:  docker compose up -d
+# Ver estado:               docker compose ps
+# Ver logs (todos/uno):     docker compose logs -f   /   docker compose logs -f backend
 # Levantar en produccion:  docker compose -f docker-compose.yml up --build -d
-# Apagar:                  docker compose down
+# Apagar (SIN borrar datos): docker compose down
 # Apagar + borrar la base: docker compose down -v
 #
+# Migrar o sembrar a mano, sin reiniciar todo (el contenedor de dev ya lo hace
+# solo en cada arranque; esto es para correrlo aparte):
+#   docker compose exec backend pnpm prisma migrate deploy
+#   docker compose exec backend pnpm run seed
+#
 # Antes del primer arranque:  cp .env.example .env  y rellenar los secretos.
+# Este .env de la raiz es la UNICA fuente para todo lo que corre via Compose.
+# avisens-backend/.env es aparte, y solo hace falta si vas a correr el
+# backend SIN Docker (ver README.md).
 #
 # Acceso una vez arriba:
 #   - Frontend (nginx):     http://localhost:8080
@@ -53,12 +63,16 @@ services:
       retries: 10
 
   # ----- Backend NestJS -----
+  # Una sola fuente de variables: el .env de la raiz, via environment: (abajo).
+  # Antes tambien se cargaba avisens-backend/.env con env_file:, y Compose
+  # resuelve el empate a favor de environment: -- asi que editar ese segundo
+  # archivo no cambiaba nada para las claves duplicadas, en silencio. El .env
+  # del backend sigue existiendo, pero solo para correrlo SIN Docker (ver
+  # README.md).
   backend:
     build: ./avisens-backend
     container_name: avisens-backend
     restart: unless-stopped
-    env_file:
-      - ./avisens-backend/.env
     depends_on:
       database:
         condition: service_healthy
@@ -96,6 +110,21 @@ services:
       ML_URL: http://ml:8000
       ML_TIMEOUT_MS: 5000
       ML_INTERNAL_TOKEN: ${ML_INTERNAL_TOKEN:?falta ML_INTERNAL_TOKEN en .env (ver .env.example)}
+      # Canal de WhatsApp: opcional (el chatbot funciona sin el), por eso sin
+      # ':?'. Antes solo llegaban dentro de Docker via el .env del backend;
+      # ahora salen del mismo .env de la raiz que todo lo demas.
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
+      WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION}
+      WHATSAPP_MINUTOS_INACTIVIDAD: ${WHATSAPP_MINUTOS_INACTIVIDAD}
+      # Opcionales, sin ':?': la app arranca sin ellas y solo las exige en
+      # produccion (NODE_ENV=production), con su propio error claro --
+      # duplicar esa condicion aqui seria una segunda fuente de la misma regla.
+      METRICS_TOKEN: ${METRICS_TOKEN}
+      UMBRAL_PESAJE_DIAS: ${UMBRAL_PESAJE_DIAS}
     ports:
       - "3000:3000"
 
