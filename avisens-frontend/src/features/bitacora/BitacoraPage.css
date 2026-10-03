@@ -47,6 +47,8 @@
 .bit-acciones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; margin-top: 0.9rem; }
 .bit-acciones button { display: flex; min-height: 76px; align-items: center; gap: 0.7rem; padding: 0.8rem; border: 1px solid var(--gr-line, var(--border)); border-radius: 12px; color: var(--text2); background: var(--bg-tint); font: inherit; text-align: left; cursor: pointer; }
 .bit-acciones button svg { color: var(--gr-deep, var(--avisens-deep)); }
+/* Con un número impar de acciones, la última ocupa la fila entera. */
+.bit-acciones button:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .bit-acciones span, .bit-acciones small { display: block; }
 .bit-acciones span { color: var(--dash-ink); font-size: 0.82rem; font-weight: 800; }
 .bit-acciones small { margin-top: 0.18rem; color: var(--text3); font-size: 0.72rem; font-weight: 500; }

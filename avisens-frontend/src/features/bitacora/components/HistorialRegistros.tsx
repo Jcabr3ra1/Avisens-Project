@@ -5,7 +5,8 @@ type Props = {
   codigoLote: string
   filas: FilaRegistro[]
   onNuevo: () => void
-  onEliminar: (id: number) => void
+  // Sin esta función no se muestra el botón (el operario no puede borrar).
+  onEliminar?: (id: number) => void
 }
 
 function fechaLegible(fecha: string) {
@@ -32,7 +33,9 @@ function HistorialRegistros({ titulo, codigoLote, filas, onNuevo, onEliminar }: 
               <time>{fechaLegible(fila.fecha)}</time>
               <strong>{fila.principal}</strong>
               <span>{fila.detalle}</span>
-              <button type="button" onClick={() => onEliminar(fila.id)}>Eliminar</button>
+              {onEliminar && (
+                <button type="button" onClick={() => onEliminar(fila.id)}>Eliminar</button>
+              )}
             </article>
           ))}
         </div>

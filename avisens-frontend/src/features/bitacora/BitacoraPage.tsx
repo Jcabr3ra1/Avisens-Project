@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { getRol } from '@shared/api'
-import { ROL_ADMIN } from '@shared/auth/permisos'
+import { permisosDeRegistro, ROL_ADMIN } from '@shared/auth/permisos'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcDoc, IcDrop, IcHeart, IcRefresh, IcScale, IcSeed } from '@shared/ui/icons/icons'
 import GestionConsumos from '@features/consumos-diarios/components/GestionConsumos'
@@ -34,6 +34,7 @@ const ETIQUETA: Record<TipoRegistro, string> = {
 function BitacoraPage() {
   const datos = useBitacora()
   const esAdministrador = getRol() === ROL_ADMIN
+  const puedeEliminar = permisosDeRegistro(getRol()).eliminar
   const [granjaId, setGranjaId] = useState<number | null>(null)
   const [galponId, setGalponId] = useState<number | null>(null)
   const [loteId, setLoteId] = useState<number | null>(null)
@@ -99,8 +100,9 @@ function BitacoraPage() {
     [mortalidad, pesajes, sanitarios, vista],
   )
 
-  const abrir = (tipo: TipoRegistro) => {
-    setForm(FORMULARIO_INICIAL)
+  // tipoEvento preselecciona el tipo del evento sanitario (p. ej. 'medicacion').
+  const abrir = (tipo: TipoRegistro, tipoEvento?: string) => {
+    setForm(tipoEvento ? { ...FORMULARIO_INICIAL, tipo: tipoEvento } : FORMULARIO_INICIAL)
     setErrorForm('')
     setModal(tipo)
   }
@@ -285,6 +287,7 @@ function BitacoraPage() {
             <AccionesRapidasBitacora
               codigoLote={lote.codigo}
               onRegistrar={abrir}
+              onRegistrarMedicina={() => abrir('sanitario', 'medicacion')}
               onRegistrarConsumo={() => setVista('consumo')}
             />
           ) : vista === 'consumo' ? (
@@ -295,7 +298,7 @@ function BitacoraPage() {
               codigoLote={lote.codigo}
               filas={filas}
               onNuevo={() => abrir(vista)}
-              onEliminar={(id) => borrar(vista, id)}
+              onEliminar={puedeEliminar ? (id) => borrar(vista, id) : undefined}
             />
           )}
         </>

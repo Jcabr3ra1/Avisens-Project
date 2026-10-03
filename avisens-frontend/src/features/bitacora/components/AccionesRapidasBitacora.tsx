@@ -1,13 +1,14 @@
-import { IcDrop, IcHeart, IcScale, IcSeed } from '@shared/ui/icons/icons'
+import { IcDrop, IcHeart, IcPill, IcScale, IcSeed } from '@shared/ui/icons/icons'
 import type { TipoRegistro } from '../model/bitacora'
 
 type Props = {
   codigoLote: string
   onRegistrar: (tipo: TipoRegistro) => void
+  onRegistrarMedicina: () => void
   onRegistrarConsumo: () => void
 }
 
-function AccionesRapidasBitacora({ codigoLote, onRegistrar, onRegistrarConsumo }: Props) {
+function AccionesRapidasBitacora({ codigoLote, onRegistrar, onRegistrarMedicina, onRegistrarConsumo }: Props) {
   return (
     <section className="bit-card bit-acciones-rapidas" aria-labelledby="bit-acciones-titulo">
       <header>
@@ -25,6 +26,10 @@ function AccionesRapidasBitacora({ codigoLote, onRegistrar, onRegistrarConsumo }
         <button type="button" onClick={() => onRegistrar('mortalidad')}>
           <IcHeart size={21} aria-hidden="true" />
           <span>Registrar mortalidad<small>Reportar aves fallecidas</small></span>
+        </button>
+        <button type="button" onClick={onRegistrarMedicina}>
+          <IcPill size={21} aria-hidden="true" />
+          <span>Registrar medicina<small>Medicamento aplicado al lote</small></span>
         </button>
         <button type="button" onClick={() => onRegistrar('sanitario')}>
           <IcDrop size={21} aria-hidden="true" />

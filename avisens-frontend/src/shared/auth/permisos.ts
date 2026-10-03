@@ -68,6 +68,19 @@ export function permisosDeInsumo(rol: string | null): PermisosInsumo {
   }
 }
 
+// Registros diarios del lote (pesajes, mortalidad, eventos sanitarios y
+// consumos). Los tres roles los crean y editan, pero borrarlos queda para el
+// administrador y el propietario.
+// Fuente: @Roles del @Delete en registros-mortalidad, eventos-sanitarios,
+// pesajes y consumos-diarios (avisens-backend/src/modules/).
+export type PermisosRegistro = {
+  eliminar: boolean
+}
+
+export function permisosDeRegistro(rol: string | null): PermisosRegistro {
+  return { eliminar: rol === ROL_ADMIN || rol === ROL_PROPIETARIO }
+}
+
 // Plan de crecimiento y estimación de alimento del lote (Fase 1 / 2A / 2B).
 // El administrador y el propietario calculan o recalculan; el operario solo
 // consulta el resultado.

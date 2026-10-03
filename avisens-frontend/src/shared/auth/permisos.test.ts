@@ -4,6 +4,7 @@ import {
   permisosDeGestion,
   permisosDeInsumo,
   permisosDePlan,
+  permisosDeRegistro,
   ROL_ADMIN,
   ROL_OPERARIO,
   ROL_PROPIETARIO,
@@ -67,6 +68,22 @@ describe('permisosDeInsumo', () => {
 
   it('sin sesión no se puede ni mover stock', () => {
     expect(permisosDeInsumo(null).registrarMovimiento).toBe(false)
+  })
+})
+
+describe('permisosDeRegistro', () => {
+  it('administrador y propietario pueden eliminar registros diarios', () => {
+    expect(permisosDeRegistro(ROL_ADMIN).eliminar).toBe(true)
+    expect(permisosDeRegistro(ROL_PROPIETARIO).eliminar).toBe(true)
+  })
+
+  it('el operario registra pero no elimina', () => {
+    expect(permisosDeRegistro(ROL_OPERARIO).eliminar).toBe(false)
+  })
+
+  it('sin sesión o con un rol desconocido no se elimina', () => {
+    expect(permisosDeRegistro(null).eliminar).toBe(false)
+    expect(permisosDeRegistro('Auditor').eliminar).toBe(false)
   })
 })
 
