@@ -8,6 +8,13 @@ import aviaProcessing from '../../assets/avia/avisens-processing.json'
 
 type EstadoAvia = 'idle' | 'hop' | 'fly' | 'wave' | 'processing'
 
+// La animación de vuelo no lleva tablet, pero sí debe conservar la identidad
+// de AVIA. Reutilizamos la capa vectorial de sus gafas del estado de trabajo.
+const capaGafas = aviaProcessing.layers.find((capa) => capa.ind === 13)
+const aviaFlyConGafas = capaGafas
+  ? { ...aviaFly, layers: [capaGafas, ...aviaFly.layers] }
+  : aviaFly
+
 function prefiereMenosMovimiento() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
@@ -29,12 +36,14 @@ function RobotLottie({
 }: Props) {
   const contenedor = useRef<HTMLSpanElement>(null)
   const [estado, setEstado] = useState<EstadoAvia>(
-    animando ? 'processing' : 'idle',
+    volando ? 'fly' : animando ? 'processing' : 'idle',
   )
 
   useEffect(() => {
-    if (animando) setEstado('processing')
-    else if (volando) setEstado('fly')
+    // El vuelo tiene prioridad: AVIA deja la tablet antes de despegar y al
+    // aterrizar vuelve automáticamente a la animación de procesamiento.
+    if (volando) setEstado('fly')
+    else if (animando) setEstado('processing')
     else if (saludar) setEstado('wave')
     else setEstado('idle')
   }, [animando, saludar, volando])
@@ -46,7 +55,7 @@ function RobotLottie({
     const animations = {
       idle: aviaIdle,
       hop: aviaHop,
-      fly: aviaFly,
+      fly: aviaFlyConGafas,
       wave: aviaWave,
       processing: aviaProcessing,
     }
