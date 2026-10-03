@@ -5,9 +5,6 @@
 #include <ArduinoJson.h>
 #include "Configuracion.h"
 
-// Envía las lecturas vigentes al backend (POST /ingest) cada INTERVALO_ENVIO_MS.
-// Hace llamadas HTTP bloqueantes con reintentos: debe ejecutarse en su propia
-// tarea (tareaIngesta), nunca en tareaRed, para no frenar el lazo MQTT.
 class ServicioIngesta
 {
 public:
@@ -18,9 +15,9 @@ public:
 private:
   enum class ResultadoEnvio : uint8_t
   {
-    OK,        // El backend registró todas las lecturas
-    REINTENTAR, // Fallo transitorio: red, 5xx, respuesta inesperada
-    ABANDONAR  // Reintentar no lo arregla: token inválido, DTO rechazado, códigos ignorados
+    OK,
+    REINTENTAR,
+    ABANDONAR
   };
 
   unsigned long ultimoEnvio_;

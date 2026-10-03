@@ -10,15 +10,12 @@
 #include "Nodo.h"
 #include "Mensajeria.h"
 
-// Cualquier epoch anterior a 2024 significa que el SNTP aún no sincronizó
 static constexpr time_t EPOCH_MINIMA_VALIDA = 1704067200;
 
 ServicioIngesta::ServicioIngesta()
     : ultimoEnvio_(0),
       ntpIniciado_(false)
 {
-  // BACKEND_URL es la base del backend; se tolera que alguien la haya
-  // escrito ya con "/ingest" o con "/" final para no acabar en /ingest/ingest.
   url_ = BACKEND_URL;
   while (url_.endsWith("/"))
   {
@@ -46,7 +43,6 @@ void ServicioIngesta::actualizar()
 
   if (!ntpIniciado_)
   {
-    // configTime necesita la pila de red levantada: se arranca con el primer WiFi
     configTime(0, 0, NTP_SERVIDOR);
     ntpIniciado_ = true;
   }
@@ -57,7 +53,6 @@ void ServicioIngesta::actualizar()
     return;
   }
 
-  // Un snapshot demasiado antiguo no puede publicarse como lectura vigente
   if ((ahora - snapshot.uptimeMs) > UMBRAL_SNAPSHOT_OBSOLETO_MS)
   {
     LOG_WARN("ServicioIngesta: snapshot obsoleto, se omite el envío");
@@ -73,8 +68,6 @@ void ServicioIngesta::actualizar()
     return;
   }
 
-  // Todos los reintentos mandan el mismo cuerpo (mismo id_lote): el backend
-  // reconoce el reintento como el mismo lote y no duplica mediciones.
   for (uint8_t intento = 1; intento <= MAX_REINTENTOS_INGESTA; intento++)
   {
     ResultadoEnvio resultado = enviarHttp(payload, idLote, enviadas);
@@ -142,8 +135,6 @@ ServicioIngesta::ResultadoEnvio ServicioIngesta::enviarHttp(const String &payloa
     return ResultadoEnvio::REINTENTAR;
   }
 
-  // Un 2xx con JSON válido pero sin el contrato esperado (otro servicio, un
-  // proxy, una respuesta genérica) no cuenta como éxito solo por ser JSON.
   StaticJsonDocument<JSON_CAPACIDAD_RESPUESTA_INGESTA> doc;
   if (deserializeJson(doc, respuesta) != DeserializationError::Ok)
   {
@@ -171,8 +162,6 @@ ServicioIngesta::ResultadoEnvio ServicioIngesta::enviarHttp(const String &payloa
   int registradas = campoRegistradas.as<int>();
   if (ignoradas.size() > 0 || registradas != static_cast<int>(enviadas))
   {
-    // Reintentar no arregla un código mal configurado: el lote ya quedó
-    // registrado (parcialmente) y un reintento devolvería lo mismo.
     String codigos;
     for (JsonVariant codigoIgnorado : ignoradas)
     {
@@ -188,7 +177,6 @@ ServicioIngesta::ResultadoEnvio ServicioIngesta::enviarHttp(const String &payloa
 
 void ServicioIngesta::agregarLectura(JsonArray &lecturas, const char *codigo, float valor)
 {
-  // Código vacío => ese sensor no está dado de alta en el backend
   if (codigo == nullptr || codigo[0] == '\0')
   {
     return;
@@ -214,8 +202,6 @@ size_t ServicioIngesta::construirPayload(const SnapshotTelemetria &snapshot,
 
   doc["ip_local"] = WiFi.localIP().toString();
 
-  // Un sensor en error no se envía: mandar el último valor arrastrado lo
-  // registraría en el backend como una medición nueva.
   JsonArray lecturas = doc.createNestedArray("lecturas");
 
   if (snapshot.dhtOk)
@@ -261,10 +247,9 @@ bool ServicioIngesta::fechaCaptura(unsigned long capturaMs, char *buffer, size_t
   gettimeofday(&ahora, nullptr);
   if (ahora.tv_sec < EPOCH_MINIMA_VALIDA)
   {
-    return false; // Sin NTP el backend usa su propia hora de recepción
+    return false;
   }
 
-  // Se fecha el momento de captura, no el de envío
   int64_t ahoraMs = static_cast<int64_t>(ahora.tv_sec) * 1000 + ahora.tv_usec / 1000;
   int64_t capturaEpochMs = ahoraMs - static_cast<int64_t>(millis() - capturaMs);
 

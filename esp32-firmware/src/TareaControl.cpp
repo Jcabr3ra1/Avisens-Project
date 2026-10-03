@@ -68,7 +68,6 @@ static void publicarSnapshot(const LecturaDHT &dht,
   LecturaDHT dhtVigente = dht.valida ? dht : sensorDHT.getUltimaLectura();
   snapshot.temperatura = dhtVigente.temperatura;
   snapshot.humedad = dhtVigente.humedad;
-  // Sin ninguna lectura buena previa el valor arrastrado es 0.0, no un dato real
   snapshot.dhtOk = dhtVigente.valida && !sensorDHT.enError();
   snapshot.gasRaw = gas.rawValue;
   snapshot.gasVoltaje = gas.voltaje;

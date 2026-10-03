@@ -106,7 +106,6 @@ void ClienteMQTT::begin(ManejadorComando manejador)
 
 void ClienteMQTT::actualizar()
 {
-  // Sin broker configurado MQTT queda desactivado; la ingesta HTTP no depende de él
   if (host_.length() == 0 || !WiFi.isConnected())
   {
     return;
