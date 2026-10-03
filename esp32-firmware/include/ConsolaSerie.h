@@ -2,7 +2,7 @@
 #define CONSOLA_SERIE_H
 
 #include <Arduino.h>
-#include "config.h"
+#include "Configuracion.h"
 
 class ConsolaSerie
 {

@@ -2,7 +2,7 @@
 #define GESTOR_ACTUADORES_H
 
 #include <Arduino.h>
-#include "config.h"
+#include "Configuracion.h"
 #include "Actuador.h"
 
 class GestorActuadores

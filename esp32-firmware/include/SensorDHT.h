@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include "DHT.h"
-#include "config.h"
+#include "Configuracion.h"
 
 class SensorDHT
 {

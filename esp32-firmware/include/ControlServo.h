@@ -5,7 +5,7 @@
 #include <ESP32Servo.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include "config.h"
+#include "Configuracion.h"
 
 class ControlServo
 {

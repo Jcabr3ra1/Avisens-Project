@@ -5,7 +5,7 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <PubSubClient.h>
-#include "config.h"
+#include "Configuracion.h"
 
 class ClienteMQTT
 {

@@ -2,7 +2,7 @@
 #define SENSOR_PESO_H
 
 #include <Arduino.h>
-#include "config.h"
+#include "Configuracion.h"
 
 struct LecturaPeso
 {

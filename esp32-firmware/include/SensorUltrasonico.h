@@ -2,7 +2,7 @@
 #define SENSOR_ULTRASONICO_H
 
 #include <Arduino.h>
-#include "config.h"
+#include "Configuracion.h"
 #include "MovingAverage.h"
 
 class SensorUltrasonico

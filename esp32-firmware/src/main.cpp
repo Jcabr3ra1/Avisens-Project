@@ -2,12 +2,13 @@
 #include <esp_task_wdt.h>
 #include <freertos/task.h>
 
-#include "config.h"
+#include "Configuracion.h"
 #include "Nodo.h"
 #include "Mensajeria.h"
 #include "ConsolaSerie.h"
 #include "TareaControl.h"
 #include "TareaRed.h"
+#include "TareaIngesta.h"
 
 void setup()
 {
@@ -35,6 +36,15 @@ void setup()
       STACK_TAREA_RED,
       NULL,
       PRIORIDAD_TAREA_RED,
+      NULL,
+      CORE_RED);
+
+  xTaskCreatePinnedToCore(
+      tareaIngesta,
+      "tareaIngesta",
+      STACK_TAREA_INGESTA,
+      NULL,
+      PRIORIDAD_TAREA_INGESTA,
       NULL,
       CORE_RED);
 

@@ -2,7 +2,7 @@
 #define SENSOR_MQ135_H
 
 #include <Arduino.h>
-#include "config.h"
+#include "Configuracion.h"
 #include "MovingAverage.h"
 
 class SensorMQ135

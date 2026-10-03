@@ -2,7 +2,7 @@
 #define ALIMENTADOR_H
 
 #include <Arduino.h>
-#include "config.h"
+#include "Configuracion.h"
 
 class Alimentador {
  public:

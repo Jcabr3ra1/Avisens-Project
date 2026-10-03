@@ -4,7 +4,7 @@
 #include <esp_task_wdt.h>
 #include <freertos/task.h>
 
-#include "config.h"
+#include "Configuracion.h"
 #include "Nodo.h"
 #include "Mensajeria.h"
 #include "ConsolaSerie.h"
@@ -68,15 +68,18 @@ static void publicarSnapshot(const LecturaDHT &dht,
   LecturaDHT dhtVigente = dht.valida ? dht : sensorDHT.getUltimaLectura();
   snapshot.temperatura = dhtVigente.temperatura;
   snapshot.humedad = dhtVigente.humedad;
-  snapshot.dhtOk = !sensorDHT.enError();
+  // Sin ninguna lectura buena previa el valor arrastrado es 0.0, no un dato real
+  snapshot.dhtOk = dhtVigente.valida && !sensorDHT.enError();
   snapshot.gasRaw = gas.rawValue;
   snapshot.gasVoltaje = gas.voltaje;
+  snapshot.gasOk = gas.valida;
   LecturaPeso pesoVigente = peso.valida ? peso : sensorPeso.getUltimaLectura();
   snapshot.peso = pesoVigente.peso;
-  snapshot.pesoOk = !sensorPeso.enError();
+  snapshot.pesoOk = pesoVigente.valida && !sensorPeso.enError();
   snapshot.obstaculo = presencia.presencia;
   snapshot.distanciaAgua = agua.distancia;
   snapshot.estadoAgua = agua.estado;
+  snapshot.aguaOk = (agua.estado == EstadoSensorUltrasonico::OK);
   snapshot.bombaActiva = gestorActuadores.getK4();
   snapshot.fallosAcumulados = sistemaFSM.fallosAcumulados();
   snapshot.estadoSistema = sistemaFSM.estado();

@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <freertos/task.h>
 
-#include "config.h"
+#include "Configuracion.h"
 #include "Nodo.h"
 #include "Mensajeria.h"
 
@@ -22,7 +22,6 @@ void tareaRed(void *pvParameters)
   {
     conexionWiFi.actualizar();
     clienteMQTT.actualizar();
-    servicioIngesta.actualizar();
 
     if (clienteMQTT.estaConectado())
     {

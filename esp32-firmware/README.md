@@ -43,54 +43,85 @@ umbrales de temperatura. Así el galpón sigue protegido aunque se caiga el WiFi
 
 ```
 esp32-firmware/
-├── platformio.ini          Config del proyecto (placa, framework, librerías)
-├── .gitignore              Ignora .pio/ y config.h (credenciales)
+├── platformio.ini            Config del proyecto (placa, framework, librerías)
 ├── include/
-│   ├── config.example.h    Plantilla de configuración (SÍ se versiona)
-│   └── config.h            TU config real (gitignored, NO se versiona)
+│   ├── Configuracion.h       Pines, umbrales, tiempos y tipos compartidos (SÍ se versiona)
+│   ├── config.example.h      Plantilla de credenciales del nodo (SÍ se versiona)
+│   └── config.h              TUS credenciales (gitignored, NO se versiona)
 └── src/
-    └── main.cpp            El firmware
+    ├── main.cpp              Arranque: periféricos + tareas FreeRTOS
+    ├── TareaControl.cpp      Core 0: sensores, actuadores, fail-safe
+    ├── TareaRed.cpp          Core 1: WiFi + telemetría MQTT
+    ├── TareaIngesta.cpp      Core 1: envío HTTP al backend (POST /ingest)
+    └── ServicioIngesta.cpp   Arma el lote, reintenta y valida la respuesta
 ```
 
 ---
 
 ## Configuración (antes de compilar)
 
-Tus credenciales y pines viven en `include/config.h`, que **no se sube a git**.
+`config.h` solo contiene lo propio de cada nodo y **no se sube a git**. Todo lo
+demás (pines, umbrales, tiempos) está en `Configuracion.h`, que es común.
 
-1. Si no existe, copia la plantilla:
+1. Copia la plantilla:
    ```bash
    cp include/config.example.h include/config.h
    ```
-   (En este repo ya viene un `config.h` con valores de ejemplo para que compile.)
-2. Abre `include/config.h` y ajusta:
-   - **WiFi:** `WIFI_SSID`, `WIFI_PASSWORD`.
-   - **Identidad:** `DEVICE_CODIGO_TOPIC` — debe coincidir con la fila de este
-     ESP32 en la tabla `dispositivos` del backend (p. ej. `"galpon1"`).
-   - **Pines:** según tu cableado real.
-   - **Umbrales:** a qué temperatura enciende/apaga el ventilador.
+   Sin `config.h` la compilación falla con un mensaje que lo indica.
+2. Rellena en `include/config.h`:
+   - **WiFi:** `WIFI_SSID`, `WIFI_PASS`.
+   - **Backend:** `BACKEND_URL` = URL **base** (`http://IP_DE_TU_PC:3000`, sin
+     `/ingest`) y `DEVICE_TOKEN`.
+   - **Códigos de sensores:** `CODIGO_SENSOR_*`, idénticos al campo `codigo`
+     de la tabla `sensores`. Deja `""` en los que no estén dados de alta.
+   - **MQTT (opcional):** `MQTT_BROKER_HOST` vacío lo desactiva.
 
-> ⚠️ Nunca subas contraseñas reales a git. `config.h` ya está en `.gitignore`.
+> ⚠️ Si tenías un `config.h` de la plantilla anterior, vuelve a copiarlo:
+> ahora no debe definir pines, umbrales ni `enum`/`struct` (se duplicarían).
+
+### Alta en el backend
+
+Para que las lecturas se guarden, en el backend debe existir:
+
+1. Un **dispositivo** activo en un galpón activo. Su token se genera/revela con
+   `POST /dispositivos/:id/token` → va en `DEVICE_TOKEN`.
+2. Un **sensor** activo por cada `CODIGO_SENSOR_*` usado, asociado a **ese
+   mismo dispositivo**:
+
+   | Constante                 | Sensor físico | `valor` enviado                   |
+   |---------------------------|---------------|-----------------------------------|
+   | `CODIGO_SENSOR_TEMP`      | DHT22         | Temperatura °C                    |
+   | `CODIGO_SENSOR_HUM`       | DHT22         | Humedad %                         |
+   | `CODIGO_SENSOR_NH3`       | MQ-135        | ADC crudo filtrado (0–4095)       |
+   | `CODIGO_SENSOR_PESO`      | HX711         | Gramos en la tolva                |
+   | `CODIGO_SENSOR_AGUA`      | HC-SR04       | Distancia al agua en cm           |
+   | `CODIGO_SENSOR_PRESENCIA` | KY-032        | 1 = presencia, 0 = libre          |
+
+Si un código no existe, el backend responde 201 pero lo **ignora**; el monitor
+serie lo muestra como `Códigos ignorados: ...`.
 
 ---
 
 ## Cableado (pinout de referencia)
 
-Ajusta los pines en `config.h` si usas otros. Estos son los del ejemplo:
+Definido en `Configuracion.h`:
 
-| Componente        | Pin ESP32 | Notas                                            |
-|-------------------|-----------|--------------------------------------------------|
-| DHT22 (datos)     | GPIO 4    | Digital. VCC a 3.3 V, GND a GND.                 |
-| Relé (IN)         | GPIO 26   | Salida digital. Ver nota de fuente ↓             |
-| MQ-135 (AO)       | GPIO 34   | **Analógico**: solo pines ADC (32–39).           |
-| LDR luz           | GPIO 35   | **Analógico**: solo pines ADC (32–39).           |
+| Componente              | Pin ESP32                  | Notas                                  |
+|-------------------------|----------------------------|----------------------------------------|
+| DHT22 (datos)           | GPIO 4                     | VCC a 3.3 V                            |
+| MQ-135 (AO)             | GPIO 34                    | **Analógico**: solo pines ADC (32–39)  |
+| HC-SR04 TRIG / ECHO     | GPIO 13 / GPIO 35          |                                        |
+| KY-032                  | GPIO 33                    |                                        |
+| HX711 DT / SCK          | GPIO 15 / GPIO 16          |                                        |
+| Relés K1–K4             | GPIO 32 / 25 / 27 / 14     | Calefacción, ventilador, extractor, bomba |
+| L293D persiana EN/IN    | GPIO 5 / 18 / 19           |                                        |
+| L293D sinfín EN/IN      | GPIO 21 / 22 / 23          |                                        |
+| Servo puerta            | GPIO 2                     |                                        |
 
 **Notas importantes de conexión:**
-- **GND común:** el ESP32, el módulo de relé y la fuente del ventilador deben
+- **GND común:** el ESP32, los relés y las fuentes de las cargas deben
   compartir tierra (GND). Si no comparten GND, el relé no conmuta.
-- **Fuente del relé/ventilador aparte:** el ventilador NO se alimenta de los
-  pines del ESP32 (chuparía demasiada corriente). Va al lado **conmutado** del
-  relé, con su propia fuente. Del ESP32 solo sale la señal de control (pin IN).
+- **Fuentes aparte:** las cargas NO se alimentan de los pines del ESP32.
 - Los pines **32–39** son los únicos con ADC utilizable para sensores analógicos.
 
 ---
@@ -105,54 +136,25 @@ Con el ESP32 conectado por USB, en la barra inferior de VS Code:
 | →     | **Upload** — flashea el ESP32                       | `pio run -t upload`        |
 | 🔌    | **Monitor** — abre el monitor serie (115200 baud)  | `pio device monitor`       |
 
-Si todo va bien, en el monitor verás algo como:
+Si el envío funciona, cada ~5 s verás:
 
 ```
-=== Nodo ESP32 Avisens ===
-[WiFi] Conectando a TU_WIFI....
-[WiFi] Conectado. IP: 192.168.1.42
-[Envío] galpon1 → temp=26.4 C  hum=61.0 %  ventilador=off
+[Ingesta] OK 6 lecturas, intento 1/3, id_lote=3f6c...
 ```
 
 ---
 
-## Qué hace hoy
+## Envío al backend
 
-- ✅ Conecta al WiFi (y reconecta si se cae).
-- ✅ Lee el DHT22 cada ~2 s (ignora lecturas inválidas `NaN`).
-- ✅ **Control local del ventilador** con histéresis (`TEMP_ENCIENDE_VENTILADOR`
-  / `TEMP_APAGA_VENTILADOR`): enciende al subir del umbral, apaga al bajar del
-  inferior — así no titila alrededor de un solo valor.
-- 🟡 **Reporta al backend:** por ahora solo **imprime** lo que enviaría. El
-  envío real está pendiente de la decisión de transporte (abajo).
-
----
-
-## Enviar los datos al backend (PENDIENTE)
-
-Falta una decisión de arquitectura y algo de trabajo en el backend:
-
-1. **Elegir transporte** (ver `enviarLectura()` en `main.cpp`):
-   - **MQTT** — el ESP32 publica a un broker (Mosquitto) y un consumidor en el
-     backend lo guarda. Más robusto; encaja con `codigo_topic`. Librería:
-     `PubSubClient`.
-   - **HTTP** — el ESP32 hace `POST /ingest` con un token de dispositivo.
-     Más simple de arrancar. Librería: `HTTPClient` (ya viene con el ESP32).
-2. **Construir la puerta en el backend:** hoy la única entrada de mediciones es
-   `POST /mediciones`, protegida con **JWT + rol** (login humano). Un ESP32 no
-   puede loguearse así, por lo que falta crear la vía de ingesta para
-   dispositivos (broker+consumidor MQTT, o un endpoint `/ingest` con token).
-3. **Identificar por código, no por id:** el firmware manda
-   `DEVICE_CODIGO_TOPIC` + el código del sensor (p. ej. `TEMP-G1-01`); el
-   backend resuelve código → `sensor_id`. Nunca quemar ids numéricos de BD aquí.
-
----
-
-## Próximos pasos
-
-- [ ] Confirmar que el "latido" sube y se ve en el monitor serie.
-- [ ] Ajustar `config.h` (WiFi, pines, umbrales reales).
-- [ ] Decidir transporte: **MQTT** vs **HTTP `/ingest`**.
-- [ ] Implementar `enviarLectura()` según lo decidido.
-- [ ] Construir en el backend la vía de ingesta para dispositivos.
-- [ ] (Frontend) cambiar las lecturas en vivo de Firebase → backend.
+- **HTTP `POST /ingest`** (tarea propia, cada `INTERVALO_ENVIO_MS`): manda las
+  lecturas válidas con cabecera `X-Device-Token`. Un sensor en error no se
+  envía (no se registra un valor arrastrado como medición nueva).
+- **Idempotencia:** cada ciclo lleva un `id_lote` UUID; los reintentos usan el
+  mismo, así el backend no duplica mediciones.
+- **Validación de la respuesta:** un 2xx solo cuenta si trae `id_lote`,
+  `registradas` e `ignoradas` coherentes. 401 y 4xx no se reintentan.
+- **Fecha:** tras sincronizar por NTP se envía `fecha_dispositivo` (UTC, hora
+  de captura). Sin NTP el backend usa su hora de recepción.
+- **MQTT** (opcional): telemetría en vivo y comandos de actuadores en
+  `avisens/<MQTT_DEVICE_ID>/...`. El backend todavía no consume MQTT; lo que se
+  guarda en la base llega por `/ingest`.

@@ -11,13 +11,7 @@ ControlServo controlServo;
 Alimentador alimentador;
 Persiana persiana;
 
-#if defined(WIFI_SSID) && defined(WIFI_PASS)
 ConexionWiFi conexionWiFi(WIFI_SSID, WIFI_PASS);
-#else
-ConexionWiFi conexionWiFi(
-    "prueba",     // Nombre de red
-    "123456789"); // Contraseña
-#endif
 
 ClienteMQTT clienteMQTT(MQTT_BROKER_HOST, MQTT_BROKER_PORT, MQTT_DEVICE_ID);
 ServicioIngesta servicioIngesta;
