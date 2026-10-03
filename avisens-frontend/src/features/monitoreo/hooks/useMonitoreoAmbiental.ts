@@ -204,8 +204,13 @@ async function cargarMonitoreo(forzar = false): Promise<void> {
   if (cargaEnCurso) return cargaEnCurso
   if (!forzar && ultimaCarga > 0 && Date.now() - ultimaCarga < CACHE_MS) return
 
- estadoMonitoreo = { ...estadoMonitoreo, cargando: true, error: '', avisoUltimas: '' }
-  notificar()
+  // Solo la primera carga muestra "Cargando…". En los refrescos se conservan
+  // los datos en pantalla hasta que llegan los nuevos: si no, cada refresco
+  // desmonta la página, el scroll vuelve arriba y parece un F5.
+  if (estadoMonitoreo.galpones.length === 0) {
+    estadoMonitoreo = { ...estadoMonitoreo, cargando: true, error: '', avisoUltimas: '' }
+    notificar()
+  }
 
   cargaEnCurso = (async () => {
     try {
