@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/bg_app">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+        <TextView android:id="@+id/txtNombrePropietario" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
+        <TextView android:id="@+id/txtCorreoPropietario" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="15sp" android:textColor="@color/text_secondary"/>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="28dp" android:text="Mis granjas" android:textSize="22sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="Consulta aquí las granjas asociadas a tu cuenta." android:textSize="13sp" android:textColor="@color/text_secondary"/>
+
+        <LinearLayout android:id="@+id/containerGranjasPropietario" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:orientation="vertical"/>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="26dp" android:text="Panel de Propietario" android:textSize="20sp" android:textStyle="bold" android:textColor="@color/text_primary"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Usa la barra inferior para consultar inventario, alertas, bitácora y gestionar tus operarios." android:textSize="15sp" android:textColor="@color/text_secondary"/>
+
+        <Button android:id="@+id/btnCerrarSesionPropietario" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="26dp" android:text="Cerrar sesión"/>
+    </LinearLayout>
+</ScrollView>
