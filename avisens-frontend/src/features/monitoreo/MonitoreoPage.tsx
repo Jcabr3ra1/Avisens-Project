@@ -15,6 +15,7 @@ import {
 import { iconoSensor } from '@shared/ui/sensorIcon'
 import { semanaDeVida } from '@shared/utils/fechas'
 import { SensorDetail } from './SensorDetail'
+import { LecturasEnVivo } from './LecturasEnVivo'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcServer } from '@shared/ui/icons/icons'
 import '@shared/ui/admin/AdminKit.css'
@@ -22,7 +23,7 @@ import './MonitoreoPage.css'
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 function MonitoreoPage() {
-  const { galpones, cargando, error, avisoUltimas } = useMonitoreoAmbiental()
+  const { galpones, cargando, error, avisoUltimas, recargar } = useMonitoreoAmbiental()
 
   // Galpón seleccionado en el selector superior
   const [galponId, setGalponId] = useState<number | null>(null)
@@ -94,21 +95,19 @@ function MonitoreoPage() {
             ))}
           </div>
 
-          {/* ── Info del lote activo ─────────────────────────────────────────── */}
+          {/* ── Info del galpón ──────────────────────────────────────────────── */}
+          {/* Los sensores son del galpón, no del lote: se muestran haya o no
+              lote activo. El lote solo da contexto (día de vida, umbrales). */}
           <div className="mon-lote-info">
             <strong>{galpon.nombre}</strong>
+            <span>· {galpon.sensores.length} sensor{galpon.sensores.length === 1 ? '' : 'es'}</span>
             {galpon.loteActivo
               ? <span>· Lote {galpon.loteActivo.codigo} · Día <strong>{galpon.diaVida}</strong> de vida</span>
               : <span className="mon-sin-lote">· Sin lote activo</span>}
           </div>
 
           {/* ── Tarjetas de sensores (clickables) ───────────────────────────── */}
-          {!galpon.loteActivo ? (
-            <div className="mon-offline-msg adm-panel">
-              <IcServer size={32} />
-              <p>Galpón vacío. Los sensores se activarán cuando ingrese un nuevo lote.</p>
-            </div>
-          ) : galpon.sensores.length === 0 ? (
+          {galpon.sensores.length === 0 ? (
             <div className="mon-offline-msg adm-panel">
               <IcServer size={32} />
               <p>Este galpón todavía no tiene sensores registrados.</p>
@@ -126,21 +125,34 @@ function MonitoreoPage() {
             </div>
           )}
 
-          {/* ── Tabla de umbrales configurados (HU-21) ──────────────────────── */}
+          {/* ── Lecturas en vivo (gráficas + últimas lecturas) ──────────────── */}
+          {galpon.sensores.length > 0 && (
+            <LecturasEnVivo sensores={galpon.sensores} onNuevaLectura={() => { void recargar() }} />
+          )}
+
+          {/* ── Tabla de sensores del galpón + umbrales (HU-21) ─────────────── */}
           {galpon.sensores.length > 0 && (
             <section className="mon-section">
-              <h2 className="mon-section-title">Umbrales configurados · Semana {semanaDeVida(galpon.diaVida) + 1}</h2>
+              <h2 className="mon-section-title">Sensores del galpón · Umbrales semana {semanaDeVida(galpon.diaVida) + 1}</h2>
               <p className="mon-section-sub">El backend soporta umbral por temperatura, humedad y luminosidad — las demás variables se muestran sin rango.</p>
               <div className="mon-tabla-card adm-panel">
-                <div className="mon-tabla-head">
-                  <span>Variable</span><span>Mín.</span><span>Máx.</span><span>Unidad</span>
+                <div className="mon-tabla-head mon-tabla--sensores">
+                  <span>ID</span><span>Sensor</span><span>Estado</span><span>Valor</span><span>Mín.</span><span>Máx.</span><span>Última lectura</span>
                 </div>
                 {galpon.sensores.map(s => (
-                  <div key={s.id + '-u'} className="mon-tabla-row">
-                    <span>{iconoSensor(s.tipo, 14)} {s.tipo}</span>
+                  <div key={s.id + '-u'} className="mon-tabla-row mon-tabla--sensores">
+                    <span className="mon-tabla-id">#{s.id}</span>
+                    <span className="mon-tabla-sensor">
+                      <span>{iconoSensor(s.tipo, 14)} {s.tipo}</span>
+                      <small>{s.codigo}</small>
+                    </span>
+                    <span>
+                      <span className={`mon-estado-badge mon-estado-badge--${s.estado}`}>{ETIQUETA_ESTADO[s.estado]}</span>
+                    </span>
+                    <span>{s.valor === null ? '—' : <strong>{s.valor} {s.unidad}</strong>}</span>
                     <span>{s.minUmbral ?? '—'}</span>
                     <span>{s.maxUmbral ?? '—'}</span>
-                    <span>{s.unidad}</span>
+                    <span className="mon-tabla-ultima">{formatearUltimaLectura(s.ultimaLecturaTs)}</span>
                   </div>
                 ))}
               </div>
@@ -160,6 +172,16 @@ function MonitoreoPage() {
   )
 }
 
+const ETIQUETA_ESTADO: Record<EstadoSensorVista, string> = {
+  optimo:                'Óptimo',
+  advertencia:           'Advertencia',
+  critico:               'Crítico',
+  sin_umbral:            'Sin umbral',
+  offline:               'Sin señal',
+  lectura_no_disponible: 'No disponible',
+  obsoleta:              'Desactualizado',
+}
+
 // ─── Sub-componente: tarjeta de sensor ────────────────────────────────────────
 type TarjetaProps = {
   sensor:  SensorVista
@@ -171,15 +193,6 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
   const relativo = rango > 0 && sensor.valor !== null
     ? Math.min(100, Math.max(0, ((sensor.valor - (sensor.minUmbral ?? 0)) / rango) * 100))
     : 50
-
-  const etiquetaEstado: Record<EstadoSensorVista, string> = {
-    optimo:               'Óptimo',
-    advertencia:          'Advertencia',
-    critico:               'Crítico',
-    sin_umbral:            'Sin umbral',
-    offline:               'Sin señal',
-    lectura_no_disponible: 'No disponible',
-  }
 
   return (
     <button
@@ -203,7 +216,7 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
 
       <div className="mon-sensor-info">
         <span className="mon-sensor-nombre">{sensor.tipo}</span>
-        <span className="mon-sensor-zona">{sensor.codigo}</span>
+        <span className="mon-sensor-zona">ID #{sensor.id} · {sensor.codigo}</span>
       </div>
 
       <div className="mon-sensor-valor">
@@ -221,7 +234,7 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
 
       <div className="mon-sensor-footer">
         <span className={`mon-estado-badge mon-estado-badge--${sensor.estado}`}>
-          {etiquetaEstado[sensor.estado]}
+          {ETIQUETA_ESTADO[sensor.estado]}
         </span>
         <span className="mon-ultima">{formatearUltimaLectura(sensor.ultimaLecturaTs)}</span>
       </div>
@@ -235,9 +248,10 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
 
 // ─── Estado global de un galpón según sus sensores ───────────────────────────
 function estadoGlobal(galpon: GalponMonitoreoVista): EstadoSensorVista {
-  if (!galpon.loteActivo || galpon.sensores.length === 0) return 'offline'
+  if (galpon.sensores.length === 0) return 'offline'
   if (galpon.sensores.some(s => s.estado === 'critico'))              return 'critico'
   if (galpon.sensores.some(s => s.estado === 'advertencia'))           return 'advertencia'
+  if (galpon.sensores.some(s => s.estado === 'obsoleta'))              return 'obsoleta'
   if (galpon.sensores.some(s => s.estado === 'lectura_no_disponible')) return 'lectura_no_disponible'
   return 'optimo'
 }
