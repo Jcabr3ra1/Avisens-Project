@@ -11,7 +11,10 @@
 services:
   database:
     ports:
-      - "5433:5432"
+      # 127.0.0.1 explicito, no solo "5433:5432": sin la IP, Docker publica en
+      # todas las interfaces (0.0.0.0), alcanzable desde la red local, no solo
+      # desde esta maquina.
+      - "127.0.0.1:5433:5432"
 
   # Backend NestJS en modo watch (nest --watch). Usa la etapa `dev` del Dockerfile.
   # Al arrancar: regenera el cliente Prisma + migra la base + siembra roles y

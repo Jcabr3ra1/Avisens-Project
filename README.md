@@ -69,24 +69,51 @@ De *registrar y medir* a *predecir y recomendar*, por fases:
 
 ### Todo el sistema con Docker (recomendado)
 
+Preparación única (solo la primera vez):
+
 ```bash
 cp .env.example .env          # y rellena los secretos (ver abajo)
-docker compose up --build
+```
+
+Este `.env` de la raíz es la **única fuente** de esas variables para todo lo
+que corre con `docker compose` — backend, frontend y microservicio de ML
+incluidos. `avisens-backend/.env` es un archivo aparte, que solo hace falta si
+además vas a correr el backend **sin** Docker (ver la sección siguiente); no se
+lee dentro del contenedor, así que editarlo no cambia nada mientras usas
+Compose.
+
+Ciclo diario:
+
+```bash
+docker compose up -d          # iniciar (primera vez, o tras cambiar un Dockerfile: agrega --build)
+docker compose ps             # ver estado
+docker compose logs -f        # ver logs de todos los servicios
+docker compose logs -f backend   # ver logs de uno solo
+docker compose down           # detener, SIN borrar datos (los volúmenes quedan)
+docker compose down -v        # detener Y BORRAR la base — solo si quieres empezar de cero
 ```
 
 Eso levanta PostgreSQL, Redis, el backend, el frontend y el microservicio de ML.
-El backend migra la base y la siembra solo, así que al terminar ya hay un admin
-para entrar:
+El backend migra la base y la siembra solo en cada arranque, así que al
+terminar ya hay un admin para entrar:
 
 | Servicio | URL |
 |---|---|
 | Frontend | http://localhost:8080 |
 | Backend / Swagger | http://localhost:3000/docs |
 | Microservicio ML | http://localhost:8000/health |
-| PostgreSQL | localhost:5433 (usuario `avisens`) |
+| PostgreSQL | 127.0.0.1:5433 (usuario `avisens`, solo accesible desde esta máquina) |
 
 En desarrollo el backend corre en modo *watch*: al guardar un archivo se
 recompila solo, sin `--build`.
+
+Si necesitas migrar o re-sembrar **sin** reiniciar todo el stack (por ejemplo,
+tras cambiar `schema.prisma` en caliente):
+
+```bash
+docker compose exec backend pnpm prisma migrate deploy
+docker compose exec backend pnpm run seed
+```
 
 **Los secretos no están en el repositorio.** `docker-compose.yml` los exige por
 variable de entorno y se niega a arrancar si faltan, con un mensaje que dice
@@ -101,6 +128,9 @@ openssl rand -base64 48 | tr -d '\n/+=' | head -c 48
 de acceso.
 
 ### Solo el backend, sin Docker (NestJS + PostgreSQL)
+
+Este camino usa su **propio** `.env`, independiente del de la raíz — edítalo
+aquí, no en el de arriba:
 
 ```bash
 # 1. Levantar PostgreSQL (desde la raíz del repo)
