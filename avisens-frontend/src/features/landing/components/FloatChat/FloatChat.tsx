@@ -114,6 +114,7 @@ const ACCIONES_RAPIDAS: {
 
 function FloatChat() {
   const [open, setOpen] = useState(false)
+  const [aviaVolando, setAviaVolando] = useState(false)
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [sesionId, setSesionId] = useState<string | null>(null)
   const [pregunta, setPregunta] = useState<PreguntaChatbot | null>(null)
@@ -131,6 +132,7 @@ function FloatChat() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const clickTimerRef = useRef<number | null>(null)
   const autoAbierto = useRef(false)
 
   const aplicar = useCallback((respuesta: RespuestaChatbot) => {
@@ -250,6 +252,39 @@ function FloatChat() {
     setOpen(true)
   }
 
+  function manejarClickAvia() {
+    if (open) {
+      toggleChat()
+      return
+    }
+
+    if (aviaVolando || clickTimerRef.current !== null) return
+
+    clickTimerRef.current = window.setTimeout(() => {
+      clickTimerRef.current = null
+      toggleChat()
+    }, 280)
+  }
+
+  function manejarDobleClickAvia() {
+    if (open || aviaVolando) return
+
+    if (clickTimerRef.current !== null) {
+      window.clearTimeout(clickTimerRef.current)
+      clickTimerRef.current = null
+    }
+
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setAviaVolando(true)
+    }
+  }
+
+  useEffect(() => () => {
+    if (clickTimerRef.current !== null) {
+      window.clearTimeout(clickTimerRef.current)
+    }
+  }, [])
+
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     void enviar(texto)
@@ -313,7 +348,7 @@ function FloatChat() {
         <div className="float-chat-topbar">
           <div className="float-chat-avatar">
             <Suspense fallback={null}>
-              <RobotLottie size={30} animando={enviando} />
+              <RobotLottie size={30} animando={enviando} saludar={open} />
             </Suspense>
           </div>
           <div className="float-chat-heading">
@@ -503,9 +538,11 @@ function FloatChat() {
 
       <button
         ref={triggerRef}
-        className="float-btn"
+        className={`float-btn${aviaVolando ? ' is-flying' : ''}`}
         type="button"
-        onClick={toggleChat}
+        onClick={manejarClickAvia}
+        onDoubleClick={manejarDobleClickAvia}
+        onAnimationEnd={() => setAviaVolando(false)}
         aria-label={open ? 'Cerrar chat con AVIA' : 'Hablar con AVIA'}
         data-tip={open ? 'Cerrar' : 'Hablar con AVIA'}
         aria-controls="avia-chat-panel"
@@ -522,7 +559,11 @@ function FloatChat() {
                 <Ic d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" size={26} />
               }
             >
-              <RobotLottie size={118} className="float-btn-robot" />
+              <RobotLottie
+                size={118}
+                volando={aviaVolando}
+                className="float-btn-robot"
+              />
             </Suspense>
           )}
         </span>

@@ -87,6 +87,30 @@
   transform: translateY(0) scale(0.97);
 }
 
+/* El doble clic activa un vuelo breve y devuelve a AVIA a su esquina. */
+.float-btn.is-flying {
+  animation: avia-vuelo-corto 2.8s ease-in-out both;
+  pointer-events: none;
+}
+
+@keyframes avia-vuelo-corto {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  22% {
+    transform: translate3d(-48px, -22px, 0) rotate(-7deg);
+  }
+  48% {
+    transform: translate3d(-132px, -82px, 0) rotate(-2deg);
+  }
+  74% {
+    transform: translate3d(-72px, -38px, 0) rotate(6deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+}
+
 .float-panel {
   width: min(92vw, 390px);
   max-height: calc(100svh - 7.5rem);
@@ -567,6 +591,24 @@
     display: none;
   }
 
+  @keyframes avia-vuelo-corto {
+    0% {
+      transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+    25% {
+      transform: translate3d(-35px, -18px, 0) rotate(-7deg);
+    }
+    52% {
+      transform: translate3d(-88px, -58px, 0) rotate(-2deg);
+    }
+    76% {
+      transform: translate3d(-48px, -28px, 0) rotate(6deg);
+    }
+    100% {
+      transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+  }
+
   .float-chat.is-open {
     right: max(0.5rem, env(safe-area-inset-right, 0px));
     left: max(0.5rem, env(safe-area-inset-left, 0px));
@@ -606,6 +648,10 @@
   .float-dots span {
     animation: none;
     transition-duration: 0.01ms;
+  }
+
+  .float-btn.is-flying {
+    animation: none;
   }
 }
 

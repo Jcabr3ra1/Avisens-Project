@@ -1,6 +1,12 @@
-import { useEffect, useRef } from 'react'
-import lottie, { type AnimationItem } from 'lottie-web/build/player/lottie_light'
-import animacionRobot from '../../assets/robot-avia.json'
+import { useEffect, useRef, useState } from 'react'
+import lottie from 'lottie-web/build/player/lottie_light'
+import aviaIdle from '../../assets/avia/avisens-idle.json'
+import aviaHop from '../../assets/avia/avisens-hop.json'
+import aviaFly from '../../assets/avia/avisens-fly.json'
+import aviaWave from '../../assets/avia/avisens-wave.json'
+import aviaProcessing from '../../assets/avia/avisens-processing.json'
+
+type EstadoAvia = 'idle' | 'hop' | 'fly' | 'wave' | 'processing'
 
 function prefiereMenosMovimiento() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -9,58 +15,92 @@ function prefiereMenosMovimiento() {
 type Props = {
   size: number
   animando?: boolean
+  volando?: boolean
+  saludar?: boolean
   className?: string
 }
 
-function RobotLottie({ size, animando = true, className }: Props) {
+function RobotLottie({
+  size,
+  animando = false,
+  volando = false,
+  saludar = false,
+  className,
+}: Props) {
   const contenedor = useRef<HTMLSpanElement>(null)
-  const animacion = useRef<AnimationItem | null>(null)
-  const cargada = useRef(false)
-  const animandoRef = useRef(animando)
+  const [estado, setEstado] = useState<EstadoAvia>(
+    animando ? 'processing' : 'idle',
+  )
 
-  animandoRef.current = animando
+  useEffect(() => {
+    if (animando) setEstado('processing')
+    else if (volando) setEstado('fly')
+    else if (saludar) setEstado('wave')
+    else setEstado('idle')
+  }, [animando, saludar, volando])
 
   useEffect(() => {
     const nodo = contenedor.current
     if (!nodo) return
 
+    const animations = {
+      idle: aviaIdle,
+      hop: aviaHop,
+      fly: aviaFly,
+      wave: aviaWave,
+      processing: aviaProcessing,
+    }
+
     const instancia = lottie.loadAnimation({
       container: nodo,
       renderer: 'svg',
-      loop: true,
-      autoplay: false,
-      animationData: animacionRobot,
+      loop: estado === 'idle' || estado === 'fly' || estado === 'processing',
+      autoplay: !prefiereMenosMovimiento(),
+      animationData: animations[estado],
+      rendererSettings: {
+        preserveAspectRatio: 'xMidYMid meet',
+      },
     })
 
-    const alCargar = () => {
-      cargada.current = true
-      if (animandoRef.current && !prefiereMenosMovimiento()) instancia.play()
-      else instancia.goToAndStop(0, true)
+    const volverAlReposo = () => {
+      if (estado === 'hop' || estado === 'wave') {
+        setEstado('idle')
+      }
     }
 
-    instancia.addEventListener('DOMLoaded', alCargar)
-    animacion.current = instancia
+    instancia.addEventListener('complete', volverAlReposo)
+
+    if (prefiereMenosMovimiento()) {
+      instancia.goToAndStop(0, true)
+    }
 
     return () => {
-      cargada.current = false
-      animacion.current = null
+      instancia.removeEventListener('complete', volverAlReposo)
       instancia.destroy()
     }
-  }, [])
+  }, [estado])
 
-  useEffect(() => {
-    const instancia = animacion.current
-    if (!instancia || !cargada.current) return
-
-    if (animando && !prefiereMenosMovimiento()) instancia.play()
-    else instancia.goToAndStop(0, true)
-  }, [animando])
+  function saltar() {
+    if (
+      estado === 'idle' &&
+      !animando &&
+      !volando &&
+      !prefiereMenosMovimiento()
+    ) {
+      setEstado('hop')
+    }
+  }
 
   return (
     <span
       ref={contenedor}
       className={className}
-      style={{ width: size, height: size, display: 'block' }}
+      onPointerEnter={saltar}
+      style={{
+        width: size,
+        height: size,
+        display: 'block',
+      }}
       aria-hidden="true"
     />
   )
