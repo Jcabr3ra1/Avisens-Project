@@ -153,6 +153,34 @@ void tareaGalpon(void *pvParameters)
         sensorPeso.setFactor(HX711_FACTOR_ESCALA);
         calibracionCompletada = true;
       }
+      else if (cmd == "RELES")
+      {
+        for (uint8_t r = 1; r <= 4; r++)
+        {
+          Serial.printf("K%u (%s): %s%s\n", r,
+                        GestorActuadores::nombreDesdeRele(r).c_str(),
+                        gestorActuadores.getEstado(r) ? "ON" : "off",
+                        gestorActuadores.esManual(r) ? " [MANUAL]" : "");
+        }
+      }
+      else
+      {
+        // Prueba de actuadores sin depender de los sensores:
+        // "<rele> ON|OFF|AUTO", con rele = K1..K4 o su nombre (VENTILADOR...).
+        int espacio = cmd.indexOf(' ');
+        uint8_t rele = espacio > 0 ? GestorActuadores::releDesdeNombre(cmd.substring(0, espacio)) : 0;
+        String accion = espacio > 0 ? cmd.substring(espacio + 1) : "";
+        accion.trim();
+
+        if (rele != 0 && accion == "ON")
+          gestorActuadores.establecerManual(rele, true);
+        else if (rele != 0 && accion == "OFF")
+          gestorActuadores.establecerManual(rele, false);
+        else if (rele != 0 && accion == "AUTO")
+          gestorActuadores.establecerAutomatico(rele);
+        else if (cmd.length() > 0)
+          LOG_WARN("Comando no reconocido: " + cmd);
+      }
     }
 
     // ─── Máquina de Estado Global (Sincronizada con SSD) ──────────────
@@ -428,6 +456,8 @@ void setup()
   Serial.println("Comandos disponibles:");
   Serial.println("  TARA  - Calibrar celda de carga");
   Serial.println("  REARME - Reiniciar sistema desde INIT");
+  Serial.println("  K1..K4 ON|OFF|AUTO - Probar un rele a mano (tambien VENTILADOR, BOMBA...)");
+  Serial.println("  RELES  - Ver estado de los 4 reles");
   Serial.println("");
 }
 
