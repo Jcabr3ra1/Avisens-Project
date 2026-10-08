@@ -1,10 +1,172 @@
-# AVISENS — Gestión Avícola Inteligente
+<p align="center">
+  <img src="avisens-frontend/src/shared/assets/logo-avisens.png" width="96" alt="Logo de AVISENS">
+</p>
 
-**AVISENS** (Sistema Automatizado de Gestión y Monitoreo Avícola) es una plataforma para la gestión, monitoreo e inteligencia de granjas avícolas de pollo de engorde en Colombia y Latinoamérica.
+<h1 align="center">AVISENS</h1>
+<p align="center"><strong>Gestión avícola inteligente para granjas de pollo de engorde</strong></p>
 
-## ¿Qué problema resuelve?
+AVISENS es una plataforma web (y una app móvil en desarrollo) para que una
+granja avícola lleve su día a día de forma digital: qué comieron las aves, qué
+tan sano está el ambiente del galpón, y cómo va creciendo el lote frente a lo
+esperado.
 
-Los avicultores colombianos enfrentan alta mortalidad de aves por falta de monitoreo ambiental continuo, registros manuales propensos a errores y poca visibilidad de la eficiencia del ciclo productivo. AVISENS lleva ese flujo a lo digital — registrar → medir → **predecir** → recomendar — con el objetivo de reducir la mortalidad avícola y mejorar la conversión alimenticia (FCR).
+---
+
+## Índice
+
+- [Qué es AVISENS](#qué-es-avisens)
+- [Qué problema resuelve y para quién](#qué-problema-resuelve-y-para-quién)
+- [Qué puedes hacer con AVISENS hoy](#qué-puedes-hacer-con-avisens-hoy)
+- [Un recorrido simple de la granja al lote](#un-recorrido-simple-de-la-granja-al-lote)
+- [Qué existe hoy y qué está en construcción](#qué-existe-hoy-y-qué-está-en-construcción)
+- [Hacia dónde va el proyecto](#hacia-dónde-va-el-proyecto)
+- [Instalación y uso técnico](#instalación-y-uso-técnico)
+  - [Correr todo con Docker (recomendado)](#correr-todo-con-docker-recomendado)
+  - [Solo el backend, sin Docker](#solo-el-backend-sin-docker)
+  - [Qué se despliega desde dónde](#qué-se-despliega-desde-dónde)
+  - [Frontend web](#frontend-web)
+  - [App Android](#app-android)
+  - [Firmware ESP32](#firmware-esp32)
+- [Calidad y flujo de colaboración](#calidad-y-flujo-de-colaboración)
+- [Proyecto](#proyecto)
+
+---
+
+## Qué es AVISENS
+
+**AVISENS** (Sistema Automatizado de Gestión y Monitoreo Avícola) es una
+plataforma para registrar, medir y — poco a poco — predecir lo que pasa en una
+granja de pollo de engorde, pensada para Colombia y Latinoamérica.
+
+## Qué problema resuelve y para quién
+
+Muchos productores avícolas, sobre todo pequeños y medianos, hoy llevan el
+control de sus galpones en papel o en hojas de cálculo sueltas: cuánto
+alimento se consumió, cuántas aves murieron, qué tan caliente o húmedo está el
+ambiente. Eso dificulta detectar a tiempo un problema (un galpón que se
+calienta de más, un lote que está comiendo más de lo esperado) y dificulta
+comparar un ciclo productivo contra el siguiente.
+
+AVISENS busca llevar ese control a lo digital — **registrar → medir →
+predecir → recomendar** — para que esa información quede en un solo lugar,
+se pueda consultar desde cualquier parte, y sirva para decidir a tiempo.
+
+Está pensado para:
+
+- **Propietarios** de una o varias granjas, que quieren ver cómo van sus
+  galpones sin tener que estar ahí.
+- **Operarios**, que son quienes registran la jornada día a día en el galpón.
+- Estudiantes y formadores que usan el proyecto como caso de estudio (ver
+  [Proyecto](#proyecto)).
+
+## Qué puedes hacer con AVISENS hoy
+
+- **Registrar la jornada** — la bitácora diaria del galpón: cuánto comieron
+  las aves, cuántas murieron, eventos sanitarios y plagas. Lo registra quien
+  está físicamente en el galpón (el Operario).
+- **Consultar el ambiente** — si el galpón tiene sensores instalados
+  (temperatura, humedad, CO₂, NH₃), sus lecturas quedan guardadas y se pueden
+  comparar contra umbrales configurados, para detectar cuándo algo se sale de
+  rango.
+- **Seguir el crecimiento** — se calculan dos indicadores del lote:
+  - **FCR** (conversión alimenticia): cuánto alimento se necesitó por cada
+    kilo de pollo vivo. Más bajo es mejor.
+  - **EPEF** (eficiencia productiva): un único número que combina el peso,
+    la mortalidad, la edad del lote y el FCR. Más alto es mejor.
+
+  El **peso** y el **FCR** se comparan contra una curva de referencia **por
+  marca de alimento**; esa curva no trae un EPEF objetivo con el que
+  comparar — el EPEF se calcula, pero hoy no tiene una meta de referencia
+  propia.
+- **Planificar el ciclo** — un sistema aparte, con **su propia curva por
+  línea genética** (no la misma curva por marca de arriba): se elige un peso
+  objetivo para el lote, el sistema **estima** un día de salida compatible
+  con esa curva, y a partir de ahí **estima** cuánto alimento haría falta por
+  etapa. Son estimaciones para planear — no son una garantía del resultado
+  final, ni el sistema cierra el lote automáticamente.
+- **Catálogo de insumos** — proveedores, insumos y tipos de alimento, con el
+  consumo diario registrado por lote, como base para decidir cuánto y qué
+  comprar.
+
+## Un recorrido simple de la granja al lote
+
+AVISENS organiza la información en tres niveles, cada uno dentro del
+anterior. Este es un **ejemplo ficticio**, solo para mostrar cómo encaja todo:
+
+```
+🏠 Granja "El Progreso" (ejemplo ficticio)
+ └── 🏚️  Galpón 1
+      ├── 📡 Sensores de temperatura y humedad — reportan el ambiente del
+      │     GALPÓN de forma continua, no dependen de qué lote esté adentro
+      └── 🐣 Lote #12 — 5.000 pollos, iniciado el 1 de octubre
+           ├── El Operario registra cuánto comieron y cuántos murieron,
+           │     según la frecuencia operativa acordada
+           └── Según esa misma frecuencia, se pesa una muestra y se compara
+                 contra la curva esperada
+```
+
+Una **Granja** agrupa varios **Galpones**. Los **sensores** quedan
+instalados en el **Galpón** — miden su ambiente sin importar qué lote tenga
+dentro en ese momento. El **Lote**, en cambio, es lo que entra y sale de un
+Galpón: nace cuando llegan las aves y se cierra cuando salen. La bitácora
+(pesajes, consumos, mortalidad) y los indicadores de crecimiento quedan
+asociados al **Lote**, para poder mirar un ciclo completo o compararlo con
+el anterior.
+
+## Qué existe hoy y qué está en construcción
+
+AVISENS está en desarrollo activo como proyecto de formación. Esta tabla
+distingue lo que **ya funciona** de lo que **está planeado** — para no
+prometer algo que todavía no se puede mostrar:
+
+<details open>
+<summary><strong>Ver estado actual</strong></summary>
+
+La madurez de cada pieza no es la misma: una cosa es que el código **exista**,
+otra que esté **integrado** en la aplicación, otra que esté **configurado**
+para usarse (claves, variables de entorno), y otra muy distinta que esté
+**validado** con uso real. Esta tabla distingue esos niveles en vez de
+agruparlo todo en "hecho" o "falta":
+
+| Área | Estado |
+|---|---|
+| **Aplicación web** (registrar, consultar, roles por usuario) | ✅ Implementado, integrado y en uso |
+| **Bitácora diaria** (pesajes, consumos, mortalidad, sanitarios, plagas) | ✅ Implementado, integrado y en uso |
+| **Indicadores productivos** (FCR y EPEF calculados; peso y FCR comparados contra curva por marca, EPEF sin meta propia) | ✅ Implementado, integrado y en uso |
+| **Planificación del ciclo** (peso objetivo, día de salida, alimento por etapas) | ✅ Implementado e integrado — son estimaciones; su precisión frente a resultados reales todavía no está validada con datos de campo |
+| **Ingesta de sensores vía HTTP** (el backend recibe y guarda lecturas) | ✅ Implementado, integrado y en uso |
+| **Clima externo como contexto** | ✅ Implementado e integrado (consulta la API pública Open-Meteo); su configuración y uso en el día a día todavía no está confirmada |
+| **Recomendaciones automáticas a partir de los KPIs** | ✅ Implementado e integrado; sin validar con uso real todavía |
+| **Copiloto conversacional** | ✅ Implementado e integrado (usa un modelo de lenguaje de Anthropic con herramientas); requiere una clave de API configurada, y su comportamiento en uso real aún no está validado a fondo |
+| **Comandos de voz** | ✅ Implementado e integrado (interpreta y registra comandos de un vocabulario controlado, con sincronización para uso sin conexión); sin validar con uso real todavía |
+| **Firmware del sensor ESP32** | 🔧 El código implementa el envío real por HTTP con token de dispositivo, pero **no hay confirmación de que se haya hecho ni siquiera una prueba física completa** (hardware real + sensor real + red real + backend real) — ni a pequeña ni a gran escala. El propio firmware tiene comentarios que dicen que el transporte (HTTP o MQTT) sigue sin decidirse del todo |
+| **App Android** | 🔧 Existe una app nativa básica (inicio de sesión y parte de la bitácora); **no** es todavía la versión multiplataforma planeada, y le falta buena parte de lo que ya tiene la web |
+| **Predicciones por Machine Learning** (peso, FCR, riesgo de mortalidad) | 🔧 El servicio existe y se está ajustando — sus resultados **no** se presentan todavía como una predicción validada para producción |
+| **Bioacústica / visión, modo multi-granja (SaaS)** | 📋 Planeado, sin construir todavía |
+
+</details>
+
+## Hacia dónde va el proyecto
+
+La idea de fondo es ir avanzando por fases, de lo más simple a lo más
+ambicioso: primero que la información quede bien **registrada**, después que
+se pueda **medir** (los indicadores de hoy), luego **predecir** con Machine
+Learning, y más adelante **recomendar** acciones concretas — todo sin
+saltarse el paso anterior ni prometer una fase antes de tenerla construida y
+probada.
+
+## Proyecto
+
+Desarrollado como proyecto de formación **SENA** — Colombia · 2026.
+Diseñado para cumplir la **Ley 1581 de 2012** de Protección de Datos
+Personales de Colombia.
+
+---
+
+# Instalación y uso técnico
+
+Esta sección es para quien va a **instalar, correr o contribuir** al
+proyecto. Si solo querías entender qué es AVISENS, con lo de arriba basta.
 
 ## Roles del sistema
 
@@ -14,36 +176,46 @@ Los avicultores colombianos enfrentan alta mortalidad de aves por falta de monit
 | **Propietario** | Gestiona sus granjas, galpones, lotes y ve sus indicadores |
 | **Operario** | Registra la bitácora del día (pesajes, consumos, mortalidad) en su galpón |
 
-El alcance por rol se aplica en el servidor: cada Propietario solo ve y gestiona **sus** propios datos.
+El alcance por rol se aplica en el servidor: cada Propietario solo ve y
+gestiona **sus** propios datos.
 
-## Estructura del repositorio
+<details>
+<summary><strong>Estructura del repositorio</strong></summary>
 
 ```
 Avisens-Project/
 ├── avisens-backend/    ← API REST (NestJS 11 + Prisma 7 + PostgreSQL)
 ├── avisens-frontend/   ← Aplicación web (React 19 + TypeScript + Vite)
-├── avisens-android/    ← App móvil (Kotlin Multiplatform + Compose)
+├── avisens-android/    ← App Android nativa (Kotlin, en desarrollo)
 ├── esp32-firmware/     ← Firmware de los sensores IoT (ESP32 + PlatformIO)
-├── database/           ← Scripts e init de la base de datos
-├── postman/            ← Colección Postman para probar la API (local, ignorada)
-└── docker-compose.yml  ← PostgreSQL + backend + frontend
+├── database/           ← Imagen base de PostgreSQL (el esquema lo administra
+│                          Prisma, no hay scripts de creación de tablas aquí)
+├── bruno/              ← Colección Bruno versionada, para probar la API
+└── docker-compose.yml  ← PostgreSQL + Redis + backend + frontend + ML
 ```
 
-## Stack tecnológico
+</details>
+
+<details>
+<summary><strong>Stack tecnológico</strong></summary>
 
 | Capa | Tecnología |
 |------|------------|
 | **Backend** | NestJS 11, Prisma 7, PostgreSQL, TypeScript, pnpm |
 | **Autenticación** | JWT (access + refresh), RBAC por rol, rate limiting, CORS, Helmet/CSP |
 | **Frontend web** | React 19, TypeScript, Vite, axios |
-| **App móvil** | Kotlin Multiplatform, Compose Multiplatform (Android) |
-| **IoT** | ESP32 + PlatformIO → MQTT → backend (sensores de temperatura, humedad, CO₂, NH₃) |
+| **App móvil** | Android nativo (Kotlin, Retrofit) — sin Compose ni Kotlin Multiplatform todavía |
+| **IoT** | ESP32 + PlatformIO → HTTP con token de dispositivo → backend (sensores de temperatura, humedad, CO₂, NH₃); MQTT se evaluó pero no está integrado |
 | **Contenedores** | Docker + Docker Compose |
-| **Despliegue** | Railway (backend en producción) |
+| **Despliegue** | Railway (backend) + Vercel (frontend) |
 
-## Módulos del backend (implementados)
+</details>
 
-La API está versionada bajo **`/v1`** y documentada con **Swagger** (`/docs` en desarrollo).
+<details>
+<summary><strong>Módulos del backend (implementados)</strong></summary>
+
+La API está versionada bajo **`/v1`** y documentada con **Swagger** (`/docs`
+en desarrollo).
 
 | Área | Módulos |
 |------|---------|
@@ -55,19 +227,16 @@ La API está versionada bajo **`/v1`** y documentada con **Swagger** (`/docs` en
 | **Auditoría** | `auditoria` (log automático de acciones sensibles) |
 | **Inteligencia (Fase 1)** | `indicadores` (KPIs **FCR / EPEF** / mortalidad, job `@Cron` diario), `curvas-objetivo` (curva de referencia por marca de alimento) |
 
-### Capa de inteligencia — roadmap (EP-09)
+</details>
 
-De *registrar y medir* a *predecir y recomendar*, por fases:
+## Correr todo con Docker (recomendado)
 
-1. **KPIs** — indicadores productivos del lote (FCR, EPEF…). ✅ *hecho*
-2. **Clima** — job que trae el clima externo como contexto. *en curso*
-3. **Predicciones (ML)** — servicio Python que predice peso, FCR y riesgo de mortalidad.
-4. **Recomendaciones** — acciones sugeridas a partir de los datos.
-5. **Copiloto IA + voz** · **6. Bioacústica / visión** · **7. SaaS multi-organización**.
-
-## Correr localmente
-
-### Todo el sistema con Docker (recomendado)
+> Requiere **Bash**: Linux o macOS de forma nativa, o Windows mediante
+> **WSL2** (con la integración de Docker Desktop con WSL2 activada,
+> corriendo los scripts desde dentro de la distro). PowerShell y CMD no
+> interpretan estos scripts; Git Bash podría, pero es un camino **no
+> verificado** — ver el detalle en
+> [Requisitos por sistema operativo](#requisitos-por-sistema-operativo).
 
 **Preparación inicial (solo la primera vez):**
 
@@ -85,9 +254,9 @@ generar una contraseña nueva que no coincidiría con la que esa base ya tiene.
 Este `.env` de la raíz es la **única fuente** de estas variables para todo lo
 que corre con `docker compose` — backend, frontend y microservicio de ML
 incluidos. `avisens-backend/.env` es un archivo aparte, que solo hace falta si
-además vas a correr el backend **sin** Docker (ver la sección siguiente); no se
-lee dentro del contenedor, así que editarlo no cambia nada mientras usas
-Compose.
+además vas a correr el backend **sin** Docker (ver
+[Solo el backend, sin Docker](#solo-el-backend-sin-docker)); no se lee dentro
+del contenedor, así que editarlo no cambia nada mientras usas Compose.
 
 Para terminar la preparación (levantar el stack y crear el admin — **el seed
 ya no corre solo en cada arranque**, es un paso explícito):
@@ -96,6 +265,62 @@ ya no corre solo en cada arranque**, es un paso explícito):
 ./scripts/dev-up.sh
 docker compose exec backend pnpm run seed
 ```
+
+> ⚠️ **Los secretos no están en el repositorio.** `docker-compose.yml` los
+> exige por variable de entorno y se niega a arrancar si faltan.
+> `./scripts/dev-setup.sh` ya los genera; si prefieres hacerlo a mano:
+> ```bash
+> openssl rand -base64 48 | tr -d '\n/+=' | head -c 48
+> ```
+> `JWT_SECRET` y `JWT_REFRESH_SECRET` deben tener 32 caracteres como mínimo y
+> ser **distintos entre sí**: si fueran iguales, un refresh token valdría
+> como token de acceso.
+
+| Servicio | URL |
+|---|---|
+| Frontend | http://localhost:8080 |
+| Backend / Swagger | http://localhost:3000/docs |
+| Microservicio ML | *(no publicado al host; solo accesible dentro de la red de Docker, p. ej. con `docker compose exec ml ...` o desde el backend)* |
+| PostgreSQL | 127.0.0.1:5433 (usuario `avisens`, solo accesible desde esta máquina) |
+
+Eso levanta PostgreSQL, Redis, el backend, el frontend y el microservicio de
+ML. El backend migra la base solo en cada arranque (siempre, es idempotente)
+— sembrar roles y admin es aparte, nunca automático, ver arriba. En
+desarrollo el backend corre en modo *watch*: al guardar un archivo se
+recompila solo, sin `--build`.
+
+> ⚠️ **¿Las credenciales de admin no funcionan después de clonar de nuevo?**
+> Clonar el repositorio no borra los volúmenes de Docker — si ya habías
+> intentado levantar el proyecto antes en esta máquina, el volumen de
+> Postgres (y el admin que tenga adentro, con otra contraseña) sigue ahí; el
+> seed nunca sobrescribe un usuario que ya existe. Dos arreglos, de menos a
+> más destructivo:
+>
+> 1. **Recuperación autorizada, sin perder el usuario ni su historial**:
+>    actualiza solo la contraseña del admin que ya existe —el mismo
+>    registro, el mismo `id`, toda su auditoría y referencias intactas— en
+>    vez de borrarlo y re-sembrarlo:
+>    ```bash
+>    hash=$(docker compose exec -T backend node -e \
+>      "require('bcrypt').hash(process.env.ADMIN_PASSWORD, 12).then(h => process.stdout.write(h))")
+>    docker compose exec database psql -U avisens -d avisens -c \
+>      "UPDATE usuarios SET password_hash='$hash' WHERE email='admin@avisens.com';"
+>    ```
+>    Usa el mismo algoritmo y costo (`bcrypt`, 12 rondas) que ya usa el seed
+>    real — no agrega lógica de autenticación nueva, solo reutiliza la
+>    existente para igualar la contraseña guardada con el `ADMIN_PASSWORD`
+>    de tu `.env`.
+> 2. **Si de verdad quieres empezar de cero** (operación **destructiva** —
+>    borra TODOS los datos de desarrollo de este proyecto, no solo el
+>    admin):
+>    ```bash
+>    docker compose down -v
+>    ./scripts/dev-up.sh
+>    docker compose exec backend pnpm run seed
+>    ```
+
+<details>
+<summary><strong>Más comandos del día a día</strong> (estado, logs, detener, migrar/sembrar sin reiniciar, actualizar tras cambios de Dockerfile)</summary>
 
 **Ciclo diario**, una vez ya está preparado:
 
@@ -106,36 +331,23 @@ docker compose ps             # ver estado
 docker compose logs -f        # ver logs de todos los servicios
 docker compose logs -f backend   # ver logs de uno solo
 docker compose down           # detener, SIN borrar datos (los volúmenes quedan)
-docker compose down -v        # detener Y BORRAR la base — solo si quieres empezar de cero
+docker compose down -v        # ⚠️ detener Y BORRAR la base — solo si quieres empezar de cero
 ```
 
-Eso levanta PostgreSQL, Redis, el backend, el frontend y el microservicio de ML.
-El backend migra la base solo en cada arranque (siempre, es idempotente) —
-sembrar roles y admin es aparte, nunca automático, ver arriba.
-
-| Servicio | URL |
-|---|---|
-| Frontend | http://localhost:8080 |
-| Backend / Swagger | http://localhost:3000/docs |
-| Microservicio ML | http://localhost:8000/health |
-| PostgreSQL | 127.0.0.1:5433 (usuario `avisens`, solo accesible desde esta máquina) |
-
-En desarrollo el backend corre en modo *watch*: al guardar un archivo se
-recompila solo, sin `--build`.
-
-Si necesitas migrar o re-sembrar **sin** reiniciar todo el stack (por ejemplo,
-tras cambiar `schema.prisma` en caliente):
+Si necesitas migrar o re-sembrar **sin** reiniciar todo el stack (por
+ejemplo, tras cambiar `schema.prisma` en caliente):
 
 ```bash
 docker compose exec backend pnpm prisma migrate deploy
 docker compose exec backend pnpm run seed
 ```
 
-**Actualizar una instalación ya existente tras cambios en algún `Dockerfile`**
-(por ejemplo, un healthcheck nuevo o una dependencia del sistema agregada a la
-imagen): reconstruye solo las imágenes afectadas y vuelve a levantar —
-`dev-up.sh` reutiliza los contenedores ya construidos si nada cambió, así que
-el `build` explícito es necesario para que el cambio de imagen se note:
+**Actualizar una instalación ya existente tras cambios en algún
+`Dockerfile`** (por ejemplo, un healthcheck nuevo o una dependencia del
+sistema agregada a la imagen): reconstruye solo las imágenes afectadas y
+vuelve a levantar — `dev-up.sh` reutiliza los contenedores ya construidos si
+nada cambió, así que el `build` explícito es necesario para que el cambio de
+imagen se note:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.override.yml build backend frontend
@@ -147,47 +359,32 @@ Redis quedan intactos, igual que el admin ya sembrado. **No hace falta
 `down -v`** para esto: ese comando es para empezar de cero, no para aplicar
 un cambio de imagen.
 
-**Las credenciales de admin no funcionan después de clonar de nuevo?** Clonar
-el repositorio no borra los volúmenes de Docker — si ya habías intentado
-levantar el proyecto antes en esta máquina, el volumen de Postgres (y el admin
-que tenga adentro, con otra contraseña) sigue ahí; el seed nunca sobrescribe
-un usuario que ya existe. Dos arreglos, de menos a más destructivo:
+</details>
 
-1. **Recuperación autorizada, sin perder el usuario ni su historial**:
-   actualiza solo la contraseña del admin que ya existe —el mismo registro,
-   el mismo `id`, toda su auditoría y referencias intactas— en vez de
-   borrarlo y re-sembrarlo:
-   ```bash
-   hash=$(docker compose exec -T backend node -e \
-     "require('bcrypt').hash(process.env.ADMIN_PASSWORD, 12).then(h => process.stdout.write(h))")
-   docker compose exec database psql -U avisens -d avisens -c \
-     "UPDATE usuarios SET password_hash='$hash' WHERE email='admin@avisens.com';"
-   ```
-   Usa el mismo algoritmo y costo (`bcrypt`, 12 rondas) que ya usa el seed
-   real — no agrega lógica de autenticación nueva, solo reutiliza la
-   existente para igualar la contraseña guardada con el `ADMIN_PASSWORD` de
-   tu `.env`.
-2. **Si de verdad quieres empezar de cero** (operación destructiva — borra
-   TODOS los datos de desarrollo de este proyecto, no solo el admin):
-   ```bash
-   docker compose down -v
-   ./scripts/dev-up.sh
-   docker compose exec backend pnpm run seed
-   ```
+<details id="requisitos-por-sistema-operativo">
+<summary><strong>Requisitos por sistema operativo</strong></summary>
 
-**Los secretos no están en el repositorio.** `docker-compose.yml` los exige por
-variable de entorno y se niega a arrancar si faltan, con un mensaje que dice
-cuál. `./scripts/dev-setup.sh` ya los genera; si prefieres hacerlo a mano:
+Los scripts (`dev-setup.sh`, `dev-up.sh`, los de `scripts/tests/`) son `.sh`
+y necesitan **Bash**. PowerShell y CMD no interpretan scripts de shell de
+forma nativa, así que quedan fuera directamente:
 
-```bash
-openssl rand -base64 48 | tr -d '\n/+=' | head -c 48
-```
+| Sistema | Qué necesitas | Estado |
+|---|---|---|
+| **Linux** | Bash + Docker + OpenSSL instalados | Compatible previsto — mismas herramientas que macOS, no probado en esta sesión |
+| **macOS** | Bash (del sistema) + Docker Desktop instalado + OpenSSL | **Probado**: es donde se verificaron todos los escenarios de esta guía |
+| **Windows** | **WSL2**, con la integración de Docker Desktop con WSL2 activada, y correr los scripts **desde dentro de la distro WSL2** | Compatible previsto — no probado en esta sesión |
 
-`JWT_SECRET` y `JWT_REFRESH_SECRET` deben tener 32 caracteres como mínimo y ser
-**distintos entre sí**: si fueran iguales, un refresh token valdría como token
-de acceso.
+**Git Bash** trae su propio `bash.exe` y en principio podría interpretar
+estos scripts, pero es un **camino no verificado**: no se probó con ellos,
+así que no hay garantía de que las primitivas que usan (`mktemp`, `ln`,
+señales, `docker volume`/`network ls` con filtros) se comporten igual ahí.
+No se afirma que no funcione — solo que no está comprobado, así que **WSL2
+es el camino recomendado y probado para Windows**.
 
-### Pruebas del entorno Docker (para quien mantiene estos archivos)
+</details>
+
+<details>
+<summary><strong>Pruebas del entorno Docker</strong> (para quien mantiene estos scripts)</summary>
 
 Dos scripts de verificación, cada uno en un stack 100% desechable y separado
 del real (nombre de proyecto único por corrida, sin puertos publicados, sin
@@ -199,22 +396,22 @@ tocar nunca `avisens-project` ni sus volúmenes):
                                        # servicios) + seed explicito + login real
 ```
 
-El segundo tarda varios minutos (construye las 4 imágenes). Ninguno de los dos
-demuestra lógica de negocio de cada servicio — solo que arrancan sanos
+El segundo tarda varios minutos (construye las 4 imágenes). Ninguno de los
+dos demuestra lógica de negocio de cada servicio — solo que arrancan sanos
 (`healthy`) y, en el segundo caso, que el camino de autenticación funciona de
 punta a punta tras el seed.
 
-Dos pruebas más, rápidas y sin tocar Docker de verdad (salvo un volumen
-desechable puntual en una de ellas), que ejercitan `dev-setup.sh` y
-`dev-up.sh` directamente contra carpetas/variables aisladas:
+Tres pruebas más, rápidas y sin tocar Docker de verdad (salvo un volumen
+desechable puntual), que ejercitan `dev-setup.sh` y `dev-up.sh` directamente
+contra carpetas/variables aisladas:
 
 ```bash
-./scripts/tests/test-dev-setup.sh      # 8 escenarios: instalación nueva, .env
-                                        # existente intacto, segunda corrida,
-                                        # volumen poblado sin .env, Docker
-                                        # inaccesible, fallo de openssl,
-                                        # SIGKILL a mitad de la generación,
-                                        # concurrencia (dos corridas a la vez)
+./scripts/tests/test-dev-setup.sh      # instalación nueva, .env existente
+                                        # intacto, segunda corrida, volumen
+                                        # poblado sin .env, Docker inaccesible,
+                                        # fallo de openssl, SIGKILL a mitad de
+                                        # la generación y durante la
+                                        # publicación atómica, concurrencia
 ./scripts/tests/test-dev-up-dry-run.sh # confirma con AVISENS_DRY_RUN=1 que el
                                         # camino real por defecto resuelve
                                         # development/target dev/bind mounts/
@@ -226,7 +423,9 @@ desechable puntual en una de ellas), que ejercitan `dev-setup.sh` y
                                         # que limpiar" en silencio
 ```
 
-### Solo el backend, sin Docker (NestJS + PostgreSQL)
+</details>
+
+## Solo el backend, sin Docker
 
 Este camino usa su **propio** `.env`, independiente del de la raíz — edítalo
 aquí, no en el de arriba:
@@ -244,26 +443,29 @@ pnpm run seed                 # crea roles, admin y las curvas de referencia
 pnpm start:dev                # http://localhost:3000  (Swagger en /docs)
 ```
 
-> Genera secretos JWT fuertes con `openssl rand -base64 48`. Nunca subas el `.env`.
+> ⚠️ Genera secretos JWT fuertes con `openssl rand -base64 48`. Nunca subas
+> el `.env`.
 
-### Qué se despliega desde dónde
+## Qué se despliega desde dónde
+
+<details open>
+<summary><strong>Ver detalle de despliegue</strong></summary>
 
 | | Despliega desde | Se ve en |
 |---|---|---|
 | Backend | Railway, rama `main` | avisens-project-production.up.railway.app |
 | Frontend | Vercel, rama `main` | avisens-project.vercel.app |
 
-**Los dos leen `main`, no `develop`.** Lo que se mergea a `develop` no llega a
-producción hasta que pasa a `main` — es el motivo más común de «desplegué y sigo
-viendo lo viejo».
+**Los dos leen `main`, no `develop`.** Lo que se mergea a `develop` no llega
+a producción hasta que pasa a `main` — es el motivo más común de «desplegué y
+sigo viendo lo viejo».
 
 Y las **preguntas del chatbot viven en la base de datos**, no en el código:
-producción tiene `RUN_SEED=false`, así que cambiarlas exige correr el seed una
-vez, no basta con desplegar.
+producción tiene `RUN_SEED=false`, así que cambiarlas exige correr el seed
+una vez, no basta con desplegar.
 
-### Desplegar el frontend en Vercel
-
-El frontend va en Vercel y el backend en Railway. Al crear el proyecto:
+**Desplegar el frontend en Vercel.** El frontend va en Vercel y el backend
+en Railway. Al crear el proyecto:
 
 | Ajuste | Valor |
 |---|---|
@@ -271,25 +473,24 @@ El frontend va en Vercel y el backend en Railway. Al crear el proyecto:
 | Framework | Vite (lo detecta solo) |
 | Variable de entorno | `VITE_API_URL` = `https://<tu-backend>.up.railway.app/v1` |
 
-Desplegado en **https://avisens-project.vercel.app**, y el backend en
-`https://avisens-project-production.up.railway.app`.
-
-**Y hay que abrir el CORS en Railway**, o el navegador bloquea todas las llamadas
-y el chat deja de funcionar:
+**Y hay que abrir el CORS en Railway**, o el navegador bloquea todas las
+llamadas y el chat deja de funcionar:
 
 ```
 CORS_ORIGIN=http://localhost:5173,http://localhost:8080,https://avisens-project.vercel.app,https://avisens-project-*.vercel.app
 ```
 
-El tercero, con comodín, cubre las previsualizaciones: Vercel crea un subdominio
-distinto en cada despliegue de rama. Sin él, cada previsualización tendría el
-chat roto, y el fallo solo se ve en la consola del navegador — nunca en los logs
-del servidor.
+El tercero, con comodín, cubre las previsualizaciones: Vercel crea un
+subdominio distinto en cada despliegue de rama. Sin él, cada
+previsualización tendría el chat roto, y el fallo solo se ve en la consola
+del navegador — nunca en los logs del servidor.
 
-> En local no hace falta nada de esto: nginx reenvía `/api` al backend por la red
-> interna de Docker, así que el navegador nunca cruza de dominio.
+> En local no hace falta nada de esto: nginx reenvía `/api` al backend por
+> la red interna de Docker, así que el navegador nunca cruza de dominio.
 
-### Frontend web (React + Vite)
+</details>
+
+## Frontend web
 
 ```bash
 cd avisens-frontend
@@ -298,14 +499,17 @@ npm install
 npm run dev
 ```
 
-### App Android (Kotlin Multiplatform)
+## App Android
+
+App nativa en Kotlin (no es Kotlin Multiplatform ni usa Compose por ahora —
+ver [Qué existe hoy y qué está en construcción](#qué-existe-hoy-y-qué-está-en-construcción)):
 
 ```bash
 cd avisens-android
 ./gradlew :app:assembleDebug
 ```
 
-### Firmware ESP32 (PlatformIO)
+## Firmware ESP32
 
 ```bash
 cd esp32-firmware
@@ -313,16 +517,26 @@ pio run                       # compilar
 pio run -t upload             # cargar al dispositivo
 ```
 
-## Calidad
+El código implementa el envío por **HTTP** (POST con un token de dispositivo
+en la cabecera), no por MQTT. El propio archivo (`esp32-firmware/src/main.cpp`)
+tiene comentarios que describen esto como pendiente de decidir — están
+desactualizados frente al código real, pero reflejan que **no hay
+confirmación de una prueba física completa** (hardware, sensor, red y
+backend reales) todavía.
 
-Todo cambio debe **demostrar que funciona** antes de considerarse terminado: pruebas de la lógica riesgosa (`jest`), *gates* en verde (`tsc --noEmit` + `eslint` + `jest` en backend, `build` en frontend) y una demo real de la ruta. El **CI de GitHub Actions** hace cumplir estos gates en cada push y Pull Request.
+## Calidad y flujo de colaboración
 
-Flujo de trabajo: **GitHub Flow** — rama por funcionalidad → Pull Request → CI en verde → *squash merge*. Nunca push directo a `main`.
+Todo cambio debe **demostrar que funciona** antes de considerarse terminado:
+pruebas de la lógica riesgosa (`jest`), *gates* en verde (`tsc --noEmit` +
+`eslint` + `jest` en backend, `build` en frontend) y una demo real de la
+ruta. El **CI de GitHub Actions** hace cumplir estos gates en cada push y
+Pull Request.
 
-## Proyecto
-
-Desarrollado como proyecto de formación **SENA** — Colombia · 2026.
-Diseñado para cumplir la **Ley 1581 de 2012** de Protección de Datos Personales de Colombia.
+Flujo de trabajo: rama por funcionalidad → Pull Request a `develop` → *checks*
+en verde y revisión → merge. **Nada se empuja directo a `develop`** — ni
+siquiera un cambio pequeño con los gates en verde. `main` solo recibe merges
+desde `develop`. El detalle completo (incluida la convención de commits) está
+en [`FLUJO-DE-TRABAJO.md`](FLUJO-DE-TRABAJO.md).
 
 ---
 
