@@ -378,8 +378,11 @@ forma nativa, así que quedan fuera directamente:
 estos scripts, pero es un **camino no verificado**: no se probó con ellos,
 así que no hay garantía de que las primitivas que usan (`mktemp`, `ln`,
 señales, `docker volume`/`network ls` con filtros) se comporten igual ahí.
-No se afirma que no funcione — solo que no está comprobado, así que **WSL2
-es el camino recomendado y probado para Windows**.
+No se afirma que no funcione — solo que no está comprobado. **WSL2 es el
+camino recomendado para Windows** porque usa el mismo Bash y el mismo Docker
+que sí se probaron en macOS — pero esa combinación en sí **no se ha probado
+en una máquina Windows**: ni siquiera parcialmente, y en particular no se
+verificó un login funcionando ahí.
 
 </details>
 
