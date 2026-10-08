@@ -372,17 +372,19 @@ forma nativa, así que quedan fuera directamente:
 |---|---|---|
 | **Linux** | Bash + Docker + OpenSSL instalados | Compatible previsto — mismas herramientas que macOS, no probado en esta sesión |
 | **macOS** | Bash (del sistema) + Docker Desktop instalado + OpenSSL | **Probado**: es donde se verificaron todos los escenarios de esta guía |
-| **Windows** | **WSL2**, con la integración de Docker Desktop con WSL2 activada, y correr los scripts **desde dentro de la distro WSL2** | Compatible previsto — no probado en esta sesión |
+| **Windows** | **WSL2**, con la integración de Docker Desktop con WSL2 activada, y correr los scripts **desde dentro de la distro WSL2** | Comprobado parcialmente: preparación y arranque, en una máquina con Ubuntu/WSL2 |
+
+**Windows con WSL2**: preparación y arranque comprobados parcialmente en una
+máquina del usuario (Ubuntu sobre WSL2, clonando `develop`): `dev-setup.sh`
+terminó bien y `dev-up.sh` dejó los cinco servicios `healthy`. **Seed y login
+quedan pendientes de verificación** ahí. Esto no valida todas las
+distribuciones de WSL2 ni el arranque nativo desde PowerShell.
 
 **Git Bash** trae su propio `bash.exe` y en principio podría interpretar
 estos scripts, pero es un **camino no verificado**: no se probó con ellos,
 así que no hay garantía de que las primitivas que usan (`mktemp`, `ln`,
 señales, `docker volume`/`network ls` con filtros) se comporten igual ahí.
-No se afirma que no funcione — solo que no está comprobado. **WSL2 es el
-camino recomendado para Windows** porque usa el mismo Bash y el mismo Docker
-que sí se probaron en macOS — pero esa combinación en sí **no se ha probado
-en una máquina Windows**: ni siquiera parcialmente, y en particular no se
-verificó un login funcionando ahí.
+No se afirma que no funcione — solo que no está comprobado.
 
 </details>
 
