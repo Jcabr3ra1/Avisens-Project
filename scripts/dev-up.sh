@@ -4,26 +4,47 @@
 # -- eso ya lo hace el propio contenedor del backend (migrar) o es un paso
 # explicito aparte (sembrar, ver scripts/dev-setup.sh).
 #
-# Variables de entorno para pruebas (apuntan a un compose y un proyecto
-# distintos del real -- asi se puede probar la espera sin tocar el stack
-# de avisens-project):
-#   AVISENS_COMPOSE_FILE, AVISENS_COMPOSE_PROJECT, AVISENS_SERVICIOS (csv),
-#   AVISENS_UP_TIMEOUT (segundos, default 120)
+# Por defecto carga EXPLICITAMENTE docker-compose.yml + docker-compose.
+# override.yml -- los dos, siempre juntos. Pasar "-f" a mano (como hace este
+# script) desactiva el autodescubrimiento de Compose del override; si solo
+# se listara el primero, el "up" real correria el perfil de PRODUCCION sin
+# querer (NODE_ENV=production, build target por defecto -- no "dev", sin
+# bind mounts, sin el puerto de Postgres en loopback). Confirmado con
+# `docker compose config` antes de corregir esto.
+#
+# Variables de entorno para pruebas (reemplazan el camino real por uno
+# propio -- asi se puede probar sin tocar el stack de avisens-project):
+#   AVISENS_COMPOSE_FILE     un unico archivo explicito, SIN el override
+#                            real (para compose desechables de prueba).
+#   AVISENS_COMPOSE_PROJECT, AVISENS_SERVICIOS (csv), AVISENS_UP_TIMEOUT
+#   AVISENS_DRY_RUN=1        no levanta nada: solo resuelve e imprime la
+#                            configuracion final (docker compose config),
+#                            para que una prueba pueda confirmar que el
+#                            camino real selecciona development/dev/los
+#                            bind mounts/el puerto en loopback, sin arrancar
+#                            un solo contenedor.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMPOSE_FILE="${AVISENS_COMPOSE_FILE:-$REPO_ROOT/docker-compose.yml}"
 COMPOSE_PROJECT="${AVISENS_COMPOSE_PROJECT:-}"
 TIMEOUT="${AVISENS_UP_TIMEOUT:-120}"
 IFS=',' read -r -a SERVICIOS <<< "${AVISENS_SERVICIOS:-database,redis,backend,ml,frontend}"
 
-compose() {
-  if [ -n "$COMPOSE_PROJECT" ]; then
-    docker compose -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT" "$@"
-  else
-    docker compose -f "$COMPOSE_FILE" "$@"
-  fi
-}
+if [ -n "${AVISENS_COMPOSE_FILE:-}" ]; then
+  # Camino de prueba: un solo archivo explicito, sin merge con nada mas.
+  COMPOSE_ARGS=(-f "$AVISENS_COMPOSE_FILE")
+else
+  # Camino real: base + override de desarrollo, SIEMPRE los dos juntos.
+  COMPOSE_ARGS=(-f "$REPO_ROOT/docker-compose.yml" -f "$REPO_ROOT/docker-compose.override.yml")
+fi
+[ -n "$COMPOSE_PROJECT" ] && COMPOSE_ARGS+=(-p "$COMPOSE_PROJECT")
+
+compose() { docker compose "${COMPOSE_ARGS[@]}" "$@"; }
+
+if [ "${AVISENS_DRY_RUN:-0}" = "1" ]; then
+  compose config --no-interpolate
+  exit 0
+fi
 
 echo "Levantando Avisens (docker compose up -d)..."
 compose up -d

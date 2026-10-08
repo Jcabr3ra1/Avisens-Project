@@ -50,33 +50,59 @@ elif ! printf '%s' "$volume_inspect_output" | grep -qi "no such volume"; then
   fail "No se pudo consultar el volumen '$PG_VOLUME' (error distinto a 'no existe') -- no se escribe nada. Detalle: $volume_inspect_output"
 fi
 
-# 4. Instalacion nueva de verdad. Crear el .env con permisos restrictivos
-# desde el primer byte y de forma atomica: "set -C" (noclobber) solo protege
-# la redireccion ">" del propio shell, NO protege "cp" (cp no la consulta,
-# pisaria el archivo igual aunque exista). Por eso el contenido se lee ANTES
-# y se escribe en una sola redireccion ">" bajo noclobber -- esa es la unica
-# operacion que el sistema garantiza exclusiva (O_EXCL) entre dos ejecuciones
-# simultaneas: solo una puede crear el archivo, la otra falla aqui mismo.
+# 4. Instalacion nueva de verdad. Todo se genera y valida en un TEMPORAL
+# PRIVADO primero; nada se publica en $ENV_FILE hasta que ese temporal esta
+# completo y validado. Antes esto escribia la plantilla en el .env real de
+# inmediato y sustituia los secretos ahi mismo, uno por uno -- si el script
+# se interrumpia (Ctrl+C) o "openssl" fallaba a mitad del bucle, quedaba un
+# .env a medias: existe (asi que una proxima corrida lo veria como "ya
+# existe" y lo dejaria quieto), pero con secretos reales mezclados con
+# placeholders sin sustituir. Generando todo aparte primero, esa situacion
+# ya no puede ocurrir: o se publica completo y valido, o $ENV_FILE nunca se
+# toca.
 [ -f "$ENV_EXAMPLE" ] || fail "No se encontró $ENV_EXAMPLE junto al script."
-contenido_plantilla="$(cat "$ENV_EXAMPLE")"
 
-if ! (umask 077; set -C; printf '%s\n' "$contenido_plantilla" > "$ENV_FILE") 2>/dev/null; then
-  fail "No se pudo crear $ENV_FILE (¿ya existe, de una ejecución simultánea?). No se modificó nada."
-fi
-unset contenido_plantilla
+tmp_file="$(mktemp "${ENV_FILE}.XXXXXX")" || fail "No se pudo crear un archivo temporal para preparar la configuración."
+chmod 600 "$tmp_file"
+limpiar_temporal() { rm -f "$tmp_file"; }
+trap limpiar_temporal EXIT INT TERM
 
 generar_secreto() {
   openssl rand -base64 48 | tr -d '\n/+=' | head -c 48
 }
 
-# Los secretos se generan y se escriben directo en el archivo -- nunca por
-# stdout/stderr, nunca en una variable que algun log pudiera imprimir luego.
+contenido="$(cat "$ENV_EXAMPLE")"
 for var in POSTGRES_PASSWORD JWT_SECRET JWT_REFRESH_SECRET ML_INTERNAL_TOKEN METRICS_TOKEN; do
+  # Si "openssl" falla (binario roto, sin entropía, lo que sea), "set -e" +
+  # "pipefail" detienen el script aqui mismo -- el trap de arriba borra el
+  # temporal y $ENV_FILE sigue sin existir.
   valor="$(generar_secreto)"
-  sed -i.bak "s|^${var}=.*|${var}=${valor}|" "$ENV_FILE"
-  rm -f "$ENV_FILE.bak"
+  contenido="$(printf '%s\n' "$contenido" | sed "s|^${var}=.*|${var}=${valor}|")"
   unset valor
 done
+printf '%s\n' "$contenido" > "$tmp_file"
+unset contenido
+
+# "validar TODO" antes de publicar: cada secreto generado debe ser una
+# cadena larga de verdad (coincide con el formato de generar_secreto), no
+# un placeholder sin sustituir ni una cadena vacia por un fallo silencioso.
+for var in POSTGRES_PASSWORD JWT_SECRET JWT_REFRESH_SECRET ML_INTERNAL_TOKEN METRICS_TOKEN; do
+  linea="$(grep "^${var}=" "$tmp_file" || true)"
+  valor_generado="${linea#${var}=}"
+  if [ "${#valor_generado}" -lt 32 ]; then
+    fail "La validación falló para ${var} (longitud ${#valor_generado}, se esperaban ~48) -- no se publica nada."
+  fi
+done
+
+# Publicacion: la unica operacion que compite con otra ejecucion simultanea
+# es ESTA, con la misma redireccion ">" bajo "set -C" de antes -- ahora
+# copiando el contenido ya completo y validado del temporal, no la
+# plantilla cruda.
+if ! (umask 077; set -C; cat "$tmp_file" > "$ENV_FILE") 2>/dev/null; then
+  fail "No se pudo publicar $ENV_FILE (¿ya existe, de una ejecución simultánea?). No se modificó nada."
+fi
+trap - EXIT INT TERM
+rm -f "$tmp_file"
 
 log "Secretos generados y escritos en $ENV_FILE (nunca se imprimieron)."
 log "Revisa y completa a mano, si los vas a usar: ANTHROPIC_API_KEY y las variables de WhatsApp."

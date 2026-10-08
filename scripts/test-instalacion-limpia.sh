@@ -16,28 +16,71 @@ TIMEOUT_SALUD="${AVISENS_TEST_TIMEOUT:-180}"
 
 compose() { docker compose -f "$COMPOSE_FILE" -p "$PROYECTO" "$@"; }
 
+# Limpieza endurecida: revisa contenedores, volumenes Y redes (no solo
+# contenedores); funciona igual si "up" nunca llego a crear nada; nunca
+# oculta un fallo real de "down" como si fuera exito; y termina de verdad
+# (exit explicito) ante INT/TERM en vez de dejar que el script siga
+# corriendo despues del trap.
 limpiar() {
-  local ids
-  ids="$(compose ps -aq 2>/dev/null || true)"
-  if [ -n "$ids" ]; then
-    local ajenos=0
-    for id in $ids; do
-      etiqueta="$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$id" 2>/dev/null || true)"
-      [ "$etiqueta" = "$PROYECTO" ] || ajenos=1
-    done
-    if [ "$ajenos" -eq 1 ]; then
-      echo "ERROR: algun recurso listado no lleva la etiqueta de este proyecto ($PROYECTO) -- no se limpia nada, revisa a mano." >&2
+  local fallo=0
+  local contenedores volumenes redes id etiqueta
+
+  contenedores="$(compose ps -aq 2>/dev/null || true)"
+  volumenes="$(docker volume ls -q --filter "label=com.docker.compose.project=$PROYECTO" 2>/dev/null || true)"
+  redes="$(docker network ls -q --filter "label=com.docker.compose.project=$PROYECTO" 2>/dev/null || true)"
+
+  for id in $contenedores; do
+    etiqueta="$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$id" 2>/dev/null || true)"
+    if [ "$etiqueta" != "$PROYECTO" ]; then
+      echo "ERROR: el contenedor $id no lleva la etiqueta de este proyecto ($PROYECTO) -- no se limpia nada, revisa a mano." >&2
       return 1
     fi
+  done
+
+  if [ -z "$contenedores" ] && [ -z "$volumenes" ] && [ -z "$redes" ]; then
+    echo "Nada que limpiar: no hay contenedores, volúmenes ni redes de $PROYECTO." >&2
+    return 0
   fi
+
   # --rmi local: borra tambien las imagenes que esta corrida construyo (su
   # tag incluye el nombre de proyecto unico, nunca se reutilizan entre
   # corridas) -- sin esto, cada ejecucion deja 4 imagenes huerfanas. No
   # toca redis:7-alpine (viene de "image:", no de un build local) ni la
   # imagen base postgres:16-alpine de la que sale la propia.
-  compose down -v --rmi local --remove-orphans >/dev/null 2>&1 || true
+  if ! compose down -v --rmi local --remove-orphans; then
+    echo "ERROR: 'docker compose down' terminó con error limpiando $PROYECTO -- puede haber quedado algo a medias, revisa a mano." >&2
+    fallo=1
+  fi
+
+  volumenes="$(docker volume ls -q --filter "label=com.docker.compose.project=$PROYECTO" 2>/dev/null || true)"
+  redes="$(docker network ls -q --filter "label=com.docker.compose.project=$PROYECTO" 2>/dev/null || true)"
+  if [ -n "$volumenes" ] || [ -n "$redes" ]; then
+    echo "ERROR: quedaron recursos de $PROYECTO sin limpiar (volúmenes: ${volumenes:-ninguno} / redes: ${redes:-ninguna}) -- revisa a mano." >&2
+    fallo=1
+  fi
+
+  return "$fallo"
 }
-trap limpiar EXIT INT TERM
+
+manejar_salida() {
+  local codigo_previo=$?
+  limpiar
+  local codigo_limpieza=$?
+  if [ "$codigo_previo" -eq 0 ] && [ "$codigo_limpieza" -ne 0 ]; then
+    exit 1
+  fi
+  exit "$codigo_previo"
+}
+
+manejar_senal() {
+  trap - EXIT INT TERM
+  limpiar || true
+  exit "$1"
+}
+
+trap manejar_salida EXIT
+trap 'manejar_senal 130' INT
+trap 'manejar_senal 143' TERM
 
 echo "Proyecto desechable: $PROYECTO"
 echo "1) Construyendo e iniciando el stack completo..."

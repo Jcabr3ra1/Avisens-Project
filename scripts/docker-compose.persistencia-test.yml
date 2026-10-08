@@ -13,10 +13,16 @@ services:
       POSTGRES_PASSWORD: test
       POSTGRES_DB: test
     # Sin esto, Postgres usa el volumen anonimo que su imagen declara por su
-    # cuenta -- y un volumen anonimo se borra junto con el contenedor al
-    # hacer "down", AUNQUE NO se use "-v". Con un volumen nombrado (sin
-    # nombre fijo aqui: Compose lo prefija con el proyecto desechable de
-    # cada corrida), "down" sin -v si lo conserva.
+    # cuenta. "down" sin -v NO borra ese volumen anonimo -- queda huerfano,
+    # sigue existiendo en el disco. El problema real es otro: el contenedor
+    # que crea el siguiente "up" no tiene forma de saber cual era "el mismo"
+    # volumen anonimo de antes (no tiene un nombre estable que lo identifique
+    # como "de este servicio"), asi que Docker le da uno nuevo y vacio.
+    # Verificado a mano: el volumen viejo seguia existiendo tras el down: solo
+    # que el contenedor nuevo ya no lo usaba. Con un volumen NOMBRADO (sin
+    # nombre fijo aqui: Compose lo prefija con el proyecto desechable de cada
+    # corrida), el contenedor siguiente sabe exactamente cual volumen buscar
+    # y lo reutiliza -- por eso "down" sin -v si conserva los datos.
     volumes:
       - datos_postgres:/var/lib/postgresql/data
     healthcheck:

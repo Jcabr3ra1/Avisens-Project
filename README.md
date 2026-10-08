@@ -134,8 +134,22 @@ docker compose exec backend pnpm run seed
 **Las credenciales de admin no funcionan después de clonar de nuevo?** Clonar
 el repositorio no borra los volúmenes de Docker — si ya habías intentado
 levantar el proyecto antes en esta máquina, el volumen de Postgres (y el admin
-que tenga adentro) sigue ahí. `docker compose down -v` seguido de
-`./scripts/dev-up.sh` + el seed de arriba empieza de cero.
+que tenga adentro, con otra contraseña) sigue ahí; el seed nunca sobrescribe
+un usuario que ya existe. Dos arreglos, de menos a más destructivo:
+
+1. **Borra solo esa fila** (conserva el resto de los datos de desarrollo):
+   ```bash
+   docker compose exec database psql -U avisens -d avisens -c \
+     "DELETE FROM usuarios WHERE email='admin@avisens.com';"
+   docker compose exec backend pnpm run seed
+   ```
+2. **Si de verdad quieres empezar de cero** (operación destructiva — borra
+   TODOS los datos de desarrollo de este proyecto, no solo el admin):
+   ```bash
+   docker compose down -v
+   ./scripts/dev-up.sh
+   docker compose exec backend pnpm run seed
+   ```
 
 **Los secretos no están en el repositorio.** `docker-compose.yml` los exige por
 variable de entorno y se niega a arrancar si faltan, con un mensaje que dice
@@ -165,6 +179,23 @@ El segundo tarda varios minutos (construye las 4 imágenes). Ninguno de los dos
 demuestra lógica de negocio de cada servicio — solo que arrancan sanos
 (`healthy`) y, en el segundo caso, que el camino de autenticación funciona de
 punta a punta tras el seed.
+
+Dos pruebas más, rápidas y sin tocar Docker de verdad (salvo un volumen
+desechable puntual en una de ellas), que ejercitan `dev-setup.sh` y
+`dev-up.sh` directamente contra carpetas/variables aisladas:
+
+```bash
+./scripts/tests/test-dev-setup.sh      # 8 escenarios: instalación nueva, .env
+                                        # existente intacto, segunda corrida,
+                                        # volumen poblado sin .env, Docker
+                                        # inaccesible, fallo de openssl,
+                                        # SIGKILL a mitad de la generación,
+                                        # concurrencia (dos corridas a la vez)
+./scripts/tests/test-dev-up-dry-run.sh # confirma con AVISENS_DRY_RUN=1 que el
+                                        # camino real por defecto resuelve
+                                        # development/target dev/bind mounts/
+                                        # loopback:5433 -- sin arrancar nada
+```
 
 ### Solo el backend, sin Docker (NestJS + PostgreSQL)
 
