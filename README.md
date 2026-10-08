@@ -69,23 +69,39 @@ De *registrar y medir* a *predecir y recomendar*, por fases:
 
 ### Todo el sistema con Docker (recomendado)
 
-Preparación única (solo la primera vez):
+**Preparación inicial (solo la primera vez):**
 
 ```bash
-cp .env.example .env          # y rellena los secretos (ver abajo)
+./scripts/dev-setup.sh
 ```
 
-Este `.env` de la raíz es la **única fuente** de esas variables para todo lo
+Esto crea el `.env` de la raíz si no existe (nunca lo sobrescribe si ya está),
+genera los secretos con `openssl` y los escribe directo en el archivo —
+**nunca los imprime** — con permisos restrictivos (`chmod 600`). Si detecta
+que ya hay una base de datos con datos de una instalación anterior pero falta
+el `.env`, se detiene y explica cómo recuperar la configuración, en vez de
+generar una contraseña nueva que no coincidiría con la que esa base ya tiene.
+
+Este `.env` de la raíz es la **única fuente** de estas variables para todo lo
 que corre con `docker compose` — backend, frontend y microservicio de ML
 incluidos. `avisens-backend/.env` es un archivo aparte, que solo hace falta si
 además vas a correr el backend **sin** Docker (ver la sección siguiente); no se
 lee dentro del contenedor, así que editarlo no cambia nada mientras usas
 Compose.
 
-Ciclo diario:
+Para terminar la preparación (levantar el stack y crear el admin — **el seed
+ya no corre solo en cada arranque**, es un paso explícito):
 
 ```bash
-docker compose up -d          # iniciar (primera vez, o tras cambiar un Dockerfile: agrega --build)
+./scripts/dev-up.sh
+docker compose exec backend pnpm run seed
+```
+
+**Ciclo diario**, una vez ya está preparado:
+
+```bash
+./scripts/dev-up.sh           # iniciar con espera acotada: no vuelve hasta que
+                               # todo está "healthy", o falla con un mensaje claro
 docker compose ps             # ver estado
 docker compose logs -f        # ver logs de todos los servicios
 docker compose logs -f backend   # ver logs de uno solo
@@ -94,8 +110,8 @@ docker compose down -v        # detener Y BORRAR la base — solo si quieres emp
 ```
 
 Eso levanta PostgreSQL, Redis, el backend, el frontend y el microservicio de ML.
-El backend migra la base y la siembra solo en cada arranque, así que al
-terminar ya hay un admin para entrar:
+El backend migra la base solo en cada arranque (siempre, es idempotente) —
+sembrar roles y admin es aparte, nunca automático, ver arriba.
 
 | Servicio | URL |
 |---|---|
@@ -115,9 +131,15 @@ docker compose exec backend pnpm prisma migrate deploy
 docker compose exec backend pnpm run seed
 ```
 
+**Las credenciales de admin no funcionan después de clonar de nuevo?** Clonar
+el repositorio no borra los volúmenes de Docker — si ya habías intentado
+levantar el proyecto antes en esta máquina, el volumen de Postgres (y el admin
+que tenga adentro) sigue ahí. `docker compose down -v` seguido de
+`./scripts/dev-up.sh` + el seed de arriba empieza de cero.
+
 **Los secretos no están en el repositorio.** `docker-compose.yml` los exige por
 variable de entorno y se niega a arrancar si faltan, con un mensaje que dice
-cuál. Genera cada uno así:
+cuál. `./scripts/dev-setup.sh` ya los genera; si prefieres hacerlo a mano:
 
 ```bash
 openssl rand -base64 48 | tr -d '\n/+=' | head -c 48
@@ -126,6 +148,23 @@ openssl rand -base64 48 | tr -d '\n/+=' | head -c 48
 `JWT_SECRET` y `JWT_REFRESH_SECRET` deben tener 32 caracteres como mínimo y ser
 **distintos entre sí**: si fueran iguales, un refresh token valdría como token
 de acceso.
+
+### Pruebas del entorno Docker (para quien mantiene estos archivos)
+
+Dos scripts de verificación, cada uno en un stack 100% desechable y separado
+del real (nombre de proyecto único por corrida, sin puertos publicados, sin
+tocar nunca `avisens-project` ni sus volúmenes):
+
+```bash
+./scripts/test-persistencia.sh        # prueba que "down" sin -v conserva los datos
+./scripts/test-instalacion-limpia.sh  # instalacion limpia del stack completo (los 5
+                                       # servicios) + seed explicito + login real
+```
+
+El segundo tarda varios minutos (construye las 4 imágenes). Ninguno de los dos
+demuestra lógica de negocio de cada servicio — solo que arrancan sanos
+(`healthy`) y, en el segundo caso, que el camino de autenticación funciona de
+punta a punta tras el seed.
 
 ### Solo el backend, sin Docker (NestJS + PostgreSQL)
 

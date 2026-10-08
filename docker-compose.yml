@@ -1,3 +1,4 @@
+name: avisens-project
 # Orquestacion completa de Avisens: base de datos, Redis, backend, frontend y ML.
 #
 # Este archivo describe el despliegue de PRODUCCION. En local, Docker Compose

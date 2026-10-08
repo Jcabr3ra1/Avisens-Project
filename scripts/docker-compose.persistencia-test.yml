@@ -1,0 +1,29 @@
+# Stack desechable, exclusivo del script test-persistencia.sh. Nunca se usa
+# para desarrollo. Sin "name:" ni "container_name:" a proposito: la
+# identidad del proyecto la da SIEMPRE el "-p" que pasa el script en cada
+# invocacion, nunca un valor fijo en este archivo -- asi cada corrida tiene
+# su propio espacio de nombres, sin chocar entre si ni con avisens-project.
+# Sin puertos publicados: el script habla con el contenedor solo por
+# "docker compose exec", nunca por un puerto del host.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: test
+    # Sin esto, Postgres usa el volumen anonimo que su imagen declara por su
+    # cuenta -- y un volumen anonimo se borra junto con el contenedor al
+    # hacer "down", AUNQUE NO se use "-v". Con un volumen nombrado (sin
+    # nombre fijo aqui: Compose lo prefija con el proyecto desechable de
+    # cada corrida), "down" sin -v si lo conserva.
+    volumes:
+      - datos_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d test"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  datos_postgres:
