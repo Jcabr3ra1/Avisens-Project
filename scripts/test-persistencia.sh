@@ -20,9 +20,22 @@ limpiar() {
   local fallo=0
   local contenedores volumenes redes id etiqueta
 
-  contenedores="$(compose ps -aq 2>/dev/null || true)"
-  volumenes="$(docker volume ls -q --filter "label=com.docker.compose.project=$PROYECTO" 2>/dev/null || true)"
-  redes="$(docker network ls -q --filter "label=com.docker.compose.project=$PROYECTO" 2>/dev/null || true)"
+  # "docker ... || true" converte un Docker inaccesible en "lista vacia" --
+  # indistinguible de "de verdad no hay nada que limpiar". Por eso cada
+  # listado se captura con su propio codigo de salida: si falla, es un
+  # fallo OBSERVABLE (se informa y se corta), nunca silencio.
+  if ! contenedores="$(compose ps -aq 2>&1)"; then
+    echo "ERROR: no se pudieron listar los contenedores de $PROYECTO -- Docker puede estar inaccesible, no se asume que no hay nada que limpiar. Detalle: $contenedores" >&2
+    return 1
+  fi
+  if ! volumenes="$(docker volume ls -q --filter "label=com.docker.compose.project=$PROYECTO" 2>&1)"; then
+    echo "ERROR: no se pudieron listar los volúmenes de $PROYECTO -- Docker puede estar inaccesible, no se asume que no hay nada que limpiar. Detalle: $volumenes" >&2
+    return 1
+  fi
+  if ! redes="$(docker network ls -q --filter "label=com.docker.compose.project=$PROYECTO" 2>&1)"; then
+    echo "ERROR: no se pudieron listar las redes de $PROYECTO -- Docker puede estar inaccesible, no se asume que no hay nada que limpiar. Detalle: $redes" >&2
+    return 1
+  fi
 
   for id in $contenedores; do
     etiqueta="$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$id" 2>/dev/null || true)"
@@ -42,10 +55,18 @@ limpiar() {
     fallo=1
   fi
 
-  volumenes="$(docker volume ls -q --filter "label=com.docker.compose.project=$PROYECTO" 2>/dev/null || true)"
-  redes="$(docker network ls -q --filter "label=com.docker.compose.project=$PROYECTO" 2>/dev/null || true)"
-  if [ -n "$volumenes" ] || [ -n "$redes" ]; then
-    echo "ERROR: quedaron recursos de $PROYECTO sin limpiar (volúmenes: ${volumenes:-ninguno} / redes: ${redes:-ninguna}) -- revisa a mano." >&2
+  if ! volumenes="$(docker volume ls -q --filter "label=com.docker.compose.project=$PROYECTO" 2>&1)"; then
+    echo "ERROR: no se pudo confirmar que los volúmenes de $PROYECTO quedaron limpios -- Docker puede estar inaccesible. Detalle: $volumenes" >&2
+    fallo=1
+  elif [ -n "$volumenes" ]; then
+    echo "ERROR: quedaron volúmenes de $PROYECTO sin limpiar: $volumenes -- revisa a mano." >&2
+    fallo=1
+  fi
+  if ! redes="$(docker network ls -q --filter "label=com.docker.compose.project=$PROYECTO" 2>&1)"; then
+    echo "ERROR: no se pudo confirmar que las redes de $PROYECTO quedaron limpias -- Docker puede estar inaccesible. Detalle: $redes" >&2
+    fallo=1
+  elif [ -n "$redes" ]; then
+    echo "ERROR: quedaron redes de $PROYECTO sin limpiar: $redes -- revisa a mano." >&2
     fallo=1
   fi
 

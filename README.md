@@ -137,12 +137,20 @@ levantar el proyecto antes en esta máquina, el volumen de Postgres (y el admin
 que tenga adentro, con otra contraseña) sigue ahí; el seed nunca sobrescribe
 un usuario que ya existe. Dos arreglos, de menos a más destructivo:
 
-1. **Borra solo esa fila** (conserva el resto de los datos de desarrollo):
+1. **Recuperación autorizada, sin perder el usuario ni su historial**:
+   actualiza solo la contraseña del admin que ya existe —el mismo registro,
+   el mismo `id`, toda su auditoría y referencias intactas— en vez de
+   borrarlo y re-sembrarlo:
    ```bash
+   hash=$(docker compose exec -T backend node -e \
+     "require('bcrypt').hash(process.env.ADMIN_PASSWORD, 12).then(h => process.stdout.write(h))")
    docker compose exec database psql -U avisens -d avisens -c \
-     "DELETE FROM usuarios WHERE email='admin@avisens.com';"
-   docker compose exec backend pnpm run seed
+     "UPDATE usuarios SET password_hash='$hash' WHERE email='admin@avisens.com';"
    ```
+   Usa el mismo algoritmo y costo (`bcrypt`, 12 rondas) que ya usa el seed
+   real — no agrega lógica de autenticación nueva, solo reutiliza la
+   existente para igualar la contraseña guardada con el `ADMIN_PASSWORD` de
+   tu `.env`.
 2. **Si de verdad quieres empezar de cero** (operación destructiva — borra
    TODOS los datos de desarrollo de este proyecto, no solo el admin):
    ```bash
@@ -195,6 +203,11 @@ desechable puntual en una de ellas), que ejercitan `dev-setup.sh` y
                                         # camino real por defecto resuelve
                                         # development/target dev/bind mounts/
                                         # loopback:5433 -- sin arrancar nada
+./scripts/tests/test-limpieza-docker-inaccesible.sh # confirma que, si Docker
+                                        # no responde, la limpieza de los dos
+                                        # scripts de arriba falla de forma
+                                        # observable -- nunca reporta "nada
+                                        # que limpiar" en silencio
 ```
 
 ### Solo el backend, sin Docker (NestJS + PostgreSQL)

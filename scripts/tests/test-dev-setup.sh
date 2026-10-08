@@ -164,6 +164,67 @@ else
   mal "después de la interrupción, una corrida normal ya no funciona"
 fi
 
+echo "=== 7b) Interrupción fatal (SIGKILL) DURANTE la publicación atómica: nunca deja .env parcial ==="
+# A diferencia del escenario 7 (interrumpe mientras se generan los
+# secretos, antes de tocar el .env real), este interrumpe justo en el
+# instante de publicar -- el punto exacto que un "cat > archivo" bajo
+# noclobber podía dejar a medias. Usa AVISENS_TEST_RETRASO_PUBLICACION
+# para abrir una ventana amplia y deterministica justo ahi.
+d7b="$TRABAJO/7b-sigkill-publicacion"; mkdir -p "$d7b"
+plantilla "$d7b/.env.example"
+fallos_7b=0
+completos_7b=0
+ausentes_7b=0
+# Retrasos de kill a propósito a ambos lados de la ventana de 1.5s: los
+# primeros caen DENTRO del "sleep" (antes de que "ln" se ejecute siquiera
+# -- el .env debe quedar ausente); los últimos caen DESPUÉS de que la
+# ventana termina y "ln" ya se ejecutó (el .env debe quedar completo). Así
+# el invariante "ausente o completo, nunca a medias" se comprueba en los
+# dos lados de la transición, no solo antes de ella.
+for par in "1:0.3" "2:0.8" "3:1.4" "4:1.7" "5:2.2"; do
+  intento="${par%%:*}"; demora="${par##*:}"
+  rm -f "$d7b/.env" "$d7b"/.env.??????
+  AVISENS_TEST_RETRASO_PUBLICACION=1.5 \
+    AVISENS_ENV_FILE="$d7b/.env" AVISENS_ENV_EXAMPLE="$d7b/.env.example" \
+    AVISENS_PG_VOLUME="avisens-test-vol-no-existe-$$-7b-$intento" "$SCRIPT" >"$d7b/log-$intento" 2>&1 &
+  pid7b=$!
+  sleep "$demora"
+  kill -9 "$pid7b" 2>/dev/null || true
+  wait "$pid7b" 2>/dev/null || true
+  if [ -f "$d7b/.env" ]; then
+    # Si alcanzó a publicarse, debe estar COMPLETO (ln es atómico: nunca a
+    # medias) -- nunca vacío ni con secretos sin sustituir.
+    tam="$(wc -c < "$d7b/.env" | tr -d ' ')"
+    incompleto=0
+    [ "$tam" -gt 0 ] || incompleto=1
+    for var in POSTGRES_PASSWORD JWT_SECRET JWT_REFRESH_SECRET ML_INTERNAL_TOKEN METRICS_TOKEN; do
+      valor="$(grep "^${var}=" "$d7b/.env" 2>/dev/null | cut -d= -f2-)"
+      [ "${#valor}" -ge 32 ] || incompleto=1
+    done
+    if [ "$incompleto" -eq 1 ]; then
+      mal "SIGKILL durante la publicación (intento $intento, demora=${demora}s): quedó un .env INCOMPLETO (tamaño=$tam) -- esto es exactamente el bug que se corrigió"
+      fallos_7b=1
+    else
+      completos_7b=$((completos_7b + 1))
+    fi
+  else
+    ausentes_7b=$((ausentes_7b + 1))
+  fi
+  # Ausente o completo son ambos resultados válidos; solo "a medias" es un fallo.
+done
+if [ "$fallos_7b" -eq 0 ] && [ "$completos_7b" -gt 0 ] && [ "$ausentes_7b" -gt 0 ]; then
+  ok "SIGKILL durante la publicación (5 intentos, demoras a ambos lados de la ventana): $ausentes_7b quedaron ausentes y $completos_7b completos -- nunca a medias"
+elif [ "$fallos_7b" -eq 0 ]; then
+  ok "SIGKILL durante la publicación (5 intentos): nunca a medias (ausentes=$ausentes_7b, completos=$completos_7b -- no se alcanzó a probar ambos lados de la ventana, considerar ajustar las demoras)"
+fi
+rm -f "$d7b/.env" "$d7b"/.env.??????
+if AVISENS_ENV_FILE="$d7b/.env" AVISENS_ENV_EXAMPLE="$d7b/.env.example" \
+   AVISENS_PG_VOLUME="avisens-test-vol-no-existe-$$-7b-final" "$SCRIPT" >"$d7b/log-final" 2>&1 && [ -f "$d7b/.env" ]; then
+  ok "después de interrumpir la publicación varias veces, una corrida normal sigue funcionando"
+else
+  mal "después de interrumpir la publicación, una corrida normal ya no funciona"
+fi
+
 echo "=== 8) Concurrencia: dos ejecuciones simultáneas sobre la misma instalación nueva ==="
 d8="$TRABAJO/8-concurrencia"; mkdir -p "$d8"
 plantilla "$d8/.env.example"

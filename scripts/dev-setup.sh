@@ -94,11 +94,27 @@ for var in POSTGRES_PASSWORD JWT_SECRET JWT_REFRESH_SECRET ML_INTERNAL_TOKEN MET
   fi
 done
 
-# Publicacion: la unica operacion que compite con otra ejecucion simultanea
-# es ESTA, con la misma redireccion ">" bajo "set -C" de antes -- ahora
-# copiando el contenido ya completo y validado del temporal, no la
-# plantilla cruda.
-if ! (umask 077; set -C; cat "$tmp_file" > "$ENV_FILE") 2>/dev/null; then
+# Publicacion atomica de verdad: "ln" crea el nombre final como un segundo
+# enlace al MISMO inodo ya completo y validado -- no copia bytes, no abre
+# el destino vacio para llenarlo despues. "cat > archivo" (incluso bajo
+# "set -C") SI tiene ese hueco: el ">" crea el archivo vacio de inmediato y
+# "cat" lo llena en un paso aparte -- una interrupcion justo entre esos dos
+# pasos deja un $ENV_FILE que EXISTE pero esta a medias. "ln" no tiene paso
+# intermedio: es una sola operacion atomica a nivel de sistema de archivos,
+# asi que desde fuera $ENV_FILE siempre se ve, en cualquier instante, o bien
+# ausente, o bien exactamente igual al temporal ya validado -- nunca algo a
+# medio camino. Tambien sigue siendo exclusiva: si $ENV_FILE ya existe (otra
+# ejecucion simultanea que publico primero), "ln" falla con "File exists"
+# sin tocar nada. El permiso 600 ya puesto en el temporal se conserva (es el
+# mismo inodo).
+if [ -n "${AVISENS_TEST_RETRASO_PUBLICACION:-}" ]; then
+  # Gancho solo para pruebas: abre una ventana deliberada justo antes de la
+  # publicacion, para poder interrumpir el proceso exactamente ahi y
+  # comprobar que el destino nunca queda a medias. Sin la variable, esto no
+  # hace nada -- cero costo en el camino real.
+  sleep "$AVISENS_TEST_RETRASO_PUBLICACION"
+fi
+if ! ln "$tmp_file" "$ENV_FILE" 2>/dev/null; then
   fail "No se pudo publicar $ENV_FILE (¿ya existe, de una ejecución simultánea?). No se modificó nada."
 fi
 trap - EXIT INT TERM
