@@ -131,6 +131,22 @@ docker compose exec backend pnpm prisma migrate deploy
 docker compose exec backend pnpm run seed
 ```
 
+**Actualizar una instalación ya existente tras cambios en algún `Dockerfile`**
+(por ejemplo, un healthcheck nuevo o una dependencia del sistema agregada a la
+imagen): reconstruye solo las imágenes afectadas y vuelve a levantar —
+`dev-up.sh` reutiliza los contenedores ya construidos si nada cambió, así que
+el `build` explícito es necesario para que el cambio de imagen se note:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.override.yml build backend frontend
+./scripts/dev-up.sh
+```
+
+Reconstruir imágenes **no borra los volúmenes** — los datos de Postgres y
+Redis quedan intactos, igual que el admin ya sembrado. **No hace falta
+`down -v`** para esto: ese comando es para empezar de cero, no para aplicar
+un cambio de imagen.
+
 **Las credenciales de admin no funcionan después de clonar de nuevo?** Clonar
 el repositorio no borra los volúmenes de Docker — si ya habías intentado
 levantar el proyecto antes en esta máquina, el volumen de Postgres (y el admin
