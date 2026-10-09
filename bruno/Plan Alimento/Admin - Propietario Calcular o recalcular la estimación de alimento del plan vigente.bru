@@ -23,3 +23,12 @@ body:json {
     "motivo": "Recalculo tras registrar mortalidad de la semana"
   }
 }
+
+docs {
+  La respuesta incluye alimento_estimado (total, hasta_corte_kg,
+  pendiente_tras_corte_kg y pendiente_desde_hoy_kg) y plan_vigente.tiempo,
+  calculados con el corte de esta estimación (el día de hoy). Ver la
+  descripción del GET. Los kilos son estimados por la curva genética, no
+  alimento realmente consumido. Recalcular el plan (POST /plan/recalcular) no
+  usa pesajes reales: conserva el peso objetivo y relee la curva vigente.
+}

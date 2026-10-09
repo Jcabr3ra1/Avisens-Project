@@ -9,7 +9,8 @@ import { Prisma } from '@prisma/client';
 import { PlanAlimentoService } from './plan-alimento.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PlanLoteService } from '../plan-lote/plan-lote.service';
-import { ALGORITMO_ACTUAL } from './consumo-curva';
+import { ALGORITMO_ACTUAL, integrarConsumo } from './consumo-curva';
+import { avesVivasEnDia } from '../../common/mortalidad/mortalidad-snapshot';
 import { VERSION_DESGLOSE_ACTUAL } from './desglose-alimento';
 
 const admin = { id: 1, rol: 'Administrador' };
@@ -51,6 +52,7 @@ const planVigenteBase = {
   version: 1,
   resultado: { dia_objetivo: 21 },
   desactualizado: false,
+  tiempo: { plan_version: 1, situacion: 'en_curso' },
 };
 
 const dataDe = (mock: jest.Mock): Record<string, unknown> => {
@@ -113,6 +115,7 @@ describe('PlanAlimentoService', () => {
       findUniqueOrThrow: jest.fn(),
     },
     registroMortalidad: { findMany: jest.fn() },
+    puntoCurvaGenetica: { findMany: jest.fn() },
     estimacionAlimentoPlan: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
@@ -145,6 +148,7 @@ describe('PlanAlimentoService', () => {
     prisma.$transaction.mockResolvedValue([[], 0]);
     prisma.lote.findUnique.mockResolvedValue(loteDePropietario(5));
     planLoteService.obtener.mockResolvedValue(planVigenteBase);
+    prisma.puntoCurvaGenetica.findMany.mockResolvedValue([]);
     tx.tipoAlimento.findMany.mockResolvedValue([]);
   });
 
@@ -332,9 +336,9 @@ describe('PlanAlimentoService', () => {
       const renglon = (
         data.renglones_alimento as { create: Array<Record<string, unknown>> }
       ).create[0];
-      expect(
-        (renglon.consumo_por_ave_g as Prisma.Decimal).toFixed(2),
-      ).toBe('1190.00');
+      expect((renglon.consumo_por_ave_g as Prisma.Decimal).toFixed(2)).toBe(
+        '1190.00',
+      );
       // sin mortalidad registrada, N(d) = 1000 constante: 1190 g x 1000 aves.
       expect((renglon.consumo_total_kg as Prisma.Decimal).toFixed(3)).toBe(
         '1190.000',
@@ -1250,6 +1254,248 @@ describe('PlanAlimentoService', () => {
       await expect(service.obtener(3, admin)).rejects.toThrow(
         InternalServerErrorException,
       );
+    });
+  });
+
+  describe('alimento_estimado (obtener)', () => {
+    const MUERTES = [
+      { dia: 2, muertes: 15 },
+      { dia: 5, muertes: 10 },
+    ];
+    const PUNTOS = [
+      { dia: 7, consumo_acumulado_g: new Prisma.Decimal(140) },
+      { dia: 14, consumo_acumulado_g: new Prisma.Decimal(490) },
+      { dia: 21, consumo_acumulado_g: new Prisma.Decimal(1190) },
+    ];
+
+    const totalPara = (diaCorte: number) => {
+      const r = integrarConsumo(
+        PUNTOS.map((p) => ({
+          dia: p.dia,
+          consumoAcumuladoG: p.consumo_acumulado_g,
+        })),
+        21,
+        (d) => avesVivasEnDia(MUERTES, 1000, diaCorte, d),
+      );
+      if (r.estado !== 'calculado') throw new Error('curva inválida');
+      return r.consumoTotalKg;
+    };
+
+    const fila = (
+      diaCorte: number,
+      overrides: Record<string, unknown> = {},
+    ) => ({
+      id: 1,
+      plan_lote_id: 31,
+      version: 2,
+      vigente: true,
+      estado_alimento: 'calculado',
+      version_algoritmo: ALGORITMO_ACTUAL,
+      cantidad_inicial_snapshot: 1000,
+      dia_corte: diaCorte,
+      mortalidad_snapshot: MUERTES.filter((m) => m.dia <= diaCorte),
+      muertes_al_corte: 25,
+      aves_vivas_al_corte: 975,
+      dia_objetivo_snapshot: 21,
+      consumo_por_ave_g: new Prisma.Decimal(1190),
+      consumo_total_kg: totalPara(diaCorte),
+      estado_desglose: 'legado_sin_desglose',
+      version_desglose: VERSION_DESGLOSE_ACTUAL,
+      marca_alimento_snapshot: null,
+      renglones_alimento: [] as unknown[],
+      motivo: null,
+      fecha_creacion: new Date('2026-08-08T00:00:00.000Z'),
+      creado_por: { id: 1, nombre_completo: 'Admin' },
+      plan: {
+        id: 31,
+        version: 1,
+        lote_id: 3,
+        fecha_ingreso_snapshot: new Date('2026-07-30T00:00:00.000Z'),
+        fecha_salida_calculada: new Date('2026-08-19T00:00:00.000Z'),
+      },
+      curva_version_snapshot: {
+        id: 7,
+        sexo: 'macho',
+        version: 1,
+        fuente: 'test',
+        linea_genetica: { id: 10, codigo: 'ross', nombre: 'Ross' },
+      },
+      ...overrides,
+    });
+
+    const preparar = (
+      estimacion: ReturnType<typeof fila>,
+      hoy: string,
+      mortalidadActual = MUERTES.filter((m) => m.dia <= estimacion.dia_corte),
+    ) => {
+      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(estimacion);
+      prisma.lote.findUniqueOrThrow.mockResolvedValue({
+        cantidad_inicial: 1000,
+        marca_alimento: null,
+      });
+      prisma.puntoCurvaGenetica.findMany.mockResolvedValue(PUNTOS);
+      const fechaDeDia = (dia: number) =>
+        new Date(Date.UTC(2026, 6, 30 + dia - 1));
+      prisma.registroMortalidad.findMany.mockResolvedValue(
+        mortalidadActual.map((m) => ({
+          fecha: fechaDeDia(m.dia),
+          cantidad_aves: m.muertes,
+        })),
+      );
+      jest.useFakeTimers().setSystemTime(new Date(`${hoy}T15:00:00.000Z`));
+    };
+
+    afterEach(() => jest.useRealTimers());
+
+    it('corte de hoy: reparte el total y entrega el pendiente desde hoy', async () => {
+      preparar(fila(10), '2026-08-08');
+
+      const res = await service.obtener(3, admin);
+      const a = res.alimento_estimado;
+
+      expect(a.disponible).toBe(true);
+      expect(a.base).toMatchObject({
+        estimacion_version: 2,
+        plan_version: 1,
+        dia_corte: 10,
+        antiguedad_dias: 0,
+        corte_es_hoy: true,
+        corresponde_al_plan_vigente: true,
+      });
+      expect(
+        new Prisma.Decimal(a.hasta_corte_kg as Prisma.Decimal)
+          .plus(a.pendiente_tras_corte_kg as Prisma.Decimal)
+          .equals(a.total_kg as Prisma.Decimal),
+      ).toBe(true);
+      expect(a.pendiente_desde_hoy_kg).toEqual(a.pendiente_tras_corte_kg);
+      expect(a.requiere_recalculo).toBe(false);
+      expect(a.motivos_recalculo).toEqual([]);
+    });
+
+    it('lee la curva fijada por el snapshot de la estimación, no la vigente', async () => {
+      preparar(fila(10), '2026-08-08');
+
+      await service.obtener(3, admin);
+
+      expect(prisma.puntoCurvaGenetica.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { curva_version_id: 7, consumo_acumulado_g: { not: null } },
+        }),
+      );
+    });
+
+    it('estimación de hace 3 días: conserva el pendiente tras SU corte y NO inventa el pendiente de hoy', async () => {
+      preparar(fila(10), '2026-08-11');
+
+      const res = await service.obtener(3, admin);
+      const a = res.alimento_estimado;
+
+      expect(res.antiguedad_dias).toBe(3);
+      expect(a.base.corte_es_hoy).toBe(false);
+      expect(a.pendiente_tras_corte_kg).not.toBeNull();
+      expect(a.pendiente_desde_hoy_kg).toBeNull();
+      expect(a.requiere_recalculo).toBe(true);
+      expect(a.motivos_recalculo).toContain('corte_anterior_a_hoy');
+    });
+
+    it('plan cambiado: no corresponde al plan vigente, sin pendiente de hoy y con plan_cambio', async () => {
+      preparar(fila(10), '2026-08-08');
+      planLoteService.obtener.mockResolvedValue({
+        ...planVigenteBase,
+        id: 32,
+        version: 2,
+        resultado: { dia_objetivo: 28 },
+      });
+
+      const res = await service.obtener(3, admin);
+      const a = res.alimento_estimado;
+
+      expect(a.base.corresponde_al_plan_vigente).toBe(false);
+      expect(a.pendiente_tras_corte_kg).not.toBeNull();
+      expect(a.pendiente_desde_hoy_kg).toBeNull();
+      expect(a.requiere_recalculo).toBe(true);
+      expect(a.motivos_recalculo).toContain('plan_cambio');
+    });
+
+    it('objetivo ya cubierto por el corte (corte 21 de 21) aunque pasen días: pendiente real 0, sin pedir recálculo', async () => {
+      preparar(fila(21), '2026-08-20');
+
+      const res = await service.obtener(3, admin);
+      const a = res.alimento_estimado;
+
+      expect(a.base.corte_es_hoy).toBe(false);
+      expect(
+        new Prisma.Decimal(a.hasta_corte_kg as Prisma.Decimal).equals(
+          a.total_kg as Prisma.Decimal,
+        ),
+      ).toBe(true);
+      expect(a.pendiente_tras_corte_kg?.toString()).toBe('0');
+      expect(a.pendiente_desde_hoy_kg?.toString()).toBe('0');
+      expect(a.requiere_recalculo).toBe(false);
+    });
+
+    it('estimación sin día objetivo: no disponible y todos los kilos null, nunca 0', async () => {
+      preparar(
+        fila(10, {
+          estado_alimento: 'plan_sin_dia_objetivo',
+          dia_objetivo_snapshot: null,
+          consumo_total_kg: null,
+          mortalidad_snapshot: null,
+          curva_version_snapshot: null,
+        }),
+        '2026-08-08',
+      );
+
+      const res = await service.obtener(3, admin);
+      const a = res.alimento_estimado;
+
+      expect(a.disponible).toBe(false);
+      expect(a.motivo_no_disponible).toBe('estado_alimento_no_calculado');
+      expect(a.total_kg).toBeNull();
+      expect(a.hasta_corte_kg).toBeNull();
+      expect(a.pendiente_tras_corte_kg).toBeNull();
+      expect(a.pendiente_desde_hoy_kg).toBeNull();
+      expect(prisma.puntoCurvaGenetica.findMany).not.toHaveBeenCalled();
+    });
+
+    it('algoritmo distinto: no disponible con kilos null y pide recalcular', async () => {
+      preparar(fila(10, { version_algoritmo: 'otro_v0' }), '2026-08-08');
+
+      const res = await service.obtener(3, admin);
+      const a = res.alimento_estimado;
+
+      expect(a.disponible).toBe(false);
+      expect(a.motivo_no_disponible).toBe('algoritmo_distinto');
+      expect(a.hasta_corte_kg).toBeNull();
+      expect(a.requiere_recalculo).toBe(true);
+      expect(a.motivos_recalculo).toContain('algoritmo_cambio');
+    });
+
+    it('curva sin puntos con consumo: no disponible, no 0', async () => {
+      preparar(fila(10), '2026-08-08');
+      prisma.puntoCurvaGenetica.findMany.mockResolvedValue([]);
+
+      const res = await service.obtener(3, admin);
+
+      expect(res.alimento_estimado.disponible).toBe(false);
+      expect(res.alimento_estimado.motivo_no_disponible).toBe(
+        'curva_no_disponible',
+      );
+      expect(res.alimento_estimado.hasta_corte_kg).toBeNull();
+    });
+
+    it('total persistido que no se reproduce: no disponible y no rompe la lectura', async () => {
+      preparar(
+        fila(10, { consumo_total_kg: new Prisma.Decimal('1.000') }),
+        '2026-08-08',
+      );
+
+      const res = await service.obtener(3, admin);
+
+      expect(res.alimento_estimado.motivo_no_disponible).toBe(
+        'total_no_reproducible',
+      );
+      expect(res.alimento_estimado.total_kg).toBeNull();
     });
   });
 
