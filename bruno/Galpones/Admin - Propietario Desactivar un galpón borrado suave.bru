@@ -18,4 +18,10 @@ docs {
   Solo Administrador. Desactiva el galpón y revoca sus asignaciones activas
   en una sola transacción. Es equivalente a PATCH /v1/galpones/:id con
   {"activo": false}. Reactivar no devuelve las asignaciones.
+
+  Concurrencia: la desactivación toma primero el bloqueo del galpón y
+  después revoca las asignaciones, con una espera máxima de 5 s para
+  obtenerlo. Una asignación en curso termina antes (y queda revocada) o
+  espera a esta desactivación y recibe 400 «galpón inactivo». Si el galpón
+  está ocupado más de 5 s responde 409 sin cambiar nada; reintenta.
 }
