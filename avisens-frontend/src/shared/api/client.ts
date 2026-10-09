@@ -106,14 +106,17 @@ api.interceptors.request.use((config) => {
   if (cfg._retry) {
     // Esto es un reintento que el interceptor de respuesta YA decidió
     // enviar, con su generación y su Authorization ya fijados ahí mismo
-    // (ver más abajo) tras comprobar que seguían vigentes. Axios ejecuta
-    // los interceptores de petición de forma asíncrona -- si aquí se
-    // volviera a pisar _generacion/Authorization con lo que sea "actual"
-    // en ESTE instante, una sesión que cambió justo en el hueco entre esa
-    // comprobación y esta pasada (otro login, por ejemplo) se colaría: la
-    // petición terminaría reenviándose con las credenciales de la sesión
-    // nueva, no de la que la originó. Por eso un reintento no se toca
-    // aquí en absoluto.
+    // tras comprobar que seguían vigentes. Axios ejecuta los
+    // interceptores de petición de forma ASÍNCRONA -- entre que se llamó
+    // a api(original) y que esta pasada corre de verdad, la sesión pudo
+    // cambiar otra vez. No basta con "no tocar nada": hay que volver a
+    // comprobar la generación AQUÍ, justo antes de que la petición salga
+    // de verdad hacia el adapter/red, y rechazarla si ya no coincide --
+    // de lo contrario, un reintento obsoleto igual llegaría con
+    // credenciales que ya no son las de la sesión actual.
+    if (cfg._generacion !== generacionSesion) {
+      return Promise.reject(new RenovacionDescartadaError())
+    }
     return config
   }
 

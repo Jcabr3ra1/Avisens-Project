@@ -11,10 +11,48 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTENEDOR="avisens-concurrencia-sesiones-test-$(date +%s)-$$"
 PUERTO_HOST=""
 
+# Limpieza endurecida, acotada exclusivamente a ESTE contenedor (nunca un
+# prune global, que afectaría recursos de otras corridas o del propio
+# avisens-project):
+#   - "-v" en "docker rm" se lleva también el volumen anónimo que la propia
+#     imagen de postgres declara para /var/lib/postgresql/data -- sin esto
+#     quedaba huérfano en disco en cada corrida.
+#   - Si el contenedor nunca llegó a crearse, no hay nada que limpiar (no
+#     es un fallo).
+#   - Un fallo real de "docker rm" NO se oculta con "|| true": se informa y
+#     se refleja en el código de salida.
+#   - INT/TERM limpian y terminan con exit explícito -- sin eso, el script
+#     podría seguir corriendo después de atender la señal.
 limpiar() {
-  docker rm -f "$CONTENEDOR" >/dev/null 2>&1 || true
+  if ! docker inspect "$CONTENEDOR" >/dev/null 2>&1; then
+    return 0
+  fi
+  if ! docker rm -f -v "$CONTENEDOR" >/dev/null 2>&1; then
+    echo "ERROR: no se pudo eliminar el contenedor desechable $CONTENEDOR (ni su volumen anónimo) -- revisa a mano: docker rm -f -v $CONTENEDOR" >&2
+    return 1
+  fi
+  return 0
 }
-trap limpiar EXIT INT TERM
+
+manejar_salida() {
+  local codigo_previo=$?
+  limpiar
+  local codigo_limpieza=$?
+  if [ "$codigo_previo" -eq 0 ] && [ "$codigo_limpieza" -ne 0 ]; then
+    exit 1
+  fi
+  exit "$codigo_previo"
+}
+
+manejar_senal() {
+  trap - EXIT INT TERM
+  limpiar || true
+  exit "$1"
+}
+
+trap manejar_salida EXIT
+trap 'manejar_senal 130' INT
+trap 'manejar_senal 143' TERM
 
 echo "Contenedor desechable: $CONTENEDOR"
 docker run -d --name "$CONTENEDOR" \

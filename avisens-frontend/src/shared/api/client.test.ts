@@ -318,29 +318,82 @@ describe('client.ts — recorrido real de Axios (adapter simulado, sin red)', ()
     expect(llamadas).toHaveLength(1)
   })
 
-  it('REGRESIÓN (bloqueante #1, invariante directo): el interceptor de petición NUNCA pisa _generacion/Authorization en un reintento ya marcado, aunque la sesión actual ya sea otra', () => {
+  it('REGRESIÓN (bloqueante #1, ventana exacta): refresh exitoso → se programa api(original) → la sesión cambia ANTES de que corra el interceptor de petición del reintento → el adapter NUNCA recibe la segunda llamada', async () => {
+    const llamadas = instalarAdapterSimulado()
+    const { promesa, resolver } = deferida<{ data: { access_token: string; refresh_token: string } }>()
+    const { promesa: llamadaAPostHecha, resolver: avisarLlamadaAPost } = deferida<void>()
+    vi.spyOn(axios, 'post').mockImplementation(() => {
+      avisarLlamadaAPost()
+      return promesa as never
+    })
+
+    const intento = api.get('/granjas')
+    await llamadaAPostHecha
+    // En este punto el interceptor de respuesta YA está en
+    // `await obtenerPromesaDeRenovacion()` -- es decir, YA registró su
+    // propia continuación sobre esa promesa (es lo que hizo `await` recién
+    // para llegar hasta el axios.post real de arriba).
+
+    // Engancho MI propio cambio de generación a la MISMA promesa que el
+    // interceptor está esperando, pero registrándolo DESPUÉS que él. Las
+    // reacciones de una promesa corren en el orden en que se registraron:
+    // cuando la promesa resuelva, primero correrá la continuación del
+    // interceptor (Check #2 pasa, llama a api(original) -- lo que ENCOLA
+    // la pasada del interceptor de petición para el reintento, al FINAL de
+    // la cola, después de lo que ya estaba encolado), y solo DESPUÉS mi
+    // reacción (que ya estaba encolada ANTES que esa pasada recién
+    // encolada). Resultado determinista: mi cambio de generación corre
+    // DESPUÉS de que Check #2 ya pasó y se llamó a api(original), pero
+    // ANTES de que el interceptor de petición del reintento se ejecute de
+    // verdad -- exactamente la ventana que describe el hallazgo, sin
+    // depender de contar microtasks a mano.
+    obtenerPromesaDeRenovacion().then(() => {
+      nuevaGeneracion()
+    })
+
+    resolver({ data: { access_token: 'access-de-sesion-B', refresh_token: 'refresh-de-sesion-B' } })
+
+    await expect(intento).rejects.toBeDefined()
+    // El adapter NUNCA debió recibir la segunda llamada (el reintento):
+    // si esto falla con llamadas.length === 2, el reintento obsoleto
+    // llegó a salir con credenciales que ya no eran las de la sesión que
+    // lo originó -- exactamente el escenario que Codex reprodujo
+    // (adapterCalls=2, obsoleteRetrySent=true).
+    expect(llamadas).toHaveLength(1)
+  })
+
+  it('REGRESIÓN (bloqueante #1, invariante directo): un reintento con generación vigente pasa intacto; uno con generación OBSOLETA se rechaza, nunca sale intacto', async () => {
     const peticion = api.interceptors.request.handlers?.[0]?.fulfilled as unknown as (
       config: Record<string, unknown>,
-    ) => Record<string, unknown>
+    ) => Record<string, unknown> | Promise<never>
 
     // Primera pasada: petición fresca (sin _retry) -- se estampa con lo
     // que sea "actual" en este instante.
     const generacionOriginal = generacionActual()
-    const configOriginal = peticion({ headers: {} })
+    const configOriginal = (await peticion({ headers: {} })) as Record<string, unknown>
     expect(configOriginal._generacion).toBe(generacionOriginal)
     expect(configOriginal.headers).toMatchObject({ Authorization: 'Bearer access-de-sesion-A' })
+
+    // Reintento (_retry=true) con la MISMA generación, todavía vigente:
+    // pasa intacto -- no se le toca _generacion ni Authorization (ya los
+    // fijó el interceptor de respuesta), y se deja salir.
+    const configReintentadoVigente = await peticion({ ...configOriginal, _retry: true })
+    expect(configReintentadoVigente).toMatchObject({
+      _generacion: generacionOriginal,
+      headers: { Authorization: 'Bearer access-de-sesion-A' },
+    })
 
     // La sesión cambia, y con ella el access token guardado.
     nuevaGeneracion()
     vi.spyOn(tokens, 'getAccessToken').mockReturnValue('access-de-sesion-B')
 
-    // Segunda pasada: el MISMO config, ahora marcado _retry=true (como
-    // hace el interceptor de respuesta antes de reintentar). Si el
-    // interceptor de petición volviera a estampar aquí, se colaría la
-    // sesión B -- no debe tocar nada.
-    const configReintentado = peticion({ ...configOriginal, _retry: true })
-    expect(configReintentado._generacion).toBe(generacionOriginal)
-    expect(configReintentado.headers).toMatchObject({ Authorization: 'Bearer access-de-sesion-A' })
+    // Reintento (_retry=true) con la generación YA OBSOLETA: antes esto
+    // simplemente "no tocaba nada" y lo dejaba salir igual -- ahí seguía
+    // el bloqueante: un reintento obsoleto llegaba intacto al adapter con
+    // credenciales que ya no eran las de la sesión actual. Ahora debe
+    // RECHAZARSE aquí mismo, antes de salir hacia el adapter/red.
+    const intentoObsoleto = peticion({ ...configOriginal, _retry: true })
+    await expect(intentoObsoleto).rejects.toBeInstanceOf(RenovacionDescartadaError)
   })
 
   it('REGRESIÓN (bloqueante #2): si la sesión cambia justo antes de que corra el catch de un refresh fallido, no limpia ni redirige la sesión nueva', async () => {
