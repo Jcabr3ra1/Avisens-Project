@@ -18,15 +18,32 @@ PUERTO_HOST=""
 #     imagen de postgres declara para /var/lib/postgresql/data -- sin esto
 #     quedaba huérfano en disco en cada corrida.
 #   - Si el contenedor nunca llegó a crearse, no hay nada que limpiar (no
-#     es un fallo).
+#     es un fallo) -- pero esa conclusión exige que Docker haya RESPONDIDO
+#     confirmando la ausencia ("no such object"), no solo que el comando
+#     haya fallado: un "docker inspect" puede fallar porque Docker esté
+#     inaccesible, y eso es un caso completamente distinto -- ahí no hay
+#     forma de saber si el contenedor (y su volumen) siguen existiendo, así
+#     que nunca se declara limpieza exitosa.
 #   - Un fallo real de "docker rm" NO se oculta con "|| true": se informa y
 #     se refleja en el código de salida.
 #   - INT/TERM limpian y terminan con exit explícito -- sin eso, el script
 #     podría seguir corriendo después de atender la señal.
 limpiar() {
-  if ! docker inspect "$CONTENEDOR" >/dev/null 2>&1; then
+  local salida_inspect
+  if salida_inspect="$(docker inspect "$CONTENEDOR" 2>&1)"; then
+    : # existe -- sigue abajo para eliminarlo
+  elif printf '%s' "$salida_inspect" | grep -qi "no such object"; then
+    # Ausencia CONFIRMADA por Docker (respondió y dijo que no existe) --
+    # nada que limpiar, no es un fallo.
     return 0
+  else
+    # No se pudo ni siquiera preguntar (Docker inaccesible, u otro error
+    # distinto a "no existe") -- nunca se asume que no hay nada que
+    # limpiar. Se informa el problema y se devuelve error.
+    echo "ERROR: no se pudo consultar si el contenedor desechable $CONTENEDOR existe (Docker puede estar inaccesible) -- no se asume que no hay nada que limpiar. Detalle: $salida_inspect" >&2
+    return 1
   fi
+
   if ! docker rm -f -v "$CONTENEDOR" >/dev/null 2>&1; then
     echo "ERROR: no se pudo eliminar el contenedor desechable $CONTENEDOR (ni su volumen anónimo) -- revisa a mano: docker rm -f -v $CONTENEDOR" >&2
     return 1
