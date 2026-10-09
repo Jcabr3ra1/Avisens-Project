@@ -101,11 +101,27 @@ interface RetryConfig extends InternalAxiosRequestConfig {
 }
 
 api.interceptors.request.use((config) => {
+  const cfg = config as RetryConfig
+
+  if (cfg._retry) {
+    // Esto es un reintento que el interceptor de respuesta YA decidió
+    // enviar, con su generación y su Authorization ya fijados ahí mismo
+    // (ver más abajo) tras comprobar que seguían vigentes. Axios ejecuta
+    // los interceptores de petición de forma asíncrona -- si aquí se
+    // volviera a pisar _generacion/Authorization con lo que sea "actual"
+    // en ESTE instante, una sesión que cambió justo en el hueco entre esa
+    // comprobación y esta pasada (otro login, por ejemplo) se colaría: la
+    // petición terminaría reenviándose con las credenciales de la sesión
+    // nueva, no de la que la originó. Por eso un reintento no se toca
+    // aquí en absoluto.
+    return config
+  }
+
   const token = getAccessToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
-  ;(config as RetryConfig)._generacion = generacionSesion
+  cfg._generacion = generacionSesion
   return config
 })
 
@@ -152,13 +168,24 @@ api.interceptors.response.use(
       original.headers.Authorization = `Bearer ${nuevoToken}`
       return api(original)
     } catch (refreshError) {
-      if (refreshError instanceof RenovacionDescartadaError) {
-        // Ya se resolvió por otra vía (logout y/o login nuevo) -- no hace
-        // falta limpiar de nuevo ni redirigir.
+      // Dos formas de que esto ya no corresponda a la sesión actual:
+      // (a) RenovacionDescartadaError -- renovarAccessToken() ya detectó
+      //     el cambio de generación en su propio momento;
+      // (b) la generación cambió DESPUÉS de eso, en el hueco entre que
+      //     renovarAccessToken() lanzó un error genuino (válido en su
+      //     propio instante, bajo la generación vieja) y que este catch
+      //     se ejecuta -- un login nuevo pudo completarse justo ahí. En
+      //     ese caso el error es "real" pero ya no es de ESTA sesión, así
+      //     que limpiar/redirigir borraría una sesión que no tiene nada
+      //     que ver con el fallo. Por eso se vuelve a comprobar aquí, en
+      //     el último instante antes del efecto destructivo -- no basta
+      //     con el tipo del error.
+      if (refreshError instanceof RenovacionDescartadaError || generacionDeOrigen !== generacionSesion) {
         return Promise.reject(error)
       }
       clearTokens()
-      // El refresh falló de verdad: la sesión se acabó. Redirigimos al login.
+      // El refresh falló de verdad, para la sesión que sigue siendo la
+      // actual: ahí sí se acabó. Redirigimos al login.
       if (typeof window !== 'undefined') {
         window.location.href = '/login'
       }

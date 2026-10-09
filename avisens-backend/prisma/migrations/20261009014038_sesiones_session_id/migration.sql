@@ -2,15 +2,20 @@
 -- cambia en cada rotación) para que logout pueda revocar una sesión
 -- concreta aunque el token presentado ya haya rotado.
 --
--- Transaccional por construcción: Prisma envuelve este archivo completo en
--- una única transacción al aplicarlo contra Postgres (ninguna sentencia de
--- aquí abajo requiere correr fuera de una transacción, como sí la
--- necesitaría un CREATE INDEX CONCURRENTLY) -- los tres pasos se confirman
--- o se revierten juntos.
+-- Transaccional de forma EXPLÍCITA (BEGIN/COMMIT propios, no se asume el
+-- comportamiento de la herramienta que la aplique): los tres pasos se
+-- confirman o se revierten juntos. Probado con un fallo deliberado
+-- introducido a propósito después del backfill, en una base desechable
+-- (ver evidencia en el PR/docs de diseño) -- una corrida exitosa, por sí
+-- sola, no demuestra que haya una reversión real ante un fallo a mitad de
+-- camino; esta migración se verificó forzando ese fallo y confirmando que
+-- la columna no quedó a medio crear.
 --
 -- No borra ni revoca ninguna fila existente: las sesiones ya creadas
 -- conservan su refresh_token_hash (formato bcrypt viejo) y su estado de
 -- revocada tal cual estaban -- solo ganan un session_id nuevo.
+
+BEGIN;
 
 -- 1) Columna nullable primero: no se puede agregar NOT NULL + UNIQUE de
 --    una sola vez contra una tabla con filas existentes sin valor.
@@ -25,3 +30,5 @@ UPDATE "sesiones" SET "session_id" = gen_random_uuid() WHERE "session_id" IS NUL
 -- 3) Recién ahora las restricciones, con todas las filas ya pobladas.
 ALTER TABLE "sesiones" ALTER COLUMN "session_id" SET NOT NULL;
 ALTER TABLE "sesiones" ADD CONSTRAINT "sesiones_session_id_key" UNIQUE ("session_id");
+
+COMMIT;

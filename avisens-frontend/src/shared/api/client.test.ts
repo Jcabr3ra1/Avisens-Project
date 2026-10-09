@@ -148,6 +148,14 @@ describe('client.ts — generación de sesión', () => {
   })
 })
 
+function error401(config: Record<string, unknown>) {
+  return {
+    response: { status: 401 },
+    config,
+    isAxiosError: true,
+  } as never
+}
+
 describe('client.ts — interceptor de respuesta', () => {
   beforeEach(() => {
     vi.spyOn(tokens, 'getRefreshToken').mockReturnValue('refresh-valido')
@@ -160,14 +168,6 @@ describe('client.ts — interceptor de respuesta', () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })
-
-  function error401(config: Record<string, unknown>) {
-    return {
-      response: { status: 401 },
-      config,
-      isAxiosError: true,
-    } as never
-  }
 
   it('excluye /auth/login, /auth/refresh y /auth/logout del reintento automático', async () => {
     const postSpy = vi.spyOn(axios, 'post')
@@ -218,5 +218,162 @@ describe('client.ts — interceptor de respuesta', () => {
 
     // No debe reintentar la petición original bajo la sesión nueva.
     await expect(intento).rejects.toBeDefined()
+  })
+})
+
+// --- Recorrido REAL de Axios ------------------------------------------------
+//
+// Las pruebas de arriba invocan el manejador de respuesta directamente --
+// útil para la lógica de generación en sí, pero no prueba lo que de verdad
+// causó el bug: un reintento (`return api(original)`) vuelve a pasar por el
+// interceptor de PETICIÓN, que Axios ejecuta de forma asíncrona. Estas
+// pruebas disparan peticiones reales contra `api` (`api.get(...)`), con un
+// adapter simulado en vez de red real, para que los dos interceptores
+// (petición y respuesta) corran tal cual corren en producción.
+describe('client.ts — recorrido real de Axios (adapter simulado, sin red)', () => {
+  const adapterOriginal = api.defaults.adapter
+
+  beforeEach(() => {
+    vi.spyOn(tokens, 'getRefreshToken').mockReturnValue('refresh-valido')
+    vi.spyOn(tokens, 'getAccessToken').mockReturnValue('access-de-sesion-A')
+    vi.spyOn(tokens, 'setTokens').mockImplementation(() => {})
+    vi.spyOn(tokens, 'clearTokens').mockImplementation(() => {})
+    nuevaGeneracion()
+  })
+
+  afterEach(() => {
+    api.defaults.adapter = adapterOriginal
+    vi.restoreAllMocks()
+  })
+
+  // Adapter de prueba: la primera llamada a cualquier URL "falla" con 401
+  // (como si el access token hubiera expirado); las siguientes "resuelven"
+  // 200 -- y registran con qué cabecera Authorization llegó cada una, para
+  // poder comprobar bajo qué identidad se mandó de verdad cada intento.
+  function instalarAdapterSimulado() {
+    const llamadas: Array<{ authorization: unknown; retry: unknown }> = []
+    api.defaults.adapter = async (config) => {
+      llamadas.push({
+        authorization: config.headers?.Authorization,
+        retry: (config as { _retry?: boolean })._retry,
+      })
+      if (llamadas.length === 1) {
+        const error = new Error('401') as Error & {
+          response: unknown
+          config: unknown
+          isAxiosError: boolean
+        }
+        error.response = { status: 401, data: {}, headers: {}, config }
+        error.config = config
+        error.isAxiosError = true
+        throw error
+      }
+      return { data: { ok: true }, status: 200, statusText: 'OK', headers: {}, config }
+    }
+    return llamadas
+  }
+
+  it('camino normal (generación sin cambios): el reintento real sí se envía, con el token nuevo', async () => {
+    const llamadas = instalarAdapterSimulado()
+    vi.spyOn(axios, 'post').mockResolvedValue({
+      data: { access_token: 'access-nuevo', refresh_token: 'refresh-nuevo' },
+    } as never)
+
+    const respuesta = await api.get('/granjas')
+
+    expect(respuesta.data).toEqual({ ok: true })
+    expect(llamadas).toHaveLength(2)
+    expect(llamadas[0].retry).toBeUndefined()
+    expect(llamadas[1].retry).toBe(true)
+    expect(llamadas[1].authorization).toBe('Bearer access-nuevo')
+  })
+
+  it('REGRESIÓN (bloqueante #1): si la sesión cambia mientras se espera el refresh, la petición original NUNCA se reenvía -- ni con el token viejo ni con el nuevo', async () => {
+    const llamadas = instalarAdapterSimulado()
+    const { promesa, resolver } = deferida<{ data: { access_token: string; refresh_token: string } }>()
+    // Señal de que axios.post YA se llamó de verdad -- Axios ejecuta sus
+    // interceptores de forma asíncrona (microtasks), así que no alcanza
+    // con disparar api.get(...) y seguir con código síncrono: hay que
+    // esperar a que el pipeline real (interceptor de petición -> adapter
+    // -> 401 -> interceptor de respuesta -> obtenerPromesaDeRenovacion)
+    // de verdad haya llegado hasta acá, con la generación TODAVÍA en N,
+    // antes de cambiarla.
+    const { promesa: llamadaAPostHecha, resolver: avisarLlamadaAPost } = deferida<void>()
+    vi.spyOn(axios, 'post').mockImplementation(() => {
+      avisarLlamadaAPost()
+      return promesa as never
+    })
+
+    const intento = api.get('/granjas')
+    await llamadaAPostHecha
+
+    // Recién ahora, con el refresh de verdad en vuelo, cambia la sesión
+    // (p. ej. un logout y/o un login nuevo en otra parte de la app).
+    nuevaGeneracion()
+    resolver({ data: { access_token: 'access-de-sesion-B', refresh_token: 'refresh-de-sesion-B' } })
+
+    await expect(intento).rejects.toBeDefined()
+    // El adapter solo debió recibir la llamada original (401) -- el
+    // reintento nunca debió dispararse, bajo ninguna identidad.
+    expect(llamadas).toHaveLength(1)
+  })
+
+  it('REGRESIÓN (bloqueante #1, invariante directo): el interceptor de petición NUNCA pisa _generacion/Authorization en un reintento ya marcado, aunque la sesión actual ya sea otra', () => {
+    const peticion = api.interceptors.request.handlers?.[0]?.fulfilled as unknown as (
+      config: Record<string, unknown>,
+    ) => Record<string, unknown>
+
+    // Primera pasada: petición fresca (sin _retry) -- se estampa con lo
+    // que sea "actual" en este instante.
+    const generacionOriginal = generacionActual()
+    const configOriginal = peticion({ headers: {} })
+    expect(configOriginal._generacion).toBe(generacionOriginal)
+    expect(configOriginal.headers).toMatchObject({ Authorization: 'Bearer access-de-sesion-A' })
+
+    // La sesión cambia, y con ella el access token guardado.
+    nuevaGeneracion()
+    vi.spyOn(tokens, 'getAccessToken').mockReturnValue('access-de-sesion-B')
+
+    // Segunda pasada: el MISMO config, ahora marcado _retry=true (como
+    // hace el interceptor de respuesta antes de reintentar). Si el
+    // interceptor de petición volviera a estampar aquí, se colaría la
+    // sesión B -- no debe tocar nada.
+    const configReintentado = peticion({ ...configOriginal, _retry: true })
+    expect(configReintentado._generacion).toBe(generacionOriginal)
+    expect(configReintentado.headers).toMatchObject({ Authorization: 'Bearer access-de-sesion-A' })
+  })
+
+  it('REGRESIÓN (bloqueante #2): si la sesión cambia justo antes de que corra el catch de un refresh fallido, no limpia ni redirige la sesión nueva', async () => {
+    const { promesa, rechazar } = deferida<string>()
+    vi.spyOn(axios, 'post').mockReturnValue(promesa as never)
+
+    const generacionDeLaPeticion = generacionActual()
+
+    // Arranca el refresco YO MISMO primero, para obtener la MISMA promesa
+    // deduplicada que el interceptor de respuesta real (manejadorDeRecha
+    // zoDeRespuesta, la función registrada de verdad en `api`) va a
+    // esperar -- y le engancho el cambio de generación como reacción
+    // ANTES de que el interceptor llegue a registrar la suya. Las
+    // reacciones de una misma promesa corren en el orden en que se
+    // registraron: así se garantiza, sin adivinar tiempos, que
+    // renovarAccessToken() ya decidió "esto es un fallo real de la
+    // generación N" (generación todavía sin cambiar en ESE instante) y
+    // que el cambio de sesión ocurre DESPUÉS de esa decisión pero ANTES
+    // de que el catch del interceptor la reciba -- el intercalado exacto
+    // que describe el hallazgo.
+    const promesaDeRefresco = obtenerPromesaDeRenovacion()
+    promesaDeRefresco.catch(() => {
+      nuevaGeneracion() // el "login nuevo" ya terminó, justo aquí
+    })
+
+    const rejected = manejadorDeRechazoDeRespuesta()
+    const intento = rejected(
+      error401({ url: '/granjas', headers: {}, _generacion: generacionDeLaPeticion }),
+    )
+
+    rechazar(new Error('401 real del backend')) // fallo genuino, bajo la generación N
+
+    await expect(intento).rejects.toBeDefined()
+    expect(tokens.clearTokens).not.toHaveBeenCalled()
   })
 })
