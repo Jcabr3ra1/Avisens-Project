@@ -7,3 +7,13 @@ post { url: {{baseUrl}}/v1/usuarios-galpones; body: json; auth: bearer }
 headers { Content-Type: application/json }
 auth:bearer { token: {{token}} }
 body:json { {"usuario_id":2,"galpon_id":1,"rol_asignacion":"galponero"} }
+
+docs {
+  Concurrencia: la asignación (y la reactivación por /activar o por
+  POST /v1/usuarios/:id/galpones) bloquea el galpón antes de validar que
+  siga activo y escribe en la misma transacción, con una espera máxima de
+  3 s. Si el galpón se desactiva a la vez responde 400 «galpón inactivo»
+  y no crea ni reactiva nada. Dos altas simultáneas del mismo par terminan
+  con 201 y una sola fila. Si el galpón está ocupado más de 3 s responde
+  409; reintenta.
+}
