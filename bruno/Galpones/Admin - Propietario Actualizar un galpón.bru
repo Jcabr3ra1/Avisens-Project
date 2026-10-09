@@ -33,3 +33,12 @@ body:json {
     "activo": true
   }
 }
+
+docs {
+  Solo Administrador. Con "activo": false el galpón se desactiva y sus
+  asignaciones activas de Operarios se revocan en la misma transacción,
+  igual que con DELETE /v1/galpones/:id. Con "activo": true, o sin el
+  campo "activo", las asignaciones no se modifican. Reactivar un galpón no
+  devuelve el acceso a los Operarios: hay que volver a asignarlos con
+  POST /v1/usuarios-galpones.
+}

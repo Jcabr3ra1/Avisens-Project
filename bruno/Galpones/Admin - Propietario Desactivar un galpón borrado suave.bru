@@ -13,3 +13,9 @@ delete {
 auth:bearer {
   token: {{token}}
 }
+
+docs {
+  Solo Administrador. Desactiva el galpón y revoca sus asignaciones activas
+  en una sola transacción. Es equivalente a PATCH /v1/galpones/:id con
+  {"activo": false}. Reactivar no devuelve las asignaciones.
+}

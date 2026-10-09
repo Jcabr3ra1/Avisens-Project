@@ -121,7 +121,7 @@ export class GalponesService {
       );
     }
 
-    return this.prisma.galpon.update({
+    const actualizacion = this.prisma.galpon.update({
       where: { id },
       data: {
         granja_id: undefined,
@@ -139,16 +139,30 @@ export class GalponesService {
       },
       select: GALPON_SELECT,
     });
+
+    if (dto.activo === false) {
+      const [, galpon] = await this.prisma.$transaction([
+        this.revocarAsignaciones(id),
+        actualizacion,
+      ]);
+      return galpon;
+    }
+
+    return actualizacion;
+  }
+
+  private revocarAsignaciones(galponId: number) {
+    return this.prisma.usuarioGalpon.updateMany({
+      where: { galpon_id: galponId, activa: true },
+      data: { activa: false },
+    });
   }
 
   async desactivar(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
     await this.prisma.$transaction([
-      this.prisma.usuarioGalpon.updateMany({
-        where: { galpon_id: id, activa: true },
-        data: { activa: false },
-      }),
+      this.revocarAsignaciones(id),
       this.prisma.galpon.update({
         where: { id },
         data: { activo: false },
