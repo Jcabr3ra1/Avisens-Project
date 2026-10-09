@@ -172,6 +172,70 @@ describe('GalponesService', () => {
       expect(prisma.galpon.update).toHaveBeenCalled();
     });
 
+    describe('activo y asignaciones', () => {
+      beforeEach(() => {
+        prisma.galpon.findUnique.mockResolvedValue({
+          id: 1,
+          granja: { id: 3, propietario_id: 5 },
+        });
+        prisma.galpon.update.mockReturnValue('operacion-galpon');
+        prisma.usuarioGalpon.updateMany.mockReturnValue('operacion-asignaciones');
+        prisma.$transaction.mockResolvedValue([
+          { count: 2 },
+          { id: 1, activo: false, nombre: 'Nuevo' },
+        ]);
+      });
+
+      it('activo:false revoca las asignaciones y actualiza el galpón en una sola transacción', async () => {
+        const res = await service.actualizar(
+          1,
+          { activo: false, nombre: 'Nuevo' },
+          admin,
+        );
+
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+        expect(prisma.$transaction).toHaveBeenCalledWith([
+          'operacion-asignaciones',
+          'operacion-galpon',
+        ]);
+        expect(prisma.usuarioGalpon.updateMany).toHaveBeenCalledWith({
+          where: { galpon_id: 1, activa: true },
+          data: { activa: false },
+        });
+        expect(dataDe(prisma.galpon.update)).toMatchObject({
+          activo: false,
+          nombre: 'Nuevo',
+        });
+        expect(res).toEqual({ id: 1, activo: false, nombre: 'Nuevo' });
+      });
+
+      it('si falla la actualización del galpón la promesa se rechaza y no se devuelve nada', async () => {
+        prisma.$transaction.mockRejectedValue(new Error('falla update'));
+
+        await expect(
+          service.actualizar(1, { activo: false }, admin),
+        ).rejects.toThrow('falla update');
+      });
+
+      it('un PATCH sin activo no toca las asignaciones', async () => {
+        prisma.galpon.update.mockResolvedValue({ id: 1 });
+
+        await service.actualizar(1, { nombre: 'Otro' }, admin);
+
+        expect(prisma.usuarioGalpon.updateMany).not.toHaveBeenCalled();
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+
+      it('activo:true no toca las asignaciones', async () => {
+        prisma.galpon.update.mockResolvedValue({ id: 1, activo: true });
+
+        await service.actualizar(1, { activo: true }, admin);
+
+        expect(prisma.usuarioGalpon.updateMany).not.toHaveBeenCalled();
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+    });
+
     it('impide trasladar un galpón a otra granja para no romper su historial', async () => {
       prisma.galpon.findUnique.mockResolvedValue({
         id: 1,
