@@ -1,3 +1,4 @@
+import { TiempoCrianzaDto } from '../../plan-lote/dto/plan-lote-respuesta.dto';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   EstadoCalculoAlimento,
@@ -172,6 +173,120 @@ export class PlanVigenteInfoDto {
 
   @ApiProperty({ example: true })
   es_el_mismo: boolean;
+
+  @ApiProperty({
+    type: TiempoCrianzaDto,
+    description: 'Tiempo de crianza del plan vigente, calculado al leer.',
+  })
+  tiempo: TiempoCrianzaDto;
+}
+
+export class BaseAlimentoEstimadoDto {
+  @ApiProperty({ example: 1, description: 'Versión de la estimación usada' })
+  estimacion_version: number;
+
+  @ApiProperty({
+    example: 2,
+    description: 'Versión del plan de esa estimación',
+  })
+  plan_version: number;
+
+  @ApiProperty({
+    example: 21,
+    description: 'Día de vida en que se fotografió la mortalidad (corte)',
+  })
+  dia_corte: number;
+
+  @ApiProperty({ example: '2026-10-09T15:00:00.000Z' })
+  calculada_el: Date;
+
+  @ApiProperty({ example: 0 })
+  antiguedad_dias: number;
+
+  @ApiProperty({
+    example: true,
+    description: 'true si el corte de la estimación es el día de hoy',
+  })
+  corte_es_hoy: boolean;
+
+  @ApiProperty({
+    example: true,
+    description:
+      'false si el plan vigente ya es otro distinto al de esta estimación',
+  })
+  corresponde_al_plan_vigente: boolean;
+}
+
+export class AlimentoEstimadoDto {
+  @ApiProperty({
+    example: true,
+    description:
+      'false cuando el reparto no se puede reproducir con los snapshots: los kilos quedan null, nunca 0',
+  })
+  disponible: boolean;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: null,
+    enum: [
+      'estado_alimento_no_calculado',
+      'algoritmo_distinto',
+      'curva_no_disponible',
+      'total_no_reproducible',
+    ],
+  })
+  motivo_no_disponible: string | null;
+
+  @ApiProperty({ type: BaseAlimentoEstimadoDto })
+  base: BaseAlimentoEstimadoDto;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '3546.389',
+    description:
+      'Ciclo completo según la curva, no alimento realmente consumido',
+  })
+  total_kg: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '1185.639',
+    description:
+      'Estimado por la curva, días 1..dia_corte (día de corte completo); no es consumo medido',
+  })
+  hasta_corte_kg: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '2360.750',
+    description:
+      'total_kg − hasta_corte_kg: lo estimado DESPUÉS del corte de esta estimación',
+  })
+  pendiente_tras_corte_kg: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: '2360.750',
+    description:
+      'Solo si el corte es de hoy (o ya cubre el objetivo), la estimación es del plan vigente y ni ella ni ese plan están desactualizados; si no, null y hay que recalcular',
+  })
+  pendiente_desde_hoy_kg: string | null;
+
+  @ApiProperty({ example: false })
+  requiere_recalculo: boolean;
+
+  @ApiProperty({
+    type: [String],
+    example: [],
+    description:
+      'corte_anterior_a_hoy, plan_desactualizado (el plan vigente cambió de curva o de fecha de ingreso: recalcular primero el plan y después su alimento) y/o los motivos de desactualización existentes',
+  })
+  motivos_recalculo: string[];
 }
 
 export class EstimacionAlimentoHistorialItemDto {
@@ -244,6 +359,13 @@ export class EstimacionAlimentoRespuestaDto extends EstimacionAlimentoHistorialI
 
   @ApiProperty({ example: 0 })
   antiguedad_dias: number;
+
+  @ApiProperty({
+    type: AlimentoEstimadoDto,
+    description:
+      'Reparto del total del ciclo en lo estimado hasta el corte y lo pendiente después, releído de los snapshots de la estimación (nunca de la mortalidad o la curva actuales).',
+  })
+  alimento_estimado: AlimentoEstimadoDto;
 }
 
 class MetaPaginacionEstimacionesDto {

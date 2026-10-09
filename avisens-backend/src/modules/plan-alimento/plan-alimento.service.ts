@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { EstadoCalculoAlimento, Prisma } from '@prisma/client';
@@ -13,6 +14,7 @@ import { verificarAccesoLote } from '../../common/auth/alcance';
 import { diaDeVida } from '../../common/fechas/dias-de-vida';
 import { esViolacionDeLlaveForanea } from '../../common/errores/llave-foranea';
 import { PlanLoteService } from '../plan-lote/plan-lote.service';
+import type { TiempoCrianza } from '../plan-lote/tiempo-crianza';
 import {
   clasificarMortalidad,
   avesVivasEnDia,
@@ -20,6 +22,7 @@ import {
   EntradaMortalidad,
 } from '../../common/mortalidad/mortalidad-snapshot';
 import { integrarConsumo, ALGORITMO_ACTUAL } from './consumo-curva';
+import { repartirTotalPorCorte } from './desglose-por-corte';
 import {
   construirDesgloseAlimento,
   validarDesgloseAlimento,
@@ -107,10 +110,13 @@ export interface PlanVigenteInfo {
   dia_objetivo: number | null;
   desactualizado: boolean;
   es_el_mismo: boolean;
+  tiempo: TiempoCrianza;
 }
 
 @Injectable()
 export class PlanAlimentoService {
+  private readonly logger = new Logger(PlanAlimentoService.name);
+
   constructor(
     private prisma: PrismaService,
     private planLoteService: PlanLoteService,
@@ -173,6 +179,7 @@ export class PlanAlimentoService {
         dia_objetivo: planVigente.resultado.dia_objetivo,
         desactualizado: planVigente.desactualizado,
         es_el_mismo: planVigente.id === planLoteIdDeLaEstimacion,
+        tiempo: planVigente.tiempo,
       };
     } catch (error) {
       if (error instanceof NotFoundException) return null;
@@ -563,6 +570,117 @@ export class PlanAlimentoService {
     };
   }
 
+  /**
+   * Reparte el total del ciclo de ESTA estimacion entre lo estimado hasta su
+   * corte y lo pendiente despues, releyendo solo sus snapshots (mortalidad,
+   * cantidad inicial, dia objetivo y la curva fijada por curva_version_snapshot,
+   * inmutable una vez publicada). Nunca usa la mortalidad ni la curva
+   * actuales: "pendiente desde hoy" solo se informa cuando el corte es el
+   * de hoy (o ya cubre el objetivo), la estimacion es del plan vigente y ni
+   * la estimacion ni ese plan estan desactualizados; si no, es null y se pide
+   * recalcular -- primero el plan (POST /plan/recalcular) y despues su
+   * alimento (POST /plan/alimento) --, no se reconstruye un hoy que esta
+   * estimacion nunca calculo.
+   */
+  private async construirAlimentoEstimado(
+    estimacion: EstimacionConRelaciones,
+    planVigente: PlanVigenteInfo | null,
+    desactualizado: boolean,
+    motivosDesactualizacion: MotivoDesactualizacion[],
+    antiguedadDias: number,
+  ) {
+    const corteEsHoy = antiguedadDias === 0;
+    const correspondeAlPlanVigente = planVigente?.es_el_mismo ?? false;
+    const base = {
+      estimacion_version: estimacion.version,
+      plan_version: estimacion.plan.version,
+      dia_corte: estimacion.dia_corte,
+      calculada_el: estimacion.fecha_creacion,
+      antiguedad_dias: antiguedadDias,
+      corte_es_hoy: corteEsHoy,
+      corresponde_al_plan_vigente: correspondeAlPlanVigente,
+    };
+
+    const corteCubreObjetivo =
+      estimacion.dia_objetivo_snapshot !== null &&
+      estimacion.dia_corte >= estimacion.dia_objetivo_snapshot;
+    const motivosRecalculo: string[] = [];
+    if (!corteEsHoy && !corteCubreObjetivo) {
+      motivosRecalculo.push('corte_anterior_a_hoy');
+    }
+    if (planVigente?.desactualizado) {
+      motivosRecalculo.push('plan_desactualizado');
+    }
+    motivosRecalculo.push(...motivosDesactualizacion);
+
+    const noDisponible = (motivo: string) => ({
+      disponible: false,
+      motivo_no_disponible: motivo,
+      base,
+      total_kg: null,
+      hasta_corte_kg: null,
+      pendiente_tras_corte_kg: null,
+      pendiente_desde_hoy_kg: null,
+      requiere_recalculo: motivosRecalculo.length > 0,
+      motivos_recalculo: motivosRecalculo,
+    });
+
+    if (
+      estimacion.estado_alimento !== 'calculado' ||
+      estimacion.consumo_total_kg === null ||
+      estimacion.dia_objetivo_snapshot === null ||
+      estimacion.curva_version_snapshot === null
+    ) {
+      return noDisponible('estado_alimento_no_calculado');
+    }
+
+    const puntos = await this.prisma.puntoCurvaGenetica.findMany({
+      where: {
+        curva_version_id: estimacion.curva_version_snapshot.id,
+        consumo_acumulado_g: { not: null },
+      },
+      orderBy: { dia: 'asc' },
+      select: { dia: true, consumo_acumulado_g: true },
+    });
+
+    const reparto = repartirTotalPorCorte({
+      versionAlgoritmo: estimacion.version_algoritmo,
+      puntos: puntos.map((p) => ({
+        dia: p.dia,
+        consumoAcumuladoG: p.consumo_acumulado_g as Prisma.Decimal,
+      })),
+      diaObjetivo: estimacion.dia_objetivo_snapshot,
+      mortalidadSnapshot: this.extraerSnapshotValidado(estimacion),
+      cantidadInicial: estimacion.cantidad_inicial_snapshot,
+      diaCorte: estimacion.dia_corte,
+      consumoTotalKgPersistido: estimacion.consumo_total_kg,
+    });
+
+    if (!reparto.disponible) {
+      this.logger.warn(
+        `Estimación de alimento ${estimacion.id}: reparto por corte no disponible (${reparto.motivo})`,
+      );
+      return noDisponible(reparto.motivo);
+    }
+
+    return {
+      disponible: true,
+      motivo_no_disponible: null,
+      base,
+      total_kg: reparto.totalKg,
+      hasta_corte_kg: reparto.hastaCorteKg,
+      pendiente_tras_corte_kg: reparto.pendienteTrasCorteKg,
+      pendiente_desde_hoy_kg:
+        motivosRecalculo.length === 0 &&
+        correspondeAlPlanVigente &&
+        !desactualizado
+          ? reparto.pendienteTrasCorteKg
+          : null,
+      requiere_recalculo: motivosRecalculo.length > 0,
+      motivos_recalculo: motivosRecalculo,
+    };
+  }
+
   private mapearEstimacion(estimacion: EstimacionConRelaciones) {
     return {
       id: estimacion.id,
@@ -749,6 +867,13 @@ export class PlanAlimentoService {
       desactualizado: false,
       motivos_desactualizacion: [] as MotivoDesactualizacion[],
       antiguedad_dias: 0,
+      alimento_estimado: await this.construirAlimentoEstimado(
+        estimacion,
+        planVigente,
+        false,
+        [],
+        0,
+      ),
     };
   }
 
@@ -799,6 +924,13 @@ export class PlanAlimentoService {
       desactualizado,
       motivos_desactualizacion: motivos,
       antiguedad_dias: antiguedadDias,
+      alimento_estimado: await this.construirAlimentoEstimado(
+        estimacion,
+        planVigente,
+        desactualizado,
+        motivos,
+        antiguedadDias,
+      ),
     };
   }
 
