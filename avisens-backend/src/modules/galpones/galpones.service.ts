@@ -15,8 +15,18 @@ import {
   filtroGalpones,
   verificarAccesoGalpon,
 } from '../../common/auth/alcance';
+import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { esViolacionDeLlaveForanea } from '../../common/errores/llave-foranea';
+import {
+  esTimeoutDeBloqueo,
+  MENSAJE_GALPON_OCUPADO,
+} from '../../common/errores/bloqueo';
+
+const OPCIONES_TRANSACCION = {
+  isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+  timeout: 10000,
+} as const;
 
 const GALPON_SELECT = {
   id: true,
@@ -141,14 +151,33 @@ export class GalponesService {
     });
 
     if (dto.activo === false) {
-      const [, galpon] = await this.prisma.$transaction([
-        this.revocarAsignaciones(id),
-        actualizacion,
-      ]);
-      return galpon;
+      try {
+        const [, galpon] = await this.prisma.$transaction(
+          [
+            this.esperaMaximaDeBloqueo(),
+            actualizacion,
+            this.revocarAsignaciones(id),
+          ],
+          OPCIONES_TRANSACCION,
+        );
+        return galpon;
+      } catch (error) {
+        this.traducirTimeoutDeBloqueo(error);
+        throw error;
+      }
     }
 
     return actualizacion;
+  }
+
+  private esperaMaximaDeBloqueo() {
+    return this.prisma.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
+  }
+
+  private traducirTimeoutDeBloqueo(error: unknown): void {
+    if (esTimeoutDeBloqueo(error)) {
+      throw new ConflictException(MENSAJE_GALPON_OCUPADO);
+    }
   }
 
   private revocarAsignaciones(galponId: number) {
@@ -161,13 +190,22 @@ export class GalponesService {
   async desactivar(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
-    await this.prisma.$transaction([
-      this.revocarAsignaciones(id),
-      this.prisma.galpon.update({
-        where: { id },
-        data: { activo: false },
-      }),
-    ]);
+    try {
+      await this.prisma.$transaction(
+        [
+          this.esperaMaximaDeBloqueo(),
+          this.prisma.galpon.update({
+            where: { id },
+            data: { activo: false },
+          }),
+          this.revocarAsignaciones(id),
+        ],
+        OPCIONES_TRANSACCION,
+      );
+    } catch (error) {
+      this.traducirTimeoutDeBloqueo(error);
+      throw error;
+    }
     return { id, activo: false };
   }
 
@@ -182,11 +220,18 @@ export class GalponesService {
     await this.obtener(id, solicitante);
 
     try {
-      await this.prisma.$transaction([
-        this.prisma.usuarioGalpon.deleteMany({ where: { galpon_id: id } }),
-        this.prisma.galpon.delete({ where: { id } }),
-      ]);
+      await this.prisma.$transaction(
+        [
+          this.esperaMaximaDeBloqueo(),
+          this.prisma
+            .$queryRaw`SELECT "id" FROM "galpones" WHERE "id" = ${id} FOR UPDATE`,
+          this.prisma.usuarioGalpon.deleteMany({ where: { galpon_id: id } }),
+          this.prisma.galpon.delete({ where: { id } }),
+        ],
+        OPCIONES_TRANSACCION,
+      );
     } catch (error) {
+      this.traducirTimeoutDeBloqueo(error);
       if (esViolacionDeLlaveForanea(error)) {
         throw new ConflictException(
           'No se puede eliminar: el galpón tiene lotes, sensores, equipos u otros registros asociados. Elimínalos primero, o desactiva el galpón en su lugar.',

@@ -15,6 +15,15 @@ import { paginate } from '../../common/pagination/paginate';
 import { ROLES } from '../../common/auth/roles';
 import { esPropietario } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  esTimeoutDeBloqueo,
+  MENSAJE_GALPON_OCUPADO,
+} from '../../common/errores/bloqueo';
+
+const OPCIONES_ASIGNACION = {
+  isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+  timeout: 10000,
+} as const;
 
 const USUARIO_SELECT = {
   id: true,
@@ -97,8 +106,9 @@ export class UsuariosService {
     usuarioId: number,
     solicitante: Solicitante,
     exigirActivo = false,
+    cliente: Prisma.TransactionClient = this.prisma,
   ) {
-    const usuario = await this.prisma.usuario.findUnique({
+    const usuario = await cliente.usuario.findUnique({
       where: { id: usuarioId },
       select: {
         id: true,
@@ -131,8 +141,9 @@ export class UsuariosService {
     organizacionId: number,
     solicitante: Solicitante,
     exigirActivo = false,
+    cliente: Prisma.TransactionClient = this.prisma,
   ) {
-    const galpon = await this.prisma.galpon.findUnique({
+    const galpon = await cliente.galpon.findUnique({
       where: { id: galponId },
       select: {
         id: true,
@@ -359,37 +370,50 @@ export class UsuariosService {
     rolAsignacion: string | undefined,
     solicitante: Solicitante,
   ) {
-    const operario = await this.obtenerOperarioParaAsignacion(
-      usuarioId,
-      solicitante,
-      true,
-    );
-    await this.validarGalponParaOperario(
-      galponId,
-      operario.organizacion_id!,
-      solicitante,
-      true,
-    );
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL lock_timeout = '3000ms'`;
+        const operario = await this.obtenerOperarioParaAsignacion(
+          usuarioId,
+          solicitante,
+          true,
+          tx,
+        );
+        await tx.$queryRaw`SELECT "id" FROM "galpones" WHERE "id" = ${galponId} FOR NO KEY UPDATE`;
+        await this.validarGalponParaOperario(
+          galponId,
+          operario.organizacion_id!,
+          solicitante,
+          true,
+          tx,
+        );
 
-    return this.prisma.usuarioGalpon.upsert({
-      where: {
-        usuario_id_galpon_id: {
-          usuario_id: usuarioId,
-          galpon_id: galponId,
-        },
-      },
-      create: {
-        usuario_id: usuarioId,
-        galpon_id: galponId,
-        rol_asignacion: rolAsignacion,
-      },
-      update: {
-        activa: true,
-        rol_asignacion: rolAsignacion,
-        fecha_asignacion: new Date(),
-      },
-      select: ASIGNACION_SELECT,
-    });
+        return tx.usuarioGalpon.upsert({
+          where: {
+            usuario_id_galpon_id: {
+              usuario_id: usuarioId,
+              galpon_id: galponId,
+            },
+          },
+          create: {
+            usuario_id: usuarioId,
+            galpon_id: galponId,
+            rol_asignacion: rolAsignacion,
+          },
+          update: {
+            activa: true,
+            rol_asignacion: rolAsignacion,
+            fecha_asignacion: new Date(),
+          },
+          select: ASIGNACION_SELECT,
+        });
+      }, OPCIONES_ASIGNACION);
+    } catch (error) {
+      if (esTimeoutDeBloqueo(error)) {
+        throw new ConflictException(MENSAJE_GALPON_OCUPADO);
+      }
+      throw error;
+    }
   }
 
   async listarGalponesAsignados(

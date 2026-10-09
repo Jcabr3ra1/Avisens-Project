@@ -39,6 +39,8 @@ describe('UsuariosService', () => {
       deleteMany: jest.fn(),
     },
     $transaction: jest.fn(),
+    $executeRaw: jest.fn(),
+    $queryRaw: jest.fn(),
   };
 
   const hashMock = bcrypt.hash as unknown as jest.Mock;
@@ -285,6 +287,14 @@ describe('UsuariosService', () => {
       granja: { propietario_id: 5, organizacion_id: 10 },
     };
 
+    beforeEach(() => {
+      prisma.$transaction.mockImplementation((operacion: unknown) =>
+        typeof operacion === 'function'
+          ? (operacion as (cliente: typeof prisma) => unknown)(prisma)
+          : Promise.resolve(operacion),
+      );
+    });
+
     it('un Propietario asigna un Operario de su organización a su galpón', async () => {
       prisma.usuario.findUnique.mockResolvedValue(operario);
       prisma.galpon.findUnique.mockResolvedValue(galpon);
@@ -369,6 +379,130 @@ describe('UsuariosService', () => {
         service.asignarGalpon(20, 30, undefined, propietario),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.galpon.findUnique).not.toHaveBeenCalled();
+    });
+
+    describe('coordinación con la desactivación del galpón', () => {
+      const orden = (mock: jest.Mock) => mock.mock.invocationCallOrder[0];
+      const timeoutDeBloqueo = () => {
+        const e = new Error('canceling statement due to lock timeout');
+        e.name = 'DriverAdapterError';
+        (e as Error & { cause: unknown }).cause = { originalCode: '55P03' };
+        return e;
+      };
+
+      beforeEach(() => {
+        prisma.$queryRaw.mockReset();
+        prisma.$executeRaw.mockReset();
+        prisma.usuarioGalpon.upsert.mockReset();
+        prisma.usuario.findUnique.mockResolvedValue(operario);
+        prisma.galpon.findUnique.mockResolvedValue(galpon);
+        prisma.usuarioGalpon.upsert.mockResolvedValue({ id: 40, activa: true });
+      });
+
+      it('bloquea el galpón antes de validarlo y de escribir, todo en una transacción READ COMMITTED', async () => {
+        await service.asignarGalpon(20, 30, undefined, propietario);
+
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+        expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+          isolationLevel: 'ReadCommitted',
+          timeout: 10000,
+        });
+        const [plantilla, idBloqueado] = prisma.$queryRaw.mock.calls[0] as [
+          TemplateStringsArray,
+          number,
+        ];
+        expect(plantilla.join('?')).toContain('FOR NO KEY UPDATE');
+        expect(idBloqueado).toBe(30);
+        expect(
+          String(
+            (prisma.$executeRaw.mock.calls[0] as [TemplateStringsArray])[0],
+          ),
+        ).toContain("lock_timeout = '3000ms'");
+        expect(orden(prisma.$executeRaw)).toBeLessThan(
+          orden(prisma.usuario.findUnique),
+        );
+        expect(orden(prisma.$queryRaw)).toBeLessThan(
+          orden(prisma.galpon.findUnique),
+        );
+        expect(orden(prisma.galpon.findUnique)).toBeLessThan(
+          orden(prisma.usuarioGalpon.upsert),
+        );
+      });
+
+      it('traduce 55P03 a 409 y no escribe', async () => {
+        prisma.$queryRaw.mockRejectedValue(timeoutDeBloqueo());
+
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toBeInstanceOf(ConflictException);
+        expect(prisma.usuarioGalpon.upsert).not.toHaveBeenCalled();
+      });
+
+      it('traduce también el 55P03 que sube del upsert', async () => {
+        prisma.usuarioGalpon.upsert.mockRejectedValue(timeoutDeBloqueo());
+
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toThrow(/siendo modificado/);
+      });
+
+      it('no convierte otros errores en conflictos (deadlock, P2002, P2028)', async () => {
+        const deadlock = new Error('deadlock detected');
+        deadlock.name = 'DriverAdapterError';
+        (deadlock as Error & { cause: unknown }).cause = {
+          originalCode: '40P01',
+        };
+        prisma.usuarioGalpon.upsert.mockRejectedValueOnce(deadlock);
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toBe(deadlock);
+
+        const unico = Object.assign(new Error('unique'), { code: 'P2002' });
+        prisma.usuarioGalpon.upsert.mockRejectedValueOnce(unico);
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toBe(unico);
+
+        const vencida = Object.assign(new Error('expired'), { code: 'P2028' });
+        prisma.$transaction.mockRejectedValueOnce(vencida);
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toBe(vencida);
+      });
+
+      it('un galpón inexistente tras el bloqueo sigue siendo 404', async () => {
+        prisma.galpon.findUnique.mockResolvedValue(null);
+
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toThrow(NotFoundException);
+        expect(prisma.usuarioGalpon.upsert).not.toHaveBeenCalled();
+      });
+
+      it('un galpón inactivo sigue siendo 400 con el mismo mensaje', async () => {
+        prisma.galpon.findUnique.mockResolvedValue({
+          ...galpon,
+          activo: false,
+        });
+
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toThrow('No se puede asignar un galpón inactivo');
+        expect(prisma.usuarioGalpon.upsert).not.toHaveBeenCalled();
+      });
+
+      it('desasignar no toma bloqueos de galpón ni abre transacción', async () => {
+        prisma.usuarioGalpon.findUnique.mockResolvedValue({
+          id: 40,
+          activa: true,
+        });
+        prisma.usuarioGalpon.update.mockResolvedValue({ id: 40 });
+
+        await service.desasignarGalpon(20, 30, propietario);
+
+        expect(prisma.$queryRaw).not.toHaveBeenCalled();
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
     });
 
     it('lista solo las asignaciones a granjas del Propietario', async () => {
