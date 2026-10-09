@@ -273,7 +273,7 @@ export class AlimentoEstimadoDto {
     nullable: true,
     example: '2360.750',
     description:
-      'Solo si el corte es de hoy (o ya cubre el objetivo), la estimación es del plan vigente y no está desactualizada; si no, null y hay que recalcular',
+      'Solo si el corte es de hoy (o ya cubre el objetivo), la estimación es del plan vigente y ni ella ni ese plan están desactualizados; si no, null y hay que recalcular',
   })
   pendiente_desde_hoy_kg: string | null;
 
@@ -284,7 +284,7 @@ export class AlimentoEstimadoDto {
     type: [String],
     example: [],
     description:
-      'corte_anterior_a_hoy y/o los motivos de desactualización existentes',
+      'corte_anterior_a_hoy, plan_desactualizado (el plan vigente cambió de curva o de fecha de ingreso: recalcular primero el plan y después su alimento) y/o los motivos de desactualización existentes',
   })
   motivos_recalculo: string[];
 }

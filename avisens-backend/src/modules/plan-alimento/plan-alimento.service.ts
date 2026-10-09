@@ -576,9 +576,11 @@ export class PlanAlimentoService {
    * cantidad inicial, dia objetivo y la curva fijada por curva_version_snapshot,
    * inmutable una vez publicada). Nunca usa la mortalidad ni la curva
    * actuales: "pendiente desde hoy" solo se informa cuando el corte es el
-   * de hoy (o ya cubre el objetivo) y la estimacion es del plan vigente y no
-   * esta desactualizada; si no, es null y se pide recalcular, no se
-   * reconstruye un hoy que esta estimacion nunca calculo.
+   * de hoy (o ya cubre el objetivo), la estimacion es del plan vigente y ni
+   * la estimacion ni ese plan estan desactualizados; si no, es null y se pide
+   * recalcular -- primero el plan (POST /plan/recalcular) y despues su
+   * alimento (POST /plan/alimento) --, no se reconstruye un hoy que esta
+   * estimacion nunca calculo.
    */
   private async construirAlimentoEstimado(
     estimacion: EstimacionConRelaciones,
@@ -605,6 +607,9 @@ export class PlanAlimentoService {
     const motivosRecalculo: string[] = [];
     if (!corteEsHoy && !corteCubreObjetivo) {
       motivosRecalculo.push('corte_anterior_a_hoy');
+    }
+    if (planVigente?.desactualizado) {
+      motivosRecalculo.push('plan_desactualizado');
     }
     motivosRecalculo.push(...motivosDesactualizacion);
 

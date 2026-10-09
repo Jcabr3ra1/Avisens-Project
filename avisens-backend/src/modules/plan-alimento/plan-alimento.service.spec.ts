@@ -1434,6 +1434,87 @@ describe('PlanAlimentoService', () => {
       expect(a.requiere_recalculo).toBe(false);
     });
 
+    it('plan vigente desactualizado con la misma identidad y versión: sin pendiente de hoy y con plan_desactualizado', async () => {
+      preparar(fila(10), '2026-08-08');
+      planLoteService.obtener.mockResolvedValue({
+        ...planVigenteBase,
+        desactualizado: true,
+      });
+
+      const res = await service.obtener(3, admin);
+      const a = res.alimento_estimado;
+
+      expect(res.desactualizado).toBe(false);
+      expect(a.base).toMatchObject({
+        corte_es_hoy: true,
+        corresponde_al_plan_vigente: true,
+      });
+      expect(a.disponible).toBe(true);
+      expect(a.hasta_corte_kg).not.toBeNull();
+      expect(a.pendiente_tras_corte_kg).not.toBeNull();
+      expect(a.pendiente_desde_hoy_kg).toBeNull();
+      expect(a.requiere_recalculo).toBe(true);
+      expect(a.motivos_recalculo).toContain('plan_desactualizado');
+    });
+
+    it('plan desactualizado conserva el reparto histórico idéntico al de un plan válido', async () => {
+      preparar(fila(10), '2026-08-08');
+      const valido = (await service.obtener(3, admin)).alimento_estimado;
+      planLoteService.obtener.mockResolvedValue({
+        ...planVigenteBase,
+        desactualizado: true,
+      });
+
+      const desactualizado = (await service.obtener(3, admin))
+        .alimento_estimado;
+
+      expect(desactualizado.total_kg).toEqual(valido.total_kg);
+      expect(desactualizado.hasta_corte_kg).toEqual(valido.hasta_corte_kg);
+      expect(desactualizado.pendiente_tras_corte_kg).toEqual(
+        valido.pendiente_tras_corte_kg,
+      );
+    });
+
+    it('corte que ya cubre el objetivo con el plan desactualizado: tampoco entrega el pendiente de hoy', async () => {
+      preparar(fila(21), '2026-08-20');
+      planLoteService.obtener.mockResolvedValue({
+        ...planVigenteBase,
+        desactualizado: true,
+      });
+
+      const res = await service.obtener(3, admin);
+      const a = res.alimento_estimado;
+
+      expect(a.pendiente_tras_corte_kg?.toString()).toBe('0');
+      expect(a.pendiente_desde_hoy_kg).toBeNull();
+      expect(a.requiere_recalculo).toBe(true);
+      expect(a.motivos_recalculo).toContain('plan_desactualizado');
+    });
+
+    it('control: con el plan válido y el mismo caso sí entrega el pendiente', async () => {
+      preparar(fila(10), '2026-08-08');
+
+      const a = (await service.obtener(3, admin)).alimento_estimado;
+
+      expect(a.pendiente_desde_hoy_kg).not.toBeNull();
+      expect(a.requiere_recalculo).toBe(false);
+      expect(a.motivos_recalculo).not.toContain('plan_desactualizado');
+    });
+
+    it('estimación no disponible con el plan desactualizado también pide recalcular', async () => {
+      preparar(fila(10, { version_algoritmo: 'otro_v0' }), '2026-08-08');
+      planLoteService.obtener.mockResolvedValue({
+        ...planVigenteBase,
+        desactualizado: true,
+      });
+
+      const a = (await service.obtener(3, admin)).alimento_estimado;
+
+      expect(a.disponible).toBe(false);
+      expect(a.requiere_recalculo).toBe(true);
+      expect(a.motivos_recalculo).toContain('plan_desactualizado');
+    });
+
     it('estimación sin día objetivo: no disponible y todos los kilos null, nunca 0', async () => {
       preparar(
         fila(10, {

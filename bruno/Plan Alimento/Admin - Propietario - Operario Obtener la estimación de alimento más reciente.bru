@@ -22,9 +22,12 @@ docs {
     (hasta_corte_kg) y lo estimado después (pendiente_tras_corte_kg).
     base identifica la estimación, el plan y el día de corte usados.
     pendiente_desde_hoy_kg solo trae valor si el corte es de hoy (o ya cubre
-    el objetivo), la estimación es del plan vigente y no está desactualizada;
-    si no, es null y requiere_recalculo=true: hay que hacer POST
-    /plan/alimento para representar hoy. Si el reparto no se puede
+    el objetivo), la estimación es del plan vigente y ni ella ni ese plan
+    están desactualizados; si no, es null y requiere_recalculo=true con sus
+    motivos_recalculo (corte_anterior_a_hoy, plan_desactualizado, plan_cambio,
+    etc.). Primero hay que recalcular el plan (POST /plan/recalcular) cuando
+    el motivo es plan_desactualizado, y después su alimento (POST
+    /plan/alimento) para representar hoy. Si el reparto no se puede
     reproducir con los snapshots, disponible=false y los kilos son null
     (nunca 0).
   - plan_vigente.tiempo: día de vida actual, día objetivo, fecha estimada y

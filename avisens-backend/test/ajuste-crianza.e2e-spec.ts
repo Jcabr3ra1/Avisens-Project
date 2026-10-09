@@ -118,6 +118,9 @@ describe('Ajuste del tiempo de crianza y alimento estimado (e2e)', () => {
   let servidor: Server;
   let tokenDueno: string;
   let tokenOperario: string;
+  let tokenAdmin: string;
+  let emailAdmin: string;
+  let lineaId: number;
   let emailDueno: string;
   let emailOperario: string;
   let loteId: number;
@@ -157,6 +160,7 @@ describe('Ajuste del tiempo de crianza y alimento estimado (e2e)', () => {
     enFecha(dia);
     tokenDueno = await entrar(emailDueno);
     tokenOperario = await entrar(emailOperario);
+    tokenAdmin = await entrar(emailAdmin);
   };
 
   const leerAlimento = async () =>
@@ -268,7 +272,8 @@ describe('Ajuste del tiempo de crianza y alimento estimado (e2e)', () => {
     ids.usuarios.push(admin.id, dueno.id, operario.id);
     emailDueno = dueno.email;
     emailOperario = operario.email;
-    const tokenAdmin = await entrar(admin.email);
+    emailAdmin = admin.email;
+    tokenAdmin = await entrar(admin.email);
     const comoAdmin = auth(tokenAdmin);
 
     const linea = JSON.parse(
@@ -284,6 +289,7 @@ describe('Ajuste del tiempo de crianza y alimento estimado (e2e)', () => {
       ).text,
     ) as { id: number };
     ids.lineas.push(linea.id);
+    lineaId = linea.id;
     const curva = JSON.parse(
       (
         await request(servidor)
@@ -634,5 +640,133 @@ describe('Ajuste del tiempo de crianza y alimento estimado (e2e)', () => {
       .set(auth(tokenOperario))
       .send({})
       .expect(403);
+  });
+  const leerPlan = async () =>
+    JSON.parse(
+      (
+        await request(servidor)
+          .get(`${base()}/plan`)
+          .set(auth(tokenDueno))
+          .expect(200)
+      ).text,
+    ) as { desactualizado: boolean; tiempo: Tiempo; version: number };
+
+  const recalcularPlan = async () =>
+    JSON.parse(
+      (
+        await request(servidor)
+          .post(`${base()}/plan/recalcular`)
+          .set(auth(tokenDueno))
+          .send({})
+          .expect(201)
+      ).text,
+    ) as { version: number };
+
+  const cambiarIngreso = (fecha: string) =>
+    request(servidor)
+      .patch(`/v1/lotes/${loteId}`)
+      .set(auth(tokenAdmin))
+      .send({ fecha_ingreso: fecha })
+      .expect(200);
+
+  const publicarCurvaNueva = async () => {
+    const curva = JSON.parse(
+      (
+        await request(servidor)
+          .post('/v1/curvas-geneticas')
+          .set(auth(tokenAdmin))
+          .send({ linea_genetica_id: lineaId, sexo: 'macho', fuente: 'e2e-2' })
+          .expect(201)
+      ).text,
+    ) as { id: number };
+    await request(servidor)
+      .put(`/v1/curvas-geneticas/${curva.id}/puntos`)
+      .set(auth(tokenAdmin))
+      .send({
+        puntos: DIAS_CURVA.map(([dia, peso, acumulado]) => ({
+          dia,
+          peso_esperado_g: peso,
+          consumo_acumulado_g: acumulado,
+        })),
+      })
+      .expect(200);
+    await request(servidor)
+      .patch(`/v1/curvas-geneticas/${curva.id}/publicar`)
+      .set(auth(tokenAdmin))
+      .expect(200);
+    await request(servidor)
+      .patch(`/v1/curvas-geneticas/${curva.id}/activar`)
+      .set(auth(tokenAdmin))
+      .expect(200);
+  };
+
+  const exigirPlanDesactualizadoSinPendienteDeHoy = async (
+    historico: AlimentoEstimado,
+  ) => {
+    expect((await leerPlan()).desactualizado).toBe(true);
+
+    const porGet = await leerAlimento();
+    const porPost = await calcularAlimento();
+
+    expect(porGet.plan_vigente?.tiempo).toBeDefined();
+    for (const a of [porGet.alimento_estimado, porPost.alimento_estimado]) {
+      expect(a.base.corresponde_al_plan_vigente).toBe(true);
+      expect(a.pendiente_desde_hoy_kg).toBeNull();
+      expect(a.requiere_recalculo).toBe(true);
+      expect(a.motivos_recalculo).toContain('plan_desactualizado');
+      expect(a.total_kg).toBe(historico.total_kg);
+      expect(a.hasta_corte_kg).toBe(historico.hasta_corte_kg);
+      expect(a.pendiente_tras_corte_kg).toBe(historico.pendiente_tras_corte_kg);
+    }
+  };
+
+  it('9. cambio de fecha de ingreso con la misma versión del plan: el pendiente de hoy se anula hasta recalcular el plan', async () => {
+    await irAlDia(HOY);
+    await definirObjetivo(2500);
+    const control = (await calcularAlimento()).alimento_estimado;
+    expect(control.pendiente_desde_hoy_kg).not.toBeNull();
+    expect(control.requiere_recalculo).toBe(false);
+    expect(control.motivos_recalculo).not.toContain('plan_desactualizado');
+    expect((await leerAlimento()).alimento_estimado).toEqual(control);
+
+    await cambiarIngreso('2026-09-26');
+    await exigirPlanDesactualizadoSinPendienteDeHoy(control);
+
+    await recalcularPlan();
+    const trasPlan = (await leerAlimento()).alimento_estimado;
+    expect(trasPlan.motivos_recalculo).toContain('plan_cambio');
+    expect(trasPlan.pendiente_desde_hoy_kg).toBeNull();
+
+    const trasAlimento = (await calcularAlimento()).alimento_estimado;
+    expect(trasAlimento.motivos_recalculo).not.toContain('plan_desactualizado');
+    expect(trasAlimento.requiere_recalculo).toBe(false);
+    expect(trasAlimento.pendiente_desde_hoy_kg).not.toBeNull();
+  });
+
+  it('10. cambio de la curva vigente con la misma versión del plan: mismo bloqueo del pendiente de hoy', async () => {
+    const control = (await calcularAlimento()).alimento_estimado;
+    expect(control.pendiente_desde_hoy_kg).not.toBeNull();
+    expect(control.requiere_recalculo).toBe(false);
+
+    await publicarCurvaNueva();
+    await exigirPlanDesactualizadoSinPendienteDeHoy(control);
+
+    await recalcularPlan();
+    const nuevo = (await calcularAlimento()).alimento_estimado;
+    expect(nuevo.requiere_recalculo).toBe(false);
+    expect(nuevo.pendiente_desde_hoy_kg).not.toBeNull();
+  });
+
+  it('11. corte que ya cubre el objetivo con el plan desactualizado: tampoco escapa por esa excepción', async () => {
+    await irAlDia('2026-11-05');
+    await recalcularPlan();
+    const cubierto = (await calcularAlimento()).alimento_estimado;
+    expect(cubierto.base.dia_corte).toBeGreaterThanOrEqual(36);
+    expect(cubierto.pendiente_tras_corte_kg).toBe('0');
+    expect(cubierto.pendiente_desde_hoy_kg).toBe('0');
+    expect(cubierto.requiere_recalculo).toBe(false);
+
+    await cambiarIngreso('2026-09-27');
+    await exigirPlanDesactualizadoSinPendienteDeHoy(cubierto);
   });
 });
