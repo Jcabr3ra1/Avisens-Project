@@ -119,7 +119,16 @@ model SeguridadCuenta {
 
 model Sesion {
   id                 Int      @id @default(autoincrement())
+  // Identidad estable de la sesión: fija desde el login, viaja en el
+  // payload del refresh token y NO cambia al rotar. Permite que logout
+  // revoque por sesión aunque el token ya haya rotado (a diferencia del
+  // hash, que sí cambia en cada refresh). Separada del "id" serial para
+  // no exponer un entero adivinable dentro de un JWT.
+  session_id         String   @unique @db.Uuid
   usuario_id         Int
+  // SHA-256 del token completo (no bcrypt: bcrypt trunca a 72 bytes y
+  // confundía tokens distintos entre sí). bcrypt sigue intacto para
+  // password_hash, en Usuario.
   refresh_token_hash String
   ip_origen          String?
   user_agent         String?

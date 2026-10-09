@@ -14,9 +14,10 @@ import type { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { RefreshDto } from './dto/refresh.dto';
 
 interface AuthRequest extends Request {
-  user: { sub: number; email: string; refresh_token: string };
+  user: { sub: number; email: string; session_id: string; refresh_token: string };
 }
 
 interface AccessRequest extends Request {
@@ -49,11 +50,13 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard('jwt-refresh'))
-  @ApiOperation({ summary: 'Renovar access token con refresh token' })
-  refresh(@Req() req: AuthRequest) {
+  @ApiOperation({
+    summary: 'Renovar access token con refresh token (en el body, no en Authorization)',
+  })
+  refresh(@Body() _dto: RefreshDto, @Req() req: AuthRequest) {
     return this.authService.refresh(
       req.user.sub,
-      req.user.email,
+      req.user.session_id,
       req.user.refresh_token,
     );
   }
@@ -61,9 +64,10 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(AuthGuard('jwt-refresh'))
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Cerrar sesión (revocar refresh token)' })
-  logout(@Req() req: AuthRequest) {
-    return this.authService.logout(req.user.sub, req.user.refresh_token);
+  @ApiOperation({
+    summary: 'Cerrar sesión (revoca esta sesión; refresh token en el body, no en Authorization)',
+  })
+  logout(@Body() _dto: RefreshDto, @Req() req: AuthRequest) {
+    return this.authService.logout(req.user.sub, req.user.session_id);
   }
 }

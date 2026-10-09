@@ -8,6 +8,25 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 jest.mock('bcrypt');
 
+interface LlamadaCreateSesion {
+  data: { session_id: string; refresh_token_hash: string };
+}
+
+interface LlamadaUpdateManySesion {
+  where: Record<string, unknown>;
+  data?: Record<string, unknown>;
+}
+
+function ultimaLlamadaCreateSesion(mockFn: jest.Mock): LlamadaCreateSesion {
+  const llamadas = mockFn.mock.calls as unknown as [LlamadaCreateSesion][];
+  return llamadas[llamadas.length - 1][0];
+}
+
+function ultimaLlamadaUpdateMany(mockFn: jest.Mock): LlamadaUpdateManySesion {
+  const llamadas = mockFn.mock.calls as unknown as [LlamadaUpdateManySesion][];
+  return llamadas[llamadas.length - 1][0];
+}
+
 function usuarioFalso(overrides: Record<string, unknown> = {}) {
   return {
     id: 1,
@@ -30,7 +49,7 @@ describe('AuthService', () => {
     sesion: {
       create: jest.fn(),
       findMany: jest.fn(),
-      update: jest.fn(),
+      updateMany: jest.fn(),
       deleteMany: jest.fn(),
     },
     seguridadCuenta: { upsert: jest.fn() },
@@ -188,6 +207,13 @@ describe('AuthService', () => {
         organizacion_id: 10,
       });
       expect(prisma.sesion.create).toHaveBeenCalled();
+      const llamadaCreate = ultimaLlamadaCreateSesion(prisma.sesion.create);
+      expect(llamadaCreate.data.session_id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      );
+      // SHA-256 hex (64 caracteres) de tokens.refresh_token -- no bcrypt
+      // (que daría un string con prefijo "$2b$...").
+      expect(llamadaCreate.data.refresh_token_hash).toMatch(/^[0-9a-f]{64}$/);
       expect(prisma.sesion.deleteMany).toHaveBeenCalled();
       expect(prisma.seguridadCuenta.upsert).toHaveBeenCalled();
       expect(jwt.signAsync).toHaveBeenCalledWith(
@@ -251,90 +277,85 @@ describe('AuthService', () => {
   });
 
   describe('refresh', () => {
-    it('con un refresh token válido renueva tokens y actualiza la sesión', async () => {
-      prisma.sesion.findMany.mockResolvedValue([
-        { id: 10, refresh_token_hash: 'hash-de-la-sesion' },
-      ]);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-      prisma.usuario.findUnique.mockResolvedValue(usuarioFalso());
+    const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 
-      const tokens = await service.refresh(
-        1,
-        'test@avisens.com',
-        'token-valido',
-      );
+    it('con un refresh token válido rota por session_id (compare-and-swap) y devuelve tokens nuevos', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(usuarioFalso());
+      prisma.sesion.updateMany.mockResolvedValue({ count: 1 });
+
+      const tokens = await service.refresh(1, SESSION_ID, 'token-valido');
 
       expect(tokens.access_token).toBe('un-token');
       expect(tokens.refresh_token).toBe('un-token');
-
-      expect(prisma.sesion.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 10 } }),
-      );
+      const llamada = ultimaLlamadaUpdateMany(prisma.sesion.updateMany);
+      expect(llamada.where.session_id).toBe(SESSION_ID);
+      expect(llamada.where.usuario_id).toBe(1);
+      expect(llamada.where.revocada).toBe(false);
+      expect(typeof llamada.data?.refresh_token_hash).toBe('string');
     });
 
-    it('rechaza (401) si ninguna sesión coincide con el token', async () => {
-      prisma.sesion.findMany.mockResolvedValue([
-        { id: 10, refresh_token_hash: 'hash-de-la-sesion' },
-      ]);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+    it('rechaza (401) si el compare-and-swap no afectó ninguna fila (token ya rotado, sesión revocada o expirada)', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(usuarioFalso());
+      prisma.sesion.updateMany.mockResolvedValue({ count: 0 });
 
       await expect(
-        service.refresh(1, 'test@avisens.com', 'token-malo'),
-      ).rejects.toThrow(UnauthorizedException);
-      expect(prisma.sesion.update).not.toHaveBeenCalled();
-    });
-
-    it('rechaza (401) si no hay sesiones activas', async () => {
-      prisma.sesion.findMany.mockResolvedValue([]);
-
-      await expect(
-        service.refresh(1, 'test@avisens.com', 'cualquier-token'),
+        service.refresh(1, SESSION_ID, 'token-ya-rotado'),
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it('rechaza (401) si el usuario quedó inactivo', async () => {
-      prisma.sesion.findMany.mockResolvedValue([
-        { id: 10, refresh_token_hash: 'hash-de-la-sesion' },
-      ]);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    it('rechaza (401) si el usuario quedó inactivo, sin llegar a tocar la sesión', async () => {
       prisma.usuario.findUnique.mockResolvedValue(
         usuarioFalso({ activo: false }),
       );
 
       await expect(
-        service.refresh(1, 'test@avisens.com', 'token-valido'),
+        service.refresh(1, SESSION_ID, 'token-valido'),
       ).rejects.toThrow(UnauthorizedException);
+      expect(prisma.sesion.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('no revoca ni toca otras sesiones del usuario: el UPDATE va acotado por session_id, no solo usuario_id', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(usuarioFalso());
+      prisma.sesion.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.refresh(1, SESSION_ID, 'token-valido');
+
+      const llamada = ultimaLlamadaUpdateMany(prisma.sesion.updateMany);
+      expect(llamada.where.session_id).toBe(SESSION_ID);
     });
   });
 
   describe('logout', () => {
-    it('revoca la sesión cuyo token coincide', async () => {
-      prisma.sesion.findMany.mockResolvedValue([
-        { id: 1, refresh_token_hash: 'hash-a' },
-        { id: 2, refresh_token_hash: 'hash-b' },
-      ]);
+    const SESSION_ID = '22222222-2222-4222-8222-222222222222';
 
-      (bcrypt.compare as jest.Mock)
-        .mockResolvedValueOnce(false)
-        .mockResolvedValueOnce(true);
+    it('revoca por session_id, sin exigir el hash del token (funciona aunque ya haya rotado)', async () => {
+      prisma.sesion.updateMany.mockResolvedValue({ count: 1 });
 
-      await service.logout(1, 'token-de-la-sesion-2');
+      await service.logout(1, SESSION_ID);
 
-      expect(prisma.sesion.update).toHaveBeenCalledWith({
-        where: { id: 2 },
+      expect(prisma.sesion.updateMany).toHaveBeenCalledWith({
+        where: { session_id: SESSION_ID, usuario_id: 1 },
         data: { revocada: true },
       });
     });
 
-    it('no revoca nada si ninguna sesión coincide', async () => {
-      prisma.sesion.findMany.mockResolvedValue([
-        { id: 1, refresh_token_hash: 'hash-a' },
-      ]);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+    it('el filtro incluye usuario_id: no puede revocar la sesión de otro usuario aunque el session_id coincidiera', async () => {
+      prisma.sesion.updateMany.mockResolvedValue({ count: 1 });
 
-      await service.logout(1, 'token-que-no-existe');
+      await service.logout(42, SESSION_ID);
 
-      expect(prisma.sesion.update).not.toHaveBeenCalled();
+      const llamada = ultimaLlamadaUpdateMany(prisma.sesion.updateMany);
+      expect(llamada.where).toEqual({ session_id: SESSION_ID, usuario_id: 42 });
+    });
+
+    it('preserva las demás sesiones del usuario: el WHERE nunca es solo usuario_id', async () => {
+      prisma.sesion.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.logout(1, SESSION_ID);
+
+      const llamada = ultimaLlamadaUpdateMany(prisma.sesion.updateMany);
+      expect(llamada.where).not.toEqual({ usuario_id: 1 });
+      expect(llamada.where.session_id).toBeDefined();
     });
   });
 });
