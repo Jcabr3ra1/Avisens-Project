@@ -15,18 +15,17 @@ import {
   filtroGalpones,
   verificarAccesoGalpon,
 } from '../../common/auth/alcance';
-import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { esViolacionDeLlaveForanea } from '../../common/errores/llave-foranea';
 import {
   esTimeoutDeBloqueo,
   MENSAJE_GALPON_OCUPADO,
 } from '../../common/errores/bloqueo';
-
-const OPCIONES_TRANSACCION = {
-  isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-  timeout: 10000,
-} as const;
+import {
+  eliminarAsignacionesDelGalpon,
+  OPCIONES_TRANSACCION_ORDENADA,
+  revocarAsignacionesDelGalpon,
+} from '../../common/bloqueos/revocar-acceso';
 
 const GALPON_SELECT = {
   id: true,
@@ -131,47 +130,44 @@ export class GalponesService {
       );
     }
 
-    const actualizacion = this.prisma.galpon.update({
-      where: { id },
-      data: {
-        granja_id: undefined,
-        nombre: dto.nombre,
-        capacidad_aves: dto.capacidad_aves,
-        ancho_metros: dto.ancho_metros,
-        largo_metros: dto.largo_metros,
-        orientacion: dto.orientacion,
-        tipo_techo: dto.tipo_techo,
-        plano_url: dto.plano_url,
-        activo: dto.activo,
-        fecha_construccion: dto.fecha_construccion
-          ? new Date(dto.fecha_construccion)
-          : undefined,
-      },
-      select: GALPON_SELECT,
-    });
+    const data = {
+      granja_id: undefined,
+      nombre: dto.nombre,
+      capacidad_aves: dto.capacidad_aves,
+      ancho_metros: dto.ancho_metros,
+      largo_metros: dto.largo_metros,
+      orientacion: dto.orientacion,
+      tipo_techo: dto.tipo_techo,
+      plano_url: dto.plano_url,
+      activo: dto.activo,
+      fecha_construccion: dto.fecha_construccion
+        ? new Date(dto.fecha_construccion)
+        : undefined,
+    };
 
-    if (dto.activo === false) {
-      try {
-        const [, galpon] = await this.prisma.$transaction(
-          [
-            this.esperaMaximaDeBloqueo(),
-            actualizacion,
-            this.revocarAsignaciones(id),
-          ],
-          OPCIONES_TRANSACCION,
-        );
-        return galpon;
-      } catch (error) {
-        this.traducirTimeoutDeBloqueo(error);
-        throw error;
-      }
+    if (dto.activo !== false) {
+      return this.prisma.galpon.update({
+        where: { id },
+        data,
+        select: GALPON_SELECT,
+      });
     }
 
-    return actualizacion;
-  }
-
-  private esperaMaximaDeBloqueo() {
-    return this.prisma.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
+        const galpon = await tx.galpon.update({
+          where: { id },
+          data,
+          select: GALPON_SELECT,
+        });
+        await revocarAsignacionesDelGalpon(tx, id);
+        return galpon;
+      }, OPCIONES_TRANSACCION_ORDENADA);
+    } catch (error) {
+      this.traducirTimeoutDeBloqueo(error);
+      throw error;
+    }
   }
 
   private traducirTimeoutDeBloqueo(error: unknown): void {
@@ -180,28 +176,15 @@ export class GalponesService {
     }
   }
 
-  private revocarAsignaciones(galponId: number) {
-    return this.prisma.usuarioGalpon.updateMany({
-      where: { galpon_id: galponId, activa: true },
-      data: { activa: false },
-    });
-  }
-
   async desactivar(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
     try {
-      await this.prisma.$transaction(
-        [
-          this.esperaMaximaDeBloqueo(),
-          this.prisma.galpon.update({
-            where: { id },
-            data: { activo: false },
-          }),
-          this.revocarAsignaciones(id),
-        ],
-        OPCIONES_TRANSACCION,
-      );
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
+        await tx.galpon.update({ where: { id }, data: { activo: false } });
+        await revocarAsignacionesDelGalpon(tx, id);
+      }, OPCIONES_TRANSACCION_ORDENADA);
     } catch (error) {
       this.traducirTimeoutDeBloqueo(error);
       throw error;
@@ -220,16 +203,12 @@ export class GalponesService {
     await this.obtener(id, solicitante);
 
     try {
-      await this.prisma.$transaction(
-        [
-          this.esperaMaximaDeBloqueo(),
-          this.prisma
-            .$queryRaw`SELECT "id" FROM "galpones" WHERE "id" = ${id} FOR UPDATE`,
-          this.prisma.usuarioGalpon.deleteMany({ where: { galpon_id: id } }),
-          this.prisma.galpon.delete({ where: { id } }),
-        ],
-        OPCIONES_TRANSACCION,
-      );
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
+        await tx.$queryRaw`SELECT "id" FROM "galpones" WHERE "id" = ${id} FOR UPDATE`;
+        await eliminarAsignacionesDelGalpon(tx, id);
+        await tx.galpon.delete({ where: { id } });
+      }, OPCIONES_TRANSACCION_ORDENADA);
     } catch (error) {
       this.traducirTimeoutDeBloqueo(error);
       if (esViolacionDeLlaveForanea(error)) {
