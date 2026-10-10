@@ -12,6 +12,7 @@ import { DESCRIPCION_DESACTUALIZADO_PLAN, etiquetaEstadoPlan } from '../lotes/mo
 import { etiquetaEstadoAlimento, etiquetaMotivo } from '../lotes/model/planAlimentoVista'
 import { calcularDesvioPct, interpolarPesoEnDia, interpolarPuntoEnDia, obtenerPesoVerificado } from './model/guiaCrecimiento'
 import { useGuiaCrecimiento } from './hooks/useGuiaCrecimiento'
+import SeleccionarLoteGuia from './components/SeleccionarLoteGuia'
 import './GuiaCrecimientoPage.css'
 
 function kilos(valor: string | null): string {
@@ -77,7 +78,7 @@ function GuiaCrecimientoPage() {
   )
 
   if (loteId === null) {
-    return <div className="page-container adm-page guia-page">{cabecera}<p className="adm-aviso">Abre la guía desde «Ver plan» en el lote que quieres consultar.</p></div>
+    return <SeleccionarLoteGuia />
   }
   if (guia.cargandoLote) {
     return <div className="page-container adm-page guia-page">{cabecera}<p className="adm-vacio" role="status">Cargando lote…</p></div>

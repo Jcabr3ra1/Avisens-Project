@@ -57,6 +57,8 @@ cruzando granjas, no bajando por la jerarquía:
 - **Alertas** — se pregunta «¿qué está mal ahora?», no «¿qué pasa en el galpón 3?»
 - **Bodega** y **Finanzas** — cruzan varias granjas
 - **Auditoría** — transversal por definición
+- **Guía de peso** — acceso transversal que permite elegir un lote activo;
+  la consulta y planificación conservan el contexto del lote elegido.
 
 ### Al aplicarla
 
@@ -81,6 +83,7 @@ es la única fuente de verdad: el sidebar dibuja lo que ella permite y la
 guardia de rutas la consulta.
 
 La guía de crecimiento se abre desde **Lotes → Ver plan → Ver guía de
-crecimiento**, con el identificador de ese lote en la URL. No tiene ítem propio
-en el sidebar ni elige automáticamente otro lote cuando falta ese contexto.
+crecimiento**, con el identificador de ese lote en la URL. También se puede entrar
+desde **Granja → Guía de peso** en el sidebar: sin un lote en la URL, muestra
+un selector de lotes activos accesibles a la cuenta. No elige un lote automáticamente.
 Desde la guía se vuelve al listado del galpón al que pertenece el lote.
