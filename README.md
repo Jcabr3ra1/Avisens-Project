@@ -238,6 +238,21 @@ en desarrollo).
 > verificado** — ver el detalle en
 > [Requisitos por sistema operativo](#requisitos-por-sistema-operativo).
 
+**Requisitos por sistema operativo.** Los scripts (`dev-setup.sh`, `dev-up.sh`,
+los de `scripts/tests/`) son `.sh` y necesitan **Bash** — no corren con
+PowerShell, CMD ni con el `bash.exe` de Git Bash:
+
+| Sistema | Qué necesitas | Estado |
+|---|---|---|
+| **Linux** | Bash + Docker + OpenSSL (ya vienen en casi toda distro) | Compatible previsto — mismas herramientas que macOS, no probado en esta sesión |
+| **macOS** | Bash + Docker Desktop + OpenSSL (vienen de fábrica) | **Probado**: es donde se verificaron todos los escenarios de esta guía |
+| **Windows** | **WSL2**, con la integración de Docker Desktop con WSL2 activada, y correr los scripts **desde dentro de la distro WSL2** (no desde PowerShell/CMD ni desde Git Bash) | Compatible previsto — no probado en esta sesión |
+
+PowerShell, CMD y Git Bash **no** son caminos soportados: aunque Git Bash trae
+un `bash.exe`, no se probó con estos scripts y no se garantiza que las
+primitivas que usan (`mktemp`, `ln`, señales, `docker volume`/`network ls`
+con filtros) se comporten igual ahí.
+
 **Preparación inicial (solo la primera vez):**
 
 ```bash
