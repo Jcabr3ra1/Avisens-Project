@@ -17,8 +17,8 @@
 /* Sin fondo ni borde: el robot se apoya directo sobre la pagina. */
 .float-btn {
   position: relative;
-  width: 118px;
-  height: 118px;
+  width: 112px;
+  height: 112px;
   display: grid;
   place-items: center;
   padding: 0;
@@ -32,8 +32,8 @@
 }
 
 .float-btn-icon {
-  width: 118px;
-  height: 118px;
+  width: 112px;
+  height: 112px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -53,9 +53,17 @@
 
 /* La sombra sigue el contorno del dibujo, no una caja. */
 .float-btn-robot {
-  transform: scale(1.28);
+  transform: scale(1);
   transform-origin: center;
   filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.28));
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Respuesta sutil e interrumpible, disponible sólo con ratón. */
+@media (hover: hover) and (pointer: fine) {
+  .float-btn:hover .float-btn-robot {
+    transform: translateY(-3px);
+  }
 }
 
 .float-btn::after {
@@ -120,16 +128,97 @@
 }
 
 .float-chat-avatar {
-  width: 38px;
-  height: 38px;
+  width: 98px;
+  height: 98px;
   display: grid;
   place-items: center;
-  overflow: hidden;
+  overflow: visible;
   color: var(--avisens-deep);
-  background: var(--landing-card);
+  background: transparent;
   border: 0;
-  border-radius: 50%;
+  border-radius: 0;
   flex: 0 0 auto;
+}
+
+.float-chat-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: avia-celebra 240ms cubic-bezier(0.23, 1, 0.32, 1) 2 alternate;
+}
+
+.float-chat-avatar-pose {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  transform-origin: 50% 82%;
+  animation: avia-revisa-tablet 2.8s ease-in-out infinite;
+}
+
+.float-chat-avatar-pose img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* La segunda pose avanza levemente: acompaña la tablet con un paso alegre. */
+.float-chat-avatar-pose--paso {
+  animation-name: avia-paso-tablet;
+}
+
+/* La tercera pose celebra el avance con un abrazo corto a la tablet. */
+.float-chat-avatar-pose--alegria {
+  animation-name: avia-alegria-tablet;
+}
+
+/* Dos párpados breves sobre las lentes: no se ocultan las gafas y el gesto
+   vuelve a abrirse antes de interrumpir la lectura de la tablet. */
+.float-chat-avatar-pose::after {
+  position: absolute;
+  top: 37%;
+  left: 25%;
+  width: 18%;
+  height: 8%;
+  content: '';
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 50%;
+  box-shadow: 35px 0 0 rgba(255, 255, 255, 0.94);
+  transform: scaleY(0);
+  transform-origin: center;
+  animation: avia-parpadea 4.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes avia-revisa-tablet {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  26% { transform: translateY(-2px) rotate(-2deg); }
+  55% { transform: translateY(1px) rotate(1.5deg); }
+  78% { transform: translateY(-1px) rotate(-1deg); }
+}
+
+@keyframes avia-parpadea {
+  0%, 44%, 48%, 100% { transform: scaleY(0); }
+  46% { transform: scaleY(1); }
+}
+
+@keyframes avia-paso-tablet {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(2px, -2px) rotate(1.6deg); }
+  55% { transform: translate(-1px, 1px) rotate(-1.2deg); }
+  78% { transform: translate(1px, -1px) rotate(0.8deg); }
+}
+
+@keyframes avia-alegria-tablet {
+  0%, 100% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-3px) scale(1.035) rotate(-1deg); }
+  68% { transform: translateY(1px) scale(0.99) rotate(1deg); }
+}
+
+@keyframes avia-celebra {
+  from { transform: translateY(2px) rotate(-3deg) scale(0.98); }
+  to { transform: translateY(-3px) rotate(3deg) scale(1.04); }
 }
 
 .float-chat-heading {
@@ -603,10 +692,14 @@
   .float-btn,
   .float-panel,
   .float-chat-online::before,
-  .float-dots span {
+  .float-dots span,
+  .float-chat-avatar-pose,
+  .float-chat-avatar-pose::after,
+  .float-chat-avatar-image {
     animation: none;
     transition-duration: 0.01ms;
   }
+
 }
 
 
@@ -688,6 +781,8 @@
 @media (prefers-reduced-motion: reduce) {
   .float-accion-flecha { transition: none; }
   .float-accion:hover .float-accion-flecha { transform: none; }
+  .float-btn-robot { transition: none; }
+  .float-btn:hover .float-btn-robot { transform: none; }
 }
 
 /* Dos opciones cortas van de lado: se leen como una decisión y no como una
