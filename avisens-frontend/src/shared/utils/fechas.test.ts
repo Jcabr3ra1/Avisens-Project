@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { diasDeVida, fechaDeHoy, semanaDeVida } from './fechas'
+import { diasDeVida, fechaDeHoy, formatearFechaCalendario, semanaDeVida } from './fechas'
+
+describe('fechas de calendario del backend', () => {
+  it('la salida del 10 de noviembre sigue en el 10 en Colombia', () => {
+    expect(formatearFechaCalendario('2026-11-10T00:00:00.000Z')).toBe('10/11/2026')
+    expect(formatearFechaCalendario('2026-11-10')).toBe('10/11/2026')
+  })
+
+  it('conserva el día al cruzar un mes y un año', () => {
+    expect(formatearFechaCalendario('2027-01-01T00:00:00.000Z')).toBe('1/1/2027')
+    expect(formatearFechaCalendario('2028-02-29')).toBe('29/2/2028')
+  })
+
+  it.each([null, '', 'no-es-fecha', '2026-02-30', '2026-13-01'])('no muestra una fecha inventada para %s', (valor) => {
+    expect(formatearFechaCalendario(valor)).toBe('—')
+  })
+})
 
 // Estas pruebas afirman cosas sobre "el día local", así que solo significan
 // algo con una zona fija. Se ancla en la del usuario real (Colombia, UTC-5)

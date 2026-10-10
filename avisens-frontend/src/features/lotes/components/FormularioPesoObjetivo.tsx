@@ -1,15 +1,16 @@
 import { useState, type FormEvent } from 'react'
 import '@shared/ui/Modal/Modal.css'
 import { mensajeDeError } from '@shared/utils/errores'
-import { gramosALibras, librasAGramos, pesoAEnviar } from '../model/pesoObjetivo'
+import { gramosALibras, validarPesoObjetivo } from '../model/pesoObjetivo'
 
 interface Props {
   pesoActualG: number | null
   onEnviar: (pesoObjetivoG: number) => Promise<unknown>
   minLibras?: number
+  deshabilitado?: boolean
 }
 
-function FormularioPesoObjetivo({ pesoActualG, onEnviar, minLibras = 0 }: Props) {
+function FormularioPesoObjetivo({ pesoActualG, onEnviar, minLibras = 0, deshabilitado = false }: Props) {
   const [libras, setLibras] = useState(
     pesoActualG !== null ? gramosALibras(pesoActualG).toFixed(2) : '',
   )
@@ -21,24 +22,26 @@ function FormularioPesoObjetivo({ pesoActualG, onEnviar, minLibras = 0 }: Props)
 
   async function manejarSubmit(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    const valor = Number(libras.replace(',', '.'))
-    if (!libras || Number.isNaN(valor) || valor < minLibras) {
-      setError(`Ingresa un peso objetivo de al menos ${minLibras.toFixed(2)} lb.`)
+    if (deshabilitado || enviando) return
+    const gramos = validarPesoObjetivo(pesoActualG, editado, libras, minLibras)
+    if (gramos === null) {
+      setError(minLibras > 0
+        ? `Ingresa un peso objetivo de al menos ${minLibras.toFixed(2)} lb.`
+        : 'Ingresa un peso objetivo positivo válido, en libras.')
       return
     }
     setError('')
     setEnviando(true)
     try {
-      await onEnviar(pesoAEnviar(pesoActualG, editado, valor))
+      await onEnviar(gramos)
     } catch (fallo) {
-      setError(fallo instanceof Error ? fallo.message : mensajeDeError(fallo, 'No se pudo guardar el peso objetivo.'))
+      setError(mensajeDeError(fallo, fallo instanceof Error ? fallo.message : 'No se pudo guardar el peso objetivo.'))
     } finally {
       setEnviando(false)
     }
   }
 
-  const librasNumero = Number(libras.replace(',', '.'))
-  const gramosPrevios = libras !== '' && librasNumero > 0 ? librasAGramos(librasNumero) : null
+  const gramosPrevios = validarPesoObjetivo(null, true, libras)
 
   return (
     <form className="pdl-form" onSubmit={(evento) => void manejarSubmit(evento)}>
@@ -47,6 +50,7 @@ function FormularioPesoObjetivo({ pesoActualG, onEnviar, minLibras = 0 }: Props)
         <input
           type="text"
           inputMode="decimal"
+          disabled={deshabilitado || enviando}
           value={libras}
           onChange={(evento) => {
             setLibras(evento.target.value)
@@ -58,7 +62,7 @@ function FormularioPesoObjetivo({ pesoActualG, onEnviar, minLibras = 0 }: Props)
           <small className="modal-ayuda">Equivale a {gramosPrevios.toLocaleString()} g</small>
         )}
       </label>
-      <button type="submit" className="modal-btn modal-btn--primary" disabled={enviando}>
+      <button type="submit" className="modal-btn modal-btn--primary" disabled={deshabilitado || enviando}>
         {enviando ? 'Guardando…' : pesoActualG !== null ? 'Cambiar objetivo' : 'Calcular plan'}
       </button>
       {error && (

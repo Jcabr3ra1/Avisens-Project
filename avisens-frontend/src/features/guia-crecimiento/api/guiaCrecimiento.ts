@@ -55,6 +55,10 @@ export type IndicadorLote = {
   peso_promedio_g: number | null
   fcr: number | null
   consumo_acumulado_g: number | null
+  estado_calculo: string
+  revision_calculo: number
+  estado_peso: string
+  pesaje_fecha_snapshot: string | null
 }
 
 export type ComparacionLote = {

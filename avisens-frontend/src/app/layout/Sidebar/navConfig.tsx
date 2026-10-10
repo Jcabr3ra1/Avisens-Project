@@ -3,7 +3,6 @@ import {
   IcAlert,
   IcBox,
   IcChat,
-  IcChart,
   IcClock,
   IcCoin,
   IcDoc,
@@ -184,11 +183,6 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/monitoreo',
         label: 'Monitoreo',
         icon: <IcEye size={16} />,
-      },
-      {
-        path: '/guia-crecimiento',
-        label: 'Guía de crecimiento',
-        icon: <IcChart size={16} />,
       },
       {
         path: '/alertas',

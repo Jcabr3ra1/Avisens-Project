@@ -17,3 +17,20 @@ export function gramosALibras(gramos: number): number {
 export function pesoAEnviar(pesoActualG: number | null, editado: boolean, libras: number): number {
   return !editado && pesoActualG !== null ? pesoActualG : librasAGramos(libras)
 }
+
+// Acepta decimales con punto o coma y valida el gramo que se enviará. Un
+// objetivo original no editado conserva su precisión, incluso en el mínimo.
+export function validarPesoObjetivo(
+  pesoActualG: number | null,
+  editado: boolean,
+  texto: string,
+  minLibras = 0,
+): number | null {
+  const limpio = texto.trim()
+  if (!/^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(limpio)) return null
+  const libras = Number(limpio.replace(',', '.'))
+  if (!Number.isFinite(libras) || libras <= 0) return null
+  const gramos = pesoAEnviar(pesoActualG, editado, libras)
+  const minimoG = librasAGramos(minLibras)
+  return Number.isFinite(gramos) && gramos > 0 && gramos >= minimoG ? gramos : null
+}
