@@ -3,6 +3,7 @@ import {
   IcAlert,
   IcBox,
   IcChat,
+  IcChart,
   IcClock,
   IcCoin,
   IcDoc,
@@ -72,6 +73,7 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/galpones':                [ROL_ADMIN, ROL_PROPIETARIO],
   '/lotes':                   [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/bitacora':                [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/guia-crecimiento':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/consumos-diarios':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/monitoreo':               [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/sensores':                [ROL_ADMIN, ROL_PROPIETARIO],
@@ -182,6 +184,11 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/monitoreo',
         label: 'Monitoreo',
         icon: <IcEye size={16} />,
+      },
+      {
+        path: '/guia-crecimiento',
+        label: 'Guía de crecimiento',
+        icon: <IcChart size={16} />,
       },
       {
         path: '/alertas',

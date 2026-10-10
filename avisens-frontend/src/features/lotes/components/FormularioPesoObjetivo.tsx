@@ -6,9 +6,10 @@ import { gramosALibras, librasAGramos, pesoAEnviar } from '../model/pesoObjetivo
 interface Props {
   pesoActualG: number | null
   onEnviar: (pesoObjetivoG: number) => Promise<unknown>
+  minLibras?: number
 }
 
-function FormularioPesoObjetivo({ pesoActualG, onEnviar }: Props) {
+function FormularioPesoObjetivo({ pesoActualG, onEnviar, minLibras = 0 }: Props) {
   const [libras, setLibras] = useState(
     pesoActualG !== null ? gramosALibras(pesoActualG).toFixed(2) : '',
   )
@@ -20,9 +21,9 @@ function FormularioPesoObjetivo({ pesoActualG, onEnviar }: Props) {
 
   async function manejarSubmit(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    const valor = Number(libras)
-    if (!libras || Number.isNaN(valor) || valor <= 0) {
-      setError('Ingresa un peso objetivo válido, en libras.')
+    const valor = Number(libras.replace(',', '.'))
+    if (!libras || Number.isNaN(valor) || valor < minLibras) {
+      setError(`Ingresa un peso objetivo de al menos ${minLibras.toFixed(2)} lb.`)
       return
     }
     setError('')
@@ -30,13 +31,13 @@ function FormularioPesoObjetivo({ pesoActualG, onEnviar }: Props) {
     try {
       await onEnviar(pesoAEnviar(pesoActualG, editado, valor))
     } catch (fallo) {
-      setError(mensajeDeError(fallo, 'No se pudo guardar el peso objetivo.'))
+      setError(fallo instanceof Error ? fallo.message : mensajeDeError(fallo, 'No se pudo guardar el peso objetivo.'))
     } finally {
       setEnviando(false)
     }
   }
 
-  const librasNumero = Number(libras)
+  const librasNumero = Number(libras.replace(',', '.'))
   const gramosPrevios = libras !== '' && librasNumero > 0 ? librasAGramos(librasNumero) : null
 
   return (
@@ -44,9 +45,8 @@ function FormularioPesoObjetivo({ pesoActualG, onEnviar }: Props) {
       <label className="modal-campo">
         <span>Peso objetivo (libras)</span>
         <input
-          type="number"
-          min="0"
-          step="0.01"
+          type="text"
+          inputMode="decimal"
           value={libras}
           onChange={(evento) => {
             setLibras(evento.target.value)

@@ -4,31 +4,41 @@ import { mensajeDeError } from '@shared/utils/errores'
 import {
   compararConCurva,
   crearPlanLote,
+  getPlanAlimentoLote,
+  getPlanLote,
+  guardarPlanAlimentoLote,
   listarCurvasGeneticas,
   listarIndicadores,
   listarLotes,
   obtenerCurvaGenetica,
+  recalcularPlanLote,
+  type PlanAlimentoGuia,
+  type PlanLoteGuia,
   type ComparacionLote,
   type CurvaGenetica,
   type IndicadorLote,
   type LoteGuia,
-  type PlanLote,
 } from '../api/guiaCrecimiento'
-
 function esErrorConEstado(error: unknown, estado: number): boolean {
   return (error as { response?: { status?: number } }).response?.status === estado
 }
 
 export function useGuiaCrecimiento() {
   const [lotes, setLotes] = useState<LoteGuia[]>([])
+  const [todosLosLotes, setTodosLosLotes] = useState<LoteGuia[]>([])
   const [loteId, setLoteId] = useState<number | null>(null)
   const [curva, setCurva] = useState<CurvaGenetica | null>(null)
   const [indicadores, setIndicadores] = useState<IndicadorLote[]>([])
   const [comparacion, setComparacion] = useState<ComparacionLote | null>(null)
-  const [plan, setPlan] = useState<PlanLote | null>(null)
   const [cargandoLotes, setCargandoLotes] = useState(true)
   const [cargandoDetalle, setCargandoDetalle] = useState(false)
   const [error, setError] = useState('')
+  const [plan, setPlan] = useState<PlanLoteGuia | null>(null)
+  const [alimento, setAlimento] = useState<PlanAlimentoGuia | null>(null)
+  const [cargandoPlan, setCargandoPlan] = useState(false)
+  const [cargandoAlimento, setCargandoAlimento] = useState(false)
+  const [errorPlan, setErrorPlan] = useState('')
+  const [errorAlimento, setErrorAlimento] = useState('')
 
   const recargarLotes = useCallback(async () => {
     setCargandoLotes(true)
@@ -36,6 +46,7 @@ export function useGuiaCrecimiento() {
     try {
       const datos = await listarLotes()
       const activos = datos.filter((lote) => lote.estado === 'activo')
+      setTodosLosLotes(datos)
       setLotes(activos)
       setLoteId((actual) => actual !== null && activos.some((lote) => lote.id === actual)
         ? actual
@@ -55,12 +66,46 @@ export function useGuiaCrecimiento() {
       setIndicadores([])
       setComparacion(null)
       setPlan(null)
+      setAlimento(null)
+      setCargandoPlan(false)
+      setCargandoAlimento(false)
+      setErrorPlan('')
+      setErrorAlimento('')
       return
     }
 
     let vigente = true
     const lote = lotes.find((item) => item.id === loteId)
     if (!lote) return
+
+    setPlan(null)
+    setAlimento(null)
+    setCargandoPlan(true)
+    setCargandoAlimento(true)
+    setErrorPlan('')
+    setErrorAlimento('')
+
+    void getPlanLote(loteId)
+      .then((datosPlan) => {
+        if (vigente) setPlan(datosPlan)
+      })
+      .catch((errorCarga) => {
+        if (vigente) setErrorPlan(mensajeDeError(errorCarga, 'No se pudo cargar el plan productivo.'))
+      })
+      .finally(() => {
+        if (vigente) setCargandoPlan(false)
+      })
+
+    void getPlanAlimentoLote(loteId)
+      .then((datosAlimento) => {
+        if (vigente) setAlimento(datosAlimento)
+      })
+      .catch((errorCarga) => {
+        if (vigente) setErrorAlimento(mensajeDeError(errorCarga, 'No se pudo cargar la estimación de alimento.'))
+      })
+      .finally(() => {
+        if (vigente) setCargandoAlimento(false)
+      })
 
     setCargandoDetalle(true)
     setError('')
@@ -95,20 +140,82 @@ export function useGuiaCrecimiento() {
       .finally(() => { if (vigente) setCargandoDetalle(false) })
 
     return () => { vigente = false }
-  }, [loteId, lotes])
+  }, [loteId, lotes, todosLosLotes])
 
   const loteSeleccionado = lotes.find((lote) => lote.id === loteId) ?? null
   const indicadorReciente = [...indicadores]
     .filter((indicador) => indicador.dia_vida !== null)
     .sort((a, b) => (b.dia_vida ?? 0) - (a.dia_vida ?? 0))[0] ?? null
 
-  const guardarPlan = useCallback(async (pesoObjetivoG: number) => {
-    if (loteId === null) throw new Error('No hay lote seleccionado.')
-    const creado = await crearPlanLote(loteId, {
-      peso_objetivo_g: pesoObjetivoG,
-      motivo: 'Definido desde la guía de crecimiento',
-    })
-    setPlan(creado)
+  const recalcularPlan = useCallback(async (motivo?: string) => {
+    if (loteId === null) throw new Error('No hay un lote seleccionado.')
+    setCargandoPlan(true)
+    setErrorPlan('')
+    try {
+      const datosPlan = await recalcularPlanLote(loteId, { motivo })
+      setPlan(datosPlan)
+      setCargandoAlimento(true)
+      setErrorAlimento('')
+      try {
+        setAlimento(await getPlanAlimentoLote(loteId))
+      } catch (errorCarga) {
+        setErrorAlimento(mensajeDeError(errorCarga, 'No se pudo actualizar la estimación de alimento.'))
+      } finally {
+        setCargandoAlimento(false)
+      }
+      return datosPlan
+    } catch (errorCarga) {
+      setErrorPlan(mensajeDeError(errorCarga, 'No se pudo recalcular el plan productivo.'))
+      throw errorCarga
+    } finally {
+      setCargandoPlan(false)
+    }
+  }, [loteId])
+
+  const guardarPlanAlimento = useCallback(async (motivo?: string) => {
+    if (loteId === null) throw new Error('No hay un lote seleccionado.')
+    setCargandoAlimento(true)
+    setErrorAlimento('')
+    try {
+      const datosAlimento = await guardarPlanAlimentoLote(loteId, { motivo })
+      setAlimento(datosAlimento)
+      return datosAlimento
+    } catch (errorCarga) {
+      setErrorAlimento(mensajeDeError(errorCarga, 'No se pudo generar la estimación de alimento.'))
+      throw errorCarga
+    } finally {
+      setCargandoAlimento(false)
+    }
+  }, [loteId])
+
+  const crearPlan = useCallback(async (pesoObjetivoG: number, motivo?: string) => {
+    if (loteId === null) throw new Error('No hay un lote seleccionado.')
+    setCargandoPlan(true)
+    setErrorPlan('')
+    try {
+      const datosPlan = await crearPlanLote(loteId, {
+        peso_objetivo_g: pesoObjetivoG,
+        motivo,
+      })
+      setPlan(datosPlan)
+      if (datosPlan.estado_dia === 'calculado') {
+        setCargandoAlimento(true)
+        setErrorAlimento('')
+        try {
+          setAlimento(await getPlanAlimentoLote(loteId))
+        } catch (errorCarga) {
+          setErrorAlimento(mensajeDeError(errorCarga, 'No se pudo actualizar la estimación de alimento.'))
+        } finally {
+          setCargandoAlimento(false)
+        }
+      }
+      return datosPlan
+    } catch (errorCarga) {
+      setErrorPlan(mensajeDeError(errorCarga, 'No se pudo guardar el peso objetivo.'))
+      throw errorCarga
+    } finally {
+      setCargandoPlan(false)
+    }
   }, [loteId])
 
   return {
@@ -121,10 +228,17 @@ export function useGuiaCrecimiento() {
     indicadorReciente,
     comparacion,
     plan,
+    alimento,
+    cargandoPlan,
+    cargandoAlimento,
+    errorPlan,
+    errorAlimento,
+    crearPlan,
+    recalcularPlan,
+    guardarPlanAlimento,
     diaActual: loteSeleccionado ? diasDeVida(loteSeleccionado.fecha_ingreso) : null,
     cargando: cargandoLotes || cargandoDetalle,
     error,
     recargar: recargarLotes,
-    guardarPlan,
   }
 }
