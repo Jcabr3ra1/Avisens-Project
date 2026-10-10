@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { permisosDePlan } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
@@ -47,6 +48,13 @@ function PlanDeLote({ lote }: Props) {
 
   return (
     <div className="pdl">
+      {lote.estado === 'activo' && (
+        <div className="pdl-bloque">
+          <Link className="adm-btn adm-btn--secundario" to={`/guia-crecimiento?lote=${lote.id}`}>
+            Ver guía de crecimiento
+          </Link>
+        </div>
+      )}
       {permisos.registrar && !plan.cargando && !plan.error && (
         <div className="pdl-bloque">
           <FormularioPesoObjetivo
