@@ -140,6 +140,14 @@ describe('calcularKpisAdmin', () => {
     expect(kpis[3].progreso).toBe(66.7)
   })
 
+  it('un sensor "obsoleta" no cuenta como en línea: hay un valor, pero no es una lectura reciente', () => {
+    const galpones = [
+      { sensores: [{ estado: 'ok' }, { estado: 'obsoleta' }, { estado: 'obsoleta' }] },
+    ] as unknown as GalponMonitoreoVista[]
+    const kpis = calcularKpisAdmin([], [], colaVacia(), galpones)
+    expect(kpis[3].valor).toBe('1/3')
+  })
+
   it('si la consulta de últimas lecturas falló, avisa que no se pudo consultar en vez de decir "0% en línea"', () => {
     const galpones = [
       { sensores: [{ estado: 'lectura_no_disponible' }, { estado: 'lectura_no_disponible' }] },
