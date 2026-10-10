@@ -1,6 +1,12 @@
 import type { Organizacion } from '@features/organizaciones/api/organizaciones'
 import type { Usuario } from '@shared/api'
 import type { Prospecto } from '@features/crm/api/prospectos'
+import { esIdentidadWhatsapp, sePuedeLlamar } from '@features/crm/model/contacto'
+import {
+  aProspectoVista,
+  type EtapaProspecto,
+  type ProspectoVista,
+} from '@features/crm/model/prospectoVista'
 import { tieneLecturaUtil, type GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { AtencionAdminData } from '../api/admin'
 import { esCriticidadAlta } from '@features/alertas/model/alerta'
@@ -177,6 +183,49 @@ export function calcularConversionCrm(prospectos: Prospecto[], etapas: EtapaCrmA
   ).length
   const cerrados = etapas.find((etapa) => etapa.nombre === 'Cerrados')?.cantidad ?? 0
   return calificados > 0 ? Math.round((cerrados / calificados) * 1000) / 10 : 0
+}
+
+export type ProspectoReciente = {
+  id: number
+  nombre: string
+  contacto: string
+  fechaRegistro: string
+  etapa: EtapaProspecto
+  canal: string
+}
+
+const CANAL_LEGIBLE: Record<ProspectoVista['canal'], string> = {
+  whatsapp: 'WhatsApp',
+  web: 'Web',
+  otro: 'Otro canal',
+}
+
+// Contacto útil para el administrador: el teléfono si se puede marcar, si no
+// el correo. Una identidad de WhatsApp (p. ej. "CO.123") no es un número.
+function contactoDe(prospecto: Prospecto): string {
+  if (sePuedeLlamar(prospecto.telefono)) return prospecto.telefono!.trim()
+  if (prospecto.email) return prospecto.email
+  if (esIdentidadWhatsapp(prospecto.telefono)) return 'Usuario de WhatsApp'
+  return 'Sin contacto'
+}
+
+// Los prospectos más recientes captados por el chatbot (por fecha de inicio
+// de la conversación), con lo que el administrador necesita para ubicarlos.
+export function ultimosProspectos(prospectos: Prospecto[], limite = 5): ProspectoReciente[] {
+  return [...prospectos]
+    .sort((a, b) => new Date(b.fecha_inicio).getTime() - new Date(a.fecha_inicio).getTime())
+    .slice(0, limite)
+    .map((prospecto) => {
+      const vista = aProspectoVista(prospecto)
+      return {
+        id: prospecto.id,
+        nombre: vista.nombre,
+        contacto: contactoDe(prospecto),
+        fechaRegistro: prospecto.fecha_inicio,
+        etapa: vista.etapa,
+        canal: CANAL_LEGIBLE[vista.canal],
+      }
+    })
 }
 
 export function hace(fechaIso: string): string {
