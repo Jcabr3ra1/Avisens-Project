@@ -12,7 +12,9 @@ import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.Po01InicioOpBinding
@@ -29,9 +31,12 @@ import com.project.avisensandroid.model.EventoSanitarioResponse
 import com.project.avisensandroid.model.SensorResponse
 import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.ui.MainActivity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import java.text.SimpleDateFormat
@@ -98,6 +103,30 @@ class InicioFragment : BaseBottomNavFragment() {
         }
 
         cargarDatosIniciales()
+        if (esPropietario()) iniciarActualizacionPeriodicaDeSensores()
+    }
+
+    /** Refresca las lecturas del galpón seleccionado mientras Inicio está visible. */
+    private fun iniciarActualizacionPeriodicaDeSensores() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (isActive) {
+                    delay(15_000L)
+                    val galponId = galponSeleccionadoId
+                    if (galponId == null) continue
+                    try {
+                        val lecturas = cargarUltimasMediciones(galponId)
+                        if (_binding != null && galponSeleccionadoId == galponId) {
+                            actualizarSensores(lecturas)
+                        }
+                    } catch (cancelacion: CancellationException) {
+                        throw cancelacion
+                    } catch (_: Exception) {
+                        // La siguiente vuelta vuelve a intentar sin interrumpir Inicio.
+                    }
+                }
+            }
+        }
     }
 
     private fun configurarEncabezado(activity: MainActivity) {
@@ -630,10 +659,15 @@ class InicioFragment : BaseBottomNavFragment() {
         val humedad = mediciones
             .filter { esTipo(it.sensor.tipo, "humedad") }
             .maxByOrNull { parseDate(it.medicion.fecha_hora)?.time ?: 0L }
+        val co2 = mediciones
+            .filter { esTipoAmbiental(it.sensor.tipo, "co2") }
+            .maxByOrNull { parseDate(it.medicion.fecha_hora)?.time ?: 0L }
+        val amoniaco = mediciones
+            .filter { esTipoAmbiental(it.sensor.tipo, "nh3") }
+            .maxByOrNull { parseDate(it.medicion.fecha_hora)?.time ?: 0L }
 
         if (temperatura != null) {
             val valor = temperatura.medicion.valor
-            binding.arcTemperaturaInicio.setTemperature(valor.toFloat())
             binding.txtTemperaturaInicio.text = "${formatearNumero(valor, 1)}°"
             actualizarEstadoSensor(
                 binding.txtEstadoTemperaturaInicio,
@@ -655,6 +689,45 @@ class InicioFragment : BaseBottomNavFragment() {
         } else {
             binding.txtHumedadInicio.text = "—"
             binding.txtEstadoHumedadInicio.text = "Sin datos"
+        }
+
+        if (co2 != null) {
+            binding.txtCo2Inicio.text = formatearNumero(co2.medicion.valor, 1)
+            binding.txtLabelCo2Inicio.text = etiquetaSensor("CO₂", co2.sensor.unidad_medida)
+            actualizarEstadoSensor(binding.txtEstadoCo2Inicio, co2.medicion.calidad, "Normal")
+        } else {
+            binding.txtCo2Inicio.text = "—"
+            binding.txtLabelCo2Inicio.text = "CO₂"
+            binding.txtEstadoCo2Inicio.text = "Sin datos"
+        }
+
+        if (amoniaco != null) {
+            binding.txtAmoniacoInicio.text = formatearNumero(amoniaco.medicion.valor, 1)
+            binding.txtLabelAmoniacoInicio.text = etiquetaSensor("NH₃", amoniaco.sensor.unidad_medida)
+            actualizarEstadoSensor(binding.txtEstadoAmoniacoInicio, amoniaco.medicion.calidad, "Normal")
+        } else {
+            binding.txtAmoniacoInicio.text = "—"
+            binding.txtLabelAmoniacoInicio.text = "NH₃"
+            binding.txtEstadoAmoniacoInicio.text = "Sin datos"
+        }
+    }
+
+    private fun etiquetaSensor(nombre: String, unidad: String?): String =
+        unidad?.trim()?.takeIf { it.isNotBlank() }?.let { "$nombre · $it" } ?: nombre
+
+    private fun esTipoAmbiental(actual: String, variable: String): Boolean {
+        val normalizado = java.text.Normalizer.normalize(actual, java.text.Normalizer.Form.NFD)
+            .replace("\\p{Mn}+".toRegex(), "")
+            .lowercase(Locale.ROOT)
+            .replace("₂", "2")
+            .replace("₃", "3")
+            .replace(" ", "")
+            .replace("_", "")
+            .replace("-", "")
+        return when (variable) {
+            "co2" -> normalizado.contains("co2") || normalizado.contains("dioxidodecarbono")
+            "nh3" -> normalizado.contains("nh3") || normalizado.contains("amoniaco")
+            else -> false
         }
     }
 
@@ -693,8 +766,14 @@ class InicioFragment : BaseBottomNavFragment() {
         binding.txtSensoresActivos.text = "0 sensores"
         binding.txtTemperaturaInicio.text = "—"
         binding.txtHumedadInicio.text = "—"
+        binding.txtCo2Inicio.text = "—"
+        binding.txtAmoniacoInicio.text = "—"
+        binding.txtLabelCo2Inicio.text = "CO₂"
+        binding.txtLabelAmoniacoInicio.text = "NH₃"
         binding.txtEstadoTemperaturaInicio.text = "Sin datos"
         binding.txtEstadoHumedadInicio.text = "Sin datos"
+        binding.txtEstadoCo2Inicio.text = "Sin datos"
+        binding.txtEstadoAmoniacoInicio.text = "Sin datos"
     }
 
     private fun esPropietario(): Boolean =
