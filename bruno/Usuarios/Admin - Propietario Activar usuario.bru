@@ -13,3 +13,9 @@ patch {
 auth:bearer {
   token: {{token}}
 }
+
+docs {
+  Solo marca al usuario activo. No reactiva sus asignaciones de galpón ni sus
+  sesiones: las asignaciones se reactivan una a una con
+  PATCH /v1/usuarios-galpones/:id/activar o POST /v1/usuarios/:id/galpones.
+}

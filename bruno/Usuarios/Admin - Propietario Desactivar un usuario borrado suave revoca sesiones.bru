@@ -13,3 +13,27 @@ delete {
 auth:bearer {
   token: {{token}}
 }
+
+docs {
+  Desactiva al usuario, revoca sus sesiones y desactiva sus asignaciones en una
+  sola transacción. Es equivalente a PATCH /v1/usuarios/:id con
+  {"activo": false}. Reactivar al usuario no devuelve las asignaciones ni las
+  sesiones. No se puede desactivar la propia cuenta (403).
+
+  Concurrencia: toma primero la fila del usuario y luego sus sesiones y
+  asignaciones por id. Si una asignación gana, puede responder 201/200 y
+  quedar revocada justo después; si esta desactivación gana, la asignación se
+  rechaza con 400.
+
+  Esperas: lock_timeout limita cada intento de adquirir un bloqueo (5 s), no
+  cada sentencia ni la duración total de la operación. Varias esperas seguidas
+  se suman y, si agotan el timeout de 10 s de la transacción, responde 500
+  (P2028, pendiente aparte). Un deadlock tampoco se convierte en 409.
+
+  Si el bloqueo no se obtiene en 5 s responde 409 sin cambiar nada; reintenta.
+
+  Alcance: el bloqueo de la fila del usuario ocurre antes de comprobar el
+  alcance del solicitante sobre ese usuario. Si la fila está ocupada, la
+  espera puede terminar en 409 antes de que llegue un 403 (igual que con el
+  galpón).
+}

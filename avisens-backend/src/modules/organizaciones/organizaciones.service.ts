@@ -1,9 +1,22 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
 import { CreateOrganizacionDto } from './dto/create-organizacion.dto';
 import { UpdateOrganizacionDto } from './dto/update-organizacion.dto';
+import {
+  OPCIONES_TRANSACCION_ORDENADA,
+  revocarAsignacionesDeLaOrganizacion,
+  revocarSesionesDeLaOrganizacion,
+} from '../../common/bloqueos/revocar-acceso';
+import {
+  esTimeoutDeBloqueo,
+  MENSAJE_ORGANIZACION_OCUPADA,
+} from '../../common/errores/bloqueo';
 
 const ORGANIZACION_SELECT = {
   id: true,
@@ -70,28 +83,34 @@ export class OrganizacionesService {
 
   async desactivar(id: number) {
     await this.obtener(id);
-    await this.prisma.$transaction([
-      this.prisma.sesion.updateMany({
-        where: { usuario: { organizacion_id: id }, revocada: false },
-        data: { revocada: true },
-      }),
-      this.prisma.usuarioGalpon.updateMany({
-        where: { usuario: { organizacion_id: id }, activa: true },
-        data: { activa: false },
-      }),
-      this.prisma.usuario.updateMany({
-        where: { organizacion_id: id, activo: true },
-        data: { activo: false },
-      }),
-      this.prisma.granja.updateMany({
-        where: { organizacion_id: id, activa: true },
-        data: { activa: false },
-      }),
-      this.prisma.organizacion.update({
-        where: { id },
-        data: { activa: false },
-      }),
-    ]);
+
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
+        const usuarios = await tx.$queryRaw<
+          Array<{ id: number }>
+        >`SELECT "id" FROM "usuarios" WHERE "organizacion_id" = ${id} ORDER BY "id" FOR NO KEY UPDATE`;
+        await tx.usuario.updateMany({
+          where: { id: { in: usuarios.map((u) => u.id) }, activo: true },
+          data: { activo: false },
+        });
+        await revocarSesionesDeLaOrganizacion(tx, id);
+        await revocarAsignacionesDeLaOrganizacion(tx, id);
+        await tx.granja.updateMany({
+          where: { organizacion_id: id, activa: true },
+          data: { activa: false },
+        });
+        await tx.organizacion.update({
+          where: { id },
+          data: { activa: false },
+        });
+      }, OPCIONES_TRANSACCION_ORDENADA);
+    } catch (error) {
+      if (esTimeoutDeBloqueo(error)) {
+        throw new ConflictException(MENSAJE_ORGANIZACION_OCUPADA);
+      }
+      throw error;
+    }
     return { id, activa: false };
   }
 
