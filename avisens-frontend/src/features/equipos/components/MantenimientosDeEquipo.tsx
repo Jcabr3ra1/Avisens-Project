@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react'
+import { getRol } from '@shared/api'
+import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { Equipo } from '../api/equipos'
 import type { Mantenimiento } from '../api/mantenimientos'
@@ -25,6 +27,7 @@ function MantenimientosDeEquipo({
 }) {
   const { mantenimientos, cargando, error, crear, marcarCompletado, eliminar } =
     useMantenimientos(equipo.id)
+  const permisos = permisosOperativosDeGalpon(getRol())
   const [form, setForm] = useState<DatosMantenimiento>(FORMULARIO_MANTENIMIENTO_INICIAL)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -94,6 +97,7 @@ function MantenimientosDeEquipo({
         <div className="eq-alert eq-alert--error" role="alert">{errorAccion}</div>
       )}
 
+      {permisos.configurar && (
       <form className="eq-card eq-form" onSubmit={handleCrear}>
         <h2 className="eq-form-titulo">Programar mantenimiento</h2>
         <div className="eq-grid">
@@ -148,6 +152,7 @@ function MantenimientosDeEquipo({
           </button>
         </div>
       </form>
+      )}
 
       <div className="eq-card">
         {cargando ? (
@@ -155,7 +160,9 @@ function MantenimientosDeEquipo({
         ) : mantenimientos.length === 0 ? (
           <div className="eq-vacio">
             <p className="eq-vacio-titulo">Este equipo no tiene mantenimientos.</p>
-            <p className="eq-vacio-sub">Programa el primero con el formulario de arriba.</p>
+            {permisos.configurar && (
+              <p className="eq-vacio-sub">Programa el primero con el formulario de arriba.</p>
+            )}
           </div>
         ) : (
           <ul className="eq-mant-lista">
@@ -180,7 +187,7 @@ function MantenimientosDeEquipo({
                     >
                       Repuestos
                     </button>
-                    {mantenimiento.estado !== 'completado' && (
+                    {permisos.configurar && mantenimiento.estado !== 'completado' && (
                       <button
                         type="button"
                         className="eq-btn eq-btn--sm"
@@ -189,13 +196,15 @@ function MantenimientosDeEquipo({
                         Completar
                       </button>
                     )}
-                    <button
-                      type="button"
-                      className="eq-btn eq-btn--sm eq-btn--danger"
-                      onClick={() => void handleEliminar(mantenimiento)}
-                    >
-                      Eliminar
-                    </button>
+                    {permisos.configurar && (
+                      <button
+                        type="button"
+                        className="eq-btn eq-btn--sm eq-btn--danger"
+                        onClick={() => void handleEliminar(mantenimiento)}
+                      >
+                        Eliminar
+                      </button>
+                    )}
                   </span>
                 </div>
 
