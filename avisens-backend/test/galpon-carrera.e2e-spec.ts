@@ -376,9 +376,10 @@ describe('Galpón: asignación frente a desactivación, concurrencia determinist
         [e.filaOp1],
       );
     } else {
-      await retener('SELECT id FROM usuarios WHERE id = $1 FOR UPDATE', [
-        e.op1,
-      ]);
+      await retener(
+        'INSERT INTO usuarios_galpones (usuario_id, galpon_id, activa) VALUES ($1, $2, true)',
+        [e.op1, e.galpon],
+      );
     }
   };
 
@@ -781,9 +782,7 @@ describe('Galpón: asignación frente a desactivación, concurrencia determinist
     it('asignación primero: la eliminación se lleva también la fila recién creada', async () => {
       const e = await nuevoEscenario();
       await correr(async () => {
-        await retener('SELECT id FROM usuarios WHERE id = $1 FOR UPDATE', [
-          e.op1,
-        ]);
+        await bloquearParaAltaDe(e, 'POST /usuarios-galpones');
         const a = iniciar(
           'asignación',
           pedirAsignacion(
@@ -803,7 +802,11 @@ describe('Galpón: asignación frente a desactivación, concurrencia determinist
             .delete(`/v1/galpones/${e.galpon}/permanente`)
             .set(auth()),
         );
-        await esperarBloqueo('e2e-carrera-desactivacion', [pidA], d);
+        await esperarBloqueo(
+          'e2e-carrera-desactivacion',
+          [pidA, pidControl],
+          d,
+        );
 
         await liberar();
         const [ra, rd] = await Promise.all([a.promesa, d.promesa]);
@@ -839,7 +842,9 @@ describe('Galpón: asignación frente a desactivación, concurrencia determinist
         const r = await respuestaEn(a);
 
         expect(r.status).toBe(409);
-        expect(String(r.body.message)).toMatch(/siendo modificado/);
+        expect(String(r.body.message)).toMatch(
+          /modificando los datos de esta asignación/,
+        );
         expect(Date.now() - inicio).toBeGreaterThanOrEqual(
           LOCK_TIMEOUT_ASIGNACION_MS - 200,
         );
