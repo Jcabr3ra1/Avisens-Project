@@ -12,3 +12,18 @@ delete {
 auth:bearer {
   token: {{token}}
 }
+
+docs {
+  Desactiva la organización, a todos sus usuarios, sus sesiones, sus
+  asignaciones y sus granjas en una sola transacción. Reactivar la organización
+  no reactiva usuarios, granjas ni asignaciones.
+
+  Concurrencia: toma primero las filas de los usuarios de la organización
+  (por id) y después sus sesiones y asignaciones (por id), con espera máxima de
+  5 s. Una asignación en curso termina antes (y queda revocada) o espera y
+  recibe 400 «No se puede asignar un Operario inactivo». Si hay otra operación
+  sobre esas filas más de 5 s responde 409 sin cambiar nada.
+
+  Límites: un usuario creado mientras la organización se desactiva y un login
+  concurrente no están cubiertos por este bloqueo.
+}

@@ -13,3 +13,14 @@ delete {
 auth:bearer {
   token: {{token}}
 }
+
+docs {
+  Desactiva al usuario, revoca sus sesiones y desactiva sus asignaciones en una
+  sola transacción. Es equivalente a PATCH /v1/usuarios/:id con
+  {"activo": false}. Reactivar al usuario no devuelve las asignaciones ni las
+  sesiones. No se puede desactivar la propia cuenta (403).
+
+  Concurrencia: toma primero la fila del usuario y luego sus sesiones y
+  asignaciones por id, con espera máxima de 5 s. Si hay otra operación sobre el
+  usuario más de 5 s responde 409 sin cambiar nada; reintenta.
+}

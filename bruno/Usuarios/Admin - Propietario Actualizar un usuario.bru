@@ -29,3 +29,23 @@ body:json {
     "activo": true
   }
 }
+
+docs {
+  Con {"activo": false} equivale a DELETE /v1/usuarios/:id: marca al usuario
+  inactivo, revoca sus sesiones y desactiva sus asignaciones de galpón en una
+  sola transacción, y conserva los demás campos del cuerpo. La respuesta sigue
+  siendo el usuario actualizado. Sin "activo" o con {"activo": true} no toca
+  sesiones ni asignaciones.
+
+  Cambio de contrato: desactivar la propia cuenta por esta ruta responde 403
+  «No puedes desactivar tu propia cuenta» (antes devolvía 200 y dejaba la
+  sesión viva), igual que DELETE.
+
+  Concurrencia: toma primero la fila del usuario y después sus sesiones y
+  asignaciones, ordenadas por id, con una espera máxima de 5 s por bloqueo.
+  Una asignación en curso termina antes (y queda revocada) o espera y recibe
+  400 «No se puede asignar un Operario inactivo». Si la fila está ocupada más
+  de 5 s responde 409 «El usuario está siendo modificado por otra operación;
+  intenta de nuevo» y no cambia nada. Un timeout de la transacción (P2028) o
+  un deadlock no se convierten en 409.
+}

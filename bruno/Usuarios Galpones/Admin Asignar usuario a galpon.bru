@@ -10,10 +10,17 @@ body:json { {"usuario_id":2,"galpon_id":1,"rol_asignacion":"galponero"} }
 
 docs {
   Concurrencia: la asignación (y la reactivación por /activar o por
-  POST /v1/usuarios/:id/galpones) bloquea el galpón antes de validar que
-  siga activo y escribe en la misma transacción, con una espera máxima de
-  3 s. Si el galpón se desactiva a la vez responde 400 «galpón inactivo»
-  y no crea ni reactiva nada. Dos altas simultáneas del mismo par terminan
-  con 201 y una sola fila. Si el galpón está ocupado más de 3 s responde
-  409; reintenta.
+  POST /v1/usuarios/:id/galpones) toma primero la fila del usuario con
+  FOR SHARE, vuelve a validar que siga activo y recién después bloquea el
+  galpón, todo en la misma transacción y con una espera máxima de 3 s por
+  bloqueo. Si el usuario se desactiva a la vez responde 400 «No se puede
+  asignar un Operario inactivo» (o 404 si se eliminó); si el galpón se
+  desactiva, 400 «galpón inactivo». En ambos casos no crea ni reactiva nada.
+  Dos altas simultáneas del mismo par terminan con 201 y una sola fila.
+
+  Si el usuario o el galpón están ocupados más de 3 s responde 409 «Hay otra
+  operación modificando los datos de esta asignación; intenta de nuevo»;
+  reintenta. Los bloqueos se esperan por separado: varias esperas seguidas
+  pueden sumar más de 3 s y, si agotan los 10 s de la transacción, responder
+  500 (pendiente aparte).
 }
