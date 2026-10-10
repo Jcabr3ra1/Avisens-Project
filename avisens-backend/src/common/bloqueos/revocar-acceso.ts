@@ -1,9 +1,12 @@
 import { Prisma } from '@prisma/client';
 
 /**
- * Orden global de bloqueo de filas para todo escritor de acceso:
+ * Orden de bloqueo de filas de los caminos coordinados por este hito
+ * (asignar galpón, desactivar y eliminar usuario, desactivar organización y
+ * revocar o eliminar las asignaciones de un galpón):
  * usuarios -> galpones -> sesiones -> usuarios_galpones, y dentro de cada
- * tabla por id ascendente. Un updateMany no garantiza ese orden: Postgres
+ * tabla por id ascendente. No cubre a todos los escritores de acceso del
+ * proyecto: otros caminos quedan fuera de este orden. Un updateMany no garantiza ese orden: Postgres
  * bloquea las filas en el orden en que recorre la tabla. Por eso cada
  * revocación primero selecciona y bloquea sus filas con ORDER BY id FOR UPDATE
  * y después modifica solo esos ids, con el mismo cliente transaccional.

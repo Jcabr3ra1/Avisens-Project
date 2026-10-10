@@ -42,10 +42,21 @@ docs {
   sesión viva), igual que DELETE.
 
   Concurrencia: toma primero la fila del usuario y después sus sesiones y
-  asignaciones, ordenadas por id, con una espera máxima de 5 s por bloqueo.
-  Una asignación en curso termina antes (y queda revocada) o espera y recibe
-  400 «No se puede asignar un Operario inactivo». Si la fila está ocupada más
-  de 5 s responde 409 «El usuario está siendo modificado por otra operación;
-  intenta de nuevo» y no cambia nada. Un timeout de la transacción (P2028) o
-  un deadlock no se convierten en 409.
+  asignaciones, ordenadas por id. Frente a una asignación en curso hay dos
+  resultados: si la asignación gana, puede responder 201/200 y quedar revocada
+  justo después por esta desactivación; si la desactivación gana, la
+  asignación se rechaza con 400 «No se puede asignar un Operario inactivo».
+
+  Esperas: lock_timeout limita cada intento de adquirir un bloqueo (5 s), no
+  cada sentencia ni la duración total de la operación. Varias esperas seguidas
+  se suman y, si agotan el timeout de 10 s de la transacción, responde 500
+  (P2028, pendiente aparte). Un deadlock tampoco se convierte en 409.
+
+  Si el bloqueo no se obtiene en 5 s responde 409 «El usuario está siendo
+  modificado por otra operación; intenta de nuevo» y no cambia nada.
+
+  Alcance: el bloqueo de la fila del usuario ocurre antes de comprobar el
+  alcance del solicitante sobre ese usuario. Si la fila está ocupada, la
+  espera puede terminar en 409 antes de que llegue un 403 (igual que con el
+  galpón).
 }
