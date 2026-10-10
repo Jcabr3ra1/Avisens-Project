@@ -1,110 +1,86 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 import lottie from 'lottie-web/build/player/lottie_light'
 import aviaIdle from '../../assets/avia/avisens-idle.json'
-import aviaHop from '../../assets/avia/avisens-hop.json'
-import aviaFly from '../../assets/avia/avisens-fly.json'
 import aviaWave from '../../assets/avia/avisens-wave.json'
 import aviaProcessing from '../../assets/avia/avisens-processing.json'
 
-type EstadoAvia = 'idle' | 'hop' | 'fly' | 'wave' | 'processing'
+const CONSULTA_MOVIMIENTO = '(prefers-reduced-motion: reduce)'
 
-// La animación de vuelo no lleva tablet, pero sí debe conservar la identidad
-// de AVIA. Reutilizamos la capa vectorial de sus gafas del estado de trabajo.
-const capaGafas = aviaProcessing.layers.find((capa) => capa.ind === 13)
-const aviaFlyConGafas = capaGafas
-  ? { ...aviaFly, layers: [capaGafas, ...aviaFly.layers] }
-  : aviaFly
+function suscribirMovimiento(notificar: () => void) {
+  const consulta = window.matchMedia(CONSULTA_MOVIMIENTO)
+  consulta.addEventListener('change', notificar)
+  return () => consulta.removeEventListener('change', notificar)
+}
 
 function prefiereMenosMovimiento() {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  return window.matchMedia(CONSULTA_MOVIMIENTO).matches
 }
 
 type Props = {
   size: number
   animando?: boolean
-  volando?: boolean
   saludar?: boolean
+  onSaludoTerminado?: () => void
   className?: string
 }
 
 function RobotLottie({
   size,
   animando = false,
-  volando = false,
   saludar = false,
+  onSaludoTerminado,
   className,
 }: Props) {
   const contenedor = useRef<HTMLSpanElement>(null)
-  const [estado, setEstado] = useState<EstadoAvia>(
-    volando ? 'fly' : animando ? 'processing' : 'idle',
+  const menosMovimiento = useSyncExternalStore(
+    suscribirMovimiento,
+    prefiereMenosMovimiento,
+    () => false,
   )
-
-  useEffect(() => {
-    // El vuelo tiene prioridad: AVIA deja la tablet antes de despegar y al
-    // aterrizar vuelve automáticamente a la animación de procesamiento.
-    if (volando) setEstado('fly')
-    else if (animando) setEstado('processing')
-    else if (saludar) setEstado('wave')
-    else setEstado('idle')
-  }, [animando, saludar, volando])
+  const estado = animando ? 'processing' : saludar && !menosMovimiento ? 'wave' : 'idle'
 
   useEffect(() => {
     const nodo = contenedor.current
     if (!nodo) return
 
-    const animations = {
-      idle: aviaIdle,
-      hop: aviaHop,
-      fly: aviaFlyConGafas,
-      wave: aviaWave,
-      processing: aviaProcessing,
-    }
+    const animations = { idle: aviaIdle, wave: aviaWave, processing: aviaProcessing }
 
     const instancia = lottie.loadAnimation({
       container: nodo,
       renderer: 'svg',
-      loop: estado === 'idle' || estado === 'fly' || estado === 'processing',
-      autoplay: !prefiereMenosMovimiento(),
+      loop: estado !== 'wave',
+      autoplay: false,
       animationData: animations[estado],
       rendererSettings: {
         preserveAspectRatio: 'xMidYMid meet',
       },
     })
 
-    const volverAlReposo = () => {
-      if (estado === 'hop' || estado === 'wave') {
-        setEstado('idle')
-      }
+    const alCargar = () => {
+      if (menosMovimiento) instancia.goToAndStop(0, true)
+      else instancia.play()
+    }
+    const alCompletar = () => {
+      if (estado === 'wave') onSaludoTerminado?.()
     }
 
-    instancia.addEventListener('complete', volverAlReposo)
-
-    if (prefiereMenosMovimiento()) {
-      instancia.goToAndStop(0, true)
-    }
+    instancia.addEventListener('DOMLoaded', alCargar)
+    instancia.addEventListener('complete', alCompletar)
+    // La preferencia también puede cambiar mientras el saludo está activo.
+    if (saludar && menosMovimiento) onSaludoTerminado?.()
 
     return () => {
-      instancia.removeEventListener('complete', volverAlReposo)
+      instancia.removeEventListener('DOMLoaded', alCargar)
+      instancia.removeEventListener('complete', alCompletar)
       instancia.destroy()
     }
-  }, [estado])
-
-  function saltar() {
-    if (
-      estado === 'idle' &&
-      !animando &&
-      !volando &&
-      !prefiereMenosMovimiento()
-    ) {
-      setEstado('hop')
-    }
-  }
+  }, [estado, menosMovimiento, onSaludoTerminado, saludar])
 
   return (
     <span
       ref={contenedor}
       className={className}
-      onPointerEnter={saltar}
+      data-avia-estado={estado}
       style={{
         width: size,
         height: size,

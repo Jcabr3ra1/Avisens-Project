@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { isAxiosError } from 'axios'
 import {
   iniciarConversacion,
@@ -115,6 +115,7 @@ const ACCIONES_RAPIDAS: {
 
 function FloatChat() {
   const [open, setOpen] = useState(false)
+  const [saludando, setSaludando] = useState(false)
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [sesionId, setSesionId] = useState<string | null>(null)
   const [pregunta, setPregunta] = useState<PreguntaChatbot | null>(null)
@@ -177,6 +178,7 @@ function FloatChat() {
   }, [])
 
   const iniciar = useCallback(async (ruta: RutaChat = 'cotizacion') => {
+    setSaludando(false)
     setEnviando(true)
     setError(null)
     setMensajes([])
@@ -217,6 +219,7 @@ function FloatChat() {
     const valor = respuesta.trim()
     if (!valor || !sesionId || enviando || resultado) return
 
+    setSaludando(false)
     setTexto('')
     setError(null)
     setMensajes((m) => [...m, { autor: 'usuario', texto: valor }])
@@ -237,23 +240,26 @@ function FloatChat() {
   }, [aplicar, enviando, resultado, sesionId])
 
   const cerrarChat = useCallback(() => {
+    setSaludando(false)
     setOpen(false)
     window.requestAnimationFrame(() => triggerRef.current?.focus())
   }, [])
 
-  function toggleChat() {
+  function manejarClickAvia(evento: MouseEvent<HTMLButtonElement>) {
+    // Un doble clic no debe abrir y cerrar el chat. Teclado y clic sencillo
+    // siguen respondiendo de inmediato; AVIA no tiene interacción de vuelo.
+    if (evento.detail > 1) return
     if (open) {
       cerrarChat()
       return
     }
 
     if (!iniciado && !enviando && !porElegirRuta) abrirConMenu()
+    setSaludando(evento.detail > 0 && !enviando)
     setOpen(true)
   }
 
-  function manejarClickAvia() {
-    toggleChat()
-  }
+  const terminarSaludo = useCallback(() => setSaludando(false), [])
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -307,6 +313,14 @@ function FloatChat() {
       ? 'Escribe un número'
       : 'Escribe tu respuesta...'
 
+  const avatarProgreso = (
+    <AviaProgress
+      progreso={progreso}
+      totalPasos={totalPasos}
+      finalizado={resultado !== null}
+    />
+  )
+
   return (
     <div className={`float-chat${open ? ' is-open' : ''}`}>
       <div
@@ -317,11 +331,16 @@ function FloatChat() {
       >
         <div className="float-chat-topbar">
           <div className="float-chat-avatar">
-            <AviaProgress
-              progreso={progreso}
-              totalPasos={totalPasos}
-              finalizado={resultado !== null}
-            />
+            {open && (saludando || enviando) ? (
+              <Suspense fallback={avatarProgreso}>
+                <RobotLottie
+                  size={98}
+                  animando={enviando}
+                  saludar={saludando}
+                  onSaludoTerminado={terminarSaludo}
+                />
+              </Suspense>
+            ) : avatarProgreso}
           </div>
           <div className="float-chat-heading">
             <div className="float-chat-name" id="avia-chat-title">AVIA</div>
@@ -531,7 +550,7 @@ function FloatChat() {
             >
               <RobotLottie
                 size={112}
-                animando
+                animando={false}
                 className="float-btn-robot"
               />
             </Suspense>
