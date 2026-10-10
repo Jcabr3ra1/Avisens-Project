@@ -12,6 +12,7 @@ import {
   IcLeaf,
   IcNote,
   IcRefresh,
+  IcScale,
   IcSearch,
   IcSeed,
   IcSend,
@@ -173,6 +174,11 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/granjas',
         label: 'Granjas',
         icon: <IcLeaf size={16} />,
+      },
+      {
+        path: '/guia-crecimiento',
+        label: 'Guía de peso',
+        icon: <IcScale size={16} />,
       },
       {
         path: '/bitacora',
