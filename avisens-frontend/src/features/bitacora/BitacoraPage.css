@@ -87,3 +87,11 @@
   .bit-principal { width: 100%; }
   .bit-acciones { grid-template-columns: 1fr; }
 }
+
+/* Alimento estimado del lote dentro del formulario de pesaje */
+.bit-alimento { margin: 0.2rem 0 0.9rem; padding: 0.75rem 0.85rem; border: 1px solid var(--gr-line, var(--border)); border-radius: 12px; background: var(--bg-tint); }
+.bit-alimento-total { margin: 0.1rem 0 0; color: var(--dash-ink); font-size: 0.85rem; }
+.bit-alimento-total strong { font-size: 1.1rem; font-weight: 800; }
+.bit-alimento-texto { margin: 0.2rem 0 0; color: var(--text3); font-size: 0.78rem; line-height: 1.45; }
+.bit-alimento-texto--error { color: #c52424; }
+.bit-alimento-avisos { margin: 0.4rem 0 0; padding-left: 1.1rem; color: #b45309; font-size: 0.75rem; }
