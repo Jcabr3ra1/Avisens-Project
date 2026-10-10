@@ -9,6 +9,7 @@ import {
   calcularConversionCrm,
   calcularEtapasCrmAdmin,
   calcularKpisAdmin,
+  ultimosProspectos,
 } from '../model/adminResumen'
 
 type Datos = {
@@ -32,6 +33,8 @@ export function useResumenAdmin({ usuarios, organizaciones, prospectos, galpones
       atencion: calcularAtencionAdmin(atencion),
       etapasCrm,
       conversionCrm: calcularConversionCrm(prospectos, etapasCrm),
+      prospectosRecientes: ultimosProspectos(prospectos),
+      totalProspectos: prospectos.length,
       actividadReciente,
       totalPropietarios,
       totalOperarios: usuarios.filter((usuario) => usuario.rol.nombre === 'Operario').length,
