@@ -52,9 +52,13 @@ describe('detallePorDesvio', () => {
 
 describe('detallePorSensores', () => {
   it('resume el estado de los sensores', () => {
-    expect(detallePorSensores(0, 0)).toBe('todos en rango')
-    expect(detallePorSensores(2, 0)).toBe('2 fuera de rango')
-    expect(detallePorSensores(1, 3)).toBe('1 fuera de rango · 3 sin señal')
+    expect(detallePorSensores(0, 0, 0)).toBe('todos en rango')
+    expect(detallePorSensores(2, 0, 0)).toBe('2 fuera de rango')
+    expect(detallePorSensores(1, 3, 0)).toBe('1 fuera de rango · 3 sin señal')
+  })
+
+  it('distingue "sin dato disponible" de "sin señal": no es lo mismo que el sensor esté caído que no haber podido consultarlo', () => {
+    expect(detallePorSensores(0, 0, 4)).toBe('4 sin dato disponible')
   })
 })
 
@@ -71,9 +75,14 @@ describe('tonos', () => {
   })
 
   it('da prioridad a los sensores fuera de rango sobre los caídos', () => {
-    expect(tonoPorSensores(0, 0)).toBe('ok')
-    expect(tonoPorSensores(0, 2)).toBe('advertencia')
-    expect(tonoPorSensores(1, 5)).toBe('peligro')
+    expect(tonoPorSensores(0, 0, 0)).toBe('ok')
+    expect(tonoPorSensores(0, 2, 0)).toBe('advertencia')
+    expect(tonoPorSensores(1, 5, 0)).toBe('peligro')
+  })
+
+  it('nunca dice "ok" cuando la consulta falló: "info", ni siquiera con sensores caídos de por medio', () => {
+    expect(tonoPorSensores(0, 0, 3)).toBe('info')
+    expect(tonoPorSensores(0, 2, 3)).toBe('info')
   })
 
   it('mide el desvío por magnitud, sin importar el signo', () => {

@@ -1,8 +1,12 @@
 import { IcCheck, IcChevronRight, IcFlame, IcPhone, IcSnowflake, IcThermo } from '@shared/ui/icons/icons'
-import type { EtapaCrmAdmin } from '../model/adminResumen'
+import { ESTILO_ETAPA } from '@features/crm/model/etapas'
+import { iniciales } from '@features/crm/model/formato'
+import { hace, type EtapaCrmAdmin, type ProspectoReciente } from '../model/adminResumen'
 
 type Props = {
   etapas: EtapaCrmAdmin[]
+  recientes: ProspectoReciente[]
+  total: number
   cargando: boolean
   conversion: number
   onGestionar: () => void
@@ -18,7 +22,7 @@ function iconoEtapa(nombre: string) {
   return iconos[nombre as keyof typeof iconos]
 }
 
-function PanelCrmAdmin({ etapas, cargando, conversion, onGestionar }: Props) {
+function PanelCrmAdmin({ etapas, recientes, total, cargando, conversion, onGestionar }: Props) {
   const maximo = Math.max(1, ...etapas.map((etapa) => etapa.cantidad))
 
   return (
@@ -29,32 +33,72 @@ function PanelCrmAdmin({ etapas, cargando, conversion, onGestionar }: Props) {
           Ver todos <IcChevronRight size={13} />
         </button>
       </div>
-      <p className="admin-card-sub">Prospectos captados por el chatbot, por etapa</p>
+      <p className="admin-card-sub">Prospectos captados por el chatbot, clasificados por oportunidad</p>
 
-      <div className="admin-funnel">
+      <div className="admin-pipeline-chart" aria-label="Distribución de prospectos por etapa">
         {etapas.map((etapa) => (
-          <div key={etapa.nombre} className="admin-funnel-row">
-            <div className="admin-funnel-meta">
-              <span className="admin-funnel-label">
-                <span className="admin-funnel-icon" style={{ color: etapa.color }}>{iconoEtapa(etapa.nombre)}</span>
-                {etapa.nombre}
-              </span>
-              <span className="admin-funnel-desc">{etapa.descripcion}</span>
-            </div>
-            <div className="admin-funnel-track">
-              <div
-                className="admin-funnel-bar"
+          <div key={etapa.nombre} className="admin-pipeline-stage">
+            <div className="admin-pipeline-plot" aria-hidden="true">
+              <span
+                className="admin-pipeline-bar"
                 style={{
-                  width: `${(etapa.cantidad / maximo) * 100}%`,
-                  background: `linear-gradient(90deg, ${etapa.color}99, ${etapa.color})`,
+                  height: etapa.cantidad > 0 ? `${Math.max(14, (etapa.cantidad / maximo) * 100)}%` : '2px',
+                  backgroundColor: etapa.color,
                 }}
               />
             </div>
-            <span className="admin-funnel-count" style={{ color: etapa.color }}>
-              {cargando ? '…' : etapa.cantidad}
-            </span>
+            <strong className="admin-pipeline-count">{cargando ? '…' : etapa.cantidad}</strong>
+            <div className="admin-pipeline-meta">
+              <span className="admin-pipeline-label">
+                <span className="admin-funnel-icon" style={{ color: etapa.color }}>{iconoEtapa(etapa.nombre)}</span>
+                {etapa.nombre}
+              </span>
+              <span>{etapa.descripcion}</span>
+            </div>
           </div>
         ))}
+      </div>
+
+      <div className="admin-crm-recientes">
+        <div className="admin-crm-recientes-head">
+          <span>Últimos posibles clientes</span>
+          {!cargando && total > 0 && <small>{total} en total</small>}
+        </div>
+        {recientes.length === 0 ? (
+          <p className="admin-feed-vacio">
+            {cargando ? 'Cargando…' : 'Aún no hay posibles clientes captados por el chatbot.'}
+          </p>
+        ) : (
+          <ul className="admin-feed">
+            {recientes.map((prospecto) => {
+              const estilo = ESTILO_ETAPA[prospecto.etapa]
+              return (
+                <li key={prospecto.id} className="admin-feed-item">
+                  <span className="admin-feed-avatar admin-feed-avatar--p" aria-hidden="true">
+                    {iniciales(prospecto.nombre)}
+                  </span>
+                  <div className="admin-feed-info">
+                    <span className="admin-feed-nombre">{prospecto.nombre}</span>
+                    <span className="admin-feed-meta">
+                      {prospecto.contacto} · {prospecto.canal}
+                    </span>
+                  </div>
+                  <div className="admin-crm-reciente-lado">
+                    <span
+                      className="admin-crm-etapa"
+                      style={{ color: estilo.color, background: estilo.colorSuave, borderColor: estilo.colorBorde }}
+                    >
+                      {estilo.label}
+                    </span>
+                    <time className="admin-feed-hace" dateTime={prospecto.fechaRegistro}>
+                      {hace(prospecto.fechaRegistro)}
+                    </time>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </div>
 
       <div className="admin-crm-footer">

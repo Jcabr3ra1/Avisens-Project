@@ -84,6 +84,18 @@ describe('AlertasService', () => {
       expect(r).toEqual({ id: 1 });
     });
 
+    it('guarda origen "manual"', async () => {
+      prisma.galpon.findUnique.mockResolvedValue(galponPropio);
+      prisma.alerta.create.mockResolvedValue({ id: 1 });
+
+      await service.crear(dtoCrear, propietario);
+
+      const llamadas = prisma.alerta.create.mock.calls as unknown as Array<
+        [{ data: Record<string, unknown> }]
+      >;
+      expect(llamadas[0][0].data).toMatchObject({ origen: 'manual' });
+    });
+
     it('lanza NotFound cuando el galpon no existe', async () => {
       prisma.galpon.findUnique.mockResolvedValue(null);
       await expect(service.crear(dtoCrear, admin)).rejects.toThrow(
@@ -246,13 +258,11 @@ describe('AlertasService', () => {
 
       await service.evaluarLectura(3, 35, new Date('2026-08-30T12:00:00Z'));
 
-      const llamadasCrear = prisma.alerta.create.mock.calls as unknown as Array<[
-        { data: Record<string, unknown> },
-      ]>;
-      const llamadasNotificar =
-        prisma.notificacion.createMany.mock.calls as unknown as Array<[
-          { data: Array<Record<string, unknown>> },
-        ]>;
+      const llamadasCrear = prisma.alerta.create.mock.calls as unknown as Array<
+        [{ data: Record<string, unknown> }]
+      >;
+      const llamadasNotificar = prisma.notificacion.createMany.mock
+        .calls as unknown as Array<[{ data: Array<Record<string, unknown>> }]>;
       const llamadaCrear = llamadasCrear[0]?.[0];
       const llamadaNotificar = llamadasNotificar[0]?.[0];
 
@@ -268,6 +278,65 @@ describe('AlertasService', () => {
           expect.objectContaining({ usuario_id: 8, referencia_id: 12 }),
         ]),
       );
+    });
+
+    it('busca "existente" solo entre alertas automaticas', async () => {
+      prisma.sensor.findUnique.mockResolvedValue({
+        id: 3,
+        tipo: 'Temperatura',
+        galpon_id: 1,
+        galpon: {
+          nombre: 'Galpón Norte',
+          granja: { propietario_id: 5 },
+          lotes: [],
+        },
+      });
+      prisma.umbralAmbiental.findFirst.mockResolvedValue({
+        valor_minimo: 20,
+        valor_maximo: 30,
+        criticidad: 'alta',
+      });
+      prisma.alerta.findFirst.mockResolvedValue(null);
+      prisma.alerta.create.mockResolvedValue({ id: 20 });
+      prisma.usuarioGalpon.findMany.mockResolvedValue([]);
+
+      await service.evaluarLectura(3, 35);
+
+      const llamadasExistente = prisma.alerta.findFirst.mock
+        .calls as unknown as Array<[{ where: Record<string, unknown> }]>;
+      expect(llamadasExistente[0][0].where).toMatchObject({
+        origen: 'automatica',
+      });
+    });
+
+    it('crea la alerta automatica con origen "automatica"', async () => {
+      prisma.sensor.findUnique.mockResolvedValue({
+        id: 3,
+        tipo: 'Temperatura',
+        galpon_id: 1,
+        galpon: {
+          nombre: 'Galpón Norte',
+          granja: { propietario_id: 5 },
+          lotes: [],
+        },
+      });
+      prisma.umbralAmbiental.findFirst.mockResolvedValue({
+        valor_minimo: 20,
+        valor_maximo: 30,
+        criticidad: 'alta',
+      });
+      prisma.alerta.findFirst.mockResolvedValue(null);
+      prisma.alerta.create.mockResolvedValue({ id: 21 });
+      prisma.usuarioGalpon.findMany.mockResolvedValue([]);
+
+      await service.evaluarLectura(3, 35);
+
+      const llamadasCrear = prisma.alerta.create.mock.calls as unknown as Array<
+        [{ data: Record<string, unknown> }]
+      >;
+      expect(llamadasCrear[0][0].data).toMatchObject({
+        origen: 'automatica',
+      });
     });
 
     it('actualiza la alerta abierta sin crear una duplicada', async () => {

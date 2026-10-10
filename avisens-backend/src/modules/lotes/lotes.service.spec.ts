@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,6 +15,7 @@ describe('LotesService', () => {
     lote: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
@@ -21,6 +23,7 @@ describe('LotesService', () => {
     },
     galpon: { findUnique: jest.fn() },
     proveedor: { findUnique: jest.fn() },
+    $queryRaw: jest.fn(),
     $transaction: jest.fn(),
   };
 
@@ -66,6 +69,8 @@ describe('LotesService', () => {
       granja: { propietario_id: 5 },
     });
     prisma.proveedor.findUnique.mockResolvedValue({ id: 7 });
+    prisma.$queryRaw.mockResolvedValue([{ id: 2, activo: true }]);
+    prisma.lote.findFirst.mockResolvedValue(null);
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -117,6 +122,15 @@ describe('LotesService', () => {
       expect(prisma.lote.create).not.toHaveBeenCalled();
     });
 
+    it('rechaza (409) si el galpón ya tiene un lote activo', async () => {
+      prisma.lote.findFirst.mockResolvedValue({ id: 99 });
+
+      await expect(service.crear(dtoCrear, propietario)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prisma.lote.create).not.toHaveBeenCalled();
+    });
+
     it('crea el lote sin proveedor cuando aún no se ha definido', async () => {
       prisma.lote.create.mockResolvedValue({ id: 26 });
       prisma.lote.update.mockResolvedValue({
@@ -134,6 +148,63 @@ describe('LotesService', () => {
 
       expect(prisma.proveedor.findUnique).not.toHaveBeenCalled();
       expect(dataDe(prisma.lote.create).proveedor_id).toBeNull();
+    });
+
+    it('crea el lote con la linea genetica indicada, decidido con la lectura bloqueada (FOR UPDATE) dentro de la transaccion', async () => {
+      prisma.lote.create.mockResolvedValue({ id: 27 });
+      prisma.lote.update.mockResolvedValue({
+        id: 27,
+        codigo: 'LOT-2026-000027',
+      });
+
+      await service.crear({ ...dtoCrear, linea_genetica_id: 2 }, admin);
+
+      expect(prisma.$queryRaw).toHaveBeenCalled();
+      expect(dataDe(prisma.lote.create).linea_genetica_id).toBe(2);
+    });
+
+    it('rechaza (404) si la linea genetica no existe (leido dentro de la transaccion)', async () => {
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await expect(
+        service.crear({ ...dtoCrear, linea_genetica_id: 2 }, admin),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.lote.create).not.toHaveBeenCalled();
+    });
+
+    it('rechaza (400) si la linea genetica esta inactiva (leido dentro de la transaccion)', async () => {
+      prisma.$queryRaw.mockResolvedValue([{ id: 2, activo: false }]);
+
+      await expect(
+        service.crear({ ...dtoCrear, linea_genetica_id: 2 }, admin),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.lote.create).not.toHaveBeenCalled();
+    });
+
+    it('crea el lote sin linea genetica cuando no se indica (undefined no consulta ni bloquea)', async () => {
+      prisma.lote.create.mockResolvedValue({ id: 28 });
+      prisma.lote.update.mockResolvedValue({
+        id: 28,
+        codigo: 'LOT-2026-000028',
+      });
+
+      await service.crear(dtoCrear, admin);
+
+      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+      expect(dataDe(prisma.lote.create).linea_genetica_id).toBeNull();
+    });
+
+    it('crea el lote con linea_genetica_id null sin consultar ni bloquear ninguna linea', async () => {
+      prisma.lote.create.mockResolvedValue({ id: 29 });
+      prisma.lote.update.mockResolvedValue({
+        id: 29,
+        codigo: 'LOT-2026-000029',
+      });
+
+      await service.crear({ ...dtoCrear, linea_genetica_id: null }, admin);
+
+      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+      expect(dataDe(prisma.lote.create).linea_genetica_id).toBeNull();
     });
   });
 
@@ -211,6 +282,140 @@ describe('LotesService', () => {
 
       expect(dataDe(prisma.lote.update).proveedor_id).toBeNull();
       expect(prisma.proveedor.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('rechaza (409) poner estado activo si el galpón ya tiene otro lote activo', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.findFirst.mockResolvedValue({ id: 42 });
+
+      await expect(
+        service.actualizar(1, { estado: 'activo' }, propietario),
+      ).rejects.toThrow(ConflictException);
+      expect(prisma.lote.update).not.toHaveBeenCalled();
+    });
+
+    it('no verifica exclusividad si el PATCH no cambia el estado', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.update.mockResolvedValue({ id: 1 });
+
+      await service.actualizar(1, { raza: 'Cobb 500' }, propietario);
+
+      expect(prisma.lote.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('asigna la linea genetica indicada, decidido con la lectura bloqueada (FOR UPDATE) dentro de la misma transaccion del update', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.update.mockResolvedValue({ id: 1 });
+
+      await service.actualizar(1, { linea_genetica_id: 2 }, propietario);
+
+      expect(prisma.$queryRaw).toHaveBeenCalled();
+      expect(dataDe(prisma.lote.update).linea_genetica_id).toBe(2);
+    });
+
+    it('rechaza (404) si la linea genetica no existe (leido dentro de la transaccion)', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.$queryRaw.mockResolvedValue([]);
+
+      await expect(
+        service.actualizar(1, { linea_genetica_id: 2 }, propietario),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.lote.update).not.toHaveBeenCalled();
+    });
+
+    it('rechaza (400) asignar una linea genetica inactiva (leido dentro de la transaccion)', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.$queryRaw.mockResolvedValue([{ id: 2, activo: false }]);
+
+      await expect(
+        service.actualizar(1, { linea_genetica_id: 2 }, propietario),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.lote.update).not.toHaveBeenCalled();
+    });
+
+    it('permite desvincular la linea genetica con null, sin consultar ni bloquear ninguna linea', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.update.mockResolvedValue({ id: 1 });
+
+      await service.actualizar(1, { linea_genetica_id: null }, propietario);
+
+      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+      expect(dataDe(prisma.lote.update).linea_genetica_id).toBeNull();
+    });
+
+    it('un PATCH que no toca linea_genetica_id (undefined) no consulta ni bloquea ninguna linea', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.update.mockResolvedValue({ id: 1 });
+
+      await service.actualizar(1, { raza: 'Cobb 500' }, propietario);
+
+      expect(prisma.$queryRaw).not.toHaveBeenCalled();
+      expect(dataDe(prisma.lote.update).linea_genetica_id).toBeUndefined();
+    });
+  });
+
+  describe('activar', () => {
+    it('activa el lote cuando el galpón no tiene otro activo', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.update.mockResolvedValue({ id: 1, estado: 'activo' });
+
+      const res = await service.activar(1, propietario);
+
+      expect(dataDe(prisma.lote.update)).toEqual({ estado: 'activo' });
+      expect(res.estado).toBe('activo');
+    });
+
+    it('rechaza (409) si el galpón ya tiene otro lote activo', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.findFirst.mockResolvedValue({ id: 42 });
+
+      await expect(service.activar(1, propietario)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prisma.lote.update).not.toHaveBeenCalled();
+    });
+
+    it('excluye al propio lote de la búsqueda de otro activo', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { id: 3, granja: { propietario_id: 5 } },
+      });
+      prisma.lote.update.mockResolvedValue({ id: 1, estado: 'activo' });
+
+      await service.activar(1, propietario);
+
+      expect(whereDe(prisma.lote.findFirst)).toMatchObject({
+        galpon_id: 3,
+        estado: 'activo',
+        id: { not: 1 },
+      });
     });
   });
 

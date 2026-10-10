@@ -1,7 +1,13 @@
 import type { Organizacion } from '@features/organizaciones/api/organizaciones'
 import type { Usuario } from '@shared/api'
 import type { Prospecto } from '@features/crm/api/prospectos'
-import type { GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import { esIdentidadWhatsapp, sePuedeLlamar } from '@features/crm/model/contacto'
+import {
+  aProspectoVista,
+  type EtapaProspecto,
+  type ProspectoVista,
+} from '@features/crm/model/prospectoVista'
+import { tieneLecturaUtil, type GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { AtencionAdminData } from '../api/admin'
 import { esCriticidadAlta } from '@features/alertas/model/alerta'
 
@@ -10,6 +16,8 @@ export type KpiAdmin = {
   valor: string | number
   detalle: string
   icono: 'organizacion' | 'usuarios' | 'soporte' | 'sensor'
+  progreso: number | null
+  progresoTexto: string | null
 }
 
 export type EtapaCrmAdmin = {
@@ -64,7 +72,7 @@ export function calcularAtencionAdmin(datos: AtencionAdminData): ResumenAtencion
       tipo: 'solicitud' as const,
       etiqueta: solicitud.estado === 'abierta' ? 'PQRS pendiente' : 'PQRS en atención',
       titulo: solicitud.asunto ?? solicitud.categoria,
-      detalle: solicitud.prospecto.nombre ?? solicitud.prospecto.email ?? 'Prospecto sin nombre',
+      detalle: solicitud.prospecto.nombre ?? solicitud.prospecto.email ?? 'Sin contacto asociado',
       fecha: solicitud.fecha_creacion,
       ruta: '/crm' as const,
       prioridad: solicitud.estado === 'abierta' ? 2 : 1,
@@ -98,10 +106,14 @@ export function calcularKpisAdmin(
   galpones: GalponMonitoreoVista[],
 ): KpiAdmin[] {
   const sensores = galpones.flatMap((galpon) => galpon.sensores)
-  const sensoresOnline = sensores.filter((sensor) => sensor.estado !== 'offline').length
-  const porcentajeOnline = sensores.length > 0
+  const sensoresOnline = sensores.filter((sensor) => tieneLecturaUtil(sensor.estado)).length
+  // Si la consulta de últimas lecturas falló, todo sensor activo queda en
+  // 'lectura_no_disponible' — no hay porcentaje que calcular, porque no
+  // comprobamos nada: "0% en línea" mentiría diciendo que sí lo hicimos.
+  const sensoresNoDisponibles = sensores.filter((sensor) => sensor.estado === 'lectura_no_disponible').length
+  const porcentajeOnline = sensores.length > 0 && sensoresNoDisponibles === 0
     ? Math.round((sensoresOnline / sensores.length) * 1000) / 10
-    : 0
+    : null
 
   const organizacionesActivas = organizaciones.filter((item) => item.activa).length
   const usuariosActivos = usuarios.filter((usuario) => usuario.activo).length
@@ -118,24 +130,36 @@ export function calcularKpisAdmin(
       valor: organizacionesActivas,
       detalle: `de ${organizaciones.length} clientes registrados`,
       icono: 'organizacion',
+      progreso: organizaciones.length > 0 ? Math.round((organizacionesActivas / organizaciones.length) * 100) : null,
+      progresoTexto: organizaciones.length > 0 ? `${organizacionesActivas} de ${organizaciones.length} activas` : null,
     },
     {
       etiqueta: 'Usuarios',
       valor: usuarios.length,
       detalle: `${usuariosActivos} con acceso`,
       icono: 'usuarios',
+      progreso: usuarios.length > 0 ? Math.round((usuariosActivos / usuarios.length) * 100) : null,
+      progresoTexto: usuarios.length > 0 ? `${usuariosActivos} de ${usuarios.length} con acceso` : null,
     },
     {
       etiqueta: 'En espera de respuesta',
       valor: enCola,
       detalle: `${atencion.solicitudesPendientes} PQRS · ${atencion.recuperacionesPendientes} contraseñas`,
       icono: 'soporte',
+      progreso: null,
+      progresoTexto: null,
     },
     {
       etiqueta: 'Sensores en línea',
-      valor: `${sensoresOnline}/${sensores.length}`,
-      detalle: `${porcentajeOnline}% en línea`,
+      valor: sensoresNoDisponibles > 0 || sensores.length === 0 ? '—' : `${sensoresOnline}/${sensores.length}`,
+      detalle: sensoresNoDisponibles > 0
+        ? 'No se pudo consultar el estado de los sensores'
+        : porcentajeOnline === null ? 'Sin sensores instalados' : `${porcentajeOnline}% en línea`,
       icono: 'sensor',
+      progreso: porcentajeOnline,
+      progresoTexto: sensoresNoDisponibles === 0 && sensores.length > 0
+        ? `${sensoresOnline} de ${sensores.length} sensores en línea`
+        : null,
     },
   ]
 }
@@ -159,6 +183,49 @@ export function calcularConversionCrm(prospectos: Prospecto[], etapas: EtapaCrmA
   ).length
   const cerrados = etapas.find((etapa) => etapa.nombre === 'Cerrados')?.cantidad ?? 0
   return calificados > 0 ? Math.round((cerrados / calificados) * 1000) / 10 : 0
+}
+
+export type ProspectoReciente = {
+  id: number
+  nombre: string
+  contacto: string
+  fechaRegistro: string
+  etapa: EtapaProspecto
+  canal: string
+}
+
+const CANAL_LEGIBLE: Record<ProspectoVista['canal'], string> = {
+  whatsapp: 'WhatsApp',
+  web: 'Web',
+  otro: 'Otro canal',
+}
+
+// Contacto útil para el administrador: el teléfono si se puede marcar, si no
+// el correo. Una identidad de WhatsApp (p. ej. "CO.123") no es un número.
+function contactoDe(prospecto: Prospecto): string {
+  if (sePuedeLlamar(prospecto.telefono)) return prospecto.telefono!.trim()
+  if (prospecto.email) return prospecto.email
+  if (esIdentidadWhatsapp(prospecto.telefono)) return 'Usuario de WhatsApp'
+  return 'Sin contacto'
+}
+
+// Los prospectos más recientes captados por el chatbot (por fecha de inicio
+// de la conversación), con lo que el administrador necesita para ubicarlos.
+export function ultimosProspectos(prospectos: Prospecto[], limite = 5): ProspectoReciente[] {
+  return [...prospectos]
+    .sort((a, b) => new Date(b.fecha_inicio).getTime() - new Date(a.fecha_inicio).getTime())
+    .slice(0, limite)
+    .map((prospecto) => {
+      const vista = aProspectoVista(prospecto)
+      return {
+        id: prospecto.id,
+        nombre: vista.nombre,
+        contacto: contactoDe(prospecto),
+        fechaRegistro: prospecto.fecha_inicio,
+        etapa: vista.etapa,
+        canal: CANAL_LEGIBLE[vista.canal],
+      }
+    })
 }
 
 export function hace(fechaIso: string): string {

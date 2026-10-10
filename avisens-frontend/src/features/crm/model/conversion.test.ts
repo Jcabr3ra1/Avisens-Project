@@ -6,6 +6,7 @@ import {
   errorDeConversion,
   payloadDeConversion,
   prellenarDesde,
+  primerCampoInvalido,
   type FormularioConversion,
 } from './conversion'
 
@@ -44,15 +45,11 @@ describe('prellenarDesde', () => {
   })
 
   it('sin granja propone el nombre que usaría el backend', () => {
-    // Así el asesor ve de antemano cómo va a llamarse la organización y puede
-    // cambiarlo, en vez de descubrirlo después en el listado.
     const form = prellenarDesde(prospecto({ nombre_granja: null }))
     expect(form.organizacion_nombre).toBe('Organización de Juan Alberto')
   })
 
   it('nunca mete una identidad de WhatsApp en el teléfono', () => {
-    // `telefono` ya viene limpio del backend: si la persona no dio número, es
-    // null y el campo se queda vacío para que el asesor lo pregunte.
     const form = prellenarDesde(prospecto({ telefono: null, whatsapp_id: 'CO.1639897497563370' }))
     expect(form.telefono).toBe('')
   })
@@ -75,8 +72,39 @@ describe('errorDeConversion', () => {
     expect(errorDeConversion(formulario({ password: 'abc' }))).toMatch(/8 caracteres/)
   })
 
-  it('rechaza un correo sin arroba', () => {
+  it('rechaza correos incompletos', () => {
     expect(errorDeConversion(formulario({ email: 'juan.ejemplo.com' }))).toMatch(/no parece válido/)
+    expect(errorDeConversion(formulario({ email: 'juan@' }))).toMatch(/no parece válido/)
+    expect(errorDeConversion(formulario({ email: 'juan@ejemplo' }))).toMatch(/no parece válido/)
+  })
+})
+
+describe('primerCampoInvalido', () => {
+  it('un formulario completo no señala ningún campo', () => {
+    expect(primerCampoInvalido(formulario())).toBeNull()
+  })
+
+  it('señala el mismo campo que describe errorDeConversion', () => {
+    expect(primerCampoInvalido(formulario({ cedula: '' }))).toBe('cedula')
+    expect(primerCampoInvalido(formulario({ email: 'sin-arroba' }))).toBe('email')
+    expect(primerCampoInvalido(formulario({ granja_nombre: '' }))).toBe('granja_nombre')
+    expect(primerCampoInvalido(formulario({ password: 'abc' }))).toBe('password')
+  })
+
+  it('gana el primer campo en el orden visual del formulario', () => {
+    expect(primerCampoInvalido(formulario({ nombre_completo: '', cedula: '', email: '' })))
+      .toBe('nombre_completo')
+    expect(primerCampoInvalido(formulario({ granja_nombre: '', email: '' })))
+      .toBe('granja_nombre')
+  })
+
+  it('los opcionales vacíos no cuentan', () => {
+    const soloObligatorios = formulario({
+      telefono: '',
+      organizacion_nombre: '',
+      granja_municipio: '',
+    })
+    expect(primerCampoInvalido(soloObligatorios)).toBeNull()
   })
 })
 
@@ -90,8 +118,6 @@ describe('payloadDeConversion', () => {
   })
 
   it('no manda el rol: un prospecto convertido es siempre Propietario', () => {
-    // Dejar que la pantalla eligiera el rol sería abrir la puerta a crear un
-    // administrador desde el CRM.
     const payload = payloadDeConversion(formulario())
     expect('rol_id' in payload).toBe(false)
   })
@@ -99,7 +125,6 @@ describe('payloadDeConversion', () => {
 
 describe('contrasenaSugerida', () => {
   it('no usa caracteres que se confunden al dictarla', () => {
-    // El asesor se la va a leer por teléfono: sin l/1, O/0 ni I mayúscula.
     const clave = contrasenaSugerida(200)
     expect(clave).not.toMatch(/[lI1O0]/)
   })
@@ -111,8 +136,6 @@ describe('contrasenaSugerida', () => {
 
 describe('campoDuplicado', () => {
   it('saca el campo del mensaje del backend', () => {
-    // «Ya existe un registro con ese valor en: cedula» es el 409 más frecuente
-    // al convertir: es fácil teclear una cédula que ya existe.
     expect(campoSenalado('Ya existe un registro con ese valor en: cedula')).toBe('cedula')
     expect(campoSenalado('Ya existe un registro con ese valor en: email')).toBe('email')
   })
@@ -122,8 +145,6 @@ describe('campoDuplicado', () => {
   })
 
   it('no señala nada si el mensaje es otro', () => {
-    // Un 400 de «este prospecto ya está cerrado» no apunta a ningún campo:
-    // marcar uno al azar sería peor que no marcar ninguno.
     expect(campoSenalado('Este prospecto ya esta cerrado')).toBeNull()
     expect(campoSenalado('')).toBeNull()
   })
@@ -135,15 +156,12 @@ describe('campoDuplicado', () => {
 
 describe('la granja del cliente nuevo', () => {
   it('no se prellena del prospecto, porque el chatbot ya no la pregunta', () => {
-    // A5, A6 y A6B escribían `nombre_granja` y `municipio`, y se retiraron en
-    // el recorte a nueve pasos. Prellenar de ahí sería una rama muerta.
     const form = prellenarDesde(prospecto({ nombre_granja: 'La Esperanza' }))
     expect(form.granja_nombre).toBe('')
     expect(form.granja_municipio).toBe('')
   })
 
   it('sin nombre de granja no se convierte', () => {
-    // Sin granja no hay galpones, ni lotes, ni monitoreo: la cuenta nace rota.
     expect(errorDeConversion(formulario({ granja_nombre: '' }))).toMatch(/granja/i)
     expect(errorDeConversion(formulario({ granja_nombre: '   ' }))).toMatch(/granja/i)
     expect(errorDeConversion(formulario({ granja_nombre: 'A' }))).toMatch(/corto/i)
@@ -164,8 +182,6 @@ describe('la granja del cliente nuevo', () => {
 
 describe('campoSenalado con el 400 de class-validator', () => {
   it('marca el campo que nombra el mensaje', () => {
-    // Backend devuelve esto tal cual cuando la granja viene vacía. El patrón
-    // del 409 («ese valor en: x») no lo reconoce: es otra forma de mensaje.
     expect(campoSenalado('granja_nombre must be longer than or equal to 2 characters'))
       .toBe('granja_nombre')
   })

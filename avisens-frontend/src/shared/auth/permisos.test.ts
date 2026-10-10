@@ -3,6 +3,8 @@ import {
   gestionaAlgo,
   permisosDeGestion,
   permisosDeInsumo,
+  permisosDePlan,
+  permisosOperativosDeGalpon,
   ROL_ADMIN,
   ROL_OPERARIO,
   ROL_PROPIETARIO,
@@ -66,5 +68,46 @@ describe('permisosDeInsumo', () => {
 
   it('sin sesión no se puede ni mover stock', () => {
     expect(permisosDeInsumo(null).registrarMovimiento).toBe(false)
+  })
+})
+
+describe('permisosOperativosDeGalpon', () => {
+  it('el propietario configura la operación de sus galpones', () => {
+    expect(permisosOperativosDeGalpon(ROL_PROPIETARIO).configurar).toBe(true)
+  })
+
+  it('el administrador consulta la operación en solo lectura', () => {
+    expect(permisosOperativosDeGalpon(ROL_ADMIN).configurar).toBe(false)
+  })
+
+  it('el operario, sin sesión o con un rol desconocido no configuran', () => {
+    for (const rol of [ROL_OPERARIO, null, 'Auditor']) {
+      expect(permisosOperativosDeGalpon(rol).configurar).toBe(false)
+    }
+  })
+
+  it('nadie borra definitivamente desde la vista operativa', () => {
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO, null]) {
+      expect(permisosOperativosDeGalpon(rol).eliminarDefinitivo).toBe(false)
+    }
+  })
+})
+
+describe('permisosDePlan', () => {
+  it('administrador y propietario pueden calcular o recalcular', () => {
+    expect(permisosDePlan(ROL_ADMIN).registrar).toBe(true)
+    expect(permisosDePlan(ROL_PROPIETARIO).registrar).toBe(true)
+  })
+
+  it('el operario solo consulta', () => {
+    expect(permisosDePlan(ROL_OPERARIO).registrar).toBe(false)
+  })
+
+  it('sin sesión no se puede registrar', () => {
+    expect(permisosDePlan(null).registrar).toBe(false)
+  })
+
+  it('un rol desconocido no hereda permisos por accidente', () => {
+    expect(permisosDePlan('Auditor').registrar).toBe(false)
   })
 })

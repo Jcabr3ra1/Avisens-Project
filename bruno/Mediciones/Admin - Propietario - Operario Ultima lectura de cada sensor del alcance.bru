@@ -1,0 +1,19 @@
+meta {
+  name: [Admin · Propietario · Operario]  Última lectura de cada sensor del alcance (opcional: acotar con galpon_id)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/v1/mediciones/ultimas
+  body: none
+  auth: bearer
+}
+
+params:query {
+  ~galpon_id: 3,7
+}
+
+auth:bearer {
+  token: {{token}}
+}

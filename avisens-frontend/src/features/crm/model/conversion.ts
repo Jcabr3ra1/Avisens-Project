@@ -12,35 +12,25 @@ export interface FormularioConversion {
   password: string
 }
 
-// Lo que el prospecto ya dio se trae tal cual; lo que falta se deja vacío para
-// que el asesor lo pregunte. La gracia de convertir no es adivinar datos, es no
-// tener que volver a teclear los que ya están.
-//
-// La cédula casi siempre viene vacía: el cuestionario no la pregunta, y no
-// debería — se pide en la llamada, no en un chat.
+// Se reutilizan los datos que el prospecto ya entregó; los que el chatbot no
+// pide se dejan para que el asesor los confirme durante la llamada.
 export function prellenarDesde(prospecto: ProspectoDetalle): FormularioConversion {
   return {
     nombre_completo: prospecto.nombre ?? '',
     cedula: prospecto.documento ?? '',
     email: prospecto.email ?? '',
-    // Solo un número marcable: una identidad de WhatsApp en el campo teléfono
-    // de un usuario no sirve para nada.
     telefono: prospecto.telefono ?? '',
     organizacion_nombre: prospecto.nombre_granja?.trim() || nombreDeOrganizacion(prospecto.nombre),
-    // Vacíos a propósito. El cuestionario preguntaba la granja y el municipio
-    // en A5, A6 y A6B, y esas preguntas se retiraron en el recorte a nueve
-    // pasos: hoy nada escribe `nombre_granja` ni `municipio`, y en producción
-    // los tres prospectos los tienen en null. Prellenar de ahí sería una rama
-    // que no se ejecuta nunca. Los escribe el asesor, que está al teléfono.
+    // La granja y el municipio ya no los recoge el chatbot: no se inventan al
+    // convertir, porque el asesor debe confirmar el dato real.
     granja_nombre: '',
     granja_municipio: '',
     password: '',
   }
 }
 
-// El backend usa «Organización de {nombre}» cuando no se le da uno. Se replica
-// aquí para que el asesor vea de antemano cómo va a llamarse y pueda cambiarlo,
-// en vez de descubrirlo después en el listado de organizaciones.
+// Replica el nombre que generará el backend cuando no se proporciona una
+// organización, para que el asesor pueda revisarlo antes de crearla.
 export function nombreDeOrganizacion(nombre: string | null): string {
   const limpio = nombre?.trim()
   return limpio ? `Organización de ${limpio}` : ''
@@ -49,20 +39,33 @@ export function nombreDeOrganizacion(nombre: string | null): string {
 export function errorDeConversion(form: FormularioConversion): string {
   if (!form.nombre_completo.trim()) return 'El nombre del propietario es obligatorio.'
   if (!form.cedula.trim()) return 'La cédula es obligatoria: pídesela al cliente.'
-  if (!form.email.trim()) return 'El correo es obligatorio: con él entra al sistema.'
-  if (!form.email.includes('@')) return 'Ese correo no parece válido.'
-  // Sin granja el cliente no puede hacer nada: no hay galpones, ni lotes, ni
-  // monitoreo, ni alertas. Convertir sin ella entrega una cuenta que no sirve
-  // y que nadie descubre rota hasta que el cliente entra y no ve dónde pulsar.
   if (!form.granja_nombre.trim()) return 'El nombre de la granja es obligatorio: sin ella el cliente entra a un sistema vacío.'
   if (form.granja_nombre.trim().length < 2) return 'El nombre de la granja es demasiado corto.'
+  if (!form.email.trim()) return 'El correo es obligatorio: con él entra al sistema.'
+  if (!correoValido(form.email)) return 'Ese correo no parece válido.'
   if (form.password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.'
   return ''
 }
 
-// La ruta de conversión no pide `rol_id`: el cliente que sale de un prospecto
-// es siempre Propietario, y dejar que la pantalla eligiera el rol sería abrir
-// la puerta a crear un administrador desde el CRM.
+export function primerCampoInvalido(
+  form: FormularioConversion,
+): keyof FormularioConversion | null {
+  if (!form.nombre_completo.trim()) return 'nombre_completo'
+  if (!form.cedula.trim()) return 'cedula'
+  if (!form.granja_nombre.trim() || form.granja_nombre.trim().length < 2) {
+    return 'granja_nombre'
+  }
+  if (!form.email.trim() || !correoValido(form.email)) return 'email'
+  if (form.password.length < 8) return 'password'
+  return null
+}
+
+function correoValido(correo: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())
+}
+
+// La conversión siempre crea un Propietario. El formulario no expone ni envía
+// un rol para evitar crear por accidente una cuenta administrativa.
 export function payloadDeConversion(
   form: FormularioConversion,
 ): ConvertirProspectoPayload {
@@ -83,9 +86,6 @@ export function payloadDeConversion(
   return payload
 }
 
-
-// Una contraseña que el asesor pueda dictar por teléfono sin equivocarse: sin
-// caracteres que se confundan al oído ni al leerlos (l/1, O/0, I/i).
 const SIN_AMBIGUOS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
 
 export function contrasenaSugerida(largo = 12): string {
@@ -105,16 +105,8 @@ const CAMPOS: readonly string[] = [
   'password',
 ]
 
-// Señala el campo que el backend rechazó, en vez de dejar al asesor releyendo
-// el formulario entero para adivinar qué está mal. Hay dos formas de mensaje y
-// no se parecen en nada:
-//
-//   409  «Ya existe un registro con ese valor en: cedula»
-//   400  «granja_nombre must be longer than or equal to 2 characters»
-//
-// El 409 es el más frecuente —es fácil teclear una cédula que ya existe—, pero
-// el 400 de class-validator nombra el campo al principio del mensaje, y esa
-// forma hay que reconocerla aparte.
+// El backend puede responder un 409 por duplicado o un 400 de class-validator.
+// Ambos formatos se traducen al campo que el asesor debe corregir.
 export function campoSenalado(mensaje: string): keyof FormularioConversion | null {
   const duplicado = /ese valor en:\s*([a-z_]+)/i.exec(mensaje)
   if (duplicado) {
@@ -124,8 +116,6 @@ export function campoSenalado(mensaje: string): keyof FormularioConversion | nul
     return null
   }
 
-  // `mensajeDelCuerpo` une el array `errors` con comas, así que puede venir más
-  // de uno: se marca el primero, que es por donde el asesor va a empezar.
   for (const tramo of mensaje.split(',')) {
     const nombrado = /^\s*([a-z_]+)\s+(?:must|should|has|is)\b/i.exec(tramo)
     if (nombrado && CAMPOS.includes(nombrado[1].toLowerCase())) {

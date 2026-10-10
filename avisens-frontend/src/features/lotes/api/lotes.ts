@@ -11,6 +11,7 @@ export interface Lote {
   raza: string | null
   sexo: string | null
   marca_alimento: string | null
+  linea_genetica: { id: number; codigo: string; nombre: string } | null
   costo_pollito_unitario: number | null
   presupuesto_total_cop: number | null
   fecha_salida_estimada: string | null
@@ -27,6 +28,7 @@ export interface Lote {
 export interface CrearLotePayload {
   galpon_id: number
   proveedor_id?: number
+  linea_genetica_id?: number | null
   fecha_ingreso: string
   cantidad_inicial: number
   raza?: string

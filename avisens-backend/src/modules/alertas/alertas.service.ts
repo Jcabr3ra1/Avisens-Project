@@ -37,6 +37,7 @@ const ALERTA_SELECT = {
   lote_id: true,
   sensor_id: true,
   tipo: true,
+  origen: true,
   criticidad: true,
   valor_detectado: true,
   valor_umbral: true,
@@ -149,6 +150,7 @@ export class AlertasService {
     const existente = await this.prisma.alerta.findFirst({
       where: {
         sensor_id: sensor.id,
+        origen: 'automatica',
         estado: { in: ['abierta', 'en_proceso'] },
       },
       select: { id: true },
@@ -173,6 +175,7 @@ export class AlertasService {
         lote_id: loteActivo?.id,
         sensor_id: sensor.id,
         tipo: sensor.tipo,
+        origen: 'automatica',
         criticidad,
         valor_detectado: valor,
         valor_umbral:
@@ -354,10 +357,6 @@ export class AlertasService {
     return usuario;
   }
 
-  // ============================================================
-  // MÉTODOS PÚBLICOS
-  // ============================================================
-
   async crear(dto: CreateAlertasDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
 
@@ -375,6 +374,7 @@ export class AlertasService {
         lote_id: dto.lote_id,
         sensor_id: dto.sensor_id,
         tipo: dto.tipo,
+        origen: 'manual',
         criticidad: dto.criticidad,
         valor_detectado: dto.valor_detectado,
         valor_umbral: dto.valor_umbral,

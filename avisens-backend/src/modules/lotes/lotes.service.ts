@@ -1,8 +1,10 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
@@ -34,6 +36,7 @@ const LOTE_SELECT = {
     },
   },
   proveedor: { select: { id: true, nombre: true } },
+  linea_genetica: { select: { id: true, codigo: true, nombre: true } },
 } as const;
 
 @Injectable()
@@ -63,13 +66,68 @@ export class LotesService {
     if (!proveedor) throw new NotFoundException(`Proveedor no encontrado`);
   }
 
+  /**
+   * Bloquea la fila de la linea y decide "activa" con ESTA lectura, dentro
+   * de la misma transaccion que crea/actualiza el lote -- no con una
+   * consulta previa fuera de la transaccion. Sin este orden, una
+   * desactivacion concurrente (LineasGeneticasService.cambiarEstado(), un
+   * UPDATE simple) podria confirmar entre el chequeo y el create()/update()
+   * del lote, dejando pasar una asignacion sobre una linea ya inactiva. Si
+   * la desactivacion ya tomo este mismo lock de fila, esta consulta espera
+   * a que termine antes de decidir (mismo patron que CurvasGeneticasService
+   * en Fase 0).
+   */
+  private async bloquearYValidarLineaGenetica(
+    tx: Prisma.TransactionClient,
+    lineaGeneticaId: number,
+  ) {
+    const [linea] = await tx.$queryRaw<Array<{ id: number; activo: boolean }>>`
+      SELECT "id", "activo" FROM "lineas_geneticas"
+      WHERE "id" = ${lineaGeneticaId}
+      FOR UPDATE
+    `;
+    if (!linea) throw new NotFoundException('Línea genética no encontrada');
+    if (!linea.activo) {
+      throw new BadRequestException(
+        'No se puede asignar una línea genética inactiva',
+      );
+    }
+  }
+
+  private async verificarSinLoteActivo(galponId: number, idPropio?: number) {
+    const otroActivo = await this.prisma.lote.findFirst({
+      where: {
+        galpon_id: galponId,
+        estado: 'activo',
+        ...(idPropio !== undefined ? { id: { not: idPropio } } : {}),
+      },
+      select: { id: true },
+    });
+    if (otroActivo) {
+      throw new ConflictException(
+        'Este galpón ya tiene un lote activo. Desactívalo antes de crear o activar otro.',
+      );
+    }
+  }
+
   async crear(dto: CreateLoteDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
+    await this.verificarSinLoteActivo(dto.galpon_id);
     if (dto.proveedor_id !== undefined && dto.proveedor_id !== null) {
       await this.validarProveedor(dto.proveedor_id);
     }
 
     return this.prisma.$transaction(async (transaccion) => {
+      if (
+        dto.linea_genetica_id !== undefined &&
+        dto.linea_genetica_id !== null
+      ) {
+        await this.bloquearYValidarLineaGenetica(
+          transaccion,
+          dto.linea_genetica_id,
+        );
+      }
+
       const creado = await transaccion.lote.create({
         data: {
           galpon_id: dto.galpon_id,
@@ -79,6 +137,7 @@ export class LotesService {
           cantidad_inicial: dto.cantidad_inicial,
           raza: dto.raza,
           sexo: dto.sexo,
+          linea_genetica_id: dto.linea_genetica_id ?? null,
           marca_alimento: dto.marca_alimento,
           costo_pollito_unitario: dto.costo_pollito_unitario,
           presupuesto_total_cop: dto.presupuesto_total_cop,
@@ -145,30 +204,46 @@ export class LotesService {
     if (dto.proveedor_id !== undefined && dto.proveedor_id !== null) {
       await this.validarProveedor(dto.proveedor_id);
     }
+    if (dto.estado === 'activo') {
+      await this.verificarSinLoteActivo(actual.galpon.id, id);
+    }
 
-    return this.prisma.lote.update({
-      where: { id },
-      data: {
-        galpon_id: undefined,
-        proveedor_id: dto.proveedor_id,
-        fecha_ingreso: dto.fecha_ingreso
-          ? new Date(dto.fecha_ingreso)
-          : undefined,
-        cantidad_inicial: dto.cantidad_inicial,
-        raza: dto.raza,
-        sexo: dto.sexo,
-        marca_alimento: dto.marca_alimento,
-        costo_pollito_unitario: dto.costo_pollito_unitario,
-        presupuesto_total_cop: dto.presupuesto_total_cop,
-        fecha_salida_estimada: dto.fecha_salida_estimada
-          ? new Date(dto.fecha_salida_estimada)
-          : undefined,
-        fecha_salida_real: dto.fecha_salida_real
-          ? new Date(dto.fecha_salida_real)
-          : undefined,
-        estado: dto.estado,
-      },
-      select: LOTE_SELECT,
+    return this.prisma.$transaction(async (transaccion) => {
+      if (
+        dto.linea_genetica_id !== undefined &&
+        dto.linea_genetica_id !== null
+      ) {
+        await this.bloquearYValidarLineaGenetica(
+          transaccion,
+          dto.linea_genetica_id,
+        );
+      }
+
+      return transaccion.lote.update({
+        where: { id },
+        data: {
+          galpon_id: undefined,
+          proveedor_id: dto.proveedor_id,
+          fecha_ingreso: dto.fecha_ingreso
+            ? new Date(dto.fecha_ingreso)
+            : undefined,
+          cantidad_inicial: dto.cantidad_inicial,
+          raza: dto.raza,
+          sexo: dto.sexo,
+          linea_genetica_id: dto.linea_genetica_id,
+          marca_alimento: dto.marca_alimento,
+          costo_pollito_unitario: dto.costo_pollito_unitario,
+          presupuesto_total_cop: dto.presupuesto_total_cop,
+          fecha_salida_estimada: dto.fecha_salida_estimada
+            ? new Date(dto.fecha_salida_estimada)
+            : undefined,
+          fecha_salida_real: dto.fecha_salida_real
+            ? new Date(dto.fecha_salida_real)
+            : undefined,
+          estado: dto.estado,
+        },
+        select: LOTE_SELECT,
+      });
     });
   }
   async desactivar(id: number, solicitante: Solicitante) {
@@ -181,7 +256,8 @@ export class LotesService {
   }
 
   async activar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    const lote = await this.obtener(id, solicitante);
+    await this.verificarSinLoteActivo(lote.galpon.id, id);
     return this.prisma.lote.update({
       where: { id },
       data: { estado: 'activo' },

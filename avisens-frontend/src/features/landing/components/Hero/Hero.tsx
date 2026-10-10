@@ -6,23 +6,29 @@ import './Hero.css';
 
 const INTERVALO_CARRUSEL = 7500;
 
+// `titulo` es el titular grande y `aside` el texto de la esquina superior
+// derecha mientras la foto está activa.
 const slides = [
   {
     src: avicultorImage,
     label: 'Avicultor cuidando sus aves',
-    aside: 'Hacemos más fácil el manejo de tu galpón.',
-  },
-  {
-    src: pollosImage,
-    label: 'Pollos de engorde en la granja',
+    titulo: 'Cultivando un futuro sostenible',
     aside:
-      'Tú conoces tu galpón. AVISENS te ayuda a tenerlo todo más organizado y bajo control.',
+      'Te ayudamos a cuidar mejor tus aves, aprovechar el alimento y sacar lotes más sanos y rentables.',
   },
   {
     src: comunidadImage,
     label: 'Comunidad rural del Cauca',
+    titulo: 'Hacemos más fácil el manejo de tu galpón',
     aside:
-      'Cuidamos más que aves: ayudamos a construir un futuro mejor para las familias, las granjas y las comunidades del campo colombiano.',
+      'Anotas el alimento, las bajas y las vacunas desde el celular, y te mostramos cómo va tu lote día a día.',
+  },
+  {
+    src: pollosImage,
+    label: 'Pollos de engorde en la granja',
+    titulo: 'Tú conoces tu galpón. AVISENS te ayuda a tenerlo bajo control.',
+    aside:
+      'Nuestros sensores vigilan la temperatura, la humedad y el aire, y te avisan cuando algo no está bien.',
   },
 ];
 
@@ -81,13 +87,11 @@ function Hero() {
       <div className="hero-bg-overlay" />
 
       <div className="hero-content">
-        <h1 id="hero-title">
-          <span>Cultivando</span>
-          <span>un futuro</span>
-          <span>sostenible</span>
+        <h1 key={activeIndex} id="hero-title">
+          {slides[activeIndex].titulo}
         </h1>
 
-        <p key={activeIndex} className="hero-aside">
+        <p key={`aside-${activeIndex}`} className="hero-aside">
           {slides[activeIndex].aside}
         </p>
 

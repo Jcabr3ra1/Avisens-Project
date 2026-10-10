@@ -3,7 +3,6 @@ import { esIdentidadWhatsapp, etiquetaContacto, sePuedeLlamar } from './contacto
 
 describe('esIdentidadWhatsapp', () => {
   it('reconoce la identidad que manda Meta cuando se oculta el número', () => {
-    // Forma real vista en producción: dos letras, punto y dígitos.
     expect(esIdentidadWhatsapp('CO.1639897497563370')).toBe(true)
   })
 
@@ -20,8 +19,6 @@ describe('esIdentidadWhatsapp', () => {
 
 describe('sePuedeLlamar', () => {
   it('a una identidad de WhatsApp no se la puede llamar', () => {
-    // Este es el bug que arregla: `tel:CO.1639…` abre el marcador con basura
-    // y el asesor cree que el sistema perdió el número.
     expect(sePuedeLlamar('CO.1639897497563370')).toBe(false)
   })
 

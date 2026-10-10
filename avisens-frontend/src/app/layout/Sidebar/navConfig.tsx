@@ -72,6 +72,7 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/galpones':                [ROL_ADMIN, ROL_PROPIETARIO],
   '/lotes':                   [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/bitacora':                [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/guia-crecimiento':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/consumos-diarios':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/monitoreo':               [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/sensores':                [ROL_ADMIN, ROL_PROPIETARIO],

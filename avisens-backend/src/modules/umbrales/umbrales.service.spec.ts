@@ -99,6 +99,34 @@ describe('UmbralesService', () => {
       expect(prisma.umbralAmbiental.create).toHaveBeenCalled();
     });
 
+    it('usa la versión siguiente al máximo histórico cuando no hay vigente (crear -> jubilar -> crear)', async () => {
+      prisma.umbralAmbiental.findFirst
+        .mockResolvedValueOnce(null) // sin vigente: pasa el rechazo
+        .mockResolvedValueOnce({ version: 3 }); // maximo historico, jubilado
+      prisma.umbralAmbiental.create.mockResolvedValue({ id: 99 });
+
+      await service.crear(dtoCrear, admin);
+
+      const calls = prisma.umbralAmbiental.create.mock.calls as Array<
+        [{ data: Record<string, unknown> }]
+      >;
+      expect(calls[0][0].data).toMatchObject({ version: 4 });
+    });
+
+    it('usa versión 1 cuando la combinación nunca tuvo historial', async () => {
+      prisma.umbralAmbiental.findFirst
+        .mockResolvedValueOnce(null) // sin vigente
+        .mockResolvedValueOnce(null); // sin historial alguno
+      prisma.umbralAmbiental.create.mockResolvedValue({ id: 100 });
+
+      await service.crear(dtoCrear, admin);
+
+      const calls = prisma.umbralAmbiental.create.mock.calls as Array<
+        [{ data: Record<string, unknown> }]
+      >;
+      expect(calls[0][0].data).toMatchObject({ version: 1 });
+    });
+
     it('un Propietario de otra granja recibe 403', async () => {
       prisma.galpon.findUnique.mockResolvedValue({
         id: 1,
@@ -167,10 +195,7 @@ describe('UmbralesService', () => {
     });
 
     it('con incluir_historico quita el filtro de vigencia', async () => {
-      await service.listar(
-        { ...paginacion, incluir_historico: true },
-        admin,
-      );
+      await service.listar({ ...paginacion, incluir_historico: true }, admin);
 
       // En Prisma, `undefined` ELIMINA el filtro; no busca nulos. Por eso
       // vigente tiene que quedar en undefined y no en false: con false solo

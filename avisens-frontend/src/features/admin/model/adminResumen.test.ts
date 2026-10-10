@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AtencionAdminData } from '../api/admin'
-import { calcularAtencionAdmin } from './adminResumen'
+import type { Prospecto } from '@features/crm/api/prospectos'
+import { calcularAtencionAdmin, ultimosProspectos } from './adminResumen'
 
 function datosVacios(): AtencionAdminData {
   return { alertas: [], solicitudes: [], recuperaciones: [] }
@@ -107,12 +108,14 @@ describe('calcularKpisAdmin', () => {
     expect(kpis[0].etiqueta).toBe('Organizaciones activas')
     expect(kpis[0].valor).toBe(2)
     expect(kpis[0].detalle).toBe('de 3 clientes registrados')
+    expect(kpis[0].progreso).toBe(67)
   })
 
   it('los usuarios distinguen el total de los que tienen acceso', () => {
     const kpis = calcularKpisAdmin([], [usuario(1), usuario(2, false)], colaVacia(), [])
     expect(kpis[1].valor).toBe(2)
     expect(kpis[1].detalle).toBe('1 con acceso')
+    expect(kpis[1].progresoTexto).toBe('1 de 2 con acceso')
   })
 
   it('la cola suma PQRS y contraseñas, que son las dos que exigen respuesta', () => {
@@ -122,12 +125,11 @@ describe('calcularKpisAdmin', () => {
     expect(kpis[2].detalle).toBe('3 PQRS · 2 contraseñas')
   })
 
-  it('sin sensores no divide por cero', () => {
-    // Una instalación recién creada no tiene ni un sensor: el porcentaje debe
-    // salir 0, no NaN.
+  it('sin sensores informa que todavía no hay infraestructura instalada', () => {
     const kpis = calcularKpisAdmin([], [], colaVacia(), [])
-    expect(kpis[3].valor).toBe('0/0')
-    expect(kpis[3].detalle).toBe('0% en línea')
+    expect(kpis[3].valor).toBe('—')
+    expect(kpis[3].detalle).toBe('Sin sensores instalados')
+    expect(kpis[3].progreso).toBeNull()
   })
 
   it('cuenta en línea todo sensor que no esté offline', () => {
@@ -136,5 +138,84 @@ describe('calcularKpisAdmin', () => {
     ] as unknown as GalponMonitoreoVista[]
     const kpis = calcularKpisAdmin([], [], colaVacia(), galpones)
     expect(kpis[3].valor).toBe('2/3')
+    expect(kpis[3].progreso).toBe(66.7)
+  })
+
+  it('si la consulta de últimas lecturas falló, avisa que no se pudo consultar en vez de decir "0% en línea"', () => {
+    const galpones = [
+      { sensores: [{ estado: 'lectura_no_disponible' }, { estado: 'lectura_no_disponible' }] },
+    ] as unknown as GalponMonitoreoVista[]
+    const kpis = calcularKpisAdmin([], [], colaVacia(), galpones)
+    expect(kpis[3].valor).toBe('—')
+    expect(kpis[3].detalle).toBe('No se pudo consultar el estado de los sensores')
+    expect(kpis[3].progreso).toBeNull()
+    expect(kpis[3].progresoTexto).toBeNull()
+  })
+
+  it('con una mezcla de caídos y no disponibles, prioriza avisar que faltó la consulta', () => {
+    const galpones = [
+      { sensores: [{ estado: 'offline' }, { estado: 'lectura_no_disponible' }] },
+    ] as unknown as GalponMonitoreoVista[]
+    const kpis = calcularKpisAdmin([], [], colaVacia(), galpones)
+    expect(kpis[3].detalle).toBe('No se pudo consultar el estado de los sensores')
+  })
+})
+
+function prospecto(datos: Partial<Prospecto>): Prospecto {
+  return {
+    id: 1,
+    nombre: 'Ana Pérez',
+    telefono: null,
+    email: null,
+    canal_origen: 'web',
+    clasificacion: null,
+    estado: 'nuevo',
+    fecha_inicio: '2026-10-01T10:00:00.000Z',
+    ultima_actividad: '2026-10-01T10:00:00.000Z',
+    ...datos,
+  } as Prospecto
+}
+
+describe('ultimosProspectos', () => {
+  it('ordena del más reciente al más antiguo y respeta el límite', () => {
+    const lista = [
+      prospecto({ id: 1, fecha_inicio: '2026-10-01T10:00:00.000Z' }),
+      prospecto({ id: 2, fecha_inicio: '2026-10-03T10:00:00.000Z' }),
+      prospecto({ id: 3, fecha_inicio: '2026-10-02T10:00:00.000Z' }),
+    ]
+
+    expect(ultimosProspectos(lista, 2).map((p) => p.id)).toEqual([2, 3])
+  })
+
+  it('no modifica el arreglo original', () => {
+    const lista = [prospecto({ id: 1 }), prospecto({ id: 2, fecha_inicio: '2026-10-05T10:00:00.000Z' })]
+    ultimosProspectos(lista)
+    expect(lista.map((p) => p.id)).toEqual([1, 2])
+  })
+
+  it('usa el teléfono, luego el correo y nunca muestra una identidad de WhatsApp como número', () => {
+    const [conTelefono] = ultimosProspectos([prospecto({ telefono: '3001234567', email: 'a@b.co' })])
+    const [conCorreo] = ultimosProspectos([prospecto({ email: 'ana@finca.co' })])
+    const [soloWhatsapp] = ultimosProspectos([prospecto({ telefono: 'CO.573001234567' })])
+    const [sinNada] = ultimosProspectos([prospecto({})])
+
+    expect(conTelefono.contacto).toBe('3001234567')
+    expect(conCorreo.contacto).toBe('ana@finca.co')
+    expect(soloWhatsapp.contacto).toBe('Usuario de WhatsApp')
+    expect(sinNada.contacto).toBe('Sin contacto')
+  })
+
+  it('traduce el canal y la etapa con las reglas del CRM', () => {
+    const [cerrado] = ultimosProspectos([prospecto({ canal_origen: 'whatsapp', estado: 'cerrado' })])
+    const [caliente] = ultimosProspectos([prospecto({ canal_origen: null, clasificacion: 'caliente' })])
+    const [sinNombre] = ultimosProspectos([prospecto({ nombre: null })])
+
+    expect(cerrado).toMatchObject({ canal: 'WhatsApp', etapa: 'cerrado' })
+    expect(caliente).toMatchObject({ canal: 'Otro canal', etapa: 'caliente' })
+    expect(sinNombre.nombre).toBe('Prospecto sin nombre')
+  })
+
+  it('sin prospectos devuelve una lista vacía', () => {
+    expect(ultimosProspectos([])).toEqual([])
   })
 })

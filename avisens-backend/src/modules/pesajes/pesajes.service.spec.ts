@@ -141,6 +141,15 @@ describe('PesajesService', () => {
 
       expect(whereDe(prisma.pesaje.findMany)).toBeUndefined();
     });
+
+    it('desempata por id -- fecha es solo el dia, varios pesajes del mismo dia empatan', async () => {
+      await service.listar(admin, { page: 1, limit: 10 });
+
+      const calls = prisma.pesaje.findMany.mock.calls as Array<
+        [{ orderBy: unknown }]
+      >;
+      expect(calls[0][0].orderBy).toEqual([{ fecha: 'desc' }, { id: 'desc' }]);
+    });
   });
 
   describe('obtener', () => {

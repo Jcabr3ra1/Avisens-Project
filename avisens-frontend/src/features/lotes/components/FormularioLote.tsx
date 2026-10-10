@@ -1,10 +1,12 @@
-import { useState, type FormEventHandler } from 'react'
+import { useMemo, useState, type FormEventHandler } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import type { Galpon } from '@features/galpones/api/galpones'
 import type { Proveedor } from '@features/proveedores/api/proveedores'
+import type { LineaGenetica } from '../api/lineas-geneticas'
 import {
   MARCAS_ALIMENTO,
   SEXOS_LOTE,
+  opcionesLineaGenetica,
   tieneCurvaObjetivo,
   type FormularioLoteDatos,
 } from '../model/formularioLote'
@@ -14,6 +16,8 @@ interface Props {
   modoEdicion: boolean
   galpones: Galpon[]
   proveedores: Proveedor[]
+  lineasGeneticas: LineaGenetica[]
+  errorLineasGeneticas: string
   guardando: boolean
   error: string
   onCambiar: <K extends keyof FormularioLoteDatos>(
@@ -35,6 +39,8 @@ function FormularioLote({
   modoEdicion,
   galpones,
   proveedores,
+  lineasGeneticas,
+  errorLineasGeneticas,
   guardando,
   error,
   onCambiar,
@@ -42,6 +48,10 @@ function FormularioLote({
   onCerrar,
 }: Props) {
   const [mostrarAdicional, setMostrarAdicional] = useState(modoEdicion)
+  const opcionesLinea = useMemo(
+    () => opcionesLineaGenetica(lineasGeneticas, form.linea_genetica_id),
+    [lineasGeneticas, form.linea_genetica_id],
+  )
 
   return (
     <Modal
@@ -191,6 +201,34 @@ function FormularioLote({
                     Todavía no hay curva de referencia para esta marca: el peso del
                     lote se registrará, pero no podrá compararse con un objetivo.
                   </small>
+                )}
+              </label>
+            </div>
+            <div className="modal-fila">
+              <label className="modal-campo">
+                <span>Línea genética <em>(Opcional)</em></span>
+                <select
+                  value={form.linea_genetica_id ?? ''}
+                  onChange={(evento) => {
+                    const valor = evento.target.value
+                    onCambiar('linea_genetica_id', valor === '' ? null : Number(valor))
+                  }}
+                >
+                  <option value="">Sin especificar</option>
+                  {opcionesLinea.map((opcion) => (
+                    <option key={opcion.id} value={opcion.id}>
+                      {opcion.etiqueta}
+                    </option>
+                  ))}
+                </select>
+                {!form.linea_genetica_id && (
+                  <small className="modal-ayuda">
+                    Sin línea genética, el plan de crecimiento del lote no podrá
+                    calcularse.
+                  </small>
+                )}
+                {errorLineasGeneticas && (
+                  <small className="modal-ayuda">{errorLineasGeneticas}</small>
                 )}
               </label>
             </div>

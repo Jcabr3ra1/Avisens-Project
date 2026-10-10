@@ -29,7 +29,6 @@ function PanelAtencionAdmin({
     <section className="admin-card admin-attention" aria-labelledby="admin-attention-title" aria-busy={cargando}>
       <div className="admin-card-head admin-attention-head">
         <div>
-          <p className="admin-section-kicker">Prioridad del día</p>
           <h2 id="admin-attention-title" className="admin-card-title">Necesita tu atención</h2>
           <p className="admin-card-sub">Pendientes transversales ordenados por urgencia</p>
         </div>

@@ -9,6 +9,7 @@ import './NotificacionesPage.css'
 
 const ETIQUETAS_TIPO: Record<string, string> = {
   recuperacion_password: 'Acceso',
+  seguridad_cuenta: 'Seguridad',
   sistema: 'Sistema',
 }
 
@@ -41,6 +42,11 @@ function NotificacionesPage() {
   const irARecuperaciones = (notificacion: Notificacion) => {
     if (!notificacion.leida) void marcarLeida(notificacion.id)
     navigate('/recuperaciones-password')
+  }
+
+  const irAUsuarios = (notificacion: Notificacion) => {
+    if (!notificacion.leida) void marcarLeida(notificacion.id)
+    navigate('/usuarios')
   }
 
   return (
@@ -96,6 +102,15 @@ function NotificacionesPage() {
                     onClick={() => irARecuperaciones(notificacion)}
                   >
                     Revisar solicitudes
+                  </button>
+                )}
+                {notificacion.tipo === 'seguridad_cuenta' && rol === 'Administrador' && (
+                  <button
+                    className="not-boton not-boton--principal"
+                    type="button"
+                    onClick={() => irAUsuarios(notificacion)}
+                  >
+                    Revisar cuenta
                   </button>
                 )}
                 {!notificacion.leida && (

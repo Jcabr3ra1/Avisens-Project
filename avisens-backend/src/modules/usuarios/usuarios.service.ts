@@ -15,6 +15,18 @@ import { paginate } from '../../common/pagination/paginate';
 import { ROLES } from '../../common/auth/roles';
 import { esPropietario } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  esTimeoutDeBloqueo,
+  MENSAJE_ASIGNACION_OCUPADA,
+  MENSAJE_USUARIO_OCUPADO,
+} from '../../common/errores/bloqueo';
+import {
+  eliminarAsignacionesDelUsuario,
+  eliminarSesionesDelUsuario,
+  OPCIONES_TRANSACCION_ORDENADA,
+  revocarAsignacionesDelUsuario,
+  revocarSesionesDelUsuario,
+} from '../../common/bloqueos/revocar-acceso';
 
 const USUARIO_SELECT = {
   id: true,
@@ -97,8 +109,9 @@ export class UsuariosService {
     usuarioId: number,
     solicitante: Solicitante,
     exigirActivo = false,
+    cliente: Prisma.TransactionClient = this.prisma,
   ) {
-    const usuario = await this.prisma.usuario.findUnique({
+    const usuario = await cliente.usuario.findUnique({
       where: { id: usuarioId },
       select: {
         id: true,
@@ -131,8 +144,9 @@ export class UsuariosService {
     organizacionId: number,
     solicitante: Solicitante,
     exigirActivo = false,
+    cliente: Prisma.TransactionClient = this.prisma,
   ) {
-    const galpon = await this.prisma.galpon.findUnique({
+    const galpon = await cliente.galpon.findUnique({
       where: { id: galponId },
       select: {
         id: true,
@@ -249,7 +263,6 @@ export class UsuariosService {
     );
   }
 
-
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
     const where = esPropietario(solicitante)
       ? {
@@ -312,6 +325,9 @@ export class UsuariosService {
     });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
     this.verificarOperarioDeLaOrganizacion(usuario, solicitante);
+    if (dto.activo === false && id === solicitante.id) {
+      throw new ForbiddenException('No puedes desactivar tu propia cuenta');
+    }
 
     const cambiaEmail = dto.email && dto.email !== usuario.email;
     const cambiaCedula = dto.cedula && dto.cedula !== usuario.cedula;
@@ -339,18 +355,45 @@ export class UsuariosService {
       if (!rol) throw new NotFoundException('Rol no encontrado');
     }
 
-    return this.prisma.usuario.update({
-      where: { id },
-      data: {
-        nombre_completo: dto.nombre_completo,
-        cedula: dto.cedula,
-        email: dto.email,
-        telefono: dto.telefono,
-        rol_id: rolId,
-        activo: dto.activo,
-      },
-      select: USUARIO_SELECT,
-    });
+    const data = {
+      nombre_completo: dto.nombre_completo,
+      cedula: dto.cedula,
+      email: dto.email,
+      telefono: dto.telefono,
+      rol_id: rolId,
+      activo: dto.activo,
+    };
+
+    if (dto.activo !== false) {
+      return this.prisma.usuario.update({
+        where: { id },
+        data,
+        select: USUARIO_SELECT,
+      });
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
+        const actualizado = await tx.usuario.update({
+          where: { id },
+          data,
+          select: USUARIO_SELECT,
+        });
+        await revocarSesionesDelUsuario(tx, id);
+        await revocarAsignacionesDelUsuario(tx, id);
+        return actualizado;
+      }, OPCIONES_TRANSACCION_ORDENADA);
+    } catch (error) {
+      this.traducirTimeoutDeUsuario(error);
+      throw error;
+    }
+  }
+
+  private traducirTimeoutDeUsuario(error: unknown): void {
+    if (esTimeoutDeBloqueo(error)) {
+      throw new ConflictException(MENSAJE_USUARIO_OCUPADO);
+    }
   }
 
   async asignarGalpon(
@@ -359,37 +402,51 @@ export class UsuariosService {
     rolAsignacion: string | undefined,
     solicitante: Solicitante,
   ) {
-    const operario = await this.obtenerOperarioParaAsignacion(
-      usuarioId,
-      solicitante,
-      true,
-    );
-    await this.validarGalponParaOperario(
-      galponId,
-      operario.organizacion_id!,
-      solicitante,
-      true,
-    );
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL lock_timeout = '3000ms'`;
+        await tx.$queryRaw`SELECT "id" FROM "usuarios" WHERE "id" = ${usuarioId} FOR SHARE`;
+        const operario = await this.obtenerOperarioParaAsignacion(
+          usuarioId,
+          solicitante,
+          true,
+          tx,
+        );
+        await tx.$queryRaw`SELECT "id" FROM "galpones" WHERE "id" = ${galponId} FOR NO KEY UPDATE`;
+        await this.validarGalponParaOperario(
+          galponId,
+          operario.organizacion_id!,
+          solicitante,
+          true,
+          tx,
+        );
 
-    return this.prisma.usuarioGalpon.upsert({
-      where: {
-        usuario_id_galpon_id: {
-          usuario_id: usuarioId,
-          galpon_id: galponId,
-        },
-      },
-      create: {
-        usuario_id: usuarioId,
-        galpon_id: galponId,
-        rol_asignacion: rolAsignacion,
-      },
-      update: {
-        activa: true,
-        rol_asignacion: rolAsignacion,
-        fecha_asignacion: new Date(),
-      },
-      select: ASIGNACION_SELECT,
-    });
+        return tx.usuarioGalpon.upsert({
+          where: {
+            usuario_id_galpon_id: {
+              usuario_id: usuarioId,
+              galpon_id: galponId,
+            },
+          },
+          create: {
+            usuario_id: usuarioId,
+            galpon_id: galponId,
+            rol_asignacion: rolAsignacion,
+          },
+          update: {
+            activa: true,
+            rol_asignacion: rolAsignacion,
+            fecha_asignacion: new Date(),
+          },
+          select: ASIGNACION_SELECT,
+        });
+      }, OPCIONES_TRANSACCION_ORDENADA);
+    } catch (error) {
+      if (esTimeoutDeBloqueo(error)) {
+        throw new ConflictException(MENSAJE_ASIGNACION_OCUPADA);
+      }
+      throw error;
+    }
   }
 
   async listarGalponesAsignados(
@@ -460,17 +517,17 @@ export class UsuariosService {
       throw new ForbiddenException('No puedes desactivar tu propia cuenta');
     }
 
-    await this.prisma.$transaction([
-      this.prisma.sesion.updateMany({
-        where: { usuario_id: id, revocada: false },
-        data: { revocada: true },
-      }),
-      this.prisma.usuarioGalpon.updateMany({
-        where: { usuario_id: id, activa: true },
-        data: { activa: false },
-      }),
-      this.prisma.usuario.update({ where: { id }, data: { activo: false } }),
-    ]);
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
+        await tx.usuario.update({ where: { id }, data: { activo: false } });
+        await revocarSesionesDelUsuario(tx, id);
+        await revocarAsignacionesDelUsuario(tx, id);
+      }, OPCIONES_TRANSACCION_ORDENADA);
+    } catch (error) {
+      this.traducirTimeoutDeUsuario(error);
+      throw error;
+    }
 
     return { id, activo: false };
   }
@@ -488,12 +545,19 @@ export class UsuariosService {
       throw new ForbiddenException('No puedes eliminar tu propia cuenta');
     }
 
-    await this.prisma.$transaction([
-      this.prisma.sesion.deleteMany({ where: { usuario_id: id } }),
-      this.prisma.seguridadCuenta.deleteMany({ where: { usuario_id: id } }),
-      this.prisma.usuarioGalpon.deleteMany({ where: { usuario_id: id } }),
-      this.prisma.usuario.delete({ where: { id } }),
-    ]);
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
+        await tx.$queryRaw`SELECT "id" FROM "usuarios" WHERE "id" = ${id} FOR UPDATE`;
+        await eliminarSesionesDelUsuario(tx, id);
+        await tx.seguridadCuenta.deleteMany({ where: { usuario_id: id } });
+        await eliminarAsignacionesDelUsuario(tx, id);
+        await tx.usuario.delete({ where: { id } });
+      }, OPCIONES_TRANSACCION_ORDENADA);
+    } catch (error) {
+      this.traducirTimeoutDeUsuario(error);
+      throw error;
+    }
 
     return { id, eliminado: true };
   }

@@ -39,6 +39,7 @@
 .mon-dot--critico     { background: var(--red); box-shadow: 0 0 6px rgba(239,68,68,0.5); }
 .mon-dot--offline     { background: var(--text4); }
 .mon-dot--sin_umbral  { background: var(--text4); }
+.mon-dot--lectura_no_disponible { background: var(--info2); }
 
 .mon-lote-info { font-size: 0.88rem; color: var(--text2); margin-bottom: 1.2rem; }
 .mon-sin-lote  { color: var(--text3); }
@@ -111,6 +112,7 @@
 }
 .mon-sensor-card--offline { opacity: 0.5; }
 .mon-sensor-card--sin_umbral { opacity: 0.75; }
+.mon-sensor-card--lectura_no_disponible { opacity: 0.75; }
 
 .mon-sensor-icon   { font-size: 1.7rem; line-height: 1; }
 .mon-sensor-info   { display: flex; flex-direction: column; gap: 0.1rem; }
@@ -135,6 +137,7 @@
 .mon-estado-badge--critico     { background: rgba(239,68,68,0.13);  color: var(--red); }
 .mon-estado-badge--offline     { background: rgba(100,116,139,0.12); color: var(--text3); }
 .mon-estado-badge--sin_umbral  { background: rgba(100,116,139,0.12); color: var(--text3); }
+.mon-estado-badge--lectura_no_disponible { background: rgba(59,130,246,0.13); color: var(--info3); }
 .mon-ultima { font-size: 0.71rem; color: var(--text4); }
 
 /* ─── Tabla de umbrales ──────────────────────────────────────────────────── */

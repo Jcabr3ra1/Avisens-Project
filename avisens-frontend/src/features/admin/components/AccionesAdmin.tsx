@@ -19,31 +19,31 @@ function AccionesAdmin({ onUsuarios, onGranjas, onCrm, onProveedores, onCompras 
   const acciones: Accion[] = [
     {
       titulo: 'Personas',
-      descripcion: 'Crear, editar e inactivar cuentas de propietarios y operarios.',
+      descripcion: 'Gestiona cuentas de equipo y clientes.',
       icono: <IcUsers size={22} />,
       onClick: onUsuarios,
     },
     {
       titulo: 'Granjas',
-      descripcion: 'Crear granjas y asignarlas al propietario responsable.',
+      descripcion: 'Crea granjas y asigna responsables.',
       icono: <IcLeaf size={22} />,
       onClick: onGranjas,
     },
     {
       titulo: 'Clientes y PQRS',
-      descripcion: 'Revisar prospectos, cotizaciones y solicitudes en un mismo contexto.',
+      descripcion: 'Consulta prospectos, cotizaciones y PQRS.',
       icono: <IcPhone size={22} />,
       onClick: onCrm,
     },
     {
       titulo: 'Proveedores',
-      descripcion: 'Gestionar los aliados de alimento, pollitos, insumos y servicios.',
+      descripcion: 'Gestiona aliados, insumos y servicios.',
       icono: <IcUsers size={22} />,
       onClick: onProveedores,
     },
     {
       titulo: 'Compras',
-      descripcion: 'Registrar pedidos, sus insumos y la recepción en bodega.',
+      descripcion: 'Registra pedidos y controla su recepción en bodega.',
       icono: <IcDoc size={22} />,
       onClick: onCompras,
     },

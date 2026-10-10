@@ -73,6 +73,17 @@ export class UmbralesService {
       );
     }
 
+    const ultimo = await this.prisma.umbralAmbiental.findFirst({
+      where: {
+        galpon_id: dto.galpon_id,
+        variable: dto.variable,
+        semana_vida: dto.semana_vida,
+      },
+      orderBy: { version: 'desc' },
+      select: { version: true },
+    });
+    const version = ultimo ? ultimo.version + 1 : 1;
+
     return this.prisma.umbralAmbiental.create({
       data: {
         galpon_id: dto.galpon_id,
@@ -82,6 +93,7 @@ export class UmbralesService {
         valor_maximo: dto.valor_maximo,
         unidad: dto.unidad,
         criticidad: dto.criticidad,
+        version,
       },
       select: UMBRAL_SELECT,
     });

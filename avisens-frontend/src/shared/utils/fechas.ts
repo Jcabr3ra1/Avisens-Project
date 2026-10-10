@@ -57,3 +57,14 @@ export function fechaDeHoy(ahora: Date = new Date()): string {
   const dia = String(ahora.getDate()).padStart(2, '0')
   return `${ahora.getFullYear()}-${mes}-${dia}`
 }
+
+// Una columna DATE llega como día puro o como medianoche UTC. Se muestran
+// sus componentes de calendario, sin convertirla al día del navegador.
+export function formatearFechaCalendario(valor: string | null): string {
+  if (!valor) return '—'
+  const dia = valor.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return '—'
+  const fecha = new Date(`${dia}T00:00:00.000Z`)
+  if (Number.isNaN(fecha.getTime()) || fecha.toISOString().slice(0, 10) !== dia) return '—'
+  return fecha.toLocaleDateString('es-CO', { timeZone: 'UTC' })
+}
