@@ -12,12 +12,15 @@ import {
   type CrearLotePayload,
   type Lote,
 } from '../api/lotes'
+import { listarLineasGeneticas, type LineaGenetica } from '../api/lineas-geneticas'
 import { obtenerMensajeError } from '../model/errorApi'
 
 export function useLotes() {
   const [lotes, setLotes] = useState<Lote[]>([])
   const [galpones, setGalpones] = useState<Galpon[]>([])
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
+  const [lineasGeneticas, setLineasGeneticas] = useState<LineaGenetica[]>([])
+  const [lineasGeneticasError, setLineasGeneticasError] = useState('')
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -38,6 +41,17 @@ export function useLotes() {
     } finally {
       setCargando(false)
     }
+
+    // De apoyo: si falla, la pantalla de lotes sigue funcionando sin el
+    // catálogo, con una advertencia en vez de tumbar toda la carga.
+    void listarLineasGeneticas()
+      .then((lista) => {
+        setLineasGeneticas(lista)
+        setLineasGeneticasError('')
+      })
+      .catch(() =>
+        setLineasGeneticasError('No se pudo cargar el catálogo de líneas genéticas.'),
+      )
   }, [])
 
   useEffect(() => {
@@ -87,6 +101,8 @@ export function useLotes() {
     lotes,
     galpones,
     proveedores,
+    lineasGeneticas,
+    lineasGeneticasError,
     cargando,
     error,
     recargar,

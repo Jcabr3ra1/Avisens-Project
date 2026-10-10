@@ -12,7 +12,7 @@ import {
 import {
   MARCAS_ALIMENTO,
   SEXOS_LOTE,
-} from '../../../common/ganaderia/vocabulario';
+} from '../../../common/avicultura/vocabulario';
 
 export class CreateLoteDto {
   @ApiProperty({
@@ -61,6 +61,17 @@ export class CreateLoteDto {
   @IsIn(SEXOS_LOTE)
   @IsOptional()
   sexo?: string;
+
+  @ApiPropertyOptional({
+    example: 1,
+    description:
+      'ID de la línea genética del lote. null desvincula la línea asignada.',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  linea_genetica_id?: number | null;
 
   @ApiPropertyOptional({
     example: 'italcol',

@@ -81,4 +81,8 @@ describe('etiquetaEstado', () => {
     expect(etiquetaEstado('offline')).toBe('Sin señal')
     expect(etiquetaEstado('sin_umbral')).toBe('Sin umbral')
   })
+
+  it('distingue "no disponible" de "sin señal"', () => {
+    expect(etiquetaEstado('lectura_no_disponible')).toBe('No disponible')
+  })
 })

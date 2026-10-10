@@ -1,0 +1,48 @@
+.guia-page { --guia-verde: #1d7a55; --guia-azul: #315f9b; }
+.guia-selector { display: grid; gap: 1.2rem; }
+.guia-campo { display: grid; gap: .42rem; color: var(--color-texto, #20352a); font-weight: 650; }
+.guia-campo input, .guia-campo select { width: 100%; min-height: 2.7rem; border: 1px solid var(--color-borde, #d8e2dc); border-radius: 5px; background: var(--color-superficie, #fff); color: inherit; padding: .6rem .7rem; font: inherit; }
+.guia-campo small, .guia-plazo > small { min-height: 1.2rem; color: var(--color-texto-suave, #66736c); font-weight: 450; }
+.guia-ficha-lote { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; margin: 0; }
+.guia-ficha-lote div { border-left: 3px solid #b5d5c5; padding: .45rem .7rem; background: #f5faf7; }
+.guia-ficha-lote dt { color: var(--color-texto-suave, #66736c); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+.guia-ficha-lote dd { margin: .25rem 0 0; font-weight: 700; }
+.guia-columnas { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); gap: 1rem; align-items: start; }
+.guia-panel-titulo { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 1.2rem; }
+.guia-panel h2, .guia-columnas h2 { margin: .25rem 0 0; font-size: 1.25rem; }
+.guia-formulario { display: grid; gap: 1rem; }
+.guia-plazo { display: grid; gap: .7rem; border: 0; padding: 0; margin: 0; }
+.guia-plazo legend { padding: 0; margin-bottom: .1rem; color: var(--color-texto, #20352a); font-weight: 650; }
+.guia-segmentado { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; padding: .25rem; background: #eef5f0; border-radius: 6px; }
+.guia-segmentado button { border: 0; border-radius: 4px; background: transparent; color: var(--color-texto-suave, #66736c); padding: .55rem .7rem; cursor: pointer; font: inherit; }
+.guia-segmentado button.activo { background: #fff; color: var(--guia-verde); box-shadow: 0 1px 3px rgb(24 55 38 / 14%); font-weight: 700; }
+.guia-resultado { display: grid; gap: .35rem; padding: 1rem; border-left: 4px solid var(--guia-verde); background: #f2faf5; }
+.guia-resultado strong { font-size: 1.35rem; color: var(--guia-verde); }
+.guia-resultado p { margin: 0; color: var(--color-texto-suave, #53645b); line-height: 1.5; }
+.guia-resultado--justo { border-color: #c7882f; background: #fffaf0; }
+.guia-resultado--justo strong { color: #94641d; }
+.guia-resultado--no_alcanzable, .guia-resultado--plazo_vencido, .guia-resultado--sin_curva, .guia-resultado--fuera_de_rango, .guia-resultado--datos_insuficientes { border-color: #c94f38; background: #fff6f3; }
+.guia-resultado--no_alcanzable strong, .guia-resultado--plazo_vencido strong, .guia-resultado--sin_curva strong, .guia-resultado--fuera_de_rango strong, .guia-resultado--datos_insuficientes strong { color: #a33f2d; }
+.guia-resultado-etiqueta, .guia-eyebrow { color: var(--color-texto-suave, #66736c); font-size: .75rem; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.guia-nota { color: var(--color-texto-suave, #66736c); line-height: 1.45; }
+.guia-error { margin: 0; color: #a33f2d; }
+.guia-cargando { margin: 0; color: var(--color-texto-suave, #66736c); }
+.guia-situacion p { margin: .65rem 0; color: var(--color-texto-suave, #53645b); }
+.guia-situacion strong { color: var(--color-texto, #20352a); }
+.guia-desvio { margin-top: 1rem !important; padding-top: .8rem; border-top: 1px solid var(--color-borde, #d8e2dc); }
+.guia-desvio--bajo strong { color: #a33f2d; }
+.guia-aviso { margin-top: 1rem; padding: .8rem; border-left: 3px solid #c7882f; background: #fffaf0; color: #74531c; line-height: 1.45; }
+.guia-panel { margin-top: 1rem; }
+.guia-recursos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.guia-recursos p { margin: 0; padding: .8rem; background: #f5faf7; color: var(--color-texto-suave, #53645b); }
+.guia-recursos strong { display: block; margin-top: .25rem; color: var(--guia-verde); font-size: 1.15rem; }
+.guia-vacio { text-align: center; }
+.guia-vacio h2 { margin-top: 0; }
+.guia-vacio p { color: var(--color-texto-suave, #66736c); }
+@media (max-width: 800px) {
+  .guia-ficha-lote, .guia-columnas { grid-template-columns: 1fr 1fr; }
+  .guia-columnas { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .guia-ficha-lote, .guia-recursos { grid-template-columns: 1fr; }
+}

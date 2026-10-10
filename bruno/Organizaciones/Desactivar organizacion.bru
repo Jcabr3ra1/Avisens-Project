@@ -12,3 +12,25 @@ delete {
 auth:bearer {
   token: {{token}}
 }
+
+docs {
+  Desactiva la organización, a todos sus usuarios, sus sesiones, sus
+  asignaciones y sus granjas en una sola transacción. Reactivar la organización
+  no reactiva usuarios, granjas ni asignaciones.
+
+  Concurrencia: toma primero las filas de los usuarios de la organización
+  (por id) y después sus sesiones y asignaciones (por id). Si una asignación
+  gana, puede responder 201/200 y quedar revocada justo después; si la
+  desactivación gana, la asignación se rechaza con 400 «No se puede asignar un
+  Operario inactivo».
+
+  Esperas: lock_timeout limita cada intento de adquirir un bloqueo (5 s), no
+  cada sentencia ni la duración total de la operación. Varias esperas seguidas
+  se suman y, si agotan el timeout de 10 s de la transacción, responde 500
+  (P2028, pendiente aparte). Un deadlock tampoco se convierte en 409.
+
+  Si un bloqueo no se obtiene en 5 s responde 409 sin cambiar nada.
+
+  Límites: un usuario creado mientras la organización se desactiva y un login
+  concurrente no están cubiertos por este bloqueo.
+}

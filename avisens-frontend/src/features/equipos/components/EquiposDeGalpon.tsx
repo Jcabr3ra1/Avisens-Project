@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react'
+import { getRol } from '@shared/api'
+import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { Galpon } from '@features/galpones/api/galpones'
 import type { CrearEquipoPayload, Equipo } from '../api/equipos'
@@ -15,6 +17,9 @@ import './EquiposDeGalpon.css'
 
 function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
   const { equipos, cargando, error, crear, actualizar, eliminar } = useEquipos(galpon.id)
+  // Registrar equipos, cambiar su estado o darlos de baja es operación del
+  // galpón: la hace el propietario; el administrador la consulta.
+  const permisos = permisosOperativosDeGalpon(getRol())
   const [form, setForm] = useState<DatosEquipo>(FORMULARIO_EQUIPO_INICIAL)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -111,6 +116,7 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
         <div className="eq-alert eq-alert--error" role="alert">{errorAccion}</div>
       )}
 
+      {permisos.configurar && (
       <form className="eq-card eq-form" onSubmit={handleCrear}>
         <h2 className="eq-form-titulo">Registrar equipo</h2>
         <div className="eq-grid">
@@ -203,6 +209,7 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
           </button>
         </div>
       </form>
+      )}
 
       <div className="eq-card">
         {cargando ? (
@@ -210,7 +217,9 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
         ) : equipos.length === 0 ? (
           <div className="eq-vacio">
             <p className="eq-vacio-titulo">Este galpón no tiene equipos.</p>
-            <p className="eq-vacio-sub">Registra el primero con el formulario de arriba.</p>
+            {permisos.configurar && (
+              <p className="eq-vacio-sub">Registra el primero con el formulario de arriba.</p>
+            )}
           </div>
         ) : (
           <div className="eq-tabla-scroll">
@@ -252,15 +261,19 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
                         )}
                       </td>
                       <td>
-                        <select
-                          className="eq-estado-select"
-                          value={equipo.estado_actual}
-                          onChange={(e) => void handleEstado(equipo, e.target.value)}
-                        >
-                          {ESTADOS_EQUIPO.map((estado) => (
-                            <option key={estado} value={estado}>{estado}</option>
-                          ))}
-                        </select>
+                        {permisos.configurar ? (
+                          <select
+                            className="eq-estado-select"
+                            value={equipo.estado_actual}
+                            onChange={(e) => void handleEstado(equipo, e.target.value)}
+                          >
+                            {ESTADOS_EQUIPO.map((estado) => (
+                              <option key={estado} value={estado}>{estado}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          equipo.estado_actual
+                        )}
                       </td>
                       <td className="eq-acciones">
                         <button
@@ -270,13 +283,15 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
                         >
                           Mantenimientos
                         </button>
-                        <button
-                          type="button"
-                          className="eq-btn eq-btn--sm eq-btn--danger"
-                          onClick={() => void handleEliminar(equipo)}
-                        >
-                          Dar de baja
-                        </button>
+                        {permisos.configurar && (
+                          <button
+                            type="button"
+                            className="eq-btn eq-btn--sm eq-btn--danger"
+                            onClick={() => void handleEliminar(equipo)}
+                          >
+                            Dar de baja
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )

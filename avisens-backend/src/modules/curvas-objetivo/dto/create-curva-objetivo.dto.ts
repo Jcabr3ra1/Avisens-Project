@@ -4,7 +4,7 @@ import {
   ETAPAS_ALIMENTACION,
   MARCAS_ALIMENTO,
   SEXOS_LOTE,
-} from '../../../common/ganaderia/vocabulario';
+} from '../../../common/avicultura/vocabulario';
 
 export class CreateCurvaObjetivoDto {
   @ApiProperty({

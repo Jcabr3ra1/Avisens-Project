@@ -1,7 +1,7 @@
 import type { ComparacionIndicador } from '@features/indicadores/api/indicadores'
 import { IcChevronRight } from '@shared/ui/icons/icons'
 import type { DashboardIndicador, DashboardLote } from '../model/dashboard'
-import { lineaSparkline, textoComparacion, type Fila } from '../model/estadoLote'
+import { comparacionVigente, esDatoVerificado, lineaSparkline, mismaRevision, pesoActualParaSparkline, serieDePesoVerificado, textoComparacion, textoComparacionFcr, textoFechaPesaje, type Fila } from '../model/estadoLote'
 
 type Props = {
   lote: DashboardLote | null
@@ -14,28 +14,45 @@ type Props = {
 
 function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrirBitacora }: Props) {
   const reciente = indicadores[0] ?? null
+  const datosVerificados = reciente !== null && esDatoVerificado(reciente.estadoCalculo)
+  const notaVigente =
+    datosVerificados &&
+    comparacionVigente(comparacion?.fecha_del_dato_usado, reciente?.fecha) &&
+    mismaRevision(comparacion?.revision_calculo, reciente?.revisionCalculo)
+  // Fecha propia de "reciente" (misma peticion que su fcr), no la de
+  // "comparacion" -- son dos llamadas HTTP independientes.
+  const fechaFcr = datosVerificados ? textoFechaPesaje(reciente?.pesajeFechaSnapshot) : undefined
 
   const filas: Fila[] = [
     { etiqueta: 'Edad', valor: diaLote === null ? '—' : `${diaLote} días`, mono: true },
     { etiqueta: 'Aves alojadas', valor: lote ? lote.cantidadInicial.toLocaleString('es-CO') : '—', mono: true },
     {
       etiqueta: 'Mortalidad',
-      valor: reciente?.mortalidadAcumuladaPct === null || reciente === null
+      valor: !datosVerificados || reciente?.mortalidadAcumuladaPct === null
         ? '—'
         : `${reciente.mortalidadAcumuladaPct} %`,
-      alerta: (reciente?.mortalidadAcumuladaPct ?? 0) >= 2,
+      alerta: datosVerificados && (reciente?.mortalidadAcumuladaPct ?? 0) >= 2,
       mono: true,
     },
     {
       etiqueta: 'Peso promedio',
-      valor: reciente?.pesoPromedioG == null ? '—' : `${reciente.pesoPromedioG} g`,
-      nota: textoComparacion(comparacion?.desvio_peso_pct ?? null, comparacion?.peso_objetivo ?? null, 'g'),
+      valor: !datosVerificados || reciente?.pesoPromedioG == null ? '—' : `${reciente.pesoPromedioG} g`,
+      nota: notaVigente
+        ? textoComparacion(comparacion?.desvio_peso_pct ?? null, comparacion?.objetivo?.peso_esperado_g ?? null, 'g')
+        : undefined,
       mono: true,
     },
     {
       etiqueta: 'Conversión',
-      valor: reciente?.fcr == null ? '—' : String(reciente.fcr),
-      nota: textoComparacion(comparacion?.desvio_fcr_pct ?? null, comparacion?.fcr_objetivo ?? null, ''),
+      valor:
+        !datosVerificados || reciente?.fcr == null
+          ? '—'
+          : fechaFcr
+            ? `${reciente.fcr} (${fechaFcr})`
+            : String(reciente.fcr),
+      nota: notaVigente
+        ? textoComparacionFcr(comparacion?.desvio_fcr ?? null, comparacion?.objetivo?.fcr_objetivo ?? null)
+        : undefined,
       mono: true,
     },
     { etiqueta: 'Lote', valor: lote?.codigo ?? '—', mono: true },
@@ -43,10 +60,8 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
 
   // La serie va del indicador más antiguo al más reciente: el sparkline se
   // lee de izquierda a derecha, igual que la gráfica de mediciones.
-  const seriePeso = [...indicadores]
-    .reverse()
-    .map((indicador) => indicador.pesoPromedioG)
-    .filter((peso): peso is number => peso !== null)
+  const seriePeso = serieDePesoVerificado([...indicadores].reverse())
+  const pesoRecienteVerificado = pesoActualParaSparkline(reciente)
 
   return (
     <section className="dash-lote" aria-labelledby="dash-lote-titulo">
@@ -86,11 +101,11 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
             </p>
           )}
 
-          {seriePeso.length > 1 && (
+          {pesoRecienteVerificado !== null && seriePeso.length > 1 && (
             <div className="dash-lote-pie">
               <div className="dash-lote-pie-fila">
                 <span>Peso promedio ({seriePeso.length} registros)</span>
-                <span className="mono">{seriePeso[seriePeso.length - 1]} g</span>
+                <span className="mono">{pesoRecienteVerificado} g</span>
               </div>
               <svg
                 className="dash-lote-spark"

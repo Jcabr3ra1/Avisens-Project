@@ -182,7 +182,9 @@ a.adm-miga:hover {
 .adm-btn--secundario:hover:not(:disabled) {
   border-color: var(--border3);
   background: var(--bg-tint);
-  color: var(--adm-deep);
+  /* --adm-deep lo define .adm-page; este botón también se usa desde
+     PlanDeLote dentro del portal de PantallaHija, fuera de ese ancestro. */
+  color: var(--adm-deep, var(--primary));
 }
 
 /* ─────────────────────────────────────────────────────────────

@@ -1,0 +1,21 @@
+meta {
+  name: [Admin · Propietario · Operario]  Historial paginado de estimaciones de alimento
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/v1/lotes/1/plan/alimento/historial?page=1&limit=20
+  body: none
+  auth: bearer
+  params: true
+}
+
+params:query {
+  page: 1
+  limit: 20
+}
+
+auth:bearer {
+  token: {{token}}
+}
