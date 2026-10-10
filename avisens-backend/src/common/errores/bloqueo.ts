@@ -37,3 +37,12 @@ export function esTimeoutDeBloqueo(error: unknown): boolean {
 
 export const MENSAJE_GALPON_OCUPADO =
   'El galpón está siendo modificado por otra operación; intenta de nuevo';
+
+export const MENSAJE_ASIGNACION_OCUPADA =
+  'Hay otra operación modificando los datos de esta asignación; intenta de nuevo';
+
+export const MENSAJE_USUARIO_OCUPADO =
+  'El usuario está siendo modificado por otra operación; intenta de nuevo';
+
+export const MENSAJE_ORGANIZACION_OCUPADA =
+  'La organización está siendo modificada por otra operación; intenta de nuevo';
