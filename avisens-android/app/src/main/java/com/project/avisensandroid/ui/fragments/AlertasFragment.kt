@@ -1,16 +1,21 @@
 package com.project.avisensandroid.ui.fragments
 
 import android.app.AlertDialog
+import android.app.Dialog
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.Button
+import android.text.InputType
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
@@ -207,7 +212,9 @@ class AlertasFragment : BaseBottomNavFragment() {
         fila.addView(crearBadgeEstadoAlerta(alerta.estado))
         card.addView(fila)
 
-        val titulo = alerta.sensor?.tipo?.takeIf { it.isNotBlank() } ?: alerta.tipo
+        val titulo = alerta.sensor?.tipo?.takeIf { it.isNotBlank() }
+            ?.let { etiquetaTipoAlerta(it) }
+            ?: etiquetaTipoAlerta(alerta.tipo)
         val valor = alerta.valor_detectado?.let { formatearValor(it) }
         card.addView(
             texto(
@@ -296,6 +303,21 @@ class AlertasFragment : BaseBottomNavFragment() {
         return card
     }
 
+    private fun etiquetaTipoAlerta(tipo: String): String {
+        return when (tipo.trim().lowercase(Locale.ROOT)) {
+            "desvio_peso" -> "Desvío de peso"
+            "temperatura_alta" -> "Temperatura alta"
+            "temperatura_baja" -> "Temperatura baja"
+            "humedad_alta" -> "Humedad alta"
+            "humedad_baja" -> "Humedad baja"
+            "co2_alto", "co₂_alto" -> "CO₂ alto"
+            "amoniaco_alto", "amoníaco_alto", "nh3_alto" -> "Amoníaco alto"
+            else -> tipo.replace('_', ' ').replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+            }
+        }
+    }
+
     private fun crearBadgeEstadoAlerta(estado: String): TextView {
         val cerrado = estado == "cerrada"
         val fondo = if (cerrado) "#E2F2E8" else "#FDE8E7"
@@ -312,44 +334,192 @@ class AlertasFragment : BaseBottomNavFragment() {
     }
 
     private fun mostrarDialogCerrar(alerta: AlertaResponse) {
-        val input = EditText(requireContext()).apply {
-            hint = "Describe la acción correctiva"
-            minLines = 2
-            setPadding(dp(12), dp(10), dp(12), dp(10))
+        val context = requireContext()
+        val tarjeta = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(20), dp(20), dp(18))
+            background = roundedBackground(Color.WHITE, Color.parseColor("#D8E7DE"), 20)
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
         }
 
-        AlertDialog.Builder(requireContext())
-            .setTitle("Cerrar alerta")
-            .setMessage("Registra la acción correctiva realizada.")
-            .setView(input)
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Cerrar") { _, _ ->
-                val accion = input.text.toString().trim()
-                if (accion.isEmpty()) {
-                    Toast.makeText(requireContext(), "Ingresa la acción correctiva", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-                ejecutarCerrar(alerta.id, accion)
+        tarjeta.addView(texto("AVISENS · ALERTAS", 10f, "#176747", true))
+        tarjeta.addView(texto("Cerrar alerta", 21f, "#183C2E", true, 5))
+        tarjeta.addView(
+            texto(
+                "Registra la acción correctiva realizada antes de cerrar esta alerta.",
+                13f,
+                "#66756D",
+                false,
+                5
+            )
+        )
+
+
+        tarjeta.addView(texto("Acción correctiva (obligatoria)", 12f, "#183C2E", true, 15))
+        val input = EditText(context).apply {
+            hint = "Ej. Se ajustó la ventilación y se verificó la lectura."
+            inputType = InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                    InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            minLines = 3
+            maxLines = 5
+            gravity = Gravity.TOP or Gravity.START
+            textSize = 14f
+            setTextColor(Color.parseColor("#183C2E"))
+            setHintTextColor(Color.parseColor("#8A9890"))
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = roundedBackground(Color.WHITE, Color.parseColor("#BFD6C7"), 10)
+        }
+        tarjeta.addView(
+            input,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(112)
+            ).apply { topMargin = dp(7) }
+        )
+
+        val filaBotones = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val botonCancelar = MaterialButton(context).apply {
+            text = "Cancelar"
+            isAllCaps = false
+            textSize = 13f
+            setTextColor(Color.parseColor("#176747"))
+            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            setStrokeColor(android.content.res.ColorStateList.valueOf(Color.parseColor("#BFD6C7")))
+            strokeWidth = dp(1)
+            cornerRadius = dp(10)
+            minWidth = 0
+            minHeight = 0
+            insetTop = 0
+            insetBottom = 0
+            layoutParams = LinearLayout.LayoutParams(0, dp(44), 1f)
+        }
+        val botonConfirmar = MaterialButton(context).apply {
+            text = "Confirmar cierre"
+            isAllCaps = false
+            textSize = 13f
+            setTextColor(Color.WHITE)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#176747"))
+            cornerRadius = dp(10)
+            minWidth = 0
+            minHeight = 0
+            insetTop = 0
+            insetBottom = 0
+            layoutParams = LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                marginStart = dp(8)
             }
-            .show()
+        }
+        filaBotones.addView(botonCancelar)
+        filaBotones.addView(botonConfirmar)
+        tarjeta.addView(
+            filaBotones,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(16) }
+        )
+
+        val dialog = Dialog(context)
+        dialog.setContentView(tarjeta)
+        dialog.setCancelable(true)
+        dialog.setCanceledOnTouchOutside(false)
+        dialog.window?.apply {
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setDimAmount(0.35f)
+        }
+        dialog.show()
+        val dialogWidth = (resources.displayMetrics.widthPixels - dp(32)).coerceAtMost(dp(440))
+        dialog.window?.apply {
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setLayout(dialogWidth, WindowManager.LayoutParams.WRAP_CONTENT)
+        }
+
+        botonCancelar.setOnClickListener { dialog.dismiss() }
+        botonConfirmar.setOnClickListener {
+            val accion = input.text?.toString()?.trim().orEmpty()
+            if (accion.isBlank()) {
+                input.error = "Describe la acción correctiva para continuar"
+                input.requestFocus()
+                return@setOnClickListener
+            }
+            input.error = null
+            ejecutarCerrar(alerta, accion, dialog, botonConfirmar)
+        }
     }
 
-    private fun ejecutarCerrar(alertaId: Int, accion: String) {
+    private fun ejecutarCerrar(
+        alerta: AlertaResponse,
+        accion: String,
+        dialog: Dialog,
+        botonConfirmar: Button
+    ) {
+        botonConfirmar.isEnabled = false
+        botonConfirmar.text = "Cerrando…"
+
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val response = RetrofitClient.api.cerrarAlerta(
-                    alertaId,
+                    alerta.id,
                     CerrarAlertaRequest(accion_correctiva = accion)
                 )
                 if (!response.isSuccessful) {
-                    throw IllegalStateException("Código ${response.code()}")
+                    val detalleServidor = try {
+                        response.errorBody()?.string()?.take(240)
+                    } catch (_: Exception) {
+                        null
+                    }
+                    throw IllegalStateException(
+                        detalleServidor?.takeIf { it.isNotBlank() }
+                            ?: "El servidor respondió HTTP ${response.code()}."
+                    )
                 }
-                Toast.makeText(requireContext(), "Alerta cerrada correctamente", Toast.LENGTH_SHORT).show()
-                cargarAlertas()
+
+                val respuestaActualizada = response.body()
+                if (respuestaActualizada != null &&
+                    !respuestaActualizada.estado.equals("cerrada", ignoreCase = true)
+                ) {
+                    throw IllegalStateException(
+                        "El servidor no confirmó el estado de alerta cerrada."
+                    )
+                }
+
+                val alertaCerrada = respuestaActualizada
+                    ?: alerta.copy(estado = "cerrada", accion_correctiva = accion)
+                alertas = alertas.map { actual ->
+                    if (actual.id == alerta.id) alertaCerrada else actual
+                }
+
+                if (dialog.isShowing) dialog.dismiss()
+                if (_binding != null) {
+                    actualizarResumen()
+                    mostrarLista()
+                }
+                Toast.makeText(
+                    requireContext(),
+                    "Alerta cerrada correctamente y añadida al historial.",
+                    Toast.LENGTH_LONG
+                ).show()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "No se pudo cerrar la alerta: ${e.message}", Toast.LENGTH_LONG).show()
+                if (dialog.isShowing) {
+                    botonConfirmar.isEnabled = true
+                    botonConfirmar.text = "Confirmar cierre"
+                }
+                if (isAdded) {
+                    Toast.makeText(
+                        requireContext(),
+                        "No se pudo cerrar la alerta: ${e.message ?: "error de conexión"}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
     }

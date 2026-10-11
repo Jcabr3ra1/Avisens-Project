@@ -84,12 +84,11 @@
                             android:contentDescription=""
                             android:src="@drawable/bg_ring_track" />
 
-                        <ImageView
+                        <com.project.avisensandroid.ui.views.SensorArcView
                             android:id="@+id/arcTemperatura"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:contentDescription=""
-                            android:src="@drawable/arc_temperatura" />
+                            android:contentDescription="Progreso de temperatura" />
 
                         <!-- Temperatura -->
                         <TextView
@@ -153,10 +152,11 @@
                             android:layout_height="match_parent"
                             android:src="@drawable/bg_ring_track" />
 
-                        <ImageView
+                        <com.project.avisensandroid.ui.views.SensorArcView
+                            android:id="@+id/arcHumedad"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:src="@drawable/arc_humedad" />
+                            android:contentDescription="Progreso de humedad" />
 
                         <TextView
                             android:id="@+id/txtHumedad"
@@ -225,11 +225,11 @@
                             android:contentDescription=""
                             android:src="@drawable/bg_ring_track" />
 
-                        <ImageView
+                        <com.project.avisensandroid.ui.views.SensorArcView
+                            android:id="@+id/arcCo2"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:contentDescription=""
-                            android:src="@drawable/arc_co2" />
+                            android:contentDescription="Progreso de dióxido de carbono" />
 
                         <TextView
                             android:id="@+id/txtCo2"
@@ -292,11 +292,11 @@
                             android:contentDescription=""
                             android:src="@drawable/bg_ring_track" />
 
-                        <ImageView
+                        <com.project.avisensandroid.ui.views.SensorArcView
+                            android:id="@+id/arcAmoniaco"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:contentDescription=""
-                            android:src="@drawable/arc_amoniaco" />
+                            android:contentDescription="Progreso de amoníaco" />
 
                         <TextView
                             android:id="@+id/txtAmoniaco"

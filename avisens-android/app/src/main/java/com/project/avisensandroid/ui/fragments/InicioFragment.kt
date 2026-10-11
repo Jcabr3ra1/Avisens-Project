@@ -31,6 +31,7 @@ import com.project.avisensandroid.model.EventoSanitarioResponse
 import com.project.avisensandroid.model.SensorResponse
 import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.ui.MainActivity
+import com.project.avisensandroid.ui.views.SensorArcView
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -117,7 +118,8 @@ class InicioFragment : BaseBottomNavFragment() {
                     try {
                         val lecturas = cargarUltimasMediciones(galponId)
                         if (_binding != null && galponSeleccionadoId == galponId) {
-                            actualizarSensores(lecturas)
+                            val alertasGalpon = cargarAlertasGalpon(galponId)
+                            actualizarSensores(lecturas, alertasGalpon)
                         }
                     } catch (cancelacion: CancellationException) {
                         throw cancelacion
@@ -583,7 +585,7 @@ class InicioFragment : BaseBottomNavFragment() {
         )
 
         if (esPropietario()) {
-            actualizarSensores(mediciones)
+            actualizarSensores(mediciones, alertas)
         }
     }
 
@@ -647,7 +649,10 @@ class InicioFragment : BaseBottomNavFragment() {
         eventos: List<EventoSanitarioResponse>
     ): Boolean = mortalidadPct == null && epef == null && alertas.isEmpty() && eventos.isEmpty()
 
-    private fun actualizarSensores(mediciones: List<MedicionConSensor>) {
+    private fun actualizarSensores(
+        mediciones: List<MedicionConSensor>,
+        alertas: List<AlertaResponse>
+    ) {
         val sensoresActivos = sensores.count {
             it.galpon.id == galponSeleccionadoId && it.estado.equals("activo", true)
         }
@@ -666,13 +671,25 @@ class InicioFragment : BaseBottomNavFragment() {
             .filter { esTipoAmbiental(it.sensor.tipo, "nh3") }
             .maxByOrNull { parseDate(it.medicion.fecha_hora)?.time ?: 0L }
 
+        // La barra es verde si no existe alerta activa y la lectura es válida;
+        // las alertas del backend cambian el arco a naranja/rojo según criticidad.
+        binding.arcTemperaturaInicio.setArcColor(colorArcoPorEstado(temperatura?.sensor?.id, temperatura?.medicion?.calidad, alertas))
+        binding.arcHumedadInicio.setArcColor(colorArcoPorEstado(humedad?.sensor?.id, humedad?.medicion?.calidad, alertas))
+        binding.arcCo2Inicio.setArcColor(colorArcoPorEstado(co2?.sensor?.id, co2?.medicion?.calidad, alertas))
+        binding.arcAmoniacoInicio.setArcColor(colorArcoPorEstado(amoniaco?.sensor?.id, amoniaco?.medicion?.calidad, alertas))
+        binding.arcTemperaturaInicio.setProgressFraction((temperatura?.medicion?.valor?.toFloat()?.div(50f) ?: 0f).coerceIn(0f, 1f))
+        binding.arcHumedadInicio.setProgressFraction((humedad?.medicion?.valor?.toFloat()?.div(100f) ?: 0f).coerceIn(0f, 1f))
+        binding.arcCo2Inicio.setProgressFraction((co2?.medicion?.valor?.toFloat()?.div(5_000f) ?: 0f).coerceIn(0f, 1f))
+        binding.arcAmoniacoInicio.setProgressFraction((amoniaco?.medicion?.valor?.toFloat()?.div(100f) ?: 0f).coerceIn(0f, 1f))
+
         if (temperatura != null) {
             val valor = temperatura.medicion.valor
             binding.txtTemperaturaInicio.text = "${formatearNumero(valor, 1)}°"
             actualizarEstadoSensor(
                 binding.txtEstadoTemperaturaInicio,
                 temperatura.medicion.calidad,
-                "Normal"
+                "Normal",
+                alertas.firstOrNull { it.sensor_id == temperatura.sensor.id && it.estado.esActiva() }
             )
         } else {
             binding.txtTemperaturaInicio.text = "—"
@@ -684,7 +701,8 @@ class InicioFragment : BaseBottomNavFragment() {
             actualizarEstadoSensor(
                 binding.txtEstadoHumedadInicio,
                 humedad.medicion.calidad,
-                "Normal"
+                "Normal",
+                alertas.firstOrNull { it.sensor_id == humedad.sensor.id && it.estado.esActiva() }
             )
         } else {
             binding.txtHumedadInicio.text = "—"
@@ -694,7 +712,12 @@ class InicioFragment : BaseBottomNavFragment() {
         if (co2 != null) {
             binding.txtCo2Inicio.text = formatearNumero(co2.medicion.valor, 1)
             binding.txtLabelCo2Inicio.text = etiquetaSensor("CO₂", co2.sensor.unidad_medida)
-            actualizarEstadoSensor(binding.txtEstadoCo2Inicio, co2.medicion.calidad, "Normal")
+            actualizarEstadoSensor(
+                binding.txtEstadoCo2Inicio,
+                co2.medicion.calidad,
+                "Normal",
+                alertas.firstOrNull { it.sensor_id == co2.sensor.id && it.estado.esActiva() }
+            )
         } else {
             binding.txtCo2Inicio.text = "—"
             binding.txtLabelCo2Inicio.text = "CO₂"
@@ -704,7 +727,12 @@ class InicioFragment : BaseBottomNavFragment() {
         if (amoniaco != null) {
             binding.txtAmoniacoInicio.text = formatearNumero(amoniaco.medicion.valor, 1)
             binding.txtLabelAmoniacoInicio.text = etiquetaSensor("NH₃", amoniaco.sensor.unidad_medida)
-            actualizarEstadoSensor(binding.txtEstadoAmoniacoInicio, amoniaco.medicion.calidad, "Normal")
+            actualizarEstadoSensor(
+                binding.txtEstadoAmoniacoInicio,
+                amoniaco.medicion.calidad,
+                "Normal",
+                alertas.firstOrNull { it.sensor_id == amoniaco.sensor.id && it.estado.esActiva() }
+            )
         } else {
             binding.txtAmoniacoInicio.text = "—"
             binding.txtLabelAmoniacoInicio.text = "NH₃"
@@ -731,8 +759,40 @@ class InicioFragment : BaseBottomNavFragment() {
         }
     }
 
-    private fun actualizarEstadoSensor(view: TextView, calidad: String?, normal: String) {
-        if (calidad.equals("error", true)) {
+
+    /** Prioriza alertas activas del backend y luego la calidad de lectura. */
+    private fun colorArcoPorEstado(
+        sensorId: Int?,
+        calidad: String?,
+        alertas: List<AlertaResponse>
+    ): Int {
+        val alerta = alertas.firstOrNull { it.sensor_id == sensorId && it.estado.esActiva() }
+        return when {
+            alerta != null && (alerta.criticidad.equals("alta", true) || alerta.criticidad.equals("critica", true)) ->
+                resources.getColor(R.color.gauge_red, null)
+            alerta != null -> resources.getColor(R.color.gauge_orange, null)
+            calidad.equals("ok", true) -> resources.getColor(R.color.gauge_green, null)
+            calidad.equals("sospechosa", true) -> resources.getColor(R.color.gauge_orange, null)
+            calidad.equals("error", true) -> resources.getColor(R.color.gauge_red, null)
+            else -> resources.getColor(R.color.ring_track, null)
+        }
+    }
+
+    private fun actualizarEstadoSensor(
+        view: TextView,
+        calidad: String?,
+        normal: String,
+        alertaActiva: AlertaResponse? = null
+    ) {
+        if (alertaActiva != null && (alertaActiva.criticidad.equals("alta", true) || alertaActiva.criticidad.equals("critica", true))) {
+            view.text = "Alerta crítica"
+            view.setBackgroundResource(R.drawable.bg_badge_red)
+            view.setTextColor(resources.getColor(R.color.badge_red_text, null))
+        } else if (alertaActiva != null) {
+            view.text = "Fuera de rango"
+            view.setBackgroundResource(R.drawable.bg_badge_orange)
+            view.setTextColor(resources.getColor(R.color.orange_badge_text, null))
+        } else if (calidad.equals("error", true)) {
             view.text = "Error"
             view.setBackgroundResource(R.drawable.bg_badge_red)
             view.setTextColor(resources.getColor(R.color.badge_red_text, null))
@@ -740,10 +800,14 @@ class InicioFragment : BaseBottomNavFragment() {
             view.text = "Atención"
             view.setBackgroundResource(R.drawable.bg_badge_orange)
             view.setTextColor(resources.getColor(R.color.orange_badge_text, null))
-        } else {
+        } else if (calidad.equals("ok", true)) {
             view.text = normal
             view.setBackgroundResource(R.drawable.bg_badge_green)
             view.setTextColor(resources.getColor(R.color.badge_green_text, null))
+        } else {
+            view.text = "Sin verificar"
+            view.setBackgroundResource(R.drawable.bg_badge_regular)
+            view.setTextColor(resources.getColor(R.color.text_secondary, null))
         }
     }
 
@@ -768,6 +832,15 @@ class InicioFragment : BaseBottomNavFragment() {
         binding.txtHumedadInicio.text = "—"
         binding.txtCo2Inicio.text = "—"
         binding.txtAmoniacoInicio.text = "—"
+        binding.arcTemperaturaInicio.setProgressFraction(0f)
+        binding.arcHumedadInicio.setProgressFraction(0f)
+        binding.arcCo2Inicio.setProgressFraction(0f)
+        binding.arcAmoniacoInicio.setProgressFraction(0f)
+        val colorNeutral = resources.getColor(R.color.ring_track, null)
+        binding.arcTemperaturaInicio.setArcColor(colorNeutral)
+        binding.arcHumedadInicio.setArcColor(colorNeutral)
+        binding.arcCo2Inicio.setArcColor(colorNeutral)
+        binding.arcAmoniacoInicio.setArcColor(colorNeutral)
         binding.txtLabelCo2Inicio.text = "CO₂"
         binding.txtLabelAmoniacoInicio.text = "NH₃"
         binding.txtEstadoTemperaturaInicio.text = "Sin datos"

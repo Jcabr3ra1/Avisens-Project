@@ -12,10 +12,12 @@ import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.Po02SensoresOpBinding
 import com.project.avisensandroid.model.GalponResponse
+import com.project.avisensandroid.model.AlertaResponse
 import com.project.avisensandroid.model.MedicionResponse
 import com.project.avisensandroid.model.PaginatedResponse
 import com.project.avisensandroid.model.SensorResponse
 import com.project.avisensandroid.ui.MainActivity
+import com.project.avisensandroid.ui.views.SensorArcView
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -42,6 +44,7 @@ class SensoresFragment : BaseBottomNavFragment() {
 
     private var galponesDisponibles: List<GalponResponse> = emptyList()
     private var sensoresActivos: List<SensorResponse> = emptyList()
+    private var alertasActivasGalpon: List<AlertaResponse> = emptyList()
     private var galponSeleccionadoId: Int? = null
     private val mutexLecturas = Mutex()
 
@@ -52,6 +55,7 @@ class SensoresFragment : BaseBottomNavFragment() {
         val variable: Variable,
         val valor: TextView,
         val estado: TextView,
+        val arco: SensorArcView,
         val unidadLabel: TextView? = null
     )
 
@@ -100,12 +104,17 @@ class SensoresFragment : BaseBottomNavFragment() {
         }
     }
 
-    private fun indicadores(): List<Indicador> = listOf(
-        Indicador(Variable.TEMPERATURA, binding.txtTemperatura, binding.txtEstadoTemperatura),
-        Indicador(Variable.HUMEDAD, binding.txtHumedad, binding.txtEstadoHumedad),
-        Indicador(Variable.CO2, binding.txtCo2, binding.txtEstadoCo2, binding.txtLabelCo2),
-        Indicador(Variable.AMONIACO, binding.txtAmoniaco, binding.txtEstadoAmoniaco, binding.txtLabelAmoniaco)
-    )
+    private fun indicadores(): List<Indicador> {
+        // El color se asigna según la calidad de la última lectura,
+        // no según el tipo de variable. Una lectura válida no queda naranja
+        // solo por ser temperatura o CO₂.
+        return listOf(
+            Indicador(Variable.TEMPERATURA, binding.txtTemperatura, binding.txtEstadoTemperatura, binding.arcTemperatura),
+            Indicador(Variable.HUMEDAD, binding.txtHumedad, binding.txtEstadoHumedad, binding.arcHumedad),
+            Indicador(Variable.CO2, binding.txtCo2, binding.txtEstadoCo2, binding.arcCo2, binding.txtLabelCo2),
+            Indicador(Variable.AMONIACO, binding.txtAmoniaco, binding.txtEstadoAmoniaco, binding.arcAmoniaco, binding.txtLabelAmoniaco)
+        )
+    }
 
     private suspend fun cargarCatalogos() {
         val galpones = cargarTodasLasPaginas { pagina ->
@@ -156,6 +165,7 @@ class SensoresFragment : BaseBottomNavFragment() {
 
         if (seleccionado == null) {
             galponSeleccionadoId = null
+            alertasActivasGalpon = emptyList()
             binding.txtResumenSensores.text = "Selecciona un galpón desde Inicio"
             reiniciarIndicadores()
             actualizarEntradasConfiguradas(emptyList())
@@ -185,6 +195,8 @@ class SensoresFragment : BaseBottomNavFragment() {
         if (_binding == null) return
         indicadores().forEach { indicador ->
             indicador.valor.text = "—"
+            indicador.arco.setProgressFraction(0f)
+            indicador.arco.setArcColor(colorDe(R.color.ring_track))
             mostrarEstado(indicador.estado, "Sin datos", EstadoLectura.SIN_DATOS)
         }
         binding.txtLabelCo2.text = "CO₂"
@@ -276,6 +288,23 @@ class SensoresFragment : BaseBottomNavFragment() {
             }
             if (_binding == null || galponSeleccionadoId != galponId) return@withLock
 
+            alertasActivasGalpon = try {
+                val respuestaAlertas = RetrofitClient.api.listarAlertasDeGalpon(
+                    galponId = galponId,
+                    page = 1,
+                    limit = 100
+                )
+                if (respuestaAlertas.isSuccessful) {
+                    respuestaAlertas.body()?.data.orEmpty().filter {
+                        !it.estado.equals("cerrada", ignoreCase = true)
+                    }
+                } else emptyList()
+            } catch (cancelacion: CancellationException) {
+                throw cancelacion
+            } catch (_: Exception) {
+                emptyList()
+            }
+
             actualizarResumenSensores(sensoresDelGalpon)
             actualizarEntradasConfiguradas(resultados)
             val porVariable = resultados.groupBy { variableDe(it.sensor.tipo) }
@@ -313,27 +342,69 @@ class SensoresFragment : BaseBottomNavFragment() {
 
         if (sensor == null) {
             indicador.valor.text = "—"
+            indicador.arco.setProgressFraction(0f)
+            indicador.arco.setArcColor(colorDe(R.color.ring_track))
             mostrarEstado(indicador.estado, "No configurado", EstadoLectura.SIN_DATOS)
             return
         }
         if (medicion == null) {
             indicador.valor.text = "—"
+            indicador.arco.setProgressFraction(0f)
+            indicador.arco.setArcColor(colorDe(R.color.ring_track))
             mostrarEstado(indicador.estado, "Sin datos", EstadoLectura.SIN_DATOS)
             return
         }
 
+        val alertaActiva = alertasActivasGalpon.firstOrNull {
+            it.sensor_id == sensor.id && !it.estado.equals("cerrada", ignoreCase = true)
+        }
+        indicador.arco.setProgressFraction(
+            (medicion.valor.toFloat() / escalaVisual(indicador.variable)).coerceIn(0f, 1f)
+        )
+        indicador.arco.setArcColor(colorArcoPorEstado(alertaActiva, medicion.calidad))
         val numero = formatearValor(medicion.valor)
         indicador.valor.text = when (indicador.variable) {
             Variable.TEMPERATURA -> "$numero°"
             Variable.HUMEDAD -> "$numero%"
             Variable.CO2, Variable.AMONIACO -> numero
         }
-        when (medicion.calidad?.trim()?.lowercase(Locale.ROOT)) {
-            "ok" -> mostrarEstado(indicador.estado, "Lectura OK", EstadoLectura.NORMAL)
-            "sospechosa" -> mostrarEstado(indicador.estado, "Atención", EstadoLectura.ATENCION)
-            "error" -> mostrarEstado(indicador.estado, "Error", EstadoLectura.ERROR)
-            else -> mostrarEstado(indicador.estado, "Recibida", EstadoLectura.SIN_DATOS)
+        when {
+            alertaActiva != null && (alertaActiva.criticidad.equals("alta", true) ||
+                    alertaActiva.criticidad.equals("critica", true)) ->
+                mostrarEstado(indicador.estado, "Alerta crítica", EstadoLectura.ERROR)
+            alertaActiva != null ->
+                mostrarEstado(indicador.estado, "Fuera de rango", EstadoLectura.ATENCION)
+            medicion.calidad.equals("ok", true) ->
+                mostrarEstado(indicador.estado, "Lectura OK", EstadoLectura.NORMAL)
+            medicion.calidad.equals("sospechosa", true) ->
+                mostrarEstado(indicador.estado, "Atención", EstadoLectura.ATENCION)
+            medicion.calidad.equals("error", true) ->
+                mostrarEstado(indicador.estado, "Error", EstadoLectura.ERROR)
+            else -> mostrarEstado(indicador.estado, "Sin verificar", EstadoLectura.SIN_DATOS)
         }
+    }
+
+    /**
+     * La longitud del arco es una escala visual; el color prioriza alertas activas
+     * del backend. Si no hay alerta, usa la calidad de la lectura. Los umbrales
+     * ambientales numéricos se gestionan en el backend.
+     */
+    private fun colorArcoPorEstado(alerta: AlertaResponse?, calidad: String?): Int = when {
+        alerta != null && (alerta.criticidad.equals("alta", true) ||
+                alerta.criticidad.equals("critica", true)) -> colorDe(R.color.gauge_red)
+        alerta != null -> colorDe(R.color.gauge_orange)
+        calidad.equals("ok", true) -> colorDe(R.color.gauge_green)
+        calidad.equals("sospechosa", true) -> colorDe(R.color.gauge_orange)
+        calidad.equals("error", true) -> colorDe(R.color.gauge_red)
+        else -> colorDe(R.color.ring_track)
+    }
+
+    /** Escalas visuales del arco (no son límites ambientales). */
+    private fun escalaVisual(variable: Variable): Float = when (variable) {
+        Variable.TEMPERATURA -> 50f
+        Variable.HUMEDAD -> 100f
+        Variable.CO2 -> 5_000f
+        Variable.AMONIACO -> 100f
     }
 
     private fun etiquetaConUnidad(nombre: String, unidad: String?): String {
