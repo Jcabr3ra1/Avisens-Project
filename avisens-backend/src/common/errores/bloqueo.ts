@@ -11,14 +11,15 @@
  */
 const CODIGO_LOCK_TIMEOUT = '55P03';
 
-type Causa = { originalCode?: unknown } | null | undefined;
-
-function esCausaDeLockTimeout(causa: Causa): boolean {
-  return causa?.originalCode === CODIGO_LOCK_TIMEOUT;
+export interface CausaDelAdaptador {
+  originalCode?: unknown;
+  originalMessage?: unknown;
 }
 
-export function esTimeoutDeBloqueo(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) return false;
+type Causa = CausaDelAdaptador | null | undefined;
+
+export function causaDelAdaptador(error: unknown): Causa {
+  if (typeof error !== 'object' || error === null) return null;
   const candidato = error as {
     name?: unknown;
     code?: unknown;
@@ -27,12 +28,16 @@ export function esTimeoutDeBloqueo(error: unknown): boolean {
   };
 
   if (candidato.name === 'DriverAdapterError') {
-    return esCausaDeLockTimeout(candidato.cause);
+    return candidato.cause;
   }
   if (candidato.code === 'P2010') {
-    return esCausaDeLockTimeout(candidato.meta?.driverAdapterError?.cause);
+    return candidato.meta?.driverAdapterError?.cause;
   }
-  return false;
+  return null;
+}
+
+export function esTimeoutDeBloqueo(error: unknown): boolean {
+  return causaDelAdaptador(error)?.originalCode === CODIGO_LOCK_TIMEOUT;
 }
 
 export const MENSAJE_GALPON_OCUPADO =
