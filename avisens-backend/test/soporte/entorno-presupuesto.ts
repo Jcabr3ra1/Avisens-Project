@@ -19,33 +19,28 @@ import { PrismaService } from '../../src/prisma/prisma.service';
 import { PrismaExceptionFilter } from '../../src/common/filters/prisma-exception.filter';
 import { HttpExceptionFilter } from '../../src/common/filters/http-exception.filter';
 import { validateEnv } from '../../src/config/env.validation';
+import {
+  conControlesSostenidos,
+  controlPg,
+  ControlRetenido,
+  Etapa,
+  medirConControles,
+  Medicion,
+  OpcionesDeMedicion,
+  Peticion,
+  Programador,
+  sostenerControles,
+} from './controles';
+
+export type {
+  Accion,
+  ControlRetenido,
+  Etapa,
+  Medicion,
+  Respuesta,
+} from './controles';
 
 export const PASSWORD = 'Prueba-e2e-123';
-
-export interface Respuesta {
-  status: number;
-  body: Record<string, unknown>;
-}
-
-export interface Etapa {
-  etiqueta: string;
-  sql: string;
-  parametros: unknown[];
-  liberarMs: number | null;
-}
-
-export interface Accion {
-  enMs: number;
-  ejecutar: (retenidos: Map<string, Client>) => Promise<void>;
-}
-
-export interface Medicion {
-  status: number;
-  body: Record<string, unknown>;
-  ms: number;
-  bloqueadoPor: string[];
-  idleEnTransaccion: number;
-}
 
 export interface Fixture {
   org: number;
@@ -260,106 +255,42 @@ export class Entorno {
     };
   }
 
-  async sostener(etapas: Etapa[]) {
-    const retenidos: { c: Client; pid: number; etiqueta: string }[] = [];
-    for (const etapa of etapas) {
-      const c = new Client({
-        connectionString: this.urlConApp(
-          `e2e-presupuesto-ctl-${etapa.etiqueta}`,
-        ),
-      });
-      c.on('error', () => undefined);
-      await c.connect();
-      const pid = (
-        await c.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')
-      ).rows[0].pid;
-      await c.query('BEGIN');
-      await c.query(etapa.sql, etapa.parametros);
-      retenidos.push({ c, pid, etiqueta: etapa.etiqueta });
-    }
-    return retenidos;
+  private controlPara(etiqueta: string) {
+    return controlPg(this.urlConApp(`e2e-presupuesto-ctl-${etiqueta}`));
   }
 
-  async medir(
+  sostener(etapas: Etapa[]): Promise<ControlRetenido[]> {
+    return sostenerControles(etapas, (etiqueta) => this.controlPara(etiqueta));
+  }
+
+  conControles<T>(
+    etapas: Etapa[],
+    cuerpo: (
+      retenidos: ControlRetenido[],
+      programador: Programador,
+    ) => Promise<T>,
+  ): Promise<T> {
+    return conControlesSostenidos(
+      etapas,
+      (etiqueta) => this.controlPara(etiqueta),
+      cuerpo,
+    );
+  }
+
+  medir(
     aplicacion: string,
     etapas: Etapa[],
-    pedido: () => request.Test,
-    opciones: { asentarMs?: number; acciones?: Accion[] } = {},
+    pedido: () => Peticion,
+    opciones: OpcionesDeMedicion = {},
   ): Promise<Medicion> {
-    const retenidos = await this.sostener(etapas);
-    const etiquetaDePid = new Map(retenidos.map((r) => [r.pid, r.etiqueta]));
-    const vistos = new Set<string>();
-    let parar = false;
-    const sondeo = (async () => {
-      while (!parar) {
-        const r = await this.observador.query<{ bloqueadores: number[] }>(
-          `SELECT pg_blocking_pids(pid) AS bloqueadores
-             FROM pg_stat_activity
-            WHERE application_name = $1 AND wait_event_type = 'Lock'`,
-          [aplicacion],
-        );
-        for (const fila of r.rows)
-          for (const pid of fila.bloqueadores)
-            vistos.add(etiquetaDePid.get(pid) ?? String(pid));
-        await new Promise((resolver) => setTimeout(resolver, 40));
-      }
-    })();
-
-    const temporizadores: NodeJS.Timeout[] = [];
-    const t0 = Date.now();
-    retenidos.forEach((r, i) => {
-      const liberarMs = etapas[i].liberarMs;
-      if (liberarMs !== null) {
-        temporizadores.push(
-          setTimeout(() => {
-            void r.c.query('ROLLBACK').catch(() => undefined);
-          }, liberarMs),
-        );
-      }
-    });
-    const porEtiqueta = new Map(retenidos.map((r) => [r.etiqueta, r.c]));
-    for (const accion of opciones.acciones ?? []) {
-      temporizadores.push(
-        setTimeout(() => {
-          void accion.ejecutar(porEtiqueta).catch(() => undefined);
-        }, accion.enMs),
-      );
-    }
-
-    const respuesta = await new Promise<Respuesta>((resolver) => {
-      pedido().end((error, res) => {
-        resolver(
-          error
-            ? { status: -1, body: { error: String(error) } }
-            : { status: res.status, body: res.body as Record<string, unknown> },
-        );
-      });
-    });
-    const ms = Date.now() - t0;
-    await new Promise((resolver) =>
-      setTimeout(resolver, opciones.asentarMs ?? 500),
+    return medirConControles(
+      this.observador,
+      (etiqueta) => this.controlPara(etiqueta),
+      aplicacion,
+      etapas,
+      pedido,
+      opciones,
     );
-    parar = true;
-    await sondeo;
-    const idle = (
-      await this.observador.query<{ n: number }>(
-        `SELECT count(*)::int AS n FROM pg_stat_activity
-          WHERE application_name = $1 AND state LIKE 'idle in transaction%'`,
-        [aplicacion],
-      )
-    ).rows[0].n;
-    for (const t of temporizadores) clearTimeout(t);
-    for (const r of retenidos) {
-      await r.c.query('ROLLBACK').catch(() => undefined);
-      await r.c.end().catch(() => undefined);
-    }
-    return {
-      status: respuesta.status,
-      body: respuesta.body,
-      ms,
-      bloqueadoPor: [...vistos].sort(),
-      idleEnTransaccion: idle,
-    };
   }
 
   async limpiar() {

@@ -243,84 +243,84 @@ describe('Presupuesto de esperas de las transacciones con bloqueos (e2e)', () =>
   describe('esperas encadenadas dentro de una misma llamada de Prisma (nivel de transacción, sin lecturas previas de la petición)', () => {
     it('con la llamada dividida (escritura + lectura con k = 3) las mismas esperas dan 409 a ~6 s, no a 13 s', async () => {
       const f = await entorno.fixture();
-      const retenidos = await entorno.sostener([
-        {
-          etiqueta: 'A-fila',
-          sql: 'SELECT id FROM usuarios WHERE id = $1 FOR UPDATE',
-          parametros: [f.op],
-          liberarMs: null,
-        },
-        {
-          etiqueta: 'B-roles',
-          sql: 'LOCK TABLE roles IN ACCESS EXCLUSIVE MODE',
-          parametros: [],
-          liberarMs: null,
-        },
-        {
-          etiqueta: 'C-orgs',
-          sql: 'LOCK TABLE organizaciones IN ACCESS EXCLUSIVE MODE',
-          parametros: [],
-          liberarMs: null,
-        },
-      ]);
-      const soltarEn = [4500, 9000, 13000];
-      retenidos.forEach((r, i) => {
-        setTimeout(() => {
-          void r.c.query('ROLLBACK').catch(() => undefined);
-        }, soltarEn[i]);
-      });
-      const t0 = Date.now();
-      try {
-        const error = await transaccionConPresupuesto(
-          prismaDirecto,
-          5000,
-          async (p) => {
-            await p.paso('actualizar', (tx) =>
-              tx.usuario.update({
-                where: { id: f.op },
-                data: { activo: false },
-                select: { id: true },
-              }),
-            );
-            await p.paso(
-              'leer respuesta',
-              (tx) =>
-                tx.usuario.findUniqueOrThrow({
-                  where: { id: f.op },
-                  select: {
-                    id: true,
-                    rol: { select: { id: true } },
-                    organizacion: { select: { id: true } },
-                  },
-                }),
-              3,
-            );
+      await entorno.conControles(
+        [
+          {
+            etiqueta: 'A-fila',
+            sql: 'SELECT id FROM usuarios WHERE id = $1 FOR UPDATE',
+            parametros: [f.op],
+            liberarMs: null,
           },
-        ).then(
-          () => null,
-          (e: unknown) => e,
-        );
+          {
+            etiqueta: 'B-roles',
+            sql: 'LOCK TABLE roles IN ACCESS EXCLUSIVE MODE',
+            parametros: [],
+            liberarMs: null,
+          },
+          {
+            etiqueta: 'C-orgs',
+            sql: 'LOCK TABLE organizaciones IN ACCESS EXCLUSIVE MODE',
+            parametros: [],
+            liberarMs: null,
+          },
+        ],
+        async (retenidos, programador) => {
+          const soltarEn = [4500, 9000, 13000];
+          retenidos.forEach((r, i) => {
+            programador.programar(`liberar ${r.etiqueta}`, soltarEn[i], () =>
+              r.c.query('ROLLBACK'),
+            );
+          });
+          const t0 = Date.now();
+          try {
+            const error = await transaccionConPresupuesto(
+              prismaDirecto,
+              5000,
+              async (p) => {
+                await p.paso('actualizar', (tx) =>
+                  tx.usuario.update({
+                    where: { id: f.op },
+                    data: { activo: false },
+                    select: { id: true },
+                  }),
+                );
+                await p.paso(
+                  'leer respuesta',
+                  (tx) =>
+                    tx.usuario.findUniqueOrThrow({
+                      where: { id: f.op },
+                      select: {
+                        id: true,
+                        rol: { select: { id: true } },
+                        organizacion: { select: { id: true } },
+                      },
+                    }),
+                  3,
+                );
+              },
+            ).then(
+              () => null,
+              (e: unknown) => e,
+            );
 
-        const ms = Date.now() - t0;
-        expect(esEsperaVencida(error)).toBe(true);
-        expect(ms).toBeGreaterThan(5000);
-        expect(ms).toBeLessThan(8300);
-        expect(
-          (
-            await entorno.prisma.usuario.findUniqueOrThrow({
-              where: { id: f.op },
-            })
-          ).activo,
-        ).toBe(true);
-      } finally {
-        await new Promise((resolver) =>
-          setTimeout(resolver, Math.max(0, 13300 - (Date.now() - t0))),
-        );
-        for (const r of retenidos) {
-          await r.c.query('ROLLBACK').catch(() => undefined);
-          await r.c.end().catch(() => undefined);
-        }
-      }
+            const ms = Date.now() - t0;
+            expect(esEsperaVencida(error)).toBe(true);
+            expect(ms).toBeGreaterThan(5000);
+            expect(ms).toBeLessThan(8300);
+            expect(
+              (
+                await entorno.prisma.usuario.findUniqueOrThrow({
+                  where: { id: f.op },
+                })
+              ).activo,
+            ).toBe(true);
+          } finally {
+            await new Promise((resolver) =>
+              setTimeout(resolver, Math.max(0, 13300 - (Date.now() - t0))),
+            );
+          }
+        },
+      );
     });
   });
 
@@ -476,134 +476,135 @@ describe('Presupuesto de esperas de las transacciones con bloqueos (e2e)', () =>
 
     it('P2028 de la transacción vencida (10 s de Prisma) tampoco se traduce', async () => {
       const f = await entorno.fixture();
-      const retenidos = await entorno.sostener([
-        {
-          etiqueta: 'L-larga',
-          sql: 'SELECT id FROM usuarios WHERE id = $1 FOR UPDATE',
-          parametros: [f.op],
-          liberarMs: null,
-        },
-      ]);
-      const soltar = setTimeout(() => {
-        void retenidos[0].c.query('ROLLBACK').catch(() => undefined);
-      }, 11000);
-      try {
-        const error = await prismaDirecto
-          .$transaction(
-            async (tx) => {
-              const p = new PresupuestoTransaccion(
-                tx,
-                20000,
-                undefined,
-                40000,
-                250,
-              );
-              await p.paso(
-                'espera larga',
-                (cliente) =>
-                  cliente.$queryRaw`SELECT id FROM usuarios WHERE id = ${f.op} FOR UPDATE`,
-              );
-              await p.paso(
-                'siguiente',
-                (cliente) => cliente.$queryRaw`SELECT 1`,
-              );
-            },
-            {
-              isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-              timeout: 10000,
-            },
-          )
-          .then(
-            () => null,
-            (e: unknown) => e,
+      await entorno.conControles(
+        [
+          {
+            etiqueta: 'L-larga',
+            sql: 'SELECT id FROM usuarios WHERE id = $1 FOR UPDATE',
+            parametros: [f.op],
+            liberarMs: null,
+          },
+        ],
+        async (retenidos, programador) => {
+          programador.programar('liberar L-larga', 11000, () =>
+            retenidos[0].c.query('ROLLBACK'),
           );
+          {
+            const error = await prismaDirecto
+              .$transaction(
+                async (tx) => {
+                  const p = new PresupuestoTransaccion(
+                    tx,
+                    20000,
+                    undefined,
+                    40000,
+                    250,
+                  );
+                  await p.paso(
+                    'espera larga',
+                    (cliente) =>
+                      cliente.$queryRaw`SELECT id FROM usuarios WHERE id = ${f.op} FOR UPDATE`,
+                  );
+                  await p.paso(
+                    'siguiente',
+                    (cliente) => cliente.$queryRaw`SELECT 1`,
+                  );
+                },
+                {
+                  isolationLevel:
+                    Prisma.TransactionIsolationLevel.ReadCommitted,
+                  timeout: 10000,
+                },
+              )
+              .then(
+                () => null,
+                (e: unknown) => e,
+              );
 
-        expect((error as { code?: string } | null)?.code).toBe('P2028');
-        expect(esEsperaVencida(error)).toBe(false);
-        expect(error).not.toBeInstanceOf(PresupuestoAgotado);
-      } finally {
-        clearTimeout(soltar);
-        await retenidos[0].c.query('ROLLBACK').catch(() => undefined);
-        await retenidos[0].c.end().catch(() => undefined);
-      }
+            expect((error as { code?: string } | null)?.code).toBe('P2028');
+            expect(esEsperaVencida(error)).toBe(false);
+            expect(error).not.toBeInstanceOf(PresupuestoAgotado);
+          }
+        },
+      );
     });
   });
 
   describe('el hueco original: una llamada de Prisma con relaciones son varias sentencias', () => {
     it('la llamada sin dividir supera los 8 s y 10 s de Prisma; el paso siguiente aborta sin enviarse', async () => {
       const f = await entorno.fixture();
-      const retenidos = await entorno.sostener([
-        {
-          etiqueta: 'A-fila',
-          sql: 'SELECT id FROM usuarios WHERE id = $1 FOR UPDATE',
-          parametros: [f.op],
-          liberarMs: null,
-        },
-        {
-          etiqueta: 'B-roles',
-          sql: 'LOCK TABLE roles IN ACCESS EXCLUSIVE MODE',
-          parametros: [],
-          liberarMs: null,
-        },
-        {
-          etiqueta: 'C-orgs',
-          sql: 'LOCK TABLE organizaciones IN ACCESS EXCLUSIVE MODE',
-          parametros: [],
-          liberarMs: null,
-        },
-      ]);
-      const soltarEn = [4500, 9000, 13000];
-      retenidos.forEach((r, i) => {
-        setTimeout(() => {
-          void r.c.query('ROLLBACK').catch(() => undefined);
-        }, soltarEn[i]);
-      });
-      const t0 = Date.now();
-      let siguienteEjecutado = false;
-      try {
-        const error = await transaccionConPresupuesto(
-          prismaDirecto,
-          5000,
-          async (p) => {
-            await p.paso('llamada sin dividir', (tx) =>
-              tx.usuario.update({
-                where: { id: f.op },
-                data: { activo: false },
-                select: {
-                  id: true,
-                  rol: { select: { id: true } },
-                  organizacion: { select: { id: true } },
-                },
-              }),
-            );
-            await p.paso('paso siguiente', (tx) => {
-              siguienteEjecutado = true;
-              return tx.$queryRaw`SELECT 1`;
-            });
+      await entorno.conControles(
+        [
+          {
+            etiqueta: 'A-fila',
+            sql: 'SELECT id FROM usuarios WHERE id = $1 FOR UPDATE',
+            parametros: [f.op],
+            liberarMs: null,
           },
-        ).then(
-          () => null,
-          (e: unknown) => e,
-        );
+          {
+            etiqueta: 'B-roles',
+            sql: 'LOCK TABLE roles IN ACCESS EXCLUSIVE MODE',
+            parametros: [],
+            liberarMs: null,
+          },
+          {
+            etiqueta: 'C-orgs',
+            sql: 'LOCK TABLE organizaciones IN ACCESS EXCLUSIVE MODE',
+            parametros: [],
+            liberarMs: null,
+          },
+        ],
+        async (retenidos, programador) => {
+          const soltarEn = [4500, 9000, 13000];
+          retenidos.forEach((r, i) => {
+            programador.programar(`liberar ${r.etiqueta}`, soltarEn[i], () =>
+              r.c.query('ROLLBACK'),
+            );
+          });
+          const t0 = Date.now();
+          let siguienteEjecutado = false;
+          try {
+            const error = await transaccionConPresupuesto(
+              prismaDirecto,
+              5000,
+              async (p) => {
+                await p.paso('llamada sin dividir', (tx) =>
+                  tx.usuario.update({
+                    where: { id: f.op },
+                    data: { activo: false },
+                    select: {
+                      id: true,
+                      rol: { select: { id: true } },
+                      organizacion: { select: { id: true } },
+                    },
+                  }),
+                );
+                await p.paso('paso siguiente', (tx) => {
+                  siguienteEjecutado = true;
+                  return tx.$queryRaw`SELECT 1`;
+                });
+              },
+            ).then(
+              () => null,
+              (e: unknown) => e,
+            );
 
-        const ms = Date.now() - t0;
-        expect(error).toBeInstanceOf(PresupuestoAgotado);
-        expect(ms).toBeGreaterThan(12000);
-        expect(siguienteEjecutado).toBe(false);
-        expect(
-          (
-            await entorno.prisma.usuario.findUniqueOrThrow({
-              where: { id: f.op },
-            })
-          ).activo,
-        ).toBe(true);
-      } finally {
-        await new Promise((resolver) => setTimeout(resolver, 500));
-        for (const r of retenidos) {
-          await r.c.query('ROLLBACK').catch(() => undefined);
-          await r.c.end().catch(() => undefined);
-        }
-      }
+            const ms = Date.now() - t0;
+            expect(error).toBeInstanceOf(PresupuestoAgotado);
+            expect(ms).toBeGreaterThan(12000);
+            expect(siguienteEjecutado).toBe(false);
+            expect(
+              (
+                await entorno.prisma.usuario.findUniqueOrThrow({
+                  where: { id: f.op },
+                })
+              ).activo,
+            ).toBe(true);
+          } finally {
+            await new Promise((resolver) => setTimeout(resolver, 500));
+          }
+        },
+      );
     });
   });
 });
