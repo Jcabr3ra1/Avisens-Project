@@ -39,18 +39,18 @@ export interface Peticion {
   abort?(): unknown;
 }
 
-export interface Observador {
-  query<R = any>(sql: string, parametros?: unknown[]): Promise<{ rows: R[] }>;
-}
+export type Observador = ClienteControl;
 
 export interface ControlRetenido {
   c: ClienteControl;
   pid: number;
   etiqueta: string;
   conectado: boolean;
+  sinTransaccion?: boolean;
 }
 
 export const LIMITE_PETICION_MS = 13000;
+export const LIMITE_OBSERVADOR_MS = 5000;
 export const LIMITE_LIMPIEZA_MS = 3000;
 export const LIMITE_PREPARACION_MS = 5000;
 
@@ -143,7 +143,7 @@ export async function cerrarControles(
           fallos.push(comoError(error, `${que} de ${control.etiqueta}`));
         }
       };
-      if (control.conectado) {
+      if (control.conectado && !control.sinTransaccion) {
         await intentar('ROLLBACK', () => control.c.query('ROLLBACK'));
       }
       await intentar('cierre', () => control.c.end());
@@ -260,13 +260,19 @@ export class Programador {
   }
 }
 
-function esperarRespuesta(
+export function esperarRespuesta(
   crear: () => Peticion,
   limiteMs: number,
 ): { respuesta: Promise<Respuesta>; abortar: () => void } {
   const peticion = crear();
+  let temporizador: NodeJS.Timeout | undefined;
+  const detenerElTemporizador = () => {
+    if (temporizador !== undefined) clearTimeout(temporizador);
+    temporizador = undefined;
+  };
   let abortada = false;
   const abortar = () => {
+    detenerElTemporizador();
     if (abortada) return;
     abortada = true;
     try {
@@ -276,12 +282,13 @@ function esperarRespuesta(
     }
   };
   const respuesta = new Promise<Respuesta>((resolver, rechazar) => {
-    const t = setTimeout(() => {
+    temporizador = setTimeout(() => {
+      temporizador = undefined;
       abortar();
       rechazar(new PeticionSinRespuesta(limiteMs));
     }, limiteMs);
     peticion.end((error, res) => {
-      clearTimeout(t);
+      detenerElTemporizador();
       resolver(
         error
           ? {
@@ -306,10 +313,11 @@ export interface OpcionesDeMedicion {
   limitePeticionMs?: number;
   limiteLimpiezaMs?: number;
   limitePreparacionMs?: number;
+  limiteObservadorMs?: number;
 }
 
 export async function medirConControles(
-  observador: Observador,
+  fabricaObservador: () => Observador,
   fabrica: (etiqueta: string) => ClienteControl,
   aplicacion: string,
   etapas: Etapa[],
@@ -317,12 +325,24 @@ export async function medirConControles(
   opciones: OpcionesDeMedicion = {},
 ): Promise<Medicion> {
   const limiteLimpiezaMs = opciones.limiteLimpiezaMs ?? LIMITE_LIMPIEZA_MS;
+  const limiteObservadorMs =
+    opciones.limiteObservadorMs ?? LIMITE_OBSERVADOR_MS;
   const retenidos = await sostenerControles(etapas, fabrica, {
     limpiezaMs: limiteLimpiezaMs,
     preparacionMs: opciones.limitePreparacionMs,
   });
   const programador = new Programador();
   const vistos = new Set<string>();
+  let observador: ControlRetenido | null = null;
+  let consultasPendientes = 0;
+  const consultar = <R>(sql: string, parametros: unknown[]) => {
+    consultasPendientes += 1;
+    return Promise.resolve()
+      .then(() => observador!.c.query<R>(sql, parametros))
+      .finally(() => {
+        consultasPendientes -= 1;
+      });
+  };
   let parar = false;
   let avisarFalloDelObservador: (error: Error) => void = () => undefined;
   const falloDelObservador = new Promise<Error>((resolver) => {
@@ -334,11 +354,25 @@ export async function medirConControles(
   let medicion: Medicion | null = null;
 
   try {
+    observador = {
+      c: fabricaObservador(),
+      pid: 0,
+      etiqueta: 'observador',
+      conectado: false,
+      sinTransaccion: true,
+    };
+    const conexion = observador;
+    await conLimite(
+      Promise.resolve().then(() => conexion.c.connect()),
+      opciones.limitePreparacionMs ?? LIMITE_PREPARACION_MS,
+      'la conexión del observador',
+    );
+    conexion.conectado = true;
     const etiquetaDePid = new Map(retenidos.map((r) => [r.pid, r.etiqueta]));
     sondeo = (async () => {
       try {
         while (!parar) {
-          const r = await observador.query<{ bloqueadores: number[] }>(
+          const r = await consultar<{ bloqueadores: number[] }>(
             `SELECT pg_blocking_pids(pid) AS bloqueadores
                FROM pg_stat_activity
               WHERE application_name = $1 AND wait_event_type = 'Lock'`,
@@ -385,17 +419,21 @@ export async function medirConControles(
     const ms = Date.now() - t0;
     await dormir(opciones.asentarMs ?? 500);
     parar = true;
-    await sondeo;
+    await conLimite(sondeo, limiteObservadorMs, 'el cierre del sondeo');
     const caido = await Promise.race([
       falloDelObservador,
       Promise.resolve(null),
     ]);
     if (caido) throw caido;
     const idle = (
-      await observador.query<{ n: number }>(
-        `SELECT count(*)::int AS n FROM pg_stat_activity
-          WHERE application_name = $1 AND state LIKE 'idle in transaction%'`,
-        [aplicacion],
+      await conLimite(
+        consultar<{ n: number }>(
+          `SELECT count(*)::int AS n FROM pg_stat_activity
+            WHERE application_name = $1 AND state LIKE 'idle in transaction%'`,
+          [aplicacion],
+        ),
+        limiteObservadorMs,
+        'la lectura final del observador',
       )
     ).rows[0].n;
     medicion = {
@@ -412,14 +450,31 @@ export async function medirConControles(
   parar = true;
   const erroresProgramados = await programador.cancelar(limiteLimpiezaMs);
   const fallosDeLimpieza: Error[] = [];
+  if (consultasPendientes > 0) {
+    try {
+      observador?.c.destruir?.();
+    } catch (error) {
+      fallosDeLimpieza.push(comoError(error, 'destrucción del observador'));
+    }
+  }
   try {
     await conLimite(sondeo, limiteLimpiezaMs, 'el cierre del observador');
   } catch (error) {
     fallosDeLimpieza.push(comoError(error, 'cierre del observador'));
   }
   fallosDeLimpieza.push(
-    ...(await cerrarControles(retenidos, limiteLimpiezaMs)),
+    ...(await cerrarControles(
+      observador ? [...retenidos, observador] : retenidos,
+      limiteLimpiezaMs,
+    )),
   );
+  if (consultasPendientes > 0) {
+    fallosDeLimpieza.push(
+      new Error(
+        `quedaron ${consultasPendientes} consultas del observador sin resolver`,
+      ),
+    );
+  }
   if (fallo === null && erroresProgramados.length > 0) {
     fallo = { error: erroresProgramados[0] };
   } else {

@@ -2,9 +2,9 @@ import {
   ClienteControl,
   conControlesSostenidos,
   ErrorDeLimpieza,
+  esperarRespuesta,
   Etapa,
   medirConControles,
-  Observador,
   OpcionesDeMedicion,
   Peticion,
   PeticionSinRespuesta,
@@ -14,7 +14,7 @@ import {
 type Fallo = 'falla' | 'cuelga';
 type Punto = 'connect' | 'pid' | 'BEGIN' | 'etapa' | 'ROLLBACK' | 'end';
 
-const ESPERA_MAXIMA_MS = 4000;
+const ESPERA_MAXIMA_MS = 2500;
 
 class ControlFalso implements ClienteControl {
   conectado = false;
@@ -113,17 +113,63 @@ const etapas = (...etiquetas: string[]): Etapa[] =>
     liberarMs: null,
   }));
 
-class ObservadorFalso implements Observador {
+interface ModoDelObservador {
+  caerEnLaLlamada?: number;
+  colgarEnLaLlamada?: number;
+  colgarLecturaFinal?: boolean;
+  fallarLecturaFinal?: boolean;
+}
+
+class ObservadorFalso implements ClienteControl {
   llamadas = 0;
-  constructor(private readonly caerEnLaLlamada: number | null = null) {}
+  cerrado = false;
+  destruido = false;
+  private readonly colgadas: ((error: Error) => void)[] = [];
+
+  constructor(private readonly modo: ModoDelObservador = {}) {}
+
+  get consultasPendientes() {
+    return this.colgadas.length;
+  }
+
+  connect() {
+    return Promise.resolve();
+  }
+
+  end() {
+    this.cerrado = true;
+    return Promise.resolve();
+  }
+
+  destruir() {
+    this.destruido = true;
+    for (const rechazar of this.colgadas.splice(0)) {
+      rechazar(new Error('conexión terminada'));
+    }
+  }
 
   query<R = any>(sql: string) {
     this.llamadas += 1;
-    if (this.caerEnLaLlamada === this.llamadas) {
+    const final = sql.includes('count(*)');
+    if (this.modo.caerEnLaLlamada === this.llamadas) {
       return Promise.reject(new Error('fallo simulado del observador'));
     }
-    const filas = sql.includes('count(*)') ? [{ n: 0 }] : [];
-    return Promise.resolve({ rows: filas as R[] });
+    if (final && this.modo.fallarLecturaFinal) {
+      return Promise.reject(new Error('fallo simulado en la lectura final'));
+    }
+    if (
+      this.modo.colgarEnLaLlamada === this.llamadas ||
+      (final && this.modo.colgarLecturaFinal)
+    ) {
+      return new Promise<{ rows: R[] }>((_resolver, rechazar) => {
+        this.colgadas.push(rechazar);
+      });
+    }
+    return Promise.resolve({ rows: (final ? [{ n: 0 }] : []) as R[] });
+  }
+
+  get abierto() {
+    return !this.cerrado && !this.destruido;
   }
 }
 
@@ -150,6 +196,7 @@ const opciones: OpcionesDeMedicion = {
   limitePeticionMs: 400,
   limiteLimpiezaMs: 150,
   limitePreparacionMs: 150,
+  limiteObservadorMs: 150,
 };
 
 const capturar = async (promesa: Promise<unknown>): Promise<unknown> => {
@@ -161,11 +208,26 @@ const capturar = async (promesa: Promise<unknown>): Promise<unknown> => {
   throw new Error('se esperaba un rechazo y la promesa se resolvió');
 };
 
-const acotada = async <T>(trabajo: () => Promise<T>) => {
+const acotada = async <T>(
+  trabajo: () => Promise<T>,
+  limiteMs = ESPERA_MAXIMA_MS,
+) => {
+  let guardia: NodeJS.Timeout | undefined;
   const inicio = Date.now();
-  const resultado = await trabajo();
-  expect(Date.now() - inicio).toBeLessThan(ESPERA_MAXIMA_MS);
-  return resultado;
+  const vencimiento = new Promise<never>((_resolver, rechazar) => {
+    guardia = setTimeout(
+      () => rechazar(new Error(`el arnés no terminó en ${limiteMs} ms`)),
+      limiteMs,
+    );
+  });
+  const corrida = trabajo();
+  corrida.catch(() => undefined);
+  try {
+    return await Promise.race([corrida, vencimiento]);
+  } finally {
+    clearTimeout(guardia);
+    expect(Date.now() - inicio).toBeLessThan(limiteMs);
+  }
 };
 
 const fallosDeLimpiezaDe = (error: unknown) =>
@@ -265,7 +327,7 @@ describe('arnés de controles: acotado, conserva el fallo y no deja controles ab
 
       const m = await acotada(() =>
         medirConControles(
-          observador,
+          () => observador,
           granja.fabrica,
           'app',
           etapas('A', 'B'),
@@ -290,7 +352,7 @@ describe('arnés de controles: acotado, conserva el fallo y no deja controles ab
       const error = await acotada(() =>
         capturar(
           medirConControles(
-            observador,
+            () => observador,
             granja.fabrica,
             'app',
             etapas('A', 'B'),
@@ -317,7 +379,7 @@ describe('arnés de controles: acotado, conserva el fallo y no deja controles ab
       const error = await acotada(() =>
         capturar(
           medirConControles(
-            observador,
+            () => observador,
             granja.fabrica,
             'app',
             etapas('A', 'B'),
@@ -334,14 +396,14 @@ describe('arnés de controles: acotado, conserva el fallo y no deja controles ab
 
     it('fallo del observador: aborta la petición sin esperar su límite y se limpia', async () => {
       const granja = new Granja();
-      const observador = new ObservadorFalso(2);
+      const observador = new ObservadorFalso({ caerEnLaLlamada: 2 });
       const peticion = new PeticionFalsa('nunca');
       const inicio = Date.now();
 
       const error = await acotada(() =>
         capturar(
           medirConControles(
-            observador,
+            () => observador,
             granja.fabrica,
             'app',
             etapas('A', 'B'),
@@ -361,17 +423,12 @@ describe('arnés de controles: acotado, conserva el fallo y no deja controles ab
 
     it('fallo del observador en la lectura final: no se pierde', async () => {
       const granja = new Granja();
-      const observador = new ObservadorFalso(null);
-      const consultar = observador.query.bind(observador);
-      observador.query = ((sql: string) =>
-        sql.includes('count(*)')
-          ? Promise.reject(new Error('fallo simulado en la lectura final'))
-          : consultar(sql)) as Observador['query'];
+      const observador = new ObservadorFalso({ fallarLecturaFinal: true });
 
       const error = await acotada(() =>
         capturar(
           medirConControles(
-            observador,
+            () => observador,
             granja.fabrica,
             'app',
             etapas('A'),
@@ -384,7 +441,110 @@ describe('arnés de controles: acotado, conserva el fallo y no deja controles ab
       expect((error as Error).message).toBe(
         'fallo simulado en la lectura final',
       );
+      expect(observador.abierto).toBe(false);
       granja.sinControlesAbiertos();
+    });
+
+    it('sondeo que nunca responde aunque la petición ya devolvió 200: se acota, se cancela la consulta y se limpia', async () => {
+      const granja = new Granja();
+      const observador = new ObservadorFalso({ colgarEnLaLlamada: 2 });
+      const peticion = new PeticionFalsa();
+
+      const error = await acotada(() =>
+        capturar(
+          medirConControles(
+            () => observador,
+            granja.fabrica,
+            'app',
+            etapas('A', 'B'),
+            () => peticion,
+            { ...opciones, asentarMs: 100 },
+          ),
+        ),
+      );
+
+      expect((error as Error).message).toContain('el cierre del sondeo');
+      expect(observador.destruido).toBe(true);
+      expect(observador.consultasPendientes).toBe(0);
+      expect(observador.abierto).toBe(false);
+      granja.sinControlesAbiertos();
+    });
+
+    it('lectura final del observador que nunca responde: se acota, se cancela la consulta y se limpia', async () => {
+      const granja = new Granja();
+      const observador = new ObservadorFalso({ colgarLecturaFinal: true });
+
+      const error = await acotada(() =>
+        capturar(
+          medirConControles(
+            () => observador,
+            granja.fabrica,
+            'app',
+            etapas('A', 'B'),
+            () => new PeticionFalsa(),
+            opciones,
+          ),
+        ),
+      );
+
+      expect((error as Error).message).toContain(
+        'la lectura final del observador',
+      );
+      expect(observador.destruido).toBe(true);
+      expect(observador.consultasPendientes).toBe(0);
+      expect(observador.abierto).toBe(false);
+      granja.sinControlesAbiertos();
+    });
+
+    it('fallo del observador: el temporizador del límite de la petición queda cancelado', async () => {
+      const granja = new Granja();
+      const LIMITE_UNICO = 7777;
+      const creados = new Set<unknown>();
+      const cancelados = new Set<unknown>();
+      const crear = globalThis.setTimeout;
+      const cancelar = globalThis.clearTimeout;
+      const espiaCrear = jest
+        .spyOn(globalThis, 'setTimeout')
+        .mockImplementation(((
+          funcion: () => void,
+          ms?: number,
+          ...resto: unknown[]
+        ) => {
+          const asa = (crear as (...args: unknown[]) => unknown)(
+            funcion,
+            ms,
+            ...resto,
+          );
+          if (ms === LIMITE_UNICO) creados.add(asa);
+          return asa;
+        }) as unknown as typeof setTimeout);
+      const espiaCancelar = jest
+        .spyOn(globalThis, 'clearTimeout')
+        .mockImplementation((asa: NodeJS.Timeout) => {
+          cancelados.add(asa);
+          return cancelar(asa);
+        });
+
+      try {
+        await acotada(() =>
+          capturar(
+            medirConControles(
+              () => new ObservadorFalso({ caerEnLaLlamada: 2 }),
+              granja.fabrica,
+              'app',
+              etapas('A'),
+              () => new PeticionFalsa('nunca'),
+              { ...opciones, limitePeticionMs: LIMITE_UNICO },
+            ),
+          ),
+        );
+      } finally {
+        espiaCrear.mockRestore();
+        espiaCancelar.mockRestore();
+      }
+
+      expect(creados.size).toBe(1);
+      for (const asa of creados) expect(cancelados.has(asa)).toBe(true);
     });
 
     it('fallo de una acción programada: se propaga y las pendientes se cancelan', async () => {
@@ -394,7 +554,7 @@ describe('arnés de controles: acotado, conserva el fallo y no deja controles ab
       const error = await acotada(() =>
         capturar(
           medirConControles(
-            new ObservadorFalso(),
+            () => new ObservadorFalso(),
             granja.fabrica,
             'app',
             etapas('A'),
@@ -434,7 +594,7 @@ describe('arnés de controles: acotado, conserva el fallo y no deja controles ab
       const error = await acotada(() =>
         capturar(
           medirConControles(
-            new ObservadorFalso(),
+            () => new ObservadorFalso(),
             granja.fabrica,
             'app',
             etapas('A', 'B'),
@@ -462,7 +622,7 @@ describe('arnés de controles: acotado, conserva el fallo y no deja controles ab
       const error = await acotada(() =>
         capturar(
           medirConControles(
-            new ObservadorFalso(),
+            () => new ObservadorFalso(),
             granja.fabrica,
             'app',
             etapas('A'),
@@ -479,6 +639,52 @@ describe('arnés de controles: acotado, conserva el fallo y no deja controles ab
         expect.stringContaining('cierre de A'),
       ]);
       expect(granja.controles[0].destruido).toBe(true);
+    });
+  });
+
+  describe('esperarRespuesta', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('un aborto anticipado sin callback posterior cancela el temporizador', () => {
+      const peticion = new PeticionFalsa('nunca');
+      const { respuesta, abortar } = esperarRespuesta(() => peticion, 5000);
+      respuesta.catch(() => undefined);
+      expect(jest.getTimerCount()).toBe(1);
+
+      abortar();
+
+      expect(peticion.abortada).toBe(true);
+      expect(jest.getTimerCount()).toBe(0);
+      jest.advanceTimersByTime(10000);
+      expect(peticion.abortada).toBe(true);
+    });
+
+    it('cancela el temporizador aunque abort() lance', () => {
+      const peticion = new PeticionFalsa('nunca');
+      peticion.abort = () => {
+        throw new Error('abort roto');
+      };
+      const { respuesta, abortar } = esperarRespuesta(() => peticion, 5000);
+      respuesta.catch(() => undefined);
+
+      abortar();
+
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('al vencer el límite aborta una sola vez y rechaza', async () => {
+      const peticion = new PeticionFalsa('nunca');
+      const abort = jest.spyOn(peticion, 'abort');
+      const { respuesta, abortar } = esperarRespuesta(() => peticion, 500);
+      const resultado = capturar(respuesta);
+
+      jest.advanceTimersByTime(500);
+      abortar();
+
+      expect(await resultado).toBeInstanceOf(PeticionSinRespuesta);
+      expect(abort).toHaveBeenCalledTimes(1);
+      expect(jest.getTimerCount()).toBe(0);
     });
   });
 

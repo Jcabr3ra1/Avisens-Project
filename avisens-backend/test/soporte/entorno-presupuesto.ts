@@ -284,7 +284,7 @@ export class Entorno {
     opciones: OpcionesDeMedicion = {},
   ): Promise<Medicion> {
     return medirConControles(
-      this.observador,
+      () => controlPg(this.urlConApp('e2e-presupuesto-observador-medicion')),
       (etiqueta) => this.controlPara(etiqueta),
       aplicacion,
       etapas,
