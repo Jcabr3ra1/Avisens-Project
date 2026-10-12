@@ -16,17 +16,21 @@ import { ROLES } from '../../common/auth/roles';
 import { esPropietario } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
 import {
-  esTimeoutDeBloqueo,
   MENSAJE_ASIGNACION_OCUPADA,
   MENSAJE_USUARIO_OCUPADO,
 } from '../../common/errores/bloqueo';
 import {
   eliminarAsignacionesDelUsuario,
   eliminarSesionesDelUsuario,
-  OPCIONES_TRANSACCION_ORDENADA,
   revocarAsignacionesDelUsuario,
   revocarSesionesDelUsuario,
 } from '../../common/bloqueos/revocar-acceso';
+import {
+  esEsperaVencida,
+  TOPE_ESPERA_ASIGNACION_MS,
+  TOPE_ESPERA_ESCRITURA_MS,
+  transaccionConPresupuesto,
+} from '../../common/bloqueos/presupuesto-transaccion';
 
 const USUARIO_SELECT = {
   id: true,
@@ -373,17 +377,27 @@ export class UsuariosService {
     }
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
-        const actualizado = await tx.usuario.update({
-          where: { id },
-          data,
-          select: USUARIO_SELECT,
-        });
-        await revocarSesionesDelUsuario(tx, id);
-        await revocarAsignacionesDelUsuario(tx, id);
-        return actualizado;
-      }, OPCIONES_TRANSACCION_ORDENADA);
+      return await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ESCRITURA_MS,
+        async (p) => {
+          await p.paso('actualizar usuario', (tx) =>
+            tx.usuario.update({ where: { id }, data, select: { id: true } }),
+          );
+          const actualizado = await p.paso(
+            'leer usuario actualizado',
+            (tx) =>
+              tx.usuario.findUniqueOrThrow({
+                where: { id },
+                select: USUARIO_SELECT,
+              }),
+            3,
+          );
+          await revocarSesionesDelUsuario(p, id);
+          await revocarAsignacionesDelUsuario(p, id);
+          return actualizado;
+        },
+      );
     } catch (error) {
       this.traducirTimeoutDeUsuario(error);
       throw error;
@@ -391,7 +405,7 @@ export class UsuariosService {
   }
 
   private traducirTimeoutDeUsuario(error: unknown): void {
-    if (esTimeoutDeBloqueo(error)) {
+    if (esEsperaVencida(error)) {
       throw new ConflictException(MENSAJE_USUARIO_OCUPADO);
     }
   }
@@ -403,46 +417,90 @@ export class UsuariosService {
     solicitante: Solicitante,
   ) {
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SET LOCAL lock_timeout = '3000ms'`;
-        await tx.$queryRaw`SELECT "id" FROM "usuarios" WHERE "id" = ${usuarioId} FOR SHARE`;
-        const operario = await this.obtenerOperarioParaAsignacion(
-          usuarioId,
-          solicitante,
-          true,
-          tx,
-        );
-        await tx.$queryRaw`SELECT "id" FROM "galpones" WHERE "id" = ${galponId} FOR NO KEY UPDATE`;
-        await this.validarGalponParaOperario(
-          galponId,
-          operario.organizacion_id!,
-          solicitante,
-          true,
-          tx,
-        );
+      return await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ASIGNACION_MS,
+        async (p) => {
+          await p.paso(
+            'bloquear usuario',
+            (tx) =>
+              tx.$queryRaw`SELECT "id" FROM "usuarios" WHERE "id" = ${usuarioId} FOR SHARE`,
+          );
+          const operario = await p.paso(
+            'leer operario',
+            (tx) =>
+              this.obtenerOperarioParaAsignacion(
+                usuarioId,
+                solicitante,
+                true,
+                tx,
+              ),
+            2,
+          );
+          await p.paso(
+            'bloquear galpón',
+            (tx) =>
+              tx.$queryRaw`SELECT "id" FROM "galpones" WHERE "id" = ${galponId} FOR NO KEY UPDATE`,
+          );
+          await p.paso(
+            'leer galpón',
+            (tx) =>
+              this.validarGalponParaOperario(
+                galponId,
+                operario.organizacion_id!,
+                solicitante,
+                true,
+                tx,
+              ),
+            2,
+          );
 
-        return tx.usuarioGalpon.upsert({
-          where: {
-            usuario_id_galpon_id: {
-              usuario_id: usuarioId,
-              galpon_id: galponId,
-            },
-          },
-          create: {
-            usuario_id: usuarioId,
-            galpon_id: galponId,
-            rol_asignacion: rolAsignacion,
-          },
-          update: {
-            activa: true,
-            rol_asignacion: rolAsignacion,
-            fecha_asignacion: new Date(),
-          },
-          select: ASIGNACION_SELECT,
-        });
-      }, OPCIONES_TRANSACCION_ORDENADA);
+          const previa = await p.paso('buscar asignación', (tx) =>
+            tx.usuarioGalpon.findUnique({
+              where: {
+                usuario_id_galpon_id: {
+                  usuario_id: usuarioId,
+                  galpon_id: galponId,
+                },
+              },
+              select: { id: true },
+            }),
+          );
+          const fila = previa
+            ? await p.paso('reactivar asignación', (tx) =>
+                tx.usuarioGalpon.update({
+                  where: { id: previa.id },
+                  data: {
+                    activa: true,
+                    rol_asignacion: rolAsignacion,
+                    fecha_asignacion: new Date(),
+                  },
+                  select: { id: true },
+                }),
+              )
+            : await p.paso('crear asignación', (tx) =>
+                tx.usuarioGalpon.create({
+                  data: {
+                    usuario_id: usuarioId,
+                    galpon_id: galponId,
+                    rol_asignacion: rolAsignacion,
+                  },
+                  select: { id: true },
+                }),
+              );
+          return p.paso(
+            'leer asignación',
+            (tx) =>
+              tx.usuarioGalpon.findUniqueOrThrow({
+                where: { id: fila.id },
+                select: ASIGNACION_SELECT,
+              }),
+            3,
+          );
+        },
+      );
     } catch (error) {
-      if (esTimeoutDeBloqueo(error)) {
+      if (esEsperaVencida(error)) {
         throw new ConflictException(MENSAJE_ASIGNACION_OCUPADA);
       }
       throw error;
@@ -518,12 +576,17 @@ export class UsuariosService {
     }
 
     try {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
-        await tx.usuario.update({ where: { id }, data: { activo: false } });
-        await revocarSesionesDelUsuario(tx, id);
-        await revocarAsignacionesDelUsuario(tx, id);
-      }, OPCIONES_TRANSACCION_ORDENADA);
+      await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ESCRITURA_MS,
+        async (p) => {
+          await p.paso('desactivar usuario', (tx) =>
+            tx.usuario.update({ where: { id }, data: { activo: false } }),
+          );
+          await revocarSesionesDelUsuario(p, id);
+          await revocarAsignacionesDelUsuario(p, id);
+        },
+      );
     } catch (error) {
       this.traducirTimeoutDeUsuario(error);
       throw error;
@@ -546,14 +609,25 @@ export class UsuariosService {
     }
 
     try {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
-        await tx.$queryRaw`SELECT "id" FROM "usuarios" WHERE "id" = ${id} FOR UPDATE`;
-        await eliminarSesionesDelUsuario(tx, id);
-        await tx.seguridadCuenta.deleteMany({ where: { usuario_id: id } });
-        await eliminarAsignacionesDelUsuario(tx, id);
-        await tx.usuario.delete({ where: { id } });
-      }, OPCIONES_TRANSACCION_ORDENADA);
+      await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ESCRITURA_MS,
+        async (p) => {
+          await p.paso(
+            'bloquear usuario',
+            (tx) =>
+              tx.$queryRaw`SELECT "id" FROM "usuarios" WHERE "id" = ${id} FOR UPDATE`,
+          );
+          await eliminarSesionesDelUsuario(p, id);
+          await p.paso('eliminar seguridad de cuenta', (tx) =>
+            tx.seguridadCuenta.deleteMany({ where: { usuario_id: id } }),
+          );
+          await eliminarAsignacionesDelUsuario(p, id);
+          await p.paso('eliminar usuario', (tx) =>
+            tx.usuario.delete({ where: { id } }),
+          );
+        },
+      );
     } catch (error) {
       this.traducirTimeoutDeUsuario(error);
       throw error;

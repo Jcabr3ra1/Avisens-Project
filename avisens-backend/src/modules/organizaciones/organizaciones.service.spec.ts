@@ -1,4 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import {
+  clienteDePrueba,
+  secuenciaDeLlamadas,
+} from '../../common/bloqueos/cliente-de-prueba.testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OrganizacionesService } from './organizaciones.service';
 
@@ -18,7 +22,7 @@ describe('OrganizacionesService', () => {
     usuario: { updateMany: jest.fn() },
     granja: { updateMany: jest.fn() },
     $transaction: jest.fn(),
-    $executeRaw: jest.fn(),
+    $configurar: jest.fn(),
     $queryRaw: jest.fn(),
   };
 
@@ -67,8 +71,6 @@ describe('OrganizacionesService', () => {
   });
 
   describe('desactivar', () => {
-    const orden = (mock: jest.Mock, llamada = 0) =>
-      mock.mock.invocationCallOrder[llamada];
     const sql = (llamada: number) =>
       (prisma.$queryRaw.mock.calls[llamada] as [TemplateStringsArray])[0].join(
         '?',
@@ -83,9 +85,9 @@ describe('OrganizacionesService', () => {
     beforeEach(() => {
       prisma.organizacion.findUnique.mockResolvedValue({ id: 4 });
       prisma.$transaction.mockImplementation((operacion: unknown) =>
-        (operacion as (tx: typeof prisma) => unknown)(prisma),
+        (operacion as (tx: typeof prisma) => unknown)(clienteDePrueba(prisma)),
       );
-      prisma.$executeRaw.mockResolvedValue(0);
+      prisma.$configurar.mockResolvedValue([{}]);
       prisma.$queryRaw.mockResolvedValue([{ id: 7 }, { id: 9 }]);
     });
 
@@ -124,33 +126,47 @@ describe('OrganizacionesService', () => {
         isolationLevel: 'ReadCommitted',
         timeout: 10000,
       });
-      expect(
-        String((prisma.$executeRaw.mock.calls[0] as [TemplateStringsArray])[0]),
-      ).toContain("lock_timeout = '5000ms'");
+      expect(prisma.$configurar).toHaveBeenCalledTimes(8);
+      const [, esperaMs] = prisma.$configurar.mock.calls[0] as [
+        TemplateStringsArray,
+        string,
+        string,
+      ];
+      expect(esperaMs).toBe('5000ms');
       expect(sql(0)).toContain('"usuarios"');
       expect(sql(0)).toContain('ORDER BY "id" FOR NO KEY UPDATE');
       expect(sql(1)).toContain('"sesiones"');
       expect(sql(1)).toContain('ORDER BY s."id" FOR UPDATE OF s');
       expect(sql(2)).toContain('"usuarios_galpones"');
       expect(sql(2)).toContain('ORDER BY ug."id" FOR UPDATE OF ug');
-      expect(orden(prisma.$queryRaw, 0)).toBeLessThan(
-        orden(prisma.usuario.updateMany),
-      );
-      expect(orden(prisma.usuario.updateMany)).toBeLessThan(
-        orden(prisma.$queryRaw, 1),
-      );
-      expect(orden(prisma.$queryRaw, 1)).toBeLessThan(
-        orden(prisma.sesion.updateMany),
-      );
-      expect(orden(prisma.sesion.updateMany)).toBeLessThan(
-        orden(prisma.$queryRaw, 2),
-      );
-      expect(orden(prisma.$queryRaw, 2)).toBeLessThan(
-        orden(prisma.usuarioGalpon.updateMany),
-      );
-      expect(orden(prisma.usuarioGalpon.updateMany)).toBeLessThan(
-        orden(prisma.granja.updateMany),
-      );
+      expect(
+        secuenciaDeLlamadas(
+          ['c', prisma.$configurar],
+          ['bloqueo', prisma.$queryRaw],
+          ['usuarios', prisma.usuario.updateMany],
+          ['sesiones', prisma.sesion.updateMany],
+          ['asignaciones', prisma.usuarioGalpon.updateMany],
+          ['granjas', prisma.granja.updateMany],
+          ['organizacion', prisma.organizacion.update],
+        ),
+      ).toEqual([
+        'c',
+        'bloqueo',
+        'c',
+        'usuarios',
+        'c',
+        'bloqueo',
+        'c',
+        'sesiones',
+        'c',
+        'bloqueo',
+        'c',
+        'asignaciones',
+        'c',
+        'granjas',
+        'c',
+        'organizacion',
+      ]);
     });
 
     it('traduce solo 55P03 a 409', async () => {

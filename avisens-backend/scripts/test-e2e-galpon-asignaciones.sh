@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Corre la suite e2e de "galpón: desactivar revoca asignaciones" (F1) contra
 # un Postgres DESECHABLE, exclusivo de esta corrida: levanta un solo
-# contenedor postgres:17-alpine con su propio volumen, aplica las migraciones
+# contenedor postgres (17 por defecto, 16 opcional) con su propio volumen, aplica las migraciones
 # reales (prisma migrate deploy), ejecuta las pruebas y elimina al terminar
 # -- con éxito, con fallo o con INT/TERM -- SOLO lo que esta corrida creó.
 #
@@ -19,6 +19,10 @@
 #                        no, se rechaza sin crear ni borrar nada)
 #   AVISENS_E2E_TOKEN    token de propiedad (32 hex); por defecto, aleatorio
 #   AVISENS_E2E_COMANDO  comando a ejecutar en lugar de jest
+#   AVISENS_E2E_POSTGRES_IMAGEN  imagen de Postgres; solo postgres:16-alpine o
+#                        postgres:17-alpine (por defecto 17, la de CI; 16 es
+#                        la del Dockerfile de la base). Otra se rechaza sin
+#                        crear ni borrar nada.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -30,6 +34,11 @@ fi
 TOKEN="${AVISENS_E2E_TOKEN:-$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')}"
 if ! [[ "$TOKEN" =~ ^[0-9a-f]{32}$ ]]; then
   echo "ERROR: AVISENS_E2E_TOKEN debe tener 32 caracteres hexadecimales. No se crea ni se borra nada." >&2
+  exit 2
+fi
+IMAGEN_POSTGRES="${AVISENS_E2E_POSTGRES_IMAGEN:-postgres:17-alpine}"
+if ! [[ "$IMAGEN_POSTGRES" =~ ^postgres:(16|17)-alpine$ ]]; then
+  echo "ERROR: AVISENS_E2E_POSTGRES_IMAGEN='$IMAGEN_POSTGRES' no es postgres:16-alpine ni postgres:17-alpine. No se crea ni se borra nada." >&2
   exit 2
 fi
 CONTENEDOR="$CORRIDA"
@@ -243,8 +252,8 @@ CONTENEDOR_ID="$(docker run -d --name "$CONTENEDOR" \
   -e POSTGRES_USER=avisens -e POSTGRES_PASSWORD=f1_desechable \
   -e POSTGRES_DB=avisens_test \
   -v "$VOLUMEN":/var/lib/postgresql/data \
-  -p 127.0.0.1::5432 postgres:17-alpine)"
-echo "Recursos creados por esta corrida: contenedor $CONTENEDOR_ID, volumen $VOLUMEN (propio=$VOLUMEN_PROPIO)."
+  -p 127.0.0.1::5432 "$IMAGEN_POSTGRES")"
+echo "Recursos creados por esta corrida: contenedor $CONTENEDOR_ID ($IMAGEN_POSTGRES), volumen $VOLUMEN (propio=$VOLUMEN_PROPIO)."
 
 echo "Esperando a que Postgres esté listo..."
 LISTO=0
