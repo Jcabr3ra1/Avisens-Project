@@ -103,6 +103,11 @@ class InicioFragment : BaseBottomNavFragment() {
             activity.mostrarAsistenteVoz()
         }
 
+        // Acceso a la Guía de peso del lote seleccionado.
+        binding.btnGuiaPeso.setOnClickListener {
+            activity.mostrarGuiaPeso()
+        }
+
         cargarDatosIniciales()
         if (esPropietario()) iniciarActualizacionPeriodicaDeSensores()
     }

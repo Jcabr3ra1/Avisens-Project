@@ -30,6 +30,12 @@ import com.project.avisensandroid.model.AlertaResponse
 import com.project.avisensandroid.model.CerrarAlertaRequest
 import com.project.avisensandroid.model.IndicadorLoteResponse
 import com.project.avisensandroid.model.ComparacionIndicadorResponse
+import com.project.avisensandroid.model.EstimacionAlimentoApiResponse
+import com.project.avisensandroid.model.CurvaGeneticaApiResponse
+import com.project.avisensandroid.model.PlanLoteApiResponse
+import com.project.avisensandroid.model.CrearEstimacionAlimentoRequest
+import com.project.avisensandroid.model.RecalcularPlanLoteRequest
+import com.project.avisensandroid.model.CrearPlanLoteRequest
 import com.project.avisensandroid.model.LoteResponse
 import com.project.avisensandroid.model.RefreshTokenResponse
 import com.project.avisensandroid.model.InterpretarComandoVozRequest
@@ -266,6 +272,50 @@ interface ApiService {
     suspend fun compararIndicadorLote(
         @Path("loteId") loteId: Int
     ): Response<ComparacionIndicadorResponse>
+
+
+    // =========================================================
+    // GUÍA DE PESO: plan del lote, curva genética y estimación de alimento
+    // =========================================================
+
+    @POST("v1/lotes/{id}/plan")
+    suspend fun crearPlanLote(
+        @Path("id") loteId: Int,
+        @Body request: CrearPlanLoteRequest
+    ): Response<PlanLoteApiResponse>
+
+    @GET("v1/lotes/{id}/plan")
+    suspend fun obtenerPlanLote(
+        @Path("id") loteId: Int
+    ): Response<PlanLoteApiResponse>
+
+    @POST("v1/lotes/{id}/plan/recalcular")
+    suspend fun recalcularPlanLote(
+        @Path("id") loteId: Int,
+        @Body request: RecalcularPlanLoteRequest = RecalcularPlanLoteRequest()
+    ): Response<PlanLoteApiResponse>
+
+    @GET("v1/curvas-geneticas")
+    suspend fun listarCurvasGeneticas(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<CurvaGeneticaApiResponse>>
+
+    @GET("v1/curvas-geneticas/{id}")
+    suspend fun obtenerCurvaGenetica(
+        @Path("id") curvaId: Int
+    ): Response<CurvaGeneticaApiResponse>
+
+    @GET("v1/lotes/{id}/plan/alimento")
+    suspend fun obtenerEstimacionAlimento(
+        @Path("id") loteId: Int
+    ): Response<EstimacionAlimentoApiResponse>
+
+    @POST("v1/lotes/{id}/plan/alimento")
+    suspend fun crearEstimacionAlimento(
+        @Path("id") loteId: Int,
+        @Body request: CrearEstimacionAlimentoRequest = CrearEstimacionAlimentoRequest()
+    ): Response<EstimacionAlimentoApiResponse>
 
 
     // =========================================================

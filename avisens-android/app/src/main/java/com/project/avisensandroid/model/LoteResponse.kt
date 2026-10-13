@@ -14,7 +14,8 @@ data class LoteResponse(
     val fecha_salida_real: String?,
     val estado: String,
     val galpon: GalponLoteResponse,
-    val proveedor: ProveedorLoteResponse
+    val proveedor: ProveedorLoteResponse,
+    val linea_genetica: LineaGeneticaLoteResponse? = null
 )
 
 data class GalponLoteResponse(
@@ -31,4 +32,10 @@ data class GranjaLoteResponse(
 data class ProveedorLoteResponse(
     val id: Int,
     val nombre: String
+)
+
+data class LineaGeneticaLoteResponse(
+    val id: Int = 0,
+    val codigo: String = "",
+    val nombre: String = ""
 )

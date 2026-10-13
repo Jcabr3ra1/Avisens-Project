@@ -51,6 +51,7 @@ import com.project.avisensandroid.ui.fragments.BodegaFragment
 import com.project.avisensandroid.ui.fragments.BitacoraEnfermoFragment
 import com.project.avisensandroid.ui.fragments.BitacoraFragment
 import com.project.avisensandroid.ui.fragments.InicioFragment
+import com.project.avisensandroid.ui.fragments.GuiaPesoFragment
 import com.project.avisensandroid.ui.fragments.PropietarioFragment
 import com.project.avisensandroid.ui.fragments.GestionOperariosFragment
 import com.project.avisensandroid.ui.fragments.SensoresFragment
@@ -352,6 +353,20 @@ class MainActivity : AppCompatActivity() {
 
     fun mostrarAsistenteVoz() {
         mostrarFragment(AsistenteVozFragment())
+    }
+
+    /** Abre la Guía de peso y permite regresar a Inicio con el botón Atrás. */
+    fun mostrarGuiaPeso() {
+        if (rolActual != UserRole.OPERARIO && rolActual != UserRole.PROPIETARIO) return
+        val contenedor = if (rolActual == UserRole.PROPIETARIO) {
+            R.id.propietarioFragmentContainer
+        } else {
+            R.id.mainFragmentContainer
+        }
+        supportFragmentManager.beginTransaction()
+            .replace(contenedor, GuiaPesoFragment())
+            .addToBackStack("guia_peso")
+            .commit()
     }
 
     fun navegarDesdeBottomNav(itemId: Int) {
