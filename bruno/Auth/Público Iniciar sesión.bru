@@ -30,3 +30,20 @@ script:post-response {
     bru.setVar("refresh_token", body.refresh_token);
   }
 }
+
+docs {
+  Respuestas: 200 con access_token y refresh_token; 200 con
+  requiere_cambio_password y cambio_password_token (contraseña temporal
+  vigente, sin sesión nueva); 401 «Credenciales inválidas»; 403 «Cuenta
+  bloqueada temporalmente» o «La contraseña temporal venció. Solicita una
+  nueva recuperación.»; 409 «La cuenta está siendo modificada por otra
+  operación; intenta de nuevo».
+
+  Concurrencia: tras verificar la contraseña, el login toma el bloqueo del
+  usuario y revalida usuario, organización y contraseña antes de crear la
+  sesión, con una espera máxima de 3 s. Si una desactivación del usuario o
+  de su organización ya está en curso, el login espera y responde 401 en
+  lugar de crear una sesión. Si la cuenta sigue ocupada pasados los 3 s
+  responde 409 sin cambiar nada; reintenta. Un access token ya emitido no
+  se revoca: sigue vigente hasta que expire (JWT_EXPIRES_IN).
+}

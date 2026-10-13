@@ -2,6 +2,7 @@ import request from 'supertest';
 import { RecuperacionesPasswordService } from '../src/modules/recuperaciones-password/recuperaciones-password.service';
 import { MENSAJE_CUENTA_OCUPADA } from '../src/common/errores/bloqueo';
 import { esperarGrafo } from './soporte/barreras';
+import { ensayarConCompuerta } from './soporte/compuerta-bcrypt';
 import { Entorno, Fixture, PASSWORD } from './soporte/entorno-presupuesto';
 
 jest.setTimeout(60000);
@@ -151,30 +152,16 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
     liberarMs: null,
   });
 
-  const compuertaDeBcrypt = () => {
-    let abrir: () => void = () => undefined;
-    let avisar: () => void = () => undefined;
-    const abierta = new Promise<void>((resolver) => (abrir = resolver));
-    const llego = new Promise<void>((resolver) => (avisar = resolver));
-    let usada = false;
-    const original = bcryptReal.compare.bind(bcryptReal) as (
-      data: string,
-      hash: string,
-    ) => Promise<boolean>;
-    jest.spyOn(bcryptReal, 'compare').mockImplementation((async (
-      data: string,
-      hash: string,
-    ) => {
-      const resultado = await original(data, hash);
-      if (!usada && data === PASSWORD) {
-        usada = true;
-        avisar();
-        await abierta;
-      }
-      return resultado;
-    }) as never);
-    return { llego, liberar: abrir };
-  };
+  const conCompuerta = <A>(
+    iniciar: () => Promise<Res>,
+    durante: () => Promise<A>,
+  ) =>
+    ensayarConCompuerta({
+      modulo: bcryptReal,
+      password: PASSWORD,
+      iniciar,
+      durante,
+    });
 
   const jtiDe = (token: string) =>
     (
@@ -324,13 +311,11 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
       const email = await emailDe(f.op);
       const antes = await seguridad(f.op);
       const totalAntes = (await sesiones(f.op)).length;
-      const compuerta = compuertaDeBcrypt();
 
-      const pendiente = iniciar(urlLogin, email);
-      await compuerta.llego;
-      const desactivacion = await d.ejecutar(f);
-      compuerta.liberar();
-      const login = await pendiente;
+      const { login, accion: desactivacion } = await conCompuerta(
+        () => iniciar(urlLogin, email),
+        () => d.ejecutar(f),
+      );
 
       expect(desactivacion.status).toBe(200);
       expect(login.status).toBe(401);
@@ -358,13 +343,11 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
     it('la cuenta se bloquea entre la fase A y la B: 403, sin sesión nueva y el bloqueo se conserva', async () => {
       const { f, email } = await preparar();
       const totalAntes = (await sesiones(f.op)).length;
-      const compuerta = compuertaDeBcrypt();
 
-      const pendiente = iniciar(urlLogin, email);
-      await compuerta.llego;
-      const fallido = await iniciar(urlFallido, email, 'incorrecta-123');
-      compuerta.liberar();
-      const login = await pendiente;
+      const { login, accion: fallido } = await conCompuerta(
+        () => iniciar(urlLogin, email),
+        () => iniciar(urlFallido, email, 'incorrecta-123'),
+      );
 
       expect(fallido.status).toBe(401);
       expect(login.status).toBe(403);
@@ -437,13 +420,11 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
       const f = await entorno.fixture();
       const email = await emailDe(f.op);
       const s = await solicitud(f.op);
-      const compuerta = compuertaDeBcrypt();
 
-      const pendiente = iniciar(urlLogin, email);
-      await compuerta.llego;
-      await recuperaciones.aprobar(s.id, administrador());
-      compuerta.liberar();
-      const login = await pendiente;
+      const { login } = await conCompuerta(
+        () => iniciar(urlLogin, email),
+        () => recuperaciones.aprobar(s.id, administrador()),
+      );
 
       expect(login.status).toBe(401);
       expect(login.body.message).toBe(CREDENCIALES_INVALIDAS);

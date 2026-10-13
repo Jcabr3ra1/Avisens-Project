@@ -1,3 +1,5 @@
+import { conLimite } from './controles';
+
 export interface Bloqueador {
   pid: number;
   app: string;
@@ -19,7 +21,10 @@ export interface EsperaEsperada {
 
 export interface ConsultadorDeGrafo {
   query<R = any>(sql: string, parametros?: unknown[]): Promise<{ rows: R[] }>;
+  abandonar?(): Promise<void> | void;
 }
+
+export const LIMITE_ABANDONO_MS = 3000;
 
 export const APLICACIONES_DE_PRUEBA = 'e2e-%';
 
@@ -83,17 +88,103 @@ export function discrepanciasDelGrafo(
   return discrepancias;
 }
 
+export class ObservadorSinRespuesta extends Error {
+  constructor(
+    readonly limiteMs: number,
+    readonly detalle: string[],
+  ) {
+    super(
+      `la consulta del observador no respondió dentro de los ${limiteMs} ms del plazo:\n- ${detalle.join('\n- ')}`,
+    );
+    this.name = 'ObservadorSinRespuesta';
+  }
+}
+
+async function consultarAntesDe(
+  observador: ConsultadorDeGrafo,
+  fin: number,
+  limiteMs: number,
+  instantanea: () => string,
+  abandonoMs: number,
+): Promise<NodoDeEspera[]> {
+  const consulta = grafoDeEspera(observador);
+  let temporizador: NodeJS.Timeout | undefined;
+  const plazo = new Promise<null>((resolver) => {
+    temporizador = setTimeout(
+      () => resolver(null),
+      Math.max(1, fin - Date.now()),
+    );
+  });
+  let resultado: NodoDeEspera[] | null;
+  try {
+    resultado = await Promise.race([consulta, plazo]);
+  } finally {
+    clearTimeout(temporizador);
+  }
+  if (resultado !== null) return resultado;
+
+  const detalle = [
+    'la consulta al observador sigue sin respuesta',
+    instantanea(),
+  ];
+  if (!observador.abandonar) {
+    detalle.push(
+      'el observador no ofrece abandonar() y la consulta subyacente queda pendiente',
+    );
+  } else {
+    try {
+      await conLimite(
+        Promise.resolve().then(() => observador.abandonar!()),
+        abandonoMs,
+        'el abandono de la consulta del observador',
+      );
+    } catch (error) {
+      detalle.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  try {
+    await conLimite(
+      consulta.then(
+        () => undefined,
+        () => undefined,
+      ),
+      abandonoMs,
+      'la liberación de la consulta del observador',
+    );
+  } catch (error) {
+    detalle.push(error instanceof Error ? error.message : String(error));
+  }
+  throw new ObservadorSinRespuesta(limiteMs, detalle);
+}
+
 export async function esperarGrafo(
   observador: ConsultadorDeGrafo,
   esperado: EsperaEsperada[],
   limiteMs = 8000,
   intervaloMs = 20,
+  abandonoMs = LIMITE_ABANDONO_MS,
 ): Promise<NodoDeEspera[]> {
   const fin = Date.now() + limiteMs;
   let grafo: NodoDeEspera[] = [];
   let discrepancias: string[] = [];
+  const resumen = () =>
+    JSON.stringify(
+      grafo.map((n) => ({
+        app: n.app,
+        bloqueadoPor: n.bloqueadores.map((b) => b.app),
+        consulta: n.consulta.slice(0, 80),
+      })),
+    );
+  const instantanea = () =>
+    `última observación completa: ${discrepancias.length === 0 ? 'ninguna' : `${discrepancias.join('; ')} | grafo ${resumen()}`}`;
   while (Date.now() < fin) {
-    const actual = await grafoDeEspera(observador);
+    const actual = await consultarAntesDe(
+      observador,
+      fin,
+      limiteMs,
+      instantanea,
+      abandonoMs,
+    );
     const actuales = discrepanciasDelGrafo(actual, esperado);
     if (actuales.length === 0) return actual;
     if (
@@ -103,15 +194,13 @@ export async function esperarGrafo(
       grafo = actual;
       discrepancias = actuales;
     }
-    await new Promise((resolver) => setTimeout(resolver, intervaloMs));
+    const restante = fin - Date.now();
+    if (restante <= 0) break;
+    await new Promise((resolver) =>
+      setTimeout(resolver, Math.min(intervaloMs, restante)),
+    );
   }
   throw new Error(
-    `el grafo de espera no coincidió en ${limiteMs} ms:\n- ${discrepancias.join('\n- ')}\ngrafo observado: ${JSON.stringify(
-      grafo.map((n) => ({
-        app: n.app,
-        bloqueadoPor: n.bloqueadores.map((b) => b.app),
-        consulta: n.consulta.slice(0, 80),
-      })),
-    )}`,
+    `el grafo de espera no coincidió en ${limiteMs} ms:\n- ${discrepancias.join('\n- ')}\ngrafo observado: ${resumen()}`,
   );
 }

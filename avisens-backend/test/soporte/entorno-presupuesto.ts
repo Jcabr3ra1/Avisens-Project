@@ -6,7 +6,6 @@ import {
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
-import { Client } from 'pg';
 import request from 'supertest';
 import { AuthModule } from '../../src/modules/auth/auth.module';
 import { GalponesModule } from '../../src/modules/galpones/galpones.module';
@@ -31,6 +30,7 @@ import {
   Programador,
   sostenerControles,
 } from './controles';
+import { ObservadorRenovable } from './observador';
 
 export type {
   Accion,
@@ -66,7 +66,7 @@ export class Entorno {
     galpones: [] as number[],
   };
   prisma!: PrismaService;
-  observador!: Client;
+  observador!: ObservadorRenovable;
   tokenAdmin = '';
   private rolOperarioId = 0;
   private rolPropietarioId = 0;
@@ -144,9 +144,9 @@ export class Entorno {
   private async iniciar() {
     const datos = await this.crearApp('e2e-presupuesto-datos');
     this.prisma = datos.prisma;
-    this.observador = new Client({
-      connectionString: this.urlConApp('e2e-presupuesto-observador'),
-    });
+    this.observador = new ObservadorRenovable(
+      this.urlConApp('e2e-presupuesto-observador'),
+    );
     await this.observador.connect();
 
     const [rolAdmin, rolPropietario, rolOperario] = await Promise.all(
