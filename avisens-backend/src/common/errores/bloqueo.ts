@@ -51,3 +51,6 @@ export const MENSAJE_USUARIO_OCUPADO =
 
 export const MENSAJE_ORGANIZACION_OCUPADA =
   'La organización está siendo modificada por otra operación; intenta de nuevo';
+
+export const MENSAJE_CUENTA_OCUPADA =
+  'La cuenta está siendo modificada por otra operación; intenta de nuevo';
