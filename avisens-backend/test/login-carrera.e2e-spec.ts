@@ -66,26 +66,51 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
   const emailDe = async (id: number) =>
     (await entorno.prisma.usuario.findUniqueOrThrow({ where: { id } })).email;
 
-  const iniciar = (url: string, email: string, password = PASSWORD) =>
-    request(url)
-      .post('/v1/auth/login')
-      .send({ email, password })
-      .then(
-        (r): Res => ({
-          status: r.status,
-          body: r.body as Record<string, unknown>,
-        }),
+  const enviar = (peticion: request.Test, senal?: AbortSignal) =>
+    new Promise<Res>((resolver, rechazar) => {
+      const abortar = () => {
+        peticion.abort();
+        rechazar(new Error('petición abortada por el ensayo'));
+      };
+      if (senal?.aborted) return abortar();
+      senal?.addEventListener('abort', abortar, { once: true });
+      peticion.then(
+        (r) => {
+          senal?.removeEventListener('abort', abortar);
+          resolver({
+            status: r.status,
+            body: r.body as Record<string, unknown>,
+          });
+        },
+        (error: unknown) => {
+          senal?.removeEventListener('abort', abortar);
+          rechazar(error instanceof Error ? error : new Error(String(error)));
+        },
       );
+    });
 
-  const admin = (metodo: 'patch' | 'delete', ruta: string, cuerpo?: object) =>
-    (cuerpo
-      ? request(urlAdmin)[metodo](ruta).set(entorno.auth()).send(cuerpo)
-      : request(urlAdmin)[metodo](ruta).set(entorno.auth())
-    ).then(
-      (r): Res => ({
-        status: r.status,
-        body: r.body as Record<string, unknown>,
-      }),
+  const iniciar = (
+    url: string,
+    email: string,
+    password = PASSWORD,
+    senal?: AbortSignal,
+  ) =>
+    enviar(
+      request(url).post('/v1/auth/login').send({ email, password }),
+      senal,
+    );
+
+  const admin = (
+    metodo: 'patch' | 'delete',
+    ruta: string,
+    cuerpo?: object,
+    senal?: AbortSignal,
+  ) =>
+    enviar(
+      cuerpo
+        ? request(urlAdmin)[metodo](ruta).set(entorno.auth()).send(cuerpo)
+        : request(urlAdmin)[metodo](ruta).set(entorno.auth()),
+      senal,
     );
 
   const permisos = (token: string) =>
@@ -153,8 +178,8 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
   });
 
   const conCompuerta = <A>(
-    iniciar: () => Promise<Res>,
-    durante: () => Promise<A>,
+    iniciar: (senal: AbortSignal) => Promise<Res>,
+    durante: (senal: AbortSignal) => Promise<A>,
   ) =>
     ensayarConCompuerta({
       modulo: bcryptReal,
@@ -172,7 +197,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
 
   interface Desactivacion {
     nombre: string;
-    ejecutar: (f: Fixture) => Promise<Res>;
+    ejecutar: (f: Fixture, senal?: AbortSignal) => Promise<Res>;
     reactivar?: (f: Fixture) => Promise<void>;
     esperaDelAdmin: RegExp;
   }
@@ -184,20 +209,22 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
   const DESACTIVACIONES: Desactivacion[] = [
     {
       nombre: 'PATCH /usuarios/:id {activo:false}',
-      ejecutar: (f) =>
-        admin('patch', `/v1/usuarios/${f.op}`, { activo: false }),
+      ejecutar: (f, senal) =>
+        admin('patch', `/v1/usuarios/${f.op}`, { activo: false }, senal),
       reactivar: activarUsuario,
       esperaDelAdmin: /^UPDATE "public"."usuarios"/,
     },
     {
       nombre: 'DELETE /usuarios/:id',
-      ejecutar: (f) => admin('delete', `/v1/usuarios/${f.op}`),
+      ejecutar: (f, senal) =>
+        admin('delete', `/v1/usuarios/${f.op}`, undefined, senal),
       reactivar: activarUsuario,
       esperaDelAdmin: /^UPDATE "public"."usuarios"/,
     },
     {
       nombre: 'DELETE /organizaciones/:id',
-      ejecutar: (f) => admin('delete', `/v1/organizaciones/${f.org}`),
+      ejecutar: (f, senal) =>
+        admin('delete', `/v1/organizaciones/${f.org}`, undefined, senal),
       reactivar: async (f) => {
         await admin('patch', `/v1/organizaciones/${f.org}/activar`);
         await activarUsuario(f);
@@ -206,7 +233,8 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
     },
     {
       nombre: 'DELETE /usuarios/:id/permanente',
-      ejecutar: (f) => admin('delete', `/v1/usuarios/${f.op}/permanente`),
+      ejecutar: (f, senal) =>
+        admin('delete', `/v1/usuarios/${f.op}/permanente`, undefined, senal),
       esperaDelAdmin: /FROM "usuarios" WHERE "id" = \$1 FOR UPDATE/,
     },
   ];
@@ -313,8 +341,8 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
       const totalAntes = (await sesiones(f.op)).length;
 
       const { login, accion: desactivacion } = await conCompuerta(
-        () => iniciar(urlLogin, email),
-        () => d.ejecutar(f),
+        (senal) => iniciar(urlLogin, email, PASSWORD, senal),
+        (senal) => d.ejecutar(f, senal),
       );
 
       expect(desactivacion.status).toBe(200);
@@ -345,8 +373,8 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
       const totalAntes = (await sesiones(f.op)).length;
 
       const { login, accion: fallido } = await conCompuerta(
-        () => iniciar(urlLogin, email),
-        () => iniciar(urlFallido, email, 'incorrecta-123'),
+        (senal) => iniciar(urlLogin, email, PASSWORD, senal),
+        (senal) => iniciar(urlFallido, email, 'incorrecta-123', senal),
       );
 
       expect(fallido.status).toBe(401);
@@ -422,7 +450,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
       const s = await solicitud(f.op);
 
       const { login } = await conCompuerta(
-        () => iniciar(urlLogin, email),
+        (senal) => iniciar(urlLogin, email, PASSWORD, senal),
         () => recuperaciones.aprobar(s.id, administrador()),
       );
 

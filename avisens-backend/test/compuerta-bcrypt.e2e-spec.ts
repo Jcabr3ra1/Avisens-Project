@@ -1,3 +1,5 @@
+import { createServer, get, Server } from 'http';
+import type { Socket } from 'net';
 import {
   CompuertaSinLlegada,
   ensayarConCompuerta,
@@ -176,5 +178,130 @@ describe('compuerta de bcrypt: ensayos acotados', () => {
     });
 
     expect(terminadoAntes).toBe(true);
+  });
+
+  it('si iniciar lanza de forma síncrona, el ensayo falla acotado, conserva la causa y restaura bcrypt', async () => {
+    const causa = new Error('fallo al construir la petición');
+
+    const { error, ms } = await resultado(
+      ensayarConCompuerta({
+        modulo,
+        password: PASSWORD,
+        iniciar: () => {
+          throw causa;
+        },
+        durante: () => Promise.resolve(null),
+        limites: { llegadaMs: 5000 },
+      }),
+    );
+
+    expect(error).toBeInstanceOf(CompuertaSinLlegada);
+    expect(error?.message).toMatch(/fallo al construir la petición/);
+    expect(error?.cause).toBe(causa);
+    expect(ms).toBeLessThan(1000);
+    expect(jest.isMockFunction(modulo.compare)).toBe(false);
+  });
+
+  it('si la acción nunca responde, el ensayo vence acotado, abre la compuerta, aborta la acción y restaura bcrypt', async () => {
+    const { iniciar, marca } = loginQueLlama(200);
+    let abortada = false;
+
+    const { error, ms } = await resultado(
+      ensayarConCompuerta({
+        modulo,
+        password: PASSWORD,
+        iniciar,
+        durante: (senal) => {
+          senal.addEventListener('abort', () => (abortada = true));
+          return colgar();
+        },
+        limites: { accionMs: 150 },
+      }),
+    );
+
+    expect(error?.message).toMatch(
+      /la acción durante la compuerta superó el límite de 150 ms/,
+    );
+    expect(ms).toBeLessThan(1500);
+    expect(abortada).toBe(true);
+    expect(marca.terminado).toBe(true);
+    expect(jest.isMockFunction(modulo.compare)).toBe(false);
+  });
+
+  it('si el login no llega ni termina, se aborta su petición', async () => {
+    let abortado = false;
+
+    const { error } = await resultado(
+      ensayarConCompuerta({
+        modulo,
+        password: PASSWORD,
+        iniciar: (senal) => {
+          senal.addEventListener('abort', () => (abortado = true));
+          return colgar();
+        },
+        durante: () => Promise.resolve(null),
+        limites: { llegadaMs: 100, terminoMs: 100 },
+      }),
+    );
+
+    expect(error).toBeInstanceOf(CompuertaSinLlegada);
+    expect(abortado).toBe(true);
+  });
+
+  describe('con una petición HTTP real que nunca responde', () => {
+    let servidor: Server;
+    let url = '';
+    let conexiones: Socket[] = [];
+    let cerradas = 0;
+
+    beforeEach(async () => {
+      conexiones = [];
+      cerradas = 0;
+      servidor = createServer(() => undefined);
+      servidor.on('connection', (socket) => {
+        conexiones.push(socket);
+        socket.on('close', () => (cerradas += 1));
+      });
+      await new Promise<void>((resolver) =>
+        servidor.listen(0, '127.0.0.1', resolver),
+      );
+      const direccion = servidor.address() as { port: number };
+      url = `http://127.0.0.1:${direccion.port}/`;
+    });
+
+    afterEach(async () => {
+      conexiones.forEach((socket) => socket.destroy());
+      await new Promise<void>((resolver) => servidor.close(() => resolver()));
+    });
+
+    const peticionColgada = (senal: AbortSignal) =>
+      new Promise<void>((resolver, rechazar) => {
+        const peticion = get(url, { signal: senal }, () => resolver());
+        peticion.on('error', rechazar);
+      });
+
+    it('el ensayo aborta y cierra la conexión propia en lugar de abandonar la espera', async () => {
+      const { iniciar } = loginQueLlama(200);
+
+      const { error, ms } = await resultado(
+        ensayarConCompuerta({
+          modulo,
+          password: PASSWORD,
+          iniciar,
+          durante: peticionColgada,
+          limites: { accionMs: 200 },
+        }),
+      );
+
+      expect(error?.message).toMatch(/la acción durante la compuerta superó/);
+      expect(ms).toBeLessThan(2000);
+      const limite = Date.now() + 2000;
+      while (cerradas < conexiones.length && Date.now() < limite) {
+        await dormir(20);
+      }
+      expect(conexiones).toHaveLength(1);
+      expect(cerradas).toBe(1);
+      expect(jest.isMockFunction(modulo.compare)).toBe(false);
+    });
   });
 });

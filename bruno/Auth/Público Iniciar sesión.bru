@@ -41,9 +41,11 @@ docs {
 
   Concurrencia: tras verificar la contraseña, el login toma el bloqueo del
   usuario y revalida usuario, organización y contraseña antes de crear la
-  sesión, con una espera máxima de 3 s. Si una desactivación del usuario o
-  de su organización ya está en curso, el login espera y responde 401 en
-  lugar de crear una sesión. Si la cuenta sigue ocupada pasados los 3 s
-  responde 409 sin cambiar nada; reintenta. Un access token ya emitido no
-  se revoca: sigue vigente hasta que expire (JWT_EXPIRES_IN).
+  sesión. Cada intento de adquirir un bloqueo espera como máximo 3 s y está
+  sujeto al presupuesto restante de la operación; no es un máximo para todo
+  el login. Si una desactivación del usuario o de su organización está en
+  curso y termina dentro del plazo, el login responde 401 en lugar de crear
+  una sesión. Si la espera vence, responde 409 sin cambiar nada; reintenta.
+  Un access token ya emitido no se revoca: sigue vigente hasta que expire
+  (JWT_EXPIRES_IN).
 }
