@@ -28,6 +28,9 @@ class InicioFragment : BaseBottomNavFragment() {
         configurarBottomNav(R.id.nav_inicio)
 
         binding.btnPerfil.setOnClickListener { activity.mostrarConfiguracion() }
+        binding.btnAbrirLia.setOnClickListener {
+            activity.mostrarAsistenteVoz()
+        }
     }
 
     private fun configurarSpinner(activity: MainActivity) {
