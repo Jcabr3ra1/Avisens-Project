@@ -9,7 +9,6 @@ function CaptacionPage() {
       <header className="captacion-header">
         <Link to="/" className="captacion-marca" aria-label="Volver al inicio de AVISENS">
           <img src={logoAvisens} alt="" />
-          <span>AVISENS</span>
         </Link>
         <Link to="/login" className="captacion-entrar">Entrar</Link>
       </header>

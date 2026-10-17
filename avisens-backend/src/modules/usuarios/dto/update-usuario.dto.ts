@@ -8,6 +8,7 @@ export class UpdateUsuarioDto extends PartialType(
     'organizacion_nombre',
     'password',
   ] as const),
+  { skipNullProperties: false },
 ) {
   @ApiPropertyOptional({
     example: true,

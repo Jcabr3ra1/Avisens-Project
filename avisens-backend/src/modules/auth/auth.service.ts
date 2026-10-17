@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -12,6 +13,7 @@ import { randomUUID, createHash } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { permisosDelRol } from '../../common/auth/permisos';
+import { normalizarUsername } from '../../common/auth/username';
 import { ROLES } from '../../common/auth/roles';
 import { MENSAJE_CUENTA_OCUPADA } from '../../common/errores/bloqueo';
 import {
@@ -33,6 +35,81 @@ export class AuthService {
 
   obtenerPermisos(rol: string) {
     return { rol, permisos: permisosDelRol(rol) };
+  }
+
+  async perfil(usuarioId: number) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: {
+        id: true,
+        username: true,
+        nombre_completo: true,
+        email: true,
+        telefono: true,
+        fecha_creacion: true,
+        rol: { select: { nombre: true } },
+        organizacion: { select: { id: true, nombre: true } },
+        seguridad_cuenta: {
+          select: {
+            fecha_ultimo_login: true,
+            fecha_ultimo_cambio_password: true,
+          },
+        },
+      },
+    });
+    if (!usuario) throw new UnauthorizedException();
+    const { seguridad_cuenta, rol, ...datos } = usuario;
+    return {
+      ...datos,
+      rol: rol.nombre,
+      fecha_ultimo_login: seguridad_cuenta?.fecha_ultimo_login ?? null,
+      fecha_ultimo_cambio_password:
+        seguridad_cuenta?.fecha_ultimo_cambio_password ?? null,
+    };
+  }
+
+  async cambiarPassword(
+    usuarioId: number,
+    passwordActual: string,
+    nuevaPassword: string,
+  ) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { password_hash: true },
+    });
+    if (!usuario) throw new UnauthorizedException();
+    const actualCorrecta = await bcrypt.compare(
+      passwordActual,
+      usuario.password_hash,
+    );
+    if (!actualCorrecta) {
+      throw new BadRequestException('La contraseña actual no es correcta.');
+    }
+    if (await bcrypt.compare(nuevaPassword, usuario.password_hash)) {
+      throw new BadRequestException(
+        'La nueva contraseña debe ser distinta de la actual.',
+      );
+    }
+    const passwordHash = await bcrypt.hash(nuevaPassword, 12);
+    await this.prisma.$transaction([
+      this.prisma.usuario.update({
+        where: { id: usuarioId },
+        data: { password_hash: passwordHash },
+      }),
+      this.prisma.seguridadCuenta.upsert({
+        where: { usuario_id: usuarioId },
+        create: {
+          usuario_id: usuarioId,
+          fecha_ultimo_cambio_password: new Date(),
+        },
+        update: { fecha_ultimo_cambio_password: new Date() },
+      }),
+      this.prisma.sesion.updateMany({
+        where: { usuario_id: usuarioId, revocada: false },
+        data: { revocada: true },
+      }),
+    ]);
+    return { mensaje: 'Contraseña actualizada. Inicia sesión nuevamente.' };
   }
 
   /**
@@ -69,7 +146,7 @@ export class AuthService {
    */
   async login(dto: LoginDto, ip?: string, userAgent?: string) {
     const usuario = await this.prisma.usuario.findUnique({
-      where: { email: dto.email },
+      where: { username: normalizarUsername(dto.username) },
       include: { rol: true, seguridad_cuenta: true, organizacion: true },
     });
 
@@ -102,6 +179,7 @@ export class AuthService {
             p,
             usuario.id,
             usuario.password_hash,
+            usuario.username,
             ip,
             userAgent,
           ),
@@ -118,6 +196,7 @@ export class AuthService {
     p: PresupuestoTransaccion,
     usuarioId: number,
     hashVerificado: string,
+    usernameVerificado: string,
     ip?: string,
     userAgent?: string,
   ) {
@@ -138,14 +217,15 @@ export class AuthService {
         tx.$queryRaw<
           {
             nombre_completo: string;
-            email: string;
+            username: string;
+            email: string | null;
             activo: boolean;
             password_hash: string;
             organizacion_id: number | null;
             rol: string;
             organizacion_activa: boolean | null;
           }[]
-        >`SELECT u."nombre_completo", u."email", u."activo", u."password_hash", u."organizacion_id", r."nombre" AS "rol", o."activa" AS "organizacion_activa"
+        >`SELECT u."nombre_completo", u."username", u."email", u."activo", u."password_hash", u."organizacion_id", r."nombre" AS "rol", o."activa" AS "organizacion_activa"
             FROM "usuarios" u
             JOIN "roles" r ON r."id" = u."rol_id"
             LEFT JOIN "organizaciones" o ON o."id" = u."organizacion_id"
@@ -155,7 +235,8 @@ export class AuthService {
       !actual ||
       !actual.activo ||
       actual.organizacion_activa === false ||
-      actual.password_hash !== hashVerificado
+      actual.password_hash !== hashVerificado ||
+      actual.username !== usernameVerificado
     ) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
@@ -234,7 +315,7 @@ export class AuthService {
     const sessionId = randomUUID();
     const tokens = await this.generarTokens(
       usuarioId,
-      actual.email,
+      actual.username,
       actual.rol,
       actual.organizacion_id,
       sessionId,
@@ -261,6 +342,7 @@ export class AuthService {
       usuario: {
         id: usuarioId,
         nombre: actual.nombre_completo,
+        username: actual.username,
         email: actual.email,
         rol: actual.rol,
         organizacion_id: actual.organizacion_id,
@@ -299,7 +381,7 @@ export class AuthService {
     // produzcan el mismo token.
     const tokens = await this.generarTokens(
       usuario.id,
-      usuario.email,
+      usuario.username,
       usuario.rol.nombre,
       usuario.organizacion_id,
       sessionId,
@@ -348,14 +430,14 @@ export class AuthService {
 
   private async generarTokens(
     userId: number,
-    email: string,
+    username: string,
     rol: string,
     organizacionId: number | null | undefined,
     sessionId: string,
   ) {
     const payloadBase = {
       sub: userId,
-      email,
+      username,
       rol,
       organizacion_id: organizacionId ?? null,
     };

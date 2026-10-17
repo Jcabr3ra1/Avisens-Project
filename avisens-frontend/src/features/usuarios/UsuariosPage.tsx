@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react'
 import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
 import { crearOrganizacion } from '@features/organizaciones/api/organizaciones'
-import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcPlus } from '@shared/ui/icons/icons'
 import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
 import RecuperacionesDeUsuario from '@features/recuperaciones-password/components/RecuperacionesDeUsuario'
@@ -55,7 +54,8 @@ function UsuariosPage() {
         await actualizar(editandoId, {
           nombre_completo: datos.nombre_completo.trim(),
           cedula: datos.cedula.trim(),
-          email: datos.email.trim(),
+          username: datos.username.trim().toLowerCase(),
+          email: datos.email?.trim().toLowerCase() || null,
           telefono: telefono || '',
           rol_id: datos.rol_id,
         })
@@ -81,7 +81,8 @@ function UsuariosPage() {
         ...datos,
         nombre_completo: datos.nombre_completo.trim(),
         cedula: datos.cedula.trim(),
-        email: datos.email.trim(),
+        username: datos.username.trim().toLowerCase(),
+        email: datos.email?.trim().toLowerCase() || null,
         telefono: telefono || undefined,
         organizacion_id: organizacionId,
         organizacion_nombre: rol?.nombre === 'Propietario' ? nombreOrgNueva : undefined,
@@ -92,11 +93,17 @@ function UsuariosPage() {
 
   const formulario = useFormularioUsuario(guardarUsuario)
 
-  async function abrirCrearUsuario() {
+  async function abrirCrearUsuario(nombreRolPreseleccionado?: 'Administrador' | 'Propietario' | 'Operario') {
     const roles = rolesCatalogo.length > 0
       ? rolesCatalogo
       : await recargarCatalogos()
     if (roles.length === 0) return
+
+    if (nombreRolPreseleccionado) {
+      const encontrado = roles.find((r) => r.nombre === nombreRolPreseleccionado)
+      formulario.abrirCrear(encontrado ? encontrado.id : 0)
+      return
+    }
 
     formulario.abrirCrear(roles.length === 1 ? roles[0].id : 0)
   }
@@ -109,31 +116,43 @@ function UsuariosPage() {
   }
 
   const tituloFormulario = formulario.modoEdicion
-    ? `Editar ${esPropietario ? 'operario' : 'usuario'}`
-    : `Nuevo ${esPropietario ? 'operario' : 'usuario'}`
+    ? `Editar ${esPropietario ? 'operario' : 'persona'}`
+    : `Registrar ${esPropietario ? 'operario' : 'persona'}`
 
   return (
     <div className="page-container usuarios adm-page">
-      <CabeceraAdmin
-        eyebrow={esPropietario ? 'Equipo de trabajo' : 'Administración de acceso'}
-        titulo={esPropietario ? 'Operarios' : 'Usuarios y roles'}
-        subtitulo={esPropietario
-          ? 'Gestiona los operarios de tu organización y sus asignaciones.'
-          : 'Administra las cuentas, roles y recuperaciones de acceso del sistema.'}
-        acciones={(
-          <button
-            type="button"
-            className="adm-btn adm-btn--primario"
-            onClick={() => void abrirCrearUsuario()}
-            disabled={catalogosCargando}
-          >
-            <IcPlus size={17} aria-hidden="true" />
-            {esPropietario ? 'Nuevo operario' : 'Nuevo usuario'}
-          </button>
-        )}
-      />
+      <header className="usuarios-cabecera">
+        <div>
+          <span className="adm-eyebrow">
+            <span className="adm-eyebrow-punto" aria-hidden="true" />
+            {esPropietario ? 'Equipo de trabajo' : 'Plataforma · Control de acceso'}
+          </span>
+          <h1 className="usuarios-titulo">{esPropietario ? 'Operarios' : 'Personas y roles'}</h1>
+          <p className="usuarios-subtitulo">
+            {esPropietario
+              ? 'Gestiona los operarios de tu organización y sus asignaciones a galpón.'
+              : 'Cuentas del sistema por nivel de responsabilidad: administradores, propietarios y operarios.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="usuarios-boton-nuevo"
+          onClick={() => void abrirCrearUsuario(
+            filtro.rolFiltro !== 'todos' ? filtro.rolFiltro : undefined,
+          )}
+          disabled={catalogosCargando}
+        >
+          <IcPlus size={17} aria-hidden="true" />
+          {esPropietario ? 'Nuevo operario' : 'Registrar persona'}
+        </button>
+      </header>
 
-      <ResumenUsuarios resumen={resumen} esPropietario={esPropietario} />
+      <ResumenUsuarios
+        resumen={resumen}
+        esPropietario={esPropietario}
+        rolActivo={filtro.rolFiltro}
+        onSeleccionarRol={filtro.setRolFiltro}
+      />
 
       {(error || catalogosError) && (
         <div className="adm-alerta" role="alert">
@@ -147,13 +166,17 @@ function UsuariosPage() {
         </div>
       )}
 
-      <section className="usuarios-card adm-panel" aria-label="Listado de usuarios">
+      <section className="usuarios-workspace" aria-label="Directorio de personas por rol">
         {!cargando && usuarios.length > 0 && (
           <BarraUsuarios
             busqueda={filtro.busqueda}
             visibles={filtro.visibles.length}
             total={usuarios.length}
+            esPropietario={esPropietario}
+            rolFiltro={filtro.rolFiltro}
+            resumen={resumen}
             onBuscar={filtro.setBusqueda}
+            onCambiarRol={filtro.setRolFiltro}
           />
         )}
         <TablaUsuarios
@@ -161,6 +184,9 @@ function UsuariosPage() {
           visibles={filtro.visibles}
           cargando={cargando}
           busqueda={filtro.busqueda}
+          esPropietario={esPropietario}
+          rolFiltro={filtro.rolFiltro}
+          onCrearPorRol={(nombreRol) => void abrirCrearUsuario(nombreRol)}
           onAlternarActivo={(usuario) => void alternarActivo(usuario)}
           onEditar={formulario.abrirEditar}
           onGestionarAsignaciones={(usuario) => void asignaciones.abrir(usuario)}
@@ -204,7 +230,7 @@ function UsuariosPage() {
       {usuarioRecuperaciones && (
         <PantallaHija
           titulo={`Recuperar acceso · ${usuarioRecuperaciones.nombre_completo}`}
-          subtitulo={usuarioRecuperaciones.email}
+          subtitulo={usuarioRecuperaciones.username}
           onCerrar={() => setUsuarioRecuperaciones(null)}
         >
           <RecuperacionesDeUsuario usuario={usuarioRecuperaciones} />

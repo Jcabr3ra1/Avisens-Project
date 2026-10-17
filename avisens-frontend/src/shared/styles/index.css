@@ -5,36 +5,51 @@
 }
 
 :root {
-  /* Paleta de marca AVISENS. El orden refleja su peso de uso:
-     crema 45 %, verde profundo 25 %, verde 15 %, amarillo 10 %, naranja 5 %. */
-  --avisens-cream: #e9e3ba;
+  /* Identidad AVISENS: bosque, marfil, salvia y maíz.
+     Los neutros dominan la lectura; bosque identifica acciones y navegación;
+     maíz se reserva para pequeños acentos. */
+  --avisens-cream: #f7f6ef;
   --avisens-deep: #005b48;
-  --avisens-green: #47bb4b;
-  --avisens-yellow: #ffdd67;
-  --avisens-orange: #e84200;
+  --avisens-sage: #c6d2bf;
+  --avisens-maize: #e3c565;
+  --avisens-ink: #203b32;
+  --avisens-white: #ffffff;
+  --avisens-green: var(--avisens-deep);
+  --avisens-yellow: var(--avisens-maize);
+  --avisens-orange: var(--danger);
 
   /* Foundations. Los alias cortos se conservan porque los módulos actuales
      todavía los consumen; todos apuntan al mismo sistema semántico. */
-  --surface-page: #f4f7f5;
-  --surface-base: #ffffff;
-  --surface-subtle: #edf3ef;
-  --surface-tinted: #f6faf7;
-  --surface-raised: #ffffff;
-  --surface-hover: #f8fbf9;
+  --surface-page: var(--avisens-cream);
+  --surface-base: var(--avisens-white);
+  --surface-subtle: #e9eee4;
+  --surface-tinted: #f2f4ec;
+  --surface-raised: var(--avisens-white);
+  --surface-hover: #f0f2e9;
 
-  --border-subtle: #e2eae5;
-  --border-default: #cad8d0;
-  --border-strong: #9fb5a9;
+  --border-subtle: #e1e4d8;
+  --border-default: #ccd4c5;
+  --border-strong: #84977f;
 
-  --text-primary: #102019;
-  --text-secondary: #41594d;
-  --text-muted: #5f7469;
-  --text-disabled: #778a80;
+  --text-primary: var(--avisens-ink);
+  --text-secondary: #435c50;
+  --text-muted: #5a6e61;
+  --text-disabled: var(--text-muted);
 
-  --primary: #005b48;
-  --primary-hover: #004b3b;
-  --primary-soft: #e4f1eb;
-  --focus-ring: #0b8066;
+  --primary: var(--avisens-deep);
+  --primary-hover: #004638;
+  --primary-soft: var(--surface-subtle);
+  --on-primary: var(--avisens-white);
+  --on-primary-muted: #dce6d6;
+  --focus-ring: var(--avisens-deep);
+  --accent: var(--avisens-maize);
+  --accent-soft: #fbf4dc;
+  --on-accent: var(--avisens-ink);
+  --selection-bg: color-mix(in srgb, var(--avisens-maize) 45%, transparent);
+  --overlay: color-mix(in srgb, var(--avisens-ink) 54%, transparent);
+  --chart-track: var(--border-subtle);
+  --data-purple: #71598b;
+  --data-purple-soft: #f0ecf4;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -51,9 +66,9 @@
   --radius-xl: 16px;
   --radius-full: 999px;
 
-  --shadow-sm: 0 1px 2px rgba(10, 40, 28, 0.05);
-  --shadow-md: 0 8px 24px rgba(10, 40, 28, 0.07);
-  --shadow-lg: 0 18px 42px rgba(10, 40, 28, 0.11);
+  --shadow-sm: 0 1px 2px color-mix(in srgb, var(--avisens-ink) 5%, transparent);
+  --shadow-md: 0 8px 24px color-mix(in srgb, var(--avisens-ink) 7%, transparent);
+  --shadow-lg: 0 18px 42px color-mix(in srgb, var(--avisens-ink) 11%, transparent);
 
   --motion-fast: 120ms;
   --motion-base: 180ms;
@@ -73,34 +88,43 @@
   --text3: var(--text-muted);
   --text4: var(--text-disabled);
 
-  --success: #10b981;
-  --success2: #34d399;
-  --success3: #059669;
-  --warning: #f59e0b;
-  --warning2: #fbbf24;
-  --warning3: #d97706;
-  --danger: #ef4444;
-  --danger2: #f87171;
-  --danger3: #dc2626;
-  --info: #3b82f6;
-  --info2: #60a5fa;
-  --info3: #2563eb;
+  /* Estados operativos: siempre acompañados por su etiqueta o icono. */
+  --success: #276b4c;
+  --success2: #47835b;
+  --success3: var(--success);
+  --success-soft: var(--surface-subtle);
+  --success-border: #b9cbb4;
+  --warning: #866115;
+  --warning2: #ae8429;
+  --warning3: var(--warning);
+  --warning-soft: var(--accent-soft);
+  --warning-border: #d6bc70;
+  --danger: #b13d3d;
+  --danger2: #c85c50;
+  --danger3: #983434;
+  --danger-soft: #f9ece8;
+  --danger-border: #e6b7af;
+  --info: #326678;
+  --info2: #528296;
+  --info3: var(--info);
+  --info-soft: #eaf1f3;
+  --info-border: #b8cfd6;
 
-  --amber: #f59e0b;
-  --amber2: #fbbf24;
-  --green: #10b981;
-  --green2: #34d399;
-  --green-d: #059669;
-  --green-dd: #047857;
-  --green-l: #34d399;
-  --green-ll: #a7f3d0;
-  --green-glow: rgba(16, 185, 129, 0.25);
-  --red: #ef4444;
-  --blue: #3b82f6;
+  --amber: var(--warning);
+  --amber2: var(--warning2);
+  --green: var(--primary);
+  --green2: var(--success2);
+  --green-d: var(--primary);
+  --green-dd: var(--primary-hover);
+  --green-l: var(--success2);
+  --green-ll: var(--avisens-sage);
+  --green-glow: color-mix(in srgb, var(--primary) 20%, transparent);
+  --red: var(--danger);
+  --blue: var(--info);
 
-  --glow-success: 0 0 20px rgba(16, 185, 129, 0.3);
-  --glow-warning: 0 0 20px rgba(245, 158, 11, 0.3);
-  --glow-danger: 0 0 20px rgba(239, 68, 68, 0.3);
+  --glow-success: 0 0 20px color-mix(in srgb, var(--primary) 30%, transparent);
+  --glow-warning: 0 0 20px color-mix(in srgb, var(--warning) 30%, transparent);
+  --glow-danger: 0 0 20px color-mix(in srgb, var(--danger) 30%, transparent);
 
   /* Nombres en español que nueve features llevaban usando sin que nadie los
      definiera: 97 referencias a variables inexistentes. Una declaración con
@@ -122,9 +146,9 @@
   --sombra-sm: var(--shadow-sm);
   --dash-muted: var(--text-muted);
 
-  --ga: rgba(16, 185, 129, 0.1);
-  --go: rgba(245, 158, 11, 0.1);
-  --gg: rgba(16, 185, 129, 0.12);
+  --ga: color-mix(in srgb, var(--primary) 10%, transparent);
+  --go: color-mix(in srgb, var(--warning) 10%, transparent);
+  --gg: color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 html {
@@ -151,7 +175,7 @@ body {
 }
 
 ::selection {
-  background: rgba(16, 185, 129, 0.25);
+  background: var(--selection-bg);
   color: var(--text);
 }
 
@@ -180,6 +204,8 @@ input,
 select,
 textarea {
   font: inherit;
+  accent-color: var(--primary);
+  caret-color: var(--primary);
 }
 
 @keyframes fadeUp {
@@ -213,8 +239,8 @@ textarea {
 }
 
 @keyframes glow-v {
-  0%, 100% { box-shadow: 0 0 24px rgba(16, 185, 129, 0.25); }
-  50% { box-shadow: 0 0 44px rgba(16, 185, 129, 0.5); }
+  0%, 100% { box-shadow: 0 0 24px color-mix(in srgb, var(--primary) 25%, transparent); }
+  50% { box-shadow: 0 0 44px color-mix(in srgb, var(--primary) 50%, transparent); }
 }
 
 @keyframes slide-x {
@@ -258,18 +284,9 @@ textarea {
   }
 }
 
-.grad-text {
-  background: linear-gradient(135deg, var(--green) 0%, var(--green-d) 60%, var(--green-dd) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
+.grad-text,
 .grad-text-pk {
-  background: linear-gradient(135deg, var(--green) 0%, var(--green-d) 60%, var(--green-dd) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--primary);
 }
 
 .bg-layer {
@@ -350,4 +367,25 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.6rem 0.9rem;
+}
+
+/* Sonner también comparte la paleta, incluidos los avisos fuera del panel. */
+:root [data-sonner-toaster][data-sonner-theme] {
+  --normal-bg: var(--surface-base);
+  --normal-text: var(--text-primary);
+  --normal-border: var(--border-default);
+  --normal-bg-hover: var(--surface-hover);
+  --normal-border-hover: var(--border-strong);
+  --success-bg: var(--success-soft);
+  --success-text: var(--success);
+  --success-border: color-mix(in srgb, var(--success) 30%, var(--surface-base));
+  --info-bg: var(--info-soft);
+  --info-text: var(--info);
+  --info-border: color-mix(in srgb, var(--info) 30%, var(--surface-base));
+  --warning-bg: var(--warning-soft);
+  --warning-text: var(--warning);
+  --warning-border: color-mix(in srgb, var(--warning) 30%, var(--surface-base));
+  --error-bg: var(--danger-soft);
+  --error-text: var(--danger3);
+  --error-border: var(--danger-border);
 }

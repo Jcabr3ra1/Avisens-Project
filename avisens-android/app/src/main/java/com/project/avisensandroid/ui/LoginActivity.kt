@@ -2,6 +2,8 @@ package com.project.avisensandroid.ui
 
 import android.content.Intent
 import android.os.Bundle
+import java.util.Locale
+import kotlinx.coroutines.CancellationException
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
 import android.view.View
@@ -67,6 +69,10 @@ class LoginActivity : AppCompatActivity() {
         // BOTÓN ENTRAR
         // ==========================================
 
+        binding.txtOlvideContrasena.setOnClickListener {
+            startActivity(Intent(this, AccesoAsistidoActivity::class.java))
+        }
+
         binding.btnEntrar.setOnClickListener {
             hacerLogin()
         }
@@ -74,8 +80,8 @@ class LoginActivity : AppCompatActivity() {
 
     private fun hacerLogin() {
 
-        val username = binding.etCorreo.text.toString().trim()
-        val password = binding.etContrasena.text.toString().trim()
+        val username = binding.etUsuario.text.toString().trim().lowercase(Locale.ROOT)
+        val password = binding.etContrasena.text.toString()
 
         binding.txtError.text = ""
 
@@ -92,7 +98,7 @@ class LoginActivity : AppCompatActivity() {
 
                 val response = RetrofitClient.api.login(
                     LoginRequest(
-                        email = username,
+                        username = username,
                         password = password
                     )
                 )
@@ -101,32 +107,48 @@ class LoginActivity : AppCompatActivity() {
 
                     val loginData = response.body()
 
-                    // Guardar el token
-                    guardarToken(
-                        loginData?.accessToken ?: ""
-                    )
-
-                    // Navegar a MainActivity
-                    startActivity(
-                        Intent(
-                            this@LoginActivity,
-                            MainActivity::class.java
-                        )
-                    )
-
-                    // Cerrar LoginActivity
-                    finish()
+                    if (loginData?.requiereCambioPassword == true) {
+                        val cambioToken = loginData.cambioPasswordToken
+                        if (cambioToken.isNullOrBlank()) {
+                            binding.txtError.text = "No se pudo iniciar el cambio de contraseña. Intenta de nuevo."
+                        } else {
+                            getSharedPreferences("app_prefs", MODE_PRIVATE).edit().clear().apply()
+                            binding.etContrasena.text.clear()
+                            startActivity(Intent(this@LoginActivity, AccesoAsistidoActivity::class.java)
+                                .putExtra("cambio_password_token", cambioToken))
+                        }
+                    } else {
+                        val accessToken = loginData?.accessToken
+                        val refreshToken = loginData?.refreshToken
+                        if (accessToken.isNullOrBlank() || refreshToken.isNullOrBlank()) {
+                            binding.txtError.text = "No se pudo iniciar sesión. Intenta de nuevo."
+                        } else {
+                            getSharedPreferences("app_prefs", MODE_PRIVATE).edit()
+                                .putString("token", accessToken)
+                                .putString("refresh_token", refreshToken)
+                                .apply()
+                            startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                            finish()
+                        }
+                    }
 
                 } else {
 
                     binding.txtError.text =
-                        "Usuario o contraseña incorrectos"
+                        when (response.code()) {
+                            403 -> "Acceso bloqueado. Revisa tu cuenta o solicita recuperación."
+                            429 -> "Demasiados intentos. Espera un momento antes de volver a intentar."
+                            401 -> "Usuario o contraseña incorrectos"
+                            else -> "No se pudo iniciar sesión. Intenta de nuevo."
+                        }
                 }
 
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
 
                 binding.txtError.text =
-                    "Error de conexión: ${e.message}"
+                    "No se pudo conectar. Revisa tu conexión e intenta de nuevo."
 
             } finally {
 
@@ -136,15 +158,4 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    private fun guardarToken(token: String) {
-
-        val prefs = getSharedPreferences(
-            "app_prefs",
-            MODE_PRIVATE
-        )
-
-        prefs.edit()
-            .putString("token", token)
-            .apply()
-    }
 }

@@ -1,3 +1,4 @@
+import { usernameDePrueba } from '../../../test/soporte/username';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
@@ -65,6 +66,7 @@ describe('UsuariosService', () => {
   const dtoCrear = {
     nombre_completo: 'María López',
     cedula: '1098765432',
+    username: usernameDePrueba('maria@granja.com'),
     email: 'maria@granja.com',
     password: 'contraseña123',
     rol_id: 2,
@@ -257,6 +259,7 @@ describe('UsuariosService', () => {
     it('un Propietario no puede cambiar el rol de su operario', async () => {
       prisma.usuario.findUnique.mockResolvedValue({
         id: 20,
+        username: usernameDePrueba('op@x.com'),
         email: 'op@x.com',
         cedula: '123',
         organizacion_id: 10,
@@ -272,6 +275,7 @@ describe('UsuariosService', () => {
     it('rechaza (409) si el email nuevo choca con otro usuario', async () => {
       prisma.usuario.findUnique.mockResolvedValue({
         id: 20,
+        username: usernameDePrueba('op@x.com'),
         email: 'op@x.com',
         cedula: '123',
         organizacion_id: 10,
@@ -727,6 +731,7 @@ describe('UsuariosService', () => {
       const operarioDe10 = {
         id: 20,
         organizacion_id: 10,
+        username: usernameDePrueba('op@x.com'),
         email: 'op@x.com',
         cedula: '123',
         rol: { nombre: 'Operario' },
@@ -879,6 +884,7 @@ describe('UsuariosService', () => {
       it('PATCH activo:false sobre la propia cuenta es 403 y no escribe nada', async () => {
         prisma.usuario.findUnique.mockResolvedValue({
           id: 1,
+          username: usernameDePrueba('a@x.com'),
           email: 'a@x.com',
           cedula: '1',
           rol: { nombre: 'Administrador' },

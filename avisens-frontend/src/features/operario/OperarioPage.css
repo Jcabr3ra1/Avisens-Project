@@ -111,10 +111,10 @@
   padding: 3rem 1.5rem;
   color: var(--text3);
   text-align: center;
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(16, 44, 35, 0.09);
+  background: color-mix(in srgb, var(--surface-base) 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--avisens-ink) 9%, transparent);
   border-radius: 20px;
-  box-shadow: 0 6px 24px rgba(10, 40, 28, 0.07);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--avisens-ink) 7%, transparent);
 }
 
 .operario-empty svg {
@@ -145,10 +145,10 @@
   flex-direction: column;
   min-width: 0;
   padding: 1.15rem;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(16, 44, 35, 0.1);
+  background: color-mix(in srgb, var(--surface-base) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--avisens-ink) 10%, transparent);
   border-radius: 20px;
-  box-shadow: 0 6px 24px rgba(10, 40, 28, 0.07);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--avisens-ink) 7%, transparent);
 }
 
 .operario-galpon-head,
@@ -211,7 +211,7 @@
   margin: 1rem 0;
   padding: 0.75rem;
   color: var(--text3);
-  background: rgba(7, 23, 19, 0.035);
+  background: color-mix(in srgb, var(--avisens-ink) 3.5%, transparent);
   border-radius: 12px;
   font-size: 0.86rem;
   line-height: 1.45;
@@ -282,7 +282,7 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(7, 20, 14, 0.55);
+  background: color-mix(in srgb, var(--avisens-ink) 55%, transparent);
   backdrop-filter: blur(4px);
 }
 
@@ -295,7 +295,7 @@
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 20px;
-  box-shadow: 0 32px 80px rgba(7, 20, 14, 0.35);
+  box-shadow: 0 32px 80px color-mix(in srgb, var(--avisens-ink) 35%, transparent);
 }
 
 .operario-modal-head {
@@ -423,7 +423,7 @@
 }
 
 .operario-btn-primary {
-  color: #fff;
+  color: var(--on-primary);
   background: var(--green-d);
   border: 1px solid var(--green-d);
 }

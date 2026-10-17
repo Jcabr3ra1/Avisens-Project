@@ -50,7 +50,7 @@ describe('RecuperacionesPasswordService', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  it('responde igual si el correo no existe para no revelar cuentas', async () => {
+  it('responde igual si el usuario no existe para no revelar cuentas', async () => {
     prisma.usuario.findUnique.mockResolvedValue(null);
 
     const respuesta = await service.solicitar('nadie@avisens.com');
@@ -70,10 +70,10 @@ describe('RecuperacionesPasswordService', () => {
     prisma.recuperacionPassword.create.mockResolvedValue({ id: 12 });
     prisma.usuario.findMany.mockResolvedValue([{ id: 1 }]);
 
-    await service.solicitar('OP@AVISENS.COM', '  Olvido  ', '127.0.0.1');
+    await service.solicitar('  OPERARIO.UNO  ', '  Olvido  ', '127.0.0.1');
 
     expect(prisma.usuario.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { email: 'op@avisens.com' } }),
+      expect.objectContaining({ where: { username: 'operario.uno' } }),
     );
     expect(prisma.recuperacionPassword.create).toHaveBeenCalledWith({
       data: {
@@ -105,7 +105,7 @@ describe('RecuperacionesPasswordService', () => {
     });
     prisma.recuperacionPassword.findFirst.mockResolvedValue({ id: 8 });
 
-    await service.solicitar('op@avisens.com');
+    await service.solicitar('operario.uno');
 
     expect(prisma.recuperacionPassword.create).not.toHaveBeenCalled();
   });

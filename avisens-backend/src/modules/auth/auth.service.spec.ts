@@ -1,3 +1,4 @@
+import { usernameDePrueba } from '../../../test/soporte/username';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   ConflictException,
@@ -43,6 +44,7 @@ function ultimaLlamadaUpdateMany(mockFn: jest.Mock): LlamadaUpdateManySesion {
 function usuarioFalso(overrides: Record<string, unknown> = {}) {
   return {
     id: 1,
+    username: usernameDePrueba('test@avisens.com'),
     email: 'test@avisens.com',
     nombre_completo: 'Test',
     password_hash: 'hash-guardado',
@@ -58,7 +60,7 @@ describe('AuthService', () => {
   let service: AuthService;
 
   const prisma = {
-    usuario: { findUnique: jest.fn(), findMany: jest.fn() },
+    usuario: { findUnique: jest.fn(), findMany: jest.fn(), update: jest.fn() },
     sesion: {
       create: jest.fn(),
       findMany: jest.fn(),
@@ -96,7 +98,10 @@ describe('AuthService', () => {
   afterEach(() => jest.clearAllMocks());
 
   describe('login', () => {
-    const dto = { email: 'test@avisens.com', password: 'buena' };
+    const dto = {
+      username: usernameDePrueba('test@avisens.com'),
+      password: 'buena',
+    };
 
     const errorDriver = (codigo: string, mensaje = '') => {
       const e = new Error('error del driver');
@@ -110,6 +115,7 @@ describe('AuthService', () => {
 
     const filaActual = (cambios: Record<string, unknown> = {}) => ({
       nombre_completo: 'Test',
+      username: usernameDePrueba('test@avisens.com'),
       email: 'test@avisens.com',
       activo: true,
       password_hash: 'hash-guardado',
@@ -190,7 +196,10 @@ describe('AuthService', () => {
         prisma.usuario.findUnique.mockResolvedValue(null);
 
         await expect(
-          service.login({ email: 'x@x.com', password: '123456' }),
+          service.login({
+            username: usernameDePrueba('x@x.com'),
+            password: '123456',
+          }),
         ).rejects.toThrow(UnauthorizedException);
         expect(prisma.$transaction).not.toHaveBeenCalled();
       });
@@ -234,7 +243,10 @@ describe('AuthService', () => {
         (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
         await expect(
-          service.login({ email: 'test@avisens.com', password: 'mala' }),
+          service.login({
+            username: usernameDePrueba('test@avisens.com'),
+            password: 'mala',
+          }),
         ).rejects.toThrow(UnauthorizedException);
 
         expect(prisma.seguridadCuenta.upsert).toHaveBeenCalled();
@@ -251,7 +263,10 @@ describe('AuthService', () => {
         (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
         await expect(
-          service.login({ email: 'test@avisens.com', password: 'mala' }),
+          service.login({
+            username: usernameDePrueba('test@avisens.com'),
+            password: 'mala',
+          }),
         ).rejects.toThrow(UnauthorizedException);
 
         expect(prisma.notificacion.createMany).toHaveBeenCalledWith({
@@ -277,7 +292,10 @@ describe('AuthService', () => {
         (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
         await expect(
-          service.login({ email: 'test@avisens.com', password: 'mala' }),
+          service.login({
+            username: usernameDePrueba('test@avisens.com'),
+            password: 'mala',
+          }),
         ).rejects.toThrow(UnauthorizedException);
 
         expect(prisma.notificacion.createMany).toHaveBeenCalledWith({
@@ -431,12 +449,39 @@ describe('AuthService', () => {
         });
         expect(jwt.signAsync).toHaveBeenCalledWith(
           expect.objectContaining({
-            email: 'nuevo@avisens.com',
+            username: usernameDePrueba('test@avisens.com'),
             rol: 'Propietario',
             organizacion_id: 22,
           }),
           expect.any(Object),
         );
+      });
+
+      it('rechaza si el usuario cambia entre la verificación y la apertura de sesión', async () => {
+        prepararFaseB({ actual: [filaActual({ username: 'otro.usuario' })] });
+        await expect(service.login(dto)).rejects.toBeInstanceOf(
+          UnauthorizedException,
+        );
+        expect(prisma.sesion.create).not.toHaveBeenCalled();
+      });
+
+      it('permite ingresar sin correo y normaliza el usuario', async () => {
+        prisma.usuario.findUnique.mockResolvedValue(
+          usuarioFalso({ username: 'maria.lopez', email: null }),
+        );
+        prepararFaseB({
+          actual: [filaActual({ username: 'maria.lopez', email: null })],
+        });
+        const resultado = await service.login({
+          username: ' MARIA.LOPEZ ',
+          password: 'buena',
+        });
+        expect(prisma.usuario.findUnique).toHaveBeenCalledWith(
+          expect.objectContaining({ where: { username: 'maria.lopez' } }),
+        );
+        expect(resultado).toMatchObject({
+          usuario: { username: 'maria.lopez', email: null },
+        });
       });
 
       it('conserva a un usuario sin organización y sin seguridad_cuenta previa', async () => {
@@ -720,6 +765,99 @@ describe('AuthService', () => {
       const llamada = ultimaLlamadaUpdateMany(prisma.sesion.updateMany);
       expect(llamada.where).not.toEqual({ usuario_id: 1 });
       expect(llamada.where.session_id).toBeDefined();
+    });
+  });
+
+  describe('perfil', () => {
+    it('aplana el rol y las fechas de seguridad', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 7,
+        username: 'ana',
+        nombre_completo: 'Ana',
+        email: null,
+        telefono: '300',
+        fecha_creacion: new Date('2026-01-01'),
+        rol: { nombre: 'Propietario' },
+        organizacion: { id: 1, nombre: 'Granja' },
+        seguridad_cuenta: {
+          fecha_ultimo_login: new Date('2026-10-01'),
+          fecha_ultimo_cambio_password: null,
+        },
+      });
+
+      const perfil = await service.perfil(7);
+
+      expect(perfil).toEqual(
+        expect.objectContaining({
+          id: 7,
+          rol: 'Propietario',
+          fecha_ultimo_login: new Date('2026-10-01'),
+          fecha_ultimo_cambio_password: null,
+        }),
+      );
+      expect(perfil).not.toHaveProperty('seguridad_cuenta');
+      expect(perfil).not.toHaveProperty('password_hash');
+    });
+
+    it('rechaza si el usuario ya no existe', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(null);
+      await expect(service.perfil(7)).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('cambiarPassword', () => {
+    beforeEach(() => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        password_hash: 'hash-actual',
+      });
+      prisma.$transaction.mockResolvedValue([]);
+    });
+
+    it('rechaza si la contraseña actual no coincide y no toca nada', async () => {
+      (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false);
+
+      await expect(
+        service.cambiarPassword(7, 'mala', 'NuevaClave123'),
+      ).rejects.toThrow('La contraseña actual no es correcta.');
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('rechaza reutilizar la misma contraseña', async () => {
+      (bcrypt.compare as jest.Mock)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true);
+
+      await expect(
+        service.cambiarPassword(7, 'igual', 'igual12345'),
+      ).rejects.toThrow('La nueva contraseña debe ser distinta de la actual.');
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('guarda el hash nuevo, registra la fecha y cierra todas las sesiones', async () => {
+      (bcrypt.compare as jest.Mock)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+      (bcrypt.hash as jest.Mock).mockResolvedValueOnce('hash-nuevo');
+
+      const respuesta = await service.cambiarPassword(
+        7,
+        'actual',
+        'NuevaClave123',
+      );
+
+      expect(bcrypt.hash).toHaveBeenCalledWith('NuevaClave123', 12);
+      expect(prisma.usuario.update).toHaveBeenCalledWith({
+        where: { id: 7 },
+        data: { password_hash: 'hash-nuevo' },
+      });
+      expect(prisma.sesion.updateMany).toHaveBeenCalledWith({
+        where: { usuario_id: 7, revocada: false },
+        data: { revocada: true },
+      });
+      expect(prisma.seguridadCuenta.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { usuario_id: 7 } }),
+      );
+      expect(respuesta.mensaje).toContain('Inicia sesión nuevamente');
     });
   });
 });

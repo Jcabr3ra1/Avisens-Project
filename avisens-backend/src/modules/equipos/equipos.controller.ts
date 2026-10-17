@@ -25,7 +25,7 @@ import { UpdateEquipoDto } from './dto/update-equipo.dto';
 interface AuthRequest extends Request {
   user: {
     id: number;
-    email: string;
+    email?: string | null;
     rol: string;
   };
 }

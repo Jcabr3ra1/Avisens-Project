@@ -7,12 +7,12 @@
    la tipografía y el contraste, no los efectos decorativos. */
 
 /* ─── Contenedor base de página ──────────────────────────────────────────── */
-/* Mejora el padding y agrega max-width para pantallas muy anchas */
+/* Ocupa todo el ancho disponible: centrar con un tope dejaba un margen
+   vacío a la izquierda en pantallas anchas y movía el contenido al
+   contraer el menú. */
 .page-container {
   width: 100%;
   padding: var(--space-6) clamp(var(--space-4), 2.4vw, var(--space-6)) var(--space-8);
-  max-width: 1440px;
-  margin-inline: auto;
   color: var(--dash-ink);
 }
 @media (max-width: 640px) {
@@ -73,7 +73,7 @@
 /* ─── Separador de sección ───────────────────────────────────────────────── */
 .fp-divider {
   height: 1px;
-  background: rgba(16, 44, 35, 0.07);
+  background: color-mix(in srgb, var(--avisens-ink) 7%, transparent);
   margin: 1.4rem 0;
 }
 
@@ -81,8 +81,8 @@
 /* Header de tabla unificado con fondo sutil */
 .fp-thead th {
   padding: 0.8rem 1rem;
-  background: rgba(7, 23, 19, 0.032);
-  border-bottom: 1px solid rgba(16, 44, 35, 0.08);
+  background: color-mix(in srgb, var(--avisens-ink) 3.2%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--avisens-ink) 8%, transparent);
   text-align: left;
   font-size: 0.71rem;
   font-weight: 700;
@@ -95,21 +95,21 @@
 /* ─── Filas de tabla ─────────────────────────────────────────────────────── */
 .fp-tbody td {
   padding: 0.85rem 1rem;
-  border-bottom: 1px solid rgba(16, 44, 35, 0.055);
+  border-bottom: 1px solid color-mix(in srgb, var(--avisens-ink) 5.5%, transparent);
   color: var(--dash-ink);
   font-size: 0.88rem;
   vertical-align: middle;
 }
 .fp-tbody tr:last-child td { border-bottom: none; }
-.fp-tbody tr:hover td { background: rgba(16, 185, 129, 0.035); }
+.fp-tbody tr:hover td { background: color-mix(in srgb, var(--primary) 3.5%, transparent); }
 
 /* ─── Tabs con underline activo ──────────────────────────────────────────── */
 .fp-tabs {
   display: flex;
   gap: 0.3rem;
   margin-bottom: 1.2rem;
-  background: rgba(7, 23, 19, 0.032);
-  border: 1px solid rgba(16, 44, 35, 0.07);
+  background: color-mix(in srgb, var(--avisens-ink) 3.2%, transparent);
+  border: 1px solid color-mix(in srgb, var(--avisens-ink) 7%, transparent);
   border-radius: 14px;
   padding: 0.35rem;
   width: fit-content;
@@ -126,11 +126,11 @@
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.fp-tab:hover { background: rgba(255,255,255,0.6); color: var(--text2); }
+.fp-tab:hover { background: color-mix(in srgb, var(--surface-base) 60%, transparent); color: var(--text2); }
 .fp-tab--activo {
-  background: #fff;
+  background: var(--surface-base);
   color: var(--dash-ink);
-  box-shadow: 0 2px 8px rgba(10, 40, 28, 0.08);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--avisens-ink) 8%, transparent);
 }
 
 /* ─── Badge de estado (semáforo) ─────────────────────────────────────────── */
@@ -144,16 +144,16 @@
   font-weight: 700;
   white-space: nowrap;
 }
-.fp-badge--verde    { background: rgba(16,185,129,0.13); color: var(--green-dd); }
-.fp-badge--rojo     { background: rgba(239,68,68,0.13);  color: var(--red); }
-.fp-badge--amarillo { background: rgba(245,158,11,0.13); color: var(--warning3); }
-.fp-badge--gris     { background: rgba(100,116,139,0.12); color: var(--text3); }
-.fp-badge--azul     { background: rgba(59,130,246,0.13); color: var(--blue); }
+.fp-badge--verde    { background: color-mix(in srgb, var(--primary) 13%, transparent); color: var(--green-dd); }
+.fp-badge--rojo     { background: var(--danger-soft);  color: var(--red); }
+.fp-badge--amarillo { background: var(--warning-soft); color: var(--warning3); }
+.fp-badge--gris     { background: color-mix(in srgb, var(--text-muted) 12%, transparent); color: var(--text3); }
+.fp-badge--azul     { background: var(--info-soft); color: var(--blue); }
 
 /* ─── Barra de progreso base ─────────────────────────────────────────────── */
 .fp-bar-wrap {
   height: 5px;
-  background: rgba(10,26,20,0.08);
+  background: color-mix(in srgb, var(--avisens-ink) 8%, transparent);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -188,7 +188,7 @@
   min-height: 44px;
   padding: 0.6rem 1.1rem;
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   border: none;
   border-radius: var(--radius-md);
   font-size: 0.88rem;
@@ -212,7 +212,7 @@
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
-.fp-btn-ghost:hover { background: rgba(255,255,255,0.8); border-color: var(--green); }
+.fp-btn-ghost:hover { background: color-mix(in srgb, var(--surface-base) 80%, transparent); border-color: var(--green); }
 
 /* ─── Estado vacío ───────────────────────────────────────────────────────── */
 .fp-empty {

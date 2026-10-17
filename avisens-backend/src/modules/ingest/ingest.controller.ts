@@ -1,5 +1,6 @@
 import {
   Body,
+  Get,
   Controller,
   HttpCode,
   HttpStatus,
@@ -18,6 +19,13 @@ import { IngestDto } from './dto/ingest.dto';
 @Controller({ path: 'ingest', version: VERSION_NEUTRAL })
 export class IngestController {
   constructor(private ingestService: IngestService) {}
+
+  @Get('configuracion')
+  @UseGuards(DeviceTokenGuard)
+  @ApiOperation({ summary: 'Conexiones DHT22 activas del controlador autenticado' })
+  configuracion(@Req() req: DeviceRequest) {
+    return this.ingestService.configuracion(req.dispositivo);
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

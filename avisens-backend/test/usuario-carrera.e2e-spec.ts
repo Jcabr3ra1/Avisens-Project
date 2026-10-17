@@ -1,3 +1,4 @@
+import { usernameDePrueba } from './soporte/username';
 import {
   INestApplication,
   ValidationPipe,
@@ -267,12 +268,12 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
     (
       await request(servidorDatos)
         .post('/v1/auth/login')
-        .send({ email, password })
+        .send({ username: email, password })
         .expect(200)
     ).body as { access_token: string; refresh_token: string };
 
-  const emailDe = async (id: number) =>
-    (await prisma.usuario.findUniqueOrThrow({ where: { id } })).email;
+  const usernameDe = async (id: number) =>
+    (await prisma.usuario.findUniqueOrThrow({ where: { id } })).username;
 
   const nuevaOrg = async (
     operarios: number,
@@ -288,6 +289,7 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
       data: {
         nombre_completo: 'dueno',
         cedula: `d-${sufijo}-${contador}`,
+        username: usernameDePrueba(`d-${sufijo}-${contador}@e2e.local`),
         email: `d-${sufijo}-${contador}@e2e.local`,
         password_hash: hash,
         rol_id: rolPropietarioId,
@@ -311,6 +313,7 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
         data: {
           nombre_completo: `op-${i}`,
           cedula: `o-${sufijo}-${contador}`,
+          username: usernameDePrueba(`o-${sufijo}-${contador}@e2e.local`),
           email: `o-${sufijo}-${contador}@e2e.local`,
           password_hash: hash,
           rol_id: rolOperarioId,
@@ -459,7 +462,7 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
             data: { usuario_id: op, galpon_id: objetivo, activa: false },
           })
         : null;
-    const sesion = await entrar(await emailDe(op));
+    const sesion = await entrar(await usernameDe(op));
     return {
       o,
       op,
@@ -515,13 +518,14 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
       data: {
         nombre_completo: 'admin',
         cedula: `admin-${sufijo}`,
+        username: usernameDePrueba(`admin-${sufijo}@e2e.local`),
         email: `admin-${sufijo}@e2e.local`,
         password_hash: hash,
         rol_id: rolAdminId,
       },
     });
     ids.usuarios.push(admin.id);
-    tokenAdmin = (await entrar(admin.email)).access_token;
+    tokenAdmin = (await entrar(admin.username)).access_token;
   });
 
   afterAll(async () => {
@@ -675,8 +679,8 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
       async (escritor) => {
         const o = await nuevaOrg(1, 2, true);
         const op = o.ops[0];
-        const sesion = await entrar(await emailDe(op));
-        await entrar(await emailDe(op));
+        const sesion = await entrar(await usernameDe(op));
+        await entrar(await usernameDe(op));
         expect(await sesionesVivas(op)).toBe(2);
 
         const r = await pedirEscritor(escritor, 'e2e-carrera-datos', o);
@@ -687,7 +691,7 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
         expect(await filasActivas(op)).toBe(0);
         const login = await request(servidorDatos)
           .post('/v1/auth/login')
-          .send({ email: await emailDe(op), password });
+          .send({ username: await usernameDe(op), password });
         expect(login.status).toBe(401);
 
         await request(servidorDatos)
@@ -739,7 +743,7 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
     it('PATCH sin activo o con activo:true no toca sesiones ni asignaciones', async () => {
       const o = await nuevaOrg(1, 1, true);
       const op = o.ops[0];
-      await entrar(await emailDe(op));
+      await entrar(await usernameDe(op));
 
       await request(servidorDatos)
         .patch(`/v1/usuarios/${op}`)
@@ -764,13 +768,14 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
         data: {
           nombre_completo: 'admin2',
           cedula: `a2-${sufijo}-${contador}`,
+          username: usernameDePrueba(`a2-${sufijo}-${contador}@e2e.local`),
           email: `a2-${sufijo}-${contador}@e2e.local`,
           password_hash: hash,
           rol_id: rolAdminId,
         },
       });
       ids.usuarios.push(admin2.id);
-      const { access_token } = await entrar(admin2.email);
+      const { access_token } = await entrar(admin2.username);
 
       const patch = await request(servidorDatos)
         .patch(`/v1/usuarios/${admin2.id}`)
@@ -805,7 +810,7 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
       ] as Escritor[]) {
         const o = await nuevaOrg(1, 1, true);
         const op = o.ops[0];
-        await entrar(await emailDe(op));
+        await entrar(await usernameDe(op));
         const fila = await filaDe(op, o.gs[0]);
         await correr(async () => {
           await retener(
@@ -833,7 +838,7 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
     it('DELETE permanente: 409 y el usuario sigue intacto', async () => {
       const o = await nuevaOrg(1, 1, true);
       const op = o.ops[0];
-      await entrar(await emailDe(op));
+      await entrar(await usernameDe(op));
       const fila = await filaDe(op, o.gs[0]);
       await correr(async () => {
         await retener(
@@ -859,7 +864,7 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
     it('DELETE organización: 409 y ni organización, ni usuarios, ni granjas cambian', async () => {
       const o = await nuevaOrg(2, 1, true);
       const fila = await filaDe(o.ops[1], o.gs[0]);
-      await entrar(await emailDe(o.ops[0]));
+      await entrar(await usernameDe(o.ops[0]));
       await correr(async () => {
         await retener(
           'SELECT id FROM usuarios_galpones WHERE id = $1 FOR UPDATE',
@@ -930,7 +935,7 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
     it('la organización llega primero: el DELETE de usuario espera y ambos terminan en 200', async () => {
       const o = await nuevaOrg(2, 1, true);
       const fila = await filaDe(o.ops[1], o.gs[0]);
-      await entrar(await emailDe(o.ops[0]));
+      await entrar(await usernameDe(o.ops[0]));
       await correr(async () => {
         await retener(
           'SELECT id FROM usuarios_galpones WHERE id = $1 FOR UPDATE',
@@ -962,7 +967,7 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
     it('el usuario llega primero: la organización espera su fila y ambos terminan en 200', async () => {
       const o = await nuevaOrg(2, 1, true);
       const fila = await filaDe(o.ops[0], o.gs[0]);
-      await entrar(await emailDe(o.ops[0]));
+      await entrar(await usernameDe(o.ops[0]));
       await correr(async () => {
         await retener(
           'SELECT id FROM usuarios_galpones WHERE id = $1 FOR UPDATE',
@@ -1111,7 +1116,7 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
   describe('estrés complementario sobre el código real', () => {
     it('desactivaciones, eliminaciones y asignaciones simultáneas no dan 500, ni deadlocks, ni filas activas con usuario o galpón inactivo', async () => {
       const o = await nuevaOrg(4, 4, true);
-      for (const u of o.ops) await entrar(await emailDe(u));
+      for (const u of o.ops) await entrar(await usernameDe(u));
       const apps4 = [
         'e2e-carrera-asignacion-1',
         'e2e-carrera-asignacion-2',

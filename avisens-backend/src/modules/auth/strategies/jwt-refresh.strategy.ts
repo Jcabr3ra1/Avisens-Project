@@ -5,7 +5,8 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
 import { JwtPayload } from './jwt.strategy';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface RefreshJwtPayload extends JwtPayload {
   jti?: string;
@@ -36,13 +37,20 @@ export class JwtRefreshStrategy extends PassportStrategy(
     // Prisma no filtra "ningún registro" -- Prisma omite ese campo del
     // filtro por completo, lo que ampliaría un logout a todas las
     // sesiones del usuario en vez de rechazarlo.
-    if (typeof payload.sub !== 'number' || !Number.isInteger(payload.sub) || payload.sub <= 0) {
+    if (
+      typeof payload.sub !== 'number' ||
+      !Number.isInteger(payload.sub) ||
+      payload.sub <= 0
+    ) {
       throw new UnauthorizedException('Refresh token inválido');
     }
     if (typeof payload.jti !== 'string' || payload.jti.length === 0) {
       throw new UnauthorizedException('Refresh token inválido');
     }
-    if (typeof payload.session_id !== 'string' || !UUID_RE.test(payload.session_id)) {
+    if (
+      typeof payload.session_id !== 'string' ||
+      !UUID_RE.test(payload.session_id)
+    ) {
       throw new UnauthorizedException('Refresh token inválido');
     }
 

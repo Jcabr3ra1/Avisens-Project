@@ -3,7 +3,6 @@ import { listarTodasLasPaginas } from '@shared/api/paginacion'
 
 export interface Dispositivo {
   id: number
-  mac_address: string
   codigo_topic: string
   nombre: string
   version_firmware: string | null
@@ -18,12 +17,13 @@ export interface Dispositivo {
 
 export interface CrearDispositivoPayload {
   galpon_id: number
-  mac_address: string
-  codigo_topic: string
-  nombre: string
+  codigo_topic?: string
+  nombre?: string
   version_firmware?: string
   ip_local?: string
 }
+
+export type DispositivoCreado = Dispositivo & { token_ingesta: string }
 
 export type ActualizarDispositivoPayload = Partial<CrearDispositivoPayload> & {
   activo?: boolean
@@ -40,8 +40,8 @@ export async function obtenerDispositivo(id: number): Promise<Dispositivo> {
 
 export async function crearDispositivo(
   payload: CrearDispositivoPayload,
-): Promise<Dispositivo> {
-  const { data } = await api.post<Dispositivo>('/dispositivos', payload)
+): Promise<DispositivoCreado> {
+  const { data } = await api.post<DispositivoCreado>('/dispositivos', payload)
   return data
 }
 

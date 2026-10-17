@@ -6,14 +6,14 @@ export function useSolicitudRecuperacion() {
   const [mensaje, setMensaje] = useState('')
   const [error, setError] = useState('')
 
-  const enviar = useCallback(async (email: string, motivo: string) => {
+  const enviar = useCallback(async (username: string, motivo: string) => {
     setEnviando(true)
     setMensaje('')
     setError('')
 
     try {
       const respuesta = await solicitarRecuperacion({
-        email: email.trim(),
+        username: username.trim().toLowerCase(),
         motivo: motivo.trim() || undefined,
       })
       setMensaje(respuesta.mensaje)

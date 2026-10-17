@@ -11,6 +11,7 @@ import { InterpreteRespuestaService } from './interprete-respuesta.service';
 import { IniciarChatDto } from './dto/iniciar-chat.dto';
 import { ResponderChatDto } from './dto/responder-chat.dto';
 import { esIdentidadMeta } from '../../common/contacto/identidad-meta';
+import { fechaLimite } from '../solicitudes-pqrs/dominio/pqrs';
 import {
   NO_DECIDE,
   clasificarSoporte,
@@ -619,6 +620,7 @@ export class ChatbotService {
           asunto: porCodigo.get('S2'),
           mensaje: porCodigo.get('S3'),
           estado: 'abierta',
+          fecha_limite: fechaLimite(new Date(), horas),
         },
         select: { id: true },
       });

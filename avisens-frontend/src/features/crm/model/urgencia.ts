@@ -22,15 +22,15 @@ export function urgenciaDe(fechaIso: string, etapa: EtapaProspecto): Urgencia {
   const etiqueta = dias <= 0 ? 'Hoy' : `${dias}d`
 
   if (etapa === 'caliente' && dias >= 7) {
-    return { nivel: 'urgente', colorBorde: '#ef4444', colorDias: '#ef4444', etiqueta }
+    return { nivel: 'urgente', colorBorde: 'var(--danger)', colorDias: 'var(--danger)', etiqueta }
   }
 
   if ((etapa === 'caliente' && dias >= 4) || (etapa === 'tibio' && dias >= 12)) {
-    return { nivel: 'alerta', colorBorde: '#f59e0b', colorDias: '#f59e0b', etiqueta }
+    return { nivel: 'alerta', colorBorde: 'var(--warning)', colorDias: 'var(--warning)', etiqueta }
   }
 
   if (dias <= 2) {
-    return { nivel: 'reciente', colorBorde: '#10b981', colorDias: '#10b981', etiqueta }
+    return { nivel: 'reciente', colorBorde: 'var(--success)', colorDias: 'var(--success)', etiqueta }
   }
 
   return { nivel: 'normal', colorBorde: 'transparent', colorDias: 'var(--text3)', etiqueta }

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
+import { CATEGORIAS_PQRS } from '../dominio/pqrs';
 
 export class CreateSolicitudPqrsDto {
   @ApiProperty({ example: 1, description: 'ID del prospecto que radica la PQRS' })
@@ -10,11 +11,12 @@ export class CreateSolicitudPqrsDto {
     example: 'Petición',
     description: 'Categoria: Petición | Queja | Reclamo | Sugerencia | Felicitación',
   })
-  @IsString()
+  @IsIn(CATEGORIAS_PQRS)
   categoria: string;
 
   @ApiPropertyOptional({ example: 'Los sensores no llegan', description: 'Asunto de la solicitud' })
   @IsString()
+  @MaxLength(200)
   @IsOptional()
   asunto?: string;
 
@@ -23,6 +25,7 @@ export class CreateSolicitudPqrsDto {
     description: 'Detalle de la solicitud',
   })
   @IsString()
+  @MaxLength(4000)
   @IsOptional()
   mensaje?: string;
 }

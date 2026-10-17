@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   Param,
@@ -22,9 +23,10 @@ import { ListarProspectosDto } from './dto/listar-prospectos.dto';
 import { AsignarAsesorDto } from './dto/asignar-asesor.dto';
 import { ConvertirProspectoDto } from './dto/convertir-prospecto.dto';
 import { CerrarProspectoDto } from './dto/cerrar-prospecto.dto';
+import { EliminarProspectoDto } from './dto/eliminar-prospecto.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string };
+  user: { id: number; email?: string | null; rol: string };
 }
 
 @ApiTags('prospectos')
@@ -60,8 +62,22 @@ export class ProspectosController {
     return this.prospectosService.obtener(id);
   }
 
+  @Delete(':id')
+  @ApiOperation({
+    summary:
+      'Eliminar un prospecto y su historial asociado, conservando el cliente convertido',
+  })
+  eliminar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: EliminarProspectoDto,
+  ) {
+    return this.prospectosService.eliminar(id, dto.confirmacion);
+  }
+
   @Patch(':id/asignar')
-  @ApiOperation({ summary: 'Asignar un administrador a un prospecto calificado' })
+  @ApiOperation({
+    summary: 'Asignar un administrador a un prospecto calificado',
+  })
   asignar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AsignarAsesorDto,

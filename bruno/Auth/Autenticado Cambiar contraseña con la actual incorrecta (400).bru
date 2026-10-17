@@ -1,0 +1,33 @@
+meta {
+  name: [Autenticado]  Cambiar contraseña con la actual incorrecta (400)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/v1/auth/cambiar-password
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "password_actual": "no-es-la-actual",
+    "nueva_password": "OtraClaveSegura123"
+  }
+}
+
+tests {
+  test("rechaza sin cambiar nada", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
+docs {
+  Con la contraseña actual correcta responde 200, cambia la clave y cierra
+  todas las sesiones: después hay que volver a iniciar sesión.
+}

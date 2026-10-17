@@ -3,7 +3,8 @@
 // compartido useMonitoreoAmbiental. Al seleccionar una tarjeta se abre un
 // panel lateral con gauge, estadísticas, histórico real y referencia Italcol.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   useMonitoreoAmbiental,
   formatearUltimaLectura,
@@ -15,6 +16,7 @@ import {
 import { iconoSensor } from '@shared/ui/sensorIcon'
 import { semanaDeVida } from '@shared/utils/fechas'
 import { SensorDetail } from './SensorDetail'
+import AsignarSensores from './AsignarSensores'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcServer } from '@shared/ui/icons/icons'
 import '@shared/ui/admin/AdminKit.css'
@@ -22,19 +24,42 @@ import './MonitoreoPage.css'
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 function MonitoreoPage() {
-  const { galpones, cargando, error, avisoUltimas } = useMonitoreoAmbiental()
+  const { galpones, cargando, error, avisoUltimas, recargar } = useMonitoreoAmbiental()
+  const [searchParams] = useSearchParams()
+  const granjaSolicitada = Number(searchParams.get('granjaId'))
 
-  // Galpón seleccionado en el selector superior
+  // La granja primero limita los galpones que aparecen en Monitoreo.
+  const [granjaId, setGranjaId] = useState<number | null>(() =>
+    Number.isSafeInteger(granjaSolicitada) && granjaSolicitada > 0 ? granjaSolicitada : null,
+  )
+
+  // Galpón seleccionado dentro de la granja.
   const [galponId, setGalponId] = useState<number | null>(null)
 
   // Sensor cuyo panel de detalle está abierto (null = ninguno)
   const [sensorActivo, setSensorActivo] = useState<SensorVista | null>(null)
 
+  const granjas = useMemo(() => [...new Map<number, string>(
+    galpones.map(g => [g.granjaId, g.origen.granja.nombre] as const),
+  ).entries()], [galpones])
   useEffect(() => {
-    if (galponId === null && galpones.length > 0) setGalponId(galpones[0].id)
-  }, [galponId, galpones])
+    if (granjas.length === 0 || granjas.some(([id]) => id === granjaId)) return
+    const solicitadaDisponible = granjas.some(([id]) => id === granjaSolicitada)
+    setGranjaId(solicitadaDisponible ? granjaSolicitada : granjas[0][0])
+  }, [granjaId, granjaSolicitada, granjas])
 
-  const galpon = galpones.find(g => g.id === galponId) ?? galpones[0] ?? null
+  const galponesDeGranja = useMemo(
+    () => galpones.filter(g => g.granjaId === granjaId),
+    [galpones, granjaId],
+  )
+  useEffect(() => {
+    if (!galponesDeGranja.some(g => g.id === galponId)) {
+      setGalponId(galponesDeGranja[0]?.id ?? null)
+      setSensorActivo(null)
+    }
+  }, [galponId, galponesDeGranja])
+
+  const galpon = galponesDeGranja.find(g => g.id === galponId) ?? galponesDeGranja[0] ?? null
 
   // Conteos de sensores por estado para el encabezado
   const criticos    = galpon?.sensores.filter(s => s.estado === 'critico').length ?? 0
@@ -46,7 +71,7 @@ function MonitoreoPage() {
     setSensorActivo(sensor)
   }
 
-  if (cargando) {
+  if (cargando && galpones.length === 0) {
     return (
       <div className="page-container mon-page adm-page">
         <p className="mon-cargando">Cargando monitoreo ambiental…</p>
@@ -78,9 +103,21 @@ function MonitoreoPage() {
         <p className="mon-cargando">No hay galpones registrados todavía.</p>
       ) : !galpon ? null : (
         <>
+          <div className="mon-contexto-selectores">
+            <label className="mon-contexto-campo">
+              <span>Granja</span>
+              <select
+                value={granjaId ?? ''}
+                onChange={e => { setGranjaId(Number(e.target.value)); setGalponId(null); setSensorActivo(null) }}
+              >
+                {granjas.map(([id, nombre]) => <option key={id} value={id}>{nombre}</option>)}
+              </select>
+            </label>
+          </div>
+
           {/* ── Selector de galpón ──────────────────────────────────────────── */}
           <div className="mon-selector">
-            {galpones.map(g => (
+            {galponesDeGranja.map(g => (
               <button
                 key={g.id}
                 type="button"
@@ -88,7 +125,7 @@ function MonitoreoPage() {
                 onClick={() => { setGalponId(g.id); setSensorActivo(null) }}
               >
                 <span className={`mon-dot mon-dot--${estadoGlobal(g)}`} />
-                <span>{g.codigo}</span>
+                <span>Código de galpón: {g.codigo}</span>
                 <small>{g.nombre.replace('Galpón ', '')}</small>
               </button>
             ))}
@@ -102,11 +139,19 @@ function MonitoreoPage() {
               : <span className="mon-sin-lote">· Sin lote activo</span>}
           </div>
 
+          <AsignarSensores
+            key={galpon.id}
+            galponId={galpon.id}
+            galponCodigo={galpon.codigo}
+            galponNombre={galpon.nombre}
+            recargar={recargar}
+          />
+
           {/* ── Tarjetas de sensores (clickables) ───────────────────────────── */}
-          {!galpon.loteActivo ? (
+          {galpon.sensores.length === 0 && !galpon.loteActivo ? (
             <div className="mon-offline-msg adm-panel">
               <IcServer size={32} />
-              <p>Galpón vacío. Los sensores se activarán cuando ingrese un nuevo lote.</p>
+              <p>Galpón sin lote activo y sin sensores registrados.</p>
             </div>
           ) : galpon.sensores.length === 0 ? (
             <div className="mon-offline-msg adm-panel">
@@ -127,7 +172,7 @@ function MonitoreoPage() {
           )}
 
           {/* ── Tabla de umbrales configurados (HU-21) ──────────────────────── */}
-          {galpon.sensores.length > 0 && (
+          {galpon.loteActivo && galpon.sensores.length > 0 && (
             <section className="mon-section">
               <h2 className="mon-section-title">Umbrales configurados · Semana {semanaDeVida(galpon.diaVida) + 1}</h2>
               <p className="mon-section-sub">El backend soporta umbral por temperatura, humedad y luminosidad — las demás variables se muestran sin rango.</p>
@@ -151,7 +196,7 @@ function MonitoreoPage() {
           <SensorDetail
             sensor={sensorActivo}
             galponNombre={galpon.nombre}
-            diaVida={galpon.diaVida}
+            diaVida={galpon.loteActivo ? galpon.diaVida : null}
             onClose={() => setSensorActivo(null)}
           />
         </>
@@ -235,7 +280,7 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
 
 // ─── Estado global de un galpón según sus sensores ───────────────────────────
 function estadoGlobal(galpon: GalponMonitoreoVista): EstadoSensorVista {
-  if (!galpon.loteActivo || galpon.sensores.length === 0) return 'offline'
+  if (galpon.sensores.length === 0) return 'offline'
   if (galpon.sensores.some(s => s.estado === 'critico'))              return 'critico'
   if (galpon.sensores.some(s => s.estado === 'advertencia'))           return 'advertencia'
   if (galpon.sensores.some(s => s.estado === 'lectura_no_disponible')) return 'lectura_no_disponible'

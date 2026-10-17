@@ -18,7 +18,7 @@ import { PrediccionesService } from './predicciones.service';
 import { HistorialPrediccionesDto } from './dto/historial-predicciones.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string };
+  user: { id: number; email?: string | null; rol: string };
 }
 
 @ApiTags('predicciones')

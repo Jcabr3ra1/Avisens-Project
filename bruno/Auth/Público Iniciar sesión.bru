@@ -16,7 +16,7 @@ headers {
 
 body:json {
   {
-    "email": "admin@avisens.com",
+    "username": "usuario.1",
     "password": "Avisens2026!"
   }
 }
@@ -32,6 +32,7 @@ script:post-response {
 }
 
 docs {
+  Usa el usuario mostrado en Personas; usuario.1 es solo un ejemplo de cuenta migrada.
   Respuestas: 200 con access_token y refresh_token; 200 con
   requiere_cambio_password y cambio_password_token (contraseña temporal
   vigente, sin sesión nueva); 401 «Credenciales inválidas»; 403 «Cuenta

@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -15,10 +16,15 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ROLES } from '../../common/auth/roles';
+import type { Request } from 'express';
 import { SolicitudesPqrsService } from './solicitudes-pqrs.service';
 import { CreateSolicitudPqrsDto } from './dto/create-solicitud-pqrs.dto';
 import { ListarSolicitudesPqrsDto } from './dto/listar-solicitudes-pqrs.dto';
 import { ResponderSolicitudPqrsDto } from './dto/responder-solicitud-pqrs.dto';
+
+interface AuthRequest extends Request {
+  user: { id: number };
+}
 
 @ApiTags('solicitudes-pqrs')
 @ApiBearerAuth()
@@ -50,6 +56,12 @@ export class SolicitudesPqrsController {
   @ApiOperation({ summary: 'Ver una solicitud PQRS con detalle' })
   obtener(@Param('id', ParseIntPipe) id: number) {
     return this.service.obtener(id);
+  }
+
+  @Patch(':id/tomar')
+  @ApiOperation({ summary: 'Tomar una solicitud PQRS: queda a cargo de quien la toma' })
+  tomar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.service.tomar(id, req.user.id);
   }
 
   @Patch(':id/responder')

@@ -1,3 +1,4 @@
+import { usernameDePrueba } from './soporte/username';
 import request from 'supertest';
 import { RecuperacionesPasswordService } from '../src/modules/recuperaciones-password/recuperaciones-password.service';
 import { MENSAJE_CUENTA_OCUPADA } from '../src/common/errores/bloqueo';
@@ -63,8 +64,8 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
     await entorno.limpiar();
   });
 
-  const emailDe = async (id: number) =>
-    (await entorno.prisma.usuario.findUniqueOrThrow({ where: { id } })).email;
+  const usernameDe = async (id: number) =>
+    (await entorno.prisma.usuario.findUniqueOrThrow({ where: { id } })).username;
 
   const enviar = (peticion: request.Test, senal?: AbortSignal) =>
     new Promise<Res>((resolver, rechazar) => {
@@ -96,7 +97,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
     senal?: AbortSignal,
   ) =>
     enviar(
-      request(url).post('/v1/auth/login').send({ email, password }),
+      request(url).post('/v1/auth/login').send({ username: email, password }),
       senal,
     );
 
@@ -242,7 +243,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
   describe('el login gana: la desactivación espera, y luego revoca o elimina la sesión nueva', () => {
     it.each(DESACTIVACIONES)('$nombre', async (d) => {
       const f = await entorno.fixture();
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       const [candidata] = await sesionesRevocadas(f.op, 1);
       let login: Res = { status: 0, body: {} };
       let desactivacion: Res = { status: 0, body: {} };
@@ -300,7 +301,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
   describe('la desactivación está en curso: el login espera al usuario y la cuenta queda sin sesión', () => {
     it.each(DESACTIVACIONES)('$nombre', async (d) => {
       const f = await entorno.fixture();
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       let login: Res = { status: 0, body: {} };
       let desactivacion: Res = { status: 0, body: {} };
 
@@ -336,7 +337,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
   describe('la desactivación confirma entre la fase A y la fase B del login', () => {
     it.each(DESACTIVACIONES)('$nombre', async (d) => {
       const f = await entorno.fixture();
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       const antes = await seguridad(f.op);
       const totalAntes = (await sesiones(f.op)).length;
 
@@ -365,7 +366,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
         where: { usuario_id: f.op },
         data: { intentos_fallidos: 4 },
       });
-      return { f, email: await emailDe(f.op) };
+      return { f, email: await usernameDe(f.op) };
     };
 
     it('la cuenta se bloquea entre la fase A y la B: 403, sin sesión nueva y el bloqueo se conserva', async () => {
@@ -446,7 +447,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
 
     it('aprobada entre la fase A y la B: el hash cambió, 401 sin sesión y sin contar un intento', async () => {
       const f = await entorno.fixture();
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       const s = await solicitud(f.op);
 
       const { login } = await conCompuerta(
@@ -464,7 +465,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
 
     it('aprobada mientras el login está en la fase B: espera al login y revoca la sesión nueva', async () => {
       const f = await entorno.fixture();
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       const s = await solicitud(f.op);
       const [candidata] = await sesionesRevocadas(f.op, 1);
       let login: Res = { status: 0, body: {} };
@@ -498,7 +499,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
 
     it('cambiarPassword mientras el login está en la fase B: espera y revoca la sesión nueva', async () => {
       const f = await entorno.fixture();
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       const [candidata] = await sesionesRevocadas(f.op, 1);
       let login: Res = { status: 0, body: {} };
 
@@ -535,7 +536,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
   describe('dos logins simultáneos del mismo usuario', () => {
     it('con varias sesiones candidatas: el segundo espera al primero, solo se eliminan las candidatas y ambos entran', async () => {
       const f = await entorno.fixture();
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       const candidatas = await sesionesRevocadas(f.op, 3);
       const vencida = await entorno.prisma.sesion.create({
         data: {
@@ -589,7 +590,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
 
     it('sin sesiones candidatas: ambos entran, con session_id y jti distintos', async () => {
       const f = await entorno.fixture();
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       let r1: Res = { status: 0, body: {} };
       let r2: Res = { status: 0, body: {} };
 
@@ -636,7 +637,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
   describe('presupuesto: 409 cuando la espera supera el tope de 3 s', () => {
     it('devuelve 409 con el mensaje acordado y no crea sesión ni cambia seguridad_cuenta', async () => {
       const f = await entorno.fixture();
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       const antes = {
         s: await seguridad(f.op),
         n: (await sesiones(f.op)).length,
@@ -690,7 +691,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
       });
       const totalAntes = (await sesiones(f.op)).length;
 
-      const login = await iniciar(urlLogin, await emailDe(f.op));
+      const login = await iniciar(urlLogin, await usernameDe(f.op));
 
       expect(login.status).toBe(200);
       expect(login.body.requiere_cambio_password).toBe(true);
@@ -712,7 +713,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
       });
       const totalAntes = (await sesiones(f.op)).length;
 
-      const login = await iniciar(urlLogin, await emailDe(f.op));
+      const login = await iniciar(urlLogin, await usernameDe(f.op));
 
       expect(login.status).toBe(403);
       expect(login.body.message).toBe(
@@ -733,6 +734,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
         data: {
           nombre_completo: 'sin organización',
           cedula: `so-${entorno.sufijo}`,
+          username: usernameDePrueba(`so-${entorno.sufijo}@e2e.local`),
           email: `so-${entorno.sufijo}@e2e.local`,
           password_hash: base.password_hash,
           rol_id: rol.id,
@@ -741,7 +743,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
       entorno.ids.usuarios.push(u.id);
       expect(await seguridad(u.id)).toBeNull();
 
-      const login = await iniciar(urlLogin, u.email);
+      const login = await iniciar(urlLogin, u.username);
 
       expect(login.status).toBe(200);
       expect(login.body.usuario).toMatchObject({
@@ -760,7 +762,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
 
       const login = await iniciar(
         urlLogin,
-        await emailDe(f.op),
+        await usernameDe(f.op),
         'incorrecta-123',
       );
 
@@ -770,7 +772,7 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
 
     it('rotación y logout siguen funcionando con la sesión creada por la fase B', async () => {
       const f = await entorno.fixture();
-      const login = await iniciar(urlLogin, await emailDe(f.op));
+      const login = await iniciar(urlLogin, await usernameDe(f.op));
       const refresh = login.body.refresh_token as string;
 
       const rotado = await request(urlLogin)

@@ -1,0 +1,88 @@
+.float-chat .float-panel {
+  width: min(92vw, 380px);
+  max-height: min(640px, calc(100svh - 7.5rem));
+  background: color-mix(in srgb, var(--avisens-sage) 26%, var(--avisens-cream));
+  border: 1px solid color-mix(in srgb, var(--avisens-ink) 10%, transparent);
+  border-radius: 24px;
+  box-shadow: 0 30px 70px -28px color-mix(in srgb, var(--avisens-ink) 55%, transparent), 0 2px 6px color-mix(in srgb, var(--avisens-ink) 8%, transparent);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.float-chat .float-chat-topbar {
+  position: relative;
+  gap: .8rem;
+  padding: .85rem .9rem .85rem 1rem;
+  background: var(--avisens-deep);
+}
+
+.float-chat .float-chat-topbar::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--avisens-maize), color-mix(in srgb, var(--avisens-maize) 0%, transparent));
+}
+
+.float-chat .float-chat-avatar {
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--avisens-cream) 35%, transparent);
+  border-radius: 50%;
+  background: var(--avisens-sage);
+}
+
+.float-chat .float-chat-avatar { position: relative; display: grid; place-items: center; box-sizing: border-box; }
+.float-chat .float-chat-avatar > * { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+.float-chat .float-chat-avatar-pose { animation: none; }
+.float-chat .float-chat-avatar-pose img,
+.float-chat .float-chat-avatar-image { width: 100%; height: 100%; object-fit: contain; transform: scale(1.75); transform-origin: 42% 38%; }
+.float-chat .float-chat-avatar [data-avia-estado] { transform: scale(1.12) translateY(4%); }
+.float-chat .float-chat-avatar-pose::after { display: none; }
+
+.float-chat .float-chat-name { color: var(--avisens-cream); font-family: inherit; font-size: 1.02rem; font-weight: 700; letter-spacing: -.01em; }
+.float-chat .float-chat-tagline { display: none; }
+.float-chat .float-chat-online { margin-top: .15rem; color: color-mix(in srgb, var(--avisens-cream) 78%, transparent); font-family: inherit; font-size: .74rem; }
+.float-chat .float-chat-online::before { background: var(--avisens-maize); box-shadow: 0 0 0 3px color-mix(in srgb, var(--avisens-maize) 25%, transparent); }
+
+.float-chat .float-chat-reset,
+.float-chat .float-chat-close { width: 34px; height: 34px; border-radius: 10px; color: var(--avisens-cream); background: color-mix(in srgb, var(--avisens-cream) 10%, transparent); }
+.float-chat .float-chat-reset:hover:not(:disabled),
+.float-chat .float-chat-close:hover { background: color-mix(in srgb, var(--avisens-cream) 20%, transparent); }
+
+.float-chat .float-chat-progress { height: 3px; background: color-mix(in srgb, var(--avisens-sage) 70%, transparent); }
+.float-chat .float-chat-progress div { background: var(--avisens-maize); }
+
+.float-chat .float-chat-msgs { padding: 1.1rem 1rem .6rem; background: color-mix(in srgb, var(--avisens-sage) 26%, var(--avisens-cream)); }
+.float-chat .float-msg-bub { padding: .7rem .95rem; border-radius: 18px; font-size: .92rem; line-height: 1.5; box-shadow: none; }
+.float-chat .float-msg.bot .float-msg-bub { border: 1px solid color-mix(in srgb, var(--avisens-sage) 85%, transparent); border-bottom-left-radius: 6px; background: var(--avisens-cream); color: var(--avisens-ink); }
+.float-chat .float-msg.usuario .float-msg-bub { border-bottom-right-radius: 6px; background: var(--avisens-deep); color: var(--avisens-cream); }
+.float-chat .float-dots span { background: var(--avisens-deep); }
+
+.float-chat .float-chat-options { gap: .45rem; padding: .4rem 1rem .9rem; background: color-mix(in srgb, var(--avisens-sage) 26%, var(--avisens-cream)); }
+.float-chat .float-chat-options button { min-height: 44px; border: 1px solid color-mix(in srgb, var(--avisens-deep) 30%, transparent); border-radius: 14px; background: var(--avisens-cream); color: var(--avisens-deep); font-weight: 600; }
+.float-chat .float-chat-options button:hover:not(:disabled) { border-color: var(--avisens-deep); background: var(--avisens-deep); color: var(--avisens-cream); transform: translateY(-1px); }
+
+.float-chat .float-chat-rotulo { margin: .2rem .1rem .15rem; color: color-mix(in srgb, var(--avisens-ink) 60%, transparent); font-size: .68rem; letter-spacing: .1em; }
+.float-chat .float-chat-menu .float-accion { gap: .8rem; padding: .75rem .8rem; border: 1px solid color-mix(in srgb, var(--avisens-sage) 90%, transparent); border-radius: 16px; background: var(--avisens-cream); color: var(--avisens-ink); box-shadow: 0 1px 2px color-mix(in srgb, var(--avisens-ink) 6%, transparent); }
+.float-chat .float-chat-menu .float-accion:hover:not(:disabled) { border-color: var(--avisens-deep); background: var(--avisens-cream); color: var(--avisens-ink); box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--avisens-ink) 45%, transparent); }
+.float-chat .float-chat-menu .float-accion strong { color: var(--avisens-ink); font-size: .92rem; }
+.float-chat .float-chat-menu .float-accion small { color: color-mix(in srgb, var(--avisens-ink) 62%, transparent); font-size: .78rem; }
+.float-chat .float-accion-icono { width: 2.3rem; height: 2.3rem; border-radius: 11px; }
+.float-chat .float-accion--cotizar .float-accion-icono { color: var(--avisens-ink); background: var(--avisens-maize); }
+.float-chat .float-accion--dudas .float-accion-icono { color: var(--avisens-deep); background: var(--avisens-sage); }
+.float-chat .float-accion--soporte .float-accion-icono { color: var(--avisens-cream); background: var(--avisens-deep); }
+.float-chat .float-accion-flecha { color: var(--avisens-deep); }
+
+.float-chat .float-chat-input-row { gap: .5rem; padding: .7rem .8rem .8rem; border-top: 1px solid color-mix(in srgb, var(--avisens-sage) 80%, transparent); background: color-mix(in srgb, var(--avisens-sage) 26%, var(--avisens-cream)); }
+.float-chat .float-chat-inp { min-height: 44px; border: 1px solid color-mix(in srgb, var(--avisens-sage) 100%, transparent); background: var(--avisens-cream); color: var(--avisens-ink); font-size: .9rem; }
+.float-chat .float-chat-inp:focus { border-color: var(--avisens-deep); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--avisens-deep) 14%, transparent); }
+.float-chat .float-chat-inp:disabled { background: color-mix(in srgb, var(--avisens-sage) 35%, var(--avisens-cream)); }
+.float-chat .float-chat-send-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--avisens-deep); color: var(--avisens-cream); }
+.float-chat .float-chat-send-btn:disabled { background: color-mix(in srgb, var(--avisens-sage) 80%, transparent); color: color-mix(in srgb, var(--avisens-ink) 45%, transparent); }
+
+.float-chat .float-result { border: 1px solid color-mix(in srgb, var(--avisens-sage) 90%, transparent); border-radius: 16px; background: var(--avisens-cream); }
+.float-chat .float-btn::after { background: var(--avisens-deep); color: var(--avisens-cream); font-family: inherit; }
+.float-chat .float-btn-cerrar { background: var(--avisens-deep); color: var(--avisens-cream); }

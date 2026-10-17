@@ -6,7 +6,10 @@ import {
   IsString,
   IsDateString,
   Min,
+  Matches,
+  MaxLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateSensorDto {
   @ApiProperty({
@@ -27,18 +30,40 @@ export class CreateSensorDto {
 
   @ApiProperty({
     example: 'TEMP-G1-01',
-    description: 'Código único del sensor',
+    description:
+      'Código único del sensor; si se omite, el backend genera el serial',
+    required: false,
   })
   @IsString()
-  codigo: string;
+  @IsOptional()
+  codigo?: string;
 
   @ApiProperty({ example: 'temperatura', description: 'Variable que mide' })
   @IsString()
   tipo: string;
 
-  @ApiProperty({ example: '°C', description: 'Unidad de medida' })
+  @ApiPropertyOptional({
+    example: 'gpio:18',
+    nullable: true,
+    description:
+      'Conexión física estable dentro del ESP32; null conserva ingesta por código',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
+  @IsOptional()
   @IsString()
-  unidad_medida: string;
+  @MaxLength(64)
+  @Matches(/^gpio:(0|[1-9]\d*)$/)
+  canal?: string | null;
+
+  @ApiPropertyOptional({
+    example: '°C',
+    description: 'Unidad de medida; si se omite, se deriva del tipo de sensor',
+  })
+  @IsString()
+  @IsOptional()
+  unidad_medida?: string;
 
   @ApiPropertyOptional({ example: 'DHT22' })
   @IsString()

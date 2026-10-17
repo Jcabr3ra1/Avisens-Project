@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { QueryAuditoriaDto } from './dto/query-auditoria.dto';
 import { paginate } from '../../common/pagination/paginate';
 
 export interface EventoAuditoria {
@@ -41,9 +41,12 @@ export class AuditoriaService {
     }
   }
 
-  async listar({ page, limit }: PaginationQueryDto) {
+  async listar(query: QueryAuditoriaDto) {
+    const { page, limit } = query;
+    const where = filtroAuditoria(query);
     const [data, total] = await this.prisma.$transaction([
       this.prisma.bitacoraAuditoria.findMany({
+        where,
         include: {
           usuario: { select: { nombre_completo: true, email: true } },
         },
@@ -51,8 +54,55 @@ export class AuditoriaService {
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.prisma.bitacoraAuditoria.count(),
+      this.prisma.bitacoraAuditoria.count({ where }),
     ]);
     return paginate(data, total, page, limit);
   }
+
+  async opciones() {
+    const [acciones, entidades, usuarios] = await Promise.all([
+      this.prisma.bitacoraAuditoria.groupBy({
+        by: ['accion'],
+        _count: { _all: true },
+        orderBy: { accion: 'asc' },
+      }),
+      this.prisma.bitacoraAuditoria.groupBy({
+        by: ['entidad_afectada'],
+        _count: { _all: true },
+        orderBy: { entidad_afectada: 'asc' },
+      }),
+      this.prisma.usuario.findMany({
+        where: { auditorias: { some: {} } },
+        select: { id: true, nombre_completo: true },
+        orderBy: { nombre_completo: 'asc' },
+      }),
+    ]);
+    return {
+      acciones: acciones.map((fila) => fila.accion),
+      entidades: entidades.map((fila) => fila.entidad_afectada),
+      usuarios,
+    };
+  }
+}
+
+const ZONA_COLOMBIA = '-05:00';
+
+export function filtroAuditoria(
+  query: QueryAuditoriaDto,
+): Prisma.BitacoraAuditoriaWhereInput {
+  const where: Prisma.BitacoraAuditoriaWhereInput = {};
+  if (query.accion) where.accion = query.accion;
+  if (query.entidad) where.entidad_afectada = query.entidad;
+  if (query.usuario_id) where.usuario_id = query.usuario_id;
+  if (query.desde || query.hasta) {
+    where.fecha_hora = {
+      ...(query.desde && {
+        gte: new Date(`${query.desde}T00:00:00.000${ZONA_COLOMBIA}`),
+      }),
+      ...(query.hasta && {
+        lte: new Date(`${query.hasta}T23:59:59.999${ZONA_COLOMBIA}`),
+      }),
+    };
+  }
+  return where;
 }

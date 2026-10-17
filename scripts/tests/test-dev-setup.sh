@@ -23,6 +23,7 @@ JWT_SECRET=cambia-esto
 JWT_REFRESH_SECRET=cambia-esto
 ML_INTERNAL_TOKEN=cambia-esto
 METRICS_TOKEN=cambia-esto
+ADMIN_USERNAME=admin.avisens
 ADMIN_EMAIL=admin@avisens.com
 ADMIN_PASSWORD=cambia-esto
 EOF

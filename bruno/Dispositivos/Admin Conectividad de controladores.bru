@@ -1,0 +1,30 @@
+meta {
+  name: [Admin]  Conectividad de controladores
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/v1/dispositivos/conectividad
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("cuenta los controladores con la ventana de 15 minutos", function() {
+    expect(res.getStatus()).to.equal(200);
+    const body = res.getBody();
+    expect(body.ventana_minutos).to.equal(15);
+    expect(body.conectados + body.sin_reportar + body.nunca).to.equal(body.total);
+  });
+}
+
+docs {
+  Solo cuenta dispositivos activos. Un controlador está conectado si su
+  ultima_conexion cae dentro de los últimos 15 minutos (decisión de negocio
+  del 2026-10-17). «problemas» lista los que no reportan, con su organización.
+}
