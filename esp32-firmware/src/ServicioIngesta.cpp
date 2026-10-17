@@ -25,11 +25,33 @@ String generarIdLote() {
   return String(buf);
 }
 
-bool enviarLecturaConReintentos(float temperatura, float humedad, const String &idLote) {
-  String body = "{\"id_lote\":\"" + idLote + "\",\"lecturas\":[";
-  body += "{\"codigo\":\"" + String(CODIGO_SENSOR_TEMP) + "\",\"valor\":" + String(temperatura, 1) + "},";
-  body += "{\"codigo\":\"" + String(CODIGO_SENSOR_HUM) + "\",\"valor\":" + String(humedad, 1) + "}";
-  body += "]}";
+static String lecturaJson(const char *codigo, const String &valor) {
+  return "{\"codigo\":\"" + String(codigo) + "\",\"valor\":" + valor + "},";
+}
+
+bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote) {
+  String lecturas;
+  int LECTURAS_ENVIADAS = 0;
+  if (ciclo.incluirDht) {
+    lecturas += lecturaJson(CODIGO_SENSOR_TEMP, String(ciclo.temperatura, 1));
+    lecturas += lecturaJson(CODIGO_SENSOR_HUM, String(ciclo.humedad, 1));
+    LECTURAS_ENVIADAS += 2;
+  }
+  if (ciclo.incluirAgua) {
+    lecturas += lecturaJson(CODIGO_SENSOR_AGUA, String(ciclo.distanciaAgua, 1));
+    LECTURAS_ENVIADAS += 1;
+  }
+  const EstadoActuadores &a = ciclo.actuadores;
+  const char *CODIGOS_RELES[4] = {CODIGO_RELE_K1, CODIGO_RELE_K2, CODIGO_RELE_K3, CODIGO_RELE_K4};
+  lecturas += lecturaJson(CODIGO_MOTOR_ALIMENTADOR, String(a.alimentador ? 1 : 0));
+  lecturas += lecturaJson(CODIGO_MOTOR_PERSIANA, String(a.persiana ? 1 : 0));
+  for (int i = 0; i < 4; i++) {
+    lecturas += lecturaJson(CODIGOS_RELES[i], String(a.reles[i] ? 1 : 0));
+  }
+  LECTURAS_ENVIADAS += 6;
+  lecturas.remove(lecturas.length() - 1);  // coma final
+
+  String body = "{\"id_lote\":\"" + idLote + "\",\"lecturas\":[" + lecturas + "]}";
 
   for (int intento = 1; intento <= MAX_REINTENTOS_INGESTA; intento++) {
     HTTPClient http;
@@ -75,7 +97,6 @@ bool enviarLecturaConReintentos(float temperatura, float humedad, const String &
     // Un 2xx con JSON valido pero sin el contrato esperado (otro servicio,
     // un proxy, una respuesta generica) no cuenta como exito solo por ser
     // JSON parseable -- se exige la forma real de la respuesta de /ingest.
-    const int LECTURAS_ENVIADAS = 2;  // DHT: temperatura + humedad
     JsonVariant campoIgnoradas = doc["ignoradas"];
     JsonVariant campoRegistradas = doc["registradas"];
     JsonVariant campoIdLote = doc["id_lote"];
@@ -100,7 +121,7 @@ bool enviarLecturaConReintentos(float temperatura, float humedad, const String &
       // Reintentar no arregla un codigo mal configurado -- se abandona
       // sin gastar los reintentos que quedan.
       LOG_ERROR("Ingesta: el backend no registro todas las lecturas (revisar "
-                "CODIGO_SENSOR_TEMP/HUM en config.h vs sensores registrados)");
+                "CODIGO_SENSOR_* / CODIGO_MOTOR_* en config.h vs sensores registrados)");
       return false;
     }
 

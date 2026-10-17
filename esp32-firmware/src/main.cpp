@@ -82,6 +82,58 @@ LecturaDHT leerSnapshotDht()
   return copia;
 }
 
+// Actuadores "encendidos desde el último envío": la persiana se mueve solo
+// ~6 s cada 5 min y el envío es cada INTERVALO_ENVIO_MS, así que mandar solo
+// el estado del instante del envío podría no mostrar nunca un movimiento.
+static portMUX_TYPE muxActuadores = portMUX_INITIALIZER_UNLOCKED;
+static EstadoActuadores actuadoresDesdeEnvio = {};
+
+void registrarEstadoActuadores(const EstadoActuadores &ahora)
+{
+  portENTER_CRITICAL(&muxActuadores);
+  actuadoresDesdeEnvio.alimentador |= ahora.alimentador;
+  actuadoresDesdeEnvio.persiana |= ahora.persiana;
+  for (int i = 0; i < 4; i++)
+    actuadoresDesdeEnvio.reles[i] |= ahora.reles[i];
+  portEXIT_CRITICAL(&muxActuadores);
+}
+
+EstadoActuadores tomarEstadoActuadores()
+{
+  portENTER_CRITICAL(&muxActuadores);
+  EstadoActuadores copia = actuadoresDesdeEnvio;
+  actuadoresDesdeEnvio = {};
+  portEXIT_CRITICAL(&muxActuadores);
+  return copia;
+}
+
+// Última distancia del HC-SR04 para la tarea de red (Core 1).
+static portMUX_TYPE muxAgua = portMUX_INITIALIZER_UNLOCKED;
+static LecturaUltrasonico snapshotAgua = {-1.0f, EstadoSensorUltrasonico::ERROR, 0};
+static bool snapshotAguaEnError = true;
+
+void publicarLecturaAgua(const LecturaUltrasonico &lectura, bool enError)
+{
+  portENTER_CRITICAL(&muxAgua);
+  snapshotAgua = lectura;
+  snapshotAguaEnError = enError;
+  portEXIT_CRITICAL(&muxAgua);
+}
+
+// true y la distancia si hay una lectura válida y reciente para enviar.
+bool leerSnapshotAgua(float &distancia)
+{
+  portENTER_CRITICAL(&muxAgua);
+  LecturaUltrasonico copia = snapshotAgua;
+  bool enError = snapshotAguaEnError;
+  portEXIT_CRITICAL(&muxAgua);
+
+  distancia = copia.distancia;
+  return !enError &&
+         copia.estado == EstadoSensorUltrasonico::OK &&
+         millis() - copia.timestamp <= UMBRAL_SNAPSHOT_OBSOLETO_MS;
+}
+
 // FUNCIÓN: Registrar falla crítica (local)
 void registrarFallaCritica(
     const String &origen,
@@ -275,6 +327,7 @@ void tareaGalpon(void *pvParameters)
       LecturaMQ135 lecturaMQ135 = sensorMQ135.leer();
       LecturaKY032 lecturaKY032 = sensorKY032.leer();
       LecturaUltrasonico lecturaUltrasonico = sensorUltrasonico.leer();
+      publicarLecturaAgua(lecturaUltrasonico, sensorUltrasonico.enError());
       LecturaPeso lecturaPeso = sensorPeso.leer();
 
       float temperatura = lecturaDHT.valida ? lecturaDHT.temperatura : 0.0f;
@@ -306,6 +359,16 @@ void tareaGalpon(void *pvParameters)
         alimentador.actualizar();
         persiana.actualizar();
       }
+
+      // Fuera de MONITORING (ERROR/SHUTDOWN) los motores están detenidos y
+      // así se reporta; los relés van con el estado real que dejó el fail-safe.
+      EstadoPersiana ep = persiana.getEstado();
+      EstadoActuadores ahoraActuadores = {};
+      ahoraActuadores.alimentador = alimentador.getEstado() == EstadoAlimentador::ENCENDIDO;
+      ahoraActuadores.persiana = ep == EstadoPersiana::ABRIENDO || ep == EstadoPersiana::CERRANDO;
+      for (uint8_t r = 1; r <= 4; r++)
+        ahoraActuadores.reles[r - 1] = gestorActuadores.getEstado(r);
+      registrarEstadoActuadores(ahoraActuadores);
 
       // ─── Evaluación de Fallos Críticos (Variable F) ────────────────
       bool errorCritico = sensorDHT.enError() || sensorUltrasonico.enError();
@@ -378,21 +441,27 @@ void tareaWiFi(void *pvParameters)
 
       LecturaDHT lectura = leerSnapshotDht();
       unsigned long antiguedadSnapshot = millis() - lectura.timestamp;
+      bool incluirDht = true;
 
       if (!lectura.valida)
       {
-        LOG_WARN("Ingesta: DHT sin lectura válida, se omite este ciclo");
+        LOG_WARN("Ingesta: DHT sin lectura válida, se omite del envío");
+        incluirDht = false;
       }
       else if (antiguedadSnapshot > UMBRAL_SNAPSHOT_OBSOLETO_MS)
       {
         LOG_WARN("Ingesta: snapshot DHT obsoleto (" + String(antiguedadSnapshot) +
-                 "ms) -- tareaGalpon dejó de refrescarlo, se omite");
+                 "ms) -- tareaGalpon dejó de refrescarlo, se omite del envío");
+        incluirDht = false;
       }
-      else
-      {
-        String idLote = generarIdLote();
-        enviarLecturaConReintentos(lectura.temperatura, lectura.humedad, idLote);
-      }
+
+      CicloIngesta ciclo;
+      ciclo.incluirDht = incluirDht;
+      ciclo.temperatura = lectura.temperatura;
+      ciclo.humedad = lectura.humedad;
+      ciclo.incluirAgua = leerSnapshotAgua(ciclo.distanciaAgua);
+      ciclo.actuadores = tomarEstadoActuadores();
+      enviarLecturaConReintentos(ciclo, generarIdLote());
     }
 
     vTaskDelay(pdMS_TO_TICKS(1000));

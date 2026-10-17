@@ -33,6 +33,18 @@
 // backend (ese es el puente físico↔BD; el backend resuelve codigo → sensor_id).
 #define CODIGO_SENSOR_TEMP "TEMP-G1-01"
 #define CODIGO_SENSOR_HUM  "HUM-G1-01"
+// HC-SR04: distancia del sensor a la superficie del agua (cm). Más
+// distancia = menos agua.
+#define CODIGO_SENSOR_AGUA "AGUA-G1-01"
+// Estado de los motores del L293D: se reportan como sensores con unidad
+// "estado" (1 = encendido, 0 = apagado).
+#define CODIGO_MOTOR_ALIMENTADOR "MOT-ALIM-G1-01"
+#define CODIGO_MOTOR_PERSIANA    "MOT-PERS-G1-01"
+// Relés K1-K4, también como sensores de "estado" (1 = encendido).
+#define CODIGO_RELE_K1 "REL-K1-G1-01" // Bombillos (calefacción)
+#define CODIGO_RELE_K2 "REL-K2-G1-01" // Ventiladores
+#define CODIGO_RELE_K3 "REL-K3-G1-01" // Extractores
+#define CODIGO_RELE_K4 "REL-K4-G1-01" // Bomba de agua
 
 // ─── SENSORES (pines) ────────────────────────────────────
 #define DHTPIN 4
@@ -79,7 +91,7 @@
 #define HUM_EXTRACTORES 65.0
 #define NH3_ALTO 1500
 #define NH3_MODERADO 800
-#define NIVEL_BOMBA_ON 6.0       // cm
+#define NIVEL_BOMBA_ON 5.0       // cm: más distancia = menos agua -> llenar
 #define NIVEL_BOMBA_OFF 3.0      // cm
 #define MAX_FALLOS_SENSOR 3      // Reintentos antes de fail-safe
 #define MAX_DISTANCIA_AGUA 400.0 // cm (rango HC-SR04)
