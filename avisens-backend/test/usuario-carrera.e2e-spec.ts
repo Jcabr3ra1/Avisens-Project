@@ -729,6 +729,7 @@ describe('Usuario: asignación frente a desactivación de usuario y organizació
         'organizacion_id',
         'rol',
         'telefono',
+        'username',
       ]);
       expect((r.body as { activo: boolean }).activo).toBe(false);
       expect((r.body as { nombre_completo: string }).nombre_completo).toBe(
