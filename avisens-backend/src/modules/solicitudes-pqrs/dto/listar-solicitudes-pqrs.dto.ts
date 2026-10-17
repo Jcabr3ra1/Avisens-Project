@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto';
+import { CATEGORIAS_PQRS, ESTADOS_PQRS } from '../dominio/pqrs';
 
 export class ListarSolicitudesPqrsDto extends PaginationQueryDto {
   @ApiPropertyOptional({
@@ -8,7 +9,7 @@ export class ListarSolicitudesPqrsDto extends PaginationQueryDto {
     description: 'Filtrar por estado: abierta | en_proceso | resuelta | cerrada',
   })
   @IsString()
-  @IsIn(['abierta', 'en_proceso', 'resuelta', 'cerrada'])
+  @IsIn(ESTADOS_PQRS)
   @IsOptional()
   estado?: string;
 
@@ -16,7 +17,7 @@ export class ListarSolicitudesPqrsDto extends PaginationQueryDto {
     example: 'Queja',
     description: 'Filtrar por categoria',
   })
-  @IsString()
+  @IsIn(CATEGORIAS_PQRS)
   @IsOptional()
   categoria?: string;
 }

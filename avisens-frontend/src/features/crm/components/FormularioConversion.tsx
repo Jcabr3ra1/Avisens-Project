@@ -243,10 +243,33 @@ function FormularioConversion({ prospecto, onConvertir, onCerrar }: Props) {
         </fieldset>
 
         <fieldset className="modal-seccion">
-          <legend>Acceso</legend>
+          <legend>Acceso y contacto</legend>
 
           <label className="modal-campo">
-            <span>Correo</span>
+            <span>Usuario de acceso</span>
+            <input
+              ref={registrar('username')}
+              name="username"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              value={form.username}
+              onChange={(e) => cambiar('username', e.target.value)}
+              minLength={3}
+              maxLength={30}
+              required
+              aria-invalid={campoError === 'username'}
+              aria-describedby={descripcion('username', 'crm-username-ayuda')}
+            />
+            <small className="modal-ayuda" id="crm-username-ayuda">
+              De 3 a 30 caracteres: letras sin tildes, números, punto, guion o guion bajo.
+              Se guarda en minúsculas. Entrégalo al cliente junto con la contraseña.
+            </small>
+            {mensajeCampo('username')}
+          </label>
+
+          <label className="modal-campo">
+            <span>Correo <em>(Opcional)</em></span>
             <input
               ref={registrar('email')}
               name="email"
@@ -254,16 +277,13 @@ function FormularioConversion({ prospecto, onConvertir, onCerrar }: Props) {
               autoComplete="email"
               value={form.email}
               onChange={(e) => cambiar('email', e.target.value)}
-              required
               aria-invalid={campoError === 'email'}
               aria-describedby={descripcion('email', 'crm-email-ayuda')}
               className={campoError === 'email' ? 'crm-campo--choca' : undefined}
             />
 
             <small className="modal-ayuda" id="crm-email-ayuda">
-              {prospecto.email
-                ? 'Lo dio en el chat. Con él entra al sistema: confírmalo antes de crear la cuenta.'
-                : 'No lo pedimos por WhatsApp, así que hay que pedírselo. Con él entra al sistema.'}
+              Solo se usa como dato de contacto. Puedes dejarlo vacío.
             </small>
             {mensajeCampo('email')}
           </label>

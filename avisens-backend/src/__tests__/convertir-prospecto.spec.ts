@@ -1,3 +1,4 @@
+import { usernameDePrueba } from '../../test/soporte/username';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ProspectosService } from '../modules/prospectos/prospectos.service';
@@ -37,6 +38,7 @@ describe('convertir un prospecto en cliente', () => {
   const datos = {
     nombre_completo: 'María López',
     cedula: '1098765432',
+    username: usernameDePrueba('maria@granja.com'),
     email: 'maria@granja.com',
     password: 'Clave123Seg',
     telefono: '573001234567',

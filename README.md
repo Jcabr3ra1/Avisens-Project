@@ -139,7 +139,7 @@ agruparlo todo en "hecho" o "falta":
 | **Recomendaciones automáticas a partir de los KPIs** | ✅ Implementado e integrado; sin validar con uso real todavía |
 | **Copiloto conversacional** | ✅ Implementado e integrado (usa un modelo de lenguaje de Anthropic con herramientas); requiere una clave de API configurada, y su comportamiento en uso real aún no está validado a fondo |
 | **Comandos de voz** | ✅ Implementado e integrado (interpreta y registra comandos de un vocabulario controlado, con sincronización para uso sin conexión); sin validar con uso real todavía |
-| **Firmware del sensor ESP32** | 🔧 El código implementa el envío real por HTTP con token de dispositivo, pero **no hay confirmación de que se haya hecho ni siquiera una prueba física completa** (hardware real + sensor real + red real + backend real) — ni a pequeña ni a gran escala. El propio firmware tiene comentarios que dicen que el transporte (HTTP o MQTT) sigue sin decidirse del todo |
+| **Firmware del sensor ESP32** | 🔧 El firmware compila para el entorno `esp32dev` y implementa envío HTTPS validado por CA y token de dispositivo, con control local separado de la red. La prueba física completa (placa, sensor, fuente, red y backend) sigue pendiente de hardware real. |
 | **App Android** | 🔧 Existe una app nativa básica (inicio de sesión y parte de la bitácora); **no** es todavía la versión multiplataforma planeada, y le falta buena parte de lo que ya tiene la web |
 | **Predicciones por Machine Learning** (peso, FCR, riesgo de mortalidad) | 🔧 El servicio existe y se está ajustando — sus resultados **no** se presentan todavía como una predicción validada para producción |
 | **Bioacústica / visión, modo multi-granja (SaaS)** | 📋 Planeado, sin construir todavía |
@@ -522,12 +522,12 @@ pio run                       # compilar
 pio run -t upload             # cargar al dispositivo
 ```
 
-El código implementa el envío por **HTTP** (POST con un token de dispositivo
-en la cabecera), no por MQTT. El propio archivo (`esp32-firmware/src/main.cpp`)
-tiene comentarios que describen esto como pendiente de decidir — están
-desactualizados frente al código real, pero reflejan que **no hay
-confirmación de una prueba física completa** (hardware, sensor, red y
-backend reales) todavía.
+El firmware envía por **HTTPS** a `/ingest`, con validación de certificado y un
+token individual del dispositivo en la cabecera. El ciclo de reconexión y envío
+corre separado del control local del ventilador. La configuración local debe
+apuntar al hostname documentado en `esp32-firmware/README.md`; no se versionan
+WiFi ni tokens. La compilación y la prueba física completa aún requieren una
+placa concreta, fuente adecuada, sensores, red y hardware disponibles.
 
 ## Calidad y flujo de colaboración
 
@@ -546,3 +546,12 @@ en [`FLUJO-DE-TRABAJO.md`](FLUJO-DE-TRABAJO.md).
 ---
 
 > Repositorio oficial de AVISENS. En desarrollo activo.
+
+## Acceso por usuario
+
+Las cuentas se entregan con **usuario y contraseña**. El correo es un dato de
+contacto opcional. Las cuentas anteriores reciben inicialmente `usuario.<id>`;
+se puede consultar y editar en Personas. Las contraseñas existentes se conservan.
+Consulta [el contrato, migración y comprobaciones](INGRESO-POR-USUARIO.md).
+Para instalar desde cero define `ADMIN_USERNAME` y `ADMIN_PASSWORD`;
+`ADMIN_EMAIL` es opcional.

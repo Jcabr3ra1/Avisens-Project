@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { clearCambioPasswordToken, getCambioPasswordToken } from '@shared/api/tokens'
 import { cambiarPasswordTemporal } from './api/recuperacionesPassword'
+import MarcoAcceso from '@shared/ui/MarcoAcceso/MarcoAcceso'
 import './RecuperacionesPassword.css'
 
 function CambiarPasswordPage() {
@@ -46,9 +47,8 @@ function CambiarPasswordPage() {
   }
 
   return (
-    <main className="rec-publica">
+    <MarcoAcceso>
       <section className="rec-publica-tarjeta" aria-labelledby="cambiar-password-titulo">
-        <p className="rec-kicker">AVISENS · Acceso seguro</p>
         <h1 id="cambiar-password-titulo">Crea tu nueva contraseña</h1>
         <p className="rec-publica-intro">Tu contraseña temporal es válida una sola vez. Define una nueva para continuar.</p>
         {mensaje ? (
@@ -73,7 +73,7 @@ function CambiarPasswordPage() {
           </form>
         )}
       </section>
-    </main>
+    </MarcoAcceso>
   )
 }
 

@@ -26,6 +26,7 @@ function formulario(cambios: Partial<FormularioConversion> = {}): FormularioConv
   return {
     nombre_completo: 'Juan Alberto',
     cedula: '1234567890',
+    username: 'juan.alberto',
     email: 'juan@ejemplo.com',
     telefono: '3001234567',
     organizacion_nombre: 'La Esperanza',
@@ -198,5 +199,25 @@ describe('campoSenalado con el 400 de class-validator', () => {
   it('no inventa un campo cuando el mensaje no nombra ninguno', () => {
     expect(campoSenalado('Los datos enviados no son válidos.')).toBeNull()
     expect(campoSenalado('organizacion must be active')).toBeNull()
+  })
+})
+
+describe('credenciales por usuario', () => {
+  it('permite convertir sin correo de contacto', () => {
+    const form = formulario({ email: '', username: ' MARIA.LOPEZ ' })
+    expect(errorDeConversion(form)).toBe('')
+    expect(primerCampoInvalido(form)).toBeNull()
+    expect(payloadDeConversion(form)).toMatchObject({ username: 'maria.lopez', email: null })
+  })
+
+  it.each(['', 'ab', 'a'.repeat(31), 'con espacio', 'con@correo.com', 'maría'])('rechaza el usuario %s', (username) => {
+    const form = formulario({ username })
+    expect(errorDeConversion(form)).toMatch(/usuario/)
+    expect(primerCampoInvalido(form)).toBe('username')
+  })
+
+  it('señala un usuario duplicado y deja su elección al asesor', () => {
+    expect(campoSenalado('Ya existe un registro con ese valor en: username')).toBe('username')
+    expect(prellenarDesde(prospecto()).username).toBe('')
   })
 })

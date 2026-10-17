@@ -1,15 +1,15 @@
 .guia-page {
-  --guia-pino: #1b5e43;
-  --guia-pino-oscuro: #123f2d;
-  --guia-hoja: #e7f1ea;
-  --guia-grano: #e0a82e;
-  --guia-grano-suave: #fdf4dc;
-  --guia-alerta: #a8402d;
-  --guia-alerta-suave: #fbece8;
-  --guia-tinta: var(--color-texto, #1a2a22);
-  --guia-tinta-suave: var(--color-texto-suave, #5b6b62);
-  --guia-linea: var(--color-borde, #d5dfd8);
-  --guia-fondo: var(--color-superficie, #ffffff);
+  --guia-pino: var(--primary);
+  --guia-pino-oscuro: var(--primary-hover);
+  --guia-hoja: var(--surface-subtle);
+  --guia-grano: var(--avisens-maize);
+  --guia-grano-suave: var(--warning-soft);
+  --guia-alerta: var(--danger);
+  --guia-alerta-suave: var(--danger-soft);
+  --guia-tinta: var(--color-texto, var(--text-primary));
+  --guia-tinta-suave: var(--color-texto-suave, var(--text-muted));
+  --guia-linea: var(--color-borde, var(--border-default));
+  --guia-fondo: var(--color-superficie, var(--on-primary));
   --guia-radio: 8px;
   --guia-radio-chico: 5px;
 
@@ -183,7 +183,7 @@
   border-left: 4px solid var(--guia-grano);
   border-radius: 0 var(--guia-radio-chico) var(--guia-radio-chico) 0;
   background: var(--guia-grano-suave);
-  color: #6b4d12;
+  color: var(--warning);
   line-height: 1.5;
 }
 

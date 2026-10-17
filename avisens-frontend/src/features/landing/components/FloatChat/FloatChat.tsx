@@ -12,6 +12,7 @@ import Ic from '@shared/ui/Ic/Ic'
 import { seLeenEnPar } from '@features/landing/model/opcionesChat'
 import AviaProgress from './AviaProgress'
 import './FloatChat.css'
+import './FloatChat.tema.css'
 
 const RobotLottie = lazy(() => import('./RobotLottie'))
 
@@ -259,6 +260,20 @@ function FloatChat() {
     setOpen(true)
   }
 
+  useEffect(() => {
+    const abrirDesdeLaPagina = (evento: Event) => {
+      const ruta = (evento as CustomEvent<{ ruta?: RutaChat }>).detail?.ruta
+      setOpen(true)
+      if (ruta && !enviando && (porElegirRuta || !iniciado)) {
+        void iniciar(ruta)
+        return
+      }
+      if (!iniciado && !enviando && !porElegirRuta) abrirConMenu()
+    }
+    window.addEventListener('avisens:abrir-chat', abrirDesdeLaPagina)
+    return () => window.removeEventListener('avisens:abrir-chat', abrirDesdeLaPagina)
+  }, [abrirConMenu, enviando, iniciado, iniciar, porElegirRuta])
+
   const terminarSaludo = useCallback(() => setSaludando(false), [])
 
   function onSubmit(e: FormEvent) {
@@ -334,7 +349,7 @@ function FloatChat() {
             {open && (saludando || enviando) ? (
               <Suspense fallback={avatarProgreso}>
                 <RobotLottie
-                  size={98}
+                  size={48}
                   animando={enviando}
                   saludar={saludando}
                   onSaludoTerminado={terminarSaludo}

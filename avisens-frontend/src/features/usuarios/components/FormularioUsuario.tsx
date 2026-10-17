@@ -173,13 +173,32 @@ function FormularioUsuario({
         )}
 
         <label className="modal-campo">
-          <span>Correo electrónico</span>
+          <span>Usuario de acceso</span>
+          <input
+            value={form.username}
+            onChange={(evento) => onCambiar('username', evento.target.value)}
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            minLength={3}
+            maxLength={30}
+            pattern="[A-Za-z0-9][A-Za-z0-9._\-]{2,29}"
+            aria-describedby="usuarios-username-ayuda"
+            required
+          />
+          <small id="usuarios-username-ayuda" className="modal-ayuda">
+            De 3 a 30 caracteres: letras sin tildes, números, punto, guion o guion bajo.
+            Se guarda en minúsculas. Entrégalo junto con la contraseña.
+          </small>
+        </label>
+
+        <label className="modal-campo">
+          <span>Correo electrónico <em>(Opcional)</em></span>
           <input
             type="email"
-            value={form.email}
+            value={form.email ?? ''}
             onChange={(evento) => onCambiar('email', evento.target.value)}
             autoComplete="email"
-            required
           />
         </label>
 

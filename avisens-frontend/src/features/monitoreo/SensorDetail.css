@@ -5,13 +5,13 @@
   position: fixed;
   inset: 0;
   z-index: 70;
-  background: rgba(7, 20, 14, 0);
+  background: transparent;
   backdrop-filter: blur(0px);
   pointer-events: none;
   transition: background 0.3s ease, backdrop-filter 0.3s ease;
 }
 .sdet-overlay--activo {
-  background: rgba(7, 20, 14, 0.45);
+  background: color-mix(in srgb, var(--avisens-ink) 45%, transparent);
   backdrop-filter: blur(3px);
   pointer-events: all;
 }
@@ -25,9 +25,9 @@
   z-index: 71;
   width: 380px;
   max-width: 100vw;
-  background: rgba(255, 255, 255, 0.98);
-  border-left: 1px solid rgba(16, 44, 35, 0.1);
-  box-shadow: -24px 0 80px rgba(7, 20, 14, 0.18);
+  background: color-mix(in srgb, var(--surface-base) 98%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--avisens-ink) 10%, transparent);
+  box-shadow: -24px 0 80px color-mix(in srgb, var(--avisens-ink) 18%, transparent);
   overflow-y: auto;
   overflow-x: hidden;
   /* Estado cerrado: panel fuera de pantalla a la derecha */
@@ -49,10 +49,10 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 1.3rem 1.4rem 1rem;
-  border-bottom: 1px solid rgba(16, 44, 35, 0.07);
+  border-bottom: 1px solid color-mix(in srgb, var(--avisens-ink) 7%, transparent);
   position: sticky;
   top: 0;
-  background: rgba(255, 255, 255, 0.98);
+  background: color-mix(in srgb, var(--surface-base) 98%, transparent);
   backdrop-filter: blur(8px);
   z-index: 1;
 }
@@ -72,7 +72,7 @@
 
 .sdet-cerrar {
   width: 44px; height: 44px;
-  border: 1px solid rgba(16, 44, 35, 0.12);
+  border: 1px solid color-mix(in srgb, var(--avisens-ink) 12%, transparent);
   border-radius: 9px;
   background: transparent;
   color: var(--text3);
@@ -82,7 +82,7 @@
   transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
 }
-.sdet-cerrar:hover { background: rgba(239, 68, 68, 0.08); color: var(--red); border-color: rgba(239,68,68,0.25); }
+.sdet-cerrar:hover { background: var(--danger-soft); color: var(--red); border-color: color-mix(in srgb, var(--danger) 25%, transparent); }
 .sdet-cerrar:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* ─── Área del gauge ─────────────────────────────────────────────────────────── */
@@ -93,9 +93,9 @@
   padding: 1.8rem 1.4rem 1.2rem;
   /* Fondo sutil que hace resaltar el gauge sin distracciones */
   background:
-    radial-gradient(ellipse 70% 60% at 50% 40%, rgba(16,185,129,0.05), transparent),
-    linear-gradient(180deg, rgba(250,254,252,0.8), transparent);
-  border-bottom: 1px solid rgba(16, 44, 35, 0.06);
+    radial-gradient(ellipse 70% 60% at 50% 40%, color-mix(in srgb, var(--primary) 5%, transparent), transparent),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-base) 80%, transparent), transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--avisens-ink) 6%, transparent);
 }
 
 .sdet-estado-wrap { margin-top: -0.5rem; }
@@ -124,12 +124,12 @@
   grid-template-columns: 1fr 1fr;
   gap: 0.6rem;
   padding: 1.2rem 1.4rem;
-  border-bottom: 1px solid rgba(16, 44, 35, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, var(--avisens-ink) 6%, transparent);
 }
 
 .sdet-stat {
-  background: rgba(7, 23, 19, 0.025);
-  border: 1px solid rgba(16, 44, 35, 0.07);
+  background: color-mix(in srgb, var(--avisens-ink) 2.5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--avisens-ink) 7%, transparent);
   border-radius: 12px;
   padding: 0.75rem 1rem;
   display: flex;
@@ -144,7 +144,7 @@
 /* ─── Barra de rango con marcador ───────────────────────────────────────────── */
 .sdet-rango-card {
   padding: 1.1rem 1.4rem;
-  border-bottom: 1px solid rgba(16, 44, 35, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, var(--avisens-ink) 6%, transparent);
 }
 .sdet-rango-label { font-size: 0.78rem; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 0.75rem; }
 
@@ -152,7 +152,7 @@
 .sdet-rango-bar {
   position: relative;
   height: 8px;
-  background: rgba(10, 26, 20, 0.07);
+  background: color-mix(in srgb, var(--avisens-ink) 7%, transparent);
   border-radius: 999px;
   overflow: visible;
 }
@@ -168,9 +168,9 @@
   transform: translate(-50%, -50%);
   width: 14px; height: 14px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--surface-base);
   border: 2.5px solid;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--avisens-ink) 15%, transparent);
   transition: left 0.5s ease;
 }
 .sdet-rango-labels {
@@ -184,7 +184,7 @@
 /* ─── Secciones internas del panel ──────────────────────────────────────────── */
 .sdet-section {
   padding: 1.1rem 1.4rem;
-  border-bottom: 1px solid rgba(16, 44, 35, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, var(--avisens-ink) 6%, transparent);
 }
 .sdet-section:last-child { border-bottom: none; }
 
@@ -208,8 +208,8 @@
   font-style: italic;
 }
 .sdet-spark {
-  background: rgba(7, 23, 19, 0.02);
-  border: 1px solid rgba(16, 44, 35, 0.07);
+  background: color-mix(in srgb, var(--avisens-ink) 2%, transparent);
+  border: 1px solid color-mix(in srgb, var(--avisens-ink) 7%, transparent);
   border-radius: 12px;
   /* Padding-top generoso: deja lugar al tooltip flotante sin recortarlo */
   padding: 1.9rem 0.8rem 0.4rem;
@@ -237,21 +237,21 @@
   align-items: center;
   gap: 0.05rem;
   padding: 0.3rem 0.55rem;
-  background: rgba(10, 26, 20, 0.92);
+  background: color-mix(in srgb, var(--avisens-ink) 92%, transparent);
   border-radius: 8px;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.12s ease;
 }
-.sdet-spark-tip strong { font-size: 0.78rem; font-weight: 700; color: #fff; font-family: 'DM Mono', monospace; }
-.sdet-spark-tip span   { font-size: 0.65rem; color: rgba(255,255,255,0.55); }
+.sdet-spark-tip strong { font-size: 0.78rem; font-weight: 700; color: var(--on-primary); font-family: 'DM Mono', monospace; }
+.sdet-spark-tip span   { font-size: 0.65rem; color: color-mix(in srgb, var(--surface-base) 55%, transparent); }
 /* Visible solo mientras se pasa el mouse/dedo — el estado lo controla React */
 .sdet-spark-tip--flotante { opacity: 1; }
 
 /* ─── Sección Manual Italcol ─────────────────────────────────────────────────── */
 .sdet-italcol {
-  background: rgba(16, 185, 129, 0.025);
+  background: color-mix(in srgb, var(--primary) 2.5%, transparent);
 }
 .sdet-italcol-desc {
   font-size: 0.83rem;

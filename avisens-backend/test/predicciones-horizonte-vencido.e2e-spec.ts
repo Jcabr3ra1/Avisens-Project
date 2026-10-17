@@ -1,3 +1,4 @@
+import { usernameDePrueba } from './soporte/username';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   INestApplication,
@@ -90,6 +91,7 @@ describe('Predicciones · 422 con cuerpo completo por HTTP (e2e, Postgres real)'
         organizacion_id: organizacion.id,
         nombre_completo: 'Admin horizonte-vencido e2e',
         cedula: `HV-${sufijo}`,
+        username: usernameDePrueba(`horizonte-vencido-${sufijo}@e2e.test`),
         email: `horizonte-vencido-${sufijo}@e2e.test`,
         password_hash: 'no-se-usa-en-este-test',
       },

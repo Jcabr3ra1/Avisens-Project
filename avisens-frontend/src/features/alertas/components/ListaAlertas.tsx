@@ -1,9 +1,12 @@
 import { IcAlert, IcCheck, IcClock, IcEye } from '@shared/ui/icons/icons'
 import type { Alerta } from '../api/alertas'
 import { etiquetaCriticidad, etiquetaEstado } from '../model/alerta'
+import EstadoVacioAnimado from '@shared/ui/Animacion/EstadoVacioAnimado'
 
 interface ListaAlertasProps {
   alertas: Alerta[]
+  hayAlertas: boolean
+  onLimpiarFiltros: () => void
   actualizandoId: number | null
   onAtender: (id: number) => void
   onVerDetalle: (alerta: Alerta) => void
@@ -13,9 +16,24 @@ function fecha(fechaIso: string): string {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(fechaIso))
 }
 
-function ListaAlertas({ alertas, actualizandoId, onAtender, onVerDetalle }: ListaAlertasProps) {
+function ListaAlertas({ alertas, hayAlertas, onLimpiarFiltros, actualizandoId, onAtender, onVerDetalle }: ListaAlertasProps) {
   if (alertas.length === 0) {
-    return <div className="ale-vacio"><IcCheck size={28} /><strong>No hay alertas con estos filtros</strong><span>El sistema no encontró situaciones pendientes en esta vista.</span></div>
+    return hayAlertas ? (
+      <EstadoVacioAnimado
+        className="ale-vacio"
+        animacion="sin-resultados"
+        titulo="Sin coincidencias"
+        texto="Ninguna alerta coincide con estos filtros."
+        accion={<button type="button" className="adm-btn adm-btn--secundario" onClick={onLimpiarFiltros}>Limpiar filtros</button>}
+      />
+    ) : (
+      <EstadoVacioAnimado
+        className="ale-vacio"
+        animacion="exito"
+        titulo="Todo en orden"
+        texto="Los sensores no han detectado situaciones fuera de rango."
+      />
+    )
   }
 
   return (

@@ -47,6 +47,7 @@ jobs:
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://avisens:avisens_ci@localhost:5432/avisens_test
+      AVISENS_AUTH_TEST_DB: aislada
       JWT_SECRET: ci-access-secret-at-least-32-characters
       JWT_REFRESH_SECRET: ci-refresh-secret-at-least-32-characters
     steps:

@@ -9,7 +9,7 @@
   justify-content: center;
   padding: var(--space-4);
   overflow-y: auto;
-  background: rgba(7, 20, 14, 0.52);
+  background: color-mix(in srgb, var(--avisens-ink) 52%, transparent);
   animation: modal-velo-entra var(--motion-base) var(--ease-standard);
 }
 
@@ -196,7 +196,7 @@
   width: 100%;
   margin: 0.2rem 0 0.9rem;
   padding: 0.6rem 0.75rem;
-  border: 1px dashed rgba(0, 91, 72, 0.28);
+  border: 1px dashed color-mix(in srgb, var(--primary) 28%, transparent);
   border-radius: var(--radius-md);
   color: var(--avisens-deep);
   background: transparent;
@@ -210,7 +210,7 @@
 
 .modal-desplegar:hover {
   border-color: var(--avisens-green);
-  background: rgba(71, 187, 75, 0.07);
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
 }
 
 .modal-adicional {
@@ -226,10 +226,10 @@
 .modal-error {
   margin: 0 0 0.2rem;
   padding: 0.55rem 0.7rem;
-  border: 1px solid rgba(232, 66, 0, 0.24);
+  border: 1px solid color-mix(in srgb, var(--danger) 24%, transparent);
   border-radius: var(--radius-md);
-  color: #b93300;
-  background: rgba(232, 66, 0, 0.07);
+  color: var(--danger);
+  background: var(--danger-soft);
   font-size: 0.83rem;
 }
 
@@ -251,12 +251,12 @@
   transition: background 150ms ease, border-color 150ms ease, transform 120ms ease;
 }
 
-.modal-btn:hover:not(:disabled) { background: #f3f6f4; }
+.modal-btn:hover:not(:disabled) { background: var(--surface-subtle); }
 .modal-btn:active:not(:disabled) { transform: scale(0.985); }
 
 .modal-btn--primary {
   border-color: transparent;
-  color: #ffffff;
+  color: var(--on-primary);
   background: var(--avisens-deep);
   font-weight: 700;
 }

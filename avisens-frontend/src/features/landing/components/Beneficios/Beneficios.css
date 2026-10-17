@@ -2,7 +2,7 @@
   position: relative;
   padding: 6rem 0 5rem;
   background:
-    radial-gradient(ellipse 70% 50% at 50% 50%, rgba(14, 47, 115, 0.08), transparent 70%),
+    radial-gradient(ellipse 70% 50% at 50% 50%, color-mix(in srgb, var(--avisens-sage) 8%, transparent), transparent 70%),
     var(--landing-bg);
   isolation: isolate;
 }
@@ -23,13 +23,13 @@
   font-size: 0.7rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(16, 51, 2, 0.78);
+  color: color-mix(in srgb, var(--avisens-ink) 78%, transparent);
 }
 
 .beneficios-eyebrow-line {
   flex: 0 0 40px;
   height: 1px;
-  background: rgba(16, 51, 2, 0.3);
+  background: color-mix(in srgb, var(--avisens-ink) 30%, transparent);
 }
 
 .beneficios-eyebrow-txt {
@@ -69,7 +69,7 @@
     opacity 0.5s ease, translate 0.5s ease;
   overflow: hidden;
   isolation: isolate;
-  box-shadow: 0 14px 30px -22px rgba(16, 51, 2, 0.34);
+  box-shadow: 0 14px 30px -22px color-mix(in srgb, var(--avisens-ink) 34%, transparent);
   opacity: 0;
   translate: 0 16px;
 }
@@ -103,7 +103,7 @@
   transform: translateY(-4px);
   border-color: var(--landing-primary);
   background: var(--landing-card);
-  box-shadow: 0 22px 44px -22px rgba(16, 51, 2, 0.44);
+  box-shadow: 0 22px 44px -22px color-mix(in srgb, var(--avisens-ink) 44%, transparent);
 }
 
 .beneficio-card-icono {
@@ -114,7 +114,7 @@
   height: 42px;
   margin-bottom: 1rem;
   border-radius: 12px;
-  background: rgba(14, 47, 115, 0.08);
+  background: var(--primary-soft);
   color: var(--landing-accent);
 }
 
@@ -130,7 +130,7 @@
 .beneficio-card-texto {
   font-size: 0.88rem;
   line-height: 1.6;
-  color: rgba(16, 51, 2, 0.86);
+  color: color-mix(in srgb, var(--avisens-ink) 86%, transparent);
   margin: 0 0 1.3rem;
 }
 

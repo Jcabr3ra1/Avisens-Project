@@ -1,0 +1,20 @@
+meta {
+  name: Ver impacto de eliminar organización
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/v1/organizaciones/1/impacto-eliminacion
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Cuenta lo que se borraría si se elimina la organización: usuarios, granjas,
+  galpones, lotes, dispositivos, sensores, mediciones, registros de bitácora y
+  alertas. No modifica nada.
+}

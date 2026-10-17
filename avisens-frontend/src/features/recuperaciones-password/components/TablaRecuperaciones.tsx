@@ -1,18 +1,27 @@
-import type { RecuperacionPassword } from '../model/recuperacionPassword'
+import { ETIQUETAS_ESTADO_RECUPERACION, type RecuperacionPassword } from '../model/recuperacionPassword'
 
-const etiquetasEstado = {
-  pendiente: 'Por revisar',
-  aprobada: 'Acceso temporal',
-  rechazada: 'Rechazada',
-  completada: 'Completada',
-} as const
+const DIA = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
+const HORA = new Intl.DateTimeFormat('es-CO', { hour: 'numeric', minute: '2-digit' })
 
-function formatearFecha(fecha: string | null) {
-  if (!fecha) return '—'
-  return new Intl.DateTimeFormat('es-CO', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(fecha))
+function partesFecha(fecha: string | null): { dia: string; hora: string } | null {
+  if (!fecha) return null
+  const instante = new Date(fecha)
+  return Number.isNaN(instante.getTime()) ? null : { dia: DIA.format(instante), hora: HORA.format(instante) }
+}
+
+function CeldaFecha({ fecha }: { fecha: string | null }) {
+  const partes = partesFecha(fecha)
+  if (!partes) return <>—</>
+  return (
+    <span className="rec-celda-texto rec-celda-texto--centro">
+      <strong>{partes.dia}</strong>
+      <span>{partes.hora}</span>
+    </span>
+  )
+}
+
+function iniciales(nombre: string): string {
+  return nombre.trim().split(/\s+/).slice(0, 2).map((parte) => parte[0]?.toUpperCase()).join('') || '—'
 }
 
 type Props = {
@@ -22,37 +31,35 @@ type Props = {
 
 function TablaRecuperaciones({ solicitudes, onAbrir }: Props) {
   return (
-    <section className="rec-listado" aria-labelledby="rec-listado-titulo">
-      <header className="rec-listado-cabecera">
-        <div>
-          <h2 id="rec-listado-titulo">Solicitudes recibidas</h2>
-          <p>Selecciona una solicitud para verificarla y atenderla.</p>
-        </div>
-        <span>{solicitudes.length} registradas</span>
-      </header>
+    <section className="rec-listado rec-listado--pagina" aria-label="Solicitudes de recuperación">
       <div className="rec-tabla-contenedor">
-        <table>
+        <table className="rec-tabla">
           <thead>
             <tr>
               <th scope="col">Persona</th>
               <th scope="col">Documento</th>
-              <th scope="col">Solicitud</th>
+              <th scope="col">Solicitada</th>
               <th scope="col">Estado</th>
-              <th scope="col">Acción</th>
+              <th scope="col"><span className="sr-only">Acción</span></th>
             </tr>
           </thead>
           <tbody>
             {solicitudes.map((solicitud) => (
               <tr key={solicitud.id}>
                 <td>
-                  <strong>{solicitud.usuario.nombre_completo}</strong>
-                  <span>{solicitud.usuario.email}</span>
+                  <div className="rec-celda-persona">
+                    <span className="rec-avatar" aria-hidden="true">{iniciales(solicitud.usuario.nombre_completo)}</span>
+                    <span className="rec-celda-texto">
+                      <strong>{solicitud.usuario.nombre_completo}</strong>
+                      <span>{solicitud.usuario.username}</span>
+                    </span>
+                  </div>
                 </td>
-                <td>{solicitud.usuario.cedula}</td>
-                <td>{formatearFecha(solicitud.fecha_creacion)}</td>
-                <td><span className={`rec-estado rec-estado--${solicitud.estado}`}>{etiquetasEstado[solicitud.estado]}</span></td>
+                <td className="rec-num">{solicitud.usuario.cedula}</td>
+                <td className="rec-num"><CeldaFecha fecha={solicitud.fecha_creacion} /></td>
+                <td><span className={`rec-estado rec-estado--${solicitud.estado}`}>{ETIQUETAS_ESTADO_RECUPERACION[solicitud.estado]}</span></td>
                 <td>
-                  <button className="rec-boton-enlace" type="button" onClick={() => onAbrir(solicitud)}>
+                  <button className={`rec-accion${solicitud.estado === 'pendiente' ? ' rec-accion--principal' : ''}`} type="button" onClick={() => onAbrir(solicitud)}>
                     {solicitud.estado === 'pendiente' ? 'Revisar' : 'Ver detalle'}
                   </button>
                 </td>

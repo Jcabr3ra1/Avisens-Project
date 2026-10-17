@@ -1,4 +1,6 @@
 import { type Usuario } from '@shared/api'
+import { api } from '@shared/api/client'
+import type { ConectividadPlataforma } from '../model/conectividad'
 import { listarUsuarios } from '@features/usuarios/api/usuarios'
 import { listarTodosLosProspectos, type Prospecto } from '@features/crm/api/prospectos'
 import { listarGranjas, type Granja } from '@features/granjas/api/granjas'
@@ -31,4 +33,9 @@ export async function cargarAtencionAdmin(): Promise<AtencionAdminData> {
   ])
 
   return { alertas, solicitudes, recuperaciones }
+}
+
+export async function obtenerConectividad(): Promise<ConectividadPlataforma> {
+  const { data } = await api.get<ConectividadPlataforma>('/dispositivos/conectividad')
+  return data
 }

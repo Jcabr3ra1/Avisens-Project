@@ -5,6 +5,7 @@ import { mensajeDeError } from '@shared/utils/errores'
 const FORMULARIO_VACIO: CrearUsuarioPayload = {
   nombre_completo: '',
   cedula: '',
+  username: '',
   email: '',
   password: '',
   telefono: '',
@@ -39,7 +40,8 @@ export function useFormularioUsuario(alGuardar: AlGuardar) {
     setForm({
       nombre_completo: usuario.nombre_completo,
       cedula: usuario.cedula,
-      email: usuario.email,
+      username: usuario.username,
+      email: usuario.email ?? '',
       password: '',
       telefono: usuario.telefono ?? '',
       rol_id: usuario.rol.id,

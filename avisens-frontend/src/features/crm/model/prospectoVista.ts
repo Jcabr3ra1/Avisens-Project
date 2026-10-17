@@ -1,8 +1,12 @@
-import type { Prospecto } from '@features/crm/api/prospectos'
+import type { EstadoProspecto, Prospecto } from '@features/crm/api/prospectos'
 
 export const PUNTAJE_MAXIMO = 12
 
 export type EtapaProspecto = 'caliente' | 'tibio' | 'frio' | 'descartado' | 'cerrado'
+
+export type AccionSiguiente = 'VISITA_PRESENCIAL' | 'DEMO_REMOTA' | 'SEGUIMIENTO_AUTOMATIZADO' | 'CALLBACK_DECISOR'
+
+const ACCIONES_CONOCIDAS: AccionSiguiente[] = ['VISITA_PRESENCIAL', 'DEMO_REMOTA', 'SEGUIMIENTO_AUTOMATIZADO', 'CALLBACK_DECISOR']
 
 export type ProspectoVista = {
   id: number
@@ -18,6 +22,14 @@ export type ProspectoVista = {
   correo?: string
   asesorId: number | null
   canal: 'web' | 'whatsapp' | 'otro'
+  estado: EstadoProspecto
+  departamento: string
+  numeroGalpones: number | null
+  accionSiguiente: AccionSiguiente | null
+  fechaCallback: string | null
+  senalCaliente: boolean
+  contactoDecisor: string
+  fechaInicio: string
 }
 
 export const RANGOS_PUNTAJE: Record<EtapaProspecto, string> = {
@@ -37,7 +49,7 @@ export const ETAPAS: EtapaProspecto[] = [
 ]
 
 function etapaDe(p: Prospecto): EtapaProspecto {
-  if (p.estado === 'cerrado') return 'cerrado'
+  if (p.estado === 'cerrado') return p.resultado_cierre === 'perdido' ? 'descartado' : 'cerrado'
 
   if (
     p.estado === 'abandonado' ||
@@ -70,5 +82,13 @@ export function aProspectoVista(p: Prospecto): ProspectoVista {
     correo: p.email ?? undefined,
     asesorId: p.asesor_asignado_id,
     canal: p.canal_origen === 'whatsapp' ? 'whatsapp' : p.canal_origen === 'web' ? 'web' : 'otro',
+    estado: p.estado,
+    departamento: p.departamento ?? '',
+    numeroGalpones: p.numero_galpones,
+    accionSiguiente: ACCIONES_CONOCIDAS.find((accion) => accion === p.accion_siguiente) ?? null,
+    fechaCallback: p.fecha_callback,
+    senalCaliente: p.senal_caliente,
+    contactoDecisor: p.contacto_decisor ?? '',
+    fechaInicio: p.fecha_inicio,
   }
 }

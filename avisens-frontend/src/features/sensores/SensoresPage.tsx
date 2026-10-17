@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { getRol } from '@shared/api'
+import { ROL_ADMIN } from '@shared/auth/permisos'
 import { type CrearSensorPayload, type Sensor } from '@features/sensores/api/sensores'
 import { mensajeDeError } from '@shared/utils/errores'
 import { useCatalogoSensores } from './hooks/useCatalogoSensores'
@@ -34,6 +35,7 @@ function SensoresPage() {
   const [ok, setOk] = useState('')
 
   const rol = getRol()
+  const puedeGestionar = rol === ROL_ADMIN
   const { galpones, dispositivosDelGalpon, cargando: cargandoOpciones } =
     useOpcionesSensor(form.galpon_id)
 
@@ -144,7 +146,7 @@ function SensoresPage() {
       )}
 
       {/* ── Alta de sensor ──────────────────────────────────────────────── */}
-      <form className="sn-card sn-form" onSubmit={handleCrear}>
+      {puedeGestionar && <form className="sn-card sn-form" onSubmit={handleCrear}>
         <h2 className="sn-form-titulo">Registrar sensor</h2>
         <div className="sn-grid">
           <label className="sn-campo">
@@ -261,7 +263,7 @@ function SensoresPage() {
             {guardando ? 'Registrando…' : '+ Registrar sensor'}
           </button>
         </div>
-      </form>
+      </form>}
 
       {/* ── Listado ─────────────────────────────────────────────────────── */}
       <div className="sn-card">
@@ -270,7 +272,7 @@ function SensoresPage() {
         ) : sensores.length === 0 ? (
           <div className="sn-vacio">
             <p className="sn-vacio-titulo">No hay sensores registrados.</p>
-            <p className="sn-vacio-sub">Crea el primero con el formulario de arriba.</p>
+            {puedeGestionar && <p className="sn-vacio-sub">Crea el primero con el formulario de arriba.</p>}
           </div>
         ) : (
           <div className="sn-tabla-scroll">
@@ -284,7 +286,7 @@ function SensoresPage() {
                   <th>Galpón</th>
                   <th>Dispositivo</th>
                   <th>Estado</th>
-                  <th aria-label="Acciones"></th>
+                  {puedeGestionar && <th aria-label="Acciones"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -301,7 +303,7 @@ function SensoresPage() {
                     <td>
                       <span className={`sn-badge sn-badge--${s.estado}`}>{s.estado}</span>
                     </td>
-                    <td className="sn-acciones">
+                    {puedeGestionar && <td className="sn-acciones">
                       <button className="sn-btn sn-btn--sm" onClick={() => handleToggle(s)}>
                         {s.estado === 'activo' ? 'Desactivar' : 'Activar'}
                       </button>
@@ -311,7 +313,7 @@ function SensoresPage() {
                       >
                         Eliminar
                       </button>
-                    </td>
+                    </td>}
                   </tr>
                 ))}
               </tbody>

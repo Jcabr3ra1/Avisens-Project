@@ -5,7 +5,7 @@ import {
   type Dispositivo,
 } from '@features/dispositivos/api/dispositivos'
 import { getRol } from '@shared/api'
-import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
+import { ROL_ADMIN } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { Galpon } from '@features/galpones/api/galpones'
 import { useCatalogoSensores } from '../hooks/useCatalogoSensores'
@@ -27,11 +27,9 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
   const [dispositivos, setDispositivos] = useState<Dispositivo[]>([])
   const [form, setForm] = useState<DatosSensor>(FORMULARIO_SENSOR_INICIAL)
   const [editando, setEditando] = useState<Sensor | null>(null)
-  // Configurar sensores es operación del galpón: la hace el propietario y el
-  // administrador la consulta en solo lectura. Un botón sin permiso se
-  // oculta, no se deshabilita.
-  const permisos = permisosOperativosDeGalpon(getRol())
-  const conAcciones = permisos.configurar || permisos.eliminarDefinitivo
+  // El administrador AVISENS es el único que administra sensores.
+  const puedeGestionar = getRol() === ROL_ADMIN
+  const conAcciones = puedeGestionar
   const [dispositivoId, setDispositivoId] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -148,7 +146,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
         </div>
       )}
 
-      {permisos.configurar && (
+      {puedeGestionar && (
       <form className="sn-card sn-form" onSubmit={handleCrear}>
         <h2 className="sn-form-titulo">Registrar sensor</h2>
         <div className="sn-grid">
@@ -262,7 +260,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
             <p className="sn-vacio-titulo">
               Este galpón no tiene sensores registrados.
             </p>
-            {permisos.configurar && (
+            {puedeGestionar && (
               <p className="sn-vacio-sub">
                 Crea el primero con el formulario de arriba.
               </p>
@@ -302,7 +300,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
                     </td>
                     {conAcciones && (
                     <td className="sn-acciones">
-                      {permisos.configurar && (
+                      {puedeGestionar && (
                         <button
                           className="sn-btn sn-btn--sm"
                           onClick={() => setEditando(s)}
@@ -310,7 +308,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
                           Editar
                         </button>
                       )}
-                      {permisos.configurar && (
+                      {puedeGestionar && (
                         <button
                           className="sn-btn sn-btn--sm"
                           onClick={() => handleAlternar(s)}
@@ -318,7 +316,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
                           {s.estado === 'activo' ? 'Desactivar' : 'Activar'}
                         </button>
                       )}
-                      {permisos.eliminarDefinitivo && (
+                      {puedeGestionar && (
                         <button
                           className="sn-btn sn-btn--sm sn-btn--danger"
                           onClick={() => handleEliminar(s)}

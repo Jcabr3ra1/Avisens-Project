@@ -14,7 +14,8 @@ export type RecuperacionPassword = {
   usuario: {
     id: number
     nombre_completo: string
-    email: string
+    username: string
+    email: string | null
     cedula: string
     activo: boolean
   }
@@ -29,10 +30,17 @@ export type AprobacionRecuperacion = {
 }
 
 export type SolicitarRecuperacionPayload = {
-  email: string
+  username: string
   motivo?: string
 }
 
 export type ResolverRecuperacionPayload = {
   observacion?: string
+}
+
+export const ETIQUETAS_ESTADO_RECUPERACION: Record<EstadoRecuperacionPassword, string> = {
+  pendiente: 'Por revisar',
+  aprobada: 'Acceso temporal',
+  rechazada: 'Rechazada',
+  completada: 'Completada',
 }

@@ -4,6 +4,7 @@ import type { ProspectoDetalle } from '../api/prospectos'
 export interface FormularioConversion {
   nombre_completo: string
   cedula: string
+  username: string
   email: string
   telefono: string
   organizacion_nombre: string
@@ -18,6 +19,7 @@ export function prellenarDesde(prospecto: ProspectoDetalle): FormularioConversio
   return {
     nombre_completo: prospecto.nombre ?? '',
     cedula: prospecto.documento ?? '',
+    username: '',
     email: prospecto.email ?? '',
     telefono: prospecto.telefono ?? '',
     organizacion_nombre: prospecto.nombre_granja?.trim() || nombreDeOrganizacion(prospecto.nombre),
@@ -41,8 +43,8 @@ export function errorDeConversion(form: FormularioConversion): string {
   if (!form.cedula.trim()) return 'La cédula es obligatoria: pídesela al cliente.'
   if (!form.granja_nombre.trim()) return 'El nombre de la granja es obligatorio: sin ella el cliente entra a un sistema vacío.'
   if (form.granja_nombre.trim().length < 2) return 'El nombre de la granja es demasiado corto.'
-  if (!form.email.trim()) return 'El correo es obligatorio: con él entra al sistema.'
-  if (!correoValido(form.email)) return 'Ese correo no parece válido.'
+  if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(form.username.trim().toLowerCase())) return 'El usuario debe tener de 3 a 30 caracteres: letras sin tildes, números, punto, guion o guion bajo.'
+  if (form.email.trim() && !correoValido(form.email)) return 'Ese correo no parece válido.'
   if (form.password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.'
   return ''
 }
@@ -55,7 +57,8 @@ export function primerCampoInvalido(
   if (!form.granja_nombre.trim() || form.granja_nombre.trim().length < 2) {
     return 'granja_nombre'
   }
-  if (!form.email.trim() || !correoValido(form.email)) return 'email'
+  if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(form.username.trim().toLowerCase())) return 'username'
+  if (form.email.trim() && !correoValido(form.email)) return 'email'
   if (form.password.length < 8) return 'password'
   return null
 }
@@ -72,7 +75,8 @@ export function payloadDeConversion(
   const payload: ConvertirProspectoPayload = {
     nombre_completo: form.nombre_completo.trim(),
     cedula: form.cedula.trim(),
-    email: form.email.trim().toLowerCase(),
+    username: form.username.trim().toLowerCase(),
+    email: form.email.trim().toLowerCase() || null,
     password: form.password,
     granja_nombre: form.granja_nombre.trim(),
   }
@@ -97,6 +101,7 @@ export function contrasenaSugerida(largo = 12): string {
 const CAMPOS: readonly string[] = [
   'nombre_completo',
   'cedula',
+  'username',
   'email',
   'telefono',
   'organizacion_nombre',
@@ -111,6 +116,7 @@ export function campoSenalado(mensaje: string): keyof FormularioConversion | nul
   const duplicado = /ese valor en:\s*([a-z_]+)/i.exec(mensaje)
   if (duplicado) {
     const campo = duplicado[1].toLowerCase()
+    if (campo === 'username') return 'username'
     if (campo === 'cedula') return 'cedula'
     if (campo === 'email' || campo === 'correo') return 'email'
     return null

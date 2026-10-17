@@ -5,34 +5,34 @@
 .crm-hero-funnel-stage {
   display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
   padding: 0.5rem 1rem;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.09);
+  background: color-mix(in srgb, var(--surface-base) 6%, transparent); border: 1px solid color-mix(in srgb, var(--surface-base) 9%, transparent);
   border-radius: 12px;
   transition: background 0.2s;
 }
-.crm-hero-funnel-stage:hover { background: rgba(255,255,255,0.1); }
+.crm-hero-funnel-stage:hover { background: color-mix(in srgb, var(--surface-base) 10%, transparent); }
 .crm-hero-funnel-cnt {
   font-size: 1.3rem; font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .crm-hero-funnel-lbl {
   display: inline-flex; align-items: center; gap: 0.25rem;
-  font-size: 0.7rem; color: rgba(255,255,255,0.5); white-space: nowrap;
+  font-size: 0.7rem; color: color-mix(in srgb, var(--surface-base) 50%, transparent); white-space: nowrap;
 }
 
 .crm-hero-funnel-rango {
-  font-size: 0.62rem; color: rgba(255,255,255,0.28); white-space: nowrap;
+  font-size: 0.62rem; color: color-mix(in srgb, var(--surface-base) 28%, transparent); white-space: nowrap;
 }
 .crm-hero-funnel-sep {
-  font-size: 1.4rem; color: rgba(255,255,255,0.18); line-height: 1;
+  font-size: 1.4rem; color: color-mix(in srgb, var(--surface-base) 18%, transparent); line-height: 1;
   user-select: none; align-self: center;
 }
 
 .crm-hero-funnel-desc {
   display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
   padding: 0.4rem 0.8rem;
-  border-left: 1px solid rgba(255,255,255,0.07);
+  border-left: 1px solid color-mix(in srgb, var(--surface-base) 7%, transparent);
   margin-left: 0.4rem; opacity: 0.45;
-  font-size: 0.68rem; color: rgba(255,255,255,0.4);
+  font-size: 0.68rem; color: color-mix(in srgb, var(--surface-base) 40%, transparent);
 }
 
 .crm-canal-badge {
@@ -40,21 +40,21 @@
   margin-top: 0.22rem; padding: 0.1rem 0.38rem; border-radius: 999px;
   font-size: 0.62rem; font-weight: 800; line-height: 1.25;
 }
-.crm-canal-badge--web { color: #1d4ed8; background: rgba(37,99,235,0.11); }
-.crm-canal-badge--whatsapp { color: #087b51; background: rgba(16,185,129,0.13); }
-.crm-canal-badge--otro { color: var(--text3); background: rgba(100,116,139,0.1); }
+.crm-canal-badge--web { color: var(--info); background: var(--info-soft); }
+.crm-canal-badge--whatsapp { color: var(--primary); background: color-mix(in srgb, var(--primary) 13%, transparent); }
+.crm-canal-badge--otro { color: var(--text3); background: color-mix(in srgb, var(--text-muted) 10%, transparent); }
 
-.crm-fila--caliente   td:first-child { border-left: 3px solid #ef4444; }
-.crm-fila--tibio      td:first-child { border-left: 3px solid #f59e0b; }
-.crm-fila--cerrado    td:first-child { border-left: 3px solid #10b981; }
-.crm-fila--frio       td:first-child { border-left: 3px solid #3b82f6; }
+.crm-fila--caliente   td:first-child { border-left: 3px solid var(--danger); }
+.crm-fila--tibio      td:first-child { border-left: 3px solid var(--warning); }
+.crm-fila--cerrado    td:first-child { border-left: 3px solid var(--primary); }
+.crm-fila--frio       td:first-child { border-left: 3px solid var(--info); }
 .crm-fila--descartado               { opacity: 0.52; }
 
 .crm-fila-nombre-wrap { display: flex; align-items: center; gap: 0.6rem; }
 .crm-fila-avatar {
   width: 30px; height: 30px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.68rem; font-weight: 800; color: #fff; flex-shrink: 0;
+  font-size: 0.68rem; font-weight: 800; color: var(--on-primary); flex-shrink: 0;
 }
 .crm-rol { display: block; color: var(--text3); font-size: 0.76rem; }
 
@@ -62,20 +62,20 @@
 
 .crm-puntaje { display: flex; align-items: center; gap: 0.5rem; }
 .crm-puntaje-num { font-weight: 800; font-size: 0.93rem; color: var(--dash-ink); min-width: 18px; }
-.crm-puntaje-barra-wrap { flex: 1; height: 5px; background: rgba(10,26,20,0.07); border-radius: 999px; overflow: hidden; min-width: 50px; }
+.crm-puntaje-barra-wrap { flex: 1; height: 5px; background: color-mix(in srgb, var(--avisens-ink) 7%, transparent); border-radius: 999px; overflow: hidden; min-width: 50px; }
 .crm-puntaje-barra { height: 100%; border-radius: 999px; transition: width 0.4s; }
-.crm-puntaje-barra--caliente   { background: linear-gradient(90deg,#f87171,#ef4444); }
-.crm-puntaje-barra--tibio      { background: linear-gradient(90deg,#fbbf24,#f59e0b); }
-.crm-puntaje-barra--frio       { background: linear-gradient(90deg,#60a5fa,#3b82f6); }
+.crm-puntaje-barra--caliente   { background: linear-gradient(90deg,var(--danger2),var(--danger)); }
+.crm-puntaje-barra--tibio      { background: linear-gradient(90deg,var(--warning2),var(--warning)); }
+.crm-puntaje-barra--frio       { background: linear-gradient(90deg,var(--info2),var(--info)); }
 .crm-puntaje-barra--descartado { background: var(--text4); }
-.crm-puntaje-barra--cerrado    { background: linear-gradient(90deg,#34d399,#10b981); }
+.crm-puntaje-barra--cerrado    { background: linear-gradient(90deg,var(--success2),var(--primary)); }
 
 .crm-estado-badge            { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.18rem 0.6rem; border-radius: 999px; font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
-.crm-estado-badge--caliente  { background: rgba(239,68,68,0.12);   color: #dc2626; }
-.crm-estado-badge--tibio     { background: rgba(245,158,11,0.12);  color: #d97706; }
-.crm-estado-badge--frio      { background: rgba(59,130,246,0.12);  color: #2563eb; }
-.crm-estado-badge--descartado{ background: rgba(100,116,139,0.1);  color: var(--text3); }
-.crm-estado-badge--cerrado   { background: rgba(16,185,129,0.12);  color: #059669; }
+.crm-estado-badge--caliente  { background: var(--danger-soft);   color: var(--danger); }
+.crm-estado-badge--tibio     { background: var(--warning-soft);  color: var(--warning); }
+.crm-estado-badge--frio      { background: var(--info-soft);  color: var(--info); }
+.crm-estado-badge--descartado{ background: color-mix(in srgb, var(--text-muted) 10%, transparent);  color: var(--text3); }
+.crm-estado-badge--cerrado   { background: color-mix(in srgb, var(--primary) 12%, transparent);  color: var(--primary); }
 
 .crm-aviso {
   margin: 0;
@@ -98,7 +98,7 @@
 .crm-det-row {
   display: flex; align-items: center; justify-content: space-between;
   gap: 0.75rem; padding: 0.55rem 0;
-  border-bottom: 1px solid rgba(16,44,35,0.05);
+  border-bottom: 1px solid color-mix(in srgb, var(--avisens-ink) 5%, transparent);
 }
 .crm-det-row:last-child { border-bottom: none; }
 .crm-det-lbl  { font-size: 0.78rem; color: var(--text3); font-weight: 500; flex-shrink: 0; }
@@ -113,7 +113,7 @@
 .crm-det-score-max   { font-size: 0.8rem; color: var(--text3); }
 .crm-det-score-rango { font-size: 0.74rem; color: var(--text3); }
 
-.crm-det-sep { height: 1px; background: rgba(16,44,35,0.06); margin: 0.65rem 0; }
+.crm-det-sep { height: 1px; background: color-mix(in srgb, var(--avisens-ink) 6%, transparent); margin: 0.65rem 0; }
 
 .crm-det-section {
   font-size: 0.69rem; font-weight: 700; text-transform: uppercase;
@@ -123,14 +123,14 @@
 .crm-det-asesor { display: flex; gap: 0.5rem; padding: 0.4rem 0; }
 .crm-det-asesor-select {
   flex: 1; min-width: 0; font-size: 0.82rem; padding: 0.4rem 0.6rem;
-  border-radius: 8px; border: 1px solid rgba(16,44,35,0.14);
-  background: #fff; color: var(--dash-ink);
+  border-radius: 8px; border: 1px solid color-mix(in srgb, var(--avisens-ink) 14%, transparent);
+  background: var(--surface-base); color: var(--dash-ink);
 }
 .crm-det-asesor-nota {
   font-size: 0.78rem; color: var(--text3); line-height: 1.5; margin: 0.3rem 0;
 }
 .crm-det-error {
-  font-size: 0.78rem; color: #dc2626; margin: 0.4rem 0 0;
+  font-size: 0.78rem; color: var(--danger); margin: 0.4rem 0 0;
 }
 .crm-det-cargando {
   font-size: 0.8rem; color: var(--text3); margin: 0.5rem 0;
@@ -139,7 +139,7 @@
 .crm-det-transcript { display: flex; flex-direction: column; gap: 0.7rem; padding: 0.2rem 0; }
 .crm-det-transcript-item {
   padding: 0.6rem 0.7rem; border-radius: 10px;
-  background: rgba(7,23,19,0.03); border: 1px solid rgba(16,44,35,0.06);
+  background: color-mix(in srgb, var(--avisens-ink) 3%, transparent); border: 1px solid color-mix(in srgb, var(--avisens-ink) 6%, transparent);
 }
 .crm-det-transcript-q {
   font-size: 0.74rem; font-weight: 600; color: var(--text3); margin: 0 0 0.25rem;
@@ -177,14 +177,14 @@
   display: flex; width: 100%; align-items: center; gap: 0.8rem;
   margin: 0.9rem 0 0.2rem;
   padding: 0.8rem 1rem; border: none; border-radius: 12px;
-  background: var(--color-primario); color: #fff;
+  background: var(--color-primario); color: var(--on-primary);
   text-align: left; cursor: pointer;
-  box-shadow: 0 4px 14px rgba(16,185,129,0.26);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 26%, transparent);
   transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
 .crm-det-convertir:hover {
   background: var(--color-primario-oscuro);
-  transform: translateY(-1px); box-shadow: 0 7px 20px rgba(16,185,129,0.36);
+  transform: translateY(-1px); box-shadow: 0 7px 20px color-mix(in srgb, var(--primary) 36%, transparent);
 }
 .crm-det-convertir svg { flex-shrink: 0; }
 .crm-det-convertir-txt { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 0.15rem; }
@@ -193,9 +193,9 @@
 .crm-det-btn--ghost {
   flex: 0 0 auto;
   background: transparent; color: var(--text2);
-  border: 1px solid rgba(16,44,35,0.14);
+  border: 1px solid color-mix(in srgb, var(--avisens-ink) 14%, transparent);
 }
-.crm-det-btn--ghost:hover { background: rgba(7,23,19,0.04); border-color: rgba(16,44,35,0.22); }
+.crm-det-btn--ghost:hover { background: color-mix(in srgb, var(--avisens-ink) 4%, transparent); border-color: color-mix(in srgb, var(--avisens-ink) 22%, transparent); }
 
 @media (max-width: 500px) {
   .crm-hero-funnel-stage { padding: 0.45rem 0.7rem; }
@@ -261,7 +261,7 @@
 .crm-det-cotiza-vacio {
   margin: 0; padding: 0.6rem 0.7rem;
   color: var(--text3); font-size: 0.82rem;
-  background: rgba(7, 23, 19, 0.03); border-radius: 10px;
+  background: color-mix(in srgb, var(--avisens-ink) 3%, transparent); border-radius: 10px;
 }
 
 .crm-embudo {

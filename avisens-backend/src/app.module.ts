@@ -73,7 +73,10 @@ import { PlanAlimentoModule } from './modules/plan-alimento/plan-alimento.module
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+    }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot({
       throttlers: [

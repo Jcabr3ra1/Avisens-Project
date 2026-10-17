@@ -58,6 +58,11 @@ export async function responderSolicitudPqrs(
   return data
 }
 
+export async function tomarSolicitudPqrs(id: number): Promise<SolicitudPqrs> {
+  const { data } = await api.patch<SolicitudPqrs>(`/solicitudes-pqrs/${id}/tomar`)
+  return data
+}
+
 export async function eliminarSolicitudPqrs(
   id: number,
 ): Promise<{ id: number; eliminado: boolean }> {

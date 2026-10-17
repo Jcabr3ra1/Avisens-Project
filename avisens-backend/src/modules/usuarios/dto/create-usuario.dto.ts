@@ -1,3 +1,5 @@
+import { Transform } from 'class-transformer';
+import { NombreUsuario } from '../../../common/auth/username';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
@@ -17,9 +19,17 @@ export class CreateUsuarioDto {
   @IsString()
   cedula: string;
 
-  @ApiProperty({ example: 'maria@granja.com' })
+  @ApiProperty({ example: 'maria.lopez', minLength: 3, maxLength: 30 })
+  @NombreUsuario()
+  username: string;
+
+  @ApiPropertyOptional({ example: 'maria@granja.com', nullable: true })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() || null : value,
+  )
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email?: string | null;
 
   @ApiProperty({ example: 'contraseña123', minLength: 8 })
   @IsString()

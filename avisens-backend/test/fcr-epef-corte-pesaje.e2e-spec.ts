@@ -1,3 +1,4 @@
+import { usernameDePrueba } from './soporte/username';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from '../src/config/env.validation';
@@ -60,6 +61,7 @@ describe('FCR/EPEF al corte del pesaje -- corte inclusivo y mortalidad posterior
         organizacion_id: organizacion.id,
         nombre_completo: 'Propietario fcr-corte e2e',
         cedula: `FCR-${sufijo}`,
+        username: usernameDePrueba(`fcr-corte-${sufijo}@e2e.test`),
         email: `fcr-corte-${sufijo}@e2e.test`,
         password_hash: 'no-se-usa-en-este-test',
       },

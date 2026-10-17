@@ -24,10 +24,6 @@ import com.project.avisensandroid.ui.fragments.BitacoraFragment
 import com.project.avisensandroid.ui.fragments.InicioFragment
 import com.project.avisensandroid.ui.fragments.SensoresFragment
 import com.project.avisensandroid.R
-import com.project.avisensandroid.databinding.Au02RecuperarContrasenaBinding
-import com.project.avisensandroid.databinding.Au03VerificarCodigoBinding
-import com.project.avisensandroid.databinding.Au04NuevaContrasenaBinding
-import com.project.avisensandroid.databinding.Au05ConfirmacionContrasenaBinding
 import com.project.avisensandroid.databinding.Co01ConfiguracionOpBinding
 import com.project.avisensandroid.databinding.Co02NotificacionesOpBinding
 import com.project.avisensandroid.databinding.Co03PerfilOpBinding
@@ -55,15 +51,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var perfilBinding: Co03PerfilOpBinding
     private lateinit var notificacionesBinding: Co02NotificacionesOpBinding
     private lateinit var seguridadBinding: Co04SeguridadOpBinding
-
-    // =========================================================
-    // RECUPERACIÓN DE CONTRASEÑA
-    // =========================================================
-
-    private lateinit var recuperarBinding: Au02RecuperarContrasenaBinding
-    private lateinit var verificarBinding: Au03VerificarCodigoBinding
-    private lateinit var nuevaContrasenaBinding: Au04NuevaContrasenaBinding
-    private lateinit var confirmacionBinding: Au05ConfirmacionContrasenaBinding
 
     // =========================================================
     // GRANJAS
@@ -134,178 +121,6 @@ class MainActivity : AppCompatActivity() {
         )
 
         finish()
-    }
-
-
-    // =========================================================
-    // RECUPERAR CONTRASEÑA
-    // =========================================================
-
-    private fun mostrarRecuperarContrasena() {
-
-        recuperarBinding =
-            Au02RecuperarContrasenaBinding.inflate(layoutInflater)
-
-        setContentView(recuperarBinding.root)
-
-        recuperarBinding.btnVolver.setOnClickListener {
-            irALogin()
-        }
-
-        recuperarBinding.btnEnviarCorreo.setOnClickListener {
-
-            val correo =
-                recuperarBinding.edtCorreo.text
-                    .toString()
-                    .trim()
-
-            if (correo.isEmpty()) {
-
-                recuperarBinding.edtCorreo.error =
-                    "Ingresa tu correo electrónico"
-
-                return@setOnClickListener
-            }
-
-            if (
-                !Patterns.EMAIL_ADDRESS
-                    .matcher(correo)
-                    .matches()
-            ) {
-
-                recuperarBinding.edtCorreo.error =
-                    "Ingresa un correo válido"
-
-                return@setOnClickListener
-            }
-
-            mostrarVerificarCodigo()
-        }
-    }
-
-
-    // =========================================================
-    // VERIFICAR CÓDIGO
-    // =========================================================
-
-    private fun mostrarVerificarCodigo() {
-
-        verificarBinding =
-            Au03VerificarCodigoBinding.inflate(layoutInflater)
-
-        setContentView(verificarBinding.root)
-
-        verificarBinding.btnVerificarCodigo.setOnClickListener {
-
-            val codigo =
-                verificarBinding.edtCodigo.text
-                    .toString()
-                    .trim()
-
-            if (codigo.isEmpty()) {
-
-                verificarBinding.edtCodigo.error =
-                    "Ingresa el código"
-
-                return@setOnClickListener
-            }
-
-            if (codigo.length != 6) {
-
-                verificarBinding.edtCodigo.error =
-                    "El código debe tener 6 dígitos"
-
-                return@setOnClickListener
-            }
-
-            mostrarNuevaContrasena()
-        }
-
-        verificarBinding.txtReenviarCodigo.setOnClickListener {
-            // Pendiente conectar con API
-        }
-    }
-
-
-    // =========================================================
-    // NUEVA CONTRASEÑA
-    // =========================================================
-
-    private fun mostrarNuevaContrasena() {
-
-        nuevaContrasenaBinding =
-            Au04NuevaContrasenaBinding.inflate(layoutInflater)
-
-        setContentView(nuevaContrasenaBinding.root)
-
-        nuevaContrasenaBinding.btnCambiarContrasena
-            .setOnClickListener {
-
-                val nueva =
-                    nuevaContrasenaBinding.edtNuevaContrasena
-                        .text
-                        .toString()
-
-                val confirmar =
-                    nuevaContrasenaBinding.edtConfirmarContrasena
-                        .text
-                        .toString()
-
-                if (nueva.isEmpty()) {
-
-                    nuevaContrasenaBinding.edtNuevaContrasena
-                        .error =
-                        "Ingresa una contraseña"
-
-                    return@setOnClickListener
-                }
-
-                if (nueva.length < 8) {
-
-                    nuevaContrasenaBinding.edtNuevaContrasena
-                        .error =
-                        "Mínimo 8 caracteres"
-
-                    return@setOnClickListener
-                }
-
-                if (confirmar.isEmpty()) {
-
-                    nuevaContrasenaBinding.edtConfirmarContrasena
-                        .error =
-                        "Confirma tu contraseña"
-
-                    return@setOnClickListener
-                }
-
-                if (nueva != confirmar) {
-
-                    nuevaContrasenaBinding.edtConfirmarContrasena
-                        .error =
-                        "Las contraseñas no coinciden"
-
-                    return@setOnClickListener
-                }
-
-                mostrarConfirmacionContrasena()
-            }
-    }
-
-
-    // =========================================================
-    // CONFIRMACIÓN CONTRASEÑA
-    // =========================================================
-
-    private fun mostrarConfirmacionContrasena() {
-
-        confirmacionBinding =
-            Au05ConfirmacionContrasenaBinding.inflate(layoutInflater)
-
-        setContentView(confirmacionBinding.root)
-
-        confirmacionBinding.btnVolverLogin.setOnClickListener {
-            irALogin()
-        }
     }
 
 
@@ -581,7 +396,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 if (
-                    nuevoCorreo.isEmpty() ||
+                    nuevoCorreo.isNotEmpty() &&
                     !Patterns.EMAIL_ADDRESS
                         .matcher(nuevoCorreo)
                         .matches()

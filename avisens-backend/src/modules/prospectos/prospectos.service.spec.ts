@@ -85,6 +85,25 @@ describe('ProspectosService', () => {
       expect(seleccion.ip_origen).toBeUndefined();
       expect(seleccion.sesion_id).toBeUndefined();
       expect(seleccion.telefono).toBe(true);
+      expect(seleccion.contacto_decisor).toBeUndefined();
+    });
+
+    it('trae lo que la bandeja necesita para priorizar sin abrir cada prospecto', async () => {
+      await service.listar({ page: 1, limit: 20 });
+
+      const seleccion = argsDe(prisma.prospecto.findMany).select as Record<
+        string,
+        boolean
+      >;
+      for (const campo of [
+        'ultima_actividad',
+        'accion_siguiente',
+        'fecha_callback',
+        'senal_caliente',
+        'resultado_cierre',
+      ]) {
+        expect(seleccion[campo]).toBe(true);
+      }
     });
 
     it('pagina con skip y take', async () => {

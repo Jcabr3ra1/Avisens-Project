@@ -19,7 +19,10 @@ describe('OrganizacionesService', () => {
     },
     sesion: { updateMany: jest.fn() },
     usuarioGalpon: { updateMany: jest.fn() },
-    usuario: { updateMany: jest.fn() },
+    usuario: {
+      updateMany: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     granja: { updateMany: jest.fn() },
     $transaction: jest.fn(),
     $configurar: jest.fn(),
@@ -37,6 +40,35 @@ describe('OrganizacionesService', () => {
   });
 
   afterEach(() => jest.clearAllMocks());
+
+  it('agrega la última actividad: el ingreso más reciente de su gente', async () => {
+    prisma.$transaction.mockResolvedValue([[{ id: 1 }, { id: 2 }], 2]);
+    prisma.usuario.findMany.mockResolvedValueOnce([
+      {
+        organizacion_id: 1,
+        seguridad_cuenta: { fecha_ultimo_login: new Date('2026-10-01') },
+      },
+      {
+        organizacion_id: 1,
+        seguridad_cuenta: { fecha_ultimo_login: new Date('2026-10-15') },
+      },
+      {
+        organizacion_id: 1,
+        seguridad_cuenta: { fecha_ultimo_login: new Date('2026-10-03') },
+      },
+    ]);
+
+    const resultado = await service.listar({ page: 1, limit: 20 });
+
+    expect(resultado.data[0].ultima_actividad).toEqual(new Date('2026-10-15'));
+    expect(resultado.data[1].ultima_actividad).toBeNull();
+    const consulta = (
+      prisma.usuario.findMany.mock.calls[0] as [
+        { where: { organizacion_id: unknown } },
+      ]
+    )[0];
+    expect(consulta.where.organizacion_id).toEqual({ in: [1, 2] });
+  });
 
   it('lista organizaciones paginadas y ordenadas por nombre', async () => {
     prisma.$transaction.mockResolvedValue([[{ id: 1, nombre: 'Avícola' }], 1]);

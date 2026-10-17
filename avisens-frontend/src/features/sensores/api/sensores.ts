@@ -12,6 +12,7 @@ export interface Sensor {
   id: number
   codigo: string
   tipo: string
+  canal?: string | null
   unidad_medida: string
   modelo: string | null
   fabricante: string | null
@@ -36,10 +37,14 @@ export interface CrearSensorPayload {
   dispositivo_id: number
   codigo: string
   tipo: string
+  canal?: string | null
   unidad_medida: string
   modelo?: string
   fabricante?: string
 }
+
+export type CrearSensorAutomaticoPayload = Omit<CrearSensorPayload, 'codigo' | 'unidad_medida'> &
+  Partial<Pick<CrearSensorPayload, 'codigo' | 'unidad_medida'>>
 
 // En edición todo es opcional; `estado` permite activar/desactivar.
 
@@ -60,7 +65,7 @@ export async function obtenerSensor(id: number): Promise<Sensor> {
   return data
 }
 
-export async function crearSensor(payload: CrearSensorPayload): Promise<Sensor> {
+export async function crearSensor(payload: CrearSensorAutomaticoPayload): Promise<Sensor> {
   const { data } = await api.post<Sensor>('/sensores', payload)
   return data
 }
