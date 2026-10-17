@@ -7,7 +7,7 @@ import {
   type EtapaProspecto,
   type ProspectoVista,
 } from '@features/crm/model/prospectoVista'
-import { tieneLecturaUtil, type GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import { esLecturaVigente, type GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { AtencionAdminData } from '../api/admin'
 import { esCriticidadAlta } from '@features/alertas/model/alerta'
 
@@ -106,7 +106,7 @@ export function calcularKpisAdmin(
   galpones: GalponMonitoreoVista[],
 ): KpiAdmin[] {
   const sensores = galpones.flatMap((galpon) => galpon.sensores)
-  const sensoresOnline = sensores.filter((sensor) => tieneLecturaUtil(sensor.estado)).length
+  const sensoresOnline = sensores.filter((sensor) => esLecturaVigente(sensor.estado)).length
   // Si la consulta de últimas lecturas falló, todo sensor activo queda en
   // 'lectura_no_disponible' — no hay porcentaje que calcular, porque no
   // comprobamos nada: "0% en línea" mentiría diciendo que sí lo hicimos.

@@ -85,4 +85,8 @@ describe('etiquetaEstado', () => {
   it('distingue "no disponible" de "sin señal"', () => {
     expect(etiquetaEstado('lectura_no_disponible')).toBe('No disponible')
   })
+
+  it('un sensor obsoleto no se etiqueta como "Sin umbral": son causas distintas', () => {
+    expect(etiquetaEstado('obsoleta')).toBe('Desactualizado')
+  })
 })

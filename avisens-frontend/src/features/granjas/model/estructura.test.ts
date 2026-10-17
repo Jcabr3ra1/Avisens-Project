@@ -18,6 +18,7 @@ function sensor(parcial: Partial<SensorVista>): SensorVista {
     codigo: 'S-1',
     tipo: 'temperatura',
     unidad: '°C',
+    esEstado: false,
     variableUmbral: 'temperatura',
     valor: 24,
     minUmbral: 20,
@@ -67,6 +68,11 @@ describe('estadoOperativoDeGalpon', () => {
   it('sensores sin umbral configurado no bastan para declarar alerta', () => {
     expect(estadoOperativoDeGalpon(true, [sensor({ estado: 'sin_umbral' })])).toBe('normal')
   })
+
+  it('con todos los sensores obsoletos tampoco se afirma que esté normal: hay un valor, pero no es una lectura reciente', () => {
+    const sensores = [sensor({ estado: 'obsoleta' }), sensor({ id: 2, estado: 'obsoleta' })]
+    expect(estadoOperativoDeGalpon(true, sensores)).toBe('sin_datos')
+  })
 })
 
 describe('contarSensores', () => {
@@ -97,6 +103,20 @@ describe('contarSensores', () => {
       enLinea: 0,
       offline: 1,
       noDisponible: 2,
+      conAlerta: 0,
+    })
+  })
+
+  it('un sensor obsoleto no cuenta como "en línea": tiene un valor histórico, no una lectura reciente', () => {
+    const sensores = [
+      sensor({ id: 1, estado: 'optimo' }),
+      sensor({ id: 2, estado: 'obsoleta' }),
+    ]
+    expect(contarSensores(sensores)).toEqual({
+      total: 2,
+      enLinea: 1,
+      offline: 0,
+      noDisponible: 0,
       conAlerta: 0,
     })
   })
