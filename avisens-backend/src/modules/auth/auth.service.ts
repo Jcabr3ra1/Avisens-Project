@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Injectable,
   UnauthorizedException,
   ForbiddenException,
@@ -12,6 +13,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { permisosDelRol } from '../../common/auth/permisos';
 import { ROLES } from '../../common/auth/roles';
+import { MENSAJE_CUENTA_OCUPADA } from '../../common/errores/bloqueo';
+import {
+  esEsperaVencida,
+  TOPE_ESPERA_ASIGNACION_MS,
+  transaccionConPresupuesto,
+} from '../../common/bloqueos/presupuesto-transaccion';
+import type { PresupuestoTransaccion } from '../../common/bloqueos/presupuesto-transaccion';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +35,38 @@ export class AuthService {
     return { rol, permisos: permisosDelRol(rol) };
   }
 
+  /**
+   * Login en dos fases.
+   *
+   * Fase A (sin transacción ni bloqueos): lectura del usuario, rechazos
+   * tempranos, cuenta bloqueada y bcrypt. bcrypt nunca corre con bloqueos
+   * tomados.
+   *
+   * Fase B (transacción con el presupuesto de transaccionConPresupuesto, tope
+   * de espera de 3 s, un paso por sentencia): vuelve a validar lo decidido en
+   * la fase A bajo bloqueo y solo entonces modifica seguridad_cuenta y crea la
+   * sesión. Orden de bloqueos: usuarios (FOR SHARE) -> seguridad_cuenta
+   * (FOR UPDATE) -> sesiones (ids ascendentes).
+   *
+   * Por qué este orden no se cruza con los escritores relacionados:
+   * - La desactivación (PATCH/DELETE de usuario y de organización) y la
+   *   eliminación permanente toman antes un bloqueo de fila sobre usuarios
+   *   (FOR NO KEY UPDATE / FOR UPDATE) que es incompatible con el FOR SHARE
+   *   del login. Si llegan primero, el login espera y ve el usuario inactivo
+   *   o inexistente; si el login gana, ellos esperan a que confirme y luego
+   *   revocan o eliminan su sesión. La eliminación permanente
+   *   (usuarios -> sesiones -> seguridad_cuenta) no puede quedar a medio
+   *   camino frente a un login porque este ya habría sido excluido por el
+   *   bloqueo previo del usuario.
+   * - La aprobación de una recuperación y el cambio de contraseña actualizan
+   *   usuarios.password_hash (mismo bloqueo de fila) antes de seguridad_cuenta
+   *   y sesiones, como el login.
+   * - registrarIntentoFallido, el compare-and-swap del refresh y el logout son
+   *   sentencias únicas que no bloquean al usuario: pueden esperar a este
+   *   login, pero no forman un ciclo. Sus pendientes quedan fuera de este
+   *   alcance.
+   * Este orden no es universal: describe solo los caminos de esta familia.
+   */
   async login(dto: LoginDto, ip?: string, userAgent?: string) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { email: dto.email },
@@ -53,19 +93,121 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    if (seguridad?.debe_cambiar_password) {
+    try {
+      return await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ASIGNACION_MS,
+        (p) =>
+          this.completarLogin(
+            p,
+            usuario.id,
+            usuario.password_hash,
+            ip,
+            userAgent,
+          ),
+      );
+    } catch (error) {
+      if (esEsperaVencida(error)) {
+        throw new ConflictException(MENSAJE_CUENTA_OCUPADA);
+      }
+      throw error;
+    }
+  }
+
+  private async completarLogin(
+    p: PresupuestoTransaccion,
+    usuarioId: number,
+    hashVerificado: string,
+    ip?: string,
+    userAgent?: string,
+  ) {
+    const bloqueado = await p.paso(
+      'bloquear usuario',
+      (tx) =>
+        tx.$queryRaw<
+          { id: number }[]
+        >`SELECT "id" FROM "usuarios" WHERE "id" = ${usuarioId} FOR SHARE`,
+    );
+    if (bloqueado.length === 0) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    const [actual] = await p.paso(
+      'revalidar usuario',
+      (tx) =>
+        tx.$queryRaw<
+          {
+            nombre_completo: string;
+            email: string;
+            activo: boolean;
+            password_hash: string;
+            organizacion_id: number | null;
+            rol: string;
+            organizacion_activa: boolean | null;
+          }[]
+        >`SELECT u."nombre_completo", u."email", u."activo", u."password_hash", u."organizacion_id", r."nombre" AS "rol", o."activa" AS "organizacion_activa"
+            FROM "usuarios" u
+            JOIN "roles" r ON r."id" = u."rol_id"
+            LEFT JOIN "organizaciones" o ON o."id" = u."organizacion_id"
+           WHERE u."id" = ${usuarioId}`,
+    );
+    if (
+      !actual ||
+      !actual.activo ||
+      actual.organizacion_activa === false ||
+      actual.password_hash !== hashVerificado
+    ) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    await p.paso(
+      'asegurar seguridad de la cuenta',
+      (tx) =>
+        tx.$executeRaw`INSERT INTO "seguridad_cuenta" ("usuario_id") VALUES (${usuarioId}) ON CONFLICT ("usuario_id") DO NOTHING`,
+    );
+    const [seguridad] = await p.paso(
+      'bloquear seguridad de la cuenta',
+      (tx) =>
+        tx.$queryRaw<
+          {
+            bloqueado_hasta: Date | null;
+            debe_cambiar_password: boolean;
+            password_temporal_expira_en: Date | null;
+          }[]
+        >`SELECT "bloqueado_hasta", "debe_cambiar_password", "password_temporal_expira_en" FROM "seguridad_cuenta" WHERE "usuario_id" = ${usuarioId} FOR UPDATE`,
+    );
+
+    const ahora = new Date();
+    if (seguridad.bloqueado_hasta && seguridad.bloqueado_hasta > ahora) {
+      throw new ForbiddenException('Cuenta bloqueada temporalmente');
+    }
+
+    const reiniciarIntentos = () =>
+      p.paso('reiniciar intentos', (tx) =>
+        tx.seguridadCuenta.update({
+          where: { usuario_id: usuarioId },
+          data: {
+            intentos_fallidos: 0,
+            bloqueado_hasta: null,
+            fecha_ultimo_login: ahora,
+          },
+          select: { id: true },
+        }),
+      );
+
+    if (seguridad.debe_cambiar_password) {
       if (
         !seguridad.password_temporal_expira_en ||
-        seguridad.password_temporal_expira_en <= new Date()
+        seguridad.password_temporal_expira_en <= ahora
       ) {
         throw new ForbiddenException(
           'La contraseña temporal venció. Solicita una nueva recuperación.',
         );
       }
 
-      await this.resetearIntentosFallidos(usuario.id);
+      await reiniciarIntentos();
       const cambio_password_token = await this.jwt.signAsync(
-        { sub: usuario.id, tipo: 'cambio_password' },
+        { sub: usuarioId, tipo: 'cambio_password' },
         {
           secret: this.config.getOrThrow('JWT_SECRET'),
           expiresIn: '15m',
@@ -74,50 +216,54 @@ export class AuthService {
       return { requiere_cambio_password: true, cambio_password_token };
     }
 
-    await this.resetearIntentosFallidos(usuario.id);
+    const candidatas = await p.paso(
+      'bloquear sesiones vencidas o revocadas',
+      (tx) =>
+        tx.$queryRaw<
+          { id: number }[]
+        >`SELECT "id" FROM "sesiones" WHERE "usuario_id" = ${usuarioId} AND ("expira_en" < ${ahora} OR "revocada" = true) ORDER BY "id" FOR UPDATE`,
+    );
+    if (candidatas.length > 0) {
+      await p.paso('eliminar sesiones vencidas o revocadas', (tx) =>
+        tx.sesion.deleteMany({
+          where: { id: { in: candidatas.map((fila) => fila.id) } },
+        }),
+      );
+    }
 
-    // session_id: identidad estable de ESTA sesión, generada una sola vez
-    // aquí. Viaja firmada dentro del refresh token y se conserva sin
-    // cambios en cada rotación (ver refresh() más abajo) -- es lo que le
-    // permite a logout() revocar la sesión correcta aunque el token ya
-    // haya rotado, en vez de depender de comparar hashes.
     const sessionId = randomUUID();
     const tokens = await this.generarTokens(
-      usuario.id,
-      usuario.email,
-      usuario.rol.nombre,
-      usuario.organizacion_id,
+      usuarioId,
+      actual.email,
+      actual.rol,
+      actual.organizacion_id,
       sessionId,
     );
-
-    await this.prisma.sesion.deleteMany({
-      where: {
-        usuario_id: usuario.id,
-        OR: [{ expira_en: { lt: new Date() } }, { revocada: true }],
-      },
-    });
-
-    await this.prisma.sesion.create({
-      data: {
-        session_id: sessionId,
-        usuario_id: usuario.id,
-        refresh_token_hash: this.hashRefreshToken(tokens.refresh_token),
-        ip_origen: ip,
-        user_agent: userAgent,
-        expira_en: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
-    });
+    await p.paso('crear sesión', (tx) =>
+      tx.sesion.create({
+        data: {
+          session_id: sessionId,
+          usuario_id: usuarioId,
+          refresh_token_hash: this.hashRefreshToken(tokens.refresh_token),
+          ip_origen: ip,
+          user_agent: userAgent,
+          expira_en: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+        select: { id: true },
+      }),
+    );
+    await reiniciarIntentos();
 
     return {
       requiere_cambio_password: false,
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       usuario: {
-        id: usuario.id,
-        nombre: usuario.nombre_completo,
-        email: usuario.email,
-        rol: usuario.rol.nombre,
-        organizacion_id: usuario.organizacion_id,
+        id: usuarioId,
+        nombre: actual.nombre_completo,
+        email: actual.email,
+        rol: actual.rol,
+        organizacion_id: actual.organizacion_id,
       },
     };
   }
@@ -295,21 +441,5 @@ export class AuthService {
         'No fue posible crear las notificaciones de seguridad de la cuenta',
       );
     }
-  }
-
-  private async resetearIntentosFallidos(userId: number) {
-    await this.prisma.seguridadCuenta.upsert({
-      where: { usuario_id: userId },
-      create: {
-        usuario_id: userId,
-        intentos_fallidos: 0,
-        fecha_ultimo_login: new Date(),
-      },
-      update: {
-        intentos_fallidos: 0,
-        bloqueado_hasta: null,
-        fecha_ultimo_login: new Date(),
-      },
-    });
   }
 }
