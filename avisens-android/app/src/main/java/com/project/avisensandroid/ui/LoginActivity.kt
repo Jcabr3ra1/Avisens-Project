@@ -11,24 +11,38 @@ import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.ActivityLoginBinding
 import com.project.avisensandroid.model.LoginRequest
+import com.project.avisensandroid.model.UserRole
+import com.project.avisensandroid.model.UserSession
 import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
 
-    // Controla si la contraseña está visible o escondida
     private var passwordVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        binding = ActivityLoginBinding.inflate(layoutInflater)
+        RetrofitClient.inicializar(applicationContext)
+
+        binding =
+            ActivityLoginBinding.inflate(layoutInflater)
+
         setContentView(binding.root)
 
-        // ==========================================
-        // MOSTRAR / OCULTAR CONTRASEÑA
-        // ==========================================
+        configurarPassword()
+
+        binding.btnEntrar.setOnClickListener {
+            hacerLogin()
+        }
+    }
+
+    // =========================================================
+    // MOSTRAR / OCULTAR CONTRASEÑA
+    // =========================================================
+
+    private fun configurarPassword() {
 
         binding.btnTogglePassword.setOnClickListener {
 
@@ -36,77 +50,140 @@ class LoginActivity : AppCompatActivity() {
 
             if (passwordVisible) {
 
-                // Mostrar contraseña
                 binding.etContrasena.transformationMethod =
                     HideReturnsTransformationMethod.getInstance()
 
-                // Cambiar icono a ojo
                 binding.btnTogglePassword.setImageResource(
                     R.drawable.ic_eye
                 )
 
             } else {
 
-                // Ocultar contraseña
                 binding.etContrasena.transformationMethod =
                     PasswordTransformationMethod.getInstance()
 
-                // Cambiar icono a ojo tachado
                 binding.btnTogglePassword.setImageResource(
                     R.drawable.ic_eye_off
                 )
             }
 
-            // Mantener el cursor al final del texto
             binding.etContrasena.setSelection(
                 binding.etContrasena.text.length
             )
         }
-
-        // ==========================================
-        // BOTÓN ENTRAR
-        // ==========================================
-
-        binding.btnEntrar.setOnClickListener {
-            hacerLogin()
-        }
     }
+
+    // =========================================================
+    // LOGIN
+    // =========================================================
 
     private fun hacerLogin() {
 
-        val username = binding.etCorreo.text.toString().trim()
-        val password = binding.etContrasena.text.toString().trim()
+        val email =
+            binding.etCorreo.text
+                .toString()
+                .trim()
+
+        val password =
+            binding.etContrasena.text
+                .toString()
+                .trim()
 
         binding.txtError.text = ""
 
-        if (username.isEmpty() || password.isEmpty()) {
-            binding.txtError.text = "Completa todos los campos"
+        // =====================================================
+        // VALIDACIONES
+        // =====================================================
+
+        if (email.isEmpty()) {
+
+            binding.txtError.text =
+                "Ingresa tu correo electrónico"
+
             return
         }
 
-        binding.progressLogin.visibility = View.VISIBLE
+        if (password.isEmpty()) {
+
+            binding.txtError.text =
+                "Ingresa tu contraseña"
+
+            return
+        }
+
+        // =====================================================
+        // CARGANDO
+        // =====================================================
+
+        binding.progressLogin.visibility =
+            View.VISIBLE
+
         binding.btnEntrar.isEnabled = false
 
+        // =====================================================
+        // API
+        // =====================================================
+
         lifecycleScope.launch {
+
             try {
 
-                val response = RetrofitClient.api.login(
-                    LoginRequest(
-                        email = username,
-                        password = password
+                val response =
+                    RetrofitClient.api.login(
+                        LoginRequest(
+                            email = email,
+                            password = password
+                        )
                     )
-                )
 
                 if (response.isSuccessful) {
 
-                    val loginData = response.body()
+                    val loginData =
+                        response.body()
 
-                    // Guardar el token
-                    guardarToken(
-                        loginData?.accessToken ?: ""
+                    if (loginData == null) {
+
+                        binding.txtError.text =
+                            "El servidor no devolvió información"
+
+                        return@launch
+                    }
+
+                    // =================================================
+                    // DATOS DEL USUARIO
+                    // =================================================
+
+                    val usuario =
+                        loginData.usuario
+
+                    val role =
+                        UserRole.fromApiValue(usuario.rol)
+
+                    if (role == null) {
+
+                        binding.txtError.text =
+                            "El usuario no tiene un rol válido: ${usuario.rol}"
+
+                        return@launch
+                    }
+
+                    // =================================================
+                    // GUARDAR SESIÓN CON EL ROL REAL DE LA API
+                    // =================================================
+
+                    guardarSesion(
+                        token = loginData.access_token,
+                        refreshToken = loginData.refresh_token,
+                        usuarioId = usuario.id,
+                        nombre = usuario.nombre,
+                        email = usuario.email,
+                        rol = role
                     )
 
-                    // Navegar a MainActivity
+                    // =================================================
+                    // IR A MAIN
+                    // =================================================
+
                     startActivity(
                         Intent(
                             this@LoginActivity,
@@ -114,37 +191,71 @@ class LoginActivity : AppCompatActivity() {
                         )
                     )
 
-                    // Cerrar LoginActivity
                     finish()
 
                 } else {
 
-                    binding.txtError.text =
-                        "Usuario o contraseña incorrectos"
+                    when (response.code()) {
+
+                        401 -> {
+
+                            binding.txtError.text =
+                                "Correo o contraseña incorrectos"
+                        }
+
+                        403 -> {
+
+                            binding.txtError.text =
+                                "No tienes permisos para acceder"
+                        }
+
+                        else -> {
+
+                            binding.txtError.text =
+                                "Error del servidor: ${response.code()}"
+                        }
+                    }
                 }
 
             } catch (e: Exception) {
 
                 binding.txtError.text =
-                    "Error de conexión: ${e.message}"
+                    "Error de conexión: ${
+                        e.message ?: "error desconocido"
+                    }"
 
             } finally {
 
-                binding.progressLogin.visibility = View.GONE
-                binding.btnEntrar.isEnabled = true
+                binding.progressLogin.visibility =
+                    View.GONE
+
+                binding.btnEntrar.isEnabled =
+                    true
             }
         }
     }
 
-    private fun guardarToken(token: String) {
+    // =========================================================
+    // GUARDAR SESIÓN
+    // =========================================================
 
-        val prefs = getSharedPreferences(
-            "app_prefs",
-            MODE_PRIVATE
+    private fun guardarSesion(
+        token: String,
+        refreshToken: String,
+        usuarioId: Int,
+        nombre: String,
+        email: String,
+        rol: UserRole
+    ) {
+
+        UserSession.save(
+            context = this,
+            token = token,
+            refreshToken = refreshToken,
+            userId = usuarioId,
+            name = nombre,
+            email = email,
+            role = rol
         )
-
-        prefs.edit()
-            .putString("token", token)
-            .apply()
     }
 }

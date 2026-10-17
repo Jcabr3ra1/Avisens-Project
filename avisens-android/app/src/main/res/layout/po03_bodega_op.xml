@@ -7,9 +7,9 @@
     android:layout_height="match_parent"
     android:background="@color/bg_app">
 
-    <!-- ============================= -->
-    <!-- CONTENIDO -->
-    <!-- ============================= -->
+    <!-- ===================================================== -->
+    <!-- CONTENIDO PRINCIPAL -->
+    <!-- ===================================================== -->
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scrollBodega"
@@ -28,23 +28,22 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingStart="17dp"
-            android:layout_marginTop="8dp"
             android:paddingEnd="17dp"
             android:paddingTop="17dp"
             android:paddingBottom="20dp">
 
-            <!-- ============================= -->
+            <!-- ================================================= -->
             <!-- TÍTULO -->
-            <!-- ============================= -->
+            <!-- ================================================= -->
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
                 android:text="Bodega e Inventario"
                 android:textColor="@color/text_primary"
                 android:textSize="28sp"
-                android:layout_marginTop="22dp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -52,20 +51,17 @@
                 android:layout_marginTop="5dp"
                 android:text="Stock de insumos y directorio de proveedores"
                 android:textColor="@color/text_secondary"
-                android:textSize="12sp"/>
+                android:textSize="12sp" />
 
-
-            <!-- ============================= -->
-            <!-- INDICADORES -->
-            <!-- ============================= -->
+            <!-- ================================================= -->
+            <!-- INDICADOR DE INSUMOS CRÍTICOS -->
+            <!-- ================================================= -->
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
                 android:orientation="horizontal">
-
-                <!-- CRÍTICO -->
 
                 <TextView
                     android:id="@+id/txtCriticos"
@@ -75,17 +71,16 @@
                     android:gravity="center"
                     android:paddingStart="11dp"
                     android:paddingEnd="11dp"
-                    android:text="● 1 crítico"
+                    android:text="● 0 críticos"
                     android:textColor="#C93B32"
                     android:textSize="12sp"
-                    android:textStyle="bold"/>
+                    android:textStyle="bold" />
 
             </LinearLayout>
 
-
-            <!-- ============================= -->
+            <!-- ================================================= -->
             <!-- SELECTOR INSUMOS / PROVEEDORES -->
-            <!-- ============================= -->
+            <!-- ================================================= -->
 
             <LinearLayout
                 android:id="@+id/tabsBodega"
@@ -93,8 +88,8 @@
                 android:layout_height="42dp"
                 android:layout_marginTop="10dp"
                 android:background="@drawable/bg_bodega_tabs"
-                android:padding="4dp"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:padding="4dp">
 
                 <!-- INSUMOS -->
 
@@ -108,7 +103,7 @@
                     android:text="⬡ Insumos"
                     android:textColor="@color/text_primary"
                     android:textSize="13sp"
-                    android:textStyle="bold"/>
+                    android:textStyle="bold" />
 
                 <!-- PROVEEDORES -->
 
@@ -121,26 +116,25 @@
                     android:text="♧ Proveedores"
                     android:textColor="#89938E"
                     android:textSize="13sp"
-                    android:textStyle="bold"/>
+                    android:textStyle="bold" />
 
             </LinearLayout>
 
-
-            <!-- ============================= -->
+            <!-- ================================================= -->
             <!-- BOTÓN NUEVO INSUMO -->
-            <!-- ============================= -->
+            <!-- ================================================= -->
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="end"
-                android:layout_marginTop="10dp">
-
+                android:layout_marginTop="10dp"
+                android:gravity="end">
 
                 <TextView
                     android:id="@+id/btnNuevoInsumo"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
+                    android:layout_marginTop="8dp"
                     android:background="@drawable/bg_bodega_nuevo"
                     android:gravity="center"
                     android:paddingStart="13dp"
@@ -148,283 +142,61 @@
                     android:text="+ Nuevo Insumo"
                     android:textColor="@android:color/white"
                     android:textSize="13sp"
-                    android:layout_marginTop="8dp"
-                    android:textStyle="bold"/>
-
+                    android:textStyle="bold" />
 
             </LinearLayout>
 
+            <!-- ================================================= -->
+            <!-- INDICADOR DE CARGA -->
+            <!-- ================================================= -->
 
-            <!-- ============================= -->
-            <!-- TARJETA 1 -->
-            <!-- ============================= -->
+            <ProgressBar
+                android:id="@+id/progressInsumos"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="25dp"
+                android:visibility="gone" />
+
+            <!-- ================================================= -->
+            <!-- CONTENEDOR DINÁMICO DE INSUMOS -->
+            <!-- ================================================= -->
+            <!--
+                IMPORTANTE:
+
+                Aquí BodegaFragment agregará las tarjetas
+                obtenidas desde:
+
+                GET /v1/insumos
+
+                No colocar tarjetas manualmente aquí.
+            -->
 
             <LinearLayout
-                android:id="@+id/cardConcentrado"
+                android:id="@+id/contenedorInsumos"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
-                android:background="@drawable/bg_bodega_card"
-                android:orientation="vertical"
-                android:padding="14dp">
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
 
-                <!-- NOMBRE + TIPO -->
+            <!-- ================================================= -->
+            <!-- MENSAJE SIN INSUMOS -->
+            <!-- ================================================= -->
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Concentrado Engorde Fase 2"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="21dp"
-                        android:background="@drawable/bg_bodega_tipo"
-                        android:gravity="center"
-                        android:paddingStart="7dp"
-                        android:paddingEnd="7dp"
-                        android:text="alimento"
-                        android:textColor="#7D8782"
-                        android:textSize="10sp"/>
-
-                </LinearLayout>
-
-
-                <!-- CANTIDAD -->
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:gravity="bottom"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/txtCantidadAlimento"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="1,200"
-                        android:textColor="@color/text_primary"
-                        android:textSize="22sp"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_marginBottom="3dp"
-                        android:text="kg"
-                        android:textColor="#89938E"
-                        android:textSize="12sp"
-                        android:textStyle="bold"/>
-
-                </LinearLayout>
-
-
-                <!-- BARRA STOCK -->
-
-                <ProgressBar
-                    android:id="@+id/progressAlimento"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="7dp"
-                    android:layout_marginTop="6dp"
-                    android:max="100"
-                    android:progress="90"
-                    android:progressTint="#22965F"
-                    android:backgroundTint="#E8ECEA"/>
-
-
-                <!-- INFO -->
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
-                    android:text="Mínimo: 500 kg  Autonomía: 18 días"
-                    android:textColor="#89938E"
-                    android:textSize="11sp"/>
-
-
-                <!-- PROVEEDOR + ESTADO -->
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Italcol S.A."
-                        android:textColor="#69746F"
-                        android:textSize="11sp"/>
-
-                    <TextView
-                        android:id="@+id/txtStockOk"
-                        android:layout_width="wrap_content"
-                        android:layout_height="23dp"
-                        android:background="@drawable/bg_stock_ok"
-                        android:gravity="center"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:text="Stock OK"
-                        android:textColor="#18875A"
-                        android:textSize="10sp"
-                        android:textStyle="bold"/>
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-
-            <!-- ============================= -->
-            <!-- TARJETA 2 -->
-            <!-- ============================= -->
-
-            <LinearLayout
-                android:id="@+id/cardVacuna"
+            <TextView
+                android:id="@+id/txtSinInsumos"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="11dp"
-                android:background="@drawable/bg_bodega_card_critico"
-                android:orientation="vertical"
-                android:padding="14dp">
-
-                <!-- NOMBRE + TIPO -->
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Vacuna Newcastle\n(IB)"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="21dp"
-                        android:background="@drawable/bg_bodega_tipo"
-                        android:gravity="center"
-                        android:paddingStart="7dp"
-                        android:paddingEnd="7dp"
-                        android:text="vacuna"
-                        android:textColor="#7D8782"
-                        android:textSize="10sp"/>
-
-                </LinearLayout>
-
-
-                <!-- CANTIDAD -->
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:gravity="bottom"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/txtCantidadVacuna"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="40"
-                        android:textColor="@color/text_primary"
-                        android:textSize="22sp"
-                        android:textStyle="bold"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_marginBottom="3dp"
-                        android:text="dosis"
-                        android:textColor="#89938E"
-                        android:textSize="11sp"
-                        android:textStyle="bold"/>
-
-                </LinearLayout>
-
-
-                <!-- BARRA STOCK CRÍTICA -->
-
-                <ProgressBar
-                    android:id="@+id/progressVacuna"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="7dp"
-                    android:layout_marginTop="6dp"
-                    android:max="100"
-                    android:progress="20"
-                    android:progressTint="#E85A4F"
-                    android:backgroundTint="#E8ECEA"/>
-
-
-                <!-- INFO -->
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
-                    android:text="Mínimo: 100 dosis  Autonomía: 3 días"
-                    android:textColor="#89938E"
-                    android:textSize="11sp"/>
-
-
-                <!-- PROVEEDOR + ESTADO -->
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="MSD Animal Health"
-                        android:textColor="#69746F"
-                        android:textSize="11sp"/>
-
-                    <TextView
-                        android:id="@+id/txtStockCritico"
-                        android:layout_width="wrap_content"
-                        android:layout_height="23dp"
-                        android:background="@drawable/bg_stock_critico"
-                        android:gravity="center"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:text="Stock crítico"
-                        android:textColor="#C93B32"
-                        android:textSize="10sp"
-                        android:textStyle="bold"/>
-
-                </LinearLayout>
-
-            </LinearLayout>
+                android:layout_marginTop="30dp"
+                android:gravity="center"
+                android:padding="20dp"
+                android:text="No hay insumos registrados"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:visibility="gone" />
 
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

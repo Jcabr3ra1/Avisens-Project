@@ -1,10 +1,14 @@
 package com.project.avisensandroid.model
 
 data class LoginResponse(
+    val access_token: String,
+    val refresh_token: String,
+    val usuario: UsuarioLoginResponse
+)
+
+data class UsuarioLoginResponse(
     val id: Int,
-    val username: String,
+    val nombre: String,
     val email: String,
-    val firstName: String,
-    val accessToken: String,   // el token vive aquí
-    val refreshToken: String
+    val rol: String
 )
