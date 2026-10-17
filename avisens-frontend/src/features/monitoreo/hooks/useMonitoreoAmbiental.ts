@@ -43,11 +43,30 @@ export function normalizarVariableUmbral(tipo: string): 'temperatura' | 'humedad
   return null
 }
 
+// Los motores del ESP32 se registran como sensores con unidad "estado" y
+// reportan 1 (encendido) o 0 (apagado), sin umbral ni gráfica de valores.
+export function esSensorDeEstado(unidad: string): boolean {
+  return unidad.trim().toLowerCase() === 'estado'
+}
+
+export function estaEncendido(valor: number): boolean {
+  return valor >= 0.5
+}
+
+// Texto del valor tal como se muestra: "Encendido"/"Apagado" para los de
+// estado, "22.1 °C" para el resto.
+export function textoValor(sensor: Pick<SensorVista, 'esEstado' | 'unidad'>, valor: number | null): string {
+  if (valor === null) return '—'
+  if (sensor.esEstado) return estaEncendido(valor) ? 'Encendido' : 'Apagado'
+  return `${valor} ${sensor.unidad}`
+}
+
 export type SensorVista = {
   id: number
   codigo: string
   tipo: string
   unidad: string
+  esEstado: boolean
   variableUmbral: 'temperatura' | 'humedad' | 'luminosidad' | null
   valor: number | null
   minUmbral: number | null
@@ -142,6 +161,7 @@ export function construirVista(
           codigo: s.codigo,
           tipo: s.tipo,
           unidad: s.unidad_medida,
+          esEstado: esSensorDeEstado(s.unidad_medida),
           variableUmbral,
           valor,
           minUmbral: umbral?.valor_minimo ?? null,

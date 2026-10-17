@@ -3,11 +3,13 @@
 // compartido useMonitoreoAmbiental. Al seleccionar una tarjeta se abre un
 // panel lateral con gauge, estadísticas, histórico real y referencia Italcol.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   useMonitoreoAmbiental,
   formatearUltimaLectura,
   tieneLecturaUtil,
+  estaEncendido,
+  textoValor,
   type GalponMonitoreoVista,
   type SensorVista,
   type EstadoSensorVista,
@@ -31,6 +33,16 @@ function MonitoreoPage() {
   // Sensor cuyo panel de detalle está abierto (null = ninguno)
   const [sensorActivo, setSensorActivo] = useState<SensorVista | null>(null)
 
+  // Las tarjetas se recargan al llegar una lectura nueva, pero como mucho
+  // cada 20 s: el ESP32 manda cada 5 s y cada recarga son 5 peticiones, lo
+  // que sumado a "Lecturas en vivo" se acercaba al límite del backend.
+  const ultimaRecarga = useRef(0)
+  function recargarTarjetas() {
+    if (Date.now() - ultimaRecarga.current < 20_000) return
+    ultimaRecarga.current = Date.now()
+    void recargar()
+  }
+
   useEffect(() => {
     if (galponId === null && galpones.length > 0) setGalponId(galpones[0].id)
   }, [galponId, galpones])
@@ -43,7 +55,7 @@ function MonitoreoPage() {
   const optimos     = galpon?.sensores.filter(s => s.estado === 'optimo').length ?? 0
 
  function abrirDetalle(sensor: SensorVista) {
-    if (!tieneLecturaUtil(sensor.estado)) return
+    if (!puedeAbrirDetalle(sensor)) return
     setSensorActivo(sensor)
   }
 
@@ -127,7 +139,7 @@ function MonitoreoPage() {
 
           {/* ── Lecturas en vivo (gráficas + últimas lecturas) ──────────────── */}
           {galpon.sensores.length > 0 && (
-            <LecturasEnVivo sensores={galpon.sensores} onNuevaLectura={() => { void recargar() }} />
+            <LecturasEnVivo sensores={galpon.sensores} onNuevaLectura={recargarTarjetas} />
           )}
 
           {/* ── Tabla de sensores del galpón + umbrales (HU-21) ─────────────── */}
@@ -147,9 +159,9 @@ function MonitoreoPage() {
                       <small>{s.codigo}</small>
                     </span>
                     <span>
-                      <span className={`mon-estado-badge mon-estado-badge--${s.estado}`}>{ETIQUETA_ESTADO[s.estado]}</span>
+                      <InsigniaEstado sensor={s} />
                     </span>
-                    <span>{s.valor === null ? '—' : <strong>{s.valor} {s.unidad}</strong>}</span>
+                    <span>{s.valor === null ? '—' : <strong>{textoValor(s, s.valor)}</strong>}</span>
                     <span>{s.minUmbral ?? '—'}</span>
                     <span>{s.maxUmbral ?? '—'}</span>
                     <span className="mon-tabla-ultima">{formatearUltimaLectura(s.ultimaLecturaTs)}</span>
@@ -182,6 +194,32 @@ const ETIQUETA_ESTADO: Record<EstadoSensorVista, string> = {
   obsoleta:              'Desactualizado',
 }
 
+// Los motores (sensores de estado) no tienen gauge ni umbrales: el panel de
+// detalle no aplica.
+function puedeAbrirDetalle(sensor: SensorVista): boolean {
+  return tieneLecturaUtil(sensor.estado) && !sensor.esEstado
+}
+
+// Insignia de estado. Un motor con lectura vigente dice Encendido/Apagado en
+// lugar de "Sin umbral"; si la lectura es vieja o falta, manda el estado.
+function InsigniaEstado({ sensor }: { sensor: SensorVista }) {
+  const vigente = sensor.esEstado && sensor.valor !== null &&
+    (sensor.estado === 'sin_umbral' || sensor.estado === 'optimo')
+  if (vigente) {
+    const on = estaEncendido(sensor.valor!)
+    return (
+      <span className={`mon-estado-badge mon-estado-badge--${on ? 'encendido' : 'apagado'}`}>
+        {on ? 'Encendido' : 'Apagado'}
+      </span>
+    )
+  }
+  return (
+    <span className={`mon-estado-badge mon-estado-badge--${sensor.estado}`}>
+      {ETIQUETA_ESTADO[sensor.estado]}
+    </span>
+  )
+}
+
 // ─── Sub-componente: tarjeta de sensor ────────────────────────────────────────
 type TarjetaProps = {
   sensor:  SensorVista
@@ -201,16 +239,17 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
         'mon-sensor-card',
         `mon-sensor-card--${sensor.estado}`,
         activo ? 'mon-sensor-card--activo' : '',
-        tieneLecturaUtil(sensor.estado) ? 'mon-sensor-card--clickable' : '',
+        puedeAbrirDetalle(sensor) ? 'mon-sensor-card--clickable' : '',
       ].filter(Boolean).join(' ')}
       onClick={onClick}
       title={
-        tieneLecturaUtil(sensor.estado)
+        puedeAbrirDetalle(sensor)
           ? `Ver detalle de ${sensor.tipo}`
+          : sensor.esEstado && tieneLecturaUtil(sensor.estado) ? `${sensor.tipo}: ${textoValor(sensor, sensor.valor)}`
           : sensor.estado === 'lectura_no_disponible' ? 'Sin dato disponible' : 'Sensor sin señal'
       }
       aria-pressed={activo}
-      disabled={!tieneLecturaUtil(sensor.estado)}
+      disabled={!puedeAbrirDetalle(sensor)}
     >
       <div className="mon-sensor-icon">{iconoSensor(sensor.tipo, 22)}</div>
 
@@ -222,7 +261,9 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
       <div className="mon-sensor-valor">
         {sensor.estado === 'offline' || sensor.valor === null
           ? <span className="mon-offline-txt">—</span>
-          : <><strong>{sensor.valor}</strong><small>{sensor.unidad}</small></>
+          : sensor.esEstado
+            ? <strong className={`mon-onoff mon-onoff--${estaEncendido(sensor.valor) ? 'on' : 'off'}`}>{textoValor(sensor, sensor.valor)}</strong>
+            : <><strong>{sensor.valor}</strong><small>{sensor.unidad}</small></>
         }
       </div>
 
@@ -233,13 +274,11 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
       )}
 
       <div className="mon-sensor-footer">
-        <span className={`mon-estado-badge mon-estado-badge--${sensor.estado}`}>
-          {ETIQUETA_ESTADO[sensor.estado]}
-        </span>
+        <InsigniaEstado sensor={sensor} />
         <span className="mon-ultima">{formatearUltimaLectura(sensor.ultimaLecturaTs)}</span>
       </div>
 
-      {tieneLecturaUtil(sensor.estado) && (
+      {puedeAbrirDetalle(sensor) && (
         <span className="mon-sensor-hint" aria-hidden="true">›</span>
       )}
     </button>

@@ -18,6 +18,7 @@ function sensor(parcial: Partial<SensorVista>): SensorVista {
     codigo: 'S-1',
     tipo: 'temperatura',
     unidad: '°C',
+    esEstado: false,
     variableUmbral: 'temperatura',
     valor: 24,
     minUmbral: 20,

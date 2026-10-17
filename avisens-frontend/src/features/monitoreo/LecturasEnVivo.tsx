@@ -6,11 +6,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { listarMediciones, type Medicion } from '@features/sensores/api/mediciones'
 import { iconoSensor } from '@shared/ui/sensorIcon'
-import { formatearUltimaLectura, type SensorVista } from './hooks/useMonitoreoAmbiental'
+import { estaEncendido, formatearUltimaLectura, textoValor, type SensorVista } from './hooks/useMonitoreoAmbiental'
 
 const INTERVALO_MS = 5000
 const LECTURAS_POR_SENSOR = 30
-const FILAS_TABLA = 12
+const FILAS_TABLA = 16
+// Tope de /mediciones por página. Con 9 sensores cada 5 s alcanza para ~50 s
+// de lecturas: de sobra entre un refresco y el siguiente.
+const LIMITE_REFRESCO = 100
 
 type Props = {
   sensores: SensorVista[]
@@ -50,31 +53,56 @@ export function LecturasEnVivo({ sensores, onNuevaLectura }: Props) {
     if (!enVivo || ids === '') return
     let activo = true
     const lista = ids.split(',').map(Number)
+    const delGalpon = new Set(lista)
 
-    async function cargar() {
+    // Une lecturas nuevas a las que ya hay por sensor, sin repetir, y deja
+    // las LECTURAS_POR_SENSOR más recientes de cada uno.
+    function aplicar(nuevas: Medicion[]) {
+      let masNueva = 0
+      for (const m of nuevas) masNueva = Math.max(masNueva, new Date(m.fecha_hora).getTime())
+      setPorSensor(prev => {
+        const siguiente: Record<number, Medicion[]> = { ...prev }
+        for (const id of lista) {
+          const vistos = new Set((prev[id] ?? []).map(m => m.id))
+          const agregadas = nuevas.filter(m => m.sensor_id === id && !vistos.has(m.id))
+          if (agregadas.length === 0 && prev[id]) continue
+          siguiente[id] = [...agregadas, ...(prev[id] ?? [])]
+            .sort((a, b) => new Date(b.fecha_hora).getTime() - new Date(a.fecha_hora).getTime())
+            .slice(0, LECTURAS_POR_SENSOR)
+        }
+        return siguiente
+      })
+      if (ultimaVista.current !== 0 && masNueva > ultimaVista.current) avisar.current?.()
+      ultimaVista.current = Math.max(ultimaVista.current, masNueva)
+    }
+
+    // Historial inicial: una petición por sensor, solo al entrar o reanudar.
+    // Pedirlas así cada 5 s superaba el límite del backend (100/min) con
+    // nueve sensores y las lecturas dejaban de cargar.
+    async function cargarHistorial() {
+      const resultados = await Promise.allSettled(
+        lista.map(id => listarMediciones({ sensor_id: id, page: 1, limit: LECTURAS_POR_SENSOR })),
+      )
+      if (!activo) return
+      const ok = resultados.flatMap(r => (r.status === 'fulfilled' ? r.value : []))
+      aplicar(ok)
+      setError(resultados.some(r => r.status === 'rejected') ? 'No se pudieron cargar todas las lecturas en vivo.' : '')
+    }
+
+    // Refresco: una sola petición con lo más reciente de todos los sensores.
+    async function refrescar() {
       try {
-        const resultados = await Promise.all(
-          lista.map(id => listarMediciones({ sensor_id: id, page: 1, limit: LECTURAS_POR_SENSOR })),
-        )
+        const recientes = await listarMediciones({ page: 1, limit: LIMITE_REFRESCO })
         if (!activo) return
-        const siguiente: Record<number, Medicion[]> = {}
-        let masNueva = 0
-        lista.forEach((id, i) => {
-          siguiente[id] = resultados[i]
-          const ts = resultados[i][0] ? new Date(resultados[i][0].fecha_hora).getTime() : 0
-          masNueva = Math.max(masNueva, ts)
-        })
-        setPorSensor(siguiente)
+        aplicar(recientes.filter(m => delGalpon.has(m.sensor_id)))
         setError('')
-        if (ultimaVista.current !== 0 && masNueva > ultimaVista.current) avisar.current?.()
-        ultimaVista.current = Math.max(ultimaVista.current, masNueva)
       } catch {
         if (activo) setError('No se pudieron cargar las lecturas en vivo.')
       }
     }
 
-    cargar()
-    const timer = setInterval(cargar, INTERVALO_MS)
+    void cargarHistorial()
+    const timer = setInterval(() => { void refrescar() }, INTERVALO_MS)
     return () => { activo = false; clearInterval(timer) }
   }, [enVivo, ids])
 
@@ -111,9 +139,10 @@ export function LecturasEnVivo({ sensores, onNuevaLectura }: Props) {
       {error && <div className="mon-alert adm-alerta" role="alert">{error}</div>}
 
       <div className="mon-vivo-graficas">
-        {sensores.map(s => (
-          <GraficaSensor key={s.id} sensor={s} mediciones={porSensor[s.id] ?? []} />
-        ))}
+        {sensores.map(s => s.esEstado
+          ? <GraficaEstado key={s.id} sensor={s} mediciones={porSensor[s.id] ?? []} />
+          : <GraficaSensor key={s.id} sensor={s} mediciones={porSensor[s.id] ?? []} />,
+        )}
       </div>
 
       <div className="mon-tabla-card adm-panel">
@@ -130,11 +159,60 @@ export function LecturasEnVivo({ sensores, onNuevaLectura }: Props) {
               <span>{iconoSensor(s.tipo, 14)} {s.tipo}</span>
               <small>{s.codigo}</small>
             </span>
-            <span><strong>{m.valor} {s.unidad}</strong></span>
+            <span><strong>{textoValor(s, m.valor)}</strong></span>
           </div>
         ))}
       </div>
     </section>
+  )
+}
+
+// ─── Motor: franja de encendido/apagado en orden cronológico ─────────────────
+function GraficaEstado({ sensor, mediciones }: { sensor: SensorVista; mediciones: Medicion[] }) {
+  const datos = [...mediciones].reverse()
+  const actual = datos[datos.length - 1]
+  const encendidas = datos.filter(d => estaEncendido(d.valor)).length
+  const ultimoEncendido = [...datos].reverse().find(d => estaEncendido(d.valor))
+  const on = actual ? estaEncendido(actual.valor) : false
+
+  return (
+    <div className="mon-vivo-card adm-panel">
+      <div className="mon-vivo-card-head">
+        <div className="mon-sensor-icon">{iconoSensor(sensor.tipo, 18)}</div>
+        <div className="mon-sensor-info">
+          <span className="mon-sensor-nombre">{sensor.tipo}</span>
+          <span className="mon-sensor-zona">ID #{sensor.id} · {sensor.codigo}</span>
+        </div>
+        <div className="mon-sensor-valor">
+          {actual
+            ? <strong className={`mon-onoff mon-onoff--${on ? 'on' : 'off'}`}>{on ? 'Encendido' : 'Apagado'}</strong>
+            : <span className="mon-offline-txt">—</span>}
+        </div>
+      </div>
+
+      {datos.length === 0 ? (
+        <p className="mon-vivo-vacio">Sin lecturas todavía.</p>
+      ) : (
+        <>
+          <div className="mon-vivo-franja" role="img"
+            aria-label={`${sensor.tipo}: encendido en ${encendidas} de ${datos.length} lecturas`}>
+            {datos.map(d => (
+              <span key={d.id}
+                className={`mon-vivo-tramo${estaEncendido(d.valor) ? ' mon-vivo-tramo--on' : ''}`}
+                title={`${estaEncendido(d.valor) ? 'Encendido' : 'Apagado'} · ${hora(d.fecha_hora)}`} />
+            ))}
+          </div>
+          <div className="mon-vivo-eje">
+            <span>{hora(datos[0].fecha_hora)}</span>
+            <span>{hora(datos[datos.length - 1].fecha_hora)}</span>
+          </div>
+          <div className="mon-vivo-stats">
+            <span>Encendido en <strong>{encendidas}</strong> de {datos.length} lecturas</span>
+            <span>Último encendido: <strong>{ultimoEncendido ? hora(ultimoEncendido.fecha_hora) : '—'}</strong></span>
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
