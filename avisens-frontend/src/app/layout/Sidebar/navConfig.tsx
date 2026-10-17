@@ -12,6 +12,7 @@ import {
   IcLeaf,
   IcNote,
   IcRefresh,
+  IcScale,
   IcSearch,
   IcSeed,
   IcSend,
@@ -72,6 +73,7 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/galpones':                [ROL_ADMIN, ROL_PROPIETARIO],
   '/lotes':                   [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/bitacora':                [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/guia-crecimiento':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/consumos-diarios':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/monitoreo':               [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/sensores':                [ROL_ADMIN, ROL_PROPIETARIO],
@@ -172,6 +174,11 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/granjas',
         label: 'Granjas',
         icon: <IcLeaf size={16} />,
+      },
+      {
+        path: '/guia-crecimiento',
+        label: 'Guía de peso',
+        icon: <IcScale size={16} />,
       },
       {
         path: '/bitacora',

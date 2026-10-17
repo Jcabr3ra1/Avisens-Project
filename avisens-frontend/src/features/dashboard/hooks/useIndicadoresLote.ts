@@ -26,8 +26,9 @@ export function useIndicadoresLote(loteId: number | null) {
       .catch(() => { if (vigente) setIndicadores([]) })
       .finally(() => { if (vigente) setCargando(false) })
 
-    // Sin curva objetivo sembrada el backend no puede comparar. Se queda en
-    // null y la vista lo dice, en vez de mostrar un 0 % que parecería la meta.
+    // 404 solo si el lote nunca tuvo ni un indicador calculado. Sin curva
+    // sembrada, o con el ultimo dato incoherente, el backend igual responde
+    // 200 con un veredicto explicito (sin_referencia, peso_no_disponible...).
     void compararConCurva(loteId)
       .then((datos) => { if (vigente) setComparacion(datos) })
       .catch(() => { if (vigente) setComparacion(null) })

@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { gramosALibras, librasAGramos, pesoAEnviar } from './pesoObjetivo'
+import { gramosALibras, librasAGramos, pesoAEnviar, validarPesoObjetivo } from './pesoObjetivo'
+
+describe('validación del peso que se envía al plan', () => {
+  it('acepta coma y punto y envía gramos enteros positivos', () => {
+    expect(validarPesoObjetivo(null, true, '5,50')).toBe(2495)
+    expect(validarPesoObjetivo(null, true, ' 5.50 ')).toBe(2495)
+    expect(validarPesoObjetivo(null, true, ',5')).toBe(227)
+  })
+
+  it.each(['0', '-1', '', ' ', 'NaN', 'Infinity', '1e999', '0x10', '0,000001', '1,2,3'])('rechaza %s sin enviarlo al servidor', (texto) => {
+    expect(validarPesoObjetivo(null, true, texto)).toBeNull()
+  })
+
+  it('conserva un objetivo original exactamente en el mínimo', () => {
+    const minimo = gramosALibras(1000)
+    expect(validarPesoObjetivo(1000, false, '2.20', minimo)).toBe(1000)
+    expect(validarPesoObjetivo(1000, true, '2.20', minimo)).toBeNull()
+    expect(validarPesoObjetivo(null, true, '2.21', minimo)).toBe(1002)
+  })
+})
 
 describe('librasAGramos', () => {
   it('convierte 1 libra a 454 gramos redondeados', () => {

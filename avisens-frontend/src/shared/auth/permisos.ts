@@ -68,6 +68,27 @@ export function permisosDeInsumo(rol: string | null): PermisosInsumo {
   }
 }
 
+// Funciones operativas del galpón: sensores, dispositivos, equipos (con sus
+// mantenimientos y repuestos) y umbrales ambientales. Las configura el
+// propietario, que es quien opera su granja. El administrador gestiona la
+// estructura (granja → galpón → lote) y la operación solo la consulta.
+//
+// Ojo: el backend todavía acepta estas escrituras del Administrador
+// (@Roles(ADMINISTRADOR, PROPIETARIO) en sensores, dispositivos, equipos,
+// mantenimiento y umbrales). Mientras no se cierre allí, esto es honestidad de
+// la interfaz, no seguridad: quitar ADMINISTRADOR de esos @Roles queda como
+// pendiente del backend.
+export type PermisosOperativosGalpon = {
+  configurar: boolean
+  // Borrado definitivo (/permanente): el backend solo lo permite al
+  // Administrador, que aquí es de solo lectura. La baja normal es desactivar.
+  eliminarDefinitivo: boolean
+}
+
+export function permisosOperativosDeGalpon(rol: string | null): PermisosOperativosGalpon {
+  return { configurar: rol === ROL_PROPIETARIO, eliminarDefinitivo: false }
+}
+
 // Plan de crecimiento y estimación de alimento del lote (Fase 1 / 2A / 2B).
 // El administrador y el propietario calculan o recalculan; el operario solo
 // consulta el resultado.

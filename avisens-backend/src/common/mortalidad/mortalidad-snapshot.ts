@@ -1,4 +1,4 @@
-import { diaDeVidaDeFecha } from '../../common/fechas/dias-de-vida';
+import { diaDeVidaDeFecha } from '../fechas/dias-de-vida';
 
 export interface EntradaMortalidad {
   dia: number;

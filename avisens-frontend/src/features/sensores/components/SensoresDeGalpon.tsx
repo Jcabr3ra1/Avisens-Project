@@ -5,7 +5,7 @@ import {
   type Dispositivo,
 } from '@features/dispositivos/api/dispositivos'
 import { getRol } from '@shared/api'
-import { gestionaAlgo, permisosDeGestion } from '@shared/auth/permisos'
+import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { Galpon } from '@features/galpones/api/galpones'
 import { useCatalogoSensores } from '../hooks/useCatalogoSensores'
@@ -27,10 +27,11 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
   const [dispositivos, setDispositivos] = useState<Dispositivo[]>([])
   const [form, setForm] = useState<DatosSensor>(FORMULARIO_SENSOR_INICIAL)
   const [editando, setEditando] = useState<Sensor | null>(null)
-  // Instalar y configurar sensores es del administrador: el propietario
-  // llega aquí desde Galpones y solo debe consultar. Un botón sin permiso
-  // se oculta, no se deshabilita.
-  const permisos = permisosDeGestion(getRol())
+  // Configurar sensores es operación del galpón: la hace el propietario y el
+  // administrador la consulta en solo lectura. Un botón sin permiso se
+  // oculta, no se deshabilita.
+  const permisos = permisosOperativosDeGalpon(getRol())
+  const conAcciones = permisos.configurar || permisos.eliminarDefinitivo
   const [dispositivoId, setDispositivoId] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -147,7 +148,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
         </div>
       )}
 
-      {permisos.crear && (
+      {permisos.configurar && (
       <form className="sn-card sn-form" onSubmit={handleCrear}>
         <h2 className="sn-form-titulo">Registrar sensor</h2>
         <div className="sn-grid">
@@ -261,9 +262,11 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
             <p className="sn-vacio-titulo">
               Este galpón no tiene sensores registrados.
             </p>
-            <p className="sn-vacio-sub">
-              Crea el primero con el formulario de arriba.
-            </p>
+            {permisos.configurar && (
+              <p className="sn-vacio-sub">
+                Crea el primero con el formulario de arriba.
+              </p>
+            )}
           </div>
         ) : (
           <div className="sn-tabla-scroll">
@@ -276,7 +279,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
                   <th>Unidad</th>
                   <th>Dispositivo</th>
                   <th>Estado</th>
-                  {gestionaAlgo(permisos) && <th aria-label="Acciones"></th>}
+                  {conAcciones && <th aria-label="Acciones"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -297,9 +300,9 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
                         {s.estado}
                       </span>
                     </td>
-                    {gestionaAlgo(permisos) && (
+                    {conAcciones && (
                     <td className="sn-acciones">
-                      {permisos.editar && (
+                      {permisos.configurar && (
                         <button
                           className="sn-btn sn-btn--sm"
                           onClick={() => setEditando(s)}
@@ -307,7 +310,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
                           Editar
                         </button>
                       )}
-                      {permisos.alternarActivo && (
+                      {permisos.configurar && (
                         <button
                           className="sn-btn sn-btn--sm"
                           onClick={() => handleAlternar(s)}
@@ -315,7 +318,7 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
                           {s.estado === 'activo' ? 'Desactivar' : 'Activar'}
                         </button>
                       )}
-                      {permisos.eliminar && (
+                      {permisos.eliminarDefinitivo && (
                         <button
                           className="sn-btn sn-btn--sm sn-btn--danger"
                           onClick={() => handleEliminar(s)}

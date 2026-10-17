@@ -4,6 +4,7 @@ import {
   permisosDeGestion,
   permisosDeInsumo,
   permisosDePlan,
+  permisosOperativosDeGalpon,
   ROL_ADMIN,
   ROL_OPERARIO,
   ROL_PROPIETARIO,
@@ -67,6 +68,28 @@ describe('permisosDeInsumo', () => {
 
   it('sin sesión no se puede ni mover stock', () => {
     expect(permisosDeInsumo(null).registrarMovimiento).toBe(false)
+  })
+})
+
+describe('permisosOperativosDeGalpon', () => {
+  it('el propietario configura la operación de sus galpones', () => {
+    expect(permisosOperativosDeGalpon(ROL_PROPIETARIO).configurar).toBe(true)
+  })
+
+  it('el administrador consulta la operación en solo lectura', () => {
+    expect(permisosOperativosDeGalpon(ROL_ADMIN).configurar).toBe(false)
+  })
+
+  it('el operario, sin sesión o con un rol desconocido no configuran', () => {
+    for (const rol of [ROL_OPERARIO, null, 'Auditor']) {
+      expect(permisosOperativosDeGalpon(rol).configurar).toBe(false)
+    }
+  })
+
+  it('nadie borra definitivamente desde la vista operativa', () => {
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO, null]) {
+      expect(permisosOperativosDeGalpon(rol).eliminarDefinitivo).toBe(false)
+    }
   })
 })
 

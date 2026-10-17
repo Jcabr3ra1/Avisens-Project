@@ -15,6 +15,22 @@ import { paginate } from '../../common/pagination/paginate';
 import { ROLES } from '../../common/auth/roles';
 import { esPropietario } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
+import {
+  MENSAJE_ASIGNACION_OCUPADA,
+  MENSAJE_USUARIO_OCUPADO,
+} from '../../common/errores/bloqueo';
+import {
+  eliminarAsignacionesDelUsuario,
+  eliminarSesionesDelUsuario,
+  revocarAsignacionesDelUsuario,
+  revocarSesionesDelUsuario,
+} from '../../common/bloqueos/revocar-acceso';
+import {
+  esEsperaVencida,
+  TOPE_ESPERA_ASIGNACION_MS,
+  TOPE_ESPERA_ESCRITURA_MS,
+  transaccionConPresupuesto,
+} from '../../common/bloqueos/presupuesto-transaccion';
 
 const USUARIO_SELECT = {
   id: true,
@@ -97,8 +113,9 @@ export class UsuariosService {
     usuarioId: number,
     solicitante: Solicitante,
     exigirActivo = false,
+    cliente: Prisma.TransactionClient = this.prisma,
   ) {
-    const usuario = await this.prisma.usuario.findUnique({
+    const usuario = await cliente.usuario.findUnique({
       where: { id: usuarioId },
       select: {
         id: true,
@@ -131,8 +148,9 @@ export class UsuariosService {
     organizacionId: number,
     solicitante: Solicitante,
     exigirActivo = false,
+    cliente: Prisma.TransactionClient = this.prisma,
   ) {
-    const galpon = await this.prisma.galpon.findUnique({
+    const galpon = await cliente.galpon.findUnique({
       where: { id: galponId },
       select: {
         id: true,
@@ -249,7 +267,6 @@ export class UsuariosService {
     );
   }
 
-
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
     const where = esPropietario(solicitante)
       ? {
@@ -312,6 +329,9 @@ export class UsuariosService {
     });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
     this.verificarOperarioDeLaOrganizacion(usuario, solicitante);
+    if (dto.activo === false && id === solicitante.id) {
+      throw new ForbiddenException('No puedes desactivar tu propia cuenta');
+    }
 
     const cambiaEmail = dto.email && dto.email !== usuario.email;
     const cambiaCedula = dto.cedula && dto.cedula !== usuario.cedula;
@@ -339,18 +359,55 @@ export class UsuariosService {
       if (!rol) throw new NotFoundException('Rol no encontrado');
     }
 
-    return this.prisma.usuario.update({
-      where: { id },
-      data: {
-        nombre_completo: dto.nombre_completo,
-        cedula: dto.cedula,
-        email: dto.email,
-        telefono: dto.telefono,
-        rol_id: rolId,
-        activo: dto.activo,
-      },
-      select: USUARIO_SELECT,
-    });
+    const data = {
+      nombre_completo: dto.nombre_completo,
+      cedula: dto.cedula,
+      email: dto.email,
+      telefono: dto.telefono,
+      rol_id: rolId,
+      activo: dto.activo,
+    };
+
+    if (dto.activo !== false) {
+      return this.prisma.usuario.update({
+        where: { id },
+        data,
+        select: USUARIO_SELECT,
+      });
+    }
+
+    try {
+      return await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ESCRITURA_MS,
+        async (p) => {
+          await p.paso('actualizar usuario', (tx) =>
+            tx.usuario.update({ where: { id }, data, select: { id: true } }),
+          );
+          const actualizado = await p.paso(
+            'leer usuario actualizado',
+            (tx) =>
+              tx.usuario.findUniqueOrThrow({
+                where: { id },
+                select: USUARIO_SELECT,
+              }),
+            3,
+          );
+          await revocarSesionesDelUsuario(p, id);
+          await revocarAsignacionesDelUsuario(p, id);
+          return actualizado;
+        },
+      );
+    } catch (error) {
+      this.traducirTimeoutDeUsuario(error);
+      throw error;
+    }
+  }
+
+  private traducirTimeoutDeUsuario(error: unknown): void {
+    if (esEsperaVencida(error)) {
+      throw new ConflictException(MENSAJE_USUARIO_OCUPADO);
+    }
   }
 
   async asignarGalpon(
@@ -359,37 +416,95 @@ export class UsuariosService {
     rolAsignacion: string | undefined,
     solicitante: Solicitante,
   ) {
-    const operario = await this.obtenerOperarioParaAsignacion(
-      usuarioId,
-      solicitante,
-      true,
-    );
-    await this.validarGalponParaOperario(
-      galponId,
-      operario.organizacion_id!,
-      solicitante,
-      true,
-    );
+    try {
+      return await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ASIGNACION_MS,
+        async (p) => {
+          await p.paso(
+            'bloquear usuario',
+            (tx) =>
+              tx.$queryRaw`SELECT "id" FROM "usuarios" WHERE "id" = ${usuarioId} FOR SHARE`,
+          );
+          const operario = await p.paso(
+            'leer operario',
+            (tx) =>
+              this.obtenerOperarioParaAsignacion(
+                usuarioId,
+                solicitante,
+                true,
+                tx,
+              ),
+            2,
+          );
+          await p.paso(
+            'bloquear galpón',
+            (tx) =>
+              tx.$queryRaw`SELECT "id" FROM "galpones" WHERE "id" = ${galponId} FOR NO KEY UPDATE`,
+          );
+          await p.paso(
+            'leer galpón',
+            (tx) =>
+              this.validarGalponParaOperario(
+                galponId,
+                operario.organizacion_id!,
+                solicitante,
+                true,
+                tx,
+              ),
+            2,
+          );
 
-    return this.prisma.usuarioGalpon.upsert({
-      where: {
-        usuario_id_galpon_id: {
-          usuario_id: usuarioId,
-          galpon_id: galponId,
+          const previa = await p.paso('buscar asignación', (tx) =>
+            tx.usuarioGalpon.findUnique({
+              where: {
+                usuario_id_galpon_id: {
+                  usuario_id: usuarioId,
+                  galpon_id: galponId,
+                },
+              },
+              select: { id: true },
+            }),
+          );
+          const fila = previa
+            ? await p.paso('reactivar asignación', (tx) =>
+                tx.usuarioGalpon.update({
+                  where: { id: previa.id },
+                  data: {
+                    activa: true,
+                    rol_asignacion: rolAsignacion,
+                    fecha_asignacion: new Date(),
+                  },
+                  select: { id: true },
+                }),
+              )
+            : await p.paso('crear asignación', (tx) =>
+                tx.usuarioGalpon.create({
+                  data: {
+                    usuario_id: usuarioId,
+                    galpon_id: galponId,
+                    rol_asignacion: rolAsignacion,
+                  },
+                  select: { id: true },
+                }),
+              );
+          return p.paso(
+            'leer asignación',
+            (tx) =>
+              tx.usuarioGalpon.findUniqueOrThrow({
+                where: { id: fila.id },
+                select: ASIGNACION_SELECT,
+              }),
+            3,
+          );
         },
-      },
-      create: {
-        usuario_id: usuarioId,
-        galpon_id: galponId,
-        rol_asignacion: rolAsignacion,
-      },
-      update: {
-        activa: true,
-        rol_asignacion: rolAsignacion,
-        fecha_asignacion: new Date(),
-      },
-      select: ASIGNACION_SELECT,
-    });
+      );
+    } catch (error) {
+      if (esEsperaVencida(error)) {
+        throw new ConflictException(MENSAJE_ASIGNACION_OCUPADA);
+      }
+      throw error;
+    }
   }
 
   async listarGalponesAsignados(
@@ -460,17 +575,22 @@ export class UsuariosService {
       throw new ForbiddenException('No puedes desactivar tu propia cuenta');
     }
 
-    await this.prisma.$transaction([
-      this.prisma.sesion.updateMany({
-        where: { usuario_id: id, revocada: false },
-        data: { revocada: true },
-      }),
-      this.prisma.usuarioGalpon.updateMany({
-        where: { usuario_id: id, activa: true },
-        data: { activa: false },
-      }),
-      this.prisma.usuario.update({ where: { id }, data: { activo: false } }),
-    ]);
+    try {
+      await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ESCRITURA_MS,
+        async (p) => {
+          await p.paso('desactivar usuario', (tx) =>
+            tx.usuario.update({ where: { id }, data: { activo: false } }),
+          );
+          await revocarSesionesDelUsuario(p, id);
+          await revocarAsignacionesDelUsuario(p, id);
+        },
+      );
+    } catch (error) {
+      this.traducirTimeoutDeUsuario(error);
+      throw error;
+    }
 
     return { id, activo: false };
   }
@@ -488,12 +608,30 @@ export class UsuariosService {
       throw new ForbiddenException('No puedes eliminar tu propia cuenta');
     }
 
-    await this.prisma.$transaction([
-      this.prisma.sesion.deleteMany({ where: { usuario_id: id } }),
-      this.prisma.seguridadCuenta.deleteMany({ where: { usuario_id: id } }),
-      this.prisma.usuarioGalpon.deleteMany({ where: { usuario_id: id } }),
-      this.prisma.usuario.delete({ where: { id } }),
-    ]);
+    try {
+      await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ESCRITURA_MS,
+        async (p) => {
+          await p.paso(
+            'bloquear usuario',
+            (tx) =>
+              tx.$queryRaw`SELECT "id" FROM "usuarios" WHERE "id" = ${id} FOR UPDATE`,
+          );
+          await eliminarSesionesDelUsuario(p, id);
+          await p.paso('eliminar seguridad de cuenta', (tx) =>
+            tx.seguridadCuenta.deleteMany({ where: { usuario_id: id } }),
+          );
+          await eliminarAsignacionesDelUsuario(p, id);
+          await p.paso('eliminar usuario', (tx) =>
+            tx.usuario.delete({ where: { id } }),
+          );
+        },
+      );
+    } catch (error) {
+      this.traducirTimeoutDeUsuario(error);
+      throw error;
+    }
 
     return { id, eliminado: true };
   }

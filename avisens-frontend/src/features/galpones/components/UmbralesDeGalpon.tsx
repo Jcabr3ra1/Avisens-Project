@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { getRol } from '@shared/api'
-import { permisosDeGestion } from '@shared/auth/permisos'
+import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
 import type { Galpon } from '../api/galpones'
 import { VARIABLES_UMBRAL, type Umbral } from '../api/umbrales'
 import { useUmbrales } from '../hooks/useUmbrales'
@@ -23,7 +23,7 @@ const UNIDAD_POR_VARIABLE: Record<string, string> = {
 type Props = { galpon: Galpon }
 
 function UmbralesDeGalpon({ galpon }: Props) {
-  const permisos = permisosDeGestion(getRol())
+  const permisos = permisosOperativosDeGalpon(getRol())
   const { umbrales, cargando, error, recargar, crear, revisar, jubilar } = useUmbrales(galpon.id)
   const [editando, setEditando] = useState<
     { variable: string; semana: number; existente: Umbral | null } | null
@@ -95,7 +95,7 @@ function UmbralesDeGalpon({ galpon }: Props) {
                           <span className={`umb-crit umb-crit--${celda.umbral.criticidad}`}>
                             {celda.umbral.criticidad}
                           </span>
-                          {permisos.editar && (
+                          {permisos.configurar && (
                             <span className="umb-acciones">
                               <button
                                 type="button"
@@ -117,7 +117,7 @@ function UmbralesDeGalpon({ galpon }: Props) {
                             </span>
                           )}
                         </>
-                      ) : permisos.crear ? (
+                      ) : permisos.configurar ? (
                         <button
                           type="button"
                           className="umb-definir"

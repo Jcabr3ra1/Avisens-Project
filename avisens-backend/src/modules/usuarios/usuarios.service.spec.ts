@@ -8,6 +8,14 @@ import {
 import * as bcrypt from 'bcrypt';
 import { UsuariosService } from './usuarios.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  clienteDePrueba,
+  secuenciaDeLlamadas,
+} from '../../common/bloqueos/cliente-de-prueba.testing';
+import {
+  PresupuestoAgotado,
+  SentenciaVencida,
+} from '../../common/bloqueos/presupuesto-transaccion';
 
 jest.mock('bcrypt');
 
@@ -25,12 +33,14 @@ describe('UsuariosService', () => {
       findFirst: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
     },
     sesion: { updateMany: jest.fn(), deleteMany: jest.fn() },
     seguridadCuenta: { deleteMany: jest.fn() },
     galpon: { findUnique: jest.fn() },
     usuarioGalpon: {
-      upsert: jest.fn(),
+      create: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
       findUnique: jest.fn(),
@@ -39,6 +49,8 @@ describe('UsuariosService', () => {
       deleteMany: jest.fn(),
     },
     $transaction: jest.fn(),
+    $configurar: jest.fn(),
+    $queryRaw: jest.fn(),
   };
 
   const hashMock = bcrypt.hash as unknown as jest.Mock;
@@ -81,10 +93,12 @@ describe('UsuariosService', () => {
     prisma.usuario.findFirst.mockResolvedValue(null);
     prisma.$transaction.mockImplementation((operacion: unknown) =>
       typeof operacion === 'function'
-        ? (operacion as (tx: typeof prisma) => unknown)(prisma)
+        ? (operacion as (tx: typeof prisma) => unknown)(clienteDePrueba(prisma))
         : Promise.resolve([[], 0]),
     );
     prisma.organizacion.create.mockResolvedValue({ id: 10 });
+    prisma.$configurar.mockResolvedValue([{}]);
+    prisma.$queryRaw.mockResolvedValue([{ id: 40 }, { id: 41 }]);
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -285,40 +299,88 @@ describe('UsuariosService', () => {
       granja: { propietario_id: 5, organizacion_id: 10 },
     };
 
+    beforeEach(() => {
+      prisma.$transaction.mockImplementation((operacion: unknown) =>
+        typeof operacion === 'function'
+          ? (operacion as (cliente: typeof prisma) => unknown)(
+              clienteDePrueba(prisma),
+            )
+          : Promise.resolve(operacion),
+      );
+    });
+
     it('un Propietario asigna un Operario de su organización a su galpón', async () => {
       prisma.usuario.findUnique.mockResolvedValue(operario);
       prisma.galpon.findUnique.mockResolvedValue(galpon);
-      prisma.usuarioGalpon.upsert.mockResolvedValue({ id: 40, activa: true });
+      prisma.usuarioGalpon.findUnique.mockResolvedValue(null);
+      prisma.usuarioGalpon.create.mockResolvedValue({ id: 40 });
+      prisma.usuarioGalpon.findUniqueOrThrow.mockResolvedValue({
+        id: 40,
+        activa: true,
+      });
 
-      await service.asignarGalpon(
+      const res = await service.asignarGalpon(
         20,
         30,
         'Responsable de alimentación',
         propietario,
       );
 
-      const argumentos = argumentosDe(prisma.usuarioGalpon.upsert);
-      expect(argumentos.where).toEqual({
-        usuario_id_galpon_id: { usuario_id: 20, galpon_id: 30 },
+      expect(prisma.usuarioGalpon.findUnique).toHaveBeenCalledWith({
+        where: { usuario_id_galpon_id: { usuario_id: 20, galpon_id: 30 } },
+        select: { id: true },
       });
-      expect(argumentos.create).toEqual({
-        usuario_id: 20,
-        galpon_id: 30,
-        rol_asignacion: 'Responsable de alimentación',
+      expect(prisma.usuarioGalpon.create).toHaveBeenCalledWith({
+        data: {
+          usuario_id: 20,
+          galpon_id: 30,
+          rol_asignacion: 'Responsable de alimentación',
+        },
+        select: { id: true },
       });
+      expect(prisma.usuarioGalpon.update).not.toHaveBeenCalled();
+      expect(
+        argumentosDe(prisma.usuarioGalpon.findUniqueOrThrow).where,
+      ).toEqual({ id: 40 });
+      expect(res).toEqual({ id: 40, activa: true });
     });
 
     it('reactiva la misma fila en vez de duplicar la asignación', async () => {
       prisma.usuario.findUnique.mockResolvedValue(operario);
       prisma.galpon.findUnique.mockResolvedValue(galpon);
-      prisma.usuarioGalpon.upsert.mockResolvedValue({ id: 40, activa: true });
+      prisma.usuarioGalpon.findUnique.mockResolvedValue({ id: 40 });
+      prisma.usuarioGalpon.update.mockResolvedValue({ id: 40 });
+      prisma.usuarioGalpon.findUniqueOrThrow.mockResolvedValue({
+        id: 40,
+        activa: true,
+      });
 
       await service.asignarGalpon(20, 30, undefined, propietario);
 
-      const argumentos = argumentosDe(prisma.usuarioGalpon.upsert);
-      const actualizacion = argumentos.update as Record<string, unknown>;
+      const argumentos = argumentosDe(prisma.usuarioGalpon.update);
+      expect(argumentos.where).toEqual({ id: 40 });
+      expect(argumentos.select).toEqual({ id: true });
+      const actualizacion = argumentos.data as Record<string, unknown>;
       expect(actualizacion.activa).toBe(true);
       expect(actualizacion.fecha_asignacion).toBeInstanceOf(Date);
+      expect(actualizacion.rol_asignacion).toBeUndefined();
+      expect(prisma.usuarioGalpon.create).not.toHaveBeenCalled();
+    });
+
+    it('al reactivar con un rol lo reemplaza; sin rol no lo toca', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(operario);
+      prisma.galpon.findUnique.mockResolvedValue(galpon);
+      prisma.usuarioGalpon.findUnique.mockResolvedValue({ id: 40 });
+      prisma.usuarioGalpon.update.mockResolvedValue({ id: 40 });
+      prisma.usuarioGalpon.findUniqueOrThrow.mockResolvedValue({ id: 40 });
+
+      await service.asignarGalpon(20, 30, 'Nuevo rol', propietario);
+
+      const datos = argumentosDe(prisma.usuarioGalpon.update).data as Record<
+        string,
+        unknown
+      >;
+      expect(datos.rol_asignacion).toBe('Nuevo rol');
     });
 
     it('rechaza asignar un usuario que no es Operario', async () => {
@@ -330,7 +392,7 @@ describe('UsuariosService', () => {
       await expect(
         service.asignarGalpon(20, 30, undefined, admin),
       ).rejects.toThrow(BadRequestException);
-      expect(prisma.usuarioGalpon.upsert).not.toHaveBeenCalled();
+      expect(prisma.usuarioGalpon.create).not.toHaveBeenCalled();
     });
 
     it('rechaza cruzar organizaciones aunque lo intente un Administrador', async () => {
@@ -343,7 +405,7 @@ describe('UsuariosService', () => {
       await expect(
         service.asignarGalpon(20, 30, undefined, admin),
       ).rejects.toThrow(BadRequestException);
-      expect(prisma.usuarioGalpon.upsert).not.toHaveBeenCalled();
+      expect(prisma.usuarioGalpon.create).not.toHaveBeenCalled();
     });
 
     it('un Propietario no asigna operarios a un galpón ajeno', async () => {
@@ -356,7 +418,7 @@ describe('UsuariosService', () => {
       await expect(
         service.asignarGalpon(20, 30, undefined, propietario),
       ).rejects.toThrow(ForbiddenException);
-      expect(prisma.usuarioGalpon.upsert).not.toHaveBeenCalled();
+      expect(prisma.usuarioGalpon.create).not.toHaveBeenCalled();
     });
 
     it('no permite asignar un Operario inactivo', async () => {
@@ -369,6 +431,218 @@ describe('UsuariosService', () => {
         service.asignarGalpon(20, 30, undefined, propietario),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.galpon.findUnique).not.toHaveBeenCalled();
+    });
+
+    describe('coordinación con la desactivación del galpón', () => {
+      const timeoutDeBloqueo = () => {
+        const e = new Error('canceling statement due to lock timeout');
+        e.name = 'DriverAdapterError';
+        (e as Error & { cause: unknown }).cause = { originalCode: '55P03' };
+        return e;
+      };
+
+      beforeEach(() => {
+        prisma.$queryRaw.mockReset();
+        prisma.$configurar.mockReset();
+        prisma.$configurar.mockResolvedValue([{}]);
+        prisma.usuarioGalpon.findUnique.mockReset();
+        prisma.usuarioGalpon.create.mockReset();
+        prisma.usuarioGalpon.update.mockReset();
+        prisma.usuarioGalpon.findUniqueOrThrow.mockReset();
+        prisma.usuario.findUnique.mockResolvedValue(operario);
+        prisma.galpon.findUnique.mockResolvedValue(galpon);
+        prisma.usuarioGalpon.findUnique.mockResolvedValue(null);
+        prisma.usuarioGalpon.create.mockResolvedValue({ id: 40 });
+        prisma.usuarioGalpon.findUniqueOrThrow.mockResolvedValue({
+          id: 40,
+          activa: true,
+        });
+      });
+
+      it('bloquea primero al usuario y después el galpón, todo en una transacción READ COMMITTED', async () => {
+        await service.asignarGalpon(20, 30, undefined, propietario);
+
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+        expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+          isolationLevel: 'ReadCommitted',
+          timeout: 10000,
+        });
+        const [plantillaUsuario, idUsuario] = prisma.$queryRaw.mock
+          .calls[0] as [TemplateStringsArray, number];
+        expect(plantillaUsuario.join('?')).toContain('"usuarios"');
+        expect(plantillaUsuario.join('?')).toContain('FOR SHARE');
+        expect(idUsuario).toBe(20);
+        const [plantilla, idBloqueado] = prisma.$queryRaw.mock.calls[1] as [
+          TemplateStringsArray,
+          number,
+        ];
+        expect(plantilla.join('?')).toContain('FOR NO KEY UPDATE');
+        expect(idBloqueado).toBe(30);
+        expect(prisma.$configurar).toHaveBeenCalledTimes(7);
+        const [, esperaMs] = prisma.$configurar.mock.calls[0] as [
+          TemplateStringsArray,
+          string,
+          string,
+        ];
+        expect(esperaMs).toBe('3000ms');
+        expect(
+          secuenciaDeLlamadas(
+            ['c', prisma.$configurar],
+            ['bloqueo', prisma.$queryRaw],
+            ['usuario', prisma.usuario.findUnique],
+            ['galpón', prisma.galpon.findUnique],
+            ['buscar', prisma.usuarioGalpon.findUnique],
+            ['crear', prisma.usuarioGalpon.create],
+            ['leer', prisma.usuarioGalpon.findUniqueOrThrow],
+          ),
+        ).toEqual([
+          'c',
+          'bloqueo',
+          'c',
+          'usuario',
+          'c',
+          'bloqueo',
+          'c',
+          'galpón',
+          'c',
+          'buscar',
+          'c',
+          'crear',
+          'c',
+          'leer',
+        ]);
+      });
+
+      it('un usuario que ya quedó inactivo tras el bloqueo es 400 y no toca el galpón', async () => {
+        prisma.usuario.findUnique.mockResolvedValue({
+          ...operario,
+          activo: false,
+        });
+
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toThrow('No se puede asignar un Operario inactivo');
+        expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+        expect(prisma.usuarioGalpon.create).not.toHaveBeenCalled();
+      });
+
+      it('un usuario eliminado antes de asignar es 404', async () => {
+        prisma.usuario.findUnique.mockResolvedValue(null);
+
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toThrow(NotFoundException);
+        expect(prisma.usuarioGalpon.create).not.toHaveBeenCalled();
+      });
+
+      it('traduce 55P03 a 409 y no escribe', async () => {
+        prisma.$queryRaw.mockRejectedValue(timeoutDeBloqueo());
+
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toBeInstanceOf(ConflictException);
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toThrow(
+          'Hay otra operación modificando los datos de esta asignación; intenta de nuevo',
+        );
+        expect(prisma.usuarioGalpon.create).not.toHaveBeenCalled();
+      });
+
+      it('traduce también el 55P03 que sube de la escritura', async () => {
+        prisma.usuarioGalpon.create.mockRejectedValue(timeoutDeBloqueo());
+
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toThrow(
+          'Hay otra operación modificando los datos de esta asignación; intenta de nuevo',
+        );
+      });
+
+      it('no convierte otros errores en conflictos (deadlock, P2002, P2028)', async () => {
+        const deadlock = new Error('deadlock detected');
+        deadlock.name = 'DriverAdapterError';
+        (deadlock as Error & { cause: unknown }).cause = {
+          originalCode: '40P01',
+        };
+        prisma.usuarioGalpon.create.mockRejectedValueOnce(deadlock);
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toBe(deadlock);
+
+        const unico = Object.assign(new Error('unique'), { code: 'P2002' });
+        prisma.usuarioGalpon.create.mockRejectedValueOnce(unico);
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toBe(unico);
+
+        const vencida = Object.assign(new Error('expired'), { code: 'P2028' });
+        prisma.$transaction.mockRejectedValueOnce(vencida);
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toBe(vencida);
+      });
+
+      it('traduce a 409 el presupuesto agotado y la sentencia vencida, no la cancelación manual', async () => {
+        prisma.usuarioGalpon.create.mockRejectedValueOnce(
+          new PresupuestoAgotado('antes de «crear asignación»'),
+        );
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toBeInstanceOf(ConflictException);
+
+        prisma.usuarioGalpon.create.mockRejectedValueOnce(
+          new SentenciaVencida('crear asignación', new Error('57014')),
+        );
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toBeInstanceOf(ConflictException);
+
+        const manual = new Error('canceling statement due to user request');
+        manual.name = 'DriverAdapterError';
+        (manual as Error & { cause: unknown }).cause = {
+          originalCode: '57014',
+          originalMessage: 'canceling statement due to user request',
+        };
+        prisma.usuarioGalpon.create.mockRejectedValueOnce(manual);
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toBe(manual);
+      });
+
+      it('un galpón inexistente tras el bloqueo sigue siendo 404', async () => {
+        prisma.galpon.findUnique.mockResolvedValue(null);
+
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toThrow(NotFoundException);
+        expect(prisma.usuarioGalpon.create).not.toHaveBeenCalled();
+      });
+
+      it('un galpón inactivo sigue siendo 400 con el mismo mensaje', async () => {
+        prisma.galpon.findUnique.mockResolvedValue({
+          ...galpon,
+          activo: false,
+        });
+
+        await expect(
+          service.asignarGalpon(20, 30, undefined, propietario),
+        ).rejects.toThrow('No se puede asignar un galpón inactivo');
+        expect(prisma.usuarioGalpon.create).not.toHaveBeenCalled();
+      });
+
+      it('desasignar no toma bloqueos de galpón ni abre transacción', async () => {
+        prisma.usuarioGalpon.findUnique.mockResolvedValue({
+          id: 40,
+          activa: true,
+        });
+        prisma.usuarioGalpon.update.mockResolvedValue({ id: 40 });
+
+        await service.desasignarGalpon(20, 30, propietario);
+
+        expect(prisma.$queryRaw).not.toHaveBeenCalled();
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
     });
 
     it('lista solo las asignaciones a granjas del Propietario', async () => {
@@ -449,32 +723,244 @@ describe('UsuariosService', () => {
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
-    it('al desactivar un Operario también desactiva sus asignaciones', async () => {
-      prisma.usuario.findUnique.mockResolvedValue({
+    describe('desactivación y eliminación con bloqueos ordenados', () => {
+      const operarioDe10 = {
         id: 20,
         organizacion_id: 10,
+        email: 'op@x.com',
+        cedula: '123',
         rol: { nombre: 'Operario' },
+      };
+      const sql = (llamada: number) =>
+        (
+          prisma.$queryRaw.mock.calls[llamada] as [TemplateStringsArray]
+        )[0].join('?');
+      const errorDriver = (codigo: string) => {
+        const e = new Error('error del driver');
+        e.name = 'DriverAdapterError';
+        (e as Error & { cause: unknown }).cause = { originalCode: codigo };
+        return e;
+      };
+
+      beforeEach(() => {
+        prisma.usuario.findUnique.mockResolvedValue(operarioDe10);
+        prisma.usuario.update.mockResolvedValue({ id: 20, activo: false });
+        prisma.usuario.findUniqueOrThrow.mockResolvedValue({
+          id: 20,
+          activo: false,
+        });
+        prisma.sesion.updateMany.mockResolvedValue({ count: 1 });
+        prisma.usuarioGalpon.updateMany.mockResolvedValue({ count: 2 });
+        prisma.usuarioGalpon.deleteMany.mockResolvedValue({ count: 2 });
+        prisma.sesion.deleteMany.mockResolvedValue({ count: 1 });
+        prisma.seguridadCuenta.deleteMany.mockResolvedValue({ count: 1 });
+        prisma.usuario.delete.mockResolvedValue({ id: 20 });
       });
 
-      await service.desactivar(20, propietario);
+      const secuenciaDeRevocacion = [
+        'c',
+        'bloqueo',
+        'c',
+        'sesiones',
+        'c',
+        'bloqueo',
+        'c',
+        'asignaciones',
+      ];
+      const observar = () =>
+        secuenciaDeLlamadas(
+          ['c', prisma.$configurar],
+          ['actualizar', prisma.usuario.update],
+          ['leer', prisma.usuario.findUniqueOrThrow],
+          ['bloqueo', prisma.$queryRaw],
+          ['sesiones', prisma.sesion.updateMany],
+          ['asignaciones', prisma.usuarioGalpon.updateMany],
+        );
 
-      expect(prisma.usuarioGalpon.updateMany).toHaveBeenCalledWith({
-        where: { usuario_id: 20, activa: true },
-        data: { activa: false },
+      it.each([
+        [
+          'DELETE',
+          () => service.desactivar(20, propietario),
+          ['c', 'actualizar', ...secuenciaDeRevocacion],
+        ],
+        [
+          'PATCH activo:false',
+          () => service.actualizar(20, { activo: false }, propietario),
+          ['c', 'actualizar', 'c', 'leer', ...secuenciaDeRevocacion],
+        ],
+      ])(
+        '%s: usuario primero, luego sesiones y asignaciones por id, en una transacción READ COMMITTED con espera máxima',
+        async (_nombre, accion, secuenciaEsperada) => {
+          await accion();
+
+          expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+          expect(prisma.$transaction).toHaveBeenCalledWith(
+            expect.any(Function),
+            { isolationLevel: 'ReadCommitted', timeout: 10000 },
+          );
+          const [, esperaMs] = prisma.$configurar.mock.calls[0] as [
+            TemplateStringsArray,
+            string,
+            string,
+          ];
+          expect(esperaMs).toBe('5000ms');
+          expect(sql(0)).toContain('"sesiones"');
+          expect(sql(0)).toContain('ORDER BY "id" FOR UPDATE');
+          expect(sql(1)).toContain('"usuarios_galpones"');
+          expect(sql(1)).toContain('ORDER BY "id" FOR UPDATE');
+          expect(prisma.sesion.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: [40, 41] } },
+            data: { revocada: true },
+          });
+          expect(prisma.usuarioGalpon.updateMany).toHaveBeenCalledWith({
+            where: { id: { in: [40, 41] } },
+            data: { activa: false },
+          });
+          expect(observar()).toEqual(secuenciaEsperada);
+        },
+      );
+
+      it('no escribe sobre filas que no bloqueó ni cuando no había ninguna', async () => {
+        prisma.$queryRaw.mockResolvedValue([]);
+
+        await service.desactivar(20, propietario);
+
+        expect(prisma.sesion.updateMany).not.toHaveBeenCalled();
+        expect(prisma.usuarioGalpon.updateMany).not.toHaveBeenCalled();
+        expect(prisma.usuario.update).toHaveBeenCalledTimes(1);
       });
-    });
 
-    it('retira asignaciones antes de eliminar permanentemente un Operario', async () => {
-      prisma.usuario.findUnique.mockResolvedValue({
-        id: 20,
-        organizacion_id: 10,
-        rol: { nombre: 'Operario' },
+      it('PATCH activo:false conserva los demás campos y devuelve el usuario actualizado', async () => {
+        prisma.usuario.update.mockResolvedValue({ id: 20 });
+        prisma.usuario.findUniqueOrThrow.mockResolvedValue({
+          id: 20,
+          nombre_completo: 'Nuevo nombre',
+          activo: false,
+        });
+
+        const res = await service.actualizar(
+          20,
+          { activo: false, nombre_completo: 'Nuevo nombre' },
+          propietario,
+        );
+
+        expect(dataDe(prisma.usuario.update)).toMatchObject({
+          activo: false,
+          nombre_completo: 'Nuevo nombre',
+        });
+        expect(argumentosDe(prisma.usuario.update).select).toEqual({
+          id: true,
+        });
+        expect(argumentosDe(prisma.usuario.findUniqueOrThrow).where).toEqual({
+          id: 20,
+        });
+        expect(res).toEqual({
+          id: 20,
+          nombre_completo: 'Nuevo nombre',
+          activo: false,
+        });
       });
 
-      await service.eliminarPermanente(20, admin);
+      it.each([
+        ['sin activo', { nombre_completo: 'x' }],
+        ['con activo:true', { activo: true }],
+      ])(
+        'PATCH %s no abre transacción ni toca sesiones ni asignaciones',
+        async (_nombre, dto) => {
+          await service.actualizar(20, dto, propietario);
 
-      expect(prisma.usuarioGalpon.deleteMany).toHaveBeenCalledWith({
-        where: { usuario_id: 20 },
+          expect(prisma.$transaction).not.toHaveBeenCalled();
+          expect(prisma.sesion.updateMany).not.toHaveBeenCalled();
+          expect(prisma.usuarioGalpon.updateMany).not.toHaveBeenCalled();
+          expect(prisma.usuario.update).toHaveBeenCalledTimes(1);
+        },
+      );
+
+      it('PATCH activo:false sobre la propia cuenta es 403 y no escribe nada', async () => {
+        prisma.usuario.findUnique.mockResolvedValue({
+          id: 1,
+          email: 'a@x.com',
+          cedula: '1',
+          rol: { nombre: 'Administrador' },
+        });
+
+        await expect(
+          service.actualizar(1, { activo: false }, admin),
+        ).rejects.toThrow('No puedes desactivar tu propia cuenta');
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+        expect(prisma.usuario.update).not.toHaveBeenCalled();
+      });
+
+      it('la eliminación permanente bloquea al usuario antes de borrar sesiones, seguridad y asignaciones por id', async () => {
+        await service.eliminarPermanente(20, admin);
+
+        expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+          isolationLevel: 'ReadCommitted',
+          timeout: 10000,
+        });
+        const [plantilla, id] = prisma.$queryRaw.mock.calls[0] as [
+          TemplateStringsArray,
+          number,
+        ];
+        expect(plantilla.join('?')).toContain('"usuarios"');
+        expect(plantilla.join('?')).toContain('FOR UPDATE');
+        expect(id).toBe(20);
+        expect(prisma.sesion.deleteMany).toHaveBeenCalledWith({
+          where: { id: { in: [40, 41] } },
+        });
+        expect(prisma.usuarioGalpon.deleteMany).toHaveBeenCalledWith({
+          where: { id: { in: [40, 41] } },
+        });
+        expect(
+          secuenciaDeLlamadas(
+            ['c', prisma.$configurar],
+            ['bloqueo', prisma.$queryRaw],
+            ['sesiones', prisma.sesion.deleteMany],
+            ['seguridad', prisma.seguridadCuenta.deleteMany],
+            ['asignaciones', prisma.usuarioGalpon.deleteMany],
+            ['usuario', prisma.usuario.delete],
+          ),
+        ).toEqual([
+          'c',
+          'bloqueo',
+          'c',
+          'bloqueo',
+          'c',
+          'sesiones',
+          'c',
+          'seguridad',
+          'c',
+          'bloqueo',
+          'c',
+          'asignaciones',
+          'c',
+          'usuario',
+        ]);
+      });
+
+      it.each([
+        ['DELETE', () => service.desactivar(20, propietario)],
+        [
+          'PATCH activo:false',
+          () => service.actualizar(20, { activo: false }, propietario),
+        ],
+        ['DELETE permanente', () => service.eliminarPermanente(20, admin)],
+      ])('%s traduce solo 55P03 a 409', async (_nombre, accion) => {
+        prisma.$transaction.mockRejectedValueOnce(errorDriver('55P03'));
+        await expect(accion()).rejects.toBeInstanceOf(ConflictException);
+
+        prisma.$transaction.mockRejectedValueOnce(errorDriver('55P03'));
+        await expect(accion()).rejects.toThrow(
+          'El usuario está siendo modificado por otra operación; intenta de nuevo',
+        );
+
+        const deadlock = errorDriver('40P01');
+        prisma.$transaction.mockRejectedValueOnce(deadlock);
+        await expect(accion()).rejects.toBe(deadlock);
+
+        const vencida = Object.assign(new Error('expired'), { code: 'P2028' });
+        prisma.$transaction.mockRejectedValueOnce(vencida);
+        await expect(accion()).rejects.toBe(vencida);
       });
     });
   });

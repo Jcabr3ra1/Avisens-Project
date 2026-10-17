@@ -41,6 +41,14 @@ const whereDe = (mock: jest.Mock): Record<string, unknown> => {
   return calls[0][0].where;
 };
 
+const planMinimo = {
+  id: 1,
+  version: 1,
+  fecha_ingreso_snapshot: new Date('2026-07-30T00:00:00.000Z'),
+  dia_objetivo: null,
+  fecha_salida_calculada: null,
+};
+
 describe('PlanLoteService', () => {
   let service: PlanLoteService;
 
@@ -113,7 +121,7 @@ describe('PlanLoteService', () => {
       tx.curvaGeneticaVersion.findFirst.mockResolvedValue({ id: 7 });
       tx.puntoCurvaGenetica.findMany.mockResolvedValue(puntosCurva);
       tx.planLote.findFirst.mockResolvedValue(null);
-      tx.planLote.create.mockResolvedValue({ id: 1 });
+      tx.planLote.create.mockResolvedValue(planMinimo);
 
       await service.crear(3, { peso_objetivo_g: 2500 }, admin);
 
@@ -133,7 +141,7 @@ describe('PlanLoteService', () => {
       conCallback();
       tx.$queryRaw.mockResolvedValue([filaLote({ linea_genetica_id: null })]);
       tx.planLote.findFirst.mockResolvedValue(null);
-      tx.planLote.create.mockResolvedValue({ id: 1 });
+      tx.planLote.create.mockResolvedValue(planMinimo);
 
       await service.crear(3, { peso_objetivo_g: 2500 }, admin);
 
@@ -149,7 +157,7 @@ describe('PlanLoteService', () => {
       tx.$queryRaw.mockResolvedValue([filaLote()]);
       tx.curvaGeneticaVersion.findFirst.mockResolvedValue(null);
       tx.planLote.findFirst.mockResolvedValue(null);
-      tx.planLote.create.mockResolvedValue({ id: 1 });
+      tx.planLote.create.mockResolvedValue(planMinimo);
 
       await service.crear(3, { peso_objetivo_g: 2500 }, admin);
 
@@ -165,7 +173,7 @@ describe('PlanLoteService', () => {
       tx.curvaGeneticaVersion.findFirst.mockResolvedValue({ id: 7 });
       tx.puntoCurvaGenetica.findMany.mockResolvedValue(puntosCurva);
       tx.planLote.findFirst.mockResolvedValue(null);
-      tx.planLote.create.mockResolvedValue({ id: 1 });
+      tx.planLote.create.mockResolvedValue(planMinimo);
 
       await service.crear(3, { peso_objetivo_g: 5000 }, admin);
 
@@ -183,7 +191,7 @@ describe('PlanLoteService', () => {
       tx.curvaGeneticaVersion.findFirst.mockResolvedValue({ id: 7 });
       tx.puntoCurvaGenetica.findMany.mockResolvedValue([puntosCurva[0]]);
       tx.planLote.findFirst.mockResolvedValue(null);
-      tx.planLote.create.mockResolvedValue({ id: 1 });
+      tx.planLote.create.mockResolvedValue(planMinimo);
 
       await service.crear(3, { peso_objetivo_g: 2500 }, admin);
 
@@ -199,7 +207,7 @@ describe('PlanLoteService', () => {
       tx.curvaGeneticaVersion.findFirst.mockResolvedValue({ id: 7 });
       tx.puntoCurvaGenetica.findMany.mockResolvedValue(puntosCurva);
       tx.planLote.findFirst.mockResolvedValue(null);
-      tx.planLote.create.mockResolvedValue({ id: 1 });
+      tx.planLote.create.mockResolvedValue(planMinimo);
 
       await service.crear(3, { peso_objetivo_g: 2500 }, propietario);
 
@@ -218,7 +226,7 @@ describe('PlanLoteService', () => {
       tx.$queryRaw.mockResolvedValue([filaLote({ sexo: null })]);
       tx.curvaGeneticaVersion.findFirst.mockResolvedValue(null);
       tx.planLote.findFirst.mockResolvedValue(null);
-      tx.planLote.create.mockResolvedValue({ id: 1 });
+      tx.planLote.create.mockResolvedValue(planMinimo);
 
       await service.crear(3, { peso_objetivo_g: 2500 }, admin);
 
@@ -231,7 +239,7 @@ describe('PlanLoteService', () => {
       conCallback();
       tx.$queryRaw.mockResolvedValue([filaLote({ linea_genetica_id: null })]);
       tx.planLote.findFirst.mockResolvedValue(null);
-      tx.planLote.create.mockResolvedValue({ id: 1 });
+      tx.planLote.create.mockResolvedValue(planMinimo);
 
       await service.crear(3, { peso_objetivo_g: 2500 }, admin);
 
@@ -242,7 +250,7 @@ describe('PlanLoteService', () => {
       conCallback();
       tx.$queryRaw.mockResolvedValue([filaLote({ linea_genetica_id: null })]);
       tx.planLote.findFirst.mockResolvedValue({ version: 4 });
-      tx.planLote.create.mockResolvedValue({ id: 1 });
+      tx.planLote.create.mockResolvedValue(planMinimo);
 
       await service.crear(3, { peso_objetivo_g: 2500 }, admin);
 
@@ -253,7 +261,7 @@ describe('PlanLoteService', () => {
       conCallback();
       tx.$queryRaw.mockResolvedValue([filaLote({ linea_genetica_id: null })]);
       tx.planLote.findFirst.mockResolvedValue({ version: 1 });
-      tx.planLote.create.mockResolvedValue({ id: 1 });
+      tx.planLote.create.mockResolvedValue(planMinimo);
 
       await service.crear(3, { peso_objetivo_g: 2500 }, admin);
 
@@ -293,7 +301,7 @@ describe('PlanLoteService', () => {
       tx.planLote.findFirst
         .mockResolvedValueOnce({ peso_objetivo_g: new Prisma.Decimal(2500) })
         .mockResolvedValueOnce({ version: 1 });
-      tx.planLote.create.mockResolvedValue({ id: 2 });
+      tx.planLote.create.mockResolvedValue({ ...planMinimo, id: 2 });
 
       await service.recalcular(3, { motivo: 'ajuste' }, admin);
 
@@ -311,7 +319,7 @@ describe('PlanLoteService', () => {
         .mockResolvedValueOnce({ version: 1 });
       tx.curvaGeneticaVersion.findFirst.mockResolvedValue({ id: 7 });
       tx.puntoCurvaGenetica.findMany.mockResolvedValue(puntosCurva);
-      tx.planLote.create.mockResolvedValue({ id: 2 });
+      tx.planLote.create.mockResolvedValue({ ...planMinimo, id: 2 });
 
       await service.recalcular(3, {}, admin);
 
@@ -324,6 +332,9 @@ describe('PlanLoteService', () => {
   describe('obtener', () => {
     const planVigente = (overrides: Record<string, unknown> = {}) => ({
       id: 1,
+      version: 1,
+      dia_objetivo: null,
+      fecha_salida_calculada: null,
       lote_id: 3,
       linea_genetica_snapshot: { id: 10, codigo: 'ross', nombre: 'Ross' },
       sexo_curva_snapshot: 'macho',

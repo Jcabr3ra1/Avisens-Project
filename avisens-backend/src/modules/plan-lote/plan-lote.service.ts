@@ -11,6 +11,7 @@ import type { Solicitante } from '../../common/auth/acceso';
 import { verificarAccesoLote } from '../../common/auth/alcance';
 import { fechaDeVida } from '../../common/fechas/dias-de-vida';
 import { resolverDiaObjetivo } from './interpolacion';
+import { calcularTiempoCrianza } from './tiempo-crianza';
 import { CrearPlanLoteDto } from './dto/crear-plan-lote.dto';
 import { RecalcularPlanLoteDto } from './dto/recalcular-plan-lote.dto';
 
@@ -206,6 +207,15 @@ export class PlanLoteService {
     };
   }
 
+  private tiempoDelPlan(plan: PlanConRelaciones) {
+    return calcularTiempoCrianza({
+      version: plan.version,
+      fecha_ingreso_snapshot: plan.fecha_ingreso_snapshot,
+      dia_objetivo: plan.dia_objetivo,
+      fecha_salida_calculada: plan.fecha_salida_calculada,
+    });
+  }
+
   /**
    * desactualizado se deriva siempre en la lectura, nunca se persiste, y
    * SOLO tiene sentido para el plan vigente (GET /plan, y el que devuelven
@@ -325,7 +335,11 @@ export class PlanLoteService {
       }
     });
 
-    return { ...this.mapearPlan(plan), desactualizado: false };
+    return {
+      ...this.mapearPlan(plan),
+      desactualizado: false,
+      tiempo: this.tiempoDelPlan(plan),
+    };
   }
 
   async recalcular(
@@ -409,7 +423,11 @@ export class PlanLoteService {
       }
     });
 
-    return { ...this.mapearPlan(plan), desactualizado: false };
+    return {
+      ...this.mapearPlan(plan),
+      desactualizado: false,
+      tiempo: this.tiempoDelPlan(plan),
+    };
   }
 
   async obtener(loteId: number, solicitante: Solicitante) {
@@ -426,6 +444,7 @@ export class PlanLoteService {
     return {
       ...this.mapearPlan(plan),
       desactualizado: await this.esDesactualizado(plan),
+      tiempo: this.tiempoDelPlan(plan),
     };
   }
 

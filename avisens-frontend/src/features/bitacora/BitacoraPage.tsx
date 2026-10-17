@@ -7,6 +7,7 @@ import GestionConsumos from '@features/consumos-diarios/components/GestionConsum
 import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
 import AccionesRapidasBitacora from './components/AccionesRapidasBitacora'
+import AlimentoEstimadoPesaje from './components/AlimentoEstimadoPesaje'
 import FormularioRegistro from './components/FormularioRegistro'
 import HistorialRegistros from './components/HistorialRegistros'
 import ResumenLote from './components/ResumenLote'
@@ -310,6 +311,11 @@ function BitacoraPage() {
           onCambiar={cambiar}
           onGuardar={guardar}
           onCerrar={() => !guardando && setModal(null)}
+          complemento={
+            modal === 'peso' && loteSeleccionadoId !== null
+              ? <AlimentoEstimadoPesaje loteId={loteSeleccionadoId} />
+              : undefined
+          }
         />
       )}
     </div>

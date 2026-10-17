@@ -75,6 +75,8 @@ function AdminPage() {
       <div className="admin-secondary-grid">
         <PanelCrmAdmin
           etapas={resumen.etapasCrm}
+          recientes={resumen.prospectosRecientes}
+          total={resumen.totalProspectos}
           cargando={cargandoCrm}
           conversion={resumen.conversionCrm}
           onGestionar={() => navigate('/crm')}

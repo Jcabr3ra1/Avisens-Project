@@ -1,8 +1,12 @@
 import { IcCheck, IcChevronRight, IcFlame, IcPhone, IcSnowflake, IcThermo } from '@shared/ui/icons/icons'
-import type { EtapaCrmAdmin } from '../model/adminResumen'
+import { ESTILO_ETAPA } from '@features/crm/model/etapas'
+import { iniciales } from '@features/crm/model/formato'
+import { hace, type EtapaCrmAdmin, type ProspectoReciente } from '../model/adminResumen'
 
 type Props = {
   etapas: EtapaCrmAdmin[]
+  recientes: ProspectoReciente[]
+  total: number
   cargando: boolean
   conversion: number
   onGestionar: () => void
@@ -18,7 +22,7 @@ function iconoEtapa(nombre: string) {
   return iconos[nombre as keyof typeof iconos]
 }
 
-function PanelCrmAdmin({ etapas, cargando, conversion, onGestionar }: Props) {
+function PanelCrmAdmin({ etapas, recientes, total, cargando, conversion, onGestionar }: Props) {
   const maximo = Math.max(1, ...etapas.map((etapa) => etapa.cantidad))
 
   return (
@@ -53,6 +57,48 @@ function PanelCrmAdmin({ etapas, cargando, conversion, onGestionar }: Props) {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="admin-crm-recientes">
+        <div className="admin-crm-recientes-head">
+          <span>Últimos posibles clientes</span>
+          {!cargando && total > 0 && <small>{total} en total</small>}
+        </div>
+        {recientes.length === 0 ? (
+          <p className="admin-feed-vacio">
+            {cargando ? 'Cargando…' : 'Aún no hay posibles clientes captados por el chatbot.'}
+          </p>
+        ) : (
+          <ul className="admin-feed">
+            {recientes.map((prospecto) => {
+              const estilo = ESTILO_ETAPA[prospecto.etapa]
+              return (
+                <li key={prospecto.id} className="admin-feed-item">
+                  <span className="admin-feed-avatar admin-feed-avatar--p" aria-hidden="true">
+                    {iniciales(prospecto.nombre)}
+                  </span>
+                  <div className="admin-feed-info">
+                    <span className="admin-feed-nombre">{prospecto.nombre}</span>
+                    <span className="admin-feed-meta">
+                      {prospecto.contacto} · {prospecto.canal}
+                    </span>
+                  </div>
+                  <div className="admin-crm-reciente-lado">
+                    <span
+                      className="admin-crm-etapa"
+                      style={{ color: estilo.color, background: estilo.colorSuave, borderColor: estilo.colorBorde }}
+                    >
+                      {estilo.label}
+                    </span>
+                    <time className="admin-feed-hace" dateTime={prospecto.fechaRegistro}>
+                      {hace(prospecto.fechaRegistro)}
+                    </time>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </div>
 
       <div className="admin-crm-footer">

@@ -19,6 +19,7 @@ const LoginPage = lazy(() => import('@features/login/LoginPage'))
 const AdminPage = lazy(() => import('@features/admin/AdminPage'))
 const DashboardPage = lazy(() => import('@features/dashboard/DashboardPage'))
 const CrmPage = lazy(() => import('@features/crm/CrmPage'))
+const GuiaCrecimientoPage = lazy(() => import('@features/guia-crecimiento/GuiaCrecimientoPage'))
 const MonitoreoPage = lazy(() => import('@features/monitoreo/MonitoreoPage'))
 const BitacoraPage = lazy(() => import('@features/bitacora/BitacoraPage'))
 const AlertasPage = lazy(() => import('@features/alertas/AlertasPage'))
@@ -75,6 +76,7 @@ function AppRoutes() {
 
         {/* Módulos del sistema — acceso según navConfig.tsx */}
         <Route path="/crm"             element={cargarPagina(<CrmPage />)} />
+        <Route path="/guia-crecimiento" element={cargarPagina(<GuiaCrecimientoPage />)} />
         <Route path="/solicitudes-pqrs" element={cargarPagina(<SolicitudesPqrsPage />)} />
         <Route path="/monitoreo"       element={cargarPagina(<MonitoreoPage />)} />
         <Route path="/bitacora"        element={cargarPagina(<BitacoraPage />)} />

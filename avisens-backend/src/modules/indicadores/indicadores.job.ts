@@ -33,20 +33,41 @@ export class IndicadoresJob {
         });
 
         this.logger.log(`Procesando ${lotes.length} lotes activos`);
-        let fallidos = 0;
+        let fallidosTecnicos = 0;
+        const lotesIncoherentes: number[] = [];
+
         for (const lote of lotes) {
           try {
-            await this.indicadores.calcularParaLote(lote.id);
+            const indicador = await this.indicadores.calcularParaLote(
+              lote.id,
+            );
+            if (indicador.estado_calculo === 'mortalidad_incoherente') {
+              lotesIncoherentes.push(lote.id);
+            }
             await this.indicadores.generarAlertaDesvio(lote.id);
           } catch (error: unknown) {
-            fallidos += 1;
+            fallidosTecnicos += 1;
             const mensaje =
               error instanceof Error ? error.message : String(error);
             this.logger.error(`Falló lote ${lote.id}: ${mensaje}`);
           }
         }
-        if (fallidos > 0) {
-          throw new Error(`${fallidos} de ${lotes.length} lotes fallaron`);
+
+        if (lotesIncoherentes.length > 0) {
+          this.logger.warn(
+            JSON.stringify({
+              evento: 'indicadores.lotes_incoherentes',
+              ventana,
+              cantidad: lotesIncoherentes.length,
+              lotes: lotesIncoherentes,
+            }),
+          );
+        }
+
+        if (fallidosTecnicos > 0) {
+          throw new Error(
+            `${fallidosTecnicos} de ${lotes.length} lotes fallaron por excepcion tecnica`,
+          );
         }
       },
       6 * 60 * 60 * 1000,

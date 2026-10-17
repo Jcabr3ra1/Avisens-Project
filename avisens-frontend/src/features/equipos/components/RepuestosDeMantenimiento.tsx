@@ -1,4 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
+import { getRol } from '@shared/api'
+import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import { nuevaClaveIdempotencia } from '@shared/utils/idempotencia'
 import { useRepuestos } from '../hooks/useRepuestos'
@@ -7,6 +9,7 @@ import type { MantenimientoRepuesto } from '../api/mantenimientos'
 function RepuestosDeMantenimiento({ mantenimientoId }: { mantenimientoId: number }) {
   const { repuestos, insumos, cargando, error, agregar, revertir } =
     useRepuestos(mantenimientoId)
+  const permisos = permisosOperativosDeGalpon(getRol())
   const [insumoId, setInsumoId] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -87,7 +90,7 @@ function RepuestosDeMantenimiento({ mantenimientoId }: { mantenimientoId: number
               </span>
               {repuesto.revertido ? (
                 <span className="eq-badge eq-badge--inactivo">revertido</span>
-              ) : (
+              ) : permisos.configurar && (
                 <button
                   type="button"
                   className="eq-btn eq-btn--sm"
@@ -102,6 +105,7 @@ function RepuestosDeMantenimiento({ mantenimientoId }: { mantenimientoId: number
         </ul>
       )}
 
+      {permisos.configurar && (
       <form className="eq-repuesto-form" onSubmit={handleAgregar}>
         <select value={insumoId} onChange={(e) => { claveIntento.current = null; setInsumoId(e.target.value) }}>
           <option value="">Insumo de bodega…</option>
@@ -123,6 +127,7 @@ function RepuestosDeMantenimiento({ mantenimientoId }: { mantenimientoId: number
           {guardando ? 'Agregando…' : 'Agregar'}
         </button>
       </form>
+      )}
 
       {errorForm && <p className="eq-alert eq-alert--error" role="alert">{errorForm}</p>}
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type FormEvent } from 'react'
+import { useEffect, useRef, type FormEvent, type ReactNode } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import type { FormularioRegistro as Datos, TipoRegistro } from '../model/bitacora'
 
@@ -10,6 +10,8 @@ type Props = {
   onCambiar: <K extends keyof Datos>(campo: K, valor: Datos[K]) => void
   onGuardar: (evento: FormEvent<HTMLFormElement>) => void
   onCerrar: () => void
+  // Información de apoyo que se muestra dentro del formulario (no se envía).
+  complemento?: ReactNode
 }
 
 const ID_FORMULARIO = 'formulario-registro'
@@ -28,7 +30,7 @@ const EVENTOS_SANITARIOS = [
   ['revision', 'Revisión'],
 ] as const
 
-function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar, onCerrar }: Props) {
+function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar, onCerrar, complemento }: Props) {
   const fechaRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -155,6 +157,8 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
             </label>
           </>
         )}
+
+        {complemento}
 
         <label className="modal-campo">
           <span>Observaciones <em>(Opcional)</em></span>

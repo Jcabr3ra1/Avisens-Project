@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
-import { permisosDeGestion } from '@shared/auth/permisos'
+import { permisosDeGestion, permisosOperativosDeGalpon } from '@shared/auth/permisos'
 import { IcPlus } from '@shared/ui/icons/icons'
 import CabeceraAdmin, { type Miga } from '@shared/ui/admin/CabeceraAdmin'
 import '@shared/ui/admin/AdminKit.css'
@@ -26,6 +26,14 @@ function GalponesPage() {
   const [searchParams] = useSearchParams()
   const gestion = useGalpones()
   const permisos = permisosDeGestion(getRol())
+  const operacion = permisosOperativosDeGalpon(getRol())
+  // Sensores, dispositivos, equipos y umbrales son operación del galpón: quien
+  // no la configura los ve en solo lectura y se le dice por qué.
+  const avisoSoloLectura = !operacion.configurar && (
+    <p className="adm-aviso" role="note">
+      Vista de solo lectura: la configuración operativa del galpón la hace su propietario.
+    </p>
+  )
   const granjaParam = searchParams.get('granja')
   const granjaId = Number(granjaParam)
   const tieneContextoDeGranja = granjaParam !== null && Number.isInteger(granjaId)
@@ -155,6 +163,7 @@ function GalponesPage() {
           subtitulo={`${galponEquipos.codigo} · ${galponEquipos.granja.nombre}`}
           onCerrar={() => setGalponEquipos(null)}
         >
+          {avisoSoloLectura}
           <EquiposDeGalpon galpon={galponEquipos} />
         </PantallaHija>
       )}
@@ -165,6 +174,7 @@ function GalponesPage() {
           subtitulo={`${galponDispositivos.codigo} · ${galponDispositivos.granja.nombre}`}
           onCerrar={() => setGalponDispositivos(null)}
         >
+          {avisoSoloLectura}
           <DispositivosDeGalpon galpon={galponDispositivos} />
         </PantallaHija>
       )}
@@ -175,6 +185,7 @@ function GalponesPage() {
           subtitulo={`${galponSensores.codigo} · ${galponSensores.granja.nombre}`}
           onCerrar={() => setGalponSensores(null)}
         >
+          {avisoSoloLectura}
           <SensoresDeGalpon galpon={galponSensores} />
         </PantallaHija>
       )}
@@ -185,6 +196,7 @@ function GalponesPage() {
           subtitulo={`${galponUmbrales.codigo} · ${galponUmbrales.granja.nombre}`}
           onCerrar={() => setGalponUmbrales(null)}
         >
+          {avisoSoloLectura}
           <UmbralesDeGalpon galpon={galponUmbrales} />
         </PantallaHija>
       )}

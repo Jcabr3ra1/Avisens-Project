@@ -13,3 +13,10 @@ delete {
 auth:bearer {
   token: {{token}}
 }
+
+docs {
+  Concurrencia: bloquea el galpón antes de borrar sus asignaciones y el
+  galpón, con una espera máxima de 5 s. Una asignación en curso termina
+  antes (y se elimina con el galpón) o, si llega después, recibe 404. Si el
+  galpón está ocupado más de 5 s responde 409 sin borrar nada; reintenta.
+}

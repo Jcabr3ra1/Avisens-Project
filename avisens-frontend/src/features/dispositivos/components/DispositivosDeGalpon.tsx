@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react'
+import { getRol } from '@shared/api'
+import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { Galpon } from '@features/galpones/api/galpones'
 import { useDispositivos } from '../hooks/useDispositivos'
@@ -13,6 +15,10 @@ import './DispositivosDeGalpon.css'
 function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
   const { dispositivos, cargando, error, crear, alternar, regenerarToken, eliminar } =
     useDispositivos(galpon.id)
+  // Registrar dispositivos y rotar su token es operación del galpón: la hace
+  // el propietario; el administrador la consulta en solo lectura.
+  const permisos = permisosOperativosDeGalpon(getRol())
+  const conAcciones = permisos.configurar || permisos.eliminarDefinitivo
   const [form, setForm] = useState<DatosDispositivo>(FORMULARIO_DISPOSITIVO_INICIAL)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -131,6 +137,7 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
         </div>
       )}
 
+      {permisos.configurar && (
       <form className="dsp-card dsp-form" onSubmit={handleCrear}>
         <h2 className="dsp-form-titulo">Registrar dispositivo</h2>
         <div className="dsp-grid">
@@ -193,6 +200,7 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
           </button>
         </div>
       </form>
+      )}
 
       <div className="dsp-card">
         {cargando ? (
@@ -200,10 +208,12 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
         ) : dispositivos.length === 0 ? (
           <div className="dsp-vacio">
             <p className="dsp-vacio-titulo">Este galpón no tiene dispositivos.</p>
-            <p className="dsp-vacio-sub">
-              Registra el primero arriba: sin dispositivo no se pueden crear
-              sensores.
-            </p>
+            {permisos.configurar && (
+              <p className="dsp-vacio-sub">
+                Registra el primero arriba: sin dispositivo no se pueden crear
+                sensores.
+              </p>
+            )}
           </div>
         ) : (
           <div className="dsp-tabla-scroll">
@@ -215,7 +225,7 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
                   <th>Tópico</th>
                   <th>Firmware</th>
                   <th>Estado</th>
-                  <th aria-label="Acciones"></th>
+                  {conAcciones && <th aria-label="Acciones"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -232,26 +242,34 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
                         {dispositivo.activo ? 'activo' : 'inactivo'}
                       </span>
                     </td>
+                    {conAcciones && (
                     <td className="dsp-acciones">
-                      <button
-                        className="dsp-btn dsp-btn--sm"
-                        onClick={() => void handleAlternar(dispositivo)}
-                      >
-                        {dispositivo.activo ? 'Desactivar' : 'Activar'}
-                      </button>
-                      <button
-                        className="dsp-btn dsp-btn--sm"
-                        onClick={() => void handleToken(dispositivo)}
-                      >
-                        Token
-                      </button>
-                      <button
-                        className="dsp-btn dsp-btn--sm dsp-btn--danger"
-                        onClick={() => void handleEliminar(dispositivo)}
-                      >
-                        Eliminar
-                      </button>
+                      {permisos.configurar && (
+                        <>
+                          <button
+                            className="dsp-btn dsp-btn--sm"
+                            onClick={() => void handleAlternar(dispositivo)}
+                          >
+                            {dispositivo.activo ? 'Desactivar' : 'Activar'}
+                          </button>
+                          <button
+                            className="dsp-btn dsp-btn--sm"
+                            onClick={() => void handleToken(dispositivo)}
+                          >
+                            Token
+                          </button>
+                        </>
+                      )}
+                      {permisos.eliminarDefinitivo && (
+                        <button
+                          className="dsp-btn dsp-btn--sm dsp-btn--danger"
+                          onClick={() => void handleEliminar(dispositivo)}
+                        >
+                          Eliminar
+                        </button>
+                      )}
                     </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

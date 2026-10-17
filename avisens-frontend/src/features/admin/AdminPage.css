@@ -218,6 +218,12 @@
 .admin-pipeline-meta { display: flex; min-width: 0; flex-direction: column; gap: 2px; padding-bottom: var(--space-3); color: var(--text-muted); font-size: 0.67rem; line-height: 1.25; text-align: center; }
 .admin-pipeline-label { display: inline-flex; align-items: center; justify-content: center; gap: 3px; color: var(--text-secondary); font-size: 0.72rem; font-weight: 750; }
 .admin-funnel-icon { display: inline-flex; }
+.admin-crm-recientes { margin-bottom: var(--space-3); }
+.admin-crm-recientes-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-1); color: var(--text-secondary); font-size: 0.76rem; font-weight: 700; }
+.admin-crm-recientes-head small { color: var(--text-muted); font-weight: 500; }
+.admin-crm-recientes .admin-feed-meta { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-crm-reciente-lado { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 2px; }
+.admin-crm-etapa { padding: 1px var(--space-2); border: 1px solid; border-radius: var(--radius-full); font-size: 0.66rem; font-weight: 750; }
 .admin-crm-footer { padding-top: var(--space-3); border-top: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 0.76rem; }
 .admin-crm-conv { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
 .admin-crm-conv-track { height: 6px; flex: 1; overflow: hidden; border-radius: var(--radius-full); background: var(--surface-subtle); }

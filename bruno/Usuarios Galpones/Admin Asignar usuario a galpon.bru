@@ -7,3 +7,30 @@ post { url: {{baseUrl}}/v1/usuarios-galpones; body: json; auth: bearer }
 headers { Content-Type: application/json }
 auth:bearer { token: {{token}} }
 body:json { {"usuario_id":2,"galpon_id":1,"rol_asignacion":"galponero"} }
+
+docs {
+  Concurrencia: la asignación (y la reactivación por /activar o por
+  POST /v1/usuarios/:id/galpones) toma primero la fila del usuario con
+  FOR SHARE, vuelve a validar que siga activo y recién después bloquea el
+  galpón, todo en la misma transacción.
+
+  Dos resultados frente a una desactivación del usuario (o de su
+  organización): si la asignación gana, responde 201/200 y la desactivación la
+  revoca justo después; si la desactivación gana, la asignación se rechaza con
+  400 «No se puede asignar un Operario inactivo» (o 404 si el usuario se
+  eliminó) y no crea ni reactiva nada. Con el galpón desactivado, 400 «galpón
+  inactivo». Dos altas simultáneas del mismo par terminan con 201 y una sola
+  fila.
+
+  Esperas: lock_timeout (3 s) limita cada intento de adquirir un bloqueo, el
+  del usuario y el del galpón por separado, no la duración total. Si un
+  bloqueo no se obtiene en 3 s responde 409 «Hay otra operación modificando
+  los datos de esta asignación; intenta de nuevo»; reintenta. Varias esperas
+  seguidas se suman y, si agotan el timeout de 10 s de la transacción, responde
+  500 (P2028, pendiente aparte).
+
+  Alcance: el bloqueo del usuario ocurre antes de comprobar el alcance del
+  solicitante sobre ese usuario (y el del galpón, antes de comprobar el
+  galpón). Si la fila está ocupada, la espera puede terminar en 409 antes de
+  que llegue un 403.
+}

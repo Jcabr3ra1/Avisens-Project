@@ -7,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { randomUUID, createHash } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { permisosDelRol } from '../../common/auth/permisos';
@@ -75,11 +76,18 @@ export class AuthService {
 
     await this.resetearIntentosFallidos(usuario.id);
 
+    // session_id: identidad estable de ESTA sesión, generada una sola vez
+    // aquí. Viaja firmada dentro del refresh token y se conserva sin
+    // cambios en cada rotación (ver refresh() más abajo) -- es lo que le
+    // permite a logout() revocar la sesión correcta aunque el token ya
+    // haya rotado, en vez de depender de comparar hashes.
+    const sessionId = randomUUID();
     const tokens = await this.generarTokens(
       usuario.id,
       usuario.email,
       usuario.rol.nombre,
       usuario.organizacion_id,
+      sessionId,
     );
 
     await this.prisma.sesion.deleteMany({
@@ -91,8 +99,9 @@ export class AuthService {
 
     await this.prisma.sesion.create({
       data: {
+        session_id: sessionId,
         usuario_id: usuario.id,
-        refresh_token_hash: await bcrypt.hash(tokens.refresh_token, 10),
+        refresh_token_hash: this.hashRefreshToken(tokens.refresh_token),
         ip_origen: ip,
         user_agent: userAgent,
         expira_en: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -113,27 +122,17 @@ export class AuthService {
     };
   }
 
-  async refresh(userId: number, email: string, refreshToken: string) {
-    const sesiones = await this.prisma.sesion.findMany({
-      where: {
-        usuario_id: userId,
-        revocada: false,
-        expira_en: { gt: new Date() },
-      },
-    });
+  // El refresh token completo se compara por SHA-256 (no bcrypt): bcrypt
+  // trunca a 72 bytes, y con la forma actual del payload eso confundía
+  // tokens distintos de un mismo usuario entre sí (ver docs de diseño).
+  // SHA-256 procesa el token completo -- el algoritmo correcto para un
+  // secreto de alta entropía generado por el servidor, no para una
+  // contraseña elegida por una persona (ahí sigue bcrypt, sin cambios).
+  private hashRefreshToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
 
-    const sesionValida = await Promise.any(
-      sesiones.map(async (s) => {
-        const match = await bcrypt.compare(refreshToken, s.refresh_token_hash);
-        if (!match) throw new Error();
-        return s;
-      }),
-    ).catch(() => null);
-
-    if (!sesionValida) {
-      throw new UnauthorizedException('Refresh token inválido o expirado');
-    }
-
+  async refresh(userId: number, sessionId: string, refreshToken: string) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: userId },
       include: { rol: true, seguridad_cuenta: true, organizacion: true },
@@ -148,63 +147,94 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
+    const hashAnterior = this.hashRefreshToken(refreshToken);
+    // Misma sesión (session_id es estable, no cambia al rotar); el jti
+    // nuevo en cada emisión evita que dos rotaciones en el mismo segundo
+    // produzcan el mismo token.
     const tokens = await this.generarTokens(
       usuario.id,
       usuario.email,
       usuario.rol.nombre,
       usuario.organizacion_id,
+      sessionId,
     );
+    const hashNuevo = this.hashRefreshToken(tokens.refresh_token);
 
-    await this.prisma.sesion.update({
-      where: { id: sesionValida.id },
-      data: { refresh_token_hash: await bcrypt.hash(tokens.refresh_token, 10) },
+    // Rotación atómica (compare-and-swap): un único UPDATE condicional,
+    // no "leer y luego escribir". Si otra petición concurrente ya rotó
+    // esta misma sesión, o un logout concurrente ya la revocó, o ya
+    // expiró, la condición no calza con ninguna fila y count queda en 0
+    // -- nunca se devuelven tokens nuevos sobre una sesión que ya no
+    // debería poder rotar.
+    const resultado = await this.prisma.sesion.updateMany({
+      where: {
+        session_id: sessionId,
+        usuario_id: userId,
+        refresh_token_hash: hashAnterior,
+        revocada: false,
+        expira_en: { gt: new Date() },
+      },
+      data: { refresh_token_hash: hashNuevo },
     });
+
+    if (resultado.count === 0) {
+      throw new UnauthorizedException(
+        'Refresh token inválido, expirado o ya utilizado',
+      );
+    }
 
     return tokens;
   }
 
-  async logout(userId: number, refreshToken: string) {
-    const sesiones = await this.prisma.sesion.findMany({
-      where: { usuario_id: userId, revocada: false },
+  async logout(userId: number, sessionId: string) {
+    // Revoca por identidad de sesión (session_id), no por el hash del
+    // token presentado: así, aunque un refresh concurrente ya haya
+    // rotado el token, logout sigue pudiendo cerrar ESTA sesión -- no
+    // depende de traer el hash vigente. Idempotente (revocar una sesión
+    // ya revocada no tiene efecto extra) y no afecta otras sesiones del
+    // mismo usuario (el WHERE exige también session_id, no solo
+    // usuario_id).
+    await this.prisma.sesion.updateMany({
+      where: { session_id: sessionId, usuario_id: userId },
+      data: { revocada: true },
     });
-
-    for (const sesion of sesiones) {
-      const match = await bcrypt.compare(
-        refreshToken,
-        sesion.refresh_token_hash,
-      );
-      if (match) {
-        await this.prisma.sesion.update({
-          where: { id: sesion.id },
-          data: { revocada: true },
-        });
-        break;
-      }
-    }
   }
 
   private async generarTokens(
     userId: number,
     email: string,
     rol: string,
-    organizacionId?: number | null,
+    organizacionId: number | null | undefined,
+    sessionId: string,
   ) {
-    const payload = {
+    const payloadBase = {
       sub: userId,
       email,
       rol,
       organizacion_id: organizacionId ?? null,
     };
+    // jti: aleatorio en CADA emisión (login y cada refresh). Sin esto,
+    // dos tokens firmados en el mismo segundo de reloj, con el mismo
+    // payload, son literalmente el mismo string -- no solo el mismo hash.
+    const jti = randomUUID();
 
     const [access_token, refresh_token] = await Promise.all([
-      this.jwt.signAsync(payload, {
-        secret: this.config.getOrThrow('JWT_SECRET'),
-        expiresIn: this.config.get('JWT_EXPIRES_IN', '15m'),
-      }),
-      this.jwt.signAsync(payload, {
-        secret: this.config.getOrThrow('JWT_REFRESH_SECRET'),
-        expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN', '7d'),
-      }),
+      this.jwt.signAsync(
+        { ...payloadBase, jti },
+        {
+          secret: this.config.getOrThrow('JWT_SECRET'),
+          expiresIn: this.config.get('JWT_EXPIRES_IN', '15m'),
+        },
+      ),
+      this.jwt.signAsync(
+        // session_id: identidad estable de la sesión (no cambia al
+        // rotar) -- distinta del jti, que sí cambia en cada emisión.
+        { ...payloadBase, jti, session_id: sessionId },
+        {
+          secret: this.config.getOrThrow('JWT_REFRESH_SECRET'),
+          expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN', '7d'),
+        },
+      ),
     ]);
 
     return { access_token, refresh_token };

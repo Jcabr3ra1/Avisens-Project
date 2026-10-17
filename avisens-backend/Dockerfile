@@ -24,6 +24,11 @@ RUN pnpm run build
 # Conserva las dev-deps (nest CLI) y el codigo fuente. Solo se usa en local via
 # docker-compose.override.yml; produccion NO usa esta etapa.
 FROM builder AS dev
+# dev sale de builder, ANTES de que runner (abajo) declare su propio
+# HEALTHCHECK -- esta etapa no lo hereda, hay que repetirlo aqui o
+# "docker compose ps" nunca marca este contenedor como healthy.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=45s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||3000)+'/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 CMD ["pnpm", "run", "start:dev"]
 
 # ---------- Etapa prune: dependencias de produccion ----------

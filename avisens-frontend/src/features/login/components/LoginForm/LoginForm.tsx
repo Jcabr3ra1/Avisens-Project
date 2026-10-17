@@ -62,8 +62,8 @@ function LoginForm() {
   return (
     <div className="lf-card">
       <div className="lf-header">
-        <h1 className="lf-title">Entrar a AVISENS</h1>
-        <p className="lf-sub">Use el correo y la contraseña de su cuenta.</p>
+        <h1 className="lf-title">Bienvenido de nuevo</h1>
+        <p className="lf-sub">Ingresa el correo y la contraseña de tu cuenta para continuar.</p>
       </div>
 
       <form className="lf-form" onSubmit={handleSubmit} noValidate>

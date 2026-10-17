@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { isAxiosError } from 'axios'
 import {
   iniciarConversacion,
@@ -10,6 +10,7 @@ import {
 import { IcAlert, IcRefresh, IcSend } from '@shared/ui/icons/icons'
 import Ic from '@shared/ui/Ic/Ic'
 import { seLeenEnPar } from '@features/landing/model/opcionesChat'
+import AviaProgress from './AviaProgress'
 import './FloatChat.css'
 
 const RobotLottie = lazy(() => import('./RobotLottie'))
@@ -114,6 +115,7 @@ const ACCIONES_RAPIDAS: {
 
 function FloatChat() {
   const [open, setOpen] = useState(false)
+  const [saludando, setSaludando] = useState(false)
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [sesionId, setSesionId] = useState<string | null>(null)
   const [pregunta, setPregunta] = useState<PreguntaChatbot | null>(null)
@@ -176,6 +178,7 @@ function FloatChat() {
   }, [])
 
   const iniciar = useCallback(async (ruta: RutaChat = 'cotizacion') => {
+    setSaludando(false)
     setEnviando(true)
     setError(null)
     setMensajes([])
@@ -216,6 +219,7 @@ function FloatChat() {
     const valor = respuesta.trim()
     if (!valor || !sesionId || enviando || resultado) return
 
+    setSaludando(false)
     setTexto('')
     setError(null)
     setMensajes((m) => [...m, { autor: 'usuario', texto: valor }])
@@ -236,19 +240,26 @@ function FloatChat() {
   }, [aplicar, enviando, resultado, sesionId])
 
   const cerrarChat = useCallback(() => {
+    setSaludando(false)
     setOpen(false)
     window.requestAnimationFrame(() => triggerRef.current?.focus())
   }, [])
 
-  function toggleChat() {
+  function manejarClickAvia(evento: MouseEvent<HTMLButtonElement>) {
+    // Un doble clic no debe abrir y cerrar el chat. Teclado y clic sencillo
+    // siguen respondiendo de inmediato; AVIA no tiene interacción de vuelo.
+    if (evento.detail > 1) return
     if (open) {
       cerrarChat()
       return
     }
 
     if (!iniciado && !enviando && !porElegirRuta) abrirConMenu()
+    setSaludando(evento.detail > 0 && !enviando)
     setOpen(true)
   }
+
+  const terminarSaludo = useCallback(() => setSaludando(false), [])
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -302,6 +313,14 @@ function FloatChat() {
       ? 'Escribe un número'
       : 'Escribe tu respuesta...'
 
+  const avatarProgreso = (
+    <AviaProgress
+      progreso={progreso}
+      totalPasos={totalPasos}
+      finalizado={resultado !== null}
+    />
+  )
+
   return (
     <div className={`float-chat${open ? ' is-open' : ''}`}>
       <div
@@ -312,9 +331,16 @@ function FloatChat() {
       >
         <div className="float-chat-topbar">
           <div className="float-chat-avatar">
-            <Suspense fallback={null}>
-              <RobotLottie size={30} animando={enviando} />
-            </Suspense>
+            {open && (saludando || enviando) ? (
+              <Suspense fallback={avatarProgreso}>
+                <RobotLottie
+                  size={98}
+                  animando={enviando}
+                  saludar={saludando}
+                  onSaludoTerminado={terminarSaludo}
+                />
+              </Suspense>
+            ) : avatarProgreso}
           </div>
           <div className="float-chat-heading">
             <div className="float-chat-name" id="avia-chat-title">AVIA</div>
@@ -505,7 +531,7 @@ function FloatChat() {
         ref={triggerRef}
         className="float-btn"
         type="button"
-        onClick={toggleChat}
+        onClick={manejarClickAvia}
         aria-label={open ? 'Cerrar chat con AVIA' : 'Hablar con AVIA'}
         data-tip={open ? 'Cerrar' : 'Hablar con AVIA'}
         aria-controls="avia-chat-panel"
@@ -522,7 +548,11 @@ function FloatChat() {
                 <Ic d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" size={26} />
               }
             >
-              <RobotLottie size={118} className="float-btn-robot" />
+              <RobotLottie
+                size={112}
+                animando={false}
+                className="float-btn-robot"
+              />
             </Suspense>
           )}
         </span>

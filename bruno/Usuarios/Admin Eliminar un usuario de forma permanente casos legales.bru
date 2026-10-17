@@ -13,3 +13,23 @@ delete {
 auth:bearer {
   token: {{token}}
 }
+
+docs {
+  Solo Administrador. Bloquea la fila del usuario antes de borrar sus
+  sesiones, su seguridad de cuenta y sus asignaciones, y borra al usuario en la
+  misma transacción. Si una asignación gana, puede responder 201/200 y su fila
+  se borra justo después con el usuario; si la eliminación gana, la asignación
+  recibe 404 «Usuario no encontrado» (antes un 400 «Referencia inválida»).
+
+  Esperas: lock_timeout limita cada intento de adquirir un bloqueo (5 s), no
+  cada sentencia ni la duración total de la operación. Varias esperas seguidas
+  se suman y, si agotan el timeout de 10 s de la transacción, responde 500
+  (P2028, pendiente aparte). Un deadlock tampoco se convierte en 409.
+
+  Si el bloqueo no se obtiene en 5 s responde 409 sin borrar nada.
+
+  Alcance: el bloqueo de la fila del usuario ocurre antes de comprobar el
+  alcance del solicitante sobre ese usuario. Si la fila está ocupada, la
+  espera puede terminar en 409 antes de que llegue un 403 (igual que con el
+  galpón).
+}

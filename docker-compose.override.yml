@@ -11,12 +11,17 @@
 services:
   database:
     ports:
-      - "5433:5432"
+      # 127.0.0.1 explicito, no solo "5433:5432": sin la IP, Docker publica en
+      # todas las interfaces (0.0.0.0), alcanzable desde la red local, no solo
+      # desde esta maquina.
+      - "127.0.0.1:5433:5432"
 
   # Backend NestJS en modo watch (nest --watch). Usa la etapa `dev` del Dockerfile.
-  # Al arrancar: regenera el cliente Prisma + migra la base + siembra roles y
-  # admin (idempotente), para que cualquier compañero tenga login listo sin
-  # correr nada a mano.
+  # Al arrancar: regenera el cliente Prisma y migra la base (ambas idempotentes,
+  # seguras en cada arranque). YA NO siembra solo -- sembrar roles y admin es un
+  # paso explicito de la preparacion inicial (ver scripts/dev-setup.sh), para
+  # que el arranque habitual nunca cree o deje intacto un admin sin que alguien
+  # lo haya decidido a propósito.
   #
   # El `prisma generate` es imprescindible aqui: el cliente se genera al
   # construir la imagen, pero /app/node_modules es un volumen anonimo que
@@ -26,13 +31,12 @@ services:
   backend:
     build:
       target: dev
-    command: sh -c "pnpm prisma generate && pnpm prisma migrate deploy && pnpm run seed && pnpm run start:dev"
+    command: sh -c "pnpm prisma generate && pnpm prisma migrate deploy && pnpm run start:dev"
     environment:
       NODE_ENV: development
-      # En desarrollo si se siembra; el archivo base lo deja apagado para que
-      # un despliegue de produccion no reescriba datos sin querer.
-      RUN_SEED: "true"
-      # Admin de DESARROLLO local (no es prod). El seed lo crea con estas vars.
+      # Estas dos solo las usa el seed EXPLICITO (scripts/dev-setup.sh o
+      # `docker compose exec backend pnpm run seed` a mano) -- el arranque
+      # habitual ya no las consume.
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@avisens.com}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Avisens2026!}
       # Sin esto, pnpm aborta al arrancar si el volumen de node_modules quedó

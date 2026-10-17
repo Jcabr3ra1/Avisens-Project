@@ -104,7 +104,61 @@ export class PlanLoteHistorialItemDto {
   resultado: ResultadoCalculoPlanDto;
 }
 
-// vigente/crear/recalcular agregan desactualizado; el historial no -- una
+export class TiempoCrianzaDto {
+  @ApiProperty({
+    example: 2,
+    description: 'Versión del plan sobre el que se calcula',
+  })
+  plan_version: number;
+
+  @ApiProperty({
+    enum: [
+      'sin_dia_objetivo',
+      'no_iniciado',
+      'en_curso',
+      'objetivo_hoy',
+      'objetivo_superado',
+    ],
+    example: 'en_curso',
+  })
+  situacion: string;
+
+  @ApiProperty({
+    example: 21,
+    description:
+      'Día de vida de hoy contado desde la fecha de ingreso del plan; puede ser 0 o negativo si el ingreso es futuro',
+  })
+  dia_actual: number;
+
+  @ApiProperty({ type: Number, example: 36, nullable: true })
+  dia_objetivo: number | null;
+
+  @ApiProperty({
+    type: Date,
+    example: '2026-10-24T00:00:00.000Z',
+    nullable: true,
+  })
+  fecha_estimada: Date | null;
+
+  @ApiProperty({
+    type: Number,
+    example: 15,
+    nullable: true,
+    description: 'Nunca negativo: 0 cuando el objetivo es hoy o ya pasó',
+  })
+  dias_restantes: number | null;
+
+  @ApiProperty({
+    type: Number,
+    example: null,
+    nullable: true,
+    description:
+      'Días transcurridos desde el día objetivo; null si aún no se supera',
+  })
+  dias_sobre_objetivo: number | null;
+}
+
+// vigente/crear/recalcular agregan desactualizado y tiempo; el historial no -- una
 // version jubilada no se compara contra el lote actual (ver PlanLoteService).
 export class PlanLoteRespuestaDto extends PlanLoteHistorialItemDto {
   @ApiProperty({
@@ -113,6 +167,13 @@ export class PlanLoteRespuestaDto extends PlanLoteHistorialItemDto {
       'Derivado en el momento de la lectura: nunca se persiste. true si línea genética, sexo, fecha de ingreso o la curva vigente compatible cambiaron desde que se calculó este plan.',
   })
   desactualizado: boolean;
+
+  @ApiProperty({
+    type: TiempoCrianzaDto,
+    description:
+      'Calculado al leer, contra la fecha de hoy en la zona de la granja; nunca se persiste.',
+  })
+  tiempo: TiempoCrianzaDto;
 }
 
 class MetaPaginacionPlanesDto {
