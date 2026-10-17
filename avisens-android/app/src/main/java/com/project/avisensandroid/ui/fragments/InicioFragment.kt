@@ -45,14 +45,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
-/**
- * Inicio compartido por Operario y Propietario.
- *
- * El contenido visual conserva el diseño existente, pero sus cifras y estados
- * se alimentan de los módulos reales del backend: granjas, galpones, lotes,
- * mortalidad, eventos sanitarios, pesajes, consumos, sensores, mediciones,
- * alertas e indicadores.
- */
 class InicioFragment : BaseBottomNavFragment() {
 
     private var _binding: Po01InicioOpBinding? = null
@@ -568,7 +560,8 @@ class InicioFragment : BaseBottomNavFragment() {
         binding.txtAvesMuertas.text = muertes.toString()
         binding.txtAlertas.text = alertas.count { it.estado.esActiva() }.toString()
 
-        val diaVida = indicador?.dia_vida ?: lote?.let { calcularDiaVida(it.fecha_ingreso) }
+        // La fecha vigente del lote manda: los indicadores pueden tener una edad calculada antes de cambiar fecha_ingreso.
+        val diaVida = lote?.let { calcularDiaVida(it.fecha_ingreso) } ?: indicador?.dia_vida
         binding.txtDiaLote.text = diaVida?.toString() ?: "—"
 
         binding.txtCalidadCrianza.text = indicador?.epef?.let { formatearNumero(it, 0) } ?: "—"

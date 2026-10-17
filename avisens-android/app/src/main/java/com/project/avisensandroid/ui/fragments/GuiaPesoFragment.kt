@@ -16,13 +16,11 @@ import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.FragmentGuiaPesoBinding
 import com.project.avisensandroid.model.AlimentoEstimadoApi
-import com.project.avisensandroid.model.ConsumoDiarioResponse
 import com.project.avisensandroid.model.CrearEstimacionAlimentoRequest
 import com.project.avisensandroid.model.CrearPlanLoteRequest
 import com.project.avisensandroid.model.CurvaGeneticaApiResponse
 import com.project.avisensandroid.model.EstimacionAlimentoApiResponse
 import com.project.avisensandroid.model.LoteResponse
-import com.project.avisensandroid.model.PaginatedResponse
 import com.project.avisensandroid.model.PesajeResponse
 import com.project.avisensandroid.model.PlanLoteApiResponse
 import com.project.avisensandroid.model.RegistroMortalidadResponse
@@ -44,7 +42,6 @@ import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.abs
 import kotlin.math.ceil
-import kotlin.math.round
 
 /** Seguimiento de peso desde la API: usa el plan y la curva genética publicados por el backend. */
 class GuiaPesoFragment : BaseBottomNavFragment() {
@@ -58,7 +55,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
     private var lotesActivos: List<LoteResponse> = emptyList()
     private var loteSeleccionado: LoteResponse? = null
     private var pesajes: List<PesajeResponse> = emptyList()
-    private var consumos: List<ConsumoDiarioResponse> = emptyList()
+    private var consumos: List<com.project.avisensandroid.model.ConsumoDiarioResponse> = emptyList()
     private var mortalidades: List<RegistroMortalidadResponse> = emptyList()
     private var planActual: PlanLoteApiResponse? = null
     private var curvaActual: CurvaGeneticaApiResponse? = null
@@ -158,7 +155,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                 lotesActivos = todosLosLotes
                     .filter {
                         it.galpon.id == galponSeleccionado &&
-                            it.estado.equals("activo", ignoreCase = true)
+                                it.estado.equals("activo", ignoreCase = true)
                     }
                     .sortedByDescending { parseFecha(it.fecha_ingreso)?.time ?: 0L }
 
@@ -369,9 +366,9 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             val vigente = curvas
                 .filter {
                     it.linea_genetica_id == lineaId &&
-                        it.sexo.equals(sexoLote, ignoreCase = true) &&
-                        it.vigente &&
-                        it.estado.equals("publicada", ignoreCase = true)
+                            it.sexo.equals(sexoLote, ignoreCase = true) &&
+                            it.vigente &&
+                            it.estado.equals("publicada", ignoreCase = true)
                 }
                 .maxByOrNull { it.version ?: 0 }
                 ?: return null
@@ -458,9 +455,9 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
                 alimentoActual ?: cargarEstimacionAlimentoSiDisponible(lote.id)
             }
             val necesitaAlimentoNuevo = respuestaPlan != null || comidaAnterior == null ||
-                comidaAnterior.desactualizado ||
-                comidaAnterior.alimento_estimado?.requiere_recalculo == true ||
-                comidaAnterior.plan_vigente?.es_el_mismo == false
+                    comidaAnterior.desactualizado ||
+                    comidaAnterior.alimento_estimado?.requiere_recalculo == true ||
+                    comidaAnterior.plan_vigente?.es_el_mismo == false
 
             alimentoActual = comidaAnterior
             if (necesitaAlimentoNuevo) {
@@ -519,8 +516,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         val planGuardado = planActual
         val objetivoIngresadoG = leerLibras()?.times(GRAMOS_POR_LIBRA)
         val objetivoCambio = objetivoIngresadoG != null &&
-            planGuardado?.peso_objetivo_g != null &&
-            abs(objetivoIngresadoG - planGuardado.peso_objetivo_g) > 0.5
+                planGuardado?.peso_objetivo_g != null &&
+                abs(objetivoIngresadoG - planGuardado.peso_objetivo_g) > 0.5
 
         if (planGuardado == null || objetivoCambio) {
             // Si no hay plan todavía, o se editó el objetivo, usa el flujo de guardar.
@@ -579,8 +576,8 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
 
         val diaObjetivo = objetivoG?.let { diaObjetivoParaPeso(it, plan) }
         binding.txtDiaObjetivoPlan.text = diaObjetivo?.let {
-            if (abs(it - round(it)) < 0.05) {
-                round(it).toInt().toString()
+            if (abs(it - kotlin.math.round(it)) < 0.05) {
+                kotlin.math.round(it).toInt().toString()
             } else {
                 formatoDecimal.format(it)
             }
@@ -598,10 +595,18 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         binding.txtDiaVidaDetalleGuia.text = diaActual?.toString() ?: "—"
         val pesajesLote = pesajesDeLote(lote.id)
         val ultimoPesaje = pesajesLote.lastOrNull()
-        val pesoEsperadoHoy = diaActual?.let { puntos.valorCurvaEnDia(it.toDouble()) { p -> p.peso_esperado_g } }
+        val pesoEsperadoEnRango = diaActual?.let { dia ->
+            puntos.valorCurvaEnDia(dia.toDouble()) { punto -> punto.peso_esperado_g }
+        }
+        val pesoEsperadoPorPesajes = estimarPesoHoyDesdePesajes(lote, diaActual, ultimoPesaje)
+        val pesoEsperadoExtrapolado = if (pesoEsperadoEnRango == null && pesoEsperadoPorPesajes == null) {
+            diaActual?.let { pesoCurvaExtrapoladoEnDia(it) }
+        } else null
+        val pesoEsperadoHoy = pesoEsperadoEnRango ?: pesoEsperadoPorPesajes ?: pesoEsperadoExtrapolado
         val diaUltimoPesaje = ultimoPesaje?.let { edadEnFecha(lote, it.fecha) }
         val esperadoEnFechaPesaje = diaUltimoPesaje?.let { edad ->
-            puntos.valorCurvaEnDia(edad.toDouble()) { p -> p.peso_esperado_g }
+            puntos.valorCurvaEnDia(edad.toDouble()) { punto -> punto.peso_esperado_g }
+                ?: pesoCurvaExtrapoladoEnDia(edad)
         }
         val desvio = if (ultimoPesaje != null && esperadoEnFechaPesaje != null && esperadoEnFechaPesaje > 0.0) {
             ((ultimoPesaje.peso_promedio_g - esperadoEnFechaPesaje) / esperadoEnFechaPesaje) * 100.0
@@ -618,10 +623,13 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             "${if (it > 0) "+" else ""}${formatoDecimal.format(it)}% vs curva"
         } ?: "Sin comparación"
         binding.txtPuntosCurvaGuia.text = puntos.size.toString()
+        val ultimoDiaPublicado = puntos.maxOfOrNull { it.dia }
         binding.txtFuenteCurvaGuia.text = when {
-            curva == null -> "No hay curva genética asignada."
-            pesoEsperadoHoy == null -> "No hay datos de curva para el día actual."
-            else -> "Curva v${curva.version ?: "—"} · ${curva.fuente ?: "fuente no informada"}"
+            pesoEsperadoEnRango != null && curva != null -> "Curva v${curva.version ?: "—"} · ${curva.fuente ?: "fuente no informada"}"
+            pesoEsperadoPorPesajes != null -> "Día fuera del rango genético${ultimoDiaPublicado?.let { " (hasta día $it)" } ?: ""} · estimación por pesajes recientes."
+            pesoEsperadoExtrapolado != null -> "Día fuera del rango publicado (hasta día ${ultimoDiaPublicado ?: "—"}) · extrapolación orientativa, no valor oficial."
+            curva == null -> "No hay curva genética asignada ni pesajes recientes suficientes."
+            else -> "No hay puntos suficientes para el día actual ni pesajes recientes para estimarlo."
         }
         actualizarResumenObjetivo(plan)
 
@@ -632,6 +640,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
 
         when {
             plan?.desactualizado == true -> mostrarAdvertencia("Plan desactualizado. Guarda y recalcula.")
+            plan?.estado_dia == "fuera_de_rango" -> mostrarAdvertencia("El objetivo supera los puntos de curva cargados. La fecha mostrada es orientativa; carga la curva completa para calcular oficialmente el plan y el alimento.")
             desvio != null && desvio <= -10.0 -> mostrarAdvertencia("${formatoDecimal.format(abs(desvio))}% por debajo de la curva. Revisa el ritmo de crecimiento.")
             desvio != null && desvio < -5.0 -> mostrarAdvertencia("Por debajo de la curva. Revisa pesajes, consumo y ambiente.")
             curva == null && plan?.estado_dia == "calculado" -> mostrarAdvertencia("No se pudo leer la curva. Verifica permisos y conexión.")
@@ -662,7 +671,9 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             (diaActual - edadUltimoPesaje).coerceAtLeast(0)
         } else 0
         val pesoEstimadoHoyPorHistorial = if (
-            tasa != null && ultimoPesaje != null && diasDesdeUltimo <= MAX_DIAS_DESDE_PESAJE
+            tasa != null && ultimoPesaje != null &&
+            esPesajePlausibleParaEdad(diaActual, ultimoPesaje.peso_promedio_g) &&
+            diasDesdeUltimo <= MAX_DIAS_DESDE_PESAJE
         ) {
             ultimoPesaje.peso_promedio_g + tasa * diasDesdeUltimo
         } else null
@@ -735,19 +746,24 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             mostrarProyeccionNoDisponible("La fecha calculada supera $MAX_DIAS_PROYECCION días.")
             return
         }
-        if (fechaObjetivo.before(fechaActual()) && diaActual != null && diaObjetivo < diaActual.toDouble()) {
-            mostrarProyeccionNoDisponible("La curva sitúa el objetivo en una fecha pasada. Registra pesajes recientes para proyectar el retraso.")
-            return
-        }
-
-        val fechaFinal = if (diasRestantes == 0 && fechaObjetivo.before(fechaActual())) fechaActual() else fechaObjetivo
+        val objetivoFueraDelRangoPublicado = diaObjetivoEnCurva(objetivoG) == null
+        val fechaTeoricaPasada = fechaObjetivo.before(fechaActual()) && diaActual != null && diaObjetivo < diaActual.toDouble()
         val banda = if (diasRestantes == 0) 0 else ceil(diasRestantes * PORCENTAJE_BANDA).toInt().coerceAtLeast(1)
+        val metodo = when {
+            objetivoFueraDelRangoPublicado && fechaTeoricaPasada ->
+                "Extrapolación fuera de la curva publicada; fecha teórica pasada. Confirma con un pesaje reciente."
+            objetivoFueraDelRangoPublicado ->
+                "Extrapolación orientativa fuera de la curva publicada; amplía la curva para validar el resultado."
+            fechaTeoricaPasada ->
+                "Fecha teórica calculada por curva, ya pasada; confirma con un pesaje reciente."
+            else -> "Según la curva genética publicada"
+        }
         mostrarProyeccionConFechas(
-            fechaFinal,
-            sumarDias(fechaFinal, -banda).let { if (it.before(fechaActual())) fechaActual() else it },
-            sumarDias(fechaFinal, banda),
+            fechaObjetivo,
+            sumarDias(fechaObjetivo, -banda),
+            sumarDias(fechaObjetivo, banda),
             diasRestantes,
-            "Según la curva genética publicada"
+            metodo
         )
     }
 
@@ -766,13 +782,16 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         val planTieneEsteObjetivo = plan?.peso_objetivo_g?.let {
             abs(it - objetivoG) <= 0.5
         } == true
-        if (!planTieneEsteObjetivo) return diaObjetivoEnCurva(objetivoG)
+        if (!planTieneEsteObjetivo) {
+            return diaObjetivoEnCurva(objetivoG) ?: diaObjetivoExtrapolado(objetivoG)
+        }
         return plan?.resultado?.dia_objetivo_interpolado
             ?: plan?.resultado?.dia_objetivo?.toDouble()
             ?: diaObjetivoEnCurva(objetivoG)
+            ?: diaObjetivoExtrapolado(objetivoG)
     }
 
-    /** Interpola el día en que la curva llega al peso objetivo, sin extrapolar fuera de ella. */
+    /** Interpola únicamente dentro de los puntos publicados; no los modifica. */
     private fun diaObjetivoEnCurva(objetivoG: Double): Double? {
         val puntos = curvaActual?.puntos.orEmpty()
             .filter { it.peso_esperado_g != null }
@@ -801,6 +820,71 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         return null
     }
 
+    /** Pendiente media del tramo final de la curva. Solo se usa como estimación orientativa fuera del rango publicado. */
+    private fun pendienteFinalCurvaGPorDia(): Double? {
+        val puntos = curvaActual?.puntos.orEmpty()
+            .filter { it.peso_esperado_g != null }
+            .sortedBy { it.dia }
+            .takeLast(7)
+        if (puntos.size < 2) return null
+        val primero = puntos.first()
+        val ultimo = puntos.last()
+        val dias = ultimo.dia - primero.dia
+        val pesoPrimero = primero.peso_esperado_g ?: return null
+        val pesoUltimo = ultimo.peso_esperado_g ?: return null
+        if (dias <= 0) return null
+        return ((pesoUltimo - pesoPrimero) / dias).takeIf { it > 0.0 && it.isFinite() }
+    }
+
+    /** Estima días futuros usando solo la pendiente terminal; el resultado se etiqueta como extrapolado. */
+    private fun pesoCurvaExtrapoladoEnDia(dia: Int): Double? {
+        val puntos = curvaActual?.puntos.orEmpty()
+            .filter { it.peso_esperado_g != null }
+            .sortedBy { it.dia }
+        val ultimo = puntos.lastOrNull() ?: return null
+        val pesoUltimo = ultimo.peso_esperado_g ?: return null
+        val deltaDias = dia - ultimo.dia
+        if (deltaDias <= 0 || deltaDias > MAX_DIAS_EXTRAPOLACION_CURVA) return null
+        val pendiente = pendienteFinalCurvaGPorDia() ?: return null
+        return (pesoUltimo + pendiente * deltaDias).takeIf { it > 0.0 && it.isFinite() }
+    }
+
+    /** Calcula día de objetivo fuera del rango publicado, solo para mostrar una proyección marcada como orientativa. */
+    private fun diaObjetivoExtrapolado(objetivoG: Double): Double? {
+        val puntos = curvaActual?.puntos.orEmpty()
+            .filter { it.peso_esperado_g != null }
+            .sortedBy { it.dia }
+        val ultimo = puntos.lastOrNull() ?: return null
+        val ultimoPeso = ultimo.peso_esperado_g ?: return null
+        if (objetivoG <= ultimoPeso) return null
+        val pendiente = pendienteFinalCurvaGPorDia() ?: return null
+        val deltaDias = (objetivoG - ultimoPeso) / pendiente
+        if (!deltaDias.isFinite() || deltaDias <= 0.0 || deltaDias > MAX_DIAS_EXTRAPOLACION_CURVA) return null
+        return ultimo.dia + deltaDias
+    }
+
+    /** Descarta valores evidentemente incompatibles con la edad (p. ej. 6 g en un lote de 72 días). */
+    private fun esPesajePlausibleParaEdad(diaActual: Int?, pesoG: Double): Boolean {
+        if (!pesoG.isFinite() || pesoG <= 0.0) return false
+        return diaActual == null || diaActual <= 14 || pesoG >= 100.0
+    }
+
+    /** Si la curva no cubre hoy, usa la tendencia reciente de pesajes (si hay al menos dos útiles). */
+    private fun estimarPesoHoyDesdePesajes(
+        lote: LoteResponse,
+        diaActual: Int?,
+        ultimoPesaje: PesajeResponse?
+    ): Double? {
+        if (diaActual == null || ultimoPesaje == null) return null
+        if (!esPesajePlausibleParaEdad(diaActual, ultimoPesaje.peso_promedio_g)) return null
+        val tasa = tasaHistoricaReciente(lote, pesajesDeLote(lote.id), diaActual) ?: return null
+        val edadUltimo = edadEnFecha(lote, ultimoPesaje.fecha) ?: return null
+        val diasDesde = diaActual - edadUltimo
+        if (diasDesde < 0 || diasDesde > MAX_DIAS_DESDE_PESAJE) return null
+        return (ultimoPesaje.peso_promedio_g + tasa * diasDesde)
+            .takeIf { it > 0.0 && it.isFinite() }
+    }
+
     private fun actualizarNecesidadParaObjetivo(
         lote: LoteResponse,
         plan: PlanLoteApiResponse?,
@@ -823,12 +907,15 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         var diaBase = diaActual
 
         val pesoBase = when {
-            ultimoPesaje != null && tasa != null && diasDesdePesaje != null && diasDesdePesaje <= MAX_DIAS_DESDE_PESAJE ->
+            ultimoPesaje != null && esPesajePlausibleParaEdad(diaActual, ultimoPesaje.peso_promedio_g) &&
+                    tasa != null && diasDesdePesaje != null && diasDesdePesaje <= MAX_DIAS_DESDE_PESAJE ->
                 ultimoPesaje.peso_promedio_g + tasa * diasDesdePesaje
-            ultimoPesaje != null && diasDesdePesaje == 0 ->
+            ultimoPesaje != null && diasDesdePesaje == 0 &&
+                    esPesajePlausibleParaEdad(diaActual, ultimoPesaje.peso_promedio_g) ->
                 ultimoPesaje.peso_promedio_g
             diaActual != null -> {
                 val pesoCurva = curvaActual?.puntos?.valorCurvaEnDia(diaActual.toDouble()) { it.peso_esperado_g }
+                    ?: pesoCurvaExtrapoladoEnDia(diaActual)
                 if (pesoCurva != null) {
                     baseSegunCurva = true
                     pesoCurva
@@ -890,7 +977,11 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
     ) {
         binding.txtFechaEstimadaSalida.text = formatoFecha.format(fechaEstimada)
         binding.txtRangoFechasSalida.text = "Rango: ${formatoFecha.format(fechaInicio)} – ${formatoFecha.format(fechaFin)}"
-        binding.txtDiasRestantesSalida.text = if (diasRestantes <= 0) "0 días restantes" else "$diasRestantes días restantes"
+        binding.txtDiasRestantesSalida.text = when {
+            fechaEstimada.before(fechaActual()) -> "Fecha teórica pasada · confirma con pesaje actual"
+            diasRestantes <= 0 -> "Objetivo previsto para hoy"
+            else -> "$diasRestantes días restantes"
+        }
         binding.txtMetodoProyeccion.text = metodo
     }
 
@@ -1069,7 +1160,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
     }
 
     private suspend fun <T> cargarPaginas(
-        request: suspend (Int) -> Response<PaginatedResponse<T>>
+        request: suspend (Int) -> Response<com.project.avisensandroid.model.PaginatedResponse<T>>
     ): List<T> {
         val datos = mutableListOf<T>()
         var pagina = 1
@@ -1100,6 +1191,7 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
         private const val VENTANA_HISTORIAL_DIAS = 21
         private const val MAX_DIAS_DESDE_PESAJE = 21
         private const val MAX_DIAS_PROYECCION = 120
+        private const val MAX_DIAS_EXTRAPOLACION_CURVA = 90
         private const val PORCENTAJE_BANDA = 0.15
     }
 }
