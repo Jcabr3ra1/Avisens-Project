@@ -24,6 +24,7 @@ class PeticionPrediccion(BaseModel):
         _validar_dias(self.pesajes, self.dia_faena)
         return self
 
+
 class Mortalidad(BaseModel):
     model_config = ConfigDict(extra="forbid")
     dia: int = Field(ge=0, le=100)
