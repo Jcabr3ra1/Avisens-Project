@@ -1,3 +1,4 @@
+import { usernameDePrueba } from './username';
 import {
   INestApplication,
   ValidationPipe,
@@ -165,20 +166,21 @@ export class Entorno {
       data: {
         nombre_completo: 'admin',
         cedula: `admin-${this.sufijo}`,
+        username: usernameDePrueba(`admin-${this.sufijo}@e2e.local`),
         email: `admin-${this.sufijo}@e2e.local`,
         password_hash: this.hash,
         rol_id: rolAdmin.id,
       },
     });
     this.ids.usuarios.push(admin.id);
-    this.tokenAdmin = (await this.entrar(admin.email)).access_token;
+    this.tokenAdmin = (await this.entrar(admin.username)).access_token;
   }
 
   async entrar(email: string) {
     return (
       await request(this.urls['e2e-presupuesto-datos'])
         .post('/v1/auth/login')
-        .send({ email, password: PASSWORD })
+        .send({ username: email, password: PASSWORD })
         .expect(200)
     ).body as { access_token: string; refresh_token: string };
   }
@@ -194,6 +196,7 @@ export class Entorno {
       data: {
         nombre_completo: 'dueno',
         cedula: `d-${this.sufijo}-${n}`,
+        username: usernameDePrueba(`d-${this.sufijo}-${n}@e2e.local`),
         email: `d-${this.sufijo}-${n}@e2e.local`,
         password_hash: this.hash,
         rol_id: this.rolPropietarioId,
@@ -213,6 +216,7 @@ export class Entorno {
       data: {
         nombre_completo: 'operario',
         cedula: `o-${this.sufijo}-${n}`,
+        username: usernameDePrueba(`o-${this.sufijo}-${n}@e2e.local`),
         email: `o-${this.sufijo}-${n}@e2e.local`,
         password_hash: this.hash,
         rol_id: this.rolOperarioId,
@@ -242,7 +246,7 @@ export class Entorno {
           data: { usuario_id: op.id, galpon_id: objetivo, activa: false },
         })
       : null;
-    const sesion = await this.entrar(op.email);
+    const sesion = await this.entrar(op.username);
     return {
       org: org.id,
       granja: granja.id,

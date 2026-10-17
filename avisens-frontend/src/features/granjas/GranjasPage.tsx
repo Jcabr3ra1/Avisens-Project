@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { permisosDeGestion, ROL_ADMIN } from '@shared/auth/permisos'
 import {
@@ -54,6 +55,8 @@ import { calcularEtapasImplementacionGranjas } from './model/implementacion'
 import './GranjasPage.css'
 
 function GranjasPage() {
+  const [searchParams] = useSearchParams()
+  const granjaSolicitada = Number(searchParams.get('granjaId'))
   const rol = getRol()
   const esAdministrador = rol === ROL_ADMIN
   const permisos = permisosDeGestion(rol)
@@ -73,7 +76,9 @@ function GranjasPage() {
 
   // Granja elegida y galpones desplegados: el único estado de la página.
   // Aquí navegar es revelar, no cambiar de ruta.
-  const [granjaId, setGranjaId] = useState<number | null>(null)
+  const [granjaId, setGranjaId] = useState<number | null>(() =>
+    Number.isSafeInteger(granjaSolicitada) && granjaSolicitada > 0 ? granjaSolicitada : null,
+  )
   const [vistaAdministrativa, setVistaAdministrativa] = useState<'proceso' | 'tabla'>('proceso')
   const [busquedaAdministrativa, setBusquedaAdministrativa] = useState('')
   // Lo desplegado se guarda por granja: volver a una ya visitada la

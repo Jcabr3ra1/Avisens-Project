@@ -14,10 +14,10 @@
 // color:      tono principal del arco
 // colorLight: versión clara para el inicio del gradiente y el glow
 const PALETTE: Record<string, { color: string; colorLight: string }> = {
-  optimo:      { color: '#10b981', colorLight: '#6ee7b7' },
-  advertencia: { color: '#f59e0b', colorLight: '#fcd34d' },
-  critico:     { color: '#ef4444', colorLight: '#fca5a5' },
-  offline:     { color: '#9ca3af', colorLight: '#e5e7eb' },
+  optimo:      { color: 'var(--success)', colorLight: 'var(--success2)' },
+  advertencia: { color: 'var(--warning)', colorLight: 'var(--warning2)' },
+  critico:     { color: 'var(--danger)', colorLight: 'var(--danger2)' },
+  offline:     { color: 'var(--text-muted)', colorLight: 'var(--border-default)' },
 }
 
 // ─── Helpers de geometría SVG ─────────────────────────────────────────────────
@@ -157,7 +157,7 @@ export function SensorGauge({ valor, minUmbral, maxUmbral, unidad, estado, size 
       <circle
         cx={cx} cy={cy} r={R + TW * 1.05}
         fill="none"
-        stroke="rgba(10,26,20,0.04)"
+        stroke="color-mix(in srgb, var(--avisens-ink) 4%, transparent)"
         strokeWidth={1}
       />
 
@@ -166,7 +166,7 @@ export function SensorGauge({ valor, minUmbral, maxUmbral, unidad, estado, size 
       <path
         d={dTrack}
         fill="none"
-        stroke="rgba(10,26,20,0.06)"
+        stroke="color-mix(in srgb, var(--avisens-ink) 6%, transparent)"
         strokeWidth={TW + 4}
         strokeLinecap="round"
       />
@@ -174,7 +174,7 @@ export function SensorGauge({ valor, minUmbral, maxUmbral, unidad, estado, size 
       <path
         d={dTrack}
         fill="none"
-        stroke="rgba(10,26,20,0.08)"
+        stroke="color-mix(in srgb, var(--avisens-ink) 8%, transparent)"
         strokeWidth={TW}
         strokeLinecap="round"
       />
@@ -210,7 +210,7 @@ export function SensorGauge({ valor, minUmbral, maxUmbral, unidad, estado, size 
           key={deg}
           x1={inner.x.toFixed(2)} y1={inner.y.toFixed(2)}
           x2={outer.x.toFixed(2)} y2={outer.y.toFixed(2)}
-          stroke={isMid ? 'rgba(10,26,20,0.18)' : 'rgba(10,26,20,0.12)'}
+          stroke={isMid ? 'color-mix(in srgb, var(--avisens-ink) 18%, transparent)' : 'color-mix(in srgb, var(--avisens-ink) 12%, transparent)'}
           strokeWidth={isMid ? 2 : 1.5}
           strokeLinecap="round"
         />
@@ -231,7 +231,7 @@ export function SensorGauge({ valor, minUmbral, maxUmbral, unidad, estado, size 
           <circle
             cx={ptValue.x.toFixed(2)} cy={ptValue.y.toFixed(2)}
             r={TW * 0.44}
-            fill="white"
+            fill="var(--surface-base)"
             stroke={color}
             strokeWidth={2.5}
           />
@@ -247,8 +247,8 @@ export function SensorGauge({ valor, minUmbral, maxUmbral, unidad, estado, size 
       {/* Círculo interior decorativo */}
       <circle
         cx={cx} cy={cy} r={R - TW * 1.1}
-        fill="rgba(255,255,255,0.6)"
-        stroke="rgba(10,26,20,0.04)"
+        fill="color-mix(in srgb, var(--surface-base) 60%, transparent)"
+        stroke="color-mix(in srgb, var(--avisens-ink) 4%, transparent)"
         strokeWidth={1}
       />
 
@@ -261,7 +261,7 @@ export function SensorGauge({ valor, minUmbral, maxUmbral, unidad, estado, size 
             dominantBaseline="middle"
             fontSize={size * 0.195}
             fontWeight="800"
-            fill="#0a1a14"
+            fill="var(--text-primary)"
             fontFamily="Inter, system-ui, sans-serif"
             letterSpacing="-1"
           >
@@ -286,7 +286,7 @@ export function SensorGauge({ valor, minUmbral, maxUmbral, unidad, estado, size 
           x={cx} y={cy}
           textAnchor="middle" dominantBaseline="middle"
           fontSize={size * 0.14} fontWeight="700"
-          fill="#9ca3af"
+          fill="var(--text-muted)"
           fontFamily="Inter, system-ui, sans-serif"
         >
           —
@@ -299,7 +299,7 @@ export function SensorGauge({ valor, minUmbral, maxUmbral, unidad, estado, size 
         textAnchor="end"
         fontSize={size * 0.062}
         fontWeight={sobrePasaMin ? '800' : '600'}
-        fill={sobrePasaMin ? color : 'rgba(10,26,20,0.35)'}
+        fill={sobrePasaMin ? color : 'var(--text-muted)'}
         fontFamily="'DM Mono', monospace"
       >
         {minUmbral}
@@ -309,7 +309,7 @@ export function SensorGauge({ valor, minUmbral, maxUmbral, unidad, estado, size 
         textAnchor="start"
         fontSize={size * 0.062}
         fontWeight={sobrePasaMax ? '800' : '600'}
-        fill={sobrePasaMax ? color : 'rgba(10,26,20,0.35)'}
+        fill={sobrePasaMax ? color : 'var(--text-muted)'}
         fontFamily="'DM Mono', monospace"
       >
         {maxUmbral}

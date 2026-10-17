@@ -14,19 +14,64 @@ import {
   IsUUID,
   MaxLength,
   ValidateNested,
+  Validate,
+  ValidatorConstraint,
+  type ValidatorConstraintInterface,
+  type ValidationArguments,
 } from 'class-validator';
 
+@ValidatorConstraint({ name: 'identidadLectura', async: false })
+export class IdentidadLectura implements ValidatorConstraintInterface {
+  validate(_valor: unknown, args: ValidationArguments) {
+    const lectura = args.object as LecturaDto;
+    const porCodigo =
+      typeof lectura.codigo === 'string' && lectura.codigo.trim().length > 0;
+    const porConexion =
+      typeof lectura.tipo === 'string' &&
+      /^[a-z][a-z0-9_]{0,49}$/.test(lectura.tipo) &&
+      typeof lectura.canal === 'string' &&
+      /^gpio:(0|[1-9]\d*)$/.test(lectura.canal);
+    return (
+      (porCodigo &&
+        lectura.tipo === undefined &&
+        lectura.canal === undefined) ||
+      (porConexion && lectura.codigo === undefined)
+    );
+  }
+
+  defaultMessage() {
+    return 'Cada lectura requiere codigo o el par tipo/canal, sin mezclar identidades';
+  }
+}
+
 export class LecturaDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'TEMP-G1-01',
     description: 'Código único del sensor que reporta',
   })
   @IsString()
   @MaxLength(100)
-  codigo: string;
+  @IsOptional()
+  codigo?: string;
+
+  @ApiPropertyOptional({ example: 'temperatura' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  tipo?: string;
+
+  @ApiPropertyOptional({
+    example: 'gpio:18',
+    description: 'Conexión estable del sensor en el controlador',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  canal?: string;
 
   @ApiProperty({ example: 24.8, description: 'Valor leído por el sensor' })
   @IsNumber()
+  @Validate(IdentidadLectura)
   valor: number;
 
   @ApiPropertyOptional({
@@ -64,7 +109,11 @@ export class IngestDto {
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(100)
-  @ArrayUnique((lectura: LecturaDto) => lectura.codigo)
+  @ArrayUnique((lectura: LecturaDto) =>
+    lectura.codigo !== undefined
+      ? `codigo:${lectura.codigo}`
+      : `conexion:${lectura.tipo}:${lectura.canal}`,
+  )
   @ValidateNested({ each: true })
   @Type(() => LecturaDto)
   lecturas: LecturaDto[];

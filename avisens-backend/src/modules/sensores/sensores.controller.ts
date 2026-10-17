@@ -25,7 +25,7 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 interface AuthRequest extends Request {
   user: {
     id: number;
-    email: string;
+    email?: string | null;
     rol: string;
   };
 }
@@ -39,7 +39,7 @@ export class SensoresController {
   constructor(private sensoresService: SensoresService) {}
 
   @Post()
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Registrar un sensor en un galpón' })
   crear(@Body() dto: CreateSensorDto, @Req() req: AuthRequest) {
     return this.sensoresService.crear(dto, req.user);
@@ -61,7 +61,7 @@ export class SensoresController {
   }
 
   @Patch(':id')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Actualizar un sensor' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -72,14 +72,14 @@ export class SensoresController {
   }
 
   @Patch(':id/activar')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Activar un sensor (estado → activo)' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.sensoresService.activar(id, req.user);
   }
 
   @Delete(':id')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
     summary: 'Desactivar un sensor (borrado suave, estado → inactivo)',
   })
@@ -87,9 +87,8 @@ export class SensoresController {
     return this.sensoresService.desactivar(id, req.user);
   }
 
-  // El borrado definitivo de infraestructura es del administrador, igual que
-  // en granja, galpón y lote. El propietario desactiva con DELETE :id, que no
-  // pierde el histórico de mediciones colgado del sensor.
+  // Toda modificación del sensor, incluida la baja suave y definitiva, es del
+  // administrador. Las mediciones históricas quedan en el sensor al desactivarlo.
   @Delete(':id/permanente')
   @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({

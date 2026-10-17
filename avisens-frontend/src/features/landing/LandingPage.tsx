@@ -1,31 +1,15 @@
-import Navbar from './components/Navbar/Navbar'
-import Hero from './components/Hero/Hero'
-import Beneficios from './components/Beneficios/Beneficios'
-import Sensores from './components/Sensores/Sensores'
-import Footer from './components/Footer/Footer'
+import { MotionConfig } from 'motion/react'
+import Escenas from './escenas/Escenas'
 import FloatChat from './components/FloatChat/FloatChat'
 import './LandingPage.css'
 
-function LandingPage() {
+export default function LandingPage() {
   return (
-    <div className="landing-shell">
-      <div className="landing-page">
-        <div className="bg-layer" />
-        <div className="grid-layer" />
-
-        <Navbar />
-
-        <div className="landing-hero-frame">
-          <Hero />
-        </div>
-
-        <Beneficios />
-        <Sensores />
+    <MotionConfig reducedMotion="user">
+      <div className="landing-shell av-landing">
+        <Escenas />
+        <FloatChat />
       </div>
-      <Footer />
-      <FloatChat />
-    </div>
+    </MotionConfig>
   )
 }
-
-export default LandingPage

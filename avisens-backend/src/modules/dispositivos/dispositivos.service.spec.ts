@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Prisma } from '@prisma/client';
 import {
   BadRequestException,
   ForbiddenException,
@@ -30,14 +31,13 @@ describe('DispositivosService', () => {
 
   const dtoCrear = {
     galpon_id: 3,
-    mac_address: 'A4:CF:12:8B:00:1A',
     codigo_topic: 'galpon1',
     nombre: 'Nodo entrada norte',
   };
 
-  const dataDe = (mock: jest.Mock): Record<string, unknown> => {
+  const dataDe = (mock: jest.Mock, indice = 0): Record<string, unknown> => {
     const calls = mock.mock.calls as Array<[{ data: Record<string, unknown> }]>;
-    return calls[0][0].data;
+    return calls[indice][0].data;
   };
   const whereDe = (mock: jest.Mock): Record<string, unknown> => {
     const calls = mock.mock.calls as Array<
@@ -56,9 +56,12 @@ describe('DispositivosService', () => {
     service = module.get<DispositivosService>(DispositivosService);
 
     prisma.$transaction.mockResolvedValue([[], 0]);
+    prisma.dispositivo.create.mockReset();
+    prisma.dispositivo.findMany.mockResolvedValue([]);
     // Por defecto el galpón 3 es del propietario 5.
     prisma.galpon.findUnique.mockResolvedValue({
       id: 3,
+      codigo: 'GAL-000003',
       granja: { propietario_id: 5 },
     });
   });
@@ -91,6 +94,64 @@ describe('DispositivosService', () => {
         ForbiddenException,
       );
       expect(prisma.dispositivo.create).not.toHaveBeenCalled();
+    });
+
+    it('genera el código y el nombre desde el galpón sin pedir identidad manual', async () => {
+      prisma.dispositivo.create.mockResolvedValue({ id: 1 });
+
+      await service.crear({ galpon_id: 3 }, admin);
+
+      expect(dataDe(prisma.dispositivo.create)).toMatchObject({
+        galpon_id: 3,
+        codigo_topic: 'GAL-000003-ESP32-001',
+        nombre: 'GAL-000003-ESP32-001',
+      });
+    });
+
+    it('avanza después del último consecutivo del galpón', async () => {
+      prisma.dispositivo.findMany.mockResolvedValue([
+        { galpon_id: 3, codigo_topic: 'GAL-000003-ESP32-001' },
+        { galpon_id: 3, codigo_topic: 'GAL-000003-ESP32-003' },
+      ]);
+      prisma.dispositivo.create.mockResolvedValue({ id: 4 });
+
+      await service.crear({ galpon_id: 3 }, admin);
+
+      expect(dataDe(prisma.dispositivo.create).codigo_topic).toBe(
+        'GAL-000003-ESP32-004',
+      );
+    });
+
+    it('salta un código ocupado por un galpón histórico con el mismo prefijo', async () => {
+      prisma.dispositivo.findMany.mockResolvedValue([
+        { galpon_id: 99, codigo_topic: 'GAL-000003-ESP32-001' },
+      ]);
+      prisma.dispositivo.create.mockResolvedValue({ id: 2 });
+
+      await service.crear({ galpon_id: 3 }, admin);
+
+      expect(dataDe(prisma.dispositivo.create).codigo_topic).toBe(
+        'GAL-000003-ESP32-002',
+      );
+    });
+
+    it('reintenta con el siguiente número si otro registro reserva el mismo código', async () => {
+      prisma.dispositivo.create
+        .mockRejectedValueOnce(
+          new Prisma.PrismaClientKnownRequestError('Código ocupado', {
+            code: 'P2002',
+            clientVersion: 'test',
+            meta: { target: ['codigo_topic'] },
+          }),
+        )
+        .mockResolvedValueOnce({ id: 2 });
+
+      await service.crear({ galpon_id: 3 }, admin);
+
+      expect(prisma.dispositivo.create).toHaveBeenCalledTimes(2);
+      expect(dataDe(prisma.dispositivo.create, 1).codigo_topic).toBe(
+        'GAL-000003-ESP32-002',
+      );
     });
 
     it('rechaza (404) si el galpón no existe', async () => {
@@ -217,17 +278,66 @@ describe('DispositivosService', () => {
       await expect(
         service.eliminarPermanente(1, propietario),
       ).rejects.toBeInstanceOf(ConflictException);
-      await expect(
-        service.eliminarPermanente(1, propietario),
-      ).rejects.toThrow(/sensores asociados/);
+      await expect(service.eliminarPermanente(1, propietario)).rejects.toThrow(
+        /sensores asociados/,
+      );
     });
 
     it('un error que no sea de llave foránea se propaga tal cual', async () => {
-      prisma.dispositivo.delete.mockRejectedValue(new Error('se cayó la conexión'));
+      prisma.dispositivo.delete.mockRejectedValue(
+        new Error('se cayó la conexión'),
+      );
 
       await expect(service.eliminarPermanente(1, propietario)).rejects.toThrow(
         'se cayó la conexión',
       );
+    });
+  });
+
+  describe('conectividad', () => {
+    const ahora = new Date('2026-10-17T12:00:00Z');
+    const fila = (id: number, minutos: number | null) => ({
+      id,
+      nombre: `ESP-${id}`,
+      codigo_topic: `t${id}`,
+      ultima_conexion:
+        minutos === null ? null : new Date(ahora.getTime() - minutos * 60_000),
+      galpon: {
+        id: 1,
+        nombre: 'G1',
+        granja: {
+          id: 1,
+          nombre: 'Finca',
+          organizacion: { id: 1, nombre: 'Org' },
+        },
+      },
+    });
+
+    it('solo considera dispositivos activos y cuenta cada estado', async () => {
+      prisma.dispositivo.findMany.mockResolvedValue([
+        fila(1, null),
+        fila(2, 40),
+        fila(3, 2),
+      ]);
+
+      const res = await service.conectividad(ahora);
+
+      expect(prisma.dispositivo.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { activo: true } }),
+      );
+      expect(res).toEqual(
+        expect.objectContaining({
+          ventana_minutos: 15,
+          total: 3,
+          conectados: 1,
+          sin_reportar: 1,
+          nunca: 1,
+        }),
+      );
+      expect(res.problemas.map((d) => [d.id, d.estado])).toEqual([
+        [1, 'nunca'],
+        [2, 'sin_reportar'],
+      ]);
     });
   });
 });

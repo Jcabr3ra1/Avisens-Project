@@ -145,6 +145,7 @@ solicitudes_pqrs [icon: inbox, color: yellow] {
   estado string
   responsable_id integer fk
   fecha_creacion datetime
+  fecha_limite datetime
   fecha_cierre datetime
 }
 
@@ -202,7 +203,8 @@ usuarios [icon: user, color: cyan] {
   organizacion_id integer fk
   nombre_completo string
   cedula string unique
-  email string unique
+  username string unique
+  email string unique // opcional: contacto
   password_hash string
   telefono string
   foto_url string
@@ -306,7 +308,6 @@ granjas [icon: home, color: green] {
 dispositivos [icon: cpu, color: green] {
   id integer pk
   galpon_id integer fk
-  mac_address string unique
   codigo_topic string unique
   nombre string
   version_firmware string
@@ -339,6 +340,8 @@ galpones [icon: package, color: green] {
 // estado hace de borrado suave: activo | inactivo | mantenimiento | falla.
 // Regla de coherencia (validada en backend): el dispositivo del sensor debe
 // pertenecer al mismo galpón que el sensor.
+// Identidad física opcional: UNIQUE(dispositivo_id, tipo, canal).
+// Los registros anteriores mantienen canal nulo hasta vincular su cableado.
 sensores [icon: thermometer, color: green] {
   id integer pk
   galpon_id integer fk
@@ -346,6 +349,7 @@ sensores [icon: thermometer, color: green] {
   zona_id integer fk
   codigo string unique
   tipo string
+  canal string
   modelo string
   fabricante string
   unidad_medida string

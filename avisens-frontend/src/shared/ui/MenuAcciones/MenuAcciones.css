@@ -30,7 +30,7 @@
   border: 1px solid var(--border2);
   border-radius: 11px;
   background: var(--card);
-  box-shadow: 0 10px 30px rgba(10, 40, 28, 0.16);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--avisens-ink) 16%, transparent);
 }
 
 .menu-acciones-item {
@@ -47,5 +47,5 @@
 
 .menu-acciones-item:hover { background: var(--bg-tint); }
 .menu-acciones-item:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
-.menu-acciones-item--peligro { color: #dc2626; }
-.menu-acciones-item--peligro:hover { background: rgba(239, 68, 68, 0.08); }
+.menu-acciones-item--peligro { color: var(--danger); }
+.menu-acciones-item--peligro:hover { background: var(--danger-soft); }

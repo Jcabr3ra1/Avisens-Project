@@ -1,3 +1,4 @@
+import { usernameDePrueba } from './soporte/username';
 import {
   INestApplication,
   ValidationPipe,
@@ -119,10 +120,10 @@ describe('Ajuste del tiempo de crianza y alimento estimado (e2e)', () => {
   let tokenDueno: string;
   let tokenOperario: string;
   let tokenAdmin: string;
-  let emailAdmin: string;
+  let usernameAdmin: string;
   let lineaId: number;
-  let emailDueno: string;
-  let emailOperario: string;
+  let usernameDueno: string;
+  let usernameOperario: string;
   let loteId: number;
   const sufijo = `${Date.now()}-${process.pid}`;
   const marca = `e2ecrianza${Date.now()}${process.pid}`;
@@ -150,7 +151,7 @@ describe('Ajuste del tiempo de crianza y alimento estimado (e2e)', () => {
         (
           await request(servidor)
             .post('/v1/auth/login')
-            .send({ email, password })
+            .send({ username: email, password })
             .expect(200)
         ).text,
       ) as { access_token: string }
@@ -158,9 +159,9 @@ describe('Ajuste del tiempo de crianza y alimento estimado (e2e)', () => {
 
   const irAlDia = async (dia: string) => {
     enFecha(dia);
-    tokenDueno = await entrar(emailDueno);
-    tokenOperario = await entrar(emailOperario);
-    tokenAdmin = await entrar(emailAdmin);
+    tokenDueno = await entrar(usernameDueno);
+    tokenOperario = await entrar(usernameOperario);
+    tokenAdmin = await entrar(usernameAdmin);
   };
 
   const leerAlimento = async () =>
@@ -258,6 +259,7 @@ describe('Ajuste del tiempo de crianza y alimento estimado (e2e)', () => {
         data: {
           nombre_completo: tipo,
           cedula: `${tipo}-${sufijo}`,
+          username: usernameDePrueba(`${tipo}-${sufijo}@e2e.local`),
           email: `${tipo}-${sufijo}@e2e.local`,
           password_hash: hash,
           rol_id,
@@ -270,10 +272,10 @@ describe('Ajuste del tiempo de crianza y alimento estimado (e2e)', () => {
       crearUsuario(rolOperario.id, 'operario'),
     ]);
     ids.usuarios.push(admin.id, dueno.id, operario.id);
-    emailDueno = dueno.email;
-    emailOperario = operario.email;
-    emailAdmin = admin.email;
-    tokenAdmin = await entrar(admin.email);
+    usernameDueno = dueno.username;
+    usernameOperario = operario.username;
+    usernameAdmin = admin.username;
+    tokenAdmin = await entrar(admin.username);
     const comoAdmin = auth(tokenAdmin);
 
     const linea = JSON.parse(

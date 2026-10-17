@@ -27,7 +27,7 @@ function respuestaLogin(accessToken: string, refreshToken: string): { data: Logi
       requiere_cambio_password: false,
       access_token: accessToken,
       refresh_token: refreshToken,
-      usuario: { id: 1, nombre: 'Test', email: 'test@avisens.com', rol: 'Operario' },
+      usuario: { id: 1, nombre: 'Test', username: 'test.avisens', email: 'test@avisens.com', rol: 'Operario' },
     },
   }
 }
@@ -68,7 +68,7 @@ describe('auth.ts — logout()', () => {
       .mockResolvedValueOnce(respuestaLogin('access-nuevo', 'refresh-nuevo') as never) // el login que sigue
 
     await logout() // dispara /auth/logout, sin esperar su propia respuesta
-    await login({ email: 'otro@avisens.com', password: 'xxxxxx' })
+    await login({ username: 'otro.avisens', password: 'xxxxxx' })
 
     expect(tokens.setTokens).toHaveBeenCalledWith('access-nuevo', 'refresh-nuevo')
     const llamadasATokens = vi.mocked(tokens.setTokens).mock.calls.length
@@ -116,7 +116,7 @@ describe('auth.ts — login()', () => {
     post.mockResolvedValue(respuestaLogin('a', 'r') as never)
     const generacionAntes = generacionActual()
 
-    await login({ email: 'x@x.com', password: '123456' })
+    await login({ username: 'usuario.x', password: '123456' })
 
     expect(generacionActual()).toBe(generacionAntes + 1)
   })

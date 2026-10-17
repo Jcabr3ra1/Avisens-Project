@@ -101,11 +101,11 @@ describe('Login: cobertura del presupuesto y orden de bloqueos sobre el SQL real
 
   afterEach(() => jest.restoreAllMocks());
 
-  const emailDe = async (id: number) =>
-    (await entorno.prisma.usuario.findUniqueOrThrow({ where: { id } })).email;
+  const usernameDe = async (id: number) =>
+    (await entorno.prisma.usuario.findUniqueOrThrow({ where: { id } })).username;
 
   const entrar = (email: string, password = PASSWORD) =>
-    request(url).post('/v1/auth/login').send({ email, password });
+    request(url).post('/v1/auth/login').send({ username: email, password });
 
   const espiarDeclaradas = (
     forzar?: (nombre: string, sentencias: number) => number,
@@ -185,7 +185,7 @@ describe('Login: cobertura del presupuesto y orden de bloqueos sobre el SQL real
     it.each(CASOS)('$nombre', async (caso) => {
       const f = await entorno.fixture();
       await caso.preparar(f);
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       const declaradas = espiarDeclaradas();
       proxy.reiniciar();
 
@@ -205,7 +205,7 @@ describe('Login: cobertura del presupuesto y orden de bloqueos sobre el SQL real
   describe('fase A: sin transacción', () => {
     it('una contraseña incorrecta nunca abre la transacción de la fase B', async () => {
       const f = await entorno.fixture();
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       proxy.reiniciar();
 
       const res = await entrar(email, 'incorrecta-123');
@@ -221,7 +221,7 @@ describe('Login: cobertura del presupuesto y orden de bloqueos sobre el SQL real
         where: { usuario_id: f.op },
         data: { bloqueado_hasta: new Date(Date.now() + 3600 * 1000) },
       });
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       proxy.reiniciar();
 
       const res = await entrar(email);
@@ -236,7 +236,7 @@ describe('Login: cobertura del presupuesto y orden de bloqueos sobre el SQL real
     it('omitir un reservar deja el DELETE en el mismo grupo que el bloqueo de candidatas', async () => {
       const f = await entorno.fixture();
       await sesionRevocada(f);
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       const original = Object.getOwnPropertyDescriptor(
         PresupuestoTransaccion.prototype,
         'reservar',
@@ -275,7 +275,7 @@ describe('Login: cobertura del presupuesto y orden de bloqueos sobre el SQL real
 
     it('declarar más sentencias de las que ejecuta un paso no coincide con el SQL real', async () => {
       const f = await entorno.fixture();
-      const email = await emailDe(f.op);
+      const email = await usernameDe(f.op);
       const declaradas = espiarDeclaradas((nombre, k) =>
         nombre === 'crear sesión' ? 2 : k,
       );

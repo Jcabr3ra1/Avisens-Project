@@ -62,7 +62,7 @@
 }
 
 .sn-stat--activo .sn-stat-valor {
-  color: var(--green, #22c55e);
+  color: var(--green, var(--primary));
 }
 
 /* ── Tarjeta genérica ─────────────────────────────────────────────────── */
@@ -162,9 +162,9 @@
 }
 
 .sn-btn--primary {
-  background: var(--green, #22c55e);
-  border-color: var(--green, #22c55e);
-  color: #fff;
+  background: var(--green, var(--primary));
+  border-color: var(--green, var(--primary));
+  color: var(--on-primary);
 }
 
 .sn-btn--sm {
@@ -173,8 +173,8 @@
 }
 
 .sn-btn--danger {
-  color: var(--danger, #ef4444);
-  border-color: var(--danger, #ef4444);
+  color: var(--danger, var(--danger));
+  border-color: var(--danger, var(--danger));
 }
 
 /* ── Avisos ───────────────────────────────────────────────────────────── */
@@ -186,15 +186,15 @@
 }
 
 .sn-alert--error {
-  background: color-mix(in srgb, var(--danger, #ef4444) 12%, transparent);
-  border: 1px solid var(--danger, #ef4444);
-  color: var(--danger, #ef4444);
+  background: color-mix(in srgb, var(--danger, var(--danger)) 12%, transparent);
+  border: 1px solid var(--danger, var(--danger));
+  color: var(--danger, var(--danger));
 }
 
 .sn-alert--ok {
-  background: color-mix(in srgb, var(--green, #22c55e) 12%, transparent);
-  border: 1px solid var(--green, #22c55e);
-  color: var(--green, #22c55e);
+  background: color-mix(in srgb, var(--green, var(--primary)) 12%, transparent);
+  border: 1px solid var(--green, var(--primary));
+  color: var(--green, var(--primary));
 }
 
 /* ── Tabla ────────────────────────────────────────────────────────────── */
@@ -250,8 +250,8 @@
 }
 
 .sn-badge--activo {
-  background: color-mix(in srgb, var(--green, #22c55e) 18%, transparent);
-  color: var(--green, #22c55e);
+  background: color-mix(in srgb, var(--green, var(--primary)) 18%, transparent);
+  color: var(--green, var(--primary));
 }
 
 .sn-badge--inactivo {
@@ -295,7 +295,7 @@
 }
 
 .mv-vivo {
-  color: var(--green, #22c55e);
+  color: var(--green, var(--primary));
   font-style: normal;
   font-size: 0.8rem;
   font-weight: 600;
@@ -312,7 +312,7 @@
 }
 
 .mv-dot--on {
-  background: var(--green, #22c55e);
+  background: var(--green, var(--primary));
   animation: mv-latido 1.4s ease-in-out infinite;
 }
 
@@ -320,7 +320,7 @@
   0%,
   100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--green, #22c55e) 60%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--green, var(--primary)) 60%, transparent);
   }
   50% {
     opacity: 0.5;
@@ -330,16 +330,16 @@
 
 /* Badges de calidad (reusan el pill de .sn-badge). */
 .mv-cal--ok {
-  background: color-mix(in srgb, var(--green, #22c55e) 18%, transparent);
-  color: var(--green, #22c55e);
+  background: color-mix(in srgb, var(--green, var(--primary)) 18%, transparent);
+  color: var(--green, var(--primary));
 }
 
 .mv-cal--sospechosa {
-  background: color-mix(in srgb, var(--warning, #f59e0b) 18%, transparent);
-  color: var(--warning, #f59e0b);
+  background: color-mix(in srgb, var(--warning, var(--warning)) 18%, transparent);
+  color: var(--warning, var(--warning));
 }
 
 .mv-cal--error {
-  background: color-mix(in srgb, var(--danger, #ef4444) 18%, transparent);
-  color: var(--danger, #ef4444);
+  background: color-mix(in srgb, var(--danger, var(--danger)) 18%, transparent);
+  color: var(--danger, var(--danger));
 }

@@ -9,24 +9,24 @@
 #define WIFI_SSID     "TU_WIFI"
 #define WIFI_PASSWORD "TU_PASSWORD"
 
-// ── Identidad del dispositivo ───────────────────────────────────────────────
-// Debe coincidir con la fila de este ESP32 en la tabla `dispositivos` del
-// backend. `codigo_topic` es el prefijo único de este nodo (p. ej. "galpon1").
-#define DEVICE_CODIGO_TOPIC "galpon1"
+// ── Transporte del backend ──────────────────────────────────────────────────
+// La fase actual es LOCAL: apunta a la IPv4 privada del computador que ejecuta
+// Docker. No uses localhost aquí: para el ESP32, localhost es el propio ESP32.
+#define BACKEND_MODO_LOCAL       1
+#define BACKEND_MODO_PRODUCCION  2
+#define BACKEND_MODO             BACKEND_MODO_LOCAL
+#define BACKEND_URL              "http://192.168.1.100:3000/ingest"
 
-// ── Backend (se usará cuando definamos el transporte: MQTT o HTTP) ──────────
-// Opción HTTP: URL del endpoint de ingesta + token del dispositivo.
-#define BACKEND_URL   "http://192.168.1.100:3000/ingest"
+// Producción requiere selección explícita del modo y conserva TLS validado:
+//   #define BACKEND_MODO BACKEND_MODO_PRODUCCION
+//   #define BACKEND_URL "https://avisens-project-production.up.railway.app/ingest"
+// No cambies a producción hasta completar y revisar la prueba local.
+// El token identifica al controlador y al galpón que le asignó el administrador.
 #define DEVICE_TOKEN  "PON_AQUI_EL_TOKEN_DEL_DISPOSITIVO"
-// Opción MQTT: broker Mosquitto.
-#define MQTT_HOST     "192.168.1.100"
-#define MQTT_PORT     1883
 
-// ── Códigos de los sensores ─────────────────────────────────────────────────
-// Deben coincidir EXACTAMENTE con el campo `codigo` de la tabla `sensores` del
-// backend (ese es el puente físico↔BD; el backend resuelve codigo → sensor_id).
-#define CODIGO_SENSOR_TEMP "TEMP-G1-01"
-#define CODIGO_SENSOR_HUM  "HUM-G1-01"
+// Las conexiones DHT22 se asignan en Monitoreo (controlador + tipo + GPIO).
+// El firmware consulta /ingest/configuracion cada 30 s con el mismo token.
+// No se configuran seriales de sensores ni un token por sensor.
 
 // ── Pines (AJUSTA a tu cableado real) ───────────────────────────────────────
 #define PIN_DHT       4     // Sensor DHT22 (temperatura + humedad)

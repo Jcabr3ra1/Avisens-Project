@@ -25,7 +25,7 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 interface AuthRequest extends Request {
   user: {
     id: number;
-    email: string;
+    email?: string | null;
     rol: string;
   };
 }
@@ -39,7 +39,7 @@ export class DispositivosController {
   constructor(private dispositivosService: DispositivosService) {}
 
   @Post()
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Registrar un dispositivo (ESP32) en galpon' })
   crear(@Body() dto: CreateDispositivoDto, @Req() req: AuthRequest) {
     return this.dispositivosService.crear(dto, req.user);
@@ -53,6 +53,16 @@ export class DispositivosController {
     return this.dispositivosService.listar(req.user, paginacion);
   }
 
+  @Get('conectividad')
+  @Roles(ROLES.ADMINISTRADOR)
+  @ApiOperation({
+    summary:
+      'Controladores activos sin reportar en la ventana de conectividad (solo Admin)',
+  })
+  conectividad() {
+    return this.dispositivosService.conectividad();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un dispositivo por ID' })
   obtener(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
@@ -60,7 +70,7 @@ export class DispositivosController {
   }
 
   @Patch(':id')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Actualizar un dispositivo' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -71,14 +81,14 @@ export class DispositivosController {
   }
 
   @Patch(':id/activar')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Activar un dispositivo' })
   activar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.dispositivosService.activar(id, req.user);
   }
 
   @Post(':id/token')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
     summary: 'Regenerar y revelar el token de ingesta del dispositivo',
   })
@@ -90,15 +100,14 @@ export class DispositivosController {
   }
 
   @Delete(':id')
-  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Desactivar un dispositivo (borrado suave)' })
   desactivar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.dispositivosService.desactivar(id, req.user);
   }
 
-  // El borrado definitivo de infraestructura es del administrador, igual que
-  // en granja, galpón y lote. El propietario desactiva con DELETE :id, que no
-  // pierde los sensores ni las ingestas colgadas del dispositivo.
+  // Toda modificación del nodo, incluida la baja suave y definitiva, es del
+  // administrador. Ninguna conserva una ruta de escritura para el propietario.
   @Delete(':id/permanente')
   @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({

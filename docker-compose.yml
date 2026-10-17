@@ -127,7 +127,10 @@ services:
       METRICS_TOKEN: ${METRICS_TOKEN}
       UMBRAL_PESAJE_DIAS: ${UMBRAL_PESAJE_DIAS}
     ports:
-      - "3000:3000"
+      # Por defecto, el backend solo acepta conexiones del propio equipo.
+      # Para una prueba ESP32 en LAN, define AVISENS_BACKEND_BIND con la IPv4
+      # privada del host; no uses una IP pública ni configures port forwarding.
+      - "${AVISENS_BACKEND_BIND:-127.0.0.1}:3000:3000"
 
   # ----- Frontend React + nginx -----
   frontend:

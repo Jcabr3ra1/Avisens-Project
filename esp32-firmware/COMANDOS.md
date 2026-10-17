@@ -81,7 +81,7 @@ pio run -t upload -t monitor
 ```
 === Nodo ESP32 Avisens ===
 [WiFi] Conectado. IP: 10.83.202.176
-[Envío] galpon1 → temp=24.8 C  hum=69.2 %  ventilador=off
+[Envío] GPIO 18: temp=24.8 C  hum=69.2 %
 ```
 
 Prueba en vivo: calienta el DHT22 con la mano; al pasar de 30 °C, el relé hace

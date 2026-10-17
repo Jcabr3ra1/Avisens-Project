@@ -17,7 +17,7 @@ import { ROLES } from '../../common/auth/roles';
 import { RecomendacionesService } from './recomendaciones.service';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string };
+  user: { id: number; email?: string | null; rol: string };
 }
 
 @ApiTags('recomendaciones')

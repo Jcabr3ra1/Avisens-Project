@@ -137,7 +137,7 @@
 }
 
 .fin-tipo-badge--egreso {
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  background: var(--danger-soft);
   color: var(--danger3);
 }
 

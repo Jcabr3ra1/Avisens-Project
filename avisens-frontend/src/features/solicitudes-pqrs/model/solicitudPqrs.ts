@@ -4,12 +4,9 @@ export type EstadoSolicitudPqrs =
   | 'resuelta'
   | 'cerrada'
 
-export type CategoriaSolicitudPqrs =
-  | 'Petición'
-  | 'Queja'
-  | 'Reclamo'
-  | 'Sugerencia'
-  | 'Felicitación'
+export const CATEGORIAS_PQRS = ['Petición', 'Queja', 'Reclamo', 'Sugerencia', 'Felicitación'] as const
+
+export type CategoriaSolicitudPqrs = (typeof CATEGORIAS_PQRS)[number]
 
 export interface ProspectoSolicitudPqrs {
   id: number
@@ -27,6 +24,7 @@ export interface ResponsableSolicitudPqrs {
 
 export interface SolicitudPqrs {
   id: number
+  radicado: string
   prospecto_id: number
   categoria: string
   asunto: string | null
@@ -35,6 +33,7 @@ export interface SolicitudPqrs {
   estado: EstadoSolicitudPqrs
   responsable_id: number | null
   fecha_creacion: string
+  fecha_limite: string | null
   fecha_cierre: string | null
   prospecto: ProspectoSolicitudPqrs
   responsable: ResponsableSolicitudPqrs | null
