@@ -102,14 +102,24 @@ el backend lo alcanza como `http://ml:8000`.
 
 ## Archivos
 
-| Archivo                | Rol                                        |
-| ---------------------- | ------------------------------------------ |
-| `prediccion.py`        | La lógica del modelo (regresión con numpy) |
-| `main.py`              | La API FastAPI que expone la predicción    |
-| `requirements.txt`     | Las dependencias de Python                 |
-| `requirements-dev.txt` | Pytest, HTTPX y Ruff para calidad          |
-| `test_main.py`         | Pruebas del contrato HTTP y del modelo     |
-| `Dockerfile`           | La imagen del servicio                     |
+```
+avisens-ml/
+├── main.py                  La API FastAPI: rutas y token interno
+├── esquemas.py              Validación de las peticiones (Pydantic)
+├── modelos/
+│   ├── polinomial.py        Regresión polinomial (peso, mortalidad, consumo)
+│   └── gompertz.py          Curva de Gompertz anclada a la curva genética
+├── tests/
+│   ├── test_api.py          Contrato HTTP de los endpoints
+│   └── test_gompertz.py     Matemática del modelo de Gompertz
+├── pyproject.toml           Configuración de pytest
+├── requirements.txt         Dependencias de Python
+├── requirements-dev.txt     Pytest, HTTPX y Ruff para calidad
+└── Dockerfile               Imagen del servicio
+```
+
+Cada modelo matemático vive en su propio archivo dentro de `modelos/`, y cada
+uno tiene su archivo de pruebas en `tests/`.
 
 ## Quién lo consume
 
