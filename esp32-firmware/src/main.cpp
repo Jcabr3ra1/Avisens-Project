@@ -20,6 +20,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <Preferences.h>
+#include <Update.h>
+#include <mbedtls/sha256.h>
 #include <esp_random.h>
 #include <DHT.h>
 #include <ArduinoJson.h>
@@ -27,22 +29,16 @@
 #include "config.h"
 #include "isrg_root_x1.h"
 
-// Las configuraciones anteriores que aún no declaran modo quedan en local,
-// para impedir que un firmware recién recompilado contacte producción por
-// accidente. El destino local además se valida como IPv4 privada.
-#ifndef BACKEND_MODO_LOCAL
-#define BACKEND_MODO_LOCAL 1
-#endif
-#ifndef BACKEND_MODO_PRODUCCION
-#define BACKEND_MODO_PRODUCCION 2
-#endif
-#ifndef BACKEND_MODO
-#define BACKEND_MODO BACKEND_MODO_LOCAL
-#endif
+// El controlador envía a dos destinos a la vez, sin recompilar:
+//   - Producción: BACKEND_URL (HTTPS validado). Es el principal y usa el búfer.
+//   - Local: el computador de desarrollo en la misma red, hallado por mDNS o
+//     por las IP vecinas a la última conocida. Es "si se puede": nunca retrasa
+//     a producción ni guarda lecturas.
+// Cada destino se habilita al recibir su token por USB desde la página.
 
-#if BACKEND_MODO != BACKEND_MODO_LOCAL && BACKEND_MODO != BACKEND_MODO_PRODUCCION
-#error "BACKEND_MODO debe ser BACKEND_MODO_LOCAL o BACKEND_MODO_PRODUCCION"
-#endif
+// Versión de este firmware. Súbela al publicar uno nuevo desde la página:
+// el controlador compara este valor con la versión publicada y se actualiza.
+#define FIRMWARE_VERSION "1.1.1"
 
 // Tipo de sensor DHT (DHT22 = AM2302). Cámbialo a DHT11 si usas ese modelo.
 #define DHT_TIPO DHT22
@@ -83,6 +79,7 @@ struct ConfiguracionDht {
 };
 struct TokenDispositivo {
   char valor[MAX_TOKEN_LEN];
+  bool local;
 };
 // Un ciclo listo para enviar. El id viaja como id_lote: si un reintento llega
 // dos veces, el backend devuelve el resultado anterior sin duplicar mediciones.
@@ -103,14 +100,32 @@ QueueHandle_t colaEnvios = nullptr;
 QueueHandle_t colaConfiguracion = nullptr;
 QueueHandle_t colaToken = nullptr;
 Preferences preferencias;
-char tokenActivo[MAX_TOKEN_LEN] = DEVICE_TOKEN;
-char urlBackendActiva[MAX_URL_LEN] = BACKEND_URL;
+char tokenProduccion[MAX_TOKEN_LEN] = DEVICE_TOKEN;
+char tokenLocal[MAX_TOKEN_LEN] = "";
+char urlLocal[MAX_URL_LEN] = "";
+String ultimaIpLocal;
 char bufferSerial[256] = {};
 size_t longitudBufferSerial = 0;
 bool mdnsIniciado = false;
 unsigned long ultimoIntentoDescubrimiento = 0;
 constexpr unsigned long DESCUBRIMIENTO_REINTENTO_MS = 60000;
 constexpr int32_t SONDA_TIMEOUT_MS = 150;
+constexpr int VECINOS_DESCUBRIMIENTO = 16;
+
+// Actualización por Wi-Fi: la consulta de configuración anuncia la versión
+// publicada; si difiere, se descarga, se verifica su SHA-256 y se reinicia.
+constexpr unsigned long OTA_REINTENTO_MS = 3600000;
+struct ActualizacionPendiente {
+  bool hay;
+  bool local;
+  char version[33];
+  char sha256[65];
+  size_t tamano;
+};
+ActualizacionPendiente actualizacion{};
+char versionFallida[33] = "";
+bool produccionRechazaToken = false;
+unsigned long ultimoFalloOta = 0;
 
 // Sin conexión se guarda un ciclo por minuto durante 3 horas; al volver la red
 // se reenvían en orden, uno por segundo para no chocar con el límite de peticiones.
@@ -138,21 +153,39 @@ bool tokenFormatoValido(const String& candidato) {
   return true;
 }
 
+void recordarIpLocal(const String& url) {
+  const int desde = url.indexOf("://") + 3;
+  const int hasta = url.indexOf(':', desde);
+  if (desde > 2 && hasta > desde) ultimaIpLocal = url.substring(desde, hasta);
+}
+
+String leerPreferencia(const char* clave) {
+  return preferencias.isKey(clave) ? preferencias.getString(clave, "") : String();
+}
+
 void cargarTokenPersistido() {
+  if (esUrlLocalValida(String(BACKEND_URL))) {
+    snprintf(urlLocal, sizeof(urlLocal), "%s", BACKEND_URL);
+    recordarIpLocal(String(BACKEND_URL));
+  }
   if (!preferencias.begin("avisens", true)) return;
-  const String guardado = preferencias.isKey("token") ? preferencias.getString("token", "") : String();
-  const String urlGuardada = preferencias.isKey("url") ? preferencias.getString("url", "") : String();
+  const String produccion = leerPreferencia("token");
+  const String local = leerPreferencia("token_local");
+  const String urlGuardada = leerPreferencia("url");
   preferencias.end();
-  if (tokenFormatoValido(guardado)) {
-    snprintf(tokenActivo, sizeof(tokenActivo), "%s", guardado.c_str());
-    Serial.println("[Provision] Token de controlador cargado desde memoria NVS.");
+  if (tokenFormatoValido(produccion)) {
+    snprintf(tokenProduccion, sizeof(tokenProduccion), "%s", produccion.c_str());
+    Serial.println("[Provision] Token de producción cargado desde memoria NVS.");
   }
-#if BACKEND_MODO == BACKEND_MODO_LOCAL
+  if (tokenFormatoValido(local)) {
+    snprintf(tokenLocal, sizeof(tokenLocal), "%s", local.c_str());
+    Serial.println("[Provision] Token local cargado desde memoria NVS.");
+  }
   if (esUrlLocalValida(urlGuardada)) {
-    snprintf(urlBackendActiva, sizeof(urlBackendActiva), "%s", urlGuardada.c_str());
-    Serial.printf("[Provision] URL de backend cargada desde NVS: %s\n", urlBackendActiva);
+    snprintf(urlLocal, sizeof(urlLocal), "%s", urlGuardada.c_str());
+    recordarIpLocal(urlGuardada);
+    Serial.printf("[Provision] Backend local recordado: %s\n", urlLocal);
   }
-#endif
 }
 
 void procesarLineaSerial(String linea) {
@@ -162,9 +195,10 @@ void procesarLineaSerial(String linea) {
     Serial.println("[Provision] PONG");
     return;
   }
-  if (!linea.startsWith("AVISENS_TOKEN:")) return;
+  const bool local = linea.startsWith("AVISENS_TOKEN_LOCAL:");
+  if (!local && !linea.startsWith("AVISENS_TOKEN:")) return;
 
-  String nuevoToken = linea.substring(strlen("AVISENS_TOKEN:"));
+  String nuevoToken = linea.substring(local ? strlen("AVISENS_TOKEN_LOCAL:") : strlen("AVISENS_TOKEN:"));
   nuevoToken.trim();
   if (!tokenFormatoValido(nuevoToken)) {
     Serial.println("[Provision] ERROR: formato o longitud de token inválido.");
@@ -175,7 +209,7 @@ void procesarLineaSerial(String linea) {
     Serial.println("[Provision] ERROR: no se pudo abrir la memoria NVS.");
     return;
   }
-  const size_t escrito = preferencias.putString("token", nuevoToken);
+  const size_t escrito = preferencias.putString(local ? "token_local" : "token", nuevoToken);
   preferencias.end();
   if (escrito == 0) {
     Serial.println("[Provision] ERROR: no se pudo guardar el token en NVS.");
@@ -184,11 +218,14 @@ void procesarLineaSerial(String linea) {
 
   TokenDispositivo msg{};
   snprintf(msg.valor, sizeof(msg.valor), "%s", nuevoToken.c_str());
+  msg.local = local;
   if (colaToken != nullptr) {
     xQueueOverwrite(colaToken, &msg);
   } else {
-    snprintf(tokenActivo, sizeof(tokenActivo), "%s", nuevoToken.c_str());
+    char* destino = local ? tokenLocal : tokenProduccion;
+    snprintf(destino, MAX_TOKEN_LEN, "%s", nuevoToken.c_str());
   }
+  Serial.printf("[Provision] Token %s guardado.\n", local ? "local" : "de producción");
   Serial.println("[Provision] TOKEN_OK");
 }
 
@@ -252,7 +289,8 @@ void aplicarConfiguracion() {
 bool urlBackendProduccionSegura();
 bool urlBackendLocalValida();
 bool relojSincronizado();
-bool backendListoParaEnviar();
+bool produccionLista();
+bool localHabilitado();
 
 // ── WiFi ────────────────────────────────────────────────────────────────────
 void iniciarWiFi() {
@@ -284,7 +322,16 @@ void controlarActuadores(float temperatura) {
 //
 // El token identifica el controlador/galpón. La identidad física de cada
 // variable es tipo + gpio; los seriales administrativos viven solo en Avisens.
-ResultadoEnvio enviarLote(const LoteGuardado& lote) {
+bool iniciarHttp(HTTPClient& http, WiFiClient& plano, WiFiClientSecure& seguro,
+                 bool local, const String& url) {
+  http.setConnectTimeout(HTTP_TIMEOUT_MS);
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  if (local) return http.begin(plano, url);
+  seguro.setCACert(ISRG_ROOT_X1);
+  return http.begin(seguro, url);
+}
+
+ResultadoEnvio enviarLote(const LoteGuardado& lote, bool local) {
   const LecturaPendiente& lectura = lote.lectura;
   JsonDocument documento;
   documento["id_lote"] = lote.id;
@@ -301,7 +348,9 @@ ResultadoEnvio enviarLote(const LoteGuardado& lote) {
     humedad["tipo"] = "humedad";
     humedad["canal"] = canal;
     humedad["valor"] = muestra.humedad;
-    if (huboCorte) {
+    if (local) {
+      continue;
+    } else if (huboCorte) {
       Serial.printf("[Reenvío] GPIO %u: temp=%.1f C  hum=%.1f %%  (capturada %s)\n",
                     muestra.gpio, muestra.temperatura, muestra.humedad,
                     lote.fecha[0] != '\0' ? lote.fecha : "sin hora");
@@ -314,60 +363,40 @@ ResultadoEnvio enviarLote(const LoteGuardado& lote) {
   String body;
   serializeJson(documento, body);
 
+  const char* nombre = local ? "Local" : "Backend";
   HTTPClient http;
-  http.setConnectTimeout(HTTP_TIMEOUT_MS);
-  http.setTimeout(HTTP_TIMEOUT_MS);
-
-#if BACKEND_MODO == BACKEND_MODO_LOCAL
-  if (!urlBackendLocalValida() && !intentarRedescubrirBackend()) {
-    Serial.println("[HTTP local] URL inválida y no se encontró el backend en la red.");
+  WiFiClient plano;
+  WiFiClientSecure seguro;
+  if (!iniciarHttp(http, plano, seguro, local, local ? String(urlLocal) : String(BACKEND_URL))) {
+    Serial.printf("[%s] No se pudo iniciar la conexión.\n", nombre);
     return ResultadoEnvio::Reintentar;
   }
-  WiFiClient cliente;
-  if (!http.begin(cliente, urlBackendActiva)) {
-    Serial.println("[HTTP local] No se pudo iniciar la conexión al backend local.");
-    return ResultadoEnvio::Reintentar;
-  }
-#else
-  WiFiClientSecure clienteTLS;
-  clienteTLS.setCACert(ISRG_ROOT_X1);
-  if (!http.begin(clienteTLS, BACKEND_URL)) {
-    Serial.println("[HTTPS] No se pudo iniciar la conexión segura.");
-    return ResultadoEnvio::Reintentar;
-  }
-#endif
-
   http.addHeader("Content-Type", "application/json");
-  http.addHeader("X-Device-Token", tokenActivo);  // autentica al dispositivo
+  http.addHeader("X-Device-Token", local ? tokenLocal : tokenProduccion);
 
   int codigo = http.POST(body);
+  if (!local) produccionRechazaToken = codigo == 401;
   ResultadoEnvio resultado = ResultadoEnvio::Reintentar;
   if (codigo >= 200 && codigo < 300) {
     resultado = ResultadoEnvio::Enviado;
     JsonDocument respuesta;
     if (deserializeJson(respuesta, http.getString()) || !respuesta["registradas"].is<int>() || !respuesta["ignoradas"].is<JsonArray>()) {
-      Serial.println("[Backend] Respuesta sin confirmación de persistencia válida.");
+      Serial.printf("[%s] Respuesta sin confirmación de persistencia válida.\n", nombre);
     } else {
-      Serial.printf("[Backend] %d: %d registradas, %u ignoradas.\n", codigo,
+      Serial.printf("[%s] %d: %d registradas, %u ignoradas.\n", nombre, codigo,
                     respuesta["registradas"].as<int>(),
                     static_cast<unsigned>(respuesta["ignoradas"].as<JsonArray>().size()));
     }
   } else if (codigo == 401) {
-    Serial.println("[Backend] 401: token inválido. Provisiona el token del controlador desde la UI admin; no lo publiques.");
+    Serial.printf("[%s] 401: token inválido. Vincula el ESP32 desde la página de ese destino.\n", nombre);
   } else if (codigo == 400 || codigo == 409 || codigo == 413 || codigo == 422) {
     // El backend nunca aceptará este ciclo tal como está: reintentarlo solo
     // bloquearía a los que vienen detrás.
-    Serial.printf("[Backend] %d: ciclo rechazado, se descarta.\n", codigo);
+    Serial.printf("[%s] %d: ciclo rechazado, se descarta.\n", nombre, codigo);
     resultado = ResultadoEnvio::Descartar;
   } else {
-    Serial.printf("[Backend] Fallo HTTP %d (%s).\n", codigo, urlBackendActiva);
-#if BACKEND_MODO == BACKEND_MODO_LOCAL
-    if (codigo < 0) {
-      http.end();
-      intentarRedescubrirBackend();
-      return resultado;
-    }
-#endif
+    Serial.printf("[%s] Fallo HTTP %d.\n", nombre, codigo);
+    if (local && codigo < 0) urlLocal[0] = '\0';
   }
   http.end();
   return resultado;
@@ -389,7 +418,20 @@ void generarId(char* destino) {
 
 bool relojSincronizado();
 
-void guardarEnBufer(const LecturaPendiente& lectura) {
+void prepararLote(const LecturaPendiente& lectura, LoteGuardado& lote) {
+  generarId(lote.id);
+  lote.fecha[0] = '\0';
+  if (relojSincronizado()) {
+    const time_t segundos = time(nullptr);
+    struct tm utc;
+    gmtime_r(&segundos, &utc);
+    strftime(lote.fecha, sizeof(lote.fecha), "%Y-%m-%dT%H:%M:%SZ", &utc);
+  }
+  lote.capturadoMs = millis();
+  lote.lectura = lectura;
+}
+
+void guardarEnBufer(const LoteGuardado& nuevo) {
   const unsigned long ahora = millis();
   const bool hayPendientes = cantidadBufer > 0;
   if (hayPendientes && ahora - ultimoGuardadoMs < BUFER_INTERVALO_MS) return;
@@ -399,17 +441,7 @@ void guardarEnBufer(const LecturaPendiente& lectura) {
     --cantidadBufer;
     Serial.println("[Búfer] Lleno: se descarta el ciclo más antiguo.");
   }
-  LoteGuardado& lote = bufer[(inicioBufer + cantidadBufer) % CAPACIDAD_BUFER];
-  generarId(lote.id);
-  lote.fecha[0] = '\0';
-  if (relojSincronizado()) {
-    const time_t segundos = time(nullptr);
-    struct tm utc;
-    gmtime_r(&segundos, &utc);
-    strftime(lote.fecha, sizeof(lote.fecha), "%Y-%m-%dT%H:%M:%SZ", &utc);
-  }
-  lote.capturadoMs = ahora;
-  lote.lectura = lectura;
+  bufer[(inicioBufer + cantidadBufer) % CAPACIDAD_BUFER] = nuevo;
   ++cantidadBufer;
   ultimoGuardadoMs = ahora;
   if (hayPendientes) {
@@ -424,45 +456,112 @@ void quitarPrimeroDelBufer() {
   --cantidadBufer;
 }
 
+void revisarFirmwarePublicado(JsonVariantConst firmware, bool local) {
+  const char* version = firmware["version"] | "";
+  const char* sha256 = firmware["sha256"] | "";
+  const size_t tamano = firmware["tamano"] | 0;
+  if (version[0] == '\0' || strcmp(version, FIRMWARE_VERSION) == 0) return;
+  if (strlen(sha256) != 64 || tamano == 0 || strlen(version) >= sizeof(actualizacion.version)) return;
+  if (strcmp(version, versionFallida) == 0 && millis() - ultimoFalloOta < OTA_REINTENTO_MS) return;
+  if (actualizacion.hay && strcmp(actualizacion.version, version) == 0) return;
+  actualizacion.hay = true;
+  actualizacion.local = local;
+  actualizacion.tamano = tamano;
+  snprintf(actualizacion.version, sizeof(actualizacion.version), "%s", version);
+  snprintf(actualizacion.sha256, sizeof(actualizacion.sha256), "%s", sha256);
+  Serial.printf("[OTA] Hay firmware nuevo: %s (este es %s).\n", version, FIRMWARE_VERSION);
+}
+
+void marcarFalloOta(const char* motivo) {
+  Serial.printf("[OTA] No se actualizó: %s. Se reintenta en una hora.\n", motivo);
+  snprintf(versionFallida, sizeof(versionFallida), "%s", actualizacion.version);
+  ultimoFalloOta = millis();
+  actualizacion.hay = false;
+}
+
+void aplicarActualizacion() {
+  const bool local = actualizacion.local;
+  String url(local ? urlLocal : BACKEND_URL);
+  url += "/firmware";
+  HTTPClient http;
+  WiFiClient plano;
+  WiFiClientSecure seguro;
+  if (!iniciarHttp(http, plano, seguro, local, url)) return marcarFalloOta("sin conexión");
+  http.setTimeout(15000);
+  http.addHeader("X-Device-Token", local ? tokenLocal : tokenProduccion);
+  const int estado = http.GET();
+  const int tamano = http.getSize();
+  if (estado != 200 || tamano <= 0 || static_cast<size_t>(tamano) != actualizacion.tamano) {
+    http.end();
+    return marcarFalloOta("la descarga no coincide con lo publicado");
+  }
+  if (!Update.begin(tamano)) {
+    http.end();
+    return marcarFalloOta("no hay espacio para la actualización");
+  }
+  Serial.printf("[OTA] Descargando %s (%d bytes)…\n", actualizacion.version, tamano);
+
+  mbedtls_sha256_context sha;
+  mbedtls_sha256_init(&sha);
+  mbedtls_sha256_starts(&sha, 0);
+  WiFiClient* flujo = http.getStreamPtr();
+  uint8_t bloque[1024];
+  int restante = tamano;
+  unsigned long ultimoDato = millis();
+  while (restante > 0 && millis() - ultimoDato < 15000) {
+    const size_t disponible = flujo->available();
+    if (disponible == 0) { vTaskDelay(pdMS_TO_TICKS(5)); continue; }
+    const int leidos = flujo->readBytes(bloque, min(disponible, sizeof(bloque)));
+    if (leidos <= 0) continue;
+    mbedtls_sha256_update(&sha, bloque, leidos);
+    if (Update.write(bloque, leidos) != static_cast<size_t>(leidos)) break;
+    restante -= leidos;
+    ultimoDato = millis();
+  }
+  http.end();
+  uint8_t huella[32];
+  mbedtls_sha256_finish(&sha, huella);
+  mbedtls_sha256_free(&sha);
+  char huellaHex[65];
+  for (int i = 0; i < 32; ++i) snprintf(huellaHex + i * 2, 3, "%02x", huella[i]);
+
+  if (restante != 0) { Update.abort(); return marcarFalloOta("la descarga se cortó"); }
+  if (strcmp(huellaHex, actualizacion.sha256) != 0) {
+    Update.abort();
+    return marcarFalloOta("la huella SHA-256 no coincide");
+  }
+  if (!Update.end(true)) return marcarFalloOta("el ESP32 rechazó la imagen");
+  Serial.printf("[OTA] Firmware %s instalado. Reiniciando…\n", actualizacion.version);
+  delay(500);
+  ESP.restart();
+}
+
 // Una consulta fallida conserva los lectores actuales. La respuesta no contiene
 // tokens; ambos endpoints usan la misma credencial y el mismo destino validado.
-void consultarConfiguracion() {
-#if BACKEND_MODO == BACKEND_MODO_LOCAL
-  if (!urlBackendLocalValida() && !intentarRedescubrirBackend()) return;
-  String url(urlBackendActiva);
-#else
-  String url(BACKEND_URL);
-#endif
+bool consultarConfiguracion(bool local, bool aplicarConexiones) {
+  String url(local ? urlLocal : BACKEND_URL);
   url += "/configuracion";
   HTTPClient http;
-  http.setConnectTimeout(HTTP_TIMEOUT_MS);
-  http.setTimeout(HTTP_TIMEOUT_MS);
+  WiFiClient plano;
+  WiFiClientSecure seguro;
+  if (!iniciarHttp(http, plano, seguro, local, url)) return false;
   http.useHTTP10(true);  // stream sin transferencia chunked para ArduinoJson
-#if BACKEND_MODO == BACKEND_MODO_LOCAL
-  WiFiClient cliente;
-  if (!http.begin(cliente, url)) return;
-#else
-  if (!urlBackendProduccionSegura()) return;
-  WiFiClientSecure cliente;
-  cliente.setCACert(ISRG_ROOT_X1);
-  if (!http.begin(cliente, url)) return;
-#endif
-  http.addHeader("X-Device-Token", tokenActivo);
+  http.addHeader("X-Device-Token", local ? tokenLocal : tokenProduccion);
+  http.addHeader("X-Firmware-Version", FIRMWARE_VERSION);
   const int estado = http.GET();
   if (estado != 200) {
-    Serial.printf("[Config] HTTP %d; se conservan los lectores locales.\n", estado);
+    Serial.printf("[Config] HTTP %d desde %s; se conservan los lectores.\n", estado,
+                  local ? "local" : "producción");
     http.end();
-#if BACKEND_MODO == BACKEND_MODO_LOCAL
-    if (estado < 0) intentarRedescubrirBackend();
-#endif
-    return;
+    if (local && estado < 0) urlLocal[0] = '\0';
+    return false;
   }
   JsonDocument documento;
   const auto error = deserializeJson(documento, http.getStream(), DeserializationOption::NestingLimit(5));
   if (error || documento["version"].as<int>() != 1 || !documento["conexiones"].is<JsonArray>() || documento["conexiones"].size() > MAX_DHT) {
     Serial.println("[Config] Configuración inválida; se conserva la anterior.");
     http.end();
-    return;
+    return false;
   }
   ConfiguracionDht config{};
   for (JsonObject conexion : documento["conexiones"].as<JsonArray>()) {
@@ -471,14 +570,16 @@ void consultarConfiguracion() {
     if (!conexion["gpio"].is<int>() || !pinDhtPermitido(pin) || conexion["modelo"].as<String>() != "DHT22" || canal != "gpio:" + String(pin)) {
       Serial.println("[Config] GPIO o modelo incompatible (incluido pin de relé); se conserva la anterior.");
       http.end();
-      return;
+      return false;
     }
     bool repetido = false;
     for (uint8_t i = 0; i < config.cantidad; ++i) if (config.pines[i] == pin) repetido = true;
     if (!repetido) config.pines[config.cantidad++] = pin;
   }
-  if (colaConfiguracion != nullptr) xQueueOverwrite(colaConfiguracion, &config);
+  if (aplicarConexiones && colaConfiguracion != nullptr) xQueueOverwrite(colaConfiguracion, &config);
+  revisarFirmwarePublicado(documento["firmware"], local);
   http.end();
+  return true;
 }
 
 bool urlBackendProduccionSegura() {
@@ -509,7 +610,7 @@ bool esUrlLocalValida(const String& url) {
 }
 
 bool urlBackendLocalValida() {
-  return esUrlLocalValida(String(urlBackendActiva));
+  return esUrlLocalValida(String(urlLocal));
 }
 
 bool probarBackendEnIp(const IPAddress& ip) {
@@ -530,18 +631,19 @@ bool probarBackendEnIp(const IPAddress& ip) {
   // controlador; cualquier otro servicio en el puerto 3000 se ignora.
   if (respuesta.indexOf("\"servicio\":\"avisens\"") < 0) return false;
 
-  snprintf(urlBackendActiva, sizeof(urlBackendActiva), "%s", candidata.c_str());
+  snprintf(urlLocal, sizeof(urlLocal), "%s", candidata.c_str());
+  recordarIpLocal(candidata);
   if (preferencias.begin("avisens", false)) {
     preferencias.putString("url", candidata);
     preferencias.end();
   }
-  Serial.printf("[Descubrimiento] Backend Avisens encontrado en %s\n", urlBackendActiva);
+  Serial.printf("[Descubrimiento] Backend local encontrado en %s\n", urlLocal);
   return true;
 }
 
 bool descubrirBackendEnRed() {
   if (WiFi.status() != WL_CONNECTED) return false;
-  Serial.println("[Descubrimiento] Buscando servidor Avisens en la red Wi-Fi…");
+  Serial.println("[Descubrimiento] Buscando el computador local en la red Wi-Fi…");
 
   if (!mdnsIniciado) {
     mdnsIniciado = MDNS.begin("avisens-esp32");
@@ -553,20 +655,17 @@ bool descubrirBackendEnRed() {
     }
   }
 
-  // Respaldo sin mDNS: recorre la subred /24 empezando por la última IP
-  // conocida y alejándose de ella (.50, .51, .49, .52…), porque el DHCP suele
-  // reasignar al computador una dirección vecina.
+  // Respaldo sin mDNS: prueba la última IP conocida y sus vecinas (.50, .51,
+  // .49…), porque el DHCP suele reasignar al computador una dirección cercana.
+  // Se limita a unas pocas IP para no retrasar el envío a producción.
   const IPAddress miIp = WiFi.localIP();
   IPAddress anterior;
-  int inicio = 1;
-  const String urlAnterior(urlBackendActiva);
-  const int desde = urlAnterior.indexOf("://") + 3;
-  const int hasta = urlAnterior.indexOf(':', desde);
-  if (desde > 2 && hasta > desde && anterior.fromString(urlAnterior.substring(desde, hasta)) &&
+  int inicio = miIp[3];
+  if (anterior.fromString(ultimaIpLocal) &&
       anterior[0] == miIp[0] && anterior[1] == miIp[1] && anterior[2] == miIp[2]) {
     inicio = anterior[3];
   }
-  for (int paso = 0; paso < 508; ++paso) {
+  for (int paso = 0; paso <= VECINOS_DESCUBRIMIENTO * 2; ++paso) {
     const int desplazamiento = (paso + 1) / 2;
     const int host = paso % 2 == 0 ? inicio + desplazamiento : inicio - desplazamiento;
     if (host < 1 || host > 254 || host == miIp[3]) continue;
@@ -576,10 +675,9 @@ bool descubrirBackendEnRed() {
       sonda.stop();
       if (probarBackendEnIp(ip)) return true;
     }
-    if (paso % 16 == 0) vTaskDelay(pdMS_TO_TICKS(5));
   }
 
-  Serial.println("[Descubrimiento] No se encontró ningún backend Avisens en el puerto 3000 de la LAN.");
+  Serial.println("[Descubrimiento] El computador local no respondió; se reintenta en un minuto.");
   return false;
 }
 
@@ -597,12 +695,18 @@ bool relojSincronizado() {
   return time(nullptr) > 1700000000;
 }
 
-bool backendListoParaEnviar() {
-#if BACKEND_MODO == BACKEND_MODO_LOCAL
-  return true;
-#else
-  return urlBackendProduccionSegura() && relojSincronizado();
-#endif
+bool produccionLista() {
+  return urlBackendProduccionSegura() && relojSincronizado() &&
+         tokenFormatoValido(String(tokenProduccion));
+}
+
+bool localHabilitado() {
+  return tokenFormatoValido(String(tokenLocal));
+}
+
+bool asegurarUrlLocal() {
+  if (urlBackendLocalValida()) return true;
+  return intentarRedescubrirBackend();
 }
 
 // La reconexión, NTP y transporte viven en otra tarea. Una espera de red no detiene
@@ -615,27 +719,33 @@ void tareaRed(void*) {
   unsigned long ultimaConfiguracion = millis() - CONFIG_INTERVALO_MS;
   unsigned long ultimoEnvioRed = 0;
   unsigned long pausaEnvio = 0;
+  LoteGuardado pendienteLocal{};
+  bool hayPendienteLocal = false;
 
-#if BACKEND_MODO == BACKEND_MODO_LOCAL
-  Serial.printf("[HTTP local] Modo LAN activo. Destino inicial: %s\n", urlBackendActiva);
-#else
-  if (!urlBackendProduccionSegura()) {
-    Serial.println("[HTTPS] Producción exige BACKEND_URL con https://; ingesta desactivada.");
-  } else {
-    Serial.println("[HTTPS] Modo de producción explícito; certificado validado.");
-  }
-#endif
+  Serial.printf("[Destinos] Producción: %s | Local: %s\n",
+                urlBackendProduccionSegura() ? BACKEND_URL : "sin URL HTTPS",
+                localHabilitado() ? "habilitado" : "sin token");
 
   for (;;) {
     TokenDispositivo nuevoToken{};
     if (colaToken != nullptr && xQueueReceive(colaToken, &nuevoToken, 0) == pdTRUE) {
-      snprintf(tokenActivo, sizeof(tokenActivo), "%s", nuevoToken.valor);
+      char* destino = nuevoToken.local ? tokenLocal : tokenProduccion;
+      snprintf(destino, MAX_TOKEN_LEN, "%s", nuevoToken.valor);
       ultimaConfiguracion = millis() - CONFIG_INTERVALO_MS;
-      Serial.println("[Provision] Nuevo token aplicado en la tarea de red.");
+      if (nuevoToken.local) ultimoIntentoDescubrimiento = 0;
+      Serial.printf("[Provision] Token %s aplicado.\n", nuevoToken.local ? "local" : "de producción");
     }
 
     LecturaPendiente capturada;
-    if (xQueueReceive(colaEnvios, &capturada, 0) == pdTRUE) guardarEnBufer(capturada);
+    if (xQueueReceive(colaEnvios, &capturada, 0) == pdTRUE) {
+      LoteGuardado lote;
+      prepararLote(capturada, lote);
+      if (urlBackendProduccionSegura()) guardarEnBufer(lote);
+      if (localHabilitado()) {
+        pendienteLocal = lote;
+        hayPendienteLocal = true;
+      }
+    }
 
     if (WiFi.status() != WL_CONNECTED) {
       if (yaEstuvoConectado) {
@@ -665,31 +775,44 @@ void tareaRed(void*) {
       Serial.println("[NTP] Sincronizando la hora del controlador.");
     }
 
-    if (backendListoParaEnviar()) {
-      if (millis() - ultimaConfiguracion >= CONFIG_INTERVALO_MS) {
-        ultimaConfiguracion = millis();
-        consultarConfiguracion();
+    // Las conexiones salen de producción; si producción no responde, de local.
+    // Ambos destinos pueden anunciar firmware nuevo.
+    if (millis() - ultimaConfiguracion >= CONFIG_INTERVALO_MS) {
+      ultimaConfiguracion = millis();
+      const bool desdeProduccion = produccionLista() && consultarConfiguracion(false, true);
+      if (localHabilitado() && asegurarUrlLocal()) consultarConfiguracion(true, !desdeProduccion);
+    }
+
+    if (produccionLista() && cantidadBufer > 0 && millis() - ultimoEnvioRed >= pausaEnvio) {
+      LoteGuardado& lote = bufer[inicioBufer];
+      if (lote.fecha[0] == '\0' && millis() - lote.capturadoMs > VIGENCIA_SIN_HORA_MS) {
+        Serial.println("[Búfer] Ciclo sin hora y ya viejo: se descarta para no fecharlo mal.");
+        quitarPrimeroDelBufer();
+        continue;
       }
-      if (cantidadBufer > 0 && millis() - ultimoEnvioRed >= pausaEnvio) {
-        LoteGuardado& lote = bufer[inicioBufer];
-        if (lote.fecha[0] == '\0' && millis() - lote.capturadoMs > VIGENCIA_SIN_HORA_MS) {
-          Serial.println("[Búfer] Ciclo sin hora y ya viejo: se descarta para no fecharlo mal.");
-          quitarPrimeroDelBufer();
-          continue;
-        }
-        const ResultadoEnvio resultado = enviarLote(lote);
-        ultimoEnvioRed = millis();
-        if (resultado == ResultadoEnvio::Reintentar) {
-          pausaEnvio = pausaEnvio < REINTENTO_MIN_MS ? REINTENTO_MIN_MS : min(pausaEnvio * 2, REINTENTO_MAX_MS);
-        } else {
-          quitarPrimeroDelBufer();
-          pausaEnvio = cantidadBufer > 0 ? REENVIO_PAUSA_MS : 0;
-          if (huboCorte && cantidadBufer == 0) {
-            huboCorte = false;
-            Serial.println("[Búfer] Conexión recuperada: se enviaron todos los ciclos guardados.");
-          }
+      const ResultadoEnvio resultado = enviarLote(lote, false);
+      ultimoEnvioRed = millis();
+      if (resultado == ResultadoEnvio::Reintentar) {
+        pausaEnvio = pausaEnvio < REINTENTO_MIN_MS ? REINTENTO_MIN_MS : min(pausaEnvio * 2, REINTENTO_MAX_MS);
+      } else {
+        quitarPrimeroDelBufer();
+        pausaEnvio = cantidadBufer > 0 ? REENVIO_PAUSA_MS : 0;
+        if (huboCorte && cantidadBufer == 0) {
+          huboCorte = false;
+          Serial.println("[Búfer] Conexión recuperada: se enviaron todos los ciclos guardados.");
         }
       }
+    }
+
+    // Se actualiza con el búfer vacío para no perder lecturas guardadas; si
+    // producción rechaza el token, esas lecturas nunca se aceptarían igual.
+    if (actualizacion.hay && (cantidadBufer == 0 || produccionRechazaToken)) aplicarActualizacion();
+
+    // El destino local nunca guarda ni reintenta: si el computador no está,
+    // la lectura se omite allí y producción sigue igual.
+    if (hayPendienteLocal) {
+      hayPendienteLocal = false;
+      if (asegurarUrlLocal()) enviarLote(pendienteLocal, true);
     }
     vTaskDelay(pdMS_TO_TICKS(100));
   }
@@ -699,7 +822,7 @@ void tareaRed(void*) {
 void setup() {
   Serial.begin(115200);
   delay(200);
-  Serial.println("\n=== Nodo ESP32 Avisens ===");
+  Serial.printf("\n=== Nodo ESP32 Avisens · firmware %s ===\n", FIRMWARE_VERSION);
   cargarTokenPersistido();
   Serial.println("[Provision] LISTO");
 
