@@ -8,7 +8,7 @@ import {
   FORMULARIO_DISPOSITIVO_INICIAL,
   type DatosDispositivo,
 } from '../model/dispositivo'
-import { provisionarTokenPorUsb, soportaProvisionUsb } from '../model/provisionUsb'
+import { destinoDeLaPagina, provisionarTokenPorUsb, soportaProvisionUsb } from '../model/provisionUsb'
 import type { CrearDispositivoPayload, Dispositivo } from '../api/dispositivos'
 import './DispositivosDeGalpon.css'
 
@@ -22,10 +22,12 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
   const puedeGestionar = getRol() === ROL_ADMIN
   const conAcciones = puedeGestionar
   const usbDisponible = soportaProvisionUsb()
+  const destinoUsb = destinoDeLaPagina()
   const [form, setForm] = useState<DatosDispositivo>(FORMULARIO_DISPOSITIVO_INICIAL)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
   const [errorAccion, setErrorAccion] = useState('')
+  const [avisoAccion, setAvisoAccion] = useState('')
   const [token, setToken] = useState<{ id: number; valor: string } | null>(null)
   const [enviandoUsb, setEnviandoUsb] = useState(false)
   const [estadoUsb, setEstadoUsb] = useState('')
@@ -83,7 +85,7 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
     const confirmar = window.confirm(
       `¿Regenerar el token de "${dispositivo.nombre}"?\n` +
         'El token anterior deja de servir: el ESP32 no podrá enviar mediciones ' +
-        'hasta que lo actualices por USB o en su configuración.',
+        'hasta que lo vuelvas a vincular por USB.',
     )
     if (!confirmar) return
     setErrorAccion('')
@@ -103,7 +105,9 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
     setErrorUsb('')
     try {
       await provisionarTokenPorUsb(token.valor)
-      setEstadoUsb('¡Token guardado automáticamente en la memoria NVS del ESP32!')
+      setEstadoUsb(destinoUsb === 'local'
+        ? 'ESP32 vinculado a este computador. Ya puedes desconectarlo del USB.'
+        : 'ESP32 vinculado a producción. Ya puedes desconectarlo del USB.')
     } catch (err) {
       if (err instanceof DOMException && err.name === 'NotFoundError') {
         setErrorUsb('No se seleccionó ningún puerto USB.')
@@ -112,7 +116,7 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
         // USB traen su propia explicación y no deben ocultarse.
         setErrorUsb(err.message)
       } else {
-        setErrorUsb('No se pudo enviar el token al ESP32 por USB.')
+        setErrorUsb('No se pudo vincular el ESP32. Revisa que esté conectado por USB.')
       }
     } finally {
       setEnviandoUsb(false)
@@ -131,13 +135,18 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
 
   async function handleEliminar(dispositivo: Dispositivo) {
     const confirmar = window.confirm(
-      `¿Eliminar PERMANENTEMENTE el dispositivo "${dispositivo.nombre}"?\n` +
-        'Falla si ya tiene sensores asociados. Esta acción no se deshace.',
+      `¿Eliminar el controlador "${dispositivo.nombre}" y sus sensores?\n` +
+        'Dejará de recibir datos y su token queda anulado. Si ya envió lecturas, ' +
+        'el historial se conserva para los reportes.',
     )
     if (!confirmar) return
     setErrorAccion('')
+    setAvisoAccion('')
     try {
-      await eliminar(dispositivo.id)
+      const { retirado } = await eliminar(dispositivo.id)
+      setAvisoAccion(retirado
+        ? `Se eliminó "${dispositivo.nombre}" con sus sensores. Sus lecturas anteriores se conservan en el historial.`
+        : `Se eliminó "${dispositivo.nombre}".`)
       onCambio?.()
     } catch (err) {
       setErrorAccion(mensajeDeError(err, 'No se pudo eliminar el dispositivo.'))
@@ -164,17 +173,24 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
       </div>
 
       {error && <div className="dsp-alert dsp-alert--error" role="alert">{error}</div>}
+      {avisoAccion && (
+        <div className="dsp-alert dsp-alert--ok" role="status">{avisoAccion}</div>
+      )}
       {errorAccion && (
         <div className="dsp-alert dsp-alert--error" role="alert">{errorAccion}</div>
       )}
 
       {token && (
         <div className="dsp-token" role="status">
-          <strong>Token nuevo</strong>
+          <strong>Vincular el ESP32</strong>
           <code>{token.valor}</code>
           <p>
-            Conecta el ESP32 por USB y envíalo con un clic (o cópialo manualmente).
-            Solo se muestra una vez.
+            Solo la primera vez: conecta el ESP32 a este computador por USB y pulsa
+            «Vincular ESP32». Queda guardado en su memoria; después puedes
+            desconectarlo y darle energía con cualquier cargador.
+            {destinoUsb === 'local'
+              ? ' Desde esta página local queda vinculado a este computador.'
+              : ' Desde esta página queda vinculado a producción.'}
           </p>
           {estadoUsb && (
             <p className="dsp-token-feedback dsp-token-feedback--ok">{estadoUsb}</p>
@@ -190,7 +206,7 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
                 disabled={enviandoUsb}
                 onClick={() => void handleEnviarUsb()}
               >
-                {enviandoUsb ? 'Enviando al ESP32…' : 'Enviar al ESP32 por USB'}
+                {enviandoUsb ? 'Vinculando…' : 'Vincular ESP32'}
               </button>
             )}
             <button
