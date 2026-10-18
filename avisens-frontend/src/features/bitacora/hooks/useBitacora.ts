@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
 import { listarConsumosDiarios, type ConsumoDiario } from '@features/consumos-diarios/api/consumosDiarios'
 import { mensajeDeError } from '@shared/utils/errores'
-import { crearEventoSanitario, crearMortalidad, crearPesaje, eliminarEventoSanitario, eliminarMortalidad, eliminarPesaje, listarEventosSanitarios, listarMortalidad, listarPesajes } from '../api/bitacora'
+import { actualizarEventoSanitario, actualizarMortalidad, actualizarPesaje, crearEventoSanitario, crearMortalidad, crearPesaje, eliminarEventoSanitario, eliminarMortalidad, eliminarPesaje, listarEventosSanitarios, listarMortalidad, listarPesajes } from '../api/bitacora'
 import type { EventoSanitario, Mortalidad, Pesaje, TipoRegistro } from '../model/bitacora'
 
 export function useBitacora() {
@@ -67,6 +67,19 @@ export function useBitacora() {
     }
   }
 
+  const actualizar = async (tipo: TipoRegistro, id: number, datos: object) => {
+    if (tipo === 'peso') {
+      const registro = await actualizarPesaje(id, datos)
+      setPesajes((actuales) => actuales.map((item) => (item.id === id ? registro : item)))
+    } else if (tipo === 'mortalidad') {
+      const registro = await actualizarMortalidad(id, datos)
+      setMortalidad((actuales) => actuales.map((item) => (item.id === id ? registro : item)))
+    } else {
+      const registro = await actualizarEventoSanitario(id, datos)
+      setSanitarios((actuales) => actuales.map((item) => (item.id === id ? registro : item)))
+    }
+  }
+
   const eliminar = async (tipo: TipoRegistro, id: number) => {
     if (tipo === 'peso') {
       await eliminarPesaje(id)
@@ -80,5 +93,5 @@ export function useBitacora() {
     }
   }
 
-  return { lotes, pesajes, mortalidad, sanitarios, consumos, cargando, error, recargar, crear, eliminar }
+  return { lotes, pesajes, mortalidad, sanitarios, consumos, cargando, error, recargar, crear, actualizar, eliminar }
 }

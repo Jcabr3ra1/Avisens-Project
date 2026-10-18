@@ -2,17 +2,20 @@ import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { permisosDePlan } from '@shared/auth/permisos'
-import { diasDeVida, formatearFechaCalendario } from '@shared/utils/fechas'
+import { formatearFechaCalendario } from '@shared/utils/fechas'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import '@shared/ui/admin/AdminKit.css'
-import { IcChart, IcCheck, IcEgg, IcScale } from '@shared/ui/icons/icons'
+import { IcBarn, IcChart, IcEgg, IcScale } from '@shared/ui/icons/icons'
 import FormularioPesoObjetivo from '../lotes/components/FormularioPesoObjetivo'
 import { DESCRIPCION_DESACTUALIZADO_PLAN, etiquetaEstadoPlan } from '../lotes/model/planLoteVista'
 import { etiquetaEstadoAlimento, etiquetaMotivo } from '../lotes/model/planAlimentoVista'
-import { calcularDesvioPct, interpolarPesoEnDia, interpolarPuntoEnDia, obtenerPesoVerificado } from './model/guiaCrecimiento'
+import { interpolarPesoEnDia, interpolarPuntoEnDia } from './model/guiaCrecimiento'
 import { useGuiaCrecimiento } from './hooks/useGuiaCrecimiento'
+import { useProyeccionLote } from './hooks/useProyeccionLote'
 import SeleccionarLoteGuia from './components/SeleccionarLoteGuia'
+import PanelCrecimiento from './components/PanelCrecimiento'
+import ProyeccionFaena from './components/ProyeccionFaena'
 import './GuiaCrecimientoPage.css'
 
 function kilos(valor: string | null): string {
@@ -42,16 +45,10 @@ function GuiaCrecimientoPage() {
     consumoAcumuladoG: punto.consumo_acumulado_g === null ? null : Number(punto.consumo_acumulado_g),
     fcrObjetivo: punto.fcr_objetivo === null ? null : Number(punto.fcr_objetivo),
   })) ?? [], [guia.curva])
-  const pesoEsperadoHoy = guia.diaActual === null ? null : interpolarPesoEnDia(puntos, guia.diaActual)
   const puntoActual = guia.diaActual === null ? null : interpolarPuntoEnDia(puntos, guia.diaActual)
   const pesoMinimoDia30 = interpolarPesoEnDia(puntos, MIN_DIA_OBJETIVO)
-  const pesaje = obtenerPesoVerificado(guia.indicadorReciente)
-  const pesoReal = pesaje?.gramos ?? null
-  const diaPesaje = lote && pesaje && pesaje.fecha.slice(0, 10) >= lote.fecha_ingreso.slice(0, 10)
-    ? diasDeVida(lote.fecha_ingreso.slice(0, 10), new Date(`${pesaje.fecha.slice(0, 10)}T00:00:00`)) : null
-  const referenciaPesaje = diaPesaje !== null && Number.isFinite(diaPesaje) ? interpolarPesoEnDia(puntos, diaPesaje) : null
-  const pesoEsperadoHoyG = pesoEsperadoHoy?.estado === 'calculado' ? pesoEsperadoHoy.pesoEsperadoG : null
-  const desvioPct = calcularDesvioPct(pesoReal, referenciaPesaje?.estado === 'calculado' ? referenciaPesaje.pesoEsperadoG : null)
+  const revisionPlan = guia.plan ? `${guia.plan.id}-${guia.plan.version}-${guia.plan.desactualizado}` : 'sin-plan'
+  const proyeccion = useProyeccionLote(loteId, lote?.estado === 'activo', revisionPlan)
 
   async function guardarPesoObjetivo(pesoObjetivoG: number) {
     if (guia.cargandoDetalle) throw new Error('Espera a que termine de cargar la curva del lote.')
@@ -90,8 +87,8 @@ function GuiaCrecimientoPage() {
   const stats: Stat[] = [
     { label: 'Día actual', valor: guia.diaActual ?? '—', icono: <IcChart size={18} />, tono: 'info' },
     { label: 'Aves alojadas', valor: lote.cantidad_inicial.toLocaleString('es-CO'), icono: <IcEgg size={18} />, tono: 'neutral' },
-    { label: 'Línea genética', valor: lote.linea_genetica?.nombre ?? 'Sin asignar', icono: <IcScale size={18} />, tono: lote.linea_genetica ? 'ok' : 'aviso' },
-    { label: 'Puntos de curva', valor: guia.curva?.puntos.length ?? 0, icono: <IcCheck size={18} />, tono: guia.curva ? 'ok' : 'aviso' },
+    { label: 'Línea genética', valor: lote.linea_genetica ? `${lote.linea_genetica.nombre} · ${lote.sexo ?? 'mixto'}` : 'Sin asignar', icono: <IcScale size={18} />, tono: lote.linea_genetica ? 'ok' : 'aviso' },
+    { label: 'Galpón', valor: lote.galpon.nombre, icono: <IcBarn size={18} />, tono: 'neutral' },
   ]
   const alimento = guia.alimento
   const alimentoAnterior = alimento !== null && !alimento.plan_vigente?.es_el_mismo
@@ -102,31 +99,15 @@ function GuiaCrecimientoPage() {
       {cabecera}
       {guia.error && <div className="adm-alerta" role="alert"><span>{guia.error}</span><button type="button" onClick={guia.recargar} disabled={guia.guardando}>Reintentar</button></div>}
       <TarjetasResumen stats={stats} etiqueta="Resumen del lote seleccionado" />
-      <section className="adm-panel guia-selector" aria-label="Lote seleccionado">
-        <div className="guia-campo"><span>Lote</span><strong>{lote.codigo}</strong></div>
-        <dl className="guia-ficha-lote">
-          <div><dt>Galpón</dt><dd>{lote.galpon.nombre}</dd></div>
-          <div><dt>Sexo</dt><dd>{lote.sexo ?? 'Sin especificar'}</dd></div>
-          <div><dt>Línea genética</dt><dd>{lote.linea_genetica?.nombre ?? 'Sin asignar'}</dd></div>
-          <div><dt>Día de vida</dt><dd>{guia.diaActual ?? '—'}</dd></div>
-        </dl>
-      </section>
+      <PanelCrecimiento
+        loteId={lote.id}
+        curva={proyeccion.curva}
+        problema={proyeccion.problemaCurva}
+        cargando={proyeccion.cargandoCurva}
+        onReintentar={proyeccion.recargar}
+      />
 
-      <div className="guia-columnas">
-        <section className="adm-panel guia-situacion" aria-labelledby="guia-situacion-titulo">
-          <span className="adm-eyebrow">Seguimiento</span><h2 id="guia-situacion-titulo">Situación real del lote</h2>
-          {guia.cargandoDetalle ? <p role="status">Cargando seguimiento…</p> : <>
-            <p>Día actual: <strong>{guia.diaActual ?? '—'}</strong></p>
-            <p>Último peso verificado: <strong>{pesoReal === null ? 'Sin peso verificado' : `${pesoReal.toFixed(0)} g`}</strong></p>
-            {pesaje && <p>Fecha del pesaje: <strong>{formatearFechaCalendario(pesaje.fecha)}</strong></p>}
-            {guia.indicadorReciente && !pesaje && <p className="guia-aviso" role="status">El último cálculo no tiene un peso verificado. Revisa los registros del lote antes de comparar.</p>}
-            <p>Peso esperado hoy: <strong>{pesoEsperadoHoyG === null ? '—' : `${pesoEsperadoHoyG.toFixed(0)} g`}</strong></p>
-            {desvioPct !== null && <p className={desvioPct < 0 ? 'guia-desvio guia-desvio--bajo' : 'guia-desvio'}>Desvío en la fecha del pesaje: <strong>{desvioPct >= 0 ? '+' : ''}{desvioPct.toFixed(1)}%</strong></p>}
-            {desvioPct !== null && desvioPct < 0 && <div className="guia-aviso" role="status">Este lote está por debajo de la curva estándar; la fecha puede ser optimista para su situación real.</div>}
-          </>}
-        </section>
-      </div>
-
+      <div className="guia-columnas guia-columnas--plan">
       <section className="adm-panel guia-panel guia-datos-panel" aria-labelledby="guia-plan-titulo">
         <div className="guia-panel-titulo">
           <div><span className="adm-eyebrow">Plan productivo</span><h2 id="guia-plan-titulo">Objetivo del lote</h2></div>
@@ -152,6 +133,13 @@ function GuiaCrecimientoPage() {
           </div>
         )}
       </section>
+
+        <ProyeccionFaena
+          prediccion={proyeccion.prediccion}
+          error={proyeccion.errorPrediccion}
+          cargando={proyeccion.cargandoPrediccion}
+        />
+      </div>
 
       <section className="adm-panel guia-panel guia-datos-panel" aria-labelledby="guia-alimento-titulo">
         <div className="guia-panel-titulo">

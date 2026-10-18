@@ -1,0 +1,33 @@
+meta {
+  name: [Admin · Propietario]  Completar datos de una granja
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/v1/granjas/29/datos
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "direccion": "Vereda El Progreso km 4",
+    "municipio": "Rionegro",
+    "departamento": "Antioquia"
+  }
+}
+
+docs {
+  Todos obligatorios: direccion, municipio y departamento.
+  Las coordenadas y el área las registra el administrador (PATCH /granjas/:id),
+  porque con ellas se ubican los sensores. Si el propietario las envía: 400.
+}

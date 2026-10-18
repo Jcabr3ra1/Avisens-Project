@@ -14,7 +14,6 @@ export interface FormularioLoteDatos {
   lineaGeneticaIdOriginal: number | null
   fecha_ingreso: string
   cantidad_inicial: number | ''
-  raza: string
   sexo: string
   marca_alimento: string
   costo_pollito_unitario: number | ''
@@ -41,7 +40,6 @@ export function crearFormularioLote(
     lineaGeneticaIdOriginal: null,
     fecha_ingreso: fechaActual(),
     cantidad_inicial: '',
-    raza: '',
     sexo: '',
     marca_alimento: '',
     costo_pollito_unitario: '',
@@ -60,7 +58,6 @@ export function formularioDesdeLote(lote: Lote): FormularioLoteDatos {
     lineaGeneticaIdOriginal: lote.linea_genetica?.id ?? null,
     fecha_ingreso: fechaInput(lote.fecha_ingreso),
     cantidad_inicial: lote.cantidad_inicial,
-    raza: lote.raza ?? '',
     sexo: lote.sexo ?? '',
     marca_alimento: lote.marca_alimento ?? '',
     costo_pollito_unitario: lote.costo_pollito_unitario ?? '',
@@ -82,7 +79,6 @@ export function crearPayloadLote(form: FormularioLoteDatos): CrearLotePayload {
     ...(form.linea_genetica_id === null ? {} : { linea_genetica_id: form.linea_genetica_id }),
     fecha_ingreso: form.fecha_ingreso,
     cantidad_inicial: Number(form.cantidad_inicial),
-    raza: textoOpcional(form.raza),
     sexo: textoOpcional(form.sexo),
     marca_alimento: textoOpcional(form.marca_alimento),
     costo_pollito_unitario: form.costo_pollito_unitario || undefined,

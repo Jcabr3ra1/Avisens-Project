@@ -103,7 +103,7 @@ export class ClimaService {
     const lectura = await this.traerClimaDeGranja(granja);
     if (!lectura) {
       throw new BadRequestException(
-        'No se pudo traer el clima (revisa OPENWEATHER_KEY y las coordenadas de la granja)',
+        'No se pudo traer el clima (revisa las coordenadas de la granja)',
       );
     }
     return lectura;

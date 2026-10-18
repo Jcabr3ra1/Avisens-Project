@@ -8,6 +8,7 @@ import {
   FORMULARIO_DISPOSITIVO_INICIAL,
   type DatosDispositivo,
 } from '../model/dispositivo'
+import { provisionarTokenPorUsb, soportaProvisionUsb } from '../model/provisionUsb'
 import type { CrearDispositivoPayload, Dispositivo } from '../api/dispositivos'
 import './DispositivosDeGalpon.css'
 
@@ -20,21 +21,33 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
   // La administración de nodos ESP32 pertenece exclusivamente al administrador.
   const puedeGestionar = getRol() === ROL_ADMIN
   const conAcciones = puedeGestionar
+  const usbDisponible = soportaProvisionUsb()
   const [form, setForm] = useState<DatosDispositivo>(FORMULARIO_DISPOSITIVO_INICIAL)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
   const [errorAccion, setErrorAccion] = useState('')
   const [token, setToken] = useState<{ id: number; valor: string } | null>(null)
+  const [enviandoUsb, setEnviandoUsb] = useState(false)
+  const [estadoUsb, setEstadoUsb] = useState('')
+  const [errorUsb, setErrorUsb] = useState('')
+  const [copiado, setCopiado] = useState(false)
 
   function campo<K extends keyof DatosDispositivo>(k: K, v: DatosDispositivo[K]) {
     setForm((prev) => ({ ...prev, [k]: v }))
+  }
+
+  function limpiarEstadoToken() {
+    setToken(null)
+    setEstadoUsb('')
+    setErrorUsb('')
+    setCopiado(false)
   }
 
   async function handleCrear(e: FormEvent) {
     e.preventDefault()
     setErrorForm('')
     setErrorAccion('')
-    setToken(null)
+    limpiarEstadoToken()
 
     setGuardando(true)
     try {
@@ -70,15 +83,49 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
     const confirmar = window.confirm(
       `¿Regenerar el token de "${dispositivo.nombre}"?\n` +
         'El token anterior deja de servir: el ESP32 no podrá enviar mediciones ' +
-        'hasta que lo actualices en su firmware.',
+        'hasta que lo actualices por USB o en su configuración.',
     )
     if (!confirmar) return
     setErrorAccion('')
+    limpiarEstadoToken()
     try {
       const { token_ingesta } = await regenerarToken(dispositivo.id)
       setToken({ id: dispositivo.id, valor: token_ingesta })
     } catch (err) {
       setErrorAccion(mensajeDeError(err, 'No se pudo regenerar el token.'))
+    }
+  }
+
+  async function handleEnviarUsb() {
+    if (!token || enviandoUsb) return
+    setEnviandoUsb(true)
+    setEstadoUsb('')
+    setErrorUsb('')
+    try {
+      await provisionarTokenPorUsb(token.valor)
+      setEstadoUsb('¡Token guardado automáticamente en la memoria NVS del ESP32!')
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'NotFoundError') {
+        setErrorUsb('No se seleccionó ningún puerto USB.')
+      } else if (err instanceof Error && err.message) {
+        // mensajeDeError solo interpreta errores HTTP (Axios); los del puerto
+        // USB traen su propia explicación y no deben ocultarse.
+        setErrorUsb(err.message)
+      } else {
+        setErrorUsb('No se pudo enviar el token al ESP32 por USB.')
+      }
+    } finally {
+      setEnviandoUsb(false)
+    }
+  }
+
+  async function handleCopiarToken() {
+    if (!token) return
+    try {
+      await navigator.clipboard.writeText(token.valor)
+      setCopiado(true)
+    } catch {
+      setCopiado(false)
     }
   }
 
@@ -126,12 +173,41 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
           <strong>Token nuevo</strong>
           <code>{token.valor}</code>
           <p>
-            Cópialo ahora y ponlo en el firmware del ESP32. No se vuelve a
-            mostrar.
+            Conecta el ESP32 por USB y envíalo con un clic (o cópialo manualmente).
+            Solo se muestra una vez.
           </p>
-          <button type="button" className="dsp-btn dsp-btn--sm" onClick={() => setToken(null)}>
-            Ya lo copié
-          </button>
+          {estadoUsb && (
+            <p className="dsp-token-feedback dsp-token-feedback--ok">{estadoUsb}</p>
+          )}
+          {errorUsb && (
+            <p className="dsp-token-feedback dsp-token-feedback--error" role="alert">{errorUsb}</p>
+          )}
+          <div className="dsp-token-acciones">
+            {usbDisponible && (
+              <button
+                type="button"
+                className="dsp-btn dsp-btn--primary dsp-btn--sm"
+                disabled={enviandoUsb}
+                onClick={() => void handleEnviarUsb()}
+              >
+                {enviandoUsb ? 'Enviando al ESP32…' : 'Enviar al ESP32 por USB'}
+              </button>
+            )}
+            <button
+              type="button"
+              className="dsp-btn dsp-btn--sm"
+              onClick={() => void handleCopiarToken()}
+            >
+              {copiado ? 'Copiado' : 'Copiar token'}
+            </button>
+            <button
+              type="button"
+              className="dsp-btn dsp-btn--sm"
+              onClick={limpiarEstadoToken}
+            >
+              Ya quedó listo
+            </button>
+          </div>
         </div>
       )}
 

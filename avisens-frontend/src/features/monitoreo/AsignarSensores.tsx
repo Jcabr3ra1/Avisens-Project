@@ -4,10 +4,13 @@ import { ROL_ADMIN } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import { listarDispositivos, type Dispositivo } from '@features/dispositivos/api/dispositivos'
 import DispositivosDeGalpon from '@features/dispositivos/components/DispositivosDeGalpon'
-import { crearSensor, listarSensores, type CrearSensorAutomaticoPayload, type Sensor } from '@features/sensores/api/sensores'
+import {
+  activarSensor, crearSensor, desactivarSensor, eliminarSensor, listarSensores,
+  type CrearSensorAutomaticoPayload, type Sensor,
+} from '@features/sensores/api/sensores'
 import { listarCatalogoSensores, type CatalogoSensor } from '@features/sensores/api/catalogoSensores'
 import { iconoSensor } from '@shared/ui/sensorIcon'
-import { IcCheck, IcChevronDown, IcPlus } from '@shared/ui/icons/icons'
+import { IcCheck, IcChevronDown, IcPlus, IcTrash } from '@shared/ui/icons/icons'
 import './MonitoreoPage.css'
 import './AsignarSensores.css'
 import ConexionDhtSensor, { OpcionesGpioDht } from './ConexionDhtSensor'
@@ -75,6 +78,7 @@ function AsignarSensores({
   const [pendientes, setPendientes] = useState<SensorPendiente[]>([])
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
+  const [sensorOcupado, setSensorOcupado] = useState<number | null>(null)
   const [mensaje, setMensaje] = useState('')
   const [error, setError] = useState('')
   const [errorCarga, setErrorCarga] = useState('')
@@ -143,6 +147,35 @@ function AsignarSensores({
       : item))
   }
 
+  async function cambiarSensor(sensor: Sensor, accion: 'activar' | 'desactivar' | 'eliminar') {
+    if (sensorOcupado !== null) return
+    const nombre = `${etiquetaTipo(sensor.tipo)} (${sensor.codigo})`
+    if (accion === 'eliminar' && !window.confirm(
+      `¿Eliminar permanentemente el sensor ${nombre}? Esta acción no se puede deshacer. Si ya tiene lecturas guardadas, desactívalo en su lugar.`,
+    )) return
+    if (accion === 'desactivar' && !window.confirm(
+      `¿Desactivar el sensor ${nombre}? Deja de contar en el monitoreo y sus lecturas guardadas se conservan.`,
+    )) return
+    setSensorOcupado(sensor.id)
+    setMensaje('')
+    setError('')
+    try {
+      if (accion === 'activar') await activarSensor(sensor.id)
+      else if (accion === 'desactivar') await desactivarSensor(sensor.id)
+      else await eliminarSensor(sensor.id)
+      setMensaje(
+        accion === 'eliminar'
+          ? `Se eliminó el sensor ${nombre}.`
+          : `El sensor ${nombre} quedó ${accion === 'activar' ? 'activo' : 'inactivo'}.`,
+      )
+      actualizarControladores()
+    } catch (problema) {
+      setError(mensajeDeError(problema, 'No se pudo actualizar el sensor.'))
+    } finally {
+      setSensorOcupado(null)
+    }
+  }
+
   async function registrar() {
     if (guardando || cargando || pendientes.length === 0 || pendientes.some(item => !disponibles.some(d => d.id === item.dispositivoId) || (esVariableDht(item.tipo) && !item.canal))) return
     setGuardando(true)
@@ -180,11 +213,14 @@ function AsignarSensores({
     }
   }
 
+  function etiquetaTipo(tipo: string) {
+    return opciones.find(opcion => opcion.tipo === tipo)?.nombre ?? tipo.replace(/_/g, ' ')
+  }
+
   if (!puedeRegistrar) return null
 
   const conCanal = sensores.filter(sensor => sensor.canal).length
   const pasoListo = [disponibles.length > 0, sensores.length > 0, sensores.length > 0 && conCanal === sensores.length]
-  const etiquetaTipo = (tipo: string) => opciones.find(opcion => opcion.tipo === tipo)?.nombre ?? tipo.replace(/_/g, ' ')
 
   return (
     <section className="cs" aria-labelledby={`cs-titulo-${galponId}`}>
@@ -347,17 +383,20 @@ function AsignarSensores({
                     <th>Serial</th>
                     <th>Controlador</th>
                     <th>Conexión</th>
+                    <th aria-label="Acciones" />
                   </tr>
                 </thead>
                 <tbody>
                   {sensores.map(sensor => (
-                    <tr key={sensor.id}>
+                    <tr key={sensor.id} className={sensor.estado === 'inactivo' ? 'is-inactivo' : undefined} aria-busy={sensorOcupado === sensor.id}>
                       <td>
                         <span className="cs-sensor">
                           <span className="cs-opcion-icono" aria-hidden="true">{iconoSensor(sensor.tipo, 18)}</span>
                           <span className="cs-opcion-texto">
                             <strong>{etiquetaTipo(sensor.tipo)}</strong>
-                            <small>{sensor.unidad_medida} · {sensor.estado}</small>
+                            <small>
+                              {sensor.unidad_medida} · <span className={`cs-sensor-estado cs-sensor-estado--${sensor.estado}`}>{sensor.estado === 'activo' ? 'Activo' : sensor.estado === 'inactivo' ? 'Inactivo' : sensor.estado}</span>
+                            </small>
                           </span>
                         </span>
                       </td>
@@ -370,6 +409,28 @@ function AsignarSensores({
                             actualizarControladores()
                           }} />
                         ) : <span className="cs-nota cs-nota--celda">{sensor.canal ?? 'Lector por serial'}</span>}
+                      </td>
+                      <td className="cs-celda-acciones">
+                        <span className="cs-acciones">
+                          <button
+                            type="button"
+                            className="cs-accion"
+                            disabled={sensorOcupado !== null}
+                            onClick={() => void cambiarSensor(sensor, sensor.estado === 'inactivo' ? 'activar' : 'desactivar')}
+                          >
+                            {sensor.estado === 'inactivo' ? 'Activar' : 'Desactivar'}
+                          </button>
+                          <button
+                            type="button"
+                            className="cs-accion cs-accion--peligro"
+                            disabled={sensorOcupado !== null}
+                            onClick={() => void cambiarSensor(sensor, 'eliminar')}
+                            aria-label={`Eliminar el sensor ${sensor.codigo}`}
+                            title="Eliminar sensor"
+                          >
+                            <IcTrash size={15} aria-hidden="true" />
+                          </button>
+                        </span>
                       </td>
                     </tr>
                   ))}

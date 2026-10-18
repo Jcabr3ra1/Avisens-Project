@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ServiceUnavailableException } from '@nestjs/common';
-import { HealthController } from './health.controller';
+import { HealthController, SERVICIO_AVISENS } from './health.controller';
 import { PrismaService } from '../../prisma/prisma.service';
 import { getQueueToken } from '@nestjs/bullmq';
 import { COLA_WHATSAPP } from '../whatsapp/whatsapp.tipos';
@@ -33,6 +33,7 @@ describe('HealthController', () => {
       const r = await controller.check();
 
       expect(r.status).toBe('ok');
+      expect(r.servicio).toBe(SERVICIO_AVISENS);
       expect(r.db).toBe('up');
       expect(r.redis).toBe('up');
       expect(r.timestamp).toBeDefined();

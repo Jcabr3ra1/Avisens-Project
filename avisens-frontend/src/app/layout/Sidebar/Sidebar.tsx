@@ -6,7 +6,7 @@ import { logout } from '@shared/api'
 import { useFocoAtrapado } from '@shared/ui/Modal/useFocoAtrapado'
 import logoAvisens from '@shared/assets/logo-avisens.png'
 import { esGrupo, rutaInicioPorRol, type NavItem, type NavLinkItem } from './navConfig'
-import { descripcionDe, matchesPath, navigationSpaces, spaceForPath, visibleSections, type NavigationSpace, type SpaceId } from './navigation'
+import { descripcionDe, matchesPath, navigationSpaces, spaceForPath, tieneUnSoloDestino, visibleSections, type NavigationSpace, type SpaceId } from './navigation'
 import './Sidebar.css'
 
 const SPACE_ICONS = { plataforma: IcGrid, granja: IcLeaf, gestion: IcBox }
@@ -60,6 +60,10 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
   const railLinks = sections.find((section) => section.label === 'Riel')?.items.filter((item): item is NavLinkItem => !esGrupo(item)) ?? []
   const enRiel = railLinks.some((item) => matchesPath(pathname, item.path))
   const explorandoEspacio = selection?.route === pathname
+  const sinPanel = tieneUnSoloDestino(selected)
+  const rutaEnEspacio = spaces.some((space) => space.sections.some((section) => section.items.some((item) =>
+    matchesPath(pathname, item.path) || (esGrupo(item) && item.children.some((child) => matchesPath(pathname, child.path))),
+  )))
   const shortcut = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘ K' : 'Ctrl K'
 
   useEffect(() => { setSelection(null) }, [pathname])
@@ -93,7 +97,13 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
   }
 
   function selectSpace(id: SpaceId) {
-    const destino = primerDestino(spaces.find((space) => space.id === id))
+    const espacio = spaces.find((space) => space.id === id)
+    const destino = primerDestino(espacio)
+    if (destino && tieneUnSoloDestino(espacio)) {
+      onCloseMobile()
+      navigate(destino)
+      return
+    }
     if (destino && (routeSpace?.id !== id || enInicio || enRiel)) navigate(destino)
     else setSelection({ route: pathname, space: id })
     if (collapsed && window.matchMedia('(min-width: 901px)').matches) onToggle()
@@ -148,7 +158,7 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
 
   return (
     <Tooltip.Provider delayDuration={350} skipDelayDuration={150} disableHoverableContent>
-      <aside ref={sidebar} id="navegacion-principal" className={`dash-sidebar${mobileOpen ? ' is-mobile-open' : ''}`} aria-label="Menú principal" data-route={pathname}>
+      <aside ref={sidebar} id="navegacion-principal" className={`dash-sidebar${mobileOpen ? ' is-mobile-open' : ''}${sinPanel ? ' is-sin-panel' : ''}`} aria-label="Menú principal" data-route={pathname}>
         <div className="dash-rail">
           <Hint label="Volver al inicio">
             <NavLink to={rutaInicio} className="dash-side-brand" aria-label="Ir al panel principal de AVISENS" onClick={selectHome}>
@@ -172,13 +182,13 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
             )}
             {spaces.map((space) => {
               const SpaceIcon = SPACE_ICONS[space.id]
-              const spaceSelected = space.id === selected?.id && ((!enInicio && !enRiel) || explorandoEspacio)
+              const spaceSelected = space.id === selected?.id && ((!enInicio && !enRiel && rutaEnEspacio) || explorandoEspacio)
               return (
                 <Hint key={space.id} label={space.description}>
                   <button type="button" className={`dash-rail-space${spaceSelected ? ' is-selected' : ''}`} aria-pressed={spaceSelected} aria-controls="navegacion-contextual" onClick={() => selectSpace(space.id)}>
                     <SpaceIcon size={21} />
                     <span>{space.label}</span>
-                    {space.id === routeSpace?.id && pathname !== rutaInicio && !enRiel && <i className="dash-rail-location" aria-hidden="true" />}
+                    {space.id === routeSpace?.id && rutaEnEspacio && pathname !== rutaInicio && !enRiel && <i className="dash-rail-location" aria-hidden="true" />}
                   </button>
                 </Hint>
               )

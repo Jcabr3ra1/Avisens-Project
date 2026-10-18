@@ -1,0 +1,231 @@
+.resumen-page {
+  gap: var(--space-5);
+}
+
+.resumen-granja-selector select {
+  min-height: 38px;
+  padding: 0 2rem 0 0.8rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.resumen-page .admin-card-sub {
+  margin-top: 0.15rem;
+}
+
+.resumen-atencion-item--sensor .admin-attention-icon {
+  color: var(--info);
+  background: var(--info-soft);
+}
+
+.resumen-atencion-item--alerta .admin-attention-icon {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.admin-attention-item.is-critico .admin-attention-icon {
+  color: var(--danger3);
+  background: var(--danger-soft);
+}
+
+.resumen-galpones-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.resumen-galpones-lista li + li {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.resumen-galpon {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto 16px;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--space-3) var(--space-5);
+  border: 0;
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+
+.resumen-galpon.is-seleccionado {
+  border-left-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface-base));
+}
+
+.resumen-galpon:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.resumen-galpon-icono {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
+  color: var(--primary);
+}
+
+.resumen-galpon-copia {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.resumen-galpon-titulo {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.resumen-galpon-titulo strong {
+  overflow: hidden;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resumen-galpon-codigo {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.resumen-galpon-detalle {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resumen-galpon-lecturas {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.resumen-galpon-estado {
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.resumen-galpon-estado.is-ok {
+  background: var(--surface-subtle);
+  color: var(--success);
+}
+
+.resumen-galpon-estado.is-atencion {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.resumen-galpon-estado.is-critico {
+  background: var(--danger-soft);
+  color: var(--danger3);
+}
+
+.resumen-galpon-estado.is-inactivo {
+  background: var(--surface-tinted);
+  color: var(--text-muted);
+}
+
+.resumen-galpon-flecha {
+  color: var(--text-muted);
+}
+
+.resumen-reportando {
+  flex: none;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-subtle);
+  color: var(--success);
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.resumen-reportando.is-alerta {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.resumen-ambiente .dash-metricas {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.resumen-ambiente .dash-metricas-tabs {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.resumen-lote-plano {
+  align-items: stretch;
+}
+
+.resumen-lote-plano .dash-lote,
+.resumen-lote-plano .dash-plano {
+  margin: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.dash-lote-enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .resumen-galpon:hover {
+    background: var(--surface-hover);
+  }
+}
+
+@media (max-width: 620px) {
+  .resumen-galpon {
+    grid-template-columns: auto minmax(0, 1fr) 16px;
+    padding-inline: var(--space-4);
+  }
+
+  .resumen-galpon-estado {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .resumen-galpon-flecha {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .resumen-galpon-detalle {
+    white-space: normal;
+  }
+
+  .resumen-lote-plano .dash-lote-cabecera {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+}

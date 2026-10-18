@@ -1,4 +1,4 @@
-import { IcAlert, IcEgg, IcHeart, IcLeaf, IcSeed } from '@shared/ui/icons/icons'
+import { IcAlert, IcChevronRight, IcEgg, IcHeart, IcLeaf, IcSeed } from '@shared/ui/icons/icons'
 import type { JornadaOperario } from '../model/jornadaOperario'
 
 type Props = {
@@ -6,6 +6,7 @@ type Props = {
   onRegistrarMortalidad: () => void
   onRegistrarConsumo: () => void
   onVerAlertas: () => void
+  onVerCrecimiento: () => void
 }
 
 function TarjetaJornada({
@@ -13,6 +14,7 @@ function TarjetaJornada({
   onRegistrarMortalidad,
   onRegistrarConsumo,
   onVerAlertas,
+  onVerCrecimiento,
 }: Props) {
   const { galpon, lote, diaLote } = jornada
 
@@ -34,6 +36,9 @@ function TarjetaJornada({
             <span>Lote activo · Día {diaLote}</span>
             <strong>{lote.codigo} · {lote.cantidad_inicial.toLocaleString()} aves</strong>
           </div>
+          <button type="button" className="operario-link-crecimiento" onClick={onVerCrecimiento}>
+            Guía de peso <IcChevronRight size={14} />
+          </button>
         </div>
       ) : (
         <p className="operario-sin-lote">No hay un lote activo en este galpón.</p>

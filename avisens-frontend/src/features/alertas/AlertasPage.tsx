@@ -22,8 +22,17 @@ const FILTROS_INICIALES: FiltrosAlertasModel = {
   galponId: 'todos',
 }
 
-function AlertasPage() {
-  const { alertas, cargando, actualizandoId, error, recargar, aceptar, cerrar, escalar } = useAlertas()
+type Props = {
+  galponFijo?: number
+}
+
+function AlertasPage({ galponFijo }: Props = {}) {
+  const embebida = galponFijo !== undefined
+  const { alertas: todas, cargando, actualizandoId, error, recargar, aceptar, cerrar, escalar } = useAlertas()
+  const alertas = useMemo(
+    () => (embebida ? todas.filter((alerta) => alerta.galpon_id === galponFijo) : todas),
+    [embebida, galponFijo, todas],
+  )
   const [filtros, setFiltros] = useState<FiltrosAlertasModel>(FILTROS_INICIALES)
   const [seleccionada, setSeleccionada] = useState<Alerta | null>(null)
   const resumen = useMemo(() => obtenerResumenAlertas(alertas), [alertas])
@@ -39,8 +48,8 @@ function AlertasPage() {
   }
 
   return (
-    <div className="page-container ale-page adm-page">
-      <header className="ale-cabecera">
+    <div className={embebida ? 'ale-page ale-page--embebida' : 'page-container ale-page adm-page'}>
+      {!embebida && <header className="ale-cabecera">
         <div>
           <span className="adm-eyebrow">
             <span className="adm-eyebrow-punto" aria-hidden="true" />
@@ -53,7 +62,7 @@ function AlertasPage() {
           <IcRefresh size={17} aria-hidden="true" />
           {cargando ? 'Actualizando…' : 'Actualizar'}
         </button>
-      </header>
+      </header>}
 
       {error && (
         <div className="ale-error adm-alerta" role="alert">
@@ -62,13 +71,13 @@ function AlertasPage() {
         </div>
       )}
       <BannerAlertaCritica alertas={alertas} onAbrir={setSeleccionada} />
-      <ResumenAlertas resumen={resumen} cargando={cargando} />
-      <FiltrosAlertas
+      <ResumenAlertas resumen={resumen} cargando={cargando} alcance={embebida ? 'En este galpón' : undefined} />
+      {!embebida && <FiltrosAlertas
         alertas={alertas}
         filtros={filtros}
         onCambiar={setFiltros}
         onLimpiar={() => setFiltros(FILTROS_INICIALES)}
-      />
+      />}
       {cargando ? (
         <CargandoAnimado texto="Cargando alertas registradas…" />
       ) : (

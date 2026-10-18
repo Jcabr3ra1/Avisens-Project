@@ -95,3 +95,8 @@ export function tituloDeRuta(pathname: string, rol: string | null): string {
   const extra = Object.keys(TITULOS_FUERA_DEL_MENU).find((ruta) => matchesPath(pathname, ruta))
   return extra ? TITULOS_FUERA_DEL_MENU[extra] : 'Avisens'
 }
+
+export function tieneUnSoloDestino(space: NavigationSpace | undefined): boolean {
+  const items = space?.sections.flatMap((section) => section.items) ?? []
+  return items.length === 1 && !('children' in items[0])
+}
