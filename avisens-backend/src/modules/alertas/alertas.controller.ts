@@ -34,7 +34,7 @@ import {
 } from './dto/alerta-respuesta.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string; organizacion_id?: number };
+  user: { id: number; email?: string | null; rol: string; organizacion_id?: number };
 }
 
 @ApiTags('alertas')

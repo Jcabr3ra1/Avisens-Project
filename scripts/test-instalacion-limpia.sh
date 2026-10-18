@@ -138,7 +138,7 @@ compose exec -T backend pnpm run seed
 echo "4) Verificando que el login funcione con admin@avisens.com / Avisens2026!..."
 resultado=$(compose exec -T backend node -e "
 const http = require('http');
-const datos = JSON.stringify({ email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD });
+const datos = JSON.stringify({ username: process.env.ADMIN_USERNAME, password: process.env.ADMIN_PASSWORD });
 const req = http.request({ hostname: '127.0.0.1', port: 3000, path: '/v1/auth/login', method: 'POST',
   headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(datos) } }, res => {
   let cuerpo = '';

@@ -21,13 +21,12 @@ function PantallaHija({ titulo, subtitulo, onCerrar, children }: Props) {
   }, [onCerrar])
 
    return createPortal(
-    <div className="hija-overlay" onClick={onCerrar}>
+    <div className="hija-overlay">
       <section
         className="hija-panel"
         role="dialog"
         aria-modal="true"
         aria-label={titulo}
-        onClick={(e) => e.stopPropagation()}
       >
         <header className="hija-head">
           <div className="hija-ident">

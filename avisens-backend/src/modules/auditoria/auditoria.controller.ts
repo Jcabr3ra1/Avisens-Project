@@ -5,7 +5,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ROLES } from '../../common/auth/roles';
 import { AuditoriaService } from './auditoria.service';
-import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { QueryAuditoriaDto } from './dto/query-auditoria.dto';
 
 @ApiTags('auditoria')
 @ApiBearerAuth()
@@ -19,7 +19,16 @@ export class AuditoriaController {
   @ApiOperation({
     summary: 'Listar la bitacora de auditoria paginada (solo Admin)',
   })
-  listar(@Query() paginacion: PaginationQueryDto) {
-    return this.auditoriaService.listar(paginacion);
+  listar(@Query() query: QueryAuditoriaDto) {
+    return this.auditoriaService.listar(query);
+  }
+
+  @Get('opciones')
+  @ApiOperation({
+    summary:
+      'Acciones, entidades y usuarios presentes en la bitacora (solo Admin)',
+  })
+  opciones() {
+    return this.auditoriaService.opciones();
   }
 }

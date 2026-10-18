@@ -1,3 +1,4 @@
+import MenuAcciones from '@shared/ui/MenuAcciones/MenuAcciones'
 import type { Proveedor } from '../model/proveedor'
 
 type Props = {
@@ -5,6 +6,10 @@ type Props = {
   onEditar: (proveedor: Proveedor) => void
   onAlternarActivo: (proveedor: Proveedor) => void
   onEliminar: (proveedor: Proveedor) => void
+}
+
+function iniciales(nombre: string): string {
+  return nombre.trim().split(/\s+/).slice(0, 2).map((parte) => parte[0]?.toUpperCase()).join('') || '—'
 }
 
 function TablaProveedores({ proveedores, onEditar, onAlternarActivo, onEliminar }: Props) {
@@ -18,34 +23,52 @@ function TablaProveedores({ proveedores, onEditar, onAlternarActivo, onEliminar 
             <th>Tipo</th>
             <th>Contacto</th>
             <th>Estado</th>
-            <th>Acciones</th>
+            <th><span className="sr-only">Acciones</span></th>
           </tr>
         </thead>
         <tbody>
           {proveedores.map((proveedor) => (
-            <tr key={proveedor.id}>
+            <tr key={proveedor.id} className={proveedor.activo ? undefined : 'is-inactivo'}>
               <td>
-                <strong>{proveedor.nombre}</strong>
-                <span>{proveedor.direccion || 'Sin dirección registrada'}</span>
+                <div className="prv-celda-proveedor">
+                  <span className="prv-avatar" aria-hidden="true">{iniciales(proveedor.nombre)}</span>
+                  <span className="prv-celda-texto">
+                    <strong>{proveedor.nombre}</strong>
+                    <span>{proveedor.direccion || 'Sin dirección registrada'}</span>
+                  </span>
+                </div>
               </td>
-              <td>{proveedor.nit}</td>
-              <td>{proveedor.tipo_proveedor || 'Sin clasificar'}</td>
+              <td className="prv-num">{proveedor.nit}</td>
               <td>
-                <strong>{proveedor.contacto_persona || 'Sin contacto'}</strong>
-                <span>{proveedor.telefono || proveedor.email || 'Sin datos de contacto'}</span>
+                <span className={`prv-tipo${proveedor.tipo_proveedor ? '' : ' is-vacio'}`}>{proveedor.tipo_proveedor || 'Sin clasificar'}</span>
               </td>
               <td>
-                <span className={`prv-estado prv-estado--${proveedor.activo ? 'activo' : 'inactivo'}`}>
-                  {proveedor.activo ? 'Activo' : 'Inactivo'}
+                <span className="prv-celda-texto prv-celda-texto--centro">
+                  <strong>{proveedor.contacto_persona || 'Sin contacto'}</strong>
+                  <span>{proveedor.telefono || proveedor.email || 'Sin teléfono ni correo'}</span>
                 </span>
               </td>
               <td>
-                <div className="prv-acciones-fila">
-                  <button type="button" onClick={() => onEditar(proveedor)}>Editar</button>
-                  <button type="button" onClick={() => onAlternarActivo(proveedor)}>
-                    {proveedor.activo ? 'Desactivar' : 'Activar'}
-                  </button>
-                  <button type="button" className="prv-accion-eliminar" onClick={() => onEliminar(proveedor)}>Eliminar</button>
+                <label className="prv-interruptor">
+                  <input
+                    type="checkbox"
+                    checked={proveedor.activo}
+                    onChange={() => onAlternarActivo(proveedor)}
+                    aria-label={`${proveedor.activo ? 'Desactivar' : 'Activar'} ${proveedor.nombre}`}
+                  />
+                  <span className="prv-interruptor-riel" aria-hidden="true" />
+                  <span className={`prv-estado prv-estado--${proveedor.activo ? 'activo' : 'inactivo'}`}>{proveedor.activo ? 'Activo' : 'Inactivo'}</span>
+                </label>
+              </td>
+              <td>
+                <div className="prv-acciones">
+                  <MenuAcciones
+                    etiqueta={`Acciones de ${proveedor.nombre}`}
+                    acciones={[
+                      { etiqueta: 'Editar', onSeleccionar: () => onEditar(proveedor) },
+                      { etiqueta: 'Eliminar', onSeleccionar: () => onEliminar(proveedor), peligrosa: true },
+                    ]}
+                  />
                 </div>
               </td>
             </tr>

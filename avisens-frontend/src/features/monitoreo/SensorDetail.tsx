@@ -17,7 +17,7 @@ import './SensorDetail.css'
 type Props = {
   sensor:       SensorVista | null   // Sensor actualmente seleccionado (null = cerrado)
   galponNombre: string                // Nombre del galpón al que pertenece el sensor
-  diaVida:      number                // Día de vida del lote (para referencia Italcol)
+  diaVida:      number | null          // Día del lote que ocupa el galpón; null si está vacío
   onClose:      () => void            // Callback para cerrar el panel
 }
 
@@ -35,7 +35,7 @@ function claveReferencia(tipo: string): keyof typeof REFERENCIA_ITALCOL | null {
 // ─── Referencia del Manual Italcol por variable ───────────────────────────────
 const REFERENCIA_ITALCOL = {
   temperatura: {
-    descripcion: 'La temperatura crítica para el bienestar del lote — el umbral configurado arriba ya está ajustado a la semana de vida del galpón.',
+    descripcion: 'La temperatura crítica para el bienestar del lote que ocupa el galpón. El umbral de Monitoreo se ajusta a la semana de vida de ese lote.',
     rangos: ['Semana 1 (1-7 días): 30–33 °C', 'Semana 2 (8-14 días): 28–30 °C', 'Semana 3 (15-21 días): 26–28 °C', 'Semana 4+ (22+ días): 22–26 °C'],
   },
   humedad: {
@@ -58,13 +58,13 @@ const REFERENCIA_ITALCOL = {
 
 // ─── Colores por estado ───────────────────────────────────────────────────────
 const COLORES: Record<EstadoSensorVista, string> = {
-  optimo:      '#10b981',
-  advertencia: '#f59e0b',
-  critico:     '#ef4444',
-  sin_umbral:  '#64748b',
-  offline:     '#a8b8b0',
-  lectura_no_disponible: '#3b82f6',
-  obsoleta:    '#f59e0b',
+  optimo:      'var(--success)',
+  advertencia: 'var(--warning)',
+  critico:     'var(--danger)',
+  sin_umbral:  'var(--text-muted)',
+  offline:     'var(--text-muted)',
+  lectura_no_disponible: 'var(--info)',
+  obsoleta:    'var(--warning)',
 }
 
 const ETIQUETA_ESTADO: Record<EstadoSensorVista, string> = {
@@ -134,7 +134,7 @@ function SparkLine({ datos, color, unidad, min, max, umbralMin, umbralMax }: Spa
         </defs>
 
         {bandTop !== null && bandBot !== null && bandBot > bandTop && (
-          <rect x="0" y={bandTop} width={W} height={bandBot - bandTop} fill="#10b981" opacity="0.06" />
+          <rect x="0" y={bandTop} width={W} height={bandBot - bandTop} fill="var(--success)" opacity="0.06" />
         )}
 
         <path d={areaPath} fill="url(#spark-grad)" />
@@ -143,7 +143,7 @@ function SparkLine({ datos, color, unidad, min, max, umbralMin, umbralMax }: Spa
         <line x1={p.x} y1={PAD_TOP - 2} x2={p.x} y2={H - PAD_BOT + 2}
           stroke={color} strokeWidth="1" strokeDasharray="2 3" opacity={hoverIdx !== null ? 0.5 : 0} />
 
-        <circle cx={p.x} cy={p.y} r={hoverIdx !== null ? 4.5 : 4} fill={color} stroke="white" strokeWidth="2" />
+        <circle cx={p.x} cy={p.y} r={hoverIdx !== null ? 4.5 : 4} fill={color} stroke="var(--surface-base)" strokeWidth="2" />
       </svg>
 
       <div
@@ -223,15 +223,16 @@ export function SensorDetail({ sensor, galponNombre, diaVida, onClose }: Props) 
         ref={panelRef}
         tabIndex={-1}
         className={`sdet-panel${sensor ? ' sdet-panel--abierto' : ''}`}
-        role="dialog"
-        aria-modal="true"
+        role={sensor ? 'dialog' : undefined}
+        aria-modal={sensor ? true : undefined}
+        aria-hidden={!sensor}
         aria-label={sensor ? `Detalle de ${sensor.tipo}` : 'Detalle de sensor'}
       >
         {!sensor ? null : (
           <>
             <div className="sdet-header">
               <div className="sdet-header-info">
-                <span className="sdet-icono" style={{ background: `${color}1f`, color }}>
+                <span className="sdet-icono" style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}>
                   {iconoSensor(sensor.tipo, 18)}
                 </span>
                 <div>
@@ -257,7 +258,7 @@ export function SensorDetail({ sensor, galponNombre, diaVida, onClose }: Props) 
               <div className="sdet-estado-wrap">
                 <span
                   className="sdet-estado-badge"
-                  style={{ background: `${color}20`, color, border: `1px solid ${color}40` }}
+                  style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color, border: `1px solid color-mix(in srgb, ${color} 25%, transparent)` }}
                 >
                   {ETIQUETA_ESTADO[sensor.estado]}
                 </span>
@@ -343,7 +344,7 @@ export function SensorDetail({ sensor, galponNombre, diaVida, onClose }: Props) 
             {ref && refDisponible && (
               <div className="sdet-section sdet-italcol">
                 <h3 className="sdet-section-title">
-                  <IcNote size={14} /> Manual Italcol · Día de vida {diaVida}
+                  <IcNote size={14} /> Manual Italcol{diaVida === null ? ' · Sin lote activo' : ` · Día de vida ${diaVida}`}
                 </h3>
                 <p className="sdet-italcol-desc">{ref.descripcion}</p>
                 <ul className="sdet-italcol-lista">

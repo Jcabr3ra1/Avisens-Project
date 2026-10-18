@@ -9,9 +9,9 @@ object RetrofitClient {
 
     private const val BASE_URL = "https://avisens-project-production.up.railway.app/"
 
-    // Muestra en el Logcat lo que se envía y se recibe (útil para depurar)
+    // Solo registra la petición HTTP; nunca contraseñas ni tokens del cuerpo.
     private val logging = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = HttpLoggingInterceptor.Level.BASIC
     }
 
     private val client = OkHttpClient.Builder()

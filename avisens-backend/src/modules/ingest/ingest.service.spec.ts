@@ -265,6 +265,92 @@ describe('IngestService', () => {
     expect(calls[0][0].data.ip_local).toBe('192.168.1.5');
   });
 
+  it('resuelve tipo y GPIO al serial asignado sin que el firmware lo conozca', async () => {
+    prisma.sensor.findMany.mockResolvedValue([
+      {
+        id: 35,
+        codigo: 'SERIAL-AUTOMATICO',
+        tipo: 'temperatura',
+        canal: 'gpio:18',
+      },
+      { id: 36, codigo: 'OTRO-SERIAL', tipo: 'temperatura', canal: 'gpio:4' },
+    ]);
+    const res = await service.registrar(
+      {
+        lecturas: [
+          { tipo: 'temperatura', canal: 'gpio:18', valor: 24.8 },
+          { tipo: 'humedad', canal: 'gpio:18', valor: 60 },
+        ],
+      },
+      dispositivo,
+    );
+    expect(res.registradas).toBe(1);
+    expect(res.ignoradas).toEqual(['humedad:gpio:18']);
+    expect(prisma.sensor.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { dispositivo_id: 7, galpon_id: 3, estado: 'activo' },
+      }),
+    );
+    expect(prisma.medicion.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ sensor_id: 35, valor: 24.8 })],
+    });
+  });
+
+  it('no asigna por tipo una conexión distinta o todavía sin vincular', async () => {
+    prisma.sensor.findMany.mockResolvedValue([
+      { id: 35, codigo: 'SIN-VINCULAR', tipo: 'temperatura', canal: null },
+      { id: 36, codigo: 'OTRO-GPIO', tipo: 'temperatura', canal: 'gpio:4' },
+    ]);
+    const res = await service.registrar(
+      { lecturas: [{ tipo: 'temperatura', canal: 'gpio:18', valor: 24.8 }] },
+      dispositivo,
+    );
+    expect(res.registradas).toBe(0);
+  });
+
+  it('rechaza un mismo sensor enviado por serial y conexión en el mismo lote', async () => {
+    prisma.sensor.findMany.mockResolvedValue([
+      { id: 35, codigo: 'SERIAL', tipo: 'temperatura', canal: 'gpio:18' },
+    ]);
+    await expect(
+      service.registrar(
+        {
+          lecturas: [
+            { codigo: 'SERIAL', valor: 24.8 },
+            { tipo: 'temperatura', canal: 'gpio:18', valor: 24.8 },
+          ],
+        },
+        dispositivo,
+      ),
+    ).rejects.toThrow('Un sensor no puede aparecer dos veces');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('publica conexiones DHT22 sin secretos, sin inventar sensores y sin duplicar GPIO', async () => {
+    prisma.sensor.findMany.mockResolvedValue([
+      { tipo: 'temperatura', canal: 'gpio:18', modelo: 'DHT22' },
+      { tipo: 'humedad', canal: 'gpio:18', modelo: 'DHT22' },
+      { tipo: 'co2', canal: 'gpio:4', modelo: 'MQ135' },
+      { tipo: 'temperatura', canal: 'gpio:34', modelo: 'DHT22' },
+    ]);
+    expect(await service.configuracion(dispositivo)).toEqual({
+      version: 1,
+      controlador: 'galpon1',
+      conexiones: [{ canal: 'gpio:18', modelo: 'DHT22', gpio: 18 }],
+    });
+    expect(prisma.sensor.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          dispositivo_id: 7,
+          galpon_id: 3,
+          estado: 'activo',
+          canal: { not: null },
+        },
+      }),
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it('no duplica mediciones cuando se reintenta el mismo id_lote', async () => {
     prisma.ingestaDispositivo.findUnique.mockResolvedValue({
       clave_idempotencia: 'ad65a582-4ef3-48c9-b847-2f9f6a8c6186',

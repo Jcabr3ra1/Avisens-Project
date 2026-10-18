@@ -1,26 +1,35 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { login } from '@shared/api'
 import { ROL_ADMIN, ROL_OPERARIO } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
+import CargaConLogo from '@shared/ui/Animacion/CargaConLogo'
 import './LoginForm.css'
 
 function LoginForm() {
   const navigate = useNavigate()
-  const [email, setEmail]       = useState('')
+  const [username, setUsername]       = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [mostrarRecuperacion, setMostrarRecuperacion] = useState(false)
+  const [entrando, setEntrando] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!entrando) return
+    const reducir = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const espera = window.setTimeout(() => navigate(entrando), reducir ? 300 : 1800)
+    return () => window.clearTimeout(espera)
+  }, [entrando, navigate])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setMostrarRecuperacion(false)
 
-    if (!email || !password) {
+    if (!username.trim() || !password) {
       setError('Por favor complete todos los campos.')
       return
     }
@@ -28,27 +37,25 @@ function LoginForm() {
     setLoading(true)
     try {
       // Hacemos login y recibimos el objeto con el rol del usuario
-      const respuesta = await login({ email, password })
+      const respuesta = await login({ username: username.trim().toLowerCase(), password })
 
       if (respuesta.requiere_cambio_password) {
         navigate('/cambiar-password')
         return
       }
 
-      if (respuesta.usuario.rol === ROL_ADMIN) {
-        navigate('/admin')
-      } else if (respuesta.usuario.rol === ROL_OPERARIO) {
-        navigate('/mi-jornada')
-      } else {
-        navigate('/dashboard')
-      }
+      setEntrando(
+        respuesta.usuario.rol === ROL_ADMIN ? '/admin'
+          : respuesta.usuario.rol === ROL_OPERARIO ? '/mi-jornada'
+            : '/dashboard',
+      )
     } catch (err) {
       if (isAxiosError(err) && err.response) {
         const esErrorDeAcceso = err.response.status === 401 || err.response.status === 403
         setMostrarRecuperacion(esErrorDeAcceso)
         setError(
           err.response.status === 401
-            ? 'No pudimos verificar el correo o la contraseña.'
+            ? 'No pudimos verificar el usuario o la contraseña.'
             : mensajeDeError(err, 'No se pudo iniciar sesión. Intente de nuevo.'),
         )
       } else {
@@ -61,23 +68,32 @@ function LoginForm() {
 
   return (
     <div className="lf-card">
+      {entrando && (
+        <div className="lf-entrando">
+          <CargaConLogo texto="Preparando tu panel…" />
+        </div>
+      )}
       <div className="lf-header">
         <h1 className="lf-title">Bienvenido de nuevo</h1>
-        <p className="lf-sub">Ingresa el correo y la contraseña de tu cuenta para continuar.</p>
+        <p className="lf-sub">Ingresa el usuario y la contraseña que te entregaron.</p>
       </div>
 
       <form className="lf-form" onSubmit={handleSubmit} noValidate>
         <div className="lf-field">
-          <label className="lf-label" htmlFor="email">Correo electrónico</label>
+          <label className="lf-label" htmlFor="username">Usuario</label>
           <div className="lf-input-wrap">
             <input
-              id="email"
+              id="username"
+              name="username"
               className="lf-input"
-              type="email"
-              placeholder="su.correo@granja.co"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              autoComplete="email"
+              type="text"
+              placeholder="maria.lopez"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              maxLength={30}
               aria-invalid={!!error || undefined}
               aria-describedby={error ? 'lf-error-msg' : undefined}
             />
@@ -85,10 +101,14 @@ function LoginForm() {
         </div>
 
         <div className="lf-field">
-          <label className="lf-label" htmlFor="password">Contraseña</label>
+          <div className="lf-password-heading">
+            <label className="lf-label" htmlFor="password">Contraseña</label>
+            <Link className="lf-link" to="/recuperar-password">¿Olvidó su contraseña?</Link>
+          </div>
           <div className="lf-input-wrap">
             <input
               id="password"
+              name="password"
               className="lf-input lf-input-password"
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
@@ -103,6 +123,8 @@ function LoginForm() {
               type="button"
               onClick={() => setShowPassword(v => !v)}
               aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              aria-pressed={showPassword}
+              aria-controls="password"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 {showPassword ? (
@@ -134,17 +156,17 @@ function LoginForm() {
           </div>
         )}
 
-        <div className="lf-row">
-          <Link className="lf-link" to="/recuperar-password">¿Olvidó su contraseña?</Link>
-        </div>
-
         <button className="lf-btn-primary" type="submit" disabled={loading} aria-busy={loading}>
-          {loading ? <span className="lf-spinner" aria-hidden="true" /> : 'Entrar'}
+          {loading ? (
+            <><span className="lf-spinner" aria-hidden="true" /><span>Entrando…</span></>
+          ) : (
+            <><span>Entrar</span><svg className="lf-btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></>
+          )}
         </button>
       </form>
 
       <p className="lf-back">
-        <Link to="/">← Volver al inicio</Link>
+        <Link to="/"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>Volver al inicio</Link>
       </p>
     </div>
   )

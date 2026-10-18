@@ -9,6 +9,9 @@
 //   resto       → según permisos definidos en navConfig.tsx
 import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Routes, Route } from 'react-router-dom'
+import { getRol } from '@shared/api'
+import { ROL_ADMIN } from './layout/Sidebar/navConfig'
+import CargaConLogo from '@shared/ui/Animacion/CargaConLogo'
 
 // Cada pantalla se descarga solo cuando el usuario entra a su ruta. Antes se
 // enviaban todos los módulos (y todo su CSS) en el primer acceso, aunque la
@@ -37,19 +40,29 @@ const ProveedoresPage = lazy(() => import('@features/proveedores/ProveedoresPage
 const OrdenesCompraPage = lazy(() => import('@features/ordenes-compra/OrdenesCompraPage'))
 const ConsumosDiariosPage = lazy(() => import('@features/consumos-diarios/ConsumosDiariosPage'))
 const NotificacionesPage = lazy(() => import('@features/notificaciones/NotificacionesPage'))
+const PerfilPage = lazy(() => import('@features/perfil/PerfilPage'))
 const AuditoriaPage = lazy(() => import('@features/auditoria/AuditoriaPage'))
 const CatalogosPage = lazy(() => import('@features/catalogos/CatalogosPage'))
 const OrganizacionesPage = lazy(() => import('@features/organizaciones/OrganizacionesPage'))
+const OrganizacionDetallePage = lazy(() => import('@features/organizaciones/OrganizacionDetallePage'))
 const RecuperarPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperarPasswordPage'))
 const CambiarPasswordPage = lazy(() => import('@features/recuperaciones-password/CambiarPasswordPage'))
 const RecuperacionesPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperacionesPasswordPage'))
 
 function cargarPagina(page: ReactNode) {
   return (
-    <Suspense fallback={<div className="route-loading" role="status">Cargando…</div>}>
+    <Suspense fallback={<CargaConLogo />}>
       {page}
     </Suspense>
   )
+}
+
+// El administrador consulta el ambiente dentro de cada organización.
+// Propietario y Operario conservan la revisión de sus sensores.
+function MonitoreoPorRol() {
+  return getRol() === ROL_ADMIN
+    ? <Navigate to="/organizaciones" replace />
+    : cargarPagina(<MonitoreoPage />)
 }
 
 function AppRoutes() {
@@ -78,11 +91,12 @@ function AppRoutes() {
         <Route path="/crm"             element={cargarPagina(<CrmPage />)} />
         <Route path="/guia-crecimiento" element={cargarPagina(<GuiaCrecimientoPage />)} />
         <Route path="/solicitudes-pqrs" element={cargarPagina(<SolicitudesPqrsPage />)} />
-        <Route path="/monitoreo"       element={cargarPagina(<MonitoreoPage />)} />
+        <Route path="/monitoreo"       element={<MonitoreoPorRol />} />
         <Route path="/bitacora"        element={cargarPagina(<BitacoraPage />)} />
         <Route path="/consumos-diarios" element={cargarPagina(<ConsumosDiariosPage />)} />
         <Route path="/alertas"         element={cargarPagina(<AlertasPage />)} />
         <Route path="/notificaciones"  element={cargarPagina(<NotificacionesPage />)} />
+        <Route path="/perfil"          element={cargarPagina(<PerfilPage />)} />
         <Route path="/finanzas"        element={cargarPagina(<FinanzasPage />)} />
         <Route path="/inventario"      element={cargarPagina(<InventarioPage />)} />
         <Route path="/usuarios"        element={cargarPagina(<UsuariosPage />)} />
@@ -92,6 +106,7 @@ function AppRoutes() {
         <Route path="/auditoria"        element={cargarPagina(<AuditoriaPage />)} />
         <Route path="/catalogos"        element={cargarPagina(<CatalogosPage />)} />
         <Route path="/organizaciones"   element={cargarPagina(<OrganizacionesPage />)} />
+        <Route path="/organizaciones/:id" element={cargarPagina(<OrganizacionDetallePage />)} />
         <Route path="/granjas"         element={cargarPagina(<GranjasPage />)} />
         <Route path="/galpones"        element={cargarPagina(<GalponesPage />)} />
         <Route path="/lotes"           element={cargarPagina(<LotesPage />)} />

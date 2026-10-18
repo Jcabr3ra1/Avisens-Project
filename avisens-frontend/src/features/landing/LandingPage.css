@@ -1,43 +1,84 @@
+@font-face {
+  font-family: 'Manrope';
+  src: url('./assets/fonts/manrope-latin.woff2') format('woff2');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 .landing-shell {
-  /* Paleta natural exclusiva de la landing. El panel conserva sus colores. */
-  --landing-bg: #f5f7f4;
-  --landing-surface: #f5f7f4;
-  --landing-surface-muted: #f5f7f4;
-  --landing-card: #f7f5f7;
-  --landing-footer: #e6ede2;
-  --landing-primary: var(--avisens-deep);
-  --landing-primary-hover: #004437;
-  --landing-accent: var(--avisens-green);
-  --landing-on-primary: #ffffff;
-  --landing-text: var(--text);
-  --landing-text-muted: var(--text2);
-  --landing-border: #d2d4d2;
-  --landing-focus: var(--avisens-deep);
-  --bg-tint: #f7f5f7;
-  color: var(--landing-text);
-  background: var(--landing-bg);
+  --landing-bg: var(--surface-page);
+  --landing-surface: var(--surface-base);
+  --landing-surface-muted: var(--surface-subtle);
+  --landing-card: var(--surface-base);
+  --landing-footer: var(--avisens-deep);
+  --landing-primary: var(--primary);
+  --landing-primary-hover: var(--primary-hover);
+  --landing-accent: var(--primary);
+  --landing-on-primary: var(--on-primary);
+  --landing-text: var(--text-primary);
+  --landing-text-muted: var(--text-secondary);
+  --landing-border: var(--border-default);
+  --landing-focus: var(--focus-ring);
+  --av-display: 'Manrope', 'Inter', sans-serif;
+  --av-gutter: clamp(1.35rem, 5vw, 6rem);
+  --av-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --av-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  color: var(--text-primary);
+  background: var(--surface-page);
 }
 
-.landing-page {
-  position: relative;
-  overflow: hidden;
-  background: var(--landing-bg);
+.av-landing { position: relative; isolation: isolate; }
+.av-story { overflow: clip; }
+.av-landing :is(h1, h2, h3) { font-family: var(--av-display); font-weight: 650; letter-spacing: -0.04em; text-wrap: balance; }
+.av-landing :is(h1, h2) { line-height: 1.05; }
+.av-landing p { text-wrap: pretty; }
+.av-landing section { scroll-margin-top: 90px; }
+.av-section { padding: clamp(5rem, 11vw, 10rem) var(--av-gutter); }
+.av-scene { padding: 0; position: relative; }
+.av-stage { position: sticky; top: 0; min-height: 100svh; }
+.av-story-media { display: block; width: 100%; height: 100%; object-fit: cover; }
+.av-story-media--video { position: relative; z-index: 3; }
+.av-photo-window { position: relative; overflow: clip; isolation: isolate; }
+.av-parallax-layer { position: absolute; inset: 0; }
+
+.av-button { display: inline-flex; min-height: 56px; align-items: center; justify-content: space-between; gap: 2.5rem; padding: 0.85rem 1.4rem; border: 1px solid transparent; border-radius: 999px; font-size: 0.9rem; font-weight: 650; text-decoration: none; transition: background 180ms ease, transform 160ms var(--av-ease-out); }
+.av-button--maize { color: var(--on-accent); background: var(--avisens-maize); }
+.av-button:active { transform: scale(0.97); }
+.av-text-link { display: inline-flex; min-height: 44px; align-items: center; gap: 1rem; color: var(--primary); font-size: 0.88rem; font-weight: 650; text-decoration: underline; text-underline-offset: 5px; text-decoration-color: var(--avisens-sage); }
+.av-landing :is(a, button):focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 5px; }
+.av-landing :is(.av-site-header, .av-opening, .av-field-scene, .av-purpose, .av-contact, .av-footer) :is(a, button):focus-visible { outline-color: var(--avisens-maize); }
+
+.av-motion-toggle { position: fixed; bottom: 1rem; left: 1rem; z-index: 90; display: inline-flex; min-height: 40px; align-items: center; gap: 0.55rem; padding: 0.45rem 0.9rem; border: 1px solid var(--border-default); border-radius: 999px; color: var(--text-primary); background: var(--surface-page); box-shadow: var(--shadow-sm); font: inherit; font-size: 0.7rem; }
+.av-motion-toggle svg { width: 14px; height: 14px; }
+
+/* La llegada acompaña las escenas; el contenido sigue visible sin el motor. */
+.av-landing[data-motion='on'] [data-story-reveal] { transition: clip-path 600ms var(--av-ease-in-out), transform 600ms var(--av-ease-out); }
+.av-landing[data-motion='on'] [data-story-reveal]:not([data-visible='true']) { clip-path: inset(0 0 100% 0); transform: translateY(20px); }
+.av-landing[data-motion='on'] [data-story-reveal][data-visible='true'] { clip-path: inset(0); transform: translateY(0); }
+.av-landing[data-motion='on'] .av-opening-media,
+.av-landing[data-motion='on'] .av-opening-copy { will-change: transform; }
+
+@media (hover: hover) and (pointer: fine) {
+  .av-button--maize:hover { background: color-mix(in srgb, var(--avisens-maize) 82%, var(--avisens-white)); }
+  .av-text-link:hover { text-decoration-color: var(--primary); }
 }
 
-/* La landing es larga: el navegador puede aplazar el layout y pintado de las
-   secciones que todavía están lejos del viewport. */
-.landing-page > section:not(.hero) {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 800px;
+@media (max-width: 700px) {
+  .av-landing section { scroll-margin-top: 116px; }
+  .av-section { padding-block: 5rem; }
+  .av-motion-toggle { bottom: 0.75rem; left: 0.75rem; min-height: 44px; }
+  .av-button { min-height: 52px; gap: 1.5rem; }
 }
 
-/* A sangre: la imagen llega hasta el borde de la ventana y la navbar flota
-   encima, sin marco intermedio. */
-.landing-hero-frame {
-  position: relative;
-  z-index: 1;
-  min-height: 100svh;
-  overflow: hidden;
-  background: var(--avisens-deep);
-  isolation: isolate;
+/* El modo pausado ofrece el relato completo en flujo normal. */
+.av-landing[data-motion='off'] :is(.av-opening, .av-record-scene) { min-height: 0; }
+.av-landing[data-motion='off'] .av-stage { position: relative; }
+.av-landing[data-motion='off'] [data-story-reveal] { clip-path: none; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .av-landing :is(.av-opening, .av-record-scene) { min-height: 0; }
+  .av-landing .av-stage { position: relative; }
+  .av-landing [data-story-reveal] { clip-path: none !important; transform: none !important; }
+  .av-landing .av-motion-toggle { display: none; }
 }

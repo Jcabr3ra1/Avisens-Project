@@ -26,7 +26,7 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 interface AuthRequest extends Request {
   user: {
     id: number;
-    email: string;
+    email?: string | null;
     rol: string;
   };
 }

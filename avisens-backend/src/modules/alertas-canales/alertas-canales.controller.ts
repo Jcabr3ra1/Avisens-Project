@@ -23,7 +23,7 @@ import { UpdateAlertasCanalesDto } from './dto/update-alertas-canales.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string; organizacion_id?: number };
+  user: { id: number; email?: string | null; rol: string; organizacion_id?: number };
 }
 
 @ApiTags('alertas-canales')

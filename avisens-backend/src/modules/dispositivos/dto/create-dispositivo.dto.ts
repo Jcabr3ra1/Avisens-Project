@@ -10,23 +10,23 @@ export class CreateDispositivoDto {
   @Min(1)
   galpon_id: number;
 
-  @ApiProperty({
-    example: 'A4:CF:12:8B:00:1A',
-    description: 'MAC fisica de la ESP32 (unica)',
-  })
-  @IsString()
-  mac_address: string;
-
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'galpon1',
-    description: 'Prefijo del topic MQTT (unico)',
+    description:
+      'Código único del nodo; si se omite se genera como GAL-000027-ESP32-001 con consecutivo por galpón',
   })
+  @IsOptional()
   @IsString()
-  codigo_topic: string;
+  codigo_topic?: string;
 
-  @ApiProperty({ example: 'Nodo entrada norte' })
+  @ApiPropertyOptional({
+    example: 'Nodo entrada norte',
+    description:
+      'Nombre visible; si se omite se usa el código generado del nodo',
+  })
+  @IsOptional()
   @IsString()
-  nombre: string;
+  nombre?: string;
 
   @ApiPropertyOptional({
     example: '1.0.3',

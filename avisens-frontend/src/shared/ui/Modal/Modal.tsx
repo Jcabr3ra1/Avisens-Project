@@ -40,14 +40,13 @@ function Modal({ titulo, subtitulo, onCerrar, children, acciones, ancho = 'norma
   useFocoAtrapado(tarjeta, true, onCerrar, focoPrevio.current)
 
   return createPortal(
-    <div className="modal-velo" role="presentation" onClick={onCerrar}>
+    <div className="modal-velo" role="presentation">
       <div
         ref={tarjeta}
         className={`modal-tarjeta${ancho === 'ancho' ? ' modal-tarjeta--ancha' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={titulo}
-        onClick={(evento) => evento.stopPropagation()}
       >
         <header className="modal-cabecera">
           <div className="modal-ident">

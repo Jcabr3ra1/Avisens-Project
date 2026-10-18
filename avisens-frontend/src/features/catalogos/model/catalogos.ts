@@ -29,6 +29,16 @@ export function capitalizar(texto: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
 
+const ETIQUETAS_ETAPA: Record<string, string> = {
+  preiniciacion: 'Preiniciación',
+  iniciacion: 'Iniciación',
+  engorde: 'Engorde',
+}
+
+export function etiquetaEtapa(etapa: string): string {
+  return ETIQUETAS_ETAPA[etapa.toLowerCase()] ?? capitalizar(etapa)
+}
+
 // Los días de vida se muestran como rango; cualquiera de los dos extremos
 // puede faltar, y un guion suelto se lee peor que decirlo con palabras.
 export function rangoDeDias(inicio: number | null, fin: number | null): string {

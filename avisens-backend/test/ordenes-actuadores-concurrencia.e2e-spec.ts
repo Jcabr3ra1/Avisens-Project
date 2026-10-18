@@ -7,6 +7,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { OrdenesActuadoresModule } from '../src/modules/ordenes-actuadores/ordenes-actuadores.module';
 import { OrdenesActuadoresService } from '../src/modules/ordenes-actuadores/ordenes-actuadores.service';
 import { validateEnv } from '../src/config/env.validation';
+import { usernameDePrueba } from './soporte/username';
 
 // Contra Postgres real: lo que el mock no puede probar es que el índice único
 // parcial de la migración de verdad impide dos órdenes en curso sobre el
@@ -53,6 +54,7 @@ describe('Órdenes de actuadores contra la base (e2e)', () => {
         data: {
           nombre_completo: tipo,
           cedula: `${tipo}-${sufijo}`,
+          username: usernameDePrueba(`${tipo}-${sufijo}@e2e.local`),
           email: `${tipo}-${sufijo}@e2e.local`,
           password_hash: 'sin-uso-en-este-test',
           rol_id: rol.id,
@@ -74,7 +76,6 @@ describe('Órdenes de actuadores contra la base (e2e)', () => {
     const dispositivo = await prisma.dispositivo.create({
       data: {
         galpon_id: galpon.id,
-        mac_address: `MAC-ORD-${sufijo}`,
         codigo_topic: `ordenes-${sufijo}`,
         nombre: 'Nodo órdenes',
         ultima_conexion: new Date(),
@@ -156,6 +157,7 @@ describe('Órdenes de actuadores contra la base (e2e)', () => {
       data: {
         nombre_completo: 'operador-borrable',
         cedula: `borrable-${sufijo}`,
+        username: usernameDePrueba(`borrable-${sufijo}@e2e.local`),
         email: `borrable-${sufijo}@e2e.local`,
         password_hash: 'sin-uso-en-este-test',
         rol_id: (await prisma.rol.findUniqueOrThrow({ where: { nombre: 'Propietario' } })).id,

@@ -79,7 +79,7 @@ function PlanoGalpon({ galpon }: { galpon: GalponMonitoreoVista | null }) {
               style={{
                 left: `${(inicio / largo) * 100}%`,
                 width: `${((fin - inicio) / largo) * 100}%`,
-                background: zona.color_visualizacion ?? 'rgba(0, 91, 72, 0.07)',
+                background: zona.color_visualizacion ?? 'color-mix(in srgb, var(--primary) 7%, transparent)',
               }}
             >
               <span className="dash-plano-zona-nombre">{zona.nombre}</span>

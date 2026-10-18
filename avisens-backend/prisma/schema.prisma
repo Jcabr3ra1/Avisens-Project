@@ -53,7 +53,8 @@ model Usuario {
   organizacion_id Int?
   nombre_completo String
   cedula          String   @unique
-  email           String   @unique
+  username        String   @unique
+  email           String?  @unique
   password_hash   String
   telefono        String?
   foto_url        String?
@@ -223,7 +224,6 @@ enum EstadoDispositivo {
 model Dispositivo {
   id                 Int               @id @default(autoincrement())
   galpon_id          Int
-  mac_address        String            @unique
   codigo_topic       String            @unique
   nombre             String
   version_firmware   String?
@@ -276,6 +276,8 @@ model Sensor {
   zona_id             Int?
   codigo              String       @unique
   tipo                String
+  // Identidad física dentro del controlador; null conserva el contrato legacy.
+  canal               String?
   unidad_medida       String
   modelo              String?
   fabricante          String?
@@ -298,6 +300,7 @@ model Sensor {
   // Consultas frecuentes: "sensores del galpón X" y "sensores del nodo Y".
   @@index([galpon_id])
   @@index([dispositivo_id])
+  @@unique([dispositivo_id, tipo, canal])
   @@map("sensores")
 }
 
@@ -937,6 +940,7 @@ model SolicitudPqrs {
   estado          String    @default("abierta")
   responsable_id  Int?
   fecha_creacion  DateTime  @default(now())
+  fecha_limite    DateTime?
   fecha_cierre    DateTime?
 
   prospecto   Prospecto @relation(fields: [prospecto_id], references: [id])

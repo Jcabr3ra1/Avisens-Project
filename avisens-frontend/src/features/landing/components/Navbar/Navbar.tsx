@@ -1,82 +1,24 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import logoAvisens from '@shared/assets/logo-avisens.png';
-import './Navbar.css';
+import { Link } from 'react-router-dom'
+import { IcArrowRight } from '@shared/ui/icons/icons'
+import logoAvisens from '@shared/assets/logo-avisens.png'
+import { landingChapters } from '../../model/landingContent'
+import './Navbar.css'
 
-const navItems: [string, string][] = [['Cómo ayuda', '#beneficios']];
-
-function Navbar() {
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false);
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [menuOpen]);
-
+export default function Navbar() {
   return (
-    <nav className="navbar" data-menu-open={menuOpen}>
-      <a href="#" className="nav-logo" aria-label="Ir al inicio de AVISENS">
-        <span className="nav-logo-mark">
-          <img src={logoAvisens} alt="" />
-        </span>
-        <span className="nav-logo-name">AVISENS</span>
-      </a>
-
-      <ul className="nav-links">
-        {navItems.map(([label, href]) => (
-          <li key={label}>
-            <a href={href}>{label}</a>
-          </li>
-        ))}
-      </ul>
-
-      <div className="nav-actions">
-        <Link to="/login" className="nav-btn nav-btn-ghost">
-          Entrar
-        </Link>
-        <a
-          href="https://wa.me/573022358210?text=Hola%2C%20quiero%20saber%20m%C3%A1s%20sobre%20AVISENS"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="nav-btn nav-btn-primary"
-        >
-          Contáctanos
-        </a>
-        <button
-          className="nav-menu-toggle"
-          type="button"
-          aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          <span />
-          <span />
-        </button>
-      </div>
-
-      <div className="nav-mobile-panel" aria-hidden={!menuOpen}>
-        {navItems.map(([label, href]) => (
-          <a
-            key={label}
-            href={href}
-            tabIndex={menuOpen ? 0 : -1}
-            onClick={() => setMenuOpen(false)}
-          >
-            {label}
-          </a>
-        ))}
-        <Link to="/login" tabIndex={menuOpen ? 0 : -1} onClick={() => setMenuOpen(false)}>
-          Iniciar sesión
-        </Link>
-      </div>
-    </nav>
-  );
+    <header className="av-site-header">
+      <a className="av-skip-link" href="#historia">Ir a la historia</a>
+      <nav className="av-navigation" aria-label="Navegación principal">
+        <a href="#historia" className="av-brand" aria-label="Avisens, inicio de la historia"><img src={logoAvisens} alt="" width={44} height={44} /></a>
+        <div className="av-navigation-chapters">
+          {landingChapters.map(chapter => <a key={chapter.id} href={`#${chapter.id}`} data-chapter-link>{chapter.label}</a>)}
+        </div>
+        <div className="av-navigation-actions">
+          <Link to="/login" className="av-login-link">Entrar</Link>
+          <Link className="av-header-contact" to="/contacto">Conversemos <IcArrowRight size={16} /></Link>
+        </div>
+      </nav>
+      <div className="av-reading-progress" aria-hidden="true"><span data-story-progress /></div>
+    </header>
+  )
 }
-
-export default Navbar;

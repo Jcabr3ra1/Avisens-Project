@@ -1,3 +1,4 @@
+import { usernameDePrueba } from './soporte/username';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   INestApplication,
@@ -86,6 +87,7 @@ describe('TiposAlimento · eliminarPermanente respeta el historial de ConsumoDia
         organizacion_id: organizacion.id,
         nombre_completo: 'Admin tipo-alimento e2e',
         cedula: `TA-${sufijo}`,
+        username: usernameDePrueba(`tipo-alimento-${sufijo}@e2e.test`),
         email: `tipo-alimento-${sufijo}@e2e.test`,
         password_hash: 'no-se-usa-en-este-test',
       },

@@ -6,7 +6,9 @@ import { mensajeDeError } from '@shared/utils/errores'
 import { descargarBlob, nombreConFecha } from '@shared/utils/descargas'
 import {
   asignarAsesor,
+  cerrarProspecto,
   convertirProspecto,
+  eliminarProspecto,
   exportarProspectosCsv,
   listarTodosLosProspectos,
   type ConvertirProspectoPayload,
@@ -99,8 +101,28 @@ export function useProspectos() {
     return resultado
   }, [cargar])
 
+  const descartar = useCallback(async (prospectoId: number, motivo: string) => {
+    try {
+      await cerrarProspecto(prospectoId, { resultado: 'perdido', motivo })
+      await cargar()
+      toast.success('Prospecto marcado como perdido')
+      return true
+    } catch (problema) {
+      toast.error(mensajeDeError(problema, 'No se pudo marcar el prospecto como perdido.'))
+      return false
+    }
+  }, [cargar])
+
+  const eliminar = useCallback(async (prospectoId: number, confirmacion: string) => {
+    await eliminarProspecto(prospectoId, confirmacion)
+    if (montado.current) {
+      setProspectos((actuales) => actuales.filter((prospecto) => prospecto.id !== prospectoId))
+      toast.success('Prospecto eliminado')
+    }
+  }, [])
+
   return {
     prospectos, asesores, cargando, asignandoId, exportando, error,
-    recargar: cargar, asignar, exportar, convertir,
+    recargar: cargar, asignar, exportar, convertir, descartar, eliminar,
   }
 }

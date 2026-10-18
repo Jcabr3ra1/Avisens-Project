@@ -23,7 +23,8 @@ export interface RolResumen {
 export interface Usuario {
   id: number
   nombre_completo: string
-  email: string
+  username: string
+  email: string | null
   cedula: string
   telefono: string | null
   activo: boolean
@@ -36,14 +37,15 @@ export interface Usuario {
 // ----- Auth -----
 
 export interface LoginPayload {
-  email: string
+  username: string
   password: string
 }
 
 export interface UsuarioSesion {
   id: number
   nombre: string
-  email: string
+  username: string
+  email: string | null
   rol: string
 }
 
@@ -71,7 +73,8 @@ export interface TokensResponse {
 export interface CrearUsuarioPayload {
   nombre_completo: string
   cedula: string
-  email: string
+  username: string
+  email?: string | null
   password: string
   telefono?: string
   rol_id: number

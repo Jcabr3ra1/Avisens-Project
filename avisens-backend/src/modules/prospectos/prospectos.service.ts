@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -27,6 +28,15 @@ const PROSPECTO_LISTA = {
   asesor_asignado_id: true,
   fecha_inicio: true,
   fecha_finalizacion: true,
+  ultima_actividad: true,
+  departamento: true,
+  numero_galpones: true,
+  area_galpon_m2: true,
+  rol_prospecto: true,
+  accion_siguiente: true,
+  fecha_callback: true,
+  senal_caliente: true,
+  resultado_cierre: true,
 };
 
 @Injectable()
@@ -81,6 +91,50 @@ export class ProspectosService {
     return prospecto;
   }
 
+  async eliminar(id: number, confirmacion: string) {
+    if (confirmacion !== 'ELIMINAR') {
+      throw new BadRequestException('Escribe ELIMINAR para confirmar.');
+    }
+
+    try {
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const prospecto = await tx.prospecto.findUnique({
+            where: { id },
+            select: { id: true },
+          });
+          if (!prospecto)
+            throw new NotFoundException('Prospecto no encontrado');
+
+          // Las relaciones no tienen borrado en cascada. El cliente convertido
+          // es independiente del prospecto: no se toca su usuario ni organización.
+          await tx.cotizacionSensor.deleteMany({
+            where: { cotizacion: { prospecto_id: id } },
+          });
+          await tx.cotizacion.deleteMany({ where: { prospecto_id: id } });
+          await tx.respuestaChatbot.deleteMany({ where: { prospecto_id: id } });
+          await tx.interaccionChatbot.deleteMany({
+            where: { prospecto_id: id },
+          });
+          await tx.solicitudPqrs.deleteMany({ where: { prospecto_id: id } });
+          await tx.prospecto.delete({ where: { id } });
+          return { id, eliminado: true };
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        ['P2003', 'P2014', 'P2034'].includes(error.code)
+      ) {
+        throw new ConflictException(
+          'El prospecto cambió mientras se eliminaba. No se borró nada; actualiza la ficha e inténtalo de nuevo.',
+        );
+      }
+      throw error;
+    }
+  }
+
   async asignar(id: number, asesorId: number) {
     const prospecto = await this.prisma.prospecto.findUnique({
       where: { id },
@@ -101,7 +155,11 @@ export class ProspectosService {
     // suya. El `where` miraba solo que el usuario existiera y estuviera activo.
     const admin = await this.prisma.usuario.findFirst({
       where: { id: asesorId, activo: true },
-      select: { id: true, nombre_completo: true, rol: { select: { nombre: true } } },
+      select: {
+        id: true,
+        nombre_completo: true,
+        rol: { select: { nombre: true } },
+      },
     });
     if (!admin) {
       throw new NotFoundException('El administrador no existe o esta inactivo');
@@ -130,7 +188,9 @@ export class ProspectosService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { page: _page, limit: _limit, ...filtros } = dto;
     const where: Prisma.ProspectoWhereInput = {
-      ...(filtros.clasificacion ? { clasificacion: filtros.clasificacion } : {}),
+      ...(filtros.clasificacion
+        ? { clasificacion: filtros.clasificacion }
+        : {}),
       ...(filtros.estado ? { estado: filtros.estado } : {}),
       ...(filtros.sin_asignar ? { asesor_asignado_id: null } : {}),
     };
@@ -268,6 +328,7 @@ export class ProspectosService {
         {
           nombre_completo: dto.nombre_completo,
           cedula: dto.cedula,
+          username: dto.username,
           email: dto.email,
           telefono: dto.telefono,
           password: dto.password,

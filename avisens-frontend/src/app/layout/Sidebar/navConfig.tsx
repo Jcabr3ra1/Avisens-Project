@@ -28,6 +28,7 @@ export const ROL_OPERARIO = 'Operario'
 type NavBase = {
   label: string
   icon: ReactNode
+  rolesVisibles?: string[]
 }
 
 export type NavLinkItem = NavBase & {
@@ -79,6 +80,7 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/sensores':                [ROL_ADMIN, ROL_PROPIETARIO],
   '/alertas':                 [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/notificaciones':          [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/perfil':                  [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/inventario':              [ROL_ADMIN, ROL_PROPIETARIO],
   // Solo el propietario. El estado de resultados de una granja es información
   // financiera de su dueño y no tiene ninguna finalidad en la operación de la
@@ -124,49 +126,63 @@ export const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
-  // La plataforma va aparte. El administrador opera Avisens como producto:
-  // sus clientes, su soporte y sus listas maestras. Antes estos módulos
-  // estaban repartidos entre 'Gestión' y 'Comercial', debajo de la operación
-  // de las granjas, y el menú le contaba que era un granjero con permisos de
-  // más.
+  // La ficha reúne los flujos de cada organización. El menú lleva al listado
+  // y conserva una sola entrada, sin duplicar sus secciones como subenlaces.
   {
-    label: 'Plataforma',
+    label: 'Organizaciones',
+    sinEncabezado: true,
     items: [
       {
         path: '/organizaciones',
         label: 'Organizaciones',
         icon: <IcServer size={16} />,
       },
+    ],
+  },
+  // Herramientas transversales de la plataforma, fuera del contexto de una
+  // organización concreta.
+  {
+    label: 'Plataforma',
+    items: [
       {
         path: '/crm',
-        label: 'Clientes',
+        label: 'Prospectos',
         icon: <IcUsers size={16} />,
       },
       {
         path: '/solicitudes-pqrs',
-        label: 'Soporte',
+        label: 'Solicitudes PQRS',
         icon: <IcChat size={16} />,
       },
       {
+        path: '/usuarios',
+        label: 'Personas',
+        icon: <IcUserCircle size={16} />,
+        rolesVisibles: [ROL_ADMIN],
+      },
+      {
         path: '/recuperaciones-password',
-        label: 'Contraseñas',
+        label: 'Recuperar acceso',
         icon: <IcRefresh size={16} />,
+      },
+      {
+        path: '/proveedores',
+        label: 'Proveedores',
+        icon: <IcSeed size={16} />,
       },
       {
         path: '/catalogos',
         label: 'Catálogos',
         icon: <IcNote size={16} />,
       },
-      {
-        path: '/auditoria',
-        label: 'Auditoría',
-        icon: <IcSearch size={16} />,
-      },
     ],
   },
   // Producción y Monitoreo eran dos secciones de dos ítems cada una: más
   // encabezado que contenido, y para el operario tres títulos sobre cuatro
   // botones. Es todo lo mismo —lo que pasa en la granja— y va junto.
+  // El administrador no lleva granjas: las ve dentro de la ficha de cada
+  // organización. Por eso estos ítems no se le muestran, aunque la ruta
+  // siga abierta para él (el Centro de control enlaza a /alertas).
   {
     label: 'Granja',
     items: [
@@ -174,26 +190,31 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/granjas',
         label: 'Granjas',
         icon: <IcLeaf size={16} />,
+        rolesVisibles: [ROL_PROPIETARIO],
       },
       {
         path: '/guia-crecimiento',
         label: 'Guía de peso',
         icon: <IcScale size={16} />,
+        rolesVisibles: [ROL_PROPIETARIO, ROL_OPERARIO],
       },
       {
         path: '/bitacora',
         label: 'Bitácora',
         icon: <IcDoc size={16} />,
+        rolesVisibles: [ROL_PROPIETARIO, ROL_OPERARIO],
       },
       {
         path: '/monitoreo',
         label: 'Monitoreo',
         icon: <IcEye size={16} />,
+        rolesVisibles: [ROL_PROPIETARIO, ROL_OPERARIO],
       },
       {
         path: '/alertas',
         label: 'Alertas',
         icon: <IcAlert size={16} />,
+        rolesVisibles: [ROL_PROPIETARIO, ROL_OPERARIO],
       },
     ],
   },
@@ -207,16 +228,13 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/inventario',
         label: 'Bodega',
         icon: <IcBox size={16} />,
+        rolesVisibles: [ROL_PROPIETARIO],
       },
       {
         path: '/ordenes-compra',
         label: 'Compras',
         icon: <IcSend size={16} />,
-      },
-      {
-        path: '/proveedores',
-        label: 'Proveedores',
-        icon: <IcSeed size={16} />,
+        rolesVisibles: [ROL_PROPIETARIO],
       },
       {
         path: '/finanzas',
@@ -227,6 +245,20 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/usuarios',
         label: 'Personas',
         icon: <IcUserCircle size={16} />,
+        rolesVisibles: [ROL_PROPIETARIO],
+      },
+    ],
+  },
+  // Accesos directos en el riel verde: pantallas de consulta que no
+  // pertenecen a ningún espacio y se abren a pantalla completa.
+  {
+    label: 'Riel',
+    sinEncabezado: true,
+    items: [
+      {
+        path: '/auditoria',
+        label: 'Auditoría',
+        icon: <IcSearch size={16} />,
       },
     ],
   },
@@ -237,7 +269,10 @@ export function esGrupo(item: NavItem): item is NavGroupItem {
 }
 
 export function puedeAcceder(path: string, rol: string | null): boolean {
-  const permitidos = PERMISOS_RUTA[path]
+  const permisoDetalleOrganizacion = /^\/organizaciones\/\d+$/.test(path)
+    ? PERMISOS_RUTA['/organizaciones']
+    : undefined
+  const permitidos = PERMISOS_RUTA[path] ?? permisoDetalleOrganizacion
   if (!permitidos) return false
   return rol !== null && permitidos.includes(rol)
 }
@@ -249,5 +284,5 @@ export function rutaInicioPorRol(rol: string | null): string {
 }
 
 export function itemVisible(item: NavItem, rol: string | null): boolean {
-  return puedeAcceder(item.path, rol)
+  return puedeAcceder(item.path, rol) && (!item.rolesVisibles || (rol !== null && item.rolesVisibles.includes(rol)))
 }

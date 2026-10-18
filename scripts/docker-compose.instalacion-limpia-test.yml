@@ -50,6 +50,7 @@ services:
       ML_INTERNAL_TOKEN: instalacion-limpia-test-ml-token-32-caracteres-x
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      ADMIN_USERNAME: admin.avisens
       ADMIN_EMAIL: admin@avisens.com
       ADMIN_PASSWORD: Avisens2026!
       CI: "true"
