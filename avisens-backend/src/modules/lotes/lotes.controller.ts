@@ -20,6 +20,7 @@ import { ROLES } from '../../common/auth/roles';
 import { LotesService } from './lotes.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
+import { DatosLoteDto } from './dto/datos-lote.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
@@ -66,6 +67,20 @@ export class LotesController {
   actualizar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateLoteDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.lotesService.actualizar(id, dto, req.user);
+  }
+
+  @Patch(':id/datos')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({
+    summary:
+      'Completar los datos descriptivos de un lote (línea genética, sexo, marca de alimento, proveedor)',
+  })
+  actualizarDatos(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: DatosLoteDto,
     @Req() req: AuthRequest,
   ) {
     return this.lotesService.actualizar(id, dto, req.user);
