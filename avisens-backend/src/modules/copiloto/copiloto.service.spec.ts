@@ -14,6 +14,7 @@ import { LotesService } from '../lotes/lotes.service';
 import { IndicadoresService } from '../indicadores/indicadores.service';
 import { PrediccionesService } from '../predicciones/predicciones.service';
 import { RecomendacionesService } from '../recomendaciones/recomendaciones.service';
+import { CurvaCrecimientoService } from '../predicciones/curva-crecimiento.service';
 import { ROLES } from '../../common/auth/roles';
 import type { Solicitante } from '../../common/auth/acceso';
 
@@ -39,6 +40,7 @@ describe('CopilotoService', () => {
   const indicadoresService = { listar: jest.fn(), compararConCurva: jest.fn() };
   const prediccionesService = { predecir: jest.fn() };
   const recomendacionesService = { listar: jest.fn() };
+  const curvaCrecimientoService = { calcular: jest.fn() };
 
   const propietario: Solicitante = { id: 5, rol: ROLES.PROPIETARIO };
 
@@ -67,6 +69,7 @@ describe('CopilotoService', () => {
         { provide: IndicadoresService, useValue: indicadoresService },
         { provide: PrediccionesService, useValue: prediccionesService },
         { provide: RecomendacionesService, useValue: recomendacionesService },
+        { provide: CurvaCrecimientoService, useValue: curvaCrecimientoService },
       ],
     }).compile();
 
@@ -92,6 +95,7 @@ describe('CopilotoService', () => {
       conversacion_id: 1,
       respuesta: 'Hola, soy AVIA',
       herramientas_usadas: 0,
+      visualizaciones: [],
     });
     expect(crear).toHaveBeenCalledTimes(1);
   });
@@ -158,6 +162,66 @@ describe('CopilotoService', () => {
     expect(ultimo.content[0].content).toContain(
       'Solo puedes predecir tus propios lotes',
     );
+  });
+
+  it('devuelve la curva como visualizacion y a Claude solo un resumen semanal', async () => {
+    const serie = Array.from({ length: 42 }, (_, i) => ({
+      dia: i + 1,
+      real_g: i === 6 ? 200 : null,
+      proyectado_g: 100 + i * 60,
+      min_g: 90 + i * 55,
+      max_g: 110 + i * 65,
+      estandar_g: 105 + i * 62,
+      marca_g: null,
+    }));
+    const curva = {
+      lote_id: 1,
+      codigo: 'LOT-1',
+      dia_actual: 21,
+      dia_final: 42,
+      peso_objetivo_g: 2800,
+      referencias: { genetica: { linea: 'Ross 308' }, marca: null },
+      serie,
+      resumen: { desvio_vs_estandar_pct: -5.1, peso_final_g: 2560 },
+      modelo: { confianza: 0.87, puntos_usados: 3 },
+    };
+    curvaCrecimientoService.calcular.mockResolvedValue(curva);
+    crear
+      .mockResolvedValueOnce(
+        pideHerramienta('proyeccion_crecimiento', { lote_id: 1 }),
+      )
+      .mockResolvedValueOnce(soloTexto('Va 5 % por debajo de Ross 308'));
+
+    const r = await service.preguntar(
+      { pregunta: 'como va creciendo el lote 1' },
+      propietario,
+    );
+
+    expect(curvaCrecimientoService.calcular).toHaveBeenCalledWith(
+      1,
+      propietario,
+    );
+    expect(r.visualizaciones).toEqual([
+      {
+        tipo: 'curva_crecimiento',
+        titulo: 'Crecimiento del lote LOT-1',
+        datos: curva,
+      },
+    ]);
+    const llamadas = crear.mock.calls as Array<
+      [{ messages: Array<{ content: unknown }> }]
+    >;
+    const resultado = llamadas[1][0].messages.at(-1) as {
+      content: Array<{ content: string }>;
+    };
+    const enviado = JSON.parse(resultado.content[0].content) as {
+      semanal: Array<{ dia: number }>;
+      referencia_genetica: string;
+    };
+    expect(enviado.semanal.map((punto) => punto.dia)).toEqual([
+      7, 14, 21, 28, 35, 42,
+    ]);
+    expect(enviado.referencia_genetica).toBe('Ross 308');
   });
 
   it('corta el bucle en MAX_VUELTAS aunque Claude siga pidiendo herramientas', async () => {

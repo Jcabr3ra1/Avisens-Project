@@ -65,24 +65,25 @@ describe('el administrador no ve datos financieros del cliente', () => {
 })
 
 describe('NAV_SECTIONS', () => {
-  it('la guía aparece en el menú con los permisos del lote', () => {
+  it('la guía vive dentro del lote: tiene sus permisos, pero no un ítem propio en el menú', () => {
     for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO]) {
       expect(puedeAcceder('/guia-crecimiento', rol)).toBe(puedeAcceder('/lotes', rol))
     }
     expect(puedeAcceder('/guia-crecimiento', null)).toBe(false)
-    expect(NAV_SECTIONS.flatMap((seccion) => seccion.items).some((item) => item.path === '/guia-crecimiento')).toBe(true)
+    expect(NAV_SECTIONS.flatMap((seccion) => seccion.items).some((item) => item.path === '/guia-crecimiento')).toBe(false)
   })
   it('ningún ítem repite icono', () => {
     // Contraído, el sidebar esconde las etiquetas y solo quedan los iconos:
     // dos ítems con el mismo dibujo son indistinguibles hasta pasar el ratón.
     // Había seis parejas repetidas (Auditoría/Bitácora/Compras compartían una).
-    const vistos = new Map<unknown, string>()
+    const vistos = new Map<unknown, { label: string; path: string }>()
     for (const seccion of NAV_SECTIONS) {
       for (const item of seccion.items) {
         const tipo = (item.icon as ReactElement).type
         const previo = vistos.get(tipo)
-        expect(previo, `«${item.label}» repite el icono de «${previo}»`).toBeUndefined()
-        vistos.set(tipo, item.label)
+        if (previo?.path === item.path) continue
+        expect(previo?.label, `«${item.label}» repite el icono de «${previo?.label}»`).toBeUndefined()
+        vistos.set(tipo, { label: item.label, path: item.path })
       }
     }
   })

@@ -1,0 +1,82 @@
+.grc {
+  --calor-atencion: var(--accent);
+  --calor-atencion-borde: color-mix(in srgb, var(--accent) 70%, var(--warning));
+  --calor-alerta: color-mix(in srgb, var(--accent) 40%, var(--danger));
+  --calor-peligro: var(--danger);
+  --calor-emergencia: var(--danger3);
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  min-width: 0;
+}
+
+.grc-detalle {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.grc-detalle-hora {
+  color: var(--text-primary);
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.grc-detalle-thi {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.grc-detalle-thi strong {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.grc-nivel {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.grc-nivel--atencion { background: var(--accent-soft); color: var(--warning); }
+.grc-nivel--alerta { background: color-mix(in srgb, var(--calor-alerta) 16%, var(--surface-base)); color: var(--danger3); }
+.grc-nivel--peligro,
+.grc-nivel--emergencia { background: var(--danger-soft); color: var(--danger3); }
+
+.grc-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.grc-clave {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.grc-clave::before {
+  content: '';
+  width: 12px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.grc-clave--atencion::before { background: color-mix(in srgb, var(--calor-atencion) 45%, transparent); }
+.grc-clave--alerta::before { background: color-mix(in srgb, var(--calor-alerta) 45%, transparent); }
+.grc-clave--peligro::before { background: color-mix(in srgb, var(--calor-peligro) 45%, transparent); }
+.grc-clave--emergencia::before { background: color-mix(in srgb, var(--calor-emergencia) 55%, transparent); }

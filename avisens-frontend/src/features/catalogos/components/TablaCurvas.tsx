@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
+import { IcChevronDown, IcPlus } from '@shared/ui/icons/icons'
 import type { CurvaObjetivo } from '@features/indicadores/api/curvas-objetivo'
-import { capitalizar, gramos } from '../model/catalogos'
+import MenuAcciones from '@shared/ui/MenuAcciones/MenuAcciones'
+import { capitalizar, etiquetaEtapa, gramos } from '../model/catalogos'
 
 type Props = {
   curvas: CurvaObjetivo[]
@@ -35,51 +37,47 @@ function TablaCurvas({
   )), [curvas, marca, sexo])
 
   return (
-    <section className="adm-panel" role="tabpanel" id="panel-curvas" aria-labelledby="tab-curvas">
-      <div className="cat-aviso">
-        <strong>Las curvas del manual no se editan.</strong> El peso y el consumo de
-        cada lote se comparan contra ellas, así que cambiar el objetivo del día 21
-        de Italcol alteraría el resultado de todos los lotes de esa marca. El
-        servidor las protege: editarlas devuelve un error.
-        <br />
-        Las que se crean aquí sí se pueden corregir y borrar — sirven para marcas
-        que todavía no tienen curva sembrada.
-      </div>
-
-      <div className="cat-panel-head">
-        <div className="cat-filtros">
-          <label className="cat-filtro">
-            <span>Marca</span>
+    <section className="cat-panel" role="tabpanel" id="panel-curvas" aria-labelledby="tab-curvas">
+      <header className="cat-panel-head">
+        <div>
+          <h2>Curvas objetivo</h2>
+          <p>Los valores de referencia del fabricante contra los que se compara cada lote.</p>
+        </div>
+        <div className="cat-panel-acciones">
+          <label className="cat-desplegable">
+            <span className="sr-only">Filtrar por marca</span>
             <select value={marca} onChange={(evento) => setMarca(evento.target.value)}>
-              <option value="todas">Todas</option>
+              <option value="todas">Marca: todas</option>
               {marcas.map((item) => (
                 <option key={item} value={item}>{capitalizar(item)}</option>
               ))}
             </select>
+            <IcChevronDown size={17} aria-hidden="true" />
           </label>
-          <label className="cat-filtro">
-            <span>Sexo</span>
+          <label className="cat-desplegable">
+            <span className="sr-only">Filtrar por sexo</span>
             <select value={sexo} onChange={(evento) => setSexo(evento.target.value)}>
-              <option value="todos">Todos</option>
+              <option value="todos">Sexo: todos</option>
               {sexos.map((item) => (
                 <option key={item} value={item}>{capitalizar(item)}</option>
               ))}
             </select>
+            <IcChevronDown size={17} aria-hidden="true" />
           </label>
-        </div>
-        <div className="cat-panel-head-derecha">
-          <span className="adm-conteo">
-            {visibles.length === curvas.length
-              ? `${curvas.length} puntos`
-              : `${visibles.length} de ${curvas.length} puntos`}
-          </span>
+          <span className="cat-conteo">{visibles.length} de {curvas.length}</span>
           {puedeGestionar && (
-            <button type="button" className="adm-btn adm-btn--primario" onClick={onCrear}>
+            <button type="button" className="cat-boton-nuevo" onClick={onCrear}>
+              <IcPlus size={16} aria-hidden="true" />
               Nuevo punto
             </button>
           )}
         </div>
-      </div>
+      </header>
+
+      <p className="cat-aviso">
+        <strong>Las curvas del fabricante no se editan:</strong> cada lote se compara contra ellas.
+        Las que se crean aquí sí se pueden corregir y borrar, para marcas que aún no tienen curva.
+      </p>
 
       {error && (
         <div className="adm-alerta" role="alert">
@@ -97,16 +95,14 @@ function TablaCurvas({
         </div>
       ) : (
         <div className="cat-tabla-scroll">
-          <table className="cat-tabla">
+          <table className="cat-tabla cat-tabla--curvas">
             <thead>
               <tr>
-                <th scope="col">Marca</th>
-                <th scope="col">Sexo</th>
+                <th scope="col">Marca · sexo</th>
                 <th scope="col">Día</th>
                 <th scope="col">Peso esperado</th>
-                <th scope="col">Consumo diario</th>
                 <th scope="col">Consumo acumulado</th>
-                <th scope="col">FCR objetivo</th>
+                <th scope="col">FCR</th>
                 <th scope="col">Etapa</th>
                 <th scope="col">Temperatura</th>
                 <th scope="col">Origen</th>
@@ -116,38 +112,46 @@ function TablaCurvas({
             <tbody>
               {visibles.map((curva) => (
                 <tr key={curva.id}>
-                  <td>{capitalizar(curva.marca)}</td>
-                  <td>{capitalizar(curva.sexo)}</td>
+                  <td>
+                    <span className="cat-celda-texto">
+                      <strong>{capitalizar(curva.marca)}</strong>
+                      <span>{capitalizar(curva.sexo)}</span>
+                    </span>
+                  </td>
                   <td className="cat-num"><strong>{curva.dia}</strong></td>
                   <td className="cat-num">{gramos(curva.peso_esperado_g)}</td>
-                  <td className="cat-num">{gramos(curva.consumo_diario_g)}</td>
-                  <td className="cat-num">{gramos(curva.consumo_acumulado_g)}</td>
+                  <td className="cat-num">
+                    <span className="cat-celda-texto cat-celda-texto--centro">
+                      <strong>{gramos(curva.consumo_acumulado_g)}</strong>
+                      <span>{curva.consumo_diario_g === null ? 'Diario sin dato' : `${gramos(curva.consumo_diario_g)} al día`}</span>
+                    </span>
+                  </td>
                   <td className="cat-num">{curva.fcr_objetivo ?? '—'}</td>
-                  <td>{curva.etapa_alimentacion ? capitalizar(curva.etapa_alimentacion) : '—'}</td>
+                  <td><span className="cat-chip">{curva.etapa_alimentacion ? etiquetaEtapa(curva.etapa_alimentacion) : '—'}</span></td>
                   <td className="cat-num">
                     {curva.temperatura_min === null && curva.temperatura_max === null
                       ? '—'
-                      : `${curva.temperatura_min ?? '?'} – ${curva.temperatura_max ?? '?'} °C`}
+                      : curva.temperatura_min === curva.temperatura_max
+                        ? `${curva.temperatura_min} °C`
+                        : `${curva.temperatura_min ?? '?'}–${curva.temperatura_max ?? '?'} °C`}
                   </td>
                   <td>
                     <span className={`cat-origen cat-origen--${curva.origen}`}>
-                      {curva.origen === 'seed' ? 'Manual del fabricante' : 'Añadida aquí'}
+                      {curva.origen === 'seed' ? 'Fabricante' : 'Añadida aquí'}
                     </span>
                   </td>
                   {puedeGestionar && (
-                    <td className="cat-acciones">
-                      {/* Sin botones en las del manual: el servidor las rechaza
-                          con un 403, así que ofrecerlos sería prometer algo que
-                          va a fallar. */}
+                    <td>
                       {curva.origen === 'manual' ? (
-                        <>
-                          <button type="button" className="adm-btn-fila" onClick={() => onEditar(curva)}>
-                            Editar
-                          </button>
-                          <button type="button" className="adm-btn-fila adm-btn-fila--peligro" onClick={() => onEliminar(curva)}>
-                            Eliminar
-                          </button>
-                        </>
+                        <div className="cat-acciones">
+                          <MenuAcciones
+                            etiqueta={`Acciones del día ${curva.dia}`}
+                            acciones={[
+                              { etiqueta: 'Editar', onSeleccionar: () => onEditar(curva) },
+                              { etiqueta: 'Eliminar', onSeleccionar: () => onEliminar(curva), peligrosa: true },
+                            ]}
+                          />
+                        </div>
                       ) : (
                         <span className="cat-protegida">Protegida</span>
                       )}

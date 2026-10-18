@@ -30,7 +30,7 @@ import {
 } from './dto/estimacion-alimento-respuesta.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string };
+  user: { id: number; email?: string | null; rol: string };
 }
 
 @ApiTags('plan-alimento')

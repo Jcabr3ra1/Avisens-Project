@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { permisosDeGestion, ROL_ADMIN } from '@shared/auth/permisos'
 import {
@@ -51,12 +52,16 @@ import { useGranjas } from './hooks/useGranjas'
 import { useIndicadoresDeLotes } from './hooks/useIndicadoresDeLotes'
 import { usePropietariosGranja } from './hooks/usePropietariosGranja'
 import { calcularEtapasImplementacionGranjas } from './model/implementacion'
+import GranjasPropietario from './propietario/GranjasPropietario'
 import './GranjasPage.css'
 
-function GranjasPage() {
+function GranjasAdministracion() {
+  const [searchParams] = useSearchParams()
+  const granjaSolicitada = Number(searchParams.get('granjaId'))
   const rol = getRol()
   const esAdministrador = rol === ROL_ADMIN
   const permisos = permisosDeGestion(rol)
+  const navigate = useNavigate()
 
   const {
     estructura,
@@ -73,7 +78,9 @@ function GranjasPage() {
 
   // Granja elegida y galpones desplegados: el único estado de la página.
   // Aquí navegar es revelar, no cambiar de ruta.
-  const [granjaId, setGranjaId] = useState<number | null>(null)
+  const [granjaId, setGranjaId] = useState<number | null>(() =>
+    Number.isSafeInteger(granjaSolicitada) && granjaSolicitada > 0 ? granjaSolicitada : null,
+  )
   const [vistaAdministrativa, setVistaAdministrativa] = useState<'proceso' | 'tabla'>('proceso')
   const [busquedaAdministrativa, setBusquedaAdministrativa] = useState('')
   // Lo desplegado se guarda por granja: volver a una ya visitada la
@@ -256,7 +263,7 @@ function GranjasPage() {
     : {
         contexto: 'Mi operación',
         titulo: 'Mis granjas',
-        descripcion: 'Consulta la estructura productiva de las granjas que tienes asignadas.',
+        descripcion: 'Tus galpones y lotes, con sus datos. Completa la ubicación, las medidas y la línea genética para que las proyecciones sean precisas.',
         resumen: 'Resumen de mis granjas',
         vacioTitulo: 'Aún no tienes granjas asignadas.',
         vacioDescripcion:
@@ -430,18 +437,20 @@ function GranjasPage() {
                       texto={seleccionada.granja.activa ? 'Activa' : 'Inactiva'}
                     />
                   </div>
-                  <p className="gr-granja-lugar">
-                    <IcPin size={13} aria-hidden="true" />
-                    {seleccionada.granja.municipio ?? '—'},{' '}
-                    {seleccionada.granja.departamento ?? '—'}
-                    {esAdministrador && seleccionada.granja.propietario && (
-                      <> · Propietario: {seleccionada.granja.propietario.nombre_completo}</>
-                    )}
-                  </p>
+                  {(esAdministrador || seleccionada.granja.municipio || seleccionada.granja.departamento) && (
+                    <p className="gr-granja-lugar">
+                      <IcPin size={13} aria-hidden="true" />
+                      {seleccionada.granja.municipio ?? '—'},{' '}
+                      {seleccionada.granja.departamento ?? '—'}
+                      {esAdministrador && seleccionada.granja.propietario && (
+                        <> · Propietario: {seleccionada.granja.propietario.nombre_completo}</>
+                      )}
+                    </p>
+                  )}
                   <p className="gr-granja-cifras">
-                    <strong>{seleccionada.galpones.length}</strong> galpones ·{' '}
-                    <strong>{seleccionada.lotesActivos}</strong> lotes activos ·{' '}
-                    <strong>{seleccionada.avesAlojadas.toLocaleString()}</strong> aves
+                    <strong>{seleccionada.galpones.length}</strong> {seleccionada.galpones.length === 1 ? 'galpón' : 'galpones'} ·{' '}
+                    <strong>{seleccionada.lotesActivos}</strong> {seleccionada.lotesActivos === 1 ? 'lote activo' : 'lotes activos'} ·{' '}
+                    <strong>{seleccionada.avesAlojadas.toLocaleString('es-CO')}</strong> aves
                     {seleccionada.alertasAbiertas > 0 && (
                       <span className="gr-granja-alertas">
                         <IcAlert size={13} aria-hidden="true" />
@@ -465,6 +474,7 @@ function GranjasPage() {
                   <MenuAcciones
                     etiqueta={`Acciones de ${seleccionada.granja.nombre}`}
                     acciones={[
+
                       ...(permisos.editar
                         ? [
                             {
@@ -530,6 +540,7 @@ function GranjasPage() {
                       onEditarLote={formularioLote.abrirEditar}
                       onAlternarLote={alternarLote}
                       onEliminarLote={eliminarLote}
+                      onAbrirGuia={(lote) => navigate(`/guia-crecimiento?lote=${lote.id}`)}
                     />
                   ))}
                 </div>
@@ -586,6 +597,10 @@ function GranjasPage() {
       )}
     </div>
   )
+}
+
+function GranjasPage() {
+  return getRol() === ROL_ADMIN ? <GranjasAdministracion /> : <GranjasPropietario />
 }
 
 export default GranjasPage

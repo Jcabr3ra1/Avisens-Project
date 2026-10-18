@@ -27,7 +27,7 @@ import {
 interface AuthRequest extends Request {
   user: {
     id: number;
-    email: string;
+    email?: string | null;
     rol: string;
     organizacion_id?: number | null;
   };

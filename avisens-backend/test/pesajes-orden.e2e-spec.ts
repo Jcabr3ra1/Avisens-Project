@@ -1,3 +1,4 @@
+import { usernameDePrueba } from './soporte/username';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from '../src/config/env.validation';
@@ -62,6 +63,7 @@ describe('Pesajes -- desempate por id cuando la fecha empata (e2e, Postgres real
         organizacion_id: organizacion.id,
         nombre_completo: 'Propietario pesajes e2e',
         cedula: `PES-${sufijo}`,
+        username: usernameDePrueba(`pesajes-${sufijo}@e2e.test`),
         email: `pesajes-${sufijo}@e2e.test`,
         password_hash: 'no-se-usa-en-este-test',
       },

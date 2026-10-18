@@ -40,3 +40,5 @@ export type EtapaAlimentacion = (typeof ETAPAS_ALIMENTACION)[number];
 export function normalizarMarcaCatalogo(valor: string): string {
   return valor.trim().toLowerCase();
 }
+
+export const PESO_MAXIMO_POLLO_G = 10000;

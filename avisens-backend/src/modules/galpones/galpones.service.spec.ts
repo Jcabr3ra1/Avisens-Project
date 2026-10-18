@@ -5,6 +5,10 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import {
+  clienteDePrueba,
+  secuenciaDeLlamadas,
+} from '../../common/bloqueos/cliente-de-prueba.testing';
 import { GalponesService } from './galpones.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -20,11 +24,12 @@ describe('GalponesService', () => {
       count: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
     },
     granja: { findUnique: jest.fn() },
     usuarioGalpon: { updateMany: jest.fn(), deleteMany: jest.fn() },
     $transaction: jest.fn(),
-    $executeRaw: jest.fn(),
+    $configurar: jest.fn(),
     $queryRaw: jest.fn(),
   };
 
@@ -62,11 +67,12 @@ describe('GalponesService', () => {
     service = module.get<GalponesService>(GalponesService);
 
     prisma.$transaction.mockImplementation((operacion: unknown) => {
-      if (esTransaccionPrueba(operacion)) return operacion(prisma);
+      if (esTransaccionPrueba(operacion))
+        return operacion(clienteDePrueba(prisma));
       return Promise.resolve([[], 0]);
     });
     prisma.granja.findUnique.mockResolvedValue({ id: 3, propietario_id: 5 });
-    prisma.$executeRaw.mockResolvedValue(0);
+    prisma.$configurar.mockResolvedValue([{}]);
     prisma.$queryRaw.mockResolvedValue([{ id: 40 }, { id: 41 }]);
   });
 
@@ -182,7 +188,8 @@ describe('GalponesService', () => {
           id: 1,
           granja: { id: 3, propietario_id: 5 },
         });
-        prisma.galpon.update.mockResolvedValue({
+        prisma.galpon.update.mockResolvedValue({ id: 1 });
+        prisma.galpon.findUniqueOrThrow.mockResolvedValue({
           id: 1,
           activo: false,
           nombre: 'Nuevo',
@@ -210,6 +217,12 @@ describe('GalponesService', () => {
           activo: false,
           nombre: 'Nuevo',
         });
+        expect(prisma.galpon.update).toHaveBeenCalledWith(
+          expect.objectContaining({ where: { id: 1 }, select: { id: true } }),
+        );
+        expect(prisma.galpon.findUniqueOrThrow).toHaveBeenCalledWith(
+          expect.objectContaining({ where: { id: 1 } }),
+        );
         expect(res).toEqual({ id: 1, activo: false, nombre: 'Nuevo' });
       });
 
@@ -320,8 +333,6 @@ describe('GalponesService', () => {
       return e;
     };
 
-    const orden = (mock: jest.Mock, llamada = 0) =>
-      mock.mock.invocationCallOrder[llamada];
     const sql = (llamada: number) =>
       (prisma.$queryRaw.mock.calls[llamada] as [TemplateStringsArray])[0].join(
         '?',
@@ -346,19 +357,29 @@ describe('GalponesService', () => {
         isolationLevel: 'ReadCommitted',
         timeout: 10000,
       });
-      expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
-      const [plantilla] = prisma.$executeRaw.mock.calls[0] as [
+      expect(prisma.$configurar).toHaveBeenCalledTimes(3);
+      const [, esperaMs] = prisma.$configurar.mock.calls[0] as [
         TemplateStringsArray,
+        string,
+        string,
       ];
-      expect(plantilla.join('?')).toContain("lock_timeout = '5000ms'");
-      expect(orden(prisma.$executeRaw)).toBeLessThan(
-        orden(prisma.galpon.update),
-      );
-      expect(orden(prisma.galpon.update)).toBeLessThan(orden(prisma.$queryRaw));
+      expect(esperaMs).toBe('5000ms');
       expect(sql(0)).toContain('ORDER BY "id" FOR UPDATE');
-      expect(orden(prisma.$queryRaw)).toBeLessThan(
-        orden(prisma.usuarioGalpon.updateMany),
-      );
+      expect(
+        secuenciaDeLlamadas(
+          ['configurar', prisma.$configurar],
+          ['actualizar', prisma.galpon.update],
+          ['bloquear', prisma.$queryRaw],
+          ['revocar', prisma.usuarioGalpon.updateMany],
+        ),
+      ).toEqual([
+        'configurar',
+        'actualizar',
+        'configurar',
+        'bloquear',
+        'configurar',
+        'revocar',
+      ]);
     });
 
     it('modifica únicamente los ids que bloqueó y no escribe si no había ninguno', async () => {
@@ -393,15 +414,23 @@ describe('GalponesService', () => {
       expect(prisma.usuarioGalpon.deleteMany).toHaveBeenCalledWith({
         where: { id: { in: [40, 41] } },
       });
-      expect(orden(prisma.$executeRaw)).toBeLessThan(
-        orden(prisma.$queryRaw, 0),
-      );
-      expect(orden(prisma.$queryRaw, 1)).toBeLessThan(
-        orden(prisma.usuarioGalpon.deleteMany),
-      );
-      expect(orden(prisma.usuarioGalpon.deleteMany)).toBeLessThan(
-        orden(prisma.galpon.delete),
-      );
+      expect(
+        secuenciaDeLlamadas(
+          ['configurar', prisma.$configurar],
+          ['consulta', prisma.$queryRaw],
+          ['borrar asignaciones', prisma.usuarioGalpon.deleteMany],
+          ['borrar galpón', prisma.galpon.delete],
+        ),
+      ).toEqual([
+        'configurar',
+        'consulta',
+        'configurar',
+        'consulta',
+        'configurar',
+        'borrar asignaciones',
+        'configurar',
+        'borrar galpón',
+      ]);
     });
 
     it.each([
@@ -449,7 +478,7 @@ describe('GalponesService', () => {
       await service.actualizar(1, { activo: true }, admin);
 
       expect(prisma.$transaction).not.toHaveBeenCalled();
-      expect(prisma.$executeRaw).not.toHaveBeenCalled();
+      expect(prisma.$configurar).not.toHaveBeenCalled();
     });
   });
 });

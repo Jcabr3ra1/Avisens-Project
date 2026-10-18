@@ -44,7 +44,7 @@ export class RecuperacionesPasswordController {
   @Throttle({ default: { limit: 3, ttl: 15 * 60 * 1000 } })
   @ApiOperation({ summary: 'Solicitar recuperación asistida de contraseña' })
   solicitar(@Body() dto: SolicitarRecuperacionDto, @Req() req: Request) {
-    return this.recuperaciones.solicitar(dto.email, dto.motivo, req.ip);
+    return this.recuperaciones.solicitar(dto.username, dto.motivo, req.ip);
   }
 
   @Get()

@@ -3,68 +3,17 @@ from secrets import compare_digest
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-from prediccion import predecir, predecir_mortalidad, predecir_consumo
 
-
-class Pesaje(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    dia: int = Field(ge=0, le=100)
-    peso: float = Field(gt=0, le=10000, allow_inf_nan=False)
-
-
-class PeticionPrediccion(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    pesajes: Annotated[list[Pesaje], Field(min_length=3, max_length=100)]
-    dia_faena: int = Field(default=42, ge=1, le=100)
-    peso_objetivo_g: float = Field(default=2500, gt=0, le=10000, allow_inf_nan=False)
-
-    @model_validator(mode="after")
-    def validar_serie(self):
-        _validar_dias(self.pesajes, self.dia_faena)
-        return self
-
-
-class Mortalidad(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    dia: int = Field(ge=0, le=100)
-    mortalidad_pct: float = Field(ge=0, le=100, allow_inf_nan=False)
-
-
-class PeticionMortalidad(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    mortalidades: Annotated[list[Mortalidad], Field(min_length=3, max_length=100)]
-    dia_faena: int = Field(default=42, ge=1, le=100)
-
-    @model_validator(mode="after")
-    def validar_serie(self):
-        _validar_dias(self.mortalidades, self.dia_faena)
-        return self
-
-
-class Consumo(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    dia: int = Field(ge=0, le=100)
-    consumo_acum_kg: float = Field(ge=0, le=1000000, allow_inf_nan=False)
-
-
-class PeticionConsumo(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    consumos: Annotated[list[Consumo], Field(min_length=3, max_length=100)]
-    dia_faena: int = Field(default=42, ge=1, le=100)
-
-    @model_validator(mode="after")
-    def validar_serie(self):
-        _validar_dias(self.consumos, self.dia_faena)
-        return self
-
-
-def _validar_dias(observaciones, dia_faena):
-    dias = [observacion.dia for observacion in observaciones]
-    if len(set(dias)) != len(dias):
-        raise ValueError("Cada observacion debe pertenecer a un dia distinto")
-    if max(dias) >= dia_faena:
-        raise ValueError("dia_faena debe ser posterior a la ultima observacion")
+from esquemas import (
+    PeticionConsumo,
+    PeticionCurvaCrecimiento,
+    PeticionMortalidad,
+    PeticionPrediccion,
+    PeticionRiesgoCalor,
+)
+from modelos.estres_calor import proyectar_riesgo
+from modelos.gompertz import proyectar_crecimiento
+from modelos.polinomial import predecir, predecir_consumo, predecir_mortalidad
 
 
 app = FastAPI(title="Avisens ML")
@@ -105,3 +54,23 @@ def predecir_mortalidad_endpoint(peticion: PeticionMortalidad):
 def predecir_consumo_endpoint(peticion: PeticionConsumo):
     datos = [c.model_dump() for c in peticion.consumos]
     return predecir_consumo(datos, peticion.dia_faena)
+
+
+@app.post("/curva-crecimiento", dependencies=[Depends(validar_token_interno)])
+def curva_crecimiento_endpoint(peticion: PeticionCurvaCrecimiento):
+    return proyectar_crecimiento(
+        [p.model_dump() for p in peticion.pesajes],
+        peticion.dia_final,
+        [p.model_dump() for p in peticion.curva_referencia],
+        peticion.peso_objetivo_g,
+    )
+
+
+@app.post("/riesgo-calor", dependencies=[Depends(validar_token_interno)])
+def riesgo_calor_endpoint(peticion: PeticionRiesgoCalor):
+    return proyectar_riesgo(
+        [hora.model_dump() for hora in peticion.horas],
+        peticion.ajuste_temperatura,
+        peticion.ajuste_humedad,
+        peticion.dia_vida,
+    )

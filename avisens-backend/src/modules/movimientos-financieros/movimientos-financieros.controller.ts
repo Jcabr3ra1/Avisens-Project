@@ -23,7 +23,7 @@ import { UpdateMovimientoFinancieroDto } from './dto/update-movimiento-financier
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string };
+  user: { id: number; email?: string | null; rol: string };
 }
 
 @ApiTags('movimientos-financieros')

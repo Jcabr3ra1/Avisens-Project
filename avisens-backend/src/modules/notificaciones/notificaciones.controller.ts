@@ -22,7 +22,7 @@ import { NotificacionesService } from './notificaciones.service';
 import { CreateNotificacionDto } from './dto/create-notificacion.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string };
+  user: { id: number; email?: string | null; rol: string };
 }
 
 @ApiTags('notificaciones')

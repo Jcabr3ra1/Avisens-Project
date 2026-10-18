@@ -1,91 +1,66 @@
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { mensajeDeError } from '@shared/utils/errores'
 import {
-  eliminarSolicitudPqrs,
   listarTodasLasSolicitudesPqrs,
   responderSolicitudPqrs,
+  tomarSolicitudPqrs,
 } from '../api/solicitudesPqrs'
-import type {
-  ResponderSolicitudPqrsDto,
-  SolicitudPqrs,
-  SolicitudesPqrsQuery,
-} from '../model/solicitudPqrs'
+import type { ResponderSolicitudPqrsDto, SolicitudPqrs } from '../model/solicitudPqrs'
 
 export function useSolicitudesPqrs() {
   const [solicitudes, setSolicitudes] = useState<SolicitudPqrs[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
-  const [mensaje, setMensaje] = useState('')
-  const [filtros, setFiltros] = useState<SolicitudesPqrsQuery>({})
+  const [ocupadaId, setOcupadaId] = useState<number | null>(null)
 
-  const cargar = useCallback(async (query: SolicitudesPqrsQuery) => {
+  const cargar = useCallback(async () => {
     setCargando(true)
     setError('')
-
     try {
-      setSolicitudes(await listarTodasLasSolicitudesPqrs(query))
+      setSolicitudes(await listarTodasLasSolicitudesPqrs())
     } catch {
-      setError('No se pudieron cargar las solicitudes. Intenta actualizar la página.')
+      setError('No se pudieron cargar las solicitudes.')
     } finally {
       setCargando(false)
     }
   }, [])
 
   useEffect(() => {
-    void cargar(filtros)
-  }, [cargar, filtros])
+    void cargar()
+  }, [cargar])
 
-  const aplicarFiltros = useCallback((nuevosFiltros: SolicitudesPqrsQuery) => {
-    setMensaje('')
-    setFiltros(nuevosFiltros)
+  const reemplazar = useCallback((actualizada: SolicitudPqrs) => {
+    setSolicitudes((actuales) => actuales.map((solicitud) => (solicitud.id === actualizada.id ? actualizada : solicitud)))
   }, [])
 
-  const recargar = useCallback(async () => {
-    await cargar(filtros)
-  }, [cargar, filtros])
+  const ejecutar = useCallback(
+    async (id: number, accion: () => Promise<SolicitudPqrs>, exito: string, fallo: string): Promise<boolean> => {
+      setOcupadaId(id)
+      try {
+        reemplazar(await accion())
+        toast.success(exito)
+        return true
+      } catch (causa) {
+        toast.error(mensajeDeError(causa, fallo))
+        return false
+      } finally {
+        setOcupadaId(null)
+      }
+    },
+    [reemplazar],
+  )
+
+  const tomar = useCallback(
+    (id: number) => ejecutar(id, () => tomarSolicitudPqrs(id), 'El caso quedó a tu cargo.', 'No se pudo tomar el caso.'),
+    [ejecutar],
+  )
 
   const responder = useCallback(
-    async (id: number, datos: ResponderSolicitudPqrsDto) => {
-      setError('')
-      setMensaje('')
-
-      try {
-        await responderSolicitudPqrs(id, datos)
-        await cargar(filtros)
-        setMensaje('La solicitud fue actualizada correctamente.')
-      } catch {
-        setError('No se pudo actualizar la solicitud. Revisa la información e inténtalo de nuevo.')
-        throw new Error('No se pudo actualizar la solicitud.')
-      }
-    },
-    [cargar, filtros],
+    (id: number, datos: ResponderSolicitudPqrsDto, exito: string) =>
+      ejecutar(id, () => responderSolicitudPqrs(id, datos), exito, 'No se pudo guardar la solicitud.'),
+    [ejecutar],
   )
 
-  const eliminar = useCallback(
-    async (id: number) => {
-      setError('')
-      setMensaje('')
-
-      try {
-        await eliminarSolicitudPqrs(id)
-        await cargar(filtros)
-        setMensaje('La solicitud fue eliminada correctamente.')
-      } catch {
-        setError('No se pudo eliminar la solicitud. Inténtalo de nuevo.')
-        throw new Error('No se pudo eliminar la solicitud.')
-      }
-    },
-    [cargar, filtros],
-  )
-
-  return {
-    solicitudes,
-    cargando,
-    error,
-    mensaje,
-    filtros,
-    aplicarFiltros,
-    recargar,
-    responder,
-    eliminar,
-  }
+  return { solicitudes, cargando, error, ocupadaId, recargar: cargar, tomar, responder }
 }

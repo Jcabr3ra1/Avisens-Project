@@ -1,0 +1,28 @@
+meta {
+  name: Eliminar organización definitivamente
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/v1/organizaciones/1/definitivo
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "confirmacion": "Nombre exacto de la organización"
+  }
+}
+
+docs {
+  IRREVERSIBLE. Borra la organización con sus usuarios, granjas, galpones,
+  lotes, sensores y mediciones. La auditoría se conserva con el usuario
+  anonimizado. Si la confirmación no es el nombre exacto responde 400 y no
+  borra nada. No se puede borrar la organización propia (403).
+}

@@ -87,13 +87,12 @@ function ModalRegistroOperario({
   }
 
   return (
-    <div className="operario-modal-overlay" onMouseDown={guardando ? undefined : onCerrar}>
+    <div className="operario-modal-overlay">
       <div
         className="operario-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="operario-registro-titulo"
-        onMouseDown={(evento) => evento.stopPropagation()}
       >
         <div className="operario-modal-head">
           <div>

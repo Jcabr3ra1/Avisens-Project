@@ -1,3 +1,4 @@
+import { usernameDePrueba } from './soporte/username';
 import {
   INestApplication,
   ValidationPipe,
@@ -142,6 +143,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         data: {
           nombre_completo: tipo,
           cedula: `${tipo}-${sufijo}`,
+          username: usernameDePrueba(`${tipo}-${sufijo}@e2e.local`),
           email: `${tipo}-${sufijo}@e2e.local`,
           password_hash: hash,
           rol_id,
@@ -186,7 +188,6 @@ describe('Núcleo multi-tenant (e2e)', () => {
     const dispositivo = await prisma.dispositivo.create({
       data: {
         galpon_id: galponA.id,
-        mac_address: `MAC-${sufijo}`,
         codigo_topic: `topic-${sufijo}`,
         nombre: 'Nodo E2E',
         token_ingesta_hash: hashDeviceToken(deviceToken),
@@ -286,7 +287,6 @@ describe('Núcleo multi-tenant (e2e)', () => {
     const dispositivoOrgB = await prisma.dispositivo.create({
       data: {
         galpon_id: galponB.id,
-        mac_address: `MAC-B-${sufijo}`,
         codigo_topic: `topic-b-${sufijo}`,
         nombre: 'Nodo E2E B',
         token_ingesta_hash: hashDeviceToken(`otro-${deviceToken}`),
@@ -327,11 +327,11 @@ describe('Núcleo multi-tenant (e2e)', () => {
     const [loginOperario, loginPropietario] = await Promise.all([
       request(servidor)
         .post('/v1/auth/login')
-        .send({ email: operario.email, password })
+        .send({ username: operario.username, password })
         .expect(200),
       request(servidor)
         .post('/v1/auth/login')
-        .send({ email: duenoA.email, password })
+        .send({ username: duenoA.username, password })
         .expect(200),
     ]);
     token = (JSON.parse(loginOperario.text) as { access_token: string })
@@ -1038,6 +1038,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         data: {
           nombre_completo: 'admin-lotes',
           cedula: `admin-lotes-${sufijo}`,
+          username: usernameDePrueba(`admin-lotes-${sufijo}@e2e.local`),
           email: `admin-lotes-${sufijo}@e2e.local`,
           password_hash: hash,
           rol_id: rolAdmin.id,
@@ -1048,7 +1049,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
 
       const login = await request(servidor)
         .post('/v1/auth/login')
-        .send({ email: admin.email, password })
+        .send({ username: admin.username, password })
         .expect(200);
       tokenAdminLotes = (JSON.parse(login.text) as { access_token: string })
         .access_token;
@@ -1271,6 +1272,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         data: {
           nombre_completo: 'admin-genetica',
           cedula: `admin-genetica-${sufijo}`,
+          username: usernameDePrueba(`admin-genetica-${sufijo}@e2e.local`),
           email: `admin-genetica-${sufijo}@e2e.local`,
           password_hash: hash,
           rol_id: rolAdmin.id,
@@ -1281,7 +1283,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
 
       const login = await request(servidor)
         .post('/v1/auth/login')
-        .send({ email: admin.email, password })
+        .send({ username: admin.username, password })
         .expect(200);
       tokenAdminGenetica = (JSON.parse(login.text) as { access_token: string })
         .access_token;
@@ -1791,6 +1793,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         data: {
           nombre_completo: 'admin-plan',
           cedula: `admin-plan-${sufijo}`,
+          username: usernameDePrueba(`admin-plan-${sufijo}@e2e.local`),
           email: `admin-plan-${sufijo}@e2e.local`,
           password_hash: hash,
           rol_id: rolAdmin.id,
@@ -1801,7 +1804,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
 
       const login = await request(servidor)
         .post('/v1/auth/login')
-        .send({ email: admin.email, password })
+        .send({ username: admin.username, password })
         .expect(200);
       tokenAdminPlan = (JSON.parse(login.text) as { access_token: string })
         .access_token;
@@ -2460,6 +2463,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
         data: {
           nombre_completo: 'admin-alimento',
           cedula: `admin-alimento-${sufijo}`,
+          username: usernameDePrueba(`admin-alimento-${sufijo}@e2e.local`),
           email: `admin-alimento-${sufijo}@e2e.local`,
           password_hash: hash,
           rol_id: rolAdmin.id,
@@ -2470,7 +2474,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
 
       const login = await request(servidor)
         .post('/v1/auth/login')
-        .send({ email: admin.email, password })
+        .send({ username: admin.username, password })
         .expect(200);
       tokenAdminAlimento = (JSON.parse(login.text) as { access_token: string })
         .access_token;

@@ -161,15 +161,6 @@ function FormularioLote({
           >
             <div className="modal-fila">
               <label className="modal-campo">
-                <span>Raza <em>(Opcional)</em></span>
-                <input
-                  value={form.raza}
-                  onChange={(evento) =>
-                    onCambiar('raza', evento.target.value)
-                  }
-                />
-              </label>
-              <label className="modal-campo">
                 <span>Sexo <em>(Opcional)</em></span>
                 <select
                   value={form.sexo}

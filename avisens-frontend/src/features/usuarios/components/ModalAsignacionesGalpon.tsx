@@ -79,13 +79,12 @@ function ModalAsignacionesGalpon({
   }
 
   return (
-    <div className="usuarios-modal-overlay" onMouseDown={onCerrar}>
+    <div className="usuarios-modal-overlay">
       <div
         className="usuarios-modal usuarios-modal-asignaciones"
         role="dialog"
         aria-modal="true"
         aria-labelledby="usuarios-asignaciones-titulo"
-        onMouseDown={(evento) => evento.stopPropagation()}
       >
         <div className="usuarios-modal-cabecera">
           <div>

@@ -17,15 +17,16 @@ import {
 } from '../../common/auth/alcance';
 import { randomUUID } from 'node:crypto';
 import { esViolacionDeLlaveForanea } from '../../common/errores/llave-foranea';
-import {
-  esTimeoutDeBloqueo,
-  MENSAJE_GALPON_OCUPADO,
-} from '../../common/errores/bloqueo';
+import { MENSAJE_GALPON_OCUPADO } from '../../common/errores/bloqueo';
 import {
   eliminarAsignacionesDelGalpon,
-  OPCIONES_TRANSACCION_ORDENADA,
   revocarAsignacionesDelGalpon,
 } from '../../common/bloqueos/revocar-acceso';
+import {
+  esEsperaVencida,
+  TOPE_ESPERA_ESCRITURA_MS,
+  transaccionConPresupuesto,
+} from '../../common/bloqueos/presupuesto-transaccion';
 
 const GALPON_SELECT = {
   id: true,
@@ -154,16 +155,26 @@ export class GalponesService {
     }
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
-        const galpon = await tx.galpon.update({
-          where: { id },
-          data,
-          select: GALPON_SELECT,
-        });
-        await revocarAsignacionesDelGalpon(tx, id);
-        return galpon;
-      }, OPCIONES_TRANSACCION_ORDENADA);
+      return await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ESCRITURA_MS,
+        async (p) => {
+          await p.paso('actualizar galpón', (tx) =>
+            tx.galpon.update({ where: { id }, data, select: { id: true } }),
+          );
+          const galpon = await p.paso(
+            'leer galpón actualizado',
+            (tx) =>
+              tx.galpon.findUniqueOrThrow({
+                where: { id },
+                select: GALPON_SELECT,
+              }),
+            2,
+          );
+          await revocarAsignacionesDelGalpon(p, id);
+          return galpon;
+        },
+      );
     } catch (error) {
       this.traducirTimeoutDeBloqueo(error);
       throw error;
@@ -171,7 +182,7 @@ export class GalponesService {
   }
 
   private traducirTimeoutDeBloqueo(error: unknown): void {
-    if (esTimeoutDeBloqueo(error)) {
+    if (esEsperaVencida(error)) {
       throw new ConflictException(MENSAJE_GALPON_OCUPADO);
     }
   }
@@ -180,11 +191,16 @@ export class GalponesService {
     await this.obtener(id, solicitante);
 
     try {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
-        await tx.galpon.update({ where: { id }, data: { activo: false } });
-        await revocarAsignacionesDelGalpon(tx, id);
-      }, OPCIONES_TRANSACCION_ORDENADA);
+      await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ESCRITURA_MS,
+        async (p) => {
+          await p.paso('desactivar galpón', (tx) =>
+            tx.galpon.update({ where: { id }, data: { activo: false } }),
+          );
+          await revocarAsignacionesDelGalpon(p, id);
+        },
+      );
     } catch (error) {
       this.traducirTimeoutDeBloqueo(error);
       throw error;
@@ -203,12 +219,21 @@ export class GalponesService {
     await this.obtener(id, solicitante);
 
     try {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SET LOCAL lock_timeout = '5000ms'`;
-        await tx.$queryRaw`SELECT "id" FROM "galpones" WHERE "id" = ${id} FOR UPDATE`;
-        await eliminarAsignacionesDelGalpon(tx, id);
-        await tx.galpon.delete({ where: { id } });
-      }, OPCIONES_TRANSACCION_ORDENADA);
+      await transaccionConPresupuesto(
+        this.prisma,
+        TOPE_ESPERA_ESCRITURA_MS,
+        async (p) => {
+          await p.paso(
+            'bloquear galpón',
+            (tx) =>
+              tx.$queryRaw`SELECT "id" FROM "galpones" WHERE "id" = ${id} FOR UPDATE`,
+          );
+          await eliminarAsignacionesDelGalpon(p, id);
+          await p.paso('eliminar galpón', (tx) =>
+            tx.galpon.delete({ where: { id } }),
+          );
+        },
+      );
     } catch (error) {
       this.traducirTimeoutDeBloqueo(error);
       if (esViolacionDeLlaveForanea(error)) {

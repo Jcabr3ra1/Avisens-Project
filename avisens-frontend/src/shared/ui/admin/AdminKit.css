@@ -67,7 +67,7 @@
   height: 6px;
   border-radius: 50%;
   background: var(--green);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
 }
 
 .adm-titulo {
@@ -125,12 +125,12 @@
 }
 
 a.adm-miga:hover {
-  background: rgba(0, 91, 72, 0.07);
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
   color: var(--adm-deep);
 }
 
 .adm-miga--actual {
-  background: rgba(0, 91, 72, 0.08);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
   color: var(--adm-deep);
   font-weight: 750;
 }
@@ -164,7 +164,7 @@ a.adm-miga:hover {
 
 .adm-btn--primario {
   background: var(--primary);
-  color: #fff;
+  color: var(--on-primary);
   box-shadow: var(--shadow-sm);
 }
 
@@ -242,11 +242,11 @@ a.adm-miga:hover {
   text-transform: uppercase;
 }
 
-.adm-stat--neutral .adm-stat-icono { color: var(--adm-deep); background: rgba(0, 91, 72, 0.09); }
-.adm-stat--ok      .adm-stat-icono { color: var(--green-d);  background: rgba(16, 185, 129, 0.13); }
-.adm-stat--aviso   .adm-stat-icono { color: var(--warning3); background: rgba(245, 158, 11, 0.14); }
-.adm-stat--peligro .adm-stat-icono { color: var(--danger3);  background: rgba(239, 68, 68, 0.11); }
-.adm-stat--info    .adm-stat-icono { color: var(--info3);    background: rgba(59, 130, 246, 0.12); }
+.adm-stat--neutral .adm-stat-icono { color: var(--adm-deep); background: color-mix(in srgb, var(--primary) 9%, transparent); }
+.adm-stat--ok      .adm-stat-icono { color: var(--green-d);  background: color-mix(in srgb, var(--primary) 13%, transparent); }
+.adm-stat--aviso   .adm-stat-icono { color: var(--warning3); background: var(--warning-soft); }
+.adm-stat--peligro .adm-stat-icono { color: var(--danger3);  background: var(--danger-soft); }
+.adm-stat--info    .adm-stat-icono { color: var(--info3);    background: var(--info-soft); }
 
 /* ─────────────────────────────────────────────────────────────
    Panel: la caja que envuelve barra + tabla
@@ -269,7 +269,7 @@ a.adm-miga:hover {
   gap: 0.7rem;
   padding: 0.8rem 0.95rem;
   border-bottom: 1px solid var(--adm-line);
-  background: linear-gradient(180deg, rgba(0, 91, 72, 0.022), transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 2.2%, transparent), transparent);
 }
 
 .adm-buscador {
@@ -335,7 +335,7 @@ a.adm-miga:hover {
   background: var(--card);
   color: var(--adm-deep);
   font-weight: 750;
-  box-shadow: 0 1px 2px rgba(10, 40, 28, 0.1);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--avisens-ink) 10%, transparent);
 }
 
 .adm-conteo {
@@ -397,8 +397,8 @@ a.adm-miga:hover {
 }
 
 .adm-alerta {
-  border: 1px solid rgba(239, 68, 68, 0.28);
-  background: rgba(239, 68, 68, 0.07);
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+  background: var(--danger-soft);
   color: var(--danger3);
 }
 
@@ -413,8 +413,8 @@ a.adm-miga:hover {
 }
 
 .adm-aviso {
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  background: var(--warning-soft);
   color: var(--warning3);
 }
 

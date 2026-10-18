@@ -7,6 +7,7 @@ import { EstadoRecuperacionPassword } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { normalizarUsername } from '../../common/auth/username';
 import { ROLES } from '../../common/auth/roles';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
@@ -31,6 +32,7 @@ export class RecuperacionesPasswordService {
       select: {
         id: true,
         nombre_completo: true,
+        username: true,
         email: true,
         cedula: true,
         activo: true,
@@ -41,9 +43,9 @@ export class RecuperacionesPasswordService {
     },
   };
 
-  async solicitar(email: string, motivo?: string, ip?: string) {
+  async solicitar(username: string, motivo?: string, ip?: string) {
     const usuario = await this.prisma.usuario.findUnique({
-      where: { email: email.trim().toLowerCase() },
+      where: { username: normalizarUsername(username) },
       select: {
         id: true,
         activo: true,

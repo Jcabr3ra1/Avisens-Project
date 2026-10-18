@@ -1,0 +1,34 @@
+meta {
+  name: [Admin · Propietario]  Completar datos de un lote
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/v1/lotes/9/datos
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "sexo": "mixto",
+    "linea_genetica_id": 1,
+    "marca_alimento": "italcol",
+    "proveedor_id": 1
+  }
+}
+
+docs {
+  Todos obligatorios: linea_genetica_id, sexo, marca_alimento y proveedor_id.
+  La línea genética y el sexo eligen la curva estándar del lote.
+  Raza, cantidad, fechas o estado responden 400.
+}

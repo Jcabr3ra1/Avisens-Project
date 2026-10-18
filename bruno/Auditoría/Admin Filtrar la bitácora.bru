@@ -1,0 +1,32 @@
+meta {
+  name: [Admin]  Filtrar la bitácora
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/auditoria?page=1&limit=20&accion=eliminar&entidad=usuarios&desde=2026-10-01&hasta=2026-10-17
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  limit: 20
+  accion: eliminar
+  entidad: usuarios
+  desde: 2026-10-01
+  hasta: 2026-10-17
+  ~usuario_id: 1
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("responde 200 y solo trae la acción pedida", function() {
+    expect(res.getStatus()).to.equal(200);
+    res.getBody().data.forEach((r) => expect(r.accion).to.equal("eliminar"));
+  });
+}

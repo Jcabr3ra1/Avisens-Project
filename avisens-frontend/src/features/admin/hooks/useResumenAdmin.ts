@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import type { Usuario } from '@shared/api'
 import type { Organizacion } from '@features/organizaciones/api/organizaciones'
 import type { Prospecto } from '@features/crm/api/prospectos'
-import type { GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import type { ConectividadPlataforma } from '../model/conectividad'
 import type { AtencionAdminData } from '../api/admin'
 import {
   calcularAtencionAdmin,
@@ -16,11 +16,12 @@ type Datos = {
   usuarios: Usuario[]
   organizaciones: Organizacion[]
   prospectos: Prospecto[]
-  galpones: GalponMonitoreoVista[]
+  conectividad: ConectividadPlataforma | null
+  errorConectividad: boolean
   atencion: AtencionAdminData
 }
 
-export function useResumenAdmin({ usuarios, organizaciones, prospectos, galpones, atencion }: Datos) {
+export function useResumenAdmin({ usuarios, organizaciones, prospectos, conectividad, errorConectividad, atencion }: Datos) {
   return useMemo(() => {
     const etapasCrm = calcularEtapasCrmAdmin(prospectos)
     const totalPropietarios = usuarios.filter((usuario) => usuario.rol.nombre === 'Propietario').length
@@ -29,10 +30,10 @@ export function useResumenAdmin({ usuarios, organizaciones, prospectos, galpones
       .slice(0, 5)
 
     return {
-      kpis: calcularKpisAdmin(organizaciones, usuarios, calcularAtencionAdmin(atencion), galpones),
+      kpis: calcularKpisAdmin(organizaciones, usuarios, calcularAtencionAdmin(atencion), conectividad, errorConectividad),
       atencion: calcularAtencionAdmin(atencion),
       etapasCrm,
-      conversionCrm: calcularConversionCrm(prospectos, etapasCrm),
+      conversionCrm: calcularConversionCrm(prospectos),
       prospectosRecientes: ultimosProspectos(prospectos),
       totalProspectos: prospectos.length,
       actividadReciente,
@@ -41,5 +42,5 @@ export function useResumenAdmin({ usuarios, organizaciones, prospectos, galpones
       totalAdministradores: usuarios.filter((usuario) => usuario.rol.nombre === 'Administrador').length,
       totalActivos: usuarios.filter((usuario) => usuario.activo).length,
     }
-  }, [atencion, galpones, organizaciones, prospectos, usuarios])
+  }, [atencion, conectividad, errorConectividad, organizaciones, prospectos, usuarios])
 }

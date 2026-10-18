@@ -1,56 +1,65 @@
 import { useState, type FormEvent } from 'react'
 import { getRol } from '@shared/api'
-import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
+import { ROL_ADMIN } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { Galpon } from '@features/galpones/api/galpones'
 import { useDispositivos } from '../hooks/useDispositivos'
 import {
-  esMacValida,
   FORMULARIO_DISPOSITIVO_INICIAL,
   type DatosDispositivo,
 } from '../model/dispositivo'
+import { provisionarTokenPorUsb, soportaProvisionUsb } from '../model/provisionUsb'
 import type { CrearDispositivoPayload, Dispositivo } from '../api/dispositivos'
 import './DispositivosDeGalpon.css'
 
-function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
+function DispositivosDeGalpon({ galpon, onCambio }: {
+  galpon: Pick<Galpon, 'id' | 'codigo' | 'nombre'>
+  onCambio?: () => void
+}) {
   const { dispositivos, cargando, error, crear, alternar, regenerarToken, eliminar } =
     useDispositivos(galpon.id)
-  // Registrar dispositivos y rotar su token es operación del galpón: la hace
-  // el propietario; el administrador la consulta en solo lectura.
-  const permisos = permisosOperativosDeGalpon(getRol())
-  const conAcciones = permisos.configurar || permisos.eliminarDefinitivo
+  // La administración de nodos ESP32 pertenece exclusivamente al administrador.
+  const puedeGestionar = getRol() === ROL_ADMIN
+  const conAcciones = puedeGestionar
+  const usbDisponible = soportaProvisionUsb()
   const [form, setForm] = useState<DatosDispositivo>(FORMULARIO_DISPOSITIVO_INICIAL)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
   const [errorAccion, setErrorAccion] = useState('')
   const [token, setToken] = useState<{ id: number; valor: string } | null>(null)
+  const [enviandoUsb, setEnviandoUsb] = useState(false)
+  const [estadoUsb, setEstadoUsb] = useState('')
+  const [errorUsb, setErrorUsb] = useState('')
+  const [copiado, setCopiado] = useState(false)
 
   function campo<K extends keyof DatosDispositivo>(k: K, v: DatosDispositivo[K]) {
     setForm((prev) => ({ ...prev, [k]: v }))
+  }
+
+  function limpiarEstadoToken() {
+    setToken(null)
+    setEstadoUsb('')
+    setErrorUsb('')
+    setCopiado(false)
   }
 
   async function handleCrear(e: FormEvent) {
     e.preventDefault()
     setErrorForm('')
     setErrorAccion('')
-
-    if (!esMacValida(form.mac_address)) {
-      setErrorForm('La MAC debe tener el formato AA:BB:CC:DD:EE:FF.')
-      return
-    }
+    limpiarEstadoToken()
 
     setGuardando(true)
     try {
       const payload: CrearDispositivoPayload = {
         galpon_id: galpon.id,
-        mac_address: form.mac_address.trim(),
-        codigo_topic: form.codigo_topic.trim(),
-        nombre: form.nombre.trim(),
         version_firmware: form.version_firmware.trim() || undefined,
         ip_local: form.ip_local.trim() || undefined,
       }
-      await crear(payload)
+      const resultado = await crear(payload)
+      setToken({ id: resultado.dispositivo.id, valor: resultado.token_ingesta })
       setForm(FORMULARIO_DISPOSITIVO_INICIAL)
+      onCambio?.()
     } catch (err) {
       setErrorForm(mensajeDeError(err, 'No se pudo registrar el dispositivo.'))
     } finally {
@@ -62,6 +71,7 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
     setErrorAccion('')
     try {
       await alternar(dispositivo)
+      onCambio?.()
     } catch (err) {
       setErrorAccion(
         mensajeDeError(err, 'No se pudo cambiar el estado del dispositivo.'),
@@ -73,15 +83,49 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
     const confirmar = window.confirm(
       `¿Regenerar el token de "${dispositivo.nombre}"?\n` +
         'El token anterior deja de servir: el ESP32 no podrá enviar mediciones ' +
-        'hasta que lo actualices en su firmware.',
+        'hasta que lo actualices por USB o en su configuración.',
     )
     if (!confirmar) return
     setErrorAccion('')
+    limpiarEstadoToken()
     try {
       const { token_ingesta } = await regenerarToken(dispositivo.id)
       setToken({ id: dispositivo.id, valor: token_ingesta })
     } catch (err) {
       setErrorAccion(mensajeDeError(err, 'No se pudo regenerar el token.'))
+    }
+  }
+
+  async function handleEnviarUsb() {
+    if (!token || enviandoUsb) return
+    setEnviandoUsb(true)
+    setEstadoUsb('')
+    setErrorUsb('')
+    try {
+      await provisionarTokenPorUsb(token.valor)
+      setEstadoUsb('¡Token guardado automáticamente en la memoria NVS del ESP32!')
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'NotFoundError') {
+        setErrorUsb('No se seleccionó ningún puerto USB.')
+      } else if (err instanceof Error && err.message) {
+        // mensajeDeError solo interpreta errores HTTP (Axios); los del puerto
+        // USB traen su propia explicación y no deben ocultarse.
+        setErrorUsb(err.message)
+      } else {
+        setErrorUsb('No se pudo enviar el token al ESP32 por USB.')
+      }
+    } finally {
+      setEnviandoUsb(false)
+    }
+  }
+
+  async function handleCopiarToken() {
+    if (!token) return
+    try {
+      await navigator.clipboard.writeText(token.valor)
+      setCopiado(true)
+    } catch {
+      setCopiado(false)
     }
   }
 
@@ -94,6 +138,7 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
     setErrorAccion('')
     try {
       await eliminar(dispositivo.id)
+      onCambio?.()
     } catch (err) {
       setErrorAccion(mensajeDeError(err, 'No se pudo eliminar el dispositivo.'))
     }
@@ -128,50 +173,51 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
           <strong>Token nuevo</strong>
           <code>{token.valor}</code>
           <p>
-            Cópialo ahora y ponlo en el firmware del ESP32. No se vuelve a
-            mostrar.
+            Conecta el ESP32 por USB y envíalo con un clic (o cópialo manualmente).
+            Solo se muestra una vez.
           </p>
-          <button type="button" className="dsp-btn dsp-btn--sm" onClick={() => setToken(null)}>
-            Ya lo copié
-          </button>
+          {estadoUsb && (
+            <p className="dsp-token-feedback dsp-token-feedback--ok">{estadoUsb}</p>
+          )}
+          {errorUsb && (
+            <p className="dsp-token-feedback dsp-token-feedback--error" role="alert">{errorUsb}</p>
+          )}
+          <div className="dsp-token-acciones">
+            {usbDisponible && (
+              <button
+                type="button"
+                className="dsp-btn dsp-btn--primary dsp-btn--sm"
+                disabled={enviandoUsb}
+                onClick={() => void handleEnviarUsb()}
+              >
+                {enviandoUsb ? 'Enviando al ESP32…' : 'Enviar al ESP32 por USB'}
+              </button>
+            )}
+            <button
+              type="button"
+              className="dsp-btn dsp-btn--sm"
+              onClick={() => void handleCopiarToken()}
+            >
+              {copiado ? 'Copiado' : 'Copiar token'}
+            </button>
+            <button
+              type="button"
+              className="dsp-btn dsp-btn--sm"
+              onClick={limpiarEstadoToken}
+            >
+              Ya quedó listo
+            </button>
+          </div>
         </div>
       )}
 
-      {permisos.configurar && (
+      {puedeGestionar && (
       <form className="dsp-card dsp-form" onSubmit={handleCrear}>
-        <h2 className="dsp-form-titulo">Registrar dispositivo</h2>
-        <div className="dsp-grid">
-          <label className="dsp-campo">
-            <span>galpón</span>
-            <input value={`${galpon.codigo} · ${galpon.nombre}`} disabled />
-          </label>
-          <label className="dsp-campo">
-            <span>nombre</span>
-            <input
-              value={form.nombre}
-              onChange={(e) => campo('nombre', e.target.value)}
-              placeholder="ESP32 galpón 1"
-              required
-            />
-          </label>
-          <label className="dsp-campo">
-            <span>MAC</span>
-            <input
-              value={form.mac_address}
-              onChange={(e) => campo('mac_address', e.target.value)}
-              placeholder="A4:CF:12:9B:00:1E"
-              required
-            />
-          </label>
-          <label className="dsp-campo">
-            <span>tópico MQTT</span>
-            <input
-              value={form.codigo_topic}
-              onChange={(e) => campo('codigo_topic', e.target.value)}
-              placeholder="galpon-1"
-              required
-            />
-          </label>
+        <h3 className="dsp-form-titulo">Registrar controlador ESP32</h3>
+        <p className="dsp-ayuda">El nombre y el código se generan automáticamente con el código del galpón y un consecutivo: ESP32-001, ESP32-002… Al registrar el controlador recibirás su token de conexión una sola vez.</p>
+        <details className="dsp-opcionales">
+          <summary>Datos técnicos opcionales</summary>
+          <div className="dsp-grid">
           <label className="dsp-campo">
             <span>firmware <em>(opcional)</em></span>
             <input
@@ -188,7 +234,8 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
               placeholder="192.168.1.40"
             />
           </label>
-        </div>
+          </div>
+        </details>
 
         {errorForm && (
           <p className="dsp-alert dsp-alert--error" role="alert">{errorForm}</p>
@@ -208,10 +255,10 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
         ) : dispositivos.length === 0 ? (
           <div className="dsp-vacio">
             <p className="dsp-vacio-titulo">Este galpón no tiene dispositivos.</p>
-            {permisos.configurar && (
+            {puedeGestionar && (
               <p className="dsp-vacio-sub">
-                Registra el primero arriba: sin dispositivo no se pueden crear
-                sensores.
+                Registra el nodo y guarda el token. Después asígnale las
+                variables que reportará desde el catálogo de sensores.
               </p>
             )}
           </div>
@@ -221,8 +268,7 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
               <thead>
                 <tr>
                   <th>Nombre</th>
-                  <th>MAC</th>
-                  <th>Tópico</th>
+                  <th>Código del controlador</th>
                   <th>Firmware</th>
                   <th>Estado</th>
                   {conAcciones && <th aria-label="Acciones"></th>}
@@ -232,7 +278,6 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
                 {dispositivos.map((dispositivo) => (
                   <tr key={dispositivo.id} className={dispositivo.activo ? '' : 'is-inactive'}>
                     <td>{dispositivo.nombre}</td>
-                    <td><code>{dispositivo.mac_address}</code></td>
                     <td><code>{dispositivo.codigo_topic}</code></td>
                     <td>{dispositivo.version_firmware ?? '—'}</td>
                     <td>
@@ -244,7 +289,7 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
                     </td>
                     {conAcciones && (
                     <td className="dsp-acciones">
-                      {permisos.configurar && (
+                      {puedeGestionar && (
                         <>
                           <button
                             className="dsp-btn dsp-btn--sm"
@@ -260,7 +305,7 @@ function DispositivosDeGalpon({ galpon }: { galpon: Galpon }) {
                           </button>
                         </>
                       )}
-                      {permisos.eliminarDefinitivo && (
+                      {puedeGestionar && (
                         <button
                           className="dsp-btn dsp-btn--sm dsp-btn--danger"
                           onClick={() => void handleEliminar(dispositivo)}

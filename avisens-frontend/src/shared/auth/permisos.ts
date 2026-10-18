@@ -38,6 +38,13 @@ export function permisosDeGestion(rol: string | null): PermisosGestion {
   return rol === ROL_ADMIN ? TODOS_LOS_PERMISOS : SIN_PERMISOS
 }
 
+// Excepción acordada el 2026-10-18: el propietario completa los datos
+// descriptivos de lo suyo (ubicación de la granja, medidas del galpón, raza y
+// línea genética del lote) por las rutas PATCH …/:id/datos. No crea ni borra.
+export function puedeCompletarDatos(rol: string | null): boolean {
+  return rol === ROL_ADMIN || rol === ROL_PROPIETARIO
+}
+
 // ¿Hay alguna acción de gestión que mostrar? Sirve para no dibujar
 // separadores ni columnas de acciones vacías.
 export function gestionaAlgo(permisos: PermisosGestion): boolean {
@@ -68,16 +75,12 @@ export function permisosDeInsumo(rol: string | null): PermisosInsumo {
   }
 }
 
-// Funciones operativas del galpón: sensores, dispositivos, equipos (con sus
-// mantenimientos y repuestos) y umbrales ambientales. Las configura el
-// propietario, que es quien opera su granja. El administrador gestiona la
-// estructura (granja → galpón → lote) y la operación solo la consulta.
+// Equipos, mantenimientos, repuestos y umbrales ambientales siguen la regla
+// operativa del propietario. Dispositivos ESP32 y sensores se administran por
+// separado y son exclusivos del administrador AVISENS.
 //
-// Ojo: el backend todavía acepta estas escrituras del Administrador
-// (@Roles(ADMINISTRADOR, PROPIETARIO) en sensores, dispositivos, equipos,
-// mantenimiento y umbrales). Mientras no se cierre allí, esto es honestidad de
-// la interfaz, no seguridad: quitar ADMINISTRADOR de esos @Roles queda como
-// pendiente del backend.
+// Esto solo controla la visibilidad de la interfaz. La autorización real está
+// en los roles declarados por cada controlador del backend.
 export type PermisosOperativosGalpon = {
   configurar: boolean
   // Borrado definitivo (/permanente): el backend solo lo permite al

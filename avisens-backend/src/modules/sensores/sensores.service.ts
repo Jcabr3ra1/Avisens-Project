@@ -1,11 +1,14 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateSensorDto } from './dto/create-sensor.dto';
 import { UpdateSensorDto } from './dto/update-sensor.dto';
+import { esConflictoConexion, validarConexionSensor } from './conexion-sensor';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
 import { verificarDueno } from '../../common/auth/acceso';
@@ -15,10 +18,41 @@ import {
   verificarAccesoSensor,
 } from '../../common/auth/alcance';
 
+const UNIDAD_POR_TIPO: Record<string, string> = {
+  temperatura: '°C',
+  humedad: '%',
+  amoniaco: 'ppm',
+  co2: 'ppm',
+  luminosidad: 'lux',
+};
+
+function normalizarTipo(tipo: string) {
+  return tipo
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function unidadMedidaPorTipo(tipo: string) {
+  return UNIDAD_POR_TIPO[normalizarTipo(tipo)] ?? 'N/D';
+}
+
+function prefijoSerial(tipo: string) {
+  return (
+    normalizarTipo(tipo)
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 12) || 'SENSOR'
+  );
+}
+
 const SENSOR_SELECT = {
   id: true,
   codigo: true,
   tipo: true,
+  canal: true,
   unidad_medida: true,
   modelo: true,
   fabricante: true,
@@ -98,31 +132,79 @@ export class SensoresService {
   async crear(dto: CreateSensorDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
     await this.validarDispositivoEnGalpon(dto.dispositivo_id, dto.galpon_id);
+    const tipo = normalizarTipo(dto.tipo);
+    const modelo = dto.modelo?.trim();
+    validarConexionSensor(dto.canal, tipo, modelo);
 
-    return this.prisma.sensor.create({
-      data: {
-        galpon_id: dto.galpon_id,
-        dispositivo_id: dto.dispositivo_id,
-        codigo: dto.codigo,
-        tipo: dto.tipo,
-        unidad_medida: dto.unidad_medida,
-        modelo: dto.modelo,
-        fabricante: dto.fabricante,
-        coordenada_x: dto.coordenada_x,
-        coordenada_y: dto.coordenada_y,
-        altura_metros: dto.altura_metros,
-        fecha_instalacion: dto.fecha_instalacion
-          ? new Date(dto.fecha_instalacion)
-          : undefined,
-        ultima_calibracion: dto.ultima_calibracion
-          ? new Date(dto.ultima_calibracion)
-          : undefined,
-        proxima_calibracion: dto.proxima_calibracion
-          ? new Date(dto.proxima_calibracion)
-          : undefined,
-      },
-      select: SENSOR_SELECT,
-    });
+    const data = {
+      galpon_id: dto.galpon_id,
+      dispositivo_id: dto.dispositivo_id,
+      tipo,
+      canal: dto.canal,
+      unidad_medida: dto.unidad_medida?.trim() || unidadMedidaPorTipo(dto.tipo),
+      modelo,
+      fabricante: dto.fabricante,
+      coordenada_x: dto.coordenada_x,
+      coordenada_y: dto.coordenada_y,
+      altura_metros: dto.altura_metros,
+      fecha_instalacion: dto.fecha_instalacion
+        ? new Date(dto.fecha_instalacion)
+        : undefined,
+      ultima_calibracion: dto.ultima_calibracion
+        ? new Date(dto.ultima_calibracion)
+        : undefined,
+      proxima_calibracion: dto.proxima_calibracion
+        ? new Date(dto.proxima_calibracion)
+        : undefined,
+    };
+
+    if (dto.codigo?.trim()) {
+      return this.prisma.sensor
+        .create({
+          data: { ...data, codigo: dto.codigo.trim() },
+          select: SENSOR_SELECT,
+        })
+        .catch((error: unknown) => {
+          if (esConflictoConexion(error))
+            throw new ConflictException(
+              'Ya existe esta variable en el GPIO del controlador; edita o reactiva el sensor existente',
+            );
+          throw error;
+        });
+    }
+
+    // Sensor.codigo tiene índice UNIQUE en PostgreSQL. Si dos altas concurrentes
+    // chocan, se genera otro serial y se vuelve a intentar; nunca se devuelve un
+    // código que no quedó reservado por la base de datos.
+    for (let intento = 0; intento < 5; intento += 1) {
+      const codigo = `${prefijoSerial(dto.tipo)}-G${dto.galpon_id}-${randomUUID()
+        .replace(/-/g, '')
+        .slice(0, 12)
+        .toUpperCase()}`;
+      try {
+        return await this.prisma.sensor.create({
+          data: { ...data, codigo },
+          select: SENSOR_SELECT,
+        });
+      } catch (error) {
+        if (esConflictoConexion(error))
+          throw new ConflictException(
+            'Ya existe esta variable en el GPIO del controlador; edita o reactiva el sensor existente',
+          );
+        if (
+          error instanceof Error &&
+          'code' in error &&
+          error.code === 'P2002'
+        ) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new ConflictException(
+      'No se pudo reservar un serial único para el sensor; intenta de nuevo',
+    );
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
@@ -172,33 +254,53 @@ export class SensoresService {
     if (dto.dispositivo_id) {
       await this.validarDispositivoEnGalpon(dispositivoFinal, galponFinal);
     }
+    if (dto.tipo !== undefined && typeof dto.tipo !== 'string')
+      throw new BadRequestException('El tipo de sensor debe ser texto');
+    const tipo =
+      dto.tipo === undefined ? actual.tipo : normalizarTipo(dto.tipo);
+    const modelo =
+      dto.modelo === undefined ? actual.modelo : (dto.modelo?.trim() ?? null);
+    validarConexionSensor(
+      dto.canal === undefined ? actual.canal : dto.canal,
+      tipo,
+      modelo,
+    );
 
-    return this.prisma.sensor.update({
-      where: { id },
-      data: {
-        galpon_id: undefined,
-        dispositivo_id: dto.dispositivo_id,
-        codigo: dto.codigo,
-        tipo: dto.tipo,
-        unidad_medida: dto.unidad_medida,
-        modelo: dto.modelo,
-        fabricante: dto.fabricante,
-        coordenada_x: dto.coordenada_x,
-        coordenada_y: dto.coordenada_y,
-        altura_metros: dto.altura_metros,
-        fecha_instalacion: dto.fecha_instalacion
-          ? new Date(dto.fecha_instalacion)
-          : undefined,
-        ultima_calibracion: dto.ultima_calibracion
-          ? new Date(dto.ultima_calibracion)
-          : undefined,
-        proxima_calibracion: dto.proxima_calibracion
-          ? new Date(dto.proxima_calibracion)
-          : undefined,
-        estado: dto.estado,
-      },
-      select: SENSOR_SELECT,
-    });
+    return this.prisma.sensor
+      .update({
+        where: { id },
+        data: {
+          galpon_id: undefined,
+          dispositivo_id: dto.dispositivo_id,
+          codigo: dto.codigo,
+          tipo,
+          canal: dto.canal,
+          unidad_medida: dto.unidad_medida,
+          modelo,
+          fabricante: dto.fabricante,
+          coordenada_x: dto.coordenada_x,
+          coordenada_y: dto.coordenada_y,
+          altura_metros: dto.altura_metros,
+          fecha_instalacion: dto.fecha_instalacion
+            ? new Date(dto.fecha_instalacion)
+            : undefined,
+          ultima_calibracion: dto.ultima_calibracion
+            ? new Date(dto.ultima_calibracion)
+            : undefined,
+          proxima_calibracion: dto.proxima_calibracion
+            ? new Date(dto.proxima_calibracion)
+            : undefined,
+          estado: dto.estado,
+        },
+        select: SENSOR_SELECT,
+      })
+      .catch((error: unknown) => {
+        if (esConflictoConexion(error))
+          throw new ConflictException(
+            'Ya existe esta variable en el GPIO del controlador; edita o reactiva el sensor existente',
+          );
+        throw error;
+      });
   }
 
   async desactivar(id: number, solicitante: Solicitante) {

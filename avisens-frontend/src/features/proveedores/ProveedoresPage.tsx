@@ -1,24 +1,33 @@
 import { useCallback, useMemo, useState } from 'react'
 import { mensajeDeError } from '@shared/utils/errores'
-import BarraHerramientas, { type OpcionFiltro } from '@shared/ui/admin/BarraHerramientas'
-import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
-import { IcPlus } from '@shared/ui/icons/icons'
+import { IcChevronDown, IcPlus, IcSearch } from '@shared/ui/icons/icons'
 import FormularioProveedor from './components/FormularioProveedor'
-import ResumenProveedores from './components/ResumenProveedores'
 import TablaProveedores from './components/TablaProveedores'
 import { useFormularioProveedor } from './hooks/useFormularioProveedor'
 import { useProveedores } from './hooks/useProveedores'
 import type { FormularioProveedor as DatosProveedor, Proveedor } from './model/proveedor'
+import EstadoVacioAnimado from '@shared/ui/Animacion/EstadoVacioAnimado'
+import CargandoAnimado from '@shared/ui/Animacion/CargandoAnimado'
 import '@shared/ui/admin/AdminKit.css'
 import './ProveedoresPage.css'
 
 type FiltroEstado = 'todos' | 'activos' | 'inactivos'
 
-const OPCIONES_ESTADO: OpcionFiltro<FiltroEstado>[] = [
-  { valor: 'todos', label: 'Todos' },
-  { valor: 'activos', label: 'Activos' },
-  { valor: 'inactivos', label: 'Inactivos' },
+const OPCIONES_ESTADO: Array<{ valor: FiltroEstado; etiqueta: string }> = [
+  { valor: 'todos', etiqueta: 'Estado: todos' },
+  { valor: 'activos', etiqueta: 'Estado: activos' },
+  { valor: 'inactivos', etiqueta: 'Estado: inactivos' },
 ]
+
+function Indicador({ etiqueta, valor, nota }: { etiqueta: string; valor: number | null; nota: string }) {
+  return (
+    <li className="prv-indicador">
+      <span className="prv-indicador-label">{etiqueta}</span>
+      <strong className="prv-indicador-valor">{valor ?? '—'}</strong>
+      <span className="prv-indicador-nota">{nota}</span>
+    </li>
+  )
+}
 
 function ProveedoresPage() {
   const gestion = useProveedores()
@@ -71,25 +80,35 @@ function ProveedoresPage() {
     if (confirmado) void gestion.eliminar(proveedor)
   }
 
+  const { proveedores, cargando } = gestion
+  const activos = proveedores.filter((proveedor) => proveedor.activo).length
+  const sinContacto = proveedores.filter((proveedor) => !proveedor.telefono && !proveedor.email).length
+  const tipos = new Set(proveedores.map((proveedor) => proveedor.tipo_proveedor).filter(Boolean)).size
+  const listo = !cargando && !gestion.error
+
   return (
     <div className="page-container prv-page adm-page">
-      <CabeceraAdmin
-        eyebrow="Abastecimiento"
-        titulo="Proveedores"
-        subtitulo="Centraliza los aliados de alimento, pollitos, insumos y servicios."
-        acciones={(
-          <button
-            type="button"
-            className="adm-btn adm-btn--primario"
-            onClick={formulario.abrirCrear}
-          >
-            <IcPlus size={17} aria-hidden="true" />
-            Nuevo proveedor
-          </button>
-        )}
-      />
+      <header className="prv-cabecera">
+        <div>
+          <span className="adm-eyebrow">
+            <span className="adm-eyebrow-punto" aria-hidden="true" />
+            Plataforma · Abastecimiento
+          </span>
+          <h1 className="prv-titulo">Proveedores</h1>
+          <p className="prv-subtitulo">Aliados de alimento, pollitos, insumos y servicios.</p>
+        </div>
+        <button type="button" className="prv-boton-nuevo" onClick={formulario.abrirCrear}>
+          <IcPlus size={17} aria-hidden="true" />
+          Nuevo proveedor
+        </button>
+      </header>
 
-      <ResumenProveedores proveedores={gestion.proveedores} />
+      <ul className="prv-indicadores" aria-label="Resumen de proveedores">
+        <Indicador etiqueta="Proveedores" valor={listo ? proveedores.length : null} nota="Registrados en total" />
+        <Indicador etiqueta="Activos" valor={listo ? activos : null} nota={proveedores.length - activos === 1 ? '1 inactivo' : `${proveedores.length - activos} inactivos`} />
+        <Indicador etiqueta="Tipos" valor={listo ? tipos : null} nota="Clasificaciones distintas" />
+        <Indicador etiqueta="Sin contacto" valor={listo ? sinContacto : null} nota="Sin teléfono ni correo" />
+      </ul>
 
       {gestion.error && (
         <div className="adm-alerta" role="alert">
@@ -98,34 +117,46 @@ function ProveedoresPage() {
         </div>
       )}
 
-      <section className="prv-listado adm-panel" aria-label="Directorio de proveedores">
-        {!gestion.cargando && gestion.proveedores.length > 0 && (
-          <BarraHerramientas
-            busqueda={busqueda}
-            placeholder="Buscar por nombre, NIT o contacto"
-            etiquetaBusqueda="Buscar proveedor"
-            onBuscar={setBusqueda}
-            filtro={estado}
-            opciones={OPCIONES_ESTADO}
-            etiquetaFiltro="Filtrar proveedores por estado"
-            onCambiarFiltro={setEstado}
-            visibles={visibles.length}
-            total={gestion.proveedores.length}
-          />
-        )}
+      {!cargando && proveedores.length > 0 && (
+        <div className="prv-herramientas">
+          <label className="prv-buscador">
+            <span className="sr-only">Buscar proveedor</span>
+            <IcSearch size={17} aria-hidden="true" />
+            <input type="search" value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} placeholder="Buscar por nombre, NIT o contacto…" autoComplete="off" />
+          </label>
+          <label className="prv-desplegable">
+            <span className="sr-only">Filtrar por estado</span>
+            <select value={estado} onChange={(evento) => setEstado(evento.target.value as FiltroEstado)}>
+              {OPCIONES_ESTADO.map((opcion) => <option key={opcion.valor} value={opcion.valor}>{opcion.etiqueta}</option>)}
+            </select>
+            <IcChevronDown size={17} aria-hidden="true" />
+          </label>
+          <span className="prv-conteo">{visibles.length} de {proveedores.length}</span>
+        </div>
+      )}
 
-        {gestion.cargando ? (
-          <p className="prv-vacio" role="status">Cargando proveedores…</p>
-        ) : gestion.proveedores.length === 0 ? (
-          <div className="prv-vacio">
-            <h2>Aún no hay proveedores</h2>
-            <p>Registra el primero para poder relacionarlo con lotes, insumos y compras.</p>
-          </div>
+      <section className="prv-listado" aria-label="Directorio de proveedores">
+        {cargando ? (
+          <CargandoAnimado texto="Cargando proveedores…" />
+        ) : proveedores.length === 0 ? (
+          <EstadoVacioAnimado
+            animacion="caja-vacia"
+            titulo="Aún no hay proveedores"
+            texto="Registra el primero para relacionarlo con lotes, insumos y compras."
+            accion={(
+              <button type="button" className="adm-btn adm-btn--primario" onClick={formulario.abrirCrear}>
+                <IcPlus size={16} aria-hidden="true" />
+                Nuevo proveedor
+              </button>
+            )}
+          />
         ) : visibles.length === 0 ? (
-          <div className="prv-vacio">
-            <h2>No encontramos proveedores</h2>
-            <p>Prueba cambiando la búsqueda o el filtro de estado.</p>
-          </div>
+          <EstadoVacioAnimado
+            animacion="sin-resultados"
+            titulo="No encontramos proveedores"
+            texto="Prueba cambiando la búsqueda o el filtro de estado."
+            accion={<button type="button" className="adm-btn adm-btn--secundario" onClick={() => { setBusqueda(''); setEstado('todos') }}>Limpiar filtros</button>}
+          />
         ) : (
           <TablaProveedores
             proveedores={visibles}

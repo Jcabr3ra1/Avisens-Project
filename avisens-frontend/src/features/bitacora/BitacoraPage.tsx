@@ -1,4 +1,5 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { ROL_ADMIN } from '@shared/auth/permisos'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
@@ -14,6 +15,8 @@ import ResumenLote from './components/ResumenLote'
 import { useBitacora } from './hooks/useBitacora'
 import {
   FORMULARIO_INICIAL,
+  formularioDesde,
+  payloadRegistro,
   type FormularioRegistro as DatosFormulario,
   type TipoRegistro,
 } from './model/bitacora'
@@ -37,9 +40,28 @@ function BitacoraPage() {
   const esAdministrador = getRol() === ROL_ADMIN
   const [granjaId, setGranjaId] = useState<number | null>(null)
   const [galponId, setGalponId] = useState<number | null>(null)
+  const [parametros] = useSearchParams()
+  const vistaSolicitada = parametros.get('vista')
   const [loteId, setLoteId] = useState<number | null>(null)
-  const [vista, setVista] = useState<VistaBitacora>('resumen')
+  const [vista, setVista] = useState<VistaBitacora>(() =>
+    vistaSolicitada === 'peso' || vistaSolicitada === 'mortalidad' || vistaSolicitada === 'sanitario' || vistaSolicitada === 'consumo'
+      ? vistaSolicitada
+      : 'resumen',
+  )
   const [modal, setModal] = useState<TipoRegistro | null>(null)
+  const [editandoId, setEditandoId] = useState<number | null>(null)
+  const loteSolicitado = Number(parametros.get('lote'))
+  const destinoAplicado = useRef(false)
+
+  useEffect(() => {
+    if (destinoAplicado.current || !Number.isSafeInteger(loteSolicitado) || loteSolicitado <= 0) return
+    const destino = datos.lotes.find((item) => item.id === loteSolicitado)
+    if (!destino) return
+    destinoAplicado.current = true
+    setGranjaId(destino.galpon.granja.id)
+    setGalponId(destino.galpon.id)
+    setLoteId(destino.id)
+  }, [datos.lotes, loteSolicitado])
   const [form, setForm] = useState<DatosFormulario>(FORMULARIO_INICIAL)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -103,6 +125,17 @@ function BitacoraPage() {
   const abrir = (tipo: TipoRegistro) => {
     setForm(FORMULARIO_INICIAL)
     setErrorForm('')
+    setEditandoId(null)
+    setModal(tipo)
+  }
+
+  const abrirEdicion = (tipo: TipoRegistro, id: number) => {
+    const registros = tipo === 'peso' ? pesajes : tipo === 'mortalidad' ? mortalidad : sanitarios
+    const registro = registros.find((item) => item.id === id)
+    if (!registro) return
+    setForm(formularioDesde(tipo, registro))
+    setErrorForm('')
+    setEditandoId(id)
     setModal(tipo)
   }
 
@@ -114,44 +147,17 @@ function BitacoraPage() {
     evento.preventDefault()
     if (!modal || !loteSeleccionadoId) return
 
-    let payload: object = {
-      lote_id: loteSeleccionadoId,
-      fecha: form.fecha,
-      metodo_registro: 'manual',
-      observaciones: form.observaciones || undefined,
-    }
-
-    if (modal === 'peso') {
-      payload = {
-        ...payload,
-        peso_promedio_g: Number(form.peso_promedio_g),
-        cantidad_aves_pesadas: form.cantidad_aves_pesadas ? Number(form.cantidad_aves_pesadas) : undefined,
-        peso_objetivo_g: form.peso_objetivo_g ? Number(form.peso_objetivo_g) : undefined,
-      }
-    }
-
-    if (modal === 'mortalidad') {
-      payload = {
-        ...payload,
-        cantidad_aves: Number(form.cantidad_aves),
-        causa_presuntiva: form.causa_presuntiva || undefined,
-      }
-    }
-
-    if (modal === 'sanitario') {
-      payload = {
-        ...payload,
-        tipo: form.tipo,
-        producto: form.producto || undefined,
-        diagnostico: form.diagnostico || undefined,
-      }
-    }
+    const payload = payloadRegistro(modal, form, loteSeleccionadoId)
 
     setGuardando(true)
     setErrorForm('')
-    void datos
-      .crear(modal, payload)
-      .then(() => setModal(null))
+    const tipo = modal
+    void (editandoId === null ? datos.crear(tipo, payload) : datos.actualizar(tipo, editandoId, payload))
+      .then(() => {
+        if (editandoId !== null) toast.success('Registro corregido')
+        setModal(null)
+        setEditandoId(null)
+      })
       .catch((error) => setErrorForm(mensajeDeError(error, 'No se pudo guardar el registro.')))
       .finally(() => setGuardando(false))
   }
@@ -296,7 +302,9 @@ function BitacoraPage() {
               codigoLote={lote.codigo}
               filas={filas}
               onNuevo={() => abrir(vista)}
+              onEditar={(id) => abrirEdicion(vista, id)}
               onEliminar={(id) => borrar(vista, id)}
+              resaltadoId={vista === 'peso' ? pesajes.find((item) => item.peso_promedio_g > 10000)?.id ?? null : null}
             />
           )}
         </>
@@ -310,7 +318,12 @@ function BitacoraPage() {
           error={errorForm}
           onCambiar={cambiar}
           onGuardar={guardar}
-          onCerrar={() => !guardando && setModal(null)}
+          onCerrar={() => {
+            if (guardando) return
+            setModal(null)
+            setEditandoId(null)
+          }}
+          editando={editandoId !== null}
           complemento={
             modal === 'peso' && loteSeleccionadoId !== null
               ? <AlimentoEstimadoPesaje loteId={loteSeleccionadoId} />

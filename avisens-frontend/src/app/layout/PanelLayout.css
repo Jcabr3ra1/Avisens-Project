@@ -2,9 +2,9 @@
   --dash-ink: var(--text-primary);
   width: 100%;
   height: 100dvh;
-  overflow: hidden;
+  overflow: clip;
   color: var(--text-primary);
-  background: var(--primary);
+  background: var(--surface-page);
 }
 
 .dash-shell {
@@ -15,12 +15,90 @@
 }
 
 .dash-content {
+  position: relative;
   display: flex;
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  padding: var(--space-3);
 }
+
+.dash-acciones-superiores {
+  --header-control-size: 52px;
+  --header-control-radius: 14px;
+  position: relative;
+  z-index: 30;
+  display: flex;
+  width: 100%;
+  min-height: var(--header-control-size);
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-1) calc(clamp(var(--space-4), 2.4vw, var(--space-6)) + 10px) 0 0;
+}
+
+.dash-header-perfil {
+  --perfil-avatar-size: 40px;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 300px;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--header-control-size);
+  padding: 5px 16px 5px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--header-control-radius);
+  background: var(--surface-base);
+  color: inherit;
+  text-decoration: none;
+  user-select: none;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.dash-header-perfil:hover { border-color: var(--border-strong); background: var(--surface-subtle); }
+.dash-header-perfil:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.dash-header-perfil-foto {
+  display: grid;
+  width: var(--perfil-avatar-size);
+  height: var(--perfil-avatar-size);
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--surface-subtle);
+}
+
+.dash-header-perfil-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dash-header-perfil-copy strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-header-perfil-copy small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-main .page-container { padding-top: var(--space-3); }
 
 .dash-main {
   display: flex;
@@ -30,6 +108,7 @@
   flex-direction: column;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   border-radius: var(--radius-xl);
   background: var(--surface-page);
   scrollbar-color: var(--border-strong) transparent;
@@ -53,8 +132,8 @@
 }
 
 @keyframes dash-view-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .page-container {
@@ -103,6 +182,12 @@
 
   .dash-content { padding: 0; }
 
+  .dash-acciones-superiores { --header-control-size: 44px; --header-control-radius: 13px; position: absolute; top: 8px; right: var(--space-4); width: auto; min-height: 0; padding: 0; }
+  .dash-main .page-container { padding-top: var(--space-4); }
+  .dash-content > .dash-mobile-header { padding-right: calc(var(--space-4) + 110px); }
+  .dash-header-perfil { --perfil-avatar-size: 36px; padding: 3px; }
+  .dash-header-perfil-copy { display: none; }
+
   .dash-mobile-header {
     position: relative;
     z-index: 25;
@@ -115,7 +200,8 @@
     background: var(--surface-base);
   }
 
-  .dash-mobile-menu {
+  .dash-mobile-menu,
+  .dash-mobile-search {
     display: grid;
     width: 44px;
     height: 44px;
@@ -138,9 +224,20 @@
   }
 
   .dash-mobile-brand img {
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
     object-fit: contain;
+  }
+
+  .dash-mobile-location {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 0.86rem;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .dash-main { border-radius: 0; }
@@ -151,7 +248,7 @@
     z-index: 35;
     display: block;
     border: 0;
-    background: rgba(6, 24, 18, 0.54);
+    background: color-mix(in srgb, var(--avisens-ink) 54%, transparent);
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--motion-base) var(--ease-standard);
@@ -170,4 +267,9 @@
 
 body[data-tab-hidden="true"] .dash-status-pulse .ring {
   animation-play-state: paused !important;
+}
+
+@media (max-width: 30rem) {
+  .dash-mobile-brand { display: none; }
+  .dash-mobile-location { font-size: 0.95rem; font-weight: 750; }
 }

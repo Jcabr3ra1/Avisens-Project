@@ -3,6 +3,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import { sembrarRoles, sembrarAdmin } from './seed-auth';
 import { sembrarCurvasObjetivo } from './seed-curvas';
+import { sembrarCurvasGeneticas } from './seed-curvas-geneticas';
 import {
   sembrarMatrizCalificacion,
   sembrarPreguntasChatbot,
@@ -20,6 +21,7 @@ async function main() {
   const rolAdmin = await sembrarRoles(prisma);
   await sembrarAdmin(prisma, rolAdmin.id);
   await sembrarCurvasObjetivo(prisma);
+  await sembrarCurvasGeneticas(prisma);
   await sembrarMatrizCalificacion(prisma);
   await sembrarPreguntasChatbot(prisma);
   await sembrarCategoriasFinancieras(prisma);
