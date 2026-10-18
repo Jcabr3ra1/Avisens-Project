@@ -23,14 +23,40 @@
 .mgr-punto--advertencia { background: var(--warning); }
 .mgr-punto--critico { background: var(--danger); }
 
-.mgr-resumen { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-4); padding: var(--space-4) var(--space-5); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-base); box-shadow: var(--shadow-sm); }
-.mgr-resumen-galpon { display: grid; min-width: 0; }
-.mgr-resumen-galpon strong { color: var(--text-primary); font-size: 1.1rem; font-weight: 650; }
-.mgr-resumen-galpon span { color: var(--text-muted); font-size: .82rem; }
-.mgr-resumen-datos { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; }
-.mgr-resumen-datos div { display: grid; gap: .05rem; }
-.mgr-resumen-datos dt { color: var(--text-muted); font-size: .72rem; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
-.mgr-resumen-datos dd { margin: 0; color: var(--text-primary); font-size: 1.05rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.mgr-resumen {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  overflow: hidden;
+  padding: var(--space-4) var(--space-5) var(--space-4) calc(var(--space-5) + 4px);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.mgr-resumen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--avisens-deep);
+}
+
+.mgr-resumen-galpon { display: grid; min-width: 0; gap: 0.15rem; }
+.mgr-resumen-galpon strong { color: var(--text-primary); font-size: 1.12rem; font-weight: 800; letter-spacing: -0.015em; }
+.mgr-resumen-galpon span { color: var(--text-muted); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+.mgr-codigo { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.76rem; font-weight: 650; color: var(--text-secondary); }
+.mgr-codigo-lote { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.96rem; font-weight: 750; color: var(--avisens-deep); }
+
+.mgr-resumen-datos { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); margin: 0; }
+.mgr-resumen-datos div { display: grid; gap: 0.1rem; }
+.mgr-resumen-datos dt { color: var(--text-muted); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.mgr-resumen-datos dd { margin: 0; color: var(--text-primary); font-size: 1.08rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .mgr-resumen-datos .is-alerta dd { color: var(--danger3); }
 .mgr-resumen-datos .is-apagado dd { color: var(--text-muted); }
 
@@ -41,25 +67,31 @@
   width: 100%;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   background: var(--surface-base);
   box-shadow: var(--shadow-sm);
   text-align: left;
-  transition: border-color 200ms var(--ease-standard), box-shadow 240ms var(--ease-standard), transform 240ms var(--ease-standard);
+  transition: border-color 200ms var(--ease-standard), box-shadow 240ms var(--ease-standard), transform 240ms var(--ease-standard), background 200ms var(--ease-standard);
 }
 .mgr-sensor:hover:not(:disabled) { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.mgr-sensor.is-activo {
+  border-color: var(--primary);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 6%, var(--surface-base)) 0%, var(--surface-base) 100%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 16%, transparent), var(--shadow-sm);
+}
 .mgr-sensor:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
 .mgr-sensor:disabled { cursor: default; opacity: .75; }
 
 .mgr-sensor-cabecera { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .6rem; }
 .mgr-sensor-icono { display: grid; width: 34px; height: 34px; place-items: center; border-radius: var(--radius-md); background: var(--surface-subtle); color: var(--text-secondary); }
-.mgr-sensor-tipo { overflow: hidden; color: var(--text-primary); font-size: .92rem; font-weight: 650; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
-.mgr-estado { padding: .12rem .5rem; border-radius: var(--radius-full); background: var(--surface-subtle); color: var(--text-muted); font-size: .72rem; font-weight: 650; }
+.mgr-sensor.is-activo .mgr-sensor-icono { background: var(--avisens-deep); color: var(--on-primary); }
+.mgr-sensor-tipo { overflow: hidden; color: var(--text-primary); font-size: .92rem; font-weight: 700; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
+.mgr-estado { padding: .15rem .5rem; border-radius: var(--radius-sm); background: var(--surface-subtle); color: var(--text-muted); font-size: .72rem; font-weight: 700; }
 
 .mgr-sensor-valor { display: flex; align-items: baseline; gap: .35rem; }
-.mgr-sensor-valor strong { color: var(--text-primary); font-size: 2.2rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.03em; line-height: 1; }
-.mgr-sensor-valor small { color: var(--text-muted); font-size: .95rem; font-weight: 600; }
+.mgr-sensor-valor strong { color: var(--text-primary); font-size: 2.2rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.03em; line-height: 1; }
+.mgr-sensor-valor small { color: var(--text-muted); font-size: .95rem; font-weight: 650; }
 
 .mgr-rango { position: relative; display: block; height: 8px; border-radius: var(--radius-full); background: linear-gradient(90deg, color-mix(in srgb, var(--danger) 35%, transparent), color-mix(in srgb, var(--warning) 35%, transparent) 20%, var(--surface-subtle) 25%, var(--surface-subtle) 75%, color-mix(in srgb, var(--warning) 35%, transparent) 80%, color-mix(in srgb, var(--danger) 35%, transparent)); }
 .mgr-rango-ideal { position: absolute; top: 0; bottom: 0; left: 25%; width: 50%; border-radius: var(--radius-full); background: color-mix(in srgb, var(--success) 45%, transparent); }
@@ -67,9 +99,11 @@
 .mgr-rango-vacio { color: var(--text-muted); font-size: .76rem; }
 
 .mgr-sensor-pie { display: flex; justify-content: space-between; gap: var(--space-2); color: var(--text-muted); font-size: .76rem; }
+.mgr-sensor-pie span:first-child { overflow: hidden; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.72rem; text-overflow: ellipsis; white-space: nowrap; }
+.mgr-sensor-pie span:last-child { flex: 0 0 auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .mgr-sensor--optimo .mgr-estado { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success3); }
-.mgr-sensor--optimo .mgr-sensor-icono { background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success3); }
+.mgr-sensor--optimo:not(.is-activo) .mgr-sensor-icono { background: color-mix(in srgb, var(--success) 12%, transparent); color: var(--success3); }
 .mgr-sensor--advertencia { border-color: color-mix(in srgb, var(--warning) 45%, transparent); }
 .mgr-sensor--advertencia .mgr-estado { background: color-mix(in srgb, var(--warning) 18%, transparent); color: var(--warning3); }
 .mgr-sensor--advertencia .mgr-rango-marca { background: var(--warning3); }
@@ -91,7 +125,7 @@
   .mgr-cabecera { padding: var(--space-3) var(--space-4); }
   .mgr-cabecera p { display: none; }
   .mgr-cuerpo { padding: var(--space-4); }
-  .mgr-resumen { grid-template-columns: 1fr; }
+  .mgr-resumen { grid-template-columns: 1fr; padding: var(--space-4) var(--space-4) var(--space-4) calc(var(--space-4) + 4px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -100,6 +134,3 @@
   .mgr-icono-boton { transition: none; }
   .mgr-sensor:hover:not(:disabled) { transform: none; }
 }
-
-.mgr-sensor-pie span:first-child { overflow: hidden; min-width: 0; text-overflow: ellipsis; white-space: nowrap; }
-.mgr-sensor-pie span:last-child { flex: 0 0 auto; white-space: nowrap; }

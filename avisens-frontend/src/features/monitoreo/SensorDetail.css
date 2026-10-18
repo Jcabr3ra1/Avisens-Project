@@ -67,11 +67,11 @@
   width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
 }
-.sdet-titulo { font-size: 1.05rem; font-weight: 800; color: var(--dash-ink); }
+.sdet-titulo { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text-primary); text-transform: capitalize; }
 .sdet-subtitulo { font-size: 0.8rem; color: var(--text3); margin-top: 0.1rem; }
 
 .sdet-cerrar {
-  width: 44px; height: 44px;
+  width: 40px; height: 40px;
   border: 1px solid color-mix(in srgb, var(--avisens-ink) 12%, transparent);
   border-radius: 9px;
   background: transparent;
@@ -102,20 +102,20 @@
 
 .sdet-estado-badge {
   display: inline-block;
-  padding: 0.25rem 0.85rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
+  padding: 0.22rem 0.7rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
 
 .sdet-estado-desc {
-  margin: 0.6rem 0 0;
+  margin: 0.5rem 0 0;
   font-size: 0.82rem;
-  color: var(--text3);
+  color: var(--text-secondary);
   text-align: center;
-  max-width: 280px;
-  line-height: 1.5;
+  max-width: 300px;
+  line-height: 1.45;
 }
 
 /* ─── Tarjetas de estadísticas (cuadrícula 2×2) ──────────────────────────────── */
@@ -128,25 +128,25 @@
 }
 
 .sdet-stat {
-  background: color-mix(in srgb, var(--avisens-ink) 2.5%, transparent);
-  border: 1px solid color-mix(in srgb, var(--avisens-ink) 7%, transparent);
-  border-radius: 12px;
+  background: var(--surface-tinted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
-.sdet-stat-label { font-size: 0.72rem; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-.sdet-stat-val   { font-size: 1.1rem; font-weight: 800; color: var(--dash-ink); }
-.sdet-stat-val small  { font-size: 0.75rem; font-weight: 500; color: var(--text3); }
-.sdet-stat-mono  { font-family: 'DM Mono', monospace; font-size: 0.9rem; }
+.sdet-stat-label { font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.sdet-stat-val   { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.sdet-stat-val small  { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+.sdet-stat-mono  { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92rem; }
 
 /* ─── Barra de rango con marcador ───────────────────────────────────────────── */
 .sdet-rango-card {
   padding: 1.1rem 1.4rem;
   border-bottom: 1px solid color-mix(in srgb, var(--avisens-ink) 6%, transparent);
 }
-.sdet-rango-label { font-size: 0.78rem; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 0.75rem; }
+.sdet-rango-label { font-size: 0.74rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 0.65rem; }
 
 .sdet-rango-bar-wrap { display: flex; flex-direction: column; gap: 0.4rem; }
 .sdet-rango-bar {
@@ -192,27 +192,26 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text2);
-  margin: 0 0 0.85rem;
+  font-size: 0.76rem;
+  font-weight: 750;
+  color: var(--text-secondary);
+  margin: 0 0 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 /* ─── Spark line ─────────────────────────────────────────────────────────────── */
 .sdet-spark-hint {
-  margin: 0 0 0.5rem;
-  font-size: 0.72rem;
-  color: var(--text4);
-  font-style: italic;
+  margin: 0 0 0.55rem;
+  font-size: 0.76rem;
+  color: var(--text-muted);
 }
 .sdet-spark {
-  background: color-mix(in srgb, var(--avisens-ink) 2%, transparent);
-  border: 1px solid color-mix(in srgb, var(--avisens-ink) 7%, transparent);
-  border-radius: 12px;
+  background: var(--surface-tinted);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   /* Padding-top generoso: deja lugar al tooltip flotante sin recortarlo */
-  padding: 1.9rem 0.8rem 0.4rem;
+  padding: 1.9rem 0.9rem 0.5rem;
   overflow: visible;
 }
 
@@ -244,44 +243,176 @@
   opacity: 0;
   transition: opacity 0.12s ease;
 }
-.sdet-spark-tip strong { font-size: 0.78rem; font-weight: 700; color: var(--on-primary); font-family: 'DM Mono', monospace; }
-.sdet-spark-tip span   { font-size: 0.65rem; color: color-mix(in srgb, var(--surface-base) 55%, transparent); }
+.sdet-spark-tip strong { font-size: 0.78rem; font-weight: 700; color: var(--on-primary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.sdet-spark-tip span   { font-size: 0.65rem; color: color-mix(in srgb, var(--surface-base) 65%, transparent); }
 /* Visible solo mientras se pasa el mouse/dedo — el estado lo controla React */
 .sdet-spark-tip--flotante { opacity: 1; }
 
 /* ─── Sección Manual Italcol ─────────────────────────────────────────────────── */
 .sdet-italcol {
-  background: color-mix(in srgb, var(--primary) 2.5%, transparent);
+  background: color-mix(in srgb, var(--primary) 3%, var(--surface-tinted));
 }
 .sdet-italcol-desc {
   font-size: 0.83rem;
-  color: var(--text3);
-  margin: 0 0 0.75rem;
-  line-height: 1.55;
+  color: var(--text-secondary);
+  margin: 0 0 0.65rem;
+  line-height: 1.5;
 }
 .sdet-italcol-lista {
   list-style: none;
   padding: 0; margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.38rem;
 }
 .sdet-italcol-lista li {
   font-size: 0.82rem;
-  color: var(--text2);
-  padding-left: 1rem;
+  color: var(--text-primary);
+  padding-left: 0.95rem;
   position: relative;
   line-height: 1.4;
 }
 .sdet-italcol-lista li::before {
-  content: '·';
+  content: '';
   position: absolute;
   left: 0;
-  color: var(--green-d);
-  font-weight: 700;
+  top: 0.5rem;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--avisens-deep);
 }
 
-/* ─── Responsive: móvil ocupa pantalla completa ──────────────────────────────── */
+/* ─── Modo embebido (inline dentro de MonitoreoGranja) ─────────────────────── */
+.sdet-inline {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.sdet-inline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--avisens-deep);
+}
+
+.sdet-inline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-3) calc(var(--space-5) + 4px);
+  border-bottom: 1px solid var(--border-subtle);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-tinted) 70%, var(--surface-base)) 0%,
+    var(--surface-base) 100%
+  );
+}
+
+.sdet-inline-ident {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.sdet-inline-titulo-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.sdet-inline-header .sdet-subtitulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.38rem;
+  margin-top: 0;
+}
+
+.sdet-inline-codigo {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
+  font-weight: 650;
+  color: var(--text-secondary);
+}
+
+.sdet-inline-body {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.95fr) minmax(0, 1.25fr);
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5) var(--space-5) calc(var(--space-5) + 4px);
+}
+
+.sdet-inline-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sdet-inline-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(ellipse 75% 65% at 50% 42%, color-mix(in srgb, var(--primary) 6%, transparent), transparent),
+    var(--surface-tinted);
+}
+
+.sdet-inline-gauge .sdet-estado-desc {
+  margin-top: -0.25rem;
+}
+
+.sdet-rango-card--inline {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+}
+
+.sdet-stats--inline {
+  padding: 0;
+  border-bottom: none;
+}
+
+.sdet-section--inline {
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+}
+
+.sdet-section--inline.sdet-italcol {
+  margin-top: auto;
+  border-color: color-mix(in srgb, var(--primary) 18%, var(--border-subtle));
+  background: color-mix(in srgb, var(--primary) 4%, var(--surface-tinted));
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 52rem) {
+  .sdet-inline-body {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 480px) {
   .sdet-panel { width: 100vw; }
+  .sdet-inline-header {
+    padding: var(--space-3) var(--space-4) var(--space-3) calc(var(--space-4) + 4px);
+  }
+  .sdet-inline-body {
+    padding: var(--space-3) var(--space-4) var(--space-4) calc(var(--space-4) + 4px);
+  }
 }
