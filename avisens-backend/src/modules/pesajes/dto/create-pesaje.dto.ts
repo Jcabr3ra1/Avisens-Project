@@ -6,7 +6,9 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Max,
 } from 'class-validator';
+import { PESO_MAXIMO_POLLO_G } from '../../../common/avicultura/vocabulario';
 
 export class CreatePesajeDto {
   @ApiProperty({ example: 1, description: 'ID del lote pesado' })
@@ -17,9 +19,16 @@ export class CreatePesajeDto {
   @IsDateString()
   fecha: string;
 
-  @ApiProperty({ example: 1850, description: 'Peso promedio de las aves(g)' })
+  @ApiProperty({
+    example: 1850,
+    description: 'Peso promedio de las aves (g). Máximo 10.000 g',
+  })
   @IsNumber()
   @IsPositive()
+  @Max(PESO_MAXIMO_POLLO_G, {
+    message:
+      'El peso promedio no puede superar 10.000 g por ave; revisa si escribiste kilos o un cero de más',
+  })
   peso_promedio_g: number;
 
   @ApiPropertyOptional({ example: 50, description: 'Cuantas aves se pesaron' })

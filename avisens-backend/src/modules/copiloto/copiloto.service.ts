@@ -6,12 +6,17 @@ import { LotesService } from '../lotes/lotes.service';
 import { IndicadoresService } from '../indicadores/indicadores.service';
 import { PrediccionesService } from '../predicciones/predicciones.service';
 import { RecomendacionesService } from '../recomendaciones/recomendaciones.service';
+import { CurvaCrecimientoService } from '../predicciones/curva-crecimiento.service';
 import { HERRAMIENTAS } from './copiloto.herramientas';
+import {
+  resumirCurvaParaClaude,
+  type Visualizacion,
+} from './copiloto.visualizaciones';
 import { PreguntarDto } from './dto/preguntar.dto';
 
 const MODELO = process.env.CLAUDE_MODEL ?? 'claude-haiku-4-5';
 const MAX_VUELTAS = 5;
-const MAX_TOKENS = 1024;
+const MAX_TOKENS = 2048;
 
 const INSTRUCCIONES = `Eres AVIA, el copiloto de Avisens, un sistema de monitoreo
 para granjas avicolas de pollo de engorde en Colombia.
@@ -23,7 +28,10 @@ Reglas:
 - Interpreta los numeros para el avicultor, no los recites: di si va bien o mal
   y por que. Un FCR bajo es bueno; una mortalidad alta es mala.
 - Usa terminos del oficio: lote, galpon, faena, FCR, EPEF, curva objetivo.
-- Si el usuario menciona un lote de forma vaga, usa listar_lotes primero.`;
+- Si el usuario menciona un lote de forma vaga, usa listar_lotes primero.
+- Para preguntas de crecimiento o peso futuro usa proyeccion_crecimiento: el
+  usuario vera un grafico, asi que explica en 2 o 3 frases que significa
+  (va bien o mal frente al estandar, cuando llega al objetivo, que hacer).`;
 
 @Injectable()
 export class CopilotoService {
@@ -38,12 +46,14 @@ export class CopilotoService {
     private indicadoresService: IndicadoresService,
     private prediccionesService: PrediccionesService,
     private recomendacionesService: RecomendacionesService,
+    private curvaCrecimientoService: CurvaCrecimientoService,
   ) {}
 
   private async ejecutarHerramienta(
     nombre: string,
     entrada: Record<string, unknown>,
     solicitante: Solicitante,
+    visualizaciones: Visualizacion[],
   ): Promise<unknown> {
     const loteId = Number(entrada.lote_id);
 
@@ -68,6 +78,19 @@ export class CopilotoService {
 
         case 'consultar_recomendaciones':
           return await this.recomendacionesService.listar(loteId, solicitante);
+
+        case 'proyeccion_crecimiento': {
+          const curva = await this.curvaCrecimientoService.calcular(
+            loteId,
+            solicitante,
+          );
+          visualizaciones.push({
+            tipo: 'curva_crecimiento',
+            titulo: `Crecimiento del lote ${curva.codigo}`,
+            datos: curva,
+          });
+          return resumirCurvaParaClaude(curva);
+        }
 
         default:
           return { error: `Herramienta desconocida: ${nombre}` };
@@ -128,6 +151,7 @@ export class CopilotoService {
 
     let respuesta = await this.llamarClaude(mensajes);
     let vueltas = 0;
+    const visualizaciones: Visualizacion[] = [];
 
     while (respuesta.stop_reason === 'tool_use' && vueltas < MAX_VUELTAS) {
       vueltas++;
@@ -141,6 +165,7 @@ export class CopilotoService {
           bloque.name,
           bloque.input as Record<string, unknown>,
           solicitante,
+          visualizaciones,
         );
 
         resultados.push({
@@ -185,6 +210,7 @@ export class CopilotoService {
       conversacion_id: conversacion.id,
       respuesta: texto,
       herramientas_usadas: vueltas,
+      visualizaciones,
     };
   }
 }

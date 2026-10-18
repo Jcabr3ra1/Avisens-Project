@@ -70,6 +70,7 @@ import { JobsModule } from './common/jobs/jobs.module';
 import { ObservabilityModule } from './common/observability/observability.module';
 import { RequestObservabilityInterceptor } from './common/observability/request-observability.interceptor';
 import { CaptacionProspectosModule } from './modules/captacion-prospectos/captacion-prospectos.module';
+import { FirmwareModule } from './modules/firmware/firmware.module';
 import { PlanLoteModule } from './modules/plan-lote/plan-lote.module';
 import { PlanAlimentoModule } from './modules/plan-alimento/plan-alimento.module';
 
@@ -165,6 +166,7 @@ import { PlanAlimentoModule } from './modules/plan-alimento/plan-alimento.module
     AnalisisBioacusticoModule,
     AnalisisVisionModule,
     CaptacionProspectosModule,
+    FirmwareModule,
   ],
   providers: [
     {

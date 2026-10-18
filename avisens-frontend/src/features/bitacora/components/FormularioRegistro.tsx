@@ -12,9 +12,16 @@ type Props = {
   onCerrar: () => void
   // Información de apoyo que se muestra dentro del formulario (no se envía).
   complemento?: ReactNode
+  editando?: boolean
 }
 
 const ID_FORMULARIO = 'formulario-registro'
+
+const TITULOS_EDICION: Record<TipoRegistro, string> = {
+  peso: 'Corregir pesaje',
+  mortalidad: 'Corregir mortalidad',
+  sanitario: 'Corregir evento sanitario',
+}
 
 const TITULOS: Record<TipoRegistro, string> = {
   peso: 'Registrar pesaje',
@@ -30,7 +37,7 @@ const EVENTOS_SANITARIOS = [
   ['revision', 'Revisión'],
 ] as const
 
-function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar, onCerrar, complemento }: Props) {
+function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar, onCerrar, complemento, editando = false }: Props) {
   const fechaRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -39,7 +46,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
 
   return (
     <Modal
-      titulo={TITULOS[tipo]}
+      titulo={editando ? TITULOS_EDICION[tipo] : TITULOS[tipo]}
       onCerrar={onCerrar}
       acciones={
         <>
@@ -52,7 +59,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
             className="modal-btn modal-btn--primary"
             disabled={guardando}
           >
-            {guardando ? 'Guardando…' : 'Guardar registro'}
+            {guardando ? 'Guardando…' : editando ? 'Guardar corrección' : 'Guardar registro'}
           </button>
         </>
       }

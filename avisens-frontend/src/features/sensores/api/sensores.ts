@@ -98,11 +98,11 @@ export async function desactivarSensor(
   return data
 }
 
-// Borrado permanente (casos legales). Falla (400) si el sensor tiene mediciones.
+// Sin historial se borra; con lecturas o alertas se retira y deja de aparecer.
 export async function eliminarSensor(
   id: number,
-): Promise<{ id: number; eliminado: boolean }> {
-  const { data } = await api.delete<{ id: number; eliminado: boolean }>(
+): Promise<{ id: number; eliminado: boolean; retirado: boolean }> {
+  const { data } = await api.delete<{ id: number; eliminado: boolean; retirado: boolean }>(
     `/sensores/${id}/permanente`,
   )
   return data

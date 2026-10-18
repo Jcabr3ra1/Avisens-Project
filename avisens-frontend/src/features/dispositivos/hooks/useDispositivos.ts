@@ -61,8 +61,9 @@ export function useDispositivos(galponId: number) {
   }, [])
 
   const eliminar = useCallback(async (id: number) => {
-    await eliminarDispositivoPermanente(id)
+    const resultado = await eliminarDispositivoPermanente(id)
     setDispositivos((actuales) => actuales.filter((actual) => actual.id !== id))
+    return resultado
   }, [])
 
   return {

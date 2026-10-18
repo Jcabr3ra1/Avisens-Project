@@ -108,6 +108,12 @@
   border-radius: 8px;
   font-size: 0.85rem;
 }
+.dsp-alert--ok {
+  border: 1px solid var(--success-border);
+  background: color-mix(in srgb, var(--success) 7%, var(--surface-base));
+  color: var(--success);
+}
+
 .dsp-alert--error {
   color: var(--danger, var(--danger));
   background: var(--danger-soft);
@@ -134,7 +140,18 @@
   word-break: break-all;
 }
 .dsp-token p { margin: 0; color: var(--text2); font-size: 0.8rem; }
-.dsp-token button { align-self: flex-start; }
+.dsp-token-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+.dsp-token .dsp-token-feedback {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.dsp-token .dsp-token-feedback--ok { color: var(--primary); }
+.dsp-token .dsp-token-feedback--error { color: var(--danger); }
 
 .dsp-tabla-scroll { overflow-x: auto; }
 .dsp-tabla { width: 100%; border-collapse: collapse; font-size: 0.86rem; }

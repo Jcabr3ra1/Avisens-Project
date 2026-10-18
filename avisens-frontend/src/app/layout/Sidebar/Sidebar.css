@@ -7,6 +7,7 @@
   z-index: 40;
   display: flex;
   width: 344px;
+  transition: width 220ms var(--ease-standard);
   height: calc(100% - 24px);
   min-height: 0;
   flex: 0 0 auto;
@@ -96,6 +97,19 @@
 .dash-page.sidebar-collapsed .dash-context-panel { display: none; }
 .dash-page.sidebar-collapsed .dash-rail-search { display: grid; }
 
+@media (prefers-reduced-motion: reduce) {
+  .dash-sidebar { transition: none; }
+}
+
+@media (min-width: 901px) {
+  .dash-sidebar { overflow: hidden; }
+  .dash-sidebar.is-sin-panel { width: 78px; }
+  .dash-sidebar.is-sin-panel .dash-rail { border-radius: 23px; }
+  .dash-sidebar.is-sin-panel .dash-context-panel { display: none; }
+  .dash-sidebar.is-sin-panel .dash-rail-search { display: grid; }
+  .dash-sidebar.is-sin-panel .dash-sidebar-toggle { display: none; }
+}
+
 
 @media (hover: hover) and (pointer: fine) {
   .dash-rail-space:not(.is-selected):hover,
@@ -146,4 +160,197 @@
   .dash-side-item,
   .dash-side-item-arrow,
   .dash-navigation-search { transition: none; }
+}
+
+/* El riel y la navegación viven dentro del mismo marco que la barra superior. */
+@media (min-width: 901px) {
+  .dash-sidebar {
+    height: 100%;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .dash-rail,
+  .dash-sidebar.is-sin-panel .dash-rail,
+  .dash-page.sidebar-collapsed .dash-rail {
+    border-radius: 0;
+  }
+
+  .dash-context-panel {
+    padding-top: 20px;
+  }
+
+  .dash-navigation-search {
+    display: none;
+  }
+}
+
+/* Escritorio: riel angosto con ícono y nombre abajo. Los espacios con varias
+   páginas se despliegan dentro del riel como un bloque de íconos pequeños. */
+.dash-arbol { display: none; }
+
+@media (min-width: 901px) {
+  .dash-sidebar,
+  .dash-sidebar.is-sin-panel,
+  .dash-page.sidebar-collapsed .dash-sidebar { width: 92px; }
+
+  .dash-rail,
+  .dash-page.sidebar-collapsed .dash-rail {
+    width: 100%;
+    gap: 14px;
+    padding: 14px 8px 12px;
+  }
+
+  .dash-context-panel,
+  .dash-rail-spaces,
+  .dash-rail-search,
+  .dash-sidebar-toggle,
+  .dash-sidebar.is-sin-panel .dash-rail-search,
+  .dash-sidebar.is-sin-panel .dash-sidebar-toggle,
+  .dash-page.sidebar-collapsed .dash-rail-search {
+    display: none;
+  }
+
+  .dash-arbol {
+    display: flex;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+    padding-bottom: 20px;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent);
+    mask-image: linear-gradient(#000 calc(100% - 22px), transparent);
+  }
+
+  .dash-arbol::-webkit-scrollbar { display: none; }
+
+  .dash-arbol-item,
+  .dash-arbol-hijo {
+    position: relative;
+    display: flex;
+    width: 100%;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 0;
+    background: transparent;
+    color: var(--on-primary-muted);
+    font: inherit;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background var(--motion-fast) ease, color var(--motion-fast) ease;
+  }
+
+  .dash-arbol-item {
+    min-height: 54px;
+    padding: 7px 4px;
+    border-radius: 15px;
+  }
+
+  .dash-arbol-icono {
+    display: grid;
+    place-items: center;
+  }
+
+  .dash-arbol-item .dash-arbol-icono svg { width: 20px; height: 20px; }
+
+  .dash-arbol-texto {
+    max-width: 100%;
+    font-size: 0.64rem;
+    font-weight: 650;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .dash-arbol-item:hover,
+  .dash-arbol-hijo:hover {
+    background: color-mix(in srgb, var(--avisens-cream) 10%, transparent);
+    color: var(--on-primary);
+  }
+
+  .dash-arbol-item.is-activo,
+  .dash-arbol-hijo.is-activo {
+    background: var(--avisens-maize);
+    color: var(--avisens-ink);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
+  }
+
+  .dash-arbol-flecha {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    opacity: 0.6;
+    transition: transform var(--motion-fast) ease;
+  }
+
+  .dash-arbol-seccion.is-abierta .dash-arbol-flecha { transform: rotate(180deg); }
+
+  /* El espacio abierto se lee como un solo bloque: cabecera + sus páginas. */
+  .dash-arbol-seccion {
+    display: flex;
+    flex-direction: column;
+    border-radius: 17px;
+    transition: background var(--motion-fast) ease;
+  }
+
+  .dash-arbol-seccion.is-abierta {
+    background: color-mix(in srgb, #000 16%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--avisens-cream) 8%, transparent);
+  }
+
+  .dash-arbol-seccion.is-dentro > span > .dash-arbol-grupo,
+  .dash-arbol-seccion.is-abierta > span > .dash-arbol-grupo { color: var(--on-primary); }
+
+  .dash-arbol-seccion.is-dentro:not(.is-abierta) > span > .dash-arbol-grupo {
+    background: color-mix(in srgb, var(--avisens-maize) 22%, transparent);
+  }
+
+  .dash-arbol-hijos {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 2px 5px 6px;
+  }
+
+  .dash-arbol-hijos[hidden] { display: none; }
+
+  .dash-arbol-hijo {
+    min-height: 44px;
+    padding: 5px 2px;
+    border-radius: 12px;
+  }
+
+  .dash-arbol-hijo .dash-arbol-icono svg { width: 16px; height: 16px; }
+  .dash-arbol-hijo .dash-arbol-texto { font-size: 0.6rem; }
+
+  .dash-arbol-badge {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    min-width: 17px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--avisens-maize);
+    color: var(--avisens-ink);
+    font-size: 0.6rem;
+    font-weight: 800;
+    line-height: 17px;
+  }
+
+  .dash-arbol-item:focus-visible,
+  .dash-arbol-hijo:focus-visible { outline: 2px solid var(--avisens-maize); outline-offset: 1px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-arbol-item,
+  .dash-arbol-hijo,
+  .dash-arbol-flecha { transition: none; }
 }

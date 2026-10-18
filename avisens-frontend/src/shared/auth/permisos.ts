@@ -38,6 +38,13 @@ export function permisosDeGestion(rol: string | null): PermisosGestion {
   return rol === ROL_ADMIN ? TODOS_LOS_PERMISOS : SIN_PERMISOS
 }
 
+// Excepción acordada el 2026-10-18: el propietario completa los datos
+// descriptivos de lo suyo (ubicación de la granja, medidas del galpón, raza y
+// línea genética del lote) por las rutas PATCH …/:id/datos. No crea ni borra.
+export function puedeCompletarDatos(rol: string | null): boolean {
+  return rol === ROL_ADMIN || rol === ROL_PROPIETARIO
+}
+
 // ¿Hay alguna acción de gestión que mostrar? Sirve para no dibujar
 // separadores ni columnas de acciones vacías.
 export function gestionaAlgo(permisos: PermisosGestion): boolean {

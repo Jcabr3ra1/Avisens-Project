@@ -18,6 +18,7 @@ venv
 .gitignore
 *.md
 requirements-dev.txt
-test_*.py
+tests
+pyproject.toml
 Dockerfile
 .dockerignore

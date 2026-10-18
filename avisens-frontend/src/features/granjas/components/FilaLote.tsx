@@ -4,6 +4,7 @@ import { avesActuales, diasDeVida } from '../model/estructura'
 import type { IndicadoresDeLote } from '../hooks/useIndicadoresDeLotes'
 import Badge, { type TonoBadge } from './Badge'
 import MenuAcciones from '@shared/ui/MenuAcciones/MenuAcciones'
+import { faltantesLote, unir } from '../model/datosDescriptivos'
 
 interface Props {
   lote: Lote
@@ -13,6 +14,8 @@ interface Props {
   onEditar: (lote: Lote) => void
   onAlternar: (lote: Lote) => void
   onEliminar: (lote: Lote) => void
+  onEditarDatos?: (lote: Lote) => void
+  onAbrirGuia?: (lote: Lote) => void
 }
 
 const TONO: Record<string, TonoBadge> = {
@@ -29,13 +32,18 @@ function FilaLote({
   onEditar,
   onAlternar,
   onEliminar,
+  onEditarDatos,
+  onAbrirGuia,
 }: Props) {
   const enCurso = lote.estado === 'activo'
   const ultimo = indicadores?.ultimo ?? null
   const dias = diasDeVida(lote.fecha_ingreso)
   const vivas = avesActuales(lote.cantidad_inicial, ultimo?.mortalidadAcumuladaPct ?? null)
 
+  const faltan = faltantesLote(lote)
   const acciones = [
+    ...(enCurso && onAbrirGuia ? [{ etiqueta: 'Abrir guía de peso', onSeleccionar: () => onAbrirGuia(lote) }] : []),
+    ...(onEditarDatos ? [{ etiqueta: 'Editar datos del lote', onSeleccionar: () => onEditarDatos(lote) }] : []),
     ...(permisos.editar ? [{ etiqueta: 'Editar lote', onSeleccionar: () => onEditar(lote) }] : []),
     ...(permisos.alternarActivo
       ? [{ etiqueta: enCurso ? 'Desactivar' : 'Activar', onSeleccionar: () => onAlternar(lote) }]
@@ -53,6 +61,18 @@ function FilaLote({
           <Badge tono={TONO[lote.estado] ?? 'neutral'} />
         </div>
         <MenuAcciones acciones={acciones} etiqueta={`Acciones del lote ${lote.codigo}`} />
+      </div>
+
+      <div className="gr-lote-ficha">
+        {lote.linea_genetica && <span className="gr-dato">{lote.linea_genetica.nombre}</span>}
+        {lote.sexo && <span className="gr-dato">{lote.sexo.charAt(0).toUpperCase() + lote.sexo.slice(1)}</span>}
+        {lote.marca_alimento && <span className="gr-dato">Alimento {lote.marca_alimento.charAt(0).toUpperCase() + lote.marca_alimento.slice(1)}</span>}
+        {lote.proveedor && <span className="gr-dato">{lote.proveedor.nombre}</span>}
+        {faltan.length > 0 && onEditarDatos && (
+          <button type="button" className="gr-dato gr-dato--falta" onClick={() => onEditarDatos(lote)}>
+            Completar {unir(faltan)}
+          </button>
+        )}
       </div>
 
       {enCurso ? (

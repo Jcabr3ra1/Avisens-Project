@@ -17,18 +17,19 @@
   --avisens-green: var(--avisens-deep);
   --avisens-yellow: var(--avisens-maize);
   --avisens-orange: var(--danger);
+  --shell-bg: #0d4537;
 
   /* Foundations. Los alias cortos se conservan porque los módulos actuales
      todavía los consumen; todos apuntan al mismo sistema semántico. */
   --surface-page: var(--avisens-cream);
   --surface-base: var(--avisens-white);
-  --surface-subtle: #e9eee4;
-  --surface-tinted: #f2f4ec;
+  --surface-subtle: #ebeae0;
+  --surface-tinted: #f3f2e9;
   --surface-raised: var(--avisens-white);
-  --surface-hover: #f0f2e9;
+  --surface-hover: #f0efe5;
 
-  --border-subtle: #e1e4d8;
-  --border-default: #ccd4c5;
+  --border-subtle: #e3e1d5;
+  --border-default: #d0cfc1;
   --border-strong: #84977f;
 
   --text-primary: var(--avisens-ink);
@@ -150,6 +151,61 @@
   --go: color-mix(in srgb, var(--warning) 10%, transparent);
   --gg: color-mix(in srgb, var(--primary) 12%, transparent);
 }
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --shell-bg: #0b231c;
+
+  --surface-page: #111d19;
+  --surface-base: #18261f;
+  --surface-raised: #1b2a23;
+  --surface-subtle: #233529;
+  --surface-tinted: #1d2e26;
+  --surface-hover: #22342b;
+
+  --border-subtle: #2a3d34;
+  --border-default: #375046;
+  --border-strong: #5f7a6d;
+
+  --text-primary: #e8efe6;
+  --text-secondary: #bfcdc1;
+  --text-muted: #93a69a;
+
+  --avisens-deep: #2e8c6c;
+  --primary: #2e8c6c;
+  --primary-hover: #38a07d;
+  --primary-soft: #1f3a30;
+  --on-primary-muted: #cfe0d4;
+  --focus-ring: #6fcfa8;
+  --accent-soft: #3a331d;
+  --selection-bg: color-mix(in srgb, var(--avisens-maize) 35%, transparent);
+  --overlay: rgb(0 0 0 / 60%);
+  --chart-track: #2a3d34;
+  --data-purple-soft: #2c2536;
+
+  --success: #57bb8a;
+  --success2: #6cc89a;
+  --success-soft: #1d3a2d;
+  --success-border: #2f5a45;
+  --warning: #e0b04a;
+  --warning2: #e9c26a;
+  --warning-border: #6b5622;
+  --danger: #e5786b;
+  --danger2: #ec8b7f;
+  --danger3: #f09284;
+  --danger-soft: #3b2220;
+  --danger-border: #6b3a34;
+  --info: #6fb3c8;
+  --info2: #86c2d4;
+  --info-soft: #1d3138;
+  --info-border: #2e5562;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 35%);
+  --shadow-md: 0 8px 24px rgb(0 0 0 / 40%);
+  --shadow-lg: 0 18px 42px rgb(0 0 0 / 50%);
+}
+
+:root[data-theme='dark'] img:not([src$='.svg']) { filter: brightness(0.92); }
+
 
 html {
   scroll-behavior: smooth;

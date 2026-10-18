@@ -5,6 +5,7 @@ import {
   permisosDeInsumo,
   permisosDePlan,
   permisosOperativosDeGalpon,
+  puedeCompletarDatos,
   ROL_ADMIN,
   ROL_OPERARIO,
   ROL_PROPIETARIO,
@@ -109,5 +110,14 @@ describe('permisosDePlan', () => {
 
   it('un rol desconocido no hereda permisos por accidente', () => {
     expect(permisosDePlan('Auditor').registrar).toBe(false)
+  })
+})
+
+describe('puedeCompletarDatos', () => {
+  it('el propietario y el administrador completan los datos descriptivos; el operario no', () => {
+    expect(puedeCompletarDatos(ROL_ADMIN)).toBe(true)
+    expect(puedeCompletarDatos(ROL_PROPIETARIO)).toBe(true)
+    expect(puedeCompletarDatos(ROL_OPERARIO)).toBe(false)
+    expect(puedeCompletarDatos(null)).toBe(false)
   })
 })

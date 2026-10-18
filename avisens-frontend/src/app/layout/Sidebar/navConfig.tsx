@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import {
   IcAlert,
   IcBox,
+  IcChip,
   IcChat,
   IcClock,
   IcCoin,
@@ -12,7 +13,6 @@ import {
   IcLeaf,
   IcNote,
   IcRefresh,
-  IcScale,
   IcSearch,
   IcSeed,
   IcSend,
@@ -95,6 +95,7 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/recuperaciones-password': [ROL_ADMIN],
   '/auditoria':               [ROL_ADMIN],
   '/catalogos':               [ROL_ADMIN],
+  '/dispositivos':            [ROL_ADMIN],
   '/organizaciones':          [ROL_ADMIN],
   '/crm':                     [ROL_ADMIN],
   '/solicitudes-pqrs':        [ROL_ADMIN],
@@ -193,28 +194,22 @@ export const NAV_SECTIONS: NavSection[] = [
         rolesVisibles: [ROL_PROPIETARIO],
       },
       {
-        path: '/guia-crecimiento',
-        label: 'Guía de peso',
-        icon: <IcScale size={16} />,
-        rolesVisibles: [ROL_PROPIETARIO, ROL_OPERARIO],
-      },
-      {
         path: '/bitacora',
         label: 'Bitácora',
         icon: <IcDoc size={16} />,
-        rolesVisibles: [ROL_PROPIETARIO, ROL_OPERARIO],
+        rolesVisibles: [ROL_OPERARIO],
       },
       {
         path: '/monitoreo',
         label: 'Monitoreo',
         icon: <IcEye size={16} />,
-        rolesVisibles: [ROL_PROPIETARIO, ROL_OPERARIO],
+        rolesVisibles: [ROL_OPERARIO],
       },
       {
         path: '/alertas',
         label: 'Alertas',
         icon: <IcAlert size={16} />,
-        rolesVisibles: [ROL_PROPIETARIO, ROL_OPERARIO],
+        rolesVisibles: [ROL_OPERARIO],
       },
     ],
   },
@@ -255,6 +250,11 @@ export const NAV_SECTIONS: NavSection[] = [
     label: 'Riel',
     sinEncabezado: true,
     items: [
+      {
+        path: '/dispositivos',
+        label: 'Dispositivos',
+        icon: <IcChip size={16} />,
+      },
       {
         path: '/auditoria',
         label: 'Auditoría',

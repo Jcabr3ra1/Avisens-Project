@@ -227,6 +227,22 @@ describe('HttpExceptionFilter', () => {
       expect(cuerpo.estado_plan).toBeUndefined();
     });
 
+    it('sin_ubicacion reenvia solo el codigo y el mensaje', () => {
+      filtro.catch(
+        new UnprocessableEntityException({
+          codigo: 'sin_ubicacion',
+          message: 'Completa el municipio de la granja',
+          latitud: 6.15,
+        }),
+        host(),
+      );
+
+      const cuerpo = respuesta();
+      expect(cuerpo.codigo).toBe('sin_ubicacion');
+      expect(cuerpo.message).toBe('Completa el municipio de la granja');
+      expect(cuerpo.latitud).toBeUndefined();
+    });
+
     it('plan_excede_limites_ml reenvia dia_faena y peso_objetivo_g, ambos numericos', () => {
       filtro.catch(
         new UnprocessableEntityException({

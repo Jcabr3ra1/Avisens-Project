@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { iconoSensor } from '@shared/ui/sensorIcon'
 import { useSerieSensor } from '../hooks/useSerieSensor'
-import { alturaBarra, etiquetaEstado, rangoUmbral } from '../model/metricas'
+import { etiquetaEstado, rangoUmbral } from '../model/metricas'
+
+const GraficoSerie = lazy(() => import('@shared/ui/graficos/GraficoSerie'))
 
 function DetalleSensor({ sensor }: { sensor: SensorVista }) {
   const { serie, resumen, cargando } = useSerieSensor(sensor.id)
@@ -48,23 +50,15 @@ function DetalleSensor({ sensor }: { sensor: SensorVista }) {
           Este sensor no ha reportado en las últimas 24 horas.
         </p>
       ) : (
-        <>
-          <div className="dash-metrica-grafica" role="img"
-            aria-label={`Lecturas de ${sensor.tipo} en las últimas 24 horas`}>
-            {serie.map((punto, indice) => (
-              <span
-                key={`${punto.hora}-${indice}`}
-                className="dash-metrica-barra"
-                style={{ height: `${alturaBarra(punto.valor, resumen.maximo)}%` }}
-                title={`${punto.hora} · ${punto.valor} ${sensor.unidad}`}
-              />
-            ))}
-          </div>
-          <div className="dash-metrica-eje">
-            <span>{serie[0]?.hora}</span>
-            <span>{serie[serie.length - 1]?.hora}</span>
-          </div>
-        </>
+        <Suspense fallback={<p className="dash-metrica-vacio" role="status">Cargando gráfico…</p>}>
+          <GraficoSerie
+            puntos={serie.map((punto) => ({ etiqueta: punto.hora, valor: punto.valor }))}
+            unidad={sensor.unidad}
+            minimo={sensor.minUmbral}
+            maximo={sensor.maxUmbral}
+            descripcion={`Lecturas de ${sensor.tipo} en las últimas 24 horas, entre ${resumen.minimo ?? '—'} y ${resumen.maximo ?? '—'} ${sensor.unidad}`}
+          />
+        </Suspense>
       )}
     </div>
   )

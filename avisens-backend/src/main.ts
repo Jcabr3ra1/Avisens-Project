@@ -23,6 +23,10 @@ async function bootstrap() {
     rawBody: true,
   });
   const config = app.get(ConfigService);
+  app.useBodyParser('raw', {
+    type: 'application/octet-stream',
+    limit: '2mb',
+  });
 
   const enProduccion = config.get<string>('NODE_ENV') === 'production';
   app.use(
