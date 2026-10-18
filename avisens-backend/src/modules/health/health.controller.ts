@@ -11,6 +11,8 @@ import type { Queue } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
 import { COLA_WHATSAPP } from '../whatsapp/whatsapp.tipos';
 
+export const SERVICIO_AVISENS = 'avisens';
+
 @ApiTags('health')
 @SkipThrottle()
 @Controller({ path: 'health', version: VERSION_NEUTRAL })
@@ -58,6 +60,7 @@ export class HealthController {
 
     return {
       status: 'ok',
+      servicio: SERVICIO_AVISENS,
       ...dependencias,
       uptime_seconds: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),
