@@ -1,15 +1,23 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { IcArrowRight, IcBox, IcChevronDown, IcChevronRight, IcClose, IcGrid, IcLeaf, IcSearch, IcSidebar } from '@shared/ui/icons/icons'
+import { IcArrowRight, IcBox, IcChevronDown, IcChevronRight, IcClose, IcGrid, IcLeaf, IcMoon, IcSearch, IcSidebar, IcSun } from '@shared/ui/icons/icons'
 import { logout } from '@shared/api'
 import { useFocoAtrapado } from '@shared/ui/Modal/useFocoAtrapado'
 import logoAvisens from '@shared/assets/logo-avisens.png'
 import { esGrupo, rutaInicioPorRol, type NavItem, type NavLinkItem } from './navConfig'
+import { useTemaPanel } from '../useTemaPanel'
 import { descripcionDe, matchesPath, navigationSpaces, spaceForPath, tieneUnSoloDestino, visibleSections, type NavigationSpace, type SpaceId } from './navigation'
 import './Sidebar.css'
 
 const SPACE_ICONS = { plataforma: IcGrid, granja: IcLeaf, gestion: IcBox }
+
+// Nombres cortos para que quepan bajo el ícono del riel.
+const ETIQUETA_RIEL: Record<string, string> = {
+  '/solicitudes-pqrs': 'PQRS',
+  '/recuperaciones-password': 'Accesos',
+  '/organizaciones': 'Clientes',
+}
 
 function Hint({ label, children }: { label: string; children: ReactElement }) {
   return (
@@ -46,6 +54,8 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
   const [selection, setSelection] = useState<{ route: string; space: SpaceId } | null>(null)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const [loggingOut, setLoggingOut] = useState(false)
+  const { tema, alternar: alternarTema } = useTemaPanel()
+  const [gruposAbiertos, setGruposAbiertos] = useState<Partial<Record<SpaceId, boolean>>>({})
   const sections = visibleSections(rol)
   const spaces = navigationSpaces(sections)
   const routeSpace = spaceForPath(pathname, spaces)
@@ -60,13 +70,16 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
   const railLinks = sections.find((section) => section.label === 'Riel')?.items.filter((item): item is NavLinkItem => !esGrupo(item)) ?? []
   const enRiel = railLinks.some((item) => matchesPath(pathname, item.path))
   const explorandoEspacio = selection?.route === pathname
-  const sinPanel = tieneUnSoloDestino(selected)
+  const sinPanel = tieneUnSoloDestino(selected) || (enRiel && !explorandoEspacio)
   const rutaEnEspacio = spaces.some((space) => space.sections.some((section) => section.items.some((item) =>
     matchesPath(pathname, item.path) || (esGrupo(item) && item.children.some((child) => matchesPath(pathname, child.path))),
   )))
   const shortcut = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘ K' : 'Ctrl K'
 
-  useEffect(() => { setSelection(null) }, [pathname])
+  useEffect(() => {
+    setSelection(null)
+    setGruposAbiertos({})
+  }, [pathname])
 
   useFocoAtrapado(sidebar, mobileOpen, onCloseMobile)
 
@@ -107,6 +120,35 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
     if (destino && (routeSpace?.id !== id || enInicio || enRiel)) navigate(destino)
     else setSelection({ route: pathname, space: id })
     if (collapsed && window.matchMedia('(min-width: 901px)').matches) onToggle()
+  }
+
+  function grupoAbierto(space: NavigationSpace) {
+    const contieneRuta = space.sections.some((section) => section.items.some((item) =>
+      matchesPath(pathname, item.path) || (esGrupo(item) && item.children.some((child) => matchesPath(pathname, child.path)))))
+    return gruposAbiertos[space.id] ?? contieneRuta
+  }
+
+  function alternarGrupo(space: NavigationSpace) {
+    setGruposAbiertos((actual) => ({ ...actual, [space.id]: !grupoAbierto(space) }))
+  }
+
+  function enlaceArbol(item: NavLinkItem, hijo: boolean) {
+    const activo = matchesPath(pathname, item.path)
+    return (
+      <Hint key={item.path} label={descripcionDe(item.path, rol) ?? item.label}>
+        <NavLink
+          to={item.path}
+          className={`${hijo ? 'dash-arbol-hijo' : 'dash-arbol-item'}${activo ? ' is-activo' : ''}`}
+          end={item.path !== '/organizaciones'}
+          aria-current={activo ? 'page' : undefined}
+          aria-label={item.label}
+        >
+          <span className="dash-arbol-icono" aria-hidden="true">{item.icon}</span>
+          <span className="dash-arbol-texto">{ETIQUETA_RIEL[item.path] ?? item.label}</span>
+          {item.badge ? <span className="dash-arbol-badge">{item.badge}</span> : null}
+        </NavLink>
+      </Hint>
+    )
   }
 
   async function handleLogout() {
@@ -165,6 +207,39 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
               <img src={logoAvisens} alt="" width={48} height={48} />
             </NavLink>
           </Hint>
+          <nav className="dash-arbol" aria-label="Navegación principal">
+            {home && enlaceArbol(home, false)}
+            {spaces.map((space) => {
+              const SpaceIcon = SPACE_ICONS[space.id]
+              const hijos = space.sections.flatMap((section) => section.items).flatMap((item) => esGrupo(item) ? item.children : [item])
+              if (hijos.length === 1) return enlaceArbol({ ...hijos[0], icon: <SpaceIcon size={20} />, label: space.label }, false)
+              const abierto = grupoAbierto(space)
+              const contieneRuta = hijos.some((item) => matchesPath(pathname, item.path))
+              const idHijos = `dash-arbol-${space.id}`
+              const boton = (
+                <button
+                  type="button"
+                  className={`dash-arbol-item dash-arbol-grupo${contieneRuta ? ' is-dentro' : ''}`}
+                  aria-expanded={abierto}
+                  aria-controls={idHijos}
+                  onClick={() => alternarGrupo(space)}
+                >
+                  <span className="dash-arbol-icono" aria-hidden="true"><SpaceIcon size={20} /></span>
+                  <span className="dash-arbol-texto">{space.label}</span>
+                  <IcChevronDown size={12} className="dash-arbol-flecha" aria-hidden="true" />
+                </button>
+              )
+              return (
+                <div key={space.id} className={`dash-arbol-seccion${abierto ? ' is-abierta' : ''}${contieneRuta ? ' is-dentro' : ''}`}>
+                  <Hint label={space.description}>{boton}</Hint>
+                  <div className="dash-arbol-hijos" id={idHijos} hidden={!abierto}>
+                    {hijos.map((item) => enlaceArbol(item, true))}
+                  </div>
+                </div>
+              )
+            })}
+            {railLinks.map((item) => enlaceArbol(item, false))}
+          </nav>
           <nav className="dash-rail-spaces" aria-label="Espacios de trabajo">
             {home && (
               <Hint label={descripcionDe(home.path, rol) ?? home.label}>
@@ -212,6 +287,16 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
             </Hint>
             <Hint label={collapsed ? 'Expandir menú · Ctrl / ⌘ B' : 'Contraer menú · Ctrl / ⌘ B'}>
               <button type="button" className="dash-rail-tool dash-sidebar-toggle" onClick={onToggle} aria-label={collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'} aria-expanded={!collapsed} aria-controls="navegacion-contextual"><IcSidebar size={19} /></button>
+            </Hint>
+            <Hint label={tema === 'oscuro' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>
+              <button
+                type="button"
+                className="dash-rail-tool dash-rail-tema"
+                onClick={alternarTema}
+                aria-label={tema === 'oscuro' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              >
+                {tema === 'oscuro' ? <IcSun size={19} /> : <IcMoon size={18} />}
+              </button>
             </Hint>
             <Hint label="Cerrar sesión">
               <button type="button" className="dash-rail-tool dash-side-logout" onClick={handleLogout} aria-label="Cerrar sesión" disabled={loggingOut}>

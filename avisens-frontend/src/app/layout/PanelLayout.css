@@ -273,3 +273,159 @@ body[data-tab-hidden="true"] .dash-status-pulse .ring {
   .dash-mobile-brand { display: none; }
   .dash-mobile-location { font-size: 0.95rem; font-weight: 750; }
 }
+
+/* ─── Marco único: riel, navegación y barra superior en una sola superficie ─── */
+@media (min-width: 901px) {
+  .dash-page {
+    background: var(--shell-bg);
+  }
+
+  .dash-shell {
+    overflow: hidden;
+    background: var(--shell-bg);
+  }
+
+  .dash-sidebar { --sidebar-rail: var(--shell-bg); }
+
+
+
+  /* Barra superior sobre el mismo verde del menú: se leen como una sola pieza. */
+  .dash-acciones-superiores .dash-topbar-titulo { color: var(--on-primary-muted); }
+  .dash-acciones-superiores .dash-topbar-titulo strong { color: var(--on-primary); }
+
+  .dash-topbar-buscar {
+    background: color-mix(in srgb, var(--avisens-cream) 12%, transparent) !important;
+    color: var(--on-primary-muted) !important;
+  }
+
+  .dash-topbar-buscar:hover { border-color: color-mix(in srgb, var(--avisens-cream) 28%, transparent) !important; }
+
+  .dash-topbar-buscar kbd {
+    border-color: color-mix(in srgb, var(--avisens-cream) 25%, transparent) !important;
+    background: transparent !important;
+    color: var(--on-primary-muted) !important;
+  }
+
+  .dash-acciones-superiores .dash-campana-boton {
+    background: color-mix(in srgb, var(--avisens-cream) 12%, transparent) !important;
+    color: var(--avisens-cream) !important;
+  }
+
+  .dash-acciones-superiores .dash-campana-boton:hover,
+  .dash-acciones-superiores .dash-campana-boton.abierta {
+    background: color-mix(in srgb, var(--avisens-cream) 20%, transparent) !important;
+  }
+
+  .dash-acciones-superiores .dash-campana-punto { border-color: var(--shell-bg); }
+  .dash-acciones-superiores .dash-campana-boton svg { color: var(--avisens-cream); }
+
+  .dash-acciones-superiores .dash-header-perfil {
+    background: color-mix(in srgb, var(--avisens-cream) 12%, transparent) !important;
+  }
+
+  .dash-acciones-superiores .dash-header-perfil:hover { background: color-mix(in srgb, var(--avisens-cream) 20%, transparent) !important; }
+  .dash-acciones-superiores .dash-header-perfil-copy strong { color: var(--on-primary); }
+  .dash-acciones-superiores .dash-header-perfil-copy small { color: var(--on-primary-muted); }
+
+  .dash-acciones-superiores :is(button, a):focus-visible { outline-color: var(--avisens-maize); }
+
+  .dash-content {
+    padding: 0 12px 12px 6px;
+  }
+
+  .dash-acciones-superiores {
+    --header-control-size: 42px;
+    --header-control-radius: 999px;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    min-height: 68px;
+    padding: 10px 6px 10px 14px;
+  }
+
+  .dash-topbar-titulo {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .dash-topbar-titulo strong {
+    overflow: hidden;
+    color: var(--text-primary);
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dash-topbar-titulo svg { flex: 0 0 auto; opacity: 0.6; }
+
+  .dash-topbar-buscar {
+    display: inline-flex;
+    width: clamp(220px, 24vw, 320px);
+    height: var(--header-control-size);
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0 0.6rem 0 1rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: var(--surface-tinted);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.84rem;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--motion-fast) ease, background var(--motion-fast) ease;
+  }
+
+  .dash-topbar-buscar span { flex: 1; }
+
+  .dash-topbar-buscar kbd {
+    padding: 0.15rem 0.45rem;
+    border: 1px solid var(--border-default);
+    border-radius: 7px;
+    background: var(--surface-base);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .dash-topbar-buscar:hover { border-color: var(--border-default); background: var(--surface-subtle); }
+  .dash-topbar-buscar:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+  .dash-acciones-superiores .dash-campana-boton {
+    border-color: transparent;
+    background: var(--surface-tinted);
+  }
+
+  .dash-header-perfil {
+    --perfil-avatar-size: 34px;
+    padding: 4px 14px 4px 4px;
+    border-color: transparent;
+    background: var(--surface-tinted);
+  }
+
+  .dash-header-perfil-foto { border-radius: 50%; }
+
+  .dash-main {
+    border: 0;
+    border-radius: 22px;
+    background: var(--surface-page);
+  }
+
+  .dash-main .page-container {
+    padding: var(--space-5) clamp(var(--space-4), 2vw, var(--space-6)) var(--space-7);
+  }
+}
+
+/* ─── Escala común de títulos: todas las vistas con el mismo tamaño ─── */
+.dash-main .page-container h1 {
+  font-size: clamp(1.5rem, 1.15rem + 0.9vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
