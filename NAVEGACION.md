@@ -54,11 +54,21 @@ lleva ítem propio.
 Llevan ítem propio aunque tengan padre, porque se consultan por urgencia o
 cruzando granjas, no bajando por la jerarquía:
 
-- **Alertas** — se pregunta «¿qué está mal ahora?», no «¿qué pasa en el galpón 3?»
+- **Alertas** — se pregunta «¿qué está mal ahora?», no «¿qué pasa en el galpón 3?».
+  Excepción solo para el **operario** (en «Mi jornada»); para el propietario vive
+  dentro del galpón desde el 2026-10-18 (ver abajo).
 - **Bodega** y **Finanzas** — cruzan varias granjas
 - **Auditoría** — transversal por definición
-- **Guía de peso** — acceso transversal que permite elegir un lote activo;
-  la consulta y planificación conservan el contexto del lote elegido.
+
+La **Guía de peso** fue excepción hasta el 2026-10-18; desde entonces vive dentro
+del lote: se abre desde la fila del lote en Granjas, desde «Estado del lote» en el
+Resumen y, para el operario, desde su lote en «Mi jornada».
+
+Desde el 2026-10-18 el espacio «Granja» del **propietario** tiene un solo ítem,
+**Granjas**: Bitácora, Monitoreo (pestaña «Ambiente») y Alertas son pestañas del
+galpón seleccionado. Las rutas `/bitacora`, `/monitoreo` y `/alertas` siguen
+existiendo para el operario y para enlaces profundos, pero no se listan en el
+menú del propietario.
 
 ### Al aplicarla
 
