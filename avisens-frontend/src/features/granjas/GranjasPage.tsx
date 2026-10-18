@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
@@ -178,8 +179,14 @@ function GranjasAdministracion() {
     )
   }
 
-  function eliminarGalpon(galpon: GalponConLotes) {
-    if (!window.confirm(`¿Eliminar permanentemente el galpón "${galpon.nombre}"? Esta acción no se puede deshacer.`)) return
+  async function eliminarGalpon(galpon: GalponConLotes) {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar este galpón?',
+      entidad: galpon.nombre,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar galpón',
+      tono: 'peligro',
+    }))) return
     void ejecutar(
       () => eliminarGalponPermanente(galpon.id),
       'No se pudo eliminar el galpón. Puede que tenga lotes asociados.',
@@ -193,16 +200,28 @@ function GranjasAdministracion() {
     )
   }
 
-  function eliminarLote(lote: Lote) {
-    if (!window.confirm(`¿Eliminar permanentemente el lote "${lote.codigo}"? Esta acción no se puede deshacer.`)) return
+  async function eliminarLote(lote: Lote) {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar este lote?',
+      entidad: lote.codigo,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar lote',
+      tono: 'peligro',
+    }))) return
     void ejecutar(
       () => eliminarLotePermanente(lote.id),
       'No se pudo eliminar el lote. Puede que tenga registros de producción asociados.',
     )
   }
 
-  function eliminarGranja(granja: Granja) {
-    if (!window.confirm(`¿Eliminar permanentemente la granja "${granja.nombre}"? Esta acción no se puede deshacer.`)) return
+  async function eliminarGranja(granja: Granja) {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar esta granja?',
+      entidad: granja.nombre,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar granja',
+      tono: 'peligro',
+    }))) return
     void ejecutar(
       () => gestionGranjas.eliminar(granja),
       'No se pudo eliminar la granja. Puede que tenga galpones asociados.',

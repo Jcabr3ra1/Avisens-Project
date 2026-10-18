@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useState, type FormEvent } from 'react'
 import { getRol } from '@shared/api'
 import { ROL_ADMIN } from '@shared/auth/permisos'
@@ -84,17 +85,17 @@ function SensoresPage() {
   }
 
   async function handleEliminar(s: Sensor) {
-    const confirmar = window.confirm(
-      `¿Eliminar PERMANENTEMENTE el sensor "${s.codigo}"?\n` +
-        'Falla si ya tiene mediciones asociadas. Esta acción no se deshace.',
-    )
-    if (!confirmar) return
-    setErrorAccion('')
-    try {
-      await eliminar(s.id)
-    } catch (err) {
-      setErrorAccion(mensajeDeError(err, 'No se pudo eliminar el sensor.'))
-    }
+    await confirmarAccion({
+      titulo: '¿Eliminar este sensor?',
+      entidad: s.codigo,
+      descripcion: 'Dejará de aparecer en AVISENS. Si tiene lecturas o alertas, su historial se conserva para los reportes.',
+      textoConfirmar: 'Eliminar sensor',
+      textoProcesando: 'Eliminando…',
+      onConfirmar: async () => {
+        setErrorAccion('')
+        await eliminar(s.id)
+      },
+    })
   }
 
   const activos = sensores.filter((s) => s.estado === 'activo').length

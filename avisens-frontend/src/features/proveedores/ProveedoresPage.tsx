@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useCallback, useMemo, useState } from 'react'
 import { mensajeDeError } from '@shared/utils/errores'
 import { IcChevronDown, IcPlus, IcSearch } from '@shared/ui/icons/icons'
@@ -73,10 +74,14 @@ function ProveedoresPage() {
     })
   }, [busqueda, estado, gestion.proveedores])
 
-  const confirmarEliminacion = (proveedor: Proveedor) => {
-    const confirmado = window.confirm(
-      `¿Eliminar permanentemente a ${proveedor.nombre}? Esta acción no se puede deshacer.`,
-    )
+  const confirmarEliminacion = async (proveedor: Proveedor) => {
+    const confirmado = (await confirmarAccion({
+      titulo: '¿Eliminar este proveedor?',
+      entidad: proveedor.nombre,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar proveedor',
+      tono: 'peligro',
+    }))
     if (confirmado) void gestion.eliminar(proveedor)
   }
 

@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useEffect, useMemo, useState } from 'react'
 import { getRol } from '@shared/api'
 import { permisosDeInsumo, ROL_ADMIN } from '@shared/auth/permisos'
@@ -94,9 +95,13 @@ function InventarioPage() {
   ]
 
   async function confirmarEliminacion(insumo: Insumo) {
-    const confirmado = window.confirm(
-      `¿Eliminar permanentemente el insumo "${insumo.nombre}"? Esta acción no se puede deshacer.`,
-    )
+    const confirmado = (await confirmarAccion({
+      titulo: '¿Eliminar este insumo?',
+      entidad: insumo.nombre,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar insumo',
+      tono: 'peligro',
+    }))
     if (confirmado) await gestion.eliminar(insumo)
   }
 

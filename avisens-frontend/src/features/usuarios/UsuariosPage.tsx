@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useCallback, useState } from 'react'
 import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
 import { crearOrganizacion } from '@features/organizaciones/api/organizaciones'
@@ -108,10 +109,14 @@ function UsuariosPage() {
     formulario.abrirCrear(roles.length === 1 ? roles[0].id : 0)
   }
 
-  function confirmarEliminacion(usuario: Usuario) {
-    const confirmado = window.confirm(
-      `¿Eliminar permanentemente a ${usuario.nombre_completo}? Esta acción no se puede deshacer.`,
-    )
+  async function confirmarEliminacion(usuario: Usuario) {
+    const confirmado = (await confirmarAccion({
+      titulo: '¿Eliminar este usuario?',
+      entidad: usuario.nombre_completo,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar usuario',
+      tono: 'peligro',
+    }))
     if (confirmado) void eliminar(usuario.id)
   }
 

@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
@@ -70,10 +71,14 @@ function GalponesPage() {
     if (granjaId) formulario.abrirCrear(granjaId)
   }
 
-  function confirmarEliminacion(galpon: Galpon) {
-    const confirmado = window.confirm(
-      `¿Eliminar permanentemente el galpón "${galpon.nombre}"? Esta acción no se puede deshacer.`,
-    )
+  async function confirmarEliminacion(galpon: Galpon) {
+    const confirmado = (await confirmarAccion({
+      titulo: '¿Eliminar este galpón?',
+      entidad: galpon.nombre,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar galpón',
+      tono: 'peligro',
+    }))
     if (confirmado) void gestion.eliminar(galpon)
   }
 

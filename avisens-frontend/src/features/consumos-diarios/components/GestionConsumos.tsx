@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
@@ -97,8 +98,14 @@ function GestionConsumos({ loteFijo = null, completo = false }: Props) {
       .catch((err) => setErrorFormulario(mensajeDeError(err, 'No se pudo guardar el consumo.')))
       .finally(() => setGuardando(false))
   }
-  const eliminar = (c: ConsumoDiario) => {
-    if (!window.confirm(`¿Eliminar el consumo del lote ${c.lote.codigo}?`)) return
+  const eliminar = async (c: ConsumoDiario) => {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar este consumo?',
+      entidad: `Lote ${c.lote.codigo}`,
+      descripcion: 'Se eliminará el registro de consumo seleccionado.',
+      textoConfirmar: 'Eliminar consumo',
+      tono: 'peligro',
+    }))) return
     void gestion.eliminar(c.id).catch((error) => {
       toast.error(mensajeDeError(error, 'No se pudo eliminar el consumo.'))
     })

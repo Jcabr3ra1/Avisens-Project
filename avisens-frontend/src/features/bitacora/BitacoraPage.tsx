@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
@@ -162,8 +163,13 @@ function BitacoraPage() {
       .finally(() => setGuardando(false))
   }
 
-  const borrar = (tipo: TipoRegistro, id: number) => {
-    if (window.confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) {
+  const borrar = async (tipo: TipoRegistro, id: number) => {
+    if ((await confirmarAccion({
+      titulo: '¿Eliminar este registro?',
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar registro',
+      tono: 'peligro',
+    }))) {
       void datos.eliminar(tipo, id).catch((error) => {
         toast.error(mensajeDeError(error, 'No se pudo eliminar el registro.'))
       })
