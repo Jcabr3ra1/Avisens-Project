@@ -13,7 +13,12 @@ export interface Galpon {
   plano_url: string | null
   fecha_construccion: string | null
   activo: boolean
-  granja: { id: number; nombre: string; propietario_id: number }
+  granja: {
+    id: number
+    nombre: string
+    propietario_id: number
+    organizacion?: { id: number; nombre: string }
+  }
 }
 
 export interface CrearGalponPayload {

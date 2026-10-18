@@ -20,11 +20,11 @@ import {
   generarDeviceToken,
   hashDeviceToken,
 } from '../../common/security/device-token';
-import { esViolacionDeLlaveForanea } from '../../common/errores/llave-foranea';
 import {
   estadoConexion,
   VENTANA_CONECTIVIDAD_MINUTOS,
 } from '../../common/conectividad/conectividad';
+import { SENSOR_VIGENTE } from '../sensores/sensor-vigente';
 
 const DISPOSITIVO_SELECT = {
   id: true,
@@ -36,6 +36,7 @@ const DISPOSITIVO_SELECT = {
   ultima_conexion: true,
   activo: true,
   fecha_creacion: true,
+  retirado_en: true,
 
   galpon: {
     select: {
@@ -176,7 +177,7 @@ export class DispositivosService {
   }
 
   async regenerarToken(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    this.rechazarSiRetirado(await this.obtener(id, solicitante));
     const token = generarDeviceToken();
     await this.prisma.dispositivo.update({
       where: { id },
@@ -189,7 +190,7 @@ export class DispositivosService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = filtroDispositivos(solicitante);
+    const where = { ...filtroDispositivos(solicitante), retirado_en: null };
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.dispositivo.findMany({
@@ -271,6 +272,7 @@ export class DispositivosService {
     solicitante: Solicitante,
   ) {
     const actual = await this.obtener(id, solicitante);
+    this.rechazarSiRetirado(actual);
 
     if (dto.galpon_id !== undefined && dto.galpon_id !== actual.galpon.id) {
       throw new BadRequestException(
@@ -293,7 +295,7 @@ export class DispositivosService {
   }
 
   async desactivar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    this.rechazarSiRetirado(await this.obtener(id, solicitante));
 
     await this.prisma.dispositivo.update({
       where: { id },
@@ -303,7 +305,7 @@ export class DispositivosService {
   }
 
   async activar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    this.rechazarSiRetirado(await this.obtener(id, solicitante));
     await this.prisma.dispositivo.update({
       where: { id },
       data: { activo: true },
@@ -312,18 +314,52 @@ export class DispositivosService {
   }
 
   async eliminarPermanente(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    this.rechazarSiRetirado(await this.obtener(id, solicitante));
 
-    try {
-      await this.prisma.dispositivo.delete({ where: { id } });
-    } catch (error) {
-      if (esViolacionDeLlaveForanea(error)) {
-        throw new ConflictException(
-          'No se puede eliminar: el dispositivo tiene sensores asociados. Elimínalos primero, o desactiva el dispositivo en su lugar.',
-        );
+    return this.prisma.$transaction(async (tx) => {
+      await tx.sensor.deleteMany({
+        where: {
+          dispositivo_id: id,
+          ...SENSOR_VIGENTE,
+          mediciones: { none: {} },
+          alertas: { none: {} },
+        },
+      });
+      await tx.sensor.updateMany({
+        where: { dispositivo_id: id, ...SENSOR_VIGENTE },
+        data: { estado: 'retirado', canal: null },
+      });
+
+      const conHistorial = await tx.dispositivo.findFirst({
+        where: {
+          id,
+          OR: [{ sensores: { some: {} } }, { ingestas: { some: {} } }],
+        },
+        select: { id: true },
+      });
+      if (!conHistorial) {
+        await tx.dispositivo.delete({ where: { id } });
+        return { id, eliminado: true, retirado: false };
       }
-      throw error;
+
+      await tx.dispositivo.update({
+        where: { id },
+        data: {
+          retirado_en: new Date(),
+          activo: false,
+          token_ingesta: null,
+          token_ingesta_hash: null,
+        },
+      });
+      return { id, eliminado: false, retirado: true };
+    });
+  }
+
+  private rechazarSiRetirado(dispositivo: { retirado_en: Date | null }) {
+    if (dispositivo.retirado_en) {
+      throw new ConflictException(
+        'Este controlador fue eliminado y ya no se puede modificar; registra uno nuevo',
+      );
     }
-    return { id, eliminado: true };
   }
 }

@@ -43,6 +43,7 @@ const NotificacionesPage = lazy(() => import('@features/notificaciones/Notificac
 const PerfilPage = lazy(() => import('@features/perfil/PerfilPage'))
 const AuditoriaPage = lazy(() => import('@features/auditoria/AuditoriaPage'))
 const CatalogosPage = lazy(() => import('@features/catalogos/CatalogosPage'))
+const DispositivosPage = lazy(() => import('@features/dispositivos/DispositivosPage'))
 const OrganizacionesPage = lazy(() => import('@features/organizaciones/OrganizacionesPage'))
 const OrganizacionDetallePage = lazy(() => import('@features/organizaciones/OrganizacionDetallePage'))
 const RecuperarPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperarPasswordPage'))
@@ -105,6 +106,7 @@ function AppRoutes() {
         <Route path="/recuperaciones-password" element={cargarPagina(<RecuperacionesPasswordPage />)} />
         <Route path="/auditoria"        element={cargarPagina(<AuditoriaPage />)} />
         <Route path="/catalogos"        element={cargarPagina(<CatalogosPage />)} />
+        <Route path="/dispositivos"     element={cargarPagina(<DispositivosPage />)} />
         <Route path="/organizaciones"   element={cargarPagina(<OrganizacionesPage />)} />
         <Route path="/organizaciones/:id" element={cargarPagina(<OrganizacionDetallePage />)} />
         <Route path="/granjas"         element={cargarPagina(<GranjasPage />)} />

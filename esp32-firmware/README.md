@@ -58,74 +58,46 @@ esp32-firmware/
 ## Configuración (antes de compilar)
 
 Tus credenciales Wi-Fi y pines viven en `include/config.h`, que **no se sube a
-git**. Si ya tienes ese archivo configurado, consérvalo: para esta prueba solo
-edita `BACKEND_URL` y comprueba que `BACKEND_MODO` esté en local. No reemplaces
-tu `config.h` con la plantilla.
+git**. Si ya tienes ese archivo configurado, consérvalo; no lo reemplaces con la
+plantilla.
 
 1. Solo si todavía no existe, copia la plantilla:
    ```bash
    cp include/config.example.h include/config.h
    ```
-   Si ya existe, edita solo los campos necesarios en tu copia local; no la
-   reemplaces ni la compartas.
 2. En `include/config.h` configura:
-   - **WiFi:** deja intactos los valores `WIFI_SSID`, `WIFI_PASSWORD` que ya
-     funcionan en tu ESP32.
-   - **Modo:** deja `BACKEND_MODO` como `BACKEND_MODO_LOCAL` para esta fase.
-   - **Backend local:** cambia `BACKEND_URL` por
-     `http://<IP_LAN_DEL_COMPUTADOR>:3000/ingest`. Usa la IPv4 privada del equipo
-     donde se ejecuta el backend; `localhost` señalaría al propio ESP32.
-   - **Token:** pega en `DEVICE_TOKEN` el token que muestra una sola vez el
-     registro del dispositivo o la acción de regenerarlo. No lo envíes por chat,
-     no lo publiques y no lo subas a Git.
-   - **Sensores:** registra y vincula las conexiones DHT22 desde Monitoreo;
-     no se copian seriales al firmware. Se consultan cada 30 segundos.
-   - **Pines:** `PIN_DHT` conserva el DHT22 usado para control local del relé;
-     debe coincidir con el cableado real. Las conexiones adicionales se eligen
-     en Monitoreo y no pueden usar el pin del relé.
-   - **Umbrales:** a qué temperatura enciende/apaga el ventilador.
+   - **WiFi:** `WIFI_SSID` y `WIFI_PASSWORD`.
+   - **Producción:** `BACKEND_URL` con la URL HTTPS pública de `/ingest`
+     (Railway). La plantilla ya la trae.
+   - **Pines y umbrales:** `PIN_DHT` debe coincidir con el cableado real; las
+     conexiones adicionales se eligen en la página y no pueden usar el pin del
+     relé.
 
-   La plantilla trae un ejemplo de IP, que debes sustituir por la IPv4 real.
-   En modo local el firmware solo acepta direcciones IPv4 privadas, el puerto
-   `3000` y la ruta `/ingest`; usa HTTP únicamente para esta prueba dentro de la
-   LAN. No configures aún la URL pública.
+No hace falta copiar tokens ni IP al código. Todo lo demás se configura desde
+la página y queda guardado en la memoria del ESP32.
 
-### Consultar la IP LAN y abrir el backend solo para la prueba
+### Dos destinos a la vez: producción y local
 
-1. En el computador que ejecuta Docker, consulta su IPv4 de Wi-Fi:
-   - macOS: `ipconfig getifaddr en0` (si no devuelve IP, revisa cuál interfaz
-     Wi-Fi está activa en Ajustes de Red).
-   - Windows: ejecuta `ipconfig` y busca la IPv4 del adaptador Wi-Fi.
-   - Linux: `hostname -I`; usa la IPv4 privada de Wi-Fi, no una IP de Docker,
-     VPN o pública.
-2. Confirma que el computador y el ESP32 usan la misma red Wi-Fi. Las redes de
-   invitados o el aislamiento de clientes pueden impedir que se vean.
-3. Desde la raíz del repositorio, enlaza el puerto del backend solo a esa IP
-   privada y levanta el servicio local:
-   - macOS/Linux: `AVISENS_BACKEND_BIND=192.168.1.42 docker compose up -d backend`
-   - PowerShell: `$env:AVISENS_BACKEND_BIND="192.168.1.42"; docker compose up -d backend`
-   Reemplaza `192.168.1.42` por la IP del paso 1. Sin esa variable, Compose
-   enlaza el backend solo a `127.0.0.1`. No uses una IP pública, no configures
-   redirección de puertos en el router y permite TCP 3000 únicamente desde la
-   red local si el firewall lo requiere.
-4. Comprueba `/health` y, tras la provisión inicial y carga del firmware,
-   revisa el resultado real: `registradas` debe ser mayor que cero y el serial
-   correspondiente debe mostrar la medición en Monitoreo. No envíes lecturas
-   inventadas a la base usada para la prueba física. `/ingest/configuracion`
-   requiere el mismo token del controlador; no lo compartas ni lo pegues en
-   comandos que queden guardados en el historial.
+El controlador envía cada lectura a:
 
-   Sustituye IP, token y códigos por los valores del entorno local. Un `201`
-   aquí confirma la ruta local; tras flashear, el monitor serie del ESP32 debe
-   mostrar `[Backend] 201`. Este paso no llama al backend público.
+| Destino | Cómo se activa | Comportamiento |
+| --- | --- | --- |
+| Producción (Railway) | «Vincular ESP32» desde la página pública, una sola vez por USB | Principal. HTTPS con la CA ISRG Root X1 y reloj por NTP. Si se cae el internet guarda hasta 3 horas y reenvía con la hora real. |
+| Local (tu computador) | «Vincular ESP32» desde la página local (`localhost` o una IP privada), una sola vez por USB | Opcional, «si se puede». Encuentra el computador por mDNS o por las IP vecinas a la última conocida; si no está, omite la lectura sin retrasar a producción. |
 
-### Producción, después de completar la prueba local
+La página decide sola qué token envía: abierta en local guarda el token local;
+abierta en producción, el de producción. Cada base de datos tiene su propio
+controlador registrado, así que cada lado necesita su token.
 
-Producción requiere cambiar explícitamente `BACKEND_MODO` a
-`BACKEND_MODO_PRODUCCION` y poner la URL HTTPS pública de `/ingest`. En ese modo
-el firmware usa la CA ISRG Root X1 versionada en `include/isrg_root_x1.h` y
-sincroniza el reloj por NTP antes de transmitir. El certificado siempre se
-valida; no existe fallback sin TLS.
+Para que el ESP32 vea tu computador:
+
+1. Usa la misma red Wi-Fi (las redes de invitados o con aislamiento de clientes
+   lo impiden).
+2. Abre el backend a la red local con `scripts/esp32-lan.sh`, que detecta la IP,
+   publica el puerto 3000 solo en esa IP privada y anuncia Avisens por mDNS.
+   En PowerShell: `$env:AVISENS_BACKEND_BIND="192.168.1.42"; docker compose up -d backend`.
+3. El ESP32 solo entrega su token a un equipo cuyo `/health` responda
+   `"servicio":"avisens"`.
 
 > ⚠️ Nunca subas contraseñas reales a git. `config.h` ya está en `.gitignore`.
 
@@ -242,12 +214,11 @@ muestra cuántas lecturas quedaron registradas y cuántas se ignoraron. Revisa
 además la medición del sensor en Monitoreo. En cada instalación nueva, la prueba
 queda pendiente hasta cargar el firmware y recibir un envío real con token válido.
 
-Un `401` con «Token de dispositivo inválido» ocurre antes de guardar lecturas.
-Usa el token del controlador registrado en el backend local. Si no conservaste
-el que se mostró al crear el nodo, un administrador puede regenerarlo desde
-su acción **Token** y copiarlo directamente a `DEVICE_TOKEN`, sin pasarlo por
-el chat ni guardarlo en archivos versionados. Regenerarlo invalida el anterior;
-no cambia por sí solo el firmware que ya está cargado en la placa.
+Un `401` con «token inválido» ocurre antes de guardar lecturas: el token que
+tiene el ESP32 no es del controlador registrado en ese destino. Regenera el
+token desde la acción **Token** del controlador y vincúlalo con «Vincular ESP32»
+desde la misma página (local o producción). Regenerarlo invalida el
+anterior; el ESP32 aplica el nuevo sin recompilar.
 
 ---
 

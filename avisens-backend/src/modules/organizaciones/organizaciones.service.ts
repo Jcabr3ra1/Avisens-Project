@@ -21,6 +21,7 @@ import {
   transaccionConPresupuesto,
 } from '../../common/bloqueos/presupuesto-transaccion';
 import { MENSAJE_ORGANIZACION_OCUPADA } from '../../common/errores/bloqueo';
+import { SENSOR_VIGENTE } from '../sensores/sensor-vigente';
 
 const TOPE_BORRADO_MS = 120_000;
 
@@ -137,7 +138,12 @@ const ORGANIZACION_DETALLE_SELECT = {
           codigo: true,
           nombre: true,
           activo: true,
-          _count: { select: { dispositivo: true, sensores: true } },
+          _count: {
+            select: {
+              dispositivo: { where: { retirado_en: null } },
+              sensores: { where: SENSOR_VIGENTE },
+            },
+          },
         },
       },
     },
@@ -318,8 +324,8 @@ export class OrganizacionesService {
       this.prisma.granja.count({ where: granja }),
       this.prisma.galpon.count({ where: galpon }),
       this.prisma.lote.count({ where: lote }),
-      this.prisma.dispositivo.count({ where: { galpon } }),
-      this.prisma.sensor.count({ where: { galpon } }),
+      this.prisma.dispositivo.count({ where: { galpon, retirado_en: null } }),
+      this.prisma.sensor.count({ where: { galpon, ...SENSOR_VIGENTE } }),
       this.prisma.medicion.count({ where: { sensor: { galpon } } }),
       this.prisma.pesaje.count({ where: { lote } }),
       this.prisma.registroMortalidad.count({ where: { lote } }),

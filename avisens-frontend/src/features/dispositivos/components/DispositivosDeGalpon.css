@@ -108,6 +108,12 @@
   border-radius: 8px;
   font-size: 0.85rem;
 }
+.dsp-alert--ok {
+  border: 1px solid var(--success-border);
+  background: color-mix(in srgb, var(--success) 7%, var(--surface-base));
+  color: var(--success);
+}
+
 .dsp-alert--error {
   color: var(--danger, var(--danger));
   background: var(--danger-soft);

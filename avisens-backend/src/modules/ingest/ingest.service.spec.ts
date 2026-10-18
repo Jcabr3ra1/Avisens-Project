@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import type { DispositivoAutenticado } from '../../common/guards/device-token.guard';
 import { ObservabilityService } from '../../common/observability/observability.service';
 import { AlertasService } from '../alertas/alertas.service';
+import { FirmwareService } from '../firmware/firmware.service';
 
 describe('IngestService', () => {
   let service: IngestService;
@@ -13,11 +14,12 @@ describe('IngestService', () => {
     sensor: { findMany: jest.fn() },
     medicion: { createMany: jest.fn() },
     ingestaDispositivo: { findUnique: jest.fn(), create: jest.fn() },
-    dispositivo: { update: jest.fn() },
+    dispositivo: { update: jest.fn(), updateMany: jest.fn() },
     $transaction: jest.fn(),
   };
   const observability = { registrarIngesta: jest.fn() };
   const alertas = { evaluarLectura: jest.fn() };
+  const firmware = { vigente: jest.fn().mockResolvedValue(null) };
 
   const dispositivo: DispositivoAutenticado = {
     id: 7,
@@ -32,6 +34,7 @@ describe('IngestService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: ObservabilityService, useValue: observability },
         { provide: AlertasService, useValue: alertas },
+        { provide: FirmwareService, useValue: firmware },
       ],
     }).compile();
     service = module.get<IngestService>(IngestService);
@@ -194,6 +197,7 @@ describe('IngestService', () => {
       version: 1,
       controlador: 'galpon1',
       conexiones: [{ canal: 'gpio:18', modelo: 'DHT22', gpio: 18 }],
+      firmware: null,
     });
     expect(prisma.sensor.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -206,6 +210,41 @@ describe('IngestService', () => {
       }),
     );
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('ofrece el firmware publicado y registra la versión que reporta el controlador', async () => {
+    prisma.sensor.findMany.mockResolvedValue([]);
+    firmware.vigente.mockResolvedValueOnce({
+      version: '1.2.0',
+      sha256: 'abc',
+      tamano: 900000,
+    });
+
+    const r = await service.configuracion(dispositivo, '1.1.0');
+
+    expect(r.firmware).toEqual({
+      version: '1.2.0',
+      sha256: 'abc',
+      tamano: 900000,
+    });
+    expect(prisma.dispositivo.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 7,
+        OR: [
+          { version_firmware: null },
+          { version_firmware: { not: '1.1.0' } },
+        ],
+      },
+      data: { version_firmware: '1.1.0' },
+    });
+  });
+
+  it('ignora una versión de firmware con caracteres raros', async () => {
+    prisma.sensor.findMany.mockResolvedValue([]);
+
+    await service.configuracion(dispositivo, 'x; drop table');
+
+    expect(prisma.dispositivo.updateMany).not.toHaveBeenCalled();
   });
 
   it('no duplica mediciones cuando se reintenta el mismo id_lote', async () => {

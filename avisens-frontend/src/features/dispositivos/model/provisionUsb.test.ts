@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   construirComandoTokenSerial,
+  destinoDeLaPagina,
   enviarTokenAlPuerto,
   soportaProvisionUsb,
   type PuertoSerialWeb,
@@ -17,8 +18,20 @@ describe('provisionUsb', () => {
     expect(construirComandoTokenSerial('  tok_1234567890abcdef  ')).toBe(
       'AVISENS_TOKEN:tok_1234567890abcdef\n',
     )
+    expect(construirComandoTokenSerial('tok_1234567890abcdef', 'local')).toBe(
+      'AVISENS_TOKEN_LOCAL:tok_1234567890abcdef\n',
+    )
     expect(() => construirComandoTokenSerial('corto')).toThrow()
     expect(() => construirComandoTokenSerial('token con espacios 1234567890')).toThrow()
+  })
+
+  it('la página local guarda token local y la pública token de producción', () => {
+    expect(destinoDeLaPagina('localhost')).toBe('local')
+    expect(destinoDeLaPagina('127.0.0.1')).toBe('local')
+    expect(destinoDeLaPagina('192.168.1.51')).toBe('local')
+    expect(destinoDeLaPagina('172.20.0.4')).toBe('local')
+    expect(destinoDeLaPagina('avisens-project.vercel.app')).toBe('produccion')
+    expect(destinoDeLaPagina('172.32.0.1')).toBe('produccion')
   })
 
   it('envía el token por el puerto y resuelve al recibir [Provision] TOKEN_OK', async () => {
