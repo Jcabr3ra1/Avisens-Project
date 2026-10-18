@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from 'motion/react'
 import { toast } from 'sonner'
 import { ROL_PROPIETARIO } from '@shared/auth/permisos'
 import { IcChevronDown, IcEgg, IcEye, IcGrid, IcPin, IcPlus, IcSettings, IcThermo } from '@shared/ui/icons/icons'
-import AsignarSensores from '@features/monitoreo/AsignarSensores'
 import { actualizarGalpon, crearGalpon, type Galpon } from '@features/galpones/api/galpones'
 import FormularioGalpon from '@features/galpones/components/FormularioGalpon'
 import { useFormularioGalpon } from '@features/galpones/hooks/useFormularioGalpon'
@@ -167,13 +166,13 @@ function EstructuraOrganizacion({ detalle, recargarDetalle, resaltadaId, revelad
                     galpon={galpon}
                     lote={loteEnCurso(galpon.id)}
                     sensores={granja.galpones.find((item) => item.id === galpon.id)?._count.sensores ?? 0}
+                    controladores={granja.galpones.find((item) => item.id === galpon.id)?._count.dispositivo ?? 0}
                     abierto={abiertoId === galpon.id}
                     habilitado={detalle.activa && granja.activa && galpon.activo}
                     onAlternar={() => setAbiertoId((actual) => (actual === galpon.id ? null : galpon.id))}
                     onEditarGalpon={() => formGalpon.abrirEditar(galpon)}
                     onIniciarLote={() => formLote.abrirCrear(galpon.id)}
                     onEditarLote={(lote) => formLote.abrirEditar(lote)}
-                    onSensoresCambiados={recargarDetalle}
                   />
                 ))}
               </ul>
@@ -235,18 +234,18 @@ function EstructuraOrganizacion({ detalle, recargarDetalle, resaltadaId, revelad
 }
 
 function FilaGalpon({
-  galpon, lote, sensores, abierto, habilitado, onAlternar, onEditarGalpon, onIniciarLote, onEditarLote, onSensoresCambiados,
+  galpon, lote, sensores, controladores, abierto, habilitado, onAlternar, onEditarGalpon, onIniciarLote, onEditarLote,
 }: {
   galpon: Galpon
   lote: Lote | null
   sensores: number
+  controladores: number
   abierto: boolean
   habilitado: boolean
   onAlternar: () => void
   onEditarGalpon: () => void
   onIniciarLote: () => void
   onEditarLote: (lote: Lote) => void
-  onSensoresCambiados: () => Promise<void>
 }) {
   const idCuerpo = `est-galpon-${galpon.id}`
   return (
@@ -307,17 +306,20 @@ function FilaGalpon({
                 )}
               </section>
 
-              <section className="est-bloque" aria-label="Controladores y sensores">
-                {habilitado ? (
-                  <AsignarSensores
-                    galponId={galpon.id}
-                    galponCodigo={galpon.codigo}
-                    galponNombre={galpon.nombre}
-                    recargar={onSensoresCambiados}
-                  />
-                ) : (
-                  <p className="est-nota">La organización, la granja y el galpón deben estar activos para conectar sensores.</p>
-                )}
+              <section className="est-bloque est-iot" aria-label="Controladores y sensores">
+                <header>
+                  <h5>Controladores y sensores</h5>
+                </header>
+                <p className="est-iot-cifras">
+                  <strong>{controladores}</strong> {controladores === 1 ? 'controlador' : 'controladores'}
+                  <span aria-hidden="true">·</span>
+                  <strong>{sensores}</strong> {sensores === 1 ? 'sensor' : 'sensores'}
+                </p>
+                <p className="est-nota">
+                  {habilitado
+                    ? 'Se instalan y configuran en Dispositivos, desde el riel verde.'
+                    : 'La organización, la granja y el galpón deben estar activos para conectar sensores.'}
+                </p>
               </section>
 
               <footer className="est-galpon-pie">

@@ -40,7 +40,14 @@ const GALPON_SELECT = {
   plano_url: true,
   activo: true,
   fecha_construccion: true,
-  granja: { select: { id: true, nombre: true, propietario_id: true } },
+  granja: {
+    select: {
+      id: true,
+      nombre: true,
+      propietario_id: true,
+      organizacion: { select: { id: true, nombre: true } },
+    },
+  },
 } as const;
 
 @Injectable()

@@ -25,6 +25,7 @@ export const LINK_DETAILS: Record<string, { description: string; descriptionAdmi
   '/recuperaciones-password': { description: 'Contraseñas por restablecer', keywords: ['contraseña', 'password', 'acceso', 'recuperar', 'bloqueo'] },
   '/catalogos': { description: 'Las bases de tu operación', descriptionAdmin: 'Alimentos, curvas y sensores base', keywords: ['insumos', 'alimentos', 'catalogo'] },
   '/auditoria': { description: 'La trazabilidad de cada cambio', keywords: ['historial', 'registro'] },
+  '/dispositivos': { description: 'Controladores, sensores y firmware', keywords: ['esp32', 'controlador', 'sensores', 'firmware', 'iot', 'actualizacion', 'token'] },
   '/granjas': { description: 'Galpones y lotes, en su lugar', keywords: ['granja', 'galpon', 'lote'] },
   '/guia-crecimiento': { description: 'El crecimiento de cada lote', keywords: ['peso', 'plan', 'curva', 'alimento'] },
   '/bitacora': { description: 'Lo que sucede en el galpón', keywords: ['pesajes', 'consumos', 'mortalidad', 'registro', 'sanidad'] },
