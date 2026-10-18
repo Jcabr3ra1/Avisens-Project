@@ -1,0 +1,32 @@
+meta {
+  name: [Admin · Propietario · Operario]  Curva de crecimiento del lote
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/v1/predicciones/lote/11/curva-crecimiento
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Curva de crecimiento Gompertz del lote, anclada a la curva genetica de su
+  linea (Ross 308 o Cobb 500) y sexo. No guarda nada.
+
+  Devuelve una sola serie por dia, lista para graficar:
+  real_g (pesaje del dia o null), proyectado_g con su banda min_g/max_g al
+  90 %, estandar_g (curva genetica) y marca_g (curva de la marca de alimento,
+  si existe para ese sexo).
+
+  El resumen trae el desvio del ultimo pesaje frente al estandar, el peso
+  proyectado al dia de faena del plan (42 si no hay plan), el dia y la fecha
+  en que llega al peso objetivo y el punto de inflexion.
+
+  Errores: 401 sin sesion, 403 lote de otro propietario, 404 lote inexistente,
+  422 si el lote no tiene pesajes, 400 si el servicio de ML no responde.
+}

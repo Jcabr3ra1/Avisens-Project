@@ -38,6 +38,7 @@ const CAMPOS_POR_CODIGO: Record<string, CampoPermitido[]> = {
     { clave: 'estado_plan', tipo: 'string', valoresPermitidos: ESTADOS_PLAN_VALIDOS },
   ],
   plan_desactualizado: [],
+  sin_ubicacion: [],
   plan_excede_limites_ml: [
     { clave: 'dia_faena', tipo: 'number' },
     { clave: 'peso_objetivo_g', tipo: 'number' },
