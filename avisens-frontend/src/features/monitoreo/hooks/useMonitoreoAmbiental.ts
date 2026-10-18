@@ -53,12 +53,29 @@ export function estaEncendido(valor: number): boolean {
   return valor >= 0.5
 }
 
-// Texto del valor tal como se muestra: "Encendido"/"Apagado" para los de
-// estado, "22.1 °C" para el resto.
+// Los relés y motores reportan la salida que el ESP32 les ordenó. No hay
+// realimentación física: "Salida encendida" no confirma que el relé conmutó
+// ni que la carga funciona, y las etiquetas lo dicen así.
+export function textoSalidaReportada(encendido: boolean): string {
+  return encendido ? 'Salida encendida' : 'Salida apagada'
+}
+
+export const AYUDA_SALIDA_REPORTADA =
+  'Salida que el ESP32 ordenó. Sin sensor de realimentación: no confirma que el relé conmutó ni que la carga funciona.'
+
+// Texto del valor tal como se muestra: "Salida encendida"/"Salida apagada"
+// para los de estado, "22.1 °C" para el resto.
 export function textoValor(sensor: Pick<SensorVista, 'esEstado' | 'unidad'>, valor: number | null): string {
   if (valor === null) return '—'
-  if (sensor.esEstado) return estaEncendido(valor) ? 'Encendido' : 'Apagado'
+  if (sensor.esEstado) return textoSalidaReportada(estaEncendido(valor))
   return `${valor} ${sensor.unidad}`
+}
+
+// El ESP32 manda "sospechosa" cuando el valor no es una medida física
+// confirmada: hoy, el peso del HX711 con el factor de escala de ejemplo.
+// Sin esta marca la web mostraría esos "gramos" como si fueran reales.
+export function esLecturaSinCalibrar(calidad: string | null | undefined): boolean {
+  return calidad === 'sospechosa'
 }
 
 export type SensorVista = {
@@ -67,6 +84,7 @@ export type SensorVista = {
   tipo: string
   unidad: string
   esEstado: boolean
+  sinCalibrar: boolean
   variableUmbral: 'temperatura' | 'humedad' | 'luminosidad' | null
   valor: number | null
   minUmbral: number | null
@@ -162,6 +180,7 @@ export function construirVista(
           tipo: s.tipo,
           unidad: s.unidad_medida,
           esEstado: esSensorDeEstado(s.unidad_medida),
+          sinCalibrar: esLecturaSinCalibrar(entrada?.ultima_lectura?.calidad),
           variableUmbral,
           valor,
           minUmbral: umbral?.valor_minimo ?? null,

@@ -8,7 +8,8 @@ import { GranjasModule } from './modules/granjas/granjas.module';
 import { GalponesModule } from './modules/galpones/galpones.module';
 import { HealthModule } from './modules/health/health.module';
 import { LegalModule } from './modules/legal/legal.module';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerPorCanalGuard } from './common/guards/throttler-por-canal.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
 import { SensoresModule } from './modules/sensores/sensores.module';
@@ -35,6 +36,7 @@ import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-ale
 import { AlertasCanalesModule } from './modules/alertas-canales/alertas-canales.module';
 import { EvidenciaAlertaModule } from './modules/evidencia-alerta/evidencia-alerta.module';
 import { AccionamientosEquiposModule } from './modules/accionamientos-equipos/accionamientos-equipos.module';
+import { OrdenesActuadoresModule } from './modules/ordenes-actuadores/ordenes-actuadores.module';
 import { OrdenesCompraModule } from './modules/ordenes-compra/ordenes-compra.module';
 import { MovimientosFinancierosModule } from './modules/movimientos-financieros/movimientos-financieros.module';
 import { PrediccionesModule } from './modules/predicciones/predicciones.module';
@@ -130,6 +132,7 @@ import { PlanAlimentoModule } from './modules/plan-alimento/plan-alimento.module
     AlertasCanalesModule,
     EvidenciaAlertaModule,
     AccionamientosEquiposModule,
+    OrdenesActuadoresModule,
     OrdenesCompraModule,
     MovimientosFinancierosModule,
     PrediccionesModule,
@@ -163,7 +166,8 @@ import { PlanAlimentoModule } from './modules/plan-alimento/plan-alimento.module
   providers: [
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      // Mismo límite por IP, con la ingesta del ESP32 en su propio cupo.
+      useClass: ThrottlerPorCanalGuard,
     },
     { provide: APP_INTERCEPTOR, useClass: DecimalInterceptor },
     {

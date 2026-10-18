@@ -263,6 +263,12 @@ export function SensorDetail({ sensor, galponNombre, diaVida, onClose }: Props) 
                 </span>
               </div>
 
+              {sensor.sinCalibrar && sensor.valor !== null && (
+                <p className="sdet-estado-desc">
+                  Sin calibrar · El valor no es una medida física confirmada
+                </p>
+              )}
+
               <p className="sdet-estado-desc">
                 {sensor.estado === 'optimo'      && `Dentro del rango óptimo · ${pctEnRango}% del recorrido`}
                 {sensor.estado === 'advertencia' && `Fuera del umbral recomendado · Monitorear de cerca`}

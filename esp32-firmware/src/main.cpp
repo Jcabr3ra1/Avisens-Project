@@ -17,6 +17,7 @@
 #include "Persiana.h"
 #include "ConexionWiFi.h"
 #include "ServicioIngesta.h"
+#include "ControlRemoto.h"
 
 //  INSTANCIAS GLOBALES
 
@@ -34,6 +35,8 @@ GestorActuadores gestorActuadores;
 ControlServo controlServo;
 Alimentador alimentador;
 Persiana persiana;
+// Órdenes de la web sobre K1-K4; ver ControlRemoto.h.
+ControlRemoto controlRemoto(gestorActuadores);
 
 #if !defined(WIFI_SSID) || !defined(WIFI_PASSWORD)
 #error "Define WIFI_SSID y WIFI_PASSWORD en include/config.h (ver config.example.h) antes de compilar."
@@ -131,6 +134,54 @@ bool leerSnapshotAgua(float &distancia)
   distancia = copia.distancia;
   return !enError &&
          copia.estado == EstadoSensorUltrasonico::OK &&
+         millis() - copia.timestamp <= UMBRAL_SNAPSHOT_OBSOLETO_MS;
+}
+
+// Último ADC del MQ-135 para la tarea de red (Core 1).
+static portMUX_TYPE muxGas = portMUX_INITIALIZER_UNLOCKED;
+static LecturaMQ135 snapshotGas = {0, 0.0f, false, 0};
+
+void publicarLecturaGas(const LecturaMQ135 &lectura)
+{
+  portENTER_CRITICAL(&muxGas);
+  snapshotGas = lectura;
+  portEXIT_CRITICAL(&muxGas);
+}
+
+// true y el ADC si hay una lectura válida y reciente para enviar.
+bool leerSnapshotGas(int &adc)
+{
+  portENTER_CRITICAL(&muxGas);
+  LecturaMQ135 copia = snapshotGas;
+  portEXIT_CRITICAL(&muxGas);
+
+  adc = copia.rawValue;
+  return copia.valida &&
+         millis() - copia.timestamp <= UMBRAL_SNAPSHOT_OBSOLETO_MS;
+}
+
+// Último peso del HX711 para la tarea de red (Core 1). SensorPeso marca la
+// lectura inválida mientras no se haya hecho TARA, así que sin tara no se
+// envía nada en vez de mandar un peso sin cero de referencia.
+static portMUX_TYPE muxPeso = portMUX_INITIALIZER_UNLOCKED;
+static LecturaPeso snapshotPeso = {0.0f, 0.0f, false, 0};
+
+void publicarLecturaPeso(const LecturaPeso &lectura)
+{
+  portENTER_CRITICAL(&muxPeso);
+  snapshotPeso = lectura;
+  portEXIT_CRITICAL(&muxPeso);
+}
+
+// true y los gramos si hay una lectura válida y reciente para enviar.
+bool leerSnapshotPeso(float &gramos)
+{
+  portENTER_CRITICAL(&muxPeso);
+  LecturaPeso copia = snapshotPeso;
+  portEXIT_CRITICAL(&muxPeso);
+
+  gramos = copia.peso;
+  return copia.valida &&
          millis() - copia.timestamp <= UMBRAL_SNAPSHOT_OBSOLETO_MS;
 }
 
@@ -325,10 +376,12 @@ void tareaGalpon(void *pvParameters)
       LecturaDHT lecturaDHT = sensorDHT.leer();
       publicarLecturaDht(lecturaDHT);
       LecturaMQ135 lecturaMQ135 = sensorMQ135.leer();
+      publicarLecturaGas(lecturaMQ135);
       LecturaKY032 lecturaKY032 = sensorKY032.leer();
       LecturaUltrasonico lecturaUltrasonico = sensorUltrasonico.leer();
       publicarLecturaAgua(lecturaUltrasonico, sensorUltrasonico.enError());
       LecturaPeso lecturaPeso = sensorPeso.leer();
+      publicarLecturaPeso(lecturaPeso);
 
       float temperatura = lecturaDHT.valida ? lecturaDHT.temperatura : 0.0f;
       float humedad = lecturaDHT.valida ? lecturaDHT.humedad : 0.0f;
@@ -339,6 +392,26 @@ void tareaGalpon(void *pvParameters)
       {
         detectarGradienteTermico(temperatura, ahora);
       }
+
+      // ─── Órdenes remotas (web) sobre K1-K4 ───────────────────────
+      // Antes de la lógica automática: un relé que vuelve a AUTO por una
+      // protección recibe su decisión automática en este mismo ciclo.
+      ContextoProtecciones contexto = {
+          estadoSistema == EstadoSistema::MONITORING,
+          sensorDHT.enError(),
+          lecturaDHT.valida,
+          temperatura,
+          rawNH3,
+          sensorUltrasonico.enError(),
+          lecturaUltrasonico.estado == EstadoSensorUltrasonico::OK,
+          // Ante un fallo puntual, SensorUltrasonico devuelve la última medida
+          // buena con su timestamp original: si es anterior al inicio de este
+          // ciclo, está sostenida y no sirve para autorizar una orden.
+          lecturaUltrasonico.estado == EstadoSensorUltrasonico::OK &&
+              lecturaUltrasonico.timestamp >= ahora,
+          lecturaUltrasonico.distancia};
+      controlRemoto.vigilar(contexto);
+      controlRemoto.procesarOrdenes(contexto);
 
       // ─── Actualizar Actuadores y FSMs Locales ────────────────────
       if (estadoSistema == EstadoSistema::MONITORING)
@@ -359,6 +432,10 @@ void tareaGalpon(void *pvParameters)
         alimentador.actualizar();
         persiana.actualizar();
       }
+
+      // Con la decisión automática ya tomada: lo que se informa de los relés
+      // (y de las órdenes de este ciclo) es la salida que de verdad quedó.
+      controlRemoto.cerrarCiclo();
 
       // Fuera de MONITORING (ERROR/SHUTDOWN) los motores están detenidos y
       // así se reporta; los relés van con el estado real que dejó el fail-safe.
@@ -460,8 +537,42 @@ void tareaWiFi(void *pvParameters)
       ciclo.temperatura = lectura.temperatura;
       ciclo.humedad = lectura.humedad;
       ciclo.incluirAgua = leerSnapshotAgua(ciclo.distanciaAgua);
+      ciclo.incluirGas = leerSnapshotGas(ciclo.gasAdc);
+      ciclo.incluirPeso = leerSnapshotPeso(ciclo.pesoGramos);
+      ciclo.pesoCalibrado = HX711_CALIBRADO;
       ciclo.actuadores = tomarEstadoActuadores();
-      enviarLecturaConReintentos(ciclo, generarIdLote());
+
+      // Confirmaciones de órdenes: se acumulan hasta que el backend responde
+      // con el contrato válido; si el envío falla, viajan en el siguiente.
+      // Primero los resultados y después el estado de relés (ver ControlRemoto.h).
+      static ResultadoOrdenRemota resultadosSinConfirmar[MAX_ORDENES_POR_RESPUESTA];
+      static uint8_t cantidadSinConfirmar = 0;
+      cantidadSinConfirmar += controlRemoto.tomarResultados(
+          &resultadosSinConfirmar[cantidadSinConfirmar],
+          MAX_ORDENES_POR_RESPUESTA - cantidadSinConfirmar);
+      ciclo.resultados = resultadosSinConfirmar;
+      ciclo.cantidadResultados = cantidadSinConfirmar;
+      ciclo.reles = controlRemoto.leerEstadoReles();
+
+      // Identificador de esta sesión de arranque: un UUID v4 nuevo en cada
+      // encendido, que no se guarda en flash. Se genera aquí, con el WiFi ya
+      // conectado, porque esp_random() solo da entropía de hardware con la
+      // radio activa. Si el ESP32 se reinicia, el backend ve un valor nuevo y
+      // trata como inciertas las órdenes que la sesión anterior no confirmó.
+      static String arranqueId;
+      if (arranqueId.length() == 0)
+        arranqueId = generarIdLote();
+      ciclo.arranqueId = arranqueId.c_str();
+
+      static RespuestaIngesta respuesta;
+      enviarLecturaConReintentos(ciclo, generarIdLote(), respuesta);
+      if (respuesta.contratoValido)
+      {
+        cantidadSinConfirmar = 0;
+        controlRemoto.registrarContactoBackend();
+        for (uint8_t i = 0; i < respuesta.cantidadOrdenes; i++)
+          controlRemoto.recibirOrden(respuesta.ordenes[i]);
+      }
     }
 
     vTaskDelay(pdMS_TO_TICKS(1000));
@@ -485,6 +596,7 @@ void setup()
   //  Inicialización de Módulos
   Serial.println("\n[SETUP] Inicializando actuadores...");
   gestorActuadores.begin();
+  controlRemoto.begin();
   controlServo.begin();
   alimentador.begin();
   persiana.begin();

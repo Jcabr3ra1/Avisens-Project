@@ -6,7 +6,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { listarMediciones, type Medicion } from '@features/sensores/api/mediciones'
 import { iconoSensor } from '@shared/ui/sensorIcon'
-import { estaEncendido, formatearUltimaLectura, textoValor, type SensorVista } from './hooks/useMonitoreoAmbiental'
+import {
+  AYUDA_SALIDA_REPORTADA,
+  estaEncendido,
+  formatearUltimaLectura,
+  textoSalidaReportada,
+  textoValor,
+  type SensorVista,
+} from './hooks/useMonitoreoAmbiental'
 
 const INTERVALO_MS = 5000
 const LECTURAS_POR_SENSOR = 30
@@ -185,7 +192,7 @@ function GraficaEstado({ sensor, mediciones }: { sensor: SensorVista; mediciones
         </div>
         <div className="mon-sensor-valor">
           {actual
-            ? <strong className={`mon-onoff mon-onoff--${on ? 'on' : 'off'}`}>{on ? 'Encendido' : 'Apagado'}</strong>
+            ? <strong className={`mon-onoff mon-onoff--${on ? 'on' : 'off'}`} title={AYUDA_SALIDA_REPORTADA}>{textoSalidaReportada(on)}</strong>
             : <span className="mon-offline-txt">—</span>}
         </div>
       </div>
@@ -195,11 +202,11 @@ function GraficaEstado({ sensor, mediciones }: { sensor: SensorVista; mediciones
       ) : (
         <>
           <div className="mon-vivo-franja" role="img"
-            aria-label={`${sensor.tipo}: encendido en ${encendidas} de ${datos.length} lecturas`}>
+            aria-label={`${sensor.tipo}: salida encendida en ${encendidas} de ${datos.length} lecturas`}>
             {datos.map(d => (
               <span key={d.id}
                 className={`mon-vivo-tramo${estaEncendido(d.valor) ? ' mon-vivo-tramo--on' : ''}`}
-                title={`${estaEncendido(d.valor) ? 'Encendido' : 'Apagado'} · ${hora(d.fecha_hora)}`} />
+                title={`${textoSalidaReportada(estaEncendido(d.valor))} · ${hora(d.fecha_hora)}`} />
             ))}
           </div>
           <div className="mon-vivo-eje">
@@ -207,8 +214,8 @@ function GraficaEstado({ sensor, mediciones }: { sensor: SensorVista; mediciones
             <span>{hora(datos[datos.length - 1].fecha_hora)}</span>
           </div>
           <div className="mon-vivo-stats">
-            <span>Encendido en <strong>{encendidas}</strong> de {datos.length} lecturas</span>
-            <span>Último encendido: <strong>{ultimoEncendido ? hora(ultimoEncendido.fecha_hora) : '—'}</strong></span>
+            <span>Salida encendida en <strong>{encendidas}</strong> de {datos.length} lecturas</span>
+            <span>Última salida encendida: <strong>{ultimoEncendido ? hora(ultimoEncendido.fecha_hora) : '—'}</strong></span>
           </div>
         </>
       )}

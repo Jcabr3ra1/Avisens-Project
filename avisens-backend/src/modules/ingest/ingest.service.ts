@@ -6,6 +6,10 @@ import type { DispositivoAutenticado } from '../../common/guards/device-token.gu
 import { ObservabilityService } from '../../common/observability/observability.service';
 import { AlertasService } from '../alertas/alertas.service';
 import { clasificarFalloAlerta } from '../../common/errores/clasificar-error';
+import {
+  OrdenesActuadoresService,
+  type OrdenParaDispositivo,
+} from '../ordenes-actuadores/ordenes-actuadores.service';
 
 interface MedicionNueva {
   sensor_id: number;
@@ -22,6 +26,7 @@ export class IngestService {
     private prisma: PrismaService,
     private observability: ObservabilityService,
     private alertas: AlertasService,
+    private ordenes: OrdenesActuadoresService,
   ) {}
 
   async registrar(
@@ -43,7 +48,10 @@ export class IngestService {
           dispositivo.id,
           dto.ip_local ?? ipPeticion,
         );
-        return this.respuestaDuplicada(anterior);
+        return {
+          ...this.respuestaDuplicada(anterior),
+          ordenes: await this.sincronizarOrdenes(dispositivo.id, dto),
+        };
       }
     }
 
@@ -110,7 +118,10 @@ export class IngestService {
         });
         if (anterior) {
           await this.actualizarHeartbeat(dispositivo.id, ipOrigen);
-          return this.respuestaDuplicada(anterior);
+          return {
+            ...this.respuestaDuplicada(anterior),
+            ordenes: await this.sincronizarOrdenes(dispositivo.id, dto),
+          };
         }
       }
       throw error;
@@ -165,7 +176,42 @@ export class IngestService {
       duplicada: false,
       registradas: aInsertar.length,
       ignoradas,
+      ordenes: await this.sincronizarOrdenes(dispositivo.id, dto),
     };
+  }
+
+  // Confirmaciones que trae este ciclo + órdenes por entregar en la
+  // respuesta. Igual que las alertas, un fallo aquí no tumba la ingesta: las
+  // mediciones ya quedaron guardadas, y las órdenes siguen pendientes (o
+  // expiran) hasta el próximo ciclo.
+  private async sincronizarOrdenes(
+    dispositivoId: number,
+    dto: IngestDto,
+  ): Promise<OrdenParaDispositivo[]> {
+    try {
+      const sesion = await this.ordenes.procesarReporte(
+        dispositivoId,
+        dto.resultados_ordenes,
+        dto.estados_reles,
+        dto.arranque_id,
+      );
+      // Un envío retrasado de antes del último reinicio no recibe órdenes:
+      // esa sesión del ESP32 ya no existe y nunca las aplicaría.
+      if (sesion === 'anterior') return [];
+      return await this.ordenes.entregarPendientes(
+        dispositivoId,
+        dto.arranque_id,
+      );
+    } catch (error: unknown) {
+      this.logger.error(
+        JSON.stringify({
+          evento: 'iot.ordenes.fallida',
+          dispositivo_id: dispositivoId,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      return [];
+    }
   }
 
   private respuestaDuplicada(anterior: {

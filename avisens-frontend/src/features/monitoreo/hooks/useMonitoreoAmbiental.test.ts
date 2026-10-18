@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { construirVista } from './useMonitoreoAmbiental'
+import { construirVista, esLecturaSinCalibrar, textoSalidaReportada, textoValor } from './useMonitoreoAmbiental'
 import type { Galpon } from '@features/galpones/api/galpones'
 import type { Sensor } from '@features/sensores/api/sensores'
 import type { UltimaLecturaSensor } from '@features/sensores/api/mediciones'
@@ -186,5 +186,73 @@ describe('construirVista · estado del sensor', () => {
       false,
     )
     expect(resultado[0].sensores[0].estado).toBe('obsoleta')
+  })
+})
+
+describe('construirVista · MQ-135 y HX711', () => {
+  it('el ADC del MQ-135 se muestra con su unidad y sin umbral: no hay rango en ppm contra el cual compararlo', () => {
+    const resultado = construirVista(
+      [galpon()],
+      [],
+      [sensorApi({ id: 3, codigo: 'GAS-G1-01', tipo: 'Calidad del aire (ADC)', unidad_medida: 'adc' })],
+      [
+        entrada({
+          sensor_id: 3,
+          ultima_lectura: { valor: 912, fecha_hora: new Date().toISOString(), calidad: 'ok', antiguedad_segundos: 3 },
+        }),
+      ],
+      [umbral()],
+      false,
+    )
+    const sensor = resultado[0].sensores[0]
+    expect(sensor.valor).toBe(912)
+    expect(sensor.unidad).toBe('adc')
+    expect(sensor.variableUmbral).toBeNull()
+    expect(sensor.estado).toBe('sin_umbral')
+    expect(sensor.sinCalibrar).toBe(false)
+  })
+
+  it('el peso que llega "sospechosa" queda marcado como sin calibrar', () => {
+    const resultado = construirVista(
+      [galpon()],
+      [],
+      [sensorApi({ id: 4, codigo: 'PESO-G1-01', tipo: 'Peso de alimento', unidad_medida: 'g' })],
+      [
+        entrada({
+          sensor_id: 4,
+          ultima_lectura: { valor: 812.5, fecha_hora: new Date().toISOString(), calidad: 'sospechosa', antiguedad_segundos: 3 },
+        }),
+      ],
+      [],
+      false,
+    )
+    expect(resultado[0].sensores[0].sinCalibrar).toBe(true)
+  })
+
+  it('sin lectura no hay nada que marcar como sin calibrar', () => {
+    const resultado = construirVista([galpon()], [], [sensorApi()], [entrada()], [], false)
+    expect(resultado[0].sensores[0].sinCalibrar).toBe(false)
+  })
+})
+
+describe('esLecturaSinCalibrar', () => {
+  it('solo "sospechosa" marca la lectura; "ok" o no tener calidad no', () => {
+    expect(esLecturaSinCalibrar('sospechosa')).toBe(true)
+    expect(esLecturaSinCalibrar('ok')).toBe(false)
+    expect(esLecturaSinCalibrar(undefined)).toBe(false)
+    expect(esLecturaSinCalibrar(null)).toBe(false)
+  })
+})
+
+describe('textoValor de relés y motores (B2)', () => {
+  it('dice "salida" porque es lo que el ESP32 ordenó, no un estado físico confirmado', () => {
+    expect(textoValor({ esEstado: true, unidad: 'estado' }, 1)).toBe('Salida encendida')
+    expect(textoValor({ esEstado: true, unidad: 'estado' }, 0)).toBe('Salida apagada')
+    expect(textoSalidaReportada(true)).not.toMatch(/confirmad|físic/i)
+  })
+
+  it('los sensores de medida no cambian', () => {
+    expect(textoValor({ esEstado: false, unidad: '°C' }, 24.5)).toBe('24.5 °C')
+    expect(textoValor({ esEstado: true, unidad: 'estado' }, null)).toBe('—')
   })
 })

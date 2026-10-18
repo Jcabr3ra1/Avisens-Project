@@ -36,6 +36,11 @@
 // HC-SR04: distancia del sensor a la superficie del agua (cm). Más
 // distancia = menos agua.
 #define CODIGO_SENSOR_AGUA "AGUA-G1-01"
+// MQ-135: ADC crudo filtrado (0-4095), no una concentración en ppm: sin
+// calibrar contra un gas de referencia no hay conversión honesta a ppm.
+#define CODIGO_SENSOR_GAS  "GAS-G1-01"
+// HX711: peso en gramos de la tolva. Solo se envía después de TARA.
+#define CODIGO_SENSOR_PESO "PESO-G1-01"
 // Estado de los motores del L293D: se reportan como sensores con unidad
 // "estado" (1 = encendido, 0 = apagado).
 #define CODIGO_MOTOR_ALIMENTADOR "MOT-ALIM-G1-01"
@@ -83,6 +88,10 @@
 #define HX711_DT 15                  // DATA pin (GPIO15)
 #define HX711_SCK 16
 #define HX711_FACTOR_ESCALA 0.453592 // Gramos/unidad (ejemplo: 20kg)
+// 1 solo después de ajustar HX711_FACTOR_ESCALA con un peso conocido.
+// Con 0 el peso se envía con calidad "sospechosa" y la web lo muestra como
+// sin calibrar: el factor de ejemplo no da gramos reales.
+#define HX711_CALIBRADO 0
 #define UMBRAL_ALIMENTO_BAJO 500.0   // Gramos — Alerta
 
 // ─── UMBRALES DE CONTROL ────────────────────────────────

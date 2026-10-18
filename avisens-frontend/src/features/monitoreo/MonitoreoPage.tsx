@@ -10,6 +10,8 @@ import {
   tieneLecturaUtil,
   estaEncendido,
   textoValor,
+  textoSalidaReportada,
+  AYUDA_SALIDA_REPORTADA,
   type GalponMonitoreoVista,
   type SensorVista,
   type EstadoSensorVista,
@@ -18,6 +20,8 @@ import { iconoSensor } from '@shared/ui/sensorIcon'
 import { semanaDeVida } from '@shared/utils/fechas'
 import { SensorDetail } from './SensorDetail'
 import { LecturasEnVivo } from './LecturasEnVivo'
+import { ControlActuadores } from './components/ControlActuadores'
+import { esReleControlable } from './model/actuadores'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcServer } from '@shared/ui/icons/icons'
 import '@shared/ui/admin/AdminKit.css'
@@ -137,6 +141,16 @@ function MonitoreoPage() {
             </div>
           )}
 
+          {/* ── Control de los relés K1-K4 desde la web ─────────────────────── */}
+          {galpon.sensores.some(esReleControlable) && (
+            <ControlActuadores
+              key={galpon.id}
+              galponId={galpon.id}
+              reles={galpon.sensores.filter(esReleControlable)}
+              onOrdenFinalizada={() => { void recargar() }}
+            />
+          )}
+
           {/* ── Lecturas en vivo (gráficas + últimas lecturas) ──────────────── */}
           {galpon.sensores.length > 0 && (
             <LecturasEnVivo sensores={galpon.sensores} onNuevaLectura={recargarTarjetas} />
@@ -161,7 +175,7 @@ function MonitoreoPage() {
                     <span>
                       <InsigniaEstado sensor={s} />
                     </span>
-                    <span>{s.valor === null ? '—' : <strong>{textoValor(s, s.valor)}</strong>}</span>
+                    <span>{s.valor === null ? '—' : <><strong>{textoValor(s, s.valor)}</strong> <InsigniaSinCalibrar sensor={s} /></>}</span>
                     <span>{s.minUmbral ?? '—'}</span>
                     <span>{s.maxUmbral ?? '—'}</span>
                     <span className="mon-tabla-ultima">{formatearUltimaLectura(s.ultimaLecturaTs)}</span>
@@ -200,22 +214,37 @@ function puedeAbrirDetalle(sensor: SensorVista): boolean {
   return tieneLecturaUtil(sensor.estado) && !sensor.esEstado
 }
 
-// Insignia de estado. Un motor con lectura vigente dice Encendido/Apagado en
-// lugar de "Sin umbral"; si la lectura es vieja o falta, manda el estado.
+// Insignia de estado. Un motor con lectura vigente dice qué salida informó el
+// ESP32 en lugar de "Sin umbral"; si la lectura es vieja o falta, manda el
+// estado.
 function InsigniaEstado({ sensor }: { sensor: SensorVista }) {
   const vigente = sensor.esEstado && sensor.valor !== null &&
     (sensor.estado === 'sin_umbral' || sensor.estado === 'optimo')
   if (vigente) {
     const on = estaEncendido(sensor.valor!)
     return (
-      <span className={`mon-estado-badge mon-estado-badge--${on ? 'encendido' : 'apagado'}`}>
-        {on ? 'Encendido' : 'Apagado'}
+      <span className={`mon-estado-badge mon-estado-badge--${on ? 'encendido' : 'apagado'}`} title={AYUDA_SALIDA_REPORTADA}>
+        {textoSalidaReportada(on)}
       </span>
     )
   }
   return (
     <span className={`mon-estado-badge mon-estado-badge--${sensor.estado}`}>
       {ETIQUETA_ESTADO[sensor.estado]}
+    </span>
+  )
+}
+
+// El valor se muestra igual, pero marcado: el dispositivo avisó que no es una
+// medida calibrada (HX711 con el factor de escala de ejemplo).
+function InsigniaSinCalibrar({ sensor }: { sensor: SensorVista }) {
+  if (!sensor.sinCalibrar || sensor.valor === null) return null
+  return (
+    <span
+      className="mon-estado-badge mon-estado-badge--advertencia"
+      title="El ESP32 envió esta lectura sin calibración: el número no es una medida física confirmada."
+    >
+      Sin calibrar
     </span>
   )
 }
@@ -256,6 +285,7 @@ function TarjetaSensor({ sensor, activo, onClick }: TarjetaProps) {
       <div className="mon-sensor-info">
         <span className="mon-sensor-nombre">{sensor.tipo}</span>
         <span className="mon-sensor-zona">ID #{sensor.id} · {sensor.codigo}</span>
+        <InsigniaSinCalibrar sensor={sensor} />
       </div>
 
       <div className="mon-sensor-valor">

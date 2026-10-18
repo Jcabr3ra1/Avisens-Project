@@ -122,6 +122,7 @@
 .mon-sensor-info   { display: flex; flex-direction: column; gap: 0.1rem; }
 .mon-sensor-nombre { font-weight: 700; font-size: 0.88rem; color: var(--dash-ink); }
 .mon-sensor-zona   { font-size: 0.75rem; color: var(--text3); }
+.mon-sensor-info .mon-estado-badge { align-self: flex-start; }
 
 .mon-sensor-valor        { display: flex; align-items: baseline; gap: 0.25rem; }
 .mon-sensor-valor strong { font-size: 1.9rem; font-weight: 800; color: var(--dash-ink); line-height: 1; }

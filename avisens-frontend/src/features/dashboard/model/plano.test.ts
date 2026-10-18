@@ -4,7 +4,7 @@ import { frescuraLecturas, posicionPorcentaje, sensoresUbicados } from './plano'
 
 function sensor(parcial: Partial<SensorVista> = {}): SensorVista {
   return {
-    id: 1, codigo: 'S-1', tipo: 'temperatura', unidad: '°C', esEstado: false,
+    id: 1, codigo: 'S-1', tipo: 'temperatura', unidad: '°C', esEstado: false, sinCalibrar: false,
     variableUmbral: 'temperatura', valor: 27, minUmbral: 25, maxUmbral: 29,
     estado: 'optimo', ultimaLecturaTs: null, x: null, y: null, ...parcial,
   }
