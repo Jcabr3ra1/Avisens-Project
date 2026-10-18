@@ -40,11 +40,14 @@ const GALPON_SELECT = {
   plano_url: true,
   activo: true,
   fecha_construccion: true,
+  granja: { select: { id: true, nombre: true, propietario_id: true } },
+} as const;
+
+const GALPON_LECTURA_SELECT = {
+  ...GALPON_SELECT,
   granja: {
     select: {
-      id: true,
-      nombre: true,
-      propietario_id: true,
+      ...GALPON_SELECT.granja.select,
       organizacion: { select: { id: true, nombre: true } },
     },
   },
@@ -102,7 +105,7 @@ export class GalponesService {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.galpon.findMany({
         where,
-        select: GALPON_SELECT,
+        select: GALPON_LECTURA_SELECT,
         orderBy: { id: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -116,7 +119,7 @@ export class GalponesService {
   async obtener(id: number, solicitante: Solicitante) {
     const galpon = await this.prisma.galpon.findUnique({
       where: { id },
-      select: GALPON_SELECT,
+      select: GALPON_LECTURA_SELECT,
     });
     if (!galpon) throw new NotFoundException('Galpón no encontrado');
     await verificarAccesoGalpon(
