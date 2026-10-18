@@ -236,6 +236,7 @@ model Dispositivo {
   ultima_conexion    DateTime?
   activo             Boolean           @default(true)
   fecha_creacion     DateTime          @default(now())
+  retirado_en        DateTime?
 
   galpon   Galpon               @relation(fields: [galpon_id], references: [id])
   sensores Sensor[]
@@ -250,6 +251,20 @@ model Dispositivo {
   @@map("dispositivos")
 }
 
+// ── Firmware de los controladores (actualización por Wi-Fi) ─────────────────
+model FirmwareVersion {
+  id             Int      @id @default(autoincrement())
+  version        String   @unique
+  sha256         String
+  tamano         Int
+  binario        Bytes
+  notas          String?
+  vigente        Boolean  @default(false)
+  fecha_creacion DateTime @default(now())
+
+  @@map("firmware_versiones")
+}
+
 // ---------------------------------------------------------------------------
 // Sensores (miden una variable ambiental y reportan via un dispositivo)
 // ---------------------------------------------------------------------------
@@ -259,6 +274,7 @@ enum EstadoSensor {
   inactivo
   mantenimiento
   falla
+  retirado
 }
 
 model Sensor {

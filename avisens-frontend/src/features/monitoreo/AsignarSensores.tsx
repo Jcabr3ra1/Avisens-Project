@@ -151,7 +151,7 @@ function AsignarSensores({
     if (sensorOcupado !== null) return
     const nombre = `${etiquetaTipo(sensor.tipo)} (${sensor.codigo})`
     if (accion === 'eliminar' && !window.confirm(
-      `¿Eliminar permanentemente el sensor ${nombre}? Esta acción no se puede deshacer. Si ya tiene lecturas guardadas, desactívalo en su lugar.`,
+      `¿Eliminar el sensor ${nombre}? Dejará de aparecer en Avisens. Si ya registró lecturas, su historial se conserva para los reportes.`,
     )) return
     if (accion === 'desactivar' && !window.confirm(
       `¿Desactivar el sensor ${nombre}? Deja de contar en el monitoreo y sus lecturas guardadas se conservan.`,
@@ -160,14 +160,15 @@ function AsignarSensores({
     setMensaje('')
     setError('')
     try {
-      if (accion === 'activar') await activarSensor(sensor.id)
-      else if (accion === 'desactivar') await desactivarSensor(sensor.id)
-      else await eliminarSensor(sensor.id)
-      setMensaje(
-        accion === 'eliminar'
-          ? `Se eliminó el sensor ${nombre}.`
-          : `El sensor ${nombre} quedó ${accion === 'activar' ? 'activo' : 'inactivo'}.`,
-      )
+      if (accion === 'eliminar') {
+        const { retirado } = await eliminarSensor(sensor.id)
+        setMensaje(retirado
+          ? `Se eliminó el sensor ${nombre}. Sus lecturas anteriores se conservan en el historial.`
+          : `Se eliminó el sensor ${nombre}.`)
+      } else {
+        await (accion === 'activar' ? activarSensor(sensor.id) : desactivarSensor(sensor.id))
+        setMensaje(`El sensor ${nombre} quedó ${accion === 'activar' ? 'activo' : 'inactivo'}.`)
+      }
       actualizarControladores()
     } catch (problema) {
       setError(mensajeDeError(problema, 'No se pudo actualizar el sensor.'))
@@ -219,8 +220,79 @@ function AsignarSensores({
 
   if (!puedeRegistrar) return null
 
-  const conCanal = sensores.filter(sensor => sensor.canal).length
-  const pasoListo = [disponibles.length > 0, sensores.length > 0, sensores.length > 0 && conCanal === sensores.length]
+  const activos = sensores.filter(sensor => sensor.estado !== 'inactivo')
+  const desactivados = sensores.filter(sensor => sensor.estado === 'inactivo')
+  const conCanal = activos.filter(sensor => sensor.canal).length
+  const pasoListo = [disponibles.length > 0, activos.length > 0, activos.length > 0 && conCanal === activos.length]
+
+  function tablaSensores(lista: Sensor[], etiqueta: string) {
+    return (
+      <div className="cs-tabla-scroll">
+        <table className="cs-tabla" aria-label={etiqueta}>
+          <thead>
+            <tr>
+              <th>Sensor</th>
+              <th>Serial</th>
+              <th>Controlador</th>
+              <th>Conexión</th>
+              <th aria-label="Acciones" />
+            </tr>
+          </thead>
+          <tbody>
+            {lista.map(sensor => (
+              <tr key={sensor.id} className={sensor.estado === 'inactivo' ? 'is-inactivo' : undefined} aria-busy={sensorOcupado === sensor.id}>
+                <td>
+                  <span className="cs-sensor">
+                    <span className="cs-opcion-icono" aria-hidden="true">{iconoSensor(sensor.tipo, 18)}</span>
+                    <span className="cs-opcion-texto">
+                      <strong>{etiquetaTipo(sensor.tipo)}</strong>
+                      <small>
+                        {sensor.unidad_medida} · <span className={`cs-sensor-estado cs-sensor-estado--${sensor.estado}`}>{sensor.estado === 'activo' ? 'Activo' : sensor.estado === 'inactivo' ? 'Inactivo' : sensor.estado}</span>
+                      </small>
+                    </span>
+                  </span>
+                </td>
+                <td><code className="cs-codigo">{sensor.codigo}</code></td>
+                <td><code className="cs-codigo">{sensor.dispositivo.codigo_topic}</code></td>
+                <td>
+                  {sensor.estado === 'inactivo' ? (
+                    <span className="cs-nota cs-nota--celda">{sensor.canal ?? 'Sin conexión'}</span>
+                  ) : esVariableDht(sensor.tipo) ? (
+                    <ConexionDhtSensor key={`${sensor.id}-${sensor.canal}`} sensor={sensor} alGuardar={() => {
+                      setMensaje(`Conexión de ${sensor.codigo} guardada. El controlador la consultará automáticamente.`)
+                      actualizarControladores()
+                    }} />
+                  ) : <span className="cs-nota cs-nota--celda">{sensor.canal ?? 'Lector por serial'}</span>}
+                </td>
+                <td className="cs-celda-acciones">
+                  <span className="cs-acciones">
+                    <button
+                      type="button"
+                      className="cs-accion"
+                      disabled={sensorOcupado !== null}
+                      onClick={() => void cambiarSensor(sensor, sensor.estado === 'inactivo' ? 'activar' : 'desactivar')}
+                    >
+                      {sensor.estado === 'inactivo' ? 'Activar' : 'Desactivar'}
+                    </button>
+                    <button
+                      type="button"
+                      className="cs-accion cs-accion--peligro"
+                      disabled={sensorOcupado !== null}
+                      onClick={() => void cambiarSensor(sensor, 'eliminar')}
+                      aria-label={`Eliminar el sensor ${sensor.codigo}`}
+                      title="Eliminar sensor"
+                    >
+                      <IcTrash size={15} aria-hidden="true" />
+                    </button>
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
 
   return (
     <section className="cs" aria-labelledby={`cs-titulo-${galponId}`}>
@@ -231,7 +303,7 @@ function AsignarSensores({
         </div>
         <div className="cs-resumen">
           <span className={`cs-chip${disponibles.length ? ' cs-chip--ok' : ''}`}>{disponibles.length === 1 ? '1 controlador activo' : `${disponibles.length} controladores activos`}</span>
-          <span className={`cs-chip${sensores.length ? ' cs-chip--ok' : ''}`}>{sensores.length === 1 ? '1 sensor' : `${sensores.length} sensores`}</span>
+          <span className={`cs-chip${activos.length ? ' cs-chip--ok' : ''}`}>{activos.length === 1 ? '1 sensor activo' : `${activos.length} sensores activos`}</span>
         </div>
       </header>
 
@@ -365,78 +437,29 @@ function AsignarSensores({
         <summary className="cs-bloque-cabecera">
           <span className="cs-paso-numero" aria-hidden="true">3</span>
           <span className="cs-bloque-titulo">
-            <strong>Sensores registrados{!cargando && !errorCarga ? ` (${sensores.length})` : ''}</strong>
+            <strong>Sensores registrados{!cargando && !errorCarga ? ` (${activos.length})` : ''}</strong>
             <small>Cada sensor tiene su serial. Las conexiones DHT22 se actualizan solas cada 30 segundos.</small>
           </span>
-          <span className={`cs-estado${pasoListo[2] ? ' is-listo' : ''}`}>{sensores.length === 0 ? 'Sin sensores' : pasoListo[2] ? 'Conectados' : `${sensores.length - conCanal} sin conexión`}</span>
+          <span className={`cs-estado${pasoListo[2] ? ' is-listo' : ''}`}>{activos.length === 0 ? 'Sin sensores' : pasoListo[2] ? 'Conectados' : `${activos.length - conCanal} sin conexión`}</span>
           <IcChevronDown size={16} aria-hidden="true" className="cs-flecha" />
         </summary>
         <div className="cs-bloque-cuerpo">
-          {cargando ? <p className="cs-nota" role="status">Cargando sensores…</p> : errorCarga ? <p className="cs-aviso cs-aviso--error">La lista de sensores no está disponible. Vuelve a cargar los datos.</p> : sensores.length === 0 ? (
-            <p className="cs-nota">Todavía no hay sensores registrados en este galpón.</p>
-          ) : (
-            <div className="cs-tabla-scroll">
-              <table className="cs-tabla">
-                <thead>
-                  <tr>
-                    <th>Sensor</th>
-                    <th>Serial</th>
-                    <th>Controlador</th>
-                    <th>Conexión</th>
-                    <th aria-label="Acciones" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {sensores.map(sensor => (
-                    <tr key={sensor.id} className={sensor.estado === 'inactivo' ? 'is-inactivo' : undefined} aria-busy={sensorOcupado === sensor.id}>
-                      <td>
-                        <span className="cs-sensor">
-                          <span className="cs-opcion-icono" aria-hidden="true">{iconoSensor(sensor.tipo, 18)}</span>
-                          <span className="cs-opcion-texto">
-                            <strong>{etiquetaTipo(sensor.tipo)}</strong>
-                            <small>
-                              {sensor.unidad_medida} · <span className={`cs-sensor-estado cs-sensor-estado--${sensor.estado}`}>{sensor.estado === 'activo' ? 'Activo' : sensor.estado === 'inactivo' ? 'Inactivo' : sensor.estado}</span>
-                            </small>
-                          </span>
-                        </span>
-                      </td>
-                      <td><code className="cs-codigo">{sensor.codigo}</code></td>
-                      <td><code className="cs-codigo">{sensor.dispositivo.codigo_topic}</code></td>
-                      <td>
-                        {esVariableDht(sensor.tipo) ? (
-                          <ConexionDhtSensor key={`${sensor.id}-${sensor.canal}`} sensor={sensor} alGuardar={() => {
-                            setMensaje(`Conexión de ${sensor.codigo} guardada. El controlador la consultará automáticamente.`)
-                            actualizarControladores()
-                          }} />
-                        ) : <span className="cs-nota cs-nota--celda">{sensor.canal ?? 'Lector por serial'}</span>}
-                      </td>
-                      <td className="cs-celda-acciones">
-                        <span className="cs-acciones">
-                          <button
-                            type="button"
-                            className="cs-accion"
-                            disabled={sensorOcupado !== null}
-                            onClick={() => void cambiarSensor(sensor, sensor.estado === 'inactivo' ? 'activar' : 'desactivar')}
-                          >
-                            {sensor.estado === 'inactivo' ? 'Activar' : 'Desactivar'}
-                          </button>
-                          <button
-                            type="button"
-                            className="cs-accion cs-accion--peligro"
-                            disabled={sensorOcupado !== null}
-                            onClick={() => void cambiarSensor(sensor, 'eliminar')}
-                            aria-label={`Eliminar el sensor ${sensor.codigo}`}
-                            title="Eliminar sensor"
-                          >
-                            <IcTrash size={15} aria-hidden="true" />
-                          </button>
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {cargando ? <p className="cs-nota" role="status">Cargando sensores…</p> : errorCarga ? <p className="cs-aviso cs-aviso--error">La lista de sensores no está disponible. Vuelve a cargar los datos.</p> : (
+            <>
+              {activos.length === 0
+                ? <p className="cs-nota">No hay sensores activos en este galpón.</p>
+                : tablaSensores(activos, 'Sensores activos')}
+              {desactivados.length > 0 && (
+                <details className="cs-desactivados">
+                  <summary>
+                    <IcChevronDown size={14} aria-hidden="true" className="cs-flecha" />
+                    Desactivados ({desactivados.length})
+                    <small>No envían lecturas al monitoreo. Actívalos de nuevo o elimínalos.</small>
+                  </summary>
+                  {tablaSensores(desactivados, 'Sensores desactivados')}
+                </details>
+              )}
+            </>
           )}
         </div>
       </details>

@@ -1,0 +1,24 @@
+meta {
+  name: [Token dispositivo]  Descargar firmware publicado
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/ingest/firmware
+  body: none
+  auth: none
+}
+
+headers {
+  X-Device-Token: {{device_token}}
+}
+
+docs {
+  Lo usa el ESP32 para actualizarse por Wi-Fi. Devuelve el binario de la
+  versión publicada con Content-Length y las cabeceras X-Firmware-Version y
+  X-Firmware-Sha256. 404 si no hay versión publicada; 401 con token inválido.
+
+  GET /ingest/configuracion ahora incluye "firmware": { version, sha256,
+  tamano } y registra la versión que el ESP32 envía en X-Firmware-Version.
+}

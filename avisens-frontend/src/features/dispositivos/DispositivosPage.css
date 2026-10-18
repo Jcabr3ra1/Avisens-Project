@@ -1,0 +1,280 @@
+.flota-page {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* Versión compacta de la ficha de Organización */
+
+.flota-page .org-hero-texto { padding: var(--space-4) var(--space-4) var(--space-3) var(--space-5); gap: var(--space-2); }
+.flota-page .org-hero-titulo { font-size: clamp(1.35rem, 1rem + 1.1vw, 1.8rem); }
+.flota-page .org-hero-chip { padding: .2rem .6rem; font-size: .74rem; }
+.flota-page .org-hero-datos { padding: var(--space-2) 0; }
+.flota-page .org-hero-subtitulo { font-size: .82rem; line-height: 1.45; }
+.flota-page .org-hero-escena { min-height: 240px; }
+.flota-page .org-hero-indicador { padding: var(--space-3) var(--space-2); }
+.flota-page .org-hero-indicador-label { font-size: .64rem; }
+.flota-page .org-hero-indicador-valor { font-size: 1.25rem; }
+.flota-page .adm-btn { min-height: 38px; padding-inline: .9rem; font-size: .84rem; }
+
+/* Lista compacta */
+
+.flota-page .org-lista-herramientas { padding: var(--space-2) var(--space-3); }
+.flota-page .org-lista-buscador input,
+.flota-page .org-lista-desplegable select { min-height: 38px; font-size: .84rem; }
+.flota-page .org-lista-columna-cabecera h2 { font-size: .95rem; }
+.flota-page .org-lista-tarjeta { grid-template-columns: 36px minmax(0, 1fr) auto; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); }
+.flota-page .org-lista-avatar { width: 36px; height: 36px; }
+.flota-page .org-lista-tarjeta-nombre { font-size: .92rem; }
+.flota-page .org-lista-tarjeta-meta,
+.flota-page .org-lista-tarjeta-pie { font-size: .76rem; }
+.flota-page .org-lista-panel-cabecera { min-height: 40px; padding: 0 var(--space-4); }
+.flota-page .org-lista-panel-recursos li { grid-template-columns: 32px minmax(0, 1fr) auto; gap: var(--space-2); padding: .5rem .7rem; }
+.flota-page .org-lista-panel-icono { width: 32px; height: 32px; }
+
+/* Configuración compacta */
+
+.flota-detalle-config .cs-pasos li { min-height: 46px; padding: 0 var(--space-3); }
+.flota-detalle-config .cs-bloque-cabecera { min-height: 52px; padding: var(--space-2) var(--space-3); }
+.flota-detalle-config .cs-bloque-cuerpo { padding: var(--space-3); }
+.flota-detalle-config .cs-catalogo { grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); }
+.flota-detalle-config .cs-opcion { grid-template-columns: 32px minmax(0, 1fr) auto; gap: var(--space-2); min-height: 62px; padding: .55rem .7rem; }
+.flota-detalle-config .cs-opcion-icono { width: 32px; height: 32px; }
+
+/* Pestañas */
+
+.flota-tabs {
+  display: inline-flex;
+  gap: 0.3rem;
+  justify-self: start;
+  padding: 0.3rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-tinted);
+}
+
+.flota-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 34px;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.flota-tab[aria-selected='true'] {
+  background: var(--surface-base);
+  color: var(--avisens-deep);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border-subtle);
+}
+
+.flota-tab span {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.flota-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Lista + detalle */
+
+.flota-galpones {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.flota-cuerpo {
+  display: grid;
+  grid-template-columns: minmax(17rem, 0.75fr) minmax(0, 1.6fr);
+  align-items: start;
+  gap: var(--space-4);
+  scroll-margin-top: var(--space-4);
+}
+
+.flota-grupo {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.flota-grupo + .flota-grupo {
+  margin-top: var(--space-3);
+}
+
+.flota-grupo-titulo {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.flota-avatar { color: var(--text-muted); background: var(--surface-tinted); }
+.flota-avatar--conectado { color: var(--success); background: color-mix(in srgb, var(--success) 14%, transparent); }
+.flota-avatar--sin_reportar { color: #a8640f; background: var(--accent-soft); }
+.flota-avatar--nunca { color: var(--danger3); background: var(--danger-soft); }
+.flota-avatar--sin_controlador { border: 1.5px dashed var(--border-default); }
+
+.flota-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.flota-estado-punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.flota-estado--conectado { background: var(--success-soft); color: var(--success); }
+.flota-estado--sin_reportar { background: var(--accent-soft); color: #a8640f; }
+.flota-estado--nunca { background: var(--danger-soft); color: var(--danger3); }
+.flota-estado--sin_controlador { color: var(--text-muted); }
+
+.flota-estado--conectado .flota-estado-punto {
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 50%, transparent);
+  animation: flota-latido 2s ease-out infinite;
+}
+
+@keyframes flota-latido {
+  70% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--success) 0%, transparent); }
+}
+
+/* Detalle del galpón */
+
+.flota-page .flota-detalle {
+  position: static;
+}
+
+.flota-detalle-cuerpo {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.flota-detalle-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.flota-detalle-visto {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.flota-detalle-nombre {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.flota-detalle-lugar {
+  margin: -0.5rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.flota-detalle-recursos {
+  margin: 0;
+}
+
+.flota-detalle-recursos li.is-aviso {
+  border-color: color-mix(in srgb, var(--warning) 35%, transparent);
+  background: var(--accent-soft);
+}
+
+.flota-detalle-config {
+  padding-top: var(--space-1);
+}
+
+.flota-detalle-config .cs-cabecera {
+  display: none;
+}
+
+.flota-vistas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem;
+  margin-top: var(--space-2);
+  padding: 0.3rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-tinted);
+}
+
+.flota-vista {
+  min-height: 36px;
+  padding: 0 0.7rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.flota-vista[aria-selected='true'] {
+  background: var(--surface-base);
+  color: var(--avisens-deep);
+  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border-subtle);
+}
+
+.flota-vista:disabled { opacity: 0.5; cursor: not-allowed; }
+.flota-vista:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.flota-detalle-nota {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.flota-vivo {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: flota-latido 2s ease-out infinite;
+}
+
+.flota-monitoreo .amb-sensores-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.flota-monitoreo .amb-sensor-valor { font-size: 1.8rem; }
+
+@media (max-width: 72rem) {
+  .flota-cuerpo {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flota-tab { transition: none; }
+  .flota-estado--conectado .flota-estado-punto { animation: none; }
+}

@@ -82,8 +82,8 @@ export async function desactivarDispositivo(
 
 export async function eliminarDispositivoPermanente(
   id: number,
-): Promise<{ id: number; eliminado: boolean }> {
-  const { data } = await api.delete<{ id: number; eliminado: boolean }>(
+): Promise<{ id: number; eliminado: boolean; retirado: boolean }> {
+  const { data } = await api.delete<{ id: number; eliminado: boolean; retirado: boolean }>(
     `/dispositivos/${id}/permanente`,
   )
   return data

@@ -13,6 +13,17 @@ export interface NavegadorConSerial {
 }
 
 export const PREFIJO_COMANDO_TOKEN = 'AVISENS_TOKEN:'
+export const PREFIJO_COMANDO_TOKEN_LOCAL = 'AVISENS_TOKEN_LOCAL:'
+
+export type DestinoToken = 'local' | 'produccion'
+
+export function destinoDeLaPagina(hostname: string = typeof window !== 'undefined' ? window.location.hostname : ''): DestinoToken {
+  const host = hostname.toLowerCase()
+  if (host === 'localhost' || host.endsWith('.local') || /^127\./.test(host)) return 'local'
+  if (/^10\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host)) return 'local'
+  return 'produccion'
+}
+
 export const MARCA_TOKEN_OK = '[Provision] TOKEN_OK'
 export const MARCA_TOKEN_ERROR = '[Provision] ERROR:'
 
@@ -22,20 +33,21 @@ export function soportaProvisionUsb(nav: unknown = typeof navigator !== 'undefin
   return Boolean(serial && typeof serial.requestPort === 'function')
 }
 
-export function construirComandoTokenSerial(token: string): string {
+export function construirComandoTokenSerial(token: string, destino: DestinoToken = 'produccion'): string {
   const limpio = token.trim()
   if (limpio.length < 16 || limpio.length >= 128 || /\s/.test(limpio)) {
     throw new Error('El token no tiene un formato válido para enviarlo al ESP32.')
   }
-  return `${PREFIJO_COMANDO_TOKEN}${limpio}\n`
+  const prefijo = destino === 'local' ? PREFIJO_COMANDO_TOKEN_LOCAL : PREFIJO_COMANDO_TOKEN
+  return `${prefijo}${limpio}\n`
 }
 
 export async function enviarTokenAlPuerto(
   puerto: PuertoSerialWeb,
   token: string,
-  opciones?: { timeoutMs?: number; intervaloReintentoMs?: number },
+  opciones?: { timeoutMs?: number; intervaloReintentoMs?: number; destino?: DestinoToken },
 ): Promise<void> {
-  const comando = construirComandoTokenSerial(token)
+  const comando = construirComandoTokenSerial(token, opciones?.destino)
   const timeoutMs = opciones?.timeoutMs ?? 10000
   const intervaloReintentoMs = opciones?.intervaloReintentoMs ?? 550
 
@@ -126,11 +138,11 @@ export async function enviarTokenAlPuerto(
   }
 }
 
-export async function provisionarTokenPorUsb(token: string): Promise<void> {
+export async function provisionarTokenPorUsb(token: string, destino: DestinoToken = destinoDeLaPagina()): Promise<void> {
   if (!soportaProvisionUsb()) {
     throw new Error('Tu navegador no soporta conexión USB directa (Web Serial). Usa Chrome o Edge en computador.')
   }
   const nav = navigator as unknown as NavegadorConSerial
   const puerto = await nav.serial!.requestPort()
-  await enviarTokenAlPuerto(puerto, token)
+  await enviarTokenAlPuerto(puerto, token, { destino })
 }

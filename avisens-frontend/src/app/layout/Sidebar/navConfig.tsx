@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import {
   IcAlert,
   IcBox,
+  IcChip,
   IcChat,
   IcClock,
   IcCoin,
@@ -94,6 +95,7 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/recuperaciones-password': [ROL_ADMIN],
   '/auditoria':               [ROL_ADMIN],
   '/catalogos':               [ROL_ADMIN],
+  '/dispositivos':            [ROL_ADMIN],
   '/organizaciones':          [ROL_ADMIN],
   '/crm':                     [ROL_ADMIN],
   '/solicitudes-pqrs':        [ROL_ADMIN],
@@ -248,6 +250,11 @@ export const NAV_SECTIONS: NavSection[] = [
     label: 'Riel',
     sinEncabezado: true,
     items: [
+      {
+        path: '/dispositivos',
+        label: 'Dispositivos',
+        icon: <IcChip size={16} />,
+      },
       {
         path: '/auditoria',
         label: 'Auditoría',

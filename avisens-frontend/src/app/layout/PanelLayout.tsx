@@ -3,10 +3,10 @@ import { Link, Navigate, Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar/Sidebar'
 import CampanaNotificaciones from './CampanaNotificaciones'
 import { puedeAcceder, rutaInicioPorRol } from './Sidebar/navConfig'
-import { tituloDeRuta, visibleSections } from './Sidebar/navigation'
+import { matchesPath, navigationSpaces, spaceForPath, tituloDeRuta, visibleSections } from './Sidebar/navigation'
 import { getAccessToken, getRol, getUsuario } from '@shared/api'
 import { usePauseOnHidden } from '@shared/hooks/usePauseOnHidden'
-import { IcSearch, IcSidebar } from '@shared/ui/icons/icons'
+import { IcChevronRight, IcSearch, IcSidebar } from '@shared/ui/icons/icons'
 import logoAvisens from '@shared/assets/logo-avisens.png'
 import AvatarUsuario from './AvatarUsuario'
 import './PanelLayout.css'
@@ -35,12 +35,15 @@ function PanelShell({
   const usuario = getUsuario()
   const sections = visibleSections(rol)
   const titulo = tituloDeRuta(pathname, rol)
+  const enInicio = ['/admin', '/dashboard', '/mi-jornada'].some((ruta) => matchesPath(pathname, ruta))
+  const espacio = enInicio ? 'Inicio' : spaceForPath(pathname, navigationSpaces(sections))?.label ?? 'Avisens'
+  const atajo = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘ K' : 'Ctrl K'
 
   const openSearch = useCallback(() => {
     // El buscador reemplaza al drawer móvil; no dejamos dos trampas de foco
     // activas ni devolvemos el foco a un botón que haya quedado oculto.
     const active = document.activeElement as HTMLElement | null
-    const fallback = Array.from(document.querySelectorAll<HTMLElement>('.dash-navigation-search, .dash-rail-search, .dash-mobile-search'))
+    const fallback = Array.from(document.querySelectorAll<HTMLElement>('.dash-topbar-buscar, .dash-navigation-search, .dash-rail-search, .dash-mobile-search'))
       .find((element) => element.getClientRects().length > 0)
     searchTrigger.current = window.matchMedia('(max-width: 900px)').matches && mobileMenuOpen
       ? document.querySelector<HTMLElement>('.dash-mobile-menu')
@@ -119,6 +122,20 @@ function PanelShell({
             <button type="button" className="dash-mobile-search" onClick={openSearch} aria-label="Buscar en Avisens"><IcSearch size={20} /></button>
           </header>
           <div className="dash-acciones-superiores">
+            <nav className="dash-topbar-titulo" aria-label="Ubicación">
+              <span>{espacio}</span>
+              {titulo !== espacio && (
+                <>
+                  <IcChevronRight size={14} aria-hidden="true" />
+                  <strong aria-current="page">{titulo}</strong>
+                </>
+              )}
+            </nav>
+            <button type="button" className="dash-topbar-buscar" onClick={openSearch} aria-label="Buscar en Avisens">
+              <IcSearch size={16} aria-hidden="true" />
+              <span>Buscar en Avisens…</span>
+              <kbd aria-hidden="true">{atajo}</kbd>
+            </button>
             <CampanaNotificaciones />
             <Link
               to="/perfil"

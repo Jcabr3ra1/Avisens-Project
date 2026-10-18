@@ -9,19 +9,16 @@
 #define WIFI_SSID     "TU_WIFI"
 #define WIFI_PASSWORD "TU_PASSWORD"
 
-// ── Transporte del backend ──────────────────────────────────────────────────
-// La fase actual es LOCAL: apunta a la IPv4 privada del computador que ejecuta
-// Docker. No uses localhost aquí: para el ESP32, localhost es el propio ESP32.
-#define BACKEND_MODO_LOCAL       1
-#define BACKEND_MODO_PRODUCCION  2
-#define BACKEND_MODO             BACKEND_MODO_LOCAL
-#define BACKEND_URL              "http://192.168.1.100:3000/ingest"
+// ── Destinos del backend ────────────────────────────────────────────────────
+// El controlador envía a dos destinos sin recompilar:
+//   - Producción: esta URL HTTPS (certificado validado). Principal, con búfer.
+//   - Local: el computador de desarrollo en la misma red. Se encuentra solo
+//     (mDNS o IP vecinas) y se activa al enviarle su token desde la página
+//     local con «Enviar al ESP32 por USB». Nunca retrasa a producción.
+#define BACKEND_URL   "https://avisens-project-production.up.railway.app/ingest"
 
-// Producción requiere selección explícita del modo y conserva TLS validado:
-//   #define BACKEND_MODO BACKEND_MODO_PRODUCCION
-//   #define BACKEND_URL "https://avisens-project-production.up.railway.app/ingest"
-// No cambies a producción hasta completar y revisar la prueba local.
-// El token identifica al controlador y al galpón que le asignó el administrador.
+// Token de producción por defecto. Lo normal es dejarlo así y enviarlo desde
+// la página con «Enviar al ESP32 por USB»: queda guardado en su memoria.
 #define DEVICE_TOKEN  "PON_AQUI_EL_TOKEN_DEL_DISPOSITIVO"
 
 // Las conexiones DHT22 se asignan en Monitoreo (controlador + tipo + GPIO).
