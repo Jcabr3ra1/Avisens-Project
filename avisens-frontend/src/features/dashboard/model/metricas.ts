@@ -45,11 +45,6 @@ export function resumirSerie(serie: PuntoSerie[]): ResumenSerie {
 // Alto de cada barra en porcentaje. Se escala contra el máximo de la propia
 // serie, no contra un tope fijo: una humedad de 58 y una temperatura de 27
 // tienen que verse ambas con relieve.
-export function alturaBarra(valor: number, maximo: number | null): number {
-  if (!maximo || maximo <= 0) return 0
-  return Math.max(4, Math.round((valor / maximo) * 100))
-}
-
 export function etiquetaEstado(estado: string): string {
   if (estado === 'optimo') return 'Óptimo'
   if (estado === 'advertencia') return 'Atención'

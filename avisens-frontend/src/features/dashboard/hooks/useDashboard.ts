@@ -4,12 +4,10 @@ import { getUsuario } from '@shared/api'
 import { cargarFuentesDashboard, obtenerIndicadorReciente } from '../api/dashboard'
 import {
   calcularDiaLote,
-  obtenerEstadoGeneral,
   ordenarAlertas,
   type DashboardFuentes,
   type DashboardIndicador,
 } from '../model/dashboard'
-import { esCriticidadAlta } from '@features/alertas/model/alerta'
 
 const fuentesIniciales: DashboardFuentes = {
   granjas: [],
@@ -105,29 +103,15 @@ export function useDashboard() {
     return () => { vigente = false }
   }, [lote])
 
-  const alertas = useMemo(
-    () => ordenarAlertas(
-      fuentes.alertas.filter((alerta) => alerta.galponId === galponId && alerta.estado !== 'cerrada'),
-    ),
-    [fuentes.alertas, galponId],
-  )
-  const alertasPorGalpon = useMemo(() => fuentes.alertas.reduce<Record<number, { total: number; urgentes: number }>>(
-    (acumulado, alerta) => {
-      if (alerta.estado === 'cerrada') return acumulado
-      const actual = acumulado[alerta.galponId] ?? { total: 0, urgentes: 0 }
-      const esUrgente = esCriticidadAlta(alerta.criticidad)
-      acumulado[alerta.galponId] = {
-        total: actual.total + 1,
-        urgentes: actual.urgentes + (esUrgente ? 1 : 0),
-      }
-      return acumulado
-    },
-    {},
-  ), [fuentes.alertas])
+  const alertasGranja = useMemo(() => {
+    const ids = new Set(galpones.map((galpon) => galpon.id))
+    return ordenarAlertas(
+      fuentes.alertas.filter((alerta) => ids.has(alerta.galponId) && alerta.estado !== 'cerrada'),
+    )
+  }, [fuentes.alertas, galpones])
 
   const granja = fuentes.granjas.find((item) => item.id === granjaId) ?? null
   const galpon = galpones.find((item) => item.id === galponId) ?? null
-  const estadoGeneral = obtenerEstadoGeneral(lote, alertas)
 
   return {
     usuario,
@@ -139,9 +123,7 @@ export function useDashboard() {
     galpon,
     lote,
     indicador,
-    alertas,
-    alertasPorGalpon,
-    estadoGeneral,
+    alertasGranja,
     diaLote: lote ? indicador?.diaVida ?? calcularDiaLote(lote.fechaIngreso) : null,
     granjaId,
     galponId,

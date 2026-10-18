@@ -7,6 +7,7 @@
   z-index: 40;
   display: flex;
   width: 344px;
+  transition: width 220ms var(--ease-standard);
   height: calc(100% - 24px);
   min-height: 0;
   flex: 0 0 auto;
@@ -95,6 +96,19 @@
 .dash-page.sidebar-collapsed .dash-rail { border-radius: 23px; }
 .dash-page.sidebar-collapsed .dash-context-panel { display: none; }
 .dash-page.sidebar-collapsed .dash-rail-search { display: grid; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-sidebar { transition: none; }
+}
+
+@media (min-width: 901px) {
+  .dash-sidebar { overflow: hidden; }
+  .dash-sidebar.is-sin-panel { width: 78px; }
+  .dash-sidebar.is-sin-panel .dash-rail { border-radius: 23px; }
+  .dash-sidebar.is-sin-panel .dash-context-panel { display: none; }
+  .dash-sidebar.is-sin-panel .dash-rail-search { display: grid; }
+  .dash-sidebar.is-sin-panel .dash-sidebar-toggle { display: none; }
+}
 
 
 @media (hover: hover) and (pointer: fine) {

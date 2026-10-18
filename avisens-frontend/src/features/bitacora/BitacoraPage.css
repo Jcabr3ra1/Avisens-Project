@@ -53,6 +53,9 @@
 
 .bit-seccion-cab { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.1rem; border-bottom: 1px solid var(--gr-line, var(--border)); }
 .bit-principal { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 0.45rem 0.7rem; border: 1px solid var(--gr-deep, var(--avisens-deep)); border-radius: 9px; color: var(--on-primary); background: var(--gr-deep, var(--avisens-deep)); font: inherit; font-size: 0.77rem; font-weight: 800; cursor: pointer; }
+.bit-fila-acciones { display: inline-flex; gap: 0.4rem; }
+.bit-lista button.bit-editar { border-color: var(--border-default); color: var(--primary); }
+.bit-lista article.is-resaltado { background: var(--accent-soft); }
 .bit-lista article { display: grid; grid-template-columns: 112px minmax(120px, 0.7fr) 1.4fr auto; gap: 0.8rem; align-items: center; padding: 0.84rem 1.1rem; border-bottom: 1px solid var(--gr-line, var(--border)); }
 .bit-lista article:last-child { border-bottom: 0; }
 .bit-lista time, .bit-lista span { color: var(--text3); font-size: 0.78rem; }

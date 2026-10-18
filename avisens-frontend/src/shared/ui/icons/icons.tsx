@@ -423,3 +423,19 @@ export const IcArrowDown = (p: P) => (
     <path d="M6 13.5l6 6 6-6" />
   </Icon>
 )
+
+export const IcEdit = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3z" />
+    <path d="M14.5 7.5l3 3" />
+  </Icon>
+)
+
+export const IcTrash = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 7h16" />
+    <path d="M9 7V4.5h6V7" />
+    <path d="M6 7l1 13h10l1-13" />
+    <path d="M10 11v6M14 11v6" />
+  </Icon>
+)

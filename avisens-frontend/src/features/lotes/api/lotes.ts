@@ -85,3 +85,15 @@ export async function eliminarLotePermanente(
   )
   return data
 }
+
+export type DatosLotePayload = {
+  linea_genetica_id: number
+  sexo: string
+  marca_alimento: string
+  proveedor_id: number
+}
+
+export async function actualizarDatosLote(id: number, payload: DatosLotePayload): Promise<Lote> {
+  const { data } = await api.patch<Lote>(`/lotes/${id}/datos`, payload)
+  return data
+}

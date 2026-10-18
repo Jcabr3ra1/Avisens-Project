@@ -218,12 +218,4 @@ export function ultimosProspectos(prospectos: Prospecto[], limite = 5): Prospect
     })
 }
 
-export function hace(fechaIso: string): string {
-  const minutos = Math.floor((Date.now() - new Date(fechaIso).getTime()) / 60_000)
-  if (minutos < 1) return 'justo ahora'
-  if (minutos < 60) return `hace ${minutos} min`
-  const horas = Math.floor(minutos / 60)
-  if (horas < 24) return `hace ${horas} h`
-  const dias = Math.floor(horas / 24)
-  return dias === 1 ? 'ayer' : `hace ${dias} días`
-}
+export { hace } from '@shared/utils/fechas'

@@ -48,6 +48,7 @@ function OperarioPage() {
               onRegistrarMortalidad={() => setRegistroAbierto({ tipo: 'mortalidad', jornada: item })}
               onRegistrarConsumo={() => setRegistroAbierto({ tipo: 'consumo', jornada: item })}
               onVerAlertas={() => navigate('/alertas')}
+              onVerCrecimiento={() => item.lote && navigate(`/guia-crecimiento?lote=${item.lote.id}`)}
             />
           ))}
         </section>

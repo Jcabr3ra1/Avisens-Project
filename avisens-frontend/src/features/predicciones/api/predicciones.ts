@@ -70,3 +70,73 @@ export async function historialPredicciones(
   )
   return data.data
 }
+
+export interface PuntoCurvaCrecimiento {
+  dia: number
+  real_g: number | null
+  proyectado_g: number
+  min_g: number
+  max_g: number
+  estandar_g: number | null
+  marca_g: number | null
+}
+
+export interface CurvaCrecimiento {
+  lote_id: number
+  codigo: string
+  dia_actual: number
+  dia_final: number
+  peso_objetivo_g: number | null
+  referencias: {
+    genetica: { linea: string; sexo: string; version: number; fuente: string } | null
+    marca: { marca: string } | null
+  }
+  serie: PuntoCurvaCrecimiento[]
+  resumen: {
+    ultimo_pesaje: { dia: number; peso_g: number }
+    desvio_vs_estandar_pct: number | null
+    peso_final_g: number
+    dia_al_objetivo: number | null
+    fecha_al_objetivo: string | null
+    punto_inflexion: { dia: number; peso_g: number; ganancia_max_g_dia: number }
+  }
+  modelo: { nombre: string; version: string; confianza: number; puntos_usados: number }
+}
+
+export async function obtenerCurvaCrecimiento(loteId: number): Promise<CurvaCrecimiento> {
+  const { data } = await api.get<CurvaCrecimiento>(
+    `/predicciones/lote/${loteId}/curva-crecimiento`,
+  )
+  return data
+}
+
+export type NivelCalor = 'confort' | 'atencion' | 'alerta' | 'peligro' | 'emergencia'
+
+export interface HoraRiesgoCalor {
+  hora: string
+  temperatura: number
+  humedad: number
+  thi: number
+  nivel: NivelCalor
+}
+
+export interface RiesgoCalor {
+  galpon_id: number
+  galpon: string
+  lote: { codigo: string; dia_vida: number | null } | null
+  ubicacion: { latitud: number; longitud: number; origen: 'granja' | 'municipio' }
+  interior: { temperatura: number | null; humedad: number | null }
+  serie: HoraRiesgoCalor[]
+  pico: HoraRiesgoCalor
+  nivel_maximo: NivelCalor
+  horas_por_nivel: Record<NivelCalor, number>
+  primera_alerta: string | null
+  ajuste_aplicado: { temperatura: number; humedad: number }
+  recomendaciones: string[]
+  modelo: { nombre: string; version: string; tipo: string; confianza: number; puntos_usados: number }
+}
+
+export async function obtenerRiesgoCalor(galponId: number): Promise<RiesgoCalor> {
+  const { data } = await api.get<RiesgoCalor>(`/predicciones/galpon/${galponId}/riesgo-calor`)
+  return data
+}

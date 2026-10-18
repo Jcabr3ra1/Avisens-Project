@@ -65,12 +65,12 @@ describe('el administrador no ve datos financieros del cliente', () => {
 })
 
 describe('NAV_SECTIONS', () => {
-  it('la guía aparece en el menú con los permisos del lote', () => {
+  it('la guía vive dentro del lote: tiene sus permisos, pero no un ítem propio en el menú', () => {
     for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO]) {
       expect(puedeAcceder('/guia-crecimiento', rol)).toBe(puedeAcceder('/lotes', rol))
     }
     expect(puedeAcceder('/guia-crecimiento', null)).toBe(false)
-    expect(NAV_SECTIONS.flatMap((seccion) => seccion.items).some((item) => item.path === '/guia-crecimiento')).toBe(true)
+    expect(NAV_SECTIONS.flatMap((seccion) => seccion.items).some((item) => item.path === '/guia-crecimiento')).toBe(false)
   })
   it('ningún ítem repite icono', () => {
     // Contraído, el sidebar esconde las etiquetas y solo quedan los iconos:

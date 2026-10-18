@@ -105,3 +105,14 @@ export async function eliminarGranjaPermanente(
   )
   return data
 }
+
+export type DatosGranjaPayload = {
+  direccion: string
+  municipio: string
+  departamento: string
+}
+
+export async function actualizarDatosGranja(id: number, payload: DatosGranjaPayload): Promise<Granja> {
+  const { data } = await api.patch<Granja>(`/granjas/${id}/datos`, payload)
+  return data
+}

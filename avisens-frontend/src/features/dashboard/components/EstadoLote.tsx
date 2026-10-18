@@ -10,9 +10,10 @@ type Props = {
   diaLote: number | null
   cargando: boolean
   onAbrirBitacora: () => void
+  onAbrirGuia: () => void
 }
 
-function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrirBitacora }: Props) {
+function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrirBitacora, onAbrirGuia }: Props) {
   const reciente = indicadores[0] ?? null
   const datosVerificados = reciente !== null && esDatoVerificado(reciente.estadoCalculo)
   const notaVigente =
@@ -68,9 +69,14 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
       <div className="dash-lote-cabecera">
         <h2 id="dash-lote-titulo">Estado del lote</h2>
         {lote && (
-          <button type="button" className="dash-lote-enlace" onClick={onAbrirBitacora}>
-            Bitácora <IcChevronRight size={13} />
-          </button>
+          <div className="dash-lote-enlaces">
+            <button type="button" className="dash-lote-enlace" onClick={onAbrirGuia}>
+              Guía de peso <IcChevronRight size={13} />
+            </button>
+            <button type="button" className="dash-lote-enlace" onClick={onAbrirBitacora}>
+              Bitácora <IcChevronRight size={13} />
+            </button>
+          </div>
         )}
       </div>
 

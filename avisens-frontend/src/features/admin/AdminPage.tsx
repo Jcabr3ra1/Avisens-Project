@@ -13,6 +13,7 @@ import { useConectividad } from './hooks/useConectividad'
 import { useAdminDatos } from './hooks/useAdminDatos'
 import { useResumenAdmin } from './hooks/useResumenAdmin'
 import type { KpiAdmin } from './model/adminResumen'
+import '@shared/ui/admin/CentroControl.css'
 import './AdminPage.css'
 
 function AdminPage() {
