@@ -17,6 +17,8 @@
 #include "Persiana.h"
 #include "ConexionWiFi.h"
 #include "ServicioIngesta.h"
+#include "ConfigDispositivo.h"
+#include "PortalWeb.h"
 #include "ControlRemoto.h"
 
 //  INSTANCIAS GLOBALES
@@ -41,7 +43,8 @@ ControlRemoto controlRemoto(gestorActuadores);
 #if !defined(WIFI_SSID) || !defined(WIFI_PASSWORD)
 #error "Define WIFI_SSID y WIFI_PASSWORD en include/config.h (ver config.example.h) antes de compilar."
 #endif
-ConexionWiFi conexionWiFi(WIFI_SSID, WIFI_PASSWORD);
+// La red sale de configDispositivo() en setup(): la del portal o config.h.
+ConexionWiFi conexionWiFi;
 
 // ─── Variables de sincronización ─────────────────────────
 unsigned long ultimaLecturaSensores = 0;
@@ -255,6 +258,14 @@ void tareaGalpon(void *pvParameters)
         sensorPeso.tara();
         sensorPeso.setFactor(HX711_FACTOR_ESCALA);
         calibracionCompletada = true;
+      }
+      else if (cmd == "BORRAR_CONFIG")
+      {
+        // Rescate por USB si se guardó una red o URL que no funciona.
+        LOG_WARN("Configuración del portal borrada: se reinicia con config.h");
+        borrarConfigDispositivo();
+        delay(500);
+        ESP.restart();
       }
       else if (cmd == "RELES")
       {
@@ -497,50 +508,83 @@ void tareaGalpon(void *pvParameters)
   }
 }
 
+// Lecturas de sensores y actuadores de este ciclo. Sirve tanto para enviar
+// como para guardar en el búfer cuando no hay WiFi: las órdenes y el estado
+// de los relés se agregan solo al enviar (ver tareaWiFi).
+static CicloIngesta armarCicloLecturas()
+{
+  LecturaDHT lectura = leerSnapshotDht();
+  unsigned long antiguedadSnapshot = millis() - lectura.timestamp;
+  bool incluirDht = true;
+
+  if (!lectura.valida)
+  {
+    LOG_WARN("Ingesta: DHT sin lectura válida, se omite del envío");
+    incluirDht = false;
+  }
+  else if (antiguedadSnapshot > UMBRAL_SNAPSHOT_OBSOLETO_MS)
+  {
+    LOG_WARN("Ingesta: snapshot DHT obsoleto (" + String(antiguedadSnapshot) +
+             "ms) -- tareaGalpon dejó de refrescarlo, se omite del envío");
+    incluirDht = false;
+  }
+
+  CicloIngesta ciclo;
+  ciclo.resultados = nullptr;
+  ciclo.cantidadResultados = 0;
+  ciclo.reles.valido = false;
+  ciclo.arranqueId = nullptr;
+  ciclo.incluirDht = incluirDht;
+  ciclo.temperatura = lectura.temperatura;
+  ciclo.humedad = lectura.humedad;
+  ciclo.incluirAgua = leerSnapshotAgua(ciclo.distanciaAgua);
+  ciclo.incluirGas = leerSnapshotGas(ciclo.gasAdc);
+  ciclo.incluirPeso = leerSnapshotPeso(ciclo.pesoGramos);
+  ciclo.pesoCalibrado = HX711_CALIBRADO;
+  ciclo.actuadores = tomarEstadoActuadores();
+  return ciclo;
+}
+
 // Mantiene la conexión WiFi viva en Core 1 y envía cada INTERVALO_ENVIO_MS
 void tareaWiFi(void *pvParameters)
 {
   Serial.println("[WiFi Task] Iniciada en Core 1");
 
+  // El portal escucha también en la red propia, así que arranca aunque
+  // todavía no haya conexión al WiFi.
+  iniciarPortalWeb(conexionWiFi);
   vTaskDelay(pdMS_TO_TICKS(5000));
+
+  unsigned long ultimoAvisoSinWifi = 0;
 
   for (;;)
   {
     conexionWiFi.actualizar();
+    atenderPortalWeb();
 
     if (!WiFi.isConnected())
     {
-      LOG_WARN("WiFi desconectado - Reintentando conexión");
+      // La vuelta es cada 10 ms (para el portal): avisar cada 5 s basta.
+      if (millis() - ultimoAvisoSinWifi >= 5000)
+      {
+        ultimoAvisoSinWifi = millis();
+        LOG_WARN("WiFi desconectado - Reintentando conexión");
+      }
+      // Sin red las lecturas no se pierden: se guardan (una por minuto) y se
+      // reenvían con su hora cuando vuelva la conexión.
+      if (millis() - ultimaEnvioTelemetria >= INTERVALO_ENVIO_MS)
+      {
+        ultimaEnvioTelemetria = millis();
+        if (bufferListoParaGuardar())
+          guardarCicloSinRed(armarCicloLecturas());
+      }
     }
     else if (millis() - ultimaEnvioTelemetria >= INTERVALO_ENVIO_MS)
     {
       ultimaEnvioTelemetria = millis();
+      iniciarHoraRed();
 
-      LecturaDHT lectura = leerSnapshotDht();
-      unsigned long antiguedadSnapshot = millis() - lectura.timestamp;
-      bool incluirDht = true;
-
-      if (!lectura.valida)
-      {
-        LOG_WARN("Ingesta: DHT sin lectura válida, se omite del envío");
-        incluirDht = false;
-      }
-      else if (antiguedadSnapshot > UMBRAL_SNAPSHOT_OBSOLETO_MS)
-      {
-        LOG_WARN("Ingesta: snapshot DHT obsoleto (" + String(antiguedadSnapshot) +
-                 "ms) -- tareaGalpon dejó de refrescarlo, se omite del envío");
-        incluirDht = false;
-      }
-
-      CicloIngesta ciclo;
-      ciclo.incluirDht = incluirDht;
-      ciclo.temperatura = lectura.temperatura;
-      ciclo.humedad = lectura.humedad;
-      ciclo.incluirAgua = leerSnapshotAgua(ciclo.distanciaAgua);
-      ciclo.incluirGas = leerSnapshotGas(ciclo.gasAdc);
-      ciclo.incluirPeso = leerSnapshotPeso(ciclo.pesoGramos);
-      ciclo.pesoCalibrado = HX711_CALIBRADO;
-      ciclo.actuadores = tomarEstadoActuadores();
+      CicloIngesta ciclo = armarCicloLecturas();
 
       // Confirmaciones de órdenes: se acumulan hasta que el backend responde
       // con el contrato válido; si el envío falla, viajan en el siguiente.
@@ -565,7 +609,7 @@ void tareaWiFi(void *pvParameters)
       ciclo.arranqueId = arranqueId.c_str();
 
       static RespuestaIngesta respuesta;
-      enviarLecturaConReintentos(ciclo, generarIdLote(), respuesta);
+      reportarEnvioPortal(enviarLecturaConReintentos(ciclo, generarIdLote(), respuesta));
       if (respuesta.contratoValido)
       {
         cantidadSinConfirmar = 0;
@@ -575,7 +619,7 @@ void tareaWiFi(void *pvParameters)
       }
     }
 
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
 
@@ -609,6 +653,8 @@ void setup()
   sensorPeso.begin();
 
   Serial.println("[SETUP] Iniciando enlace WiFi asíncrono...");
+  cargarConfigDispositivo();
+  conexionWiFi.configurar(configDispositivo().ssid, configDispositivo().password);
   conexionWiFi.comenzar();
 
   // ─── Tareas FreeRTOS en Cores Independientes ──────────────
@@ -626,7 +672,7 @@ void setup()
   xTaskCreatePinnedToCore(
       tareaWiFi,
       "tareaWiFi",
-      8192,
+      12288, // el handshake TLS (backend https) no cabe en 8 KB
       NULL,
       1,
       NULL,
@@ -639,6 +685,8 @@ void setup()
   Serial.println("  REARME - Reiniciar sistema desde INIT");
   Serial.println("  K1..K4 ON|OFF|AUTO - Probar un rele a mano (tambien VENTILADOR, BOMBA...)");
   Serial.println("  RELES  - Ver estado de los 4 reles");
+  Serial.println("  BORRAR_CONFIG - Olvidar la config del portal y volver a config.h");
+  Serial.println("Portal web: http://<IP del ESP32>/ (o http://192.168.4.1 en su red propia)");
   Serial.println("");
 }
 

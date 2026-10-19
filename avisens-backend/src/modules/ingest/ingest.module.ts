@@ -8,7 +8,12 @@ import { OrdenesActuadoresModule } from '../ordenes-actuadores/ordenes-actuadore
 import { FirmwareModule } from '../firmware/firmware.module';
 
 @Module({
-  imports: [ObservabilityModule, AlertasModule, OrdenesActuadoresModule, FirmwareModule],
+  imports: [
+    ObservabilityModule,
+    AlertasModule,
+    OrdenesActuadoresModule,
+    FirmwareModule,
+  ],
   controllers: [IngestController],
   providers: [IngestService, DeviceTokenGuard],
 })

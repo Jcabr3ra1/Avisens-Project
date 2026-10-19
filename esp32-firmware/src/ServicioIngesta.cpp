@@ -1,8 +1,29 @@
 #include "ServicioIngesta.h"
 #include <esp_system.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include "config.h"
+#include "ConfigDispositivo.h"
+#include "BufferLecturas.h"
+#include <time.h>
+
+// config.h antiguos no definen estos valores: se usan los de abajo.
+#ifndef BUFFER_LECTURAS_CAPACIDAD
+#define BUFFER_LECTURAS_CAPACIDAD 48  // ~48 min de corte a 1 lectura por minuto
+#endif
+#ifndef INTERVALO_BUFFER_MS
+#define INTERVALO_BUFFER_MS 60000     // una lectura guardada por minuto sin red
+#endif
+#ifndef TIMEOUT_ESPEJO_MS
+#define TIMEOUT_ESPEJO_MS 2500        // el espejo es opcional: no debe frenar
+#endif
+#ifndef PAUSA_ESPEJO_CAIDO_MS
+#define PAUSA_ESPEJO_CAIDO_MS 30000   // tras un fallo, deja de intentarlo un rato
+#endif
+#ifndef MAX_REENVIOS_POR_CICLO
+#define MAX_REENVIOS_POR_CICLO 3
+#endif
 
 String generarIdLote() {
   uint8_t bytes[16];
@@ -99,29 +120,53 @@ static void leerOrdenes(JsonVariant campoOrdenes, RespuestaIngesta &respuesta) {
   }
 }
 
-bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote,
-                                RespuestaIngesta &salida) {
-  salida.contratoValido = false;
-  salida.cantidadOrdenes = 0;
+// ─── Hora por internet ───────────────────────────────────
+// El búfer necesita la hora real para fechar las lecturas que reenvía tarde.
+// Sin ella (todavía no llegó NTP) no se guarda nada y todo sigue como antes.
+static bool horaPedida = false;
+
+void iniciarHoraRed() {
+  if (horaPedida) return;
+  horaPedida = true;
+  configTime(0, 0, "pool.ntp.org", "time.google.com");
+}
+
+bool horaSincronizada() {
+  return time(nullptr) > 1700000000;  // noviembre de 2023: antes es el reloj sin ajustar
+}
+
+static String fechaJson(int64_t epoch) {
+  if (epoch <= 0) return String();
+  time_t t = static_cast<time_t>(epoch);
+  struct tm utc;
+  gmtime_r(&t, &utc);
+  char buf[32];
+  strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S.000Z", &utc);
+  return ",\"fecha_dispositivo\":\"" + String(buf) + "\"";
+}
+
+// Lecturas del ciclo en JSON, sin los corchetes del arreglo. `enviadas` es
+// cuántas incluye: el backend debe registrar exactamente ese número.
+static String armarLecturas(const CicloIngesta &ciclo, int &enviadas) {
   String lecturas;
-  int LECTURAS_ENVIADAS = 0;
+  enviadas = 0;
   if (ciclo.incluirDht) {
     lecturas += lecturaJson(CODIGO_SENSOR_TEMP, String(ciclo.temperatura, 1));
     lecturas += lecturaJson(CODIGO_SENSOR_HUM, String(ciclo.humedad, 1));
-    LECTURAS_ENVIADAS += 2;
+    enviadas += 2;
   }
   if (ciclo.incluirAgua) {
     lecturas += lecturaJson(CODIGO_SENSOR_AGUA, String(ciclo.distanciaAgua, 1));
-    LECTURAS_ENVIADAS += 1;
+    enviadas += 1;
   }
   if (ciclo.incluirGas) {
     lecturas += lecturaJson(CODIGO_SENSOR_GAS, String(ciclo.gasAdc));
-    LECTURAS_ENVIADAS += 1;
+    enviadas += 1;
   }
   if (ciclo.incluirPeso) {
     lecturas += lecturaJson(CODIGO_SENSOR_PESO, String(ciclo.pesoGramos, 1),
                             ciclo.pesoCalibrado ? nullptr : "sospechosa");
-    LECTURAS_ENVIADAS += 1;
+    enviadas += 1;
   }
   const EstadoActuadores &a = ciclo.actuadores;
   const char *CODIGOS_RELES[4] = {CODIGO_RELE_K1, CODIGO_RELE_K2, CODIGO_RELE_K3, CODIGO_RELE_K4};
@@ -130,20 +175,152 @@ bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote,
   for (int i = 0; i < 4; i++) {
     lecturas += lecturaJson(CODIGOS_RELES[i], String(a.reles[i] ? 1 : 0));
   }
-  LECTURAS_ENVIADAS += 6;
+  enviadas += 6;
   lecturas.remove(lecturas.length() - 1);  // coma final
+  return lecturas;
+}
+
+// ─── Búfer de lecturas sin red y destino espejo ──────────
+static BufferLecturas<BUFFER_LECTURAS_CAPACIDAD> bufferLecturas;
+static unsigned long ultimoGuardadoMs = 0;
+static bool hayGuardado = false;
+static unsigned long espejoCaidoHastaMs = 0;
+static bool espejoEnPausa = false;
+
+// Cuerpo sin órdenes ni estado de relés: son datos que caducan y no deben
+// reenviarse tarde, ni llegar a un destino que no manda en los relés.
+static String cuerpoSoloLecturas(const String &idLote, int64_t epoch, const String &lecturas) {
+  return "{\"id_lote\":\"" + idLote + "\"" + fechaJson(epoch) + ",\"lecturas\":[" + lecturas + "]}";
+}
+
+// Un POST sin reintentos. Devuelve el código HTTP (negativo = sin conexión).
+static int postUnaVez(const String &url, const String &token, const String &cuerpo, int timeoutMs) {
+  HTTPClient http;
+  WiFiClient clientePlano;
+  WiFiClientSecure clienteTls;
+  if (url.startsWith("https://")) {
+    clienteTls.setInsecure();  // mismo criterio que el destino principal
+    http.begin(clienteTls, url);
+  } else {
+    http.begin(clientePlano, url);
+  }
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("X-Device-Token", token);
+  http.setTimeout(timeoutMs);
+  int codigo = http.POST(cuerpo);
+  http.getString();
+  http.end();
+  return codigo;
+}
+
+static void guardarEnBuffer(const String &idLote, int64_t epoch, const String &lecturas) {
+  if (epoch <= 0) return;  // sin hora real no se puede fechar el reenvío
+  if (hayGuardado && millis() - ultimoGuardadoMs < INTERVALO_BUFFER_MS) return;
+  bool guardada = false;
+  const bool descarto = bufferLecturas.agregar(idLote.c_str(), epoch, lecturas.c_str(), &guardada);
+  if (!guardada) {
+    LOG_WARN("Buffer: lectura demasiado larga, no se guardo");
+    return;
+  }
+  hayGuardado = true;
+  ultimoGuardadoMs = millis();
+  Serial.printf("[Buffer] Guardada (%u/%u)%s\n", static_cast<unsigned>(bufferLecturas.cantidad()),
+                static_cast<unsigned>(bufferLecturas.capacidad()),
+                descarto ? " - descarto la mas vieja" : "");
+}
+
+bool bufferListoParaGuardar() {
+  if (!horaSincronizada()) return false;
+  return !hayGuardado || millis() - ultimoGuardadoMs >= INTERVALO_BUFFER_MS;
+}
+
+void guardarCicloSinRed(const CicloIngesta &ciclo) {
+  int enviadas = 0;
+  const String lecturas = armarLecturas(ciclo, enviadas);
+  const int64_t epoch = horaSincronizada() ? static_cast<int64_t>(time(nullptr)) : 0;
+  guardarEnBuffer(generarIdLote(), epoch, lecturas);
+}
+
+size_t lecturasPendientes() {
+  return bufferLecturas.cantidad();
+}
+
+// Reenvía las más viejas con su hora original. Una confirmación o un 4xx
+// (lectura que el backend nunca aceptará) la quitan; un fallo de red o un
+// 5xx/429 detienen el reenvío hasta el próximo ciclo.
+static void reenviarPendientes() {
+  const ConfigDispositivo &cfg = configDispositivo();
+  for (int i = 0; i < MAX_REENVIOS_POR_CICLO && !bufferLecturas.vacio(); i++) {
+    const EntradaBufferLecturas *e = bufferLecturas.masVieja();
+    const String cuerpo = cuerpoSoloLecturas(String(e->idLote), e->epoch, String(e->lecturas));
+    const int codigo = postUnaVez(cfg.backendUrl, cfg.token, cuerpo, TIMEOUT_INGESTA_MS);
+    if (codigo >= 200 && codigo < 300) {
+      bufferLecturas.quitarMasVieja();
+    } else if (codigo >= 400 && codigo < 500 && codigo != 429) {
+      LOG_ERROR("Buffer: el backend rechazo una lectura guardada (" + String(codigo) + "), se descarta");
+      bufferLecturas.quitarMasVieja();
+    } else {
+      return;
+    }
+  }
+  if (!bufferLecturas.vacio()) {
+    Serial.printf("[Buffer] Quedan %u por reenviar\n", static_cast<unsigned>(bufferLecturas.cantidad()));
+  }
+}
+
+// Mismas lecturas al destino espejo, un solo intento. Su respuesta no se
+// usa: las órdenes de los relés vienen únicamente del destino principal.
+static void enviarEspejo(const String &idLote, int64_t epoch, const String &lecturas) {
+  const ConfigDispositivo &cfg = configDispositivo();
+  if (cfg.backendUrl2.isEmpty() || cfg.token2.isEmpty()) return;
+  if (espejoEnPausa && millis() < espejoCaidoHastaMs) return;
+
+  const int codigo = postUnaVez(cfg.backendUrl2, cfg.token2,
+                                cuerpoSoloLecturas(idLote, epoch, lecturas), TIMEOUT_ESPEJO_MS);
+  if (codigo >= 200 && codigo < 300) {
+    espejoEnPausa = false;
+    return;
+  }
+  espejoEnPausa = true;
+  espejoCaidoHastaMs = millis() + PAUSA_ESPEJO_CAIDO_MS;
+  Serial.printf("[Espejo] Sin respuesta (codigo %d), se reintenta en %d s\n", codigo,
+                PAUSA_ESPEJO_CAIDO_MS / 1000);
+}
+
+static bool enviarPrincipal(const CicloIngesta &ciclo, const String &idLote,
+                            const String &lecturas, int LECTURAS_ENVIADAS, int64_t epoch,
+                            RespuestaIngesta &salida, bool &agotado) {
+  salida.contratoValido = false;
+  salida.cantidadOrdenes = 0;
+  agotado = false;
+  const char *CODIGOS_RELES[4] = {CODIGO_RELE_K1, CODIGO_RELE_K2, CODIGO_RELE_K3, CODIGO_RELE_K4};
 
   String arranque = ciclo.arranqueId != nullptr && ciclo.arranqueId[0] != '\0'
                         ? ",\"arranque_id\":\"" + String(ciclo.arranqueId) + "\""
                         : String();
-  String body = "{\"id_lote\":\"" + idLote + "\"" + arranque + ",\"lecturas\":[" + lecturas + "]" +
+  String body = "{\"id_lote\":\"" + idLote + "\"" + fechaJson(epoch) + arranque + ",\"lecturas\":[" + lecturas + "]" +
                 ordenesJson(ciclo, CODIGOS_RELES) + "}";
+
+  // URL y token salen de la configuración del portal (o de config.h): así
+  // se apunta al backend desplegado sin recompilar.
+  const ConfigDispositivo &cfg = configDispositivo();
+  const bool conTls = cfg.backendUrl.startsWith("https://");
 
   for (int intento = 1; intento <= MAX_REINTENTOS_INGESTA; intento++) {
     HTTPClient http;
-    http.begin(BACKEND_URL);
+    WiFiClient clientePlano;
+    WiFiClientSecure clienteTls;
+    if (conTls) {
+      // Cifra el tráfico pero no valida el certificado del servidor: evita
+      // cargar y renovar la CA en el firmware, a cambio de no detectar un
+      // servidor suplantado en la red. Aceptable para el prototipo.
+      clienteTls.setInsecure();
+      http.begin(clienteTls, cfg.backendUrl);
+    } else {
+      http.begin(clientePlano, cfg.backendUrl);
+    }
     http.addHeader("Content-Type", "application/json");
-    http.addHeader("X-Device-Token", DEVICE_TOKEN);
+    http.addHeader("X-Device-Token", cfg.token);
     http.setTimeout(TIMEOUT_INGESTA_MS);
 
     int codigo = http.POST(body);
@@ -166,7 +343,7 @@ bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote,
       }
       if (codigo >= 400 && codigo < 500) {
         LOG_ERROR("Ingesta: error " + String(codigo) +
-                  " del backend (no se reintenta -- revisar DEVICE_TOKEN/BACKEND_URL)");
+                  " del backend (no se reintenta -- revisar el token y la URL del backend en el portal)");
         return false;
       }
 
@@ -228,6 +405,24 @@ bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote,
     return true;
   }
 
-  LOG_ERROR("Ingesta: se agotaron los reintentos, ciclo abandonado (id_lote=" + idLote + ")");
+  LOG_ERROR("Ingesta: se agotaron los reintentos (id_lote=" + idLote + ")");
+  agotado = true;
   return false;
+}
+
+bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote,
+                                RespuestaIngesta &salida) {
+  int enviadas = 0;
+  const String lecturas = armarLecturas(ciclo, enviadas);
+  const int64_t epoch = horaSincronizada() ? static_cast<int64_t>(time(nullptr)) : 0;
+
+  bool agotado = false;
+  const bool ok = enviarPrincipal(ciclo, idLote, lecturas, enviadas, epoch, salida, agotado);
+
+  // Solo se guarda lo que se perdió por la red (reintentos agotados): un 4xx es
+  // configuración y reenviarlo mañana tampoco lo arreglaría.
+  if (agotado) guardarEnBuffer(idLote, epoch, lecturas);
+  if (ok) reenviarPendientes();
+  enviarEspejo(idLote, epoch, lecturas);
+  return ok;
 }

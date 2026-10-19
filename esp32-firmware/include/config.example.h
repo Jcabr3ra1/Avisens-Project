@@ -24,6 +24,11 @@
 // (POST /v1/dispositivos) o al regenerarlo (POST /v1/dispositivos/:id/token).
 #define BACKEND_URL   "http://192.168.1.100:3000/ingest"
 #define DEVICE_TOKEN  "PON_AQUI_EL_TOKEN_DEL_DISPOSITIVO"
+// Destino espejo (opcional): recibe las mismas lecturas, pero solo el destino
+// principal de arriba manda órdenes a los relés. Se puede cambiar luego desde
+// el portal. Sin estas líneas, o con la URL vacía, no hay espejo.
+// #define BACKEND_URL_2   "https://tu-backend.up.railway.app/ingest"
+// #define DEVICE_TOKEN_2  "TOKEN_DEL_DISPOSITIVO_EN_ESE_BACKEND"
 // Opción MQTT: broker Mosquitto.
 #define MQTT_HOST     "192.168.1.100"
 #define MQTT_PORT     1883
@@ -50,6 +55,17 @@
 #define CODIGO_RELE_K2 "REL-K2-G1-01" // Ventiladores
 #define CODIGO_RELE_K3 "REL-K3-G1-01" // Extractores
 #define CODIGO_RELE_K4 "REL-K4-G1-01" // Bomba de agua
+
+// ─── Portal web y actualización por WiFi (OTA) ───────────
+// En http://<IP del ESP32>/ : estado, /config (WiFi, URL del backend y
+// token, guardados en el ESP32) y /actualizar (subir firmware .bin).
+// Usuario "admin" con esta clave. Lo de arriba (WiFi, BACKEND_URL,
+// DEVICE_TOKEN) queda como configuración de fábrica.
+#define PORTAL_PASSWORD "CAMBIA_ESTA_CLAVE"
+// Red propia "Avisens-XXXX" que el ESP32 crea si no logra conectarse
+// al WiFi; el portal queda en http://192.168.4.1. Mínimo 8 caracteres.
+#define PORTAL_AP_PASSWORD "CAMBIA_ESTA_CLAVE"
+#define PORTAL_AP_TRAS_MS 60000 // sin WiFi este tiempo -> red propia
 
 // ─── SENSORES (pines) ────────────────────────────────────
 #define DHTPIN 4
@@ -127,6 +143,11 @@
 #define TIMEOUT_INGESTA_MS 5000      // por intento
 #define MAX_REINTENTOS_INGESTA 3     // agotados => se abandona el ciclo
 #define BACKOFF_INGESTA_MS 1000      // espera fija entre intentos
+
+// Sin red las lecturas se guardan en memoria y se reenvían con su hora al
+// volver. Una por INTERVALO_BUFFER_MS; con 48 entradas cubre ~48 minutos.
+#define BUFFER_LECTURAS_CAPACIDAD 48
+#define INTERVALO_BUFFER_MS 60000
 
 // Si tareaGalpon() deja de refrescar el snapshot (colgado, o Core 0 con
 // problemas), esto evita reenviar indefinidamente el mismo dato viejo

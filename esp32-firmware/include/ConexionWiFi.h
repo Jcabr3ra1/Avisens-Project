@@ -21,10 +21,15 @@ class ConexionWiFi
 public:
   /**
    * @brief Constructor.
-   * @param ssid SSID de la red
-   * @param password Contraseña
+   * Las credenciales llegan después con configurar(): vienen de la NVS
+   * (portal web) o de config.h, y se conocen recién en setup().
    */
-  ConexionWiFi(const char *ssid, const char *password);
+  ConexionWiFi();
+
+  /**
+   * @brief Fija la red a la que conectarse (llamar antes de comenzar()).
+   */
+  void configurar(const String &ssid, const String &password);
 
   /**
    * @brief Inicia proceso de conexión asíncrona.
@@ -65,13 +70,28 @@ public:
    */
   void desconectar();
 
+  /**
+   * @brief true mientras el ESP32 tiene levantada su propia red de rescate.
+   */
+  bool puntoAccesoActivo() const { return apActivo_; }
+
+  /**
+   * @brief Nombre de la red de rescate ("Avisens-XXXX").
+   */
+  String nombrePuntoAcceso() const;
+
 private:
-  const char *ssid_;
-  const char *password_;
+  String ssid_;
+  String password_;
   String hostname_;
   bool conectado_;
   unsigned long ultimoIntento_;
   unsigned long intervaloReconexion_;
+  unsigned long desconectadoDesde_;
+  bool apActivo_;
+
+  void iniciarPuntoAcceso();
+  void detenerPuntoAcceso();
 
   static constexpr unsigned long INTERVALO_RECONEXION_MS = 30000; // 30 seg
 };
