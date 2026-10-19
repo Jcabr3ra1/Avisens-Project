@@ -268,6 +268,14 @@ export class IngestService {
       // Un envío retrasado de antes del último reinicio no recibe órdenes:
       // esa sesión del ESP32 ya no existe y nunca las aplicaría.
       if (sesion === 'anterior') return [];
+      // Sin arranque_id no hay sesión a la que entregar. Así llegan los
+      // reenvíos del búfer sin red y los envíos al destino espejo, que no
+      // leen la respuesta: entregarles marcaría la orden "enviada" sin que
+      // el ESP32 la reciba, y el ciclo normal ya no la repetiría (solo
+      // reentrega a la misma sesión). Todo firmware que aplica órdenes manda
+      // arranque_id en su envío normal. Las confirmaciones de arriba sí se
+      // procesan igual.
+      if (!dto.arranque_id) return [];
       return await this.ordenes.entregarPendientes(
         dispositivoId,
         dto.arranque_id,
