@@ -1,3 +1,4 @@
+import { usernameDePrueba } from './soporte/username';
 import {
   INestApplication,
   ValidationPipe,
@@ -278,6 +279,7 @@ describe('Galpón: asignación frente a desactivación, concurrencia determinist
       data: {
         nombre_completo: `operario-${etiqueta}`,
         cedula: `op-${sufijo}-${contador}`,
+        username: usernameDePrueba(`op-${sufijo}-${contador}@e2e.local`),
         email: `op-${sufijo}-${contador}@e2e.local`,
         password_hash: hash,
         rol_id: rolOperarioId,
@@ -392,7 +394,7 @@ describe('Galpón: asignación frente a desactivación, concurrencia determinist
 
   const accesoDelOperario = async (e: Escenario) => {
     const tokenOperario = await entrar(
-      (await prisma.usuario.findUniqueOrThrow({ where: { id: e.op1 } })).email,
+      (await prisma.usuario.findUniqueOrThrow({ where: { id: e.op1 } })).username,
     );
     return (
       await request(servidorDatos)
@@ -406,7 +408,7 @@ describe('Galpón: asignación frente a desactivación, concurrencia determinist
       (
         await request(servidorDatos)
           .post('/v1/auth/login')
-          .send({ email, password })
+          .send({ username: email, password })
           .expect(200)
       ).body as { access_token: string }
     ).access_token;
@@ -483,6 +485,7 @@ describe('Galpón: asignación frente a desactivación, concurrencia determinist
         data: {
           nombre_completo: tipo,
           cedula: `${tipo}-${sufijo}`,
+          username: usernameDePrueba(`${tipo}-${sufijo}@e2e.local`),
           email: `${tipo}-${sufijo}@e2e.local`,
           password_hash: hash,
           rol_id,
@@ -503,7 +506,7 @@ describe('Galpón: asignación frente a desactivación, concurrencia determinist
     });
     ids.granjas.push(granja.id);
     granjaId = granja.id;
-    tokenAdmin = await entrar(admin.email);
+    tokenAdmin = await entrar(admin.username);
   });
 
   afterAll(async () => {

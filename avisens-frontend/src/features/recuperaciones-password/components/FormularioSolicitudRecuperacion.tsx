@@ -2,39 +2,42 @@ import { useState, type FormEvent } from 'react'
 
 type Props = {
   enviando: boolean
-  onEnviar: (email: string, motivo: string) => Promise<boolean>
+  onEnviar: (username: string, motivo: string) => Promise<boolean>
 }
 
 function FormularioSolicitudRecuperacion({ enviando, onEnviar }: Props) {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [motivo, setMotivo] = useState('')
   const [errorLocal, setErrorLocal] = useState('')
 
   const enviar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setErrorLocal('')
-    if (!email.trim()) {
-      setErrorLocal('Escribe el correo con el que ingresas a AVISENS.')
+    if (!username.trim()) {
+      setErrorLocal('Escribe el usuario con el que ingresas a AVISENS.')
       return
     }
-    const enviado = await onEnviar(email, motivo)
+    const enviado = await onEnviar(username, motivo)
     if (enviado) {
-      setEmail('')
+      setUsername('')
       setMotivo('')
     }
   }
 
   return (
     <form className="rec-formulario" onSubmit={(event) => void enviar(event)} noValidate>
-      <label className="rec-campo" htmlFor="rec-email">
-        <span>Correo de tu cuenta</span>
+      <label className="rec-campo" htmlFor="rec-username">
+        <span>Usuario de tu cuenta</span>
         <input
-          id="rec-email"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="nombre@granja.co"
-          autoComplete="email"
+          id="rec-username"
+          type="text"
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+          placeholder="maria.lopez"
+          autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
+          maxLength={30}
           aria-invalid={Boolean(errorLocal) || undefined}
           aria-describedby={errorLocal ? 'rec-error-local' : undefined}
         />

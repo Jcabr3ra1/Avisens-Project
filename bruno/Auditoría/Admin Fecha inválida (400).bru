@@ -1,0 +1,25 @@
+meta {
+  name: [Admin]  Fecha inválida (400)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/v1/auditoria?desde=2026-13-01
+  body: none
+  auth: bearer
+}
+
+params:query {
+  desde: 2026-13-01
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("rechaza una fecha imposible", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+}

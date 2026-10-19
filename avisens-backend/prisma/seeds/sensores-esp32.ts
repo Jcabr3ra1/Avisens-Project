@@ -41,6 +41,22 @@ const SENSORES_FIRMWARE: SensorFirmware[] = [
     unidad_medida: 'cm',
     modelo: 'HC-SR04',
   },
+  // ADC crudo, no ppm: el tipo no dice "gas" ni "amoniaco" a propósito, porque
+  // la web asocia esas palabras a rangos de referencia en ppm.
+  {
+    codigo: 'GAS-G1-01',
+    tipo: 'Calidad del aire (ADC)',
+    unidad_medida: 'adc',
+    modelo: 'MQ-135',
+  },
+  // Mientras el firmware tenga HX711_CALIBRADO en 0, llega con calidad
+  // "sospechosa" y la web lo marca como sin calibrar.
+  {
+    codigo: 'PESO-G1-01',
+    tipo: 'Peso de alimento',
+    unidad_medida: 'g',
+    modelo: 'HX711',
+  },
   {
     codigo: 'MOT-ALIM-G1-01',
     tipo: 'Motor alimentador',

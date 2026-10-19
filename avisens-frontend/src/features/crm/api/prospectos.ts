@@ -48,6 +48,8 @@ export interface Prospecto {
   fecha_inicio: string
   ultima_actividad: string
   fecha_finalizacion: string | null
+  resultado_cierre: string | null
+  motivo_cierre?: string | null
 }
 
 export interface RespuestaProspecto {
@@ -123,7 +125,8 @@ export async function exportarProspectosCsv(
 export interface ConvertirProspectoPayload {
   nombre_completo: string
   cedula: string
-  email: string
+  username: string
+  email?: string | null
   password: string
   telefono?: string
   organizacion_nombre?: string
@@ -136,7 +139,8 @@ export interface ProspectoConvertido {
   usuario: {
     id: number
     nombre_completo: string
-    email: string
+    username: string
+    email: string | null
     organizacion: { id: number; nombre: string }
   }
 }
@@ -164,4 +168,8 @@ export async function cerrarProspecto(
 ): Promise<Prospecto> {
   const { data } = await api.patch<Prospecto>(`/prospectos/${id}/cerrar`, payload)
   return data
+}
+
+export async function eliminarProspecto(id: number, confirmacion: string): Promise<void> {
+  await api.delete(`/prospectos/${id}`, { data: { confirmacion } })
 }

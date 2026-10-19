@@ -3,13 +3,13 @@
    stock y desplegar un insumo revela, no navega. */
 
 .inv-page {
-  --inv-deep: #005b48;
-  --inv-line: rgba(10, 26, 20, 0.09);
-  --inv-sombra: 0 1px 2px rgba(10, 40, 28, 0.04), 0 8px 24px rgba(10, 40, 28, 0.05);
-  --inv-ok: #10b981;
-  --inv-bajo: #f59e0b;
-  --inv-critico: #ef4444;
-  --inv-agotado: #7a8e84;
+  --inv-deep: var(--primary);
+  --inv-line: color-mix(in srgb, var(--avisens-ink) 9%, transparent);
+  --inv-sombra: 0 1px 2px color-mix(in srgb, var(--avisens-ink) 4%, transparent), 0 8px 24px color-mix(in srgb, var(--avisens-ink) 5%, transparent);
+  --inv-ok: var(--primary);
+  --inv-bajo: var(--warning);
+  --inv-critico: var(--danger);
+  --inv-agotado: var(--text-muted);
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
@@ -39,8 +39,8 @@
 
 .inv-btn--primario {
   background: var(--color-primario);
-  color: #fff;
-  box-shadow: 0 1px 2px rgba(4, 120, 87, 0.28), 0 6px 16px rgba(4, 120, 87, 0.2);
+  color: var(--on-primary);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--primary) 28%, transparent), 0 6px 16px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
 .inv-btn--suave { border-color: var(--border2); background: var(--card); color: var(--text2); }
@@ -63,7 +63,7 @@
   cursor: pointer;
 }
 
-.inv-accion-suave:hover { border-style: solid; background: rgba(0, 91, 72, 0.06); }
+.inv-accion-suave:hover { border-style: solid; background: color-mix(in srgb, var(--primary) 6%, transparent); }
 .inv-accion-suave:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 
 /* ─── Panel y barra de herramientas ──────────────────────────── */
@@ -141,7 +141,7 @@
   background: var(--card);
   color: var(--inv-deep);
   font-weight: 750;
-  box-shadow: 0 1px 2px rgba(10, 40, 28, 0.1);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--avisens-ink) 10%, transparent);
 }
 
 .inv-conteo {
@@ -240,10 +240,10 @@
 
 .inv-badge-punto { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 
-.inv-badge--ok { color: #059669; background: rgba(16, 185, 129, 0.12); }
-.inv-badge--bajo { color: #b45309; background: rgba(245, 158, 11, 0.15); }
-.inv-badge--critico { color: #dc2626; background: rgba(239, 68, 68, 0.11); }
-.inv-badge--agotado { color: var(--text3); background: rgba(122, 142, 132, 0.14); }
+.inv-badge--ok { color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); }
+.inv-badge--bajo { color: var(--warning); background: var(--warning-soft); }
+.inv-badge--critico { color: var(--danger); background: var(--danger-soft); }
+.inv-badge--agotado { color: var(--text3); background: color-mix(in srgb, var(--text-muted) 14%, transparent); }
 
 /* ─── Panel desplegado ───────────────────────────────────────── */
 
@@ -378,7 +378,7 @@
 
 .inv-tipo-opcion.is-activa {
   border-color: var(--inv-deep);
-  background: rgba(0, 91, 72, 0.06);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
   box-shadow: 0 0 0 1px var(--inv-deep);
 }
 
@@ -412,7 +412,7 @@
   height: 54px;
   place-items: center;
   border-radius: 16px;
-  background: rgba(0, 91, 72, 0.08);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
   color: var(--inv-deep);
 }
 

@@ -1,0 +1,38 @@
+meta {
+  name: [Admin · Propietario · Operario]  Ordenar encender, apagar o automático un relé
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/ordenes-actuadores
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "sensor_id": 12,
+    "accion": "encender"
+  }
+}
+
+docs {
+  sensor_id es el sensor de estado del relé (REL-K1..K4-G1-01). accion:
+  encender | apagar | automatico.
+
+  Responde 201 con la orden en "pendiente": todavía no pasó nada en el relé.
+  El ESP32 la recoge en su próximo POST /ingest y la confirma en el
+  siguiente; hay que seguirla con GET /v1/ordenes-actuadores/:id.
+
+  400 si el sensor no es un relé K1-K4. 409 si el ESP32 no se reporta hace
+  más de 30 s o si ya hay una orden en curso para ese relé.
+}

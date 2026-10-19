@@ -90,32 +90,43 @@ export async function sembrarRoles(prisma: PrismaClient) {
 }
 
 export async function sembrarAdmin(prisma: PrismaClient, rolAdminId: number) {
-  const email = process.env['ADMIN_EMAIL'];
+  const username = process.env['ADMIN_USERNAME']?.trim().toLowerCase();
+  const email = process.env['ADMIN_EMAIL']?.trim().toLowerCase() || null;
   const password = process.env['ADMIN_PASSWORD'];
 
-  if (!email && !password) {
+  if (!username && !password) {
     console.warn(
-      'ADMIN_EMAIL / ADMIN_PASSWORD no definidos: no se crea administrador ' +
+      'ADMIN_USERNAME / ADMIN_PASSWORD no definidos: no se crea administrador ' +
         '(solo se sembraron los roles).',
     );
     return;
   }
 
-  if (!email || !password) {
+  if (!username || !password) {
     throw new Error(
-      'Define AMBAS variables ADMIN_EMAIL y ADMIN_PASSWORD para crear el administrador.',
+      'Define AMBAS variables ADMIN_USERNAME y ADMIN_PASSWORD para crear el administrador.',
     );
   }
   if (password.length < 8) {
     throw new Error('ADMIN_PASSWORD debe tener al menos 8 caracteres.');
   }
 
+  if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(username)) {
+    throw new Error(
+      'ADMIN_USERNAME debe tener de 3 a 30 caracteres: letras sin tildes, números, punto, guion o guion bajo.',
+    );
+  }
+
   const nombre = process.env['ADMIN_NOMBRE'] ?? 'Administrador Avisens';
   const cedula = process.env['ADMIN_CEDULA'] ?? '0000000000';
 
-  const existente = await prisma.usuario.findUnique({ where: { email } });
+  const existente = await prisma.usuario.findFirst({
+    where: { OR: [{ username }, { cedula }, ...(email ? [{ email }] : [])] },
+  });
   if (existente) {
-    console.log(`El administrador ya existe (${email}); no se modifica.`);
+    console.log(
+      `El administrador ya existe (${existente.username}); no se modifica.`,
+    );
     return;
   }
 
@@ -123,10 +134,11 @@ export async function sembrarAdmin(prisma: PrismaClient, rolAdminId: number) {
     data: {
       nombre_completo: nombre,
       cedula,
+      username,
       email,
       password_hash: await bcrypt.hash(password, 12),
       rol_id: rolAdminId,
     },
   });
-  console.log(`Administrador creado: ${email}`);
+  console.log(`Administrador creado: ${username}`);
 }

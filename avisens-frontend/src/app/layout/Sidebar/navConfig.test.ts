@@ -76,13 +76,14 @@ describe('NAV_SECTIONS', () => {
     // Contraído, el sidebar esconde las etiquetas y solo quedan los iconos:
     // dos ítems con el mismo dibujo son indistinguibles hasta pasar el ratón.
     // Había seis parejas repetidas (Auditoría/Bitácora/Compras compartían una).
-    const vistos = new Map<unknown, string>()
+    const vistos = new Map<unknown, { label: string; path: string }>()
     for (const seccion of NAV_SECTIONS) {
       for (const item of seccion.items) {
         const tipo = (item.icon as ReactElement).type
         const previo = vistos.get(tipo)
-        expect(previo, `«${item.label}» repite el icono de «${previo}»`).toBeUndefined()
-        vistos.set(tipo, item.label)
+        if (previo?.path === item.path) continue
+        expect(previo?.label, `«${item.label}» repite el icono de «${previo?.label}»`).toBeUndefined()
+        vistos.set(tipo, { label: item.label, path: item.path })
       }
     }
   })

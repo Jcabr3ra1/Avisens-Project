@@ -31,7 +31,7 @@ import {
 } from './dto/plan-lote-respuesta.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string };
+  user: { id: number; email?: string | null; rol: string };
 }
 
 @ApiTags('plan-lote')

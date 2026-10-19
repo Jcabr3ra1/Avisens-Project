@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { capitalizar, gramos, rangoDeDias } from './catalogos'
+import { capitalizar, etiquetaEtapa, gramos, rangoDeDias } from './catalogos'
 
 describe('rangoDeDias', () => {
   it('describe el rango completo', () => {
@@ -37,5 +37,13 @@ describe('capitalizar', () => {
 
   it('deja el resto como está', () => {
     expect(capitalizar('preiniciacion')).toBe('Preiniciacion')
+  })
+})
+
+describe('etiquetaEtapa', () => {
+  it('muestra las etapas con tilde y respeta las desconocidas', () => {
+    expect(etiquetaEtapa('preiniciacion')).toBe('Preiniciación')
+    expect(etiquetaEtapa('Iniciacion')).toBe('Iniciación')
+    expect(etiquetaEtapa('retiro')).toBe('Retiro')
   })
 })

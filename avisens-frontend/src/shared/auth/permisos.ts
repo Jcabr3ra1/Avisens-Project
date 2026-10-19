@@ -68,16 +68,12 @@ export function permisosDeInsumo(rol: string | null): PermisosInsumo {
   }
 }
 
-// Funciones operativas del galpón: sensores, dispositivos, equipos (con sus
-// mantenimientos y repuestos) y umbrales ambientales. Las configura el
-// propietario, que es quien opera su granja. El administrador gestiona la
-// estructura (granja → galpón → lote) y la operación solo la consulta.
+// Equipos, mantenimientos, repuestos y umbrales ambientales siguen la regla
+// operativa del propietario. Dispositivos ESP32 y sensores se administran por
+// separado y son exclusivos del administrador AVISENS.
 //
-// Ojo: el backend todavía acepta estas escrituras del Administrador
-// (@Roles(ADMINISTRADOR, PROPIETARIO) en sensores, dispositivos, equipos,
-// mantenimiento y umbrales). Mientras no se cierre allí, esto es honestidad de
-// la interfaz, no seguridad: quitar ADMINISTRADOR de esos @Roles queda como
-// pendiente del backend.
+// Esto solo controla la visibilidad de la interfaz. La autorización real está
+// en los roles declarados por cada controlador del backend.
 export type PermisosOperativosGalpon = {
   configurar: boolean
   // Borrado definitivo (/permanente): el backend solo lo permite al

@@ -7,7 +7,8 @@ import {
   type EtapaProspecto,
   type ProspectoVista,
 } from '@features/crm/model/prospectoVista'
-import { esLecturaVigente, type GalponMonitoreoVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import { resumirBandeja } from '@features/crm/model/bandeja'
+import type { ConectividadPlataforma } from './conectividad'
 import type { AtencionAdminData } from '../api/admin'
 import { esCriticidadAlta } from '@features/alertas/model/alerta'
 
@@ -82,7 +83,7 @@ export function calcularAtencionAdmin(datos: AtencionAdminData): ResumenAtencion
       tipo: 'recuperacion' as const,
       etiqueta: 'Acceso pendiente',
       titulo: `Recuperar acceso de ${recuperacion.usuario.nombre_completo}`,
-      detalle: recuperacion.usuario.email,
+      detalle: recuperacion.usuario.username,
       fecha: recuperacion.fecha_creacion,
       ruta: '/usuarios' as const,
       prioridad: 2,
@@ -99,22 +100,28 @@ export function calcularAtencionAdmin(datos: AtencionAdminData): ResumenAtencion
   }
 }
 
+function kpiConectividad(conectividad: ConectividadPlataforma | null, error: boolean): KpiAdmin {
+  const base = { etiqueta: 'Controladores en línea', icono: 'sensor' as const }
+  if (error) return { ...base, valor: '—', detalle: 'No se pudo consultar los controladores', progreso: null, progresoTexto: null }
+  if (!conectividad || conectividad.total === 0) return { ...base, valor: '—', detalle: 'Sin controladores instalados', progreso: null, progresoTexto: null }
+  const { conectados, total, ventana_minutos: ventana } = conectividad
+  const caidos = total - conectados
+  return {
+    ...base,
+    valor: `${conectados}/${total}`,
+    detalle: caidos === 0 ? `Todos reportan (últimos ${ventana} min)` : `${caidos} sin reportar en ${ventana} min`,
+    progreso: Math.round((conectados / total) * 1000) / 10,
+    progresoTexto: `${conectados} de ${total} controladores reportando`,
+  }
+}
+
 export function calcularKpisAdmin(
   organizaciones: Organizacion[],
   usuarios: Usuario[],
   atencion: ResumenAtencionAdmin,
-  galpones: GalponMonitoreoVista[],
+  conectividad: ConectividadPlataforma | null,
+  errorConectividad = false,
 ): KpiAdmin[] {
-  const sensores = galpones.flatMap((galpon) => galpon.sensores)
-  const sensoresOnline = sensores.filter((sensor) => esLecturaVigente(sensor.estado)).length
-  // Si la consulta de últimas lecturas falló, todo sensor activo queda en
-  // 'lectura_no_disponible' — no hay porcentaje que calcular, porque no
-  // comprobamos nada: "0% en línea" mentiría diciendo que sí lo hicimos.
-  const sensoresNoDisponibles = sensores.filter((sensor) => sensor.estado === 'lectura_no_disponible').length
-  const porcentajeOnline = sensores.length > 0 && sensoresNoDisponibles === 0
-    ? Math.round((sensoresOnline / sensores.length) * 1000) / 10
-    : null
-
   const organizacionesActivas = organizaciones.filter((item) => item.activa).length
   const usuariosActivos = usuarios.filter((usuario) => usuario.activo).length
   const enCola = atencion.solicitudesPendientes + atencion.recuperacionesPendientes
@@ -134,7 +141,7 @@ export function calcularKpisAdmin(
       progresoTexto: organizaciones.length > 0 ? `${organizacionesActivas} de ${organizaciones.length} activas` : null,
     },
     {
-      etiqueta: 'Usuarios',
+      etiqueta: 'Personas',
       valor: usuarios.length,
       detalle: `${usuariosActivos} con acceso`,
       icono: 'usuarios',
@@ -149,40 +156,23 @@ export function calcularKpisAdmin(
       progreso: null,
       progresoTexto: null,
     },
-    {
-      etiqueta: 'Sensores en línea',
-      valor: sensoresNoDisponibles > 0 || sensores.length === 0 ? '—' : `${sensoresOnline}/${sensores.length}`,
-      detalle: sensoresNoDisponibles > 0
-        ? 'No se pudo consultar el estado de los sensores'
-        : porcentajeOnline === null ? 'Sin sensores instalados' : `${porcentajeOnline}% en línea`,
-      icono: 'sensor',
-      progreso: porcentajeOnline,
-      progresoTexto: sensoresNoDisponibles === 0 && sensores.length > 0
-        ? `${sensoresOnline} de ${sensores.length} sensores en línea`
-        : null,
-    },
+    kpiConectividad(conectividad, errorConectividad),
   ]
 }
 
 
 export function calcularEtapasCrmAdmin(prospectos: Prospecto[]): EtapaCrmAdmin[] {
-  const cantidadPorClasificacion = (clasificacion: string) =>
-    prospectos.filter((prospecto) => prospecto.clasificacion === clasificacion).length
-
+  const resumen = resumirBandeja(prospectos.map(aProspectoVista))
   return [
-    { nombre: 'Fríos', descripcion: 'Primer contacto', cantidad: cantidadPorClasificacion('frio'), color: '#3b82f6' },
-    { nombre: 'Tibios', descripcion: 'Demo o propuesta', cantidad: cantidadPorClasificacion('tibio'), color: '#f59e0b' },
-    { nombre: 'Calientes', descripcion: 'Visita programada', cantidad: cantidadPorClasificacion('caliente'), color: '#ef4444' },
-    { nombre: 'Cerrados', descripcion: 'Contrato firmado', cantidad: prospectos.filter((prospecto) => prospecto.estado === 'cerrado').length, color: '#10b981' },
+    { nombre: 'Fríos', descripcion: 'Primer contacto', cantidad: resumen.porTemperatura.frio, color: 'var(--info)' },
+    { nombre: 'Tibios', descripcion: 'Demo o propuesta', cantidad: resumen.porTemperatura.tibio, color: 'var(--warning)' },
+    { nombre: 'Calientes', descripcion: 'Visita programada', cantidad: resumen.porTemperatura.caliente, color: 'var(--danger)' },
+    { nombre: 'Cerrados', descripcion: 'Contrato firmado', cantidad: resumen.convertidos, color: 'var(--success)' },
   ]
 }
 
-export function calcularConversionCrm(prospectos: Prospecto[], etapas: EtapaCrmAdmin[]): number {
-  const calificados = prospectos.filter((prospecto) =>
-    ['frio', 'tibio', 'caliente'].includes(prospecto.clasificacion ?? ''),
-  ).length
-  const cerrados = etapas.find((etapa) => etapa.nombre === 'Cerrados')?.cantidad ?? 0
-  return calificados > 0 ? Math.round((cerrados / calificados) * 1000) / 10 : 0
+export function calcularConversionCrm(prospectos: Prospecto[]): number {
+  return resumirBandeja(prospectos.map(aProspectoVista)).conversionPct
 }
 
 export type ProspectoReciente = {

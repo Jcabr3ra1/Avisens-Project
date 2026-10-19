@@ -1,3 +1,4 @@
+import { usernameDePrueba } from './soporte/username';
 import {
   INestApplication,
   ValidationPipe,
@@ -185,6 +186,7 @@ describe('Galpón: desactivar revoca asignaciones por PATCH y DELETE (e2e)', () 
         data: {
           nombre_completo: tipo,
           cedula: `${tipo}-${sufijo}`,
+          username: usernameDePrueba(`${tipo}-${sufijo}@e2e.local`),
           email: `${tipo}-${sufijo}@e2e.local`,
           password_hash: hash,
           rol_id,
@@ -211,12 +213,12 @@ describe('Galpón: desactivar revoca asignaciones por PATCH y DELETE (e2e)', () 
     const login = async (email: string) => {
       const res = await request(servidor)
         .post('/v1/auth/login')
-        .send({ email, password })
+        .send({ username: email, password })
         .expect(200);
       return (JSON.parse(res.text) as { access_token: string }).access_token;
     };
-    tokenAdmin = await login(admin.email);
-    tokenOperario = await login(operario.email);
+    tokenAdmin = await login(admin.username);
+    tokenOperario = await login(operario.username);
   });
 
   afterEach(async () => {

@@ -37,8 +37,9 @@ export function useDispositivos(galponId: number) {
   // donde el usuario está mirando, dentro del formulario o de la fila.
   const crear = useCallback(async (payload: CrearDispositivoPayload) => {
     const creado = await crearDispositivo(payload)
-    setDispositivos((actuales) => [creado, ...actuales])
-    return creado
+    const { token_ingesta, ...dispositivo } = creado
+    setDispositivos((actuales) => [dispositivo, ...actuales])
+    return { dispositivo, token_ingesta }
   }, [])
 
   const alternar = useCallback(async (dispositivo: Dispositivo) => {

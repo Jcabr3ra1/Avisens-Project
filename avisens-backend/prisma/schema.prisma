@@ -53,7 +53,8 @@ model Usuario {
   organizacion_id Int?
   nombre_completo String
   cedula          String   @unique
-  email           String   @unique
+  username        String   @unique
+  email           String?  @unique
   password_hash   String
   telefono        String?
   foto_url        String?
@@ -81,7 +82,8 @@ model Usuario {
   notificaciones             Notificacion[]
   comandos_voz               ComandoVoz[]
   accionamientos             AccionamientoEquipo[]
-  alertas_responsable        Alerta[]               @relation("AlertaResponsable")
+  ordenes_actuadores         OrdenActuador[]
+  alertas_responsable       Alerta[]               @relation("AlertaResponsable")
   alertas_escalado           Alerta[]               @relation("AlertaEscalado")
   curvas_geneticas_publicadas CurvaGeneticaVersion[]
   planes_lote_creados        PlanLote[]
@@ -222,7 +224,6 @@ enum EstadoDispositivo {
 model Dispositivo {
   id                 Int               @id @default(autoincrement())
   galpon_id          Int
-  mac_address        String            @unique
   codigo_topic       String            @unique
   nombre             String
   version_firmware   String?
@@ -234,12 +235,19 @@ model Dispositivo {
   token_ingesta      String?           @unique
   token_ingesta_hash String?           @unique
   ultima_conexion    DateTime?
+  // Sesión de arranque del ESP32 (UUID que genera en cada encendido). Un
+  // valor nuevo en /ingest = el dispositivo se reinició. Se guarda también
+  // el anterior para reconocer un envío retrasado de la sesión previa.
+  arranque_id        String?
+  arranque_anterior  String?
+  arranque_desde     DateTime?
   activo             Boolean           @default(true)
   fecha_creacion     DateTime          @default(now())
 
   galpon   Galpon               @relation(fields: [galpon_id], references: [id])
   sensores Sensor[]
   ingestas IngestaDispositivo[]
+  ordenes  OrdenActuador[]
 
   // La relación compuesta impide conectar un sensor a un dispositivo de otro
   // galpón, incluso si se escribe directamente en la base de datos.
@@ -268,6 +276,8 @@ model Sensor {
   zona_id             Int?
   codigo              String       @unique
   tipo                String
+  // Identidad física dentro del controlador; null conserva el contrato legacy.
+  canal               String?
   unidad_medida       String
   modelo              String?
   fabricante          String?
@@ -280,6 +290,8 @@ model Sensor {
   estado              EstadoSensor @default(activo)
 
   mediciones  Medicion[]
+  ordenes     OrdenActuador[]
+  estado_actuador EstadoActuador?
   galpon      Galpon      @relation(fields: [galpon_id], references: [id])
   dispositivo Dispositivo @relation(fields: [dispositivo_id, galpon_id], references: [id, galpon_id])
   zona        ZonaGalpon? @relation(fields: [zona_id], references: [id])
@@ -288,6 +300,7 @@ model Sensor {
   // Consultas frecuentes: "sensores del galpón X" y "sensores del nodo Y".
   @@index([galpon_id])
   @@index([dispositivo_id])
+  @@unique([dispositivo_id, tipo, canal])
   @@map("sensores")
 }
 
@@ -927,6 +940,7 @@ model SolicitudPqrs {
   estado          String    @default("abierta")
   responsable_id  Int?
   fecha_creacion  DateTime  @default(now())
+  fecha_limite    DateTime?
   fecha_cierre    DateTime?
 
   prospecto   Prospecto @relation(fields: [prospecto_id], references: [id])
@@ -1225,6 +1239,94 @@ model AccionamientoEquipo {
 
   @@index([equipo_id])
   @@map("accionamientos_equipos")
+}
+
+// ---------------------------------------------------------------------------
+// Órdenes remotas sobre los relés del ESP32 (encender/apagar desde la web)
+// ---------------------------------------------------------------------------
+// El backend no acciona nada: guarda la orden, la entrega en la respuesta de
+// POST /ingest y espera a que el ESP32 la confirme en el ciclo siguiente. El
+// ESP32 decide si la aplica (sus protecciones locales mandan), así que
+// "aplicada" solo existe cuando él lo dice.
+enum AccionOrdenActuador {
+  encender
+  apagar
+  automatico // devuelve el relé a la lógica automática del ESP32
+}
+
+enum EstadoOrdenActuador {
+  pendiente // creada; el ESP32 todavía no la recogió
+  enviada   // viajó en la respuesta de /ingest; falta la confirmación
+  aplicada  // el ESP32 la ejecutó; estado_real es la salida que ordenó
+  rechazada // el ESP32 la negó por una protección (ver motivo)
+  revertida // estuvo aplicada y el ESP32 devolvió el relé a automático
+  expirada  // nadie la confirmó dentro de la vigencia
+  incierta  // el ESP32 se reinició sin confirmarla: no se sabe si se aplicó
+}
+
+model OrdenActuador {
+  id              Int                 @id @default(autoincrement())
+  dispositivo_id  Int
+  galpon_id       Int
+  // El sensor de estado del relé (REL-K*): su código es el que conoce el
+  // firmware, igual que en la ingesta.
+  sensor_id       Int
+  accion          AccionOrdenActuador
+  estado          EstadoOrdenActuador @default(pendiente)
+  // Salida que el ESP32 ordenó al pin del relé. No hay realimentación física:
+  // no confirma que el relé conmutó ni que la carga funciona.
+  estado_real     Boolean?
+  motivo          String?
+  // Sesión de arranque del ESP32 que recibió la orden. Solo esa sesión puede
+  // confirmarla: tras un reinicio no se acepta como propia.
+  arranque_entrega String?
+  // Nulo si el usuario se eliminó: la orden sigue en el historial del relé.
+  usuario_id      Int?
+  fecha_creacion  DateTime            @default(now())
+  fecha_envio     DateTime?
+  fecha_resultado DateTime?
+  // Versión de la fila: la web la usa para no pisar un estado nuevo con una
+  // respuesta vieja que llegó tarde.
+  actualizada_en  DateTime            @default(now()) @updatedAt
+
+  dispositivo Dispositivo @relation(fields: [dispositivo_id, galpon_id], references: [id, galpon_id])
+  sensor      Sensor      @relation(fields: [sensor_id], references: [id])
+  usuario     Usuario?    @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  // Consultas reinas: "órdenes por entregar a este dispositivo" y "última
+  // orden de este relé".
+  //
+  // Además, en la migración (SQL manual, partialIndexes sigue en preview en
+  // Prisma 7.8): índice único parcial "ordenes_actuadores_una_en_curso" sobre
+  // sensor_id para estado pendiente/enviada -- nunca dos órdenes en curso
+  // sobre el mismo relé, aunque lleguen dos peticiones a la vez.
+  @@index([dispositivo_id, estado])
+  @@index([sensor_id, fecha_creacion])
+  @@map("ordenes_actuadores")
+}
+
+enum ModoActuador {
+  automatico    // lo decide la lógica del ESP32
+  manual_remoto // fijado por una orden de la web (ver orden_id)
+  manual_local  // fijado por el monitor serie en el propio ESP32
+}
+
+// Lo que el ESP32 informó del relé en su último /ingest. Se pisa en cada
+// envío: es el estado actual, no historial (el historial son las órdenes).
+// Una orden "aplicada" dice qué pasó en su momento; esto dice qué hay ahora.
+model EstadoActuador {
+  sensor_id    Int          @id
+  modo         ModoActuador
+  // Salida ordenada al pin, no estado físico: no hay realimentación.
+  encendido    Boolean
+  // Orden que mantiene el relé en manual remoto. Sin llave foránea: es un
+  // dato informado por el dispositivo, se valida al usarlo.
+  orden_id     Int?
+  reportado_en DateTime
+
+  sensor Sensor @relation(fields: [sensor_id], references: [id], onDelete: Cascade)
+
+  @@map("estados_actuadores")
 }
 
 // ---------------------------------------------------------------------------

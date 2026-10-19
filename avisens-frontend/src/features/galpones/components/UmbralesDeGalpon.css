@@ -6,7 +6,7 @@
   padding: .85rem 1rem;
   border-left: 3px solid var(--warning);
   border-radius: 0 8px 8px 0;
-  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  background: var(--warning-soft);
   font-size: .92rem;
   line-height: 1.45;
 }
@@ -15,7 +15,7 @@
   display: flex; align-items: center; justify-content: space-between; gap: .75rem;
   padding: .75rem 1rem;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  background: var(--danger-soft);
   color: var(--danger);
   font-size: .9rem;
 }
@@ -65,7 +65,7 @@
 
 /* Una celda vacía tiene que verse vacía de lejos: es el hueco por el que se
    escapa una alerta. */
-.umb-celda--vacia { background: color-mix(in srgb, var(--warning) 6%, transparent); }
+.umb-celda--vacia { background: var(--warning-soft); }
 
 .umb-rango {
   display: block;
@@ -84,8 +84,8 @@
   text-transform: capitalize;
 }
 
-.umb-crit--alta  { color: var(--danger);  background: color-mix(in srgb, var(--danger) 12%, transparent); }
-.umb-crit--media { color: var(--warning); background: color-mix(in srgb, var(--warning) 14%, transparent); }
+.umb-crit--alta  { color: var(--danger);  background: var(--danger-soft); }
+.umb-crit--media { color: var(--warning); background: var(--warning-soft); }
 .umb-crit--baja  { color: var(--text-secondary); background: var(--surface-subtle); }
 
 .umb-acciones { display: flex; gap: .3rem; margin-top: .3rem; }

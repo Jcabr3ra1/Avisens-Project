@@ -15,6 +15,14 @@ function DetalleSensor({ sensor }: { sensor: SensorVista }) {
           <p className="dash-metrica-umbral">
             {rangoUmbral(sensor.minUmbral, sensor.maxUmbral, sensor.unidad)}
           </p>
+          {sensor.sinCalibrar && sensor.valor !== null && (
+            <span
+              className="dash-metrica-badge dash-metrica-badge--advertencia"
+              title="El ESP32 envió esta lectura sin calibración: el número no es una medida física confirmada."
+            >
+              Sin calibrar
+            </span>
+          )}
         </div>
         <span className={`dash-metrica-badge dash-metrica-badge--${sensor.estado}`}>
           {etiquetaEstado(sensor.estado)}

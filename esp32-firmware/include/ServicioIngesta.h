@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include "ControlRemoto.h"
 
 // Genera un id_lote nuevo (UUID v4, RFC 4122) para UN ciclo de lectura.
 // El mismo valor se reutiliza en todos los reintentos de ese ciclo -- así
@@ -32,7 +33,32 @@ struct CicloIngesta {
   float humedad;
   bool incluirAgua;
   float distanciaAgua;  // cm, del HC-SR04 a la superficie del agua
+  bool incluirGas;
+  int gasAdc;           // MQ-135: ADC crudo filtrado (0-4095), no ppm
+  bool incluirPeso;
+  float pesoGramos;     // HX711, ya tarado
+  bool pesoCalibrado;   // false = factor de ejemplo: se envía "sospechosa"
   EstadoActuadores actuadores;
+  // Confirmaciones de órdenes remotas que el backend aún no recibió.
+  const ResultadoOrdenRemota *resultados;
+  uint8_t cantidadResultados;
+  EstadoReles reles;  // modo y salida actuales de K1-K4
+  // UUID de esta sesión de arranque (ver tareaWiFi). Con él el backend sabe
+  // que el ESP32 se reinició y no le reentrega órdenes de la sesión anterior.
+  const char *arranqueId;
 };
 
-bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote);
+// Tope de órdenes que se leen de una respuesta (el backend manda hasta 10).
+#define MAX_ORDENES_POR_RESPUESTA 10
+
+// Lo que trajo la respuesta de /ingest. contratoValido es true cuando el
+// backend procesó el envío (aunque haya ignorado algún código): solo
+// entonces las confirmaciones enviadas se dan por recibidas.
+struct RespuestaIngesta {
+  bool contratoValido;
+  uint8_t cantidadOrdenes;
+  OrdenRecibida ordenes[MAX_ORDENES_POR_RESPUESTA];
+};
+
+bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote,
+                                RespuestaIngesta &respuesta);

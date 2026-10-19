@@ -67,12 +67,13 @@
 
             <ImageView
                 android:id="@+id/imgLogo"
-                android:layout_width="35dp"
-                android:layout_height="35dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_marginStart="20dp"
                 android:layout_marginTop="55dp"
                 android:contentDescription="Logo Avisens"
                 android:src="@drawable/logo_avisens"
+                app:tint="@android:color/white"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
 
@@ -85,7 +86,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="AVISENS"
+                android:visibility="gone"
                 android:textColor="@android:color/white"
                 android:textSize="25sp"
                 android:textStyle="bold"
@@ -175,15 +176,15 @@
                     app:layout_constraintEnd_toEndOf="parent" />
 
                 <!-- ===================================================== -->
-                <!-- CORREO                                                 -->
+                <!-- USUARIO                                                -->
                 <!-- ===================================================== -->
 
                 <TextView
-                    android:id="@+id/txtCorreo"
+                    android:id="@+id/txtUsuario"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
-                    android:text="Correo electrónico"
+                    android:text="Usuario"
                     android:textColor="#2E3B36"
                     android:textSize="13sp"
                     android:textStyle="bold"
@@ -191,22 +192,23 @@
                     app:layout_constraintStart_toStartOf="parent" />
 
                 <EditText
-                    android:id="@+id/etCorreo"
+                    android:id="@+id/etUsuario"
                     android:layout_width="0dp"
                     android:layout_height="52dp"
                     android:layout_marginTop="8dp"
-                    android:autofillHints="emailAddress"
+                    android:autofillHints="username"
+                    android:maxLength="30"
                     android:background="@drawable/bg_input_lavender"
-                    android:contentDescription="Campo de correo electrónico"
-                    android:hint="operario@avisens.com"
+                    android:contentDescription="Campo de usuario"
+                    android:hint="maria.lopez"
                     android:imeOptions="actionNext"
-                    android:inputType="textEmailAddress"
+                    android:inputType="text|textNoSuggestions"
                     android:paddingStart="44dp"
                     android:paddingEnd="12dp"
                     android:textColor="#1B2B26"
                     android:textColorHint="#009688"
                     android:textSize="14sp"
-                    app:layout_constraintTop_toBottomOf="@id/txtCorreo"
+                    app:layout_constraintTop_toBottomOf="@id/txtUsuario"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent" />
 
@@ -220,9 +222,9 @@
                     android:contentDescription="@null"
                     android:src="@drawable/ic_email"
                     app:tint="#009688"
-                    app:layout_constraintTop_toTopOf="@id/etCorreo"
-                    app:layout_constraintBottom_toBottomOf="@id/etCorreo"
-                    app:layout_constraintStart_toStartOf="@id/etCorreo" />
+                    app:layout_constraintTop_toTopOf="@id/etUsuario"
+                    app:layout_constraintBottom_toBottomOf="@id/etUsuario"
+                    app:layout_constraintStart_toStartOf="@id/etUsuario" />
 
                 <!-- ===================================================== -->
                 <!-- CONTRASEÑA                                             -->
@@ -237,7 +239,7 @@
                     android:textColor="#2E3B36"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    app:layout_constraintTop_toBottomOf="@id/etCorreo"
+                    app:layout_constraintTop_toBottomOf="@id/etUsuario"
                     app:layout_constraintStart_toStartOf="parent" />
 
                 <EditText
@@ -314,6 +316,8 @@
                     android:minHeight="40dp"
                     android:gravity="center_vertical"
                     android:text="¿Olvidó su contraseña?"
+                    android:focusable="true"
+                    android:clickable="true"
                     android:textColor="#1E9E63"
                     android:textSize="12sp"
                     android:textStyle="bold"

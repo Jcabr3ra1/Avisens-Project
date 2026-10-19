@@ -31,14 +31,14 @@
 .bit-indicador small, .bit-indicador strong { display: block; }
 .bit-indicador small { color: var(--text3); font-size: 0.68rem; font-weight: 750; letter-spacing: 0.04em; text-transform: uppercase; }
 .bit-indicador strong { margin-top: 0.14rem; color: var(--dash-ink); font-size: 0.98rem; font-variant-numeric: tabular-nums; }
-.bit-indicador--neutral > span { color: var(--gr-deep, var(--avisens-deep)); background: rgba(0, 91, 72, 0.09); }
-.bit-indicador--alerta > span { color: #dc2626; background: rgba(239, 68, 68, 0.11); }
-.bit-indicador--ok > span { color: var(--green-d); background: rgba(16, 185, 129, 0.13); }
-.bit-indicador--info > span { color: var(--info3); background: rgba(59, 130, 246, 0.12); }
+.bit-indicador--neutral > span { color: var(--gr-deep, var(--avisens-deep)); background: color-mix(in srgb, var(--primary) 9%, transparent); }
+.bit-indicador--alerta > span { color: var(--danger); background: var(--danger-soft); }
+.bit-indicador--ok > span { color: var(--green-d); background: color-mix(in srgb, var(--primary) 13%, transparent); }
+.bit-indicador--info > span { color: var(--info3); background: var(--info-soft); }
 
 .bit-tabs { display: inline-flex; align-self: flex-start; gap: 0.22rem; padding: 0.23rem; border: 1px solid var(--gr-line, var(--border)); border-radius: 11px; background: var(--bg-tint); }
 .bit-tabs button { display: inline-flex; min-height: 44px; align-items: center; gap: 0.36rem; padding: 0.38rem 0.68rem; border: 1px solid transparent; border-radius: 8px; color: var(--text3); background: transparent; font: inherit; font-size: 0.76rem; font-weight: 780; cursor: pointer; }
-.bit-tabs button.activo { border-color: var(--gr-line, var(--border)); color: var(--gr-deep, var(--avisens-deep)); background: var(--card); box-shadow: 0 1px 3px rgba(10, 40, 28, 0.08); }
+.bit-tabs button.activo { border-color: var(--gr-line, var(--border)); color: var(--gr-deep, var(--avisens-deep)); background: var(--card); box-shadow: 0 1px 3px color-mix(in srgb, var(--avisens-ink) 8%, transparent); }
 
 .bit-card { overflow: hidden; }
 .bit-acciones-rapidas { padding: 1.1rem; }
@@ -52,18 +52,18 @@
 .bit-acciones small { margin-top: 0.18rem; color: var(--text3); font-size: 0.72rem; font-weight: 500; }
 
 .bit-seccion-cab { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.1rem; border-bottom: 1px solid var(--gr-line, var(--border)); }
-.bit-principal { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 0.45rem 0.7rem; border: 1px solid var(--gr-deep, var(--avisens-deep)); border-radius: 9px; color: #fff; background: var(--gr-deep, var(--avisens-deep)); font: inherit; font-size: 0.77rem; font-weight: 800; cursor: pointer; }
+.bit-principal { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 0.45rem 0.7rem; border: 1px solid var(--gr-deep, var(--avisens-deep)); border-radius: 9px; color: var(--on-primary); background: var(--gr-deep, var(--avisens-deep)); font: inherit; font-size: 0.77rem; font-weight: 800; cursor: pointer; }
 .bit-lista article { display: grid; grid-template-columns: 112px minmax(120px, 0.7fr) 1.4fr auto; gap: 0.8rem; align-items: center; padding: 0.84rem 1.1rem; border-bottom: 1px solid var(--gr-line, var(--border)); }
 .bit-lista article:last-child { border-bottom: 0; }
 .bit-lista time, .bit-lista span { color: var(--text3); font-size: 0.78rem; }
 .bit-lista strong { color: var(--dash-ink); font-size: 0.83rem; }
-.bit-lista button { min-height: 44px; padding: 0 0.62rem; border: 1px solid #fecaca; border-radius: 8px; color: #c52424; background: var(--card); font: inherit; font-size: 0.72rem; font-weight: 750; cursor: pointer; }
+.bit-lista button { min-height: 44px; padding: 0 0.62rem; border: 1px solid var(--danger-border); border-radius: 8px; color: var(--danger); background: var(--card); font: inherit; font-size: 0.72rem; font-weight: 750; cursor: pointer; }
 .bit-vacio { margin: 0; padding: 2rem 1rem; color: var(--text3); font-size: 0.82rem; line-height: 1.5; text-align: center; }
 .bit-vacio h2 { margin: 0; color: var(--dash-ink); font-size: 1.1rem; }
 .bit-vacio p { margin: 0.35rem 0 0; }
 
 .bit-selector-jerarquico select:focus-visible, .bit-tabs button:focus-visible, .bit-acciones button:focus-visible, .bit-principal:focus-visible, .bit-lista button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
-.bit-tabs button:hover, .bit-acciones button:hover { border-color: rgba(0, 91, 72, 0.28); color: var(--gr-deep, var(--avisens-deep)); }
+.bit-tabs button:hover, .bit-acciones button:hover { border-color: color-mix(in srgb, var(--primary) 28%, transparent); color: var(--gr-deep, var(--avisens-deep)); }
 .bit-principal:hover { filter: brightness(0.95); }
 
 @media (max-width: 900px) {
@@ -93,5 +93,5 @@
 .bit-alimento-total { margin: 0.1rem 0 0; color: var(--dash-ink); font-size: 0.85rem; }
 .bit-alimento-total strong { font-size: 1.1rem; font-weight: 800; }
 .bit-alimento-texto { margin: 0.2rem 0 0; color: var(--text3); font-size: 0.78rem; line-height: 1.45; }
-.bit-alimento-texto--error { color: #c52424; }
-.bit-alimento-avisos { margin: 0.4rem 0 0; padding-left: 1.1rem; color: #b45309; font-size: 0.75rem; }
+.bit-alimento-texto--error { color: var(--danger); }
+.bit-alimento-avisos { margin: 0.4rem 0 0; padding-left: 1.1rem; color: var(--warning); font-size: 0.75rem; }

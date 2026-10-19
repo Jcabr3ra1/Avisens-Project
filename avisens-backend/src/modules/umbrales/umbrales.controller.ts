@@ -23,7 +23,7 @@ import { RevisarUmbralDto } from './dto/revisar-umbral.dto';
 import { QueryUmbralesDto } from './dto/query-umbrales.dto';
 
 interface AuthRequest extends Request {
-  user: { id: number; email: string; rol: string };
+  user: { id: number; email?: string | null; rol: string };
 }
 
 @ApiTags('umbrales')

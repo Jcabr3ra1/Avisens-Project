@@ -12,6 +12,7 @@ import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
+import { normalizarUsername } from '../../common/auth/username';
 import { ROLES } from '../../common/auth/roles';
 import { esPropietario } from '../../common/auth/acceso';
 import type { Solicitante } from '../../common/auth/acceso';
@@ -35,6 +36,7 @@ import {
 const USUARIO_SELECT = {
   id: true,
   nombre_completo: true,
+  username: true,
   email: true,
   cedula: true,
   telefono: true,
@@ -250,7 +252,8 @@ export class UsuariosService {
       data: {
         nombre_completo: dto.nombre_completo,
         cedula: dto.cedula,
-        email: dto.email,
+        username: normalizarUsername(dto.username),
+        email: dto.email?.trim().toLowerCase() || null,
         password_hash,
         telefono: dto.telefono,
         rol_id: rolId,
@@ -333,20 +336,25 @@ export class UsuariosService {
       throw new ForbiddenException('No puedes desactivar tu propia cuenta');
     }
 
+    const username =
+      dto.username === undefined ? undefined : normalizarUsername(dto.username);
+    const cambiaUsername =
+      username !== undefined && username !== usuario.username;
     const cambiaEmail = dto.email && dto.email !== usuario.email;
     const cambiaCedula = dto.cedula && dto.cedula !== usuario.cedula;
-    if (cambiaEmail || cambiaCedula) {
+    if (cambiaUsername || cambiaEmail || cambiaCedula) {
       const conflicto = await this.prisma.usuario.findFirst({
         where: {
           id: { not: id },
           OR: [
+            ...(cambiaUsername ? [{ username }] : []),
             ...(cambiaEmail ? [{ email: dto.email }] : []),
             ...(cambiaCedula ? [{ cedula: dto.cedula }] : []),
           ],
         },
       });
       if (conflicto)
-        throw new ConflictException('Email o cédula ya registrado');
+        throw new ConflictException('Usuario, correo o cédula ya registrado');
     }
 
     let rolId = dto.rol_id;
@@ -362,7 +370,11 @@ export class UsuariosService {
     const data = {
       nombre_completo: dto.nombre_completo,
       cedula: dto.cedula,
-      email: dto.email,
+      username,
+      email:
+        dto.email === undefined
+          ? undefined
+          : dto.email?.trim().toLowerCase() || null,
       telefono: dto.telefono,
       rol_id: rolId,
       activo: dto.activo,

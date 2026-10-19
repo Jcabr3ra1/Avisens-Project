@@ -1,0 +1,20 @@
+meta {
+  name: [Admin] Tomar solicitud PQRS
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/v1/solicitudes-pqrs/1/tomar
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Deja la solicitud a cargo de quien la toma y la pasa a en_proceso.
+  Una solicitud resuelta o cerrada responde 409.
+}

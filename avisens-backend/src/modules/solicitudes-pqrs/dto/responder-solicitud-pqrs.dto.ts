@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class ResponderSolicitudPqrsDto {
   @ApiPropertyOptional({
@@ -13,9 +13,10 @@ export class ResponderSolicitudPqrsDto {
 
   @ApiPropertyOptional({
     example: 'Se contactó al prospecto y se envió la cotización por correo.',
-    description: 'Respuesta o nota del administrador',
+    description: 'Respuesta registrada al cliente',
   })
   @IsString()
+  @MaxLength(4000)
   @IsOptional()
   respuesta?: string;
 
@@ -23,6 +24,7 @@ export class ResponderSolicitudPqrsDto {
     example: 1,
     description: 'ID del administrador que toma la solicitud',
   })
+  @IsInt()
   @IsOptional()
   responsable_id?: number;
 }

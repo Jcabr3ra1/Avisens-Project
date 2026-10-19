@@ -6,6 +6,7 @@ import {
   Length,
   MinLength,
 } from 'class-validator';
+import { NombreUsuario } from '../../../common/auth/username';
 import { Transform } from 'class-transformer';
 
 /**
@@ -13,9 +14,8 @@ import { Transform } from 'class-transformer';
  *
  * El cuestionario ya recogió nombre, teléfono y a veces correo, así que el
  * formulario llega prellenado. Lo que nunca tiene es la cédula —no se pregunta
- * por chat— y la contraseña, que se acuerdan en la llamada. El correo es
- * obligatorio porque es con lo que el cliente entra, y por WhatsApp no se pide:
- * si el prospecto llegó por ahí, hay que preguntárselo.
+ * por chat—, el usuario y la contraseña, que se acuerdan en la llamada.
+ * El correo es un dato de contacto opcional; no identifica el acceso.
  *
  * No lleva `rol_id`: convertir un prospecto siempre crea un Propietario. Y no
  * lleva `resultado`, porque convertir ya significa ganado; para lo demás está
@@ -26,7 +26,10 @@ export class ConvertirProspectoDto {
   @IsString()
   nombre_completo: string;
 
-  @ApiProperty({ example: '1098765432', description: 'La pide el asesor: el chatbot no la pregunta' })
+  @ApiProperty({
+    example: '1098765432',
+    description: 'La pide el asesor: el chatbot no la pregunta',
+  })
   @IsString()
   cedula: string;
 
@@ -35,14 +38,17 @@ export class ConvertirProspectoDto {
   @MinLength(8)
   password: string;
 
-  @ApiProperty({
-    example: 'maria@granja.com',
-    description:
-      'Con este correo entra el cliente, así que es obligatorio. El chatbot lo ' +
-      'pregunta por la web pero no por WhatsApp: si el prospecto no lo trae, se pide.',
-  })
+  @ApiProperty({ example: 'maria.lopez', minLength: 3, maxLength: 30 })
+  @NombreUsuario()
+  username: string;
+
+  @ApiPropertyOptional({ example: 'maria@granja.com', nullable: true })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() || null : value,
+  )
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email?: string | null;
 
   @ApiPropertyOptional({ example: '573001234567' })
   @IsString()

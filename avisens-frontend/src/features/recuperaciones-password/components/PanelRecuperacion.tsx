@@ -2,10 +2,11 @@ import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
 import Modal from '@shared/ui/Modal/Modal'
-import type {
-  AprobacionRecuperacion,
-  RecuperacionPassword,
-  ResolverRecuperacionPayload,
+import {
+  ETIQUETAS_ESTADO_RECUPERACION,
+  type AprobacionRecuperacion,
+  type RecuperacionPassword,
+  type ResolverRecuperacionPayload,
 } from '../model/recuperacionPassword'
 
 type Props = {
@@ -57,7 +58,8 @@ function PanelRecuperacion({ solicitud, onCerrar, onAprobar, onRechazar }: Props
     >
         <div className="rec-panel-contenido">
           <dl className="rec-datos">
-            <div><dt>Correo</dt><dd>{solicitud.usuario.email}</dd></div>
+            <div><dt>Usuario</dt><dd>{solicitud.usuario.username}</dd></div>
+            <div><dt>Correo</dt><dd>{solicitud.usuario.email || 'No registrado'}</dd></div>
             <div><dt>Documento</dt><dd>{solicitud.usuario.cedula}</dd></div>
             <div><dt>Motivo</dt><dd>{solicitud.motivo || 'No indicó un motivo.'}</dd></div>
           </dl>
@@ -83,7 +85,7 @@ function PanelRecuperacion({ solicitud, onCerrar, onAprobar, onRechazar }: Props
             </form>
           ) : (
             <section className="rec-detalle-final">
-              <p>Estado: <strong>{solicitud.estado}</strong></p>
+              <p>Estado: <strong>{ETIQUETAS_ESTADO_RECUPERACION[solicitud.estado]}</strong></p>
               <p>Atendida por: <strong>{solicitud.atendida_por?.nombre_completo ?? 'No disponible'}</strong></p>
               {solicitud.observacion && <p>Nota: {solicitud.observacion}</p>}
             </section>
