@@ -508,6 +508,43 @@ void tareaGalpon(void *pvParameters)
   }
 }
 
+// Lecturas de sensores y actuadores de este ciclo. Sirve tanto para enviar
+// como para guardar en el búfer cuando no hay WiFi: las órdenes y el estado
+// de los relés se agregan solo al enviar (ver tareaWiFi).
+static CicloIngesta armarCicloLecturas()
+{
+  LecturaDHT lectura = leerSnapshotDht();
+  unsigned long antiguedadSnapshot = millis() - lectura.timestamp;
+  bool incluirDht = true;
+
+  if (!lectura.valida)
+  {
+    LOG_WARN("Ingesta: DHT sin lectura válida, se omite del envío");
+    incluirDht = false;
+  }
+  else if (antiguedadSnapshot > UMBRAL_SNAPSHOT_OBSOLETO_MS)
+  {
+    LOG_WARN("Ingesta: snapshot DHT obsoleto (" + String(antiguedadSnapshot) +
+             "ms) -- tareaGalpon dejó de refrescarlo, se omite del envío");
+    incluirDht = false;
+  }
+
+  CicloIngesta ciclo;
+  ciclo.resultados = nullptr;
+  ciclo.cantidadResultados = 0;
+  ciclo.reles.valido = false;
+  ciclo.arranqueId = nullptr;
+  ciclo.incluirDht = incluirDht;
+  ciclo.temperatura = lectura.temperatura;
+  ciclo.humedad = lectura.humedad;
+  ciclo.incluirAgua = leerSnapshotAgua(ciclo.distanciaAgua);
+  ciclo.incluirGas = leerSnapshotGas(ciclo.gasAdc);
+  ciclo.incluirPeso = leerSnapshotPeso(ciclo.pesoGramos);
+  ciclo.pesoCalibrado = HX711_CALIBRADO;
+  ciclo.actuadores = tomarEstadoActuadores();
+  return ciclo;
+}
+
 // Mantiene la conexión WiFi viva en Core 1 y envía cada INTERVALO_ENVIO_MS
 void tareaWiFi(void *pvParameters)
 {
@@ -533,36 +570,21 @@ void tareaWiFi(void *pvParameters)
         ultimoAvisoSinWifi = millis();
         LOG_WARN("WiFi desconectado - Reintentando conexión");
       }
+      // Sin red las lecturas no se pierden: se guardan (una por minuto) y se
+      // reenvían con su hora cuando vuelva la conexión.
+      if (millis() - ultimaEnvioTelemetria >= INTERVALO_ENVIO_MS)
+      {
+        ultimaEnvioTelemetria = millis();
+        if (bufferListoParaGuardar())
+          guardarCicloSinRed(armarCicloLecturas());
+      }
     }
     else if (millis() - ultimaEnvioTelemetria >= INTERVALO_ENVIO_MS)
     {
       ultimaEnvioTelemetria = millis();
+      iniciarHoraRed();
 
-      LecturaDHT lectura = leerSnapshotDht();
-      unsigned long antiguedadSnapshot = millis() - lectura.timestamp;
-      bool incluirDht = true;
-
-      if (!lectura.valida)
-      {
-        LOG_WARN("Ingesta: DHT sin lectura válida, se omite del envío");
-        incluirDht = false;
-      }
-      else if (antiguedadSnapshot > UMBRAL_SNAPSHOT_OBSOLETO_MS)
-      {
-        LOG_WARN("Ingesta: snapshot DHT obsoleto (" + String(antiguedadSnapshot) +
-                 "ms) -- tareaGalpon dejó de refrescarlo, se omite del envío");
-        incluirDht = false;
-      }
-
-      CicloIngesta ciclo;
-      ciclo.incluirDht = incluirDht;
-      ciclo.temperatura = lectura.temperatura;
-      ciclo.humedad = lectura.humedad;
-      ciclo.incluirAgua = leerSnapshotAgua(ciclo.distanciaAgua);
-      ciclo.incluirGas = leerSnapshotGas(ciclo.gasAdc);
-      ciclo.incluirPeso = leerSnapshotPeso(ciclo.pesoGramos);
-      ciclo.pesoCalibrado = HX711_CALIBRADO;
-      ciclo.actuadores = tomarEstadoActuadores();
+      CicloIngesta ciclo = armarCicloLecturas();
 
       // Confirmaciones de órdenes: se acumulan hasta que el backend responde
       // con el contrato válido; si el envío falla, viajan en el siguiente.
