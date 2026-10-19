@@ -118,41 +118,71 @@ Si todo va bien, en el monitor verás algo como:
 
 ## Qué hace hoy
 
-- ✅ Conecta al WiFi (y reconecta si se cae).
-- ✅ Lee el DHT22 cada ~2 s (ignora lecturas inválidas `NaN`).
-- ✅ **Control local del ventilador** con histéresis (`TEMP_ENCIENDE_VENTILADOR`
-  / `TEMP_APAGA_VENTILADOR`): enciende al subir del umbral, apaga al bajar del
-  inferior — así no titila alrededor de un solo valor.
-- 🟡 **Reporta al backend:** por ahora solo **imprime** lo que enviaría. El
-  envío real está pendiente de la decisión de transporte (abajo).
+- ✅ Conecta al WiFi y reconecta si se cae.
+- ✅ Lee DHT22 (temperatura/humedad), HC-SR04 (nivel de agua), MQ-135 y KY-032.
+- ✅ **Control local** de los relés, sin depender del backend: K1 bombillos y
+  K2 ventiladores con frío, K3 extractores con calor o humedad alta, K4 bomba
+  con nivel de agua bajo (umbrales en `config.h`). Fail-safe si fallan los
+  sensores críticos.
+- ✅ **Envía al backend** cada `INTERVALO_ENVIO_MS` por `POST /ingest` (HTTP o
+  HTTPS) con el header `X-Device-Token`.
+- ✅ **Portal web** para configurarlo y actualizarlo por WiFi, sin USB (abajo).
 
 ---
 
-## Enviar los datos al backend (PENDIENTE)
+## Envío al backend
 
-Falta una decisión de arquitectura y algo de trabajo en el backend:
+Cada ciclo manda hasta 9 lecturas, identificadas por código (nunca por id de
+BD): temperatura, humedad, nivel de agua, los dos motores del L293D y los
+relés K1-K4. Motores y relés van como unidad `estado` (1 = encendido desde el
+último envío, 0 = apagado). Un sensor que falla en el ciclo se omite y el
+resto se envía igual.
 
-1. **Elegir transporte** (ver `enviarLectura()` en `main.cpp`):
-   - **MQTT** — el ESP32 publica a un broker (Mosquitto) y un consumidor en el
-     backend lo guarda. Más robusto; encaja con `codigo_topic`. Librería:
-     `PubSubClient`.
-   - **HTTP** — el ESP32 hace `POST /ingest` con un token de dispositivo.
-     Más simple de arrancar. Librería: `HTTPClient` (ya viene con el ESP32).
-2. **Construir la puerta en el backend:** hoy la única entrada de mediciones es
-   `POST /mediciones`, protegida con **JWT + rol** (login humano). Un ESP32 no
-   puede loguearse así, por lo que falta crear la vía de ingesta para
-   dispositivos (broker+consumidor MQTT, o un endpoint `/ingest` con token).
-3. **Identificar por código, no por id:** el firmware manda
-   `DEVICE_CODIGO_TOPIC` + el código del sensor (p. ej. `TEMP-G1-01`); el
-   backend resuelve código → `sensor_id`. Nunca quemar ids numéricos de BD aquí.
+Los códigos (`CODIGO_SENSOR_*`, `CODIGO_MOTOR_*`, `CODIGO_RELE_*` en
+`config.h`) tienen que existir como sensores del mismo dispositivo en el
+backend, o el backend descarta esas lecturas. Para registrarlos de una vez en
+una base local:
+
+```bash
+docker compose exec backend pnpm run seed:sensores-esp32 <codigo_topic>
+```
+
+En producción se registran desde la app (Sensores), con el mismo código,
+tipo y unidad.
 
 ---
 
-## Próximos pasos
+## Portal web y actualización por WiFi (OTA)
 
-- [ ] Confirmar que el "latido" sube y se ve en el monitor serie.
-- [ ] Ajustar `config.h` (WiFi, pines, umbrales reales).
-- [ ] Decidir transporte: **MQTT** vs **HTTP `/ingest`**.
-- [ ] Implementar `enviarLectura()` según lo decidido.
-- [ ] Construir en el backend la vía de ingesta para dispositivos.
-- [ ] (Frontend) cambiar las lecturas en vivo de Firebase → backend.
+El ESP32 sirve un portal en `http://<IP del ESP32>/`:
+
+| Página | Qué hace | Clave |
+|---|---|---|
+| `/` | Estado: WiFi, backend, último envío, MAC, versión | No |
+| `/config` | Cambiar red WiFi, URL del backend y token (se guardan en el ESP32) | `admin` + `PORTAL_PASSWORD` |
+| `/actualizar` | Subir un `firmware.bin` nuevo sin USB | `admin` + `PORTAL_PASSWORD` |
+
+- Lo de `config.h` (WiFi, `BACKEND_URL`, `DEVICE_TOKEN`) es la configuración
+  de fábrica; lo guardado en el portal tiene prioridad.
+- Si pasa `PORTAL_AP_TRAS_MS` sin WiFi, el ESP32 crea su red propia
+  **Avisens-XXXX** (clave `PORTAL_AP_PASSWORD`) con el portal en
+  `http://192.168.4.1`, para configurar una red nueva.
+- El `firmware.bin` para `/actualizar` lo deja PlatformIO en
+  `.pio/build/esp32dev/` al compilar (✓ Build).
+- Rescate por USB: el comando `BORRAR_CONFIG` en el monitor serie vuelve a
+  la configuración de `config.h`.
+- **Una sola vez por USB:** `platformio.ini` usa la tabla de particiones
+  `min_spiffs.csv`; un ESP32 grabado con la tabla anterior necesita una
+  grabación por cable antes de poder actualizarse por WiFi.
+
+> Si tu `config.h` es anterior a este cambio, copia de `config.example.h` los
+> `#define PORTAL_*` (y los `CODIGO_*` nuevos) o no compila.
+
+---
+
+## Sin USB: alimentación desde fuente
+
+El firmware arranca solo al recibir corriente; el USB solo hace falta para
+grabar y ver el monitor. Con una fuente ATX: +5 V (rojo) a **VIN** y GND
+(negro) a **GND**. La fuente solo enciende con PS_ON (verde) unido a un GND;
+el morado (5VSB) da 5 V siempre.

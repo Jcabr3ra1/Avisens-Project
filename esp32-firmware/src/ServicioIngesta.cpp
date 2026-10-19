@@ -1,8 +1,10 @@
 #include "ServicioIngesta.h"
 #include <esp_system.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include "config.h"
+#include "ConfigDispositivo.h"
 
 String generarIdLote() {
   uint8_t bytes[16];
@@ -53,11 +55,26 @@ bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote)
 
   String body = "{\"id_lote\":\"" + idLote + "\",\"lecturas\":[" + lecturas + "]}";
 
+  // URL y token salen de la configuración del portal (o de config.h): así
+  // se apunta al backend desplegado sin recompilar.
+  const ConfigDispositivo &cfg = configDispositivo();
+  const bool conTls = cfg.backendUrl.startsWith("https://");
+
   for (int intento = 1; intento <= MAX_REINTENTOS_INGESTA; intento++) {
     HTTPClient http;
-    http.begin(BACKEND_URL);
+    WiFiClient clientePlano;
+    WiFiClientSecure clienteTls;
+    if (conTls) {
+      // Cifra el tráfico pero no valida el certificado del servidor: evita
+      // cargar y renovar la CA en el firmware, a cambio de no detectar un
+      // servidor suplantado en la red. Aceptable para el prototipo.
+      clienteTls.setInsecure();
+      http.begin(clienteTls, cfg.backendUrl);
+    } else {
+      http.begin(clientePlano, cfg.backendUrl);
+    }
     http.addHeader("Content-Type", "application/json");
-    http.addHeader("X-Device-Token", DEVICE_TOKEN);
+    http.addHeader("X-Device-Token", cfg.token);
     http.setTimeout(TIMEOUT_INGESTA_MS);
 
     int codigo = http.POST(body);
@@ -73,7 +90,7 @@ bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote)
       // reintentando igual que antes.
       if (codigo >= 400 && codigo < 500) {
         LOG_ERROR("Ingesta: error " + String(codigo) +
-                  " del backend (no se reintenta -- revisar DEVICE_TOKEN/BACKEND_URL)");
+                  " del backend (no se reintenta -- revisar el token y la URL del backend en el portal)");
         return false;
       }
 

@@ -46,6 +46,17 @@
 #define CODIGO_RELE_K3 "REL-K3-G1-01" // Extractores
 #define CODIGO_RELE_K4 "REL-K4-G1-01" // Bomba de agua
 
+// ─── Portal web y actualización por WiFi (OTA) ───────────
+// En http://<IP del ESP32>/ : estado, /config (WiFi, URL del backend y
+// token, guardados en el ESP32) y /actualizar (subir firmware .bin).
+// Usuario "admin" con esta clave. Lo de arriba (WiFi, BACKEND_URL,
+// DEVICE_TOKEN) queda como configuración de fábrica.
+#define PORTAL_PASSWORD "CAMBIA_ESTA_CLAVE"
+// Red propia "Avisens-XXXX" que el ESP32 crea si no logra conectarse
+// al WiFi; el portal queda en http://192.168.4.1. Mínimo 8 caracteres.
+#define PORTAL_AP_PASSWORD "CAMBIA_ESTA_CLAVE"
+#define PORTAL_AP_TRAS_MS 60000 // sin WiFi este tiempo -> red propia
+
 // ─── SENSORES (pines) ────────────────────────────────────
 #define DHTPIN 4
 #define DHTTYPE DHT22

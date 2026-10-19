@@ -17,6 +17,8 @@
 #include "Persiana.h"
 #include "ConexionWiFi.h"
 #include "ServicioIngesta.h"
+#include "ConfigDispositivo.h"
+#include "PortalWeb.h"
 
 //  INSTANCIAS GLOBALES
 
@@ -38,7 +40,8 @@ Persiana persiana;
 #if !defined(WIFI_SSID) || !defined(WIFI_PASSWORD)
 #error "Define WIFI_SSID y WIFI_PASSWORD en include/config.h (ver config.example.h) antes de compilar."
 #endif
-ConexionWiFi conexionWiFi(WIFI_SSID, WIFI_PASSWORD);
+// La red sale de configDispositivo() en setup(): la del portal o config.h.
+ConexionWiFi conexionWiFi;
 
 // ─── Variables de sincronización ─────────────────────────
 unsigned long ultimaLecturaSensores = 0;
@@ -204,6 +207,14 @@ void tareaGalpon(void *pvParameters)
         sensorPeso.tara();
         sensorPeso.setFactor(HX711_FACTOR_ESCALA);
         calibracionCompletada = true;
+      }
+      else if (cmd == "BORRAR_CONFIG")
+      {
+        // Rescate por USB si se guardó una red o URL que no funciona.
+        LOG_WARN("Configuración del portal borrada: se reinicia con config.h");
+        borrarConfigDispositivo();
+        delay(500);
+        ESP.restart();
       }
       else if (cmd == "RELES")
       {
@@ -425,15 +436,26 @@ void tareaWiFi(void *pvParameters)
 {
   Serial.println("[WiFi Task] Iniciada en Core 1");
 
+  // El portal escucha también en la red propia, así que arranca aunque
+  // todavía no haya conexión al WiFi.
+  iniciarPortalWeb(conexionWiFi);
   vTaskDelay(pdMS_TO_TICKS(5000));
+
+  unsigned long ultimoAvisoSinWifi = 0;
 
   for (;;)
   {
     conexionWiFi.actualizar();
+    atenderPortalWeb();
 
     if (!WiFi.isConnected())
     {
-      LOG_WARN("WiFi desconectado - Reintentando conexión");
+      // La vuelta es cada 10 ms (para el portal): avisar cada 5 s basta.
+      if (millis() - ultimoAvisoSinWifi >= 5000)
+      {
+        ultimoAvisoSinWifi = millis();
+        LOG_WARN("WiFi desconectado - Reintentando conexión");
+      }
     }
     else if (millis() - ultimaEnvioTelemetria >= INTERVALO_ENVIO_MS)
     {
@@ -461,10 +483,10 @@ void tareaWiFi(void *pvParameters)
       ciclo.humedad = lectura.humedad;
       ciclo.incluirAgua = leerSnapshotAgua(ciclo.distanciaAgua);
       ciclo.actuadores = tomarEstadoActuadores();
-      enviarLecturaConReintentos(ciclo, generarIdLote());
+      reportarEnvioPortal(enviarLecturaConReintentos(ciclo, generarIdLote()));
     }
 
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
 
@@ -497,6 +519,8 @@ void setup()
   sensorPeso.begin();
 
   Serial.println("[SETUP] Iniciando enlace WiFi asíncrono...");
+  cargarConfigDispositivo();
+  conexionWiFi.configurar(configDispositivo().ssid, configDispositivo().password);
   conexionWiFi.comenzar();
 
   // ─── Tareas FreeRTOS en Cores Independientes ──────────────
@@ -514,7 +538,7 @@ void setup()
   xTaskCreatePinnedToCore(
       tareaWiFi,
       "tareaWiFi",
-      8192,
+      12288, // el handshake TLS (backend https) no cabe en 8 KB
       NULL,
       1,
       NULL,
@@ -527,6 +551,8 @@ void setup()
   Serial.println("  REARME - Reiniciar sistema desde INIT");
   Serial.println("  K1..K4 ON|OFF|AUTO - Probar un rele a mano (tambien VENTILADOR, BOMBA...)");
   Serial.println("  RELES  - Ver estado de los 4 reles");
+  Serial.println("  BORRAR_CONFIG - Olvidar la config del portal y volver a config.h");
+  Serial.println("Portal web: http://<IP del ESP32>/ (o http://192.168.4.1 en su red propia)");
   Serial.println("");
 }
 
