@@ -79,6 +79,7 @@
 .mgr-sensor--critico .mgr-rango-marca { color: var(--danger3); background-color: transparent; }
 .mgr-sensor--critico .mgr-rango-marca { background: var(--danger3); }
 .mgr-sensor--offline .mgr-sensor-valor strong,
+.mgr-sensor--obsoleta .mgr-sensor-valor strong,
 .mgr-sensor--lectura_no_disponible .mgr-sensor-valor strong { color: var(--text-muted); }
 
 .mgr-tarjeta-esqueleto { height: 170px; border-radius: var(--radius-lg); }

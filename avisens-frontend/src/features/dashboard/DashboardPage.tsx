@@ -39,7 +39,7 @@ function DashboardPage() {
     [monitoreo, dashboard.granjaId],
   )
   const galponMonitoreo = monitoreoGranja.find((item) => item.id === dashboard.galponId) ?? null
-  const sensoresDelGalpon = galponMonitoreo?.sensores ?? []
+  const sensoresDelGalpon = (galponMonitoreo?.sensores ?? []).filter((s) => !s.esEstado)
   const { indicadores, comparacion, cargando: cargandoLote } = useIndicadoresLote(dashboard.lote?.id ?? null)
   const rol = getRol()
   const nombre = dashboard.usuario?.nombre?.trim().split(/\s+/)[0] || 'equipo'

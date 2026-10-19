@@ -139,7 +139,7 @@ agruparlo todo en "hecho" o "falta":
 | **Recomendaciones automáticas a partir de los KPIs** | ✅ Implementado e integrado; sin validar con uso real todavía |
 | **Copiloto conversacional** | ✅ Implementado e integrado (usa un modelo de lenguaje de Anthropic con herramientas); requiere una clave de API configurada, y su comportamiento en uso real aún no está validado a fondo |
 | **Comandos de voz** | ✅ Implementado e integrado (interpreta y registra comandos de un vocabulario controlado, con sincronización para uso sin conexión); sin validar con uso real todavía |
-| **Firmware del sensor ESP32** | 🔧 El firmware compila para el entorno `esp32dev` y implementa envío HTTPS validado por CA y token de dispositivo, con control local separado de la red. La prueba física completa (placa, sensor, fuente, red y backend) sigue pendiente de hardware real. |
+| **Firmware del sensor ESP32** | 🔧 El firmware compila para el entorno `esp32dev` y implementa envío HTTPS validado por CA y token de dispositivo, con control local separado de la red. La prueba física completa (placa, sensor, fuente, red y backend) sigue pendiente de hardware real. **Alcance:** el HTTPS validado por CA es del firmware monolítico de `develop`; el firmware modular (MQ-135, HX711, relés y control remoto) envía hoy por HTTP y portar TLS está pendiente (ver `esp32-firmware/README.md`). |
 | **App Android** | 🔧 Existe una app nativa básica (inicio de sesión y parte de la bitácora); **no** es todavía la versión multiplataforma planeada, y le falta buena parte de lo que ya tiene la web |
 | **Predicciones por Machine Learning** (peso, FCR, riesgo de mortalidad) | 🔧 El servicio existe y se está ajustando — sus resultados **no** se presentan todavía como una predicción validada para producción |
 | **Bioacústica / visión, modo multi-granja (SaaS)** | 📋 Planeado, sin construir todavía |
@@ -528,6 +528,11 @@ corre separado del control local del ventilador. La configuración local debe
 apuntar al hostname documentado en `esp32-firmware/README.md`; no se versionan
 WiFi ni tokens. La compilación y la prueba física completa aún requieren una
 placa concreta, fuente adecuada, sensores, red y hardware disponibles.
+
+> **Alcance según la rama:** lo anterior (HTTPS con CA y control del ventilador)
+> describe el firmware monolítico de `develop`. El firmware modular de la rama
+> `feat/iot-mq135-hx711` envía por HTTP y controla los relés K1-K4; el TLS está
+> pendiente de portar. Detalle en `esp32-firmware/README.md`.
 
 ## Calidad y flujo de colaboración
 

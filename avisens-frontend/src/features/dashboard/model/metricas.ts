@@ -1,4 +1,5 @@
 import type { Medicion } from '@features/sensores/api/mediciones'
+import type { EstadoSensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 
 export type ResumenSerie = {
   minimo: number | null
@@ -45,13 +46,23 @@ export function resumirSerie(serie: PuntoSerie[]): ResumenSerie {
 // Alto de cada barra en porcentaje. Se escala contra el máximo de la propia
 // serie, no contra un tope fijo: una humedad de 58 y una temperatura de 27
 // tienen que verse ambas con relieve.
-export function etiquetaEstado(estado: string): string {
-  if (estado === 'optimo') return 'Óptimo'
-  if (estado === 'advertencia') return 'Atención'
-  if (estado === 'critico') return 'Crítico'
-  if (estado === 'offline') return 'Sin señal'
-  if (estado === 'lectura_no_disponible') return 'No disponible'
-  return 'Sin umbral'
+export function alturaBarra(valor: number, maximo: number | null): number {
+  if (!maximo || maximo <= 0) return 0
+  return Math.max(4, Math.round((valor / maximo) * 100))
+}
+
+const ETIQUETAS_ESTADO_SENSOR: Record<EstadoSensorVista, string> = {
+  optimo: 'Óptimo',
+  advertencia: 'Atención',
+  critico: 'Crítico',
+  sin_umbral: 'Sin umbral',
+  offline: 'Sin señal',
+  lectura_no_disponible: 'No disponible',
+  obsoleta: 'Desactualizado',
+}
+
+export function etiquetaEstado(estado: EstadoSensorVista): string {
+  return ETIQUETAS_ESTADO_SENSOR[estado]
 }
 
 export function rangoUmbral(minimo: number | null, maximo: number | null, unidad: string): string {

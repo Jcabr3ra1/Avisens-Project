@@ -6,7 +6,10 @@ import { iconoSensor } from '@shared/ui/sensorIcon'
 import { useFocoAtrapado } from '@shared/ui/Modal/useFocoAtrapado'
 import { SensorDetail } from '@features/monitoreo/SensorDetail'
 import {
+  AYUDA_SALIDA_REPORTADA,
+  estaEncendido,
   formatearUltimaLectura,
+  textoSalidaReportada,
   tieneLecturaUtil,
   useMonitoreoAmbiental,
   type EstadoSensorVista,
@@ -28,9 +31,12 @@ const ETIQUETA: Record<EstadoSensorVista, string> = {
   sin_umbral: 'Sin umbral',
   offline: 'Sin señal',
   lectura_no_disponible: 'Sin dato',
+  obsoleta: 'Desactualizado',
 }
 
-const GRAVEDAD: EstadoSensorVista[] = ['critico', 'advertencia', 'offline', 'lectura_no_disponible', 'sin_umbral', 'optimo']
+// 'obsoleta' (el dato existe pero ya no es reciente) pesa más que 'optimo': sin
+// esto, un galpón con todos los sensores desactualizados se vería como óptimo.
+const GRAVEDAD: EstadoSensorVista[] = ['critico', 'advertencia', 'obsoleta', 'offline', 'lectura_no_disponible', 'sin_umbral', 'optimo']
 
 function estadoDeGalpon(galpon: GalponMonitoreoVista): EstadoSensorVista | null {
   if (galpon.sensores.length === 0) return null
@@ -39,6 +45,9 @@ function estadoDeGalpon(galpon: GalponMonitoreoVista): EstadoSensorVista | null 
 
 function valorLegible(sensor: SensorVista): string {
   if (sensor.valor === null) return '—'
+  // Relés y motores informan la salida que el ESP32 ordenó (1/0), no una
+  // medida: se dice así y no como un número suelto.
+  if (sensor.esEstado) return textoSalidaReportada(estaEncendido(sensor.valor))
   return Number.isInteger(sensor.valor) ? String(sensor.valor) : sensor.valor.toFixed(1)
 }
 
@@ -152,7 +161,9 @@ function MonitoreoGranja({ granjaId, granjaNombre, onCerrar }: Props) {
                   <motion.ul key={galpon.id} className="mgr-grid" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                     {galpon.sensores.map((sensor) => {
                       const posicion = posicionEnRango(sensor)
-                      const util = tieneLecturaUtil(sensor.estado)
+                      // Los sensores de estado (relés, motores) no tienen gauge ni
+                      // histórico de valores: el panel de detalle no aplica.
+                      const util = tieneLecturaUtil(sensor.estado) && !sensor.esEstado
                       return (
                         <li key={sensor.id}>
                           <button
@@ -165,10 +176,13 @@ function MonitoreoGranja({ granjaId, granjaNombre, onCerrar }: Props) {
                               <span className="mgr-sensor-icono" aria-hidden="true">{iconoSensor(sensor.tipo, 18)}</span>
                               <span className="mgr-sensor-tipo">{sensor.tipo}</span>
                               <span className="mgr-estado">{ETIQUETA[sensor.estado]}</span>
+                              {sensor.sinCalibrar && sensor.valor !== null && (
+                                <span className="mgr-estado" title="El ESP32 envió esta lectura sin calibración: el número no es una medida física confirmada.">Sin calibrar</span>
+                              )}
                             </span>
                             <span className="mgr-sensor-valor">
-                              <strong>{valorLegible(sensor)}</strong>
-                              <small>{sensor.unidad}</small>
+                              <strong title={sensor.esEstado ? AYUDA_SALIDA_REPORTADA : undefined}>{valorLegible(sensor)}</strong>
+                              {!sensor.esEstado && <small>{sensor.unidad}</small>}
                             </span>
                             {posicion !== null ? (
                               <span className="mgr-rango" aria-label={`Rango ideal ${sensor.minUmbral} a ${sensor.maxUmbral} ${sensor.unidad}`}>
