@@ -179,6 +179,33 @@
   display: block;
 }
 
+.operario-link-crecimiento {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: auto;
+  min-height: 44px;
+  padding: 0 0.6rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.operario-link-crecimiento:hover {
+  background: var(--surface-hover);
+}
+
+.operario-link-crecimiento:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .operario-galpon-head p,
 .operario-galpon-head span,
 .operario-lote-activo span {

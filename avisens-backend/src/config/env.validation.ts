@@ -94,7 +94,10 @@ class EnvironmentVariables {
 }
 
 export function validateEnv(config: Record<string, unknown>) {
-  const validated = plainToInstance(EnvironmentVariables, config, {
+  const definidas = Object.fromEntries(
+    Object.entries(config).filter(([, valor]) => valor !== ''),
+  );
+  const validated = plainToInstance(EnvironmentVariables, definidas, {
     enableImplicitConversion: true,
   });
 

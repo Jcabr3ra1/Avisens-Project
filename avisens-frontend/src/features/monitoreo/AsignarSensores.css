@@ -111,10 +111,32 @@
 .cs-tabla th { padding: .6rem var(--space-4); border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: .69rem; font-weight: 750; letter-spacing: .05em; text-align: left; text-transform: uppercase; }
 .cs-tabla td { padding: .6rem var(--space-4); border-bottom: 1px solid var(--border-subtle); vertical-align: middle; }
 .cs-tabla tbody tr:last-child td { border-bottom: 0; }
-.cs-tabla th:nth-child(1) { width: 21%; }
-.cs-tabla th:nth-child(2) { width: 22%; }
-.cs-tabla th:nth-child(3) { width: 19%; }
-.cs-tabla th:nth-child(4) { width: 38%; }
+.cs-tabla { min-width: 860px; }
+.cs-tabla th:nth-child(1) { width: 18%; }
+.cs-tabla th:nth-child(2) { width: 21%; }
+.cs-tabla th:nth-child(3) { width: 17%; }
+.cs-tabla th:nth-child(4) { width: 30%; }
+.cs-tabla th:nth-child(5) { width: 14%; }
+.cs-celda-acciones { text-align: right; }
+.cs-acciones { display: inline-flex; align-items: center; gap: var(--space-1); }
+.cs-accion { display: inline-grid; place-items: center; min-width: 36px; min-height: 36px; padding: 0 var(--space-3); border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-base); color: var(--text-secondary); font: inherit; font-size: .76rem; font-weight: 700; cursor: pointer; transition: background 150ms ease, border-color 150ms ease, color 150ms ease; }
+.cs-accion:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-tinted); color: var(--text-primary); }
+.cs-accion--peligro { padding: 0; color: var(--danger); }
+.cs-accion--peligro:hover:not(:disabled) { border-color: var(--danger-border); background: var(--danger-soft); color: var(--danger3); }
+.cs-accion:disabled { opacity: .5; cursor: not-allowed; }
+.cs-accion:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.cs-tabla tr.is-inactivo td:not(.cs-celda-acciones) { opacity: .6; }
+.cs-desactivados { margin-top: var(--space-3); border: 1px dashed var(--border-default); border-radius: var(--radius-md); background: var(--surface-tinted); }
+.cs-desactivados > summary { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .5rem; padding: .7rem var(--space-4); color: var(--text-secondary); font-size: .84rem; font-weight: 700; list-style: none; cursor: pointer; }
+.cs-desactivados > summary::-webkit-details-marker { display: none; }
+.cs-desactivados > summary small { flex-basis: 100%; padding-left: 1.4rem; color: var(--text-muted); font-size: .74rem; font-weight: 500; }
+.cs-desactivados > summary .cs-flecha { transition: transform 160ms ease; transform: rotate(-90deg); }
+.cs-desactivados[open] > summary .cs-flecha { transform: rotate(0); }
+.cs-desactivados > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; border-radius: var(--radius-md); }
+.cs-desactivados .cs-tabla-scroll { margin: 0 var(--space-3) var(--space-3); }
+.cs-tabla tr[aria-busy='true'] { pointer-events: none; opacity: .6; }
+.cs-sensor-estado--activo { color: var(--success); font-weight: 700; }
+.cs-sensor-estado--inactivo { color: var(--text-muted); font-weight: 700; }
 
 .cs-sensor { display: flex; min-width: 0; align-items: center; gap: var(--space-2); }
 .cs-sensor .cs-opcion-icono { width: 32px; height: 32px; }

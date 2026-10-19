@@ -1,0 +1,108 @@
+.gc {
+  margin: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.gc-lienzo {
+  width: 100%;
+  min-width: 0;
+}
+
+.gc-lienzo .recharts-surface:focus,
+.gc-lienzo .recharts-wrapper:focus {
+  outline: none;
+}
+
+.gc-detalle {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 190px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-md);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.gc-detalle strong {
+  font-size: 0.9rem;
+}
+
+.gc-detalle-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--text-secondary);
+}
+
+.gc-detalle-fila::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  flex: none;
+  margin-right: auto;
+  border-radius: 50%;
+}
+
+.gc-detalle-fila b {
+  color: var(--text-primary);
+}
+
+.gc-detalle-fila--real::before { background: var(--avisens-ink); }
+.gc-detalle-fila--proyeccion::before { background: var(--primary); }
+.gc-detalle-fila--estandar::before { background: var(--avisens-maize); }
+.gc-detalle-fila--marca::before { background: var(--border-strong); }
+
+.gc-detalle-rango {
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.gc-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.1rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.gc-clave {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.gc-clave::before {
+  content: '';
+  flex: none;
+  width: 22px;
+  height: 0;
+  border-top: 2.5px solid currentColor;
+}
+
+.gc-clave--real::before {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--surface-base);
+  border-radius: 50%;
+  background: var(--avisens-ink);
+  box-shadow: 0 0 0 1px var(--avisens-ink);
+}
+
+.gc-clave--proyeccion::before { border-top: 2.5px dashed var(--primary); }
+.gc-clave--estandar::before { border-top-color: var(--avisens-maize); }
+.gc-clave--marca::before { border-top: 2px dotted var(--border-strong); }
+.gc-clave--objetivo::before { border-top: 2px dashed var(--danger); }
+
+.gc-clave--banda::before {
+  height: 10px;
+  border: 0;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+}

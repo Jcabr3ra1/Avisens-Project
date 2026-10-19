@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ describe('SensoresService', () => {
       findMany: jest.fn(),
       count: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     },
@@ -108,7 +110,10 @@ describe('SensoresService', () => {
 
       expect(prisma.sensor.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { galpon: { granja: { propietario_id: 5 } } },
+          where: {
+            galpon: { granja: { propietario_id: 5 } },
+            estado: { not: 'retirado' },
+          },
         }),
       );
     });
@@ -117,7 +122,7 @@ describe('SensoresService', () => {
       await service.listar(admin, { page: 1, limit: 10 });
 
       expect(prisma.sensor.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: undefined }),
+        expect.objectContaining({ where: { estado: { not: 'retirado' } } }),
       );
     });
   });
@@ -170,6 +175,62 @@ describe('SensoresService', () => {
         service.actualizar(1, { dispositivo_id: 9 }, admin),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.sensor.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('retiro de sensores', () => {
+    const sensorDe = (estado: string) => ({
+      id: 7,
+      estado,
+      galpon: { id: 1, granja: { propietario_id: 5 } },
+      dispositivo: { id: 10 },
+    });
+
+    it('borra de verdad un sensor que nunca tuvo lecturas ni alertas', async () => {
+      prisma.sensor.findUnique.mockResolvedValue(sensorDe('inactivo'));
+      prisma.sensor.findFirst.mockResolvedValue(null);
+
+      const r = await service.eliminarPermanente(7, admin);
+
+      expect(prisma.sensor.delete).toHaveBeenCalledWith({ where: { id: 7 } });
+      expect(r).toEqual({ id: 7, eliminado: true, retirado: false });
+    });
+
+    it('retira y libera la conexión de un sensor con historial, sin borrarlo', async () => {
+      prisma.sensor.findUnique.mockResolvedValue(sensorDe('inactivo'));
+      prisma.sensor.findFirst.mockResolvedValue({ id: 7 });
+
+      const r = await service.eliminarPermanente(7, admin);
+
+      expect(prisma.sensor.delete).not.toHaveBeenCalled();
+      expect(prisma.sensor.update).toHaveBeenCalledWith({
+        where: { id: 7 },
+        data: { estado: 'retirado', canal: null },
+      });
+      expect(r).toEqual({ id: 7, eliminado: false, retirado: true });
+    });
+
+    it('un sensor retirado no se puede activar, desactivar ni editar', async () => {
+      prisma.sensor.findUnique.mockResolvedValue(sensorDe('retirado'));
+
+      await expect(service.activar(7, admin)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(service.desactivar(7, admin)).rejects.toThrow(
+        ConflictException,
+      );
+      await expect(
+        service.actualizar(7, { modelo: 'DHT22' }, admin),
+      ).rejects.toThrow(ConflictException);
+      expect(prisma.sensor.update).not.toHaveBeenCalled();
+    });
+
+    it('no permite retirar por edición: solo con Eliminar', async () => {
+      prisma.sensor.findUnique.mockResolvedValue(sensorDe('activo'));
+
+      await expect(
+        service.actualizar(7, { estado: 'retirado' }, admin),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

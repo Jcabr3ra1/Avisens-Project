@@ -20,6 +20,7 @@ import { ROLES } from '../../common/auth/roles';
 import { GranjasService } from './granjas.service';
 import { CreateGranjaDto } from './dto/create-granja.dto';
 import { UpdateGranjaDto } from './dto/update-granja.dto';
+import { DatosGranjaDto } from './dto/datos-granja.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
@@ -66,6 +67,20 @@ export class GranjasController {
     return this.granjasService.actualizar(id, dto, req.user);
   }
 
+  @Patch(':id/datos')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({
+    summary:
+      'Completar la dirección, el municipio y el departamento de una granja. Coordenadas y área las registra el administrador',
+  })
+  actualizarDatos(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: DatosGranjaDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.granjasService.actualizar(id, dto, req.user);
+  }
+
   @Patch(':id/activar')
   @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({ summary: 'Activar una granja' })
@@ -83,7 +98,8 @@ export class GranjasController {
   @Delete(':id/permanente')
   @Roles(ROLES.ADMINISTRADOR)
   @ApiOperation({
-    summary: 'Eliminar una granja de forma permanente (casos legales) — sólo Administrador',
+    summary:
+      'Eliminar una granja de forma permanente (casos legales) — sólo Administrador',
   })
   eliminarPermanente(
     @Param('id', ParseIntPipe) id: number,

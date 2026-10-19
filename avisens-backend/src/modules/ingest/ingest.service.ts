@@ -11,6 +11,7 @@ import {
   type OrdenParaDispositivo,
 } from '../ordenes-actuadores/ordenes-actuadores.service';
 import { GPIO_DHT22 } from '../sensores/conexion-sensor';
+import { FirmwareService } from '../firmware/firmware.service';
 
 interface MedicionNueva {
   sensor_id: number;
@@ -28,9 +29,25 @@ export class IngestService {
     private observability: ObservabilityService,
     private alertas: AlertasService,
     private ordenes: OrdenesActuadoresService,
+    private firmware: FirmwareService,
   ) {}
 
-  async configuracion(dispositivo: DispositivoAutenticado) {
+  async configuracion(
+    dispositivo: DispositivoAutenticado,
+    versionFirmware?: string,
+  ) {
+    if (versionFirmware && /^[\w.-]{1,32}$/.test(versionFirmware)) {
+      await this.prisma.dispositivo.updateMany({
+        where: {
+          id: dispositivo.id,
+          OR: [
+            { version_firmware: null },
+            { version_firmware: { not: versionFirmware } },
+          ],
+        },
+        data: { version_firmware: versionFirmware },
+      });
+    }
     const sensores = await this.prisma.sensor.findMany({
       where: {
         dispositivo_id: dispositivo.id,
@@ -64,6 +81,7 @@ export class IngestService {
       version: 1,
       controlador: dispositivo.codigo_topic,
       conexiones: [...conexiones.values()],
+      firmware: await this.firmware.vigente(),
     };
   }
 

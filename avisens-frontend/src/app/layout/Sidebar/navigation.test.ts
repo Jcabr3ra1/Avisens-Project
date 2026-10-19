@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ROL_ADMIN, ROL_OPERARIO, ROL_PROPIETARIO, esGrupo, puedeAcceder } from './navConfig'
-import { LINK_DETAILS, descripcionDe, tituloDeRuta, matchesPath, navigationFilter, navigationSpaces, spaceForPath, visibleSections } from './navigation'
+import { LINK_DETAILS, descripcionDe, tituloDeRuta, matchesPath, navigationFilter, navigationSpaces, spaceForPath, tieneUnSoloDestino, visibleSections } from './navigation'
 
 describe('navegación por espacios', () => {
   it('solo ofrece espacios e ítems permitidos para la cuenta', () => {
@@ -46,11 +46,30 @@ describe('navegación por espacios', () => {
     expect(puedeAcceder('/alertas', ROL_ADMIN)).toBe(true)
   })
 
+  it('lleva la guía de peso dentro del lote: sin ítem propio, pero con acceso por ruta', () => {
+    for (const rol of [ROL_PROPIETARIO, ROL_OPERARIO]) {
+      const rutas = visibleSections(rol).flatMap((section) => section.items.map((item) => item.path))
+      expect(rutas).not.toContain('/guia-crecimiento')
+      expect(puedeAcceder('/guia-crecimiento', rol)).toBe(true)
+    }
+  })
+
+  it('al propietario le deja solo Granjas en su espacio: bitácora, monitoreo y alertas viven dentro del galpón', () => {
+    const espacioGranja = navigationSpaces(visibleSections(ROL_PROPIETARIO)).find((space) => space.id === 'granja')
+    const rutas = espacioGranja?.sections.flatMap((section) => section.items.map((item) => item.path)) ?? []
+    expect(rutas).toEqual(['/granjas'])
+    for (const ruta of ['/bitacora', '/monitoreo', '/alertas']) {
+      expect(puedeAcceder(ruta, ROL_PROPIETARIO)).toBe(true)
+    }
+    expect(tieneUnSoloDestino(espacioGranja)).toBe(true)
+    const gestion = navigationSpaces(visibleSections(ROL_PROPIETARIO)).find((space) => space.id === 'gestion')
+    expect(tieneUnSoloDestino(gestion)).toBe(false)
+  })
+
   it('ofrece el monitoreo en Organizaciones al administrador y conserva el acceso de los otros roles', () => {
     const rutas = (rol: string) => visibleSections(rol).flatMap((section) => section.items.map((item) => item.path))
     expect(rutas(ROL_ADMIN)).not.toContain('/monitoreo')
     expect(rutas(ROL_ADMIN)).toContain('/organizaciones')
-    expect(rutas(ROL_PROPIETARIO)).toContain('/monitoreo')
     expect(rutas(ROL_OPERARIO)).toContain('/monitoreo')
     expect(navigationFilter('/organizaciones', 'monitoreo humedad', LINK_DETAILS['/organizaciones'].keywords)).toBe(1)
   })

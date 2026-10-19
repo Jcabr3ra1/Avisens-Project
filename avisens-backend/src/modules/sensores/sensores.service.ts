@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateSensorDto } from './dto/create-sensor.dto';
 import { UpdateSensorDto } from './dto/update-sensor.dto';
 import { esConflictoConexion, validarConexionSensor } from './conexion-sensor';
+import { SENSOR_VIGENTE } from './sensor-vigente';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
 import { verificarDueno } from '../../common/auth/acceso';
@@ -208,7 +209,7 @@ export class SensoresService {
   }
 
   async listar(solicitante: Solicitante, { page, limit }: PaginationQueryDto) {
-    const where = filtroSensores(solicitante);
+    const where = { ...filtroSensores(solicitante), ...SENSOR_VIGENTE };
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.sensor.findMany({
@@ -242,6 +243,12 @@ export class SensoresService {
 
   async actualizar(id: number, dto: UpdateSensorDto, solicitante: Solicitante) {
     const actual = await this.obtener(id, solicitante);
+    this.rechazarSiRetirado(actual.estado);
+    if (dto.estado === 'retirado') {
+      throw new BadRequestException(
+        'Para retirar un sensor usa la acción Eliminar',
+      );
+    }
 
     if (dto.galpon_id !== undefined && dto.galpon_id !== actual.galpon.id) {
       throw new BadRequestException(
@@ -304,7 +311,8 @@ export class SensoresService {
   }
 
   async desactivar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    const sensor = await this.obtener(id, solicitante);
+    this.rechazarSiRetirado(sensor.estado);
 
     await this.prisma.sensor.update({
       where: { id },
@@ -314,7 +322,8 @@ export class SensoresService {
   }
 
   async activar(id: number, solicitante: Solicitante) {
-    await this.obtener(id, solicitante);
+    const sensor = await this.obtener(id, solicitante);
+    this.rechazarSiRetirado(sensor.estado);
     await this.prisma.sensor.update({
       where: { id },
       data: { estado: 'activo' },
@@ -325,7 +334,30 @@ export class SensoresService {
   async eliminarPermanente(id: number, solicitante: Solicitante) {
     await this.obtener(id, solicitante);
 
-    await this.prisma.sensor.delete({ where: { id } });
-    return { id, eliminado: true };
+    const conHistorial = await this.prisma.sensor.findFirst({
+      where: {
+        id,
+        OR: [{ mediciones: { some: {} } }, { alertas: { some: {} } }],
+      },
+      select: { id: true },
+    });
+    if (!conHistorial) {
+      await this.prisma.sensor.delete({ where: { id } });
+      return { id, eliminado: true, retirado: false };
+    }
+
+    await this.prisma.sensor.update({
+      where: { id },
+      data: { estado: 'retirado', canal: null },
+    });
+    return { id, eliminado: false, retirado: true };
+  }
+
+  private rechazarSiRetirado(estado: string) {
+    if (estado === 'retirado') {
+      throw new ConflictException(
+        'Este sensor fue retirado y ya no se puede modificar; registra uno nuevo',
+      );
+    }
   }
 }

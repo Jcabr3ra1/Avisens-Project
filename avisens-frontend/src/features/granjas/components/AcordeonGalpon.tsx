@@ -11,6 +11,7 @@ import type { GalponConLotes } from '../hooks/useEstructuraGranjas'
 import type { IndicadoresDeLote } from '../hooks/useIndicadoresDeLotes'
 import FilaLote from './FilaLote'
 import MenuAcciones from '@shared/ui/MenuAcciones/MenuAcciones'
+import { faltantesGalpon, unir } from '../model/datosDescriptivos'
 
 interface Props {
   galpon: GalponConLotes
@@ -26,6 +27,9 @@ interface Props {
   onEditarLote: (lote: Lote) => void
   onAlternarLote: (lote: Lote) => void
   onEliminarLote: (lote: Lote) => void
+  onEditarDatosGalpon?: (galpon: GalponConLotes) => void
+  onEditarDatosLote?: (lote: Lote) => void
+  onAbrirGuia?: (lote: Lote) => void
 }
 
 const TONO_ESTADO: Record<EstadoOperativo, string> = {
@@ -55,6 +59,9 @@ function AcordeonGalpon({
   onEditarLote,
   onAlternarLote,
   onEliminarLote,
+  onEditarDatosGalpon,
+  onEditarDatosLote,
+  onAbrirGuia,
 }: Props) {
   const temperatura = lecturaPorTipo(galpon.sensores, 'temp')
   const humedad = lecturaPorTipo(galpon.sensores, 'hum')
@@ -62,7 +69,20 @@ function AcordeonGalpon({
   const ocupacion = porcentajeOcupacion(aves, galpon.capacidadAves)
   const panelId = `gr-panel-galpon-${galpon.id}`
 
+  const faltan = faltantesGalpon(galpon.origen)
+  const ficha = [
+    galpon.origen.ancho_metros !== null && galpon.origen.largo_metros !== null
+      ? `${galpon.origen.ancho_metros.toLocaleString('es-CO')} × ${galpon.origen.largo_metros.toLocaleString('es-CO')} m`
+      : null,
+    galpon.capacidadAves !== null ? `Capacidad ${galpon.capacidadAves.toLocaleString('es-CO')} aves` : null,
+    galpon.origen.tipo_techo ? `Techo ${galpon.origen.tipo_techo}` : null,
+    galpon.origen.orientacion ? galpon.origen.orientacion.replace('-', ' – ') : null,
+  ].filter((dato): dato is string => dato !== null)
+
   const acciones = [
+    ...(onEditarDatosGalpon
+      ? [{ etiqueta: 'Editar datos del galpón', onSeleccionar: () => onEditarDatosGalpon(galpon) }]
+      : []),
     ...(permisos.editar
       ? [{ etiqueta: 'Editar galpón', onSeleccionar: () => onEditarGalpon(galpon) }]
       : []),
@@ -146,6 +166,16 @@ function AcordeonGalpon({
 
       {expandido && (
         <div className="gr-galpon-panel" id={panelId}>
+          {(ficha.length > 0 || (faltan.length > 0 && onEditarDatosGalpon)) && (
+            <div className="gr-galpon-ficha">
+              {ficha.map((dato) => <span key={dato} className="gr-dato">{dato}</span>)}
+              {faltan.length > 0 && onEditarDatosGalpon && (
+                <button type="button" className="gr-dato gr-dato--falta" onClick={() => onEditarDatosGalpon(galpon)}>
+                  Completar {unir(faltan)}
+                </button>
+              )}
+            </div>
+          )}
           <div className="gr-lotes-cabecera">
             <h4>Lotes</h4>
             {permisos.crear && (
@@ -185,6 +215,8 @@ function AcordeonGalpon({
                   onEditar={onEditarLote}
                   onAlternar={onAlternarLote}
                   onEliminar={onEliminarLote}
+                  onEditarDatos={onEditarDatosLote}
+                  onAbrirGuia={onAbrirGuia}
                 />
               ))}
             </div>

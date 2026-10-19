@@ -13,6 +13,28 @@ describe('validateEnv', () => {
     expect(() => validateEnv(BASE)).not.toThrow();
   });
 
+  it('trata una variable vacia como no definida', () => {
+    expect(() =>
+      validateEnv({ ...BASE, METRICS_TOKEN: '', UMBRAL_PESAJE_DIAS: '' }),
+    ).not.toThrow();
+    expect(
+      validateEnv({ ...BASE, METRICS_TOKEN: '' }).METRICS_TOKEN,
+    ).toBeUndefined();
+  });
+
+  it('una variable vacia no burla las obligatorias de produccion', () => {
+    expect(() =>
+      validateEnv({
+        ...BASE,
+        NODE_ENV: 'production',
+        CORS_ORIGIN: 'https://app.avisens.example',
+        REDIS_URL: 'redis://redis:6379',
+        ML_INTERNAL_TOKEN: 'ml-token-de-al-menos-32-caracteres-x',
+        METRICS_TOKEN: '',
+      }),
+    ).toThrow(/METRICS_TOKEN/);
+  });
+
   it('exige el token interno de ML en producción', () => {
     expect(() =>
       validateEnv({

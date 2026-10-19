@@ -120,6 +120,12 @@ export const IcSun = (p: P) => (
   </Icon>
 )
 
+export const IcMoon = (p: P) => (
+  <Icon {...p}>
+    <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />
+  </Icon>
+)
+
 export const IcWind = (p: P) => (
   <Icon {...p}>
     <path d="M4 9h11a2.5 2.5 0 1 0-2.5-2.5" />
@@ -294,6 +300,14 @@ export const IcBox = (p: P) => (
   </Icon>
 )
 
+export const IcChip = (p: P) => (
+  <Icon {...p}>
+    <rect x="6.5" y="6.5" width="11" height="11" rx="1.6" />
+    <rect x="9.5" y="9.5" width="5" height="5" rx="0.6" />
+    <path d="M9.5 3.5v3M14.5 3.5v3M9.5 17.5v3M14.5 17.5v3M3.5 9.5h3M3.5 14.5h3M17.5 9.5h3M17.5 14.5h3" />
+  </Icon>
+)
+
 export const IcServer = (p: P) => (
   <Icon {...p}>
     <rect x="3.5" y="4" width="17" height="7" rx="1.4" />
@@ -421,5 +435,21 @@ export const IcArrowDown = (p: P) => (
   <Icon {...p}>
     <path d="M12 4.5v15" />
     <path d="M6 13.5l6 6 6-6" />
+  </Icon>
+)
+
+export const IcEdit = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3z" />
+    <path d="M14.5 7.5l3 3" />
+  </Icon>
+)
+
+export const IcTrash = (p: P) => (
+  <Icon {...p}>
+    <path d="M4 7h16" />
+    <path d="M9 7V4.5h6V7" />
+    <path d="M6 7l1 13h10l1-13" />
+    <path d="M10 11v6M14 11v6" />
   </Icon>
 )

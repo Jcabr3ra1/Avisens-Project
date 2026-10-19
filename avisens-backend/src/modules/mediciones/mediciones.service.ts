@@ -16,6 +16,7 @@ import {
 import { AlertasService } from '../alertas/alertas.service';
 import { EstadoSensor, Prisma } from '@prisma/client';
 import { clasificarFalloAlerta } from '../../common/errores/clasificar-error';
+import { SENSOR_VIGENTE } from '../sensores/sensor-vigente';
 
 const MEDICION_SELECT = {
   id: true,
@@ -154,6 +155,7 @@ export class MedicionesService {
       AND: [
         filtroSensores(solicitante) ?? {},
         galponIds?.length ? { galpon_id: { in: galponIds } } : {},
+        SENSOR_VIGENTE,
       ],
     };
 

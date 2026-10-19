@@ -784,3 +784,164 @@
   .grj-resumen .adm-stat { border-right: 0; border-bottom: 1px solid var(--gr-line); }
   .grj-resumen .adm-stat:last-child { border-bottom: 0; }
 }
+
+/* ─── Datos descriptivos (ficha y «completar») ───────────────── */
+
+.gr-ficha {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0 0 1.05rem;
+  overflow: hidden;
+  border: 1px solid var(--gr-line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+}
+
+.gr-ficha > div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.75rem 1rem;
+  border-left: 1px solid var(--gr-line);
+}
+
+.gr-ficha > div:first-child {
+  border-left: 0;
+}
+
+.gr-ficha dt {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.gr-ficha dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.gr-ficha a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.gr-completar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1.05rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+}
+
+.gr-completar > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.gr-completar strong {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.gr-completar span {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.gr-galpon-ficha,
+.gr-lote-ficha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.gr-galpon-ficha {
+  padding: 0.75rem 0 0.25rem;
+}
+
+.gr-lote-ficha {
+  margin: 0.45rem 0 0.2rem;
+}
+
+.gr-lote-ficha:empty {
+  display: none;
+}
+
+.gr-dato {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 0.6rem;
+  border: 1px solid var(--gr-line);
+  border-radius: var(--radius-full);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.gr-dato--falta {
+  border-style: dashed;
+  border-color: var(--warning-border);
+  background: var(--accent-soft);
+  color: var(--warning);
+  cursor: pointer;
+}
+
+.gr-dato--falta:hover {
+  background: color-mix(in srgb, var(--avisens-maize) 28%, var(--surface-base));
+}
+
+.gr-dato--falta:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .gr-ficha {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gr-ficha > div:nth-child(3) {
+    border-left: 0;
+  }
+
+  .gr-ficha > div:nth-child(n + 3) {
+    border-top: 1px solid var(--gr-line);
+  }
+}
+
+@media (max-width: 560px) {
+  .gr-ficha {
+    grid-template-columns: 1fr;
+  }
+
+  .gr-ficha > div {
+    border-left: 0;
+  }
+
+  .gr-ficha > div + div {
+    border-top: 1px solid var(--gr-line);
+  }
+
+  .gr-completar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.gr-ayuda-coordenadas {
+  margin: -0.35rem 0 1rem;
+}

@@ -54,11 +54,26 @@ lleva ítem propio.
 Llevan ítem propio aunque tengan padre, porque se consultan por urgencia o
 cruzando granjas, no bajando por la jerarquía:
 
-- **Alertas** — se pregunta «¿qué está mal ahora?», no «¿qué pasa en el galpón 3?»
+- **Alertas** — se pregunta «¿qué está mal ahora?», no «¿qué pasa en el galpón 3?».
+  Excepción solo para el **operario** (en «Mi jornada»); para el propietario vive
+  dentro del galpón desde el 2026-10-18 (ver abajo).
 - **Bodega** y **Finanzas** — cruzan varias granjas
 - **Auditoría** — transversal por definición
-- **Guía de peso** — acceso transversal que permite elegir un lote activo;
-  la consulta y planificación conservan el contexto del lote elegido.
+- **Dispositivos** (solo administrador) — opera los controladores ESP32 de toda la
+  plataforma: conexión, sensores de cada galpón y firmware por Wi-Fi. Un
+  controlador pertenece a su galpón, pero la flota y las actualizaciones cruzan
+  todas las organizaciones. En la ficha de la organización el galpón solo
+  muestra cuántos controladores y sensores tiene.
+
+La **Guía de peso** fue excepción hasta el 2026-10-18; desde entonces vive dentro
+del lote: se abre desde la fila del lote en Granjas, desde «Estado del lote» en el
+Resumen y, para el operario, desde su lote en «Mi jornada».
+
+Desde el 2026-10-18 el espacio «Granja» del **propietario** tiene un solo ítem,
+**Granjas**: Bitácora, Monitoreo (pestaña «Ambiente») y Alertas son pestañas del
+galpón seleccionado. Las rutas `/bitacora`, `/monitoreo` y `/alertas` siguen
+existiendo para el operario y para enlaces profundos, pero no se listan en el
+menú del propietario.
 
 ### Al aplicarla
 
@@ -87,3 +102,8 @@ crecimiento**, con el identificador de ese lote en la URL. También se puede ent
 desde **Granja → Guía de peso** en el sidebar: sin un lote en la URL, muestra
 un selector de lotes activos accesibles a la cuenta. No elige un lote automáticamente.
 Desde la guía se vuelve al listado del galpón al que pertenece el lote.
+
+Desde el 2026-10-18 el sidebar de escritorio es un solo riel verde con ícono y
+nombre. Un espacio con varias páginas (Plataforma, Gestión) se despliega dentro
+del mismo riel; al cambiar de sección se cierra y solo queda abierto el de la
+página actual. Dispositivos y Auditoría son accesos directos del riel.

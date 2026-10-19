@@ -17,11 +17,13 @@ describe('DispositivosService', () => {
     dispositivo: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
     },
+    sensor: { deleteMany: jest.fn(), updateMany: jest.fn() },
     galpon: { findUnique: jest.fn() },
     $transaction: jest.fn(),
   };
@@ -171,12 +173,15 @@ describe('DispositivosService', () => {
       expect(whereDe(prisma.dispositivo.findMany).galpon).toEqual({
         granja: { propietario_id: 5 },
       });
+      expect(whereDe(prisma.dispositivo.findMany).retirado_en).toBeNull();
     });
 
     it('un Admin no filtra por dueño', async () => {
       await service.listar(admin, { page: 1, limit: 10 });
 
-      expect(whereDe(prisma.dispositivo.findMany)).toBeUndefined();
+      expect(whereDe(prisma.dispositivo.findMany)).toEqual({
+        retirado_en: null,
+      });
     });
   });
 
@@ -262,35 +267,71 @@ describe('DispositivosService', () => {
       expect(res).toEqual({ id: 1, activo: true });
     });
 
-    it('elimina permanentemente cuando es dueño', async () => {
-      prisma.dispositivo.delete.mockResolvedValue({ id: 1 });
+    it('sin historial borra el controlador y los sensores que nunca midieron', async () => {
+      prisma.$transaction.mockImplementation(
+        (fn: (tx: typeof prisma) => unknown) => fn(prisma),
+      );
+      prisma.dispositivo.findFirst.mockResolvedValue(null);
 
       const res = await service.eliminarPermanente(1, propietario);
 
-      expect(res).toEqual({ id: 1, eliminado: true });
+      expect(prisma.sensor.deleteMany).toHaveBeenCalledWith({
+        where: {
+          dispositivo_id: 1,
+          estado: { not: 'retirado' },
+          mediciones: { none: {} },
+          alertas: { none: {} },
+        },
+      });
+      expect(prisma.dispositivo.delete).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
+      expect(res).toEqual({ id: 1, eliminado: true, retirado: false });
     });
 
-    it('con sensores dentro avisa que hay que borrarlos primero', async () => {
-      prisma.dispositivo.delete.mockRejectedValue(
-        Object.assign(new Error('FK'), { code: 'P2003' }),
+    it('con historial retira sensores y controlador, y revoca su token', async () => {
+      prisma.$transaction.mockImplementation(
+        (fn: (tx: typeof prisma) => unknown) => fn(prisma),
       );
+      prisma.dispositivo.findFirst.mockResolvedValue({ id: 1 });
 
+      const res = await service.eliminarPermanente(1, propietario);
+
+      expect(prisma.sensor.updateMany).toHaveBeenCalledWith({
+        where: { dispositivo_id: 1, estado: { not: 'retirado' } },
+        data: { estado: 'retirado', canal: null },
+      });
+      expect(prisma.dispositivo.delete).not.toHaveBeenCalled();
+      const [{ where, data }] = prisma.dispositivo.update.mock.calls[0] as [
+        { where: { id: number }; data: Record<string, unknown> },
+      ];
+      expect(where).toEqual({ id: 1 });
+      expect(data).toMatchObject({
+        activo: false,
+        token_ingesta: null,
+        token_ingesta_hash: null,
+      });
+      expect(data.retirado_en).toBeInstanceOf(Date);
+      expect(res).toEqual({ id: 1, eliminado: false, retirado: true });
+    });
+
+    it('un controlador retirado no se activa, edita ni regenera token', async () => {
+      prisma.dispositivo.findUnique.mockResolvedValue({
+        id: 1,
+        retirado_en: new Date(),
+        galpon: { granja: { propietario_id: 5 } },
+      });
+
+      await expect(service.activar(1, propietario)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      await expect(
+        service.regenerarToken(1, propietario),
+      ).rejects.toBeInstanceOf(ConflictException);
       await expect(
         service.eliminarPermanente(1, propietario),
       ).rejects.toBeInstanceOf(ConflictException);
-      await expect(service.eliminarPermanente(1, propietario)).rejects.toThrow(
-        /sensores asociados/,
-      );
-    });
-
-    it('un error que no sea de llave foránea se propaga tal cual', async () => {
-      prisma.dispositivo.delete.mockRejectedValue(
-        new Error('se cayó la conexión'),
-      );
-
-      await expect(service.eliminarPermanente(1, propietario)).rejects.toThrow(
-        'se cayó la conexión',
-      );
+      expect(prisma.dispositivo.update).not.toHaveBeenCalled();
     });
   });
 
