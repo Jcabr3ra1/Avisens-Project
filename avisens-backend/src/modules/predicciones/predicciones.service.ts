@@ -262,6 +262,9 @@ export class PrediccionesService {
 
     const cuerpoPrediccion = await this.leerJson(respuesta);
     if (!this.esRespuestaPeso(cuerpoPrediccion)) {
+      this.logger.warn(
+        `Respuesta inesperada de /predecir: ${JSON.stringify(cuerpoPrediccion)}`,
+      );
       throw new BadRequestException(
         'El servicio de predicción devolvió una respuesta inválida',
       );

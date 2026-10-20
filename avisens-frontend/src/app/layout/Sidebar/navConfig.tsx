@@ -217,7 +217,7 @@ export const NAV_SECTIONS: NavSection[] = [
   // de la granja. Los tres primeros son una cadena —lo que hay, lo que se
   // pide, a quién— y están en ese orden a propósito.
   {
-    label: 'Administración',
+    label: 'Gestión',
     items: [
       {
         path: '/inventario',
@@ -238,7 +238,7 @@ export const NAV_SECTIONS: NavSection[] = [
       },
       {
         path: '/usuarios',
-        label: 'Personas',
+        label: 'Operarios',
         icon: <IcUserCircle size={16} />,
         rolesVisibles: [ROL_PROPIETARIO],
       },

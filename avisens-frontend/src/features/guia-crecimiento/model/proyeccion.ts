@@ -13,6 +13,24 @@ export type ProblemaCurva =
 const numero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 })
 const decimal = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 
+export const GRAMOS_POR_LIBRA = 453.59237
+
+export function formatearPeso(
+  g: number | null | undefined,
+  decimalesKg = 2,
+): string {
+  if (g === null || g === undefined || !Number.isFinite(g)) return '—'
+  if (Math.abs(g) < 1000) {
+    return `${numero.format(Math.round(g))} g`
+  }
+  const kg = g / 1000
+  const texto = kg.toLocaleString('es-CO', {
+    minimumFractionDigits: decimalesKg,
+    maximumFractionDigits: decimalesKg,
+  })
+  return `${texto} kg`
+}
+
 export function gramos(valor: number | null | undefined): string {
   return valor === null || valor === undefined || !Number.isFinite(valor)
     ? '—'
@@ -72,7 +90,10 @@ export function explicarSinProyeccion(mensaje: string): string {
     return 'Se necesitan pesajes de al menos 3 días distintos para proyectar el cierre del ciclo.'
   }
   if (/super[oó]/i.test(mensaje)) {
-    return 'El lote ya pasó su día de faena: no queda nada por proyectar.'
+    return 'El lote ya pasó su día de salida: no queda nada por proyectar.'
+  }
+  if (/predicci[oó]n|inv[aá]lida|inconsistente|no respondi[oó]|fall[oó]|error/i.test(mensaje)) {
+    return 'No fue posible estimar el cierre del ciclo con los datos actuales. Asegúrate de registrar al menos 3 pesajes y consumos en días distintos dentro de la Bitácora.'
   }
   return mensaje
 }

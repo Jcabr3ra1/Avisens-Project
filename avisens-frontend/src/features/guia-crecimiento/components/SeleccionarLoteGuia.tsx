@@ -41,6 +41,7 @@ function SeleccionarLoteGuia() {
   return (
     <div className="page-container adm-page guia-page">
       <CabeceraAdmin
+        eyebrow="Guía de crecimiento"
         titulo="Guía de peso"
         subtitulo="Elige un lote activo para consultar su crecimiento y planificación."
         migas={[{ label: 'Granja' }, { label: 'Guía de peso' }]}
