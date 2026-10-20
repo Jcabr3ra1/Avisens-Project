@@ -1,3 +1,4 @@
+
 package com.project.avisensandroid.ui
 
 import android.content.Intent
@@ -18,7 +19,6 @@ import kotlinx.coroutines.launch
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
-
     private var passwordVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,9 +26,7 @@ class LoginActivity : AppCompatActivity() {
 
         RetrofitClient.inicializar(applicationContext)
 
-        binding =
-            ActivityLoginBinding.inflate(layoutInflater)
-
+        binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         configurarPassword()
@@ -43,22 +41,17 @@ class LoginActivity : AppCompatActivity() {
     // =========================================================
 
     private fun configurarPassword() {
-
         binding.btnTogglePassword.setOnClickListener {
-
             passwordVisible = !passwordVisible
 
             if (passwordVisible) {
-
                 binding.etContrasena.transformationMethod =
                     HideReturnsTransformationMethod.getInstance()
 
                 binding.btnTogglePassword.setImageResource(
                     R.drawable.ic_eye
                 )
-
             } else {
-
                 binding.etContrasena.transformationMethod =
                     PasswordTransformationMethod.getInstance()
 
@@ -79,97 +72,59 @@ class LoginActivity : AppCompatActivity() {
 
     private fun hacerLogin() {
 
-        val email =
-            binding.etCorreo.text
-                .toString()
-                .trim()
+        val username = binding.etCorreo.text
+            .toString()
+            .trim()
 
-        val password =
-            binding.etContrasena.text
-                .toString()
-                .trim()
+        val password = binding.etContrasena.text
+            .toString()
+            .trim()
 
         binding.txtError.text = ""
 
-        // =====================================================
-        // VALIDACIONES
-        // =====================================================
-
-        if (email.isEmpty()) {
-
+        // Validaciones locales
+        if (username.isEmpty()) {
             binding.txtError.text =
-                "Ingresa tu correo electrónico"
-
+                "Ingresa tu nombre de usuario"
             return
         }
 
         if (password.isEmpty()) {
-
             binding.txtError.text =
                 "Ingresa tu contraseña"
-
             return
         }
 
-        // =====================================================
-        // CARGANDO
-        // =====================================================
-
-        binding.progressLogin.visibility =
-            View.VISIBLE
-
+        binding.progressLogin.visibility = View.VISIBLE
         binding.btnEntrar.isEnabled = false
 
-        // =====================================================
-        // API
-        // =====================================================
-
         lifecycleScope.launch {
-
             try {
-
-                val response =
-                    RetrofitClient.api.login(
-                        LoginRequest(
-                            email = email,
-                            password = password
-                        )
+                val response = RetrofitClient.api.login(
+                    LoginRequest(
+                        username = username,
+                        password = password
                     )
+                )
 
                 if (response.isSuccessful) {
 
-                    val loginData =
-                        response.body()
+                    val loginData = response.body()
 
                     if (loginData == null) {
-
                         binding.txtError.text =
                             "El servidor no devolvió información"
-
                         return@launch
                     }
 
-                    // =================================================
-                    // DATOS DEL USUARIO
-                    // =================================================
-
-                    val usuario =
-                        loginData.usuario
-
-                    val role =
-                        UserRole.fromApiValue(usuario.rol)
+                    val usuario = loginData.usuario
+                    val role = UserRole.fromApiValue(usuario.rol)
 
                     if (role == null) {
-
                         binding.txtError.text =
                             "El usuario no tiene un rol válido: ${usuario.rol}"
-
                         return@launch
                     }
-
-                    // =================================================
-                    // GUARDAR SESIÓN CON EL ROL REAL DE LA API
-                    // =================================================
 
                     guardarSesion(
                         token = loginData.access_token,
@@ -179,10 +134,6 @@ class LoginActivity : AppCompatActivity() {
                         email = usuario.email,
                         rol = role
                     )
-
-                    // =================================================
-                    // IR A MAIN
-                    // =================================================
 
                     startActivity(
                         Intent(
@@ -197,20 +148,30 @@ class LoginActivity : AppCompatActivity() {
 
                     when (response.code()) {
 
-                        401 -> {
+                        400 -> {
+                            val detalle = response.errorBody()
+                                ?.string()
+                                ?.takeIf { it.isNotBlank() }
 
                             binding.txtError.text =
-                                "Correo o contraseña incorrectos"
+                                if (detalle != null) {
+                                    "Datos inválidos (400): $detalle"
+                                } else {
+                                    "Revisa el nombre de usuario y la contraseña"
+                                }
+                        }
+
+                        401 -> {
+                            binding.txtError.text =
+                                "Nombre de usuario o contraseña incorrectos"
                         }
 
                         403 -> {
-
                             binding.txtError.text =
                                 "No tienes permisos para acceder"
                         }
 
                         else -> {
-
                             binding.txtError.text =
                                 "Error del servidor: ${response.code()}"
                         }
@@ -218,19 +179,12 @@ class LoginActivity : AppCompatActivity() {
                 }
 
             } catch (e: Exception) {
-
                 binding.txtError.text =
-                    "Error de conexión: ${
-                        e.message ?: "error desconocido"
-                    }"
+                    "Error de conexión: ${e.message ?: "error desconocido"}"
 
             } finally {
-
-                binding.progressLogin.visibility =
-                    View.GONE
-
-                binding.btnEntrar.isEnabled =
-                    true
+                binding.progressLogin.visibility = View.GONE
+                binding.btnEntrar.isEnabled = true
             }
         }
     }
@@ -247,7 +201,6 @@ class LoginActivity : AppCompatActivity() {
         email: String,
         rol: UserRole
     ) {
-
         UserSession.save(
             context = this,
             token = token,
