@@ -43,7 +43,6 @@ import java.util.TimeZone
 import kotlin.math.abs
 import kotlin.math.ceil
 
-/** Seguimiento de peso desde la API: usa el plan y la curva genética publicados por el backend. */
 class GuiaPesoFragment : BaseBottomNavFragment() {
 
     private data class FuenteCarga<T>(val datos: List<T>, val error: String? = null)
