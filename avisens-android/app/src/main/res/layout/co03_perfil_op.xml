@@ -189,7 +189,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Correo electrónico (opcional)"
+                        android:text="Correo electrónico"
                         android:textColor="#89948F"
                         android:textSize="11sp" />
 
