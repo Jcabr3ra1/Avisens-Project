@@ -64,7 +64,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="28dp"
-                android:text="Ingresa tu usuario para solicitar ayuda a un administrador."
+                android:text="Ingresa tu correo electrónico y te enviaremos instrucciones para recuperar el acceso a tu cuenta."
                 android:textColor="#66736D"
                 android:textSize="15sp"
                 android:lineSpacingExtra="3dp" />
@@ -86,21 +86,19 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Usuario"
+                    android:text="Correo electrónico"
                     android:textColor="#26332E"
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
                 <EditText
-                    android:id="@+id/edtUsuario"
+                    android:id="@+id/edtCorreo"
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
                     android:layout_marginTop="8dp"
                     android:background="@drawable/bg_edittext"
-                    android:hint="maria.lopez"
-                    android:autofillHints="username"
-                    android:maxLength="30"
-                    android:inputType="text|textNoSuggestions"
+                    android:hint="Ingresa tu correo"
+                    android:inputType="textEmailAddress"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
                     android:textColor="#26332E"
@@ -114,17 +112,17 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
-                    android:text="Un administrador revisará la solicitud y te entregará una contraseña temporal."
+                    android:text="Asegúrate de utilizar el correo asociado a tu cuenta de Avisens."
                     android:textColor="#7A8580"
                     android:textSize="13sp" />
 
                 <!-- BOTÓN -->
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSolicitarRecuperacion"
+                    android:id="@+id/btnEnviarCorreo"
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
                     android:layout_marginTop="24dp"
-                    android:text="Solicitar recuperación"
+                    android:text="Enviar"
                     android:textAllCaps="false"
                     android:textColor="@android:color/white"
                     android:textSize="15sp"
