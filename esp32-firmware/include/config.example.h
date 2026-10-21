@@ -50,11 +50,11 @@
 // "estado" (1 = encendido, 0 = apagado).
 #define CODIGO_MOTOR_ALIMENTADOR "MOT-ALIM-G1-01"
 #define CODIGO_MOTOR_PERSIANA    "MOT-PERS-G1-01"
-// Relés K1-K4, también como sensores de "estado" (1 = encendido).
-#define CODIGO_RELE_K1 "REL-K1-G1-01" // Bombillos (calefacción)
-#define CODIGO_RELE_K2 "REL-K2-G1-01" // Ventiladores
-#define CODIGO_RELE_K3 "REL-K3-G1-01" // Extractores
-#define CODIGO_RELE_K4 "REL-K4-G1-01" // Bomba de agua
+// Relés K1-K4: NO llevan código aquí. Se reportan y se controlan por canal
+// ("rele:k1".."rele:k4") dentro de este ESP32; el backend los reconoce por el
+// token del dispositivo. En la web, «Registrar relés» los da de alta (o asocia
+// los REL-K antiguos) para este ESP32. Un config.h antiguo con
+// CODIGO_RELE_K* sigue compilando: esas líneas ya no se usan.
 
 // ─── Portal web y actualización por WiFi (OTA) ───────────
 // En http://<IP del ESP32>/ : estado, /config (WiFi, URL del backend y

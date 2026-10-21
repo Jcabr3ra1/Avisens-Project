@@ -111,3 +111,43 @@ describe('tituloDeRuta', () => {
     expect(tituloDeRuta('/ruta-desconocida', 'Administrador')).toBe('Avisens')
   })
 })
+
+describe('Monitoreo: Sensores y Actuadores', () => {
+  const grupoMonitoreo = (rol: string) =>
+    visibleSections(rol).flatMap((section) => section.items).find((item) => item.path === '/monitoreo')
+
+  it('el operario ve Actuadores inmediatamente debajo de Sensores, dentro de Monitoreo', () => {
+    const grupo = grupoMonitoreo(ROL_OPERARIO)
+    expect(grupo && esGrupo(grupo)).toBe(true)
+    if (!grupo || !esGrupo(grupo)) return
+    expect(grupo.children.map((hijo) => [hijo.path, hijo.label])).toEqual([
+      ['/monitoreo/sensores', 'Sensores'],
+      ['/monitoreo/actuadores', 'Actuadores'],
+    ])
+  })
+
+  it('las dos secciones no son prefijo una de la otra: solo se marca la abierta', () => {
+    expect(matchesPath('/monitoreo/actuadores', '/monitoreo/sensores')).toBe(false)
+    expect(matchesPath('/monitoreo/sensores', '/monitoreo/actuadores')).toBe(false)
+  })
+
+  it('respeta los permisos por ruta de los tres roles', () => {
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO]) {
+      expect(puedeAcceder('/monitoreo/sensores', rol)).toBe(true)
+      expect(puedeAcceder('/monitoreo/actuadores', rol)).toBe(true)
+    }
+    expect(puedeAcceder('/monitoreo/actuadores', null)).toBe(false)
+    // El administrador y el propietario siguen sin el ítem en el menú.
+    expect(grupoMonitoreo(ROL_ADMIN)).toBeUndefined()
+    expect(grupoMonitoreo(ROL_PROPIETARIO)).toBeUndefined()
+  })
+
+  it('titula cada sección con su nombre', () => {
+    expect(tituloDeRuta('/monitoreo/actuadores', ROL_OPERARIO)).toBe('Actuadores')
+    expect(tituloDeRuta('/monitoreo/sensores', ROL_OPERARIO)).toBe('Sensores')
+  })
+
+  it('el buscador encuentra Actuadores por sus equipos', () => {
+    expect(navigationFilter('/monitoreo/actuadores', 'ventiladores', LINK_DETAILS['/monitoreo/actuadores'].keywords)).toBe(1)
+  })
+})

@@ -11,6 +11,7 @@ import {
   type OrdenParaDispositivo,
 } from '../ordenes-actuadores/ordenes-actuadores.service';
 import { GPIO_DHT22 } from '../sensores/conexion-sensor';
+import { esCanalRele, esReleControlable } from '../sensores/reles';
 import { FirmwareService } from '../firmware/firmware.service';
 
 interface MedicionNueva {
@@ -117,13 +118,27 @@ export class IngestService {
         galpon_id: dispositivo.galpon_id,
         estado: 'activo',
       },
-      select: { id: true, codigo: true, tipo: true, canal: true },
+      select: {
+        id: true,
+        codigo: true,
+        tipo: true,
+        canal: true,
+        unidad_medida: true,
+      },
     });
     const idPorCodigo = new Map(sensores.map((s) => [s.codigo, s.id]));
     const idPorConexion = new Map(
       sensores
-        .filter((s) => s.canal !== null)
+        .filter((s) => s.canal !== null && !esCanalRele(s.canal))
         .map((s) => [`${s.tipo}:${s.canal}`, s.id]),
+    );
+    // Un relé se resuelve solo por canal: su `tipo` en la base es el nombre
+    // visible y no participa en la identidad. Solo relés de ESTE ESP32 (el
+    // del token), así que "rele:k1" de otro dispositivo nunca coincide.
+    const idPorCanalRele = new Map(
+      sensores
+        .filter((s) => esCanalRele(s.canal) && esReleControlable(s))
+        .map((s) => [s.canal!, s.id]),
     );
 
     const fechaMedicion = dto.fecha_dispositivo
@@ -133,11 +148,17 @@ export class IngestService {
     const ignoradas: string[] = [];
     const incluidos = new Set<number>();
     for (const lectura of dto.lecturas) {
-      const identidad = lectura.codigo ?? `${lectura.tipo}:${lectura.canal}`;
+      const esRele =
+        lectura.codigo === undefined && esCanalRele(lectura.canal);
+      const identidad = esRele
+        ? lectura.canal!
+        : (lectura.codigo ?? `${lectura.tipo}:${lectura.canal}`);
       const sensorId =
         lectura.codigo !== undefined
           ? idPorCodigo.get(lectura.codigo)
-          : idPorConexion.get(identidad);
+          : esRele
+            ? idPorCanalRele.get(identidad)
+            : idPorConexion.get(identidad);
       if (sensorId === undefined) {
         ignoradas.push(identidad);
         continue;

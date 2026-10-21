@@ -30,12 +30,14 @@ void ControlRemoto::recibirOrden(const OrdenRecibida &orden)
   if (colaOrdenes_ == nullptr || yaRecibida(orden.id))
     return;
 
-  uint8_t rele = releDesdeCodigo(orden.codigo);
+  uint8_t rele = releDesdeCanal(orden.canal);
   if (rele == 0)
   {
     recordar(orden.id);
     publicarResultado(orden.id, ResultadoRemoto::RECHAZADA, false,
-                      "El codigo no corresponde a un rele K1-K4 de este ESP32");
+                      orden.canal[0] == '\0'
+                          ? "Orden sin canal K1-K4: registra los reles por canal en la web"
+                          : "El canal no corresponde a un rele K1-K4 de este ESP32");
     return;
   }
 
@@ -199,13 +201,13 @@ void ControlRemoto::cerrarCiclo()
 
 // ─── Auxiliares ─────────────────────────────────────────────────────────
 
-uint8_t ControlRemoto::releDesdeCodigo(const char *codigo)
+uint8_t ControlRemoto::releDesdeCanal(const char *canal)
 {
-  // Los mismos códigos con los que se reportan los relés en /ingest.
-  const char *codigos[4] = {CODIGO_RELE_K1, CODIGO_RELE_K2, CODIGO_RELE_K3, CODIGO_RELE_K4};
+  // Los mismos canales con los que se reportan los relés en /ingest. El
+  // backend solo entrega a este ESP32 órdenes de relés registrados en él.
   for (uint8_t i = 0; i < 4; i++)
   {
-    if (strcmp(codigo, codigos[i]) == 0)
+    if (strcmp(canal, canalDeRele(i)) == 0)
       return i + 1;
   }
   return 0;

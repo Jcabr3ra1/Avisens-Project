@@ -15,6 +15,8 @@ import './MonitoreoPage.css'
 import './AsignarSensores.css'
 import ConexionDhtSensor, { OpcionesGpioDht } from './ConexionDhtSensor'
 import { esVariableDht } from './conexionDht'
+import RelesDelGalpon from '@features/sensores/components/RelesDelGalpon'
+import { esSensorRele } from '@features/sensores/model/reles'
 
 type SensorPendiente = {
   clave: number
@@ -75,6 +77,7 @@ function AsignarSensores({
   const [sensores, setSensores] = useState<Sensor[]>([])
   const [revision, setRevision] = useState(0)
   const [controladoresAbiertos, setControladoresAbiertos] = useState(false)
+  const [relesAbiertos, setRelesAbiertos] = useState(false)
   const [pendientes, setPendientes] = useState<SensorPendiente[]>([])
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
@@ -220,6 +223,9 @@ function AsignarSensores({
 
   if (!puedeRegistrar) return null
 
+  const reles = sensores.filter(esSensorRele)
+  // Listos = cada relé tiene canal: el firmware nuevo puede controlarlos.
+  const relesListos = reles.length > 0 && reles.every(sensor => sensor.canal)
   const activos = sensores.filter(sensor => sensor.estado !== 'inactivo')
   const desactivados = sensores.filter(sensor => sensor.estado === 'inactivo')
   const conCanal = activos.filter(sensor => sensor.canal).length
@@ -432,6 +438,33 @@ function AsignarSensores({
           {mensaje && <p className="cs-aviso cs-aviso--ok" role="status">{mensaje}</p>}
         </div>
       </div>
+
+      <details className="cs-bloque" open={relesAbiertos} onToggle={evento => setRelesAbiertos(evento.currentTarget.open)}>
+        <summary className="cs-bloque-cabecera">
+          <span className="cs-paso-numero" aria-hidden="true">K</span>
+          <span className="cs-bloque-titulo">
+            <strong>Actuadores (relés K1-K4){!cargando && !errorCarga ? ` (${reles.length})` : ''}</strong>
+            <small>Regístralos por ESP32 con un clic y edita su ficha. Se controlan desde Monitoreo → Actuadores.</small>
+          </span>
+          <span className={`cs-estado${relesListos ? ' is-listo' : ''}`}>
+            {reles.length === 0 ? 'Sin relés' : relesListos ? 'Por canal' : 'Revisar'}
+          </span>
+          <IcChevronDown size={16} aria-hidden="true" className="cs-flecha" />
+        </summary>
+        <div className="cs-bloque-cuerpo">
+          {cargando ? <p className="cs-nota" role="status">Cargando actuadores…</p> : errorCarga ? (
+            <p className="cs-aviso cs-aviso--error">La lista de actuadores no está disponible. Vuelve a cargar los datos.</p>
+          ) : (
+            <RelesDelGalpon
+              galponId={galponId}
+              dispositivos={disponibles}
+              sensores={sensores}
+              puedeGestionar={puedeRegistrar}
+              onCambio={actualizarControladores}
+            />
+          )}
+        </div>
+      </details>
 
       <details className="cs-bloque">
         <summary className="cs-bloque-cabecera">

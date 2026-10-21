@@ -1,0 +1,67 @@
+/* RelesDelGalpon.css — Registro y lista de relés. Reutiliza los cs-* de
+   «Controladores y sensores»; aquí solo la disposición propia. */
+
+.rg { display: grid; gap: var(--space-3); }
+
+.rg-registro {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) auto minmax(0, 1fr);
+  align-items: end;
+  gap: var(--space-2) var(--space-3);
+}
+
+.rg-ayuda { align-self: center; }
+
+.rg-resultado { display: grid; justify-content: stretch; gap: var(--space-2); }
+
+.rg-canales {
+  display: grid;
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rg-canales li {
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .2rem var(--space-2);
+}
+
+.rg-canal { font-weight: 800; }
+.rg-nombre { min-width: 0; overflow-wrap: anywhere; }
+.rg-motivo { grid-column: 2 / -1; font-size: .76rem; }
+
+.rg-chip {
+  padding: .1rem .55rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font-size: .72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rg-chip--creado,
+.rg-chip--asociado { border-color: color-mix(in srgb, var(--primary) 35%, transparent); color: var(--avisens-deep); }
+.rg-chip--conflicto { border-color: var(--danger-border); background: var(--danger-soft); color: var(--danger); }
+
+.rg-actuador { display: grid; min-width: 0; }
+.rg-actuador strong { overflow-wrap: anywhere; }
+.rg-actuador small { color: var(--text-muted); font-size: .74rem; text-transform: capitalize; }
+
+.rg-sin-canal { color: var(--warning-text); font-weight: 700; }
+
+/* La tabla de relés tiene otras columnas que la de sensores. */
+.cs-tabla.rg-tabla { min-width: 640px; }
+.cs-tabla.rg-tabla th:nth-child(1) { width: 11%; }
+.cs-tabla.rg-tabla th:nth-child(2) { width: 30%; }
+.cs-tabla.rg-tabla th:nth-child(3) { width: 21%; }
+.cs-tabla.rg-tabla th:nth-child(4) { width: 22%; }
+.cs-tabla.rg-tabla th:nth-child(5) { width: 16%; }
+
+@media (max-width: 40rem) {
+  .rg-registro { grid-template-columns: 1fr; }
+}

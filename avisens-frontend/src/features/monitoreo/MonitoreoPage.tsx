@@ -4,7 +4,7 @@
 // panel lateral con gauge, estadísticas, histórico real y referencia Italcol.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { NavLink, useSearchParams } from 'react-router-dom'
 import {
   useMonitoreoAmbiental,
   formatearUltimaLectura,
@@ -21,7 +21,7 @@ import { iconoSensor } from '@shared/ui/sensorIcon'
 import { semanaDeVida } from '@shared/utils/fechas'
 import { SensorDetail } from './SensorDetail'
 import { LecturasEnVivo } from './LecturasEnVivo'
-import { ControlActuadores } from './components/ControlActuadores'
+import { ActuadoresGalpon } from './components/ActuadoresGalpon'
 import { esReleControlable } from './model/actuadores'
 import AsignarSensores from './AsignarSensores'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
@@ -29,8 +29,17 @@ import { IcServer } from '@shared/ui/icons/icons'
 import '@shared/ui/admin/AdminKit.css'
 import './MonitoreoPage.css'
 
+type Seccion = 'sensores' | 'actuadores'
+
+// Secciones de Monitoreo, en este orden: Actuadores va debajo de Sensores
+// en el menú y a su lado aquí. Mediciones y control no se mezclan.
+const SECCIONES: { id: Seccion; ruta: string; texto: string }[] = [
+  { id: 'sensores', ruta: '/monitoreo/sensores', texto: 'Sensores' },
+  { id: 'actuadores', ruta: '/monitoreo/actuadores', texto: 'Actuadores' },
+]
+
 // ─── Componente principal ─────────────────────────────────────────────────────
-function MonitoreoPage() {
+function MonitoreoPage({ seccion = 'sensores' }: { seccion?: Seccion }) {
   const { galpones, cargando, error, avisoUltimas, recargar } = useMonitoreoAmbiental()
   const [searchParams] = useSearchParams()
   const granjaSolicitada = Number(searchParams.get('granjaId'))
@@ -96,15 +105,21 @@ function MonitoreoPage() {
     )
   }
 
+  const enActuadores = seccion === 'actuadores'
+  // Al cambiar de sección se conserva la granja elegida.
+  const busqueda = granjaId ? `?granjaId=${granjaId}` : ''
+
   return (
     <div className="page-container mon-page adm-page">
 
       {/* ── Encabezado ──────────────────────────────────────────────────────── */}
       <CabeceraAdmin
         eyebrow="Condiciones ambientales"
-        titulo="Monitoreo ambiental"
-        subtitulo="Lecturas en tiempo real. Selecciona un sensor para consultar sus detalles."
-        acciones={galpon ? (
+        titulo={enActuadores ? 'Actuadores' : 'Monitoreo ambiental'}
+        subtitulo={enActuadores
+          ? 'Relés K1-K4 del galpón: estado que informa el ESP32, órdenes y ficha de cada equipo.'
+          : 'Lecturas en tiempo real. Selecciona un sensor para consultar sus detalles.'}
+        acciones={galpon && !enActuadores ? (
           <div className="mon-resumen">
             {criticos    > 0 && <span className="mon-badge mon-badge--critico"><span className="mon-dot mon-dot--critico" /> {criticos} crítico{criticos > 1 ? 's' : ''}</span>}
             {advertencia > 0 && <span className="mon-badge mon-badge--advertencia"><span className="mon-dot mon-dot--advertencia" /> {advertencia} advertencia{advertencia > 1 ? 's' : ''}</span>}
@@ -112,6 +127,19 @@ function MonitoreoPage() {
           </div>
         ) : undefined}
       />
+
+      <nav className="mon-secciones" aria-label="Secciones de Monitoreo">
+        {SECCIONES.map(({ id, ruta, texto }) => (
+          <NavLink
+            key={id}
+            to={`${ruta}${busqueda}`}
+            className={`mon-seccion${seccion === id ? ' mon-seccion--activa' : ''}`}
+            aria-current={seccion === id ? 'page' : undefined}
+          >
+            {texto}
+          </NavLink>
+        ))}
+      </nav>
 
       {error && <div className="mon-alert adm-alerta" role="alert">{error}</div>}
       {!error && avisoUltimas && <div className="mon-alert adm-aviso" role="status">{avisoUltimas}</div>}
@@ -153,12 +181,17 @@ function MonitoreoPage() {
               lote activo. El lote solo da contexto (día de vida, umbrales). */}
           <div className="mon-lote-info">
             <strong>{galpon.nombre}</strong>
-            <span>· {galpon.sensores.length} sensor{galpon.sensores.length === 1 ? '' : 'es'}</span>
+            {enActuadores
+              ? <span>· {galpon.sensores.filter(esReleControlable).length} actuador{galpon.sensores.filter(esReleControlable).length === 1 ? '' : 'es'}</span>
+              : <span>· {galpon.sensores.length} sensor{galpon.sensores.length === 1 ? '' : 'es'}</span>}
             {galpon.loteActivo
               ? <span>· Lote {galpon.loteActivo.codigo} · Día <strong>{galpon.diaVida}</strong> de vida</span>
               : <span className="mon-sin-lote">· Sin lote activo</span>}
           </div>
 
+          {enActuadores ? (
+            <ActuadoresGalpon galponId={galpon.id} sensores={galpon.sensores} onCambio={() => { void recargar() }} />
+          ) : <>
           <AsignarSensores
             key={galpon.id}
             galponId={galpon.id}
@@ -191,14 +224,12 @@ function MonitoreoPage() {
             </div>
           )}
 
-          {/* ── Control de los relés K1-K4 desde la web ─────────────────────── */}
+          {/* ── Los relés K1-K4 se controlan en su propia sección ─────────────── */}
           {galpon.sensores.some(esReleControlable) && (
-            <ControlActuadores
-              key={galpon.id}
-              galponId={galpon.id}
-              reles={galpon.sensores.filter(esReleControlable)}
-              onOrdenFinalizada={() => { void recargar() }}
-            />
+            <p className="mon-ir-actuadores">
+              Los relés K1-K4 de este galpón se controlan en{' '}
+              <NavLink to={`/monitoreo/actuadores${busqueda}`}>Actuadores</NavLink>.
+            </p>
           )}
 
           {/* ── Lecturas en vivo (gráficas + últimas lecturas) ──────────────── */}
@@ -244,6 +275,7 @@ function MonitoreoPage() {
             diaVida={galpon.loteActivo ? galpon.diaVida : null}
             onClose={() => setSensorActivo(null)}
           />
+          </>}
         </>
       )}
     </div>
