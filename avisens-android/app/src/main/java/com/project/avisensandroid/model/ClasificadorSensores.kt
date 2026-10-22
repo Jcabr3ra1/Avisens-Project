@@ -57,6 +57,10 @@ object ClasificadorSensores {
      * (prisma/seeds/sensores-esp32.ts). Devuelve null para actuadores y para
      * tipos que el firmware no envía (por ejemplo CO₂ o NH₃ en ppm sin un
      * MQ-135 detrás).
+     *
+     * El MQ-135 solo se reconoce por modelo "MQ-135" o unidad "adc": el tipo
+     * es texto libre en la web y "amoniaco", "co2" o "calidad del aire" no
+     * prueban que la lectura sea el ADC crudo del firmware.
      */
     fun variableDe(tipo: String?, modelo: String?, unidad: String?, canal: String?): VariableSensor? {
         if (esActuador(unidad, canal)) return null
@@ -66,7 +70,7 @@ object ClasificadorSensores {
         return when {
             "temperatura" in t -> VariableSensor.TEMPERATURA
             "humedad" in t -> VariableSensor.HUMEDAD
-            "mq135" in m || "calidaddelaire" in t || u == "adc" -> VariableSensor.CALIDAD_AIRE
+            "mq135" in m || u == "adc" -> VariableSensor.CALIDAD_AIRE
             "hx711" in m || "peso" in t -> VariableSensor.PESO
             "hcsr04" in m || "niveldeagua" in t || "nivelagua" in t -> VariableSensor.NIVEL_AGUA
             else -> null

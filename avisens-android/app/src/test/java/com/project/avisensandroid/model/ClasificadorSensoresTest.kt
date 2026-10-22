@@ -54,6 +54,21 @@ class ClasificadorSensoresTest {
     }
 
     @Test
+    fun reconoceElHx711PorModeloOPorTipoPeso() {
+        assertEquals(VariableSensor.PESO, variable("Báscula de tolva", "HX711", "g"))
+        assertEquals(VariableSensor.PESO, variable("Peso de alimento", null, "g"))
+        // Sin modelo HX711 ni tipo de peso, una unidad en gramos no basta.
+        assertNull(variable("Tolva", null, "g"))
+    }
+
+    @Test
+    fun elTipoCalidadDelAireSinModeloNiAdcNoBasta() {
+        // El tipo es texto libre en la web: no prueba que sea el MQ-135.
+        assertNull(variable("Calidad del aire", null, "ppm"))
+        assertEquals(VariableSensor.CALIDAD_AIRE, variable("Calidad del aire", null, "adc"))
+    }
+
+    @Test
     fun unMq135RegistradoComoGasSigueSiendoAdcCrudo() {
         assertEquals(VariableSensor.CALIDAD_AIRE, variable("co2", "MQ135", "ppm"))
     }

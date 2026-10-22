@@ -18,6 +18,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.Po01InicioOpBinding
+import com.project.avisensandroid.model.Actuadores
 import com.project.avisensandroid.model.AlertaResponse
 import com.project.avisensandroid.model.ClasificadorSensores
 import com.project.avisensandroid.model.ConsumoDiarioResponse
@@ -25,19 +26,21 @@ import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.GalponResponse
 import com.project.avisensandroid.model.IndicadorLoteResponse
 import com.project.avisensandroid.model.LoteResponse
-import com.project.avisensandroid.model.MedicionResponse
+import com.project.avisensandroid.model.LecturaDeSensor
+import com.project.avisensandroid.model.LecturasGalpon
+import com.project.avisensandroid.model.LecturasSensores
 import com.project.avisensandroid.model.PesajeResponse
 import com.project.avisensandroid.model.RegistroMortalidadResponse
 import com.project.avisensandroid.model.EventoSanitarioResponse
 import com.project.avisensandroid.model.SensorResponse
 import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.model.VariableSensor
+import com.project.avisensandroid.model.VigenciaLectura
 import com.project.avisensandroid.ui.MainActivity
+import com.project.avisensandroid.ui.views.ListaActuadores
 import com.project.avisensandroid.ui.views.SensorArcView
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -478,7 +481,7 @@ class InicioFragment : BaseBottomNavFragment() {
                     val alertas = alertasDef.safeAwait(emptyList())
                     val indicador = indicadorDef.safeAwait(null)
                     val comparacion = comparacionDef.safeAwait(null)
-                    val mediciones = medicionesDef?.safeAwait(emptyList()) ?: emptyList()
+                    val mediciones = medicionesDef?.safeAwait(LecturasGalpon.VACIAS) ?: LecturasGalpon.VACIAS
 
                     if (solicitudId == cargaDashboardId) {
                         actualizarDashboard(
@@ -544,32 +547,34 @@ class InicioFragment : BaseBottomNavFragment() {
                     ClasificadorSensores.variableDe(it) != null
         }
 
-    /** Una entrada por sensor físico, con su última medición o el fallo de la consulta. */
-    private suspend fun cargarUltimasMediciones(galponId: Int): List<MedicionConSensor> =
-        coroutineScope {
-            sensoresFisicosDelGalpon(galponId)
-                .map { sensor ->
-                    async {
-                        try {
-                            val response = RetrofitClient.api.listarMediciones(
-                                sensorId = sensor.id,
-                                page = 1,
-                                limit = 1
-                            )
-                            if (!response.isSuccessful) {
-                                MedicionConSensor(sensor, null, errorConsulta = true)
-                            } else {
-                                MedicionConSensor(sensor, response.body()?.data?.firstOrNull())
-                            }
-                        } catch (cancelacion: CancellationException) {
-                            throw cancelacion
-                        } catch (_: Exception) {
-                            MedicionConSensor(sensor, null, errorConsulta = true)
-                        }
-                    }
-                }
-                .awaitAll()
+    /** Relés y motores activos del galpón: se muestran aparte, nunca como sensores. */
+    private fun actuadoresDelGalpon(galponId: Int?): List<SensorResponse> =
+        Actuadores.activos(sensores.filter { it.galpon.id == galponId })
+
+    /**
+     * Última medición de cada sensor físico y actuador del galpón, en una
+     * sola petición (GET /v1/mediciones/ultimas). La antigüedad la calcula
+     * el servidor; si la consulta falla, todas quedan como error de consulta.
+     */
+    private suspend fun cargarUltimasMediciones(galponId: Int): LecturasGalpon {
+        val actuadores = actuadoresDelGalpon(galponId)
+        val todos = sensoresFisicosDelGalpon(galponId) + actuadores
+        if (todos.isEmpty()) return LecturasGalpon.VACIAS
+        val lecturas = try {
+            val response = RetrofitClient.api.listarUltimasLecturas(galponId)
+            val cuerpo = response.body()
+            if (response.isSuccessful && cuerpo != null && cuerpo.sensores != null) {
+                LecturasSensores.cruzar(todos, cuerpo)
+            } else {
+                LecturasSensores.conError(todos)
+            }
+        } catch (cancelacion: CancellationException) {
+            throw cancelacion
+        } catch (_: Exception) {
+            LecturasSensores.conError(todos)
         }
+        return LecturasSensores.separar(lecturas, actuadores)
+    }
 
     private fun actualizarDashboard(
         lote: LoteResponse?,
@@ -580,7 +585,7 @@ class InicioFragment : BaseBottomNavFragment() {
         alertas: List<AlertaResponse>,
         indicador: IndicadorLoteResponse?,
         comparacion: com.project.avisensandroid.model.ComparacionIndicadorResponse?,
-        mediciones: List<MedicionConSensor>
+        mediciones: LecturasGalpon
     ) {
         val muertes = mortalidadesLote.sumOf { it.cantidad_aves }
         val avesVivas = lote?.let { (it.cantidad_inicial - muertes).coerceAtLeast(0) }
@@ -677,12 +682,37 @@ class InicioFragment : BaseBottomNavFragment() {
     ): Boolean = mortalidadPct == null && epef == null && alertas.isEmpty() && eventos.isEmpty()
 
     private fun actualizarSensores(
-        mediciones: List<MedicionConSensor>,
+        lecturasGalpon: LecturasGalpon,
         alertas: List<AlertaResponse>
     ) {
-        val sensoresActivos = sensoresFisicosDelGalpon(galponSeleccionadoId).size
-        binding.txtSensoresActivos.text =
-            if (errorCargaSensores) "Sensores sin consultar" else "$sensoresActivos sensores"
+        val mediciones = lecturasGalpon.sensores
+        ListaActuadores.pintar(
+            binding.contenedorActuadoresInicio,
+            binding.txtSinActuadoresInicio,
+            lecturasGalpon.actuadores.map { Actuadores.vista(it) }
+        )
+
+        val sensoresDelGalpon = sensoresFisicosDelGalpon(galponSeleccionadoId)
+        val configuradas = VariableSensor.values().count { variable ->
+            sensoresDelGalpon.any { ClasificadorSensores.variableDe(it) == variable }
+        }
+        val recientes = VariableSensor.values().count { variable ->
+            val lectura = LecturasSensores.elegir(mediciones, variable)
+            lectura != null && !lectura.errorConsulta && lectura.vigencia == VigenciaLectura.RECIENTE
+        }
+        binding.txtSensoresActivos.text = when {
+            errorCargaSensores -> "Sensores sin consultar"
+            configuradas == 0 -> "Sin sensores"
+            else -> "$recientes de $configuradas recientes"
+        }
+
+        val aviso = LecturasSensores.avisoSinIdentificar(
+            LecturasSensores.sensoresSinIdentificar(
+                sensores.filter { it.galpon.id == galponSeleccionadoId }
+            )
+        )
+        binding.txtSensoresSinIdentificarInicio.text = aviso.orEmpty()
+        binding.txtSensoresSinIdentificarInicio.visibility = if (aviso == null) View.GONE else View.VISIBLE
 
         pintarSensorInicio(VariableSensor.TEMPERATURA, mediciones, alertas,
             binding.arcTemperaturaInicio, binding.txtTemperaturaInicio, binding.txtEstadoTemperaturaInicio)
@@ -703,25 +733,20 @@ class InicioFragment : BaseBottomNavFragment() {
 
     /**
      * Pinta una variable distinguiendo: sensor no configurado, consulta
-     * fallida, sensor sin lecturas y lectura disponible. Nunca muestra 0
-     * cuando no hay una medición real. Devuelve si la variable tiene un
-     * sensor configurado en el galpón.
+     * fallida, sensor sin lecturas, lectura obsoleta y lectura reciente.
+     * Nunca muestra 0 cuando no hay una medición real. Devuelve si la
+     * variable tiene un sensor configurado en el galpón.
      */
     private fun pintarSensorInicio(
         variable: VariableSensor,
-        mediciones: List<MedicionConSensor>,
+        mediciones: List<LecturaDeSensor>,
         alertas: List<AlertaResponse>,
         arco: SensorArcView,
         txtValor: TextView,
         txtEstado: TextView,
         txtEtiqueta: TextView? = null
     ): Boolean {
-        val deLaVariable = mediciones.filter { ClasificadorSensores.variableDe(it.sensor) == variable }
-        val lectura = deLaVariable
-            .filter { it.medicion != null }
-            .maxByOrNull { parseDate(it.medicion?.fecha_hora)?.time ?: 0L }
-            ?: deLaVariable.firstOrNull { it.errorConsulta }
-            ?: deLaVariable.firstOrNull()
+        val lectura = LecturasSensores.elegir(mediciones, variable)
         val configurado = sensoresFisicosDelGalpon(galponSeleccionadoId)
             .any { ClasificadorSensores.variableDe(it) == variable }
 
@@ -729,9 +754,11 @@ class InicioFragment : BaseBottomNavFragment() {
             nombreVariableInicio(variable),
             lectura?.sensor?.let { unidadVisibleInicio(it) }
         )
+        txtValor.setTextColor(resources.getColor(R.color.text_primary, null))
 
-        val medicion = lectura?.medicion
-        if (lectura == null || medicion == null) {
+        val ultima = lectura?.lectura
+        val valorMedido = ultima?.valor
+        if (lectura == null || lectura.errorConsulta || ultima == null || valorMedido == null) {
             txtValor.text = "—"
             arco.setProgressFraction(0f)
             arco.setArcColor(resources.getColor(R.color.ring_track, null))
@@ -745,30 +772,56 @@ class InicioFragment : BaseBottomNavFragment() {
             return configurado
         }
 
+        val noReciente = LecturasSensores.etiquetaNoReciente(lectura.vigencia)
+        if (noReciente != null) {
+            // Último valor conocido que no es verificablemente reciente
+            // (obsoleto, hora inconsistente o sin antigüedad): en gris, sin
+            // color de estado ni de alerta, y con su fecha.
+            txtValor.setTextColor(resources.getColor(R.color.text_secondary, null))
+            txtValor.text = textoValorInicio(variable, valorMedido)
+            arco.setProgressFraction(0f)
+            arco.setArcColor(resources.getColor(R.color.ring_track, null))
+            arco.contentDescription =
+                "$noReciente: ${nombreVariableInicio(variable).lowercase(Locale.getDefault())}"
+            val fecha = fechaCortaInicio(ultima.fecha_hora)
+            marcarEstadoSinValor(
+                txtEstado,
+                if (fecha != null) "$noReciente\nÚltima: $fecha" else noReciente,
+                error = false
+            )
+            return true
+        }
+
         val sensorId = lectura.sensor.id
-        arco.setArcColor(colorArcoPorEstado(sensorId, medicion.calidad, alertas))
-        arco.setProgressFraction(fraccionVisualInicio(variable, medicion.valor))
+        arco.setArcColor(colorArcoPorEstado(sensorId, ultima.calidad, alertas))
+        arco.setProgressFraction(fraccionVisualInicio(variable, valorMedido))
         if (variable == VariableSensor.PESO || variable == VariableSensor.NIVEL_AGUA) {
             // SensorArcView anuncia "100 por ciento" con el arco completo; aquí
             // el arco solo indica el estado de la lectura.
             arco.contentDescription =
                 "Estado de la lectura de ${nombreVariableInicio(variable).lowercase(Locale.getDefault())}"
         }
-        txtValor.text = when (variable) {
-            VariableSensor.TEMPERATURA -> "${formatearNumero(medicion.valor, 1)}°"
-            VariableSensor.HUMEDAD -> "${formatearNumero(medicion.valor, 1)}%"
-            // El ADC del MQ-135 es un entero; la unidad va en la etiqueta.
-            VariableSensor.CALIDAD_AIRE -> formatearNumero(medicion.valor, 0)
-            VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> formatearNumero(medicion.valor, 1)
-        }
+        txtValor.text = textoValorInicio(variable, valorMedido)
         actualizarEstadoSensor(
             txtEstado,
-            medicion.calidad,
+            ultima.calidad,
             "Normal",
             alertas.firstOrNull { it.sensor_id == sensorId && it.estado.esActiva() }
         )
         return true
     }
+
+    private fun textoValorInicio(variable: VariableSensor, valor: Double): String = when (variable) {
+        VariableSensor.TEMPERATURA -> "${formatearNumero(valor, 1)}°"
+        VariableSensor.HUMEDAD -> "${formatearNumero(valor, 1)}%"
+        // El ADC del MQ-135 es un entero; la unidad va en la etiqueta.
+        VariableSensor.CALIDAD_AIRE -> formatearNumero(valor, 0)
+        VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> formatearNumero(valor, 1)
+    }
+
+    /** "dd/MM HH:mm" en la hora del teléfono; null si no hay fecha válida. */
+    private fun fechaCortaInicio(valor: String?): String? =
+        parseDate(valor)?.let { SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(it) }
 
     private fun marcarEstadoSinValor(view: TextView, texto: String, error: Boolean) {
         view.text = texto
@@ -909,6 +962,17 @@ class InicioFragment : BaseBottomNavFragment() {
             binding.txtEstadoNivelAguaInicio
         ).forEach { marcarEstadoSinValor(it, "Sin datos", error = false) }
         binding.filaNivelAguaInicio.visibility = View.GONE
+        binding.txtSensoresSinIdentificarInicio.visibility = View.GONE
+        binding.contenedorActuadoresInicio.removeAllViews()
+        binding.txtSinActuadoresInicio.visibility = View.GONE
+        val colorValor = resources.getColor(R.color.text_primary, null)
+        listOf(
+            binding.txtTemperaturaInicio,
+            binding.txtHumedadInicio,
+            binding.txtCalidadAireInicio,
+            binding.txtPesoInicio,
+            binding.txtNivelAguaInicio
+        ).forEach { it.setTextColor(colorValor) }
     }
 
     private fun esPropietario(): Boolean =
@@ -959,16 +1023,6 @@ class InicioFragment : BaseBottomNavFragment() {
 
     private fun String?.esActiva(): Boolean =
         this.equals("abierta", true) || this.equals("en_proceso", true)
-
-    /**
-     * Última medición de un sensor físico. [medicion] es null si el sensor no
-     * tiene lecturas o si la consulta falló; [errorConsulta] separa ambos casos.
-     */
-    private data class MedicionConSensor(
-        val sensor: SensorResponse,
-        val medicion: MedicionResponse?,
-        val errorConsulta: Boolean = false
-    )
 
     private data class HealthState(
         val texto: String,

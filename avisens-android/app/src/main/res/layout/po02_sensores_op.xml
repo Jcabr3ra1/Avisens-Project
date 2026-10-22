@@ -432,6 +432,53 @@
                 android:textSize="12sp"
                 android:textColor="@color/text_secondary" />
 
+            <!-- Sensores activos que no se pudieron asociar sin ambigüedad a
+                 una variable: se listan para corregirlos, sin sus valores. -->
+            <TextView
+                android:id="@+id/txtSensoresSinIdentificar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_stat_card"
+                android:padding="12dp"
+                android:textSize="12sp"
+                android:textColor="@color/orange_badge_text"
+                android:visibility="gone" />
+            <!-- Actuadores (relés K1-K4 y motores): salida que reportó el ESP32, en
+                 solo lectura. El backend actual no informa el modo ni admite órdenes. -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:text="Actuadores · salida reportada"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Estado que envió el ESP32. No confirma que el equipo funcione. El modo automático/manual y el control remoto aún no están disponibles en el servidor."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+
+            <LinearLayout
+                android:id="@+id/contenedorActuadores"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/txtSinActuadores"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="No hay actuadores registrados en este galpón."
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
             <!-- Entradas configuradas -->
             <TextView
                 android:layout_width="wrap_content"
