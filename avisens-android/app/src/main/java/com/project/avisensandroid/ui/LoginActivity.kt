@@ -9,12 +9,17 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.project.avisensandroid.R
+import com.project.avisensandroid.controller.RegistroHttp
 import com.project.avisensandroid.controller.RetrofitClient
+import com.project.avisensandroid.controller.SesionExpirada
 import com.project.avisensandroid.databinding.ActivityLoginBinding
 import com.project.avisensandroid.model.LoginRequest
+import com.project.avisensandroid.model.ResultadoLogin
 import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.model.UserSession
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 class LoginActivity : AppCompatActivity() {
 
@@ -30,6 +35,11 @@ class LoginActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         configurarPassword()
+
+        if (intent.getBooleanExtra(SesionExpirada.EXTRA_SESION_EXPIRADA, false)) {
+            binding.txtError.text =
+                "Tu sesión expiró. Inicia sesión nuevamente."
+        }
 
         binding.btnEntrar.setOnClickListener {
             hacerLogin()
@@ -109,78 +119,85 @@ class LoginActivity : AppCompatActivity() {
 
                 if (response.isSuccessful) {
 
-                    val loginData = response.body()
+                    when (val resultado = ResultadoLogin.desde(response.body())) {
 
-                    if (loginData == null) {
-                        binding.txtError.text =
-                            "El servidor no devolvió información"
-                        return@launch
+                        is ResultadoLogin.SesionIniciada -> {
+                            guardarSesion(
+                                token = resultado.accessToken,
+                                refreshToken = resultado.refreshToken,
+                                usuarioId = resultado.usuarioId,
+                                nombre = resultado.nombre,
+                                email = resultado.email,
+                                rol = resultado.rol
+                            )
+                            SesionExpirada.reiniciar()
+
+                            startActivity(
+                                Intent(
+                                    this@LoginActivity,
+                                    MainActivity::class.java
+                                )
+                            )
+
+                            finish()
+                        }
+
+                        // La app aún no tiene la pantalla de cambio de
+                        // contraseña temporal: el token de cambio no se guarda.
+                        ResultadoLogin.CambioPasswordRequerido -> {
+                            binding.txtError.text =
+                                "Tu contraseña es temporal y debes cambiarla. " +
+                                        "Hazlo desde la web de AVÍSENS y vuelve a iniciar sesión aquí."
+                        }
+
+                        is ResultadoLogin.RolNoValido -> {
+                            binding.txtError.text =
+                                "El usuario no tiene un rol válido: ${resultado.rol ?: "sin rol"}"
+                        }
+
+                        ResultadoLogin.RespuestaIncompleta -> {
+                            binding.txtError.text =
+                                "El servidor devolvió una respuesta incompleta. Inténtalo de nuevo."
+                        }
                     }
-
-                    val usuario = loginData.usuario
-                    val role = UserRole.fromApiValue(usuario.rol)
-
-                    if (role == null) {
-                        binding.txtError.text =
-                            "El usuario no tiene un rol válido: ${usuario.rol}"
-                        return@launch
-                    }
-
-                    guardarSesion(
-                        token = loginData.access_token,
-                        refreshToken = loginData.refresh_token,
-                        usuarioId = usuario.id,
-                        nombre = usuario.nombre,
-                        email = usuario.email,
-                        rol = role
-                    )
-
-                    startActivity(
-                        Intent(
-                            this@LoginActivity,
-                            MainActivity::class.java
-                        )
-                    )
-
-                    finish()
 
                 } else {
 
-                    when (response.code()) {
+                    // El backend responde {"message": "..."} con textos
+                    // pensados para el usuario (cuenta bloqueada, contraseña
+                    // temporal vencida, sesión ocupada...).
+                    val detalle = RegistroHttp.mensajeDeError(
+                        response.errorBody()?.string()
+                    )
 
-                        400 -> {
-                            val detalle = response.errorBody()
-                                ?.string()
-                                ?.takeIf { it.isNotBlank() }
+                    binding.txtError.text = when (response.code()) {
 
-                            binding.txtError.text =
-                                if (detalle != null) {
-                                    "Datos inválidos (400): $detalle"
-                                } else {
-                                    "Revisa el nombre de usuario y la contraseña"
-                                }
-                        }
+                        400 -> detalle
+                            ?: "Revisa el nombre de usuario y la contraseña"
 
-                        401 -> {
-                            binding.txtError.text =
-                                "Nombre de usuario o contraseña incorrectos"
-                        }
+                        401 -> "Nombre de usuario o contraseña incorrectos"
 
-                        403 -> {
-                            binding.txtError.text =
-                                "No tienes permisos para acceder"
-                        }
+                        403 -> detalle ?: "No tienes permisos para acceder"
 
-                        else -> {
-                            binding.txtError.text =
-                                "Error del servidor: ${response.code()}"
-                        }
+                        409 -> detalle
+                            ?: "No se pudo iniciar sesión. Inténtalo de nuevo."
+
+                        429 -> "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
+
+                        else -> "Error del servidor: ${response.code()}"
                     }
                 }
 
-            } catch (e: Exception) {
+            } catch (cancelacion: CancellationException) {
+                throw cancelacion
+
+            } catch (e: IOException) {
                 binding.txtError.text =
                     "Error de conexión: ${e.message ?: "error desconocido"}"
+
+            } catch (e: Exception) {
+                binding.txtError.text =
+                    "No se pudo procesar la respuesta del servidor."
 
             } finally {
                 binding.progressLogin.visibility = View.GONE
@@ -198,7 +215,7 @@ class LoginActivity : AppCompatActivity() {
         refreshToken: String,
         usuarioId: Int,
         nombre: String,
-        email: String,
+        email: String?,
         rol: UserRole
     ) {
         UserSession.save(

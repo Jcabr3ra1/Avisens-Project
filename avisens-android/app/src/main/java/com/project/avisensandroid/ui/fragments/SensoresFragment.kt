@@ -11,11 +11,13 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.Po02SensoresOpBinding
+import com.project.avisensandroid.model.ClasificadorSensores
 import com.project.avisensandroid.model.GalponResponse
 import com.project.avisensandroid.model.AlertaResponse
 import com.project.avisensandroid.model.MedicionResponse
 import com.project.avisensandroid.model.PaginatedResponse
 import com.project.avisensandroid.model.SensorResponse
+import com.project.avisensandroid.model.VariableSensor
 import com.project.avisensandroid.ui.MainActivity
 import com.project.avisensandroid.ui.views.SensorArcView
 import kotlinx.coroutines.CancellationException
@@ -43,25 +45,32 @@ class SensoresFragment : BaseBottomNavFragment() {
     private val binding get() = _binding!!
 
     private var galponesDisponibles: List<GalponResponse> = emptyList()
+
+    // Solo sensores físicos activos. Los relés K1-K4 y los motores también
+    // llegan por /v1/sensores (unidad "estado"), pero son actuadores.
     private var sensoresActivos: List<SensorResponse> = emptyList()
     private var alertasActivasGalpon: List<AlertaResponse> = emptyList()
     private var galponSeleccionadoId: Int? = null
     private val mutexLecturas = Mutex()
 
-    private enum class Variable { TEMPERATURA, HUMEDAD, CO2, AMONIACO }
     private enum class EstadoLectura { NORMAL, ATENCION, ERROR, SIN_DATOS }
 
     private data class Indicador(
-        val variable: Variable,
+        val variable: VariableSensor,
         val valor: TextView,
         val estado: TextView,
         val arco: SensorArcView,
         val unidadLabel: TextView? = null
     )
 
+    /**
+     * Lectura de un sensor configurado. [errorConsulta] distingue un sensor
+     * sin mediciones de uno cuya consulta al backend falló.
+     */
     private data class LecturaSensor(
         val sensor: SensorResponse,
-        val medicion: MedicionResponse?
+        val medicion: MedicionResponse?,
+        val errorConsulta: Boolean = false
     )
 
     override fun onCreateView(
@@ -91,6 +100,7 @@ class SensoresFragment : BaseBottomNavFragment() {
                         e.message?.let { "Error de conexión: $it" }
                             ?: "No fue posible consultar el backend."
                     actualizarResumenSensores()
+                    indicadores().forEach { mostrarEstado(it.estado, "Error de consulta", EstadoLectura.ERROR) }
                 }
                 return@launch
             }
@@ -106,13 +116,13 @@ class SensoresFragment : BaseBottomNavFragment() {
 
     private fun indicadores(): List<Indicador> {
         // El color se asigna según la calidad de la última lectura,
-        // no según el tipo de variable. Una lectura válida no queda naranja
-        // solo por ser temperatura o CO₂.
+        // no según el tipo de variable.
         return listOf(
-            Indicador(Variable.TEMPERATURA, binding.txtTemperatura, binding.txtEstadoTemperatura, binding.arcTemperatura),
-            Indicador(Variable.HUMEDAD, binding.txtHumedad, binding.txtEstadoHumedad, binding.arcHumedad),
-            Indicador(Variable.CO2, binding.txtCo2, binding.txtEstadoCo2, binding.arcCo2, binding.txtLabelCo2),
-            Indicador(Variable.AMONIACO, binding.txtAmoniaco, binding.txtEstadoAmoniaco, binding.arcAmoniaco, binding.txtLabelAmoniaco)
+            Indicador(VariableSensor.TEMPERATURA, binding.txtTemperatura, binding.txtEstadoTemperatura, binding.arcTemperatura),
+            Indicador(VariableSensor.HUMEDAD, binding.txtHumedad, binding.txtEstadoHumedad, binding.arcHumedad),
+            Indicador(VariableSensor.CALIDAD_AIRE, binding.txtCalidadAire, binding.txtEstadoCalidadAire, binding.arcCalidadAire, binding.txtLabelCalidadAire),
+            Indicador(VariableSensor.PESO, binding.txtPeso, binding.txtEstadoPeso, binding.arcPeso, binding.txtLabelPeso),
+            Indicador(VariableSensor.NIVEL_AGUA, binding.txtNivelAgua, binding.txtEstadoNivelAgua, binding.arcNivelAgua, binding.txtLabelNivelAgua)
         )
     }
 
@@ -125,7 +135,9 @@ class SensoresFragment : BaseBottomNavFragment() {
         }
 
         galponesDisponibles = galpones.filter { it.activo }
-        sensoresActivos = sensores.filter { it.estado.equals("activo", ignoreCase = true) }
+        sensoresActivos = sensores.filter {
+            it.estado.equals("activo", ignoreCase = true) && !ClasificadorSensores.esActuador(it)
+        }
         actualizarResumenSensores()
     }
 
@@ -178,6 +190,11 @@ class SensoresFragment : BaseBottomNavFragment() {
         actualizarResumenSensores()
     }
 
+    private fun sensoresMedidosDelGalpon(galponId: Int): List<SensorResponse> =
+        sensoresActivos.filter {
+            it.galpon.id == galponId && ClasificadorSensores.variableDe(it) != null
+        }
+
     private fun actualizarResumenSensores(sensoresDelGalpon: List<SensorResponse>? = null) {
         if (_binding == null) return
         val galponId = galponSeleccionadoId
@@ -185,10 +202,11 @@ class SensoresFragment : BaseBottomNavFragment() {
             binding.txtResumenSensores.text = "Selecciona un galpón desde Inicio"
             return
         }
-        val sensores = sensoresDelGalpon ?: sensoresActivos.filter {
-            it.galpon.id == galponId && variableDe(it.tipo) != null
+        val sensores = sensoresDelGalpon ?: sensoresMedidosDelGalpon(galponId)
+        binding.txtResumenSensores.text = when (sensores.size) {
+            1 -> "1 sensor activo"
+            else -> "${sensores.size} sensores activos"
         }
-        binding.txtResumenSensores.text = "${sensores.size} sensores ambientales activos"
     }
 
     private fun reiniciarIndicadores() {
@@ -197,63 +215,79 @@ class SensoresFragment : BaseBottomNavFragment() {
             indicador.valor.text = "—"
             indicador.arco.setProgressFraction(0f)
             indicador.arco.setArcColor(colorDe(R.color.ring_track))
+            indicador.unidadLabel?.text = nombreVariable(indicador.variable)
             mostrarEstado(indicador.estado, "Sin datos", EstadoLectura.SIN_DATOS)
         }
-        binding.txtLabelCo2.text = "CO₂"
-        binding.txtLabelAmoniaco.text = "NH₃"
+        mostrarNivelAgua(false)
+    }
+
+    /** El nivel de agua solo aparece si el galpón tiene un HC-SR04 registrado. */
+    private fun mostrarNivelAgua(visible: Boolean) {
+        val visibilidad = if (visible) View.VISIBLE else View.GONE
+        binding.filaNivelAgua.visibility = visibilidad
+        binding.tarjetaEntradaNivelAgua.visibility = visibilidad
+    }
+
+    private fun lecturaElegida(lecturas: List<LecturaSensor>, variable: VariableSensor): LecturaSensor? {
+        val deLaVariable = lecturas.filter { ClasificadorSensores.variableDe(it.sensor) == variable }
+        return deLaVariable
+            .filter { it.medicion != null }
+            .maxByOrNull { fechaMillis(it.medicion!!.fecha_hora) }
+            ?: deLaVariable.firstOrNull { it.errorConsulta }
+            ?: deLaVariable.firstOrNull()
     }
 
     private fun actualizarEntradasConfiguradas(lecturas: List<LecturaSensor>) {
         if (_binding == null) return
-
-        fun lecturaPara(variable: Variable): LecturaSensor? =
-            lecturas.filter { variableDe(it.sensor.tipo) == variable }
-                .filter { it.medicion != null }
-                .maxByOrNull { fechaMillis(it.medicion!!.fecha_hora) }
-                ?: lecturas.firstOrNull { variableDe(it.sensor.tipo) == variable }
 
         fun detalleSensor(lectura: LecturaSensor?): String = when {
             lectura == null -> "Sensor: no configurado para este galpón"
             else -> buildString {
                 append("Sensor: ${lectura.sensor.codigo}")
                 lectura.sensor.modelo?.takeIf { it.isNotBlank() }?.let { append(" · $it") }
-                append(" · ${lectura.sensor.unidad_medida}")
+                val unidad = unidadVisible(lectura.sensor)
+                if (unidad.isNotBlank()) append(" · $unidad")
             }
         }
 
         fun ultimaLectura(lectura: LecturaSensor?): String {
-            val medicion = lectura?.medicion ?: return "Última lectura: sin datos"
-            val unidad = lectura.sensor.unidad_medida.trim()
+            if (lectura == null) return "Última lectura: —"
+            if (lectura.errorConsulta) return "Última lectura: no se pudo consultar"
+            val medicion = lectura.medicion ?: return "Última lectura: sin lecturas registradas"
+            val unidad = unidadVisible(lectura.sensor)
             val valor = formatearValor(medicion.valor)
             val fecha = parseDate(medicion.fecha_hora)
             val hora = fecha?.let { SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(it) }
             return buildString {
                 append("Última lectura: $valor")
                 if (unidad.isNotBlank()) append(" $unidad")
+                if (ClasificadorSensores.esLecturaSinCalibrar(medicion.calidad)) append(" (sin calibrar)")
                 if (hora != null) append(" · $hora")
             }
         }
 
-        val temp = lecturaPara(Variable.TEMPERATURA)
-        val humedad = lecturaPara(Variable.HUMEDAD)
-        val co2 = lecturaPara(Variable.CO2)
-        val amoniaco = lecturaPara(Variable.AMONIACO)
+        val temp = lecturaElegida(lecturas, VariableSensor.TEMPERATURA)
+        val humedad = lecturaElegida(lecturas, VariableSensor.HUMEDAD)
+        val aire = lecturaElegida(lecturas, VariableSensor.CALIDAD_AIRE)
+        val peso = lecturaElegida(lecturas, VariableSensor.PESO)
+        val agua = lecturaElegida(lecturas, VariableSensor.NIVEL_AGUA)
 
         binding.txtEntradaTemperaturaSensor.text = detalleSensor(temp)
         binding.txtEntradaTemperaturaLectura.text = ultimaLectura(temp)
         binding.txtEntradaHumedadSensor.text = detalleSensor(humedad)
         binding.txtEntradaHumedadLectura.text = ultimaLectura(humedad)
-        binding.txtEntradaCo2Detalle.text = detalleSensor(co2)
-        binding.txtEntradaCo2Lectura.text = ultimaLectura(co2)
-        binding.txtEntradaAmoniacoDetalle.text = detalleSensor(amoniaco)
-        binding.txtEntradaAmoniacoLectura.text = ultimaLectura(amoniaco)
+        binding.txtEntradaCalidadAireSensor.text = detalleSensor(aire)
+        binding.txtEntradaCalidadAireLectura.text = ultimaLectura(aire)
+        binding.txtEntradaPesoSensor.text = detalleSensor(peso)
+        binding.txtEntradaPesoLectura.text = ultimaLectura(peso)
+        binding.txtEntradaNivelAguaSensor.text = detalleSensor(agua)
+        binding.txtEntradaNivelAguaLectura.text = ultimaLectura(agua)
+        mostrarNivelAgua(agua != null)
     }
 
     private suspend fun actualizarLecturasDelGalpon() = mutexLecturas.withLock {
         val galponId = galponSeleccionadoId ?: return@withLock
-        val sensoresDelGalpon = sensoresActivos
-            .filter { it.galpon.id == galponId && variableDe(it.tipo) != null }
-            .sortedBy { it.id }
+        val sensoresDelGalpon = sensoresMedidosDelGalpon(galponId).sortedBy { it.id }
 
         if (sensoresDelGalpon.isEmpty()) {
             if (_binding != null) {
@@ -261,7 +295,7 @@ class SensoresFragment : BaseBottomNavFragment() {
                 actualizarEntradasConfiguradas(emptyList())
                 actualizarResumenSensores(emptyList())
                 indicadores().forEach { mostrarEstado(it.estado, "No configurado", EstadoLectura.SIN_DATOS) }
-                binding.txtEstadoConexion.text = "No hay sensores ambientales activos en el galpón seleccionado."
+                binding.txtEstadoConexion.text = "No hay sensores activos en el galpón seleccionado."
             }
             return@withLock
         }
@@ -270,19 +304,22 @@ class SensoresFragment : BaseBottomNavFragment() {
             val resultados = coroutineScope {
                 sensoresDelGalpon.map { sensor ->
                     async {
-                        val medicion = try {
+                        try {
                             val respuesta = RetrofitClient.api.listarMediciones(
                                 sensorId = sensor.id,
                                 page = 1,
                                 limit = 1
                             )
-                            if (respuesta.isSuccessful) respuesta.body()?.data?.firstOrNull() else null
+                            if (respuesta.isSuccessful) {
+                                LecturaSensor(sensor, respuesta.body()?.data?.firstOrNull())
+                            } else {
+                                LecturaSensor(sensor, null, errorConsulta = true)
+                            }
                         } catch (cancelacion: CancellationException) {
                             throw cancelacion
                         } catch (_: Exception) {
-                            null
+                            LecturaSensor(sensor, null, errorConsulta = true)
                         }
-                        LecturaSensor(sensor, medicion)
                     }
                 }.awaitAll()
             }
@@ -307,21 +344,23 @@ class SensoresFragment : BaseBottomNavFragment() {
 
             actualizarResumenSensores(sensoresDelGalpon)
             actualizarEntradasConfiguradas(resultados)
-            val porVariable = resultados.groupBy { variableDe(it.sensor.tipo) }
+            var variablesConfiguradas = 0
             var variablesConLectura = 0
             indicadores().forEach { indicador ->
-                val lecturas = porVariable[indicador.variable].orEmpty()
-                val lecturaElegida = lecturas
-                    .filter { it.medicion != null }
-                    .maxByOrNull { fechaMillis(it.medicion!!.fecha_hora) }
-                    ?: lecturas.firstOrNull()
-
-                if (lecturaElegida?.medicion != null) variablesConLectura++
-                pintarIndicador(indicador, lecturaElegida)
+                val lectura = lecturaElegida(resultados, indicador.variable)
+                if (lectura != null) variablesConfiguradas++
+                if (lectura?.medicion != null) variablesConLectura++
+                pintarIndicador(indicador, lectura)
             }
 
+            val fallidas = resultados.count { it.errorConsulta }
             val hora = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-            binding.txtEstadoConexion.text = "Actualizado $hora · $variablesConLectura de 4 variables con lectura."
+            binding.txtEstadoConexion.text = buildString {
+                append("Actualizado $hora · $variablesConLectura de $variablesConfiguradas variables con lectura.")
+                if (fallidas > 0) {
+                    append(" No se pudieron consultar $fallidas sensores; se reintentará automáticamente.")
+                }
+            }
         } catch (cancelacion: CancellationException) {
             throw cancelacion
         } catch (e: Exception) {
@@ -334,39 +373,40 @@ class SensoresFragment : BaseBottomNavFragment() {
     private fun pintarIndicador(indicador: Indicador, lectura: LecturaSensor?) {
         val sensor = lectura?.sensor
         val medicion = lectura?.medicion
-        if (indicador.variable == Variable.CO2) {
-            indicador.unidadLabel?.text = etiquetaConUnidad("CO₂", sensor?.unidad_medida)
-        } else if (indicador.variable == Variable.AMONIACO) {
-            indicador.unidadLabel?.text = etiquetaConUnidad("NH₃", sensor?.unidad_medida)
-        }
+        indicador.unidadLabel?.text = etiquetaConUnidad(
+            nombreVariable(indicador.variable),
+            sensor?.let { unidadVisible(it) }
+        )
 
         if (sensor == null) {
-            indicador.valor.text = "—"
-            indicador.arco.setProgressFraction(0f)
-            indicador.arco.setArcColor(colorDe(R.color.ring_track))
-            mostrarEstado(indicador.estado, "No configurado", EstadoLectura.SIN_DATOS)
+            pintarSinValor(indicador, "No configurado", EstadoLectura.SIN_DATOS)
+            return
+        }
+        if (lectura?.errorConsulta == true) {
+            pintarSinValor(indicador, "Error de consulta", EstadoLectura.ERROR)
             return
         }
         if (medicion == null) {
-            indicador.valor.text = "—"
-            indicador.arco.setProgressFraction(0f)
-            indicador.arco.setArcColor(colorDe(R.color.ring_track))
-            mostrarEstado(indicador.estado, "Sin datos", EstadoLectura.SIN_DATOS)
+            pintarSinValor(indicador, "Sin lecturas", EstadoLectura.SIN_DATOS)
             return
         }
 
         val alertaActiva = alertasActivasGalpon.firstOrNull {
             it.sensor_id == sensor.id && !it.estado.equals("cerrada", ignoreCase = true)
         }
-        indicador.arco.setProgressFraction(
-            (medicion.valor.toFloat() / escalaVisual(indicador.variable)).coerceIn(0f, 1f)
-        )
+        indicador.arco.setProgressFraction(fraccionVisual(indicador.variable, medicion.valor))
+        if (!tieneEscalaVisual(indicador.variable)) {
+            // SensorArcView anuncia "100 por ciento" con el arco completo; aquí
+            // el arco solo indica el estado de la lectura.
+            indicador.arco.contentDescription = "Estado de la lectura de ${nombreVariable(indicador.variable).lowercase(Locale.getDefault())}"
+        }
         indicador.arco.setArcColor(colorArcoPorEstado(alertaActiva, medicion.calidad))
         val numero = formatearValor(medicion.valor)
         indicador.valor.text = when (indicador.variable) {
-            Variable.TEMPERATURA -> "$numero°"
-            Variable.HUMEDAD -> "$numero%"
-            Variable.CO2, Variable.AMONIACO -> numero
+            VariableSensor.TEMPERATURA -> "$numero°"
+            VariableSensor.HUMEDAD -> "$numero%"
+            // La unidad va en la etiqueta para que el número quepa en el arco.
+            VariableSensor.CALIDAD_AIRE, VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> numero
         }
         when {
             alertaActiva != null && (alertaActiva.criticidad.equals("alta", true) ||
@@ -376,12 +416,19 @@ class SensoresFragment : BaseBottomNavFragment() {
                 mostrarEstado(indicador.estado, "Fuera de rango", EstadoLectura.ATENCION)
             medicion.calidad.equals("ok", true) ->
                 mostrarEstado(indicador.estado, "Lectura OK", EstadoLectura.NORMAL)
-            medicion.calidad.equals("sospechosa", true) ->
-                mostrarEstado(indicador.estado, "Atención", EstadoLectura.ATENCION)
+            ClasificadorSensores.esLecturaSinCalibrar(medicion.calidad) ->
+                mostrarEstado(indicador.estado, "Sin calibrar", EstadoLectura.ATENCION)
             medicion.calidad.equals("error", true) ->
                 mostrarEstado(indicador.estado, "Error", EstadoLectura.ERROR)
             else -> mostrarEstado(indicador.estado, "Sin verificar", EstadoLectura.SIN_DATOS)
         }
+    }
+
+    private fun pintarSinValor(indicador: Indicador, mensaje: String, estado: EstadoLectura) {
+        indicador.valor.text = "—"
+        indicador.arco.setProgressFraction(0f)
+        indicador.arco.setArcColor(colorDe(R.color.ring_track))
+        mostrarEstado(indicador.estado, mensaje, estado)
     }
 
     /**
@@ -399,40 +446,45 @@ class SensoresFragment : BaseBottomNavFragment() {
         else -> colorDe(R.color.ring_track)
     }
 
-    /** Escalas visuales del arco (no son límites ambientales). */
-    private fun escalaVisual(variable: Variable): Float = when (variable) {
-        Variable.TEMPERATURA -> 50f
-        Variable.HUMEDAD -> 100f
-        Variable.CO2 -> 5_000f
-        Variable.AMONIACO -> 100f
+    /**
+     * Escalas visuales del arco (no son límites ambientales). El MQ-135 usa el
+     * rango del ADC de 12 bits. El peso y la distancia al agua no tienen una
+     * escala confirmada (capacidad de la tolva, altura del tanque), así que el
+     * arco completo solo indica el estado de la lectura.
+     */
+    private fun tieneEscalaVisual(variable: VariableSensor): Boolean =
+        variable != VariableSensor.PESO && variable != VariableSensor.NIVEL_AGUA
+
+    private fun fraccionVisual(variable: VariableSensor, valor: Double): Float {
+        val escala = when (variable) {
+            VariableSensor.TEMPERATURA -> 50f
+            VariableSensor.HUMEDAD -> 100f
+            VariableSensor.CALIDAD_AIRE -> ClasificadorSensores.ADC_MAXIMO
+            VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> return 1f
+        }
+        return (valor.toFloat() / escala).coerceIn(0f, 1f)
     }
+
+    private fun nombreVariable(variable: VariableSensor): String = when (variable) {
+        VariableSensor.TEMPERATURA -> "Temperatura"
+        VariableSensor.HUMEDAD -> "Humedad"
+        VariableSensor.CALIDAD_AIRE -> "Calidad del aire"
+        VariableSensor.PESO -> "Peso de alimento"
+        VariableSensor.NIVEL_AGUA -> "Distancia al agua"
+    }
+
+    /**
+     * Unidad que se muestra junto al valor. El MQ-135 siempre llega como ADC
+     * crudo, aunque el sensor se haya registrado con otra unidad.
+     */
+    private fun unidadVisible(sensor: SensorResponse): String =
+        if (ClasificadorSensores.variableDe(sensor) == VariableSensor.CALIDAD_AIRE) "ADC"
+        else sensor.unidad_medida.trim()
 
     private fun etiquetaConUnidad(nombre: String, unidad: String?): String {
         val limpia = unidad?.trim().orEmpty()
         return if (limpia.isBlank()) nombre else "$nombre · $limpia"
     }
-
-    private fun variableDe(tipo: String): Variable? {
-        val normalizado = normalizar(tipo)
-        return when {
-            "temperatura" in normalizado -> Variable.TEMPERATURA
-            "humedad" in normalizado -> Variable.HUMEDAD
-            "amoniaco" in normalizado || "nh3" in normalizado -> Variable.AMONIACO
-            "co2" in normalizado || "dioxido de carbono" in normalizado -> Variable.CO2
-            else -> null
-        }
-    }
-
-    private fun normalizar(texto: String): String = texto
-        .trim()
-        .lowercase(Locale.ROOT)
-        .replace("á", "a")
-        .replace("é", "e")
-        .replace("í", "i")
-        .replace("ó", "o")
-        .replace("ú", "u")
-        .replace("₂", "2")
-        .replace("₃", "3")
 
     private fun mostrarEstado(texto: TextView, mensaje: String, estado: EstadoLectura) {
         texto.text = mensaje

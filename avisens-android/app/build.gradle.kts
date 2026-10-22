@@ -20,6 +20,9 @@ android {
 
     buildFeatures {
         viewBinding = true
+        // BuildConfig.DEBUG decide si OkHttp registra el tráfico HTTP
+        // (solo en debug; ver RetrofitClient).
+        buildConfig = true
     }
 
     buildTypes {

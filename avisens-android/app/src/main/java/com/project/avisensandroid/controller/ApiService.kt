@@ -37,6 +37,7 @@ import com.project.avisensandroid.model.CrearEstimacionAlimentoRequest
 import com.project.avisensandroid.model.RecalcularPlanLoteRequest
 import com.project.avisensandroid.model.CrearPlanLoteRequest
 import com.project.avisensandroid.model.LoteResponse
+import com.project.avisensandroid.model.RefreshTokenRequest
 import com.project.avisensandroid.model.RefreshTokenResponse
 import com.project.avisensandroid.model.InterpretarComandoVozRequest
 import com.project.avisensandroid.model.RespuestaComandoVoz
@@ -62,9 +63,11 @@ interface ApiService {
         @Body request: LoginRequest
     ): Response<LoginResponse>
 
+    // La renovación automática la hace RetrofitClient con su propio cliente.
+    // El backend lee el refresh token del body, no de Authorization.
     @POST("v1/auth/refresh")
     suspend fun refreshToken(
-        @Header("Authorization") refreshAuthorization: String
+        @Body request: RefreshTokenRequest
     ): Response<RefreshTokenResponse>
 
     @GET("v1/auth/me")
