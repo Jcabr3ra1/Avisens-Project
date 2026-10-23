@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { isAxiosError } from 'axios'
 import {
   iniciarConversacion,
@@ -11,10 +11,9 @@ import { IcAlert, IcSend } from '@shared/ui/icons/icons'
 import logoAvisens from '@shared/assets/logo-avisens.png'
 import Ic from '@shared/ui/Ic/Ic'
 import { seLeenEnPar } from '@features/landing/model/opcionesChat'
+import AviaBoton from './AviaBoton'
 import './FloatChat.css'
 import './FloatChat.tema.css'
-
-const RobotLottie = lazy(() => import('./RobotLottie'))
 
 const SIN_CONSENTIMIENTO = 'sin_consentimiento'
 
@@ -504,17 +503,7 @@ function FloatChat() {
               <Ic d="M18 6L6 18M6 6l12 12" size={22} />
             </span>
           ) : (
-            <Suspense
-              fallback={
-                <Ic d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" size={26} />
-              }
-            >
-              <RobotLottie
-                size={112}
-                animando={false}
-                className="float-btn-robot"
-              />
-            </Suspense>
+            <AviaBoton size={112} className="float-btn-robot" />
           )}
         </span>
       </button>
