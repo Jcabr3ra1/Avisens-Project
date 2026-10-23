@@ -12,7 +12,7 @@ export type NavigationSpace = {
 const SPACE_DEFINITIONS = [
   { id: 'plataforma', label: 'Plataforma', description: 'Organizaciones, prospectos, soporte y personas', sections: ['Organizaciones', 'Plataforma'] },
   { id: 'granja', label: 'Granja', description: 'El día a día de tus aves', sections: ['Granja'] },
-  { id: 'gestion', label: 'Gestión', description: 'Recursos y equipo', sections: ['Administración'] },
+  { id: 'gestion', label: 'Gestión', description: 'Recursos y equipo', sections: ['Gestión'] },
 ] as const
 
 export const LINK_DETAILS: Record<string, { description: string; descriptionAdmin?: string; keywords: string[] }> = {

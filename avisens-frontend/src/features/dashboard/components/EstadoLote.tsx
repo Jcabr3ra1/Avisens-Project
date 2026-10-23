@@ -1,4 +1,5 @@
 import type { ComparacionIndicador } from '@features/indicadores/api/indicadores'
+import { formatearPeso } from '@features/guia-crecimiento/model/proyeccion'
 import { IcChevronRight } from '@shared/ui/icons/icons'
 import type { DashboardIndicador, DashboardLote } from '../model/dashboard'
 import { comparacionVigente, esDatoVerificado, lineaSparkline, mismaRevision, pesoActualParaSparkline, serieDePesoVerificado, textoComparacion, textoComparacionFcr, textoFechaPesaje, type Fila } from '../model/estadoLote'
@@ -37,7 +38,7 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
     },
     {
       etiqueta: 'Peso promedio',
-      valor: !datosVerificados || reciente?.pesoPromedioG == null ? '—' : `${reciente.pesoPromedioG} g`,
+      valor: !datosVerificados || reciente?.pesoPromedioG == null ? '—' : formatearPeso(reciente.pesoPromedioG),
       nota: notaVigente
         ? textoComparacion(comparacion?.desvio_peso_pct ?? null, comparacion?.objetivo?.peso_esperado_g ?? null, 'g')
         : undefined,
@@ -111,7 +112,7 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
             <div className="dash-lote-pie">
               <div className="dash-lote-pie-fila">
                 <span>Peso promedio ({seriePeso.length} registros)</span>
-                <span className="mono">{pesoRecienteVerificado} g</span>
+                <span className="mono">{formatearPeso(pesoRecienteVerificado)}</span>
               </div>
               <svg
                 className="dash-lote-spark"

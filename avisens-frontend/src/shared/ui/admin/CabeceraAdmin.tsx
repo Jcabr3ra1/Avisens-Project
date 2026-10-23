@@ -16,7 +16,7 @@ interface Props {
 }
 
 function CabeceraAdmin({
-  eyebrow = 'Panel de administración',
+  eyebrow,
   titulo,
   contexto,
   subtitulo,
@@ -27,10 +27,12 @@ function CabeceraAdmin({
     <header className="adm-cabecera">
       <div className="adm-cabecera-fila">
         <div>
-          <span className="adm-eyebrow">
-            <span className="adm-eyebrow-punto" aria-hidden="true" />
-            {eyebrow}
-          </span>
+          {eyebrow && (
+            <span className="adm-eyebrow">
+              <span className="adm-eyebrow-punto" aria-hidden="true" />
+              {eyebrow}
+            </span>
+          )}
           <h1 className="adm-titulo">
             {titulo}
             {contexto && <span className="adm-titulo-contexto"> · {contexto}</span>}
