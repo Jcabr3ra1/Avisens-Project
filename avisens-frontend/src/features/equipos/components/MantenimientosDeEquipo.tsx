@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useState, type FormEvent } from 'react'
 import { getRol } from '@shared/api'
 import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
@@ -69,9 +70,12 @@ function MantenimientosDeEquipo({
   }
 
   async function handleEliminar(mantenimiento: Mantenimiento) {
-    const confirmar = window.confirm(
-      '¿Eliminar este mantenimiento? Esta acción no se deshace.',
-    )
+    const confirmar = (await confirmarAccion({
+      titulo: '¿Eliminar este mantenimiento?',
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar mantenimiento',
+      tono: 'peligro',
+    }))
     if (!confirmar) return
     setErrorAccion('')
     try {

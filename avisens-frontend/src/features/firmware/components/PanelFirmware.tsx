@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useRef, useState, type DragEvent, type FormEvent } from 'react'
 import { motion } from 'motion/react'
 import { IcCheck, IcPlus } from '@shared/ui/icons/icons'
@@ -99,14 +100,24 @@ function PanelFirmware({ versiones, controladores, cargando, error, onSubir, onP
   }
 
   async function publicar(item: VersionFirmware) {
-    if (!window.confirm(
-      `¿Publicar v${item.version}? Cada controlador en línea la descargará, verificará y se reiniciará solo en su próxima consulta.`,
-    )) return
+    if (!(await confirmarAccion({
+      titulo: '¿Publicar esta versión?',
+      entidad: `v${item.version}`,
+      descripcion: 'Cada controlador en línea la descargará, verificará y se reiniciará solo en su próxima consulta.',
+      textoConfirmar: 'Publicar versión',
+      tono: 'aviso',
+    }))) return
     if (await onPublicar(item.id)) setAviso(`v${item.version} publicada. Sigue el avance arriba.`)
   }
 
   async function eliminar(item: VersionFirmware) {
-    if (!window.confirm(`¿Eliminar v${item.version}?`)) return
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar esta versión?',
+      entidad: `v${item.version}`,
+      descripcion: 'Se eliminará la versión seleccionada.',
+      textoConfirmar: 'Eliminar versión',
+      tono: 'peligro',
+    }))) return
     await onEliminar(item.id)
   }
 

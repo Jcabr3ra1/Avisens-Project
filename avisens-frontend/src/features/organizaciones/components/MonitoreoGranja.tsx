@@ -64,10 +64,17 @@ function MonitoreoGranja({ granjaId, granjaNombre, onCerrar }: Props) {
   const { galpones, cargando, error, recargar } = useMonitoreoAmbiental()
   const propios = useMemo(() => galpones.filter((galpon) => galpon.granjaId === granjaId), [galpones, granjaId])
   const [galponId, setGalponId] = useState<number | null>(null)
-  const [sensorActivo, setSensorActivo] = useState<SensorVista | null>(null)
+  const [sensorId, setSensorId] = useState<number | false | null>(null)
   const galpon = propios.find((item) => item.id === galponId) ?? propios.find((item) => item.sensores.length > 0) ?? propios[0] ?? null
 
-  useFocoAtrapado(panel, sensorActivo === null, onCerrar)
+  const sensorActivo =
+    sensorId === false || !galpon
+      ? null
+      : (galpon.sensores.find((sensor) => sensor.id === sensorId && tieneLecturaUtil(sensor.estado))
+          ?? galpon.sensores.find((sensor) => tieneLecturaUtil(sensor.estado))
+          ?? null)
+
+  useFocoAtrapado(panel, true, onCerrar)
 
   const conteo = (estado: EstadoSensorVista) => galpon?.sensores.filter((sensor) => sensor.estado === estado).length ?? 0
   const alertas = conteo('critico') + conteo('advertencia')
@@ -125,7 +132,7 @@ function MonitoreoGranja({ granjaId, granjaNombre, onCerrar }: Props) {
                         role="tab"
                         aria-selected={item.id === galpon.id}
                         className={`mgr-galpon-tab${item.id === galpon.id ? ' is-activo' : ''}`}
-                        onClick={() => { setGalponId(item.id); setSensorActivo(null) }}
+                        onClick={() => { setGalponId(item.id); setSensorId(null) }}
                       >
                         <span className={`mgr-punto mgr-punto--${estado ?? 'vacio'}`} aria-hidden="true" />
                         {item.nombre}
@@ -139,10 +146,16 @@ function MonitoreoGranja({ granjaId, granjaNombre, onCerrar }: Props) {
               <section className="mgr-resumen" aria-label={`Resumen de ${galpon.nombre}`}>
                 <div className="mgr-resumen-galpon">
                   <strong>{galpon.nombre}</strong>
-                  <span>{galpon.codigo}{galpon.capacidadAves ? ` · capacidad ${galpon.capacidadAves.toLocaleString('es-CO')} aves` : ''}</span>
+                  <span>
+                    <code className="mgr-codigo">{galpon.codigo}</code>
+                    {galpon.capacidadAves ? ` · capacidad ${galpon.capacidadAves.toLocaleString('es-CO')} aves` : ''}
+                  </span>
                 </div>
                 <dl className="mgr-resumen-datos">
-                  <div><dt>Lote</dt><dd>{galpon.loteActivo ? galpon.loteActivo.codigo : 'Sin lote'}</dd></div>
+                  <div>
+                    <dt>Lote</dt>
+                    <dd>{galpon.loteActivo ? <code className="mgr-codigo-lote">{galpon.loteActivo.codigo}</code> : 'Sin lote'}</dd>
+                  </div>
                   <div><dt>Día de vida</dt><dd>{galpon.loteActivo ? galpon.diaVida : '—'}</dd></div>
                   <div><dt>Sensores</dt><dd>{galpon.sensores.length}</dd></div>
                   <div className={alertas > 0 ? 'is-alerta' : undefined}><dt>En alerta</dt><dd>{alertas}</dd></div>
@@ -157,65 +170,66 @@ function MonitoreoGranja({ granjaId, granjaNombre, onCerrar }: Props) {
                   <p>Conéctalos desde el galpón, en «Controladores y sensores».</p>
                 </div>
               ) : (
-                <AnimatePresence mode="popLayout" initial={false}>
-                  <motion.ul key={galpon.id} className="mgr-grid" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                    {galpon.sensores.map((sensor) => {
-                      const posicion = posicionEnRango(sensor)
-                      // Los sensores de estado (relés, motores) no tienen gauge ni
-                      // histórico de valores: el panel de detalle no aplica.
-                      const util = tieneLecturaUtil(sensor.estado) && !sensor.esEstado
-                      return (
-                        <li key={sensor.id}>
-                          <button
-                            type="button"
-                            className={`mgr-sensor mgr-sensor--${sensor.estado}`}
-                            onClick={() => setSensorActivo(sensor)}
-                            disabled={!util}
-                          >
-                            <span className="mgr-sensor-cabecera">
-                              <span className="mgr-sensor-icono" aria-hidden="true">{iconoSensor(sensor.tipo, 18)}</span>
-                              <span className="mgr-sensor-tipo">{sensor.tipo}</span>
-                              <span className="mgr-estado">{ETIQUETA[sensor.estado]}</span>
-                              {sensor.sinCalibrar && sensor.valor !== null && (
-                                <span className="mgr-estado" title="El ESP32 envió esta lectura sin calibración: el número no es una medida física confirmada.">Sin calibrar</span>
-                              )}
-                            </span>
-                            <span className="mgr-sensor-valor">
-                              <strong title={sensor.esEstado ? AYUDA_SALIDA_REPORTADA : undefined}>{valorLegible(sensor)}</strong>
-                              {!sensor.esEstado && <small>{sensor.unidad}</small>}
-                            </span>
-                            {posicion !== null ? (
-                              <span className="mgr-rango" aria-label={`Rango ideal ${sensor.minUmbral} a ${sensor.maxUmbral} ${sensor.unidad}`}>
-                                <span className="mgr-rango-ideal" />
-                                <span className="mgr-rango-marca" style={{ left: `${posicion}%` }} />
+                <>
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.ul key={galpon.id} className="mgr-grid" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                      {galpon.sensores.map((sensor) => {
+                        const posicion = posicionEnRango(sensor)
+                        const util = tieneLecturaUtil(sensor.estado) && !sensor.esEstado
+                        const esActivo = sensorActivo?.id === sensor.id
+                        return (
+                          <li key={sensor.id}>
+                            <button
+                              type="button"
+                              aria-pressed={esActivo}
+                              className={`mgr-sensor mgr-sensor--${sensor.estado}${esActivo ? ' is-activo' : ''}`}
+                              onClick={() => setSensorId(sensor.id)}
+                              disabled={!util}
+                            >
+                              <span className="mgr-sensor-cabecera">
+                                <span className="mgr-sensor-icono" aria-hidden="true">{iconoSensor(sensor.tipo, 18)}</span>
+                                <span className="mgr-sensor-tipo">{sensor.tipo}</span>
+                                <span className="mgr-estado">{ETIQUETA[sensor.estado]}</span>
+                                {sensor.sinCalibrar && sensor.valor !== null && (
+                                  <span className="mgr-estado" title="El ESP32 envió esta lectura sin calibración: el número no es una medida física confirmada.">Sin calibrar</span>
+                                )}
                               </span>
-                            ) : (
-                              <span className="mgr-rango-vacio">Sin rango configurado</span>
-                            )}
-                            <span className="mgr-sensor-pie">
-                              <span>{sensor.minUmbral !== null && sensor.maxUmbral !== null ? `Ideal ${sensor.minUmbral}–${sensor.maxUmbral} ${sensor.unidad}` : sensor.codigo}</span>
-                              <span>{formatearUltimaLectura(sensor.ultimaLecturaTs)}</span>
-                            </span>
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </motion.ul>
-                </AnimatePresence>
+                              <span className="mgr-sensor-valor">
+                                <strong title={sensor.esEstado ? AYUDA_SALIDA_REPORTADA : undefined}>{valorLegible(sensor)}</strong>
+                                {!sensor.esEstado && <small>{sensor.unidad}</small>}
+                              </span>
+                              {posicion !== null ? (
+                                <span className="mgr-rango" aria-label={`Rango ideal ${sensor.minUmbral} a ${sensor.maxUmbral} ${sensor.unidad}`}>
+                                  <span className="mgr-rango-ideal" />
+                                  <span className="mgr-rango-marca" style={{ left: `${posicion}%` }} />
+                                </span>
+                              ) : (
+                                <span className="mgr-rango-vacio">Sin rango configurado</span>
+                              )}
+                              <span className="mgr-sensor-pie">
+                                <span>{sensor.minUmbral !== null && sensor.maxUmbral !== null ? `Ideal ${sensor.minUmbral}–${sensor.maxUmbral} ${sensor.unidad}` : sensor.codigo}</span>
+                                <span>{formatearUltimaLectura(sensor.ultimaLecturaTs)}</span>
+                              </span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </motion.ul>
+                  </AnimatePresence>
+
+                  <SensorDetail
+                    sensor={sensorActivo}
+                    galponNombre={galpon.nombre}
+                    diaVida={galpon.loteActivo ? galpon.diaVida : null}
+                    onClose={() => setSensorId(false)}
+                    inline
+                  />
+                </>
               )}
             </>
           )}
         </div>
       </motion.div>
-
-      {galpon && (
-        <SensorDetail
-          sensor={sensorActivo}
-          galponNombre={galpon.nombre}
-          diaVida={galpon.loteActivo ? galpon.diaVida : null}
-          onClose={() => setSensorActivo(null)}
-        />
-      )}
     </div>,
     document.body,
   )

@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useMemo, useState, type FormEvent } from 'react'
 import { getUsuario } from '@shared/api/tokens'
 import BarraHerramientas, { type OpcionFiltro } from '@shared/ui/admin/BarraHerramientas'
@@ -55,10 +56,14 @@ function OrdenesCompraPage() {
     setGuardando(true); setErrorFormulario('')
     void gestion.crear({ proveedor_id: Number(form.proveedor_id), granja_id: Number(form.granja_id), lote_id: form.lote_id ? Number(form.lote_id) : undefined, usuario_id: usuario.id, codigo: codigoAutomatico(), fecha_pedido: form.fecha_pedido || undefined, fecha_entrega_estimada: form.fecha_entrega_estimada || undefined }).then((orden) => { setFormularioAbierto(false); setOrdenSeleccionadaId(orden.id) }).catch((err) => setErrorFormulario(mensajeDeError(err, 'No se pudo crear la orden.'))).finally(() => setGuardando(false))
   }
-  const cancelar = (orden: OrdenCompra) => {
-    if (!window.confirm(
-      `¿Cancelar la orden ${orden.codigo}? Ya no podrá recibir insumos ni cambiar de estado.`,
-    )) return
+  const cancelar = async (orden: OrdenCompra) => {
+    if (!(await confirmarAccion({
+      titulo: '¿Cancelar esta orden?',
+      entidad: orden.codigo,
+      descripcion: 'Ya no podrá recibir insumos ni cambiar de estado.',
+      textoConfirmar: 'Cancelar orden',
+      tono: 'aviso',
+    }))) return
     void gestion.cancelar(orden.id).catch((error) => {
       toast.error(mensajeDeError(error, 'No se pudo cancelar la orden.'))
     })

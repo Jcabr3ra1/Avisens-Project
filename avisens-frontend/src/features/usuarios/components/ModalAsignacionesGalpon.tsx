@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import type { Usuario } from '@shared/api'
 import type { Galpon } from '@features/galpones/api/galpones'
@@ -71,10 +72,14 @@ function ModalAsignacionesGalpon({
     }
   }
 
-  function confirmarRetiro(asignacion: AsignacionGalpon) {
-    const confirmado = window.confirm(
-      `¿Retirar ${asignacion.galpon.nombre} de las responsabilidades de ${usuario.nombre_completo}?`,
-    )
+  async function confirmarRetiro(asignacion: AsignacionGalpon) {
+    const confirmado = (await confirmarAccion({
+      titulo: '¿Retirar esta asignación?',
+      entidad: asignacion.galpon.nombre,
+      descripcion: `El galpón dejará de estar asignado a ${usuario.nombre_completo}.`,
+      textoConfirmar: 'Retirar asignación',
+      tono: 'aviso',
+    }))
     if (confirmado) void onRetirar(asignacion.galpon_id)
   }
 

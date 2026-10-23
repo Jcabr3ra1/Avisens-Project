@@ -187,6 +187,8 @@
   .dash-content > .dash-mobile-header { padding-right: calc(var(--space-4) + 110px); }
   .dash-header-perfil { --perfil-avatar-size: 36px; padding: 3px; }
   .dash-header-perfil-copy { display: none; }
+  .dash-acciones-superiores .dash-topbar-titulo,
+  .dash-acciones-superiores .dash-topbar-buscar { display: none; }
 
   .dash-mobile-header {
     position: relative;

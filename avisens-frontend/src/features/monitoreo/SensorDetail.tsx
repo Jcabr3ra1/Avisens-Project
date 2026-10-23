@@ -19,6 +19,7 @@ type Props = {
   galponNombre: string                // Nombre del galpón al que pertenece el sensor
   diaVida:      number | null          // Día del lote que ocupa el galpón; null si está vacío
   onClose:      () => void            // Callback para cerrar el panel
+  inline?:      boolean               // Renderiza embebido en el flujo en vez de cajón flotante
 }
 
 // A qué clave de referencia corresponde el texto libre de `sensor.tipo`.
@@ -158,7 +159,7 @@ function SparkLine({ datos, color, unidad, min, max, umbralMin, umbralMax }: Spa
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-export function SensorDetail({ sensor, galponNombre, diaVida, onClose }: Props) {
+export function SensorDetail({ sensor, galponNombre, diaVida, onClose, inline = false }: Props) {
   const panelRef = useRef<HTMLDivElement>(null)
   const [historico, setHistorico] = useState<Medicion[]>([])
   const [cargandoHist, setCargandoHist] = useState(false)
@@ -202,14 +203,145 @@ export function SensorDetail({ sensor, galponNombre, diaVida, onClose }: Props) 
 
   // El panel nunca se desmonta (la transición es por clase CSS), así que el
   // foco atrapado se activa y desactiva con `Boolean(sensor)` en vez de con
-  // el ciclo de montaje que usa Modal. Reemplaza el foco manual al `<aside>`
-  // y el listener de Escape que este panel llevaba por su cuenta: ahora
-  // también atrapa el Tab, que antes se escapaba a la página de atrás.
-  useFocoAtrapado(panelRef, Boolean(sensor), onClose)
+  // el ciclo de montaje que usa Modal. Cuando se renderiza inline dentro de
+  // MonitoreoGranja, el contenedor padre ya gestiona el foco atrapado.
+  useFocoAtrapado(panelRef, Boolean(sensor) && !inline, onClose)
 
   const ref = sensor ? REFERENCIA_ITALCOL[claveReferencia(sensor.tipo) ?? 'temperatura'] : null
   const refDisponible = sensor ? claveReferencia(sensor.tipo) !== null : false
   const color = sensor ? (COLORES[sensor.estado] ?? COLORES.offline) : COLORES.offline
+
+  if (inline) {
+    if (!sensor) return null
+    return (
+      <section className="sdet-inline" aria-label={`Detalle de ${sensor.tipo}`}>
+        <header className="sdet-inline-header">
+          <div className="sdet-header-info">
+            <span className="sdet-icono" style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}>
+              {iconoSensor(sensor.tipo, 18)}
+            </span>
+            <div className="sdet-inline-ident">
+              <div className="sdet-inline-titulo-fila">
+                <h3 className="sdet-titulo">{sensor.tipo}</h3>
+                <span
+                  className="sdet-estado-badge"
+                  style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color, border: `1px solid color-mix(in srgb, ${color} 25%, transparent)` }}
+                >
+                  {ETIQUETA_ESTADO[sensor.estado]}
+                </span>
+              </div>
+              <div className="sdet-subtitulo">
+                <span>{galponNombre}</span>
+                <span aria-hidden="true">·</span>
+                <code className="sdet-inline-codigo">{sensor.codigo}</code>
+              </div>
+            </div>
+          </div>
+          <button type="button" className="sdet-cerrar" onClick={onClose} aria-label="Ocultar detalle del sensor" title="Ocultar detalle">
+            ✕
+          </button>
+        </header>
+
+        <div className="sdet-inline-body">
+          <div className="sdet-inline-col sdet-inline-col--lectura">
+            <div className="sdet-inline-gauge">
+              <SensorGauge
+                valor={sensor.valor ?? 0}
+                minUmbral={sensor.minUmbral ?? 0}
+                maxUmbral={sensor.maxUmbral ?? (sensor.valor ?? 1) * 2}
+                unidad={sensor.unidad}
+                estado={sensor.estado === 'sin_umbral' ? 'optimo' : sensor.estado}
+                size={188}
+              />
+              <p className="sdet-estado-desc">
+                {sensor.estado === 'optimo'      && `Dentro del rango óptimo · ${pctEnRango}% del recorrido`}
+                {sensor.estado === 'advertencia' && `Fuera del umbral recomendado · Monitorear de cerca`}
+                {sensor.estado === 'critico'     && `¡Fuera del rango crítico! Requiere acción correctiva`}
+                {sensor.estado === 'sin_umbral'  && `Esta variable todavía no tiene un umbral configurado en el sistema`}
+                {sensor.estado === 'offline'     && `Sensor sin señal · Verificar conexión del dispositivo`}
+              </p>
+            </div>
+
+            {sensor.minUmbral !== null && sensor.maxUmbral !== null && (
+              <div className="sdet-rango-card sdet-rango-card--inline">
+                <span className="sdet-rango-label">Rango umbral configurado</span>
+                <div className="sdet-rango-bar-wrap">
+                  <div className="sdet-rango-bar">
+                    <div className="sdet-rango-fill" style={{ width: `${pctEnRango}%`, background: color }} />
+                    <div className="sdet-rango-marker" style={{ left: `${pctEnRango}%`, borderColor: color }} />
+                  </div>
+                  <div className="sdet-rango-labels">
+                    <span>{sensor.minUmbral} {sensor.unidad}</span>
+                    <span className="sdet-rango-actual" style={{ color }}>{sensor.valor ?? '—'} {sensor.unidad}</span>
+                    <span>{sensor.maxUmbral} {sensor.unidad}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="sdet-stats sdet-stats--inline">
+              <div className="sdet-stat">
+                <span className="sdet-stat-label">Mínimo</span>
+                <strong className="sdet-stat-val">{lecturas.length ? stats.min : '—'} <small>{sensor.unidad}</small></strong>
+              </div>
+              <div className="sdet-stat">
+                <span className="sdet-stat-label">Promedio</span>
+                <strong className="sdet-stat-val">{lecturas.length ? stats.avg : '—'} <small>{sensor.unidad}</small></strong>
+              </div>
+              <div className="sdet-stat">
+                <span className="sdet-stat-label">Máximo</span>
+                <strong className="sdet-stat-val">{lecturas.length ? stats.max : '—'} <small>{sensor.unidad}</small></strong>
+              </div>
+              <div className="sdet-stat">
+                <span className="sdet-stat-label">Última lectura</span>
+                <strong className="sdet-stat-val sdet-stat-mono">{formatearUltimaLectura(sensor.ultimaLecturaTs)}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="sdet-inline-col sdet-inline-col--contexto">
+            <div className="sdet-section sdet-section--inline">
+              <h4 className="sdet-section-title">Últimas lecturas</h4>
+              {cargandoHist ? (
+                <p className="sdet-spark-hint">Cargando histórico…</p>
+              ) : lecturas.length === 0 ? (
+                <p className="sdet-spark-hint">Todavía no hay mediciones registradas para este sensor.</p>
+              ) : (
+                <>
+                  <p className="sdet-spark-hint">Pasa el dedo o el mouse sobre el gráfico para ver cada lectura</p>
+                  <div className="sdet-spark">
+                    <SparkLine
+                      datos={lecturas}
+                      color={color}
+                      unidad={sensor.unidad}
+                      min={stats.min - (stats.max - stats.min) * 0.1}
+                      max={stats.max + (stats.max - stats.min) * 0.1}
+                      umbralMin={sensor.minUmbral}
+                      umbralMax={sensor.maxUmbral}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            {ref && refDisponible && (
+              <div className="sdet-section sdet-italcol sdet-section--inline">
+                <h4 className="sdet-section-title">
+                  <IcNote size={14} /> Manual Italcol{diaVida === null ? ' · Sin lote activo' : ` · Día de vida ${diaVida}`}
+                </h4>
+                <p className="sdet-italcol-desc">{ref.descripcion}</p>
+                <ul className="sdet-italcol-lista">
+                  {ref.rangos.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <>
