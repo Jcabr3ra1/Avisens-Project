@@ -3,6 +3,9 @@ import type { Proveedor } from '../model/proveedor'
 
 type Props = {
   proveedores: Proveedor[]
+  // Sin gestión (el operario) la tabla es de consulta: el estado se lee como
+  // etiqueta y no hay columna de acciones.
+  gestionar: boolean
   onEditar: (proveedor: Proveedor) => void
   onAlternarActivo: (proveedor: Proveedor) => void
   onEliminar: (proveedor: Proveedor) => void
@@ -12,7 +15,7 @@ function iniciales(nombre: string): string {
   return nombre.trim().split(/\s+/).slice(0, 2).map((parte) => parte[0]?.toUpperCase()).join('') || '—'
 }
 
-function TablaProveedores({ proveedores, onEditar, onAlternarActivo, onEliminar }: Props) {
+function TablaProveedores({ proveedores, gestionar, onEditar, onAlternarActivo, onEliminar }: Props) {
   return (
     <div className="prv-tabla-scroll">
       <table className="prv-tabla">
@@ -23,7 +26,7 @@ function TablaProveedores({ proveedores, onEditar, onAlternarActivo, onEliminar 
             <th>Tipo</th>
             <th>Contacto</th>
             <th>Estado</th>
-            <th><span className="sr-only">Acciones</span></th>
+            {gestionar && <th><span className="sr-only">Acciones</span></th>}
           </tr>
         </thead>
         <tbody>
@@ -49,28 +52,34 @@ function TablaProveedores({ proveedores, onEditar, onAlternarActivo, onEliminar 
                 </span>
               </td>
               <td>
-                <label className="prv-interruptor">
-                  <input
-                    type="checkbox"
-                    checked={proveedor.activo}
-                    onChange={() => onAlternarActivo(proveedor)}
-                    aria-label={`${proveedor.activo ? 'Desactivar' : 'Activar'} ${proveedor.nombre}`}
-                  />
-                  <span className="prv-interruptor-riel" aria-hidden="true" />
+                {gestionar ? (
+                  <label className="prv-interruptor">
+                    <input
+                      type="checkbox"
+                      checked={proveedor.activo}
+                      onChange={() => onAlternarActivo(proveedor)}
+                      aria-label={`${proveedor.activo ? 'Desactivar' : 'Activar'} ${proveedor.nombre}`}
+                    />
+                    <span className="prv-interruptor-riel" aria-hidden="true" />
+                    <span className={`prv-estado prv-estado--${proveedor.activo ? 'activo' : 'inactivo'}`}>{proveedor.activo ? 'Activo' : 'Inactivo'}</span>
+                  </label>
+                ) : (
                   <span className={`prv-estado prv-estado--${proveedor.activo ? 'activo' : 'inactivo'}`}>{proveedor.activo ? 'Activo' : 'Inactivo'}</span>
-                </label>
+                )}
               </td>
-              <td>
-                <div className="prv-acciones">
-                  <MenuAcciones
-                    etiqueta={`Acciones de ${proveedor.nombre}`}
-                    acciones={[
-                      { etiqueta: 'Editar', onSeleccionar: () => onEditar(proveedor) },
-                      { etiqueta: 'Eliminar', onSeleccionar: () => onEliminar(proveedor), peligrosa: true },
-                    ]}
-                  />
-                </div>
-              </td>
+              {gestionar && (
+                <td>
+                  <div className="prv-acciones">
+                    <MenuAcciones
+                      etiqueta={`Acciones de ${proveedor.nombre}`}
+                      acciones={[
+                        { etiqueta: 'Editar', onSeleccionar: () => onEditar(proveedor) },
+                        { etiqueta: 'Eliminar', onSeleccionar: () => onEliminar(proveedor), peligrosa: true },
+                      ]}
+                    />
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

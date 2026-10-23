@@ -1,5 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
+import { getRol } from '@shared/api'
+import { permisosDeRegistro } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import FormularioConsumo from './FormularioConsumo'
 import ResumenConsumos from './ResumenConsumos'
@@ -20,6 +22,7 @@ type Props = {
 
 function GestionConsumos({ loteFijo = null, completo = false }: Props) {
   const gestion = useConsumosDiarios()
+  const permisos = permisosDeRegistro(getRol())
   const [abierto, setAbierto] = useState(false)
   const [editandoId, setEditandoId] = useState<number | null>(null)
   const [form, setForm] = useState<DatosFormularioConsumo>(FORMULARIO_CONSUMO_INICIAL)
@@ -129,7 +132,7 @@ function GestionConsumos({ loteFijo = null, completo = false }: Props) {
       <p>{loteFijo === null ? 'Prueba otra búsqueda o lote.' : 'Prueba otra búsqueda.'}</p>
     </div>
   ) : (
-    <TablaConsumos consumos={visibles} onEditar={abrirEditar} onEliminar={eliminar} />
+    <TablaConsumos consumos={visibles} permisos={permisos} onEditar={abrirEditar} onEliminar={eliminar} />
   )
   const modal = abierto && (
     <FormularioConsumo

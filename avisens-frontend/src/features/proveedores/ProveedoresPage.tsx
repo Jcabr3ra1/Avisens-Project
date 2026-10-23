@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
+import { getRol } from '@shared/api'
+import { permisosDeProveedor } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import { IcChevronDown, IcPlus, IcSearch } from '@shared/ui/icons/icons'
 import FormularioProveedor from './components/FormularioProveedor'
@@ -30,6 +32,9 @@ function Indicador({ etiqueta, valor, nota }: { etiqueta: string; valor: number 
 }
 
 function ProveedoresPage() {
+  // El administrador gestiona el directorio; el operario lo consulta desde
+  // su Bodega para saber a quién pedir un insumo.
+  const { gestionar } = permisosDeProveedor(getRol())
   const gestion = useProveedores()
   const [busqueda, setBusqueda] = useState('')
   const [estado, setEstado] = useState<FiltroEstado>('todos')
@@ -92,15 +97,21 @@ function ProveedoresPage() {
         <div>
           <span className="adm-eyebrow">
             <span className="adm-eyebrow-punto" aria-hidden="true" />
-            Plataforma · Abastecimiento
+            {gestionar ? 'Plataforma · Abastecimiento' : 'Bodega · Abastecimiento'}
           </span>
           <h1 className="prv-titulo">Proveedores</h1>
-          <p className="prv-subtitulo">Aliados de alimento, pollitos, insumos y servicios.</p>
+          <p className="prv-subtitulo">
+            {gestionar
+              ? 'Aliados de alimento, pollitos, insumos y servicios.'
+              : 'A quién pedir el alimento, los pollitos y los insumos de la granja.'}
+          </p>
         </div>
-        <button type="button" className="prv-boton-nuevo" onClick={formulario.abrirCrear}>
-          <IcPlus size={17} aria-hidden="true" />
-          Nuevo proveedor
-        </button>
+        {gestionar && (
+          <button type="button" className="prv-boton-nuevo" onClick={formulario.abrirCrear}>
+            <IcPlus size={17} aria-hidden="true" />
+            Nuevo proveedor
+          </button>
+        )}
       </header>
 
       <ul className="prv-indicadores" aria-label="Resumen de proveedores">
@@ -142,13 +153,15 @@ function ProveedoresPage() {
           <EstadoVacioAnimado
             animacion="caja-vacia"
             titulo="Aún no hay proveedores"
-            texto="Registra el primero para relacionarlo con lotes, insumos y compras."
-            accion={(
+            texto={gestionar
+              ? 'Registra el primero para relacionarlo con lotes, insumos y compras.'
+              : 'Cuando el administrador registre proveedores, aparecerán aquí con sus datos de contacto.'}
+            accion={gestionar ? (
               <button type="button" className="adm-btn adm-btn--primario" onClick={formulario.abrirCrear}>
                 <IcPlus size={16} aria-hidden="true" />
                 Nuevo proveedor
               </button>
-            )}
+            ) : undefined}
           />
         ) : visibles.length === 0 ? (
           <EstadoVacioAnimado
@@ -160,6 +173,7 @@ function ProveedoresPage() {
         ) : (
           <TablaProveedores
             proveedores={visibles}
+            gestionar={gestionar}
             onEditar={formulario.abrirEditar}
             onAlternarActivo={(proveedor) => void gestion.alternarActivo(proveedor)}
             onEliminar={confirmarEliminacion}
@@ -167,7 +181,7 @@ function ProveedoresPage() {
         )}
       </section>
 
-      {formulario.abierto && (
+      {gestionar && formulario.abierto && (
         <FormularioProveedor
           form={formulario.form}
           modoEdicion={formulario.modoEdicion}

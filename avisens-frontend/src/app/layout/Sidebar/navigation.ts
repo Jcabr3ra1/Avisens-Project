@@ -1,7 +1,7 @@
 import { ROL_ADMIN } from '@shared/auth/permisos'
 import { NAV_SECTIONS, esGrupo, itemVisible, type NavItem, type NavSection } from './navConfig'
 
-export type SpaceId = 'plataforma' | 'granja' | 'gestion'
+export type SpaceId = 'plataforma' | 'granja' | 'bodega' | 'gestion'
 export type NavigationSpace = {
   id: SpaceId
   label: string
@@ -12,6 +12,7 @@ export type NavigationSpace = {
 const SPACE_DEFINITIONS = [
   { id: 'plataforma', label: 'Plataforma', description: 'Organizaciones, prospectos, soporte y personas', sections: ['Organizaciones', 'Plataforma'] },
   { id: 'granja', label: 'Granja', description: 'El día a día de tus aves', sections: ['Granja'] },
+  { id: 'bodega', label: 'Bodega', description: 'Insumos y proveedores', sections: ['Bodega'] },
   { id: 'gestion', label: 'Gestión', description: 'Recursos y equipo', sections: ['Administración'] },
 ] as const
 
