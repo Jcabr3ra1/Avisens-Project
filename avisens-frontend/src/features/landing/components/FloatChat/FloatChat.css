@@ -97,7 +97,7 @@
 
 .float-panel {
   width: min(92vw, 390px);
-  max-height: calc(100svh - 7.5rem);
+  max-height: calc(100svh - 10rem);
   display: flex;
   flex-direction: column;
   overflow: hidden;

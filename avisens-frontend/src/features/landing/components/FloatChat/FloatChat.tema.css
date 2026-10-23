@@ -1,6 +1,6 @@
 .float-chat .float-panel {
   width: min(92vw, 380px);
-  max-height: min(640px, calc(100svh - 7.5rem));
+  max-height: min(640px, calc(100svh - 10rem));
   background: color-mix(in srgb, var(--avisens-sage) 26%, var(--avisens-cream));
   border: 1px solid color-mix(in srgb, var(--avisens-ink) 10%, transparent);
   border-radius: 24px;
@@ -70,7 +70,7 @@
 @media (min-width: 1280px) and (min-height: 820px) {
   .float-chat .float-panel {
     width: 420px;
-    max-height: min(700px, calc(100svh - 7.5rem));
+    max-height: min(700px, calc(100svh - 10rem));
   }
 }
 
@@ -273,6 +273,16 @@
   transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background 160ms ease;
   animation: float-opcion-entra 320ms cubic-bezier(0.23, 1, 0.32, 1) 420ms both;
 }
+
+.float-chat .float-dudas > .float-dudas-asesor {
+  position: sticky;
+  bottom: 0;
+  flex: 0 0 auto;
+  margin-top: auto;
+  box-shadow: 0 0.9rem 0 0.3rem var(--avisens-cream), 0 -0.7rem 0.7rem -0.2rem var(--avisens-cream);
+}
+
+.float-chat .float-dudas-lista { margin-bottom: 0.9rem; }
 
 .float-chat .float-dudas-asesor:active:not(:disabled) { transform: scale(0.98); }
 .float-chat .float-dudas-lista button:disabled,
