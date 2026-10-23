@@ -1,0 +1,31 @@
+meta {
+  name: [Admin · Propietario · Operario]  Última orden de cada relé de un galpón
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/v1/ordenes-actuadores/ultimas?galpon_id=1
+  body: none
+  auth: bearer
+}
+
+params:query {
+  galpon_id: 1
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  ordenes: la última orden de cada relé (historial: qué se pidió y qué
+  respondió el ESP32 entonces).
+
+  reles: lo que el ESP32 informó de cada relé en su último /ingest (modo,
+  encendido, orden_id). vigente = false si ese informe tiene más de 30 s:
+  entonces no se debe presentar como el estado actual.
+
+  encendido es la salida que el ESP32 ordenó al pin. confirmacion_fisica es
+  siempre "no_disponible": no hay sensor que confirme que el relé conmutó.
+}

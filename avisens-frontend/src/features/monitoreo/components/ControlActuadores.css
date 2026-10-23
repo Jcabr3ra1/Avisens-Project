@@ -1,0 +1,30 @@
+/* Una tarjeta por relé. En el móvil quedan una debajo de otra y los botones
+   ocupan todo el ancho, con el alto táctil de .adm-btn (44 px). */
+.ctl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 0.9rem;
+}
+
+.ctl-card { display: flex; flex-direction: column; gap: 0.7rem; padding: 1rem; min-width: 0; }
+.ctl-cabecera { display: flex; align-items: center; gap: 0.6rem; }
+.ctl-icono { font-size: 1.3rem; line-height: 1; }
+.ctl-nombre { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.ctl-nombre strong { font-size: 0.9rem; color: var(--dash-ink); overflow-wrap: anywhere; }
+.ctl-nombre small { font-size: 0.72rem; color: var(--text3); }
+
+.ctl-estado { margin: 0; font-size: 1.1rem; }
+
+.ctl-acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ctl-acciones .adm-btn { flex: 1 1 auto; justify-content: center; }
+
+.ctl-mensajes { display: flex; flex-direction: column; gap: 0.35rem; min-height: 1.2rem; }
+.ctl-mensaje { margin: 0; font-size: 0.78rem; line-height: 1.35; }
+.ctl-mensajes .mon-estado-badge { border-radius: var(--radius-md); }
+.ctl-mensaje--tenue { color: var(--text3); }
+.ctl-mensaje--error { color: var(--red); }
+.ctl-aviso { margin-bottom: 0.8rem; }
+
+@media (max-width: 480px) {
+  .ctl-acciones .adm-btn { flex-basis: 100%; }
+}

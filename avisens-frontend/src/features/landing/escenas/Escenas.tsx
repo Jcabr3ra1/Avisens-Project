@@ -9,7 +9,6 @@ import { IcAlert, IcArrowRight, IcCheck, IcClose } from '@shared/ui/icons/icons'
 import Footer from '../components/Footer/Footer'
 import { beneficios, fotos, inicio, mision, problema, producto, videos } from '../model/historia'
 import { useEscenas } from './useEscenas'
-import AnimacionLottie from './AnimacionLottie'
 import { irAPosicion, irASeccion, useScrollSuave } from './useScrollSuave'
 import { useEntradas } from './useEntradas'
 import './Escenas.css'
@@ -427,23 +426,13 @@ function Beneficios() {
           <div className="esc-ganas-vista esc-ganas-vista--curva" data-beat={TRAMOS_GANAS[2]}>
             <header className="esc-ganas-vista-cabecera"><h3>{beneficios.lista[2]?.titulo}</h3><p>{beneficios.lista[2]?.texto}</p></header>
             <div className="esc-ganas-vista-cuerpo">
-              <AnimacionLottie
-                nombre="crecimiento"
-              velocidad={0.3}
-                className="esc-ganas-lottie"
-                quitarFondo
-                capas={{ 'percentage Outlines': '#e3c565' }}
-                colores={{ '#28194d': '#f7f6ef', '#f2b51c': '#e3c565', '#d3dbe1': '#c6d2bf', '#f9f9f9': '#005b48', '#ffffff': '#203b32' }}
-                respaldo={(
-                  <div className="esc-ganas-curva">
-                    <svg viewBox="0 0 320 170">
-                      <path className="esc-mini-esperada" d="M10 160 C 90 154, 170 128, 312 40" />
-                      <path className="esc-mini-real" d="M10 160 C 84 144, 160 98, 250 52" pathLength={1} />
-                      <circle cx="250" cy="52" r="8" className="esc-mini-punto" />
-                    </svg>
-                  </div>
-                )}
-              />
+              <div className="esc-ganas-curva">
+                <svg viewBox="0 0 320 170">
+                  <path className="esc-mini-esperada" d="M10 160 C 90 154, 170 128, 312 40" />
+                  <path className="esc-mini-real" d="M10 160 C 84 144, 160 98, 250 52" pathLength={1} />
+                  <circle cx="250" cy="52" r="8" className="esc-mini-punto" />
+                </svg>
+              </div>
               <span className="esc-ganas-chip">Tu lote, comparado con la curva esperada</span>
             </div>
           </div>
@@ -456,20 +445,11 @@ function Beneficios() {
                   <strong>1,6</strong>
                   <small>kg de alimento por<br />kg de pollo</small>
                 </div>
-                <AnimacionLottie
-                  nombre="alimento"
-                velocidad={0.3}
-                  className="esc-ganas-lottie esc-ganas-lottie--alimento"
-                  quitarFondo
-                  colores={{ '#005b48': '#c6d2bf', '#e3c565': '#e3c565', '#c6d2bf': '#c6d2bf', '#f7f6ef': '#f7f6ef', '#203b32': '#203b32' }}
-                  respaldo={(
-                    <div className="esc-conversion-barras">
-                      {[0.92, 0.78, 0.66, 0.58].map((alto, indice) => (
-                        <span key={alto} style={{ ...variable('--h', alto), ...variable('--i', indice) }} />
-                      ))}
-                    </div>
-                  )}
-                />
+                <div className="esc-conversion-barras">
+                  {[0.92, 0.78, 0.66, 0.58].map((alto, indice) => (
+                    <span key={alto} style={{ ...variable('--h', alto), ...variable('--i', indice) }} />
+                  ))}
+                </div>
               </div>
               <span className="esc-ganas-vista-nota">Semana a semana, cada kilo de alimento rinde más.</span>
             </div>

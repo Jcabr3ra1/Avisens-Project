@@ -20,7 +20,7 @@ import {
 } from './dominio/calificacion';
 
 const PRIMERA_PREGUNTA = 'M1';
-const PRIMERA_PREGUNTA_PQRS = 'B1';
+const PRIMERA_PREGUNTA_PQRS = 'BMP';
 const PRIMERA_PREGUNTA_COTIZACION = 'A1';
 const PRIMERA_PREGUNTA_SOPORTE = 'S1';
 const RUTA_PQRS = 'general';
@@ -67,10 +67,10 @@ const VALIDACION_DOCUMENTO = /^[\d\-.]+$/;
 // pantallas del formulario de WhatsApp Flows, para que el dia que se publique
 // no haya que reagrupar nada.
 const MENSAJES_TRANSICION: Record<string, string> = {
-  A5: '🏘️ *Tu granja* — 3 preguntas para poder cotizarte',
-  A9: '⚙️ *Cómo está montada* — 3 preguntas rápidas',
-  A14: '🎯 *Qué necesitas* — 5 preguntas y terminamos',
-  C1: '📞 *Casi listo* — solo falta cómo contactarte',
+  A5: '*Tu granja* — 3 preguntas para poder cotizarte',
+  A9: '*Cómo está montada* — 3 preguntas rápidas',
+  A14: '*Qué necesitas* — 5 preguntas y terminamos',
+  C1: '*Casi listo* — solo falta cómo contactarte',
 };
 
 @Injectable()
@@ -147,7 +147,7 @@ export class ChatbotService {
       return {
         sesion_id: prospecto.sesion_id,
         pregunta: this.menuCorreccion(),
-        mensaje_transicion: '✏️ Claro. ¿Qué dato quieres corregir?',
+        mensaje_transicion: 'Claro. ¿Qué dato quieres corregir?',
         progreso: null as number | null,
         total_pasos: null as number | null,
         finalizado: false,
@@ -398,7 +398,7 @@ export class ChatbotService {
   private menuCorreccion() {
     return {
       codigo: CORREGIR,
-      texto: '✏️ ¿Qué dato quieres corregir?',
+      texto: '¿Qué dato quieres corregir?',
       tipo: 'opcion_unica',
       opciones: CORREGIBLES.map(([etiqueta]) => etiqueta),
     };
@@ -421,25 +421,25 @@ export class ChatbotService {
 
     if (!prospecto) return '';
 
-    const lineas: string[] = ['📋 *Resumen de tus datos:*\n'];
+    const lineas: string[] = ['*Esto es lo que me contaste:*\n'];
 
-    if (prospecto.nombre) lineas.push(`👤 *Nombre:* ${prospecto.nombre}`);
+    if (prospecto.nombre) lineas.push(`*Nombre:* ${prospecto.nombre}`);
     if (prospecto.tipo_documento || prospecto.documento) {
       const doc = [prospecto.tipo_documento, prospecto.documento].filter(Boolean).join(' ');
-      lineas.push(`🪪 *Documento:* ${doc}`);
+      lineas.push(`*Documento:* ${doc}`);
     }
-    if (prospecto.municipio) lineas.push(`📍 *Ubicación:* ${prospecto.municipio}`);
-    if (prospecto.area_granja_m2) lineas.push(`🌾 *Tamaño granja:* ${prospecto.area_granja_m2} m²`);
-    if (prospecto.area_galpon_m2) lineas.push(`🏠 *Tamaño galpón:* ${prospecto.area_galpon_m2} m²`);
+    if (prospecto.municipio) lineas.push(`*Ubicación:* ${prospecto.municipio}`);
+    if (prospecto.area_granja_m2) lineas.push(`*Tamaño de la granja:* ${prospecto.area_granja_m2} m²`);
+    if (prospecto.area_galpon_m2) lineas.push(`*Tamaño del galpón:* ${prospecto.area_galpon_m2} m²`);
     // Si el remitente llegó como identidad de Meta y no como número, la línea
     // se omite entera: escribió por WhatsApp, ya sabe cómo lo vamos a
     // contactar, y pedirle que confirme un `CO.1639…` sólo siembra duda.
     if (prospecto.telefono && !esIdentidadMeta(prospecto.telefono)) {
-      lineas.push(`📞 *Teléfono:* ${prospecto.telefono}`);
+      lineas.push(`*Teléfono:* ${prospecto.telefono}`);
     }
-    if (prospecto.email) lineas.push(`📧 *Email:* ${prospecto.email}`);
+    if (prospecto.email) lineas.push(`*Correo:* ${prospecto.email}`);
 
-    lineas.push('\n¿Confirmas que estos datos son correctos?');
+    lineas.push('\n¿Está todo bien?');
 
     return lineas.join('\n');
   }
@@ -555,19 +555,19 @@ export class ChatbotService {
 
     if (texto && pregunta.campo_prospecto === 'email' && !VALIDACION_EMAIL.test(texto)) {
       throw new BadRequestException(
-        'El correo electrónico no parece válido. Por favor verifica e intenta de nuevo.',
+        'Ese correo no parece válido. Revísalo y escríbelo otra vez.',
       );
     }
 
     if (texto && pregunta.campo_prospecto === 'telefono' && !VALIDACION_TELEFONO.test(texto)) {
       throw new BadRequestException(
-        'El número de teléfono no parece válido. Usa solo números, opcionalmente con +, espacios o guiones.',
+        'Ese número no parece válido. Escríbelo solo con números; puedes usar + , espacios o guiones.',
       );
     }
 
     if (texto && pregunta.campo_prospecto === 'documento' && !VALIDACION_DOCUMENTO.test(texto)) {
       throw new BadRequestException(
-        'El documento debe contener solo números, puntos o guiones.',
+        'El documento solo lleva números, puntos o guiones. Revísalo y escríbelo otra vez.',
       );
     }
 
@@ -582,7 +582,7 @@ export class ChatbotService {
 
     if (!usuario || !usuario.activo) {
       throw new BadRequestException(
-        'La cédula no es válida para una solicitud PQRS. Verifica que esté registrada en AVISENS e inténtalo de nuevo.',
+        'No encuentro esa cédula entre los clientes de AVISENS. Revísala y escríbela otra vez.',
       );
     }
   }
@@ -642,7 +642,7 @@ export class ChatbotService {
         // El radicado se le muestra: sin numero, el cliente no tiene con que
         // preguntar despues por su caso.
         mensaje_transicion:
-          `✅ Listo. Tu solicitud quedó radicada con el número ` +
+          `Listo, tu solicitud quedó radicada con el número ` +
           `*${radicadoDe(solicitud.id)}*.` +
           (horas
             ? `\n\nUn asesor te responde dentro de las próximas ${horas} horas. ` +

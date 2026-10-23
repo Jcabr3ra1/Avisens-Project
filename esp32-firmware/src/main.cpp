@@ -1,884 +1,674 @@
-// main.cpp — Firmware del nodo ESP32 de Avisens.
-//
-// Qué hace:
-//   1. Se conecta al WiFi.
-//   2. Lee el sensor DHT22 (temperatura + humedad).
-//   3. Controla el ventilador LOCALMENTE por umbral (el ESP32 decide solo; el
-//      backend NO controla — ver README).
-//   4. Envía temperatura y humedad al backend por HTTP cada INTERVALO_ENVIO_MS.
-//
-// Framework Arduino sobre PlatformIO (C++ en VS Code, sin el Arduino IDE).
-
 #include <Arduino.h>
-#include <WiFi.h>
-#include <ESPmDNS.h>
-#include <HTTPClient.h>
-#include <WiFiClientSecure.h>
-#include <time.h>
-#include <cstdio>
-#include <cstring>
-#include <freertos/FreeRTOS.h>
+#include <esp_task_wdt.h>
+#include <freertos/task.h>
 #include <freertos/queue.h>
-#include <Preferences.h>
-#include <Update.h>
-#include <mbedtls/sha256.h>
-#include <esp_random.h>
-#include <DHT.h>
-#include <ArduinoJson.h>
-#include <new>
+
 #include "config.h"
-#include "isrg_root_x1.h"
+#include "MovingAverage.h"
+#include "SensorDHT.h"
+#include "SensorMQ135.h"
+#include "SensorKY032.h"
+#include "SensorUltrasonico.h"
+#include "SensorPeso.h"
+#include "Actuador.h"
+#include "GestorActuadores.h"
+#include "ControlServo.h"
+#include "Alimentador.h"
+#include "Persiana.h"
+#include "ConexionWiFi.h"
+#include "ServicioIngesta.h"
+#include "ConfigDispositivo.h"
+#include "PortalWeb.h"
+#include "ControlRemoto.h"
 
-// El controlador envía a dos destinos a la vez, sin recompilar:
-//   - Producción: BACKEND_URL (HTTPS validado). Es el principal y usa el búfer.
-//   - Local: el computador de desarrollo en la misma red, hallado por mDNS o
-//     por las IP vecinas a la última conocida. Es "si se puede": nunca retrasa
-//     a producción ni guarda lecturas.
-// Cada destino se habilita al recibir su token por USB desde la página.
+//  INSTANCIAS GLOBALES
 
-// Versión de este firmware. Súbela al publicar uno nuevo desde la página:
-// el controlador compara este valor con la versión publicada y se actualiza.
-#define FIRMWARE_VERSION "1.1.1"
+EstadoSistema estadoSistema = EstadoSistema::INIT;
 
-// Tipo de sensor DHT (DHT22 = AM2302). Cámbialo a DHT11 si usas ese modelo.
-#define DHT_TIPO DHT22
+// Sensores
+SensorDHT sensorDHT;
+SensorMQ135 sensorMQ135;
+SensorKY032 sensorKY032;
+SensorUltrasonico sensorUltrasonico;
+SensorPeso sensorPeso;
 
-// Muchos módulos de relé son "activos en BAJO": LOW = encendido. Si el tuyo va
-// al revés, intercambia estos dos valores.
-#define RELE_ENCENDIDO LOW
-#define RELE_APAGADO   HIGH
+// Actuadores
+GestorActuadores gestorActuadores;
+ControlServo controlServo;
+Alimentador alimentador;
+Persiana persiana;
+// Órdenes de la web sobre K1-K4; ver ControlRemoto.h.
+ControlRemoto controlRemoto(gestorActuadores);
 
-DHT dht(PIN_DHT, DHT_TIPO);
+#if !defined(WIFI_SSID) || !defined(WIFI_PASSWORD)
+#error "Define WIFI_SSID y WIFI_PASSWORD en include/config.h (ver config.example.h) antes de compilar."
+#endif
+// La red sale de configDispositivo() en setup(): la del portal o config.h.
+ConexionWiFi conexionWiFi;
 
-// Estado actual del ventilador — se usa para la histéresis y para reportarlo.
-bool ventiladorEncendido = false;
+// ─── Variables de sincronización ─────────────────────────
+unsigned long ultimaLecturaSensores = 0;
+unsigned long ultimaActuacion = 0;
+unsigned long ultimaEnvioTelemetria = 0;
 
-// Momento (millis) del último reporte al backend.
-unsigned long ultimoEnvio = 0;
-constexpr unsigned long WIFI_REINTENTO_MS = 15000;
-constexpr uint32_t HTTP_TIMEOUT_MS = 5000;
+// ─── Variables FSM (Documento SSD) ──────────────────────
+uint32_t ciclosArranque = 0;
+bool calibracionCompletada = false;
+uint32_t fallosAcumulados = 0;
+bool comandoRearme = false;
 
-// Todos los lectores DHT pertenecen a loop(); la tarea de red intercambia
-// copias por colas, sin modificar sensores mientras se están leyendo.
-constexpr uint8_t MAX_DHT = 16;
-constexpr unsigned long CONFIG_INTERVALO_MS = 30000;
-constexpr size_t MAX_TOKEN_LEN = 128;
-constexpr size_t MAX_URL_LEN = 128;
-struct MuestraDht {
-  uint8_t gpio;
+uint32_t ciclosTarea = 0;
+uint32_t erroresGlobales = 0;
+
+// Historial de temperatura para detectar gradientes ─
+struct HistorialTemperatura
+{
   float temperatura;
-  float humedad;
-};
-struct LecturaPendiente {
-  uint8_t cantidad;
-  MuestraDht muestras[MAX_DHT];
-};
-struct ConfiguracionDht {
-  uint8_t cantidad;
-  uint8_t pines[MAX_DHT];
-};
-struct TokenDispositivo {
-  char valor[MAX_TOKEN_LEN];
-  bool local;
-};
-// Un ciclo listo para enviar. El id viaja como id_lote: si un reintento llega
-// dos veces, el backend devuelve el resultado anterior sin duplicar mediciones.
-struct LoteGuardado {
-  char id[37];
-  char fecha[21];  // UTC ISO-8601; vacía si el reloj aún no estaba sincronizado
-  unsigned long capturadoMs;
-  LecturaPendiente lectura;
-};
-enum class ResultadoEnvio { Enviado, Reintentar, Descartar };
-struct LectorDht {
-  uint8_t gpio;
-  DHT* sensor;
-};
-LectorDht lectores[MAX_DHT] = {{PIN_DHT, &dht}};
-uint8_t cantidadLectores = 1;
-QueueHandle_t colaEnvios = nullptr;
-QueueHandle_t colaConfiguracion = nullptr;
-QueueHandle_t colaToken = nullptr;
-Preferences preferencias;
-char tokenProduccion[MAX_TOKEN_LEN] = DEVICE_TOKEN;
-char tokenLocal[MAX_TOKEN_LEN] = "";
-char urlLocal[MAX_URL_LEN] = "";
-String ultimaIpLocal;
-char bufferSerial[256] = {};
-size_t longitudBufferSerial = 0;
-bool mdnsIniciado = false;
-unsigned long ultimoIntentoDescubrimiento = 0;
-constexpr unsigned long DESCUBRIMIENTO_REINTENTO_MS = 60000;
-constexpr int32_t SONDA_TIMEOUT_MS = 150;
-constexpr int VECINOS_DESCUBRIMIENTO = 16;
+  unsigned long timestamp;
+} ultimaTemperatura = {0.0f, 0};
 
-// Actualización por Wi-Fi: la consulta de configuración anuncia la versión
-// publicada; si difiere, se descarga, se verifica su SHA-256 y se reinicia.
-constexpr unsigned long OTA_REINTENTO_MS = 3600000;
-struct ActualizacionPendiente {
-  bool hay;
-  bool local;
-  char version[33];
-  char sha256[65];
-  size_t tamano;
-};
-ActualizacionPendiente actualizacion{};
-char versionFallida[33] = "";
-bool produccionRechazaToken = false;
-unsigned long ultimoFalloOta = 0;
+// Filtro de picos para temperatura
+MovingAverage<float, 10> filtroTemperatura;
 
-// Sin conexión se guarda un ciclo por minuto durante 3 horas; al volver la red
-// se reenvían en orden, uno por segundo para no chocar con el límite de peticiones.
-constexpr size_t CAPACIDAD_BUFER = 180;
-constexpr unsigned long BUFER_INTERVALO_MS = 60000;
-constexpr unsigned long REENVIO_PAUSA_MS = 1000;
-constexpr unsigned long REINTENTO_MIN_MS = 5000;
-constexpr unsigned long REINTENTO_MAX_MS = 60000;
-constexpr unsigned long VIGENCIA_SIN_HORA_MS = 30000;
-LoteGuardado bufer[CAPACIDAD_BUFER];
-size_t inicioBufer = 0;
-size_t cantidadBufer = 0;
-unsigned long ultimoGuardadoMs = 0;
-bool huboCorte = false;
+static portMUX_TYPE muxLecturaDht = portMUX_INITIALIZER_UNLOCKED;
+static LecturaDHT snapshotDht = {0.0f, 0.0f, false, 0};
 
-bool esUrlLocalValida(const String& url);
-bool intentarRedescubrirBackend();
-
-bool tokenFormatoValido(const String& candidato) {
-  if (candidato.length() < 16 || candidato.length() >= MAX_TOKEN_LEN) return false;
-  for (size_t i = 0; i < candidato.length(); ++i) {
-    const char c = candidato[i];
-    if (c <= 32 || c >= 127) return false;
-  }
-  return true;
+void publicarLecturaDht(const LecturaDHT &lectura)
+{
+  portENTER_CRITICAL(&muxLecturaDht);
+  snapshotDht = lectura;
+  portEXIT_CRITICAL(&muxLecturaDht);
 }
 
-void recordarIpLocal(const String& url) {
-  const int desde = url.indexOf("://") + 3;
-  const int hasta = url.indexOf(':', desde);
-  if (desde > 2 && hasta > desde) ultimaIpLocal = url.substring(desde, hasta);
+LecturaDHT leerSnapshotDht()
+{
+  portENTER_CRITICAL(&muxLecturaDht);
+  LecturaDHT copia = snapshotDht;
+  portEXIT_CRITICAL(&muxLecturaDht);
+  return copia;
 }
 
-String leerPreferencia(const char* clave) {
-  return preferencias.isKey(clave) ? preferencias.getString(clave, "") : String();
+// Actuadores "encendidos desde el último envío": la persiana se mueve solo
+// ~6 s cada 5 min y el envío es cada INTERVALO_ENVIO_MS, así que mandar solo
+// el estado del instante del envío podría no mostrar nunca un movimiento.
+static portMUX_TYPE muxActuadores = portMUX_INITIALIZER_UNLOCKED;
+static EstadoActuadores actuadoresDesdeEnvio = {};
+
+void registrarEstadoActuadores(const EstadoActuadores &ahora)
+{
+  portENTER_CRITICAL(&muxActuadores);
+  actuadoresDesdeEnvio.alimentador |= ahora.alimentador;
+  actuadoresDesdeEnvio.persiana |= ahora.persiana;
+  for (int i = 0; i < 4; i++)
+    actuadoresDesdeEnvio.reles[i] |= ahora.reles[i];
+  portEXIT_CRITICAL(&muxActuadores);
 }
 
-void cargarTokenPersistido() {
-  if (esUrlLocalValida(String(BACKEND_URL))) {
-    snprintf(urlLocal, sizeof(urlLocal), "%s", BACKEND_URL);
-    recordarIpLocal(String(BACKEND_URL));
-  }
-  if (!preferencias.begin("avisens", true)) return;
-  const String produccion = leerPreferencia("token");
-  const String local = leerPreferencia("token_local");
-  const String urlGuardada = leerPreferencia("url");
-  preferencias.end();
-  if (tokenFormatoValido(produccion)) {
-    snprintf(tokenProduccion, sizeof(tokenProduccion), "%s", produccion.c_str());
-    Serial.println("[Provision] Token de producción cargado desde memoria NVS.");
-  }
-  if (tokenFormatoValido(local)) {
-    snprintf(tokenLocal, sizeof(tokenLocal), "%s", local.c_str());
-    Serial.println("[Provision] Token local cargado desde memoria NVS.");
-  }
-  if (esUrlLocalValida(urlGuardada)) {
-    snprintf(urlLocal, sizeof(urlLocal), "%s", urlGuardada.c_str());
-    recordarIpLocal(urlGuardada);
-    Serial.printf("[Provision] Backend local recordado: %s\n", urlLocal);
-  }
+EstadoActuadores tomarEstadoActuadores()
+{
+  portENTER_CRITICAL(&muxActuadores);
+  EstadoActuadores copia = actuadoresDesdeEnvio;
+  actuadoresDesdeEnvio = {};
+  portEXIT_CRITICAL(&muxActuadores);
+  return copia;
 }
 
-void procesarLineaSerial(String linea) {
-  linea.trim();
-  if (linea.isEmpty()) return;
-  if (linea == "AVISENS_PING") {
-    Serial.println("[Provision] PONG");
-    return;
-  }
-  const bool local = linea.startsWith("AVISENS_TOKEN_LOCAL:");
-  if (!local && !linea.startsWith("AVISENS_TOKEN:")) return;
+// Última distancia del HC-SR04 para la tarea de red (Core 1).
+static portMUX_TYPE muxAgua = portMUX_INITIALIZER_UNLOCKED;
+static LecturaUltrasonico snapshotAgua = {-1.0f, EstadoSensorUltrasonico::ERROR, 0};
+static bool snapshotAguaEnError = true;
 
-  String nuevoToken = linea.substring(local ? strlen("AVISENS_TOKEN_LOCAL:") : strlen("AVISENS_TOKEN:"));
-  nuevoToken.trim();
-  if (!tokenFormatoValido(nuevoToken)) {
-    Serial.println("[Provision] ERROR: formato o longitud de token inválido.");
-    return;
-  }
-
-  if (!preferencias.begin("avisens", false)) {
-    Serial.println("[Provision] ERROR: no se pudo abrir la memoria NVS.");
-    return;
-  }
-  const size_t escrito = preferencias.putString(local ? "token_local" : "token", nuevoToken);
-  preferencias.end();
-  if (escrito == 0) {
-    Serial.println("[Provision] ERROR: no se pudo guardar el token en NVS.");
-    return;
-  }
-
-  TokenDispositivo msg{};
-  snprintf(msg.valor, sizeof(msg.valor), "%s", nuevoToken.c_str());
-  msg.local = local;
-  if (colaToken != nullptr) {
-    xQueueOverwrite(colaToken, &msg);
-  } else {
-    char* destino = local ? tokenLocal : tokenProduccion;
-    snprintf(destino, MAX_TOKEN_LEN, "%s", nuevoToken.c_str());
-  }
-  Serial.printf("[Provision] Token %s guardado.\n", local ? "local" : "de producción");
-  Serial.println("[Provision] TOKEN_OK");
+void publicarLecturaAgua(const LecturaUltrasonico &lectura, bool enError)
+{
+  portENTER_CRITICAL(&muxAgua);
+  snapshotAgua = lectura;
+  snapshotAguaEnError = enError;
+  portEXIT_CRITICAL(&muxAgua);
 }
 
-void procesarProvisionSerial() {
-  while (Serial.available() > 0) {
-    const char c = static_cast<char>(Serial.read());
-    if (c == '\n' || c == '\r') {
-      if (longitudBufferSerial > 0) {
-        bufferSerial[longitudBufferSerial] = '\0';
-        procesarLineaSerial(String(bufferSerial));
-        longitudBufferSerial = 0;
-      }
-    } else if (longitudBufferSerial + 1 < sizeof(bufferSerial)) {
-      bufferSerial[longitudBufferSerial++] = c;
-    } else {
-      longitudBufferSerial = 0;
-    }
-  }
+// true y la distancia si hay una lectura válida y reciente para enviar.
+bool leerSnapshotAgua(float &distancia)
+{
+  portENTER_CRITICAL(&muxAgua);
+  LecturaUltrasonico copia = snapshotAgua;
+  bool enError = snapshotAguaEnError;
+  portEXIT_CRITICAL(&muxAgua);
+
+  distancia = copia.distancia;
+  return !enError &&
+         copia.estado == EstadoSensorUltrasonico::OK &&
+         millis() - copia.timestamp <= UMBRAL_SNAPSHOT_OBSOLETO_MS;
 }
 
-void esperarConSerial(unsigned long duracionMs) {
-  const unsigned long inicio = millis();
-  while (millis() - inicio < duracionMs) {
-    procesarProvisionSerial();
-    delay(20);
-  }
+// Último ADC del MQ-135 para la tarea de red (Core 1).
+static portMUX_TYPE muxGas = portMUX_INITIALIZER_UNLOCKED;
+static LecturaMQ135 snapshotGas = {0, 0.0f, false, 0};
+
+void publicarLecturaGas(const LecturaMQ135 &lectura)
+{
+  portENTER_CRITICAL(&muxGas);
+  snapshotGas = lectura;
+  portEXIT_CRITICAL(&muxGas);
 }
 
-bool pinDhtPermitido(int pin) {
-  const int disponibles[] = {4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33};
-  if (pin == PIN_RELE) return false;
-  for (int disponible : disponibles) if (pin == disponible) return true;
+// true y el ADC si hay una lectura válida y reciente para enviar.
+bool leerSnapshotGas(int &adc)
+{
+  portENTER_CRITICAL(&muxGas);
+  LecturaMQ135 copia = snapshotGas;
+  portEXIT_CRITICAL(&muxGas);
+
+  adc = copia.rawValue;
+  return copia.valida &&
+         millis() - copia.timestamp <= UMBRAL_SNAPSHOT_OBSOLETO_MS;
+}
+
+// Último peso del HX711 para la tarea de red (Core 1). SensorPeso marca la
+// lectura inválida mientras no se haya hecho TARA, así que sin tara no se
+// envía nada en vez de mandar un peso sin cero de referencia.
+static portMUX_TYPE muxPeso = portMUX_INITIALIZER_UNLOCKED;
+static LecturaPeso snapshotPeso = {0.0f, 0.0f, false, 0};
+
+void publicarLecturaPeso(const LecturaPeso &lectura)
+{
+  portENTER_CRITICAL(&muxPeso);
+  snapshotPeso = lectura;
+  portEXIT_CRITICAL(&muxPeso);
+}
+
+// true y los gramos si hay una lectura válida y reciente para enviar.
+bool leerSnapshotPeso(float &gramos)
+{
+  portENTER_CRITICAL(&muxPeso);
+  LecturaPeso copia = snapshotPeso;
+  portEXIT_CRITICAL(&muxPeso);
+
+  gramos = copia.peso;
+  return copia.valida &&
+         millis() - copia.timestamp <= UMBRAL_SNAPSHOT_OBSOLETO_MS;
+}
+
+// FUNCIÓN: Registrar falla crítica (local)
+void registrarFallaCritica(
+    const String &origen,
+    const String &mensaje,
+    const String &nivel = "critico")
+{
+  LOG_ERROR(origen + ": " + mensaje + " (" + nivel + ")");
+}
+
+bool detectarGradienteTermico(float temperatura, unsigned long ahora)
+{
+  const float UMBRAL_GRADIENT = 10.0f;       // °C
+  const unsigned long VENTANA_TIEMPO = 5000; // 5 segundos en ms
+
+  if (ultimaTemperatura.timestamp == 0)
+  {
+    // Primera lectura
+    ultimaTemperatura.temperatura = temperatura;
+    ultimaTemperatura.timestamp = ahora;
+    return false;
+  }
+
+  unsigned long deltaT_ms = ahora - ultimaTemperatura.timestamp;
+  float deltaTemp = std::abs(temperatura - ultimaTemperatura.temperatura);
+
+  if (deltaT_ms <= VENTANA_TIEMPO && deltaTemp > UMBRAL_GRADIENT)
+  {
+    LOG_WARN("⚠ Gradiente térmico abrupto: ΔT=" + String(deltaTemp) +
+             "°C en " + String(deltaT_ms) + "ms");
+    return true;
+  }
+
+  ultimaTemperatura.temperatura = temperatura;
+  ultimaTemperatura.timestamp = ahora;
   return false;
 }
 
-void aplicarConfiguracion() {
-  ConfiguracionDht config{};
-  if (colaConfiguracion == nullptr || xQueueReceive(colaConfiguracion, &config, 0) != pdTRUE) return;
-  // El DHT original continúa controlando el relé incluso sin asignación en BD.
-  for (uint8_t i = 1; i < cantidadLectores;) {
-    bool conservar = false;
-    for (uint8_t j = 0; j < config.cantidad; ++j) if (config.pines[j] == lectores[i].gpio) conservar = true;
-    if (conservar) { ++i; continue; }
-    delete lectores[i].sensor;
-    lectores[i] = lectores[--cantidadLectores];
-  }
-  for (uint8_t j = 0; j < config.cantidad; ++j) {
-    const uint8_t pin = config.pines[j];
-    bool existe = false;
-    for (uint8_t i = 0; i < cantidadLectores; ++i) if (lectores[i].gpio == pin) existe = true;
-    if (existe || cantidadLectores >= MAX_DHT || !pinDhtPermitido(pin)) continue;
-    DHT* sensor = new (std::nothrow) DHT(pin, DHT22);
-    if (sensor == nullptr) { Serial.println("[Config] Sin memoria para otro DHT22."); continue; }
-    pinMode(pin, INPUT_PULLUP);
-    sensor->begin();
-    lectores[cantidadLectores++] = {pin, sensor};
-    Serial.printf("[Config] DHT22 habilitado en GPIO %u.\n", pin);
-  }
-}
+void tareaGalpon(void *pvParameters)
+{
+  esp_task_wdt_add(NULL);
+  Serial.println("[FreeRTOS] Watchdog Timer registrado en Core 0.");
 
-bool urlBackendProduccionSegura();
-bool urlBackendLocalValida();
-bool relojSincronizado();
-bool produccionLista();
-bool localHabilitado();
+  static EstadoSistema ultimoEstadoImpreso = EstadoSistema::INIT;
 
-// ── WiFi ────────────────────────────────────────────────────────────────────
-void iniciarWiFi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.setAutoReconnect(true);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.printf("[WiFi] Iniciando conexión a %s; el control local sigue activo.\n",
-                WIFI_SSID);
-}
+  for (;;)
+  {
+    unsigned long ahora = millis();
+    esp_task_wdt_reset();
+    ciclosTarea++;
 
-// ── Control local de actuadores ─────────────────────────────────────────────
-// El ESP32 decide SOLO: enciende el ventilador si la temperatura sube del
-// umbral superior y lo apaga cuando baja del inferior (histéresis). Funciona
-// aunque no haya red: la seguridad del galpón no depende de internet.
-void controlarActuadores(float temperatura) {
-  if (!ventiladorEncendido && temperatura >= TEMP_ENCIENDE_VENTILADOR) {
-    ventiladorEncendido = true;
-    digitalWrite(PIN_RELE, RELE_ENCENDIDO);
-    Serial.println("[Actuador] Ventilador ENCENDIDO");
-  } else if (ventiladorEncendido && temperatura <= TEMP_APAGA_VENTILADOR) {
-    ventiladorEncendido = false;
-    digitalWrite(PIN_RELE, RELE_APAGADO);
-    Serial.println("[Actuador] Ventilador apagado");
-  }
-}
+    // ─── Procesamiento de comandos Serial (Variable R) ──────────────
+    if (Serial.available())
+    {
+      String cmd = Serial.readStringUntil('\n');
+      cmd.trim();
+      cmd.toUpperCase();
 
-// ── Envío al backend por el transporte elegido explícitamente ───────────────
-// Esta función corre en la tarea de red, nunca en el ciclo de control local.
-//
-// El token identifica el controlador/galpón. La identidad física de cada
-// variable es tipo + gpio; los seriales administrativos viven solo en Avisens.
-bool iniciarHttp(HTTPClient& http, WiFiClient& plano, WiFiClientSecure& seguro,
-                 bool local, const String& url) {
-  http.setConnectTimeout(HTTP_TIMEOUT_MS);
-  http.setTimeout(HTTP_TIMEOUT_MS);
-  if (local) return http.begin(plano, url);
-  seguro.setCACert(ISRG_ROOT_X1);
-  return http.begin(seguro, url);
-}
-
-ResultadoEnvio enviarLote(const LoteGuardado& lote, bool local) {
-  const LecturaPendiente& lectura = lote.lectura;
-  JsonDocument documento;
-  documento["id_lote"] = lote.id;
-  if (lote.fecha[0] != '\0') documento["fecha_dispositivo"] = lote.fecha;
-  JsonArray lecturas = documento["lecturas"].to<JsonArray>();
-  for (uint8_t i = 0; i < lectura.cantidad; ++i) {
-    const MuestraDht& muestra = lectura.muestras[i];
-    const String canal = "gpio:" + String(muestra.gpio);
-    JsonObject temperatura = lecturas.add<JsonObject>();
-    temperatura["tipo"] = "temperatura";
-    temperatura["canal"] = canal;
-    temperatura["valor"] = muestra.temperatura;
-    JsonObject humedad = lecturas.add<JsonObject>();
-    humedad["tipo"] = "humedad";
-    humedad["canal"] = canal;
-    humedad["valor"] = muestra.humedad;
-    if (local) {
-      continue;
-    } else if (huboCorte) {
-      Serial.printf("[Reenvío] GPIO %u: temp=%.1f C  hum=%.1f %%  (capturada %s)\n",
-                    muestra.gpio, muestra.temperatura, muestra.humedad,
-                    lote.fecha[0] != '\0' ? lote.fecha : "sin hora");
-    } else {
-      Serial.printf("[Envío] GPIO %u: temp=%.1f C  hum=%.1f %%\n",
-                    muestra.gpio, muestra.temperatura, muestra.humedad);
-    }
-  }
-  if (lectura.cantidad == 0) return ResultadoEnvio::Descartar;
-  String body;
-  serializeJson(documento, body);
-
-  const char* nombre = local ? "Local" : "Backend";
-  HTTPClient http;
-  WiFiClient plano;
-  WiFiClientSecure seguro;
-  if (!iniciarHttp(http, plano, seguro, local, local ? String(urlLocal) : String(BACKEND_URL))) {
-    Serial.printf("[%s] No se pudo iniciar la conexión.\n", nombre);
-    return ResultadoEnvio::Reintentar;
-  }
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("X-Device-Token", local ? tokenLocal : tokenProduccion);
-
-  int codigo = http.POST(body);
-  if (!local) produccionRechazaToken = codigo == 401;
-  ResultadoEnvio resultado = ResultadoEnvio::Reintentar;
-  if (codigo >= 200 && codigo < 300) {
-    resultado = ResultadoEnvio::Enviado;
-    JsonDocument respuesta;
-    if (deserializeJson(respuesta, http.getString()) || !respuesta["registradas"].is<int>() || !respuesta["ignoradas"].is<JsonArray>()) {
-      Serial.printf("[%s] Respuesta sin confirmación de persistencia válida.\n", nombre);
-    } else {
-      Serial.printf("[%s] %d: %d registradas, %u ignoradas.\n", nombre, codigo,
-                    respuesta["registradas"].as<int>(),
-                    static_cast<unsigned>(respuesta["ignoradas"].as<JsonArray>().size()));
-    }
-  } else if (codigo == 401) {
-    Serial.printf("[%s] 401: token inválido. Vincula el ESP32 desde la página de ese destino.\n", nombre);
-  } else if (codigo == 400 || codigo == 409 || codigo == 413 || codigo == 422) {
-    // El backend nunca aceptará este ciclo tal como está: reintentarlo solo
-    // bloquearía a los que vienen detrás.
-    Serial.printf("[%s] %d: ciclo rechazado, se descarta.\n", nombre, codigo);
-    resultado = ResultadoEnvio::Descartar;
-  } else {
-    Serial.printf("[%s] Fallo HTTP %d.\n", nombre, codigo);
-    if (local && codigo < 0) urlLocal[0] = '\0';
-  }
-  http.end();
-  return resultado;
-}
-
-void generarId(char* destino) {
-  uint8_t bytes[16];
-  for (size_t i = 0; i < sizeof(bytes); i += 4) {
-    const uint32_t azar = esp_random();
-    memcpy(bytes + i, &azar, 4);
-  }
-  bytes[6] = (bytes[6] & 0x0F) | 0x40;
-  bytes[8] = (bytes[8] & 0x3F) | 0x80;
-  snprintf(destino, 37,
-           "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-           bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-           bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]);
-}
-
-bool relojSincronizado();
-
-void prepararLote(const LecturaPendiente& lectura, LoteGuardado& lote) {
-  generarId(lote.id);
-  lote.fecha[0] = '\0';
-  if (relojSincronizado()) {
-    const time_t segundos = time(nullptr);
-    struct tm utc;
-    gmtime_r(&segundos, &utc);
-    strftime(lote.fecha, sizeof(lote.fecha), "%Y-%m-%dT%H:%M:%SZ", &utc);
-  }
-  lote.capturadoMs = millis();
-  lote.lectura = lectura;
-}
-
-void guardarEnBufer(const LoteGuardado& nuevo) {
-  const unsigned long ahora = millis();
-  const bool hayPendientes = cantidadBufer > 0;
-  if (hayPendientes && ahora - ultimoGuardadoMs < BUFER_INTERVALO_MS) return;
-
-  if (cantidadBufer == CAPACIDAD_BUFER) {
-    inicioBufer = (inicioBufer + 1) % CAPACIDAD_BUFER;
-    --cantidadBufer;
-    Serial.println("[Búfer] Lleno: se descarta el ciclo más antiguo.");
-  }
-  bufer[(inicioBufer + cantidadBufer) % CAPACIDAD_BUFER] = nuevo;
-  ++cantidadBufer;
-  ultimoGuardadoMs = ahora;
-  if (hayPendientes) {
-    huboCorte = true;
-    Serial.printf("[Búfer] Sin conexión con el backend: %u ciclos guardados.\n",
-                  static_cast<unsigned>(cantidadBufer));
-  }
-}
-
-void quitarPrimeroDelBufer() {
-  inicioBufer = (inicioBufer + 1) % CAPACIDAD_BUFER;
-  --cantidadBufer;
-}
-
-void revisarFirmwarePublicado(JsonVariantConst firmware, bool local) {
-  const char* version = firmware["version"] | "";
-  const char* sha256 = firmware["sha256"] | "";
-  const size_t tamano = firmware["tamano"] | 0;
-  if (version[0] == '\0' || strcmp(version, FIRMWARE_VERSION) == 0) return;
-  if (strlen(sha256) != 64 || tamano == 0 || strlen(version) >= sizeof(actualizacion.version)) return;
-  if (strcmp(version, versionFallida) == 0 && millis() - ultimoFalloOta < OTA_REINTENTO_MS) return;
-  if (actualizacion.hay && strcmp(actualizacion.version, version) == 0) return;
-  actualizacion.hay = true;
-  actualizacion.local = local;
-  actualizacion.tamano = tamano;
-  snprintf(actualizacion.version, sizeof(actualizacion.version), "%s", version);
-  snprintf(actualizacion.sha256, sizeof(actualizacion.sha256), "%s", sha256);
-  Serial.printf("[OTA] Hay firmware nuevo: %s (este es %s).\n", version, FIRMWARE_VERSION);
-}
-
-void marcarFalloOta(const char* motivo) {
-  Serial.printf("[OTA] No se actualizó: %s. Se reintenta en una hora.\n", motivo);
-  snprintf(versionFallida, sizeof(versionFallida), "%s", actualizacion.version);
-  ultimoFalloOta = millis();
-  actualizacion.hay = false;
-}
-
-void aplicarActualizacion() {
-  const bool local = actualizacion.local;
-  String url(local ? urlLocal : BACKEND_URL);
-  url += "/firmware";
-  HTTPClient http;
-  WiFiClient plano;
-  WiFiClientSecure seguro;
-  if (!iniciarHttp(http, plano, seguro, local, url)) return marcarFalloOta("sin conexión");
-  http.setTimeout(15000);
-  http.addHeader("X-Device-Token", local ? tokenLocal : tokenProduccion);
-  const int estado = http.GET();
-  const int tamano = http.getSize();
-  if (estado != 200 || tamano <= 0 || static_cast<size_t>(tamano) != actualizacion.tamano) {
-    http.end();
-    return marcarFalloOta("la descarga no coincide con lo publicado");
-  }
-  if (!Update.begin(tamano)) {
-    http.end();
-    return marcarFalloOta("no hay espacio para la actualización");
-  }
-  Serial.printf("[OTA] Descargando %s (%d bytes)…\n", actualizacion.version, tamano);
-
-  mbedtls_sha256_context sha;
-  mbedtls_sha256_init(&sha);
-  mbedtls_sha256_starts(&sha, 0);
-  WiFiClient* flujo = http.getStreamPtr();
-  uint8_t bloque[1024];
-  int restante = tamano;
-  unsigned long ultimoDato = millis();
-  while (restante > 0 && millis() - ultimoDato < 15000) {
-    const size_t disponible = flujo->available();
-    if (disponible == 0) { vTaskDelay(pdMS_TO_TICKS(5)); continue; }
-    const int leidos = flujo->readBytes(bloque, min(disponible, sizeof(bloque)));
-    if (leidos <= 0) continue;
-    mbedtls_sha256_update(&sha, bloque, leidos);
-    if (Update.write(bloque, leidos) != static_cast<size_t>(leidos)) break;
-    restante -= leidos;
-    ultimoDato = millis();
-  }
-  http.end();
-  uint8_t huella[32];
-  mbedtls_sha256_finish(&sha, huella);
-  mbedtls_sha256_free(&sha);
-  char huellaHex[65];
-  for (int i = 0; i < 32; ++i) snprintf(huellaHex + i * 2, 3, "%02x", huella[i]);
-
-  if (restante != 0) { Update.abort(); return marcarFalloOta("la descarga se cortó"); }
-  if (strcmp(huellaHex, actualizacion.sha256) != 0) {
-    Update.abort();
-    return marcarFalloOta("la huella SHA-256 no coincide");
-  }
-  if (!Update.end(true)) return marcarFalloOta("el ESP32 rechazó la imagen");
-  Serial.printf("[OTA] Firmware %s instalado. Reiniciando…\n", actualizacion.version);
-  delay(500);
-  ESP.restart();
-}
-
-// Una consulta fallida conserva los lectores actuales. La respuesta no contiene
-// tokens; ambos endpoints usan la misma credencial y el mismo destino validado.
-bool consultarConfiguracion(bool local, bool aplicarConexiones) {
-  String url(local ? urlLocal : BACKEND_URL);
-  url += "/configuracion";
-  HTTPClient http;
-  WiFiClient plano;
-  WiFiClientSecure seguro;
-  if (!iniciarHttp(http, plano, seguro, local, url)) return false;
-  http.useHTTP10(true);  // stream sin transferencia chunked para ArduinoJson
-  http.addHeader("X-Device-Token", local ? tokenLocal : tokenProduccion);
-  http.addHeader("X-Firmware-Version", FIRMWARE_VERSION);
-  const int estado = http.GET();
-  if (estado != 200) {
-    Serial.printf("[Config] HTTP %d desde %s; se conservan los lectores.\n", estado,
-                  local ? "local" : "producción");
-    http.end();
-    if (local && estado < 0) urlLocal[0] = '\0';
-    return false;
-  }
-  JsonDocument documento;
-  const auto error = deserializeJson(documento, http.getStream(), DeserializationOption::NestingLimit(5));
-  if (error || documento["version"].as<int>() != 1 || !documento["conexiones"].is<JsonArray>() || documento["conexiones"].size() > MAX_DHT) {
-    Serial.println("[Config] Configuración inválida; se conserva la anterior.");
-    http.end();
-    return false;
-  }
-  ConfiguracionDht config{};
-  for (JsonObject conexion : documento["conexiones"].as<JsonArray>()) {
-    const int pin = conexion["gpio"].as<int>();
-    const String canal = conexion["canal"].as<String>();
-    if (!conexion["gpio"].is<int>() || !pinDhtPermitido(pin) || conexion["modelo"].as<String>() != "DHT22" || canal != "gpio:" + String(pin)) {
-      Serial.println("[Config] GPIO o modelo incompatible (incluido pin de relé); se conserva la anterior.");
-      http.end();
-      return false;
-    }
-    bool repetido = false;
-    for (uint8_t i = 0; i < config.cantidad; ++i) if (config.pines[i] == pin) repetido = true;
-    if (!repetido) config.pines[config.cantidad++] = pin;
-  }
-  if (aplicarConexiones && colaConfiguracion != nullptr) xQueueOverwrite(colaConfiguracion, &config);
-  revisarFirmwarePublicado(documento["firmware"], local);
-  http.end();
-  return true;
-}
-
-bool urlBackendProduccionSegura() {
-  return String(BACKEND_URL).startsWith("https://");
-}
-
-bool esUrlLocalValida(const String& url) {
-  if (!url.startsWith("http://") || !url.endsWith(":3000/ingest")) {
-    return false;
-  }
-
-  const int inicioHost = 7;
-  const int finHost = url.indexOf(':', inicioHost);
-  if (finHost <= inicioHost) return false;
-
-  const String host = url.substring(inicioHost, finHost);
-  unsigned int a, b, c, d;
-  char sobrante;
-  if (sscanf(host.c_str(), "%u.%u.%u.%u%c", &a, &b, &c, &d, &sobrante) != 4 ||
-      a > 255 || b > 255 || c > 255 || d > 255) {
-    return false;
-  }
-
-  const bool redPrivada10 = a == 10;
-  const bool redPrivada172 = a == 172 && b >= 16 && b <= 31;
-  const bool redPrivada192 = a == 192 && b == 168;
-  return redPrivada10 || redPrivada172 || redPrivada192;
-}
-
-bool urlBackendLocalValida() {
-  return esUrlLocalValida(String(urlLocal));
-}
-
-bool probarBackendEnIp(const IPAddress& ip) {
-  if (ip == IPAddress(0, 0, 0, 0)) return false;
-  const String ipTexto = ip.toString();
-  const String candidata = "http://" + ipTexto + ":3000/ingest";
-  if (!esUrlLocalValida(candidata)) return false;
-
-  WiFiClient cliente;
-  HTTPClient http;
-  http.setConnectTimeout(600);
-  http.setTimeout(800);
-  if (!http.begin(cliente, "http://" + ipTexto + ":3000/health")) return false;
-  const int codigo = http.GET();
-  const String respuesta = codigo == 200 ? http.getString() : String();
-  http.end();
-  // Solo un backend que se identifica como Avisens recibe el token del
-  // controlador; cualquier otro servicio en el puerto 3000 se ignora.
-  if (respuesta.indexOf("\"servicio\":\"avisens\"") < 0) return false;
-
-  snprintf(urlLocal, sizeof(urlLocal), "%s", candidata.c_str());
-  recordarIpLocal(candidata);
-  if (preferencias.begin("avisens", false)) {
-    preferencias.putString("url", candidata);
-    preferencias.end();
-  }
-  Serial.printf("[Descubrimiento] Backend local encontrado en %s\n", urlLocal);
-  return true;
-}
-
-bool descubrirBackendEnRed() {
-  if (WiFi.status() != WL_CONNECTED) return false;
-  Serial.println("[Descubrimiento] Buscando el computador local en la red Wi-Fi…");
-
-  if (!mdnsIniciado) {
-    mdnsIniciado = MDNS.begin("avisens-esp32");
-  }
-  if (mdnsIniciado) {
-    const int n = MDNS.queryService("avisens", "tcp");
-    for (int i = 0; i < n; ++i) {
-      if (probarBackendEnIp(MDNS.IP(i))) return true;
-    }
-  }
-
-  // Respaldo sin mDNS: prueba la última IP conocida y sus vecinas (.50, .51,
-  // .49…), porque el DHCP suele reasignar al computador una dirección cercana.
-  // Se limita a unas pocas IP para no retrasar el envío a producción.
-  const IPAddress miIp = WiFi.localIP();
-  IPAddress anterior;
-  int inicio = miIp[3];
-  if (anterior.fromString(ultimaIpLocal) &&
-      anterior[0] == miIp[0] && anterior[1] == miIp[1] && anterior[2] == miIp[2]) {
-    inicio = anterior[3];
-  }
-  for (int paso = 0; paso <= VECINOS_DESCUBRIMIENTO * 2; ++paso) {
-    const int desplazamiento = (paso + 1) / 2;
-    const int host = paso % 2 == 0 ? inicio + desplazamiento : inicio - desplazamiento;
-    if (host < 1 || host > 254 || host == miIp[3]) continue;
-    const IPAddress ip(miIp[0], miIp[1], miIp[2], host);
-    WiFiClient sonda;
-    if (sonda.connect(ip, 3000, SONDA_TIMEOUT_MS)) {
-      sonda.stop();
-      if (probarBackendEnIp(ip)) return true;
-    }
-  }
-
-  Serial.println("[Descubrimiento] El computador local no respondió; se reintenta en un minuto.");
-  return false;
-}
-
-bool intentarRedescubrirBackend() {
-  const unsigned long ahora = millis();
-  if (ultimoIntentoDescubrimiento != 0 &&
-      ahora - ultimoIntentoDescubrimiento < DESCUBRIMIENTO_REINTENTO_MS) {
-    return false;
-  }
-  ultimoIntentoDescubrimiento = ahora;
-  return descubrirBackendEnRed();
-}
-
-bool relojSincronizado() {
-  return time(nullptr) > 1700000000;
-}
-
-bool produccionLista() {
-  return urlBackendProduccionSegura() && relojSincronizado() &&
-         tokenFormatoValido(String(tokenProduccion));
-}
-
-bool localHabilitado() {
-  return tokenFormatoValido(String(tokenLocal));
-}
-
-bool asegurarUrlLocal() {
-  if (urlBackendLocalValida()) return true;
-  return intentarRedescubrirBackend();
-}
-
-// La reconexión, NTP y transporte viven en otra tarea. Una espera de red no detiene
-// las lecturas del DHT ni el control del relé que ejecuta loop().
-void tareaRed(void*) {
-  iniciarWiFi();
-  unsigned long ultimoIntentoWiFi = millis();
-  bool yaEstuvoConectado = false;
-  bool ntpIniciado = false;
-  unsigned long ultimaConfiguracion = millis() - CONFIG_INTERVALO_MS;
-  unsigned long ultimoEnvioRed = 0;
-  unsigned long pausaEnvio = 0;
-  LoteGuardado pendienteLocal{};
-  bool hayPendienteLocal = false;
-
-  Serial.printf("[Destinos] Producción: %s | Local: %s\n",
-                urlBackendProduccionSegura() ? BACKEND_URL : "sin URL HTTPS",
-                localHabilitado() ? "habilitado" : "sin token");
-
-  for (;;) {
-    TokenDispositivo nuevoToken{};
-    if (colaToken != nullptr && xQueueReceive(colaToken, &nuevoToken, 0) == pdTRUE) {
-      char* destino = nuevoToken.local ? tokenLocal : tokenProduccion;
-      snprintf(destino, MAX_TOKEN_LEN, "%s", nuevoToken.valor);
-      ultimaConfiguracion = millis() - CONFIG_INTERVALO_MS;
-      if (nuevoToken.local) ultimoIntentoDescubrimiento = 0;
-      Serial.printf("[Provision] Token %s aplicado.\n", nuevoToken.local ? "local" : "de producción");
-    }
-
-    LecturaPendiente capturada;
-    if (xQueueReceive(colaEnvios, &capturada, 0) == pdTRUE) {
-      LoteGuardado lote;
-      prepararLote(capturada, lote);
-      if (urlBackendProduccionSegura()) guardarEnBufer(lote);
-      if (localHabilitado()) {
-        pendienteLocal = lote;
-        hayPendienteLocal = true;
+      if (cmd == "REARME" || cmd == "RESET")
+      {
+        LOG_WARN("Comando de rearme recibido por Serial");
+        comandoRearme = true;
+        estadoSistema = EstadoSistema::INIT;
+        ciclosArranque = 0;
       }
-    }
-
-    if (WiFi.status() != WL_CONNECTED) {
-      if (yaEstuvoConectado) {
-        Serial.println("[WiFi] Conexión perdida. El control local continúa.");
-        yaEstuvoConectado = false;
+      else if (cmd == "TARA")
+      {
+        LOG_DEBUG("Comando de tara (HX711) recibido");
+        sensorPeso.tara();
+        sensorPeso.setFactor(HX711_FACTOR_ESCALA);
+        calibracionCompletada = true;
       }
-      if (millis() - ultimoIntentoWiFi >= WIFI_REINTENTO_MS) {
-        Serial.println("[WiFi] Reintentando conexión…");
-        WiFi.reconnect();
-        ultimoIntentoWiFi = millis();
+      else if (cmd == "BORRAR_CONFIG")
+      {
+        // Rescate por USB si se guardó una red o URL que no funciona.
+        LOG_WARN("Configuración del portal borrada: se reinicia con config.h");
+        borrarConfigDispositivo();
+        delay(500);
+        ESP.restart();
       }
-      vTaskDelay(pdMS_TO_TICKS(500));
-      continue;
-    }
-
-    if (!yaEstuvoConectado) {
-      Serial.printf("[WiFi] Conectado. IP: %s\n",
-                    WiFi.localIP().toString().c_str());
-      yaEstuvoConectado = true;
-    }
-
-    // La hora fecha cada ciclo guardado: sin ella, una lectura reenviada tarde
-    // quedaría registrada con la hora de llegada y no con la de captura.
-    if (!ntpIniciado) {
-      configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-      ntpIniciado = true;
-      Serial.println("[NTP] Sincronizando la hora del controlador.");
-    }
-
-    // Las conexiones salen de producción; si producción no responde, de local.
-    // Ambos destinos pueden anunciar firmware nuevo.
-    if (millis() - ultimaConfiguracion >= CONFIG_INTERVALO_MS) {
-      ultimaConfiguracion = millis();
-      const bool desdeProduccion = produccionLista() && consultarConfiguracion(false, true);
-      if (localHabilitado() && asegurarUrlLocal()) consultarConfiguracion(true, !desdeProduccion);
-    }
-
-    if (produccionLista() && cantidadBufer > 0 && millis() - ultimoEnvioRed >= pausaEnvio) {
-      LoteGuardado& lote = bufer[inicioBufer];
-      if (lote.fecha[0] == '\0' && millis() - lote.capturadoMs > VIGENCIA_SIN_HORA_MS) {
-        Serial.println("[Búfer] Ciclo sin hora y ya viejo: se descarta para no fecharlo mal.");
-        quitarPrimeroDelBufer();
-        continue;
-      }
-      const ResultadoEnvio resultado = enviarLote(lote, false);
-      ultimoEnvioRed = millis();
-      if (resultado == ResultadoEnvio::Reintentar) {
-        pausaEnvio = pausaEnvio < REINTENTO_MIN_MS ? REINTENTO_MIN_MS : min(pausaEnvio * 2, REINTENTO_MAX_MS);
-      } else {
-        quitarPrimeroDelBufer();
-        pausaEnvio = cantidadBufer > 0 ? REENVIO_PAUSA_MS : 0;
-        if (huboCorte && cantidadBufer == 0) {
-          huboCorte = false;
-          Serial.println("[Búfer] Conexión recuperada: se enviaron todos los ciclos guardados.");
+      else if (cmd == "RELES")
+      {
+        for (uint8_t r = 1; r <= 4; r++)
+        {
+          Serial.printf("K%u (%s): %s%s\n", r,
+                        GestorActuadores::nombreDesdeRele(r).c_str(),
+                        gestorActuadores.getEstado(r) ? "ON" : "off",
+                        gestorActuadores.esManual(r) ? " [MANUAL]" : "");
         }
       }
+      else
+      {
+        // Prueba de actuadores sin depender de los sensores:
+        // "<rele> ON|OFF|AUTO", con rele = K1..K4 o su nombre (VENTILADOR...).
+        int espacio = cmd.indexOf(' ');
+        uint8_t rele = espacio > 0 ? GestorActuadores::releDesdeNombre(cmd.substring(0, espacio)) : 0;
+        String accion = espacio > 0 ? cmd.substring(espacio + 1) : "";
+        accion.trim();
+
+        if (rele != 0 && accion == "ON")
+          gestorActuadores.establecerManual(rele, true);
+        else if (rele != 0 && accion == "OFF")
+          gestorActuadores.establecerManual(rele, false);
+        else if (rele != 0 && accion == "AUTO")
+          gestorActuadores.establecerAutomatico(rele);
+        else if (cmd.length() > 0)
+          LOG_WARN("Comando no reconocido: " + cmd);
+      }
     }
 
-    // Se actualiza con el búfer vacío para no perder lecturas guardadas; si
-    // producción rechaza el token, esas lecturas nunca se aceptarían igual.
-    if (actualizacion.hay && (cantidadBufer == 0 || produccionRechazaToken)) aplicarActualizacion();
+    // ─── Máquina de Estado Global (Sincronizada con SSD) ──────────────
+    switch (estadoSistema)
+    {
+    case EstadoSistema::INIT:
+      ciclosArranque++;
 
-    // El destino local nunca guarda ni reintenta: si el computador no está,
-    // la lectura se omite allí y producción sigue igual.
-    if (hayPendienteLocal) {
-      hayPendienteLocal = false;
-      if (asegurarUrlLocal()) enviarLote(pendienteLocal, true);
+      // Variable C: Transición cuando ciclosArranque >= 10
+      if (ciclosArranque >= 10)
+      {
+        estadoSistema = EstadoSistema::CALIBRATION;
+        Serial.println("\n[FSM Global] INIT → CALIBRATION (Variable C>=10)");
+      }
+      break;
+
+    case EstadoSistema::CALIBRATION:
+      // Variable T: Esperar calibración HX711
+      // Transición automática después de cierto tiempo o si se completa manualmente
+      if (calibracionCompletada || ciclosTarea > 150)
+      {
+        if (!calibracionCompletada)
+        {
+          LOG_WARN("Calibración omitida — Usando factor por defecto.");
+          sensorPeso.setFactor(HX711_FACTOR_ESCALA);
+        }
+        estadoSistema = EstadoSistema::MONITORING;
+        Serial.println("[FSM Global] CALIBRATION → MONITORING (Variable T=true)");
+      }
+      break;
+
+    case EstadoSistema::MONITORING:
+      // Sistema operativo normalmente
+      break;
+
+    case EstadoSistema::ACTUATION:
+      // Transición a MONITORING cuando actuación completada
+      estadoSistema = EstadoSistema::MONITORING;
+      break;
+
+    case EstadoSistema::ERROR:
+      // Solo ejecuta una vez por transición
+      if (ultimoEstadoImpreso != EstadoSistema::ERROR)
+      {
+        Serial.println("\n❌ [FAIL-SAFE] Activado: K1-K3 OFF, K4 ON (Emergencia)");
+
+        // ─── Registrar la falla ANTES de pausar ───────────────────
+        registrarFallaCritica(
+            "SensorsDHT_Ultrasonico",
+            "Fallos persistentes en sensores críticos - Sistema en fail-safe",
+            "critico");
+
+        gestorActuadores.failSafe();
+        controlServo.cerrarEmergencia();
+        alimentador.detener();
+        persiana.detener();
+        ultimoEstadoImpreso = EstadoSistema::ERROR;
+      }
+
+      // ─── Intento de recuperación automática ──────────────────────
+      if (!sensorDHT.enError() && !sensorUltrasonico.enError())
+      {
+        LOG_DEBUG("✓ Sensores recuperados - Transición a MONITORING");
+        estadoSistema = EstadoSistema::MONITORING;
+        fallosAcumulados = 0;
+      }
+      break;
+
+    case EstadoSistema::SHUTDOWN:
+      gestorActuadores.failSafe();
+      alimentador.setHabilitado(false);
+      persiana.setHabilitado(false);
+      vTaskDelay(pdMS_TO_TICKS(1000));
+      break;
+
+    default:
+      estadoSistema = EstadoSistema::MONITORING;
     }
-    vTaskDelay(pdMS_TO_TICKS(100));
+
+    if (estadoSistema != EstadoSistema::ERROR)
+    {
+      ultimoEstadoImpreso = estadoSistema;
+    }
+
+    // ─── Lectura Periódica de Sensores ───────────────────────────────
+    if (ahora - ultimaLecturaSensores >= INTERVALO_SENSORES)
+    {
+      ultimaLecturaSensores = ahora;
+
+      LecturaDHT lecturaDHT = sensorDHT.leer();
+      publicarLecturaDht(lecturaDHT);
+      LecturaMQ135 lecturaMQ135 = sensorMQ135.leer();
+      publicarLecturaGas(lecturaMQ135);
+      LecturaKY032 lecturaKY032 = sensorKY032.leer();
+      LecturaUltrasonico lecturaUltrasonico = sensorUltrasonico.leer();
+      publicarLecturaAgua(lecturaUltrasonico, sensorUltrasonico.enError());
+      LecturaPeso lecturaPeso = sensorPeso.leer();
+      publicarLecturaPeso(lecturaPeso);
+
+      float temperatura = lecturaDHT.valida ? lecturaDHT.temperatura : 0.0f;
+      float humedad = lecturaDHT.valida ? lecturaDHT.humedad : 0.0f;
+      int rawNH3 = lecturaMQ135.rawValue;
+
+      // ─── Detectar gradiente térmico (ΔT > 10°C en 5s) ──────────────
+      if (lecturaDHT.valida)
+      {
+        detectarGradienteTermico(temperatura, ahora);
+      }
+
+      // ─── Órdenes remotas (web) sobre K1-K4 ───────────────────────
+      // Antes de la lógica automática: un relé que vuelve a AUTO por una
+      // protección recibe su decisión automática en este mismo ciclo.
+      ContextoProtecciones contexto = {
+          estadoSistema == EstadoSistema::MONITORING,
+          sensorDHT.enError(),
+          lecturaDHT.valida,
+          temperatura,
+          rawNH3,
+          sensorUltrasonico.enError(),
+          lecturaUltrasonico.estado == EstadoSensorUltrasonico::OK,
+          // Ante un fallo puntual, SensorUltrasonico devuelve la última medida
+          // buena con su timestamp original: si es anterior al inicio de este
+          // ciclo, está sostenida y no sirve para autorizar una orden.
+          lecturaUltrasonico.estado == EstadoSensorUltrasonico::OK &&
+              lecturaUltrasonico.timestamp >= ahora,
+          lecturaUltrasonico.distancia};
+      controlRemoto.vigilar(contexto);
+      controlRemoto.procesarOrdenes(contexto);
+
+      // ─── Actualizar Actuadores y FSMs Locales ────────────────────
+      if (estadoSistema == EstadoSistema::MONITORING)
+      {
+        gestorActuadores.actualizarClima(
+            temperatura,
+            humedad,
+            rawNH3,
+            lecturaDHT.valida,
+            sensorDHT.enError());
+
+        gestorActuadores.actualizarAgua(
+            lecturaUltrasonico.distancia,
+            lecturaUltrasonico.estado,
+            sensorUltrasonico.enError());
+
+        controlServo.actualizar(lecturaKY032.presencia);
+        alimentador.actualizar();
+        persiana.actualizar();
+      }
+
+      // Con la decisión automática ya tomada: lo que se informa de los relés
+      // (y de las órdenes de este ciclo) es la salida que de verdad quedó.
+      controlRemoto.cerrarCiclo();
+
+      // Fuera de MONITORING (ERROR/SHUTDOWN) los motores están detenidos y
+      // así se reporta; los relés van con el estado real que dejó el fail-safe.
+      EstadoPersiana ep = persiana.getEstado();
+      EstadoActuadores ahoraActuadores = {};
+      ahoraActuadores.alimentador = alimentador.getEstado() == EstadoAlimentador::ENCENDIDO;
+      ahoraActuadores.persiana = ep == EstadoPersiana::ABRIENDO || ep == EstadoPersiana::CERRANDO;
+      for (uint8_t r = 1; r <= 4; r++)
+        ahoraActuadores.reles[r - 1] = gestorActuadores.getEstado(r);
+      registrarEstadoActuadores(ahoraActuadores);
+
+      // ─── Evaluación de Fallos Críticos (Variable F) ────────────────
+      bool errorCritico = sensorDHT.enError() || sensorUltrasonico.enError();
+
+      if (errorCritico)
+      {
+        fallosAcumulados++;
+
+        // Variable F: Si fallos >= 3, transición a ERROR
+        if (fallosAcumulados >= 3 && estadoSistema != EstadoSistema::ERROR)
+        {
+          estadoSistema = EstadoSistema::ERROR;
+          LOG_ERROR("Fallos acumulados >= 3 — Transición a ERROR (Variable F)");
+        }
+      }
+      else
+      {
+        // Los sensores están sanos en este ciclo: el contador deja de
+        // arrastrar episodios ya resueltos. Antes solo se reiniciaba al
+        // salir de ERROR, así que fallos breves y separados en el tiempo
+        // (sin llegar nunca a ERROR) se sumaban entre sí indefinidamente.
+        // El umbral (3) y la propia FSM no cambian.
+        fallosAcumulados = 0;
+
+        if (estadoSistema == EstadoSistema::ERROR)
+        {
+          // Auto-recuperación cuando los sensores vuelven a responder
+          estadoSistema = EstadoSistema::MONITORING;
+          Serial.println("\n✓ [FSM Global] Sensores restablecidos: ERROR → MONITORING");
+        }
+      }
+
+      // ─── Alerta de Tolva ──────────────────────────────────────────
+      if (lecturaPeso.valida && lecturaPeso.peso < UMBRAL_ALIMENTO_BAJO)
+      {
+        LOG_WARN("Alimento bajo en tolva (< 500g)");
+      }
+
+      // ─── Debug: Mostrar estado actual ─────────────────────────────
+      if (ciclosTarea % 30 == 0)
+      {
+        Serial.printf("[Ciclo %lu] T=%.1f°C H=%.0f%% NH3=%d ESTADO=%d\n",
+                      ciclosTarea, temperatura, humedad, rawNH3,
+                      static_cast<int>(estadoSistema));
+      }
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
 
-// ── Setup / loop ────────────────────────────────────────────────────────────
-void setup() {
-  Serial.begin(115200);
-  delay(200);
-  Serial.printf("\n=== Nodo ESP32 Avisens · firmware %s ===\n", FIRMWARE_VERSION);
-  cargarTokenPersistido();
-  Serial.println("[Provision] LISTO");
+// Mantiene la conexión WiFi viva en Core 1 y envía cada INTERVALO_ENVIO_MS
+void tareaWiFi(void *pvParameters)
+{
+  Serial.println("[WiFi Task] Iniciada en Core 1");
 
-  pinMode(PIN_RELE, OUTPUT);
-  digitalWrite(PIN_RELE, RELE_APAGADO);  // arranca apagado por seguridad
+  // El portal escucha también en la red propia, así que arranca aunque
+  // todavía no haya conexión al WiFi.
+  iniciarPortalWeb(conexionWiFi);
+  vTaskDelay(pdMS_TO_TICKS(5000));
 
-  if (!pinDhtPermitido(PIN_DHT)) {
-    Serial.println("[Error] PIN_DHT incompatible o compartido con el relé; revisa el cableado/configuración.");
-    return;
-  }
-  // Pull-up en datos; nunca se aplica a un pin compartido con el relé.
-  pinMode(PIN_DHT, INPUT_PULLUP);
-  dht.begin();
-  Serial.printf("[DHT22] Sensor configurado en GPIO %d.\n", PIN_DHT);
+  unsigned long ultimoAvisoSinWifi = 0;
 
-  colaEnvios = xQueueCreate(1, sizeof(LecturaPendiente));
-  colaConfiguracion = xQueueCreate(1, sizeof(ConfiguracionDht));
-  colaToken = xQueueCreate(1, sizeof(TokenDispositivo));
-  if (colaEnvios == nullptr || colaConfiguracion == nullptr || colaToken == nullptr) {
-    Serial.println("[Error] No se pudo crear la cola de red; seguirá el control local.");
-    return;
-  }
+  for (;;)
+  {
+    conexionWiFi.actualizar();
+    atenderPortalWeb();
 
-  esperarConSerial(2000);
+    if (!WiFi.isConnected())
+    {
+      // La vuelta es cada 10 ms (para el portal): avisar cada 5 s basta.
+      if (millis() - ultimoAvisoSinWifi >= 5000)
+      {
+        ultimoAvisoSinWifi = millis();
+        LOG_WARN("WiFi desconectado - Reintentando conexión");
+      }
+    }
+    else if (millis() - ultimaEnvioTelemetria >= INTERVALO_ENVIO_MS)
+    {
+      ultimaEnvioTelemetria = millis();
 
-  if (xTaskCreatePinnedToCore(tareaRed, "avisens-red", 8192, nullptr, 1,
-                              nullptr, 0) != pdPASS) {
-    Serial.println("[Error] No se pudo iniciar la tarea de red; seguirá el control local.");
-    vQueueDelete(colaEnvios);
-    vQueueDelete(colaConfiguracion);
-    vQueueDelete(colaToken);
-    colaEnvios = nullptr;
-    colaConfiguracion = nullptr;
-    colaToken = nullptr;
+      LecturaDHT lectura = leerSnapshotDht();
+      unsigned long antiguedadSnapshot = millis() - lectura.timestamp;
+      bool incluirDht = true;
+
+      if (!lectura.valida)
+      {
+        LOG_WARN("Ingesta: DHT sin lectura válida, se omite del envío");
+        incluirDht = false;
+      }
+      else if (antiguedadSnapshot > UMBRAL_SNAPSHOT_OBSOLETO_MS)
+      {
+        LOG_WARN("Ingesta: snapshot DHT obsoleto (" + String(antiguedadSnapshot) +
+                 "ms) -- tareaGalpon dejó de refrescarlo, se omite del envío");
+        incluirDht = false;
+      }
+
+      CicloIngesta ciclo;
+      ciclo.incluirDht = incluirDht;
+      ciclo.temperatura = lectura.temperatura;
+      ciclo.humedad = lectura.humedad;
+      ciclo.incluirAgua = leerSnapshotAgua(ciclo.distanciaAgua);
+      ciclo.incluirGas = leerSnapshotGas(ciclo.gasAdc);
+      ciclo.incluirPeso = leerSnapshotPeso(ciclo.pesoGramos);
+      ciclo.pesoCalibrado = HX711_CALIBRADO;
+      ciclo.actuadores = tomarEstadoActuadores();
+
+      // Confirmaciones de órdenes: se acumulan hasta que el backend responde
+      // con el contrato válido; si el envío falla, viajan en el siguiente.
+      // Primero los resultados y después el estado de relés (ver ControlRemoto.h).
+      static ResultadoOrdenRemota resultadosSinConfirmar[MAX_ORDENES_POR_RESPUESTA];
+      static uint8_t cantidadSinConfirmar = 0;
+      cantidadSinConfirmar += controlRemoto.tomarResultados(
+          &resultadosSinConfirmar[cantidadSinConfirmar],
+          MAX_ORDENES_POR_RESPUESTA - cantidadSinConfirmar);
+      ciclo.resultados = resultadosSinConfirmar;
+      ciclo.cantidadResultados = cantidadSinConfirmar;
+      ciclo.reles = controlRemoto.leerEstadoReles();
+
+      // Identificador de esta sesión de arranque: un UUID v4 nuevo en cada
+      // encendido, que no se guarda en flash. Se genera aquí, con el WiFi ya
+      // conectado, porque esp_random() solo da entropía de hardware con la
+      // radio activa. Si el ESP32 se reinicia, el backend ve un valor nuevo y
+      // trata como inciertas las órdenes que la sesión anterior no confirmó.
+      static String arranqueId;
+      if (arranqueId.length() == 0)
+        arranqueId = generarIdLote();
+      ciclo.arranqueId = arranqueId.c_str();
+
+      static RespuestaIngesta respuesta;
+      reportarEnvioPortal(enviarLecturaConReintentos(ciclo, generarIdLote(), respuesta));
+      if (respuesta.contratoValido)
+      {
+        cantidadSinConfirmar = 0;
+        controlRemoto.registrarContactoBackend();
+        for (uint8_t i = 0; i < respuesta.cantidadOrdenes; i++)
+          controlRemoto.recibirOrden(respuesta.ordenes[i]);
+      }
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
 
-void loop() {
-  procesarProvisionSerial();
-  if (!pinDhtPermitido(PIN_DHT)) { esperarConSerial(2000); return; }
-  aplicarConfiguracion();
-  LecturaPendiente lectura{};
-  for (uint8_t i = 0; i < cantidadLectores; ++i) {
-    const float temperatura = lectores[i].sensor->readTemperature();
-    const float humedad = lectores[i].sensor->readHumidity();
-    // Un lector desconectado no bloquea las demás conexiones.
-    if (isnan(temperatura) || isnan(humedad)) {
-      Serial.printf("[DHT] GPIO %u: lectura inválida, se omite.\n", lectores[i].gpio);
-      continue;
-    }
-    if (lectores[i].gpio == PIN_DHT) controlarActuadores(temperatura);
-    lectura.muestras[lectura.cantidad++] = {lectores[i].gpio, temperatura, humedad};
-  }
-  if (millis() - ultimoEnvio >= INTERVALO_ENVIO_MS) {
-    ultimoEnvio = millis();
-    if (colaEnvios != nullptr && lectura.cantidad > 0) xQueueOverwrite(colaEnvios, &lectura);
-  }
-  esperarConSerial(2000);  // DHT22: máximo una lectura cada dos segundos por conexión
+void setup()
+{
+  Serial.begin(BAUD_RATE);
+  delay(500);
+
+  Serial.println("\n================================");
+  Serial.println("GALPÓN INTELIGENTE — v7.0");
+  Serial.println("Arquitectura Modular + FreeRTOS");
+  Serial.println("================================");
+
+  // Watchdog Timer
+  esp_task_wdt_init(WDT_TIMEOUT_S, true);
+  Serial.printf("[WDT] Configurado a %d segundos.\n", WDT_TIMEOUT_S);
+
+  //  Inicialización de Módulos
+  Serial.println("\n[SETUP] Inicializando actuadores...");
+  gestorActuadores.begin();
+  controlRemoto.begin();
+  controlServo.begin();
+  alimentador.begin();
+  persiana.begin();
+
+  Serial.println("[SETUP] Inicializando sensores...");
+  sensorDHT.begin();
+  sensorMQ135.begin();
+  sensorKY032.begin();
+  sensorUltrasonico.begin();
+  sensorPeso.begin();
+
+  Serial.println("[SETUP] Iniciando enlace WiFi asíncrono...");
+  cargarConfigDispositivo();
+  conexionWiFi.configurar(configDispositivo().ssid, configDispositivo().password);
+  conexionWiFi.comenzar();
+
+  // ─── Tareas FreeRTOS en Cores Independientes ──────────────
+  Serial.println("[SETUP] Desplegando tarea de control en Core 0...");
+  xTaskCreatePinnedToCore(
+      tareaGalpon,
+      "tareaGalpon",
+      16384,
+      NULL,
+      2,
+      NULL,
+      0);
+
+  Serial.println("[SETUP] Desplegando tarea WiFi en Core 1...");
+  xTaskCreatePinnedToCore(
+      tareaWiFi,
+      "tareaWiFi",
+      12288, // el handshake TLS (backend https) no cabe en 8 KB
+      NULL,
+      1,
+      NULL,
+      1);
+
+  Serial.println("\n[SETUP] Calibración a cargo de tareaGalpon (Core 0).");
+  Serial.println("Envía 'TARA' por el monitor Serial para calibrar.");
+  Serial.println("Comandos disponibles:");
+  Serial.println("  TARA  - Calibrar celda de carga");
+  Serial.println("  REARME - Reiniciar sistema desde INIT");
+  Serial.println("  K1..K4 ON|OFF|AUTO - Probar un rele a mano (tambien VENTILADOR, BOMBA...)");
+  Serial.println("  RELES  - Ver estado de los 4 reles");
+  Serial.println("  BORRAR_CONFIG - Olvidar la config del portal y volver a config.h");
+  Serial.println("Portal web: http://<IP del ESP32>/ (o http://192.168.4.1 en su red propia)");
+  Serial.println("");
+}
+
+void loop()
+{
+  vTaskDelay(pdMS_TO_TICKS(1000));
 }

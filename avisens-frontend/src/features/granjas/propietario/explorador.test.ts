@@ -14,7 +14,7 @@ const loteCompleto = {
 } as Lote
 
 function sensor(tipo: string, valor: number | null, estado: SensorVista['estado'] = 'optimo'): SensorVista {
-  return { id: Math.random(), codigo: 'S', tipo, unidad: tipo === 'Temperatura' ? '°C' : '%', variableUmbral: null, valor, minUmbral: null, maxUmbral: null, estado, ultimaLecturaTs: null, x: null, y: null }
+  return { id: Math.random(), codigo: 'S', tipo, unidad: tipo === 'Temperatura' ? '°C' : '%', variableUmbral: null, valor, minUmbral: null, maxUmbral: null, estado, ultimaLecturaTs: null, x: null, y: null, esEstado: false, sinCalibrar: false }
 }
 
 function galpon(cambios: Partial<GalponConLotes> = {}): GalponConLotes {

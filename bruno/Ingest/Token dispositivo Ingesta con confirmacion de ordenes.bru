@@ -1,0 +1,52 @@
+meta {
+  name: [Token dispositivo]  Ingesta con confirmación de órdenes
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/ingest
+  body: json
+  auth: none
+}
+
+headers {
+  X-Device-Token: {{device_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "arranque_id": "0b6f8a52-3c1e-4d7a-9f20-6a1d2b3c4e5f",
+    "lecturas": [
+      { "codigo": "REL-K2-G1-01", "valor": 1 }
+    ],
+    "resultados_ordenes": [
+      { "orden_id": 1, "resultado": "aplicada", "estado_rele": true }
+    ],
+    "estados_reles": [
+      { "codigo": "REL-K1-G1-01", "modo": "automatico", "encendido": false },
+      { "codigo": "REL-K2-G1-01", "modo": "manual_remoto", "encendido": true, "orden_id": 1 },
+      { "codigo": "REL-K3-G1-01", "modo": "automatico", "encendido": false },
+      { "codigo": "REL-K4-G1-01", "modo": "automatico", "encendido": true }
+    ]
+  }
+}
+
+docs {
+  Lo que manda el ESP32 cuando ya aplicó una orden recibida en una respuesta
+  anterior. La respuesta trae "ordenes": las que aún debe aplicar
+  ({ id, codigo, accion }).
+
+  arranque_id identifica la sesión de arranque del ESP32 (UUID nuevo en cada
+  encendido). Si cambia, el backend pasa a "incierta" toda orden "enviada" a
+  la sesión anterior (pudo aplicarse y perderse la confirmación: no se sabe)
+  y no la reentrega; las "pendiente" sí se entregan a la sesión nueva. Solo la
+  sesión que recibió una orden puede confirmarla.
+
+  estados_reles es lo que el ESP32 tiene AHORA en cada relé (modo y salida).
+  Se guarda en estados_actuadores y con eso la web muestra el estado actual.
+  Si un relé informa manual_remoto con orden_id, esa orden queda "aplicada"
+  aunque su resultado se haya perdido; cualquier otra aplicada de ese relé
+  pasa a "revertida".
+}

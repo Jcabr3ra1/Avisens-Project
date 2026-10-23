@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import * as Tabs from '@radix-ui/react-tabs'
 import { IcAlert, IcCheck, IcChevronRight, IcThermo } from '@shared/ui/icons/icons'
-import AnimacionAvisens from '@shared/ui/Animacion/AnimacionAvisens'
 import type { ItemAtencionGranja, TipoAtencionGranja } from '../model/resumenGranja'
 
 type Filtro = 'todas' | TipoAtencionGranja
@@ -57,12 +56,7 @@ function PanelAtencionGranja({ items, cargando, onAbrir, onIrAlertas, onIrMonito
         </div>
       ) : filtrados.length === 0 ? (
         <div className="admin-attention-empty">
-          <AnimacionAvisens
-            nombre={items.length === 0 ? 'exito' : 'bandeja-vacia'}
-            modo={items.length === 0 ? 'una-vez' : 'bucle'}
-            tamano={56}
-            respaldo={<span className="admin-attention-empty-icon" aria-hidden="true"><IcCheck size={18} /></span>}
-          />
+          <span className="admin-attention-empty-icon" aria-hidden="true"><IcCheck size={18} /></span>
           <div>
             <strong>{items.length === 0 ? 'Todo en orden' : 'Nada pendiente en esta categoría'}</strong>
             <p>

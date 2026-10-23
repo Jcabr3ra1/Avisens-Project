@@ -1,5 +1,23 @@
 # Asociación dinámica de sensores — desarrollo local
 
+> **Alcance en la rama `feat/iot-mq135-hx711`**
+>
+> Este documento describe el contrato y el firmware **monolítico de `develop`**.
+> De él, en esta rama están disponibles el **backend** (`GET /ingest/configuracion`,
+> lecturas `{tipo, canal, valor}` y la columna `canal`) y la pantalla **Asignar
+> sensores** de Monitoreo.
+>
+> **El firmware modular de esta rama no lo usa todavía:** no consulta
+> `/ingest/configuracion` ni envía `tipo/canal`; sigue con el contrato por
+> `{codigo, valor}`, que el backend mantiene. Por eso, asignar un DHT22 en
+> Monitoreo no cambia nada en este firmware hasta portarlo. Las referencias de
+> abajo a `src/main.cpp`, `PIN_DHT`, `PIN_RELE` y al «firmware nuevo» se refieren
+> al de `develop`.
+>
+> Pendientes de portar y sus precauciones (por ejemplo, excluir los GPIO que usa
+> el firmware modular): ver «Trabajo pendiente de portar desde `develop`» en el
+> [README](README.md).
+
 ## Alcance autorizado
 
 Un token por ESP32 identifica su controlador y galpón. El serial administrativo

@@ -1,7 +1,6 @@
 import { useMemo, useState, type CSSProperties } from 'react'
 import * as Tabs from '@radix-ui/react-tabs'
 import IconoFigma from '@shared/ui/icons/IconoFigma'
-import AnimacionAvisens from '@shared/ui/Animacion/AnimacionAvisens'
 import { hace, type ItemAtencionAdmin, type ResumenAtencionAdmin, type TipoAtencionAdmin } from '../model/adminResumen'
 
 type FiltroAtencion = 'todas' | TipoAtencionAdmin
@@ -65,12 +64,7 @@ function PanelAtencionAdmin({
         <div className="cdc-filas-esqueleto" aria-label="Cargando pendientes"><span /><span /><span /></div>
       ) : filtrados.length === 0 ? (
         <div className="cdc-vacio">
-          <AnimacionAvisens
-            nombre={items.length === 0 ? 'exito' : 'bandeja-vacia'}
-            modo={items.length === 0 ? 'una-vez' : 'bucle'}
-            tamano={64}
-            respaldo={<IconoFigma nombre="verificado" tamano={22} />}
-          />
+          <IconoFigma nombre="verificado" tamano={28} />
           <strong>{items.length === 0 ? 'Nada por resolver' : 'Sin pendientes en esta categoría'}</strong>
           <p>
             {items.length === 0

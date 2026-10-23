@@ -7,8 +7,8 @@ import TablaProveedores from './components/TablaProveedores'
 import { useFormularioProveedor } from './hooks/useFormularioProveedor'
 import { useProveedores } from './hooks/useProveedores'
 import type { FormularioProveedor as DatosProveedor, Proveedor } from './model/proveedor'
-import EstadoVacioAnimado from '@shared/ui/Animacion/EstadoVacioAnimado'
-import CargandoAnimado from '@shared/ui/Animacion/CargandoAnimado'
+import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
+import Cargando from '@shared/ui/Estados/Cargando'
 import '@shared/ui/admin/AdminKit.css'
 import './ProveedoresPage.css'
 
@@ -142,10 +142,9 @@ function ProveedoresPage() {
 
       <section className="prv-listado" aria-label="Directorio de proveedores">
         {cargando ? (
-          <CargandoAnimado texto="Cargando proveedores…" />
+          <Cargando texto="Cargando proveedores…" />
         ) : proveedores.length === 0 ? (
-          <EstadoVacioAnimado
-            animacion="caja-vacia"
+          <EstadoVacio
             titulo="Aún no hay proveedores"
             texto="Registra el primero para relacionarlo con lotes, insumos y compras."
             accion={(
@@ -156,8 +155,7 @@ function ProveedoresPage() {
             )}
           />
         ) : visibles.length === 0 ? (
-          <EstadoVacioAnimado
-            animacion="sin-resultados"
+          <EstadoVacio
             titulo="No encontramos proveedores"
             texto="Prueba cambiando la búsqueda o el filtro de estado."
             accion={<button type="button" className="adm-btn adm-btn--secundario" onClick={() => { setBusqueda(''); setEstado('todos') }}>Limpiar filtros</button>}

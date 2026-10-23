@@ -8,7 +8,7 @@ import { isAxiosError } from 'axios'
 import { SensorGauge } from './SensorGauge'
 import { listarMediciones, type Medicion } from '@features/sensores/api/mediciones'
 import { iconoSensor } from '@shared/ui/sensorIcon'
-import { formatearUltimaLectura, type SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import { formatearUltimaLectura, type EstadoSensorVista, type SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { useFocoAtrapado } from '@shared/ui/Modal/useFocoAtrapado'
 import { IcNote } from '@shared/ui/icons/icons'
 import './SensorDetail.css'
@@ -58,20 +58,24 @@ const REFERENCIA_ITALCOL = {
 } as const
 
 // ─── Colores por estado ───────────────────────────────────────────────────────
-const COLORES: Record<string, string> = {
+const COLORES: Record<EstadoSensorVista, string> = {
   optimo:      'var(--success)',
   advertencia: 'var(--warning)',
   critico:     'var(--danger)',
   sin_umbral:  'var(--text-muted)',
   offline:     'var(--text-muted)',
+  lectura_no_disponible: 'var(--info)',
+  obsoleta:    'var(--warning)',
 }
 
-const ETIQUETA_ESTADO: Record<string, string> = {
+const ETIQUETA_ESTADO: Record<EstadoSensorVista, string> = {
   optimo:      'Óptimo',
   advertencia: 'Advertencia',
   critico:     'Crítico',
   sin_umbral:  'Sin umbral configurado',
   offline:     'Sin señal',
+  lectura_no_disponible: 'No disponible',
+  obsoleta:    'Desactualizado',
 }
 
 // ─── Gráfico de histórico: línea + banda del rango saludable + hover ─────────
@@ -392,12 +396,20 @@ export function SensorDetail({ sensor, galponNombre, diaVida, onClose, inline = 
                 </span>
               </div>
 
+              {sensor.sinCalibrar && sensor.valor !== null && (
+                <p className="sdet-estado-desc">
+                  Sin calibrar · El valor no es una medida física confirmada
+                </p>
+              )}
+
               <p className="sdet-estado-desc">
                 {sensor.estado === 'optimo'      && `Dentro del rango óptimo · ${pctEnRango}% del recorrido`}
                 {sensor.estado === 'advertencia' && `Fuera del umbral recomendado · Monitorear de cerca`}
                 {sensor.estado === 'critico'     && `¡Fuera del rango crítico! Requiere acción correctiva`}
                 {sensor.estado === 'sin_umbral'  && `Esta variable todavía no tiene un umbral configurado en el sistema`}
                 {sensor.estado === 'offline'     && `Sensor sin señal · Verificar conexión del dispositivo`}
+                {sensor.estado === 'lectura_no_disponible' && `No se pudo consultar la última lectura`}
+                {sensor.estado === 'obsoleta'    && `Sin una lectura reciente · El valor mostrado puede no reflejar el estado actual`}
               </p>
             </div>
 
