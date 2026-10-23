@@ -8,7 +8,7 @@ import {
   IcDoc,
   IcSearch,
 } from '@shared/ui/icons/icons'
-import EstadoVacioAnimado from '@shared/ui/Animacion/EstadoVacioAnimado'
+import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
 import { useProspectos } from './hooks/useProspectos'
 import { payloadDeConversion } from './model/conversion'
 import {
@@ -244,16 +244,14 @@ function CrmPage() {
                   {[0, 1, 2, 3].map((indice) => <li key={indice} className="pros-tarjeta-esqueleto org-brilla" />)}
                 </ul>
               ) : error ? null : prospectos.length === 0 ? (
-                <EstadoVacioAnimado
+                <EstadoVacio
                   className="pros-vacio"
-                  animacion="caja-vacia"
                   titulo="Todavía no hay prospectos"
                   texto="Cuando alguien converse con el chatbot y dé su consentimiento, aparecerá aquí."
                 />
               ) : secciones.length === 0 ? (
-                <EstadoVacioAnimado
+                <EstadoVacio
                   className="pros-vacio"
-                  animacion={hayFiltros ? 'sin-resultados' : 'bandeja-vacia'}
                   titulo={hayFiltros ? 'Sin coincidencias' : vista === 'prioridad' ? 'Bandeja al día' : 'Nada por aquí'}
                   texto={hayFiltros ? 'Ningún prospecto coincide con la búsqueda o los filtros.' : vista === 'prioridad' ? 'No hay prospectos activos por atender.' : 'Esta vista no tiene prospectos todavía.'}
                   accion={hayFiltros ? <button type="button" className="adm-btn adm-btn--secundario" onClick={limpiarFiltros}>Limpiar filtros</button> : undefined}

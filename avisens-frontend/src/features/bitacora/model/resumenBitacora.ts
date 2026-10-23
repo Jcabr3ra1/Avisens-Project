@@ -1,4 +1,5 @@
 import type { ConsumoDiario } from '@features/consumos-diarios/api/consumosDiarios'
+import { formatearPeso } from '@features/guia-crecimiento/model/proyeccion'
 import type { EventoSanitario, Mortalidad, Pesaje, TipoRegistro } from './bitacora'
 
 export type VistaBitacora = 'resumen' | TipoRegistro | 'consumo'
@@ -50,7 +51,7 @@ export function crearFilasRegistro(
     return pesajes.map((registro) => ({
       id: registro.id,
       fecha: registro.fecha,
-      principal: `${registro.peso_promedio_g.toLocaleString('es-CO')} g`,
+      principal: formatearPeso(registro.peso_promedio_g),
       detalle: registro.observaciones || 'Sin observaciones',
     }))
   }

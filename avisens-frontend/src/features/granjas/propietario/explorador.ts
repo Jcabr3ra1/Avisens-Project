@@ -73,7 +73,7 @@ export function proximoPaso(galpon: GalponConLotes, indicador: DashboardIndicado
     return {
       tono: 'atencion',
       titulo: 'Registra el primer pesaje',
-      detalle: 'Con un pesaje ya se proyecta la curva del lote hasta el día de faena.',
+      detalle: 'Con un pesaje ya se proyecta la curva del lote hasta el día de salida.',
       accion: 'Ir a la bitácora',
       destino: { tipo: 'ruta', ruta: '/bitacora' },
     }

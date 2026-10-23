@@ -4,7 +4,7 @@ import { isAxiosError } from 'axios'
 import { login } from '@shared/api'
 import { ROL_ADMIN, ROL_OPERARIO } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
-import CargaConLogo from '@shared/ui/Animacion/CargaConLogo'
+import CargaConLogo from '@shared/ui/Estados/CargaConLogo'
 import './LoginForm.css'
 
 function LoginForm() {

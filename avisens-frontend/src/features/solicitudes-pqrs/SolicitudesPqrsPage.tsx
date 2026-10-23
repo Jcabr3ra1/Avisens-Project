@@ -13,7 +13,7 @@ import {
   type VistaPqrs,
 } from './model/bandejaPqrs'
 import { CATEGORIAS_PQRS, ETIQUETAS_ESTADO, type SolicitudPqrs } from './model/solicitudPqrs'
-import EstadoVacioAnimado from '@shared/ui/Animacion/EstadoVacioAnimado'
+import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
 import '@shared/ui/admin/AdminKit.css'
 import '@shared/ui/movimiento.css'
 import './SolicitudesPqrsPage.css'
@@ -193,16 +193,14 @@ function SolicitudesPqrsPage() {
                 {[0, 1, 2, 3].map((indice) => <li key={indice} className="sop-tarjeta-esqueleto org-brilla" />)}
               </ul>
             ) : error ? null : solicitudes.length === 0 ? (
-              <EstadoVacioAnimado
+              <EstadoVacio
                 className="sop-vacio"
-                animacion="bandeja-vacia"
                 titulo="Todavía no hay solicitudes"
                 texto="Cuando un cliente radique una petición, queja o reclamo por el chatbot, aparecerá aquí con su plazo."
               />
             ) : secciones.length === 0 ? (
-              <EstadoVacioAnimado
+              <EstadoVacio
                 className="sop-vacio"
-                animacion={hayFiltros ? 'sin-resultados' : 'bandeja-vacia'}
                 titulo={hayFiltros ? 'Sin coincidencias' : vista === 'atender' ? 'Bandeja al día' : 'Nada por aquí'}
                 texto={hayFiltros ? 'Ninguna solicitud coincide con la búsqueda o la categoría.' : vista === 'atender' ? 'No hay solicitudes pendientes.' : 'Esta vista no tiene solicitudes todavía.'}
                 accion={hayFiltros ? <button type="button" className="adm-btn adm-btn--secundario" onClick={limpiarFiltros}>Limpiar filtros</button> : undefined}

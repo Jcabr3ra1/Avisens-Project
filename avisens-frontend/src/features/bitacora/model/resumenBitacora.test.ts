@@ -71,7 +71,10 @@ describe('resumenBitacora', () => {
   })
 
   it('crea filas según la pestaña solicitada', () => {
-    const filas = crearFilasRegistro('peso', [pesaje(1, 10, 1200)], [], [])
-    expect(filas).toEqual([{ id: 1, fecha: '2026-09-01', principal: '1.200 g', detalle: 'Sin observaciones' }])
+    const filas = crearFilasRegistro('peso', [pesaje(1, 10, 1200), pesaje(2, 10, 450)], [], [])
+    expect(filas).toEqual([
+      { id: 1, fecha: '2026-09-01', principal: '1,20 kg', detalle: 'Sin observaciones' },
+      { id: 2, fecha: '2026-09-01', principal: '450 g', detalle: 'Sin observaciones' },
+    ])
   })
 })
