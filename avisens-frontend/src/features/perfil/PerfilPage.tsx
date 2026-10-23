@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { logout } from '@shared/api'
 import { mensajeDeError } from '@shared/utils/errores'
-import CargandoAnimado from '@shared/ui/Animacion/CargandoAnimado'
+import Cargando from '@shared/ui/Estados/Cargando'
 import AvatarUsuario from '@app/layout/AvatarUsuario'
 import { cambiarPasswordPropia, obtenerPerfil } from './api/perfil'
 import { errorDeCambio, fortaleza, type PerfilCuenta } from './model/perfil'
@@ -86,7 +86,7 @@ function PerfilPage() {
       {errorCarga && <div className="adm-alerta" role="alert"><span>{errorCarga}</span></div>}
 
       {!perfil && !errorCarga ? (
-        <CargandoAnimado texto="Cargando tu perfil…" />
+        <Cargando texto="Cargando tu perfil…" />
       ) : perfil && (
         <div className="per-cuerpo">
           <section className="per-tarjeta" aria-labelledby="per-datos-titulo">

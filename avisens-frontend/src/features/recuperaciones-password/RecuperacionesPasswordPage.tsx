@@ -4,8 +4,8 @@ import PanelRecuperacion from './components/PanelRecuperacion'
 import TablaRecuperaciones from './components/TablaRecuperaciones'
 import { useRecuperacionesPassword } from './hooks/useRecuperacionesPassword'
 import { ETIQUETAS_ESTADO_RECUPERACION, type EstadoRecuperacionPassword, type RecuperacionPassword } from './model/recuperacionPassword'
-import EstadoVacioAnimado from '@shared/ui/Animacion/EstadoVacioAnimado'
-import CargandoAnimado from '@shared/ui/Animacion/CargandoAnimado'
+import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
+import Cargando from '@shared/ui/Estados/Cargando'
 import '@shared/ui/admin/AdminKit.css'
 import './RecuperacionesPassword.css'
 
@@ -100,18 +100,16 @@ function RecuperacionesPasswordPage() {
       )}
 
       {cargando ? (
-        <CargandoAnimado texto="Cargando solicitudes…" />
+        <Cargando texto="Cargando solicitudes…" />
       ) : error ? null : solicitudes.length === 0 ? (
-        <EstadoVacioAnimado
+        <EstadoVacio
           className="rec-vacio"
-          animacion="bandeja-vacia"
           titulo="No hay solicitudes"
           texto="Cuando un propietario u operario pida recuperar su acceso, aparecerá aquí para verificarlo."
         />
       ) : visibles.length === 0 ? (
-        <EstadoVacioAnimado
+        <EstadoVacio
           className="rec-vacio"
-          animacion="sin-resultados"
           titulo="Sin coincidencias"
           texto="Ninguna solicitud coincide con la búsqueda o el estado."
           accion={<button type="button" className="adm-btn adm-btn--secundario" onClick={() => { setBusqueda(''); setEstado('todos') }}>Limpiar filtros</button>}
