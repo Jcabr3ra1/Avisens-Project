@@ -485,25 +485,6 @@
   text-transform: uppercase;
 }
 
-.float-chat-menu {
-  gap: 0.55rem;
-}
-
-/* El botón se dispone en `.float-accion`: icono, texto y flecha en fila. Aquí
-   solo quedan los tamaños del texto, que antes vivían mezclados con un
-   `flex-direction: column` que ganaba por especificidad al layout nuevo. */
-.float-chat-menu button strong {
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.float-chat-menu button small {
-  font-size: 0.76rem;
-  font-weight: 400;
-  line-height: 1.3;
-  color: color-mix(in srgb, var(--avisens-ink) 62%, transparent);
-}
-
 /* Separador de bloque: da estructura al cuestionario sin sumar otra burbuja
    que leer. */
 .float-bloque {
@@ -723,36 +704,6 @@
 /* Terminada la conversación el punto deja de decir «disponible». */
 .float-chat-online--fin::before { background: color-mix(in srgb, var(--surface-base) 50%, transparent); }
 
-/* ── Acciones rápidas ─────────────────────────────────────── */
-
-.float-chat-rotulo {
-  margin: 0 0 0.1rem;
-  color: var(--landing-text-muted);
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-/* Se cualifica con `.float-chat-menu` para ganarle a `.float-chat-options
-   button`, que es (0,1,1) y si no impondría su propio padding. */
-.float-chat-menu .float-accion {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  width: 100%;
-  padding: 0.62rem 0.75rem;
-  text-align: left;
-}
-
-.float-accion-texto {
-  display: flex;
-  flex-direction: column;
-  gap: 0.12rem;
-  flex: 1;
-  min-width: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .float-btn-robot { transition: none; }
   .float-btn:hover .float-btn-robot { transform: none; }
@@ -776,27 +727,27 @@
    del mensaje, y se hunden un poco al tocarlas. Con movimiento reducido solo
    hay fundido. */
 .float-chat-options > button,
-.float-accion {
+.float-inicio-boton {
   animation: float-opcion-entra 320ms cubic-bezier(0.23, 1, 0.32, 1) both;
   transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.float-chat-options > button:nth-child(1), .float-accion:nth-of-type(1) { animation-delay: 140ms; }
-.float-chat-options > button:nth-child(2), .float-accion:nth-of-type(2) { animation-delay: 190ms; }
-.float-chat-options > button:nth-child(3), .float-accion:nth-of-type(3) { animation-delay: 240ms; }
+.float-chat-options > button:nth-child(1), .float-inicio-boton:nth-of-type(1) { animation-delay: 140ms; }
+.float-chat-options > button:nth-child(2), .float-inicio-boton:nth-of-type(2) { animation-delay: 190ms; }
+.float-chat-options > button:nth-child(3), .float-inicio-boton:nth-of-type(3) { animation-delay: 240ms; }
 .float-chat-options > button:nth-child(n+4) { animation-delay: 280ms; }
 
 .float-chat-options > button:not(:disabled):active,
-.float-accion:active {
+.float-inicio-boton:active {
   transform: scale(0.97);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .float-msg { animation: float-opcion-aparece 160ms ease both; }
   .float-chat-options > button,
-  .float-accion { animation: float-opcion-aparece 160ms ease both; animation-delay: 0ms; transition: none; }
+  .float-inicio-boton { animation: float-opcion-aparece 160ms ease both; animation-delay: 0ms; transition: none; }
   .float-chat-options > button:not(:disabled):active,
-  .float-accion:active { transform: none; }
+  .float-inicio-boton:active { transform: none; }
 }
 
 @keyframes float-opcion-aparece {

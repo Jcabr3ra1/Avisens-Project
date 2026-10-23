@@ -7,7 +7,8 @@ import {
   type RespuestaChatbot,
   type RutaChat,
 } from '@features/landing/api/chatbot'
-import { IcAlert, IcRefresh, IcSend } from '@shared/ui/icons/icons'
+import { IcAlert, IcSend } from '@shared/ui/icons/icons'
+import logoAvisens from '@shared/assets/logo-avisens.png'
 import Ic from '@shared/ui/Ic/Ic'
 import { seLeenEnPar } from '@features/landing/model/opcionesChat'
 import AviaProgress from './AviaProgress'
@@ -86,33 +87,13 @@ const SIGUIENTE_PASO: Record<string, string> = {
 }
 const SIGUIENTE_PASO_GENERICO = 'Un asesor te contacta con la cotización.'
 
-// Las tres puertas de entrada al asistente. Cada una lleva icono y color
-// propios para que se distingan antes de leerlas: quien viene a cotizar y quien
-// viene con un problema no buscan lo mismo.
-const ACCIONES_RAPIDAS: {
-  ruta: RutaChat
-  tono: 'cotizar' | 'dudas' | 'soporte'
-  titulo: string
-  detalle: string
-}[] = [
-  {
-    ruta: 'cotizacion',
-    tono: 'cotizar',
-    titulo: 'Quiero cotizar',
-    detalle: 'Un asesor visita tu granja y te arma la propuesta',
-  },
-  {
-    ruta: 'general',
-    tono: 'dudas',
-    titulo: 'Tengo dudas primero',
-    detalle: 'Te cuento cómo funciona antes de que decidas',
-  },
-  {
-    ruta: 'soporte',
-    tono: 'soporte',
-    titulo: 'Ya soy cliente y tengo un problema',
-    detalle: 'Cuéntame qué pasó y te doy un número de seguimiento',
-  },
+// Las tres puertas de entrada al asistente, como botones de la pantalla de
+// inicio. Quien viene a cotizar y quien viene con un problema no buscan lo
+// mismo, así que cada una arranca una ruta distinta.
+const ACCIONES_RAPIDAS: { ruta: RutaChat; titulo: string }[] = [
+  { ruta: 'cotizacion', titulo: 'Quiero cotizar' },
+  { ruta: 'general', titulo: 'Tengo dudas primero' },
+  { ruta: 'soporte', titulo: 'Ya soy cliente' },
 ]
 
 function FloatChat() {
@@ -345,6 +326,36 @@ function FloatChat() {
         aria-hidden={!open}
         aria-labelledby="avia-chat-title"
       >
+        {porElegirRuta ? (
+          <div className="float-inicio">
+            <div className="float-inicio-hero">
+              <div className="float-inicio-barra">
+                <img className="float-inicio-logo" src={logoAvisens} alt="AVISENS" width={38} height={38} />
+                <button type="button" onClick={cerrarChat} className="float-chat-close" aria-label="Cerrar chat">
+                  <Ic d="M18 6L6 18M6 6l12 12" size={16} />
+                </button>
+              </div>
+              <h2 className="float-inicio-saludo" id="avia-chat-title">
+                <span>Hola, soy AVIA 🐔</span>
+                ¿En qué te ayudo?
+              </h2>
+            </div>
+            <div className="float-inicio-acciones">
+              {ACCIONES_RAPIDAS.map((accion) => (
+                <button
+                  key={accion.ruta}
+                  type="button"
+                  className="float-inicio-boton"
+                  onClick={() => void iniciar(accion.ruta)}
+                >
+                  <span>{accion.titulo}</span>
+                  <Ic d="M5 12h14M13 6l6 6-6 6" size={16} />
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
         <div className="float-chat-topbar">
           <div className="float-chat-avatar">
             {open && (saludando || enviando) ? (
@@ -373,10 +384,10 @@ function FloatChat() {
             className="float-chat-reset"
             onClick={() => abrirConMenu()}
             disabled={enviando}
-            aria-label="Reiniciar conversación"
-            title="Reiniciar conversación"
+            aria-label="Volver al inicio"
+            title="Volver al inicio"
           >
-            <IcRefresh size={15} />
+            <Ic d="M15 18l-6-6 6-6" size={16} />
           </button>
           <button type="button" onClick={cerrarChat} className="float-chat-close" aria-label="Cerrar chat">
             <Ic d="M18 6L6 18M6 6l12 12" size={16} />
@@ -399,14 +410,6 @@ function FloatChat() {
         )}
 
         <div className="float-chat-msgs" ref={scrollRef}>
-          {porElegirRuta ? (
-            <div className="float-msg bot">
-              <div className="float-msg-bub">
-                Hola, soy AVIA, de AVISENS 🐔{'\n\n'}Te ayudo a saber qué pasa en tu galpón antes de que se pierdan aves. ¿En qué te puedo ayudar?
-              </div>
-            </div>
-          ) : null}
-
           {mensajes.map((mensaje, i) =>
             mensaje.autor === 'bloque' ? (
               <div key={`bloque-${i}`} className="float-bloque" role="separator">
@@ -466,23 +469,7 @@ function FloatChat() {
           </div>
         ) : null}
 
-          {porElegirRuta && !enviando ? (
-            <div className="float-chat-options float-chat-menu">
-              {ACCIONES_RAPIDAS.map((accion) => (
-                <button
-                  key={accion.ruta}
-                  type="button"
-                  className={`float-accion float-accion--${accion.tono}`}
-                  onClick={() => void iniciar(accion.ruta)}
-                >
-                  <span className="float-accion-texto">
-                    <strong>{accion.titulo}</strong>
-                    <small>{accion.detalle}</small>
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : opciones.length > 0 && !resultado ? (
+          {opciones.length > 0 && !resultado ? (
           <div className={`float-chat-options${enPar ? ' float-chat-options--par' : ''}`}>
             {/* Un sí o no se responde de un vistazo: en pareja y horizontal se
                 lee como una decisión, mientras que apilado a lo ancho parece
@@ -522,6 +509,8 @@ function FloatChat() {
             <IcSend size={17} />
           </button>
         </form>
+          </>
+        )}
       </div>
 
       <button
