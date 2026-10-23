@@ -20,7 +20,7 @@ import {
 } from './dominio/calificacion';
 
 const PRIMERA_PREGUNTA = 'M1';
-const PRIMERA_PREGUNTA_PQRS = 'B1';
+const PRIMERA_PREGUNTA_PQRS = 'BMP';
 const PRIMERA_PREGUNTA_COTIZACION = 'A1';
 const PRIMERA_PREGUNTA_SOPORTE = 'S1';
 const RUTA_PQRS = 'general';

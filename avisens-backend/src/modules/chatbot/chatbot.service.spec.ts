@@ -546,16 +546,16 @@ describe('ChatbotService', () => {
       expect(r.pregunta?.codigo).toBe('A1');
     });
 
-    it('con ruta general arranca en B1 (PQRS)', async () => {
+    it('con ruta general arranca en el menú de preguntas frecuentes (BMP)', async () => {
       prisma.prospecto.create.mockResolvedValue({ id: 1, sesion_id: 'u' });
       prisma.preguntaChatbot.findFirst.mockResolvedValue(
-        pregunta({ codigo: 'B1', bloque: 'B', tipo: 'opcion_unica' }),
+        pregunta({ codigo: 'BMP', bloque: 'B', tipo: 'opcion_unica' }),
       );
 
       const r = await service.iniciar({ ruta: 'general' });
 
-      expect(r.pregunta?.codigo).toBe('B1');
-      expect(datosDe(prisma.prospecto.create).pregunta_actual).toBe('B1');
+      expect(r.pregunta?.codigo).toBe('BMP');
+      expect(datosDe(prisma.prospecto.create).pregunta_actual).toBe('BMP');
     });
 
     it('cierra el bloque B como consulta atendida, sin radicar ni puntuar', async () => {
