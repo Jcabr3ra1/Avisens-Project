@@ -182,25 +182,15 @@
 .float-btn:focus-visible,
 .float-chat-reset:focus-visible,
 .float-chat-close:focus-visible,
-.float-chat-options button:focus-visible,
-.float-chat-send-btn:focus-visible,
 .float-chat-error button:focus-visible {
   outline: 3px solid var(--landing-focus);
   outline-offset: 3px;
 }
 
 .float-chat-reset:disabled,
-.float-chat-send-btn:disabled,
-.float-chat-options button:disabled,
 .float-chat-error button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
-}
-
-.float-chat-send-btn:disabled {
-  color: color-mix(in srgb, var(--avisens-ink) 58%, transparent);
-  background: color-mix(in srgb, var(--border-default) 45%, transparent);
-  opacity: 1;
 }
 
 .float-chat-progress {
@@ -215,70 +205,11 @@
   transition: width 0.35s ease;
 }
 
-.float-chat-msgs {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  gap: 0.7rem;
-  /* Sin min-height: con un solo saludo, 220px forzados dejaban un agujero
-     entre el mensaje y las acciones. El área crece con la conversación. */
-  max-height: min(46vh, 340px);
-  overflow-y: auto;
-  padding: 1rem;
-  background: color-mix(in srgb, var(--surface-page) 94%, transparent);
-  scrollbar-width: thin;
-}
-
-.float-msg {
-  display: flex;
-  animation: float-msg-entra 280ms cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
-.float-msg.bot {
-  justify-content: flex-start;
-  transform-origin: bottom left;
-}
-
-.float-msg.usuario {
-  justify-content: flex-end;
-  transform-origin: bottom right;
-}
-
-@keyframes float-msg-entra {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.97);
-  }
-}
-
 @keyframes float-opcion-entra {
   from {
     opacity: 0;
     transform: translateY(6px);
   }
-}
-
-.float-msg-bub {
-  max-width: 84%;
-  padding: 0.7rem 0.9rem;
-  border-radius: 16px;
-  font-size: 0.88rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.float-msg.bot .float-msg-bub {
-  color: var(--avisens-deep);
-  background: var(--landing-card);
-  border-bottom-left-radius: 5px;
-  box-shadow: 0 3px 10px -4px color-mix(in srgb, var(--avisens-ink) 28%, transparent);
-}
-
-.float-msg.usuario .float-msg-bub {
-  color: var(--landing-on-primary);
-  background: var(--landing-primary);
-  border-bottom-right-radius: 5px;
 }
 
 .float-dots {
@@ -337,10 +268,6 @@
   font-size: 0.86rem;
 }
 
-.float-result--cerrado {
-  border-left-color: color-mix(in srgb, var(--avisens-ink) 46%, transparent);
-}
-
 .float-chat-error {
   display: flex;
   align-items: center;
@@ -367,161 +294,8 @@
   font-weight: 700;
 }
 
-.float-chat-options {
-  display: grid;
-  /* Una columna: las respuestas son frases ("Se va, pero tengo planta"), no
-     etiquetas cortas. En fila se partian en dos lineas y el area de toque
-     quedaba por debajo de lo comodo en movil. */
-  grid-template-columns: 1fr;
-  flex: 0 0 auto;
-  gap: 0.4rem;
-  padding: 0.75rem 1rem;
-  max-height: 40vh;
-  overflow-y: auto;
-  background: color-mix(in srgb, var(--surface-page) 94%, transparent);
-  border-top: 0;
-}
-
-.float-chat-pregunta {
-  margin: 0.1rem 0.15rem 0;
-  color: color-mix(in srgb, var(--avisens-ink) 62%, transparent);
-  font-family: 'DM Mono', monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 /* Separador de bloque: da estructura al cuestionario sin sumar otra burbuja
    que leer. */
-.float-bloque {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin: 0.85rem 0 0.35rem;
-}
-
-.float-bloque::before,
-.float-bloque::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: color-mix(in srgb, var(--avisens-ink) 16%, transparent);
-}
-
-.float-bloque span {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--avisens-deep);
-  opacity: 0.8;
-  text-align: center;
-}
-
-
-.float-result--caliente {
-  color: var(--avisens-orange);
-}
-
-.float-result--tibio {
-  color: var(--warning3);
-}
-
-.float-result--frio {
-  color: var(--avisens-deep);
-}
-
-.float-chat-options button {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  /* 44px es el minimo comodo para tocar con el pulgar; antes eran 30. */
-  min-height: 44px;
-  color: var(--landing-primary);
-  background: var(--landing-bg);
-  border: 1.5px solid var(--landing-primary);
-  border-radius: 13px;
-  padding: 0.55rem 0.85rem;
-  font-size: 0.87rem;
-  font-weight: 600;
-  line-height: 1.35;
-  text-align: left;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.1s ease;
-}
-
-.float-chat-options button:hover:not(:disabled) {
-  border-color: var(--landing-primary);
-  background: var(--bg-tint);
-}
-
-.float-chat-options button:active:not(:disabled) {
-  transform: scale(0.985);
-}
-
-.float-chat-options button:hover:not(:disabled) {
-  color: var(--landing-on-primary);
-  background: var(--landing-primary);
-  border-color: var(--landing-primary);
-  transform: translateY(-1px);
-}
-
-.float-chat-input-row {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-  gap: 0.55rem;
-  padding: 0.85rem 1rem;
-  background: var(--landing-bg);
-  border-top: 1px solid color-mix(in srgb, var(--avisens-ink) 16%, transparent);
-}
-
-.float-chat-inp {
-  flex: 1;
-  min-width: 0;
-  color: var(--avisens-deep);
-  background: var(--landing-card);
-  border: 1px solid var(--landing-border);
-  border-radius: 999px;
-  padding: 0.6rem 0.95rem;
-  font: inherit;
-  font-size: 0.88rem;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.float-chat-inp:focus {
-  border-color: var(--landing-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--avisens-sage) 18%, transparent);
-}
-
-.float-chat-inp::placeholder {
-  color: color-mix(in srgb, var(--avisens-ink) 62%, transparent);
-}
-
-.float-chat-inp:disabled {
-  color: color-mix(in srgb, var(--avisens-ink) 58%, transparent);
-  background: color-mix(in srgb, var(--border-default) 50%, transparent);
-}
-
-.float-chat-send-btn {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  color: var(--landing-on-primary);
-  background: var(--landing-primary);
-  border-radius: 50%;
-  flex: 0 0 auto;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-
-.float-chat-send-btn:hover:not(:disabled) {
-  color: var(--landing-on-primary);
-  background: var(--landing-primary-hover);
-  transform: translateY(-1px);
-}
 
 @media (max-width: 640px) {
   .float-chat {
@@ -612,44 +386,23 @@
   .float-btn:hover .float-btn-robot { transform: none; }
 }
 
-/* Dos opciones cortas van de lado: se leen como una decisión y no como una
-   lista. La regla base es una sola columna a propósito —las respuestas suelen
-   ser frases— así que esto solo se aplica cuando las dos caben. */
-.float-chat-options--par {
-  grid-template-columns: 1fr 1fr;
-}
-
-/* Cualificado para ganarle a `.float-chat-options button`, que es (0,1,1) y si
-   no impondría su alineación a la izquierda. */
-.float-chat-options--par button {
-  justify-content: center;
-  text-align: center;
-}
-
-/* Las opciones y las tres puertas de entrada llegan en cascada corta, después
-   del mensaje, y se hunden un poco al tocarlas. Con movimiento reducido solo
+/* Las tres puertas de entrada llegan en cascada corta y se hunden un poco al tocarlas. Con movimiento reducido solo
    hay fundido. */
-.float-chat-options > button,
 .float-inicio-boton {
   animation: float-opcion-entra 320ms cubic-bezier(0.23, 1, 0.32, 1) both;
   transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.float-chat-options > button:nth-child(1), .float-inicio-boton:nth-of-type(1) { animation-delay: 140ms; }
-.float-chat-options > button:nth-child(2), .float-inicio-boton:nth-of-type(2) { animation-delay: 190ms; }
-.float-chat-options > button:nth-child(3), .float-inicio-boton:nth-of-type(3) { animation-delay: 240ms; }
-.float-chat-options > button:nth-child(n+4) { animation-delay: 280ms; }
+.float-inicio-boton:nth-of-type(1) { animation-delay: 140ms; }
+.float-inicio-boton:nth-of-type(2) { animation-delay: 190ms; }
+.float-inicio-boton:nth-of-type(3) { animation-delay: 240ms; }
 
-.float-chat-options > button:not(:disabled):active,
 .float-inicio-boton:active {
   transform: scale(0.97);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .float-msg { animation: float-opcion-aparece 160ms ease both; }
-  .float-chat-options > button,
   .float-inicio-boton { animation: float-opcion-aparece 160ms ease both; animation-delay: 0ms; transition: none; }
-  .float-chat-options > button:not(:disabled):active,
   .float-inicio-boton:active { transform: none; }
 }
 
