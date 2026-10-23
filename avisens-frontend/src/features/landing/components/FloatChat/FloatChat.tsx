@@ -17,7 +17,6 @@ import './FloatChat.tema.css'
 const RobotLottie = lazy(() => import('./RobotLottie'))
 
 const SIN_CONSENTIMIENTO = 'sin_consentimiento'
-const PUNTAJE_MAXIMO = 12
 
 type Mensaje = {
   autor: 'bot' | 'usuario' | 'bloque'
@@ -74,12 +73,18 @@ function traducirError(err: unknown, fallback: string): ErrorChat {
   return { texto: mensaje || fallback, reiniciar: true }
 }
 
-function etiquetaClasificacion(clasificacion: string | null): string {
-  if (!clasificacion) return 'Sin clasificación'
-  const normalizada = clasificacion.toLowerCase()
-  if (normalizada === 'frio') return 'Frío'
-  return normalizada.charAt(0).toUpperCase() + normalizada.slice(1)
+// Lo que sigue tras la cotización, dicho con las mismas promesas que el cierre
+// de WhatsApp. Al visitante no se le muestra su puntaje ni si es «caliente» o
+// «frío»: eso es una clasificación interna de ventas, no algo que él deba leer.
+const SIGUIENTE_PASO: Record<string, string> = {
+  caliente:
+    'Un asesor comercial te contacta en las próximas 24 horas para coordinar una visita técnica y afinar tu propuesta.',
+  tibio:
+    'Te invitamos a una demostración remota para que veas la plataforma funcionando y resolvamos tus dudas antes de decidir.',
+  frio:
+    'Te enviamos información útil sobre monitoreo y bienestar de las aves, y quedamos pendientes para cuando quieras dar el siguiente paso.',
 }
+const SIGUIENTE_PASO_GENERICO = 'Un asesor te contacta con la cotización.'
 
 // Las tres puertas de entrada al asistente. Cada una lleva icono y color
 // propios para que se distingan antes de leerlas: quien viene a cotizar y quien
@@ -89,28 +94,24 @@ const ACCIONES_RAPIDAS: {
   tono: 'cotizar' | 'dudas' | 'soporte'
   titulo: string
   detalle: string
-  icono: string
 }[] = [
   {
     ruta: 'cotizacion',
     tono: 'cotizar',
     titulo: 'Quiero cotizar',
     detalle: 'Un asesor visita tu granja y te arma la propuesta',
-    icono: 'M9 7h6M9 11h6M9 15h3M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z',
   },
   {
     ruta: 'general',
     tono: 'dudas',
     titulo: 'Tengo dudas primero',
-    detalle: 'Resolvemos tus preguntas antes de decidir',
-    icono: 'M12 17h.01M9.1 9a3 3 0 115.8 1c0 2-2.9 2.5-2.9 4M12 3a9 9 0 100 18 9 9 0 000-18z',
+    detalle: 'Te cuento cómo funciona antes de que decidas',
   },
   {
     ruta: 'soporte',
     tono: 'soporte',
     titulo: 'Ya soy cliente y tengo un problema',
-    detalle: 'Radica una PQRS y te damos número de seguimiento',
-    icono: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z',
+    detalle: 'Cuéntame qué pasó y te doy un número de seguimiento',
   },
 ]
 
@@ -153,10 +154,10 @@ function FloatChat() {
         {
           autor: 'bot',
           texto: sinConsentimiento
-            ? 'Entendido, cerramos aquí. No quedaste registrado como prospecto y no guardamos ningún dato personal tuyo.'
+            ? 'Entendido, lo dejamos aquí. No quedaste registrado y no guardé ningún dato personal tuyo.'
             : esPqrs
-              ? '¡Listo! Tu solicitud quedó radicada. Un asesor del equipo la revisará y te contactará.'
-              : 'Listo. Con eso tengo todo lo necesario para orientar tu cotización.',
+              ? 'Listo, tu solicitud quedó radicada. Un asesor del equipo la revisa y te contacta.'
+              : 'Listo. Con lo que me contaste ya puedo orientar tu cotización.',
         },
       ])
       return
@@ -401,7 +402,7 @@ function FloatChat() {
           {porElegirRuta ? (
             <div className="float-msg bot">
               <div className="float-msg-bub">
-                ¡Hola! Soy AVIA. ¿En qué te puedo ayudar hoy?
+                Hola, soy AVIA, de AVISENS 🐔{'\n\n'}Te ayudo a saber qué pasa en tu galpón antes de que se pierdan aves. ¿En qué te puedo ayudar?
               </div>
             </div>
           ) : null}
@@ -446,20 +447,8 @@ function FloatChat() {
               </div>
             ) : (
               <div className={`float-result float-result--${resultado.clasificacion ?? 'frio'}`}>
-                <span>Tu perfil</span>
-                <strong>{etiquetaClasificacion(resultado.clasificacion)}</strong>
-                <div
-                  className="float-result-barra"
-                  role="img"
-                  aria-label={`${resultado.puntaje ?? 0} de ${PUNTAJE_MAXIMO} puntos`}
-                >
-                  <div
-                    style={{
-                      width: `${Math.round(((resultado.puntaje ?? 0) / PUNTAJE_MAXIMO) * 100)}%`,
-                    }}
-                  />
-                </div>
-                <p>Un asesor te contactará con la cotización.</p>
+                <span>Lo que sigue</span>
+                <p>{SIGUIENTE_PASO[resultado.clasificacion ?? ''] ?? SIGUIENTE_PASO_GENERICO}</p>
               </div>
             )
           ) : null}
@@ -479,7 +468,6 @@ function FloatChat() {
 
           {porElegirRuta && !enviando ? (
             <div className="float-chat-options float-chat-menu">
-              <p className="float-chat-rotulo">Acciones rápidas</p>
               {ACCIONES_RAPIDAS.map((accion) => (
                 <button
                   key={accion.ruta}
@@ -487,15 +475,9 @@ function FloatChat() {
                   className={`float-accion float-accion--${accion.tono}`}
                   onClick={() => void iniciar(accion.ruta)}
                 >
-                  <span className="float-accion-icono" aria-hidden="true">
-                    <Ic d={accion.icono} size={17} />
-                  </span>
                   <span className="float-accion-texto">
                     <strong>{accion.titulo}</strong>
                     <small>{accion.detalle}</small>
-                  </span>
-                  <span className="float-accion-flecha" aria-hidden="true">
-                    <Ic d="M9 18l6-6-6-6" size={14} />
                   </span>
                 </button>
               ))}

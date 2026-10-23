@@ -66,15 +66,6 @@
 .float-chat .float-chat-options button:hover:not(:disabled) { border-color: var(--avisens-deep); background: var(--avisens-deep); color: var(--avisens-cream); transform: translateY(-1px); }
 
 .float-chat .float-chat-rotulo { margin: .2rem .1rem .15rem; color: color-mix(in srgb, var(--avisens-ink) 60%, transparent); font-size: .68rem; letter-spacing: .1em; }
-.float-chat .float-chat-menu .float-accion { gap: .8rem; padding: .75rem .8rem; border: 1px solid color-mix(in srgb, var(--avisens-sage) 90%, transparent); border-radius: 16px; background: var(--avisens-cream); color: var(--avisens-ink); box-shadow: 0 1px 2px color-mix(in srgb, var(--avisens-ink) 6%, transparent); }
-.float-chat .float-chat-menu .float-accion:hover:not(:disabled) { border-color: var(--avisens-deep); background: var(--avisens-cream); color: var(--avisens-ink); box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--avisens-ink) 45%, transparent); }
-.float-chat .float-chat-menu .float-accion strong { color: var(--avisens-ink); font-size: .92rem; }
-.float-chat .float-chat-menu .float-accion small { color: color-mix(in srgb, var(--avisens-ink) 62%, transparent); font-size: .78rem; }
-.float-chat .float-accion-icono { width: 2.3rem; height: 2.3rem; border-radius: 11px; }
-.float-chat .float-accion--cotizar .float-accion-icono { color: var(--avisens-ink); background: var(--avisens-maize); }
-.float-chat .float-accion--dudas .float-accion-icono { color: var(--avisens-deep); background: var(--avisens-sage); }
-.float-chat .float-accion--soporte .float-accion-icono { color: var(--avisens-cream); background: var(--avisens-deep); }
-.float-chat .float-accion-flecha { color: var(--avisens-deep); }
 
 .float-chat .float-chat-input-row { gap: .5rem; padding: .7rem .8rem .8rem; border-top: 1px solid color-mix(in srgb, var(--avisens-sage) 80%, transparent); background: color-mix(in srgb, var(--avisens-sage) 26%, var(--avisens-cream)); }
 .float-chat .float-chat-inp { min-height: 44px; border: 1px solid color-mix(in srgb, var(--avisens-sage) 100%, transparent); background: var(--avisens-cream); color: var(--avisens-ink); font-size: .9rem; }
@@ -86,3 +77,62 @@
 .float-chat .float-result { border: 1px solid color-mix(in srgb, var(--avisens-sage) 90%, transparent); border-radius: 16px; background: var(--avisens-cream); }
 .float-chat .float-btn::after { background: var(--avisens-deep); color: var(--avisens-cream); font-family: inherit; }
 .float-chat .float-btn-cerrar { background: var(--avisens-deep); color: var(--avisens-cream); }
+
+/* Pantallas bajas (celular horizontal, ventanas chicas): el panel ocupa el
+   alto disponible y la cabecera y el campo se compactan, para que el área de
+   mensajes y el campo de escribir siempre quepan. Va aquí y no en FloatChat.css
+   porque las reglas de .float-panel de este archivo pisan a las de aquel. */
+@media (max-height: 560px) {
+  .float-chat.is-open {
+    top: max(0.5rem, env(safe-area-inset-top, 0px));
+    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .float-chat.is-open .float-panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .float-chat .float-chat-topbar { gap: 0.6rem; padding: 0.45rem 0.7rem 0.45rem 0.8rem; }
+  .float-chat .float-chat-avatar { width: 36px; height: 36px; }
+  .float-chat .float-chat-msgs { flex: 1 1 0; min-height: 0; max-height: none; padding: 0.6rem 0.8rem; }
+  .float-chat .float-chat-options { flex: 0 1 auto; min-height: 0; max-height: 48%; padding: 0.5rem 0.8rem; }
+  .float-chat .float-chat-input-row { padding: 0.4rem 0.7rem 0.5rem; }
+}
+
+@media (max-height: 560px) and (min-width: 641px) {
+  .float-chat.is-open .float-panel { width: min(92vw, 420px); }
+}
+
+/* Pantallas grandes: el panel gana un poco de tamaño para no verse chico. */
+@media (min-width: 1280px) and (min-height: 820px) {
+  .float-chat .float-panel {
+    width: 420px;
+    max-height: min(700px, calc(100svh - 7.5rem));
+  }
+}
+
+/* Las tres puertas de entrada son solo texto: un título y una línea de apoyo,
+   separados por un filo y con un tinte al pasar el cursor. Sin caja, sin
+   ícono ni flecha. */
+.float-chat .float-chat-menu { gap: 0; padding: 0.2rem 1rem 0.5rem; }
+.float-chat .float-chat-menu .float-accion {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 0.4rem;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--avisens-sage) 70%, transparent);
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--avisens-ink);
+  text-align: left;
+}
+.float-chat .float-chat-menu .float-accion:last-child { border-bottom-color: transparent; }
+.float-chat .float-chat-menu .float-accion strong { color: var(--avisens-ink); font-size: 0.92rem; font-weight: 700; }
+.float-chat .float-chat-menu .float-accion small { color: color-mix(in srgb, var(--avisens-ink) 62%, transparent); font-size: 0.78rem; line-height: 1.4; }
+@media (hover: hover) and (pointer: fine) {
+  .float-chat .float-chat-menu .float-accion:hover:not(:disabled) { background: color-mix(in srgb, var(--avisens-sage) 32%, transparent); border-bottom-color: transparent; }
+}
+.float-chat .float-chat-menu .float-accion:focus-visible { outline: 2px solid var(--avisens-deep); outline-offset: -2px; }
