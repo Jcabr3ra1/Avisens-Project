@@ -13,12 +13,22 @@ import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
 import { mensajeDeError } from '@shared/utils/errores'
 
-export type EstadoSensorVista = 'optimo' | 'advertencia' | 'critico' | 'sin_umbral' | 'offline' | 'lectura_no_disponible'
+export type EstadoSensorVista = 'optimo' | 'advertencia' | 'critico' | 'sin_umbral' | 'offline' | 'lectura_no_disponible' | 'obsoleta'
 
 // Ni "óptimo", ni "conectado", ni "sin señal": no hay dato que mostrar
 // porque la consulta al backend falló, no porque el sensor esté apagado.
 export function tieneLecturaUtil(estado: EstadoSensorVista): boolean {
   return estado !== 'offline' && estado !== 'lectura_no_disponible'
+}
+
+// Distinto de tieneLecturaUtil: esto responde "¿esta lectura es reciente,
+// confiable para el estado operativo AHORA?", no "¿hay un valor histórico
+// que se pueda consultar?". Un sensor 'obsoleta' tiene un valor -- se puede
+// abrir su detalle e historial -- pero no cuenta como "en línea" para un
+// semáforo o un contador operativo: mostrarlo así diría que el sistema
+// comprobó algo reciente cuando en realidad no lo hizo.
+export function esLecturaVigente(estado: EstadoSensorVista): boolean {
+  return tieneLecturaUtil(estado) && estado !== 'obsoleta'
 }
 
 // A qué variable de umbral (las 3 que soporta el backend) corresponde el
@@ -33,11 +43,48 @@ export function normalizarVariableUmbral(tipo: string): 'temperatura' | 'humedad
   return null
 }
 
+// Los motores del ESP32 se registran como sensores con unidad "estado" y
+// reportan 1 (encendido) o 0 (apagado), sin umbral ni gráfica de valores.
+export function esSensorDeEstado(unidad: string): boolean {
+  return unidad.trim().toLowerCase() === 'estado'
+}
+
+export function estaEncendido(valor: number): boolean {
+  return valor >= 0.5
+}
+
+// Los relés y motores reportan la salida que el ESP32 les ordenó. No hay
+// realimentación física: "Salida encendida" no confirma que el relé conmutó
+// ni que la carga funciona, y las etiquetas lo dicen así.
+export function textoSalidaReportada(encendido: boolean): string {
+  return encendido ? 'Salida encendida' : 'Salida apagada'
+}
+
+export const AYUDA_SALIDA_REPORTADA =
+  'Salida que el ESP32 ordenó. Sin sensor de realimentación: no confirma que el relé conmutó ni que la carga funciona.'
+
+// Texto del valor tal como se muestra: "Salida encendida"/"Salida apagada"
+// para los de estado, "22.1 °C" para el resto.
+export function textoValor(sensor: Pick<SensorVista, 'esEstado' | 'unidad'>, valor: number | null): string {
+  if (valor === null) return '—'
+  if (sensor.esEstado) return textoSalidaReportada(estaEncendido(valor))
+  return `${valor} ${sensor.unidad}`
+}
+
+// El ESP32 manda "sospechosa" cuando el valor no es una medida física
+// confirmada: hoy, el peso del HX711 con el factor de escala de ejemplo.
+// Sin esta marca la web mostraría esos "gramos" como si fueran reales.
+export function esLecturaSinCalibrar(calidad: string | null | undefined): boolean {
+  return calidad === 'sospechosa'
+}
+
 export type SensorVista = {
   id: number
   codigo: string
   tipo: string
   unidad: string
+  esEstado: boolean
+  sinCalibrar: boolean
   variableUmbral: 'temperatura' | 'humedad' | 'luminosidad' | null
   valor: number | null
   minUmbral: number | null
@@ -123,6 +170,7 @@ export function construirVista(
         if (s.estado !== 'activo') estado = 'offline'
         else if (ultimasNoDisponibles) estado = 'lectura_no_disponible'
         else if (valor === null) estado = 'offline'
+        else if ((entrada?.ultima_lectura?.antiguedad_segundos ?? 0) > UMBRAL_LECTURA_OBSOLETA_SEG) estado = 'obsoleta'
         else if (!umbral) estado = 'sin_umbral'
         else estado = calcularEstado(valor, umbral.valor_minimo, umbral.valor_maximo)
 
@@ -131,6 +179,8 @@ export function construirVista(
           codigo: s.codigo,
           tipo: s.tipo,
           unidad: s.unidad_medida,
+          esEstado: esSensorDeEstado(s.unidad_medida),
+          sinCalibrar: esLecturaSinCalibrar(entrada?.ultima_lectura?.calidad),
           variableUmbral,
           valor,
           minUmbral: umbral?.valor_minimo ?? null,
@@ -166,6 +216,11 @@ export function construirVista(
 // duplicaban porque el sidebar usa la misma fuente. La promesa compartida
 // también evita la doble petición que StrictMode provoca en desarrollo.
 const CACHE_MS = 30_000
+
+// Más de esto sin una lectura nueva: no importa si el valor está "en
+// rango", ya no es confiable mostrarlo como si fuera el estado actual.
+// Independiente de la cadencia de un dispositivo en particular.
+const UMBRAL_LECTURA_OBSOLETA_SEG = 120
 let estadoMonitoreo: MonitoreoState = { galpones: [], cargando: true, error: '', avisoUltimas: '' }
 let cargaEnCurso: Promise<void> | null = null
 let ultimaCarga = 0
@@ -188,8 +243,13 @@ async function cargarMonitoreo(forzar = false): Promise<void> {
   if (cargaEnCurso) return cargaEnCurso
   if (!forzar && ultimaCarga > 0 && Date.now() - ultimaCarga < CACHE_MS) return
 
- estadoMonitoreo = { ...estadoMonitoreo, cargando: true, error: '', avisoUltimas: '' }
-  notificar()
+  // Solo la primera carga muestra "Cargando…". En los refrescos se conservan
+  // los datos en pantalla hasta que llegan los nuevos: si no, cada refresco
+  // desmonta la página, el scroll vuelve arriba y parece un F5.
+  if (estadoMonitoreo.galpones.length === 0) {
+    estadoMonitoreo = { ...estadoMonitoreo, cargando: true, error: '', avisoUltimas: '' }
+    notificar()
+  }
 
   cargaEnCurso = (async () => {
     try {
@@ -244,6 +304,16 @@ export function useMonitoreoAmbiental() {
 
   useEffect(() => {
     void cargarMonitoreo()
+  }, [])
+
+  useEffect(() => {
+    // Sin esto, el store solo se carga al montar: alguien viendo Monitoreo
+    // nunca vería una lectura nueva sin salir y volver a entrar. El
+    // intervalo es más corto que CACHE_MS a propósito -- el propio cache
+    // de cargarMonitoreo() decide cuándo pega de verdad al backend, esto
+    // solo dispara el chequeo con margen.
+    const id = setInterval(() => { void cargarMonitoreo() }, CACHE_MS / 2)
+    return () => clearInterval(id)
   }, [])
 
   return { ...estado, recargar: recargarMonitoreo }

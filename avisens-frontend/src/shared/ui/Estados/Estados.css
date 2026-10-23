@@ -1,0 +1,20 @@
+.estado-cargando { display: flex; align-items: center; justify-content: center; gap: var(--space-2); margin: 0; padding: var(--space-6) var(--space-4); color: var(--text-muted); font-size: .86rem; font-weight: 600; }
+.estado-cargando-punto { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); animation: estado-pulso 1.2s ease-in-out infinite; }
+
+.estado-vacio { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-6) var(--space-5); color: var(--text-secondary); text-align: center; }
+.estado-vacio h3 { margin: 0; color: var(--text-primary); font-size: 1rem; font-weight: 700; }
+.estado-vacio p { max-width: 30rem; margin: 0; font-size: .86rem; line-height: 1.5; }
+.estado-vacio .adm-btn { margin-top: var(--space-2); }
+
+.carga-logo { display: flex; min-height: 60vh; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); color: var(--text-muted); font-size: .86rem; font-weight: 600; }
+.carga-logo-marca { animation: estado-pulso 1.6s ease-in-out infinite; }
+
+@keyframes estado-pulso {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .estado-cargando-punto,
+  .carga-logo-marca { animation: none; }
+}

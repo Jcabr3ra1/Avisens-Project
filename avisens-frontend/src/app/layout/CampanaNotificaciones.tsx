@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { listarNotificaciones, marcarNotificacionLeida, marcarTodasLeidas, type Notificacion } from '@features/notificaciones/api/notificaciones'
 import { IcAlert, IcBell, IcCheck, IcRefresh, IcUserCircle } from '@shared/ui/icons/icons'
 import { useConteoNotificaciones } from '@features/notificaciones/hooks/useNotificaciones'
-import AnimacionAvisens from '@shared/ui/Animacion/AnimacionAvisens'
 import './CampanaNotificaciones.css'
 
 const VISIBLES = 5
@@ -31,14 +30,6 @@ function CampanaNotificaciones() {
   const [recientes, setRecientes] = useState<Notificacion[]>([])
   const [cargando, setCargando] = useState(false)
   const contenedor = useRef<HTMLDivElement>(null)
-  const conteoPrevio = useRef(noLeidas)
-  const [timbre, setTimbre] = useState(0)
-
-  useEffect(() => {
-    if (noLeidas > conteoPrevio.current) setTimbre((valor) => valor + 1)
-    conteoPrevio.current = noLeidas
-  }, [noLeidas])
-
   const cerrar = useCallback(() => setAbierto(false), [])
 
   useEffect(() => {
@@ -106,13 +97,12 @@ function CampanaNotificaciones() {
         type="button"
         className={`dash-campana-boton${abierto ? ' abierta' : ''}`}
         onClick={() => setAbierto((valor) => !valor)}
-        onMouseEnter={() => setTimbre((valor) => valor + 1)}
         aria-label={noLeidas > 0 ? `Notificaciones, ${noLeidas} sin leer` : 'Notificaciones'}
         aria-expanded={abierto}
         aria-haspopup="dialog"
         title="Notificaciones"
       >
-        <AnimacionAvisens nombre="campana" modo="al-pasar" tamano={26} velocidad={1.4} reproducir={timbre} respaldo={<IcBell size={19} />} />
+        <IcBell size={19} />
         {noLeidas > 0 && (
           <span className="dash-campana-punto" aria-hidden="true">
             {noLeidas > 9 ? '9+' : noLeidas}
@@ -139,7 +129,7 @@ function CampanaNotificaciones() {
               <p className="dash-campana-estado" role="status">Cargando…</p>
             ) : recientes.length === 0 ? (
               <div className="dash-campana-vacio">
-                <AnimacionAvisens nombre="bandeja-vacia" tamano={72} respaldo={<IcBell size={22} />} />
+                <IcBell size={22} />
                 <strong>Nada nuevo por ahora</strong>
                 <span>Aquí verás alertas, accesos por restablecer y avisos del sistema.</span>
               </div>

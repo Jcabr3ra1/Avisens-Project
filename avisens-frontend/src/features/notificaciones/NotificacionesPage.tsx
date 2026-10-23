@@ -4,8 +4,8 @@ import { getRol } from '@shared/api'
 import type { Notificacion } from '@features/notificaciones/api/notificaciones'
 import { IcAlert, IcBell, IcCheck, IcRefresh, IcUserCircle } from '@shared/ui/icons/icons'
 import { useNotificaciones } from './hooks/useNotificaciones'
-import EstadoVacioAnimado from '@shared/ui/Animacion/EstadoVacioAnimado'
-import CargandoAnimado from '@shared/ui/Animacion/CargandoAnimado'
+import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
+import Cargando from '@shared/ui/Estados/Cargando'
 import '@shared/ui/admin/AdminKit.css'
 import './NotificacionesPage.css'
 
@@ -104,11 +104,10 @@ function NotificacionesPage() {
       {error && <p className="not-aviso not-aviso--error adm-alerta" role="alert">{error}</p>}
 
       {cargando ? (
-        <CargandoAnimado texto="Cargando notificaciones…" />
+        <Cargando texto="Cargando notificaciones…" />
       ) : ordenadas.length === 0 ? (
-        <EstadoVacioAnimado
+        <EstadoVacio
           className="not-vacio"
-          animacion="bandeja-vacia"
           titulo={filtro === 'sin_leer' ? 'Todo leído' : 'No tienes notificaciones'}
           texto={filtro === 'sin_leer' ? 'No hay avisos pendientes por revisar.' : 'Cuando el sistema genere un aviso para ti, aparecerá aquí.'}
         />

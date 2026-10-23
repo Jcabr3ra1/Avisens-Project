@@ -401,7 +401,7 @@ describe('WhatsappService', () => {
 
       const salida = cola.add.mock.calls.at(-1) as [string, { texto: string }];
       expect(salida[1].texto).toMatch(/No te entendí/);
-      expect(salida[1].texto).toMatch(/intentarlo de nuevo/);
+      expect(salida[1].texto).toMatch(/de otra forma/);
     });
   });
 
@@ -430,7 +430,7 @@ describe('WhatsappService', () => {
       ];
       expect(nombre).toBe('saliente');
       expect(trabajo.destino).toBe('573001112233');
-      expect(trabajo.texto).toMatch(/cerramos esta conversación/);
+      expect(trabajo.texto).toMatch(/en pausa/);
     });
 
     it('cierra igual al prospecto sin telefono, pero no le encola nada', async () => {
@@ -478,7 +478,7 @@ describe('WhatsappService', () => {
         clasificacion: 'caliente',
         accion_siguiente: 'VISITA_PRESENCIAL',
       });
-      expect(texto).toMatch(/cotización personalizada/);
+      expect(texto).toMatch(/preparamos tu cotización/);
       expect(texto).toMatch(/visita técnica/);
     });
 
@@ -509,7 +509,7 @@ describe('WhatsappService', () => {
 
     it('a quien no autoriza no se le habla de cotizacion', async () => {
       const texto = await cerrarCon({ clasificacion: 'sin_consentimiento' });
-      expect(texto).toMatch(/no podemos continuar con la cotización/);
+      expect(texto).toMatch(/no podemos seguir con la cotización/);
       expect(texto).not.toMatch(/estamos generando/);
     });
   });

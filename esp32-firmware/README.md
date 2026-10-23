@@ -1,13 +1,136 @@
 # Firmware ESP32 — Avisens
 
-Firmware del **nodo ESP32** que se instala en un galpón. Lee el DHT22,
-**controla el ventilador localmente** y envía temperatura y humedad al backend
-local durante la prueba inicial. Producción es un modo separado, explícito y
-usa HTTPS autenticado.
+> **Alcance de este documento en la rama `feat/iot-mq135-hx711`**
+>
+> Esta rama conserva el firmware **modular** (FreeRTOS): DHT22, MQ-135, HC-SR04,
+> HX711, relés K1-K4, motores y control remoto. La primera parte de este README
+> lo describe y es lo vigente aquí.
+>
+> `develop` mantiene otro firmware, **monolítico** (un solo `main.cpp`), con la
+> asociación dinámica de sensores DHT22 y el modo de producción con TLS. Esas
+> funciones **todavía no están portadas** al firmware modular: se conservan
+> documentadas en la sección «Referencia» y en
+> [ASOCIACION-DINAMICA.md](ASOCIACION-DINAMICA.md), y su lista de pendientes está
+> más abajo.
 
 Escrito en **C++ con PlatformIO** (framework Arduino) sobre **VS Code** — sin el
 Arduino IDE. Así aprovechamos las librerías de sensores del ecosistema Arduino
 (DHT, etc.) pero con un entorno de desarrollo profesional.
+
+---
+
+## Firmware modular (vigente en esta rama)
+
+Lee cinco sensores, controla localmente los actuadores del galpón y envía las
+lecturas al backend por `POST /ingest` (HTTP, cabecera `X-Device-Token`, un
+`id_lote` por ciclo para reintentar sin duplicar). Desde la web se pueden pedir
+órdenes sobre los relés K1-K4, pero **decide el ESP32**: ver
+[CONTROL_REMOTO.md](CONTROL_REMOTO.md).
+
+**Regla de oro:** el backend registra; no controla. Ventiladores, bomba,
+persiana, alimentador y puerta se deciden aquí, con los umbrales de
+`config.h`, para que el galpón siga protegido sin WiFi.
+
+### Sensores y actuadores
+
+| Componente | Pin(es) en `config.example.h` | Qué reporta o hace |
+|---|---|---|
+| DHT22 | `DHTPIN` 4 | Temperatura y humedad (`TEMP-G1-01`, `HUM-G1-01`) |
+| MQ-135 | `MQ135_PIN` 34 | ADC crudo filtrado 0-4095, **no ppm** (`GAS-G1-01`) |
+| HC-SR04 | `TRIG_AGUA` 13, `ECHO_AGUA` 35 | Distancia al agua en cm, no nivel (`AGUA-G1-01`) |
+| HX711 | `HX711_DT` 15, `HX711_SCK` 16 | Peso en g, solo tras `TARA` (`PESO-G1-01`) |
+| KY-032 | `KY032_PIN` 33 | Presencia; abre la puerta, no se reporta al backend |
+| Relés K1-K4 | `K1_PIN` 32, `K2_PIN` 25, `K3_PIN` 27, `K4_PIN` 14 | Calefacción, ventilador, extractor y bomba de agua |
+| L293D canal A | `EN1_PIN` 5, `IN1_PIN` 18, `IN2_PIN` 19 | Motor de la persiana |
+| L293D canal B | `EN2_PIN` 21, `IN3_PIN` 22, `IN4_PIN` 23 | Alimentador (tornillo sinfín) |
+| Servo | `SERVO_PIN` 2 | Puerta |
+
+Los relés y los motores se reportan como sensores de unidad `estado`
+(`REL-K1-G1-01`… `REL-K4-G1-01`, `MOT-ALIM-G1-01`, `MOT-PERS-G1-01`).
+
+### Configuración
+
+Copia `include/config.example.h` a `include/config.h` (ignorado por git, no lo
+compartas) y completa `WIFI_SSID`, `WIFI_PASSWORD`, `BACKEND_URL` y
+`DEVICE_TOKEN`. Los códigos `CODIGO_*` deben coincidir **exactamente** con los
+de la tabla `sensores`. Si ya tienes un `config.h`, **compáralo con la plantilla
+y añade las macros nuevas a mano**: una copia antigua puede no compilar.
+
+Para registrar los sensores de un dispositivo ya creado en la web:
+
+```bash
+pnpm run seed:sensores-esp32            # dispositivo "galpon1"
+pnpm run seed:sensores-esp32 galpon2    # otro codigo_topic
+```
+
+Hasta calibrar el HX711 con un peso conocido, deja `HX711_CALIBRADO` en `0`: el
+peso se envía como «sospechosa» y la web lo muestra «Sin calibrar».
+
+### Comandos por el monitor serie (115200 baud)
+
+| Comando | Efecto |
+|---|---|
+| `TARA` | Calibra el cero del HX711 con la celda vacía |
+| `RELES` | Lista el estado de K1-K4 y si están en manual |
+| `<relé> ON`, `OFF` o `AUTO` | Fuerza un relé a mano o lo devuelve al automático; `<relé>` es `K1`…`K4` o `CALEFACTOR`, `VENTILADOR`, `EXTRACTOR`, `BOMBA` |
+| `REARME` o `RESET` | Reinicia la máquina de estados desde `INIT` |
+
+Un relé tomado por serial queda en **manual local**: la web no puede cambiarlo.
+Los comandos de compilación y carga (`pio run`, `pio run -t upload`, monitor)
+están en [COMANDOS.md](COMANDOS.md).
+
+### Pruebas
+
+```bash
+pio run                      # compila el firmware (solo el entorno esp32dev)
+pio test -e native           # reglas de órdenes remotas en el computador (necesita gcc/clang)
+pio test -e esp32dev         # las mismas pruebas en la placa
+```
+
+### Trabajo pendiente de portar desde `develop`
+
+Estas funciones existen en el firmware monolítico de `develop` y **no están en
+esta rama**. Mientras tanto, la pantalla «Asignar sensores» de Monitoreo y
+`GET /ingest/configuracion` existen en el backend y la web, pero **este firmware
+no los usa**: asignar un DHT22 allí no tiene efecto en él.
+
+- [ ] **Asociación dinámica de DHT22:** consultar `GET /ingest/configuracion` cada
+  30 s y leer varios DHT22 en los GPIO configurados, enviando `{tipo, canal, valor}`.
+  Hoy se envían `{codigo, valor}` con los `CODIGO_*` de `config.h`; el backend
+  acepta los dos contratos.
+- [ ] **Pines reservados:** antes de portarlo, la lista de GPIO ofrecidos debe
+  excluir todos los que usa este firmware (relés, L293D, servo, HC-SR04, HX711,
+  MQ-135, KY-032 y `DHTPIN`). Ejemplo concreto: `develop` documenta el DHT22 en
+  el GPIO 18, que aquí es `IN1_PIN` del motor de la persiana.
+- [ ] **Modo producción con TLS:** `BACKEND_MODO`, validación de la URL HTTPS y
+  certificado raíz con reloj NTP. `include/isrg_root_x1.h` se conserva para ese
+  trabajo, pero **ningún código de esta rama lo incluye** y hoy solo se envía
+  por HTTP.
+- [ ] **Sin serial en el firmware:** `develop` quita los seriales de sensor de la
+  configuración; aquí siguen los `CODIGO_*`.
+- [ ] **Un único `config.example.h`:** `develop` retiró `DEVICE_CODIGO_TOPIC`,
+  `MQTT_*` y los `CODIGO_SENSOR_*` de la plantilla; en esta rama se conservan
+  (`MQTT_*` no se usa: el transporte es HTTP).
+
+---
+
+## Referencia: firmware monolítico de `develop` (pendiente de portar)
+
+> **Todo lo que sigue hasta el final describe el firmware de `develop`, no el de
+> esta rama.** Se conserva porque documenta lo que falta portar. En esta rama
+> **no** corresponden: los sensores implementados (aquí hay cinco), el pinout,
+> las macros `PIN_DHT`, `PIN_RELE`, `BACKEND_MODO` y `TEMP_ENCIENDE_VENTILADOR`,
+> la salida serie de ejemplo, «Qué hace hoy», el modo producción con TLS ni la
+> consulta de `/ingest/configuracion`.
+>
+> **Siguen siendo válidos aquí:** programar y operar sin computador, consultar
+> la IP LAN, abrir el backend solo para la prueba local y el diagnóstico del
+> `401`.
+
+Firmware del **nodo ESP32** que se instala en un galpón. Lee el DHT22,
+**controla el ventilador localmente** y envía temperatura y humedad al backend
+local durante la prueba inicial. Producción es un modo separado, explícito y
+usa HTTPS autenticado.
 
 ---
 
@@ -58,46 +181,74 @@ esp32-firmware/
 ## Configuración (antes de compilar)
 
 Tus credenciales Wi-Fi y pines viven en `include/config.h`, que **no se sube a
-git**. Si ya tienes ese archivo configurado, consérvalo; no lo reemplaces con la
-plantilla.
+git**. Si ya tienes ese archivo configurado, consérvalo: para esta prueba solo
+edita `BACKEND_URL` y comprueba que `BACKEND_MODO` esté en local. No reemplaces
+tu `config.h` con la plantilla.
 
 1. Solo si todavía no existe, copia la plantilla:
    ```bash
    cp include/config.example.h include/config.h
    ```
+   Si ya existe, edita solo los campos necesarios en tu copia local; no la
+   reemplaces ni la compartas.
 2. En `include/config.h` configura:
-   - **WiFi:** `WIFI_SSID` y `WIFI_PASSWORD`.
-   - **Producción:** `BACKEND_URL` con la URL HTTPS pública de `/ingest`
-     (Railway). La plantilla ya la trae.
-   - **Pines y umbrales:** `PIN_DHT` debe coincidir con el cableado real; las
-     conexiones adicionales se eligen en la página y no pueden usar el pin del
-     relé.
+   - **WiFi:** deja intactos los valores `WIFI_SSID`, `WIFI_PASSWORD` que ya
+     funcionan en tu ESP32.
+   - **Modo:** deja `BACKEND_MODO` como `BACKEND_MODO_LOCAL` para esta fase.
+   - **Backend local:** cambia `BACKEND_URL` por
+     `http://<IP_LAN_DEL_COMPUTADOR>:3000/ingest`. Usa la IPv4 privada del equipo
+     donde se ejecuta el backend; `localhost` señalaría al propio ESP32.
+   - **Token:** pega en `DEVICE_TOKEN` el token que muestra una sola vez el
+     registro del dispositivo o la acción de regenerarlo. No lo envíes por chat,
+     no lo publiques y no lo subas a Git.
+   - **Sensores:** registra y vincula las conexiones DHT22 desde Monitoreo;
+     no se copian seriales al firmware. Se consultan cada 30 segundos.
+   - **Pines:** `PIN_DHT` conserva el DHT22 usado para control local del relé;
+     debe coincidir con el cableado real. Las conexiones adicionales se eligen
+     en Monitoreo y no pueden usar el pin del relé.
+   - **Umbrales:** a qué temperatura enciende/apaga el ventilador.
 
-No hace falta copiar tokens ni IP al código. Todo lo demás se configura desde
-la página y queda guardado en la memoria del ESP32.
+   La plantilla trae un ejemplo de IP, que debes sustituir por la IPv4 real.
+   En modo local el firmware solo acepta direcciones IPv4 privadas, el puerto
+   `3000` y la ruta `/ingest`; usa HTTP únicamente para esta prueba dentro de la
+   LAN. No configures aún la URL pública.
 
-### Dos destinos a la vez: producción y local
+### Consultar la IP LAN y abrir el backend solo para la prueba
 
-El controlador envía cada lectura a:
+1. En el computador que ejecuta Docker, consulta su IPv4 de Wi-Fi:
+   - macOS: `ipconfig getifaddr en0` (si no devuelve IP, revisa cuál interfaz
+     Wi-Fi está activa en Ajustes de Red).
+   - Windows: ejecuta `ipconfig` y busca la IPv4 del adaptador Wi-Fi.
+   - Linux: `hostname -I`; usa la IPv4 privada de Wi-Fi, no una IP de Docker,
+     VPN o pública.
+2. Confirma que el computador y el ESP32 usan la misma red Wi-Fi. Las redes de
+   invitados o el aislamiento de clientes pueden impedir que se vean.
+3. Desde la raíz del repositorio, enlaza el puerto del backend solo a esa IP
+   privada y levanta el servicio local:
+   - macOS/Linux: `AVISENS_BACKEND_BIND=192.168.1.42 docker compose up -d backend`
+   - PowerShell: `$env:AVISENS_BACKEND_BIND="192.168.1.42"; docker compose up -d backend`
+   Reemplaza `192.168.1.42` por la IP del paso 1. Sin esa variable, Compose
+   enlaza el backend solo a `127.0.0.1`. No uses una IP pública, no configures
+   redirección de puertos en el router y permite TCP 3000 únicamente desde la
+   red local si el firewall lo requiere.
+4. Comprueba `/health` y, tras la provisión inicial y carga del firmware,
+   revisa el resultado real: `registradas` debe ser mayor que cero y el serial
+   correspondiente debe mostrar la medición en Monitoreo. No envíes lecturas
+   inventadas a la base usada para la prueba física. `/ingest/configuracion`
+   requiere el mismo token del controlador; no lo compartas ni lo pegues en
+   comandos que queden guardados en el historial.
 
-| Destino | Cómo se activa | Comportamiento |
-| --- | --- | --- |
-| Producción (Railway) | «Vincular ESP32» desde la página pública, una sola vez por USB | Principal. HTTPS con la CA ISRG Root X1 y reloj por NTP. Si se cae el internet guarda hasta 3 horas y reenvía con la hora real. |
-| Local (tu computador) | «Vincular ESP32» desde la página local (`localhost` o una IP privada), una sola vez por USB | Opcional, «si se puede». Encuentra el computador por mDNS o por las IP vecinas a la última conocida; si no está, omite la lectura sin retrasar a producción. |
+   Sustituye IP, token y códigos por los valores del entorno local. Un `201`
+   aquí confirma la ruta local; tras flashear, el monitor serie del ESP32 debe
+   mostrar `[Backend] 201`. Este paso no llama al backend público.
 
-La página decide sola qué token envía: abierta en local guarda el token local;
-abierta en producción, el de producción. Cada base de datos tiene su propio
-controlador registrado, así que cada lado necesita su token.
+### Producción, después de completar la prueba local
 
-Para que el ESP32 vea tu computador:
-
-1. Usa la misma red Wi-Fi (las redes de invitados o con aislamiento de clientes
-   lo impiden).
-2. Abre el backend a la red local con `scripts/esp32-lan.sh`, que detecta la IP,
-   publica el puerto 3000 solo en esa IP privada y anuncia Avisens por mDNS.
-   En PowerShell: `$env:AVISENS_BACKEND_BIND="192.168.1.42"; docker compose up -d backend`.
-3. El ESP32 solo entrega su token a un equipo cuyo `/health` responda
-   `"servicio":"avisens"`.
+Producción requiere cambiar explícitamente `BACKEND_MODO` a
+`BACKEND_MODO_PRODUCCION` y poner la URL HTTPS pública de `/ingest`. En ese modo
+el firmware usa la CA ISRG Root X1 versionada en `include/isrg_root_x1.h` y
+sincroniza el reloj por NTP antes de transmitir. El certificado siempre se
+valida; no existe fallback sin TLS.
 
 > ⚠️ Nunca subas contraseñas reales a git. `config.h` ya está en `.gitignore`.
 
@@ -155,70 +306,80 @@ En la primera conexión, la salida serie puede mostrar:
 
 ## Qué hace hoy
 
-- ✅ Inicia WiFi y reintenta sin bloquear el control local si la red se cae.
-- ✅ Lee el DHT22 cada ~2 s (ignora lecturas inválidas `NaN`).
-- ✅ **Control local del ventilador** con histéresis (`TEMP_ENCIENDE_VENTILADOR`
-  / `TEMP_APAGA_VENTILADOR`): enciende al subir del umbral, apaga al bajar del
-  inferior — así no titila alrededor de un solo valor.
-- ✅ Envía temperatura y humedad a `POST /ingest` con `X-Device-Token` al
-  backend LAN en modo local.
-- ✅ El modo producción requiere selección explícita y envía por HTTPS con
-  certificado validado.
-- ✅ La reconexión y el transporte corren en una tarea separada del control
-  local; NTP se usa en producción para validar el certificado.
-- ℹ️ En una caída prolongada, la cola conserva solo la lectura más reciente;
-  no mantiene un historial ilimitado en memoria. Las lecturas intermedias se
-  descartan.
-
-La CA integrada es ISRG Root X1, usada para validar la cadena actual de
-Let's Encrypt. Si el proveedor cambia a otra cadena de confianza, actualiza el
-certificado raíz desde una fuente oficial y vuelve a compilar y flashear.
+- ✅ Conecta al WiFi y reconecta si se cae.
+- ✅ Lee DHT22 (temperatura/humedad), HC-SR04 (nivel de agua), MQ-135 (gas),
+  HX711 (peso de la tolva) y KY-032.
+- ✅ **Control local** de los relés, sin depender del backend: K1 bombillos y
+  K2 ventiladores con frío, K3 extractores con calor o humedad alta, K4 bomba
+  con nivel de agua bajo (umbrales en `config.h`). Fail-safe si fallan los
+  sensores críticos.
+- ✅ **Envía al backend** cada `INTERVALO_ENVIO_MS` por `POST /ingest` (HTTP o
+  HTTPS) con el header `X-Device-Token`.
+- ✅ **Portal web** para configurarlo y actualizarlo por WiFi, sin USB (abajo).
 
 ---
 
-## Flujo de alta y diagnóstico
+## Envío al backend
 
-1. El administrador registra el ESP32 desde Organizaciones → organización →
-   Galpones, controladores y asignación de sensores, o desde Monitoreo.
-   El galpón ya seleccionado determina el destino. El servidor genera el código
-   del controlador con consecutivo (`GAL-000027-ESP32-001`, `-002`, etc.) y su
-   nombre visible. Firmware e IP son datos opcionales. Guarda el token de
-   ingesta, que se muestra una sola vez y autentica al nodo. La asociación del
-   galpón se resuelve con ese token; su código no se duplica en el firmware.
-2. En Monitoreo, agrega los tipos de medición al mismo galpón y selecciona ese
-   dispositivo y su conexión **DHT22 · GPIO**. Para el DHT de D18 usa GPIO 18.
-   Temperatura y humedad del mismo módulo comparten GPIO; cada variable conserva
-   un serial propio, generado por el servidor. No registres humedad si todavía
-   no quieres asociarla. Para sensores anteriores, abre «Sensores registrados»
-   y usa «Vincular conexión» sin borrar el sensor ni su historial.
-3. El usuario carga una vez este firmware genérico y el token del controlador.
-   Después, agregar otro DHT22 en un GPIO habilitado y registrarlo en Monitoreo
-   no exige editar ni cargar firmware: el nodo consulta las conexiones cada 30 s.
-   Cada ESP32 nuevo recibe su propio token durante su provisión inicial.
-4. `GET /ingest/configuracion` devuelve solo conexiones activas de ese nodo.
-   El firmware envía `{tipo, canal, valor}`, por ejemplo tipo `temperatura` y
-   canal `gpio:18`. El backend resuelve el serial asignado a ese nodo/galpón.
-   Una variable no registrada se ignora y no crea sensores automáticamente.
+Cada ciclo manda las lecturas identificadas por código (nunca por id de BD):
+temperatura, humedad, nivel de agua, gas (MQ-135, ADC crudo), peso (HX711),
+los dos motores del L293D y los relés K1-K4. Motores y relés van como unidad `estado` (1 = encendido desde el
+último envío, 0 = apagado). Un sensor que falla en el ciclo se omite y el
+resto se envía igual. La respuesta de `/ingest` trae además las órdenes
+remotas para K1-K4 (ver `ControlRemoto.h`).
 
-El lector incluido es DHT22; otros modelos requieren implementar su lector.
-Varios DHT22 necesitan un GPIO distinto por módulo. El pin del relé se excluye
-localmente aunque aparezca entre los GPIO generales de Monitoreo. Si no hay red,
-el DHT original sigue controlando el ventilador; las conexiones descargadas se
-conservan en RAM hasta reiniciar. Después del reinicio se descargan de nuevo.
-El contrato anterior por `{codigo, valor}` permanece disponible para firmware
-anterior. Consulta [el contrato y criterios](ASOCIACION-DINAMICA.md).
+Este firmware usa el contrato `{codigo, valor}`. La asociación dinámica por
+`{tipo, canal}` (`GET /ingest/configuracion`) existe en el backend pero este
+firmware todavía no la usa: ver [ASOCIACION-DINAMICA.md](ASOCIACION-DINAMICA.md).
 
-Si no llegan lecturas, revisa Wi-Fi, red LAN, IP privada del host y token del
-controlador local. Un `201` por sí solo no demuestra persistencia: el firmware
-muestra cuántas lecturas quedaron registradas y cuántas se ignoraron. Revisa
-además la medición del sensor en Monitoreo. En cada instalación nueva, la prueba
-queda pendiente hasta cargar el firmware y recibir un envío real con token válido.
+Los códigos (`CODIGO_SENSOR_*`, `CODIGO_MOTOR_*`, `CODIGO_RELE_*` en
+`config.h`) tienen que existir como sensores del mismo dispositivo en el
+backend, o el backend descarta esas lecturas. Para registrarlos de una vez en
+una base local:
 
-Un `401` con «token inválido» ocurre antes de guardar lecturas: el token que
-tiene el ESP32 no es del controlador registrado en ese destino. Regenera el
-token desde la acción **Token** del controlador y vincúlalo con «Vincular ESP32»
-desde la misma página (local o producción). Regenerarlo invalida el
-anterior; el ESP32 aplica el nuevo sin recompilar.
+```bash
+docker compose exec backend pnpm run seed:sensores-esp32 <codigo_topic>
+```
+
+En producción se registran desde la app (Sensores), con el mismo código,
+tipo y unidad.
+
+---
+
+## Portal web y actualización por WiFi (OTA)
+
+El ESP32 sirve un portal en `http://<IP del ESP32>/`:
+
+| Página | Qué hace | Clave |
+|---|---|---|
+| `/` | Estado: WiFi, backend, último envío, MAC, versión | No |
+| `/config` | Cambiar red WiFi, URL del backend y token (se guardan en el ESP32) | `admin` + `PORTAL_PASSWORD` |
+| `/actualizar` | Subir un `firmware.bin` nuevo sin USB | `admin` + `PORTAL_PASSWORD` |
+
+- Lo de `config.h` (WiFi, `BACKEND_URL`, `DEVICE_TOKEN`) es la configuración
+  de fábrica; lo guardado en el portal tiene prioridad.
+- Si pasa `PORTAL_AP_TRAS_MS` sin WiFi, el ESP32 crea su red propia
+  **Avisens-XXXX** (clave `PORTAL_AP_PASSWORD`) con el portal en
+  `http://192.168.4.1`, para configurar una red nueva.
+- El `firmware.bin` para `/actualizar` lo deja PlatformIO en
+  `.pio/build/esp32dev/` al compilar (✓ Build).
+- Rescate por USB: el comando `BORRAR_CONFIG` en el monitor serie vuelve a
+  la configuración de `config.h`.
+- **Una sola vez por USB:** `platformio.ini` usa la tabla de particiones
+  `min_spiffs.csv`; un ESP32 grabado con la tabla anterior necesita una
+  grabación por cable antes de poder actualizarse por WiFi.
+
+> Si tu `config.h` es anterior a este cambio, copia de `config.example.h` los
+> `#define PORTAL_*` (y los `CODIGO_*` nuevos) o no compila.
+
+---
+
+## Sin USB: alimentación desde fuente
+
+El firmware arranca solo al recibir corriente; el USB solo hace falta para
+grabar y ver el monitor. Con una fuente ATX: +5 V (rojo) a **VIN** y GND
+(negro) a **GND**. La fuente solo enciende con PS_ON (verde) unido a un GND;
+el morado (5VSB) da 5 V siempre.
 
 ---
 

@@ -23,7 +23,7 @@ function sensor(id: number, estado: SensorVista['estado'], cambios: Partial<Sens
   return {
     id, codigo: `S-${id}`, tipo: 'Temperatura', unidad: '°C', variableUmbral: 'temperatura',
     valor: 27.4, minUmbral: 24, maxUmbral: 30, estado, ultimaLecturaTs: Date.parse('2026-10-17T11:00:00.000Z'),
-    x: null, y: null, ...cambios,
+    x: null, y: null, esEstado: false, sinCalibrar: false, ...cambios,
   }
 }
 
