@@ -81,7 +81,9 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/alertas':                 [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/notificaciones':          [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/perfil':                  [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
-  '/inventario':              [ROL_ADMIN, ROL_PROPIETARIO],
+  // El operario entra a la bodega a registrar entradas, salidas y ajustes de
+  // stock (POST /insumos/:id/movimientos lo permite a los tres roles).
+  '/inventario':              [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   // Solo el propietario. El estado de resultados de una granja es información
   // financiera de su dueño y no tiene ninguna finalidad en la operación de la
   // plataforma: darle acceso permanente al administrador contradice el
@@ -90,7 +92,8 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   // de la interfaz, que era la que estaba abierta.
   '/finanzas':                [ROL_PROPIETARIO],
   '/usuarios':                [ROL_ADMIN, ROL_PROPIETARIO],
-  '/proveedores':             [ROL_ADMIN],
+  // El operario solo consulta (proveedores:leer); gestionar es del admin.
+  '/proveedores':             [ROL_ADMIN, ROL_OPERARIO],
   '/ordenes-compra':          [ROL_ADMIN, ROL_PROPIETARIO],
   '/recuperaciones-password': [ROL_ADMIN],
   '/auditoria':               [ROL_ADMIN],
@@ -170,6 +173,7 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/proveedores',
         label: 'Proveedores',
         icon: <IcSeed size={16} />,
+        rolesVisibles: [ROL_ADMIN],
       },
       {
         path: '/catalogos',
@@ -241,6 +245,27 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Operarios',
         icon: <IcUserCircle size={16} />,
         rolesVisibles: [ROL_PROPIETARIO],
+      },
+    ],
+  },
+  // La bodega del operario: lo que hay en ella y a quién se le pide. Va en su
+  // propio espacio y no en 'Administración' porque para el operario no es
+  // papeleo: es donde apunta lo que entra y sale. El propietario conserva su
+  // ítem «Bodega» en Administración; el admin, Proveedores en Plataforma.
+  {
+    label: 'Bodega',
+    items: [
+      {
+        path: '/inventario',
+        label: 'Inventario',
+        icon: <IcBox size={16} />,
+        rolesVisibles: [ROL_OPERARIO],
+      },
+      {
+        path: '/proveedores',
+        label: 'Proveedores',
+        icon: <IcSeed size={16} />,
+        rolesVisibles: [ROL_OPERARIO],
       },
     ],
   },

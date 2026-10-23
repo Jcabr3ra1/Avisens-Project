@@ -75,6 +75,41 @@ export function permisosDeInsumo(rol: string | null): PermisosInsumo {
   }
 }
 
+// Registros productivos (pesajes, mortalidad y eventos sanitarios de la
+// bitácora, y consumos diarios): los tres roles los crean y los editan, pero
+// solo el administrador y el propietario los eliminan. El operario apunta lo
+// que pasa en campo; corregir un dato suyo es parte de su trabajo, pero borrar
+// el historial no. Mostrarle «Eliminar» solo le daba un 403.
+// Fuente: los controladores de pesajes, registros-mortalidad,
+// eventos-sanitarios y consumos-diarios — la clase incluye al Operario (crear
+// y @Patch), pero su @Delete es solo de Administrador y Propietario.
+export type PermisosRegistro = {
+  editar: boolean
+  eliminar: boolean
+}
+
+export function permisosDeRegistro(rol: string | null): PermisosRegistro {
+  const puedeOperar =
+    rol === ROL_ADMIN || rol === ROL_PROPIETARIO || rol === ROL_OPERARIO
+  return {
+    editar: puedeOperar,
+    eliminar: rol === ROL_ADMIN || rol === ROL_PROPIETARIO,
+  }
+}
+
+// Proveedores: el directorio lo administra solo el administrador
+// (proveedores:gestionar). El operario lo consulta desde su Bodega para saber
+// a quién pedir un insumo (proveedores:leer), sin crear, editar ni borrar.
+// Fuente: avisens-backend/src/modules/proveedores/proveedores.controller.ts y
+// avisens-backend/src/common/auth/permisos.ts
+export type PermisosProveedor = {
+  gestionar: boolean
+}
+
+export function permisosDeProveedor(rol: string | null): PermisosProveedor {
+  return { gestionar: rol === ROL_ADMIN }
+}
+
 // Equipos, mantenimientos, repuestos y umbrales ambientales siguen la regla
 // operativa del propietario. Dispositivos ESP32 y sensores se administran por
 // separado y son exclusivos del administrador AVISENS.

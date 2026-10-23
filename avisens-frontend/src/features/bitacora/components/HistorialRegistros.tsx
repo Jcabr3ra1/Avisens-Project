@@ -1,9 +1,11 @@
+import type { PermisosRegistro } from '@shared/auth/permisos'
 import type { FilaRegistro } from '../model/resumenBitacora'
 
 type Props = {
   titulo: string
   codigoLote: string
   filas: FilaRegistro[]
+  permisos: PermisosRegistro
   onNuevo: () => void
   onEditar: (id: number) => void
   onEliminar: (id: number) => void
@@ -14,7 +16,7 @@ function fechaLegible(fecha: string) {
   return new Date(`${fecha.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CO')
 }
 
-function HistorialRegistros({ titulo, codigoLote, filas, onNuevo, onEditar, onEliminar, resaltadoId = null }: Props) {
+function HistorialRegistros({ titulo, codigoLote, filas, permisos, onNuevo, onEditar, onEliminar, resaltadoId = null }: Props) {
   return (
     <section className="bit-card bit-historial" aria-labelledby="bit-historial-titulo">
       <header className="bit-seccion-cab">
@@ -35,8 +37,12 @@ function HistorialRegistros({ titulo, codigoLote, filas, onNuevo, onEditar, onEl
               <strong>{fila.principal}</strong>
               <span>{fila.detalle}</span>
               <span className="bit-fila-acciones">
-                <button type="button" className="bit-editar" onClick={() => onEditar(fila.id)}>Editar</button>
-                <button type="button" onClick={() => onEliminar(fila.id)}>Eliminar</button>
+                {permisos.editar && (
+                  <button type="button" className="bit-editar" onClick={() => onEditar(fila.id)}>Editar</button>
+                )}
+                {permisos.eliminar && (
+                  <button type="button" onClick={() => onEliminar(fila.id)}>Eliminar</button>
+                )}
               </span>
             </article>
           ))}

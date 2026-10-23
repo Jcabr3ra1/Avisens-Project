@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
-import { ROL_ADMIN } from '@shared/auth/permisos'
+import { ROL_ADMIN, permisosDeRegistro } from '@shared/auth/permisos'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcDoc, IcDrop, IcHeart, IcRefresh, IcScale, IcSeed } from '@shared/ui/icons/icons'
 import GestionConsumos from '@features/consumos-diarios/components/GestionConsumos'
@@ -37,7 +37,9 @@ const ETIQUETA: Record<TipoRegistro, string> = {
 
 function BitacoraPage() {
   const datos = useBitacora()
-  const esAdministrador = getRol() === ROL_ADMIN
+  const rol = getRol()
+  const esAdministrador = rol === ROL_ADMIN
+  const permisosRegistro = permisosDeRegistro(rol)
   const [granjaId, setGranjaId] = useState<number | null>(null)
   const [galponId, setGalponId] = useState<number | null>(null)
   const [parametros] = useSearchParams()
@@ -301,6 +303,7 @@ function BitacoraPage() {
               titulo={ETIQUETA[vista]}
               codigoLote={lote.codigo}
               filas={filas}
+              permisos={permisosRegistro}
               onNuevo={() => abrir(vista)}
               onEditar={(id) => abrirEdicion(vista, id)}
               onEliminar={(id) => borrar(vista, id)}
