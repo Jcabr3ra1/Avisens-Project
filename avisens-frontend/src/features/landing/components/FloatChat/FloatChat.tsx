@@ -12,6 +12,7 @@ import logoAvisens from '@shared/assets/logo-avisens.png'
 import Ic from '@shared/ui/Ic/Ic'
 import { seLeenEnPar } from '@features/landing/model/opcionesChat'
 import AviaBoton from './AviaBoton'
+import VistaDudas from './VistaDudas'
 import mascotaPoster from '../../assets/avia/avia-chat-poster.png'
 import './FloatChat.css'
 import './FloatChat.tema.css'
@@ -287,6 +288,7 @@ function FloatChat() {
   }, [cerrarChat, open])
 
   const opciones = pregunta?.opciones ?? []
+  const enDudas = pregunta?.codigo === 'BMP' && !resultado
   const enPar = seLeenEnPar(opciones)
   // La identidad («Asistente AVISENS») es fija y va en su propia línea; el
   // estado cambia. Antes compartían sitio, así que en cuanto AVIA escribía
@@ -314,7 +316,6 @@ function FloatChat() {
           <div className="float-inicio">
             <div className="float-inicio-hero">
               <div className="float-inicio-barra">
-                <img className="float-inicio-logo" src={logoAvisens} alt="AVISENS" width={38} height={38} />
                 <img className="float-inicio-mascota" src={mascotaPoster} alt="" width={84} height={84} />
                 <button type="button" onClick={cerrarChat} className="float-chat-close" aria-label="Cerrar chat">
                   <Ic d="M18 6L6 18M6 6l12 12" size={16} />
@@ -368,6 +369,16 @@ function FloatChat() {
           </button>
         </div>
 
+        {enDudas && pregunta ? (
+          <VistaDudas
+            titulo={pregunta.texto}
+            opciones={opciones}
+            deshabilitado={enviando || !sesionId}
+            error={error?.texto ?? null}
+            onElegir={(opcion) => void enviar(opcion)}
+          />
+        ) : (
+          <>
         {/* Sin total no se dibuja nada: una barra que divide por un número
             inventado miente con aspecto de dato. */}
         {totalPasos !== null && totalPasos > 0 && (
@@ -485,6 +496,8 @@ function FloatChat() {
             <IcSend size={17} />
           </button>
         </form>
+          </>
+        )}
           </>
         )}
       </div>
