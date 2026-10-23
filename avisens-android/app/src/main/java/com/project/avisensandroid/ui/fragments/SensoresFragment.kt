@@ -457,14 +457,15 @@ class SensoresFragment : BaseBottomNavFragment() {
 
     /**
      * Último valor conocido que no es verificablemente reciente (obsoleto,
-     * con hora inconsistente o sin antigüedad): en gris, sin arco de color ni
-     * estado de alerta, y con su fecha. No es el estado actual.
+     * con hora inconsistente o sin antigüedad): número y arco en gris, con el
+     * largo real del valor pero sin color de estado ni de alerta, y con su
+     * fecha. No es el estado actual.
      */
     private fun pintarNoReciente(indicador: Indicador, valor: Double, fechaHora: String?, etiqueta: String) {
         indicador.valor.setTextColor(colorDe(R.color.text_secondary))
         indicador.valor.text = textoValor(indicador.variable, valor)
-        indicador.arco.setProgressFraction(0f)
-        indicador.arco.setArcColor(colorDe(R.color.ring_track))
+        indicador.arco.setProgressFraction(fraccionVisual(indicador.variable, valor))
+        indicador.arco.setArcColor(colorDe(R.color.text_secondary))
         indicador.arco.contentDescription =
             "$etiqueta: ${nombreVariable(indicador.variable).lowercase(Locale.getDefault())}"
         val fecha = fechaCorta(fechaHora)

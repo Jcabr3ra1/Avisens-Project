@@ -775,12 +775,13 @@ class InicioFragment : BaseBottomNavFragment() {
         val noReciente = LecturasSensores.etiquetaNoReciente(lectura.vigencia)
         if (noReciente != null) {
             // Último valor conocido que no es verificablemente reciente
-            // (obsoleto, hora inconsistente o sin antigüedad): en gris, sin
-            // color de estado ni de alerta, y con su fecha.
+            // (obsoleto, hora inconsistente o sin antigüedad): número y arco
+            // en gris, con el largo real del valor pero sin color de estado ni
+            // de alerta, y con su fecha.
             txtValor.setTextColor(resources.getColor(R.color.text_secondary, null))
             txtValor.text = textoValorInicio(variable, valorMedido)
-            arco.setProgressFraction(0f)
-            arco.setArcColor(resources.getColor(R.color.ring_track, null))
+            arco.setProgressFraction(fraccionVisualInicio(variable, valorMedido))
+            arco.setArcColor(resources.getColor(R.color.text_secondary, null))
             arco.contentDescription =
                 "$noReciente: ${nombreVariableInicio(variable).lowercase(Locale.getDefault())}"
             val fecha = fechaCortaInicio(ultima.fecha_hora)
