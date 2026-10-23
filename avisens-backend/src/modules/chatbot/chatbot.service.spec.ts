@@ -156,7 +156,7 @@ describe('ChatbotService', () => {
       prisma.usuario.findUnique.mockResolvedValue(null);
 
       await expect(responder('999999999')).rejects.toThrow(
-        'La cédula no es válida para una solicitud PQRS',
+        'No encuentro esa cédula',
       );
       expect(prisma.respuestaChatbot.create).not.toHaveBeenCalled();
       expect(prisma.prospecto.update).not.toHaveBeenCalled();
