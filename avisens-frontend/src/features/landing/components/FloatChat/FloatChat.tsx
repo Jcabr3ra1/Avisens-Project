@@ -11,7 +11,6 @@ import { IcAlert, IcSend } from '@shared/ui/icons/icons'
 import logoAvisens from '@shared/assets/logo-avisens.png'
 import Ic from '@shared/ui/Ic/Ic'
 import { seLeenEnPar } from '@features/landing/model/opcionesChat'
-import AviaProgress from './AviaProgress'
 import './FloatChat.css'
 import './FloatChat.tema.css'
 
@@ -98,7 +97,6 @@ const ACCIONES_RAPIDAS: { ruta: RutaChat; titulo: string }[] = [
 
 function FloatChat() {
   const [open, setOpen] = useState(false)
-  const [saludando, setSaludando] = useState(false)
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [sesionId, setSesionId] = useState<string | null>(null)
   const [pregunta, setPregunta] = useState<PreguntaChatbot | null>(null)
@@ -161,7 +159,6 @@ function FloatChat() {
   }, [])
 
   const iniciar = useCallback(async (ruta: RutaChat = 'cotizacion') => {
-    setSaludando(false)
     setEnviando(true)
     setError(null)
     setMensajes([])
@@ -202,7 +199,6 @@ function FloatChat() {
     const valor = respuesta.trim()
     if (!valor || !sesionId || enviando || resultado) return
 
-    setSaludando(false)
     setTexto('')
     setError(null)
     setMensajes((m) => [...m, { autor: 'usuario', texto: valor }])
@@ -223,7 +219,6 @@ function FloatChat() {
   }, [aplicar, enviando, resultado, sesionId])
 
   const cerrarChat = useCallback(() => {
-    setSaludando(false)
     setOpen(false)
     window.requestAnimationFrame(() => triggerRef.current?.focus())
   }, [])
@@ -238,7 +233,6 @@ function FloatChat() {
     }
 
     if (!iniciado && !enviando && !porElegirRuta) abrirConMenu()
-    setSaludando(evento.detail > 0 && !enviando)
     setOpen(true)
   }
 
@@ -255,8 +249,6 @@ function FloatChat() {
     window.addEventListener('avisens:abrir-chat', abrirDesdeLaPagina)
     return () => window.removeEventListener('avisens:abrir-chat', abrirDesdeLaPagina)
   }, [abrirConMenu, enviando, iniciado, iniciar, porElegirRuta])
-
-  const terminarSaludo = useCallback(() => setSaludando(false), [])
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -310,14 +302,6 @@ function FloatChat() {
       ? 'Escribe un número'
       : 'Escribe tu respuesta...'
 
-  const avatarProgreso = (
-    <AviaProgress
-      progreso={progreso}
-      totalPasos={totalPasos}
-      finalizado={resultado !== null}
-    />
-  )
-
   return (
     <div className={`float-chat${open ? ' is-open' : ''}`}>
       <div
@@ -357,18 +341,7 @@ function FloatChat() {
         ) : (
           <>
         <div className="float-chat-topbar">
-          <div className="float-chat-avatar">
-            {open && (saludando || enviando) ? (
-              <Suspense fallback={avatarProgreso}>
-                <RobotLottie
-                  size={48}
-                  animando={enviando}
-                  saludar={saludando}
-                  onSaludoTerminado={terminarSaludo}
-                />
-              </Suspense>
-            ) : avatarProgreso}
-          </div>
+          <img className="float-chat-logo" src={logoAvisens} alt="" width={40} height={40} />
           <div className="float-chat-heading">
             <div className="float-chat-name" id="avia-chat-title">AVIA</div>
             <div className="float-chat-tagline">Asistente AVISENS</div>
@@ -417,6 +390,7 @@ function FloatChat() {
               </div>
             ) : (
               <div key={`${mensaje.autor}-${i}`} className={`float-msg ${mensaje.autor}`}>
+                {mensaje.autor === 'bot' ? <img className="float-msg-logo" src={logoAvisens} alt="" width={26} height={26} /> : null}
                 <div className="float-msg-bub">{mensaje.texto}</div>
               </div>
             ),
@@ -424,6 +398,7 @@ function FloatChat() {
 
           {enviando ? (
             <div className="float-msg bot">
+              <img className="float-msg-logo" src={logoAvisens} alt="" width={26} height={26} />
               <div className="float-msg-bub">
                 <div className="float-dots">
                   <span /><span /><span />

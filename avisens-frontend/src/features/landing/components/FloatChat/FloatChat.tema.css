@@ -25,23 +25,6 @@
   background: linear-gradient(90deg, var(--avisens-maize), color-mix(in srgb, var(--avisens-maize) 0%, transparent));
 }
 
-.float-chat .float-chat-avatar {
-  width: 52px;
-  height: 52px;
-  overflow: hidden;
-  border: 2px solid color-mix(in srgb, var(--avisens-cream) 35%, transparent);
-  border-radius: 50%;
-  background: var(--avisens-sage);
-}
-
-.float-chat .float-chat-avatar { position: relative; display: grid; place-items: center; box-sizing: border-box; }
-.float-chat .float-chat-avatar > * { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
-.float-chat .float-chat-avatar-pose { animation: none; }
-.float-chat .float-chat-avatar-pose img,
-.float-chat .float-chat-avatar-image { width: 100%; height: 100%; object-fit: contain; transform: scale(1.75); transform-origin: 42% 38%; }
-.float-chat .float-chat-avatar [data-avia-estado] { transform: scale(1.12) translateY(4%); }
-.float-chat .float-chat-avatar-pose::after { display: none; }
-
 .float-chat .float-chat-name { color: var(--avisens-cream); font-family: inherit; font-size: 1.02rem; font-weight: 700; letter-spacing: -.01em; }
 .float-chat .float-chat-tagline { display: none; }
 .float-chat .float-chat-online { margin-top: .15rem; color: color-mix(in srgb, var(--avisens-cream) 78%, transparent); font-family: inherit; font-size: .74rem; }
@@ -94,7 +77,6 @@
   }
 
   .float-chat .float-chat-topbar { gap: 0.6rem; padding: 0.45rem 0.7rem 0.45rem 0.8rem; }
-  .float-chat .float-chat-avatar { width: 36px; height: 36px; }
   .float-chat .float-chat-msgs { flex: 1 1 0; min-height: 0; max-height: none; padding: 0.6rem 0.8rem; }
   .float-chat .float-chat-options { flex: 0 1 auto; min-height: 0; max-height: 48%; padding: 0.5rem 0.8rem; }
   .float-chat .float-chat-input-row { padding: 0.4rem 0.7rem 0.5rem; }
@@ -226,4 +208,36 @@
   .float-chat .float-inicio-boton svg { transition: none; }
   .float-chat .float-inicio-boton:hover,
   .float-chat .float-inicio-boton:hover svg { transform: none; }
+}
+
+/* El logo de Avisens (la A con la gallina) identifica a quien habla: en la barra
+   de la conversación y junto a cada mensaje de AVIA, en una ficha blanca porque
+   el trazo es verde y sobre el verde de la barra no se vería. */
+.float-chat .float-chat-logo {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  padding: 5px;
+  border-radius: 12px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.float-chat .float-msg-logo {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  width: 26px;
+  height: 26px;
+  margin-right: 0.45rem;
+  padding: 3px;
+  border: 1px solid color-mix(in srgb, var(--avisens-sage) 70%, transparent);
+  border-radius: 8px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.float-chat .float-msg.bot .float-msg-bub { max-width: calc(84% - 2rem); }
+
+@media (max-height: 560px) {
+  .float-chat .float-chat-logo { width: 34px; height: 34px; padding: 4px; }
 }
