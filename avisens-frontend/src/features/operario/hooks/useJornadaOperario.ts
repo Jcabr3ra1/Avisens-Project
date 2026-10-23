@@ -40,6 +40,14 @@ export function useJornadaOperario() {
     void recargar()
   }, [recargar])
 
+  // El aviso de éxito se queda fijo si no se limpia: se oculta solo a los
+  // 4 segundos para no tapar la jornada después de registrar.
+  useEffect(() => {
+    if (!mensaje) return
+    const temporizador = window.setTimeout(() => setMensaje(''), 4000)
+    return () => window.clearTimeout(temporizador)
+  }, [mensaje])
+
   const registrarMortalidad = useCallback(async (
     loteId: number,
     registro: RegistroMortalidadOperario,

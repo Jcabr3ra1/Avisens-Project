@@ -4,6 +4,8 @@ import {
   permisosDeGestion,
   permisosDeInsumo,
   permisosDePlan,
+  permisosDeProveedor,
+  permisosDeRegistro,
   permisosOperativosDeGalpon,
   puedeCompletarDatos,
   ROL_ADMIN,
@@ -69,6 +71,43 @@ describe('permisosDeInsumo', () => {
 
   it('sin sesión no se puede ni mover stock', () => {
     expect(permisosDeInsumo(null).registrarMovimiento).toBe(false)
+  })
+})
+
+describe('permisosDeRegistro', () => {
+  it('los tres roles crean y editan registros productivos', () => {
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO]) {
+      expect(permisosDeRegistro(rol).editar).toBe(true)
+    }
+  })
+
+  it('solo el administrador y el propietario eliminan; el operario no (el backend le da 403)', () => {
+    expect(permisosDeRegistro(ROL_ADMIN).eliminar).toBe(true)
+    expect(permisosDeRegistro(ROL_PROPIETARIO).eliminar).toBe(true)
+    expect(permisosDeRegistro(ROL_OPERARIO).eliminar).toBe(false)
+  })
+
+  it('sin sesión o con un rol desconocido no se opera', () => {
+    for (const rol of [null, 'Auditor']) {
+      expect(permisosDeRegistro(rol)).toEqual({ editar: false, eliminar: false })
+    }
+  })
+})
+
+describe('permisosDeProveedor', () => {
+  it('solo el administrador gestiona el directorio de proveedores', () => {
+    expect(permisosDeProveedor(ROL_ADMIN).gestionar).toBe(true)
+  })
+
+  it('el operario y el propietario solo lo consultan', () => {
+    expect(permisosDeProveedor(ROL_OPERARIO).gestionar).toBe(false)
+    expect(permisosDeProveedor(ROL_PROPIETARIO).gestionar).toBe(false)
+  })
+
+  it('sin sesión o con un rol desconocido no se gestiona', () => {
+    for (const rol of [null, 'Auditor']) {
+      expect(permisosDeProveedor(rol).gestionar).toBe(false)
+    }
   })
 })
 

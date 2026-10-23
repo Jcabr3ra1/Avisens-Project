@@ -31,11 +31,14 @@ function TarjetaJornada({
 
       {lote ? (
         <div className="operario-lote-activo">
-          <IcEgg size={18} />
-          <div>
-            <span>Lote activo · Día {diaLote}</span>
+          <span className="operario-lote-icono" aria-hidden="true"><IcEgg size={18} /></span>
+          <div className="operario-lote-info">
+            <span>Lote activo</span>
             <strong>{lote.codigo} · {lote.cantidad_inicial.toLocaleString()} aves</strong>
           </div>
+          <span className="operario-dia-badge">
+            Día <b>{diaLote}</b>
+          </span>
           <button type="button" className="operario-link-crecimiento" onClick={onVerCrecimiento}>
             Guía de peso <IcChevronRight size={14} />
           </button>

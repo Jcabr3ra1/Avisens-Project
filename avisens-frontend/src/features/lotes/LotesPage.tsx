@@ -74,6 +74,7 @@ function LotesPage() {
   return (
     <div className="page-container adm-page">
       <CabeceraAdmin
+        eyebrow="Producción"
         titulo="Lotes"
         contexto={galponSeleccionado?.nombre}
         subtitulo={

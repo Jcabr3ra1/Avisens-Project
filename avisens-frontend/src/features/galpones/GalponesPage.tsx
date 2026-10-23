@@ -85,6 +85,7 @@ function GalponesPage() {
   return (
     <div className="page-container adm-page">
       <CabeceraAdmin
+        eyebrow="Instalaciones"
         titulo="Galpones"
         contexto={granjaSeleccionada?.nombre}
         subtitulo={
