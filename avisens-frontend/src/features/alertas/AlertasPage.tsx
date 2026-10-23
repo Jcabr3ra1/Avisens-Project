@@ -12,7 +12,7 @@ import {
   type Alerta,
   type FiltrosAlertas as FiltrosAlertasModel,
 } from './model/alerta'
-import CargandoAnimado from '@shared/ui/Animacion/CargandoAnimado'
+import Cargando from '@shared/ui/Estados/Cargando'
 import '@shared/ui/admin/AdminKit.css'
 import './AlertasPage.css'
 
@@ -79,7 +79,7 @@ function AlertasPage({ galponFijo }: Props = {}) {
         onLimpiar={() => setFiltros(FILTROS_INICIALES)}
       />}
       {cargando ? (
-        <CargandoAnimado texto="Cargando alertas registradas…" />
+        <Cargando texto="Cargando alertas registradas…" />
       ) : (
         <ListaAlertas
           alertas={alertasFiltradas}

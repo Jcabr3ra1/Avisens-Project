@@ -3,8 +3,8 @@ import Modal from '@shared/ui/Modal/Modal'
 import { IcChevronDown, IcChevronRight, IcRefresh } from '@shared/ui/icons/icons'
 import { hayFiltros, rangoValido, type RegistroAuditoria } from './model/auditoria'
 import { useAuditoria } from './hooks/useAuditoria'
-import EstadoVacioAnimado from '@shared/ui/Animacion/EstadoVacioAnimado'
-import CargandoAnimado from '@shared/ui/Animacion/CargandoAnimado'
+import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
+import Cargando from '@shared/ui/Estados/Cargando'
 import '@shared/ui/admin/AdminKit.css'
 import './AuditoriaPage.css'
 
@@ -176,11 +176,10 @@ function AuditoriaPage() {
       )}
 
       {cargando && registros.length === 0 ? (
-        <CargandoAnimado texto="Cargando bitácora…" />
+        <Cargando texto="Cargando bitácora…" />
       ) : registros.length === 0 ? (
-        <EstadoVacioAnimado
+        <EstadoVacio
           className="aud-vacio"
-          animacion="caja-vacia"
           titulo={filtrando ? 'Sin coincidencias' : 'Sin registros'}
           texto={filtrando ? 'Ningún evento coincide con los filtros. Prueba con otro rango o acción.' : 'Cuando se realicen acciones en el sistema aparecerán aquí.'}
           accion={filtrando ? <button type="button" className="adm-btn adm-btn--secundario" onClick={limpiarFiltros}>Limpiar filtros</button> : undefined}

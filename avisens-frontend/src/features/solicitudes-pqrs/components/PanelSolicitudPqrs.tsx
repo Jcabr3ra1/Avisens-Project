@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { IcChat, IcCheck, IcNote, IcPhone, IcRefresh, IcUserCircle } from '@shared/ui/icons/icons'
 import { enlaceTelefono, enlaceWhatsApp, plazoDe, respuestasRapidas } from '../model/bandejaPqrs'
 import { ETIQUETAS_ESTADO, type ResponderSolicitudPqrsDto, type SolicitudPqrs } from '../model/solicitudPqrs'
-import AnimacionAvisens from '@shared/ui/Animacion/AnimacionAvisens'
 
 type Props = {
   solicitud: SolicitudPqrs | null
@@ -28,7 +27,7 @@ function PanelSolicitudPqrs({ solicitud, ahora, ocupada, onTomar, onResponder }:
       <aside className="sop-panel" aria-label="Detalle de la solicitud">
         <div className="sop-panel-cabecera">Detalle</div>
         <div className="sop-panel-vacio">
-          <AnimacionAvisens nombre="bandeja-vacia" tamano={96} respaldo={<IcNote size={26} aria-hidden="true" />} />
+          <IcNote size={26} aria-hidden="true" />
           <p>Elige una solicitud de la bandeja para atenderla.</p>
         </div>
       </aside>
