@@ -12,6 +12,7 @@ import logoAvisens from '@shared/assets/logo-avisens.png'
 import Ic from '@shared/ui/Ic/Ic'
 import { seLeenEnPar } from '@features/landing/model/opcionesChat'
 import AviaBoton from './AviaBoton'
+import mascotaPoster from '../../assets/avia/avia-chat-poster.png'
 import './FloatChat.css'
 import './FloatChat.tema.css'
 
@@ -314,12 +315,13 @@ function FloatChat() {
             <div className="float-inicio-hero">
               <div className="float-inicio-barra">
                 <img className="float-inicio-logo" src={logoAvisens} alt="AVISENS" width={38} height={38} />
+                <img className="float-inicio-mascota" src={mascotaPoster} alt="" width={84} height={84} />
                 <button type="button" onClick={cerrarChat} className="float-chat-close" aria-label="Cerrar chat">
                   <Ic d="M18 6L6 18M6 6l12 12" size={16} />
                 </button>
               </div>
               <h2 className="float-inicio-saludo" id="avia-chat-title">
-                <span>Hola, soy AVIA 🐔</span>
+                <span>Hola, soy AVIA</span>
                 ¿En qué te ayudo?
               </h2>
             </div>

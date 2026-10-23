@@ -134,6 +134,11 @@
   box-shadow: 0 4px 12px -6px color-mix(in srgb, #000 55%, transparent);
 }
 
+.float-chat .float-inicio-mascota {
+  margin: -6px 0 -14px;
+  object-fit: contain;
+}
+
 .float-chat .float-inicio-saludo {
   margin: 2rem 0 0;
   font-size: clamp(1.6rem, 6vw, 2rem);
