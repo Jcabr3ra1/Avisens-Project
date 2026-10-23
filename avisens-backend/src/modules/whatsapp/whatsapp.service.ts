@@ -29,53 +29,48 @@ const COMANDOS_CANCELAR = ['cancelar', 'salir', 'reiniciar', 'empezar de nuevo',
 const COMANDOS_AYUDA = ['ayuda', 'help', '?', 'como funciona'];
 
 const DESPEDIDA =
-  '⏰ No recibimos tu respuesta, así que cerramos esta conversación por ahora.\n\n' +
-  'Cuando quieras retomarla escríbenos de nuevo y con gusto te atendemos. ' +
-  'Gracias por tu interés en AVISENS. 🐔';
+  'Te dejo esta conversación en pausa para que atiendas lo tuyo.\n\n' +
+  'Cuando quieras seguir, escríbeme y lo retomamos. 🐔';
 
 const CANCELADO =
-  '❌ Conversación cancelada. Si quieres empezar de nuevo, escríbeme cuando quieras. 🐔';
+  'Listo, lo dejamos aquí. Si quieres empezar de cero, solo escríbeme. 🐔';
 
 const AYUDA =
-  'ℹ️ *Cómo funciona:*\n\n' +
-  '• Responde las preguntas que te haga\n' +
-  '• Puedes escribir *cancelar* en cualquier momento para empezar de nuevo\n' +
-  '• Si no respondes en 5 minutos, la conversación se cierra automáticamente\n' +
-  '• Al final te mostraré un resumen para confirmar tus datos\n\n' +
-  '¿Listo para continuar? 👇';
+  'Te voy haciendo unas preguntas y tú me respondes. Al final te muestro ' +
+  'un resumen para que confirmes tus datos.\n\n' +
+  'Puedes escribir *cancelar* cuando quieras para empezar de nuevo. Y si te ' +
+  'toca atender el galpón y te demoras en responder, dejo la conversación en ' +
+  'pausa y la retomamos cuando vuelvas.\n\n' +
+  '¿Seguimos?';
 
 const CIERRE_BASE =
-  '✅ Gracias por tu tiempo. Con la información de tu granja estamos generando ' +
-  'una cotización personalizada de AVISENS que recibirás en breve por ' +
-  'WhatsApp o correo.';
+  'Gracias por contarme de tu granja. Con eso preparamos tu cotización de ' +
+  'AVISENS y te la enviamos en breve por WhatsApp o correo.';
 
 const CIERRE_POR_RESULTADO: Record<string, string> = {
   caliente:
-    '🔥 ¡Tu granja es un candidato ideal para AVISENS! Un asesor comercial te ' +
-    'contactará en las próximas 24 horas para coordinar una visita técnica y ' +
+    'Por lo que me cuentas, AVISENS te puede ayudar. Un asesor comercial te ' +
+    'contacta en las próximas 24 horas para coordinar una visita técnica y ' +
     'afinar tu propuesta.',
   tibio:
-    '💡 AVISENS puede aportar mucho a tu operación. Te invitaremos a una ' +
-    'demostración remota para que veas la plataforma en acción y resolvamos ' +
-    'tus dudas antes de avanzar.',
+    'AVISENS puede ayudarte con tu operación. Te invitamos a una demostración ' +
+    'remota para que veas la plataforma funcionando y resolvamos tus dudas ' +
+    'antes de decidir.',
   frio:
-    '📚 Gracias por conocer AVISENS. Te enviaremos información útil sobre ' +
-    'monitoreo y bienestar avícola y quedaremos atentos para cuando decidas ' +
-    'dar el siguiente paso.',
+    'Gracias por conocer AVISENS. Te enviamos información útil sobre ' +
+    'monitoreo y bienestar de las aves, y quedamos pendientes para cuando ' +
+    'quieras dar el siguiente paso.',
   CALLBACK_DECISOR:
-    '🤝 Gracias por tu interés. Como la decisión de compra recae en otra ' +
-    'persona, un asesor te escribirá dentro de 48 horas para retomar el ' +
-    'proceso con el responsable.',
+    'Gracias por tu interés. Como la decisión la toma otra persona, un asesor ' +
+    'te escribe dentro de 48 horas para retomar con quien decide.',
   sin_consentimiento:
-    '🔒 Entendido. Sin tu autorización para el tratamiento de datos no podemos ' +
-    'continuar con la cotización. Si cambias de opinión, escríbenos cuando lo ' +
-    'desees.',
+    'Entendido. Sin tu autorización para el tratamiento de datos no podemos ' +
+    'seguir con la cotización. Si cambias de opinión, escríbeme cuando quieras.',
 };
 
 const CIERRE_PQRS =
-  '✅ ¡Listo! Tu solicitud quedó radicada.\n\n' +
-  'Le haremos seguimiento y te responderemos por este mismo medio. ' +
-  'Gracias por escribirnos. 🐔';
+  'Listo, tu solicitud quedó radicada.\n\n' +
+  'Le hacemos seguimiento y te respondemos por este mismo medio. 🐔';
 
 type PartesMensaje = Omit<TrabajoMensaje, 'destino'>;
 
@@ -302,14 +297,14 @@ export class WhatsappService {
         const base = this.formatear(pregunta);
         return {
           ...base,
-          texto: `😅 No te entendí. Elige una de estas opciones:\n\n${base.texto}`,
+          texto: `No te entendí bien. Elige una de estas opciones:\n\n${base.texto}`,
         };
       }
     } catch {
       this.logger.warn(`No se pudo releer la pregunta de ${sesionId}`);
     }
     return {
-      texto: '😅 No te entendí. ¿Puedes intentarlo de nuevo, por favor?',
+      texto: 'No te entendí bien. ¿Me lo puedes escribir de otra forma?',
     };
   }
 
@@ -376,7 +371,7 @@ export class WhatsappService {
               const pregunta = await this.chatbot.preguntaActual(abandonado.sesion_id);
               if (pregunta) {
                 await this.encolarSalida(entrante.de, {
-                  texto: '👋 ¡Hola de nuevo! Continuemos donde quedamos.',
+                  texto: '¡Hola de nuevo! Sigamos donde quedamos.',
                 });
                 await this.encolarSalida(entrante.de, this.formatear(pregunta));
                 return;
@@ -396,7 +391,7 @@ export class WhatsappService {
 
           await this.encolarSalida(entrante.de, {
             texto:
-              '👋 ¡Hola de nuevo! Vi que estabas en una conversación hace poco.\n\n' +
+              '¡Hola de nuevo! Quedó una conversación a medias.\n\n' +
               '¿Quieres continuar donde quedaste o empezar de nuevo?',
             botones: [
               { id: 'continuar', titulo: 'Continuar' },
