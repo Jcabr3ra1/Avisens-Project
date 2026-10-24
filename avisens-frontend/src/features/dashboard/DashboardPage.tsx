@@ -55,7 +55,8 @@ function DashboardPage() {
     alertas: dashboard.alertasGranja,
     galpones: dashboard.galpones,
     monitoreo: monitoreoGranja,
-  }), [dashboard.alertasGranja, dashboard.galpones, monitoreoGranja])
+    riesgosCrecimiento: dashboard.resumenCrecimiento?.riesgos ?? [],
+  }), [dashboard.alertasGranja, dashboard.galpones, dashboard.resumenCrecimiento, monitoreoGranja])
   const filas = useMemo(() => filasGalpones({
     galpones: dashboard.galpones,
     lotes: dashboard.lotes,
@@ -101,6 +102,10 @@ function DashboardPage() {
     navigate(`/granjas?granjaId=${dashboard.granjaId ?? ''}${galponId ? `&galpon=${galponId}` : ''}&pestana=${pestana}`)
 
   function abrirPendiente(item: ItemAtencionGranja) {
+    if (item.tipo === 'crecimiento' && item.loteId !== undefined) {
+      navigate(`/guia-crecimiento?lote=${item.loteId}`)
+      return
+    }
     enGranjas(item.tipo === 'alerta' ? 'alertas' : 'ambiente', item.galponId)
   }
 
@@ -128,7 +133,9 @@ function DashboardPage() {
       <div className="admin-primary-grid">
         <PanelAtencionGranja
           items={atencion}
-          cargando={dashboard.cargando && atencion.length === 0}
+          cargando={(dashboard.cargando || dashboard.cargandoResumenCrecimiento) && atencion.length === 0}
+          errorCrecimiento={dashboard.errorCrecimiento}
+          onReintentarCrecimiento={dashboard.recargarCrecimiento}
           onAbrir={abrirPendiente}
           onIrAlertas={() => enGranjas('alertas')}
           onIrMonitoreo={() => enGranjas('ambiente')}

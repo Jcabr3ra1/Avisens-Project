@@ -4,6 +4,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -14,6 +15,8 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ROLES } from '../../common/auth/roles';
 import { IndicadoresService } from './indicadores.service';
+import { ResumenCrecimientoDto } from './dto/resumen-crecimiento.dto';
+import { ResumenCrecimientoService } from './resumen-crecimiento.service';
 
 interface AuthRequest extends Request {
   user: { id: number; email?: string | null; rol: string };
@@ -25,7 +28,20 @@ interface AuthRequest extends Request {
 @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('indicadores')
 export class IndicadoresController {
-  constructor(private indicadoresService: IndicadoresService) {}
+  constructor(
+    private indicadoresService: IndicadoresService,
+    private resumenCrecimientoService: ResumenCrecimientoService,
+  ) {}
+
+  @Get('resumen-crecimiento')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({ summary: 'Resumen de crecimiento y riesgos de los lotes activos' })
+  resumenCrecimiento(
+    @Query() query: ResumenCrecimientoDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.resumenCrecimientoService.obtener(req.user, query);
+  }
 
   @Post('calcular/:loteId')
   @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)

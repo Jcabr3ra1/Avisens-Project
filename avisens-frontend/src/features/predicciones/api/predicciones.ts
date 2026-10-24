@@ -50,6 +50,13 @@ export async function predecirLote(loteId: number): Promise<ResultadoPrediccion>
   return data
 }
 
+export async function simularFaena(loteId: number, diaFaena: number): Promise<ResultadoPrediccion> {
+  const { data } = await api.get<ResultadoPrediccion>(`/predicciones/lote/${loteId}/simulacion`, {
+    params: { dia_faena: diaFaena },
+  })
+  return data
+}
+
 export async function generarPrediccion(
   loteId: number,
 ): Promise<ResultadoPrediccion> {

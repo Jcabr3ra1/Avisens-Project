@@ -146,6 +146,28 @@ describe('PrediccionesService', () => {
     );
   });
 
+  it('simula el día elegido con los modelos existentes y no guarda una predicción', async () => {
+    const fetch = jest.spyOn(global, 'fetch').mockImplementation((url, init) => {
+      const solicitud = JSON.parse(init?.body as string) as { dia_faena: number };
+      expect(url as string).toContain('/predecir');
+      return Promise.resolve(new Response(JSON.stringify({ ...respuestaMl, dia_faena: solicitud.dia_faena })));
+    });
+
+    const resultado = await service.predecir(1, admin, false, 35);
+
+    expect(resultado.dia_faena).toBe(35);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(prisma.prediccion.createMany).not.toHaveBeenCalled();
+  });
+
+  it('rechaza días simulados fuera del rango del servicio existente', async () => {
+    const fetch = jest.spyOn(global, 'fetch');
+    await expect(service.predecir(1, admin, false, 101)).rejects.toThrow(
+      /entre 1 y 100/,
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   describe('plan vigente del lote', () => {
     it('convierte la ausencia de plan vigente en 422 sin_plan_utilizable, sin llegar a leer pesajes', async () => {
       planLoteService.obtener.mockRejectedValue(

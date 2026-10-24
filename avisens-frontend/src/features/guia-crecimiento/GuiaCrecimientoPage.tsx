@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
-import { permisosDePlan } from '@shared/auth/permisos'
+import { permisosDePlan, ROL_ADMIN, ROL_PROPIETARIO } from '@shared/auth/permisos'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import '@shared/ui/admin/AdminKit.css'
 import FormularioPesoObjetivo from '../lotes/components/FormularioPesoObjetivo'
@@ -11,6 +11,7 @@ import { useProyeccionLote } from './hooks/useProyeccionLote'
 import SeleccionarLoteGuia from './components/SeleccionarLoteGuia'
 import PanelCrecimiento from './components/PanelCrecimiento'
 import ProyeccionFaena from './components/ProyeccionFaena'
+import ReportesCrecimiento from './components/ReportesCrecimiento'
 import './GuiaCrecimientoPage.css'
 
 const MIN_PESO_OBJETIVO_G = 1000
@@ -23,6 +24,7 @@ function GuiaCrecimientoPage() {
     ? Number(valorLote) : null
   const guia = useGuiaCrecimiento(loteId)
   const permisos = permisosDePlan(getRol())
+  const puedeComparar = getRol() === ROL_ADMIN || getRol() === ROL_PROPIETARIO
   const lote = guia.loteSeleccionado
   const rutaPadre = lote ? `/lotes?galpon=${lote.galpon.id}` : '/lotes'
   const revisionPlan = guia.plan ? `${guia.plan.id}-${guia.plan.version}-${guia.plan.desactualizado}` : 'sin-plan'
@@ -141,78 +143,96 @@ function GuiaCrecimientoPage() {
         </div>
       </header>
 
-      <section className="adm-panel guia-panel guia-meta-panel" aria-labelledby="guia-plan-titulo">
-        <div className="guia-panel-titulo">
-          <div>
-            <span className="adm-eyebrow">Meta de crecimiento</span>
-            <h2 id="guia-plan-titulo">¿A qué peso quieres llevar tus pollos?</h2>
-            <p className="guia-meta-subtitulo">
-              Fija el peso objetivo de venta para calcular automáticamente el día de salida y proyectar el ciclo.
-            </p>
-          </div>
-          {guia.plan && permisos.registrar && (
-            <button
-              type="button"
-              className="adm-btn adm-btn--secundario"
-              onClick={() => void ejecutarAccion(() => guia.recalcularPlan())}
-              disabled={guia.guardando || guia.cargandoPlan || guia.cargandoDetalle}
-            >
-              {guia.cargandoPlan ? 'Recalculando…' : 'Recalcular meta'}
-            </button>
-          )}
-        </div>
-        {guia.plan?.desactualizado && (
-          <div className="adm-alerta" role="status">
-            <strong>Meta desactualizada. </strong>
-            <span>{DESCRIPCION_DESACTUALIZADO_PLAN} Los resultados corresponden a la meta guardada; se necesita recalcularla.</span>
-          </div>
-        )}
-        <div className="guia-meta-contenido">
-          {permisos.registrar && (guia.plan !== null || (!guia.cargandoPlan && !guia.errorPlan)) && (
-            <div className="guia-meta-formulario">
-              <FormularioPesoObjetivo
-                key={`${lote.id}-${guia.plan?.id ?? 'nuevo'}`}
-                pesoActualG={guia.plan?.peso_objetivo_g ?? null}
-                minLibras={MIN_PESO_OBJETIVO_G / 453.59237}
-                deshabilitado={guia.guardando || guia.cargandoPlan || guia.cargandoDetalle}
-                onEnviar={guardarPesoObjetivo}
-              />
-            </div>
-          )}
-          {guia.errorPlan && (
-            <div className="guia-error" role="alert">
-              <span>{guia.errorPlan}</span>
-              <button type="button" onClick={guia.recargar} disabled={guia.guardando}>Reintentar carga</button>
-            </div>
-          )}
-          {guia.cargandoPlan ? (
-            <p className="guia-cargando" role="status">Cargando objetivo del lote…</p>
-          ) : guia.plan === null ? (
-            <p className="guia-nota">Este lote todavía no tiene un objetivo de peso definido.</p>
-          ) : (
-            <div className="guia-datos-grid">
-              <div><span>Peso objetivo</span><strong>{formatearPeso(guia.plan.peso_objetivo_g)}</strong></div>
-              <div><span>Día estimado</span><strong>Día {guia.plan.resultado.dia_objetivo ?? '—'}</strong></div>
-              <div><span>Fecha de salida</span><strong>{formatearFechaCalendario(guia.plan.resultado.fecha_salida_calculada)}</strong></div>
-              <div><span>Estado</span><strong>{guia.plan.desactualizado ? 'Desactualizado' : etiquetaEstadoPlan(guia.plan.estado_dia)}</strong></div>
-            </div>
-          )}
-        </div>
-      </section>
-
       <PanelCrecimiento
         loteId={lote.id}
+        puedeComparar={puedeComparar}
+        lote={lote}
+        indicadores={guia.indicadores}
+        curvaGenetica={guia.curva?.puntos ?? []}
         curva={proyeccion.curva}
         problema={proyeccion.problemaCurva}
         cargando={proyeccion.cargandoCurva}
         onReintentar={proyeccion.recargar}
       />
 
-      <ProyeccionFaena
-        prediccion={proyeccion.prediccion}
-        error={proyeccion.errorPrediccion}
-        cargando={proyeccion.cargandoPrediccion}
-      />
+      <section className="guia-actuar" aria-labelledby="guia-actuar-titulo">
+        <header className="guia-actuar-cabecera">
+          <h2 id="guia-actuar-titulo">Meta y salida del lote</h2>
+          <p>Define el peso de venta y revisa cómo podría cerrar el ciclo.</p>
+        </header>
+        <section className="adm-panel guia-panel guia-meta-panel" aria-labelledby="guia-plan-titulo">
+          <div className="guia-panel-titulo">
+            <div>
+              <h3 id="guia-plan-titulo">¿A qué peso quieres llevar tus pollos?</h3>
+              <p className="guia-meta-subtitulo">
+                Fija el peso objetivo de venta para calcular automáticamente el día de salida y proyectar el ciclo.
+              </p>
+            </div>
+            {guia.plan && permisos.registrar && (
+              <button
+                type="button"
+                className="adm-btn adm-btn--secundario"
+                onClick={() => void ejecutarAccion(() => guia.recalcularPlan())}
+                disabled={guia.guardando || guia.cargandoPlan || guia.cargandoDetalle}
+              >
+                {guia.cargandoPlan ? 'Recalculando…' : 'Recalcular meta'}
+              </button>
+            )}
+          </div>
+          {guia.plan?.desactualizado && (
+            <div className="adm-alerta" role="status">
+              <strong>Meta desactualizada. </strong>
+              <span>{DESCRIPCION_DESACTUALIZADO_PLAN} Los resultados corresponden a la meta guardada; se necesita recalcularla.</span>
+            </div>
+          )}
+          <div className="guia-meta-contenido">
+            {permisos.registrar && (guia.plan !== null || (!guia.cargandoPlan && !guia.errorPlan)) && (
+              <div className="guia-meta-formulario">
+                <FormularioPesoObjetivo
+                  key={`${lote.id}-${guia.plan?.id ?? 'nuevo'}`}
+                  pesoActualG={guia.plan?.peso_objetivo_g ?? null}
+                  minLibras={MIN_PESO_OBJETIVO_G / 453.59237}
+                  deshabilitado={guia.guardando || guia.cargandoPlan || guia.cargandoDetalle}
+                  onEnviar={guardarPesoObjetivo}
+                />
+              </div>
+            )}
+            {guia.errorPlan && (
+              <div className="guia-error" role="alert">
+                <span>{guia.errorPlan}</span>
+                <button type="button" onClick={guia.recargar} disabled={guia.guardando}>Reintentar carga</button>
+              </div>
+            )}
+            {guia.cargandoPlan ? (
+              <p className="guia-cargando" role="status">Cargando objetivo del lote…</p>
+            ) : guia.plan === null ? (
+              <p className="guia-nota">Este lote todavía no tiene un objetivo de peso definido.</p>
+            ) : (
+              <div className="guia-datos-grid">
+                <div><span>Peso objetivo</span><strong>{formatearPeso(guia.plan.peso_objetivo_g)}</strong></div>
+                <div><span>Día estimado</span><strong>Día {guia.plan.resultado.dia_objetivo ?? '—'}</strong></div>
+                <div><span>Fecha de salida</span><strong>{formatearFechaCalendario(guia.plan.resultado.fecha_salida_calculada)}</strong></div>
+                <div><span>Estado</span><strong>{guia.plan.desactualizado ? 'Desactualizado' : etiquetaEstadoPlan(guia.plan.estado_dia)}</strong></div>
+              </div>
+            )}
+          </div>
+        </section>
+        <ProyeccionFaena
+          loteId={lote.id}
+          curva={proyeccion.curva}
+          plan={guia.plan}
+          prediccion={proyeccion.prediccion}
+          error={proyeccion.errorPrediccion}
+          cargando={proyeccion.cargandoPrediccion}
+        />
+        <ReportesCrecimiento
+          lote={lote}
+          indicadores={guia.indicadores}
+          curva={proyeccion.curva}
+          alimento={guia.alimento}
+          cargandoAlimento={guia.cargandoAlimento}
+        />
+      </section>
     </div>
   )
 }
