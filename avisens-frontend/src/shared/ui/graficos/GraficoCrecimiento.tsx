@@ -24,6 +24,8 @@ type Props = {
   etiquetaMarca: string | null
   descripcion: string
   altura?: number
+  diaSeleccionado?: number
+  mostrarProyeccion?: boolean
 }
 
 type PuntoGrafico = PuntoCurvaCrecimiento & { banda: [number, number] }
@@ -34,11 +36,12 @@ function movimientoReducido() {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-function Detalle({ active, payload, etiquetaEstandar, etiquetaMarca }: {
+function Detalle({ active, payload, etiquetaEstandar, etiquetaMarca, mostrarProyeccion }: {
   active?: boolean
   payload?: { payload: PuntoGrafico }[]
   etiquetaEstandar: string | null
   etiquetaMarca: string | null
+  mostrarProyeccion: boolean
 }) {
   const punto = active ? payload?.[0]?.payload : undefined
   if (!punto) return null
@@ -50,12 +53,14 @@ function Detalle({ active, payload, etiquetaEstandar, etiquetaMarca }: {
           Pesaje <b>{formatearPeso(punto.real_g)}</b>
         </span>
       )}
-      <span className="gc-detalle-fila gc-detalle-fila--proyeccion">
-        Proyección <b>{formatearPeso(punto.proyectado_g)}</b>
-      </span>
-      <span className="gc-detalle-rango">
-        Rango probable {formatearPeso(punto.min_g)} – {formatearPeso(punto.max_g)}
-      </span>
+      {mostrarProyeccion && <>
+        <span className="gc-detalle-fila gc-detalle-fila--proyeccion">
+          Proyección <b>{formatearPeso(punto.proyectado_g)}</b>
+        </span>
+        <span className="gc-detalle-rango">
+          Rango probable {formatearPeso(punto.min_g)} – {formatearPeso(punto.max_g)}
+        </span>
+      </>}
       {punto.estandar_g !== null && etiquetaEstandar && (
         <span className="gc-detalle-fila gc-detalle-fila--estandar">
           {etiquetaEstandar} <b>{formatearPeso(punto.estandar_g)}</b>
@@ -83,16 +88,19 @@ function crearEtiquetaFinal(texto: string, color: string, ultimoIndice: number, 
 
 function GraficoCrecimiento({
   serie, diaActual, pesoObjetivoG, etiquetaEstandar, etiquetaMarca, descripcion, altura = 420,
+  diaSeleccionado = diaActual, mostrarProyeccion = true,
 }: Props) {
   const datos: PuntoGrafico[] = serie.map((punto) => ({ ...punto, banda: [punto.min_g, punto.max_g] }))
   const animar = !movimientoReducido()
   const hayMarca = etiquetaMarca !== null && serie.some((punto) => punto.marca_g !== null)
   const hayEstandar = etiquetaEstandar !== null && serie.some((punto) => punto.estandar_g !== null)
   const diaFinal = serie[serie.length - 1]?.dia ?? diaActual
-  const maximo = Math.max(
-    pesoObjetivoG ?? 0,
-    ...serie.flatMap((p) => [p.max_g, p.estandar_g ?? 0, p.marca_g ?? 0, p.real_g ?? 0]),
-  )
+  const maximo = Math.max(pesoObjetivoG ?? 0, ...serie.flatMap((p) => [
+    mostrarProyeccion ? p.max_g : 0,
+    p.estandar_g ?? 0,
+    p.marca_g ?? 0,
+    p.real_g ?? 0,
+  ]))
   const marcas = marcasDePeso(maximo)
 
   const marcasDias = [1, ...Array.from({ length: Math.floor(diaFinal / 7) }, (_, i) => (i + 1) * 7)]
@@ -141,10 +149,10 @@ function GraficoCrecimiento({
               tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
             />
             <Tooltip
-              content={<Detalle etiquetaEstandar={etiquetaEstandar} etiquetaMarca={etiquetaMarca} />}
+              content={<Detalle etiquetaEstandar={etiquetaEstandar} etiquetaMarca={etiquetaMarca} mostrarProyeccion={mostrarProyeccion} />}
               cursor={{ stroke: 'var(--border-strong)', strokeDasharray: '3 3' }}
             />
-            <Area dataKey="banda" stroke="none" fill="url(#gc-banda)" isAnimationActive={animar} activeDot={false} />
+            {mostrarProyeccion && <Area dataKey="banda" stroke="none" fill="url(#gc-banda)" isAnimationActive={animar} activeDot={false} />}
             {hayMarca && (
               <Line
                 dataKey="marca_g"
@@ -170,9 +178,9 @@ function GraficoCrecimiento({
                 label={crearEtiquetaFinal(etiquetaEstandar ?? 'Estándar', '#64748b', idxFinEstandar, despEstandar)}
               />
             )}
-            <Line dataKey="proyectado_g" stroke="var(--primary)" strokeWidth={3} strokeDasharray="7 5" dot={false} isAnimationActive={animar} activeDot={{ r: 5, fill: 'var(--primary)' }}
+            {mostrarProyeccion && <Line dataKey="proyectado_g" stroke="var(--primary)" strokeWidth={3} strokeDasharray="7 5" dot={false} isAnimationActive={animar} activeDot={{ r: 5, fill: 'var(--primary)' }}
               label={crearEtiquetaFinal('Proyección', 'var(--primary)', idxFinProyeccion, despProyeccion)}
-            />
+            />}
             <Line
               dataKey="real_g" stroke="transparent" isAnimationActive={animar}
               dot={{ r: 5, fill: 'var(--primary-hover, #0f172a)', stroke: 'var(--surface-base, #ffffff)', strokeWidth: 2 }}
@@ -184,10 +192,10 @@ function GraficoCrecimiento({
                 label={{ value: `Meta ${formatearPeso(pesoObjetivoG)}`, position: 'insideTopLeft', fill: 'var(--danger)', fontSize: 11, fontWeight: 600 }}
               />
             )}
-            {diaActual >= 1 && diaActual <= diaFinal && (
+            {diaSeleccionado >= 1 && diaSeleccionado <= diaFinal && (
               <ReferenceLine
-                x={diaActual} stroke="var(--border-strong, #94a3b8)" strokeDasharray="4 4" strokeWidth={1.5}
-                label={{ value: `Hoy · Día ${diaActual}`, position: 'top', fill: 'var(--text-primary)', fontSize: 11, fontWeight: 700 }}
+                x={diaSeleccionado} stroke="var(--avisens-maize)" strokeDasharray="4 4" strokeWidth={1.5}
+                label={{ value: diaSeleccionado === diaActual ? `Hoy · Día ${diaSeleccionado}` : `Día ${diaSeleccionado}`, position: 'top', fill: 'var(--text-primary)', fontSize: 11, fontWeight: 700 }}
               />
             )}
           </ComposedChart>
