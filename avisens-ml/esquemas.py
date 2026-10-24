@@ -14,6 +14,7 @@ class PeticionPrediccion(BaseModel):
     pesajes: Annotated[list[Pesaje], Field(min_length=3, max_length=100)]
     dia_faena: int = Field(default=42, ge=1, le=100)
     peso_objetivo_g: float = Field(default=2500, gt=0, le=10000, allow_inf_nan=False)
+    horas_calor_severo: int = Field(default=0, ge=0, le=168)
 
     @model_validator(mode="after")
     def validar_serie(self):
@@ -104,3 +105,24 @@ class PeticionRiesgoCalor(BaseModel):
     ajuste_temperatura: float = Field(default=0, ge=-50, le=50, allow_inf_nan=False)
     ajuste_humedad: float = Field(default=0, ge=-100, le=100, allow_inf_nan=False)
     dia_vida: int | None = Field(default=None, ge=1, le=100)
+
+
+class PeticionAnomalias(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    pesajes: Annotated[list[Pesaje], Field(max_length=100)] = []
+    consumos: Annotated[list[Consumo], Field(max_length=100)] = []
+    mortalidades: Annotated[list[Mortalidad], Field(max_length=100)] = []
+    curva_referencia: Annotated[list[PuntoCurva], Field(max_length=100)] = []
+
+    @model_validator(mode="after")
+    def validar_series(self):
+        series = (self.pesajes, self.consumos, self.mortalidades, self.curva_referencia)
+        if not any(series[:3]):
+            raise ValueError(
+                "Envia al menos una serie de pesajes, consumos o mortalidades"
+            )
+        for serie in series:
+            dias = [observacion.dia for observacion in serie]
+            if len(set(dias)) != len(dias):
+                raise ValueError("Cada observacion debe pertenecer a un dia distinto")
+        return self

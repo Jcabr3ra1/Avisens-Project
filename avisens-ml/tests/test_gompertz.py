@@ -155,5 +155,5 @@ def test_punto_de_inflexion_y_trazabilidad_del_modelo():
         r["parametros"]["peso_maximo_g"] / np.e
     )
     assert r["modelo"]["nombre"] == "crecimiento_gompertz"
-    assert r["modelo"]["version"] == "2.0.0"
+    assert r["modelo"]["version"] == "2.1.0"
     assert r["modelo"]["puntos_usados"] == 3
