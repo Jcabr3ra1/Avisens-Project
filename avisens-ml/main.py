@@ -17,7 +17,6 @@ from modelos.estres_calor import proyectar_riesgo
 from modelos.gompertz import proyectar_crecimiento
 from modelos.polinomial import predecir, predecir_consumo, predecir_mortalidad
 
-
 logger = logging.getLogger("avisens-ml")
 
 

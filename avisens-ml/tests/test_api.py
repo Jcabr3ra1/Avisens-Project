@@ -3,7 +3,6 @@ from fastapi.testclient import TestClient
 from main import app
 from modelos.polinomial import predecir_consumo, predecir_mortalidad
 
-
 client = TestClient(app)
 
 

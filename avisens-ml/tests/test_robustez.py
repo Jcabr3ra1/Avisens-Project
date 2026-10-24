@@ -3,7 +3,6 @@ from fastapi.testclient import TestClient
 from main import app
 from modelos.polinomial import predecir, predecir_consumo, predecir_mortalidad
 
-
 client = TestClient(app)
 
 
@@ -81,16 +80,12 @@ def test_consumo_acumulado_no_baja_de_lo_observado():
 
 
 def test_rechaza_hora_sin_formato_iso():
-    cuerpo = {
-        "horas": [{"hora": "no es una hora!", "temperatura": 30, "humedad": 60}]
-    }
+    cuerpo = {"horas": [{"hora": "no es una hora!", "temperatura": 30, "humedad": 60}]}
 
     assert client.post("/riesgo-calor", json=cuerpo).status_code == 422
 
 
 def test_acepta_hora_iso_de_open_meteo():
-    cuerpo = {
-        "horas": [{"hora": "2026-10-18T14:00", "temperatura": 30, "humedad": 60}]
-    }
+    cuerpo = {"horas": [{"hora": "2026-10-18T14:00", "temperatura": 30, "humedad": 60}]}
 
     assert client.post("/riesgo-calor", json=cuerpo).status_code == 200

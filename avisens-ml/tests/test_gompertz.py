@@ -11,7 +11,6 @@ from modelos.gompertz import (
     proyectar_crecimiento,
 )
 
-
 ROSS_308_MIXTO = [
     {"dia": d, "peso": p}
     for d, p in [
