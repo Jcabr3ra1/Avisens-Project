@@ -89,7 +89,11 @@ class PeticionCurvaCrecimiento(BaseModel):
 
 class HoraClima(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    hora: str = Field(min_length=10, max_length=25)
+    hora: str = Field(
+        min_length=10,
+        max_length=25,
+        pattern=r"^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$",
+    )
     temperatura: float = Field(ge=-20, le=60, allow_inf_nan=False)
     humedad: float = Field(ge=0, le=100, allow_inf_nan=False)
 

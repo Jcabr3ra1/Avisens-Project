@@ -1,4 +1,6 @@
+import logging
 import os
+from contextlib import asynccontextmanager
 from secrets import compare_digest
 from typing import Annotated
 
@@ -16,7 +18,19 @@ from modelos.gompertz import proyectar_crecimiento
 from modelos.polinomial import predecir, predecir_consumo, predecir_mortalidad
 
 
-app = FastAPI(title="Avisens ML")
+logger = logging.getLogger("avisens-ml")
+
+
+@asynccontextmanager
+async def ciclo_de_vida(_: FastAPI):
+    if not os.getenv("ML_INTERNAL_TOKEN"):
+        logger.warning(
+            "ML_INTERNAL_TOKEN no esta definido: el servicio acepta peticiones sin token"
+        )
+    yield
+
+
+app = FastAPI(title="Avisens ML", lifespan=ciclo_de_vida)
 
 
 def validar_token_interno(

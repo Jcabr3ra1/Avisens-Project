@@ -78,7 +78,7 @@ Respuesta:
   "peso_objetivo_g": 2500,
   "modelo": {
     "nombre": "crecimiento_aves",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "framework": "numpy",
     "confianza": 0.98,
     "puntos_usados": 4
