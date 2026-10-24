@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrediccionesService } from './predicciones.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CalorHistoricoService } from './calor-historico.service';
 import { PlanLoteService } from '../plan-lote/plan-lote.service';
 import { ROLES } from '../../common/auth/roles';
 import type { Solicitante } from '../../common/auth/acceso';
@@ -30,6 +31,7 @@ describe('PrediccionesService', () => {
   };
   const config = { get: jest.fn() };
   const planLoteService = { obtener: jest.fn() };
+  const calorHistorico = { horasCalorSevero: jest.fn() };
 
   const admin: Solicitante = { id: 1, rol: ROLES.ADMINISTRADOR };
   const propietario: Solicitante = { id: 5, rol: ROLES.PROPIETARIO };
@@ -73,6 +75,7 @@ describe('PrediccionesService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: ConfigService, useValue: config },
         { provide: PlanLoteService, useValue: planLoteService },
+        { provide: CalorHistoricoService, useValue: calorHistorico },
       ],
     }).compile();
     service = module.get<PrediccionesService>(PrediccionesService);
@@ -86,6 +89,7 @@ describe('PrediccionesService', () => {
     config.get.mockImplementation((clave: string, defecto?: string) => defecto);
     prisma.$transaction.mockResolvedValue([[], 0]);
     planLoteService.obtener.mockResolvedValue({ ...planCalculado });
+    calorHistorico.horasCalorSevero.mockResolvedValue(0);
   });
 
   const respuestaMl = {
@@ -158,6 +162,39 @@ describe('PrediccionesService', () => {
     expect(resultado.dia_faena).toBe(35);
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(prisma.prediccion.createMany).not.toHaveBeenCalled();
+  });
+
+  it('envía al ML las horas de calor severo del galpón y devuelve el rango', async () => {
+    calorHistorico.horasCalorSevero.mockResolvedValue(18);
+    let enviado: Record<string, unknown> = {};
+    jest.spyOn(global, 'fetch').mockImplementation((_url, init) => {
+      enviado = JSON.parse(init?.body as string) as Record<string, unknown>;
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            ...respuestaMl,
+            rango: { min: 2100, max: 2700, cobertura_pct: 90 },
+            factores: [{ factor: 'calor_severo', horas: 18 }],
+          }),
+        ),
+      );
+    });
+
+    const resultado = await service.predecir(1, admin);
+
+    expect(enviado.horas_calor_severo).toBe(18);
+    expect(resultado.rango).toEqual({ min: 2100, max: 2700, cobertura_pct: 90 });
+    expect(resultado.factores).toEqual([{ factor: 'calor_severo', horas: 18 }]);
+  });
+
+  it('descarta una respuesta con un rango imposible', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ ...respuestaMl, rango: { min: 3000, max: 2000 } }),
+      ),
+    );
+
+    await expect(service.predecir(1, admin)).rejects.toThrow(/inválida/);
   });
 
   it('rechaza días simulados fuera del rango del servicio existente', async () => {

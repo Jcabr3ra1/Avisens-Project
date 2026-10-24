@@ -17,6 +17,7 @@ import { ROLES } from '../../common/auth/roles';
 import { PrediccionesService } from './predicciones.service';
 import { CurvaCrecimientoService } from './curva-crecimiento.service';
 import { RiesgoCalorService } from './riesgo-calor.service';
+import { AnomaliasService } from './anomalias.service';
 import { HistorialPrediccionesDto } from './dto/historial-predicciones.dto';
 import { SimularFaenaDto } from './dto/simular-faena.dto';
 
@@ -34,6 +35,7 @@ export class PrediccionesController {
     private prediccionesService: PrediccionesService,
     private curvaCrecimientoService: CurvaCrecimientoService,
     private riesgoCalorService: RiesgoCalorService,
+    private anomaliasService: AnomaliasService,
   ) {}
 
   @Post('lote/:loteId')
@@ -88,6 +90,18 @@ export class PrediccionesController {
     @Req() req: AuthRequest,
   ) {
     return this.curvaCrecimientoService.calcular(loteId, req.user);
+  }
+
+  @Get('lote/:loteId/anomalias')
+  @ApiOperation({
+    summary:
+      'Alertas tempranas del lote: peso, consumo y mortalidad que se desvían de lo esperado',
+  })
+  anomalias(
+    @Param('loteId', ParseIntPipe) loteId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.anomaliasService.calcular(loteId, req.user);
   }
 
   @Get('galpon/:galponId/riesgo-calor')

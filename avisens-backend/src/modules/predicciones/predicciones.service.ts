@@ -13,7 +13,12 @@ import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto
 import { paginate } from '../../common/pagination/paginate';
 import { ConfigService } from '@nestjs/config';
 import { PlanLoteService } from '../plan-lote/plan-lote.service';
-import { diaDeVidaDeFecha, fechaDeVida } from '../../common/fechas/dias-de-vida';
+import {
+  diaDeVida,
+  diaDeVidaDeFecha,
+  fechaDeVida,
+} from '../../common/fechas/dias-de-vida';
+import { CalorHistoricoService } from './calor-historico.service';
 
 const UMBRAL_DESVIO_PCT = 5;
 const UMBRAL_DESVIO_FCR = 0.05;
@@ -49,7 +54,20 @@ export interface MetadataModelo {
   tipo: string;
   objetivo: string;
   confianza: number;
+  nivel_confianza?: 'alta' | 'media' | 'baja';
+  motivos?: string[];
   puntos_usados: number;
+}
+
+export interface RangoPrediccion {
+  min: number;
+  max: number;
+  cobertura_pct?: number;
+}
+
+export interface FactorPrediccion {
+  factor: string;
+  horas: number;
 }
 
 interface RespuestaPesoMl {
@@ -57,18 +75,22 @@ interface RespuestaPesoMl {
   dia_faena: number;
   dias_al_objetivo: number | null;
   peso_objetivo_g: number;
+  rango?: RangoPrediccion;
+  factores?: FactorPrediccion[];
   modelo?: MetadataModelo;
 }
 
 interface RespuestaMortalidadMl {
   mortalidad_proyectada_pct: number;
   dia_faena: number;
+  rango?: RangoPrediccion;
   modelo?: MetadataModelo;
 }
 
 interface RespuestaConsumoMl {
   consumo_proyectado_kg: number;
   dia_faena: number;
+  rango?: RangoPrediccion;
   modelo?: MetadataModelo;
 }
 
@@ -98,6 +120,10 @@ interface ResultadoPrediccion {
   peso_proyectado_faena_g: number;
   dia_faena: number;
   peso_objetivo_g: number;
+  rango?: RangoPrediccion;
+  factores?: FactorPrediccion[];
+  rango_mortalidad: RangoPrediccion | null;
+  rango_consumo: RangoPrediccion | null;
   plan_lote_id: number;
   plan_version: number;
   mortalidad_proyectada_pct: number | null;
@@ -123,6 +149,7 @@ export class PrediccionesService {
     private prisma: PrismaService,
     private config: ConfigService,
     private planLoteService: PlanLoteService,
+    private calorHistorico: CalorHistoricoService,
   ) {}
 
   async predecir(
@@ -138,6 +165,7 @@ export class PrediccionesService {
         cantidad_inicial: true,
         sexo: true,
         marca_alimento: true,
+        galpon_id: true,
         galpon: { select: { granja: { select: { propietario_id: true } } } },
       },
     });
@@ -266,10 +294,15 @@ export class PrediccionesService {
       });
     }
 
+    const horasCalorSevero = await this.calorHistorico.horasCalorSevero(
+      lote.galpon_id,
+      diaDeVida(lote.fecha_ingreso),
+    );
     const respuesta = await this.llamarMl('/predecir', {
       pesajes: pesajesParaMl,
       dia_faena: diaFaena,
       peso_objetivo_g: pesoObjetivoPlan,
+      horas_calor_severo: horasCalorSevero,
     });
 
     if (!respuesta?.ok) {
@@ -375,6 +408,12 @@ export class PrediccionesService {
       plan_lote_id: plan.id,
       plan_version: plan.version,
       ...valoresPrediccion,
+      rango_mortalidad:
+        mortalidad.estado === 'calculado'
+          ? (mortalidad.datos.rango ?? null)
+          : null,
+      rango_consumo:
+        consumo.estado === 'calculado' ? (consumo.datos.rango ?? null) : null,
       mortalidad_proyectada_pct: mortalidadPct,
       consumo_proyectado_kg: consumoKg,
       fcr_proyectado: fcr,
@@ -790,6 +829,7 @@ export class PrediccionesService {
       this.esNumeroFinito(valor.peso_objetivo_g, 0, 10_000) &&
       (valor.dias_al_objetivo === null ||
         this.esEntero(valor.dias_al_objetivo, 0, 100)) &&
+      this.esRangoOpcional(valor.rango) &&
       this.esMetadataOpcional(valor.modelo)
     );
   }
@@ -801,6 +841,7 @@ export class PrediccionesService {
       this.esRegistro(valor) &&
       this.esNumeroFinito(valor.mortalidad_proyectada_pct, 0, 100) &&
       this.esEntero(valor.dia_faena, 1, 100) &&
+      this.esRangoOpcional(valor.rango) &&
       this.esMetadataOpcional(valor.modelo)
     );
   }
@@ -810,7 +851,18 @@ export class PrediccionesService {
       this.esRegistro(valor) &&
       this.esNumeroFinito(valor.consumo_proyectado_kg, 0, 1_000_000) &&
       this.esEntero(valor.dia_faena, 1, 100) &&
+      this.esRangoOpcional(valor.rango) &&
       this.esMetadataOpcional(valor.modelo)
+    );
+  }
+
+  private esRangoOpcional(valor: unknown): boolean {
+    if (valor === undefined) return true;
+    return (
+      this.esRegistro(valor) &&
+      this.esNumeroFinito(valor.min, 0, 1_000_000) &&
+      this.esNumeroFinito(valor.max, 0, 1_000_000) &&
+      (valor.min as number) <= (valor.max as number)
     );
   }
 
