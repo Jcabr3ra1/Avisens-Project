@@ -25,9 +25,13 @@ function aMedianocheLocal(fecha: Date): number {
 }
 
 // Una fecha de solo día ('2026-08-12') se ancla al día local, no a UTC.
+// La API entrega esas columnas como medianoche UTC ('2026-10-16T00:00:00.000Z'):
+// leerlas tal cual en Colombia (UTC-5) las llevaría al 15 por la tarde y el lote
+// aparecería con un día de más.
 function interpretarFecha(valor: string): Date | null {
-  const soloFecha = /^\d{4}-\d{2}-\d{2}$/.test(valor)
-  const fecha = new Date(soloFecha ? `${valor}T00:00:00` : valor)
+  const medianocheUtc = /^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.0+)?Z$/.exec(valor)
+  const soloFecha = medianocheUtc ? medianocheUtc[1] : /^\d{4}-\d{2}-\d{2}$/.test(valor) ? valor : null
+  const fecha = new Date(soloFecha ? `${soloFecha}T00:00:00` : valor)
   return Number.isNaN(fecha.getTime()) ? null : fecha
 }
 

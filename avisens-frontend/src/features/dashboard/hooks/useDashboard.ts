@@ -124,7 +124,7 @@ export function useDashboard() {
     lote,
     indicador,
     alertasGranja,
-    diaLote: lote ? indicador?.diaVida ?? calcularDiaLote(lote.fechaIngreso) : null,
+    diaLote: lote ? calcularDiaLote(lote.fechaIngreso) : null,
     granjaId,
     galponId,
     cargando,
