@@ -26,9 +26,10 @@ type Props = {
   altura?: number
   diaSeleccionado?: number
   mostrarProyeccion?: boolean
+  curvaComparacion?: { codigo: string; serie: PuntoCurvaCrecimiento[] } | null
 }
 
-type PuntoGrafico = PuntoCurvaCrecimiento & { banda: [number, number] }
+type PuntoGrafico = PuntoCurvaCrecimiento & { banda: [number, number]; comparacion_g: number | null }
 
 function movimientoReducido() {
   return typeof window !== 'undefined'
@@ -36,12 +37,13 @@ function movimientoReducido() {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-function Detalle({ active, payload, etiquetaEstandar, etiquetaMarca, mostrarProyeccion }: {
+function Detalle({ active, payload, etiquetaEstandar, etiquetaMarca, mostrarProyeccion, etiquetaComparacion }: {
   active?: boolean
   payload?: { payload: PuntoGrafico }[]
   etiquetaEstandar: string | null
   etiquetaMarca: string | null
   mostrarProyeccion: boolean
+  etiquetaComparacion: string | null
 }) {
   const punto = active ? payload?.[0]?.payload : undefined
   if (!punto) return null
@@ -61,6 +63,11 @@ function Detalle({ active, payload, etiquetaEstandar, etiquetaMarca, mostrarProy
           Rango probable {formatearPeso(punto.min_g)} – {formatearPeso(punto.max_g)}
         </span>
       </>}
+      {punto.comparacion_g !== null && etiquetaComparacion && (
+        <span className="gc-detalle-fila gc-detalle-fila--comparacion">
+          {etiquetaComparacion} <b>{formatearPeso(punto.comparacion_g)}</b>
+        </span>
+      )}
       {punto.estandar_g !== null && etiquetaEstandar && (
         <span className="gc-detalle-fila gc-detalle-fila--estandar">
           {etiquetaEstandar} <b>{formatearPeso(punto.estandar_g)}</b>
@@ -88,18 +95,24 @@ function crearEtiquetaFinal(texto: string, color: string, ultimoIndice: number, 
 
 function GraficoCrecimiento({
   serie, diaActual, pesoObjetivoG, etiquetaEstandar, etiquetaMarca, descripcion, altura = 420,
-  diaSeleccionado = diaActual, mostrarProyeccion = true,
+  diaSeleccionado = diaActual, mostrarProyeccion = true, curvaComparacion = null,
 }: Props) {
-  const datos: PuntoGrafico[] = serie.map((punto) => ({ ...punto, banda: [punto.min_g, punto.max_g] }))
+  const porDiaComparacion = new Map(curvaComparacion?.serie.map((punto) => [punto.dia, punto.real_g ?? punto.proyectado_g]) ?? [])
+  const datos: PuntoGrafico[] = serie.map((punto) => ({
+    ...punto,
+    banda: [punto.min_g, punto.max_g],
+    comparacion_g: porDiaComparacion.get(punto.dia) ?? null,
+  }))
   const animar = !movimientoReducido()
   const hayMarca = etiquetaMarca !== null && serie.some((punto) => punto.marca_g !== null)
   const hayEstandar = etiquetaEstandar !== null && serie.some((punto) => punto.estandar_g !== null)
   const diaFinal = serie[serie.length - 1]?.dia ?? diaActual
-  const maximo = Math.max(pesoObjetivoG ?? 0, ...serie.flatMap((p) => [
+  const maximo = Math.max(pesoObjetivoG ?? 0, ...datos.flatMap((p) => [
     mostrarProyeccion ? p.max_g : 0,
     p.estandar_g ?? 0,
     p.marca_g ?? 0,
     p.real_g ?? 0,
+    p.comparacion_g ?? 0,
   ]))
   const marcas = marcasDePeso(maximo)
 
@@ -110,6 +123,8 @@ function GraficoCrecimiento({
   const idxFinProyeccion = datos.length - 1
   const idxFinEstandar = datos.map((d) => d.estandar_g !== null).lastIndexOf(true)
   const idxFinMarca = datos.map((d) => d.marca_g !== null).lastIndexOf(true)
+  const idxFinComparacion = datos.map((d) => d.comparacion_g !== null).lastIndexOf(true)
+  const etiquetaComparacion = curvaComparacion ? `Lote ${curvaComparacion.codigo}` : null
 
   const ultimoDato = datos[datos.length - 1]
   const proyectadoFin = ultimoDato?.proyectado_g ?? 0
@@ -149,7 +164,7 @@ function GraficoCrecimiento({
               tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
             />
             <Tooltip
-              content={<Detalle etiquetaEstandar={etiquetaEstandar} etiquetaMarca={etiquetaMarca} mostrarProyeccion={mostrarProyeccion} />}
+              content={<Detalle etiquetaEstandar={etiquetaEstandar} etiquetaMarca={etiquetaMarca} mostrarProyeccion={mostrarProyeccion} etiquetaComparacion={etiquetaComparacion} />}
               cursor={{ stroke: 'var(--border-strong)', strokeDasharray: '3 3' }}
             />
             {mostrarProyeccion && <Area dataKey="banda" stroke="none" fill="url(#gc-banda)" isAnimationActive={animar} activeDot={false} />}
@@ -180,6 +195,9 @@ function GraficoCrecimiento({
             )}
             {mostrarProyeccion && <Line dataKey="proyectado_g" stroke="var(--primary)" strokeWidth={3} strokeDasharray="7 5" dot={false} isAnimationActive={animar} activeDot={{ r: 5, fill: 'var(--primary)' }}
               label={crearEtiquetaFinal('Proyección', 'var(--primary)', idxFinProyeccion, despProyeccion)}
+            />}
+            {etiquetaComparacion && <Line dataKey="comparacion_g" name={etiquetaComparacion} stroke="var(--avisens-deep)" strokeWidth={2.5} strokeDasharray="2 5" dot={false} connectNulls isAnimationActive={animar} activeDot={{ r: 5, fill: 'var(--avisens-deep)' }}
+              label={crearEtiquetaFinal(etiquetaComparacion, 'var(--avisens-deep)', idxFinComparacion, -7)}
             />}
             <Line
               dataKey="real_g" stroke="transparent" isAnimationActive={animar}

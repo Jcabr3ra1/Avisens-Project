@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { getUsuario } from '@shared/api'
+import { ROL_PROPIETARIO } from '@shared/auth/permisos'
+import { obtenerResumenCrecimiento, type ResumenCrecimiento } from '@features/indicadores/api/indicadores'
 import { cargarFuentesDashboard, obtenerIndicadorReciente } from '../api/dashboard'
 import {
   calcularDiaLote,
@@ -33,6 +35,9 @@ export function useDashboard() {
   const [cargandoIndicador, setCargandoIndicador] = useState(false)
   const [error, setError] = useState('')
   const [actualizadoEn, setActualizadoEn] = useState<Date | null>(null)
+  const [resumenCrecimiento, setResumenCrecimiento] = useState<ResumenCrecimiento | null>(null)
+  const [cargandoResumenCrecimiento, setCargandoResumenCrecimiento] = useState(false)
+  const [errorCrecimiento, setErrorCrecimiento] = useState('')
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -73,6 +78,22 @@ export function useDashboard() {
       return galpones.find((galpon) => galpon.activo)?.id ?? galpones[0]?.id ?? null
     })
   }, [galpones])
+
+  useEffect(() => {
+    let vigente = true
+    setResumenCrecimiento(null)
+    setErrorCrecimiento('')
+    if (usuario?.rol !== ROL_PROPIETARIO || granjaId === null) {
+      setCargandoResumenCrecimiento(false)
+      return () => { vigente = false }
+    }
+    setCargandoResumenCrecimiento(true)
+    obtenerResumenCrecimiento(granjaId)
+      .then((resumen) => { if (vigente) setResumenCrecimiento(resumen) })
+      .catch((fallo) => { if (vigente) setErrorCrecimiento(obtenerMensajeError(fallo)) })
+      .finally(() => { if (vigente) setCargandoResumenCrecimiento(false) })
+    return () => { vigente = false }
+  }, [granjaId, usuario?.rol])
 
   const lote = useMemo(
     () => fuentes.lotes.find((item) => item.galponId === galponId && item.estado === 'activo') ?? null,
@@ -124,6 +145,9 @@ export function useDashboard() {
     lote,
     indicador,
     alertasGranja,
+    resumenCrecimiento,
+    cargandoResumenCrecimiento,
+    errorCrecimiento,
     diaLote: lote ? indicador?.diaVida ?? calcularDiaLote(lote.fechaIngreso) : null,
     granjaId,
     galponId,

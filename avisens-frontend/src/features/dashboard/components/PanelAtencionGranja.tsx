@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import * as Tabs from '@radix-ui/react-tabs'
-import { IcAlert, IcCheck, IcChevronRight, IcThermo } from '@shared/ui/icons/icons'
+import { IcAlert, IcChart, IcCheck, IcChevronRight, IcThermo } from '@shared/ui/icons/icons'
 import type { ItemAtencionGranja, TipoAtencionGranja } from '../model/resumenGranja'
 
 type Filtro = 'todas' | TipoAtencionGranja
@@ -8,16 +8,18 @@ type Filtro = 'todas' | TipoAtencionGranja
 type Props = {
   items: ItemAtencionGranja[]
   cargando: boolean
+  errorCrecimiento?: string
   onAbrir: (item: ItemAtencionGranja) => void
   onIrAlertas: () => void
   onIrMonitoreo: () => void
   onIrBitacora: () => void
 }
 
-function PanelAtencionGranja({ items, cargando, onAbrir, onIrAlertas, onIrMonitoreo, onIrBitacora }: Props) {
+function PanelAtencionGranja({ items, cargando, errorCrecimiento, onAbrir, onIrAlertas, onIrMonitoreo, onIrBitacora }: Props) {
   const [pestana, setPestana] = useState<Filtro>('todas')
   const alertas = items.filter((item) => item.tipo === 'alerta').length
-  const sensores = items.length - alertas
+  const sensores = items.filter((item) => item.tipo === 'sensor').length
+  const crecimiento = items.filter((item) => item.tipo === 'crecimiento').length
   const criticos = items.filter((item) => item.critico).length
   const filtrados = useMemo(
     () => (pestana === 'todas' ? items : items.filter((item) => item.tipo === pestana)),
@@ -36,7 +38,7 @@ function PanelAtencionGranja({ items, cargando, onAbrir, onIrAlertas, onIrMonito
               </span>
             )}
           </div>
-          <p className="admin-card-sub">Alertas abiertas y sensores fuera de rango o sin señal en esta granja</p>
+          <p className="admin-card-sub">Alertas, señales de crecimiento y sensores que necesitan revisión</p>
         </div>
 
         {!cargando && items.length > 0 && (
@@ -44,11 +46,14 @@ function PanelAtencionGranja({ items, cargando, onAbrir, onIrAlertas, onIrMonito
             <Tabs.List className="admin-tabs-list" aria-label="Filtrar pendientes">
               <Tabs.Trigger value="todas" className="admin-tab-trigger">Todas <span>{items.length}</span></Tabs.Trigger>
               <Tabs.Trigger value="alerta" className="admin-tab-trigger">Alertas <span>{alertas}</span></Tabs.Trigger>
+              <Tabs.Trigger value="crecimiento" className="admin-tab-trigger">Crecimiento <span>{crecimiento}</span></Tabs.Trigger>
               <Tabs.Trigger value="sensor" className="admin-tab-trigger">Sensores <span>{sensores}</span></Tabs.Trigger>
             </Tabs.List>
           </Tabs.Root>
         )}
       </div>
+
+      {errorCrecimiento && <p className="admin-attention-error" role="alert">{errorCrecimiento} No podemos confirmar el estado de crecimiento de los lotes.</p>}
 
       {cargando ? (
         <div className="admin-attention-loading" aria-label="Cargando pendientes">
@@ -56,12 +61,14 @@ function PanelAtencionGranja({ items, cargando, onAbrir, onIrAlertas, onIrMonito
         </div>
       ) : filtrados.length === 0 ? (
         <div className="admin-attention-empty">
-          <span className="admin-attention-empty-icon" aria-hidden="true"><IcCheck size={18} /></span>
+          <span className="admin-attention-empty-icon" aria-hidden="true">{errorCrecimiento ? <IcAlert size={18} /> : <IcCheck size={18} />}</span>
           <div>
-            <strong>{items.length === 0 ? 'Todo en orden' : 'Nada pendiente en esta categoría'}</strong>
+            <strong>{errorCrecimiento && items.length === 0 ? 'No pudimos revisar los lotes' : items.length === 0 ? 'Sin alertas o fallas de sensores' : 'Nada pendiente en esta categoría'}</strong>
             <p>
-              {items.length === 0
-                ? 'No hay alertas abiertas y todos los sensores reportan dentro de su rango.'
+              {errorCrecimiento && items.length === 0
+                ? 'Vuelve a intentarlo para consultar las reglas de crecimiento.'
+                : items.length === 0
+                ? 'No hay alertas abiertas y los sensores de esta granja reportan dentro de su rango.'
                 : 'Selecciona «Todas» para ver el resto de pendientes.'}
             </p>
           </div>
@@ -76,7 +83,7 @@ function PanelAtencionGranja({ items, cargando, onAbrir, onIrAlertas, onIrMonito
                 onClick={() => onAbrir(item)}
               >
                 <span className="admin-attention-icon" aria-hidden="true">
-                  {item.tipo === 'alerta' ? <IcAlert size={16} /> : <IcThermo size={16} />}
+                  {item.tipo === 'alerta' ? <IcAlert size={16} /> : item.tipo === 'crecimiento' ? <IcChart size={16} /> : <IcThermo size={16} />}
                 </span>
                 <span className="admin-attention-copy">
                   <span className="admin-attention-meta">

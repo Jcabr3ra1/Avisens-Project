@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom'
 import * as Tabs from '@radix-ui/react-tabs'
 import { motion, useReducedMotion } from 'motion/react'
 import type { CurvaCrecimiento } from '@features/predicciones/api/predicciones'
+import { obtenerCurvaCrecimiento } from '@features/predicciones/api/predicciones'
 import type { Lote } from '@features/lotes/api/lotes'
+import { listarLotes } from '@features/lotes/api/lotes'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import { IcArrowDown, IcArrowUp, IcCheck, IcScale } from '@shared/ui/icons/icons'
 import GraficoMetrica, { type TipoGraficaGuia } from './GraficoMetrica'
@@ -17,6 +19,7 @@ const GraficoCrecimiento = lazy(() => import('@shared/ui/graficos/GraficoCrecimi
 
 type Props = {
   loteId: number
+  puedeComparar: boolean
   lote: Lote
   indicadores: IndicadorLote[]
   curvaGenetica: PuntoCurvaGenetica[]
@@ -107,9 +110,15 @@ function Llegada({ curva }: { curva: CurvaCrecimiento }) {
   )
 }
 
-function PanelCrecimiento({ loteId, lote, indicadores, curvaGenetica, curva, problema, cargando, onReintentar }: Props) {
+function PanelCrecimiento({ loteId, puedeComparar, lote, indicadores, curvaGenetica, curva, problema, cargando, onReintentar }: Props) {
   const [pestana, setPestana] = useState<TipoGraficaGuia>('peso')
   const [diaSeleccionado, setDiaSeleccionado] = useState(1)
+  const [comparar, setComparar] = useState(false)
+  const [lotesComparables, setLotesComparables] = useState<Lote[]>([])
+  const [loteComparacionId, setLoteComparacionId] = useState('')
+  const [curvaComparacion, setCurvaComparacion] = useState<CurvaCrecimiento | null>(null)
+  const [cargandoComparacion, setCargandoComparacion] = useState(false)
+  const [errorComparacion, setErrorComparacion] = useState('')
   const reducir = useReducedMotion()
   const referencia = curva?.referencias.genetica?.linea ?? null
   const marca = curva?.referencias.marca?.marca ?? null
@@ -130,6 +139,52 @@ function PanelCrecimiento({ loteId, lote, indicadores, curvaGenetica, curva, pro
   useEffect(() => {
     if (curva) setDiaSeleccionado(Math.max(curva.serie[0]?.dia ?? 1, Math.min(curva.dia_actual, curva.dia_final)))
   }, [curva])
+
+  useEffect(() => {
+    if (!puedeComparar || !comparar) {
+      setLotesComparables([])
+      setLoteComparacionId('')
+      setCurvaComparacion(null)
+      setErrorComparacion('')
+      return
+    }
+    let vigente = true
+    void listarLotes().then((datos) => {
+      if (!vigente) return
+      const disponibles = datos.filter((item) => item.estado === 'activo' && item.id !== loteId)
+      setLotesComparables(disponibles)
+      setLoteComparacionId((actual) => disponibles.some((item) => String(item.id) === actual) ? actual : '')
+    }).catch(() => {
+      if (vigente) setErrorComparacion('No se pudieron cargar los otros lotes activos.')
+    })
+    return () => { vigente = false }
+  }, [puedeComparar, comparar, loteId])
+
+  useEffect(() => {
+    if (!comparar || !loteComparacionId) {
+      setCurvaComparacion(null)
+      setCargandoComparacion(false)
+      return
+    }
+    let vigente = true
+    setCargandoComparacion(true)
+    setErrorComparacion('')
+    void obtenerCurvaCrecimiento(Number(loteComparacionId)).then((resultado) => {
+      if (!vigente) return
+      if (resultado.modelo.puntos_usados < 3) {
+        setCurvaComparacion(null)
+        setErrorComparacion('Ese lote todavía necesita tres pesajes para poder compararse.')
+      } else {
+        setCurvaComparacion(resultado)
+      }
+    }).catch(() => {
+      if (vigente) {
+        setCurvaComparacion(null)
+        setErrorComparacion('No se pudo cargar la curva del lote elegido.')
+      }
+    }).finally(() => { if (vigente) setCargandoComparacion(false) })
+    return () => { vigente = false }
+  }, [comparar, loteComparacionId])
 
   function animarContenido(contenido: ReactNode) {
     return (
@@ -156,6 +211,27 @@ function PanelCrecimiento({ loteId, lote, indicadores, curvaGenetica, curva, pro
           </span>}
         </div>
       </header>
+
+      {puedeComparar && (
+        <div className="gcr-comparar-controles">
+          <label className="gcr-comparar-opcion">
+            <input type="checkbox" checked={comparar} onChange={(evento) => setComparar(evento.target.checked)} disabled={!suficiente} />
+            <span>Comparar con otro lote</span>
+          </label>
+          {!suficiente && <span className="gcr-comparar-ayuda">Registra tres pesajes para activar la comparación.</span>}
+          {comparar && (
+            <label className="gcr-comparar-selector">
+              <span>Elige un lote activo</span>
+              <select value={loteComparacionId} onChange={(evento) => setLoteComparacionId(evento.target.value)}>
+                <option value="">Selecciona un lote</option>
+                {lotesComparables.map((item) => <option key={item.id} value={item.id}>{item.codigo} · {item.galpon.nombre}</option>)}
+              </select>
+            </label>
+          )}
+          {cargandoComparacion && <span role="status" className="gcr-comparar-ayuda">Cargando la curva del otro lote…</span>}
+          {errorComparacion && <span role="status" className="gcr-comparar-ayuda">{errorComparacion}</span>}
+        </div>
+      )}
 
       <Tabs.Root value={pestana} onValueChange={(valor) => setPestana(valor as TipoGraficaGuia)}>
         <Tabs.List className="gcr-pestanas" aria-label="Métrica de crecimiento">
@@ -209,6 +285,7 @@ function PanelCrecimiento({ loteId, lote, indicadores, curvaGenetica, curva, pro
                   descripcion={resumenAccesible(curva, referencia)}
                   diaSeleccionado={diaSeleccionado}
                   mostrarProyeccion={suficiente}
+                  curvaComparacion={curvaComparacion ? { codigo: curvaComparacion.codigo, serie: curvaComparacion.serie } : null}
                 />
               </Suspense>
             </div>

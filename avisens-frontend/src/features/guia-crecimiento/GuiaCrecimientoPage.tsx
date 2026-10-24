@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
-import { permisosDePlan } from '@shared/auth/permisos'
+import { permisosDePlan, ROL_ADMIN, ROL_PROPIETARIO } from '@shared/auth/permisos'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import '@shared/ui/admin/AdminKit.css'
 import FormularioPesoObjetivo from '../lotes/components/FormularioPesoObjetivo'
@@ -23,6 +23,7 @@ function GuiaCrecimientoPage() {
     ? Number(valorLote) : null
   const guia = useGuiaCrecimiento(loteId)
   const permisos = permisosDePlan(getRol())
+  const puedeComparar = getRol() === ROL_ADMIN || getRol() === ROL_PROPIETARIO
   const lote = guia.loteSeleccionado
   const rutaPadre = lote ? `/lotes?galpon=${lote.galpon.id}` : '/lotes'
   const revisionPlan = guia.plan ? `${guia.plan.id}-${guia.plan.version}-${guia.plan.desactualizado}` : 'sin-plan'
@@ -143,6 +144,7 @@ function GuiaCrecimientoPage() {
 
       <PanelCrecimiento
         loteId={lote.id}
+        puedeComparar={puedeComparar}
         lote={lote}
         indicadores={guia.indicadores}
         curvaGenetica={guia.curva?.puntos ?? []}

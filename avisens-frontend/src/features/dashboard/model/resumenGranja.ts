@@ -2,6 +2,7 @@ import { esCriticidadAlta, etiquetaCriticidad } from '@features/alertas/model/al
 import { tieneLecturaUtil, type GalponMonitoreoVista, type SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { diasDeVida, hace } from '@shared/utils/fechas'
 import type { DashboardAlerta, DashboardGalpon, DashboardLote } from './dashboard'
+import type { LoteResumenCrecimiento } from '@features/indicadores/api/indicadores'
 
 export type KpiGranja = {
   id: 'galpones' | 'aves' | 'alertas' | 'sensores'
@@ -12,7 +13,7 @@ export type KpiGranja = {
   destino: string
 }
 
-export type TipoAtencionGranja = 'alerta' | 'sensor'
+export type TipoAtencionGranja = 'alerta' | 'crecimiento' | 'sensor'
 
 export type ItemAtencionGranja = {
   id: string
@@ -24,6 +25,7 @@ export type ItemAtencionGranja = {
   cuando: string | null
   orden: number
   galponId: number
+  loteId?: number
 }
 
 export type FilaGalpon = {
@@ -112,10 +114,11 @@ function valorSensor(sensor: SensorVista): string {
   return sensor.valor === null ? '—' : `${unDecimal.format(sensor.valor)} ${sensor.unidad}`.trim()
 }
 
-export function itemsAtencionGranja({ alertas, galpones, monitoreo, ahora = Date.now() }: {
+export function itemsAtencionGranja({ alertas, galpones, monitoreo, riesgosCrecimiento = [], ahora = Date.now() }: {
   alertas: DashboardAlerta[]
   galpones: DashboardGalpon[]
   monitoreo: GalponMonitoreoVista[]
+  riesgosCrecimiento?: LoteResumenCrecimiento[]
   ahora?: number
 }): ItemAtencionGranja[] {
   const nombres = new Map(galpones.map((galpon) => [galpon.id, galpon.nombre]))
@@ -159,7 +162,27 @@ export function itemsAtencionGranja({ alertas, galpones, monitoreo, ahora = Date
     }
   }
 
-  return items.sort((a, b) => Number(b.critico) - Number(a.critico) || b.orden - a.orden)
+  for (const lote of riesgosCrecimiento) {
+    if (!nombres.has(lote.galpon_id)) continue
+    lote.alertas.forEach((alerta, indice) => {
+      items.push({
+        id: `crecimiento-${lote.lote_id}-${alerta.regla}`,
+        tipo: 'crecimiento',
+        critico: false,
+        etiqueta: alerta.provisional ? 'Crecimiento · regla provisional' : 'Crecimiento',
+        titulo: alerta.titulo,
+        detalle: `${lote.codigo} · ${nombres.get(lote.galpon_id)} · ${alerta.por_que}`,
+        cuando: null,
+        orden: -(lote.posicion_riesgo ?? 999) - indice / 100,
+        galponId: lote.galpon_id,
+        loteId: lote.lote_id,
+      })
+    })
+  }
+
+  return items.sort((a, b) => Number(b.critico) - Number(a.critico)
+    || Number(b.tipo === 'crecimiento') - Number(a.tipo === 'crecimiento')
+    || b.orden - a.orden)
 }
 
 function lecturasDe(sensores: SensorVista[]): string[] {

@@ -23,6 +23,18 @@
   background: var(--info-soft);
 }
 
+.resumen-atencion-item--crecimiento .admin-attention-icon {
+  color: var(--primary);
+  background: var(--surface-tinted);
+}
+
+.admin-attention-error {
+  margin: 0 var(--space-5);
+  color: var(--warning);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
 .resumen-atencion-item--alerta .admin-attention-icon {
   color: var(--warning);
   background: var(--warning-soft);
