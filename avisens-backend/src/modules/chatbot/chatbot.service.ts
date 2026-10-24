@@ -36,7 +36,7 @@ const PREFIJO_CORRECCION = 'FIX:';
 const CORREGIBLES: Array<[string, string]> = [
   ['Nombre', 'A2'],
   ['Teléfono', 'C1'],
-  ['Correo', 'C2'],
+  ['Ubicación', 'A3'],
 ];
 const CAMPOS_NUMERICOS = new Set([
   'numero_galpones',
