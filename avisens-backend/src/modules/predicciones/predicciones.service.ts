@@ -125,7 +125,12 @@ export class PrediccionesService {
     private planLoteService: PlanLoteService,
   ) {}
 
-  async predecir(loteId: number, solicitante: Solicitante, persistir = false) {
+  async predecir(
+    loteId: number,
+    solicitante: Solicitante,
+    persistir = false,
+    diaFaenaSolicitado?: number,
+  ) {
     const lote = await this.prisma.lote.findUnique({
       where: { id: loteId },
       select: {
@@ -194,6 +199,17 @@ export class PrediccionesService {
 
     const diaFaenaPlan = plan.resultado.dia_objetivo;
     const pesoObjetivoPlan = Number(plan.peso_objetivo_g);
+    if (
+      diaFaenaSolicitado !== undefined
+      && (!Number.isInteger(diaFaenaSolicitado)
+        || diaFaenaSolicitado < LIMITE_DIA_FAENA_ML.min
+        || diaFaenaSolicitado > LIMITE_DIA_FAENA_ML.max)
+    ) {
+      throw new BadRequestException(
+        `El día simulado debe estar entre ${LIMITE_DIA_FAENA_ML.min} y ${LIMITE_DIA_FAENA_ML.max}`,
+      );
+    }
+    const diaFaena = diaFaenaSolicitado ?? diaFaenaPlan;
 
     if (
       diaFaenaPlan < LIMITE_DIA_FAENA_ML.min ||
@@ -241,18 +257,18 @@ export class PrediccionesService {
     }
 
     const ultimoDiaPesaje = pesajesParaMl[pesajesParaMl.length - 1].dia;
-    if (ultimoDiaPesaje >= diaFaenaPlan) {
+    if (ultimoDiaPesaje >= diaFaena) {
       throw new UnprocessableEntityException({
         codigo: 'horizonte_vencido',
-        message: `El lote ya superó el día de proyección: el último pesaje es del día ${ultimoDiaPesaje} y el día de faena proyectado es ${diaFaenaPlan}`,
-        dia_faena: diaFaenaPlan,
+        message: `El lote ya superó el día de proyección: el último pesaje es del día ${ultimoDiaPesaje} y el día simulado es ${diaFaena}`,
+        dia_faena: diaFaena,
         ultimo_dia_observado: ultimoDiaPesaje,
       });
     }
 
     const respuesta = await this.llamarMl('/predecir', {
       pesajes: pesajesParaMl,
-      dia_faena: diaFaenaPlan,
+      dia_faena: diaFaena,
       peso_objetivo_g: pesoObjetivoPlan,
     });
 
@@ -270,9 +286,9 @@ export class PrediccionesService {
       );
     }
     const prediccion = cuerpoPrediccion;
-    if (prediccion.dia_faena !== diaFaenaPlan) {
+    if (prediccion.dia_faena !== diaFaena) {
       this.logger.warn(
-        `El modelo de peso devolvio dia_faena=${prediccion.dia_faena}, se pidio ${diaFaenaPlan}`,
+        `El modelo de peso devolvio dia_faena=${prediccion.dia_faena}, se pidio ${diaFaena}`,
       );
       throw new BadRequestException(
         'El servicio de predicción devolvió un día de faena inconsistente',

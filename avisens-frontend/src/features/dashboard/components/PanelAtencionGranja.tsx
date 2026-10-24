@@ -9,13 +9,14 @@ type Props = {
   items: ItemAtencionGranja[]
   cargando: boolean
   errorCrecimiento?: string
+  onReintentarCrecimiento?: () => void
   onAbrir: (item: ItemAtencionGranja) => void
   onIrAlertas: () => void
   onIrMonitoreo: () => void
   onIrBitacora: () => void
 }
 
-function PanelAtencionGranja({ items, cargando, errorCrecimiento, onAbrir, onIrAlertas, onIrMonitoreo, onIrBitacora }: Props) {
+function PanelAtencionGranja({ items, cargando, errorCrecimiento, onReintentarCrecimiento, onAbrir, onIrAlertas, onIrMonitoreo, onIrBitacora }: Props) {
   const [pestana, setPestana] = useState<Filtro>('todas')
   const alertas = items.filter((item) => item.tipo === 'alerta').length
   const sensores = items.filter((item) => item.tipo === 'sensor').length
@@ -53,7 +54,10 @@ function PanelAtencionGranja({ items, cargando, errorCrecimiento, onAbrir, onIrA
         )}
       </div>
 
-      {errorCrecimiento && <p className="admin-attention-error" role="alert">{errorCrecimiento} No podemos confirmar el estado de crecimiento de los lotes.</p>}
+      {errorCrecimiento && <p className="admin-attention-error" role="alert">
+        {errorCrecimiento} No podemos confirmar el estado de crecimiento de los lotes.
+        {onReintentarCrecimiento && <button type="button" onClick={onReintentarCrecimiento}>Reintentar</button>}
+      </p>}
 
       {cargando ? (
         <div className="admin-attention-loading" aria-label="Cargando pendientes">

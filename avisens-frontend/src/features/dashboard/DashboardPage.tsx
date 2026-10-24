@@ -135,6 +135,7 @@ function DashboardPage() {
           items={atencion}
           cargando={(dashboard.cargando || dashboard.cargandoResumenCrecimiento) && atencion.length === 0}
           errorCrecimiento={dashboard.errorCrecimiento}
+          onReintentarCrecimiento={dashboard.recargarCrecimiento}
           onAbrir={abrirPendiente}
           onIrAlertas={() => enGranjas('alertas')}
           onIrMonitoreo={() => enGranjas('ambiente')}

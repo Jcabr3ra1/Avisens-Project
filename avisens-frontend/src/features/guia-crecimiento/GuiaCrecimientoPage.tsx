@@ -11,6 +11,7 @@ import { useProyeccionLote } from './hooks/useProyeccionLote'
 import SeleccionarLoteGuia from './components/SeleccionarLoteGuia'
 import PanelCrecimiento from './components/PanelCrecimiento'
 import ProyeccionFaena from './components/ProyeccionFaena'
+import ReportesCrecimiento from './components/ReportesCrecimiento'
 import './GuiaCrecimientoPage.css'
 
 const MIN_PESO_OBJETIVO_G = 1000
@@ -217,9 +218,19 @@ function GuiaCrecimientoPage() {
           </div>
         </section>
         <ProyeccionFaena
+          loteId={lote.id}
+          curva={proyeccion.curva}
+          plan={guia.plan}
           prediccion={proyeccion.prediccion}
           error={proyeccion.errorPrediccion}
           cargando={proyeccion.cargandoPrediccion}
+        />
+        <ReportesCrecimiento
+          lote={lote}
+          indicadores={guia.indicadores}
+          curva={proyeccion.curva}
+          alimento={guia.alimento}
+          cargandoAlimento={guia.cargandoAlimento}
         />
       </section>
     </div>

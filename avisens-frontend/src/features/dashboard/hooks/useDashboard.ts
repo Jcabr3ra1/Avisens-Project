@@ -38,6 +38,7 @@ export function useDashboard() {
   const [resumenCrecimiento, setResumenCrecimiento] = useState<ResumenCrecimiento | null>(null)
   const [cargandoResumenCrecimiento, setCargandoResumenCrecimiento] = useState(false)
   const [errorCrecimiento, setErrorCrecimiento] = useState('')
+  const [revisionCrecimiento, setRevisionCrecimiento] = useState(0)
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -93,7 +94,7 @@ export function useDashboard() {
       .catch((fallo) => { if (vigente) setErrorCrecimiento(obtenerMensajeError(fallo)) })
       .finally(() => { if (vigente) setCargandoResumenCrecimiento(false) })
     return () => { vigente = false }
-  }, [granjaId, usuario?.rol])
+  }, [granjaId, usuario?.rol, revisionCrecimiento])
 
   const lote = useMemo(
     () => fuentes.lotes.find((item) => item.galponId === galponId && item.estado === 'activo') ?? null,
@@ -148,6 +149,7 @@ export function useDashboard() {
     resumenCrecimiento,
     cargandoResumenCrecimiento,
     errorCrecimiento,
+    recargarCrecimiento: () => setRevisionCrecimiento((actual) => actual + 1),
     diaLote: lote ? indicador?.diaVida ?? calcularDiaLote(lote.fechaIngreso) : null,
     granjaId,
     galponId,

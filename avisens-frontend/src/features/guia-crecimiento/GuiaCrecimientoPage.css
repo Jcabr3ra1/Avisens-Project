@@ -101,7 +101,8 @@
   gap: 0.75rem;
   margin: 0;
   padding: 0.6rem 0.8rem;
-  border-left: 3px solid var(--guia-alerta);
+  border: 1px solid color-mix(in srgb, var(--guia-alerta) 28%, transparent);
+  border-radius: var(--guia-radio-chico);
   background: var(--guia-alerta-suave);
   color: var(--guia-alerta);
 }
@@ -114,8 +115,8 @@
 .guia-aviso {
   margin-top: 1rem;
   padding: 0.8rem 0.9rem;
-  border-left: 4px solid var(--guia-grano);
-  border-radius: 0 var(--guia-radio-chico) var(--guia-radio-chico) 0;
+  border: 1px solid color-mix(in srgb, var(--guia-grano) 32%, transparent);
+  border-radius: var(--guia-radio-chico);
   background: var(--guia-grano-suave);
   color: var(--warning);
   line-height: 1.5;
@@ -407,6 +408,8 @@
 
 .gcr {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: var(--space-5);
   margin-top: 1rem;
   padding: 1.5rem;
@@ -742,6 +745,11 @@
 .guia-tabla-distintivo { display: inline-block; margin: .35rem .35rem 0 0; padding: .15rem .45rem; border-radius: var(--radius-full); background: var(--surface-base); color: var(--text-secondary); font-size: .68rem; font-weight: 700; }
 .guia-tabla-nota, .guia-umbrales-nota { margin: 0; color: var(--text-muted); font-size: .79rem; line-height: 1.5; }
 .guia-umbrales-nota { padding: .2rem .25rem 0; }
+.guia-reportes { display: grid; gap: 1rem; padding: clamp(1rem, 2vw, 1.5rem); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-base); box-shadow: var(--shadow-sm); }
+.guia-reportes h2 { margin: .25rem 0; font-size: 1.15rem; }
+.guia-reportes > div:first-child > p:last-child, .guia-reportes-nota { color: var(--text-secondary); font-size: .84rem; line-height: 1.5; }
+.guia-reportes-acciones { display: flex; flex-wrap: wrap; gap: .7rem; }
+.guia-reportes-nota { margin: 0; color: var(--text-muted); }
 .gcr-comparar-controles { display: flex; align-items: center; flex-wrap: wrap; gap: .7rem 1rem; padding: .75rem 0; border-bottom: 1px solid var(--border-subtle); }
 .gcr-comparar-opcion { display: inline-flex; align-items: center; gap: .55rem; min-height: 2.5rem; color: var(--text-primary); font-weight: 700; cursor: pointer; }
 .gcr-comparar-opcion input { width: 1.15rem; height: 1.15rem; accent-color: var(--primary); }
@@ -750,6 +758,11 @@
 .gcr-comparar-selector { display: inline-flex; align-items: center; flex-wrap: wrap; gap: .45rem; color: var(--text-secondary); font-size: .83rem; }
 .gcr-comparar-selector select { min-height: 2.4rem; max-width: 100%; padding: .35rem 2rem .35rem .65rem; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-base); color: var(--text-primary); font: inherit; }
 .gcr-comparar-ayuda { color: var(--text-muted); font-size: .8rem; }
+.gpf-control { display: grid; gap: .6rem; max-width: 42rem; }
+.gpf-control > label { color: var(--text-primary); }
+.gpf-control input[type="range"] { width: 100%; min-height: 2rem; accent-color: var(--primary); cursor: pointer; }
+.gpf-control input[type="range"]:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.gpf-rango-ayuda { display: flex; justify-content: space-between; color: var(--text-muted); font-size: .75rem; }
 
 @keyframes gcr-brillo {
   from { background-position: 200% 0; }
@@ -779,13 +792,14 @@
 
   .gcr-cabecera {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .gcr-kpis {
     grid-template-columns: 1fr;
   }
 
-  .gcr-pestanas { margin-right: -1rem; width: calc(100% + 2rem); padding: 0 1rem; }
+  .gcr-pestanas { box-sizing: border-box; margin-right: -1rem; width: calc(100% + 1rem); padding: 0 1rem; }
   .gcr-pestana { padding-right: .75rem; padding-left: .75rem; }
   .gcr-dia-valores { gap: .5rem; }
   .gcr-dia-valores dd { font-size: .94rem; }

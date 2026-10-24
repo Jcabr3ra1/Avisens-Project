@@ -18,6 +18,7 @@ import { PrediccionesService } from './predicciones.service';
 import { CurvaCrecimientoService } from './curva-crecimiento.service';
 import { RiesgoCalorService } from './riesgo-calor.service';
 import { HistorialPrediccionesDto } from './dto/historial-predicciones.dto';
+import { SimularFaenaDto } from './dto/simular-faena.dto';
 
 interface AuthRequest extends Request {
   user: { id: number; email?: string | null; rol: string };
@@ -63,6 +64,18 @@ export class PrediccionesController {
       query,
       query.tipo,
     );
+  }
+
+  @Get('lote/:loteId/simulacion')
+  @ApiOperation({
+    summary: 'Simular el cierre de un lote para un día de faena elegido sin guardar la predicción',
+  })
+  simular(
+    @Param('loteId', ParseIntPipe) loteId: number,
+    @Query() query: SimularFaenaDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.prediccionesService.predecir(loteId, req.user, false, query.dia_faena);
   }
 
   @Get('lote/:loteId/curva-crecimiento')
