@@ -26,12 +26,13 @@ export class WhatsappController {
     @Query('hub.verify_token') token: string,
     @Query('hub.challenge') challenge: string,
     @Res() res: Response,
-  ) {
+  ): void {
     const esperado = process.env.WHATSAPP_VERIFY_TOKEN;
     if (modo === 'subscribe' && esperado && token === esperado) {
-      return res.status(200).send(challenge);
+      res.status(200).send(challenge);
+      return;
     }
-    return res.status(403).send('Forbidden');
+    res.status(403).send('Forbidden');
   }
 
   @Post('webhook')
