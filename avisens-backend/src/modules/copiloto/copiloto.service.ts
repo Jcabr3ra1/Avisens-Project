@@ -35,7 +35,10 @@ Reglas:
   usuario vera un grafico, asi que explica en 2 o 3 frases que significa
   (va bien o mal frente al estandar, cuando llega al objetivo, que hacer).
 - Para preguntas de calor, ventilacion o clima en el galpon usa
-  riesgo_calor_galpon y explica el nivel maximo, la hora del pico y que hacer.`;
+  riesgo_calor_galpon y explica el nivel maximo, la hora del pico y que hacer.
+- Si riesgo_calor_galpon no trae temperatura ni humedad de interior, avisa
+  que el galpon no tiene sensores reportando y que el calculo usa solo el
+  clima exterior.`;
 
 @Injectable()
 export class CopilotoService {
