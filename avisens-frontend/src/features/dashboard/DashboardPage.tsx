@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRol } from '@shared/api'
-import CabeceraGranja from './components/CabeceraGranja'
+import HeroGranja from './components/HeroGranja'
+import EscenarioGalpon from './components/EscenarioGalpon'
 import PanelAtencionGranja from './components/PanelAtencionGranja'
 import PanelGalpones from './components/PanelGalpones'
 import EstadoLote from './components/EstadoLote'
@@ -12,10 +13,12 @@ import { tieneLecturaUtil, useMonitoreoAmbiental } from '@features/monitoreo/hoo
 import { useIndicadoresLote } from './hooks/useIndicadoresLote'
 import { useDashboard } from './hooks/useDashboard'
 import { filasGalpones, itemsAtencionGranja, kpisGranja, type ItemAtencionGranja } from './model/resumenGranja'
+import { estadoGranja } from './model/estadoGranja'
 import '@shared/ui/admin/AdminKit.css'
 import '@shared/ui/admin/CentroControl.css'
 import './DashboardPage.css'
 import './ResumenGranja.css'
+import './ResumenRediseno.css'
 
 function DashboardSkeleton() {
   return (
@@ -101,6 +104,17 @@ function DashboardPage() {
   const enGranjas = (pestana: string, galponId = dashboard.galponId) =>
     navigate(`/granjas?granjaId=${dashboard.granjaId ?? ''}${galponId ? `&galpon=${galponId}` : ''}&pestana=${pestana}`)
 
+  const estado = estadoGranja({ atencion, filas })
+
+  function ejecutarAccion() {
+    if (!estado.accion) return
+    if (estado.accion.tipo === 'atencion') {
+      abrirPendiente(estado.accion.item)
+      return
+    }
+    navigate(dashboard.lote ? `/guia-crecimiento?lote=${dashboard.lote.id}` : '/guia-crecimiento')
+  }
+
   function abrirPendiente(item: ItemAtencionGranja) {
     if (item.tipo === 'crecimiento' && item.loteId !== undefined) {
       navigate(`/guia-crecimiento?lote=${item.loteId}`)
@@ -111,15 +125,17 @@ function DashboardPage() {
 
   return (
     <div className="page-container dashboard-page resumen-page">
-      <CabeceraGranja
+      <HeroGranja
         nombre={nombre}
         fecha={fecha}
         granjas={dashboard.granjas}
         granjaId={dashboard.granjaId}
+        estado={estado}
         kpis={kpis}
         cargando={dashboard.cargando || cargandoMonitoreo}
         onGranjaChange={dashboard.seleccionarGranja}
         onRecargar={() => void dashboard.recargar()}
+        onAccion={ejecutarAccion}
         onNavegar={(destino) => (destino.startsWith('/granjas') ? enGranjas(new URLSearchParams(destino.split('?')[1] ?? '').get('pestana') ?? 'resumen') : navigate(destino))}
       />
 
@@ -130,7 +146,7 @@ function DashboardPage() {
         </div>
       )}
 
-      <div className="admin-primary-grid">
+      {(atencion.length > 0 || (dashboard.cargando && atencion.length === 0)) && (
         <PanelAtencionGranja
           items={atencion}
           cargando={(dashboard.cargando || dashboard.cargandoResumenCrecimiento) && atencion.length === 0}
@@ -141,43 +157,33 @@ function DashboardPage() {
           onIrMonitoreo={() => enGranjas('ambiente')}
           onIrBitacora={() => enGranjas('bitacora')}
         />
-        <PanelGalpones
-          filas={filas}
-          galponId={dashboard.galponId}
-          onSeleccionar={dashboard.seleccionarGalpon}
-          onGestionar={() => navigate(dashboard.granjaId ? `/galpones?granja=${dashboard.granjaId}` : '/granjas')}
-        />
-      </div>
+      )}
 
-      <section className="admin-card resumen-ambiente" aria-labelledby="resumen-ambiente-titulo">
-        <div className="admin-card-head">
-          <div>
-            <h2 id="resumen-ambiente-titulo" className="admin-card-title">
-              Ambiente{dashboard.galpon ? ` · ${dashboard.galpon.nombre}` : ''}
-            </h2>
-            <p className="admin-card-sub">Lecturas de los sensores del galpón en las últimas 24 horas</p>
-          </div>
-          {sensoresDelGalpon.length > 0 && (
-            <span className={`resumen-reportando${reportando < sensoresDelGalpon.length ? ' is-alerta' : ''}`}>
-              {reportando} de {sensoresDelGalpon.length} reportando
-            </span>
-          )}
-        </div>
-        <PanelMetricas sensores={sensoresDelGalpon} />
-      </section>
+      <PanelGalpones
+        filas={filas}
+        galponId={dashboard.galponId}
+        onSeleccionar={dashboard.seleccionarGalpon}
+        onGestionar={() => navigate(dashboard.granjaId ? `/galpones?granja=${dashboard.granjaId}` : '/granjas')}
+      />
 
-      <div className="admin-secondary-grid resumen-lote-plano">
-        <EstadoLote
-          lote={dashboard.lote}
-          indicadores={indicadores}
-          comparacion={comparacion}
-          diaLote={dashboard.diaLote}
-          cargando={cargandoLote}
-          onAbrirBitacora={() => enGranjas('bitacora')}
-          onAbrirGuia={() => dashboard.lote && navigate(`/guia-crecimiento?lote=${dashboard.lote.id}`)}
-        />
-        <PlanoGalpon galpon={galponMonitoreo} />
-      </div>
+      <EscenarioGalpon
+        titulo={dashboard.galpon ? dashboard.galpon.nombre : 'Tu galpón'}
+        detalle="Mira lo que pasa adentro, una vista a la vez"
+        resumenAmbiente={sensoresDelGalpon.length > 0 ? `${reportando} de ${sensoresDelGalpon.length} sensores reportando` : null}
+        ambiente={<PanelMetricas sensores={sensoresDelGalpon} />}
+        lote={(
+          <EstadoLote
+            lote={dashboard.lote}
+            indicadores={indicadores}
+            comparacion={comparacion}
+            diaLote={dashboard.diaLote}
+            cargando={cargandoLote}
+            onAbrirBitacora={() => enGranjas('bitacora')}
+            onAbrirGuia={() => dashboard.lote && navigate(`/guia-crecimiento?lote=${dashboard.lote.id}`)}
+          />
+        )}
+        plano={<PlanoGalpon galpon={galponMonitoreo} />}
+      />
     </div>
   )
 }

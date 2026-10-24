@@ -150,7 +150,7 @@ export function useDashboard() {
     cargandoResumenCrecimiento,
     errorCrecimiento,
     recargarCrecimiento: () => setRevisionCrecimiento((actual) => actual + 1),
-    diaLote: lote ? indicador?.diaVida ?? calcularDiaLote(lote.fechaIngreso) : null,
+    diaLote: lote ? calcularDiaLote(lote.fechaIngreso) : null,
     granjaId,
     galponId,
     cargando,
