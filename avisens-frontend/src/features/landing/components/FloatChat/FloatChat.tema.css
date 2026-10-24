@@ -437,3 +437,10 @@
   .float-chat .float-paso-par button,
   .float-chat .float-paso-continuar { transition: none; }
 }
+
+.float-chat .float-inicio,
+.float-chat .float-dudas,
+.float-chat .float-paso,
+.float-chat .float-fin {
+  overscroll-behavior: contain;
+}
