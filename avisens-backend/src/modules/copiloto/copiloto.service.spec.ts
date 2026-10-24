@@ -15,6 +15,7 @@ import { IndicadoresService } from '../indicadores/indicadores.service';
 import { PrediccionesService } from '../predicciones/predicciones.service';
 import { RecomendacionesService } from '../recomendaciones/recomendaciones.service';
 import { CurvaCrecimientoService } from '../predicciones/curva-crecimiento.service';
+import { RiesgoCalorService } from '../predicciones/riesgo-calor.service';
 import { ROLES } from '../../common/auth/roles';
 import type { Solicitante } from '../../common/auth/acceso';
 
@@ -41,6 +42,7 @@ describe('CopilotoService', () => {
   const prediccionesService = { predecir: jest.fn() };
   const recomendacionesService = { listar: jest.fn() };
   const curvaCrecimientoService = { calcular: jest.fn() };
+  const riesgoCalorService = { calcular: jest.fn() };
 
   const propietario: Solicitante = { id: 5, rol: ROLES.PROPIETARIO };
 
@@ -70,6 +72,7 @@ describe('CopilotoService', () => {
         { provide: PrediccionesService, useValue: prediccionesService },
         { provide: RecomendacionesService, useValue: recomendacionesService },
         { provide: CurvaCrecimientoService, useValue: curvaCrecimientoService },
+        { provide: RiesgoCalorService, useValue: riesgoCalorService },
       ],
     }).compile();
 
@@ -222,6 +225,73 @@ describe('CopilotoService', () => {
       7, 14, 21, 28, 35, 42,
     ]);
     expect(enviado.referencia_genetica).toBe('Ross 308');
+  });
+
+  it('consulta el riesgo de calor del galpon con el solicitante y le pasa a Claude el resumen', async () => {
+    riesgoCalorService.calcular.mockResolvedValue({
+      galpon: 'Galpon 1',
+      lote: { codigo: 'LOT-1', dia_vida: 28 },
+      ubicacion: { origen: 'granja' },
+      interior: { temperatura: 31.2, humedad: 64 },
+      serie: [{ hora: '2026-10-23T13:00' }, { hora: '2026-10-23T14:00' }],
+      nivel_maximo: 'alerta',
+      pico: { hora: '2026-10-23T14:00', thi: 79, nivel: 'alerta' },
+      primera_alerta: '2026-10-23T13:00',
+      horas_por_nivel: { confort: 0, atencion: 0, alerta: 2 },
+      recomendaciones: ['Aumentar la ventilacion'],
+      modelo: { nombre: 'thi', version: '1' },
+    });
+    crear
+      .mockResolvedValueOnce(
+        pideHerramienta('riesgo_calor_galpon', { galpon_id: 4 }),
+      )
+      .mockResolvedValueOnce(soloTexto('Hoy habra alerta por calor'));
+
+    const r = await service.preguntar(
+      { pregunta: 'va a hacer calor en el galpon 4' },
+      propietario,
+    );
+
+    expect(riesgoCalorService.calcular).toHaveBeenCalledWith(4, propietario);
+    expect(r.visualizaciones).toEqual([]);
+    const llamadas = crear.mock.calls as Array<
+      [{ messages: Array<{ content: unknown }> }]
+    >;
+    const resultado = llamadas[1][0].messages.at(-1) as {
+      content: Array<{ content: string }>;
+    };
+    const enviado = JSON.parse(resultado.content[0].content) as {
+      nivel_maximo: string;
+      horas_pronosticadas: number;
+      recomendaciones: string[];
+      serie?: unknown;
+    };
+    expect(enviado.nivel_maximo).toBe('alerta');
+    expect(enviado.horas_pronosticadas).toBe(2);
+    expect(enviado.recomendaciones).toEqual(['Aumentar la ventilacion']);
+    expect(enviado.serie).toBeUndefined();
+  });
+
+  it('devuelve el error del riesgo de calor a Claude cuando el galpon no es del solicitante', async () => {
+    riesgoCalorService.calcular.mockRejectedValue(
+      new Error('Galpon fuera de tu alcance'),
+    );
+    crear
+      .mockResolvedValueOnce(
+        pideHerramienta('riesgo_calor_galpon', { galpon_id: 99 }),
+      )
+      .mockResolvedValueOnce(soloTexto('No tienes acceso a ese galpon'));
+
+    const r = await service.preguntar({ pregunta: 'galpon 99' }, propietario);
+
+    expect(r.respuesta).toBe('No tienes acceso a ese galpon');
+    const llamadas = crear.mock.calls as Array<
+      [{ messages: Array<{ content: unknown }> }]
+    >;
+    const ultimo = llamadas[1][0].messages.at(-1) as {
+      content: Array<{ content: string }>;
+    };
+    expect(ultimo.content[0].content).toContain('Galpon fuera de tu alcance');
   });
 
   it('corta el bucle en MAX_VUELTAS aunque Claude siga pidiendo herramientas', async () => {

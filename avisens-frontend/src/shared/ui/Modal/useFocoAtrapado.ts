@@ -4,6 +4,14 @@ const FOCUSABLES =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 let ultimoFocoFueraDeDialogo: HTMLElement | null = null
+const pila: { elemento: HTMLElement; inertPrevio: boolean }[] = []
+let overflowOriginal = ''
+
+function actualizarPila() {
+  pila.forEach((entrada, indice) => {
+    entrada.elemento.inert = indice < pila.length - 1 || entrada.inertPrevio
+  })
+}
 
 if (typeof document !== 'undefined') {
   document.addEventListener('focusin', (evento) => {
@@ -39,6 +47,7 @@ export function useFocoAtrapado(
   activo: boolean,
   onCerrar: () => void,
   retornoFoco?: HTMLElement | null,
+  focoInicial?: RefObject<HTMLElement | null>,
 ): void {
   const onCerrarRef = useRef(onCerrar)
 
@@ -50,11 +59,21 @@ export function useFocoAtrapado(
     if (!activo) return
 
     const previo = retornoFoco ?? document.activeElement as HTMLElement | null
-    const primero = contenedor.current?.querySelector<HTMLElement>(FOCUSABLES)
-    primero?.focus()
+    const elemento = contenedor.current
+    if (!elemento) return
+    const entrada = { elemento, inertPrevio: elemento.inert }
+    if (pila.length === 0) overflowOriginal = document.body.style.overflow
+    pila.push(entrada)
+    actualizarPila()
+    document.body.style.overflow = 'hidden'
+    const primero = focoInicial?.current ?? elemento.querySelector<HTMLElement>(FOCUSABLES)
+    ;(primero ?? elemento).focus()
 
     function alTeclear(evento: KeyboardEvent) {
+      if (pila[pila.length - 1] !== entrada) return
       if (evento.key === 'Escape') {
+        evento.preventDefault()
+        evento.stopImmediatePropagation()
         onCerrarRef.current()
         return
       }
@@ -63,7 +82,7 @@ export function useFocoAtrapado(
       const focusables = Array.from(
         contenedor.current.querySelectorAll<HTMLElement>(FOCUSABLES),
       ).filter((el) => el.offsetParent !== null)
-      if (focusables.length === 0) return
+      if (focusables.length === 0) { evento.preventDefault(); elemento?.focus(); return }
 
       const inicio = focusables[0]
       const fin = focusables[focusables.length - 1]
@@ -77,15 +96,17 @@ export function useFocoAtrapado(
       }
     }
 
-    window.addEventListener('keydown', alTeclear)
-
-    const overflowPrevio = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', alTeclear, true)
 
     return () => {
-      window.removeEventListener('keydown', alTeclear)
-      document.body.style.overflow = overflowPrevio
-      previo?.focus()
+      window.removeEventListener('keydown', alTeclear, true)
+      const eraSuperior = pila[pila.length - 1] === entrada
+      const indice = pila.indexOf(entrada)
+      if (indice !== -1) pila.splice(indice, 1)
+      elemento.inert = entrada.inertPrevio
+      actualizarPila()
+      if (pila.length === 0) document.body.style.overflow = overflowOriginal
+      if (eraSuperior && previo?.isConnected) previo.focus()
     }
-  }, [activo, contenedor, retornoFoco])
+  }, [activo, contenedor, retornoFoco, focoInicial])
 }

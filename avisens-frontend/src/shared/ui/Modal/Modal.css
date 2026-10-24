@@ -9,14 +9,9 @@
   justify-content: center;
   padding: var(--space-4);
   overflow-y: auto;
-  background: color-mix(in srgb, var(--avisens-ink) 52%, transparent);
-  animation: modal-velo-entra var(--motion-base) var(--ease-standard);
+  background: var(--overlay);
 }
 
-@keyframes modal-velo-entra {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
 
 .modal-tarjeta {
   display: flex;
@@ -29,16 +24,9 @@
   border-radius: var(--radius-xl);
   background: var(--surface-base);
   box-shadow: var(--shadow-lg);
-  animation: modal-entra var(--motion-base) var(--ease-standard);
 }
 
 .modal-tarjeta--ancha { max-width: 760px; }
-
-/* Sube y se asienta: el mismo peso que la pantalla hija, no un salto seco. */
-@keyframes modal-entra {
-  from { opacity: 0; transform: translateY(14px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
 
 .modal-cabecera {
   display: flex;
@@ -291,8 +279,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .modal-velo,
-  .modal-tarjeta,
   .modal-adicional { animation: none; }
   .modal-btn,
   .modal-cerrar,
@@ -328,4 +314,21 @@
 .modal-campo--check > span {
   color: var(--text-primary);
   font-size: 0.9rem;
+}
+
+/* Confirmaciones breves: la identidad del registro y la decisión se leen juntas. */
+.modal-tarjeta--compacta { max-width: 440px; }
+.modal-tarjeta--compacta .modal-cabecera { align-items: center; gap: var(--space-3); padding: var(--space-5) var(--space-5) var(--space-3); border-bottom: 0; }
+.modal-tarjeta--compacta .modal-titulo { font-size: 1.25rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.modal-tarjeta--compacta .modal-cuerpo { padding: 0 var(--space-5) var(--space-5); }
+.modal-tarjeta--compacta .modal-pie { padding: var(--space-4) var(--space-5); flex-wrap: wrap; }
+.modal-tarjeta--compacta .modal-pie .modal-btn { min-width: 100px; min-height: 44px; height: auto; padding: 0.65rem 1rem; font-size: 0.875rem; white-space: normal; overflow-wrap: anywhere; }
+.modal-cerrar:disabled { opacity: 0.45; cursor: not-allowed; }
+@media (max-width: 620px) {
+  .modal-velo:has(.modal-tarjeta--compacta) { padding: var(--space-4); align-items: center; }
+  .modal-tarjeta--compacta { max-width: 440px; max-height: calc(100dvh - 32px); border-radius: var(--radius-xl); }
+  .modal-tarjeta--compacta .modal-cabecera { padding: var(--space-4) var(--space-4) var(--space-3); }
+  .modal-tarjeta--compacta .modal-cuerpo { padding: 0 var(--space-4) var(--space-4); }
+  .modal-tarjeta--compacta .modal-pie { padding: var(--space-3) var(--space-4); }
+  .modal-tarjeta--compacta .modal-pie .modal-btn { flex: 1 1 110px; }
 }

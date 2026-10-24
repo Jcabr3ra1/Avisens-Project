@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type EstadoProspecto } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { paginate } from '../../common/pagination/paginate';
 import { ROLES } from '../../common/auth/roles';
@@ -39,6 +39,13 @@ const PROSPECTO_LISTA = {
   resultado_cierre: true,
 };
 
+const ESTADOS_SIN_TERMINAR: EstadoProspecto[] = [
+  'en_proceso',
+  'abandonado',
+  'cancelado',
+  'sin_consentimiento',
+];
+
 @Injectable()
 export class ProspectosService {
   constructor(
@@ -51,7 +58,7 @@ export class ProspectosService {
 
     const where: Prisma.ProspectoWhereInput = {
       ...(clasificacion ? { clasificacion } : {}),
-      ...(estado ? { estado } : {}),
+      estado: estado ?? { notIn: ESTADOS_SIN_TERMINAR },
       ...(sin_asignar ? { asesor_asignado_id: null } : {}),
     };
 
@@ -191,7 +198,7 @@ export class ProspectosService {
       ...(filtros.clasificacion
         ? { clasificacion: filtros.clasificacion }
         : {}),
-      ...(filtros.estado ? { estado: filtros.estado } : {}),
+      estado: filtros.estado ?? { notIn: ESTADOS_SIN_TERMINAR },
       ...(filtros.sin_asignar ? { asesor_asignado_id: null } : {}),
     };
 

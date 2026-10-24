@@ -43,25 +43,25 @@ export const PUNTAJE_MAXIMO =
 
 // NECESIDAD — el dolor real pesa mas que cualquier otra cosa
 export const A16_MORTALIDAD: OpcionCalificada[] = [
-  { texto: 'Sí, varias veces', puntaje: 3 },
-  { texto: 'Sí, una vez', puntaje: 2 },
   { texto: 'No', puntaje: 0 },
-  { texto: 'No sabría decir', puntaje: 0 },
+  { texto: 'Sí, una vez', puntaje: 2 },
+  { texto: 'Sí, varias veces', puntaje: 3 },
+  { texto: 'No lo sé', puntaje: 0 },
 ];
 
 export const A14_DOLOR: OpcionCalificada[] = [
-  { texto: 'Muertes por calor o frío', puntaje: 1 },
-  { texto: 'Consumo de alimento', puntaje: 1 },
+  { texto: 'Calor y frío', puntaje: 1 },
   { texto: 'Humedad y amoniaco', puntaje: 1 },
+  { texto: 'Consumo de alimento', puntaje: 1 },
   { texto: 'Problemas respiratorios', puntaje: 1 },
-  { texto: 'Nada en particular', puntaje: 0 },
+  { texto: 'Aún no lo tengo claro', puntaje: 0 },
 ];
 
 // PRESUPUESTO — saber como quiere pagar vale mas que no tenerlo claro
 export const A18_PAGO: OpcionCalificada[] = [
   { texto: 'Comprarlo de una vez', puntaje: 3 },
   { texto: 'Pagar mensual', puntaje: 3 },
-  { texto: 'Lo que salga mejor', puntaje: 1 },
+  { texto: 'Depende del precio', puntaje: 1 },
   { texto: 'Todavía no sé', puntaje: 0 },
 ];
 
@@ -98,7 +98,7 @@ export const OPCIONES_CALIFICADAS: Record<string, OpcionCalificada[]> = {
 // enorme se enfriaba solo porque su galpon estaba viejo. Eso no es un
 // prospecto frio, es uno caliente con una obra previa.
 
-export const NO_DECIDE = A20_DECIDE[1].texto;
+export const NO_DECIDE = 'Decide otra persona';
 export const DOLOR = A16_MORTALIDAD.filter((o) => o.puntaje > 0).map(
   (o) => o.texto,
 );

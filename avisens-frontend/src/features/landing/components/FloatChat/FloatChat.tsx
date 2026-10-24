@@ -300,6 +300,7 @@ function FloatChat() {
     <div className={`float-chat${open ? ' is-open' : ''}`}>
       <div
         id="avia-chat-panel"
+        data-lenis-prevent
         className={`float-panel ${open ? '' : 'hidden'}`}
         aria-hidden={!open}
         aria-labelledby="avia-chat-title"

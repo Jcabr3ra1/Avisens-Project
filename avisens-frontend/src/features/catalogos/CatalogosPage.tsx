@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useMemo, useState } from 'react'
 import { IcPlus, IcRefresh } from '@shared/ui/icons/icons'
 import { getRol } from '@shared/api'
@@ -65,10 +66,14 @@ function CatalogosPage() {
     { abierto: false, editando: null },
   )
 
-  function borrarCurva(curva: CurvaObjetivo) {
-    if (!window.confirm(
-      `¿Eliminar el punto de ${curva.marca} · ${curva.sexo} · día ${curva.dia}? Los lotes de esa marca dejarán de compararse contra él.`,
-    )) return
+  async function borrarCurva(curva: CurvaObjetivo) {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar este punto de referencia?',
+      entidad: `${curva.marca} · ${curva.sexo} · día ${curva.dia}`,
+      descripcion: 'Los lotes de esa marca dejarán de compararse contra él.',
+      textoConfirmar: 'Eliminar punto',
+      tono: 'peligro',
+    }))) return
     void curvas.eliminar(curva)
   }
 
@@ -87,10 +92,14 @@ function CatalogosPage() {
     else void sensores.recargar()
   }
 
-  function borrarAlimento(tipo: TipoAlimento) {
-    if (!window.confirm(
-      `¿Eliminar permanentemente "${tipo.nombre}"? Si solo quieres dejar de ofrecerlo, retíralo del catálogo en vez de eliminarlo.`,
-    )) return
+  async function borrarAlimento(tipo: TipoAlimento) {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar este alimento?',
+      entidad: tipo.nombre,
+      descripcion: 'Si solo quieres dejar de ofrecerlo, retíralo del catálogo en vez de eliminarlo.',
+      textoConfirmar: 'Eliminar alimento',
+      tono: 'peligro',
+    }))) return
     void alimentos.eliminar(tipo)
   }
 

@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
@@ -102,10 +103,14 @@ function FinanzasPage() {
     }
   }
 
-  function borrar(movimiento: MovimientoFinanciero) {
-    if (!window.confirm(
-      `¿Eliminar este movimiento de ${cop(Number(movimiento.valor_cop))}? Esta acción no se puede deshacer.`,
-    )) return
+  async function borrar(movimiento: MovimientoFinanciero) {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar este movimiento?',
+      entidad: cop(Number(movimiento.valor_cop)),
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar movimiento',
+      tono: 'peligro',
+    }))) return
     void datos.eliminar(movimiento.id)
       .then(() => toast.success('Movimiento eliminado'))
       .catch((problema) => {

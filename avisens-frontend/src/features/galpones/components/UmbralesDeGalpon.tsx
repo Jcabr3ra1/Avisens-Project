@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useMemo, useState } from 'react'
 import { getRol } from '@shared/api'
 import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
@@ -35,10 +36,14 @@ function UmbralesDeGalpon({ galpon }: Props) {
   )
   const huecos = totalDeHuecos(filas)
 
-  function jubilarConAviso(umbral: Umbral) {
-    if (!window.confirm(
-      `¿Jubilar el umbral de ${umbral.variable} para los ${etiquetaSemana(umbral.semana_vida).toLowerCase()}? Esa semana dejará de compararse y el sensor no generará alertas.`,
-    )) return
+  async function jubilarConAviso(umbral: Umbral) {
+    if (!(await confirmarAccion({
+      titulo: '¿Jubilar este umbral?',
+      entidad: `${umbral.variable} · ${etiquetaSemana(umbral.semana_vida)}`,
+      descripcion: 'Esa semana dejará de compararse y el sensor no generará alertas.',
+      textoConfirmar: 'Jubilar umbral',
+      tono: 'aviso',
+    }))) return
     void jubilar(umbral)
   }
 

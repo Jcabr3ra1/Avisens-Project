@@ -44,7 +44,7 @@ export function useProyeccionLote(loteId: number | null, habilitado: boolean, re
     predecirLote(loteId)
       .then((prediccion) => aplicar({ prediccion, cargandoPrediccion: false }))
       .catch((error: unknown) => aplicar({
-        errorPrediccion: mensajeDeError(error, 'No se pudo proyectar el lote al día de faena.'),
+        errorPrediccion: mensajeDeError(error, 'No se pudo proyectar el lote al día de salida.'),
         cargandoPrediccion: false,
       }))
 

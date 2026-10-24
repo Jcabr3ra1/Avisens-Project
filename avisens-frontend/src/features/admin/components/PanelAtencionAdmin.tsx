@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import * as Tabs from '@radix-ui/react-tabs'
-import { IcAlert, IcCheck, IcChevronRight, IcClock, IcDoc } from '@shared/ui/icons/icons'
-import type { ItemAtencionAdmin, ResumenAtencionAdmin, TipoAtencionAdmin } from '../model/adminResumen'
-import { hace } from '../model/adminResumen'
+import IconoFigma from '@shared/ui/icons/IconoFigma'
+import { hace, type ItemAtencionAdmin, type ResumenAtencionAdmin, type TipoAtencionAdmin } from '../model/adminResumen'
 
 type FiltroAtencion = 'todas' | TipoAtencionAdmin
 
@@ -16,15 +15,10 @@ type Props = ResumenAtencionAdmin & {
   onIrRecuperaciones: () => void
 }
 
-function iconoTipo(tipo: ItemAtencionAdmin['tipo']) {
-  if (tipo === 'alerta') return <IcAlert size={16} />
-  if (tipo === 'recuperacion') return <IcClock size={16} />
-  return <IcDoc size={16} />
-}
+const ICONO_TIPO = { alerta: 'alarma', solicitud: 'archivo', recuperacion: 'reloj' } as const
 
 function PanelAtencionAdmin({
   items,
-  alertasCriticas,
   solicitudesPendientes,
   recuperacionesPendientes,
   cargando,
@@ -36,120 +30,70 @@ function PanelAtencionAdmin({
   onIrRecuperaciones,
 }: Props) {
   const [pestana, setPestana] = useState<FiltroAtencion>('todas')
-
-  const alertasEnBandeja = useMemo(
-    () => items.filter((item) => item.tipo === 'alerta').length,
-    [items],
-  )
-
+  const alertas = useMemo(() => items.filter((item) => item.tipo === 'alerta').length, [items])
   const filtrados = useMemo(
     () => (pestana === 'todas' ? items : items.filter((item) => item.tipo === pestana)),
     [items, pestana],
   )
 
   return (
-    <section className="admin-card admin-attention" aria-labelledby="admin-attention-title" aria-busy={cargando}>
-      <div className="admin-card-head admin-attention-head">
+    <section id="admin-bandeja" className="cdc-panel cdc-bandeja cdc-entra" style={{ '--i': 5 } as CSSProperties} aria-labelledby="cdc-bandeja-titulo" aria-busy={cargando}>
+      <header className="cdc-panel-cabecera">
         <div>
-          <div className="admin-card-title-row">
-            <h2 id="admin-attention-title" className="admin-card-title">
-              Necesita tu atención
-            </h2>
-            {!cargando && alertasCriticas > 0 && (
-              <span className="admin-attention-badge is-critical">
-                {alertasCriticas} {alertasCriticas === 1 ? 'crítica' : 'críticas'}
-              </span>
-            )}
-          </div>
-          <p className="admin-card-sub">
-            Alertas activas, solicitudes PQRS y recuperaciones de acceso por resolver
-          </p>
+          <h2 id="cdc-bandeja-titulo">Bandeja de atención</h2>
+          <p>Alertas, solicitudes PQRS y recuperaciones de acceso por resolver</p>
         </div>
-
         {!cargando && items.length > 0 && (
-          <Tabs.Root value={pestana} onValueChange={(v) => setPestana(v as FiltroAtencion)}>
-            <Tabs.List className="admin-tabs-list" aria-label="Filtrar pendientes por categoría">
-              <Tabs.Trigger value="todas" className="admin-tab-trigger">
-                Todas <span>{items.length}</span>
-              </Tabs.Trigger>
-              <Tabs.Trigger value="alerta" className="admin-tab-trigger">
-                Alertas <span>{alertasEnBandeja}</span>
-              </Tabs.Trigger>
-              <Tabs.Trigger value="solicitud" className="admin-tab-trigger">
-                PQRS <span>{solicitudesPendientes}</span>
-              </Tabs.Trigger>
-              <Tabs.Trigger value="recuperacion" className="admin-tab-trigger">
-                Accesos <span>{recuperacionesPendientes}</span>
-              </Tabs.Trigger>
+          <Tabs.Root value={pestana} onValueChange={(valor) => setPestana(valor as FiltroAtencion)}>
+            <Tabs.List className="cdc-segmentos" aria-label="Filtrar pendientes por categoría">
+              <Tabs.Trigger value="todas">Todas <span>{items.length}</span></Tabs.Trigger>
+              <Tabs.Trigger value="alerta">Alertas <span>{alertas}</span></Tabs.Trigger>
+              <Tabs.Trigger value="solicitud">PQRS <span>{solicitudesPendientes}</span></Tabs.Trigger>
+              <Tabs.Trigger value="recuperacion">Accesos <span>{recuperacionesPendientes}</span></Tabs.Trigger>
             </Tabs.List>
           </Tabs.Root>
         )}
-      </div>
+      </header>
 
       {error ? (
-        <div className="admin-inline-error" role="alert">
+        <div className="cdc-error" role="alert">
           <span>{error}</span>
-          <button type="button" onClick={onReintentar}>
-            Reintentar
-          </button>
+          <button type="button" onClick={onReintentar}>Reintentar</button>
         </div>
       ) : cargando ? (
-        <div className="admin-attention-loading" aria-label="Cargando pendientes">
-          <span /><span /><span />
-        </div>
+        <div className="cdc-filas-esqueleto" aria-label="Cargando pendientes"><span /><span /><span /></div>
       ) : filtrados.length === 0 ? (
-        <div className="admin-attention-empty">
-          <span className="admin-attention-empty-icon" aria-hidden="true"><IcCheck size={18} /></span>
-          <div>
-            <strong>
-              {items.length === 0
-                ? 'Bandeja operativa al día'
-                : 'Sin pendientes en esta categoría'}
-            </strong>
-            <p>
-              {items.length === 0
-                ? 'No hay alertas activas, solicitudes PQRS ni recuperaciones de contraseña pendientes.'
-                : 'Selecciona «Todas» para ver el resto de los elementos por atender.'}
-            </p>
-          </div>
+        <div className="cdc-vacio">
+          <IconoFigma nombre="verificado" tamano={28} />
+          <strong>{items.length === 0 ? 'Nada por resolver' : 'Sin pendientes en esta categoría'}</strong>
+          <p>
+            {items.length === 0
+              ? 'Cuando llegue una alerta, una PQRS o una recuperación de acceso aparecerá aquí.'
+              : 'Elige «Todas» para ver el resto de los casos.'}
+          </p>
         </div>
       ) : (
-        <ul className="admin-attention-list">
-          {filtrados.map((item) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                className={`admin-attention-item admin-attention-item--${item.tipo}`}
-                onClick={() => onAbrir(item)}
-              >
-                <span className="admin-attention-icon" aria-hidden="true">
-                  {iconoTipo(item.tipo)}
+        <ul className="cdc-casos" key={pestana}>
+          {filtrados.map((item, posicion) => (
+            <li key={item.id} style={{ '--k': posicion } as CSSProperties}>
+              <button type="button" className={`cdc-caso cdc-caso--${item.tipo}${item.prioridad >= 3 ? ' is-urgente' : ''}`} onClick={() => onAbrir(item)}>
+                <span className="cdc-caso-icono" aria-hidden="true"><IconoFigma nombre={ICONO_TIPO[item.tipo]} tamano={17} /></span>
+                <span className="cdc-caso-texto">
+                  <span className="cdc-caso-meta">{item.etiqueta} · <time dateTime={item.fecha}>{hace(item.fecha)}</time></span>
+                  <strong>{item.titulo}</strong>
+                  <small>{item.detalle}</small>
                 </span>
-                <span className="admin-attention-copy">
-                  <span className="admin-attention-meta">
-                    <strong>{item.etiqueta}</strong>
-                    <time>{hace(item.fecha)}</time>
-                  </span>
-                  <span className="admin-attention-title">{item.titulo}</span>
-                  <span className="admin-attention-detail">{item.detalle}</span>
-                </span>
-                <IcChevronRight size={15} aria-hidden="true" />
+                <IconoFigma nombre="flecha-derecha" tamano={16} className="cdc-flecha" />
               </button>
             </li>
           ))}
         </ul>
       )}
 
-      <footer className="admin-attention-footer">
-        <button type="button" className="admin-attention-shortcut" onClick={onIrAlertas}>
-          Alertas <IcChevronRight size={12} />
-        </button>
-        <button type="button" className="admin-attention-shortcut" onClick={onIrPqrs}>
-          Bandeja PQRS <IcChevronRight size={12} />
-        </button>
-        <button type="button" className="admin-attention-shortcut" onClick={onIrRecuperaciones}>
-          Recuperaciones <IcChevronRight size={12} />
-        </button>
+      <footer className="cdc-panel-pie">
+        <button type="button" onClick={onIrAlertas}>Alertas</button>
+        <button type="button" onClick={onIrPqrs}>Bandeja PQRS</button>
+        <button type="button" onClick={onIrRecuperaciones}>Recuperaciones</button>
       </footer>
     </section>
   )

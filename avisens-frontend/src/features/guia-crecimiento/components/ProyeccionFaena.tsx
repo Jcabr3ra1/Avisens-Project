@@ -15,7 +15,7 @@ function ProyeccionFaena({ prediccion, error, cargando }: Props) {
   return (
     <section className="adm-panel guia-panel guia-datos-panel gpf" aria-labelledby="gpf-titulo">
       <div>
-        <span className="adm-eyebrow">Proyección al día de faena</span>
+        <span className="adm-eyebrow">Proyección al día de salida</span>
         <h2 id="gpf-titulo">Cómo cierra el ciclo</h2>
       </div>
       {cargando ? <p className="guia-cargando" role="status">Proyectando el cierre del ciclo…</p> : prediccion === null ? (
@@ -28,24 +28,24 @@ function ProyeccionFaena({ prediccion, error, cargando }: Props) {
         <>
           <div className="guia-datos-grid gpf-grid">
             <div>
-              <span>Mortalidad al cierre</span>
+              <span>Mortalidad estimada</span>
               <strong>{prediccion.mortalidad_proyectada_pct === null ? '—' : `${unDecimal.format(prediccion.mortalidad_proyectada_pct)} %`}</strong>
             </div>
             <div>
-              <span>Alimento del ciclo</span>
+              <span>Alimento total estimado</span>
               <strong>{prediccion.consumo_proyectado_kg === null ? '—' : `${entero.format(prediccion.consumo_proyectado_kg)} kg`}</strong>
             </div>
             <div>
-              <span>Conversión (FCR)</span>
+              <span>Conversión de alimento (FCR)</span>
               <strong>{prediccion.fcr_proyectado === null ? '—' : dosDecimales.format(prediccion.fcr_proyectado)}</strong>
             </div>
             <div>
-              <span>Día de faena</span>
-              <strong>{prediccion.dia_faena}</strong>
+              <span>Día estimado de salida</span>
+              <strong>Día {prediccion.dia_faena}</strong>
             </div>
           </div>
           <p className="guia-nota">
-            Estimado con los registros de mortalidad y consumo de la bitácora. Un FCR más bajo es mejor: menos alimento por cada kilo de pollo.
+            Calculado a partir del consumo y mortalidad registrados en la Bitácora. Un FCR más bajo indica mayor eficiencia: menos alimento por cada kilo ganado.
           </p>
         </>
       )}

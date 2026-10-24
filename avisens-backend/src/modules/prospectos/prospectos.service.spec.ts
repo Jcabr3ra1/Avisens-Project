@@ -47,9 +47,21 @@ describe('ProspectosService', () => {
       ]);
     });
 
-    it('no filtra cuando no llegan filtros', async () => {
+    it('oculta por defecto a quienes no terminaron la conversación', async () => {
       await service.listar({ page: 1, limit: 20 });
-      expect(argsDe(prisma.prospecto.findMany).where).toEqual({});
+      expect(argsDe(prisma.prospecto.findMany).where).toEqual(
+        { estado: { notIn: ['en_proceso', 'abandonado', 'cancelado', 'sin_consentimiento'] } },
+      );
+      expect(argsDe(prisma.prospecto.count).where).toEqual(
+        { estado: { notIn: ['en_proceso', 'abandonado', 'cancelado', 'sin_consentimiento'] } },
+      );
+    });
+
+    it('si piden un estado concreto lo respeta, también el de una conversación sin terminar', async () => {
+      await service.listar({ page: 1, limit: 20, estado: 'en_proceso' });
+      expect(argsDe(prisma.prospecto.findMany).where).toEqual({
+        estado: 'en_proceso',
+      });
     });
 
     it('combina los filtros que si llegan', async () => {
@@ -70,7 +82,9 @@ describe('ProspectosService', () => {
 
     it('sin_asignar en false no filtra por asesor', async () => {
       await service.listar({ page: 1, limit: 20, sin_asignar: false });
-      expect(argsDe(prisma.prospecto.findMany).where).toEqual({});
+      expect(argsDe(prisma.prospecto.findMany).where).toEqual(
+        { estado: { notIn: ['en_proceso', 'abandonado', 'cancelado', 'sin_consentimiento'] } },
+      );
     });
 
     it('no expone datos personales de mas en la lista', async () => {

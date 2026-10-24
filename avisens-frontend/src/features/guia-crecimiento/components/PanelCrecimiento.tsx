@@ -2,9 +2,9 @@ import { lazy, Suspense } from 'react'
 import { Link } from 'react-router-dom'
 import type { CurvaCrecimiento } from '@features/predicciones/api/predicciones'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
-import { IcArrowDown, IcArrowUp, IcCheck } from '@shared/ui/icons/icons'
+import { IcArrowDown, IcArrowUp, IcCheck, IcScale } from '@shared/ui/icons/icons'
 import {
-  estandarDelDia, gramos, porcentaje, resumenAccesible, textoDesvio, tonoDesvio,
+  estandarDelDia, formatearPeso, porcentaje, resumenAccesible, textoDesvio, tonoDesvio,
   type ProblemaCurva,
 } from '../model/proyeccion'
 
@@ -46,14 +46,14 @@ function Llegada({ curva }: { curva: CurvaCrecimiento }) {
       <div className="gcr-kpi">
         <dt>Peso objetivo</dt>
         <dd className="gcr-kpi-valor gcr-kpi-valor--tenue">Sin definir</dd>
-        <dd className="gcr-kpi-detalle">Fíjalo en el plan productivo para saber cuándo llega.</dd>
+        <dd className="gcr-kpi-detalle">Fíjalo en la meta de crecimiento para saber cuándo llega.</dd>
       </div>
     )
   }
   if (dia === null) {
     return (
       <div className="gcr-kpi">
-        <dt>Llega a {gramos(objetivo)}</dt>
+        <dt>Llega a {formatearPeso(objetivo)}</dt>
         <dd className="gcr-kpi-valor gcr-kpi-valor--tenue">No lo alcanza</dd>
         <dd className="gcr-kpi-detalle">Con este ritmo, el lote no llega a ese peso.</dd>
       </div>
@@ -62,17 +62,19 @@ function Llegada({ curva }: { curva: CurvaCrecimiento }) {
   const diaRedondo = Math.ceil(dia)
   return (
     <div className="gcr-kpi">
-      <dt>Llega a {gramos(objetivo)}</dt>
+      <dt>Llega a {formatearPeso(objetivo)}</dt>
       <dd className="gcr-kpi-valor">Día {diaRedondo}</dd>
       <dd className="gcr-kpi-detalle">
         {formatearFechaCalendario(fecha)}
-        {diaRedondo > diaFinal ? ` · después del día de faena (${diaFinal})` : ''}
+        {diaRedondo > diaFinal ? ` · después del día de salida (${diaFinal})` : ''}
       </dd>
     </div>
   )
 }
 
-function PanelCrecimiento({ loteId, curva, problema, cargando, onReintentar }: Props) {
+function PanelCrecimiento({
+  loteId, curva, problema, cargando, onReintentar,
+}: Props) {
   const referencia = curva?.referencias.genetica?.linea ?? null
   const marca = curva?.referencias.marca?.marca ?? null
   const ultimo = curva?.resumen.ultimo_pesaje
@@ -88,20 +90,33 @@ function PanelCrecimiento({ loteId, curva, problema, cargando, onReintentar }: P
           <p className="gcr-subtitulo">
             {curva
               ? `Pesajes reales y proyección hasta el día ${curva.dia_final}${referencia ? `, comparados con la curva ${referencia}` : ''}.`
-              : 'Pesajes reales, proyección hasta el día de faena y la curva estándar de su línea genética.'}
+              : 'Pesajes reales, proyección hasta el día de salida y la curva estándar de su línea genética.'}
           </p>
         </div>
-        {curva && (
-          <span className="gcr-confianza" title="Qué tan angosta es la banda al día de faena">
-            Confianza <strong>{porcentaje(curva.modelo.confianza)}</strong>
-          </span>
-        )}
+        <div className="gcr-cabecera-acciones">
+          {curva && (
+            <span className="gcr-confianza" title="Qué tan angosta es la banda al día de salida">
+              Confianza <strong>{porcentaje(curva.modelo.confianza)}</strong>
+            </span>
+          )}
+        </div>
       </header>
 
       {cargando ? <Esqueleto texto="Calculando la curva del lote…" /> : problema?.tipo === 'sin_pesajes' ? (
         <div className="gcr-vacio">
-          <strong>Aún no hay pesajes en este lote</strong>
-          <p>Registra el primer pesaje en la Bitácora. Con uno solo ya se proyecta la curva, y cada pesaje nuevo la vuelve más precisa.</p>
+          <div className="gcr-vacio-icono" aria-hidden="true">
+            <IcScale size={36} />
+          </div>
+          <strong>Tu lote aún no tiene pesajes registrados</strong>
+          <p>
+            Al registrar el primer pesaje en la bitácora, calcularemos automáticamente la curva de crecimiento,
+            la comparación con el estándar de su raza y la fecha estimada de salida.
+          </p>
+          <div className="gcr-vacio-accion">
+            <Link className="adm-btn adm-btn--primario" to={`/bitacora?lote=${loteId}&vista=peso`}>
+              + Registrar primer pesaje en Bitácora
+            </Link>
+          </div>
         </div>
       ) : problema?.tipo === 'error' ? (
         <div className="guia-error" role="alert">
@@ -130,23 +145,20 @@ function PanelCrecimiento({ loteId, curva, problema, cargando, onReintentar }: P
             <dl className="gcr-kpis">
               <div className="gcr-kpi">
                 <dt>Último pesaje · día {ultimo.dia}</dt>
-                <dd className="gcr-kpi-valor">{gramos(ultimo.peso_g)}</dd>
+                <dd className="gcr-kpi-valor">{formatearPeso(ultimo.peso_g)}</dd>
                 {referencia && curva.resumen.desvio_vs_estandar_pct !== null ? (
                   <dd><ChipDesvio pct={curva.resumen.desvio_vs_estandar_pct} referencia={referencia} /></dd>
                 ) : null}
-                {esperadoAlPesaje !== null && <dd className="gcr-kpi-detalle">Esperado ese día: {gramos(esperadoAlPesaje)}</dd>}
+                {esperadoAlPesaje !== null && <dd className="gcr-kpi-detalle">Esperado ese día: {formatearPeso(esperadoAlPesaje)}</dd>}
               </div>
+
               <div className="gcr-kpi gcr-kpi--destacado">
                 <dt>Proyección al día {curva.dia_final}</dt>
-                <dd className="gcr-kpi-valor">{gramos(curva.resumen.peso_final_g)}</dd>
-                <dd className="gcr-kpi-detalle">Rango probable {gramos(finalSerie.min_g)} – {gramos(finalSerie.max_g)}</dd>
+                <dd className="gcr-kpi-valor">{formatearPeso(curva.resumen.peso_final_g)}</dd>
+                <dd className="gcr-kpi-detalle">Rango probable {formatearPeso(finalSerie.min_g)} – {formatearPeso(finalSerie.max_g)}</dd>
               </div>
+
               <Llegada curva={curva} />
-              <div className="gcr-kpi">
-                <dt>Crecimiento más rápido</dt>
-                <dd className="gcr-kpi-valor">Día {Math.round(curva.resumen.punto_inflexion.dia)}</dd>
-                <dd className="gcr-kpi-detalle">≈ {gramos(curva.resumen.punto_inflexion.ganancia_max_g_dia)} por día</dd>
-              </div>
             </dl>
           </div>
           {!referencia && (
@@ -155,8 +167,8 @@ function PanelCrecimiento({ loteId, curva, problema, cargando, onReintentar }: P
             </p>
           )}
           <p className="gcr-nota">
-            Modelo de Gompertz {referencia ? `anclado a la curva ${referencia}` : 'con parámetros típicos'} · {curva.modelo.puntos_usados} {curva.modelo.puntos_usados === 1 ? 'pesaje' : 'pesajes'} · versión {curva.modelo.version}.
-            La franja verde es el rango donde estará el peso promedio con un 90 % de probabilidad; se angosta con cada pesaje.
+            Proyección calculada con {curva.modelo.puntos_usados} {curva.modelo.puntos_usados === 1 ? 'pesaje registrado' : 'pesajes registrados'} {referencia ? `y la curva de referencia ${referencia}` : 'y el estándar de crecimiento'}.
+            La franja sombreada indica el rango de peso esperado (90 % de probabilidad) y se hace más precisa con cada pesaje.
           </p>
         </>
       ) : null}

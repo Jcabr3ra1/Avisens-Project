@@ -2,7 +2,7 @@ import { AxiosError, AxiosHeaders } from 'axios'
 import { describe, expect, it } from 'vitest'
 import type { CurvaCrecimiento } from '@features/predicciones/api/predicciones'
 import {
-  estandarDelDia, explicarSinProyeccion, gramos, interpretarErrorCurva, porcentaje,
+  estandarDelDia, explicarSinProyeccion, formatearPeso, gramos, interpretarErrorCurva, porcentaje,
   resumenAccesible, textoDesvio, tonoDesvio,
 } from './proyeccion'
 
@@ -43,6 +43,19 @@ describe('proyeccion', () => {
     expect(porcentaje(0.8749)).toBe('87 %')
   })
 
+  it('formatea pesos de forma inteligente (< 1.000 g en g, >= 1.000 g en kg)', () => {
+    expect(formatearPeso(45)).toBe('45 g')
+    expect(formatearPeso(450)).toBe('450 g')
+    expect(formatearPeso(990)).toBe('990 g')
+    expect(formatearPeso(1000)).toBe('1,00 kg')
+    expect(formatearPeso(1850)).toBe('1,85 kg')
+    expect(formatearPeso(2500)).toBe('2,50 kg')
+    expect(formatearPeso(2896)).toBe('2,90 kg')
+    expect(formatearPeso(null)).toBe('—')
+    expect(formatearPeso(undefined)).toBe('—')
+    expect(formatearPeso(Number.NaN)).toBe('—')
+  })
+
   it('clasifica el desvío con un margen de ±3 % como "en la curva"', () => {
     expect(tonoDesvio(-5.1)).toBe('bajo')
     expect(tonoDesvio(-3)).toBe('en-curva')
@@ -81,7 +94,8 @@ describe('proyeccion', () => {
   it('traduce por qué no hay proyección al cierre en una instrucción', () => {
     expect(explicarSinProyeccion('El lote no tiene un plan con día objetivo calculado')).toMatch(/peso objetivo/)
     expect(explicarSinProyeccion('Se necesitan pesajes de al menos 3 días distintos para predecir')).toMatch(/3 días/)
-    expect(explicarSinProyeccion('El lote ya superó el día de proyección')).toMatch(/pasó su día de faena/)
+    expect(explicarSinProyeccion('El lote ya superó el día de proyección')).toMatch(/pasó su día de salida/)
+    expect(explicarSinProyeccion('El servicio de predicción devolvió una respuesta inválida')).toMatch(/No fue posible estimar el cierre/)
     expect(explicarSinProyeccion('Otro motivo')).toBe('Otro motivo')
   })
 })

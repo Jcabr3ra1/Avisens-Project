@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useState, type FormEvent } from 'react'
 import { getRol } from '@shared/api'
 import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
@@ -69,10 +70,13 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
   }
 
   async function handleEliminar(equipo: Equipo) {
-    const confirmar = window.confirm(
-      `¿Dar de baja el equipo "${equipo.nombre}"?\n` +
-        'Falla si tiene mantenimientos o accionamientos registrados.',
-    )
+    const confirmar = (await confirmarAccion({
+      titulo: '¿Dar de baja este equipo?',
+      entidad: equipo.nombre,
+      descripcion: 'No se puede dar de baja si tiene mantenimientos o accionamientos registrados.',
+      textoConfirmar: 'Dar de baja',
+      tono: 'peligro',
+    }))
     if (!confirmar) return
     setErrorAccion('')
     try {

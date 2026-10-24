@@ -1,0 +1,28 @@
+.confirmacion-icono {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+.confirmacion-icono--peligro { color: var(--danger3); background: var(--danger-soft); border-color: var(--danger-border); }
+.confirmacion-icono--aviso { color: var(--warning); background: var(--warning-soft); border-color: var(--warning-border); }
+.confirmacion-icono--normal { color: var(--primary); background: var(--primary-soft); }
+.confirmacion-entidad { margin: 0 0 var(--space-3); color: var(--text-primary); font-size: 0.9375rem; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; }
+.confirmacion-descripcion { margin: 0; color: var(--text-secondary); font-size: 0.9375rem; line-height: 1.65; white-space: pre-line; overflow-wrap: anywhere; }
+.confirmacion-error { margin-top: var(--space-4); }
+.confirmacion-confirmar { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); font-weight: 700; }
+.confirmacion-confirmar--peligro { color: var(--danger3); border-color: var(--danger-border); background: var(--danger-soft); }
+.confirmacion-confirmar--aviso { color: var(--warning); border-color: var(--warning-border); background: var(--warning-soft); }
+.confirmacion-confirmar--normal { color: var(--on-primary); border-color: var(--primary); background: var(--primary); }
+.confirmacion-espera { width: 16px; height: 16px; flex: 0 0 auto; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: confirmacion-gira 700ms linear infinite; }
+.confirmacion-estado { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@keyframes confirmacion-gira { to { transform: rotate(360deg); } }
+@media (hover: hover) and (pointer: fine) {
+  .confirmacion-confirmar--peligro:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 16%, var(--surface-base)); border-color: var(--danger3); }
+  .confirmacion-confirmar--aviso:hover:not(:disabled) { background: color-mix(in srgb, var(--warning) 16%, var(--surface-base)); border-color: var(--warning); }
+  .confirmacion-confirmar--normal:hover:not(:disabled) { background: var(--primary-hover); }
+}
+@media (prefers-reduced-motion: reduce) { .confirmacion-espera { animation: none; } }

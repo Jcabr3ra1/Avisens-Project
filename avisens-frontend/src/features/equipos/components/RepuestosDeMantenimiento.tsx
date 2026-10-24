@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useRef, useState, type FormEvent } from 'react'
 import { getRol } from '@shared/api'
 import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
@@ -52,10 +53,13 @@ function RepuestosDeMantenimiento({ mantenimientoId }: { mantenimientoId: number
   }
 
   async function handleRevertir(repuesto: MantenimientoRepuesto) {
-    const confirmar = window.confirm(
-      `¿Revertir ${repuesto.cantidad} ${repuesto.unidad_medida}?\n` +
-        'La cantidad vuelve al stock de bodega.',
-    )
+    const confirmar = (await confirmarAccion({
+      titulo: '¿Revertir este repuesto?',
+      entidad: `${repuesto.cantidad} ${repuesto.unidad_medida}`,
+      descripcion: 'La cantidad vuelve al stock de bodega.',
+      textoConfirmar: 'Revertir repuesto',
+      tono: 'aviso',
+    }))
     if (!confirmar) return
     setErrorForm('')
     setRevirtiendo(repuesto.id)
