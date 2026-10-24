@@ -4,6 +4,8 @@ import { simularFaena } from '@features/predicciones/api/predicciones'
 import type { PlanLoteGuia } from '../api/guiaCrecimiento'
 import { mensajeDeError } from '@shared/utils/errores'
 import { formatearPeso, explicarSinProyeccion } from '../model/proyeccion'
+import { textoDeRango } from '../model/confianza'
+import ConfianzaProyeccion from './ConfianzaProyeccion'
 
 type Props = {
   loteId: number
@@ -103,9 +105,10 @@ function ProyeccionFaena({ loteId, curva, plan, prediccion, error, cargando }: P
               <div className="guia-datos-grid gpf-grid">
                 <div><span>Peso estimado al día {resultado.dia_faena}</span><strong>{formatearPeso(resultado.peso_proyectado_faena_g)}</strong></div>
                 <div><span>FCR estimado</span><strong>{resultado.fcr_proyectado === null ? '—' : dosDecimales.format(resultado.fcr_proyectado)}</strong></div>
-                <div><span>Mortalidad estimada</span><strong>{resultado.mortalidad_proyectada_pct === null ? '—' : `${unDecimal.format(resultado.mortalidad_proyectada_pct)} %`}</strong></div>
-                <div><span>Alimento total estimado</span><strong>{resultado.consumo_proyectado_kg === null ? '—' : `${entero.format(resultado.consumo_proyectado_kg)} kg`}</strong></div>
+                <div><span>Mortalidad estimada</span><strong>{resultado.mortalidad_proyectada_pct === null ? '—' : `${unDecimal.format(resultado.mortalidad_proyectada_pct)} %`}</strong>{textoDeRango(resultado.rango_mortalidad, 'mortalidad') && <small className="gpf-sub">{textoDeRango(resultado.rango_mortalidad, 'mortalidad')}</small>}</div>
+                <div><span>Alimento total estimado</span><strong>{resultado.consumo_proyectado_kg === null ? '—' : `${entero.format(resultado.consumo_proyectado_kg)} kg`}</strong>{textoDeRango(resultado.rango_consumo, 'consumo') && <small className="gpf-sub">{textoDeRango(resultado.rango_consumo, 'consumo')}</small>}</div>
               </div>
+              <ConfianzaProyeccion resultado={resultado} />
               {resultado.fcr_proyectado === null && <p className="guia-nota">El peso sí se estima; faltan registros de consumo o mortalidad suficientes para calcular el FCR.</p>}
               <p className="guia-nota">La simulación usa los modelos de predicción existentes y no modifica el plan ni guarda un nuevo pronóstico.</p>
             </>

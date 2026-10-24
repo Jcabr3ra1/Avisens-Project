@@ -10,6 +10,7 @@ import { useGuiaCrecimiento } from './hooks/useGuiaCrecimiento'
 import { useProyeccionLote } from './hooks/useProyeccionLote'
 import SeleccionarLoteGuia from './components/SeleccionarLoteGuia'
 import PanelCrecimiento from './components/PanelCrecimiento'
+import AlertasTempranas from './components/AlertasTempranas'
 import ProyeccionFaena from './components/ProyeccionFaena'
 import ReportesCrecimiento from './components/ReportesCrecimiento'
 import './GuiaCrecimientoPage.css'
@@ -154,6 +155,8 @@ function GuiaCrecimientoPage() {
         cargando={proyeccion.cargandoCurva}
         onReintentar={proyeccion.recargar}
       />
+
+      <AlertasTempranas loteId={lote.id} habilitado={lote.estado === 'activo'} />
 
       <section className="guia-actuar" aria-labelledby="guia-actuar-titulo">
         <header className="guia-actuar-cabecera">
