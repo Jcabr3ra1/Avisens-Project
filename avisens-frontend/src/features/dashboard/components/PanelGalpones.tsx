@@ -9,6 +9,7 @@ type Props = {
 }
 
 const enteros = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 })
+const DIAS_CURVA_ESTANDAR = 42
 
 function EstadoFila({ fila }: { fila: FilaGalpon }) {
   if (!fila.activo) return <span className="resumen-galpon-estado is-inactivo">Inactivo</span>
@@ -28,7 +29,7 @@ function PanelGalpones({ filas, galponId, onSeleccionar, onGestionar }: Props) {
       <div className="admin-card-head">
         <div>
           <h2 id="resumen-galpones-titulo" className="admin-card-title">Tus galpones</h2>
-          <p className="admin-card-sub">Elige uno para ver su ambiente, su lote y su plano aquí abajo</p>
+          <p className="admin-card-sub">Toca uno para ver su ambiente, su lote y su plano</p>
         </div>
         <button type="button" className="admin-card-link" onClick={onGestionar}>
           Gestionar <IcChevronRight size={13} />
@@ -59,6 +60,15 @@ function PanelGalpones({ filas, galponId, onSeleccionar, onGestionar }: Props) {
                   </span>
                   {fila.lecturas.length > 0 && (
                     <span className="resumen-galpon-lecturas">{fila.lecturas.join(' · ')}</span>
+                  )}
+                  {fila.lote && (
+                    <span
+                      className="resumen-galpon-ciclo"
+                      role="img"
+                      aria-label={`Día ${fila.lote.dia} de ${DIAS_CURVA_ESTANDAR} de la curva estándar`}
+                    >
+                      <span style={{ width: `${Math.min(100, Math.round((fila.lote.dia / DIAS_CURVA_ESTANDAR) * 100))}%` }} />
+                    </span>
                   )}
                 </span>
                 <EstadoFila fila={fila} />
