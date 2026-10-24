@@ -18,24 +18,29 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.Po01InicioOpBinding
+import com.project.avisensandroid.model.Actuadores
 import com.project.avisensandroid.model.AlertaResponse
+import com.project.avisensandroid.model.ClasificadorSensores
 import com.project.avisensandroid.model.ConsumoDiarioResponse
 import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.GalponResponse
 import com.project.avisensandroid.model.IndicadorLoteResponse
 import com.project.avisensandroid.model.LoteResponse
-import com.project.avisensandroid.model.MedicionResponse
+import com.project.avisensandroid.model.LecturaDeSensor
+import com.project.avisensandroid.model.LecturasGalpon
+import com.project.avisensandroid.model.LecturasSensores
 import com.project.avisensandroid.model.PesajeResponse
 import com.project.avisensandroid.model.RegistroMortalidadResponse
 import com.project.avisensandroid.model.EventoSanitarioResponse
 import com.project.avisensandroid.model.SensorResponse
 import com.project.avisensandroid.model.UserRole
+import com.project.avisensandroid.model.VariableSensor
+import com.project.avisensandroid.model.VigenciaLectura
 import com.project.avisensandroid.ui.MainActivity
+import com.project.avisensandroid.ui.views.ListaActuadores
 import com.project.avisensandroid.ui.views.SensorArcView
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -58,6 +63,9 @@ class InicioFragment : BaseBottomNavFragment() {
     private var pesajes: List<PesajeResponse> = emptyList()
     private var consumos: List<ConsumoDiarioResponse> = emptyList()
     private var sensores: List<SensorResponse> = emptyList()
+
+    // Distingue "el galpón no tiene sensores" de "no se pudo consultar /v1/sensores".
+    private var errorCargaSensores = false
 
     private var granjaSeleccionada: GranjaResponse? = null
     private var galponSeleccionadoId: Int? = null
@@ -179,7 +187,17 @@ class InicioFragment : BaseBottomNavFragment() {
                     eventosSanitarios = eventosDef.safeAwait(emptyList())
                     pesajes = pesajesDef.safeAwait(emptyList())
                     consumos = consumosDef.safeAwait(emptyList())
-                    sensores = sensoresDef?.safeAwait(emptyList()) ?: emptyList()
+                    errorCargaSensores = false
+                    sensores = sensoresDef?.let { diferido ->
+                        try {
+                            diferido.await()
+                        } catch (cancelacion: CancellationException) {
+                            throw cancelacion
+                        } catch (_: Exception) {
+                            errorCargaSensores = true
+                            emptyList()
+                        }
+                    } ?: emptyList()
                 }
 
                 configurarSpinnerGranjas()
@@ -463,7 +481,7 @@ class InicioFragment : BaseBottomNavFragment() {
                     val alertas = alertasDef.safeAwait(emptyList())
                     val indicador = indicadorDef.safeAwait(null)
                     val comparacion = comparacionDef.safeAwait(null)
-                    val mediciones = medicionesDef?.safeAwait(emptyList()) ?: emptyList()
+                    val mediciones = medicionesDef?.safeAwait(LecturasGalpon.VACIAS) ?: LecturasGalpon.VACIAS
 
                     if (solicitudId == cargaDashboardId) {
                         actualizarDashboard(
@@ -518,29 +536,45 @@ class InicioFragment : BaseBottomNavFragment() {
         return response.body()
     }
 
-    private suspend fun cargarUltimasMediciones(galponId: Int): List<MedicionConSensor> =
-        coroutineScope {
-            sensores
-                .filter {
-                    it.galpon.id == galponId &&
-                            it.estado.equals("activo", true)
-                }
-                .map { sensor ->
-                    async {
-                        val response = RetrofitClient.api.listarMediciones(
-                            sensorId = sensor.id,
-                            page = 1,
-                            limit = 1
-                        )
-                        if (!response.isSuccessful) return@async null
-                        val medicion = response.body()?.data?.firstOrNull()
-                            ?: return@async null
-                        MedicionConSensor(sensor, medicion)
-                    }
-                }
-                .awaitAll()
-                .filterNotNull()
+    /**
+     * Sensores físicos activos del galpón. Los relés K1-K4 y los motores
+     * también vienen en /v1/sensores (unidad "estado"), pero son actuadores.
+     */
+    private fun sensoresFisicosDelGalpon(galponId: Int?): List<SensorResponse> =
+        sensores.filter {
+            it.galpon.id == galponId &&
+                    it.estado.equals("activo", true) &&
+                    ClasificadorSensores.variableDe(it) != null
         }
+
+    /** Relés y motores activos del galpón: se muestran aparte, nunca como sensores. */
+    private fun actuadoresDelGalpon(galponId: Int?): List<SensorResponse> =
+        Actuadores.activos(sensores.filter { it.galpon.id == galponId })
+
+    /**
+     * Última medición de cada sensor físico y actuador del galpón, en una
+     * sola petición (GET /v1/mediciones/ultimas). La antigüedad la calcula
+     * el servidor; si la consulta falla, todas quedan como error de consulta.
+     */
+    private suspend fun cargarUltimasMediciones(galponId: Int): LecturasGalpon {
+        val actuadores = actuadoresDelGalpon(galponId)
+        val todos = sensoresFisicosDelGalpon(galponId) + actuadores
+        if (todos.isEmpty()) return LecturasGalpon.VACIAS
+        val lecturas = try {
+            val response = RetrofitClient.api.listarUltimasLecturas(galponId)
+            val cuerpo = response.body()
+            if (response.isSuccessful && cuerpo != null && cuerpo.sensores != null) {
+                LecturasSensores.cruzar(todos, cuerpo)
+            } else {
+                LecturasSensores.conError(todos)
+            }
+        } catch (cancelacion: CancellationException) {
+            throw cancelacion
+        } catch (_: Exception) {
+            LecturasSensores.conError(todos)
+        }
+        return LecturasSensores.separar(lecturas, actuadores)
+    }
 
     private fun actualizarDashboard(
         lote: LoteResponse?,
@@ -551,7 +585,7 @@ class InicioFragment : BaseBottomNavFragment() {
         alertas: List<AlertaResponse>,
         indicador: IndicadorLoteResponse?,
         comparacion: com.project.avisensandroid.model.ComparacionIndicadorResponse?,
-        mediciones: List<MedicionConSensor>
+        mediciones: LecturasGalpon
     ) {
         val muertes = mortalidadesLote.sumOf { it.cantidad_aves }
         val avesVivas = lote?.let { (it.cantidad_inicial - muertes).coerceAtLeast(0) }
@@ -648,115 +682,189 @@ class InicioFragment : BaseBottomNavFragment() {
     ): Boolean = mortalidadPct == null && epef == null && alertas.isEmpty() && eventos.isEmpty()
 
     private fun actualizarSensores(
-        mediciones: List<MedicionConSensor>,
+        lecturasGalpon: LecturasGalpon,
         alertas: List<AlertaResponse>
     ) {
-        val sensoresActivos = sensores.count {
-            it.galpon.id == galponSeleccionadoId && it.estado.equals("activo", true)
+        val mediciones = lecturasGalpon.sensores
+        ListaActuadores.pintar(
+            binding.contenedorActuadoresInicio,
+            binding.txtSinActuadoresInicio,
+            lecturasGalpon.actuadores.map { Actuadores.vista(it) }
+        )
+
+        val sensoresDelGalpon = sensoresFisicosDelGalpon(galponSeleccionadoId)
+        val configuradas = VariableSensor.values().count { variable ->
+            sensoresDelGalpon.any { ClasificadorSensores.variableDe(it) == variable }
         }
-        binding.txtSensoresActivos.text = "$sensoresActivos sensores"
-
-        val temperatura = mediciones
-            .filter { esTipo(it.sensor.tipo, "temperatura") }
-            .maxByOrNull { parseDate(it.medicion.fecha_hora)?.time ?: 0L }
-        val humedad = mediciones
-            .filter { esTipo(it.sensor.tipo, "humedad") }
-            .maxByOrNull { parseDate(it.medicion.fecha_hora)?.time ?: 0L }
-        val co2 = mediciones
-            .filter { esTipoAmbiental(it.sensor.tipo, "co2") }
-            .maxByOrNull { parseDate(it.medicion.fecha_hora)?.time ?: 0L }
-        val amoniaco = mediciones
-            .filter { esTipoAmbiental(it.sensor.tipo, "nh3") }
-            .maxByOrNull { parseDate(it.medicion.fecha_hora)?.time ?: 0L }
-
-        // La barra es verde si no existe alerta activa y la lectura es válida;
-        // las alertas del backend cambian el arco a naranja/rojo según criticidad.
-        binding.arcTemperaturaInicio.setArcColor(colorArcoPorEstado(temperatura?.sensor?.id, temperatura?.medicion?.calidad, alertas))
-        binding.arcHumedadInicio.setArcColor(colorArcoPorEstado(humedad?.sensor?.id, humedad?.medicion?.calidad, alertas))
-        binding.arcCo2Inicio.setArcColor(colorArcoPorEstado(co2?.sensor?.id, co2?.medicion?.calidad, alertas))
-        binding.arcAmoniacoInicio.setArcColor(colorArcoPorEstado(amoniaco?.sensor?.id, amoniaco?.medicion?.calidad, alertas))
-        binding.arcTemperaturaInicio.setProgressFraction((temperatura?.medicion?.valor?.toFloat()?.div(50f) ?: 0f).coerceIn(0f, 1f))
-        binding.arcHumedadInicio.setProgressFraction((humedad?.medicion?.valor?.toFloat()?.div(100f) ?: 0f).coerceIn(0f, 1f))
-        binding.arcCo2Inicio.setProgressFraction((co2?.medicion?.valor?.toFloat()?.div(5_000f) ?: 0f).coerceIn(0f, 1f))
-        binding.arcAmoniacoInicio.setProgressFraction((amoniaco?.medicion?.valor?.toFloat()?.div(100f) ?: 0f).coerceIn(0f, 1f))
-
-        if (temperatura != null) {
-            val valor = temperatura.medicion.valor
-            binding.txtTemperaturaInicio.text = "${formatearNumero(valor, 1)}°"
-            actualizarEstadoSensor(
-                binding.txtEstadoTemperaturaInicio,
-                temperatura.medicion.calidad,
-                "Normal",
-                alertas.firstOrNull { it.sensor_id == temperatura.sensor.id && it.estado.esActiva() }
-            )
-        } else {
-            binding.txtTemperaturaInicio.text = "—"
-            binding.txtEstadoTemperaturaInicio.text = "Sin datos"
+        val recientes = VariableSensor.values().count { variable ->
+            val lectura = LecturasSensores.elegir(mediciones, variable)
+            lectura != null && !lectura.errorConsulta && lectura.vigencia == VigenciaLectura.RECIENTE
+        }
+        binding.txtSensoresActivos.text = when {
+            errorCargaSensores -> "Sensores sin consultar"
+            configuradas == 0 -> "Sin sensores"
+            else -> "$recientes de $configuradas recientes"
         }
 
-        if (humedad != null) {
-            binding.txtHumedadInicio.text = "${formatearNumero(humedad.medicion.valor, 1)}%"
-            actualizarEstadoSensor(
-                binding.txtEstadoHumedadInicio,
-                humedad.medicion.calidad,
-                "Normal",
-                alertas.firstOrNull { it.sensor_id == humedad.sensor.id && it.estado.esActiva() }
+        val aviso = LecturasSensores.avisoSinIdentificar(
+            LecturasSensores.sensoresSinIdentificar(
+                sensores.filter { it.galpon.id == galponSeleccionadoId }
             )
-        } else {
-            binding.txtHumedadInicio.text = "—"
-            binding.txtEstadoHumedadInicio.text = "Sin datos"
+        )
+        binding.txtSensoresSinIdentificarInicio.text = aviso.orEmpty()
+        binding.txtSensoresSinIdentificarInicio.visibility = if (aviso == null) View.GONE else View.VISIBLE
+
+        pintarSensorInicio(VariableSensor.TEMPERATURA, mediciones, alertas,
+            binding.arcTemperaturaInicio, binding.txtTemperaturaInicio, binding.txtEstadoTemperaturaInicio)
+        pintarSensorInicio(VariableSensor.HUMEDAD, mediciones, alertas,
+            binding.arcHumedadInicio, binding.txtHumedadInicio, binding.txtEstadoHumedadInicio)
+        pintarSensorInicio(VariableSensor.CALIDAD_AIRE, mediciones, alertas,
+            binding.arcCalidadAireInicio, binding.txtCalidadAireInicio, binding.txtEstadoCalidadAireInicio,
+            binding.txtLabelCalidadAireInicio)
+        pintarSensorInicio(VariableSensor.PESO, mediciones, alertas,
+            binding.arcPesoInicio, binding.txtPesoInicio, binding.txtEstadoPesoInicio,
+            binding.txtLabelPesoInicio)
+        val hayNivelAgua = pintarSensorInicio(VariableSensor.NIVEL_AGUA, mediciones, alertas,
+            binding.arcNivelAguaInicio, binding.txtNivelAguaInicio, binding.txtEstadoNivelAguaInicio,
+            binding.txtLabelNivelAguaInicio)
+        // El nivel de agua solo aparece si el galpón tiene un HC-SR04 registrado.
+        binding.filaNivelAguaInicio.visibility = if (hayNivelAgua) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * Pinta una variable distinguiendo: sensor no configurado, consulta
+     * fallida, sensor sin lecturas, lectura obsoleta y lectura reciente.
+     * Nunca muestra 0 cuando no hay una medición real. Devuelve si la
+     * variable tiene un sensor configurado en el galpón.
+     */
+    private fun pintarSensorInicio(
+        variable: VariableSensor,
+        mediciones: List<LecturaDeSensor>,
+        alertas: List<AlertaResponse>,
+        arco: SensorArcView,
+        txtValor: TextView,
+        txtEstado: TextView,
+        txtEtiqueta: TextView? = null
+    ): Boolean {
+        val lectura = LecturasSensores.elegir(mediciones, variable)
+        val configurado = sensoresFisicosDelGalpon(galponSeleccionadoId)
+            .any { ClasificadorSensores.variableDe(it) == variable }
+
+        txtEtiqueta?.text = etiquetaSensor(
+            nombreVariableInicio(variable),
+            lectura?.sensor?.let { unidadVisibleInicio(it) }
+        )
+        txtValor.setTextColor(resources.getColor(R.color.text_primary, null))
+
+        val ultima = lectura?.lectura
+        val valorMedido = ultima?.valor
+        if (lectura == null || lectura.errorConsulta || ultima == null || valorMedido == null) {
+            txtValor.text = "—"
+            arco.setProgressFraction(0f)
+            arco.setArcColor(resources.getColor(R.color.ring_track, null))
+            val (texto, error) = when {
+                errorCargaSensores -> "Error de consulta" to true
+                lectura?.errorConsulta == true -> "Error de consulta" to true
+                lectura != null || configurado -> "Sin lecturas" to false
+                else -> "No configurado" to false
+            }
+            marcarEstadoSinValor(txtEstado, texto, error)
+            return configurado
         }
 
-        if (co2 != null) {
-            binding.txtCo2Inicio.text = formatearNumero(co2.medicion.valor, 1)
-            binding.txtLabelCo2Inicio.text = etiquetaSensor("CO₂", co2.sensor.unidad_medida)
-            actualizarEstadoSensor(
-                binding.txtEstadoCo2Inicio,
-                co2.medicion.calidad,
-                "Normal",
-                alertas.firstOrNull { it.sensor_id == co2.sensor.id && it.estado.esActiva() }
+        val noReciente = LecturasSensores.etiquetaNoReciente(lectura.vigencia)
+        if (noReciente != null) {
+            // Último valor conocido que no es verificablemente reciente
+            // (obsoleto, hora inconsistente o sin antigüedad): número y arco
+            // en gris, con el largo real del valor pero sin color de estado ni
+            // de alerta, y con su fecha.
+            txtValor.setTextColor(resources.getColor(R.color.text_secondary, null))
+            txtValor.text = textoValorInicio(variable, valorMedido)
+            arco.setProgressFraction(fraccionVisualInicio(variable, valorMedido))
+            arco.setArcColor(resources.getColor(R.color.text_secondary, null))
+            arco.contentDescription =
+                "$noReciente: ${nombreVariableInicio(variable).lowercase(Locale.getDefault())}"
+            val fecha = fechaCortaInicio(ultima.fecha_hora)
+            marcarEstadoSinValor(
+                txtEstado,
+                if (fecha != null) "$noReciente\nÚltima: $fecha" else noReciente,
+                error = false
             )
-        } else {
-            binding.txtCo2Inicio.text = "—"
-            binding.txtLabelCo2Inicio.text = "CO₂"
-            binding.txtEstadoCo2Inicio.text = "Sin datos"
+            return true
         }
 
-        if (amoniaco != null) {
-            binding.txtAmoniacoInicio.text = formatearNumero(amoniaco.medicion.valor, 1)
-            binding.txtLabelAmoniacoInicio.text = etiquetaSensor("NH₃", amoniaco.sensor.unidad_medida)
-            actualizarEstadoSensor(
-                binding.txtEstadoAmoniacoInicio,
-                amoniaco.medicion.calidad,
-                "Normal",
-                alertas.firstOrNull { it.sensor_id == amoniaco.sensor.id && it.estado.esActiva() }
-            )
+        val sensorId = lectura.sensor.id
+        arco.setArcColor(colorArcoPorEstado(sensorId, ultima.calidad, alertas))
+        arco.setProgressFraction(fraccionVisualInicio(variable, valorMedido))
+        if (variable == VariableSensor.PESO || variable == VariableSensor.NIVEL_AGUA) {
+            // SensorArcView anuncia "100 por ciento" con el arco completo; aquí
+            // el arco solo indica el estado de la lectura.
+            arco.contentDescription =
+                "Estado de la lectura de ${nombreVariableInicio(variable).lowercase(Locale.getDefault())}"
+        }
+        txtValor.text = textoValorInicio(variable, valorMedido)
+        actualizarEstadoSensor(
+            txtEstado,
+            ultima.calidad,
+            "Normal",
+            alertas.firstOrNull { it.sensor_id == sensorId && it.estado.esActiva() }
+        )
+        return true
+    }
+
+    private fun textoValorInicio(variable: VariableSensor, valor: Double): String = when (variable) {
+        VariableSensor.TEMPERATURA -> "${formatearNumero(valor, 1)}°"
+        VariableSensor.HUMEDAD -> "${formatearNumero(valor, 1)}%"
+        // El ADC del MQ-135 es un entero; la unidad va en la etiqueta.
+        VariableSensor.CALIDAD_AIRE -> formatearNumero(valor, 0)
+        VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> formatearNumero(valor, 1)
+    }
+
+    /** "dd/MM HH:mm" en la hora del teléfono; null si no hay fecha válida. */
+    private fun fechaCortaInicio(valor: String?): String? =
+        parseDate(valor)?.let { SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(it) }
+
+    private fun marcarEstadoSinValor(view: TextView, texto: String, error: Boolean) {
+        view.text = texto
+        if (error) {
+            view.setBackgroundResource(R.drawable.bg_badge_red)
+            view.setTextColor(resources.getColor(R.color.badge_red_text, null))
         } else {
-            binding.txtAmoniacoInicio.text = "—"
-            binding.txtLabelAmoniacoInicio.text = "NH₃"
-            binding.txtEstadoAmoniacoInicio.text = "Sin datos"
+            view.setBackgroundResource(R.drawable.bg_badge_regular)
+            view.setTextColor(resources.getColor(R.color.orange_badge_text, null))
         }
     }
+
+    /**
+     * Escala visual del arco, no un umbral. El MQ-135 usa el rango del ADC de
+     * 12 bits; el peso y la distancia al agua no tienen una escala confirmada,
+     * así que el arco completo solo indica el estado de la lectura.
+     */
+    private fun fraccionVisualInicio(variable: VariableSensor, valor: Double): Float {
+        val escala = when (variable) {
+            VariableSensor.TEMPERATURA -> 50f
+            VariableSensor.HUMEDAD -> 100f
+            VariableSensor.CALIDAD_AIRE -> ClasificadorSensores.ADC_MAXIMO
+            VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> return 1f
+        }
+        return (valor.toFloat() / escala).coerceIn(0f, 1f)
+    }
+
+    private fun nombreVariableInicio(variable: VariableSensor): String = when (variable) {
+        VariableSensor.TEMPERATURA -> "Temperatura"
+        VariableSensor.HUMEDAD -> "Humedad"
+        VariableSensor.CALIDAD_AIRE -> "Calidad del aire"
+        VariableSensor.PESO -> "Peso de alimento"
+        VariableSensor.NIVEL_AGUA -> "Distancia al agua"
+    }
+
+    /** El MQ-135 siempre llega como ADC crudo, aunque se haya registrado con otra unidad. */
+    private fun unidadVisibleInicio(sensor: SensorResponse): String =
+        if (ClasificadorSensores.variableDe(sensor) == VariableSensor.CALIDAD_AIRE) "ADC"
+        else sensor.unidad_medida.trim()
 
     private fun etiquetaSensor(nombre: String, unidad: String?): String =
         unidad?.trim()?.takeIf { it.isNotBlank() }?.let { "$nombre · $it" } ?: nombre
-
-    private fun esTipoAmbiental(actual: String, variable: String): Boolean {
-        val normalizado = java.text.Normalizer.normalize(actual, java.text.Normalizer.Form.NFD)
-            .replace("\\p{Mn}+".toRegex(), "")
-            .lowercase(Locale.ROOT)
-            .replace("₂", "2")
-            .replace("₃", "3")
-            .replace(" ", "")
-            .replace("_", "")
-            .replace("-", "")
-        return when (variable) {
-            "co2" -> normalizado.contains("co2") || normalizado.contains("dioxidodecarbono")
-            "nh3" -> normalizado.contains("nh3") || normalizado.contains("amoniaco")
-            else -> false
-        }
-    }
-
 
     /** Prioriza alertas activas del backend y luego la calidad de lectura. */
     private fun colorArcoPorEstado(
@@ -795,7 +903,9 @@ class InicioFragment : BaseBottomNavFragment() {
             view.setBackgroundResource(R.drawable.bg_badge_red)
             view.setTextColor(resources.getColor(R.color.badge_red_text, null))
         } else if (calidad.equals("sospechosa", true)) {
-            view.text = "Atención"
+            // El ESP32 marca "sospechosa" una lectura que no es una medida
+            // física confirmada (hoy, el HX711 sin calibrar).
+            view.text = "Sin calibrar"
             view.setBackgroundResource(R.drawable.bg_badge_orange)
             view.setTextColor(resources.getColor(R.color.orange_badge_text, null))
         } else if (calidad.equals("ok", true)) {
@@ -828,30 +938,46 @@ class InicioFragment : BaseBottomNavFragment() {
         binding.txtSensoresActivos.text = "0 sensores"
         binding.txtTemperaturaInicio.text = "—"
         binding.txtHumedadInicio.text = "—"
-        binding.txtCo2Inicio.text = "—"
-        binding.txtAmoniacoInicio.text = "—"
+        binding.txtCalidadAireInicio.text = "—"
+        binding.txtPesoInicio.text = "—"
+        binding.txtNivelAguaInicio.text = "—"
         binding.arcTemperaturaInicio.setProgressFraction(0f)
         binding.arcHumedadInicio.setProgressFraction(0f)
-        binding.arcCo2Inicio.setProgressFraction(0f)
-        binding.arcAmoniacoInicio.setProgressFraction(0f)
+        binding.arcCalidadAireInicio.setProgressFraction(0f)
+        binding.arcPesoInicio.setProgressFraction(0f)
+        binding.arcNivelAguaInicio.setProgressFraction(0f)
         val colorNeutral = resources.getColor(R.color.ring_track, null)
         binding.arcTemperaturaInicio.setArcColor(colorNeutral)
         binding.arcHumedadInicio.setArcColor(colorNeutral)
-        binding.arcCo2Inicio.setArcColor(colorNeutral)
-        binding.arcAmoniacoInicio.setArcColor(colorNeutral)
-        binding.txtLabelCo2Inicio.text = "CO₂"
-        binding.txtLabelAmoniacoInicio.text = "NH₃"
-        binding.txtEstadoTemperaturaInicio.text = "Sin datos"
-        binding.txtEstadoHumedadInicio.text = "Sin datos"
-        binding.txtEstadoCo2Inicio.text = "Sin datos"
-        binding.txtEstadoAmoniacoInicio.text = "Sin datos"
+        binding.arcCalidadAireInicio.setArcColor(colorNeutral)
+        binding.arcPesoInicio.setArcColor(colorNeutral)
+        binding.arcNivelAguaInicio.setArcColor(colorNeutral)
+        binding.txtLabelCalidadAireInicio.text = nombreVariableInicio(VariableSensor.CALIDAD_AIRE)
+        binding.txtLabelPesoInicio.text = nombreVariableInicio(VariableSensor.PESO)
+        binding.txtLabelNivelAguaInicio.text = nombreVariableInicio(VariableSensor.NIVEL_AGUA)
+        listOf(
+            binding.txtEstadoTemperaturaInicio,
+            binding.txtEstadoHumedadInicio,
+            binding.txtEstadoCalidadAireInicio,
+            binding.txtEstadoPesoInicio,
+            binding.txtEstadoNivelAguaInicio
+        ).forEach { marcarEstadoSinValor(it, "Sin datos", error = false) }
+        binding.filaNivelAguaInicio.visibility = View.GONE
+        binding.txtSensoresSinIdentificarInicio.visibility = View.GONE
+        binding.contenedorActuadoresInicio.removeAllViews()
+        binding.txtSinActuadoresInicio.visibility = View.GONE
+        val colorValor = resources.getColor(R.color.text_primary, null)
+        listOf(
+            binding.txtTemperaturaInicio,
+            binding.txtHumedadInicio,
+            binding.txtCalidadAireInicio,
+            binding.txtPesoInicio,
+            binding.txtNivelAguaInicio
+        ).forEach { it.setTextColor(colorValor) }
     }
 
     private fun esPropietario(): Boolean =
         com.project.avisensandroid.model.UserSession.role(requireContext()) == UserRole.PROPIETARIO
-
-    private fun esTipo(actual: String, buscado: String): Boolean =
-        actual.trim().lowercase(Locale.getDefault()).contains(buscado)
 
     private fun formatearNumero(valor: Double, decimales: Int): String =
         String.format(Locale.getDefault(), "%.${decimales}f", valor)
@@ -898,11 +1024,6 @@ class InicioFragment : BaseBottomNavFragment() {
 
     private fun String?.esActiva(): Boolean =
         this.equals("abierta", true) || this.equals("en_proceso", true)
-
-    private data class MedicionConSensor(
-        val sensor: SensorResponse,
-        val medicion: MedicionResponse
-    )
 
     private data class HealthState(
         val texto: String,

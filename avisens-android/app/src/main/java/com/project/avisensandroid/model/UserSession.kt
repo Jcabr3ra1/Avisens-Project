@@ -46,7 +46,8 @@ object UserSession {
         refreshToken: String,
         userId: Int,
         name: String,
-        email: String,
+        // Opcional en el backend: null deja la clave sin valor.
+        email: String?,
         role: UserRole
     ) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -61,6 +62,12 @@ object UserSession {
             .apply()
     }
 
+    /**
+     * El backend rota el refresh token en cada renovación e invalida el
+     * anterior: si el nuevo se perdiera, la sesión se perdería con él. Por
+     * eso se escribe con commit(). Se llama desde el hilo de OkHttp, nunca
+     * desde el hilo principal.
+     */
     fun updateTokens(
         context: Context,
         accessToken: String,
@@ -71,7 +78,7 @@ object UserSession {
             .putString(KEY_TOKEN, accessToken)
             .putString(KEY_REFRESH_TOKEN, refreshToken)
             .putBoolean(KEY_SESSION_ACTIVE, true)
-            .apply()
+            .commit()
     }
 
     fun accessToken(context: Context): String? =

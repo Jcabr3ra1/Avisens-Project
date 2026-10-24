@@ -4,6 +4,10 @@ data class SensorResponse(
     val id: Int,
     val codigo: String,
     val tipo: String,
+    // Conexión física en el ESP32: "gpio:<n>" (DHT22) o "rele:k1".."rele:k4"
+    // (relés). Null en los sensores registrados solo por código (MQ-135,
+    // HX711, HC-SR04, motores) o en respuestas antiguas sin este campo.
+    val canal: String?,
     val unidad_medida: String,
     val modelo: String?,
     val fabricante: String?,
