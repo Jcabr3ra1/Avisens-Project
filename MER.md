@@ -1,25 +1,23 @@
-# MER Avisens v1.4 — Normalizado
+# MER Avisens — Normalizado
 
-> Modelo Entidad-Relación de referencia del proyecto. **62 entidades** (50 base,
-> 10 de la capa de inteligencia y 2 técnicas de operación). Notación de
-> [Eraser](https://eraser.io). Esta es
-> una vista documental del modelo. La fuente de verdad ejecutable es
+> Modelo Entidad-Relación de referencia del proyecto. Notación de
+> [Eraser](https://eraser.io). Esta es una vista documental del modelo.
+> La fuente de verdad ejecutable es
 > `prisma/schema.prisma` junto con `prisma/migrations`; este documento debe
 > actualizarse en el mismo cambio que modifique cualquiera de los dos.
 >
-> ## MODELO EN EL SCHEMA (2026-08-30)
-> Las **62 tablas** están definidas en `prisma/schema.prisma`. Las entidades de
-> roadmap permanecen identificadas como tales: estar modeladas no significa que
-> su flujo funcional ya esté implementado.
+> ## SINCRONIZADO CON EL ESQUEMA (2026-10-24)
+> El esquema ejecutable contiene **77 modelos y 22 enums**. Se comprobaron los
+> nombres de las tablas, los campos escalares y las 127 relaciones declaradas.
+> El diagrama resume tipos, nulabilidad, enums e índices; para esos detalles,
+> la fuente de verdad sigue siendo `schema.prisma` y sus migraciones.
 >
-> Los módulos operativos cubren autenticación, producción, monitoreo, alertas,
-> chatbot/cotización, clima, finanzas, inventario, mantenimiento, notificaciones,
-> asignación usuario-galpón, indicadores, predicciones, recomendaciones y
-> copiloto y recuperación asistida de contraseña. Siguen pendientes los flujos
-> de voz, zonas, registro de modelos ML, bioacústica y visión.
+> El backend también contiene módulos para comandos de voz, zonas, registro de
+> modelos ML, bioacústica, visión, firmware, órdenes de actuadores y planificación
+> genética y de alimento. Su grado de uso y madurez varía por flujo.
 
 ```
-title AVISENS v1.4 — Normalizado
+title AVISENS — Normalizado
 
 // ============================================================
 // EP-01 · CHATBOT DE COTIZACIÓN (yellow)
@@ -63,11 +61,13 @@ prospectos [icon: user-plus, color: yellow] {
   documento string
   municipio string
   departamento string
+  numero_galpones integer
   area_granja_m2 number
   area_galpon_m2 number
   rol_prospecto string
   tipo_produccion string
   telefono string
+  whatsapp_id string
   email string
   canal_origen string
   contacto_decisor string
@@ -77,10 +77,18 @@ prospectos [icon: user-plus, color: yellow] {
   accion_siguiente string
   senal_caliente bool
   conectividad_limitada bool
+  viabilidad_tecnica string
+  intencion_comercial string
+  plazo_comercial string
+  conectividad_comercial string
+  energia_comercial string
   estado string
   pregunta_actual string
   ultima_pregunta string
   asesor_asignado_id integer fk
+  usuario_convertido_id integer fk
+  resultado_cierre string
+  motivo_cierre string
   ip_origen string
   user_agent string
   consentimiento_habeas_data bool
@@ -89,11 +97,67 @@ prospectos [icon: user-plus, color: yellow] {
   fecha_finalizacion datetime
 }
 
+conversaciones_comerciales [icon: messages-square, color: yellow] {
+  id integer pk
+  session_id uuid unique
+  prospecto_id integer fk
+  canal string
+  estado string
+  resumen string
+  objetivo_pendiente string
+  version_estado integer
+  ultima_actividad datetime
+  expira_en datetime
+  fecha_creacion datetime
+}
+
+mensajes_comerciales [icon: message-square, color: yellow] {
+  id integer pk
+  conversacion_id integer fk
+  remitente string
+  contenido string
+  client_message_id string
+  proveedor_message_id string
+  estado string
+  fecha_creacion datetime
+}
+
+autorizaciones_comerciales [icon: check-square, color: yellow] {
+  id integer pk
+  prospecto_id integer fk
+  conversacion_id integer fk
+  proposito string
+  version_texto string
+  estado string
+  canal string
+  fecha_respuesta datetime
+}
+
+galpones_comerciales [icon: warehouse, color: yellow] {
+  id integer pk
+  prospecto_id integer fk
+  numero integer
+  superficie_m2 number
+  estado_dato string
+  evidencia string
+}
+
+conocimiento_comercial [icon: book-open, color: yellow] {
+  id integer pk
+  codigo string unique
+  tema string
+  contenido string
+  estado_revision string
+  estado_capacidad string
+  version integer
+  vigente bool
+  actualizado_en datetime
+}
+
 respuestas_chatbot [icon: message-circle, color: yellow] {
   id integer pk
   prospecto_id integer fk
   pregunta_id integer fk
-  matriz_id integer fk
   bloque string
   codigo_pregunta string
   pregunta_texto string
@@ -113,6 +177,9 @@ cotizaciones [icon: file, color: yellow] {
   url_pdf string
   canal_envio string
   estado string
+  version integer
+  snapshot_precios json
+  idempotency_key string unique
   fecha_generacion datetime
   fecha_envio datetime
 }
@@ -168,6 +235,8 @@ comandos_voz [icon: mic, color: purple] {
   modo_conexion string
   sincronizado bool
   fecha_ejecucion datetime
+  fecha_recepcion datetime
+  id_sincronizacion string
 }
 
 
@@ -207,9 +276,6 @@ usuarios [icon: user, color: cyan] {
   email string unique // opcional: contacto
   password_hash string
   telefono string
-  foto_url string
-  huella_voz_url string
-  pin_voz_hash string
   activo bool
   fecha_creacion datetime
 }
@@ -227,6 +293,7 @@ seguridad_cuenta [icon: shield-off, color: cyan] {
 
 sesiones [icon: log-in, color: cyan] {
   id integer pk
+  session_id uuid unique
   usuario_id integer fk
   refresh_token_hash string
   ip_origen string
@@ -245,7 +312,6 @@ recuperaciones_password [icon: rotate-ccw, color: cyan] {
   atendida_por_id integer fk
   atendida_en datetime
   observacion string
-  token_hash string
   expira_en datetime
   usado bool
   fecha_creacion datetime
@@ -314,8 +380,24 @@ dispositivos [icon: cpu, color: green] {
   estado string
   ip_local string
   token_ingesta string unique
+  token_ingesta_hash string unique
+  arranque_id string
+  arranque_anterior string
+  arranque_desde datetime
   ultima_conexion datetime
   activo bool
+  retirado_en datetime
+  fecha_creacion datetime
+}
+
+firmware_versiones [icon: cpu, color: green] {
+  id integer pk
+  version string unique
+  sha256 string
+  tamano integer
+  binario bytes
+  notas string
+  vigente bool
   fecha_creacion datetime
 }
 
@@ -336,8 +418,8 @@ galpones [icon: package, color: green] {
   fecha_construccion date
 }
 
-// zona_id se materializa en la BD cuando se construya zonas_galpon (EP-08).
-// estado hace de borrado suave: activo | inactivo | mantenimiento | falla.
+// zona_id relaciona el sensor con una zona del mismo galpón (EP-08).
+// estado conserva el ciclo de vida: activo | inactivo | mantenimiento | falla | retirado.
 // Regla de coherencia (validada en backend): el dispositivo del sensor debe
 // pertenecer al mismo galpón que el sensor.
 // Identidad física opcional: UNIQUE(dispositivo_id, tipo, canal).
@@ -362,10 +444,10 @@ sensores [icon: thermometer, color: green] {
   estado string
 }
 
-// `mediciones` es una tabla normal de Postgres. Se exploró TimescaleDB
-// (hypertable) pero se revirtió para poder desplegar en hosts gestionados
-// (Supabase) que no ofrecen esa extensión; a la escala del proyecto no se
-// necesita. La PK compuesta (id, fecha_hora) quedó como está (inofensiva).
+// `mediciones` es una tabla normal de Postgres, no particionada. TimescaleDB
+// se exploró y se revirtió por la disponibilidad de extensiones en el host
+// gestionado previsto. La PK compuesta incluye fecha_hora para permitir evaluar
+// partición por rango si el volumen futuro lo justifica.
 mediciones [icon: activity, color: green] {
   id bigint pk
   sensor_id integer fk
@@ -420,6 +502,7 @@ umbrales_ambientales [icon: sliders, color: green] {
 curvas_objetivo [icon: trending-up, color: green] {
   id integer pk
   marca string
+  origen string
   fuente string
   sexo string
   dia integer
@@ -445,6 +528,33 @@ accionamientos_equipos [icon: zap, color: green] {
   fecha_fin datetime
 }
 
+// Las órdenes remotas quedan en historial; el estado actual del relé se
+// reemplaza con cada reporte del ESP32.
+ordenes_actuadores [icon: zap, color: green] {
+  id integer pk
+  dispositivo_id integer fk
+  galpon_id integer fk
+  sensor_id integer fk
+  accion string
+  estado string
+  estado_real bool
+  motivo string
+  arranque_entrega string
+  usuario_id integer fk
+  fecha_creacion datetime
+  fecha_envio datetime
+  fecha_resultado datetime
+  actualizada_en datetime
+}
+
+estados_actuadores [icon: toggle-right, color: green] {
+  sensor_id integer pk, fk
+  modo string
+  encendido bool
+  orden_id integer
+  reportado_en datetime
+}
+
 
 // ============================================================
 // EP-05 · ALERTAS (red)
@@ -468,6 +578,7 @@ alertas [icon: alert-triangle, color: red] {
   lote_id integer fk
   sensor_id integer fk
   tipo string
+  origen string
   criticidad string
   valor_detectado number
   valor_umbral number
@@ -520,6 +631,98 @@ lotes [icon: layers, color: blue] {
   fecha_salida_estimada date
   fecha_salida_real date
   estado string
+  linea_genetica_id integer fk
+}
+
+// Curvas versionadas por línea genética y sexo; cada plan conserva snapshots
+// de la referencia que utilizó para que el historial no cambie al publicar otra.
+lineas_geneticas [icon: dna, color: blue] {
+  id integer pk
+  codigo string unique
+  nombre string
+  descripcion string
+  activo bool
+  fecha_actualizacion datetime
+}
+
+curvas_geneticas_version [icon: trending-up, color: blue] {
+  id integer pk
+  linea_genetica_id integer fk
+  sexo string
+  version integer
+  estado string
+  vigente bool
+  fuente string
+  fecha_publicacion datetime
+  publicada_por_id integer fk
+  fecha_creacion datetime
+}
+
+puntos_curva_genetica [icon: activity, color: blue] {
+  id integer pk
+  curva_version_id integer fk
+  dia integer
+  peso_esperado_g number
+  consumo_diario_g number
+  consumo_acumulado_g number
+  fcr_objetivo number
+}
+
+planes_lote [icon: calendar, color: blue] {
+  id integer pk
+  lote_id integer fk
+  version integer
+  vigente bool
+  peso_objetivo_g number
+  estado_dia string
+  curva_version_id integer fk
+  linea_genetica_id_snapshot integer fk
+  sexo_curva_snapshot string
+  fecha_ingreso_snapshot date
+  dia_objetivo integer
+  dia_objetivo_interpolado number
+  fecha_salida_calculada date
+  motivo string
+  creado_por_id integer fk
+  fecha_creacion datetime
+}
+
+estimaciones_alimento_plan [icon: chart, color: blue] {
+  id integer pk
+  plan_lote_id integer fk
+  version integer
+  vigente bool
+  estado_alimento string
+  version_algoritmo string
+  cantidad_inicial_snapshot integer
+  dia_corte integer
+  mortalidad_snapshot json
+  muertes_al_corte integer
+  aves_vivas_al_corte integer
+  dia_objetivo_snapshot integer
+  curva_version_id_snapshot integer fk
+  consumo_por_ave_g number
+  consumo_total_kg number
+  estado_desglose string
+  version_desglose string
+  marca_alimento_snapshot string
+  motivo string
+  creado_por_id integer fk
+  fecha_creacion datetime
+}
+
+renglones_estimacion_alimento [icon: list, color: blue] {
+  id integer pk
+  estimacion_id integer fk
+  orden integer
+  tipo_alimento_id integer fk
+  tipo_alimento_nombre_snapshot string
+  etapa_snapshot string
+  dia_inicio integer
+  dia_fin integer
+  extendido_hasta_dia_objetivo bool
+  consumo_por_ave_g number
+  consumo_total_kg number
 }
 
 tipos_alimento [icon: list, color: blue] {
@@ -789,10 +992,10 @@ mantenimientos_repuestos [icon: package-2, color: gray] {
 
 
 // ============================================================
-// EP-09 · CAPA DE INTELIGENCIA Y EVOLUCIÓN (roadmap · teal)
-// Tablas modeladas para el futuro (predecir / recomendar / IA / SaaS).
-// Se llenan por JOBS y servicios de IA, no por CRUD manual. Ver la hoja
-// "Cómo construir la IA" del Excel de tablas.
+// EP-09 · INTELIGENCIA, INDICADORES Y CONTEXTO (teal)
+// Incluye modelos persistidos para indicadores, predicción, recomendaciones,
+// asistente, análisis de imagen/sonido y clima. Su presencia en el esquema no
+// implica que todas las capacidades tengan el mismo nivel de uso o madurez.
 // ============================================================
 
 organizaciones [icon: building, color: teal] {
@@ -816,6 +1019,11 @@ indicadores_lote [icon: activity, color: teal] {
   mortalidad_acumulada_pct number
   consumo_acumulado_g number
   calculado_en datetime
+  estado_calculo string
+  estado_peso string
+  pesaje_id_snapshot integer
+  pesaje_fecha_snapshot date
+  revision_calculo integer
 }
 
 modelos_ml [icon: cpu, color: teal] {
@@ -922,7 +1130,19 @@ catalogo_sensores [icon: list, color: yellow] {
   cobertura_m2 number
   obligatorio bool
   activo bool
+  estado_revision string
   fecha_actualizacion datetime
+}
+
+tarifas_comerciales [icon: badge-dollar-sign, color: yellow] {
+  id integer pk
+  codigo string
+  nombre string
+  precio_unitario_cop number
+  estado_revision string
+  version integer
+  vigente bool
+  actualizado_en datetime
 }
 
 
@@ -932,14 +1152,19 @@ catalogo_sensores [icon: list, color: yellow] {
 
 // EP-01 Chatbot
 prospectos.asesor_asignado_id > usuarios.id
+prospectos.usuario_convertido_id > usuarios.id
 respuestas_chatbot.prospecto_id > prospectos.id
 respuestas_chatbot.pregunta_id > preguntas_chatbot.id
-respuestas_chatbot.matriz_id > matriz_calificacion.id
 cotizaciones.prospecto_id > prospectos.id
 cotizaciones_sensores.cotizacion_id > cotizaciones.id
 interacciones_chatbot.prospecto_id > prospectos.id
 solicitudes_pqrs.prospecto_id > prospectos.id
 solicitudes_pqrs.responsable_id > usuarios.id
+conversaciones_comerciales.prospecto_id > prospectos.id
+mensajes_comerciales.conversacion_id > conversaciones_comerciales.id
+autorizaciones_comerciales.prospecto_id > prospectos.id
+autorizaciones_comerciales.conversacion_id > conversaciones_comerciales.id
+galpones_comerciales.prospecto_id > prospectos.id
 
 // EP-02 Asistente de voz
 comandos_voz.usuario_id > usuarios.id
@@ -968,9 +1193,11 @@ notificaciones.usuario_id > usuarios.id
 // preserva así las relaciones históricas de alertas, mediciones y finanzas.
 granjas.propietario_id > usuarios.id
 granjas.organizacion_id > organizaciones.id
+granjas.organizacion_id > usuarios.organizacion_id
 galpones.granja_id > granjas.id
 zonas_galpon.galpon_id > galpones.id
 sensores.galpon_id > galpones.id
+sensores.galpon_id > dispositivos.galpon_id
 sensores.zona_id > zonas_galpon.id
 mediciones.sensor_id > sensores.id
 umbrales_ambientales.galpon_id > galpones.id
@@ -980,6 +1207,11 @@ accionamientos_equipos.usuario_id > usuarios.id
 dispositivos.galpon_id > galpones.id
 sensores.dispositivo_id > dispositivos.id
 ingestas_dispositivos.dispositivo_id > dispositivos.id
+ordenes_actuadores.dispositivo_id > dispositivos.id
+ordenes_actuadores.galpon_id > dispositivos.galpon_id
+ordenes_actuadores.sensor_id > sensores.id
+ordenes_actuadores.usuario_id > usuarios.id
+estados_actuadores.sensor_id > sensores.id
 
 // EP-05 Alertas
 politicas_alerta.granja_id > granjas.id
@@ -995,6 +1227,19 @@ evidencias_alertas.usuario_id > usuarios.id
 // EP-06 Bitácora
 lotes.galpon_id > galpones.id
 lotes.proveedor_id > proveedores.id
+lotes.linea_genetica_id > lineas_geneticas.id
+curvas_geneticas_version.linea_genetica_id > lineas_geneticas.id
+curvas_geneticas_version.publicada_por_id > usuarios.id
+puntos_curva_genetica.curva_version_id > curvas_geneticas_version.id
+planes_lote.lote_id > lotes.id
+planes_lote.curva_version_id > curvas_geneticas_version.id
+planes_lote.linea_genetica_id_snapshot > lineas_geneticas.id
+planes_lote.creado_por_id > usuarios.id
+estimaciones_alimento_plan.plan_lote_id > planes_lote.id
+estimaciones_alimento_plan.curva_version_id_snapshot > curvas_geneticas_version.id
+estimaciones_alimento_plan.creado_por_id > usuarios.id
+renglones_estimacion_alimento.estimacion_id > estimaciones_alimento_plan.id
+renglones_estimacion_alimento.tipo_alimento_id > tipos_alimento.id
 pesajes.lote_id > lotes.id
 pesajes.usuario_id > usuarios.id
 registros_mortalidad.lote_id > lotes.id
@@ -1059,6 +1304,6 @@ clima.granja_id > granjas.id
 
 
 // ================================================================
-// FIN — 62 entidades (50 base + 10 capa de inteligencia + 2 técnicas)
+// FIN — 77 entidades según prisma/schema.prisma (2026-10-24)
 // ================================================================
 ```

@@ -57,9 +57,6 @@ model Usuario {
   email           String?  @unique
   password_hash   String
   telefono        String?
-  foto_url        String?
-  huella_voz_url  String?
-  pin_voz_hash    String?
   activo          Boolean  @default(true)
   fecha_creacion  DateTime @default(now())
 
@@ -716,7 +713,6 @@ model RecuperacionPassword {
   atendida_por_id Int?
   atendida_en     DateTime?
   observacion     String?
-  token_hash      String? // legado: el flujo nuevo no crea tokens públicos
   expira_en       DateTime?
   usado           Boolean                    @default(false)
   fecha_creacion  DateTime                   @default(now())
@@ -789,8 +785,6 @@ model MatrizCalificacion {
   activa           Boolean  @default(true)
   fecha_creacion   DateTime @default(now())
 
-  respuestas RespuestaChatbot[]
-
   @@unique([codigo_pregunta, opcion_respuesta])
   @@map("matriz_calificacion")
 }
@@ -838,6 +832,10 @@ model Prospecto {
   senal_caliente             Boolean         @default(false)
   conectividad_limitada      Boolean         @default(false)
   viabilidad_tecnica         String?
+  intencion_comercial        String?
+  plazo_comercial            String?
+  conectividad_comercial     String?
+  energia_comercial          String?
   estado                     EstadoProspecto @default(nuevo)
   pregunta_actual            String?
   ultima_pregunta            String?
@@ -858,11 +856,97 @@ model Prospecto {
   cotizaciones  Cotizacion[]
   interacciones InteraccionChatbot[]
   solicitudes   SolicitudPqrs[]
+  conversacionesComerciales ConversacionComercial[]
+  galponesComerciales GalponComercial[]
+  autorizacionesComerciales AutorizacionComercial[]
 
   @@index([asesor_asignado_id])
   @@index([usuario_convertido_id])
   @@index([whatsapp_id])
   @@map("prospectos")
+}
+
+// Conversaciones y datos comerciales ya creados por la migración histórica
+// de AVIA. Se conservan aquí para que el esquema represente la base existente.
+model ConversacionComercial {
+  id                    Int       @id @default(autoincrement())
+  session_id            String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prospecto_id          Int?
+  canal                 String    @default("web")
+  estado                String    @default("abierta")
+  resumen               String?
+  objetivo_pendiente    String?
+  version_estado        Int       @default(1)
+  ultima_actividad      DateTime  @default(now())
+  expira_en             DateTime
+  fecha_creacion        DateTime  @default(now())
+  prospecto             Prospecto? @relation(fields: [prospecto_id], references: [id])
+  mensajes              MensajeComercial[]
+  autorizaciones       AutorizacionComercial[]
+
+  @@index([prospecto_id, ultima_actividad])
+  @@index([expira_en])
+  @@map("conversaciones_comerciales")
+}
+
+model MensajeComercial {
+  id                    Int       @id @default(autoincrement())
+  conversacion_id       Int
+  remitente             String
+  contenido             String
+  client_message_id     String?
+  proveedor_message_id  String?
+  estado                String    @default("confirmado")
+  fecha_creacion        DateTime  @default(now())
+  conversacion          ConversacionComercial @relation(fields: [conversacion_id], references: [id], onDelete: Cascade)
+
+  @@unique([conversacion_id, client_message_id])
+  @@index([conversacion_id, fecha_creacion])
+  @@map("mensajes_comerciales")
+}
+
+model AutorizacionComercial {
+  id                Int       @id @default(autoincrement())
+  prospecto_id      Int
+  conversacion_id   Int
+  proposito         String
+  version_texto     String
+  estado            String
+  canal             String
+  fecha_respuesta   DateTime  @default(now())
+  prospecto         Prospecto @relation(fields: [prospecto_id], references: [id])
+  conversacion      ConversacionComercial @relation(fields: [conversacion_id], references: [id], onDelete: Cascade)
+
+  @@index([prospecto_id, proposito])
+  @@map("autorizaciones_comerciales")
+}
+
+model GalponComercial {
+  id              Int       @id @default(autoincrement())
+  prospecto_id    Int
+  numero          Int
+  superficie_m2   Float?
+  estado_dato     String    @default("pendiente")
+  evidencia       String?
+  prospecto       Prospecto @relation(fields: [prospecto_id], references: [id], onDelete: Cascade)
+
+  @@unique([prospecto_id, numero])
+  @@map("galpones_comerciales")
+}
+
+model ConocimientoComercial {
+  id               Int      @id @default(autoincrement())
+  codigo           String   @unique
+  tema             String
+  contenido        String
+  estado_revision  String   @default("borrador")
+  estado_capacidad String   @default("desconocido")
+  version          Int      @default(1)
+  vigente          Boolean  @default(false)
+  actualizado_en   DateTime @updatedAt
+
+  @@index([estado_revision, vigente, tema])
+  @@map("conocimiento_comercial")
 }
 
 // ---------------------------------------------------------------------------
@@ -872,7 +956,6 @@ model RespuestaChatbot {
   id               Int      @id @default(autoincrement())
   prospecto_id     Int
   pregunta_id      Int?
-  matriz_id        Int?
   bloque           String?
   codigo_pregunta  String?
   pregunta_texto   String?
@@ -882,7 +965,6 @@ model RespuestaChatbot {
 
   prospecto Prospecto           @relation(fields: [prospecto_id], references: [id])
   pregunta  PreguntaChatbot?    @relation(fields: [pregunta_id], references: [id])
-  matriz    MatrizCalificacion? @relation(fields: [matriz_id], references: [id])
 
   @@index([prospecto_id])
   @@map("respuestas_chatbot")
@@ -902,12 +984,16 @@ model Cotizacion {
   url_pdf          String?
   canal_envio      String?
   estado           String    @default("generada")
+  version          Int       @default(1)
+  snapshot_precios Json?
+  idempotency_key String?   @unique
   fecha_generacion DateTime  @default(now())
   fecha_envio      DateTime?
 
   prospecto Prospecto          @relation(fields: [prospecto_id], references: [id])
   sensores  CotizacionSensor[]
 
+  @@unique([prospecto_id, version])
   @@index([prospecto_id])
   @@map("cotizaciones")
 }
@@ -1919,9 +2005,25 @@ model CatalogoSensor {
   cobertura_m2        Float?
   obligatorio         Boolean  @default(true)
   activo              Boolean  @default(true)
+  estado_revision    String   @default("provisional")
   fecha_actualizacion DateTime @updatedAt
 
   @@map("catalogo_sensores")
+}
+
+model TarifaComercial {
+  id                  Int      @id @default(autoincrement())
+  codigo              String
+  nombre              String
+  precio_unitario_cop Decimal  @db.Decimal(14, 2)
+  estado_revision     String   @default("provisional")
+  version             Int      @default(1)
+  vigente             Boolean  @default(false)
+  actualizado_en      DateTime @updatedAt
+
+  @@unique([codigo, version])
+  @@index([codigo, estado_revision, vigente, version])
+  @@map("tarifas_comerciales")
 }
 
 // ---------------------------------------------------------------------------
