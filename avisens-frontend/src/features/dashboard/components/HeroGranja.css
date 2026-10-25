@@ -121,7 +121,8 @@
 .hero-granja-astro {
   position: absolute;
   display: block;
-  width: 54px;
+  width: 78px;
+  filter: drop-shadow(0 0 14px rgb(255 205 100 / 0.75)) drop-shadow(0 0 34px rgb(255 190 80 / 0.45));
   aspect-ratio: 1;
   object-fit: contain;
   translate: -50% -50%;
@@ -129,8 +130,17 @@
   transition: transform 700ms var(--hero-ease);
 }
 
-.hero-granja-astro--luna { width: 44px; }
-.hero-granja-astro { animation: hero-granja-astro-entra 900ms var(--hero-ease) both; }
+.hero-granja-astro--luna {
+  width: 56px;
+  filter: drop-shadow(0 0 12px rgb(220 232 255 / 0.55)) drop-shadow(0 0 30px rgb(190 210 255 / 0.3));
+}
+
+.hero-granja-astro--sol { animation: hero-granja-astro-entra 900ms var(--hero-ease) both, hero-granja-sol-gira 160s linear infinite; }
+
+@keyframes hero-granja-sol-gira {
+  to { rotate: 360deg; }
+}
+.hero-granja-astro--luna { animation: hero-granja-astro-entra 900ms var(--hero-ease) both; }
 
 @keyframes hero-granja-astro-entra {
   from { opacity: 0; }
@@ -462,7 +472,6 @@
   align-items: center;
   justify-content: center;
   color: #203b32;
-  font-size: 15cqw;
   font-weight: 800;
   letter-spacing: -0.01em;
   line-height: 1;
@@ -552,6 +561,8 @@
   .hero-granja-nube,
   .hero-granja-estrella,
   .hero-granja-astro,
+  .hero-granja-astro--sol,
+  .hero-granja-astro--luna,
   .escena-halo--pulsa,
   .hero-granja-sync.is-spinning svg { animation: none; }
 

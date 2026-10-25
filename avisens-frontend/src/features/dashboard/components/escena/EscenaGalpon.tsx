@@ -157,7 +157,11 @@ function EscenaGalpon({ nombreGalpon, tono, diaLote, aves, astro, fase }: Props)
           }}
         >
           <img src={letreroImagen} alt="" aria-hidden="true" />
-          <span className="escena-letrero-nombre" title={nombreGalpon}>
+          <span
+            className="escena-letrero-nombre"
+            title={nombreGalpon}
+            style={{ fontSize: `${Math.min(15, 80 / (0.6 * Math.max(nombreGalpon.length, 1))).toFixed(2)}cqw` }}
+          >
             <span>{nombreGalpon}</span>
           </span>
         </div>
