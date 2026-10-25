@@ -16,6 +16,7 @@ import { pesajesDelLote, progresoDatos, proximoPaso, type DestinoPaso, type Pend
 import { useCurvaLote } from './useCurvaLote'
 import lunaLowPoly from '@features/dashboard/assets/escena/luna-low-poly.webp'
 import solLowPoly from '@features/dashboard/assets/escena/sol-low-poly.webp'
+import { useClimaVisual } from './useClimaVisual'
 import { useHoraDelDia } from '@features/dashboard/hooks/useFaseDelDia'
 import { faseDelDia, posicionDelAstro } from '@features/dashboard/model/escenaGalpon'
 import { FONDOS_POR_FASE } from '@features/dashboard/components/escena/fondosPorFase'
@@ -72,6 +73,7 @@ function GranjasPropietario() {
   const llegoConDestino = useRef(parametros.get('pestana') !== null || parametros.get('galpon') !== null)
 
   const seleccionada = estructura.find((item) => item.granja.id === granjaId) ?? estructura[0] ?? null
+  const clima = useClimaVisual(seleccionada?.granja.id ?? null)
   const galpones = useMemo(
     () => [...(seleccionada?.galpones ?? [])].sort((a, b) => Number(b.activo) - Number(a.activo)),
     [seleccionada],
@@ -181,6 +183,7 @@ function GranjasPropietario() {
       <section
         className="org-hero org-hero--granja"
         data-fase={fase}
+        data-clima={clima}
         style={{ '--fondo': `url(${FONDOS_POR_FASE[fase]})` } as CSSProperties}
         aria-labelledby="gp-hero-titulo"
       >
@@ -198,6 +201,7 @@ function GranjasPropietario() {
           aria-hidden="true"
           style={{ left: `${56 + ((astro.x - 44) / 42) * 34}%`, top: `${astro.y + 2}%` }}
         />
+        {clima === 'lluvia' && <div className="gp-hero-lluvia" aria-hidden="true" />}
         <div className="gp-hero-velo" aria-hidden="true" />
         <div className="org-hero-texto">
           <span className="adm-eyebrow org-aparece" style={{ '--orden': 0 } as CSSProperties}>
@@ -239,7 +243,7 @@ function GranjasPropietario() {
 
         <div className="org-hero-escena">
           <Suspense fallback={<div className="org-hero-escena-cargando" aria-hidden="true" />}>
-            <EscenaGranja nombre={granja.nombre} />
+            <EscenaGranja nombre={granja.nombre} fondo={FONDOS_POR_FASE[fase]} clima={clima} posicionAstro={astro.x} />
           </Suspense>
           <p className="org-hero-escena-nota org-hero-escena-nota--pista">Tu granja en 3D.</p>
         </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   ACESFilmicToneMapping,
+  Color,
   DirectionalLight,
   HemisphereLight,
   PCFSoftShadowMap,
@@ -10,30 +11,47 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three'
+import granjaImagen from '@features/dashboard/assets/escena/granja-popayan-low-poly.webp'
 import { liberarGalpon } from '@features/dashboard/components/escena/modeloGalpon'
 import { LUCES } from '@features/dashboard/components/escena/lucesPorFase'
 import { useFaseDelDia } from '@features/dashboard/hooks/useFaseDelDia'
-import type { FaseDelDia } from '@features/dashboard/model/escenaGalpon'
-import granjaImagen from '@features/dashboard/assets/escena/granja-popayan-low-poly.webp'
 import { crearAdornos, type AdornosGranja } from './adornosGranja'
+import { colorDelHorizonte } from './colorDelHorizonte'
+import type { ClimaVisual } from './climaVisual'
 import { cargarModeloGranja, type GranjaCargada } from './modeloGranja'
 
-const ELEVACION = (11 * Math.PI) / 180
-const ACIMUT = 0
-const CAMPO_VISION = 24
-const MARGEN_ENCUADRE = 0.87
+type Props = {
+  nombre: string
+  fondo: string
+  clima: ClimaVisual
+  posicionAstro: number
+}
 
-function EscenaGranja({ nombre }: { nombre: string }) {
+const ELEVACION = (12 * Math.PI) / 180
+const CAMPO_VISION = 24
+const MARGEN_ENCUADRE = 0.96
+const FUERZA_CLIMA: Record<ClimaVisual, { sol: number; ambiente: number }> = {
+  despejado: { sol: 1, ambiente: 1 },
+  nublado: { sol: 0.5, ambiente: 1.08 },
+  lluvia: { sol: 0.3, ambiente: 0.95 },
+}
+
+function EscenaGranja({ nombre, fondo, clima, posicionAstro }: Props) {
   const contenedor = useRef<HTMLDivElement>(null)
   const [sinModelo, setSinModelo] = useState(false)
   const fase = useFaseDelDia()
-  const faseActual = useRef(fase)
-  const ajustarLuz = useRef<((fase: FaseDelDia) => void) | null>(null)
-  faseActual.current = fase
+  const estado = useRef({ fase, clima, posicionAstro, fondo })
+  estado.current = { fase, clima, posicionAstro, fondo }
+  const redibujar = useRef<(() => void) | null>(null)
+  const recolorear = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    ajustarLuz.current?.(fase)
-  }, [fase])
+    redibujar.current?.()
+  }, [fase, clima, posicionAstro])
+
+  useEffect(() => {
+    recolorear.current?.()
+  }, [fondo])
 
   useEffect(() => {
     const caja = contenedor.current
@@ -58,7 +76,7 @@ function EscenaGranja({ nombre }: { nombre: string }) {
     caja.appendChild(renderer.domElement)
 
     const mundo = new Scene()
-    const camara = new PerspectiveCamera(CAMPO_VISION, 1, 0.1, 800)
+    const camara = new PerspectiveCamera(CAMPO_VISION, 1, 0.1, 900)
     const ambiente = new HemisphereLight(0xf2f6fb, 0xaebca0, 1.15)
     const sol = new DirectionalLight(0xffeccb, 1.9)
     sol.castShadow = true
@@ -71,56 +89,86 @@ function EscenaGranja({ nombre }: { nombre: string }) {
     let adornos: AdornosGranja | null = null
     let cancelado = false
 
-    const colocarCamara = (distancia: number, objetivo: Vector3) => {
-      camara.position.set(
-        objetivo.x + Math.sin(ACIMUT) * Math.cos(ELEVACION) * distancia,
-        objetivo.y + Math.sin(ELEVACION) * Math.cos(0) * distancia,
-        objetivo.z + Math.cos(ACIMUT) * Math.cos(ELEVACION) * distancia,
-      )
-      camara.lookAt(objetivo)
-      camara.updateMatrixWorld()
+    const zonaVisible = () => {
+      const zona = caja.closest('.org-hero-escena')
+      const marco = caja.getBoundingClientRect()
+      if (!zona || !marco.width) return { x: 0, y: 0, ancho: caja.clientWidth, alto: caja.clientHeight }
+      const rect = zona.getBoundingClientRect()
+      return { x: rect.left - marco.left, y: rect.top - marco.top, ancho: rect.width, alto: rect.height }
     }
 
-    const cabe = (distancia: number, objetivo: Vector3, esquinas: Vector3[]) => {
-      colocarCamara(distancia, objetivo)
-      return esquinas.every((esquina) => {
-        const punto = esquina.clone().project(camara)
-        return Math.abs(punto.x) <= MARGEN_ENCUADRE && Math.abs(punto.y) <= MARGEN_ENCUADRE
-      })
+    const iluminar = () => {
+      const { fase: faseActual, clima: climaActual, posicionAstro: astro } = estado.current
+      const luz = LUCES[faseActual]
+      const fuerza = FUERZA_CLIMA[climaActual]
+      ambiente.color.set(luz.cielo)
+      ambiente.groundColor.set(luz.suelo)
+      ambiente.intensity = luz.ambiente * fuerza.ambiente
+      sol.color.set(luz.sol)
+      sol.intensity = luz.fuerza * fuerza.sol
+      const lado = Math.max(-1, Math.min(1, (astro - 65) / 21))
+      sol.position.set(lado * 48, luz.y * 2.2, 20 + Math.abs(luz.z) * 1.2)
+      adornos?.aplicarFase(faseActual)
+      renderer.shadowMap.needsUpdate = true
     }
 
     const dibujar = () => {
       if (!granja) return
-      const { centro, tamano } = granja
-      const objetivo = new Vector3(centro.x, centro.y + tamano.y * 0.4, centro.z)
-      const esquinas = [-1, 1].flatMap((x) => [-1, 1].flatMap((y) => [-1, 1].map((z) => (
-        new Vector3(centro.x + (x * tamano.x) / 2, centro.y + (y * tamano.y) / 2, centro.z + (z * tamano.z) / 2)
-      ))))
-      let cerca = granja.radio * 0.5
-      let lejos = granja.radio * 6
-      for (let paso = 0; paso < 14; paso++) {
+      const ancho = caja.clientWidth
+      const alto = caja.clientHeight
+      if (!ancho || !alto) return
+      const zona = zonaVisible()
+      const desvioX = zona.x + zona.ancho / 2 - ancho / 2
+      const desvioY = zona.y + zona.alto / 2 - alto / 2
+      camara.setViewOffset(ancho, alto, -desvioX, -desvioY, ancho, alto)
+      const objetivo = granja.marco.getCenter(new Vector3())
+      objetivo.x -= 1.5
+      objetivo.y *= 0.55
+      const { min, max } = granja.marco
+      const esquinas = [min.x, max.x].flatMap((x) => [min.y, max.y].flatMap((y) => [min.z, max.z].map((z) => new Vector3(x, y, z))))
+      const colocar = (distancia: number) => {
+        camara.position.set(
+          objetivo.x,
+          objetivo.y + Math.sin(ELEVACION) * distancia,
+          objetivo.z + Math.cos(ELEVACION) * distancia,
+        )
+        camara.lookAt(objetivo)
+        camara.updateMatrixWorld()
+      }
+      const cabe = (distancia: number) => {
+        colocar(distancia)
+        return esquinas.every((esquina) => {
+          const punto = esquina.clone().project(camara)
+          const px = ((punto.x + 1) / 2) * ancho
+          const py = ((1 - punto.y) / 2) * alto
+          return Math.abs(px - (zona.x + zona.ancho / 2)) <= (zona.ancho / 2) * MARGEN_ENCUADRE
+            && Math.abs(py - (zona.y + zona.alto / 2)) <= (zona.alto / 2) * MARGEN_ENCUADRE
+        })
+      }
+      let cerca = 6
+      let lejos = 400
+      for (let paso = 0; paso < 16; paso++) {
         const medio = (cerca + lejos) / 2
-        if (cabe(medio, objetivo, esquinas)) lejos = medio
+        if (cabe(medio)) lejos = medio
         else cerca = medio
       }
-      colocarCamara(lejos, objetivo)
+      colocar(lejos)
       renderer.render(mundo, camara)
     }
 
-    const iluminar = (nueva: FaseDelDia) => {
-      const luz = LUCES[nueva]
-      ambiente.color.set(luz.cielo)
-      ambiente.groundColor.set(luz.suelo)
-      ambiente.intensity = luz.ambiente
-      sol.color.set(luz.sol)
-      sol.intensity = luz.fuerza
-      sol.position.set(luz.x * 2, luz.y * 2, luz.z * 2)
-      adornos?.aplicarFase(nueva)
-      renderer.shadowMap.needsUpdate = true
+    redibujar.current = () => {
+      iluminar()
       dibujar()
     }
-    ajustarLuz.current = iluminar
-    iluminar(faseActual.current)
+
+    const pintarSuelo = () => {
+      void colorDelHorizonte(estado.current.fondo).then((color: Color) => {
+        if (cancelado) return
+        adornos?.aplicarSuelo(color)
+        dibujar()
+      })
+    }
+    recolorear.current = pintarSuelo
 
     const encuadrar = () => {
       const ancho = caja.clientWidth
@@ -144,18 +192,19 @@ function EscenaGranja({ nombre }: { nombre: string }) {
       mundo.add(cargada.modelo)
       adornos = crearAdornos(cargada)
       mundo.add(adornos.grupo)
-      adornos.aplicarFase(faseActual.current)
-      const alcance = cargada.radio * 1.1
-      Object.assign(sol.shadow.camera, { left: -alcance, right: alcance, top: alcance, bottom: -alcance, near: 1, far: 400 })
+      const alcance = 52
+      Object.assign(sol.shadow.camera, { left: -alcance, right: alcance, top: alcance, bottom: -alcance, near: 1, far: 260 })
       sol.shadow.camera.updateProjectionMatrix()
       sol.target.position.copy(cargada.centro)
-      renderer.shadowMap.needsUpdate = true
+      iluminar()
+      pintarSuelo()
       encuadrar()
     })
 
     return () => {
       cancelado = true
-      ajustarLuz.current = null
+      redibujar.current = null
+      recolorear.current = null
       observador.disconnect()
       if (granja) liberarGalpon(granja.modelo)
       adornos?.liberar()
@@ -169,13 +218,8 @@ function EscenaGranja({ nombre }: { nombre: string }) {
   }, [])
 
   return (
-    <div className="gp-escena" data-fase={fase}>
-      <div
-        ref={contenedor}
-        className="gp-escena-visor"
-        role="img"
-        aria-label={`${nombre} en 3D`}
-      />
+    <div className="gp-escena" data-fase={fase} data-clima={clima}>
+      <div ref={contenedor} className="gp-escena-visor" role="img" aria-label={`${nombre} en 3D`} />
       {sinModelo && <img className="gp-escena-respaldo" src={granjaImagen} alt={`Ilustración de ${nombre}`} />}
     </div>
   )
