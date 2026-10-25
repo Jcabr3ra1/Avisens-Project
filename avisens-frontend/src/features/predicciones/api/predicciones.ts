@@ -138,7 +138,14 @@ export interface CurvaCrecimiento {
     fecha_al_objetivo: string | null
     punto_inflexion: { dia: number; peso_g: number; ganancia_max_g_dia: number }
   }
-  modelo: { nombre: string; version: string; confianza: number; puntos_usados: number }
+  modelo: {
+    nombre: string
+    version: string
+    confianza: number
+    nivel_confianza?: NivelConfianza
+    motivos?: string[]
+    puntos_usados: number
+  }
 }
 
 export async function obtenerCurvaCrecimiento(loteId: number): Promise<CurvaCrecimiento> {

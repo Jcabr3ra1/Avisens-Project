@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import type { CSSProperties } from 'react'
+import Pollito from '@shared/ui/ilustraciones/Pollito'
 import type { TonoGranja } from '../../model/estadoGranja'
 import type { KpiGranja } from '../../model/resumenGranja'
 import {
@@ -32,24 +33,6 @@ const decimal = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
 function letrero(nombre: string): string {
   const limpio = nombre.trim()
   return limpio.length > LARGO_MAXIMO_LETRERO ? `${limpio.slice(0, LARGO_MAXIMO_LETRERO - 1)}…` : limpio
-}
-
-function Pollito({ x, y, escala, mirada, retraso }: {
-  x: number; y: number; escala: number; mirada: 1 | -1; retraso: number
-}) {
-  return (
-    <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${(escala * mirada).toFixed(3)} ${escala.toFixed(3)})`}>
-      <g className="pollito" style={{ '--retraso': `${retraso.toFixed(2)}s` } as CSSProperties}>
-        <path d="M-4 -7V0M3 -7V0" stroke="var(--pata)" strokeWidth="2" strokeLinecap="round" />
-        <path d="M-10 -17q-6 -2 -8 -8q6 0 9 4z" fill="var(--plumaje-sombra)" />
-        <ellipse cx="0" cy="-15" rx="11" ry="9" fill="var(--plumaje)" />
-        <path d="M-6 -15q6 -7 12 0q-6 6 -12 0z" fill="var(--plumaje-sombra)" />
-        <circle cx="8" cy="-25" r="6.5" fill="var(--plumaje)" />
-        <path d="M13.5 -26.2L18.5 -24.2L13.5 -22.6z" fill="var(--pata)" />
-        <circle cx="10.2" cy="-26.4" r="1.2" fill="var(--tinta)" />
-      </g>
-    </g>
-  )
 }
 
 function EscenaGalpon({

@@ -136,21 +136,18 @@ function ReportesCrecimiento({ lote, indicadores, curva, alimento, cargandoAlime
   }
 
   return (
-    <section className="guia-reportes" aria-labelledby="guia-reportes-titulo">
-      <div>
-        <p className="guia-lote-badge">Para guardar o compartir</p>
-        <h2 id="guia-reportes-titulo">Tus reportes</h2>
-        <p>Descarga un archivo CSV con los datos disponibles del lote.</p>
-      </div>
-      <div className="guia-reportes-acciones">
+    <section className="gdc-reportes" aria-label="Reportes del lote">
+      <p className="gdc-reportes-nota">
+        Descarga un CSV con los datos del lote. El de alimentación separa los consumos registrados de las estimaciones vigentes del plan y no incluye proyecciones desactualizadas.
+      </p>
+      <div className="gdc-reportes-acciones">
         <button type="button" className="adm-btn adm-btn--secundario" onClick={exportarCrecimiento} disabled={!crecimientoDisponible || exportando}>
-          Descargar reporte de crecimiento
+          Reporte de crecimiento
         </button>
         <button type="button" className="adm-btn adm-btn--secundario" onClick={() => void exportarAlimentacion()} disabled={exportando || cargandoAlimento}>
-          {exportando ? 'Preparando reporte…' : 'Descargar reporte de alimentación'}
+          {exportando ? 'Preparando reporte…' : 'Reporte de alimentación'}
         </button>
       </div>
-      <p className="guia-reportes-nota">El archivo de alimentación separa los consumos registrados de las estimaciones vigentes del plan. No incluye proyecciones desactualizadas.</p>
     </section>
   )
 }

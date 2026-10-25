@@ -55,11 +55,10 @@ function ProyeccionFaena({ loteId, curva, plan, prediccion, error, cargando }: P
   }
 
   return (
-    <section className="adm-panel guia-panel guia-datos-panel gpf" aria-labelledby="gpf-titulo">
+    <section className="gdc-sim" aria-labelledby="gpf-titulo">
       <div>
-        <span className="adm-eyebrow">Simulador de salida</span>
-        <h2 id="gpf-titulo">¿Y si faeno el día {dia}?</h2>
-        <p className="guia-meta-subtitulo">Elige un día futuro para estimar el peso y la conversión del lote.</p>
+        <h3 id="gpf-titulo">¿Y si faeno el día {dia}?</h3>
+        <p className="gdc-sim-ayuda">Elige un día futuro para estimar el peso y la conversión del lote.</p>
       </div>
       {!planListo ? (
         <p className="guia-nota">{plan?.desactualizado
@@ -102,12 +101,12 @@ function ProyeccionFaena({ loteId, curva, plan, prediccion, error, cargando }: P
             <p className="guia-error" role="alert">{errorSimulacion}</p>
           ) : resultado ? (
             <>
-              <div className="guia-datos-grid gpf-grid">
-                <div><span>Peso estimado al día {resultado.dia_faena}</span><strong>{formatearPeso(resultado.peso_proyectado_faena_g)}</strong></div>
-                <div><span>FCR estimado</span><strong>{resultado.fcr_proyectado === null ? '—' : dosDecimales.format(resultado.fcr_proyectado)}</strong></div>
-                <div><span>Mortalidad estimada</span><strong>{resultado.mortalidad_proyectada_pct === null ? '—' : `${unDecimal.format(resultado.mortalidad_proyectada_pct)} %`}</strong>{textoDeRango(resultado.rango_mortalidad, 'mortalidad') && <small className="gpf-sub">{textoDeRango(resultado.rango_mortalidad, 'mortalidad')}</small>}</div>
-                <div><span>Alimento total estimado</span><strong>{resultado.consumo_proyectado_kg === null ? '—' : `${entero.format(resultado.consumo_proyectado_kg)} kg`}</strong>{textoDeRango(resultado.rango_consumo, 'consumo') && <small className="gpf-sub">{textoDeRango(resultado.rango_consumo, 'consumo')}</small>}</div>
-              </div>
+              <dl className="gdc-sim-datos">
+                <div><dt>Peso estimado al día {resultado.dia_faena}</dt><dd>{formatearPeso(resultado.peso_proyectado_faena_g)}</dd></div>
+                <div><dt>FCR estimado</dt><dd>{resultado.fcr_proyectado === null ? '—' : dosDecimales.format(resultado.fcr_proyectado)}</dd></div>
+                <div><dt>Mortalidad estimada</dt><dd>{resultado.mortalidad_proyectada_pct === null ? '—' : `${unDecimal.format(resultado.mortalidad_proyectada_pct)} %`}</dd>{textoDeRango(resultado.rango_mortalidad, 'mortalidad') && <small className="gpf-sub">{textoDeRango(resultado.rango_mortalidad, 'mortalidad')}</small>}</div>
+                <div><dt>Alimento total estimado</dt><dd>{resultado.consumo_proyectado_kg === null ? '—' : `${entero.format(resultado.consumo_proyectado_kg)} kg`}</dd>{textoDeRango(resultado.rango_consumo, 'consumo') && <small className="gpf-sub">{textoDeRango(resultado.rango_consumo, 'consumo')}</small>}</div>
+              </dl>
               <ConfianzaProyeccion resultado={resultado} />
               {resultado.fcr_proyectado === null && <p className="guia-nota">El peso sí se estima; faltan registros de consumo o mortalidad suficientes para calcular el FCR.</p>}
               <p className="guia-nota">La simulación usa los modelos de predicción existentes y no modifica el plan ni guarda un nuevo pronóstico.</p>

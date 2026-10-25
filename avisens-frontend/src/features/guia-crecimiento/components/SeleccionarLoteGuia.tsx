@@ -4,7 +4,6 @@ import { listarLotes, type Lote } from '@features/lotes/api/lotes'
 import { obtenerResumenCrecimiento, type LoteResumenCrecimiento, type ResumenCrecimiento } from '@features/indicadores/api/indicadores'
 import { getRol } from '@shared/api'
 import { ROL_ADMIN, ROL_PROPIETARIO } from '@shared/auth/permisos'
-import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { mensajeDeError } from '@shared/utils/errores'
 
 const formatoEntero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 })
@@ -28,6 +27,22 @@ function esMayorDesvioPeso(lote: LoteResumenCrecimiento, filas: LoteResumenCreci
   const comparables = filas.filter((fila) => fila.desvio_peso_pct !== null)
   return comparables.length > 1 && lote.desvio_peso_pct !== null
     && Math.abs(lote.desvio_peso_pct) === Math.max(...comparables.map((fila) => Math.abs(fila.desvio_peso_pct!)))
+}
+
+function EncabezadoGuia({ titulo, subtitulo }: { titulo: string; subtitulo: string }) {
+  return (
+    <header className="gdc-cabecera">
+      <div className="gdc-cabecera-texto">
+        <nav className="adm-migas guia-migas" aria-label="Ruta de navegación">
+          <span className="adm-miga">Granja</span>
+          <span className="adm-miga-sep" aria-hidden="true">›</span>
+          <span className="adm-miga adm-miga--actual" aria-current="page">Guía de crecimiento</span>
+        </nav>
+        <h1 className="gdc-titulo">{titulo}</h1>
+        <p className="gdc-contexto">{subtitulo}</p>
+      </div>
+    </header>
+  )
 }
 
 function SeleccionarLoteGuia() {
@@ -77,12 +92,10 @@ function SeleccionarLoteGuia() {
 
   if (muestraComparacion) {
     return (
-      <div className="page-container adm-page guia-page">
-        <CabeceraAdmin
-          eyebrow="Guía de crecimiento"
+      <div className="page-container adm-page guia-page gdc">
+        <EncabezadoGuia
           titulo="Tu granja de un vistazo"
           subtitulo="Revisa qué lotes necesitan atención y cómo va su peso frente a la curva."
-          migas={[{ label: 'Granja' }, { label: 'Guía de crecimiento' }]}
         />
         {error && <div className="adm-alerta" role="alert"><span>{error}</span><button type="button" onClick={() => setRevision((actual) => actual + 1)}>Reintentar</button></div>}
         {cargando ? (
@@ -91,10 +104,7 @@ function SeleccionarLoteGuia() {
           <>
             <section className="guia-entrada-riesgos" aria-labelledby="guia-riesgos-titulo">
               <div className="guia-entrada-cabecera">
-                <div>
-                  <p className="guia-lote-badge">Atención prioritaria</p>
-                  <h2 id="guia-riesgos-titulo">Lotes que necesitan revisión</h2>
-                </div>
+                <h2 id="guia-riesgos-titulo">Lotes que necesitan revisión</h2>
                 <span>{resumen.riesgos.length} {resumen.riesgos.length === 1 ? 'lote' : 'lotes'}</span>
               </div>
               {resumen.riesgos.length === 0 ? (
@@ -120,10 +130,7 @@ function SeleccionarLoteGuia() {
 
             <section className="guia-comparacion" aria-labelledby="guia-comparacion-titulo">
               <header className="guia-entrada-cabecera">
-                <div>
-                  <p className="guia-lote-badge">Lotes activos</p>
-                  <h2 id="guia-comparacion-titulo">Comparación entre lotes</h2>
-                </div>
+                <h2 id="guia-comparacion-titulo">Comparación entre lotes</h2>
                 <span>{resumen.lotes.length} {resumen.lotes.length === 1 ? 'lote' : 'lotes'}</span>
               </header>
               {resumen.lotes.length === 0 ? (
@@ -167,12 +174,10 @@ function SeleccionarLoteGuia() {
   }
 
   return (
-    <div className="page-container adm-page guia-page">
-      <CabeceraAdmin
-        eyebrow="Guía de crecimiento"
-        titulo="Guía de peso"
+    <div className="page-container adm-page guia-page gdc">
+      <EncabezadoGuia
+        titulo="Guía de crecimiento"
         subtitulo="Elige un lote activo para consultar su crecimiento y planificación."
-        migas={[{ label: 'Granja' }, { label: 'Guía de peso' }]}
       />
       <section className="adm-panel guia-selector" aria-labelledby="seleccionar-lote-titulo">
         <h2 id="seleccionar-lote-titulo">Selecciona un lote</h2>

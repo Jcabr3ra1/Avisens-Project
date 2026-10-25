@@ -310,21 +310,6 @@
   letter-spacing: -0.01em;
 }
 
-.pollito {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-  animation: pollito-picotea 3.1s ease-in-out infinite;
-  animation-delay: var(--retraso, 0s);
-}
-
-@keyframes pollito-picotea {
-  0%, 52%, 100% { transform: translateY(0) rotate(0); }
-  58% { transform: translateY(1.5px) rotate(7deg); }
-  64% { transform: translateY(0) rotate(-1deg); }
-  70% { transform: translateY(1.5px) rotate(7deg); }
-  78% { transform: translateY(-1px) rotate(0); }
-}
-
 .escena-halo { opacity: 0.22; }
 .escena-halo--pulsa {
   transform-box: fill-box;
@@ -467,7 +452,6 @@
   .escena,
   .hero-granja-nube,
   .hero-granja-estrella,
-  .pollito,
   .escena-halo--pulsa,
   .escena-ondas path,
   .escena-mercurio,

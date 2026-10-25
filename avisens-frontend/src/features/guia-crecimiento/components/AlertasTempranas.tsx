@@ -1,46 +1,60 @@
-import { useAnomaliasLote } from '../hooks/useAnomaliasLote'
+import type { AnomaliasLote } from '@features/predicciones/api/predicciones'
+import { IcCheck } from '@shared/ui/icons/icons'
 import { etiquetaSeveridad, resumenDeAlertas } from '../model/confianza'
-import './AlertasTempranas.css'
 
 type Props = {
-  loteId: number
-  habilitado: boolean
+  datos: AnomaliasLote | null
+  error: string
+  cargando: boolean
+  diaSeleccionado: number
+  onReintentar: () => void
+  onSeleccionarDia: (dia: number) => void
 }
 
-function AlertasTempranas({ loteId, habilitado }: Props) {
-  const { datos, error, cargando, recargar } = useAnomaliasLote(loteId, habilitado)
+function AlertasTempranas({ datos, error, cargando, diaSeleccionado, onReintentar, onSeleccionarDia }: Props) {
+  if (cargando) {
+    return <p className="gdc-alertas-estado" role="status">Revisando pesos, consumo y mortalidad…</p>
+  }
+  if (error) {
+    return (
+      <div className="guia-error" role="alert">
+        <span>{error}</span>
+        <button type="button" onClick={onReintentar}>Reintentar</button>
+      </div>
+    )
+  }
+  if (!datos) return null
+
+  if (datos.anomalias.length === 0) {
+    return (
+      <p className="gdc-alertas-estado gdc-alertas-estado--limpio" role="status">
+        <IcCheck size={16} aria-hidden="true" />
+        {resumenDeAlertas(datos.resumen)}
+      </p>
+    )
+  }
 
   return (
-    <section className="adm-panel guia-panel gat" aria-labelledby="gat-titulo">
-      <div>
-        <span className="adm-eyebrow">Alertas tempranas</span>
-        <h2 id="gat-titulo">Lo que el lote te está avisando</h2>
-      </div>
-      {cargando ? (
-        <p className="guia-cargando" role="status">Revisando pesos, consumo y mortalidad…</p>
-      ) : error ? (
-        <div className="guia-error" role="alert">
-          <span>{error}</span>
-          <button type="button" onClick={recargar}>Reintentar</button>
-        </div>
-      ) : datos ? (
-        <>
-          <p className={`gat-resumen gat-resumen--${datos.resumen.severidad_maxima}`} role="status">
-            {resumenDeAlertas(datos.resumen)}
-          </p>
-          {datos.anomalias.length > 0 && (
-            <ul className="gat-lista">
-              {datos.anomalias.map((alerta) => (
-                <li key={`${alerta.tipo}-${alerta.dia}`} className={`gat-item gat-item--${alerta.severidad}`}>
-                  <span className="gat-etiqueta">{etiquetaSeveridad(alerta.severidad)}</span>
-                  <span className="gat-dia">Día {alerta.dia}</span>
-                  <span className="gat-mensaje">{alerta.mensaje}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      ) : null}
+    <section className="gdc-alertas" aria-label="Alertas tempranas del lote">
+      <p className={`gdc-alertas-resumen gdc-alertas-resumen--${datos.resumen.severidad_maxima}`} role="status">
+        {resumenDeAlertas(datos.resumen)}
+      </p>
+      <ul className="gdc-alertas-lista">
+        {datos.anomalias.map((alerta) => (
+          <li key={`${alerta.tipo}-${alerta.dia}`}>
+            <button
+              type="button"
+              className={`gdc-alerta gdc-alerta--${alerta.severidad}`}
+              aria-pressed={alerta.dia === diaSeleccionado}
+              onClick={() => onSeleccionarDia(alerta.dia)}
+            >
+              <span className="gdc-alerta-etiqueta">{etiquetaSeveridad(alerta.severidad)}</span>
+              <span className="gdc-alerta-dia">Día {alerta.dia}</span>
+              <span className="gdc-alerta-mensaje">{alerta.mensaje}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }
