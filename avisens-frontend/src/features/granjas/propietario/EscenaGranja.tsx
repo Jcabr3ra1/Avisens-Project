@@ -30,8 +30,8 @@ type Props = {
 const ELEVACION = (12 * Math.PI) / 180
 const CAMPO_VISION = 24
 const MARGEN_X = 1.02
-const MARGEN_Y = 0.84
-const BAJADA = 0.07
+const MARGEN_Y = 0.97
+const APOYO = 3
 const FUERZA_CLIMA: Record<ClimaVisual, { sol: number; ambiente: number }> = {
   despejado: { sol: 1, ambiente: 1 },
   nublado: { sol: 0.5, ambiente: 1.08 },
@@ -136,15 +136,27 @@ function EscenaGranja({ nombre, fondo, clima, posicionAstro }: Props) {
         camara.lookAt(objetivo)
         camara.updateMatrixWorld()
       }
-      const cabe = (distancia: number) => {
+      const proyectar = (distancia: number) => {
         colocar(distancia)
-        return esquinas.every((esquina) => {
+        let izquierda = Infinity
+        let derecha = -Infinity
+        let arriba = Infinity
+        let abajo = -Infinity
+        esquinas.forEach((esquina) => {
           const punto = esquina.clone().project(camara)
           const px = ((punto.x + 1) / 2) * ancho
           const py = ((1 - punto.y) / 2) * alto
-          return Math.abs(px - (zona.x + zona.ancho / 2)) <= (zona.ancho / 2) * MARGEN_X
-            && Math.abs(py - (zona.y + zona.alto * (0.5 + BAJADA))) <= (zona.alto / 2) * MARGEN_Y
+          izquierda = Math.min(izquierda, px)
+          derecha = Math.max(derecha, px)
+          arriba = Math.min(arriba, py)
+          abajo = Math.max(abajo, py)
         })
+        return { izquierda, derecha, arriba, abajo }
+      }
+      const cabe = (distancia: number) => {
+        const caja3d = proyectar(distancia)
+        return caja3d.derecha - caja3d.izquierda <= zona.ancho * MARGEN_X
+          && caja3d.abajo - caja3d.arriba <= zona.alto * MARGEN_Y
       }
       let cerca = 6
       let lejos = 400
@@ -153,7 +165,9 @@ function EscenaGranja({ nombre, fondo, clima, posicionAstro }: Props) {
         if (cabe(medio)) lejos = medio
         else cerca = medio
       }
-      colocar(lejos)
+      const final = proyectar(lejos)
+      const bajar = zona.y + zona.alto + APOYO - final.abajo
+      camara.setViewOffset(ancho, alto, -desvioX, -(desvioY + bajar), ancho, alto)
       renderer.render(mundo, camara)
     }
 

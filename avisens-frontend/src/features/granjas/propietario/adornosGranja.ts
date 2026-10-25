@@ -55,16 +55,6 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
     void horizonte
   }
 
-  const sombraSuelo = texturaRadial([[0, 'rgba(18, 32, 22, 0.62)'], [0.55, 'rgba(18, 32, 22, 0.28)'], [1, 'rgba(18, 32, 22, 0)']])
-  texturas.push(sombraSuelo)
-  const materialSuelo = new MeshBasicMaterial({ map: sombraSuelo, transparent: true, depthWrite: false, opacity: 0.8 })
-  const sombraIsla = new Mesh(new PlaneGeometry(1, 1), materialSuelo)
-  sombraIsla.rotation.x = -Math.PI / 2
-  sombraIsla.scale.set(granja.tamano.x * 1.25, granja.tamano.z * 1.15, 1)
-  sombraIsla.position.set(granja.centro.x + 1, granja.marco.min.y - 3.4, granja.centro.z + 9)
-  sombraIsla.renderOrder = -2
-  grupo.add(sombraIsla)
-
   const mancha = texturaRadial([[0, 'rgba(10, 18, 12, 0.85)'], [0.55, 'rgba(10, 18, 12, 0.4)'], [1, 'rgba(10, 18, 12, 0)']])
   texturas.push(mancha)
   const materialMancha = new MeshBasicMaterial({ map: mancha, transparent: true, depthWrite: false, opacity: 0.55, polygonOffset: true, polygonOffsetFactor: -2 })
@@ -111,8 +101,6 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
       focos.forEach((foco) => { foco.intensity = (foco.userData.fuerza as number) * nivel })
     },
     liberar: () => {
-      sombraIsla.geometry.dispose()
-      materialSuelo.dispose()
       manchas.forEach((sombra) => sombra.geometry.dispose())
       materialMancha.dispose()
       materialBrillo.dispose()
