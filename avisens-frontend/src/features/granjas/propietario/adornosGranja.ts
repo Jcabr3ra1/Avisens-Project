@@ -1,13 +1,10 @@
 import {
   AdditiveBlending,
-  BufferAttribute,
   CanvasTexture,
   Color,
-  Float32BufferAttribute,
   Group,
   Mesh,
   MeshBasicMaterial,
-  MeshStandardMaterial,
   PlaneGeometry,
   PointLight,
   Sprite,
@@ -23,22 +20,6 @@ const VENTANAS: Punto[] = [[-4.2, 2.3, 2.3], [1.2, 2.3, 2.3], [5.3, 2.3, 2.3]]
 const FAROLES: Punto[] = [[-4.6, 3.1, 4.8], [4.6, 3.1, 4.8]]
 const LUZ_POR_FASE: Record<FaseDelDia, number> = { dia: 0, amanecer: 0.22, tarde: 0.5, noche: 1 }
 
-const ANCHO_TERRENO = 300
-const FONDO_TERRENO = 76
-const SEGMENTOS_X = 70
-const SEGMENTOS_Z = 34
-const CENTRO_Z = 10
-const ELEVACION_LOMAS = 4
-
-function suavizar(minimo: number, maximo: number, valor: number): number {
-  const t = Math.min(1, Math.max(0, (valor - minimo) / (maximo - minimo)))
-  return t * t * (3 - 2 * t)
-}
-
-function azar(x: number, z: number): number {
-  const valor = Math.sin(x * 127.1 + z * 311.7) * 43758.5453
-  return valor - Math.floor(valor)
-}
 
 function texturaRadial(colores: [number, string][]): CanvasTexture {
   const lienzo = document.createElement('canvas')
@@ -52,15 +33,6 @@ function texturaRadial(colores: [number, string][]): CanvasTexture {
     contexto.fillRect(0, 0, 128, 128)
   }
   return new CanvasTexture(lienzo)
-}
-
-function alturaEn(x: number, z: number): number {
-  const lejania = Math.hypot(x / 34, (z - 2) / 28)
-  const aplanado = suavizar(1, 1.7, lejania)
-  const ondulacion = (azar(Math.round(x), Math.round(z)) - 0.35) * 2.2
-  const lomas = suavizar(14, 52, -z) * ELEVACION_LOMAS * 0.8
-  const laderas = suavizar(46, 90, Math.abs(x)) * 4
-  return (ondulacion + lomas + laderas) * aplanado
 }
 
 export type AdornosGranja = {
@@ -79,72 +51,19 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
     granja.centro.z + punto[2],
   ]
 
-  const base = new PlaneGeometry(ANCHO_TERRENO, FONDO_TERRENO, SEGMENTOS_X, SEGMENTOS_Z)
-  base.rotateX(-Math.PI / 2)
-  const posicion = base.getAttribute('position') as BufferAttribute
-  for (let indice = 0; indice < posicion.count; indice++) {
-    const x = posicion.getX(indice)
-    const z = posicion.getZ(indice) + CENTRO_Z
-    posicion.setY(indice, alturaEn(x, z))
-  }
-  const caras = base.toNonIndexed()
-  base.dispose()
-  caras.translate(granja.centro.x, granja.suelo - 0.02, granja.centro.z + CENTRO_Z)
-  caras.setAttribute('color', new Float32BufferAttribute(new Float32Array(caras.getAttribute('position').count * 3), 3))
-
   const aplicarSuelo = (horizonte: Color) => {
-    const colores = caras.getAttribute('color') as BufferAttribute
-    const puntos = caras.getAttribute('position') as BufferAttribute
-    const cercano = granja.colorPasto.clone().lerp(horizonte, 0.18)
-    const lejano = new Color()
-    const tono = new Color()
-    const hsl = { h: 0, s: 0, l: 0 }
-    for (let cara = 0; cara < puntos.count; cara += 3) {
-      const altura = (puntos.getY(cara) + puntos.getY(cara + 1) + puntos.getY(cara + 2)) / 3 - granja.suelo
-      const x = puntos.getX(cara) - granja.centro.x
-      const z = puntos.getZ(cara) - granja.centro.z
-      const distancia = suavizar(4, 38, -z)
-      lejano.copy(horizonte).lerp(cercano, 0.3)
-      tono.copy(cercano).lerp(lejano, distancia)
-      tono.getHSL(hsl)
-      const variacion = (azar(Math.round(x * 3), Math.round(z * 3)) - 0.5) * 0.09 * (1 - distancia * 0.75)
-      tono.setHSL(hsl.h, hsl.s, Math.min(0.7, Math.max(0.22, hsl.l + variacion + altura * 0.004 * (1 - distancia))))
-      for (let vertice = 0; vertice < 3; vertice++) colores.setXYZ(cara + vertice, tono.r, tono.g, tono.b)
-    }
-    colores.needsUpdate = true
+    void horizonte
   }
-  aplicarSuelo(granja.colorPasto)
-  caras.computeVertexNormals()
 
-  const terreno = new Mesh(caras, new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }))
-  terreno.receiveShadow = true
-  grupo.add(terreno)
-
-  const vegetacion = new Group()
-  if (granja.arboles.length > 0) {
-    const sitios: [number, number, number][] = [
-      [34, -22, 0.62], [41, -13, 0.55], [37, -4, 0.5], [47, -26, 0.48], [30, -30, 0.55], [-36, -28, 0.45],
-    ]
-    sitios.forEach(([x, z, escala], indice) => {
-      const arbol = granja.arboles[indice % granja.arboles.length].clone(true)
-      arbol.scale.setScalar(escala)
-      arbol.position.set(granja.centro.x + x, granja.suelo + alturaEn(x, z) - 0.1, granja.centro.z + z)
-      arbol.rotation.y = azar(indice, 9.9) * Math.PI * 2
-      arbol.traverse((parte) => { parte.castShadow = true; parte.receiveShadow = true })
-      vegetacion.add(arbol)
-    })
-  }
-  grupo.add(vegetacion)
-
-  const largoCamino = 5
-  const camino = new Mesh(
-    new PlaneGeometry(2.8, largoCamino),
-    new MeshStandardMaterial({ color: granja.colorCamino, roughness: 1, flatShading: true }),
-  )
-  camino.rotation.x = -Math.PI / 2
-  camino.position.set(2.5, granja.suelo + 0.06, 17.9 + largoCamino / 2)
-  camino.receiveShadow = true
-  grupo.add(camino)
+  const sombraSuelo = texturaRadial([[0, 'rgba(18, 32, 22, 0.62)'], [0.55, 'rgba(18, 32, 22, 0.28)'], [1, 'rgba(18, 32, 22, 0)']])
+  texturas.push(sombraSuelo)
+  const materialSuelo = new MeshBasicMaterial({ map: sombraSuelo, transparent: true, depthWrite: false, opacity: 0.8 })
+  const sombraIsla = new Mesh(new PlaneGeometry(1, 1), materialSuelo)
+  sombraIsla.rotation.x = -Math.PI / 2
+  sombraIsla.scale.set(granja.tamano.x * 1.25, granja.tamano.z * 1.15, 1)
+  sombraIsla.position.set(granja.centro.x + 1, granja.marco.min.y - 3.4, granja.centro.z + 9)
+  sombraIsla.renderOrder = -2
+  grupo.add(sombraIsla)
 
   const mancha = texturaRadial([[0, 'rgba(10, 18, 12, 0.85)'], [0.55, 'rgba(10, 18, 12, 0.4)'], [1, 'rgba(10, 18, 12, 0)']])
   texturas.push(mancha)
@@ -192,10 +111,8 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
       focos.forEach((foco) => { foco.intensity = (foco.userData.fuerza as number) * nivel })
     },
     liberar: () => {
-      terreno.geometry.dispose()
-      ;(terreno.material as MeshStandardMaterial).dispose()
-      camino.geometry.dispose()
-      ;(camino.material as MeshStandardMaterial).dispose()
+      sombraIsla.geometry.dispose()
+      materialSuelo.dispose()
       manchas.forEach((sombra) => sombra.geometry.dispose())
       materialMancha.dispose()
       materialBrillo.dispose()

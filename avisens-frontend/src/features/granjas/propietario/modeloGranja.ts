@@ -6,7 +6,7 @@ import { fusionarPorMaterial } from '@features/dashboard/components/escena/model
 const RUTA_GRANJA = `${import.meta.env.BASE_URL}modelos/granja-colombiana-low-poly.glb`
 const SATURACION = 0.94
 const HUELLAS = ['casa', 'galpon', 'bodega', 'tanque_agua', 'huerta'] as const
-const MARCO = ['casa', 'techo_casa', 'galpon', 'bodega', 'cerca', 'camino'] as const
+const MARCO = ['casa', 'techo_casa', 'galpon', 'bodega', 'cerca', 'camino', 'terreno'] as const
 
 export type Huella = { nombre: string; x: number; z: number; ancho: number; fondo: number }
 
@@ -64,7 +64,6 @@ export function cargarModeloGranja(): Promise<GranjaCargada | null> {
       plataforma?.traverse((parte) => {
         if (parte instanceof Mesh && parte.material instanceof MeshStandardMaterial) colorPasto = parte.material.color.clone()
       })
-      plataforma?.removeFromParent()
       const arboles = (gltf.scene.getObjectByName('arboles')?.children ?? []).map((arbol) => arbol.clone(true))
       const modelo = fusionarPorMaterial(gltf.scene)
       const caja = new Box3().setFromObject(modelo)
