@@ -15,6 +15,7 @@ import granjaImagen from '@features/dashboard/assets/escena/granja-popayan-low-p
 import { liberarGalpon } from '@features/dashboard/components/escena/modeloGalpon'
 import { LUCES } from '@features/dashboard/components/escena/lucesPorFase'
 import { useFaseDelDia } from '@features/dashboard/hooks/useFaseDelDia'
+import type { FaseDelDia } from '@features/dashboard/model/escenaGalpon'
 import { crearAdornos, type AdornosGranja } from './adornosGranja'
 import { colorDelHorizonte } from './colorDelHorizonte'
 import type { ClimaVisual } from './climaVisual'
@@ -32,6 +33,12 @@ const CAMPO_VISION = 24
 const MARGEN_X = 1.02
 const MARGEN_Y = 0.97
 const APOYO = 3
+const AJUSTE_FASE: Record<FaseDelDia, { ambiente: number; sol: number; exposicion: number }> = {
+  dia: { ambiente: 1.45, sol: 1.12, exposicion: 1.08 },
+  amanecer: { ambiente: 1.4, sol: 1.1, exposicion: 1.06 },
+  tarde: { ambiente: 1.4, sol: 1.08, exposicion: 1.04 },
+  noche: { ambiente: 1.3, sol: 1.15, exposicion: 1.02 },
+}
 const FUERZA_CLIMA: Record<ClimaVisual, { sol: number; ambiente: number }> = {
   despejado: { sol: 1, ambiente: 1 },
   nublado: { sol: 0.5, ambiente: 1.08 },
@@ -105,9 +112,11 @@ function EscenaGranja({ nombre, fondo, clima, posicionAstro }: Props) {
       const fuerza = FUERZA_CLIMA[climaActual]
       ambiente.color.set(luz.cielo)
       ambiente.groundColor.set(luz.suelo)
-      ambiente.intensity = luz.ambiente * fuerza.ambiente
+      const ajuste = AJUSTE_FASE[faseActual]
+      ambiente.intensity = luz.ambiente * fuerza.ambiente * ajuste.ambiente
+      renderer.toneMappingExposure = ajuste.exposicion
       sol.color.set(luz.sol)
-      sol.intensity = luz.fuerza * fuerza.sol
+      sol.intensity = luz.fuerza * fuerza.sol * ajuste.sol
       const lado = Math.max(-1, Math.min(1, (astro - 65) / 21))
       sol.position.set(lado * 48, luz.y * 2.2, 20 + Math.abs(luz.z) * 1.2)
       adornos?.aplicarFase(faseActual)
