@@ -2,12 +2,11 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import HeroGranja from './components/HeroGranja'
-import EscenarioGalpon from './components/EscenarioGalpon'
+import ResumenGalpon from './components/ResumenGalpon'
+import RiesgoCalorResumen from './components/RiesgoCalorResumen'
 import PanelAtencionGranja from './components/PanelAtencionGranja'
 import PanelGalpones from './components/PanelGalpones'
 import EstadoLote from './components/EstadoLote'
-import PanelMetricas from './components/PanelMetricas'
-import PlanoGalpon from './components/PlanoGalpon'
 import EstadoInicial from './components/EstadoInicial'
 import { tieneLecturaUtil, useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { useIndicadoresLote } from './hooks/useIndicadoresLote'
@@ -20,6 +19,7 @@ import '@shared/ui/admin/CentroControl.css'
 import './DashboardPage.css'
 import './ResumenGranja.css'
 import './ResumenRediseno.css'
+import './ResumenAbajo.css'
 
 function DashboardSkeleton() {
   return (
@@ -102,7 +102,15 @@ function DashboardPage() {
 
   const reportando = sensoresDelGalpon.filter((sensor) => tieneLecturaUtil(sensor.estado)).length
   const sensoresEscena = sensoresDeEscena(sensoresDelGalpon.map((sensor) => ({
-    tipo: sensor.tipo, valor: sensor.valor, unidad: sensor.unidad, conLectura: tieneLecturaUtil(sensor.estado),
+    id: sensor.id,
+    codigo: sensor.codigo,
+    tipo: sensor.tipo,
+    valor: sensor.valor,
+    unidad: sensor.unidad,
+    estado: sensor.estado,
+    ultimaLecturaTs: sensor.ultimaLecturaTs,
+    minUmbral: sensor.minUmbral,
+    maxUmbral: sensor.maxUmbral,
   })))
   const lotesActivos = lotesActivosDe(dashboard.galpones, dashboard.lotes)
   const avesAlojadas = lotesActivos.reduce((total, lote) => total + lote.cantidadInicial, 0)
@@ -141,6 +149,7 @@ function DashboardPage() {
         kpis={kpis}
         diaLote={diaUnico}
         aves={avesAlojadas}
+        nombreGalpon={dashboard.galpon?.nombre ?? null}
         sensores={sensoresEscena}
         cargando={dashboard.cargando || cargandoMonitoreo}
         onGranjaChange={dashboard.seleccionarGranja}
@@ -162,37 +171,36 @@ function DashboardPage() {
           cargando={(dashboard.cargando || dashboard.cargandoResumenCrecimiento) && atencion.length === 0}
           errorCrecimiento={dashboard.errorCrecimiento}
           onReintentarCrecimiento={dashboard.recargarCrecimiento}
-          onAbrir={abrirPendiente}
-          onIrAlertas={() => enGranjas('alertas')}
-          onIrMonitoreo={() => enGranjas('ambiente')}
-          onIrBitacora={() => enGranjas('bitacora')}
         />
       )}
 
-      <PanelGalpones
-        filas={filas}
-        galponId={dashboard.galponId}
-        onSeleccionar={dashboard.seleccionarGalpon}
-        onGestionar={() => navigate(dashboard.granjaId ? `/galpones?granja=${dashboard.granjaId}` : '/granjas')}
-      />
+      {dashboard.galpones.length > 1 && (
+        <PanelGalpones
+          filas={filas}
+          galponId={dashboard.galponId}
+          onSeleccionar={dashboard.seleccionarGalpon}
+        />
+      )}
 
-      <EscenarioGalpon
+      <ResumenGalpon
         titulo={dashboard.galpon ? dashboard.galpon.nombre : 'Tu galpón'}
-        detalle="Mira lo que pasa adentro, una vista a la vez"
-        resumenAmbiente={sensoresDelGalpon.length > 0 ? `${reportando} de ${sensoresDelGalpon.length} sensores reportando` : null}
-        ambiente={<PanelMetricas sensores={sensoresDelGalpon} />}
+        detalle="Así está por dentro, ahora mismo"
+        etiqueta={sensoresDelGalpon.length > 0 ? `${reportando} de ${sensoresDelGalpon.length} sensores reportando` : null}
+        sensores={sensoresEscena}
+        aves={avesAlojadas}
+        diaLote={diaUnico}
         lote={(
-          <EstadoLote
-            lote={dashboard.lote}
-            indicadores={indicadores}
-            comparacion={comparacion}
-            diaLote={dashboard.diaLote}
-            cargando={cargandoLote}
-            onAbrirBitacora={() => enGranjas('bitacora')}
-            onAbrirGuia={() => dashboard.lote && navigate(`/guia-crecimiento?lote=${dashboard.lote.id}`)}
-          />
+          <>
+            {dashboard.galponId !== null && <RiesgoCalorResumen galponId={dashboard.galponId} />}
+            <EstadoLote
+              lote={dashboard.lote}
+              indicadores={indicadores}
+              comparacion={comparacion}
+              diaLote={dashboard.diaLote}
+              cargando={cargandoLote}
+            />
+          </>
         )}
-        plano={<PlanoGalpon galpon={galponMonitoreo} />}
       />
     </div>
   )

@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
-  claseDeSensor, colorDeEdad, detalleDeKpi, escalaDelPollito, estadoDeLampara, faseDelDia,
-  lecturaDeSensor, posicionDelAstro, sensoresDeEscena, sombraDelGalpon,
+  antiguedadDeLectura, claseDeSensor, colorDeEdad, detalleDeKpi, escalaDelPollito, estadoDeLampara, faseDelDia,
+  lecturaDeSensor, nombreDeSensor, posicionDelAstro, rangoConfigurado, senalDeSensor, sensorActivo, sensoresDeEscena, sombraDelGalpon,
+  type SensorEscena,
 } from './escenaGalpon'
 import type { KpiGranja } from './resumenGranja'
+
+type Crudo = Parameters<typeof sensoresDeEscena>[0][number]
+
+const crudo = (resto: Pick<Crudo, 'tipo' | 'valor' | 'unidad' | 'estado'> & Partial<Crudo>): Crudo => ({
+  id: 1, codigo: 'S-1', ultimaLecturaTs: null, minUmbral: null, maxUmbral: null, ...resto,
+})
 
 const kpi = (id: KpiGranja['id'], valor: string): KpiGranja => ({
   id, valor, etiqueta: '', detalle: 'detalle', progreso: null, destino: '/granjas',
@@ -41,10 +48,13 @@ describe('reloj de la escena', () => {
     expect(posicionDelAstro(12).y).toBeLessThan(posicionDelAstro(7).y)
   })
 
-  it('el astro nunca baja hasta la altura del título', () => {
+  it('el astro recorre solo la mitad derecha, lejos del texto de la franja', () => {
     for (let hora = 0; hora < 24; hora += 0.25) {
-      expect(posicionDelAstro(hora).y).toBeLessThanOrEqual(34)
-      expect(posicionDelAstro(hora).y).toBeGreaterThanOrEqual(10)
+      const { x, y } = posicionDelAstro(hora)
+      expect(x).toBeGreaterThanOrEqual(44)
+      expect(x).toBeLessThanOrEqual(86)
+      expect(y).toBeGreaterThanOrEqual(10)
+      expect(y).toBeLessThanOrEqual(32)
     }
   })
 })
@@ -82,23 +92,25 @@ describe('edad del lote (usada también en la guía)', () => {
 
   it('dibuja solo los sensores que el galpón tiene, en un orden fijo', () => {
     const lista = sensoresDeEscena([
-      { tipo: 'luminosidad', valor: 300, unidad: 'lux', conLectura: true },
-      { tipo: 'temperatura', valor: 29.4, unidad: '°C', conLectura: true },
-      { tipo: 'presion', valor: 1, unidad: 'hPa', conLectura: true },
+      crudo({ tipo: 'luminosidad', valor: 300, unidad: 'lux', estado: 'optimo' }),
+      crudo({ tipo: 'temperatura', valor: 29.4, unidad: '°C', estado: 'advertencia' }),
+      crudo({ tipo: 'presion', valor: 1, unidad: 'hPa', estado: 'optimo' }),
     ])
     expect(lista.map((s) => s.clase)).toEqual(['temperatura', 'luz'])
-    expect(lista[0]).toMatchObject({ nombre: 'Temperatura', valor: 29.4, unidad: '°C' })
+    expect(lista[0]).toMatchObject({ nombre: 'Temperatura', valor: 29.4, unidad: '°C', estado: 'advertencia', etiquetaEstado: 'Advertencia' })
+    expect(lista[0].explicacion).toMatch(/temperatura del aire/i)
   })
 
   it('no inventa una lectura cuando el sensor no reporta', () => {
-    const [sensor] = sensoresDeEscena([{ tipo: 'humedad', valor: 61, unidad: '%', conLectura: false }])
+    const [sensor] = sensoresDeEscena([crudo({ tipo: 'humedad', valor: 61, unidad: '%', estado: 'offline' })])
     expect(sensor.valor).toBeNull()
+    expect(sensor.etiquetaEstado).toBe('Sin señal')
   })
 
   it('prefiere el sensor que sí tiene lectura cuando hay dos de la misma clase', () => {
     const [sensor] = sensoresDeEscena([
-      { tipo: 'temperatura', valor: null, unidad: '°C', conLectura: false },
-      { tipo: 'temperatura', valor: 28, unidad: '°C', conLectura: true },
+      crudo({ tipo: 'temperatura', valor: null, unidad: '°C', estado: 'lectura_no_disponible' }),
+      crudo({ tipo: 'temperatura', valor: 28, unidad: '°C', estado: 'optimo' }),
     ])
     expect(sensor.valor).toBe(28)
   })
@@ -112,8 +124,62 @@ describe('edad del lote (usada también en la guía)', () => {
   })
 
   it('escribe la lectura de un sensor o avisa que no reporta', () => {
-    expect(lecturaDeSensor({ clase: 'temperatura', nombre: 'Temperatura', valor: 29.44, unidad: '°C' })).toBe('29,4 °C')
-    expect(lecturaDeSensor({ clase: 'co2', nombre: 'CO₂', valor: null, unidad: 'ppm' })).toBe('sin lectura')
+    const base: SensorEscena = {
+      id: 1, codigo: 'S-1', clase: 'temperatura', nombre: 'x', valor: 29.44, unidad: '°C', estado: 'optimo',
+      etiquetaEstado: 'Óptimo', explicacion: '', ultimaLecturaTs: null, minUmbral: null, maxUmbral: null,
+    }
+    expect(lecturaDeSensor(base)).toBe('29,4 °C')
+    expect(lecturaDeSensor({ ...base, clase: 'co2', valor: null, unidad: 'ppm' })).toBe('Sin lectura')
+  })
+
+  it('distingue los sensores que están enviando datos', () => {
+    const [activo, caido] = sensoresDeEscena([
+      crudo({ id: 1, tipo: 'temperatura', valor: 28, unidad: '°C', estado: 'optimo' }),
+      crudo({ id: 2, tipo: 'humedad', valor: 60, unidad: '%', estado: 'offline' }),
+    ])
+    expect(sensorActivo(activo)).toBe(true)
+    expect(sensorActivo(caido)).toBe(false)
+  })
+
+  it('conserva el código, la última lectura y los umbrales del sensor', () => {
+    const [sensor] = sensoresDeEscena([
+      crudo({ id: 7, codigo: 'T-07', tipo: 'temperatura', valor: 28, unidad: '°C', estado: 'optimo', ultimaLecturaTs: 1000, minUmbral: 24, maxUmbral: 32 }),
+    ])
+    expect(sensor).toMatchObject({ id: 7, codigo: 'T-07', ultimaLecturaTs: 1000, minUmbral: 24, maxUmbral: 32 })
+  })
+
+  it('cuenta hace cuánto llegó la última lectura', () => {
+    const ahora = 10_000_000
+    expect(antiguedadDeLectura(null, ahora)).toBe('Sin lecturas registradas')
+    expect(antiguedadDeLectura(ahora - 20_000, ahora)).toBe('Hace unos segundos')
+    expect(antiguedadDeLectura(ahora - 5 * 60_000, ahora)).toBe('Hace 5 min')
+    expect(antiguedadDeLectura(ahora - 3 * 3600_000, ahora)).toBe('Hace 3 h')
+    expect(antiguedadDeLectura(ahora - 49 * 3600_000, ahora)).toBe('Hace 2 d')
+    expect(antiguedadDeLectura(ahora + 5000, ahora)).toBe('Hace unos segundos')
+  })
+
+  it('escribe el nombre de un sensor con mayúscula inicial', () => {
+    expect(nombreDeSensor('co2')).toBe('CO₂')
+    expect(nombreDeSensor('temperatura')).toBe('Temperatura')
+    expect(nombreDeSensor('presión')).toBe('Presión')
+  })
+
+  it('traduce el estado del sensor a su señal', () => {
+    expect(senalDeSensor('optimo')).toEqual({ texto: 'Transmitiendo', viva: true })
+    expect(senalDeSensor('critico').viva).toBe(true)
+    expect(senalDeSensor('obsoleta')).toEqual({ texto: 'Lecturas atrasadas', viva: false })
+    expect(senalDeSensor('offline')).toEqual({ texto: 'Sin señal', viva: false })
+  })
+
+  it('escribe el rango configurado solo con los umbrales que existen', () => {
+    const base: SensorEscena = {
+      id: 1, codigo: 'S-1', clase: 'temperatura', nombre: 'x', valor: 28, unidad: '°C', estado: 'optimo',
+      etiquetaEstado: 'Óptimo', explicacion: '', ultimaLecturaTs: null, minUmbral: null, maxUmbral: null,
+    }
+    expect(rangoConfigurado(base)).toBeNull()
+    expect(rangoConfigurado({ ...base, minUmbral: 24, maxUmbral: 32 })).toBe('24 °C a 32 °C')
+    expect(rangoConfigurado({ ...base, minUmbral: 24 })).toBe('Desde 24 °C')
+    expect(rangoConfigurado({ ...base, maxUmbral: 32.5 })).toBe('Hasta 32,5 °C')
   })
 })
 

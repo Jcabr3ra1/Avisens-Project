@@ -4,6 +4,8 @@ import type { DashboardGranja } from '../model/dashboard'
 import type { EstadoGranja } from '../model/estadoGranja'
 import { detalleDeKpi, faseDelDia, lecturaDeSensor, posicionDelAstro, type SensorEscena } from '../model/escenaGalpon'
 import type { KpiGranja } from '../model/resumenGranja'
+import lunaLowPoly from '../assets/escena/luna-low-poly.webp'
+import solLowPoly from '../assets/escena/sol-low-poly.webp'
 import EscenaGalpon from './escena/EscenaGalpon'
 import './HeroGranja.css'
 
@@ -16,6 +18,7 @@ type Props = {
   kpis: KpiGranja[]
   diaLote: number | null
   aves: number
+  nombreGalpon: string | null
   sensores: SensorEscena[]
   cargando: boolean
   hora?: number
@@ -91,7 +94,7 @@ function useParalaje(ref: React.RefObject<HTMLElement | null>) {
 }
 
 function HeroGranja({
-  nombre, fecha, granjas, granjaId, estado, kpis, diaLote, aves, sensores,
+  nombre, fecha, granjas, granjaId, estado, kpis, diaLote, aves, nombreGalpon, sensores,
   cargando, hora, onGranjaChange, onRecargar, onAccion, onNavegar,
 }: Props) {
   const raiz = useRef<HTMLElement>(null)
@@ -104,7 +107,6 @@ function HeroGranja({
   const temperatura = sensores.find((sensor) => sensor.clase === 'temperatura' && sensor.valor !== null)
   const ambiente = temperatura ? lecturaDeSensor(temperatura) : null
   const indicadores = ORDEN_INDICADORES.flatMap((clave) => kpis.filter((kpi) => kpi.id === clave))
-  const destinoSensores = kpis.find((kpi) => kpi.id === 'sensores')?.destino ?? '/granjas'
 
   return (
     <section
@@ -118,7 +120,13 @@ function HeroGranja({
         {fase === 'noche' && ESTRELLAS.map(([izquierda, arriba], indice) => (
           <span key={indice} className="hero-granja-estrella" style={{ left: `${izquierda}%`, top: `${arriba}%`, animationDelay: `${(indice % 5) * -0.9}s` }} />
         ))}
-        <span className={`hero-granja-astro hero-granja-astro--${astro.tipo}`} style={{ left: `${astro.x}%`, top: `${astro.y}%` }} />
+        <img
+          key={astro.tipo}
+          className={`hero-granja-astro hero-granja-astro--${astro.tipo}`}
+          src={astro.tipo === 'sol' ? solLowPoly : lunaLowPoly}
+          alt=""
+          style={{ left: `${astro.x}%`, top: `${astro.y}%` }}
+        />
         {fase !== 'noche' && NUBES.map((nube) => (
           <svg
             key={nube.izquierda}
@@ -151,7 +159,7 @@ function HeroGranja({
           </label>
         )}
         <button type="button" className={`hero-granja-sync${cargando ? ' is-spinning' : ''}`} onClick={onRecargar} disabled={cargando}>
-          <IcRefresh size={15} aria-hidden="true" />
+          <IcRefresh size={14} aria-hidden="true" />
           <span>{cargando ? 'Actualizando…' : 'Actualizar'}</span>
         </button>
       </div>
@@ -162,7 +170,7 @@ function HeroGranja({
         {estado.accion && (
           <button type="button" className="hero-granja-accion" onClick={onAccion}>
             {TEXTO_ACCION[estado.accion.tipo]}
-            <IcArrowRight size={16} aria-hidden="true" />
+            <IcArrowRight size={15} aria-hidden="true" />
           </button>
         )}
 
@@ -191,14 +199,12 @@ function HeroGranja({
       </div>
 
       <EscenaGalpon
-        nombreGranja={granja?.nombre ?? 'Tu granja'}
+        nombreGalpon={nombreGalpon ?? granja?.nombre ?? 'Tu galpón'}
         tono={estado.tono}
         diaLote={diaLote}
         aves={aves}
-        sensores={sensores}
         astro={astro}
-        destinoSensores={destinoSensores}
-        onNavegar={onNavegar}
+        fase={fase}
       />
     </section>
   )
