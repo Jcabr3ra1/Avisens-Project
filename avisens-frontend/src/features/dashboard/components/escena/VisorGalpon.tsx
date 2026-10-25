@@ -210,7 +210,7 @@ function VisorGalpon({ clases, nombre, fase, aves, diaLote, onProyeccion }: Prop
         galpon.centro.y + Math.sin(ELEVACION) * distancia,
         galpon.centro.z + Math.cos(acimut) * Math.cos(ELEVACION) * distancia,
       )
-      camara.lookAt(galpon.centro.x, galpon.centro.y - galpon.tamano.y * 0.06, galpon.centro.z)
+      camara.lookAt(galpon.centro.x, galpon.centro.y - galpon.tamano.y * 0.06 - galpon.radioBase * 0.1, galpon.centro.z)
       camara.updateMatrixWorld()
       renderer.render(mundo, camara)
       proyectar()

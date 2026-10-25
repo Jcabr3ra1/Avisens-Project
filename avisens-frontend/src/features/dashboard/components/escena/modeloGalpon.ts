@@ -166,17 +166,55 @@ async function cargarOpcional(cargador: GLTFLoader, nombre: string): Promise<Obj
   }
 }
 
+function crearIsla(radio: number, azar: () => number): Mesh {
+  const alto = radio * 0.62
+  const forma = new CylinderGeometry(radio, radio * 0.12, alto, 30, 4, false)
+  const posiciones = forma.getAttribute('position')
+  const ruido = (x: number, z: number, nivel: number) => Math.sin(x * 1.7 + nivel * 3.1) * Math.cos(z * 1.3 - nivel * 2.3) * 0.5 + 0.5
+  for (let indice = 0; indice < posiciones.count; indice++) {
+    const x = posiciones.getX(indice)
+    const y = posiciones.getY(indice)
+    const z = posiciones.getZ(indice)
+    const nivel = (alto / 2 - y) / alto
+    const borde = Math.hypot(x, z)
+    if (borde < 0.001) continue
+    const sacudida = 1 + (ruido(x, z, nivel) - 0.5) * (nivel === 0 ? 0.07 : 0.34)
+    posiciones.setXYZ(indice, x * sacudida, y - (nivel > 0 && nivel < 1 ? ruido(z, x, nivel) * alto * 0.12 : 0), z * sacudida)
+  }
+  const caras = forma.toNonIndexed()
+  forma.dispose()
+  caras.translate(0, -alto / 2 - 0.02, 0)
+  const puntos = caras.getAttribute('position')
+  const normales = caras.getAttribute('normal')
+  const colores = new Float32Array(puntos.count * 3)
+  const pasto = new Color()
+  const tierra = new Color()
+  for (let cara = 0; cara < puntos.count; cara += 3) {
+    const arriba = (normales.getY(cara) + normales.getY(cara + 1) + normales.getY(cara + 2)) / 3 > 0.85
+    const altura = (puntos.getY(cara) + puntos.getY(cara + 1) + puntos.getY(cara + 2)) / 3
+    const variacion = (azar() - 0.5) * 0.1
+    if (arriba) pasto.setHSL(0.27, 0.42, 0.5 + variacion)
+    else tierra.setHSL(0.075 - (altura / alto) * 0.02, 0.3, Math.max(0.2, 0.42 + variacion + altura / alto * 0.28))
+    const color = arriba ? pasto : tierra
+    for (let vertice = 0; vertice < 3; vertice++) {
+      colores[(cara + vertice) * 3] = color.r
+      colores[(cara + vertice) * 3 + 1] = color.g
+      colores[(cara + vertice) * 3 + 2] = color.b
+    }
+  }
+  caras.setAttribute('color', new Float32BufferAttribute(colores, 3))
+  const isla = new Mesh(caras, new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }))
+  isla.receiveShadow = true
+  isla.castShadow = true
+  return isla
+}
+
 function armarEscenario(tamano: Vector3, arboles: Object3D[], pastos: Object3D[]): { grupo: Group; radio: number } {
   const radio = Math.hypot(tamano.x / 2, tamano.z / 2) * 1.2
   const grupo = new Group()
   const azar = aleatorio(7)
 
-  const suelo = new MeshStandardMaterial({ color: 0x93b887, roughness: 1, flatShading: true })
-  const tierra = new MeshStandardMaterial({ color: 0x77604a, roughness: 1, flatShading: true })
-  const plataforma = new Mesh(new CylinderGeometry(radio, radio * 0.97, 0.9, 56), [tierra, suelo, tierra])
-  plataforma.position.y = -0.47
-  plataforma.receiveShadow = true
-  grupo.add(plataforma)
+  grupo.add(crearIsla(radio, azar))
 
   const camino = new Mesh(
     new BoxGeometry(3.4, 0.05, radio - tamano.z / 2 + HOLGURA),
