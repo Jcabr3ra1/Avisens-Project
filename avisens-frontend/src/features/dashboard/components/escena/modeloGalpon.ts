@@ -137,7 +137,7 @@ function sombreable(modelo: Object3D): Object3D {
       natural.metalness = 0
       natural.roughness = 0.92
       natural.flatShading = true
-      if (natural.name === 'leafsGreen' || natural.name === 'grass') natural.color.multiply(new Color(0.66, 0.84, 0.42))
+      if (natural.name === 'leafsGreen' || natural.name === 'grass') natural.color.multiply(new Color(natural.name === 'grass' ? 0.46 : 0.38, natural.name === 'grass' ? 0.58 : 0.52, natural.name === 'grass' ? 0.28 : 0.3))
       parte.material = natural
     }
     parte.castShadow = true
@@ -193,8 +193,8 @@ function crearIsla(radio: number, azar: () => number): Mesh {
     const arriba = (normales.getY(cara) + normales.getY(cara + 1) + normales.getY(cara + 2)) / 3 > 0.85
     const altura = (puntos.getY(cara) + puntos.getY(cara + 1) + puntos.getY(cara + 2)) / 3
     const variacion = (azar() - 0.5) * 0.1
-    if (arriba) pasto.setHSL(0.27, 0.42, 0.5 + variacion)
-    else tierra.setHSL(0.075 - (altura / alto) * 0.02, 0.3, Math.max(0.2, 0.42 + variacion + altura / alto * 0.28))
+    if (arriba) pasto.setHSL(0.255, 0.3, 0.4 + variacion)
+    else tierra.setHSL(0.075 - (altura / alto) * 0.02, 0.24, Math.max(0.18, 0.36 + variacion + altura / alto * 0.24))
     const color = arriba ? pasto : tierra
     for (let vertice = 0; vertice < 3; vertice++) {
       colores[(cara + vertice) * 3] = color.r
@@ -231,8 +231,8 @@ function armarEscenario(tamano: Vector3, arboles: Object3D[], pastos: Object3D[]
   if (arboles.length > 0) {
     const angulos = [-2.9, -2.55, -2.2, -1.85, -1.5, -1.15, -0.8, 0.8, 1.15, 1.5, 1.85, 2.2, 2.55, 2.9, 3.14]
     angulos.forEach((angulo, indice) => {
-      let distancia = radio * (0.55 + azar() * 0.1)
-      while (distancia < radio * 0.93 && dentro(Math.sin(angulo) * distancia, Math.cos(angulo) * distancia, 3.4)) distancia += 0.5
+      let distancia = radio * (0.5 + azar() * 0.08)
+      while (distancia < radio * 0.8 && dentro(Math.sin(angulo) * distancia, Math.cos(angulo) * distancia, 3.4)) distancia += 0.5
       const x = Math.sin(angulo) * distancia
       const z = Math.cos(angulo) * distancia
       if (dentro(x, z, 3.4) || enCamino(x, z)) return
@@ -244,19 +244,23 @@ function armarEscenario(tamano: Vector3, arboles: Object3D[], pastos: Object3D[]
   }
 
   if (pastos.length > 0) {
+    const grupos = [-2.9, -2.4, -1.9, -1.4, -0.7, 0.3, 0.9, 1.5, 2.1, 2.6, 3.1]
     let colocados = 0
-    for (let intento = 0; intento < 600 && colocados < 80; intento++) {
-      const angulo = azar() * Math.PI * 2
-      const distancia = radio * (0.3 + azar() * 0.68)
-      const x = Math.sin(angulo) * distancia
-      const z = Math.cos(angulo) * distancia
-      if (dentro(x, z, 1.1) || enCamino(x, z)) continue
-      const mata = apoyado(pastos[colocados % pastos.length].clone(true), 0.9 + azar() * 1.1)
-      mata.position.set(x, 0, z)
-      mata.rotation.y = azar() * Math.PI * 2
-      grupo.add(mata)
-      colocados++
-    }
+    grupos.forEach((angulo, indice) => {
+      const distancia = radio * (0.46 + (indice % 3) * 0.1)
+      const cx = Math.sin(angulo) * distancia
+      const cz = Math.cos(angulo) * distancia
+      for (let mata = 0; mata < 4; mata++) {
+        const x = cx + (azar() - 0.5) * 3.2
+        const z = cz + (azar() - 0.5) * 3.2
+        if (dentro(x, z, 1.4) || enCamino(x, z) || Math.hypot(x, z) > radio * 0.82) continue
+        const tuft = apoyado(pastos[colocados % pastos.length].clone(true), 0.7 + azar() * 0.5)
+        tuft.position.set(x, 0, z)
+        tuft.rotation.y = azar() * Math.PI * 2
+        grupo.add(tuft)
+        colocados++
+      }
+    })
   }
 
   return { grupo, radio }
