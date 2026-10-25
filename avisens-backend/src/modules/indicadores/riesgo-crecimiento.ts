@@ -18,6 +18,12 @@ export type DatosRiesgoCrecimiento = {
   umbralPesajeDias: number | null;
 };
 
+export function desvioDeConsumoPct(acumuladoG: number | null, esperadoG: number | null): number | null {
+  if (acumuladoG === null || esperadoG === null) return null;
+  if (acumuladoG <= 0 || esperadoG <= 0) return null;
+  return ((acumuladoG - esperadoG) / esperadoG) * 100;
+}
+
 function porcentaje(valor: number): string {
   return `${Math.abs(valor).toFixed(1)} %`;
 }

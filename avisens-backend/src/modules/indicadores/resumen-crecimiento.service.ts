@@ -8,6 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ResumenCrecimientoDto } from './dto/resumen-crecimiento.dto';
 import { IndicadoresService } from './indicadores.service';
 import {
+  desvioDeConsumoPct,
   evaluarRiesgosCrecimiento,
   ordenarPorRiesgo,
   UMBRAL_DESVIO_CONSUMO_PCT_PROVISIONAL,
@@ -144,9 +145,7 @@ export class ResumenCrecimientoService {
       const puntoCurva = curva?.puntos.find((punto) => punto.dia === diaVida) ?? null;
       const consumoAcumuladoG = calculado ? numero(indicador.consumo_acumulado_g) : null;
       const consumoEsperadoG = puntoCurva ? numero(puntoCurva.consumo_acumulado_g) : null;
-      const desvioConsumoPct = consumoAcumuladoG !== null && consumoEsperadoG !== null && consumoEsperadoG > 0
-        ? ((consumoAcumuladoG - consumoEsperadoG) / consumoEsperadoG) * 100
-        : null;
+      const desvioConsumoPct = desvioDeConsumoPct(consumoAcumuladoG, consumoEsperadoG);
       const fechaPesaje = calculado && indicador.pesaje_fecha_snapshot
         ? indicador.pesaje_fecha_snapshot
         : null;

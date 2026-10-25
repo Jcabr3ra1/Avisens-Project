@@ -1,4 +1,5 @@
 import {
+  desvioDeConsumoPct,
   evaluarRiesgosCrecimiento,
   ordenarPorRiesgo,
   UMBRAL_DESVIO_CONSUMO_PCT_PROVISIONAL,
@@ -46,5 +47,17 @@ describe('reglas de riesgo de crecimiento', () => {
       { codigo: 'A', alertas: [{ regla: 'peso_por_debajo', titulo: '', por_que: '', que_hacer: '', provisional: false }, { regla: 'pesaje_atrasado', titulo: '', por_que: '', que_hacer: '', provisional: false }], desvio_peso_pct: -6, desvio_consumo_pct: null, antiguedad_pesaje_dias: 4 },
     ]);
     expect(filas.map((fila) => fila.codigo)).toEqual(['A', 'C', 'B']);
+  });
+
+  it('no compara el consumo cuando no hay consumos registrados', () => {
+    expect(desvioDeConsumoPct(0, 5000)).toBeNull();
+    expect(desvioDeConsumoPct(null, 5000)).toBeNull();
+    expect(desvioDeConsumoPct(3000, 0)).toBeNull();
+    expect(desvioDeConsumoPct(3000, null)).toBeNull();
+  });
+
+  it('calcula el desvío del consumo cuando sí hay registros', () => {
+    expect(desvioDeConsumoPct(3000, 5000)).toBeCloseTo(-40);
+    expect(desvioDeConsumoPct(6000, 5000)).toBeCloseTo(20);
   });
 });
