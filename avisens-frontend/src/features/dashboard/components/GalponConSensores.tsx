@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useFaseDelDia } from '../hooks/useFaseDelDia'
-import { lecturaDeSensor, sensorActivo, type ClaseSensor, type FaseDelDia, type SensorEscena } from '../model/escenaGalpon'
-import fondoAmanecer from '../assets/escena/fondos/fondo-amanecer-low-poly.webp'
-import fondoDia from '../assets/escena/fondos/fondo-dia-low-poly.webp'
-import fondoTarde from '../assets/escena/fondos/fondo-tarde-low-poly.webp'
-import fondoNoche from '../assets/escena/fondos/fondo-noche-low-poly.webp'
+import { lecturaDeSensor, sensorActivo, type ClaseSensor, type SensorEscena } from '../model/escenaGalpon'
+import type { ClimaVisual } from '@features/granjas/propietario/climaVisual'
+import { fondoDeGranja } from '@features/granjas/propietario/fondosGranja'
 import DialogoSensor, { type LadoDialogo } from './escena/DialogoSensor'
 import { IMAGENES_SENSOR } from './escena/imagenesSensor'
 import VisorGalpon, { type Proyeccion } from './escena/VisorGalpon'
@@ -15,9 +13,9 @@ type Props = {
   sensores: SensorEscena[]
   aves: number
   diaLote: number | null
+  clima: ClimaVisual
 }
 
-const FONDOS: Record<FaseDelDia, string> = { amanecer: fondoAmanecer, dia: fondoDia, tarde: fondoTarde, noche: fondoNoche }
 const ESCENA = { ancho: 840, alto: 420 }
 const CHIP = { ancho: 176 }
 
@@ -35,9 +33,10 @@ const porcentaje = (valor: number, total: number) => `${((valor / total) * 100).
 
 type Abierto = { clase: ClaseSensor; ancla: DOMRect }
 
-function GalponConSensores({ nombre, sensores, aves, diaLote }: Props) {
+function GalponConSensores({ nombre, sensores, aves, diaLote, clima }: Props) {
   const activos = sensores.filter(sensorActivo)
   const fase = useFaseDelDia()
+  const fondo = fondoDeGranja(fase, clima)
   const clases = activos.map((sensor) => sensor.clase)
   const [abierto, setAbierto] = useState<Abierto | null>(null)
   const disparador = useRef<HTMLElement | null>(null)
@@ -96,7 +95,7 @@ function GalponConSensores({ nombre, sensores, aves, diaLote }: Props) {
         className="gsr-lienzo"
         ref={lienzo}
         data-fase={fase}
-        style={{ '--fondo': `url(${FONDOS[fase]})` } as CSSProperties}
+        style={{ '--fondo': `url(${fondo})` } as CSSProperties}
       >
         <VisorGalpon clases={clases} nombre={nombre} fase={fase} aves={aves} diaLote={diaLote} onProyeccion={alProyectar} />
 

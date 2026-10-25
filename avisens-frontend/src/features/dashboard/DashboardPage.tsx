@@ -2,10 +2,10 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import HeroGranja from './components/HeroGranja'
+import { useClimaVisual } from '@features/granjas/propietario/useClimaVisual'
 import ResumenGalpon from './components/ResumenGalpon'
 import RiesgoCalorResumen from './components/RiesgoCalorResumen'
 import PanelAtencionGranja from './components/PanelAtencionGranja'
-import PanelGalpones from './components/PanelGalpones'
 import EstadoLote from './components/EstadoLote'
 import EstadoInicial from './components/EstadoInicial'
 import { tieneLecturaUtil, useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
@@ -37,6 +37,7 @@ function DashboardSkeleton() {
 function DashboardPage() {
   const navigate = useNavigate()
   const dashboard = useDashboard()
+  const clima = useClimaVisual(dashboard.granjaId)
   const { galpones: monitoreo, cargando: cargandoMonitoreo } = useMonitoreoAmbiental()
   const monitoreoGranja = useMemo(
     () => monitoreo.filter((galpon) => galpon.granjaId === dashboard.granjaId),
@@ -150,6 +151,7 @@ function DashboardPage() {
         diaLote={diaUnico}
         aves={avesAlojadas}
         nombreGalpon={dashboard.galpon?.nombre ?? null}
+        clima={clima}
         sensores={sensoresEscena}
         cargando={dashboard.cargando || cargandoMonitoreo}
         onGranjaChange={dashboard.seleccionarGranja}
@@ -174,14 +176,6 @@ function DashboardPage() {
         />
       )}
 
-      {dashboard.galpones.length > 1 && (
-        <PanelGalpones
-          filas={filas}
-          galponId={dashboard.galponId}
-          onSeleccionar={dashboard.seleccionarGalpon}
-        />
-      )}
-
       <ResumenGalpon
         titulo={dashboard.galpon ? dashboard.galpon.nombre : 'Tu galpón'}
         detalle="Así está por dentro, ahora mismo"
@@ -189,6 +183,10 @@ function DashboardPage() {
         sensores={sensoresEscena}
         aves={avesAlojadas}
         diaLote={diaUnico}
+        clima={clima}
+        galpones={filas}
+        galponId={dashboard.galponId}
+        onSeleccionar={dashboard.seleccionarGalpon}
         lote={(
           <>
             {dashboard.galponId !== null && <RiesgoCalorResumen galponId={dashboard.galponId} />}

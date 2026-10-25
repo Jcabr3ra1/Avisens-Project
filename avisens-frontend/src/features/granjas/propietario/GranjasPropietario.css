@@ -1161,15 +1161,50 @@
   position: absolute;
   z-index: 0;
   display: block;
-  width: 64px;
+  width: 54px;
   aspect-ratio: 1;
   object-fit: contain;
   pointer-events: none;
   translate: -50% -50%;
-  animation: gp-astro-entra 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  filter: saturate(0.92) brightness(1.06) drop-shadow(0 0 10px rgb(255 214 130 / 0.6));
+  animation: gp-astro-entra 900ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
-.gp-hero-astro--luna { width: 50px; }
+.gp-hero-astro--sol { animation: gp-astro-entra 900ms cubic-bezier(0.16, 1, 0.3, 1) backwards, gp-sol-gira 160s linear infinite; }
+
+.gp-hero-astro--luna {
+  width: 44px;
+  filter: drop-shadow(0 0 10px rgb(220 232 255 / 0.5));
+}
+
+.gp-hero-halo {
+  position: absolute;
+  z-index: 0;
+  width: min(78vw, 680px);
+  aspect-ratio: 1;
+  pointer-events: none;
+  translate: -50% -50%;
+  border-radius: 50%;
+  animation: gp-astro-entra 1200ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.gp-hero-halo--sol {
+  background: radial-gradient(circle, rgb(255 246 205 / 0.95) 0%, rgb(255 226 150 / 0.62) 9%, rgb(255 212 125 / 0.3) 24%, rgb(255 205 120 / 0.1) 46%, transparent 68%);
+}
+
+.gp-hero-halo--luna {
+  width: min(60vw, 480px);
+  background: radial-gradient(circle, rgb(226 238 255 / 0.5) 0%, rgb(190 212 255 / 0.2) 16%, rgb(170 195 245 / 0.07) 40%, transparent 65%);
+}
+
+.org-hero--granja[data-fase='amanecer'] .gp-hero-halo--sol,
+.org-hero--granja[data-fase='tarde'] .gp-hero-halo--sol {
+  background: radial-gradient(circle, rgb(255 226 170 / 0.95) 0%, rgb(255 184 110 / 0.62) 10%, rgb(255 160 90 / 0.3) 26%, rgb(255 150 90 / 0.1) 48%, transparent 70%);
+}
+
+@keyframes gp-sol-gira {
+  to { rotate: 360deg; }
+}
 
 @keyframes gp-astro-entra {
   from { opacity: 0; }
@@ -1179,12 +1214,12 @@
 .gp-hero-velo {
   position: absolute;
   inset: 0;
-  z-index: 0;
-  background: linear-gradient(90deg, rgb(247 246 239 / 0.95) 0%, rgb(247 246 239 / 0.8) 32%, rgb(247 246 239 / 0) 62%);
+  z-index: 1;
+  background: linear-gradient(90deg, rgb(247 246 239 / 0.82) 0%, rgb(247 246 239 / 0.6) 30%, rgb(247 246 239 / 0) 56%);
 }
 
 .org-hero--granja[data-fase='tarde'] .gp-hero-velo {
-  background: linear-gradient(90deg, rgb(251 243 226 / 0.95) 0%, rgb(251 243 226 / 0.78) 32%, rgb(251 243 226 / 0) 62%);
+  background: linear-gradient(90deg, rgb(251 243 226 / 0.8) 0%, rgb(251 243 226 / 0.58) 30%, rgb(251 243 226 / 0) 56%);
 }
 
 .org-hero--granja[data-fase='noche'] .gp-hero-velo {
@@ -1192,7 +1227,7 @@
 }
 
 .org-hero--granja .org-hero-escena {
-  z-index: 1;
+  z-index: 0;
   -webkit-mask-image: none;
   mask-image: none;
 }
@@ -1217,13 +1252,62 @@
 .org-hero--granja[data-fase='noche'] .org-hero-indicador { background: rgb(7 24 20 / 0.62); }
 .org-hero--granja[data-fase='noche'] .org-hero-escena-nota { background: rgb(7 24 20 / 0.6); color: #d5e1d6; }
 
+@media (prefers-reduced-motion: reduce) {
+  .gp-hero-astro,
+  .gp-hero-halo,
+  .gp-hero-astro--sol { animation: none; }
+}
+
 @media (max-width: 56rem) {
-  .gp-hero-astro { left: 78% !important; }
-  .gp-hero-velo { background: linear-gradient(180deg, rgb(247 246 239 / 0.95) 0%, rgb(247 246 239 / 0.8) 44%, rgb(247 246 239 / 0) 72%); }
-  .org-hero--granja[data-fase='tarde'] .gp-hero-velo { background: linear-gradient(180deg, rgb(251 243 226 / 0.95) 0%, rgb(251 243 226 / 0.8) 44%, rgb(251 243 226 / 0) 72%); }
+  .gp-escena { inset: -150% 0 0 0; }
+  .gp-hero-astro, .gp-hero-halo { left: 78% !important; }
+  .gp-hero-velo { background: linear-gradient(180deg, rgb(247 246 239 / 0.4) 0%, rgb(247 246 239 / 0) 55%); }
+  .org-hero--granja[data-fase='tarde'] .gp-hero-velo { background: linear-gradient(180deg, rgb(251 243 226 / 0.36) 0%, rgb(251 243 226 / 0) 55%); }
   .org-hero--granja[data-fase='noche'] .gp-hero-velo { background: linear-gradient(180deg, rgb(7 24 20 / 0.92) 0%, rgb(7 24 20 / 0.72) 46%, rgb(7 24 20 / 0) 76%); }
 }
 
-.gp-escena { position: absolute; inset: 0; }
+.gp-escena { position: absolute; inset: 0 0 0 -120%; pointer-events: none; }
 .gp-escena-visor { position: absolute; inset: 0; }
 .gp-escena-visor canvas { display: block; width: 100%; height: 100%; }
+
+.gp-escena-respaldo {
+  position: absolute;
+  right: 4%;
+  bottom: 4%;
+  width: min(46%, 520px);
+  max-height: 88%;
+  object-fit: contain;
+  object-position: bottom;
+  filter: drop-shadow(0 18px 18px rgb(29 58 46 / 0.28));
+}
+
+.org-hero--granja .org-hero-texto,
+.org-hero--granja .org-hero-indicadores { z-index: 2; }
+
+/* Clima: el paisaje trae su propio fondo; el filtro solo ajusta el modelo. */
+.org-hero--granja[data-clima='nublado'] .gp-escena { filter: saturate(0.7) brightness(0.96); }
+.org-hero--granja[data-clima='lluvia'] .gp-escena { filter: saturate(0.5) brightness(0.84) contrast(0.96); }
+.org-hero--granja[data-clima='nublado'] .gp-hero-astro,
+.org-hero--granja[data-clima='nublado'] .gp-hero-halo { opacity: 0.3; }
+.org-hero--granja[data-clima='lluvia'] .gp-hero-astro,
+.org-hero--granja[data-clima='lluvia'] .gp-hero-halo { opacity: 0.1; }
+
+.gp-hero-lluvia {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(104deg, transparent 0 14px, rgb(214 228 238 / 0.22) 14px 15px, transparent 15px 34px);
+  background-size: 120px 120px;
+  animation: gp-lluvia 0.9s linear infinite;
+}
+
+@keyframes gp-lluvia {
+  to { background-position: -40px 120px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gp-hero-lluvia { animation: none; }
+}
+
+.org-hero--granja:not([data-fase='noche']) .org-hero-texto { text-shadow: 0 0 14px rgb(247 246 239 / 0.55), 0 0 3px rgb(247 246 239 / 0.5); }

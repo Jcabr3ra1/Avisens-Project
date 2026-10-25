@@ -1,10 +1,11 @@
 import {
   AdditiveBlending,
   CanvasTexture,
-  CircleGeometry,
+  Color,
   Group,
   Mesh,
-  MeshStandardMaterial,
+  MeshBasicMaterial,
+  PlaneGeometry,
   PointLight,
   Sprite,
   SpriteMaterial,
@@ -17,8 +18,8 @@ type Punto = readonly [number, number, number]
 
 const VENTANAS: Punto[] = [[-4.2, 2.3, 2.3], [1.2, 2.3, 2.3], [5.3, 2.3, 2.3]]
 const FAROLES: Punto[] = [[-4.6, 3.1, 4.8], [4.6, 3.1, 4.8]]
-
 const LUZ_POR_FASE: Record<FaseDelDia, number> = { dia: 0, amanecer: 0.22, tarde: 0.5, noche: 1 }
+
 
 function texturaRadial(colores: [number, string][]): CanvasTexture {
   const lienzo = document.createElement('canvas')
@@ -37,6 +38,7 @@ function texturaRadial(colores: [number, string][]): CanvasTexture {
 export type AdornosGranja = {
   grupo: Group
   aplicarFase: (fase: FaseDelDia) => void
+  aplicarSuelo: (color: Color) => void
   liberar: () => void
 }
 
@@ -49,17 +51,22 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
     granja.centro.z + punto[2],
   ]
 
-  const mascara = texturaRadial([[0, '#fff'], [0.5, '#fff'], [0.78, '#777'], [1, '#000']])
-  texturas.push(mascara)
-  const pradera = new Mesh(
-    new CircleGeometry(1, 72),
-    new MeshStandardMaterial({ color: granja.pasto, alphaMap: mascara, transparent: true, depthWrite: false, roughness: 1 }),
-  )
-  pradera.rotation.x = -Math.PI / 2
-  pradera.scale.set(granja.tamano.x * 0.63, granja.tamano.z * 0.74, 1)
-  pradera.position.set(granja.centro.x, granja.suelo + 0.12, granja.centro.z)
-  pradera.receiveShadow = true
-  grupo.add(pradera)
+  const aplicarSuelo = (horizonte: Color) => {
+    void horizonte
+  }
+
+  const mancha = texturaRadial([[0, 'rgba(10, 18, 12, 0.85)'], [0.55, 'rgba(10, 18, 12, 0.4)'], [1, 'rgba(10, 18, 12, 0)']])
+  texturas.push(mancha)
+  const materialMancha = new MeshBasicMaterial({ map: mancha, transparent: true, depthWrite: false, opacity: 0.55, polygonOffset: true, polygonOffsetFactor: -2 })
+  const manchas = granja.huellas.map((huella) => {
+    const sombra = new Mesh(new PlaneGeometry(1, 1), materialMancha)
+    sombra.rotation.x = -Math.PI / 2
+    sombra.scale.set(huella.ancho * 1.45, huella.fondo * 1.5, 1)
+    sombra.position.set(huella.x + 0.5, granja.suelo + 0.1, huella.z + 0.7)
+    sombra.renderOrder = 1
+    grupo.add(sombra)
+    return sombra
+  })
 
   const brillo = texturaRadial([[0, 'rgba(255, 232, 170, 1)'], [0.3, 'rgba(255, 196, 110, 0.55)'], [1, 'rgba(255, 170, 70, 0)']])
   texturas.push(brillo)
@@ -86,14 +93,16 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
 
   return {
     grupo,
+    aplicarSuelo,
     aplicarFase: (fase) => {
       const nivel = LUZ_POR_FASE[fase]
       materialBrillo.opacity = nivel * 0.5
+      materialMancha.opacity = fase === 'noche' ? 0.4 : 0.55
       focos.forEach((foco) => { foco.intensity = (foco.userData.fuerza as number) * nivel })
     },
     liberar: () => {
-      pradera.geometry.dispose()
-      ;(pradera.material as MeshStandardMaterial).dispose()
+      manchas.forEach((sombra) => sombra.geometry.dispose())
+      materialMancha.dispose()
       materialBrillo.dispose()
       texturas.forEach((textura) => textura.dispose())
       focos.forEach((foco) => foco.dispose())
