@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
-  claseDeSensor, colorDeEdad, escalaDelPollito, estadoDeLampara, etiquetaDeKpi, faseDelDia,
-  pollitosVisibles, posicionDelAstro, posicionesDePollitos, sensoresDeEscena,
+  claseDeSensor, colorDeEdad, detalleDeKpi, escalaDelPollito, estadoDeLampara, faseDelDia,
+  lecturaDeSensor, posicionDelAstro, sensoresDeEscena, sombraDelGalpon,
 } from './escenaGalpon'
 import type { KpiGranja } from './resumenGranja'
 
 const kpi = (id: KpiGranja['id'], valor: string): KpiGranja => ({
-  id, valor, etiqueta: '', detalle: '', progreso: null, destino: '/granjas',
+  id, valor, etiqueta: '', detalle: 'detalle', progreso: null, destino: '/granjas',
 })
 
 describe('reloj de la escena', () => {
@@ -49,16 +49,7 @@ describe('reloj de la escena', () => {
   })
 })
 
-describe('bandada', () => {
-  it('dibuja pollitos en proporción a las aves sin llenar la escena', () => {
-    expect(pollitosVisibles(0)).toBe(0)
-    expect(pollitosVisibles(1)).toBe(3)
-    expect(pollitosVisibles(500)).toBeGreaterThanOrEqual(10)
-    expect(pollitosVisibles(500)).toBeLessThanOrEqual(16)
-    expect(pollitosVisibles(1_000_000)).toBe(16)
-    expect(pollitosVisibles(5000)).toBeGreaterThan(pollitosVisibles(500) - 1)
-  })
-
+describe('edad del lote (usada también en la guía)', () => {
   it('los pollitos crecen con los días del lote y no se encogen', () => {
     expect(escalaDelPollito(0)).toBeLessThan(escalaDelPollito(21))
     expect(escalaDelPollito(21)).toBeLessThan(escalaDelPollito(42))
@@ -74,33 +65,6 @@ describe('bandada', () => {
     expect(colorDeEdad(null)).toBe(0.5)
   })
 
-  it('reparte los pollitos siempre igual para el mismo lote', () => {
-    const una = posicionesDePollitos(12, 7)
-    const otra = posicionesDePollitos(12, 7)
-    expect(una).toEqual(otra)
-    expect(posicionesDePollitos(12, 8)).not.toEqual(una)
-    expect(una).toHaveLength(12)
-  })
-
-  it('mantiene los pollitos dentro del piso y los de atrás más chicos', () => {
-    const grupo = posicionesDePollitos(16, 3)
-    for (const pollito of grupo) {
-      expect(pollito.x).toBeGreaterThanOrEqual(0)
-      expect(pollito.x).toBeLessThanOrEqual(1)
-      expect(pollito.fila).toBeGreaterThanOrEqual(0)
-      expect(pollito.fila).toBeLessThanOrEqual(1)
-      expect(pollito.retraso).toBeGreaterThanOrEqual(0)
-      expect(pollito.retraso).toBeLessThan(3)
-    }
-    const atras = grupo.filter((p) => p.fila < 0.3)
-    const adelante = grupo.filter((p) => p.fila > 0.7)
-    if (atras.length > 0 && adelante.length > 0) {
-      expect(Math.max(...atras.map((p) => p.perspectiva))).toBeLessThan(Math.min(...adelante.map((p) => p.perspectiva)))
-    }
-  })
-})
-
-describe('objetos con dato real', () => {
   it('la lámpara del techo refleja el tono de la granja', () => {
     expect(estadoDeLampara('ok')).toEqual({ color: 'ok', pulsa: false })
     expect(estadoDeLampara('atencion')).toEqual({ color: 'atencion', pulsa: true })
@@ -139,14 +103,33 @@ describe('objetos con dato real', () => {
     expect(sensor.valor).toBe(28)
   })
 
-  it('escribe la etiqueta de cada indicador con su plural', () => {
-    expect(etiquetaDeKpi(kpi('aves', '500'), 9)).toBe('500 aves · día 9')
-    expect(etiquetaDeKpi(kpi('aves', '500'), null)).toBe('500 aves')
-    expect(etiquetaDeKpi(kpi('aves', '1'), null)).toBe('1 ave')
-    expect(etiquetaDeKpi(kpi('alertas', '0'), null)).toBe('Sin alertas')
-    expect(etiquetaDeKpi(kpi('alertas', '1'), null)).toBe('1 alerta')
-    expect(etiquetaDeKpi(kpi('alertas', '3'), null)).toBe('3 alertas')
-    expect(etiquetaDeKpi(kpi('sensores', '1/1'), null)).toBe('1/1 sensores')
-    expect(etiquetaDeKpi(kpi('galpones', '2/3'), null)).toBe('2/3 galpones con lote')
+  it('arma el detalle de cada indicador sin inventar datos', () => {
+    expect(detalleDeKpi(kpi('aves', '500'), 9, null)).toBe('Día 9 del lote · detalle')
+    expect(detalleDeKpi(kpi('aves', '500'), null, null)).toBe('detalle')
+    expect(detalleDeKpi(kpi('sensores', '1/1'), null, '29,4 °C')).toBe('29,4 °C · detalle')
+    expect(detalleDeKpi(kpi('sensores', '1/1'), null, null)).toBe('detalle')
+    expect(detalleDeKpi(kpi('alertas', '0'), 9, '29,4 °C')).toBe('detalle')
+  })
+
+  it('escribe la lectura de un sensor o avisa que no reporta', () => {
+    expect(lecturaDeSensor({ clase: 'temperatura', nombre: 'Temperatura', valor: 29.44, unidad: '°C' })).toBe('29,4 °C')
+    expect(lecturaDeSensor({ clase: 'co2', nombre: 'CO₂', valor: null, unidad: 'ppm' })).toBe('sin lectura')
+  })
+})
+
+describe('sombra del galpón', () => {
+  it('cae hacia el lado opuesto del sol y se acorta al mediodía', () => {
+    const mañana = sombraDelGalpon(posicionDelAstro(8))
+    const mediodia = sombraDelGalpon(posicionDelAstro(12))
+    const tarde = sombraDelGalpon(posicionDelAstro(16))
+    expect(mañana.desplazamiento).toBeGreaterThan(0)
+    expect(tarde.desplazamiento).toBeLessThan(0)
+    expect(Math.abs(mediodia.desplazamiento)).toBeLessThan(Math.abs(mañana.desplazamiento))
+    expect(mediodia.alargamiento).toBeLessThan(mañana.alargamiento)
+  })
+
+  it('de noche la sombra es suave y corta', () => {
+    const noche = sombraDelGalpon(posicionDelAstro(23))
+    expect(noche.alargamiento).toBeLessThan(1)
   })
 })

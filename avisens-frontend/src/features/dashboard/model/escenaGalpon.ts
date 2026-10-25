@@ -5,21 +5,10 @@ export type FaseDelDia = 'amanecer' | 'dia' | 'tarde' | 'noche'
 
 export type Astro = { tipo: 'sol' | 'luna'; x: number; y: number }
 
-export type PosicionPollito = {
-  x: number
-  fila: number
-  perspectiva: number
-  retraso: number
-  mirada: 1 | -1
-}
-
 const DIA_MAXIMO_CICLO = 42
 const ESCALA_RECIEN_NACIDO = 0.5
 const ESCALA_DE_FAENA = 1.15
 const ESCALA_SIN_DATO = 0.8
-const POLLITOS_MINIMOS = 3
-const POLLITOS_MAXIMOS = 16
-const AVES_POR_POLLITO_AL_CUADRADO = 1.6
 
 export function faseDelDia(hora: number): FaseDelDia {
   if (hora >= 5 && hora < 7) return 'amanecer'
@@ -38,12 +27,6 @@ export function posicionDelAstro(hora: number): Astro {
   }
 }
 
-export function pollitosVisibles(aves: number): number {
-  if (aves <= 0) return 0
-  const proporcional = Math.round(Math.sqrt(aves) / AVES_POR_POLLITO_AL_CUADRADO)
-  return Math.min(POLLITOS_MAXIMOS, Math.max(POLLITOS_MINIMOS, proporcional))
-}
-
 function avance(dia: number): number {
   return Math.min(1, Math.max(0, dia / DIA_MAXIMO_CICLO))
 }
@@ -55,28 +38,6 @@ export function escalaDelPollito(dia: number | null): number {
 
 export function colorDeEdad(dia: number | null): number {
   return dia === null ? 0.5 : avance(dia)
-}
-
-function generador(semilla: number): () => number {
-  let estado = (Math.abs(Math.trunc(semilla)) * 2654435761 + 12345) % 4294967296
-  return () => {
-    estado = (estado * 1664525 + 1013904223) % 4294967296
-    return estado / 4294967296
-  }
-}
-
-export function posicionesDePollitos(cantidad: number, semilla: number): PosicionPollito[] {
-  const azar = generador(semilla)
-  return Array.from({ length: cantidad }, (): PosicionPollito => {
-    const fila = azar()
-    return {
-      x: 0.04 + azar() * 0.92,
-      fila,
-      perspectiva: 0.4 + fila * 0.6,
-      retraso: azar() * 2.9,
-      mirada: azar() < 0.5 ? -1 : 1,
-    }
-  }).sort((a, b) => a.fila - b.fila)
 }
 
 export function estadoDeLampara(tono: TonoGranja): { color: TonoGranja; pulsa: boolean } {
@@ -134,18 +95,22 @@ export function sensoresDeEscena(sensores: SensorCrudo[]): SensorEscena[] {
   })
 }
 
-export function etiquetaDeKpi(kpi: KpiGranja, diaLote: number | null): string {
-  switch (kpi.id) {
-    case 'aves': {
-      const aves = kpi.valor === '1' ? '1 ave' : `${kpi.valor} aves`
-      return diaLote === null ? aves : `${aves} · día ${diaLote}`
-    }
-    case 'alertas':
-      if (kpi.valor === '0') return 'Sin alertas'
-      return kpi.valor === '1' ? '1 alerta' : `${kpi.valor} alertas`
-    case 'sensores':
-      return `${kpi.valor} sensores`
-    case 'galpones':
-      return `${kpi.valor} galpones con lote`
+export function detalleDeKpi(kpi: KpiGranja, diaLote: number | null, ambiente: string | null): string {
+  if (kpi.id === 'aves' && diaLote !== null) return `Día ${diaLote} del lote · ${kpi.detalle}`
+  if (kpi.id === 'sensores' && ambiente) return `${ambiente} · ${kpi.detalle}`
+  return kpi.detalle
+}
+
+export function lecturaDeSensor(sensor: SensorEscena): string {
+  const decimal = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
+  return sensor.valor === null ? 'sin lectura' : `${decimal.format(sensor.valor)} ${sensor.unidad}`.trim()
+}
+
+export function sombraDelGalpon(astro: Astro): { desplazamiento: number; alargamiento: number } {
+  const altura = Math.max(0, Math.min(1, (34 - astro.y) / 22))
+  const lado = (50 - astro.x) / 42
+  return {
+    desplazamiento: lado * (astro.tipo === 'sol' ? 1 : 0.35),
+    alargamiento: astro.tipo === 'sol' ? 1.5 - altura * 0.7 : 0.9,
   }
 }

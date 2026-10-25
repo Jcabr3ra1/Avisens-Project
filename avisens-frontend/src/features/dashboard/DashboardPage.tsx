@@ -141,7 +141,6 @@ function DashboardPage() {
         kpis={kpis}
         diaLote={diaUnico}
         aves={avesAlojadas}
-        semilla={dashboard.granjaId ?? 1}
         sensores={sensoresEscena}
         cargando={dashboard.cargando || cargandoMonitoreo}
         onGranjaChange={dashboard.seleccionarGranja}
