@@ -185,6 +185,11 @@ function GranjasPropietario() {
         aria-labelledby="gp-hero-titulo"
       >
         <div className="gp-hero-fondo" aria-hidden="true" />
+        <span
+          key={`halo-${astro.tipo}`}
+          className={`gp-hero-halo gp-hero-halo--${astro.tipo}`}
+          style={{ left: `${56 + ((astro.x - 44) / 42) * 34}%`, top: `${astro.y + 2}%` }}
+        />
         <img
           key={astro.tipo}
           className={`gp-hero-astro gp-hero-astro--${astro.tipo}`}

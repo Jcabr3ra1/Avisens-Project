@@ -1161,20 +1161,45 @@
   position: absolute;
   z-index: 0;
   display: block;
-  width: 92px;
+  width: 70px;
   aspect-ratio: 1;
   object-fit: contain;
   pointer-events: none;
   translate: -50% -50%;
-  filter: drop-shadow(0 0 16px rgb(255 205 100 / 0.8)) drop-shadow(0 0 40px rgb(255 190 80 / 0.5));
+  filter: saturate(0.92) brightness(1.06) drop-shadow(0 0 10px rgb(255 214 130 / 0.6));
   animation: gp-astro-entra 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .gp-hero-astro--sol { animation: gp-astro-entra 900ms cubic-bezier(0.16, 1, 0.3, 1) both, gp-sol-gira 160s linear infinite; }
 
 .gp-hero-astro--luna {
-  width: 62px;
-  filter: drop-shadow(0 0 14px rgb(220 232 255 / 0.55)) drop-shadow(0 0 34px rgb(190 210 255 / 0.3));
+  width: 56px;
+  filter: drop-shadow(0 0 10px rgb(220 232 255 / 0.5));
+}
+
+.gp-hero-halo {
+  position: absolute;
+  z-index: 0;
+  width: min(78vw, 680px);
+  aspect-ratio: 1;
+  pointer-events: none;
+  translate: -50% -50%;
+  border-radius: 50%;
+  animation: gp-astro-entra 1200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.gp-hero-halo--sol {
+  background: radial-gradient(circle, rgb(255 246 205 / 0.95) 0%, rgb(255 226 150 / 0.62) 9%, rgb(255 212 125 / 0.3) 24%, rgb(255 205 120 / 0.1) 46%, transparent 68%);
+}
+
+.gp-hero-halo--luna {
+  width: min(60vw, 480px);
+  background: radial-gradient(circle, rgb(226 238 255 / 0.5) 0%, rgb(190 212 255 / 0.2) 16%, rgb(170 195 245 / 0.07) 40%, transparent 65%);
+}
+
+.org-hero--granja[data-fase='amanecer'] .gp-hero-halo--sol,
+.org-hero--granja[data-fase='tarde'] .gp-hero-halo--sol {
+  background: radial-gradient(circle, rgb(255 226 170 / 0.95) 0%, rgb(255 184 110 / 0.62) 10%, rgb(255 160 90 / 0.3) 26%, rgb(255 150 90 / 0.1) 48%, transparent 70%);
 }
 
 @keyframes gp-sol-gira {
@@ -1229,11 +1254,12 @@
 
 @media (prefers-reduced-motion: reduce) {
   .gp-hero-astro,
+  .gp-hero-halo,
   .gp-hero-astro--sol { animation: none; }
 }
 
 @media (max-width: 56rem) {
-  .gp-hero-astro { left: 78% !important; }
+  .gp-hero-astro, .gp-hero-halo { left: 78% !important; }
   .gp-hero-velo { background: linear-gradient(180deg, rgb(247 246 239 / 0.95) 0%, rgb(247 246 239 / 0.8) 44%, rgb(247 246 239 / 0) 72%); }
   .org-hero--granja[data-fase='tarde'] .gp-hero-velo { background: linear-gradient(180deg, rgb(251 243 226 / 0.95) 0%, rgb(251 243 226 / 0.8) 44%, rgb(251 243 226 / 0) 72%); }
   .org-hero--granja[data-fase='noche'] .gp-hero-velo { background: linear-gradient(180deg, rgb(7 24 20 / 0.92) 0%, rgb(7 24 20 / 0.72) 46%, rgb(7 24 20 / 0) 76%); }

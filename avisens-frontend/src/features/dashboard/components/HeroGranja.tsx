@@ -120,6 +120,11 @@ function HeroGranja({
         {fase === 'noche' && ESTRELLAS.map(([izquierda, arriba], indice) => (
           <span key={indice} className="hero-granja-estrella" style={{ left: `${izquierda}%`, top: `${arriba}%`, animationDelay: `${(indice % 5) * -0.9}s` }} />
         ))}
+        <span
+          key={`halo-${astro.tipo}`}
+          className={`hero-granja-halo hero-granja-halo--${astro.tipo}`}
+          style={{ left: `${astro.x}%`, top: `${astro.y}%` }}
+        />
         <img
           key={astro.tipo}
           className={`hero-granja-astro hero-granja-astro--${astro.tipo}`}

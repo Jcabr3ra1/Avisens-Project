@@ -121,8 +121,8 @@
 .hero-granja-astro {
   position: absolute;
   display: block;
-  width: 78px;
-  filter: drop-shadow(0 0 14px rgb(255 205 100 / 0.75)) drop-shadow(0 0 34px rgb(255 190 80 / 0.45));
+  width: 64px;
+  filter: saturate(0.92) brightness(1.06) drop-shadow(0 0 10px rgb(255 214 130 / 0.6));
   aspect-ratio: 1;
   object-fit: contain;
   translate: -50% -50%;
@@ -131,8 +131,32 @@
 }
 
 .hero-granja-astro--luna {
-  width: 56px;
-  filter: drop-shadow(0 0 12px rgb(220 232 255 / 0.55)) drop-shadow(0 0 30px rgb(190 210 255 / 0.3));
+  width: 52px;
+  filter: drop-shadow(0 0 10px rgb(220 232 255 / 0.5));
+}
+
+.hero-granja-halo {
+  position: absolute;
+  width: min(78vw, 640px);
+  aspect-ratio: 1;
+  pointer-events: none;
+  translate: -50% -50%;
+  border-radius: 50%;
+  animation: hero-granja-astro-entra 1200ms var(--hero-ease) both;
+}
+
+.hero-granja-halo--sol {
+  background: radial-gradient(circle, rgb(255 246 205 / 0.95) 0%, rgb(255 226 150 / 0.62) 9%, rgb(255 212 125 / 0.3) 24%, rgb(255 205 120 / 0.1) 46%, transparent 68%);
+}
+
+.hero-granja-halo--luna {
+  width: min(60vw, 460px);
+  background: radial-gradient(circle, rgb(226 238 255 / 0.5) 0%, rgb(190 212 255 / 0.2) 16%, rgb(170 195 245 / 0.07) 40%, transparent 65%);
+}
+
+.hero-granja[data-fase='amanecer'] .hero-granja-halo--sol,
+.hero-granja[data-fase='tarde'] .hero-granja-halo--sol {
+  background: radial-gradient(circle, rgb(255 226 170 / 0.95) 0%, rgb(255 184 110 / 0.62) 10%, rgb(255 160 90 / 0.3) 26%, rgb(255 150 90 / 0.1) 48%, transparent 70%);
 }
 
 .hero-granja-astro--sol { animation: hero-granja-astro-entra 900ms var(--hero-ease) both, hero-granja-sol-gira 160s linear infinite; }
@@ -553,6 +577,7 @@
   .hero-granja-colinas { height: 100%; }
   .hero-granja-nube,
   .hero-granja-astro,
+  .hero-granja-halo,
   .hero-granja-estrella { display: none; }
 }
 
@@ -563,6 +588,7 @@
   .hero-granja-astro,
   .hero-granja-astro--sol,
   .hero-granja-astro--luna,
+  .hero-granja-halo,
   .escena-halo--pulsa,
   .hero-granja-sync.is-spinning svg { animation: none; }
 
