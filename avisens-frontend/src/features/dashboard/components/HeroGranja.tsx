@@ -8,7 +8,8 @@ import type { KpiGranja } from '../model/resumenGranja'
 import lunaLowPoly from '../assets/escena/luna-low-poly.webp'
 import solLowPoly from '../assets/escena/sol-low-poly.webp'
 import EscenaGalpon from './escena/EscenaGalpon'
-import { FONDOS_POR_FASE } from './escena/fondosPorFase'
+import type { ClimaVisual } from '@features/granjas/propietario/climaVisual'
+import { fondoDeGranja } from '@features/granjas/propietario/fondosGranja'
 import './HeroGranja.css'
 
 type Props = {
@@ -21,6 +22,7 @@ type Props = {
   diaLote: number | null
   aves: number
   nombreGalpon: string | null
+  clima: ClimaVisual
   sensores: SensorEscena[]
   cargando: boolean
   hora?: number
@@ -88,7 +90,7 @@ function useParalaje(ref: React.RefObject<HTMLElement | null>) {
 }
 
 function HeroGranja({
-  nombre, fecha, granjas, granjaId, estado, kpis, diaLote, aves, nombreGalpon, sensores,
+  nombre, fecha, granjas, granjaId, estado, kpis, diaLote, aves, nombreGalpon, clima, sensores,
   cargando, hora, onGranjaChange, onRecargar, onAccion, onNavegar,
 }: Props) {
   const raiz = useRef<HTMLElement>(null)
@@ -109,7 +111,7 @@ function HeroGranja({
       data-fase={fase}
       data-resaltado={resaltado ?? undefined}
       aria-labelledby="hero-granja-titulo"
-      style={{ '--fondo': `url(${FONDOS_POR_FASE[fase]})` } as CSSProperties}
+      style={{ '--fondo': `url(${fondoDeGranja(fase, clima)})` } as CSSProperties}
     >
       <div className="hero-granja-fondo" aria-hidden="true">
         <div className="hero-granja-paisaje" />
