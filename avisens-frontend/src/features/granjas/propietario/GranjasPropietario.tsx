@@ -191,7 +191,7 @@ function GranjasPropietario() {
         <span
           key={`halo-${astro.tipo}`}
           className={`gp-hero-halo gp-hero-halo--${astro.tipo}`}
-          style={{ left: `${56 + ((astro.x - 44) / 42) * 34}%`, top: `${astro.y + 2}%` }}
+          style={{ left: `${56 + ((astro.x - 44) / 42) * 34}%`, top: `${(5 + ((astro.y - 10) / 22) * 13).toFixed(2)}%` }}
         />
         <img
           key={astro.tipo}
@@ -199,7 +199,7 @@ function GranjasPropietario() {
           src={astro.tipo === 'sol' ? solLowPoly : lunaLowPoly}
           alt=""
           aria-hidden="true"
-          style={{ left: `${56 + ((astro.x - 44) / 42) * 34}%`, top: `${astro.y + 2}%` }}
+          style={{ left: `${56 + ((astro.x - 44) / 42) * 34}%`, top: `${(5 + ((astro.y - 10) / 22) * 13).toFixed(2)}%` }}
         />
         {clima === 'lluvia' && <div className="gp-hero-lluvia" aria-hidden="true" />}
         <div className="gp-hero-velo" aria-hidden="true" />

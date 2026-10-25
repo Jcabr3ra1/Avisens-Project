@@ -1161,7 +1161,7 @@
   position: absolute;
   z-index: 0;
   display: block;
-  width: 70px;
+  width: 54px;
   aspect-ratio: 1;
   object-fit: contain;
   pointer-events: none;
@@ -1173,7 +1173,7 @@
 .gp-hero-astro--sol { animation: gp-astro-entra 900ms cubic-bezier(0.16, 1, 0.3, 1) backwards, gp-sol-gira 160s linear infinite; }
 
 .gp-hero-astro--luna {
-  width: 56px;
+  width: 44px;
   filter: drop-shadow(0 0 10px rgb(220 232 255 / 0.5));
 }
 

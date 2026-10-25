@@ -117,14 +117,14 @@ function HeroGranja({
         <span
           key={`halo-${astro.tipo}`}
           className={`hero-granja-halo hero-granja-halo--${astro.tipo}`}
-          style={{ left: `${astro.x}%`, top: `${astro.y}%` }}
+          style={{ left: `${astro.x}%`, top: `${(9 + ((astro.y - 10) / 22) * 12).toFixed(2)}%` }}
         />
         <img
           key={astro.tipo}
           className={`hero-granja-astro hero-granja-astro--${astro.tipo}`}
           src={astro.tipo === 'sol' ? solLowPoly : lunaLowPoly}
           alt=""
-          style={{ left: `${astro.x}%`, top: `${astro.y}%` }}
+          style={{ left: `${astro.x}%`, top: `${(9 + ((astro.y - 10) / 22) * 12).toFixed(2)}%` }}
         />
       </div>
 

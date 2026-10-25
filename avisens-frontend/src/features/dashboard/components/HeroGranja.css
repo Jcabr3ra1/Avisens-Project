@@ -106,7 +106,7 @@
 .hero-granja-astro {
   position: absolute;
   display: block;
-  width: 64px;
+  width: 50px;
   filter: saturate(0.92) brightness(1.06) drop-shadow(0 0 10px rgb(255 214 130 / 0.6));
   aspect-ratio: 1;
   object-fit: contain;
@@ -116,7 +116,7 @@
 }
 
 .hero-granja-astro--luna {
-  width: 52px;
+  width: 42px;
   filter: drop-shadow(0 0 10px rgb(220 232 255 / 0.5));
 }
 
