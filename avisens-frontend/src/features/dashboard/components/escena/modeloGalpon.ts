@@ -193,7 +193,7 @@ function crearIsla(radio: number, azar: () => number): Mesh {
     const arriba = (normales.getY(cara) + normales.getY(cara + 1) + normales.getY(cara + 2)) / 3 > 0.85
     const altura = (puntos.getY(cara) + puntos.getY(cara + 1) + puntos.getY(cara + 2)) / 3
     const variacion = (azar() - 0.5) * 0.1
-    if (arriba) pasto.setHSL(0.255, 0.3, 0.4 + variacion)
+    if (arriba) pasto.setHSL(0.27, 0.5, 0.4 + variacion)
     else tierra.setHSL(0.075 - (altura / alto) * 0.02, 0.24, Math.max(0.18, 0.36 + variacion + altura / alto * 0.24))
     const color = arriba ? pasto : tierra
     for (let vertice = 0; vertice < 3; vertice++) {
