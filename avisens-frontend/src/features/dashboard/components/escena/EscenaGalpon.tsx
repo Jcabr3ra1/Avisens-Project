@@ -4,9 +4,23 @@ import Pollito from '@shared/ui/ilustraciones/Pollito'
 import type { TonoGranja } from '../../model/estadoGranja'
 import type { KpiGranja } from '../../model/resumenGranja'
 import {
-  colorDeEdad, escalaDelPollito, estadoDeLampara, etiquetaDeKpi, nivelDelTermometro,
-  pollitosVisibles, posicionesDePollitos,
+  colorDeEdad, escalaDelPollito, estadoDeLampara, etiquetaDeKpi, pollitosVisibles,
+  posicionesDePollitos, type ClaseSensor, type PosicionPollito, type SensorEscena,
 } from '../../model/escenaGalpon'
+import galponImagen from '../../assets/escena/galpon.webp'
+import sensorTemperatura from '../../assets/escena/sensores/temperatura.webp'
+import sensorHumedad from '../../assets/escena/sensores/humedad.webp'
+import sensorCo2 from '../../assets/escena/sensores/co2.webp'
+import sensorAmoniaco from '../../assets/escena/sensores/amoniaco.webp'
+import sensorLuz from '../../assets/escena/sensores/luz.webp'
+import arbol2 from '../../assets/escena/plantas/arbol-2.webp'
+import arbol3 from '../../assets/escena/plantas/arbol-3.webp'
+import arbol4 from '../../assets/escena/plantas/arbol-4.webp'
+import arbol5 from '../../assets/escena/plantas/arbol-5.webp'
+import pasto1 from '../../assets/escena/plantas/pasto-1.webp'
+import pasto2 from '../../assets/escena/plantas/pasto-2.webp'
+import pasto3 from '../../assets/escena/plantas/pasto-3.webp'
+import pasto4 from '../../assets/escena/plantas/pasto-4.webp'
 
 type Props = {
   nombreGranja: string
@@ -14,19 +28,52 @@ type Props = {
   diaLote: number | null
   aves: number
   semilla: number
-  temperatura: number | null
-  humedad: number | null
-  sensoresActivos: boolean
+  sensores: SensorEscena[]
   kpis: KpiGranja[]
   onNavegar: (destino: string) => void
 }
 
-const PISO = { izquierda: 112, ancho: 540, fondo: 298, profundidad: 32 }
-const ESCALA_PINTADA = 1.3
-const COMEDEROS = [170, 260, 350, 440, 530, 600]
-const BEBEDEROS = [215, 305, 395, 485, 565]
-const TERMOMETRO = { x: 604, arriba: 190, alto: 58 }
+const ESCENA = { ancho: 760, alto: 530 }
+const GALPON = { x: 145, y: 32, ancho: 470, alto: 434.4 }
+const SUELO_Y = 466.4
+const PISO = { atrasY: 290, frenteY: 388, atrasIzq: 354, atrasDer: 406, frenteIzq: 248, frenteDer: 514 }
+const ESCALA_PINTADA = 1
 const LARGO_MAXIMO_LETRERO = 11
+
+type Planta = { url: string; relacion: number; x: number; base: number; medida: number; sobre: 'alto' | 'ancho'; giro: number; retraso: number }
+
+const PLANTAS_TRASERAS: Planta[] = [
+  { url: arbol4, relacion: 139 / 420, x: 98, base: 462, medida: 196, sobre: 'alto', giro: 0.9, retraso: -1.1 },
+  { url: arbol3, relacion: 245 / 420, x: 40, base: 468, medida: 214, sobre: 'alto', giro: 0.7, retraso: -3.4 },
+  { url: arbol5, relacion: 115 / 420, x: 672, base: 462, medida: 268, sobre: 'alto', giro: 0.8, retraso: -2.2 },
+  { url: arbol2, relacion: 242 / 420, x: 726, base: 470, medida: 176, sobre: 'alto', giro: 0.7, retraso: -4.6 },
+]
+
+const PLANTAS_DELANTERAS: Planta[] = [
+  { url: pasto1, relacion: 420 / 325, x: 58, base: 522, medida: 84, sobre: 'ancho', giro: 2.4, retraso: -0.8 },
+  { url: pasto3, relacion: 420 / 285, x: 292, base: 508, medida: 54, sobre: 'ancho', giro: 1.8, retraso: -2.6 },
+  { url: pasto4, relacion: 420 / 159, x: 628, base: 506, medida: 88, sobre: 'ancho', giro: 1.6, retraso: -1.7 },
+  { url: pasto2, relacion: 420 / 268, x: 714, base: 526, medida: 86, sobre: 'ancho', giro: 2.4, retraso: -3.1 },
+]
+
+type PuestoSensor = { x: number; y: number; ancho: number; lado: 'izq' | 'der'; url: string; relacion: number }
+
+const PUESTOS: Record<ClaseSensor, PuestoSensor> = {
+  temperatura: { x: 559, y: 258, ancho: 26, lado: 'der', url: sensorTemperatura, relacion: 166 / 240 },
+  humedad: { x: 559, y: 319, ancho: 33, lado: 'der', url: sensorHumedad, relacion: 204 / 240 },
+  co2: { x: 201, y: 258, ancho: 35, lado: 'izq', url: sensorCo2, relacion: 197 / 240 },
+  amoniaco: { x: 201, y: 319, ancho: 37, lado: 'izq', url: sensorAmoniaco, relacion: 232 / 240 },
+  luz: { x: 380, y: 168, ancho: 46, lado: 'der', url: sensorLuz, relacion: 240 / 233 },
+}
+
+const ORIGEN_GUIA_SENSOR = { x: 640, y: 62 }
+
+function sensorMasCercano(sensores: SensorEscena[]): PuestoSensor | null {
+  const distancia = (puesto: PuestoSensor) => Math.hypot(puesto.x - ORIGEN_GUIA_SENSOR.x, puesto.y - ORIGEN_GUIA_SENSOR.y)
+  return sensores
+    .map((sensor) => PUESTOS[sensor.clase])
+    .sort((a, b) => distancia(a) - distancia(b))[0] ?? null
+}
 
 const decimal = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
 
@@ -35,148 +82,147 @@ function letrero(nombre: string): string {
   return limpio.length > LARGO_MAXIMO_LETRERO ? `${limpio.slice(0, LARGO_MAXIMO_LETRERO - 1)}…` : limpio
 }
 
+function enPiso(pollito: PosicionPollito) {
+  const t = pollito.fila
+  const mezclar = (a: number, b: number) => a + (b - a) * t
+  const izquierda = mezclar(PISO.atrasIzq, PISO.frenteIzq)
+  const derecha = mezclar(PISO.atrasDer, PISO.frenteDer)
+  const u = pollito.x < 0.5 ? pollito.x * 0.88 : 0.12 + pollito.x * 0.88
+  return { x: izquierda + u * (derecha - izquierda), y: mezclar(PISO.atrasY, PISO.frenteY) }
+}
+
+const porcentajeX = (x: number) => `${((x / ESCENA.ancho) * 100).toFixed(3)}%`
+const porcentajeY = (y: number) => `${((y / ESCENA.alto) * 100).toFixed(3)}%`
+
+function estiloPlanta(planta: Planta): CSSProperties {
+  const ancho = planta.sobre === 'alto' ? planta.medida * planta.relacion : planta.medida
+  return {
+    left: porcentajeX(planta.x),
+    top: porcentajeY(planta.base),
+    width: porcentajeX(ancho),
+    '--giro': `${planta.giro}deg`,
+    '--retraso': `${planta.retraso}s`,
+  } as CSSProperties
+}
+
+function valorDeSensor(sensor: SensorEscena): string {
+  return sensor.valor === null ? 'sin lectura' : `${decimal.format(sensor.valor)} ${sensor.unidad}`.trim()
+}
+
 function EscenaGalpon({
-  nombreGranja, tono, diaLote, aves, semilla, temperatura, humedad, sensoresActivos, kpis, onNavegar,
+  nombreGranja, tono, diaLote, aves, semilla, sensores, kpis, onNavegar,
 }: Props) {
   const id = useId().replace(/:/g, '')
   const lampara = estadoDeLampara(tono)
-  const nivel = nivelDelTermometro(temperatura)
   const escala = escalaDelPollito(diaLote)
   const pollitos = posicionesDePollitos(pollitosVisibles(aves), semilla)
   const kpiPorId = new Map(kpis.map((kpi) => [kpi.id, kpi]))
-  const ambiente = temperatura === null
-    ? null
-    : `${decimal.format(temperatura)} °C${humedad === null ? '' : ` · ${Math.round(humedad)} %`}`
+  const temperatura = sensores.find((sensor) => sensor.clase === 'temperatura' && sensor.valor !== null)
+  const ambiente = temperatura ? valorDeSensor(temperatura) : null
+  const primerSensor = sensorMasCercano(sensores)
+  const destinoAmbiente = kpiPorId.get('sensores')?.destino ?? '/granjas'
   const descripcion = aves > 0
-    ? `Corte del galpón de ${nombreGranja} con ${aves.toLocaleString('es-CO')} aves${diaLote === null ? '' : ` en el día ${diaLote}`}`
-    : `Corte del galpón de ${nombreGranja}, sin aves por ahora`
+    ? `Galpón de ${nombreGranja} con ${aves.toLocaleString('es-CO')} aves${diaLote === null ? '' : ` en el día ${diaLote}`}`
+    : `Galpón de ${nombreGranja}, sin aves por ahora`
 
   return (
     <div
       className={`escena escena--${lampara.color}`}
       style={{ '--edad': colorDeEdad(diaLote) } as CSSProperties}
     >
-      <div className="escena-lienzo">
-        <svg viewBox="0 0 760 440" className="escena-svg" role="img" aria-label={descripcion} overflow="visible">
-          <defs>
-            <pattern id={`viruta-${id}`} width="30" height="14" patternUnits="userSpaceOnUse">
-              <path d="M3 4h9M17 10h8" stroke="var(--cama-sombra)" strokeWidth="2" strokeLinecap="round" />
-            </pattern>
-          </defs>
+      <div className="escena-lienzo" role="group" aria-label={descripcion}>
+        <svg className="escena-capa escena-suelo" viewBox={`0 0 ${ESCENA.ancho} ${ESCENA.alto}`} aria-hidden="true" overflow="visible">
+          <rect x="-1600" y={SUELO_Y} width="4000" height="260" fill="var(--suelo)" />
+          <rect x="-1600" y={SUELO_Y} width="4000" height="5" fill="var(--cesped)" />
+        </svg>
 
-          <rect x="-1600" y="332" width="4000" height="200" fill="var(--suelo)" />
-          <rect x="-1600" y="332" width="4000" height="5" fill="var(--cesped)" />
-
-          <rect x="94" y="150" width="572" height="182" fill="var(--pared)" />
-          <polygon points="94,150 380,86 666,150" fill="var(--pared-alta)" />
-          <rect x="94" y="304" width="572" height="28" fill="var(--cama)" />
-          <rect x="94" y="304" width="572" height="28" fill={`url(#viruta-${id})`} />
-          <path d="M94 304h572" stroke="var(--cama-sombra)" strokeWidth="1.5" opacity="0.5" />
-
-          <g stroke="var(--madera)" strokeLinecap="round" fill="none">
-            <path d="M94 150L380 98L666 150" strokeWidth="3" />
-            <path d="M94 150H666" strokeWidth="4" />
-            <path d="M380 98V150" strokeWidth="3" />
-            <path d="M237 124V150M523 124V150" strokeWidth="2" opacity="0.7" />
-          </g>
-
-          <rect x="94" y="152" width="26" height="66" rx="3" fill="var(--cortina)" />
-          <rect x="640" y="152" width="26" height="66" rx="3" fill="var(--cortina)" />
-          <path d="M98 166h18M98 180h18M98 194h18M98 208h18M644 166h18M644 180h18M644 194h18M644 208h18" stroke="var(--cortina-sombra)" strokeWidth="1.5" strokeLinecap="round" />
-
-          <g stroke="var(--madera)" strokeLinecap="round">
-            <path d="M130 212H630" strokeWidth="3" />
-            {COMEDEROS.map((x) => <path key={`c${x}`} d={`M${x} 150V212`} strokeWidth="1.5" opacity="0.7" />)}
-            <path d="M160 250H610" strokeWidth="2.5" />
-            {BEBEDEROS.map((x) => <path key={`b${x}`} d={`M${x} 150V250`} strokeWidth="1.5" opacity="0.7" />)}
-          </g>
-          {COMEDEROS.map((x) => (
-            <g key={`p${x}`}>
-              <path d={`M${x - 10} 212L${x - 17} 225h34L${x + 10} 212z`} fill="var(--comedero-claro)" />
-              <ellipse cx={x} cy="225" rx="17" ry="4.5" fill="var(--comedero)" />
-            </g>
+        <div className="escena-capa escena-capa--trasera" aria-hidden="true">
+          {PLANTAS_TRASERAS.map((planta) => (
+            <img key={planta.url} className="escena-planta escena-img" src={planta.url} alt="" style={estiloPlanta(planta)} />
           ))}
-          {BEBEDEROS.map((x) => <circle key={`t${x}`} cx={x} cy="258" r="4.5" fill="var(--agua)" />)}
+        </div>
 
-          <path d="M380 150V174" stroke="var(--madera)" strokeWidth="2" />
-          <circle cx="380" cy="184" r="24" fill="var(--bombillo)" opacity="var(--luz-bombillo)" />
-          <circle cx="380" cy="184" r="8" fill="var(--bombillo)" />
+        <img
+          className="escena-galpon escena-img"
+          src={galponImagen}
+          alt=""
+          aria-hidden="true"
+          style={{
+            left: porcentajeX(GALPON.x), top: porcentajeY(GALPON.y),
+            width: porcentajeX(GALPON.ancho), height: porcentajeY(GALPON.alto),
+          }}
+        />
+        <span
+          className="escena-brillo"
+          aria-hidden="true"
+          style={{
+            left: porcentajeX(GALPON.x), top: porcentajeY(GALPON.y + GALPON.alto * 0.2),
+            width: porcentajeX(GALPON.ancho), height: porcentajeY(GALPON.alto * 0.7),
+          }}
+        />
 
-          <rect x={TERMOMETRO.x - 4} y={TERMOMETRO.arriba} width="8" height={TERMOMETRO.alto + 4} rx="4" fill="var(--termometro)" stroke="var(--linea-objeto)" strokeWidth="1.5" />
-          <circle cx={TERMOMETRO.x} cy={TERMOMETRO.arriba + TERMOMETRO.alto + 8} r="8" fill="var(--termometro)" stroke="var(--linea-objeto)" strokeWidth="1.5" />
-          {nivel !== null && (
-            <g fill="var(--mercurio)">
-              <circle cx={TERMOMETRO.x} cy={TERMOMETRO.arriba + TERMOMETRO.alto + 8} r="5.5" />
-              <rect
-                className="escena-mercurio"
-                x={TERMOMETRO.x - 1.75}
-                y={TERMOMETRO.arriba + TERMOMETRO.alto + 8 - nivel * (TERMOMETRO.alto - 2)}
-                width="3.5"
-                height={nivel * (TERMOMETRO.alto - 2)}
-                rx="1.75"
-              />
-            </g>
-          )}
-
-          <rect x="498" y="186" width="24" height="32" rx="4" fill="var(--sensor)" stroke="var(--linea-objeto)" strokeWidth="1.5" />
-          <circle cx="510" cy="206" r="3" fill={sensoresActivos ? 'var(--led-activo)' : 'var(--linea-objeto)'} />
-          <path d="M510 186V172" stroke="var(--linea-objeto)" strokeWidth="2" strokeLinecap="round" />
-          <g className={sensoresActivos ? 'escena-ondas' : undefined} fill="none" stroke="var(--led-activo)" strokeWidth="2" strokeLinecap="round">
-            <path d="M504 168a8 8 0 0 1 12 0" />
-            <path d="M499 162a15 15 0 0 1 22 0" />
-            <path d="M494 156a22 22 0 0 1 32 0" />
-          </g>
-
-          <rect x="84" y="148" width="12" height="184" fill="var(--techo-sombra)" />
-          <rect x="664" y="148" width="12" height="184" fill="var(--techo-sombra)" />
-          <polygon points="58,156 380,60 702,156 702,174 380,78 58,174" fill="var(--techo)" />
-          <polygon points="58,156 380,60 702,156 702,163 380,67 58,163" fill="var(--techo-luz)" opacity="0.4" />
-          <rect x="354" y="50" width="52" height="13" rx="3" fill="var(--techo-sombra)" />
-
-          <path d="M380 50V34" stroke="var(--techo-sombra)" strokeWidth="3" strokeLinecap="round" />
-          <circle className={lampara.pulsa ? 'escena-halo escena-halo--pulsa' : 'escena-halo'} cx="380" cy="27" r="15" fill="var(--lampara)" />
-          <circle cx="380" cy="27" r="7.5" fill="var(--lampara)" stroke="var(--pared)" strokeWidth="1.5" />
-
+        <svg className="escena-capa escena-dibujo" viewBox={`0 0 ${ESCENA.ancho} ${ESCENA.alto}`} aria-hidden="true">
           <g>
-            {pollitos.map((pollito, indice) => (
-              <Pollito
-                key={indice}
-                x={PISO.izquierda + pollito.x * PISO.ancho}
-                y={PISO.fondo + pollito.fila * PISO.profundidad}
-                escala={escala * pollito.perspectiva * ESCALA_PINTADA}
-                mirada={pollito.mirada}
-                retraso={pollito.retraso}
-              />
-            ))}
+            {pollitos.map((pollito, indice) => {
+              const lugar = enPiso(pollito)
+              return (
+                <Pollito
+                  key={indice}
+                  x={lugar.x}
+                  y={lugar.y}
+                  escala={escala * pollito.perspectiva * ESCALA_PINTADA}
+                  mirada={pollito.mirada}
+                  retraso={pollito.retraso}
+                />
+              )
+            })}
           </g>
-
 
           <g className="escena-guias" fill="none" stroke="var(--hero-texto)" strokeWidth="1.5" strokeLinecap="round">
-            <path d="M366 27H334" />
-            <path d="M610 52L514 186" />
-            <path d="M380 372V336" />
+            <path d="M366 33H336" />
+            <path d="M380 486V394" />
+            {primerSensor && <path d={`M${ORIGEN_GUIA_SENSOR.x} ${ORIGEN_GUIA_SENSOR.y}L${primerSensor.x + 8} ${primerSensor.y - 12}`} />}
           </g>
           <g fill="var(--hero-texto)">
-            <circle cx="370" cy="27" r="3" />
-            <circle cx="512" cy="189" r="3" />
-            <circle cx="380" cy="334" r="3" />
+            <circle cx="372" cy="33" r="3" />
+            <circle cx="380" cy="392" r="3" />
+            {primerSensor && <circle cx={primerSensor.x + 8} cy={primerSensor.y - 12} r="3" />}
           </g>
 
-          <g stroke="var(--madera)" strokeWidth="5" strokeLinecap="round">
-            <path d="M28 268V334M104 268V334" />
-          </g>
-          <rect x="14" y="236" width="104" height="42" rx="6" fill="var(--letrero)" stroke="var(--madera)" strokeWidth="2.5" />
-          <text x="66" y="262" textAnchor="middle" className="escena-letrero">{letrero(nombreGranja)}</text>
+          <path d="M380 60V42" stroke="var(--techo-sombra)" strokeWidth="3" strokeLinecap="round" />
+          <circle className={lampara.pulsa ? 'escena-halo escena-halo--pulsa' : 'escena-halo'} cx="380" cy="33" r="15" fill="var(--lampara)" />
+          <circle cx="380" cy="33" r="7.5" fill="var(--lampara)" stroke="var(--contorno)" strokeWidth="1.8" />
 
-          <g fill="none" stroke="var(--cesped-oscuro)" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M150 337q2-11 7-15M156 337q-1-9-5-13M162 337q3-8 8-10" />
-            <path d="M690 337q2-11 7-15M696 337q-1-9-5-13M702 337q3-8 8-10" />
-            <path d="M-40 337q2-11 7-15M-34 337q-1-9-5-13" />
-            <path d="M240 405q2-11 7-15M246 405q-1-9-5-13M252 405q3-8 8-10" />
-            <path d="M560 412q2-11 7-15M566 412q-1-9-5-13M572 412q3-8 8-10" />
-            <path d="M12 420q2-11 7-15M18 420q-1-9-5-13" />
+          <g stroke="var(--contorno)" strokeWidth="1.8" strokeLinejoin="round">
+            <path d="M170 446V482M240 446V482" stroke="var(--madera)" strokeWidth="5" strokeLinecap="round" />
+            <rect x="150" y="418" width="110" height="42" rx="6" fill="var(--letrero)" />
           </g>
+          <text x="205" y="444" textAnchor="middle" className="escena-letrero" id={`letrero-${id}`}>{letrero(nombreGranja)}</text>
         </svg>
+
+        {sensores.map((sensor) => {
+          const puesto = PUESTOS[sensor.clase]
+          const texto = `${sensor.nombre} ${valorDeSensor(sensor)}`
+          return (
+            <div
+              key={sensor.clase}
+              className={`escena-sensor escena-sensor--${puesto.lado}`}
+              style={{ left: porcentajeX(puesto.x), top: porcentajeY(puesto.y), width: porcentajeX(puesto.ancho) }}
+            >
+              <button type="button" onClick={() => onNavegar(destinoAmbiente)} aria-label={`${texto}. Ver ambiente`}>
+                <img className="escena-img" src={puesto.url} alt="" />
+                {sensor.valor !== null && <span className="escena-sensor-led" aria-hidden="true" />}
+                <span className="escena-sensor-lectura">{texto}</span>
+              </button>
+            </div>
+          )
+        })}
+
+        <div className="escena-capa escena-capa--delantera" aria-hidden="true">
+          {PLANTAS_DELANTERAS.map((planta) => (
+            <img key={planta.url} className="escena-planta escena-img" src={planta.url} alt="" style={estiloPlanta(planta)} />
+          ))}
+        </div>
 
         <ul className="escena-etiquetas" aria-label="Indicadores de la granja">
           {(['alertas', 'aves', 'sensores', 'galpones'] as const).map((clave) => {

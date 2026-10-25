@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { IcArrowRight, IcRefresh } from '@shared/ui/icons/icons'
 import type { DashboardGranja } from '../model/dashboard'
 import type { EstadoGranja } from '../model/estadoGranja'
-import { faseDelDia, posicionDelAstro } from '../model/escenaGalpon'
+import { faseDelDia, posicionDelAstro, type SensorEscena } from '../model/escenaGalpon'
 import type { KpiGranja } from '../model/resumenGranja'
 import EscenaGalpon from './escena/EscenaGalpon'
 import './HeroGranja.css'
@@ -17,9 +17,7 @@ type Props = {
   diaLote: number | null
   aves: number
   semilla: number
-  temperatura: number | null
-  humedad: number | null
-  sensoresActivos: boolean
+  sensores: SensorEscena[]
   cargando: boolean
   hora?: number
   onGranjaChange: (id: number) => void
@@ -93,8 +91,8 @@ function useParalaje(ref: React.RefObject<HTMLElement | null>) {
 }
 
 function HeroGranja({
-  nombre, fecha, granjas, granjaId, estado, kpis, diaLote, aves, semilla, temperatura, humedad,
-  sensoresActivos, cargando, hora, onGranjaChange, onRecargar, onAccion, onNavegar,
+  nombre, fecha, granjas, granjaId, estado, kpis, diaLote, aves, semilla, sensores,
+  cargando, hora, onGranjaChange, onRecargar, onAccion, onNavegar,
 }: Props) {
   const raiz = useRef<HTMLElement>(null)
   useParalaje(raiz)
@@ -168,9 +166,7 @@ function HeroGranja({
         diaLote={diaLote}
         aves={aves}
         semilla={semilla}
-        temperatura={temperatura}
-        humedad={humedad}
-        sensoresActivos={sensoresActivos}
+        sensores={sensores}
         kpis={kpis}
         onNavegar={onNavegar}
       />

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  colorDeEdad, escalaDelPollito, estadoDeLampara, etiquetaDeKpi, faseDelDia,
-  nivelDelTermometro, pollitosVisibles, posicionDelAstro, posicionesDePollitos,
+  claseDeSensor, colorDeEdad, escalaDelPollito, estadoDeLampara, etiquetaDeKpi, faseDelDia,
+  pollitosVisibles, posicionDelAstro, posicionesDePollitos, sensoresDeEscena,
 } from './escenaGalpon'
 import type { KpiGranja } from './resumenGranja'
 
@@ -107,11 +107,36 @@ describe('objetos con dato real', () => {
     expect(estadoDeLampara('critico')).toEqual({ color: 'critico', pulsa: true })
   })
 
-  it('el termómetro sube con la temperatura medida y no inventa una lectura', () => {
-    expect(nivelDelTermometro(null)).toBeNull()
-    expect(nivelDelTermometro(10)).toBe(0)
-    expect(nivelDelTermometro(45)).toBe(1)
-    expect(nivelDelTermometro(27.5)).toBeCloseTo(0.5, 5)
+  it('reconoce la clase de cada sensor por su tipo', () => {
+    expect(claseDeSensor('temperatura')).toBe('temperatura')
+    expect(claseDeSensor('Humedad relativa')).toBe('humedad')
+    expect(claseDeSensor('co2')).toBe('co2')
+    expect(claseDeSensor('Amoniaco (NH3)')).toBe('amoniaco')
+    expect(claseDeSensor('luminosidad')).toBe('luz')
+    expect(claseDeSensor('presion')).toBeNull()
+  })
+
+  it('dibuja solo los sensores que el galpón tiene, en un orden fijo', () => {
+    const lista = sensoresDeEscena([
+      { tipo: 'luminosidad', valor: 300, unidad: 'lux', conLectura: true },
+      { tipo: 'temperatura', valor: 29.4, unidad: '°C', conLectura: true },
+      { tipo: 'presion', valor: 1, unidad: 'hPa', conLectura: true },
+    ])
+    expect(lista.map((s) => s.clase)).toEqual(['temperatura', 'luz'])
+    expect(lista[0]).toMatchObject({ nombre: 'Temperatura', valor: 29.4, unidad: '°C' })
+  })
+
+  it('no inventa una lectura cuando el sensor no reporta', () => {
+    const [sensor] = sensoresDeEscena([{ tipo: 'humedad', valor: 61, unidad: '%', conLectura: false }])
+    expect(sensor.valor).toBeNull()
+  })
+
+  it('prefiere el sensor que sí tiene lectura cuando hay dos de la misma clase', () => {
+    const [sensor] = sensoresDeEscena([
+      { tipo: 'temperatura', valor: null, unidad: '°C', conLectura: false },
+      { tipo: 'temperatura', valor: 28, unidad: '°C', conLectura: true },
+    ])
+    expect(sensor.valor).toBe(28)
   })
 
   it('escribe la etiqueta de cada indicador con su plural', () => {

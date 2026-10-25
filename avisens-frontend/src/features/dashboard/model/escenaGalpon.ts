@@ -20,8 +20,6 @@ const ESCALA_SIN_DATO = 0.8
 const POLLITOS_MINIMOS = 3
 const POLLITOS_MAXIMOS = 16
 const AVES_POR_POLLITO_AL_CUADRADO = 1.6
-const TEMPERATURA_MINIMA = 15
-const TEMPERATURA_MAXIMA = 40
 
 export function faseDelDia(hora: number): FaseDelDia {
   if (hora >= 5 && hora < 7) return 'amanecer'
@@ -74,7 +72,7 @@ export function posicionesDePollitos(cantidad: number, semilla: number): Posicio
     return {
       x: 0.04 + azar() * 0.92,
       fila,
-      perspectiva: 0.72 + fila * 0.28,
+      perspectiva: 0.4 + fila * 0.6,
       retraso: azar() * 2.9,
       mirada: azar() < 0.5 ? -1 : 1,
     }
@@ -85,10 +83,55 @@ export function estadoDeLampara(tono: TonoGranja): { color: TonoGranja; pulsa: b
   return { color: tono, pulsa: tono !== 'ok' }
 }
 
-export function nivelDelTermometro(temperatura: number | null): number | null {
-  if (temperatura === null) return null
-  const nivel = (temperatura - TEMPERATURA_MINIMA) / (TEMPERATURA_MAXIMA - TEMPERATURA_MINIMA)
-  return Math.min(1, Math.max(0, nivel))
+export type ClaseSensor = 'temperatura' | 'humedad' | 'co2' | 'amoniaco' | 'luz'
+
+export type SensorEscena = {
+  clase: ClaseSensor
+  nombre: string
+  valor: number | null
+  unidad: string
+}
+
+type SensorCrudo = { tipo: string; valor: number | null; unidad: string; conLectura: boolean }
+
+const NOMBRES: Record<ClaseSensor, string> = {
+  temperatura: 'Temperatura',
+  humedad: 'Humedad',
+  co2: 'CO₂',
+  amoniaco: 'Amoníaco',
+  luz: 'Luz',
+}
+
+const ORDEN_SENSORES: ClaseSensor[] = ['temperatura', 'humedad', 'co2', 'amoniaco', 'luz']
+
+export function claseDeSensor(tipo: string): ClaseSensor | null {
+  const texto = tipo.toLowerCase()
+  if (texto.includes('temp')) return 'temperatura'
+  if (texto.includes('hum')) return 'humedad'
+  if (texto.includes('co2') || texto.includes('carbono')) return 'co2'
+  if (texto.includes('amon') || texto.includes('nh3')) return 'amoniaco'
+  if (texto.includes('luz') || texto.includes('lum') || texto.includes('lux')) return 'luz'
+  return null
+}
+
+export function sensoresDeEscena(sensores: SensorCrudo[]): SensorEscena[] {
+  const porClase = new Map<ClaseSensor, SensorCrudo>()
+  for (const sensor of sensores) {
+    const clase = claseDeSensor(sensor.tipo)
+    if (!clase) continue
+    const actual = porClase.get(clase)
+    if (!actual || (!actual.conLectura && sensor.conLectura)) porClase.set(clase, sensor)
+  }
+  return ORDEN_SENSORES.flatMap((clase) => {
+    const sensor = porClase.get(clase)
+    if (!sensor) return []
+    return [{
+      clase,
+      nombre: NOMBRES[clase],
+      valor: sensor.conLectura ? sensor.valor : null,
+      unidad: sensor.unidad,
+    }]
+  })
 }
 
 export function etiquetaDeKpi(kpi: KpiGranja, diaLote: number | null): string {

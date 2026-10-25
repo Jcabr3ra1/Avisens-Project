@@ -13,28 +13,13 @@
   --cesped: #6f8f6c;
   --cesped-oscuro: #4f7a5a;
   --nube: #ffffff;
-  --pared: #fbfaf3;
-  --pared-alta: #efeee2;
-  --cama: #e9cf7c;
-  --cama-sombra: #c9a94a;
-  --techo: #005b48;
   --techo-sombra: #0d4537;
-  --techo-luz: #4fa38a;
   --madera: #6b5a3c;
-  --cortina: #9db3a2;
-  --cortina-sombra: #7d9684;
-  --comedero: #c9a43f;
-  --comedero-claro: #e3c565;
-  --agua: #7fb0c4;
-  --bombillo: #f3d98a;
-  --luz-bombillo: 0.22;
-  --termometro: #ffffff;
-  --mercurio: #d14b3f;
-  --sensor: #f7f6ef;
-  --linea-objeto: #5a6e61;
   --led-activo: #2f9e6f;
+  --contorno: #203b32;
+  --filtro-imagen: none;
+  --brillo: 0;
   --letrero: #f7f6ef;
-  --tinta: #203b32;
   --pata: #d98a2b;
   --plumaje: color-mix(in srgb, #ecc85a calc((1 - var(--edad, 0.5)) * 100%), #fbf8ec);
   --plumaje-sombra: color-mix(in srgb, var(--plumaje) 78%, #8a6a1f);
@@ -62,6 +47,7 @@
   --suelo: #98a97c;
   --cesped: #7f9a6a;
   --nube: #fff4e0;
+  --filtro-imagen: sepia(0.12) saturate(1.05);
 }
 
 .hero-granja[data-fase='tarde'] {
@@ -72,7 +58,8 @@
   --suelo: #8c9c72;
   --cesped: #7a9566;
   --nube: #fde6c8;
-  --luz-bombillo: 0.3;
+  --filtro-imagen: sepia(0.25) saturate(1.1) brightness(0.98);
+  --brillo: 0.25;
 }
 
 .hero-granja[data-fase='noche'] {
@@ -85,15 +72,9 @@
   --suelo: #0d2d24;
   --cesped: #1b4a3a;
   --cesped-oscuro: #2b6a54;
-  --pared: #e8e2c8;
-  --pared-alta: #d9d3b6;
-  --techo: #0a4a3b;
   --techo-sombra: #062d24;
-  --techo-luz: #2f8a72;
-  --bombillo: #ffe08a;
-  --luz-bombillo: 0.55;
-  --cortina: #6f8a7a;
-  --cortina-sombra: #54705f;
+  --filtro-imagen: brightness(0.52) saturate(0.8) contrast(1.05);
+  --brillo: 0.75;
 }
 
 .hero-granja--atencion { --lampara: #e3c565; }
@@ -289,22 +270,73 @@
 
 .escena-lienzo {
   position: relative;
+  aspect-ratio: 760 / 530;
   transform: translate3d(calc(var(--px, 0) * -5px), calc(var(--py, 0) * -2.5px), 0);
   transition: transform 600ms var(--hero-ease);
 }
 
-.escena-svg {
-  display: block;
+.escena-capa {
+  position: absolute;
+  inset: 0;
   width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.escena-suelo { overflow: visible; }
+
+.escena-capa--trasera {
+  transform: translate3d(calc(var(--px, 0) * -9px), calc(var(--py, 0) * -3px), 0);
+  transition: transform 600ms var(--hero-ease);
+}
+
+.escena-capa--delantera {
+  z-index: 4;
+  transform: translate3d(calc(var(--px, 0) * -16px), calc(var(--py, 0) * -4px), 0);
+  transition: transform 600ms var(--hero-ease);
+}
+
+.escena-img { filter: var(--filtro-imagen, none); }
+.escena-planta { filter: saturate(0.88) brightness(0.9) var(--filtro-imagen, none); }
+
+.escena-galpon {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.escena-brillo {
+  position: absolute;
+  pointer-events: none;
+  opacity: var(--brillo, 0);
+  mix-blend-mode: screen;
+  background: radial-gradient(ellipse 44% 48% at 50% 54%, rgb(255 214 120 / 0.85), transparent 72%);
+}
+
+.escena-dibujo {
+  --contorno: #203b32;
+  --pata: #d98a2b;
+}
+
+.escena-planta {
+  position: absolute;
+  display: block;
   height: auto;
-  aspect-ratio: 760 / 440;
-  overflow: visible;
+  transform: translate(-50%, -100%);
+  transform-origin: 50% 100%;
+  animation: planta-mece 6.5s ease-in-out infinite alternate;
+  animation-delay: var(--retraso, 0s);
+}
+
+@keyframes planta-mece {
+  from { transform: translate(-50%, -100%) rotate(calc(var(--giro, 1deg) * -1)); }
+  to { transform: translate(-50%, -100%) rotate(var(--giro, 1deg)); }
 }
 
 .escena-guias { opacity: 0.55; }
 
 .escena-letrero {
-  fill: var(--tinta);
+  fill: var(--contorno);
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.01em;
@@ -324,17 +356,88 @@
   100% { transform: scale(2); opacity: 0; }
 }
 
-.escena-ondas path { animation: escena-onda 2.4s ease-in-out infinite; opacity: 0.15; }
-.escena-ondas path:nth-child(2) { animation-delay: 0.3s; }
-.escena-ondas path:nth-child(3) { animation-delay: 0.6s; }
-
-@keyframes escena-onda {
-  0%, 100% { opacity: 0.15; }
-  40% { opacity: 1; }
+/* ── Sensores sobre la pared ──────────────────────────────── */
+.escena-sensor {
+  position: absolute;
+  z-index: 3;
+  transform: translate(-50%, -50%);
 }
 
-.escena-mercurio { transform-box: fill-box; transform-origin: 50% 100%; animation: escena-sube 1.2s var(--hero-ease) both; }
-@keyframes escena-sube { from { transform: scaleY(0.2); } to { transform: scaleY(1); } }
+.escena-sensor button {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 180ms var(--hero-ease);
+}
+
+.escena-sensor button::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+
+.escena-sensor img { display: block; width: 100%; height: auto; }
+
+.escena-sensor-led {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--surface-base);
+  border-radius: 50%;
+  background: var(--led-activo);
+  animation: escena-led 2.4s ease-in-out infinite;
+}
+
+@keyframes escena-led {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.escena-sensor-lectura {
+  position: absolute;
+  top: 50%;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) scale(0.96);
+  transition: opacity 160ms ease, transform 200ms var(--hero-ease);
+}
+
+.escena-sensor--izq .escena-sensor-lectura { right: calc(100% + 10px); }
+.escena-sensor--der .escena-sensor-lectura { left: calc(100% + 10px); }
+
+.escena-sensor button:focus-visible .escena-sensor-lectura {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .escena-sensor button:hover { transform: translateY(-2px) scale(1.06); }
+  .escena-sensor button:hover .escena-sensor-lectura {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+@media (hover: none) {
+  .escena-sensor button:focus .escena-sensor-lectura {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
 
 /* ── Etiquetas sobre los objetos ──────────────────────────── */
 .escena-etiquetas {
@@ -351,10 +454,11 @@
   pointer-events: auto;
 }
 
-.escena-etiqueta--alertas { left: 43.4%; top: 6.1%; transform: translate(-100%, -50%); }
-.escena-etiqueta--aves { left: 50%; top: 90.5%; transform: translate(-50%, -50%); }
-.escena-etiqueta--sensores { right: 0.8%; top: 8%; transform: translateY(-50%); }
-.escena-etiqueta--galpones { left: 1.5%; top: 83%; }
+.escena-etiqueta { z-index: 5; }
+.escena-etiqueta--alertas { left: 43.9%; top: 6.2%; transform: translate(-100%, -50%); }
+.escena-etiqueta--aves { left: 50%; top: 94.5%; transform: translate(-50%, -50%); }
+.escena-etiqueta--sensores { right: 0.8%; top: 11.7%; transform: translateY(-50%); }
+.escena-etiqueta--galpones { right: 1.5%; top: 94.5%; transform: translateY(-50%); }
 
 .escena-etiqueta button {
   position: relative;
@@ -452,17 +556,21 @@
   .escena,
   .hero-granja-nube,
   .hero-granja-estrella,
+  .escena-planta,
   .escena-halo--pulsa,
-  .escena-ondas path,
-  .escena-mercurio,
+  .escena-sensor-led,
   .hero-granja-sync.is-spinning svg { animation: none; }
 
   .hero-granja-astro,
   .hero-granja-colinas,
   .escena-lienzo,
+  .escena-capa--trasera,
+  .escena-capa--delantera,
+  .escena-sensor button,
   .escena-etiqueta button,
   .hero-granja-accion { transition: none; transform: none; }
 
-  .escena-ondas path { opacity: 1; }
+  .escena-sensor { transform: translate(-50%, -50%); }
+  .escena-planta { transform: translate(-50%, -100%); }
   .escena-etiqueta-texto span { transition: none; }
 }
