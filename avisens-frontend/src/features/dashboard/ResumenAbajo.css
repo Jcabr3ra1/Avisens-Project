@@ -48,7 +48,6 @@
   font-size: 0.875rem;
 }
 
-.rsm-galpon:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* ── Etiquetas de estado ──────────────────────────────────── */
 .rsm-etiqueta,
@@ -181,82 +180,43 @@
   50% { opacity: 0.5; }
 }
 
-/* ── Tus galpones (solo con más de uno) ───────────────────── */
-.rsm-galpones { display: grid; gap: 1rem; }
+/* ── Pestañas de galpones (solo con más de uno) ──────────── */
+.rsm-galpon-pestanas { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 
-.rsm-galpones-lista {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
-  gap: 1rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.rsm-galpon {
-  display: grid;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  overflow: hidden;
+.rsm-galpon-pestana {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 38px;
+  padding: 0 0.95rem;
   border: 1px solid var(--border-subtle);
-  border-radius: 20px;
-  background: var(--surface-base);
-  color: var(--text-primary);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  box-shadow: 0 1px 2px color-mix(in srgb, #203b32 6%, transparent);
-  transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), border-color 160ms ease, box-shadow 180ms ease;
-}
-
-.rsm-galpon:active { transform: scale(0.985); }
-
-.rsm-galpon.is-seleccionado {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px var(--primary), 0 14px 28px -20px color-mix(in srgb, var(--primary) 70%, transparent);
-}
-
-.rsm-galpon-vista {
-  position: relative;
-  display: grid;
-  place-items: end center;
-  aspect-ratio: 16 / 9;
-  padding: 1rem 1rem 0;
-  overflow: hidden;
-  background: linear-gradient(180deg, #cddccb 0%, #e6ecdd 70%, #b9cdb0 70%, #a9c19f 100%);
-}
-
-.rsm-galpon-vista img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: bottom; }
-.rsm-galpon--inactivo .rsm-galpon-vista img { filter: grayscale(0.85); opacity: 0.8; }
-.rsm-galpon-vista .rsm-estado { position: absolute; top: 0.6rem; right: 0.6rem; background: var(--surface-base); }
-
-.rsm-galpon-cuerpo { display: grid; align-content: start; gap: 0.3rem; padding: 0.9rem 1.1rem 1.1rem; }
-.rsm-galpon-nombre { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.5rem; }
-.rsm-galpon-nombre strong { font-size: 1rem; font-weight: 800; letter-spacing: -0.01em; }
-.rsm-galpon-nombre span { color: var(--text-muted); font-size: 0.75rem; font-weight: 600; }
-.rsm-galpon-lote { color: var(--text-secondary); font-size: 0.875rem; }
-.rsm-galpon-lecturas { color: var(--text-primary); font-size: 0.875rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-
-.rsm-ciclo { display: grid; gap: 0.3rem; margin-top: 0.45rem; }
-
-.rsm-ciclo-barra {
-  display: block;
-  height: 6px;
-  overflow: hidden;
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
-.rsm-ciclo-barra span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
+.rsm-galpon-pestana small { color: var(--text-muted); font-size: 0.75rem; font-weight: 600; }
+
+.rsm-galpon-pestana[aria-pressed='true'] {
+  border-color: var(--primary);
   background: var(--primary);
-  transition: width 600ms cubic-bezier(0.23, 1, 0.32, 1);
+  color: var(--avisens-cream, #f7f6ef);
 }
 
-.rsm-ciclo-texto { color: var(--text-muted); font-size: 0.75rem; font-weight: 600; }
+.rsm-galpon-pestana[aria-pressed='true'] small { color: inherit; opacity: 0.8; }
+.rsm-galpon-pestana:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.rsm-galpon-aviso { width: 8px; height: 8px; border-radius: 50%; background: var(--warning); }
+.rsm-galpon-aviso--critico { background: var(--danger); }
+
+@media (hover: hover) and (pointer: fine) {
+  .rsm-galpon-pestana[aria-pressed='false']:hover { border-color: var(--text-muted); color: var(--text-primary); }
+}
 
 /* ── Galpón elegido: 3D con sensores alrededor + lote ─────── */
 .rsm-galpon-resumen { display: grid; gap: 1rem; }
@@ -461,7 +421,6 @@
 .rsm-lote-linea polyline { fill: none; stroke: var(--primary); stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
 
 @media (hover: hover) and (pointer: fine) {
-  .rsm-galpon:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--primary) 45%, var(--border-subtle)); }
   .gsr-sensor:hover { transform: translateY(-2px); border-color: var(--primary); }
 }
 
@@ -478,8 +437,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rsm-galpon,
-  .rsm-ciclo-barra span,
+  .rsm-galpon-pestana,
   .gsr-sensor { transition: none; }
 
   .rsm-carga span,
