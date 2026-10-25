@@ -2,7 +2,6 @@ import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useMemo, useState } from 'react'
 import { getRol } from '@shared/api'
 import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
-import type { Galpon } from '../api/galpones'
 import { VARIABLES_UMBRAL, type Umbral } from '../api/umbrales'
 import { useUmbrales } from '../hooks/useUmbrales'
 import {
@@ -21,7 +20,7 @@ const UNIDAD_POR_VARIABLE: Record<string, string> = {
   luminosidad: 'lux',
 }
 
-type Props = { galpon: Galpon }
+type Props = { galpon: { id: number } }
 
 function UmbralesDeGalpon({ galpon }: Props) {
   const permisos = permisosOperativosDeGalpon(getRol())
