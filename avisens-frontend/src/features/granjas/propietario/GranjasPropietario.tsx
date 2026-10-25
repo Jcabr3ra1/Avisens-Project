@@ -19,7 +19,7 @@ import solLowPoly from '@features/dashboard/assets/escena/sol-low-poly.webp'
 import { useClimaVisual } from './useClimaVisual'
 import { useHoraDelDia } from '@features/dashboard/hooks/useFaseDelDia'
 import { faseDelDia, posicionDelAstro } from '@features/dashboard/model/escenaGalpon'
-import { FONDOS_POR_FASE } from '@features/dashboard/components/escena/fondosPorFase'
+import { fondoDeGranja } from './fondosGranja'
 import ListaGalpones from './ListaGalpones'
 import ResumenPestana from './pestanas/ResumenPestana'
 import LotePestana from './pestanas/LotePestana'
@@ -184,7 +184,7 @@ function GranjasPropietario() {
         className="org-hero org-hero--granja"
         data-fase={fase}
         data-clima={clima}
-        style={{ '--fondo': `url(${FONDOS_POR_FASE[fase]})` } as CSSProperties}
+        style={{ '--fondo': `url(${fondoDeGranja(fase, clima)})` } as CSSProperties}
         aria-labelledby="gp-hero-titulo"
       >
         <div className="gp-hero-fondo" aria-hidden="true" />
@@ -243,7 +243,7 @@ function GranjasPropietario() {
 
         <div className="org-hero-escena">
           <Suspense fallback={<div className="org-hero-escena-cargando" aria-hidden="true" />}>
-            <EscenaGranja nombre={granja.nombre} fondo={FONDOS_POR_FASE[fase]} clima={clima} posicionAstro={astro.x} />
+            <EscenaGranja nombre={granja.nombre} fondo={fondoDeGranja(fase, clima)} clima={clima} posicionAstro={astro.x} />
           </Suspense>
           <p className="org-hero-escena-nota org-hero-escena-nota--pista">Tu granja en 3D.</p>
         </div>

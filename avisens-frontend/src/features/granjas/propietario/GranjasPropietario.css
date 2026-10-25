@@ -1284,10 +1284,8 @@
 .org-hero--granja .org-hero-texto,
 .org-hero--granja .org-hero-indicadores { z-index: 2; }
 
-/* Clima: el mismo velo cubre el paisaje y el modelo. */
-.org-hero--granja[data-clima='nublado'] .gp-hero-fondo,
+/* Clima: el paisaje trae su propio fondo; el filtro solo ajusta el modelo. */
 .org-hero--granja[data-clima='nublado'] .gp-escena { filter: saturate(0.7) brightness(0.96); }
-.org-hero--granja[data-clima='lluvia'] .gp-hero-fondo,
 .org-hero--granja[data-clima='lluvia'] .gp-escena { filter: saturate(0.5) brightness(0.84) contrast(0.96); }
 .org-hero--granja[data-clima='nublado'] .gp-hero-astro,
 .org-hero--granja[data-clima='nublado'] .gp-hero-halo { opacity: 0.3; }
