@@ -23,12 +23,12 @@ const VENTANAS: Punto[] = [[-4.2, 2.3, 2.3], [1.2, 2.3, 2.3], [5.3, 2.3, 2.3]]
 const FAROLES: Punto[] = [[-4.6, 3.1, 4.8], [4.6, 3.1, 4.8]]
 const LUZ_POR_FASE: Record<FaseDelDia, number> = { dia: 0, amanecer: 0.22, tarde: 0.5, noche: 1 }
 
-const ANCHO_TERRENO = 170
-const FONDO_TERRENO = 104
-const SEGMENTOS_X = 52
-const SEGMENTOS_Z = 30
-const CENTRO_Z = -9
-const ELEVACION_LOMAS = 3
+const ANCHO_TERRENO = 300
+const FONDO_TERRENO = 76
+const SEGMENTOS_X = 70
+const SEGMENTOS_Z = 34
+const CENTRO_Z = 10
+const ELEVACION_LOMAS = 4
 
 function suavizar(minimo: number, maximo: number, valor: number): number {
   const t = Math.min(1, Math.max(0, (valor - minimo) / (maximo - minimo)))
@@ -50,57 +50,6 @@ function texturaRadial(colores: [number, string][]): CanvasTexture {
     colores.forEach(([parada, color]) => degradado.addColorStop(parada, color))
     contexto.fillStyle = degradado
     contexto.fillRect(0, 0, 128, 128)
-  }
-  return new CanvasTexture(lienzo)
-}
-
-function texturaDesvanecida(): CanvasTexture {
-  const lado = 128
-  const lienzo = document.createElement('canvas')
-  lienzo.width = lado
-  lienzo.height = lado
-  const contexto = lienzo.getContext('2d')
-  if (contexto) {
-    const imagen = contexto.createImageData(lado, lado)
-    for (let fila = 0; fila < lado; fila++) {
-      for (let columna = 0; columna < lado; columna++) {
-        const u = columna / (lado - 1)
-        const v = fila / (lado - 1)
-        const lateral = Math.min(suavizar(0.04, 0.5, u), suavizar(0, 0.18, 1 - u))
-        const lejos = suavizar(0.1, 0.62, v)
-        const cerca = suavizar(0, 0.05, 1 - v)
-        const valor = Math.round(255 * lateral * lejos * cerca)
-        const indice = (fila * lado + columna) * 4
-        imagen.data[indice] = valor
-        imagen.data[indice + 1] = valor
-        imagen.data[indice + 2] = valor
-        imagen.data[indice + 3] = 255
-      }
-    }
-    contexto.putImageData(imagen, 0, 0)
-  }
-  return new CanvasTexture(lienzo)
-}
-
-function texturaCamino(): CanvasTexture {
-  const lienzo = document.createElement('canvas')
-  lienzo.width = 32
-  lienzo.height = 128
-  const contexto = lienzo.getContext('2d')
-  if (contexto) {
-    const degradado = contexto.createLinearGradient(0, 0, 0, 128)
-    degradado.addColorStop(0, '#fff')
-    degradado.addColorStop(0.35, '#fff')
-    degradado.addColorStop(1, '#000')
-    contexto.fillStyle = degradado
-    contexto.fillRect(0, 0, 32, 128)
-    const borde = contexto.createLinearGradient(0, 0, 32, 0)
-    borde.addColorStop(0, 'rgba(0,0,0,1)')
-    borde.addColorStop(0.18, 'rgba(0,0,0,0)')
-    borde.addColorStop(0.82, 'rgba(0,0,0,0)')
-    borde.addColorStop(1, 'rgba(0,0,0,1)')
-    contexto.fillStyle = borde
-    contexto.fillRect(0, 0, 32, 128)
   }
   return new CanvasTexture(lienzo)
 }
@@ -154,8 +103,8 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
       const altura = (puntos.getY(cara) + puntos.getY(cara + 1) + puntos.getY(cara + 2)) / 3 - granja.suelo
       const x = puntos.getX(cara) - granja.centro.x
       const z = puntos.getZ(cara) - granja.centro.z
-      const distancia = suavizar(6, 46, -z)
-      lejano.copy(cercano).lerp(horizonte, 0.62)
+      const distancia = suavizar(4, 38, -z)
+      lejano.copy(horizonte).lerp(cercano, 0.3)
       tono.copy(cercano).lerp(lejano, distancia)
       tono.getHSL(hsl)
       const variacion = (azar(Math.round(x * 3), Math.round(z * 3)) - 0.5) * 0.09 * (1 - distancia * 0.75)
@@ -167,14 +116,8 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
   aplicarSuelo(granja.colorPasto)
   caras.computeVertexNormals()
 
-  const desvanecido = texturaDesvanecida()
-  texturas.push(desvanecido)
-  const terreno = new Mesh(
-    caras,
-    new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1, alphaMap: desvanecido, transparent: true }),
-  )
+  const terreno = new Mesh(caras, new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }))
   terreno.receiveShadow = true
-  terreno.renderOrder = -1
   grupo.add(terreno)
 
   const vegetacion = new Group()
@@ -193,15 +136,13 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
   }
   grupo.add(vegetacion)
 
-  const mascaraCamino = texturaCamino()
-  texturas.push(mascaraCamino)
-  const largoCamino = 3
+  const largoCamino = 5
   const camino = new Mesh(
     new PlaneGeometry(2.8, largoCamino),
-    new MeshStandardMaterial({ color: granja.colorCamino, roughness: 1, alphaMap: mascaraCamino, transparent: true, depthWrite: false }),
+    new MeshStandardMaterial({ color: granja.colorCamino, roughness: 1, flatShading: true }),
   )
   camino.rotation.x = -Math.PI / 2
-  camino.position.set(2.5, granja.suelo + 0.06, 17.8 + largoCamino / 2)
+  camino.position.set(2.5, granja.suelo + 0.06, 17.9 + largoCamino / 2)
   camino.receiveShadow = true
   grupo.add(camino)
 

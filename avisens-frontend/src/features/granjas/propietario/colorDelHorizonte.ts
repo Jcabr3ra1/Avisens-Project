@@ -17,7 +17,7 @@ export function colorDelHorizonte(url: string): Promise<Color> {
         return
       }
       const alto = imagen.naturalHeight
-      contexto.drawImage(imagen, 0, alto * 0.72, imagen.naturalWidth, alto * 0.28, 0, 0, 24, 8)
+      contexto.drawImage(imagen, 0, alto * 0.8, imagen.naturalWidth, alto * 0.12, 0, 0, 24, 8)
       const { data } = contexto.getImageData(0, 0, 24, 8)
       let r = 0
       let g = 0

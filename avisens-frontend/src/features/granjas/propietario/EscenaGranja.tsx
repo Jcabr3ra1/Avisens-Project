@@ -29,7 +29,9 @@ type Props = {
 
 const ELEVACION = (12 * Math.PI) / 180
 const CAMPO_VISION = 24
-const MARGEN_ENCUADRE = 0.9
+const MARGEN_X = 1.02
+const MARGEN_Y = 0.84
+const BAJADA = 0.07
 const FUERZA_CLIMA: Record<ClimaVisual, { sol: number; ambiente: number }> = {
   despejado: { sol: 1, ambiente: 1 },
   nublado: { sol: 0.5, ambiente: 1.08 },
@@ -140,8 +142,8 @@ function EscenaGranja({ nombre, fondo, clima, posicionAstro }: Props) {
           const punto = esquina.clone().project(camara)
           const px = ((punto.x + 1) / 2) * ancho
           const py = ((1 - punto.y) / 2) * alto
-          return Math.abs(px - (zona.x + zona.ancho / 2)) <= (zona.ancho / 2) * MARGEN_ENCUADRE
-            && Math.abs(py - (zona.y + zona.alto / 2)) <= (zona.alto / 2) * MARGEN_ENCUADRE
+          return Math.abs(px - (zona.x + zona.ancho / 2)) <= (zona.ancho / 2) * MARGEN_X
+            && Math.abs(py - (zona.y + zona.alto * (0.5 + BAJADA))) <= (zona.alto / 2) * MARGEN_Y
         })
       }
       let cerca = 6
