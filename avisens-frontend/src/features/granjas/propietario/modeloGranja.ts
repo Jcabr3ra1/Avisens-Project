@@ -6,7 +6,7 @@ import { fusionarPorMaterial } from '@features/dashboard/components/escena/model
 const RUTA_GRANJA = `${import.meta.env.BASE_URL}modelos/granja-colombiana-low-poly.glb`
 const SATURACION = 0.94
 const HUELLAS = ['casa', 'galpon', 'bodega', 'tanque_agua', 'huerta'] as const
-const MARCO = ['casa', 'techo_casa', 'galpon', 'bodega'] as const
+const MARCO = ['casa', 'techo_casa', 'galpon', 'bodega', 'cerca', 'camino'] as const
 
 export type Huella = { nombre: string; x: number; z: number; ancho: number; fondo: number }
 

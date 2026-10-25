@@ -24,10 +24,10 @@ const FAROLES: Punto[] = [[-4.6, 3.1, 4.8], [4.6, 3.1, 4.8]]
 const LUZ_POR_FASE: Record<FaseDelDia, number> = { dia: 0, amanecer: 0.22, tarde: 0.5, noche: 1 }
 
 const ANCHO_TERRENO = 170
-const FONDO_TERRENO = 78
+const FONDO_TERRENO = 104
 const SEGMENTOS_X = 52
-const SEGMENTOS_Z = 24
-const CENTRO_Z = -16
+const SEGMENTOS_Z = 30
+const CENTRO_Z = -9
 const ELEVACION_LOMAS = 3
 
 function suavizar(minimo: number, maximo: number, valor: number): number {
@@ -66,9 +66,10 @@ function texturaDesvanecida(): CanvasTexture {
       for (let columna = 0; columna < lado; columna++) {
         const u = columna / (lado - 1)
         const v = fila / (lado - 1)
-        const lateral = Math.min(suavizar(0, 0.2, u), suavizar(0, 0.2, 1 - u))
-        const lejos = suavizar(0.04, 0.55, v)
-        const valor = Math.round(255 * lateral * lejos)
+        const lateral = Math.min(suavizar(0.04, 0.5, u), suavizar(0, 0.18, 1 - u))
+        const lejos = suavizar(0.1, 0.62, v)
+        const cerca = suavizar(0, 0.05, 1 - v)
+        const valor = Math.round(255 * lateral * lejos * cerca)
         const indice = (fila * lado + columna) * 4
         imagen.data[indice] = valor
         imagen.data[indice + 1] = valor
@@ -107,8 +108,8 @@ function texturaCamino(): CanvasTexture {
 function alturaEn(x: number, z: number): number {
   const lejania = Math.hypot(x / 34, (z - 2) / 28)
   const aplanado = suavizar(1, 1.7, lejania)
-  const ondulacion = (azar(Math.round(x), Math.round(z)) - 0.35) * 3.4
-  const lomas = suavizar(14, 52, -z) * ELEVACION_LOMAS
+  const ondulacion = (azar(Math.round(x), Math.round(z)) - 0.35) * 2.2
+  const lomas = suavizar(14, 52, -z) * ELEVACION_LOMAS * 0.8
   const laderas = suavizar(46, 90, Math.abs(x)) * 4
   return (ondulacion + lomas + laderas) * aplanado
 }
@@ -145,16 +146,20 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
   const aplicarSuelo = (horizonte: Color) => {
     const colores = caras.getAttribute('color') as BufferAttribute
     const puntos = caras.getAttribute('position') as BufferAttribute
-    const hsl = { h: 0, s: 0, l: 0 }
-    granja.colorPasto.clone().lerp(horizonte, 0.22).getHSL(hsl)
+    const cercano = granja.colorPasto.clone().lerp(horizonte, 0.18)
+    const lejano = new Color()
     const tono = new Color()
+    const hsl = { h: 0, s: 0, l: 0 }
     for (let cara = 0; cara < puntos.count; cara += 3) {
       const altura = (puntos.getY(cara) + puntos.getY(cara + 1) + puntos.getY(cara + 2)) / 3 - granja.suelo
-      const x = puntos.getX(cara)
-      const z = puntos.getZ(cara)
-      const variacion = (azar(Math.round(x * 3), Math.round(z * 3)) - 0.5) * 0.16
-      const matiz = hsl.h + (azar(Math.round(x * 5), Math.round(z * 5)) - 0.5) * 0.03
-      tono.setHSL(matiz, Math.min(0.85, hsl.s * 1.05), Math.min(0.62, Math.max(0.22, hsl.l + variacion + altura * 0.006)))
+      const x = puntos.getX(cara) - granja.centro.x
+      const z = puntos.getZ(cara) - granja.centro.z
+      const distancia = suavizar(6, 46, -z)
+      lejano.copy(cercano).lerp(horizonte, 0.62)
+      tono.copy(cercano).lerp(lejano, distancia)
+      tono.getHSL(hsl)
+      const variacion = (azar(Math.round(x * 3), Math.round(z * 3)) - 0.5) * 0.09 * (1 - distancia * 0.75)
+      tono.setHSL(hsl.h, hsl.s, Math.min(0.7, Math.max(0.22, hsl.l + variacion + altura * 0.004 * (1 - distancia))))
       for (let vertice = 0; vertice < 3; vertice++) colores.setXYZ(cara + vertice, tono.r, tono.g, tono.b)
     }
     colores.needsUpdate = true
@@ -174,16 +179,9 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
 
   const vegetacion = new Group()
   if (granja.arboles.length > 0) {
-    const sitios: [number, number, number][] = []
-    for (let intento = 0; intento < 260 && sitios.length < 44; intento++) {
-      const x = (azar(intento * 3.1, 7.7) - 0.5) * (ANCHO_TERRENO * 0.74)
-      const z = 4 - azar(intento * 5.3, 1.9) * 44
-      const dentroDeFinca = x > -26 && x < 26 && z > -22
-      const sobreCamino = Math.abs(x - 2.5) < 4 && z > 10
-      if (dentroDeFinca || sobreCamino) continue
-      if (sitios.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < 5)) continue
-      sitios.push([x, z, 0.7 + azar(intento * 2.3, 4.1) * 0.7])
-    }
+    const sitios: [number, number, number][] = [
+      [34, -22, 0.62], [41, -13, 0.55], [37, -4, 0.5], [47, -26, 0.48], [30, -30, 0.55], [-36, -28, 0.45],
+    ]
     sitios.forEach(([x, z, escala], indice) => {
       const arbol = granja.arboles[indice % granja.arboles.length].clone(true)
       arbol.scale.setScalar(escala)
@@ -197,13 +195,13 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
 
   const mascaraCamino = texturaCamino()
   texturas.push(mascaraCamino)
-  const largoCamino = 30
+  const largoCamino = 3
   const camino = new Mesh(
     new PlaneGeometry(2.8, largoCamino),
     new MeshStandardMaterial({ color: granja.colorCamino, roughness: 1, alphaMap: mascaraCamino, transparent: true, depthWrite: false }),
   )
   camino.rotation.x = -Math.PI / 2
-  camino.position.set(2.5, granja.suelo + 0.06, 17.6 + largoCamino / 2)
+  camino.position.set(2.5, granja.suelo + 0.06, 17.8 + largoCamino / 2)
   camino.receiveShadow = true
   grupo.add(camino)
 

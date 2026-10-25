@@ -1215,11 +1215,11 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: radial-gradient(62% 95% at 14% 55%, rgb(247 246 239 / 0.5) 0%, rgb(247 246 239 / 0) 100%);
+  background: linear-gradient(90deg, rgb(247 246 239 / 0.82) 0%, rgb(247 246 239 / 0.6) 30%, rgb(247 246 239 / 0) 56%);
 }
 
 .org-hero--granja[data-fase='tarde'] .gp-hero-velo {
-  background: radial-gradient(60% 90% at 14% 55%, rgb(251 243 226 / 0.3) 0%, rgb(251 243 226 / 0) 100%);
+  background: linear-gradient(90deg, rgb(251 243 226 / 0.8) 0%, rgb(251 243 226 / 0.58) 30%, rgb(251 243 226 / 0) 56%);
 }
 
 .org-hero--granja[data-fase='noche'] .gp-hero-velo {

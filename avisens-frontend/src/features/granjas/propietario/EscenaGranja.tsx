@@ -29,7 +29,7 @@ type Props = {
 
 const ELEVACION = (12 * Math.PI) / 180
 const CAMPO_VISION = 24
-const MARGEN_ENCUADRE = 0.96
+const MARGEN_ENCUADRE = 0.9
 const FUERZA_CLIMA: Record<ClimaVisual, { sol: number; ambiente: number }> = {
   despejado: { sol: 1, ambiente: 1 },
   nublado: { sol: 0.5, ambiente: 1.08 },
@@ -122,8 +122,7 @@ function EscenaGranja({ nombre, fondo, clima, posicionAstro }: Props) {
       const desvioY = zona.y + zona.alto / 2 - alto / 2
       camara.setViewOffset(ancho, alto, -desvioX, -desvioY, ancho, alto)
       const objetivo = granja.marco.getCenter(new Vector3())
-      objetivo.x -= 1.5
-      objetivo.y *= 0.55
+      objetivo.y *= 0.5
       const { min, max } = granja.marco
       const esquinas = [min.x, max.x].flatMap((x) => [min.y, max.y].flatMap((y) => [min.z, max.z].map((z) => new Vector3(x, y, z))))
       const colocar = (distancia: number) => {
