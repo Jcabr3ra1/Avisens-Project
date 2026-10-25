@@ -14,7 +14,8 @@ import EsqueletoGranjas from '../components/EsqueletoGranjas'
 import { ModalDatosGranja, ModalDatosLote } from '../components/ModalesDatos'
 import { useEstructuraGranjas, type GranjaConEstructura } from '../hooks/useEstructuraGranjas'
 import { useIndicadoresDeLotes } from '../hooks/useIndicadoresDeLotes'
-import { progresoDatos, proximoPaso, type DestinoPaso, type PendienteDatos } from './explorador'
+import { pesajesDelLote, progresoDatos, proximoPaso, type DestinoPaso, type PendienteDatos } from './explorador'
+import { useCurvaLote } from './useCurvaLote'
 import ListaGalpones from './ListaGalpones'
 import ResumenPestana from './pestanas/ResumenPestana'
 import LotePestana from './pestanas/LotePestana'
@@ -89,6 +90,7 @@ function GranjasPropietario() {
     [seleccionada],
   )
   const galpon = galpones.find((item) => item.id === galponId)
+  const curvaLote = useCurvaLote(galpon?.loteEnCurso?.id ?? null, revision)
     ?? galpones.find((item) => item.loteEnCurso !== null)
     ?? galpones[0]
     ?? null
@@ -169,7 +171,7 @@ function GranjasPropietario() {
     { label: 'Datos completos', valor: progreso?.completos ?? 0, tono: 'profundo', total: progreso?.total },
   ]
   const ubicacion = [granja.municipio, granja.departamento].filter(Boolean).join(', ')
-  const paso = galpon ? proximoPaso(galpon, indicador) : null
+  const paso = galpon ? proximoPaso(galpon, indicador, pesajesDelLote(curvaLote)) : null
 
   return (
     <div className="page-container gp-page">
@@ -296,7 +298,7 @@ function GranjasPropietario() {
                 <Tabs.Trigger value="datos" className="gp-pestana">Datos</Tabs.Trigger>
               </Tabs.List>
               <Tabs.Content value="resumen" className="gp-contenido">
-                <ResumenPestana galpon={galpon} indicador={indicador} paso={paso} revision={revision} onDestino={irADestino} onNavegar={irA} />
+                <ResumenPestana galpon={galpon} indicador={indicador} paso={paso} curvaLote={curvaLote} onDestino={irADestino} onNavegar={irA} />
               </Tabs.Content>
               <Tabs.Content value="lote" className="gp-contenido">
                 <LotePestana
