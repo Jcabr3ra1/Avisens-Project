@@ -12,7 +12,7 @@ import EstadoInicial from './components/EstadoInicial'
 import { tieneLecturaUtil, useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { useIndicadoresLote } from './hooks/useIndicadoresLote'
 import { useDashboard } from './hooks/useDashboard'
-import { filasGalpones, itemsAtencionGranja, kpisGranja, type ItemAtencionGranja } from './model/resumenGranja'
+import { filasGalpones, itemsAtencionGranja, kpisGranja, lotesActivosDe, type ItemAtencionGranja } from './model/resumenGranja'
 import { estadoGranja } from './model/estadoGranja'
 import '@shared/ui/admin/AdminKit.css'
 import '@shared/ui/admin/CentroControl.css'
@@ -100,6 +100,10 @@ function DashboardPage() {
   }
 
   const reportando = sensoresDelGalpon.filter((sensor) => tieneLecturaUtil(sensor.estado)).length
+  const lecturaDe = (tipo: string) => sensoresDelGalpon.find((sensor) => sensor.tipo === tipo && tieneLecturaUtil(sensor.estado))?.valor ?? null
+  const lotesActivos = lotesActivosDe(dashboard.galpones, dashboard.lotes)
+  const avesAlojadas = lotesActivos.reduce((total, lote) => total + lote.cantidadInicial, 0)
+  const diaUnico = lotesActivos.length === 1 ? dashboard.diaLote : null
 
   const enGranjas = (pestana: string, galponId = dashboard.galponId) =>
     navigate(`/granjas?granjaId=${dashboard.granjaId ?? ''}${galponId ? `&galpon=${galponId}` : ''}&pestana=${pestana}`)
@@ -132,6 +136,12 @@ function DashboardPage() {
         granjaId={dashboard.granjaId}
         estado={estado}
         kpis={kpis}
+        diaLote={diaUnico}
+        aves={avesAlojadas}
+        semilla={dashboard.granjaId ?? 1}
+        temperatura={lecturaDe('temperatura')}
+        humedad={lecturaDe('humedad')}
+        sensoresActivos={reportando > 0}
         cargando={dashboard.cargando || cargandoMonitoreo}
         onGranjaChange={dashboard.seleccionarGranja}
         onRecargar={() => void dashboard.recargar()}

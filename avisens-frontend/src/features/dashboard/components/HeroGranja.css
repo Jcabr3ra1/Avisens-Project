@@ -1,0 +1,484 @@
+/* Franja del resumen: el galpón de la granja, dibujado, con la hora real del
+   día y los indicadores puestos sobre los objetos que los miden. */
+
+.hero-granja {
+  --hero-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --hero-texto: #203b32;
+  --hero-texto-suave: #435c50;
+  --cielo-alto: #cddccb;
+  --cielo-bajo: #f7f6ef;
+  --colina-lejos: #b7c9b0;
+  --colina-cerca: #9fb894;
+  --suelo: #86a07f;
+  --cesped: #6f8f6c;
+  --cesped-oscuro: #4f7a5a;
+  --nube: #ffffff;
+  --pared: #fbfaf3;
+  --pared-alta: #efeee2;
+  --cama: #e9cf7c;
+  --cama-sombra: #c9a94a;
+  --techo: #005b48;
+  --techo-sombra: #0d4537;
+  --techo-luz: #4fa38a;
+  --madera: #6b5a3c;
+  --cortina: #9db3a2;
+  --cortina-sombra: #7d9684;
+  --comedero: #c9a43f;
+  --comedero-claro: #e3c565;
+  --agua: #7fb0c4;
+  --bombillo: #f3d98a;
+  --luz-bombillo: 0.22;
+  --termometro: #ffffff;
+  --mercurio: #d14b3f;
+  --sensor: #f7f6ef;
+  --linea-objeto: #5a6e61;
+  --led-activo: #2f9e6f;
+  --letrero: #f7f6ef;
+  --tinta: #203b32;
+  --pata: #d98a2b;
+  --plumaje: color-mix(in srgb, #ecc85a calc((1 - var(--edad, 0.5)) * 100%), #fbf8ec);
+  --plumaje-sombra: color-mix(in srgb, var(--plumaje) 78%, #8a6a1f);
+  --lampara: #47a678;
+
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  align-items: end;
+  min-height: clamp(300px, 29vw, 380px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--hero-texto) 14%, transparent);
+  border-radius: 28px;
+  color: var(--hero-texto);
+  background: linear-gradient(180deg, var(--cielo-alto) 0%, var(--cielo-bajo) 82%);
+  box-shadow: var(--shadow-md);
+}
+
+.hero-granja[data-fase='amanecer'] {
+  --cielo-alto: #f2d7a6;
+  --cielo-bajo: #faf0df;
+  --colina-lejos: #c9c19a;
+  --colina-cerca: #b3b88c;
+  --suelo: #98a97c;
+  --cesped: #7f9a6a;
+  --nube: #fff4e0;
+}
+
+.hero-granja[data-fase='tarde'] {
+  --cielo-alto: #f0c88a;
+  --cielo-bajo: #f8ead6;
+  --colina-lejos: #b9b58e;
+  --colina-cerca: #a0ab82;
+  --suelo: #8c9c72;
+  --cesped: #7a9566;
+  --nube: #fde6c8;
+  --luz-bombillo: 0.3;
+}
+
+.hero-granja[data-fase='noche'] {
+  --hero-texto: #f7f6ef;
+  --hero-texto-suave: #cfdccf;
+  --cielo-alto: #0b231c;
+  --cielo-bajo: #173a2f;
+  --colina-lejos: #123d31;
+  --colina-cerca: #0f3329;
+  --suelo: #0d2d24;
+  --cesped: #1b4a3a;
+  --cesped-oscuro: #2b6a54;
+  --pared: #e8e2c8;
+  --pared-alta: #d9d3b6;
+  --techo: #0a4a3b;
+  --techo-sombra: #062d24;
+  --techo-luz: #2f8a72;
+  --bombillo: #ffe08a;
+  --luz-bombillo: 0.55;
+  --cortina: #6f8a7a;
+  --cortina-sombra: #54705f;
+}
+
+.hero-granja--atencion { --lampara: #e3c565; }
+.hero-granja--critico { --lampara: #e5786b; }
+
+/* ── Cielo y colinas ──────────────────────────────────────── */
+.hero-granja-fondo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hero-granja-astro {
+  position: absolute;
+  width: 54px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: -50% -50%;
+  transform: translate3d(calc(var(--px, 0) * -12px), calc(var(--py, 0) * -6px), 0);
+  transition: transform 700ms var(--hero-ease);
+}
+
+.hero-granja-astro--sol { background: #e9c35a; }
+.hero-granja[data-fase='tarde'] .hero-granja-astro--sol { background: #e6934a; }
+.hero-granja[data-fase='amanecer'] .hero-granja-astro--sol { background: #eba85a; }
+.hero-granja-astro--luna {
+  width: 44px;
+  background: #f2efe0;
+  box-shadow: inset -11px -4px 0 0 var(--cielo-alto);
+}
+
+.hero-granja-nube {
+  position: absolute;
+  height: auto;
+  fill: var(--nube);
+  opacity: 0.85;
+  animation: hero-granja-nube 60s ease-in-out infinite alternate;
+}
+
+@keyframes hero-granja-nube {
+  from { transform: translateX(-18px); }
+  to { transform: translateX(26px); }
+}
+
+.hero-granja-estrella {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #f7f6ef;
+  animation: hero-granja-titila 4.5s ease-in-out infinite;
+}
+
+@keyframes hero-granja-titila {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.95; }
+}
+
+.hero-granja-colinas {
+  position: absolute;
+  left: -2%;
+  bottom: 0;
+  width: 104%;
+  height: 54%;
+  transform: translate3d(calc(var(--px, 0) * 8px), 0, 0);
+  transition: transform 700ms var(--hero-ease);
+}
+
+.hero-granja-colina-lejos { fill: var(--colina-lejos); }
+.hero-granja-colina-cerca { fill: var(--colina-cerca); }
+
+/* ── Texto y controles ────────────────────────────────────── */
+.hero-granja-cuerpo {
+  position: relative;
+  z-index: 2;
+  grid-column: 1;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.7rem;
+  padding: clamp(3.6rem, 5vw, 4rem) clamp(0.5rem, 1.5vw, 1rem) clamp(1.4rem, 3vw, 2.4rem) clamp(1.4rem, 3vw, 2.4rem);
+}
+
+.hero-granja-titulo {
+  max-width: 17ch;
+  margin: 0;
+  font-size: clamp(1.9rem, 3.3vw, 2.9rem);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.hero-granja-detalle {
+  max-width: 40ch;
+  text-wrap: pretty;
+  margin: 0;
+  color: var(--hero-texto-suave);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.hero-granja-accion {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 48px;
+  margin-top: 0.3rem;
+  padding: 0.7rem 1.25rem 0.7rem 1.4rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 160ms var(--hero-ease), box-shadow 160ms ease;
+}
+
+.hero-granja--atencion .hero-granja-accion {
+  background: var(--avisens-maize, #e3c565);
+  color: var(--on-accent, #203b32);
+}
+
+.hero-granja--critico .hero-granja-accion { background: var(--danger-strong, #983434); }
+.hero-granja-accion:active { transform: scale(0.97); }
+
+.hero-granja-pie {
+  margin: 0;
+  color: var(--hero-texto);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.hero-granja-controles {
+  position: absolute;
+  top: 1rem;
+  left: clamp(1.4rem, 3vw, 2.4rem);
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hero-granja-selector select,
+.hero-granja-sync {
+  min-height: 40px;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hero-granja-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: background 160ms ease;
+}
+
+.hero-granja-sync:disabled { cursor: progress; opacity: 0.75; }
+.hero-granja-sync.is-spinning svg { animation: hero-granja-giro 900ms linear infinite; }
+@keyframes hero-granja-giro { to { transform: rotate(360deg); } }
+
+.hero-granja button:focus-visible,
+.hero-granja select:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Escena ───────────────────────────────────────────────── */
+.escena {
+  position: relative;
+  z-index: 1;
+  grid-column: 2;
+  align-self: end;
+  animation: escena-entra 900ms var(--hero-ease) both;
+}
+
+@keyframes escena-entra {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+
+.escena-lienzo {
+  position: relative;
+  transform: translate3d(calc(var(--px, 0) * -5px), calc(var(--py, 0) * -2.5px), 0);
+  transition: transform 600ms var(--hero-ease);
+}
+
+.escena-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 760 / 440;
+  overflow: visible;
+}
+
+.escena-guias { opacity: 0.55; }
+
+.escena-letrero {
+  fill: var(--tinta);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.pollito {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: pollito-picotea 3.1s ease-in-out infinite;
+  animation-delay: var(--retraso, 0s);
+}
+
+@keyframes pollito-picotea {
+  0%, 52%, 100% { transform: translateY(0) rotate(0); }
+  58% { transform: translateY(1.5px) rotate(7deg); }
+  64% { transform: translateY(0) rotate(-1deg); }
+  70% { transform: translateY(1.5px) rotate(7deg); }
+  78% { transform: translateY(-1px) rotate(0); }
+}
+
+.escena-halo { opacity: 0.22; }
+.escena-halo--pulsa {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: escena-pulso 2.2s ease-out infinite;
+}
+
+.escena--critico .escena-halo--pulsa { animation-duration: 1.2s; }
+
+@keyframes escena-pulso {
+  0% { transform: scale(0.7); opacity: 0.55; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.escena-ondas path { animation: escena-onda 2.4s ease-in-out infinite; opacity: 0.15; }
+.escena-ondas path:nth-child(2) { animation-delay: 0.3s; }
+.escena-ondas path:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes escena-onda {
+  0%, 100% { opacity: 0.15; }
+  40% { opacity: 1; }
+}
+
+.escena-mercurio { transform-box: fill-box; transform-origin: 50% 100%; animation: escena-sube 1.2s var(--hero-ease) both; }
+@keyframes escena-sube { from { transform: scaleY(0.2); } to { transform: scaleY(1); } }
+
+/* ── Etiquetas sobre los objetos ──────────────────────────── */
+.escena-etiquetas {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+
+.escena-etiqueta {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.escena-etiqueta--alertas { left: 43.4%; top: 6.1%; transform: translate(-100%, -50%); }
+.escena-etiqueta--aves { left: 50%; top: 90.5%; transform: translate(-50%, -50%); }
+.escena-etiqueta--sensores { right: 0.8%; top: 8%; transform: translateY(-50%); }
+.escena-etiqueta--galpones { left: 1.5%; top: 83%; }
+
+.escena-etiqueta button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 32px;
+  padding: 0.3rem 0.8rem 0.3rem 0.6rem;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--tinta) 35%, transparent);
+  transition: transform 180ms var(--hero-ease), box-shadow 180ms ease;
+}
+
+.escena-etiqueta button::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.escena-etiqueta-punto {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.escena--atencion .escena-etiqueta--alertas .escena-etiqueta-punto { background: var(--warning); }
+.escena--critico .escena-etiqueta--alertas .escena-etiqueta-punto { background: var(--danger); }
+
+.escena-etiqueta-texto { display: grid; }
+.escena-etiqueta-texto strong { font-weight: 700; white-space: nowrap; }
+.escena-etiqueta-texto span {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  transition: max-height 240ms var(--hero-ease), opacity 160ms ease;
+}
+
+.escena-etiqueta button:active { transform: scale(0.97); }
+
+@media (hover: hover) and (pointer: fine) {
+  .escena-etiqueta button:hover,
+  .escena-etiqueta button:focus-visible {
+    box-shadow: 0 8px 18px -6px color-mix(in srgb, var(--tinta) 45%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .escena-etiqueta button:hover .escena-etiqueta-texto span,
+  .escena-etiqueta button:focus-visible .escena-etiqueta-texto span {
+    max-height: 1.5em;
+    opacity: 1;
+  }
+
+  .hero-granja-accion:hover { box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--tinta) 60%, transparent); }
+  .hero-granja-sync:hover:not(:disabled) { background: var(--surface-hover); }
+}
+
+/* ── Pantallas chicas ─────────────────────────────────────── */
+@media (max-width: 1000px) {
+  .escena-etiqueta--galpones { display: none; }
+}
+
+@media (max-width: 760px) {
+  .hero-granja {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    border-radius: 22px;
+  }
+
+  .hero-granja-cuerpo { grid-column: 1; padding: 0.6rem clamp(1.4rem, 3vw, 2.4rem) 0.25rem; }
+  .hero-granja-controles { position: static; justify-content: space-between; order: -1; padding: 1rem 1.4rem 0; }
+  .hero-granja-fondo { top: auto; height: 44%; }
+  .hero-granja-titulo { max-width: 20ch; }
+  .hero-granja-accion { justify-self: stretch; justify-content: center; }
+  .escena { grid-column: 1; margin-top: 0.25rem; }
+  .hero-granja-colinas { height: 66%; }
+  .hero-granja-nube { display: none; }
+
+  .escena-etiqueta button { font-size: 0.75rem; padding-right: 0.65rem; }
+  .escena-etiqueta-texto span { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .escena,
+  .hero-granja-nube,
+  .hero-granja-estrella,
+  .pollito,
+  .escena-halo--pulsa,
+  .escena-ondas path,
+  .escena-mercurio,
+  .hero-granja-sync.is-spinning svg { animation: none; }
+
+  .hero-granja-astro,
+  .hero-granja-colinas,
+  .escena-lienzo,
+  .escena-etiqueta button,
+  .hero-granja-accion { transition: none; transform: none; }
+
+  .escena-ondas path { opacity: 1; }
+  .escena-etiqueta-texto span { transition: none; }
+}
