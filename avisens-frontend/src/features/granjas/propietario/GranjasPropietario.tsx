@@ -245,7 +245,6 @@ function GranjasPropietario() {
           <Suspense fallback={<div className="org-hero-escena-cargando" aria-hidden="true" />}>
             <EscenaGranja nombre={granja.nombre} fondo={fondoDeGranja(fase, clima)} clima={clima} posicionAstro={astro.x} />
           </Suspense>
-          <p className="org-hero-escena-nota org-hero-escena-nota--pista">Tu granja en 3D.</p>
         </div>
 
         <ul className="org-hero-indicadores" aria-label={`Resumen de ${granja.nombre}`}>

@@ -4,7 +4,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { fusionarPorMaterial } from '@features/dashboard/components/escena/modeloGalpon'
 
 const RUTA_GRANJA = `${import.meta.env.BASE_URL}modelos/granja-colombiana-low-poly.glb`
-const SATURACION = 0.8
+const SATURACION = 0.94
 const HUELLAS = ['casa', 'galpon', 'bodega', 'tanque_agua', 'huerta'] as const
 const MARCO = ['casa', 'techo_casa', 'galpon', 'bodega'] as const
 
@@ -18,6 +18,8 @@ export type GranjaCargada = {
   huellas: Huella[]
   suelo: number
   colorCamino: Color
+  colorPasto: Color
+  arboles: Object3D[]
 }
 
 let pendiente: Promise<GranjaCargada | null> | null = null
@@ -58,13 +60,18 @@ export function cargarModeloGranja(): Promise<GranjaCargada | null> {
       })
       const marco = cajaDe(gltf.scene, MARCO)
       const plataforma = gltf.scene.getObjectByName('terreno')
+      let colorPasto = new Color(0x4f9a2a)
+      plataforma?.traverse((parte) => {
+        if (parte instanceof Mesh && parte.material instanceof MeshStandardMaterial) colorPasto = parte.material.color.clone()
+      })
       plataforma?.removeFromParent()
+      const arboles = (gltf.scene.getObjectByName('arboles')?.children ?? []).map((arbol) => arbol.clone(true))
       const modelo = fusionarPorMaterial(gltf.scene)
       const caja = new Box3().setFromObject(modelo)
       const tamano = caja.getSize(new Vector3())
       if (tamano.y <= 0) return null
       const colorCamino = atenuarSaturacion(modelo)
-      return { modelo, centro: caja.getCenter(new Vector3()), tamano, marco, huellas, suelo: 0, colorCamino }
+      return { modelo, centro: caja.getCenter(new Vector3()), tamano, marco, huellas, suelo: 0, colorCamino, colorPasto, arboles }
     })
     .catch(() => null)
   return pendiente

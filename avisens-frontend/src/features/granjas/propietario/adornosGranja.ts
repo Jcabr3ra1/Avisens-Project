@@ -23,12 +23,12 @@ const VENTANAS: Punto[] = [[-4.2, 2.3, 2.3], [1.2, 2.3, 2.3], [5.3, 2.3, 2.3]]
 const FAROLES: Punto[] = [[-4.6, 3.1, 4.8], [4.6, 3.1, 4.8]]
 const LUZ_POR_FASE: Record<FaseDelDia, number> = { dia: 0, amanecer: 0.22, tarde: 0.5, noche: 1 }
 
-const ANCHO_TERRENO = 260
-const FONDO_TERRENO = 120
+const ANCHO_TERRENO = 170
+const FONDO_TERRENO = 78
 const SEGMENTOS_X = 52
 const SEGMENTOS_Z = 24
-const CENTRO_Z = -26
-const ELEVACION_LOMAS = 3.5
+const CENTRO_Z = -16
+const ELEVACION_LOMAS = 3
 
 function suavizar(minimo: number, maximo: number, valor: number): number {
   const t = Math.min(1, Math.max(0, (valor - minimo) / (maximo - minimo)))
@@ -104,6 +104,15 @@ function texturaCamino(): CanvasTexture {
   return new CanvasTexture(lienzo)
 }
 
+function alturaEn(x: number, z: number): number {
+  const lejania = Math.hypot(x / 34, (z - 2) / 28)
+  const aplanado = suavizar(1, 1.7, lejania)
+  const ondulacion = (azar(Math.round(x), Math.round(z)) - 0.35) * 3.4
+  const lomas = suavizar(14, 52, -z) * ELEVACION_LOMAS
+  const laderas = suavizar(46, 90, Math.abs(x)) * 4
+  return (ondulacion + lomas + laderas) * aplanado
+}
+
 export type AdornosGranja = {
   grupo: Group
   aplicarFase: (fase: FaseDelDia) => void
@@ -126,36 +135,31 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
   for (let indice = 0; indice < posicion.count; indice++) {
     const x = posicion.getX(indice)
     const z = posicion.getZ(indice) + CENTRO_Z
-    const lejania = Math.hypot(x / 34, (z - 2) / 28)
-    const aplanado = suavizar(1, 1.7, lejania)
-    const ondulacion = (azar(Math.round(x), Math.round(z)) - 0.35) * 3.4
-    const lomas = suavizar(20, 70, -z) * ELEVACION_LOMAS
-    const laderas = suavizar(60, 150, Math.abs(x)) * 7
-    posicion.setY(indice, (ondulacion + lomas + laderas) * aplanado)
-    posicion.setZ(indice, posicion.getZ(indice))
+    posicion.setY(indice, alturaEn(x, z))
   }
   const caras = base.toNonIndexed()
   base.dispose()
   caras.translate(granja.centro.x, granja.suelo - 0.02, granja.centro.z + CENTRO_Z)
   caras.setAttribute('color', new Float32BufferAttribute(new Float32Array(caras.getAttribute('position').count * 3), 3))
 
-  const aplicarSuelo = (color: Color) => {
+  const aplicarSuelo = (horizonte: Color) => {
     const colores = caras.getAttribute('color') as BufferAttribute
     const puntos = caras.getAttribute('position') as BufferAttribute
     const hsl = { h: 0, s: 0, l: 0 }
-    color.getHSL(hsl)
+    granja.colorPasto.clone().lerp(horizonte, 0.22).getHSL(hsl)
     const tono = new Color()
     for (let cara = 0; cara < puntos.count; cara += 3) {
       const altura = (puntos.getY(cara) + puntos.getY(cara + 1) + puntos.getY(cara + 2)) / 3 - granja.suelo
       const x = puntos.getX(cara)
       const z = puntos.getZ(cara)
-      const variacion = (azar(Math.round(x * 3), Math.round(z * 3)) - 0.5) * 0.1
-      tono.setHSL(hsl.h, hsl.s * 0.92, Math.min(0.78, Math.max(0.2, hsl.l + variacion + altura * 0.004)))
+      const variacion = (azar(Math.round(x * 3), Math.round(z * 3)) - 0.5) * 0.16
+      const matiz = hsl.h + (azar(Math.round(x * 5), Math.round(z * 5)) - 0.5) * 0.03
+      tono.setHSL(matiz, Math.min(0.85, hsl.s * 1.05), Math.min(0.62, Math.max(0.22, hsl.l + variacion + altura * 0.006)))
       for (let vertice = 0; vertice < 3; vertice++) colores.setXYZ(cara + vertice, tono.r, tono.g, tono.b)
     }
     colores.needsUpdate = true
   }
-  aplicarSuelo(new Color(0x86a46a))
+  aplicarSuelo(granja.colorPasto)
   caras.computeVertexNormals()
 
   const desvanecido = texturaDesvanecida()
@@ -167,6 +171,29 @@ export function crearAdornos(granja: GranjaCargada): AdornosGranja {
   terreno.receiveShadow = true
   terreno.renderOrder = -1
   grupo.add(terreno)
+
+  const vegetacion = new Group()
+  if (granja.arboles.length > 0) {
+    const sitios: [number, number, number][] = []
+    for (let intento = 0; intento < 260 && sitios.length < 44; intento++) {
+      const x = (azar(intento * 3.1, 7.7) - 0.5) * (ANCHO_TERRENO * 0.74)
+      const z = 4 - azar(intento * 5.3, 1.9) * 44
+      const dentroDeFinca = x > -26 && x < 26 && z > -22
+      const sobreCamino = Math.abs(x - 2.5) < 4 && z > 10
+      if (dentroDeFinca || sobreCamino) continue
+      if (sitios.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < 5)) continue
+      sitios.push([x, z, 0.7 + azar(intento * 2.3, 4.1) * 0.7])
+    }
+    sitios.forEach(([x, z, escala], indice) => {
+      const arbol = granja.arboles[indice % granja.arboles.length].clone(true)
+      arbol.scale.setScalar(escala)
+      arbol.position.set(granja.centro.x + x, granja.suelo + alturaEn(x, z) - 0.1, granja.centro.z + z)
+      arbol.rotation.y = azar(indice, 9.9) * Math.PI * 2
+      arbol.traverse((parte) => { parte.castShadow = true; parte.receiveShadow = true })
+      vegetacion.add(arbol)
+    })
+  }
+  grupo.add(vegetacion)
 
   const mascaraCamino = texturaCamino()
   texturas.push(mascaraCamino)
