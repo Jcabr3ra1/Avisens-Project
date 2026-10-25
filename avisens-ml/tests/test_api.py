@@ -3,7 +3,6 @@ from fastapi.testclient import TestClient
 from main import app
 from modelos.polinomial import predecir_consumo, predecir_mortalidad
 
-
 client = TestClient(app)
 
 
@@ -30,7 +29,7 @@ def test_prediccion_incluye_trazabilidad_del_modelo():
     cuerpo = respuesta.json()
     assert cuerpo["peso_proyectado_faena_g"] > 0
     assert cuerpo["modelo"]["nombre"] == "crecimiento_aves"
-    assert cuerpo["modelo"]["version"] == "1.1.0"
+    assert cuerpo["modelo"]["version"] == "1.2.0"
     assert 0 <= cuerpo["modelo"]["confianza"] <= 1
     assert cuerpo["modelo"]["puntos_usados"] == 3
 

@@ -1,24 +1,29 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as Tabs from '@radix-ui/react-tabs'
-import type { GranjaOrganizacionDetalle } from '@features/organizaciones/api/organizaciones'
-import { describirMaqueta } from '@features/organizaciones/model/maqueta'
 import NumeroAnimado from '@features/organizaciones/components/NumeroAnimado'
 import type { Lote } from '@features/lotes/api/lotes'
 import { IcArrowRight, IcCheck, IcChevronRight, IcLeaf, IcRefresh } from '@shared/ui/icons/icons'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import { getRol } from '@shared/api'
-import { puedeCompletarDatos } from '@shared/auth/permisos'
+import { permisosOperativosDeGalpon, puedeCompletarDatos } from '@shared/auth/permisos'
 import type { Granja } from '../api/granjas'
 import EsqueletoGranjas from '../components/EsqueletoGranjas'
 import { ModalDatosGranja, ModalDatosLote } from '../components/ModalesDatos'
-import { useEstructuraGranjas, type GranjaConEstructura } from '../hooks/useEstructuraGranjas'
+import { useEstructuraGranjas } from '../hooks/useEstructuraGranjas'
 import { useIndicadoresDeLotes } from '../hooks/useIndicadoresDeLotes'
-import { progresoDatos, proximoPaso, type DestinoPaso, type PendienteDatos } from './explorador'
+import { pesajesDelLote, progresoDatos, proximoPaso, type DestinoPaso, type PendienteDatos } from './explorador'
+import { useCurvaLote } from './useCurvaLote'
+import lunaLowPoly from '@features/dashboard/assets/escena/luna-low-poly.webp'
+import solLowPoly from '@features/dashboard/assets/escena/sol-low-poly.webp'
+import { useHoraDelDia } from '@features/dashboard/hooks/useFaseDelDia'
+import { faseDelDia, posicionDelAstro } from '@features/dashboard/model/escenaGalpon'
+import { FONDOS_POR_FASE } from './fondosPorFase'
 import ListaGalpones from './ListaGalpones'
 import ResumenPestana from './pestanas/ResumenPestana'
 import LotePestana from './pestanas/LotePestana'
 import AmbientePestana from './pestanas/AmbientePestana'
+import UmbralesPestana from './pestanas/UmbralesPestana'
 import DatosPestana from './pestanas/DatosPestana'
 import BitacoraPestana from './pestanas/BitacoraPestana'
 import '@shared/ui/admin/AdminKit.css'
@@ -26,11 +31,11 @@ import '@shared/ui/movimiento.css'
 import '@features/organizaciones/components/HeroOrganizacion.css'
 import './GranjasPropietario.css'
 
-const EscenaOrganizacion = lazy(() => import('@features/organizaciones/components/EscenaOrganizacion'))
+const EscenaGranja = lazy(() => import('./EscenaGranja'))
 const cargarAlertas = () => import('@features/alertas/AlertasPage')
 const AlertasPage = lazy(cargarAlertas)
 
-const PESTANAS = ['resumen', 'lote', 'bitacora', 'ambiente', 'alertas', 'datos'] as const
+const PESTANAS = ['resumen', 'lote', 'bitacora', 'ambiente', 'umbrales', 'alertas', 'datos'] as const
 type Pestana = (typeof PESTANAS)[number]
 
 function pestanaDe(valor: string | null): Pestana {
@@ -45,26 +50,6 @@ type DatosAbiertos =
   | { tipo: 'lote'; lote: Lote }
   | null
 
-function aMaqueta({ granja, galpones }: GranjaConEstructura): GranjaOrganizacionDetalle {
-  return {
-    id: granja.id,
-    nombre: granja.nombre,
-    direccion: granja.direccion,
-    municipio: granja.municipio,
-    departamento: granja.departamento,
-    area_total_m2: granja.area_total_m2,
-    activa: granja.activa,
-    propietario: { id: granja.propietario.id, nombre_completo: granja.propietario.nombre_completo, email: null, telefono: null, activo: true },
-    galpones: galpones.map((galpon) => ({
-      id: galpon.id,
-      codigo: galpon.codigo,
-      nombre: galpon.nombre,
-      activo: galpon.activo,
-      _count: { dispositivo: galpon.sensores.length > 0 ? 1 : 0, sensores: galpon.sensores.length },
-    })),
-  }
-}
-
 function enteroPositivo(valor: string | null): number | null {
   const numero = Number(valor)
   return Number.isSafeInteger(numero) && numero > 0 ? numero : null
@@ -72,6 +57,9 @@ function enteroPositivo(valor: string | null): number | null {
 
 function GranjasPropietario() {
   const navigate = useNavigate()
+  const hora = useHoraDelDia()
+  const fase = faseDelDia(hora)
+  const astro = posicionDelAstro(hora)
   const [parametros] = useSearchParams()
   const { estructura, proveedores, lineasGeneticas, consumoPorLote, cargando, error, recargar } = useEstructuraGranjas()
   const [granjaId, setGranjaId] = useState<number | null>(() => enteroPositivo(parametros.get('granjaId')))
@@ -89,6 +77,7 @@ function GranjasPropietario() {
     [seleccionada],
   )
   const galpon = galpones.find((item) => item.id === galponId)
+  const curvaLote = useCurvaLote(galpon?.loteEnCurso?.id ?? null, revision)
     ?? galpones.find((item) => item.loteEnCurso !== null)
     ?? galpones[0]
     ?? null
@@ -99,7 +88,6 @@ function GranjasPropietario() {
   const { porLote } = useIndicadoresDeLotes(loteIds)
   const indicador = galpon?.loteEnCurso ? porLote.get(galpon.loteEnCurso.id)?.ultimo ?? null : null
   const progreso = seleccionada ? progresoDatos(seleccionada) : null
-  const maqueta = useMemo(() => (seleccionada ? [aMaqueta(seleccionada)] : []), [seleccionada])
 
   useEffect(() => {
     void cargarAlertas()
@@ -169,7 +157,7 @@ function GranjasPropietario() {
     { label: 'Datos completos', valor: progreso?.completos ?? 0, tono: 'profundo', total: progreso?.total },
   ]
   const ubicacion = [granja.municipio, granja.departamento].filter(Boolean).join(', ')
-  const paso = galpon ? proximoPaso(galpon, indicador) : null
+  const paso = galpon ? proximoPaso(galpon, indicador, pesajesDelLote(curvaLote)) : null
 
   return (
     <div className="page-container gp-page">
@@ -190,7 +178,22 @@ function GranjasPropietario() {
         </div>
       )}
 
-      <section className="org-hero" aria-labelledby="gp-hero-titulo">
+      <section
+        className="org-hero org-hero--granja"
+        data-fase={fase}
+        style={{ '--fondo': `url(${FONDOS_POR_FASE[fase]})` } as CSSProperties}
+        aria-labelledby="gp-hero-titulo"
+      >
+        <div className="gp-hero-fondo" aria-hidden="true" />
+        <img
+          key={astro.tipo}
+          className={`gp-hero-astro gp-hero-astro--${astro.tipo}`}
+          src={astro.tipo === 'sol' ? solLowPoly : lunaLowPoly}
+          alt=""
+          aria-hidden="true"
+          style={{ left: `${56 + ((astro.x - 44) / 42) * 34}%`, top: `${astro.y + 2}%` }}
+        />
+        <div className="gp-hero-velo" aria-hidden="true" />
         <div className="org-hero-texto">
           <span className="adm-eyebrow org-aparece" style={{ '--orden': 0 } as CSSProperties}>
             <span className="adm-eyebrow-punto" aria-hidden="true" />
@@ -231,15 +234,9 @@ function GranjasPropietario() {
 
         <div className="org-hero-escena">
           <Suspense fallback={<div className="org-hero-escena-cargando" aria-hidden="true" />}>
-            <EscenaOrganizacion
-              granjas={maqueta}
-              semilla={granja.id}
-              descripcion={describirMaqueta(granja.nombre, maqueta)}
-              resaltadaId={null}
-              alElegirGranja={() => document.getElementById('gp-galpones')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            />
+            <EscenaGranja nombre={granja.nombre} />
           </Suspense>
-          <p className="org-hero-escena-nota org-hero-escena-nota--pista">Tu granja en 3D. Toca para ir a tus galpones.</p>
+          <p className="org-hero-escena-nota org-hero-escena-nota--pista">Tu granja en 3D.</p>
         </div>
 
         <ul className="org-hero-indicadores" aria-label={`Resumen de ${granja.nombre}`}>
@@ -289,6 +286,7 @@ function GranjasPropietario() {
                 <Tabs.Trigger value="lote" className="gp-pestana">Lote</Tabs.Trigger>
                 <Tabs.Trigger value="bitacora" className="gp-pestana">Bitácora</Tabs.Trigger>
                 <Tabs.Trigger value="ambiente" className="gp-pestana">Ambiente</Tabs.Trigger>
+                <Tabs.Trigger value="umbrales" className="gp-pestana">Umbrales</Tabs.Trigger>
                 <Tabs.Trigger value="alertas" className="gp-pestana">
                   Alertas
                   {galpon.alertasAbiertas > 0 && <span className="gp-pestana-conteo">{galpon.alertasAbiertas}</span>}
@@ -296,7 +294,7 @@ function GranjasPropietario() {
                 <Tabs.Trigger value="datos" className="gp-pestana">Datos</Tabs.Trigger>
               </Tabs.List>
               <Tabs.Content value="resumen" className="gp-contenido">
-                <ResumenPestana galpon={galpon} indicador={indicador} paso={paso} revision={revision} onDestino={irADestino} onNavegar={irA} />
+                <ResumenPestana galpon={galpon} indicador={indicador} paso={paso} curvaLote={curvaLote} onDestino={irADestino} onNavegar={irA} />
               </Tabs.Content>
               <Tabs.Content value="lote" className="gp-contenido">
                 <LotePestana
@@ -324,6 +322,9 @@ function GranjasPropietario() {
                   revision={revision}
                   onCompletarUbicacion={puedeCompletarDatos(getRol()) ? () => setDatos({ tipo: 'granja', granja }) : undefined}
                 />
+              </Tabs.Content>
+              <Tabs.Content value="umbrales" className="gp-contenido">
+                <UmbralesPestana galpon={galpon} puedeConfigurar={permisosOperativosDeGalpon(getRol()).configurar} />
               </Tabs.Content>
               <Tabs.Content value="alertas" className="gp-contenido">
                 <Suspense fallback={<CargandoPestana />}>

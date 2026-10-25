@@ -1142,3 +1142,88 @@
     grid-column: 2;
   }
 }
+
+.gp-umbrales { display: grid; gap: 1rem; }
+.gp-umbrales-cabecera h3 { margin: 0; font-size: 1.125rem; font-weight: 800; letter-spacing: -0.02em; }
+.gp-umbrales-cabecera p { max-width: 62ch; margin: 0.25rem 0 0; color: var(--text-secondary); font-size: 0.875rem; line-height: 1.5; }
+
+/* Hero de la granja: el paisaje de la hora cubre toda la ficha. */
+.org-hero--granja { background: #cddccb; }
+
+.gp-hero-fondo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--fondo, none) center bottom / cover no-repeat;
+}
+
+.gp-hero-astro {
+  position: absolute;
+  z-index: 0;
+  display: block;
+  width: 64px;
+  aspect-ratio: 1;
+  object-fit: contain;
+  pointer-events: none;
+  translate: -50% -50%;
+  animation: gp-astro-entra 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.gp-hero-astro--luna { width: 50px; }
+
+@keyframes gp-astro-entra {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.gp-hero-velo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(90deg, rgb(247 246 239 / 0.95) 0%, rgb(247 246 239 / 0.8) 32%, rgb(247 246 239 / 0) 62%);
+}
+
+.org-hero--granja[data-fase='tarde'] .gp-hero-velo {
+  background: linear-gradient(90deg, rgb(251 243 226 / 0.95) 0%, rgb(251 243 226 / 0.78) 32%, rgb(251 243 226 / 0) 62%);
+}
+
+.org-hero--granja[data-fase='noche'] .gp-hero-velo {
+  background: linear-gradient(90deg, rgb(7 24 20 / 0.92) 0%, rgb(7 24 20 / 0.7) 34%, rgb(7 24 20 / 0) 66%);
+}
+
+.org-hero--granja .org-hero-escena {
+  z-index: 1;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.org-hero--granja[data-fase='noche'] {
+  --text-primary: #f7f6ef;
+  --text-secondary: #d5e1d6;
+  --text-muted: #a9bfb0;
+  --border-subtle: rgb(247 246 239 / 0.16);
+  --border-default: rgb(247 246 239 / 0.3);
+}
+
+.org-hero--granja[data-fase='noche'] .org-hero-chip { background: rgb(255 255 255 / 0.08); }
+.org-hero--granja[data-fase='noche'] .org-hero-chip--estado.is-activa { background: rgb(88 190 140 / 0.16); color: #a6e6c4; }
+.org-hero--granja[data-fase='noche'] .adm-eyebrow { color: #cfe6d6; }
+.org-hero--granja[data-fase='noche'] .adm-btn--secundario {
+  border-color: rgb(247 246 239 / 0.34);
+  background: rgb(255 255 255 / 0.1);
+  color: #f7f6ef;
+}
+.org-hero--granja[data-fase='noche'] .org-hero-indicadores { background: rgb(247 246 239 / 0.14); }
+.org-hero--granja[data-fase='noche'] .org-hero-indicador { background: rgb(7 24 20 / 0.62); }
+.org-hero--granja[data-fase='noche'] .org-hero-escena-nota { background: rgb(7 24 20 / 0.6); color: #d5e1d6; }
+
+@media (max-width: 56rem) {
+  .gp-hero-astro { left: 78% !important; }
+  .gp-hero-velo { background: linear-gradient(180deg, rgb(247 246 239 / 0.95) 0%, rgb(247 246 239 / 0.8) 44%, rgb(247 246 239 / 0) 72%); }
+  .org-hero--granja[data-fase='tarde'] .gp-hero-velo { background: linear-gradient(180deg, rgb(251 243 226 / 0.95) 0%, rgb(251 243 226 / 0.8) 44%, rgb(251 243 226 / 0) 72%); }
+  .org-hero--granja[data-fase='noche'] .gp-hero-velo { background: linear-gradient(180deg, rgb(7 24 20 / 0.92) 0%, rgb(7 24 20 / 0.72) 46%, rgb(7 24 20 / 0) 76%); }
+}
+
+.gp-escena { position: absolute; inset: 0; }
+.gp-escena-visor { position: absolute; inset: 0; }
+.gp-escena-visor canvas { display: block; width: 100%; height: 100%; }

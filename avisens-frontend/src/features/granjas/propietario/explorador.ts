@@ -1,6 +1,8 @@
 import type { Lote } from '@features/lotes/api/lotes'
 import { tieneLecturaUtil } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { DashboardIndicador } from '@features/dashboard/model/dashboard'
+import type { CurvaCrecimiento } from '@features/predicciones/api/predicciones'
+import type { ProblemaCurva } from '@features/guia-crecimiento/model/proyeccion'
 import type { GalponConLotes, GranjaConEstructura } from '../hooks/useEstructuraGranjas'
 import { faltantesGranja, faltantesLote, textoFaltantes } from '../model/datosDescriptivos'
 import { diasDeVida, lecturaPorTipo, porcentajeOcupacion } from '../model/estructura'
@@ -36,7 +38,23 @@ export type TarjetaGalpon = {
 
 const decimal = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
 
-export function proximoPaso(galpon: GalponConLotes, indicador: DashboardIndicador | null): ProximoPaso {
+const PESAJES_PARA_PROYECTAR = 3
+
+export function pesajesDelLote(estado: {
+  curva: CurvaCrecimiento | null
+  problema: ProblemaCurva | null
+  cargando: boolean
+}): number | null {
+  if (estado.cargando) return null
+  if (estado.problema?.tipo === 'sin_pesajes') return 0
+  return estado.curva ? estado.curva.modelo.puntos_usados : null
+}
+
+export function proximoPaso(
+  galpon: GalponConLotes,
+  indicador: DashboardIndicador | null,
+  pesajesRegistrados: number | null = null,
+): ProximoPaso {
   const lote = galpon.loteEnCurso
   if (!galpon.activo) {
     return { tono: 'info', titulo: 'Galpón inactivo', detalle: 'No recibe lotes ni registra lecturas.', accion: null, destino: { tipo: 'ninguno' } }
@@ -69,11 +87,22 @@ export function proximoPaso(galpon: GalponConLotes, indicador: DashboardIndicado
       destino: { tipo: 'ruta', ruta: '/alertas' },
     }
   }
-  if (indicador?.pesoPromedioG == null) {
+  const pesajes = pesajesRegistrados ?? (indicador?.pesoPromedioG == null ? 0 : PESAJES_PARA_PROYECTAR)
+  if (pesajes === 0) {
     return {
       tono: 'atencion',
       titulo: 'Registra el primer pesaje',
-      detalle: 'Con un pesaje ya se proyecta la curva del lote hasta el día de salida.',
+      detalle: 'Con tres pesajes en días distintos se proyecta la curva del lote hasta el día de salida.',
+      accion: 'Ir a la bitácora',
+      destino: { tipo: 'ruta', ruta: '/bitacora' },
+    }
+  }
+  if (pesajes < PESAJES_PARA_PROYECTAR) {
+    const faltan = PESAJES_PARA_PROYECTAR - pesajes
+    return {
+      tono: 'atencion',
+      titulo: faltan === 1 ? 'Registra 1 pesaje más' : `Registra ${faltan} pesajes más`,
+      detalle: `Llevas ${pesajes} ${pesajes === 1 ? 'pesaje' : 'pesajes'}. Con pesajes de tres días distintos se proyecta la curva del lote hasta el día de salida.`,
       accion: 'Ir a la bitácora',
       destino: { tipo: 'ruta', ruta: '/bitacora' },
     }
