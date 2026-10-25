@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { IcArrowRight, IcRefresh } from '@shared/ui/icons/icons'
 import type { DashboardGranja } from '../model/dashboard'
 import type { EstadoGranja } from '../model/estadoGranja'
@@ -7,6 +8,7 @@ import type { KpiGranja } from '../model/resumenGranja'
 import lunaLowPoly from '../assets/escena/luna-low-poly.webp'
 import solLowPoly from '../assets/escena/sol-low-poly.webp'
 import EscenaGalpon from './escena/EscenaGalpon'
+import { FONDOS_POR_FASE } from './escena/fondosPorFase'
 import './HeroGranja.css'
 
 type Props = {
@@ -35,14 +37,6 @@ const TEXTO_ACCION = {
 
 const MINUTOS_ENTRE_RELOJES = 5
 const ORDEN_INDICADORES: KpiGranja['id'][] = ['aves', 'alertas', 'sensores', 'galpones']
-const NUBES = [
-  { izquierda: 41, arriba: 13, ancho: 110, retraso: 0 },
-  { izquierda: 84, arriba: 36, ancho: 92, retraso: -22 },
-]
-const ESTRELLAS = [
-  [6, 14], [14, 36], [22, 10], [31, 28], [39, 8], [47, 20], [55, 12], [63, 32],
-  [71, 9], [78, 24], [85, 14], [92, 30], [95, 8], [27, 44],
-]
 
 function horaLocal(): number {
   const ahora = new Date()
@@ -115,11 +109,11 @@ function HeroGranja({
       data-fase={fase}
       data-resaltado={resaltado ?? undefined}
       aria-labelledby="hero-granja-titulo"
+      style={{ '--fondo': `url(${FONDOS_POR_FASE[fase]})` } as CSSProperties}
     >
       <div className="hero-granja-fondo" aria-hidden="true">
-        {fase === 'noche' && ESTRELLAS.map(([izquierda, arriba], indice) => (
-          <span key={indice} className="hero-granja-estrella" style={{ left: `${izquierda}%`, top: `${arriba}%`, animationDelay: `${(indice % 5) * -0.9}s` }} />
-        ))}
+        <div className="hero-granja-paisaje" />
+        <div className="hero-granja-velo" />
         <span
           key={`halo-${astro.tipo}`}
           className={`hero-granja-halo hero-granja-halo--${astro.tipo}`}
@@ -132,21 +126,6 @@ function HeroGranja({
           alt=""
           style={{ left: `${astro.x}%`, top: `${astro.y}%` }}
         />
-        {fase !== 'noche' && NUBES.map((nube) => (
-          <svg
-            key={nube.izquierda}
-            className="hero-granja-nube"
-            viewBox="0 0 120 40"
-            style={{ left: `${nube.izquierda}%`, top: `${nube.arriba}%`, width: nube.ancho, animationDelay: `${nube.retraso}s` }}
-          >
-            <path d="M14 36a14 14 0 0 1 2-27a22 22 0 0 1 42-4a18 18 0 0 1 32 8a15 15 0 0 1 14 23z" />
-          </svg>
-        ))}
-        <svg className="hero-granja-colinas" viewBox="0 0 1200 220" preserveAspectRatio="none">
-          <path className="hero-granja-cordillera" d="M0 96L90 58L150 84L250 30L330 76L420 44L520 92L640 36L730 82L850 50L960 98L1060 56L1200 92V220H0z" />
-          <path className="hero-granja-colina-lejos" d="M0 120C120 70 240 60 380 96S620 150 780 98S1060 40 1200 84V220H0z" />
-          <path className="hero-granja-colina-cerca" d="M0 160C150 118 280 128 430 150S720 190 880 146S1100 112 1200 140V220H0z" />
-        </svg>
       </div>
 
       <div className="hero-granja-controles">

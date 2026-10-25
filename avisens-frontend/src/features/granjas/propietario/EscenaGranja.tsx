@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ACESFilmicToneMapping,
   DirectionalLight,
@@ -14,6 +14,7 @@ import { liberarGalpon } from '@features/dashboard/components/escena/modeloGalpo
 import { LUCES } from '@features/dashboard/components/escena/lucesPorFase'
 import { useFaseDelDia } from '@features/dashboard/hooks/useFaseDelDia'
 import type { FaseDelDia } from '@features/dashboard/model/escenaGalpon'
+import granjaImagen from '@features/dashboard/assets/escena/granja-popayan-low-poly.webp'
 import { crearAdornos, type AdornosGranja } from './adornosGranja'
 import { cargarModeloGranja, type GranjaCargada } from './modeloGranja'
 
@@ -24,6 +25,7 @@ const MARGEN_ENCUADRE = 0.87
 
 function EscenaGranja({ nombre }: { nombre: string }) {
   const contenedor = useRef<HTMLDivElement>(null)
+  const [sinModelo, setSinModelo] = useState(false)
   const fase = useFaseDelDia()
   const faseActual = useRef(fase)
   const ajustarLuz = useRef<((fase: FaseDelDia) => void) | null>(null)
@@ -41,6 +43,7 @@ function EscenaGranja({ nombre }: { nombre: string }) {
     try {
       renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' })
     } catch {
+      void Promise.resolve().then(() => setSinModelo(true))
       return
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -132,7 +135,11 @@ function EscenaGranja({ nombre }: { nombre: string }) {
     observador.observe(caja)
 
     void cargarModeloGranja().then((cargada) => {
-      if (cancelado || !cargada) return
+      if (cancelado) return
+      if (!cargada) {
+        setSinModelo(true)
+        return
+      }
       granja = cargada
       mundo.add(cargada.modelo)
       adornos = crearAdornos(cargada)
@@ -169,6 +176,7 @@ function EscenaGranja({ nombre }: { nombre: string }) {
         role="img"
         aria-label={`${nombre} en 3D`}
       />
+      {sinModelo && <img className="gp-escena-respaldo" src={granjaImagen} alt={`Ilustración de ${nombre}`} />}
     </div>
   )
 }

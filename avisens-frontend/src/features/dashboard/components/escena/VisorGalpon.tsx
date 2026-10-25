@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent } from 'react'
 import {
   ACESFilmicToneMapping,
@@ -18,6 +18,7 @@ import {
 } from 'three'
 import { escalaDelPollito, type ClaseSensor, type FaseDelDia } from '../../model/escenaGalpon'
 import { cargarModeloGalpon, liberarGalpon, type GalponCargado } from './modeloGalpon'
+import galponImagen from '../../assets/escena/galpon-v4-low-poly.webp'
 import { LUCES } from './lucesPorFase'
 import { cargarModeloPollo } from './modeloPollo'
 
@@ -119,6 +120,7 @@ function poblar(modelo: Group, galpon: GalponCargado, cantidad: number, escala: 
 
 function VisorGalpon({ clases, nombre, fase, aves, diaLote, onProyeccion }: Props) {
   const contenedor = useRef<HTMLDivElement>(null)
+  const [sinModelo, setSinModelo] = useState(false)
   const girar = useRef<((delta: number) => void) | null>(null)
   const arrastre = useRef<{ x: number } | null>(null)
   const clasesActuales = useRef(clases)
@@ -148,6 +150,7 @@ function VisorGalpon({ clases, nombre, fase, aves, diaLote, onProyeccion }: Prop
     try {
       renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' })
     } catch {
+      void Promise.resolve().then(() => setSinModelo(true))
       return
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, PIXELES_MAXIMOS))
@@ -248,7 +251,11 @@ function VisorGalpon({ clases, nombre, fase, aves, diaLote, onProyeccion }: Prop
     reproyectar.current = proyectar
 
     void cargarModeloGalpon().then((cargado) => {
-      if (cancelado || !cargado) return
+      if (cancelado) return
+      if (!cargado) {
+        setSinModelo(true)
+        return
+      }
       galpon = cargado
       mundo.add(cargado.escenario, cargado.modelo)
       const alcance = cargado.radioBase * 1.15
@@ -347,7 +354,9 @@ function VisorGalpon({ clases, nombre, fase, aves, diaLote, onProyeccion }: Prop
       onPointerUp={alSoltar}
       onPointerCancel={alSoltar}
       onKeyDown={alPresionarTecla}
-    />
+    >
+      {sinModelo && <img className="gsr-respaldo" src={galponImagen} alt={`Ilustración de ${nombre}`} />}
+    </div>
   )
 }
 
