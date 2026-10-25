@@ -2,6 +2,9 @@ import type { CurvaCrecimiento, SeveridadAnomalia } from '@features/predicciones
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import { formatearPeso } from './proyeccion'
 
+export const PX_POR_UNIDAD_POLLO = 32
+export const ALTO_LIENZO_POLLO = 56
+
 const DIAS_POR_SEMANA = 7
 const PASO_SEMANAL = 7
 const ORDEN_SEVERIDAD: SeveridadAnomalia[] = ['alta', 'media', 'baja']

@@ -1,12 +1,13 @@
 import { useRef } from 'react'
 import type { KeyboardEvent, PointerEvent as EventoPuntero, CSSProperties } from 'react'
 import type { SeveridadAnomalia } from '@features/predicciones/api/predicciones'
-import Pollito from '@shared/ui/ilustraciones/Pollito'
 import { etiquetaSeveridad } from '../model/confianza'
 import {
-  diaDeFraccion, diaTrasTecla, marcasDeRegla, posicionDeDia,
+  diaDeFraccion, diaTrasTecla, marcasDeRegla, posicionDeDia, PX_POR_UNIDAD_POLLO,
 } from '../model/reglaCiclo'
 import { colorDeEdad, escalaDelPollito } from '@features/dashboard/model/escenaGalpon'
+import PolloMarcador3D from './PolloMarcador3D'
+import banderaSalida from '../assets/bandera-salida-low-poly.png'
 import './ReglaCiclo.css'
 
 type Props = {
@@ -33,6 +34,7 @@ function ReglaCiclo({
   const alSeleccionado = posicionDeDia(diaSeleccionado, primerDia, diaFinal)
   const marcas = marcasDeRegla(primerDia, diaFinal)
   const etiquetaDia = diaSeleccionado === hoy ? `Día ${diaSeleccionado}, hoy` : `Día ${diaSeleccionado}`
+  const escalaPollito = escalaDelPollito(diaActual) * ESCALA_EN_REGLA
 
   function diaEnPuntero(evento: EventoPuntero<HTMLDivElement>) {
     const caja = pista.current?.getBoundingClientRect()
@@ -106,10 +108,15 @@ function ReglaCiclo({
           />
         ))}
 
-        <span className="regla-hoy" aria-hidden="true">
-          <svg viewBox="-30 -52 60 56" width="60" height="56" overflow="visible">
-            <Pollito x={0} y={0} escala={escalaDelPollito(diaActual) * ESCALA_EN_REGLA} />
-          </svg>
+        <span
+          className="regla-hoy"
+          aria-hidden="true"
+          style={{ '--alto-pollo': `${(escalaPollito * PX_POR_UNIDAD_POLLO).toFixed(1)}px` } as CSSProperties}
+        >
+          <PolloMarcador3D
+            escala={escalaPollito}
+            mirada={Math.sign(diaSeleccionado - hoy) as -1 | 0 | 1}
+          />
           <span className="regla-hoy-texto">Hoy</span>
         </span>
 
@@ -124,10 +131,7 @@ function ReglaCiclo({
             <strong>{etiquetaSalida}</strong>
             <span>{detalleSalida}</span>
           </span>
-          <svg viewBox="0 0 22 40" width="22" height="40" aria-hidden="true">
-            <path d="M3 38V2" stroke="var(--regla-linea)" strokeWidth="2.5" strokeLinecap="round" />
-            <path d="M3 3H20L15 9.5L20 16H3z" fill="var(--maiz, #e3c565)" stroke="var(--regla-linea)" strokeWidth="1.5" strokeLinejoin="round" />
-          </svg>
+          <img className="regla-salida-icono" src={banderaSalida} alt="" />
         </span>
 
         {alertas.map((alerta, indice) => (
