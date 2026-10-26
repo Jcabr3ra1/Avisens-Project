@@ -11,6 +11,7 @@ import type { Request } from 'express';
 
 const CABECERA = 'x-hub-signature-256';
 const PREFIJO = 'sha256=';
+const FIRMA_HEX = /^[0-9a-f]{64}$/i;
 
 @Injectable()
 export class FirmaMetaGuard implements CanActivate {
@@ -49,13 +50,17 @@ export class FirmaMetaGuard implements CanActivate {
       throw new ForbiddenException();
     }
 
-    const esperada = createHmac('sha256', secreto).update(cuerpo).digest();
-    const enviada = Buffer.from(recibida.slice(PREFIJO.length), 'hex');
+    const firmaHex = recibida.slice(PREFIJO.length);
 
-    if (
-      enviada.length !== esperada.length ||
-      !timingSafeEqual(enviada, esperada)
-    ) {
+    if (!FIRMA_HEX.test(firmaHex)) {
+      this.logger.warn('Firma de Meta con formato invalido: se rechaza');
+      throw new ForbiddenException();
+    }
+
+    const esperada = createHmac('sha256', secreto).update(cuerpo).digest();
+    const enviada = Buffer.from(firmaHex, 'hex');
+
+    if (!timingSafeEqual(enviada, esperada)) {
       this.logger.warn('Firma de Meta invalida: se rechaza el webhook');
       throw new ForbiddenException();
     }
