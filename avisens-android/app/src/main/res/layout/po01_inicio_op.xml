@@ -369,7 +369,8 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Fila 2: CO₂ / NH₃ para el Propietario, mismo estilo circular -->
+                <!-- Fila 2: Calidad del aire (MQ-135, ADC crudo) / Peso (HX711) para el
+                     Propietario. El MQ-135 no se calibra a ppm: no es CO₂ ni NH₃. -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -397,13 +398,13 @@
                                 android:src="@drawable/bg_ring_track" />
 
                             <com.project.avisensandroid.ui.views.SensorArcView
-                                android:id="@+id/arcCo2Inicio"
+                                android:id="@+id/arcCalidadAireInicio"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:contentDescription="Progreso de dióxido de carbono" />
+                                android:contentDescription="Lectura cruda de calidad del aire" />
 
                             <TextView
-                                android:id="@+id/txtCo2Inicio"
+                                android:id="@+id/txtCalidadAireInicio"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
@@ -414,16 +415,16 @@
                         </FrameLayout>
 
                         <TextView
-                            android:id="@+id/txtLabelCo2Inicio"
+                            android:id="@+id/txtLabelCalidadAireInicio"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="CO₂"
+                            android:text="Calidad del aire"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp" />
 
                         <TextView
-                            android:id="@+id/txtEstadoCo2Inicio"
+                            android:id="@+id/txtEstadoCalidadAireInicio"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="7dp"
@@ -463,13 +464,13 @@
                                 android:src="@drawable/bg_ring_track" />
 
                             <com.project.avisensandroid.ui.views.SensorArcView
-                                android:id="@+id/arcAmoniacoInicio"
+                                android:id="@+id/arcPesoInicio"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:contentDescription="Progreso de amoníaco" />
+                                android:contentDescription="Indicador del peso de alimento" />
 
                             <TextView
-                                android:id="@+id/txtAmoniacoInicio"
+                                android:id="@+id/txtPesoInicio"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
@@ -480,16 +481,16 @@
                         </FrameLayout>
 
                         <TextView
-                            android:id="@+id/txtLabelAmoniacoInicio"
+                            android:id="@+id/txtLabelPesoInicio"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="NH₃"
+                            android:text="Peso de alimento"
                             android:textColor="@color/text_secondary"
                             android:textSize="13sp" />
 
                         <TextView
-                            android:id="@+id/txtEstadoAmoniacoInicio"
+                            android:id="@+id/txtEstadoPesoInicio"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="7dp"
@@ -504,6 +505,136 @@
                             android:textStyle="bold" />
                     </LinearLayout>
                 </LinearLayout>
+
+                <!-- Fila 3: Nivel de agua (HC-SR04). Solo se muestra si el galpón
+                     tiene ese sensor registrado. -->
+                <LinearLayout
+                    android:id="@+id/filaNivelAguaInicio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_stat_card"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="14dp">
+
+                        <FrameLayout
+                            android:layout_width="88dp"
+                            android:layout_height="88dp">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription=""
+                                android:src="@drawable/bg_ring_track" />
+
+                            <com.project.avisensandroid.ui.views.SensorArcView
+                                android:id="@+id/arcNivelAguaInicio"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="Indicador del nivel de agua" />
+
+                            <TextView
+                                android:id="@+id/txtNivelAguaInicio"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:text="—"
+                                android:textColor="@color/text_primary"
+                                android:textSize="19sp"
+                                android:textStyle="bold" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/txtLabelNivelAguaInicio"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Distancia al agua"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/txtEstadoNivelAguaInicio"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="7dp"
+                            android:background="@drawable/bg_badge_regular"
+                            android:paddingStart="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingEnd="10dp"
+                            android:paddingBottom="4dp"
+                            android:text="Sin datos"
+                            android:textColor="@color/orange_badge_text"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+
+                    <View
+                        android:layout_width="12dp"
+                        android:layout_height="1dp" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+                </LinearLayout>
+
+                <!-- Sensores activos que no se pudieron asociar sin ambigüedad
+                     a una variable: se listan para corregirlos, sin valores. -->
+                <TextView
+                    android:id="@+id/txtSensoresSinIdentificarInicio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_stat_card"
+                    android:padding="12dp"
+                    android:textColor="@color/orange_badge_text"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
+                <!-- Actuadores (relés K1-K4 y motores): salida que reportó el ESP32, en
+                     solo lectura. El backend actual no informa el modo ni admite órdenes. -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:text="Actuadores · salida reportada"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Estado que envió el ESP32. No confirma que el equipo funcione. El modo automático/manual y el control remoto aún no están disponibles en el servidor."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:id="@+id/contenedorActuadoresInicio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <TextView
+                    android:id="@+id/txtSinActuadoresInicio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="No hay actuadores registrados en este galpón."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- TARJETAS DEL OPERARIO: se conservan como estaban. -->

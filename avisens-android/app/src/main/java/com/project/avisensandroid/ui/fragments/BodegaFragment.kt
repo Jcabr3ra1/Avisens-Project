@@ -5,8 +5,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -16,6 +14,7 @@ import com.project.avisensandroid.databinding.ItemInsumoBinding
 import com.project.avisensandroid.databinding.Po03BodegaOpBinding
 import com.project.avisensandroid.model.InsumoResponse
 import com.project.avisensandroid.model.ProveedorResponse
+import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -43,12 +42,23 @@ class BodegaFragment : BaseBottomNavFragment() {
         val activity = requireActivity() as MainActivity
         configurarBottomNav(R.id.nav_bodega)
 
-        binding.btnProveedores.setOnClickListener {
-            activity.mostrarFragment(ProveedoresFragment())
-        }
+        val esOperario = activity.obtenerRolActual() == UserRole.OPERARIO
+
+        // El Operario solo trabaja con Insumos: no se muestra la barra de pestañas.
+        // Propietario/Admin conservan ambas pestañas y el diseño original.
+        binding.tabsBodega.visibility = if (esOperario) View.GONE else View.VISIBLE
+        binding.btnProveedores.visibility = View.VISIBLE
+        binding.btnInsumos.visibility = View.VISIBLE
+        actualizarPestanaActiva(insumosActivos = true)
 
         binding.btnInsumos.setOnClickListener {
-            // Ya estamos en insumos.
+            actualizarPestanaActiva(insumosActivos = true)
+        }
+
+        binding.btnProveedores.setOnClickListener {
+            if (!esOperario) {
+                activity.mostrarFragment(ProveedoresFragment())
+            }
         }
 
         binding.btnNuevoInsumo.visibility =
@@ -63,6 +73,21 @@ class BodegaFragment : BaseBottomNavFragment() {
         }
 
         cargarDatosBodega()
+    }
+
+
+    private fun actualizarPestanaActiva(insumosActivos: Boolean) {
+        val colorActivo = android.graphics.Color.parseColor("#2E7D5B")
+        val colorInactivo = android.graphics.Color.parseColor("#89938E")
+
+        binding.btnInsumos.setBackgroundResource(
+            if (insumosActivos) R.drawable.bg_bodega_tab_selected else android.R.color.transparent
+        )
+        binding.btnProveedores.setBackgroundResource(
+            if (!insumosActivos) R.drawable.bg_bodega_tab_selected else android.R.color.transparent
+        )
+        binding.btnInsumos.setTextColor(if (insumosActivos) colorActivo else colorInactivo)
+        binding.btnProveedores.setTextColor(if (!insumosActivos) colorActivo else colorInactivo)
     }
 
     override fun onResume() {
@@ -142,7 +167,7 @@ class BodegaFragment : BaseBottomNavFragment() {
                     }
             }
         } catch (_: Exception) {
-            // El proveedor solo se usa como dato informativo.
+            // El nombre del proveedor es solo informativo.
         }
     }
 

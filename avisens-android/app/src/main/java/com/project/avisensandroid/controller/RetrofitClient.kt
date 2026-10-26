@@ -2,27 +2,38 @@ package com.project.avisensandroid.controller
 
 import android.content.Context
 import com.google.gson.Gson
+import com.project.avisensandroid.BuildConfig
+import com.project.avisensandroid.model.RefreshTokenRequest
 import com.project.avisensandroid.model.RefreshTokenResponse
 import com.project.avisensandroid.model.UserSession
-import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.Route
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
     private const val BASE_URL =
         "https://avisens-project-production.up.railway.app/"
 
+    private val JSON = "application/json; charset=utf-8".toMediaType()
+
     private lateinit var appContext: Context
 
     private val refreshLock = Any()
+
+    private val gson = Gson()
 
     // =========================================================
     // INICIALIZAR
@@ -36,10 +47,33 @@ object RetrofitClient {
     // LOGGING
     // =========================================================
 
-    private val loggingInterceptor =
-        HttpLoggingInterceptor().apply {
+    /**
+     * Solo en compilaciones de depuración (BuildConfig.DEBUG, que Gradle
+     * genera según el buildType). En release no se registra nada.
+     *
+     * Aun en depuración, la cabecera Authorization se oculta y las rutas con
+     * contraseñas o tokens se registran sin cuerpo (ver RegistroHttp).
+     */
+    private fun interceptorDeRegistro(): Interceptor? {
+        if (!BuildConfig.DEBUG) return null
+
+        val conCuerpo = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
+            redactHeader("Authorization")
         }
+        val soloCabeceras = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.HEADERS
+            redactHeader("Authorization")
+        }
+
+        return Interceptor { chain ->
+            if (RegistroHttp.registraCuerpo(chain.request().url.encodedPath)) {
+                conCuerpo.intercept(chain)
+            } else {
+                soloCabeceras.intercept(chain)
+            }
+        }
+    }
 
     // =========================================================
     // AUTENTICACIÓN
@@ -121,30 +155,36 @@ object RetrofitClient {
             val refreshToken = UserSession.refreshToken(appContext)
 
             if (refreshToken.isNullOrBlank()) {
-                UserSession.clear(appContext)
+                SesionExpirada.notificar(appContext)
                 return@Authenticator null
             }
 
-            val nuevosTokens = renovarAccessToken(refreshToken)
+            when (val resultado = renovarAccessToken(refreshToken)) {
+                is ResultadoRenovacion.Renovada -> {
+                    UserSession.updateTokens(
+                        context = appContext,
+                        accessToken = resultado.accessToken,
+                        refreshToken = resultado.refreshToken
+                    )
 
-            if (nuevosTokens == null) {
-                // El refresh también expiró/revocó: la sesión ya no es válida.
-                UserSession.clear(appContext)
-                return@Authenticator null
+                    response.request.newBuilder()
+                        .header(
+                            "Authorization",
+                            "Bearer ${resultado.accessToken}"
+                        )
+                        .build()
+                }
+
+                ResultadoRenovacion.Rechazada -> {
+                    // El refresh también expiró/revocó: la sesión ya no es válida.
+                    SesionExpirada.notificar(appContext)
+                    null
+                }
+
+                // Sin red o servidor caído: se conserva la sesión y esta
+                // petición devuelve su 401; la siguiente vuelve a intentar.
+                ResultadoRenovacion.ErrorTransitorio -> null
             }
-
-            UserSession.updateTokens(
-                context = appContext,
-                accessToken = nuevosTokens.access_token,
-                refreshToken = nuevosTokens.refresh_token
-            )
-
-            response.request.newBuilder()
-                .header(
-                    "Authorization",
-                    "Bearer ${nuevosTokens.access_token}"
-                )
-                .build()
         }
     }
 
@@ -153,40 +193,59 @@ object RetrofitClient {
      * petición de refresh no dispare el Authenticator ni el interceptor de
      * access token.
      *
-     * El backend usa jwt-refresh, por lo que espera el refresh token en:
-     * Authorization: Bearer <refresh_token>
+     * El backend usa jwt-refresh con ExtractJwt.fromBodyField('refresh_token'):
+     * espera {"refresh_token": "..."} en el body, no en Authorization.
      */
-    private fun renovarAccessToken(refreshToken: String): RefreshTokenResponse? {
+    private fun renovarAccessToken(refreshToken: String): ResultadoRenovacion {
         val request = Request.Builder()
             .url("${BASE_URL}v1/auth/refresh")
-            .post(okhttp3.RequestBody.create(null, ByteArray(0)))
-            .header("Authorization", "Bearer $refreshToken")
+            .post(gson.toJson(RefreshTokenRequest(refreshToken)).toRequestBody(JSON))
             .header("Accept", "application/json")
             .build()
 
-        val refreshClient = OkHttpClient.Builder()
-            .build()
-
         return try {
-            refreshClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    return null
+            clienteAutenticacion.newCall(request).execute().use { response ->
+                val cuerpo = if (response.isSuccessful) {
+                    response.body?.string()?.let { texto ->
+                        runCatching {
+                            gson.fromJson(texto, RefreshTokenResponse::class.java)
+                        }.getOrNull()
+                    }
+                } else {
+                    null
                 }
-
-                val body = response.body?.string()
-                    ?: return null
-
-                Gson().fromJson(
-                    body,
-                    RefreshTokenResponse::class.java
-                )
+                RenovacionToken.clasificar(response.code, cuerpo)
             }
         } catch (_: Exception) {
-            null
-        } finally {
-            refreshClient.dispatcher.executorService.shutdown()
-            refreshClient.connectionPool.evictAll()
+            // Red caída, timeout o fallo local: no prueba que la sesión
+            // sea inválida, así que no se borra.
+            ResultadoRenovacion.ErrorTransitorio
         }
+    }
+
+    // =========================================================
+    // CIERRE DE SESIÓN REMOTO
+    // =========================================================
+
+    /**
+     * Revoca la sesión en el backend (POST /v1/auth/logout, 204). Es de mejor
+     * esfuerzo y asíncrono: la sesión local ya se borró antes de llamarlo,
+     * así que un fallo de red no impide cerrar sesión en el teléfono. Si la
+     * petición no llega, el refresh token caduca solo en el servidor.
+     */
+    fun cerrarSesionRemota(refreshToken: String) {
+        val request = Request.Builder()
+            .url("${BASE_URL}v1/auth/logout")
+            .post(gson.toJson(RefreshTokenRequest(refreshToken)).toRequestBody(JSON))
+            .build()
+
+        clienteAutenticacion.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) = Unit
+
+            override fun onResponse(call: Call, response: Response) {
+                response.close()
+            }
+        })
     }
 
     private fun responseCount(response: Response): Int {
@@ -205,11 +264,20 @@ object RetrofitClient {
     // OKHTTP
     // =========================================================
 
+    // Sin interceptores ni Authenticator: refresh y logout nunca se
+    // registran ni disparan otra renovación.
+    private val clienteAutenticacion: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .build()
+    }
+
     private val client =
         OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .authenticator(tokenAuthenticator)
-            .addInterceptor(loggingInterceptor)
+            .apply { interceptorDeRegistro()?.let { addInterceptor(it) } }
             .build()
 
     // =========================================================
