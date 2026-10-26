@@ -103,9 +103,18 @@ class InicioFragment : BaseBottomNavFragment() {
             activity.mostrarAsistenteVoz()
         }
 
-        // Acceso a la Guía de peso del lote seleccionado.
+        // La Guía de peso no está disponible para el rol Operario.
+        binding.btnGuiaPeso.visibility =
+            if (activity.obtenerRolActual() == UserRole.OPERARIO) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
+
         binding.btnGuiaPeso.setOnClickListener {
-            activity.mostrarGuiaPeso()
+            if (activity.obtenerRolActual() != UserRole.OPERARIO) {
+                activity.mostrarGuiaPeso()
+            }
         }
 
         cargarDatosIniciales()
@@ -727,8 +736,10 @@ class InicioFragment : BaseBottomNavFragment() {
         val hayNivelAgua = pintarSensorInicio(VariableSensor.NIVEL_AGUA, mediciones, alertas,
             binding.arcNivelAguaInicio, binding.txtNivelAguaInicio, binding.txtEstadoNivelAguaInicio,
             binding.txtLabelNivelAguaInicio)
-        // El nivel de agua solo aparece si el galpón tiene un HC-SR04 registrado.
-        binding.filaNivelAguaInicio.visibility = if (hayNivelAgua) View.VISIBLE else View.GONE
+        // Mantener la misma estructura visual para todos los propietarios.
+        // Si el galpón no tiene HC-SR04, la tarjeta muestra "No configurado"
+        // en lugar de desaparecer.
+        binding.filaNivelAguaInicio.visibility = View.VISIBLE
     }
 
     /**
@@ -962,7 +973,7 @@ class InicioFragment : BaseBottomNavFragment() {
             binding.txtEstadoPesoInicio,
             binding.txtEstadoNivelAguaInicio
         ).forEach { marcarEstadoSinValor(it, "Sin datos", error = false) }
-        binding.filaNivelAguaInicio.visibility = View.GONE
+        binding.filaNivelAguaInicio.visibility = View.VISIBLE
         binding.txtSensoresSinIdentificarInicio.visibility = View.GONE
         binding.contenedorActuadoresInicio.removeAllViews()
         binding.txtSinActuadoresInicio.visibility = View.GONE

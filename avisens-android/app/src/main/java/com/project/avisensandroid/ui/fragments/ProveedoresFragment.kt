@@ -20,6 +20,7 @@ import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.ItemProveedorBinding
 import com.project.avisensandroid.databinding.Po04BodegaProveedoresOpBinding
 import com.project.avisensandroid.model.ProveedorResponse
+import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.launch
 
@@ -56,12 +57,42 @@ class ProveedoresFragment : BaseBottomNavFragment() {
 
         configurarBottomNav(R.id.nav_bodega)
 
+        val activity = requireActivity() as MainActivity
+
+        // Proveedores es exclusivo de Propietario/Admin. Si se intenta abrir
+        // desde Operario, regresamos a Insumos y evitamos mostrar la barra.
+        if (activity.obtenerRolActual() == UserRole.OPERARIO) {
+            activity.mostrarFragment(BodegaFragment())
+            return
+        }
+
+        binding.tabsBodega.visibility = View.VISIBLE
+        actualizarPestanaActiva(insumosActivos = false)
+
         binding.btnInsumos.setOnClickListener {
-            (requireActivity() as MainActivity)
-                .mostrarFragment(BodegaFragment())
+            activity.mostrarFragment(BodegaFragment())
+        }
+
+        binding.btnProveedores.setOnClickListener {
+            actualizarPestanaActiva(insumosActivos = false)
         }
 
         cargarProveedores()
+    }
+
+
+    private fun actualizarPestanaActiva(insumosActivos: Boolean) {
+        val colorActivo = Color.parseColor("#2E7D5B")
+        val colorInactivo = Color.parseColor("#89938E")
+
+        binding.btnInsumos.setBackgroundResource(
+            if (insumosActivos) R.drawable.bg_bodega_tab_selected else android.R.color.transparent
+        )
+        binding.btnProveedores.setBackgroundResource(
+            if (!insumosActivos) R.drawable.bg_bodega_tab_selected else android.R.color.transparent
+        )
+        binding.btnInsumos.setTextColor(if (insumosActivos) colorActivo else colorInactivo)
+        binding.btnProveedores.setTextColor(if (!insumosActivos) colorActivo else colorInactivo)
     }
 
     private fun cargarProveedores() {
@@ -93,6 +124,7 @@ class ProveedoresFragment : BaseBottomNavFragment() {
                 }
             } catch (e: Exception) {
                 if (!isAdded || _binding == null) return@launch
+
                 mostrarError(
                     "Error de conexión al cargar proveedores"
                 )
@@ -139,9 +171,11 @@ class ProveedoresFragment : BaseBottomNavFragment() {
             proveedor.tipo_proveedor
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() },
+
             proveedor.email
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() },
+
             proveedor.direccion
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() }
@@ -157,42 +191,59 @@ class ProveedoresFragment : BaseBottomNavFragment() {
         if (proveedor.activo) {
             itemBinding.txtEstadoProveedor.text =
                 "● Activo"
+
             itemBinding.txtEstadoProveedor.setTextColor(
                 Color.parseColor("#18875A")
             )
+
             itemBinding.txtEstadoProveedor.setBackgroundResource(
                 R.drawable.bg_provider_excellent
             )
         } else {
             itemBinding.txtEstadoProveedor.text =
                 "● Inactivo"
+
             itemBinding.txtEstadoProveedor.setTextColor(
                 Color.parseColor("#C93B32")
             )
+
             itemBinding.txtEstadoProveedor.setBackgroundResource(
                 R.drawable.bg_bodega_critico
             )
         }
 
-        configurarCalificacion(itemBinding, proveedor.id)
-        configurarAccionesContacto(itemBinding, proveedor)
+        configurarCalificacion(
+            itemBinding,
+            proveedor.id
+        )
+
+        configurarAccionesContacto(
+            itemBinding,
+            proveedor
+        )
 
         binding.contenedorProveedores.addView(
             itemBinding.root
         )
     }
 
-
-
     private fun configurarAccionesContacto(
         itemBinding: ItemProveedorBinding,
         proveedor: ProveedorResponse
     ) {
-        val telefono = proveedor.telefono?.trim().orEmpty()
-        val direccion = proveedor.direccion?.trim().orEmpty()
+        val telefono = proveedor.telefono
+            ?.trim()
+            .orEmpty()
 
-        itemBinding.btnLlamarProveedor.isEnabled = telefono.isNotBlank()
-        itemBinding.btnVerDireccionProveedor.isEnabled = direccion.isNotBlank()
+        val direccion = proveedor.direccion
+            ?.trim()
+            .orEmpty()
+
+        itemBinding.btnLlamarProveedor.isEnabled =
+            telefono.isNotBlank()
+
+        itemBinding.btnVerDireccionProveedor.isEnabled =
+            direccion.isNotBlank()
 
         itemBinding.btnLlamarProveedor.setOnClickListener {
             if (telefono.isBlank()) {
@@ -201,14 +252,21 @@ class ProveedoresFragment : BaseBottomNavFragment() {
                     "Este proveedor no tiene teléfono registrado",
                     Toast.LENGTH_SHORT
                 ).show()
+
                 return@setOnClickListener
             }
 
             try {
-                val intent = Intent(Intent.ACTION_DIAL).apply {
-                    data = Uri.parse("tel:${Uri.encode(telefono)}")
+                val intent = Intent(
+                    Intent.ACTION_DIAL
+                ).apply {
+                    data = Uri.parse(
+                        "tel:${Uri.encode(telefono)}"
+                    )
                 }
+
                 startActivity(intent)
+
             } catch (_: ActivityNotFoundException) {
                 Toast.makeText(
                     requireContext(),
@@ -225,13 +283,22 @@ class ProveedoresFragment : BaseBottomNavFragment() {
                     "Este proveedor no tiene dirección registrada",
                     Toast.LENGTH_SHORT
                 ).show()
+
                 return@setOnClickListener
             }
 
             try {
-                val uri = Uri.parse("geo:0,0?q=${Uri.encode(direccion)}")
-                val intent = Intent(Intent.ACTION_VIEW, uri)
+                val uri = Uri.parse(
+                    "geo:0,0?q=${Uri.encode(direccion)}"
+                )
+
+                val intent = Intent(
+                    Intent.ACTION_VIEW,
+                    uri
+                )
+
                 startActivity(intent)
+
             } catch (_: ActivityNotFoundException) {
                 Toast.makeText(
                     requireContext(),
@@ -246,18 +313,31 @@ class ProveedoresFragment : BaseBottomNavFragment() {
         itemBinding: ItemProveedorBinding,
         proveedorId: Int
     ) {
-        val contenedor = itemBinding.contenedorEstrellasProveedor
+        val contenedor =
+            itemBinding.contenedorEstrellasProveedor
+
         contenedor.removeAllViews()
 
-        val puntuacionGuardada = calificacionesPrefs.getInt(
-            "proveedor_$proveedorId",
-            0
-        )
+        val puntuacionGuardada =
+            calificacionesPrefs.getInt(
+                "proveedor_$proveedorId",
+                0
+            )
 
-        fun actualizarEstrellas(puntuacion: Int) {
+        fun actualizarEstrellas(
+            puntuacion: Int
+        ) {
             for (i in 0 until contenedor.childCount) {
-                val estrella = contenedor.getChildAt(i) as TextView
-                estrella.text = if (i < puntuacion) "★" else "☆"
+                val estrella =
+                    contenedor.getChildAt(i) as TextView
+
+                estrella.text =
+                    if (i < puntuacion) {
+                        "★"
+                    } else {
+                        "☆"
+                    }
+
                 estrella.setTextColor(
                     if (i < puntuacion) {
                         Color.parseColor("#E3A629")
@@ -266,6 +346,7 @@ class ProveedoresFragment : BaseBottomNavFragment() {
                     }
                 )
             }
+
             itemBinding.txtCalificacionProveedor.text =
                 if (puntuacion > 0) {
                     "Tu calificación: $puntuacion/5"
@@ -275,60 +356,99 @@ class ProveedoresFragment : BaseBottomNavFragment() {
         }
 
         for (i in 1..5) {
-            val estrella = TextView(requireContext()).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    dp(25),
-                    dp(30)
-                )
-                gravity = Gravity.CENTER
-                textSize = 20f
-                text = if (i <= puntuacionGuardada) "★" else "☆"
-                setTextColor(
-                    if (i <= puntuacionGuardada) {
-                        Color.parseColor("#E3A629")
-                    } else {
-                        Color.parseColor("#B8C1BC")
-                    }
-                )
-                isClickable = true
-                isFocusable = true
+            val estrella =
+                TextView(requireContext()).apply {
 
-                setOnClickListener {
-                    calificacionesPrefs.edit()
-                        .putInt("proveedor_$proveedorId", i)
-                        .apply()
-                    actualizarEstrellas(i)
-                    Toast.makeText(
-                        requireContext(),
-                        "Calificación guardada",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    layoutParams =
+                        LinearLayout.LayoutParams(
+                            dp(25),
+                            dp(30)
+                        )
+
+                    gravity = Gravity.CENTER
+
+                    textSize = 20f
+
+                    text =
+                        if (i <= puntuacionGuardada) {
+                            "★"
+                        } else {
+                            "☆"
+                        }
+
+                    setTextColor(
+                        if (i <= puntuacionGuardada) {
+                            Color.parseColor("#E3A629")
+                        } else {
+                            Color.parseColor("#B8C1BC")
+                        }
+                    )
+
+                    isClickable = true
+                    isFocusable = true
+
+                    setOnClickListener {
+                        calificacionesPrefs
+                            .edit()
+                            .putInt(
+                                "proveedor_$proveedorId",
+                                i
+                            )
+                            .apply()
+
+                        actualizarEstrellas(i)
+
+                        Toast.makeText(
+                            requireContext(),
+                            "Calificación guardada",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
-            }
+
             contenedor.addView(estrella)
         }
 
-        actualizarEstrellas(puntuacionGuardada)
+        actualizarEstrellas(
+            puntuacionGuardada
+        )
     }
 
     private fun mostrarMensajeSinProveedores() {
-        val mensaje = android.widget.TextView(requireContext()).apply {
-            text = "Aún no hay proveedores registrados"
-            setTextColor(
-                ContextCompat.getColor(
-                    requireContext(),
-                    R.color.text_secondary
-                )
-            )
-            textSize = 13f
-            setPadding(dp(4), dp(18), dp(4), dp(18))
-        }
+        val mensaje =
+            TextView(requireContext()).apply {
 
-        binding.contenedorProveedores.addView(mensaje)
+                text =
+                    "Aún no hay proveedores registrados"
+
+                setTextColor(
+                    ContextCompat.getColor(
+                        requireContext(),
+                        R.color.text_secondary
+                    )
+                )
+
+                textSize = 13f
+
+                setPadding(
+                    dp(4),
+                    dp(18),
+                    dp(4),
+                    dp(18)
+                )
+            }
+
+        binding.contenedorProveedores.addView(
+            mensaje
+        )
     }
 
-    private fun mostrarError(mensaje: String) {
-        if (!isAdded || _binding == null) return
+    private fun mostrarError(
+        mensaje: String
+    ) {
+        if (!isAdded || _binding == null) {
+            return
+        }
 
         Toast.makeText(
             requireContext(),
@@ -339,8 +459,13 @@ class ProveedoresFragment : BaseBottomNavFragment() {
         mostrarMensajeSinProveedores()
     }
 
-    private fun dp(value: Int): Int =
-        (value * resources.displayMetrics.density).toInt()
+    private fun dp(
+        value: Int
+    ): Int =
+        (
+                value *
+                        resources.displayMetrics.density
+                ).toInt()
 
     override fun onDestroyView() {
         super.onDestroyView()
