@@ -5,6 +5,7 @@ import { IcClose, IcEye, IcRefresh } from '@shared/ui/icons/icons'
 import { iconoSensor } from '@shared/ui/sensorIcon'
 import { useFocoAtrapado } from '@shared/ui/Modal/useFocoAtrapado'
 import { SensorDetail } from '@features/monitoreo/SensorDetail'
+import { CamaraGalpon } from '@features/monitoreo/CamaraGalpon'
 import {
   AYUDA_SALIDA_REPORTADA,
   estaEncendido,
@@ -203,6 +204,9 @@ function MonitoreoGranja({ granjaId, granjaNombre, onCerrar }: Props) {
                   </motion.ul>
                 </AnimatePresence>
               )}
+
+              {/* Cámara del galpón: solo aparece si el galpón tiene ESP32-CAM. */}
+              <CamaraGalpon key={galpon.id} galponId={galpon.id} />
             </>
           )}
         </div>

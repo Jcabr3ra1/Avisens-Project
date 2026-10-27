@@ -21,6 +21,7 @@ import { iconoSensor } from '@shared/ui/sensorIcon'
 import { semanaDeVida } from '@shared/utils/fechas'
 import { SensorDetail } from './SensorDetail'
 import { LecturasEnVivo } from './LecturasEnVivo'
+import { CamaraGalpon } from './CamaraGalpon'
 import { ControlActuadores } from './components/ControlActuadores'
 import { esReleControlable } from './model/actuadores'
 import AsignarSensores from './AsignarSensores'
@@ -200,6 +201,9 @@ function MonitoreoPage() {
               onOrdenFinalizada={() => { void recargar() }}
             />
           )}
+
+          {/* ── Cámara del galpón (ESP32-CAM + detección de pollos) ────────── */}
+          <CamaraGalpon key={galpon.id} galponId={galpon.id} />
 
           {/* ── Lecturas en vivo (gráficas + últimas lecturas) ──────────────── */}
           {galpon.sensores.length > 0 && (
