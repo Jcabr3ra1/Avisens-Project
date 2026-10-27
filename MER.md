@@ -341,6 +341,9 @@ galpones [icon: package, color: green] {
 // Regla de coherencia (validada en backend): el dispositivo del sensor debe
 // pertenecer al mismo galpón que el sensor.
 // Identidad física opcional: UNIQUE(dispositivo_id, tipo, canal).
+// canal = "gpio:<n>" (DHT22) o "rele:k1".."rele:k4" (relés K1-K4). Para los
+// relés, índice único parcial (dispositivo_id, canal) WHERE canal LIKE 'rele:%':
+// un solo relé por canal y ESP32, sin importar su nombre (tipo).
 // Los registros anteriores mantienen canal nulo hasta vincular su cableado.
 sensores [icon: thermometer, color: green] {
   id integer pk

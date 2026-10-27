@@ -294,7 +294,8 @@ model Sensor {
   zona_id             Int?
   codigo              String       @unique
   tipo                String
-  // Identidad física dentro del controlador; null conserva el contrato legacy.
+  // Identidad física dentro del controlador: "gpio:<n>" (DHT22) o
+  // "rele:k1".."rele:k4" (relés). null conserva el contrato legacy por código.
   canal               String?
   unidad_medida       String
   modelo              String?
@@ -319,6 +320,10 @@ model Sensor {
   @@index([galpon_id])
   @@index([dispositivo_id])
   @@unique([dispositivo_id, tipo, canal])
+  // Además, en la migración (SQL manual, partialIndexes sigue en preview):
+  // índice único parcial "sensores_rele_canal_unico" sobre (dispositivo_id,
+  // canal) para canal LIKE 'rele:%' -- un solo relé por canal en cada ESP32,
+  // sin importar su nombre (tipo).
   @@map("sensores")
 }
 
@@ -1286,8 +1291,9 @@ model OrdenActuador {
   id              Int                 @id @default(autoincrement())
   dispositivo_id  Int
   galpon_id       Int
-  // El sensor de estado del relé (REL-K*): su código es el que conoce el
-  // firmware, igual que en la ingesta.
+  // El sensor de estado del relé. Al entregarla, el backend la dirige al
+  // canal del sensor ("rele:k1".."rele:k4") y, por compatibilidad, también
+  // manda su código (firmware anterior).
   sensor_id       Int
   accion          AccionOrdenActuador
   estado          EstadoOrdenActuador @default(pendiente)

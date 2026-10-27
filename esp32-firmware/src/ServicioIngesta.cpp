@@ -55,6 +55,13 @@ static String lecturaJson(const char *codigo, const String &valor, const char *c
   return json + "},";
 }
 
+// Relé K1-K4 identificado por canal dentro de este ESP32: el backend lo
+// resuelve con el token del dispositivo, sin códigos compilados en config.h.
+static String lecturaReleJson(uint8_t indice, bool encendido) {
+  return "{\"tipo\":\"rele\",\"canal\":\"" + String(canalDeRele(indice)) +
+         "\",\"valor\":" + String(encendido ? 1 : 0) + "},";
+}
+
 static const char *textoResultado(ResultadoRemoto resultado) {
   switch (resultado) {
     case ResultadoRemoto::APLICADA: return "aplicada";
@@ -75,7 +82,7 @@ static const char *textoModo(ModoRele modo) {
 // hay AHORA en cada relé: con él la web muestra el estado actual y el
 // backend reconcilia las órdenes que el ESP32 ya no sostiene. Antes del
 // primer ciclo de tareaGalpon no hay nada cierto que informar y se omite.
-static String ordenesJson(const CicloIngesta &ciclo, const char *const codigosReles[4]) {
+static String ordenesJson(const CicloIngesta &ciclo) {
   String json = ",\"resultados_ordenes\":[";
   for (uint8_t i = 0; i < ciclo.cantidadResultados; i++) {
     const ResultadoOrdenRemota &r = ciclo.resultados[i];
@@ -94,7 +101,7 @@ static String ordenesJson(const CicloIngesta &ciclo, const char *const codigosRe
   json += ",\"estados_reles\":[";
   for (uint8_t i = 0; i < 4; i++) {
     if (i > 0) json += ",";
-    json += "{\"codigo\":\"" + String(codigosReles[i]) + "\"" +
+    json += "{\"canal\":\"" + String(canalDeRele(i)) + "\"" +
             ",\"modo\":\"" + textoModo(ciclo.reles.modo[i]) + "\"" +
             ",\"encendido\":" + (ciclo.reles.encendido[i] ? "true" : "false");
     if (ciclo.reles.modo[i] == ModoRele::MANUAL_REMOTO) {
@@ -109,13 +116,20 @@ static void leerOrdenes(JsonVariant campoOrdenes, RespuestaIngesta &respuesta) {
   if (!campoOrdenes.is<JsonArray>()) return;
   for (JsonVariant o : campoOrdenes.as<JsonArray>()) {
     if (respuesta.cantidadOrdenes >= MAX_ORDENES_POR_RESPUESTA) break;
-    if (!o["id"].is<uint32_t>() || !o["codigo"].is<const char *>() ||
-        !o["accion"].is<const char *>()) {
+    if (!o["id"].is<uint32_t>() || !o["accion"].is<const char *>()) {
       continue;  // forma inesperada: se ignora, el backend la repetirá o expirará
     }
     OrdenRecibida &destino = respuesta.ordenes[respuesta.cantidadOrdenes++];
     destino.id = o["id"].as<uint32_t>();
-    strlcpy(destino.codigo, o["codigo"].as<const char *>(), sizeof(destino.codigo));
+    // El relé se identifica por canal ("rele:k1".."rele:k4"). Una orden sin
+    // canal (relé antiguo que aún no se registró por canal en la web) sigue
+    // adelante con el canal vacío: ControlRemoto la rechaza con un motivo
+    // claro en vez de dejarla expirar en silencio. "codigo" se ignora: es
+    // solo para el firmware anterior.
+    destino.canal[0] = '\0';
+    if (o["canal"].is<const char *>()) {
+      strlcpy(destino.canal, o["canal"].as<const char *>(), sizeof(destino.canal));
+    }
     strlcpy(destino.accion, o["accion"].as<const char *>(), sizeof(destino.accion));
   }
 }
@@ -169,11 +183,10 @@ static String armarLecturas(const CicloIngesta &ciclo, int &enviadas) {
     enviadas += 1;
   }
   const EstadoActuadores &a = ciclo.actuadores;
-  const char *CODIGOS_RELES[4] = {CODIGO_RELE_K1, CODIGO_RELE_K2, CODIGO_RELE_K3, CODIGO_RELE_K4};
   lecturas += lecturaJson(CODIGO_MOTOR_ALIMENTADOR, String(a.alimentador ? 1 : 0));
   lecturas += lecturaJson(CODIGO_MOTOR_PERSIANA, String(a.persiana ? 1 : 0));
-  for (int i = 0; i < 4; i++) {
-    lecturas += lecturaJson(CODIGOS_RELES[i], String(a.reles[i] ? 1 : 0));
+  for (uint8_t i = 0; i < 4; i++) {
+    lecturas += lecturaReleJson(i, a.reles[i]);
   }
   enviadas += 6;
   lecturas.remove(lecturas.length() - 1);  // coma final
@@ -293,13 +306,12 @@ static bool enviarPrincipal(const CicloIngesta &ciclo, const String &idLote,
   salida.contratoValido = false;
   salida.cantidadOrdenes = 0;
   agotado = false;
-  const char *CODIGOS_RELES[4] = {CODIGO_RELE_K1, CODIGO_RELE_K2, CODIGO_RELE_K3, CODIGO_RELE_K4};
 
   String arranque = ciclo.arranqueId != nullptr && ciclo.arranqueId[0] != '\0'
                         ? ",\"arranque_id\":\"" + String(ciclo.arranqueId) + "\""
                         : String();
   String body = "{\"id_lote\":\"" + idLote + "\"" + fechaJson(epoch) + arranque + ",\"lecturas\":[" + lecturas + "]" +
-                ordenesJson(ciclo, CODIGOS_RELES) + "}";
+                ordenesJson(ciclo) + "}";
 
   // URL y token salen de la configuración del portal (o de config.h): así
   // se apunta al backend desplegado sin recompilar.
@@ -396,7 +408,8 @@ static bool enviarPrincipal(const CicloIngesta &ciclo, const String &idLote,
       // Reintentar no arregla un codigo mal configurado -- se abandona
       // sin gastar los reintentos que quedan.
       LOG_ERROR("Ingesta: el backend no registro todas las lecturas (revisar "
-                "CODIGO_SENSOR_* / CODIGO_MOTOR_* en config.h vs sensores registrados)");
+                "CODIGO_SENSOR_* / CODIGO_MOTOR_* en config.h vs sensores registrados, "
+                "y que los reles K1-K4 esten registrados por canal en la web)");
       return false;
     }
 

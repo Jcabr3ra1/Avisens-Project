@@ -46,7 +46,7 @@ export class CreateSensorDto {
     example: 'gpio:18',
     nullable: true,
     description:
-      'Conexión física estable dentro del ESP32; null conserva ingesta por código',
+      'Conexión física estable dentro del ESP32: gpio:<n> para un DHT22 o rele:k1..rele:k4 para un relé; null conserva ingesta por código',
   })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,
@@ -54,7 +54,7 @@ export class CreateSensorDto {
   @IsOptional()
   @IsString()
   @MaxLength(64)
-  @Matches(/^gpio:(0|[1-9]\d*)$/)
+  @Matches(/^(gpio:(0|[1-9]\d*)|rele:k[1-4])$/)
   canal?: string | null;
 
   @ApiPropertyOptional({

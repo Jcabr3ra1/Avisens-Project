@@ -19,6 +19,7 @@ import ListaGalpones from './ListaGalpones'
 import ResumenPestana from './pestanas/ResumenPestana'
 import LotePestana from './pestanas/LotePestana'
 import AmbientePestana from './pestanas/AmbientePestana'
+import { ActuadoresGalpon } from '@features/monitoreo/components/ActuadoresGalpon'
 import DatosPestana from './pestanas/DatosPestana'
 import BitacoraPestana from './pestanas/BitacoraPestana'
 import '@shared/ui/admin/AdminKit.css'
@@ -30,7 +31,9 @@ const EscenaOrganizacion = lazy(() => import('@features/organizaciones/component
 const cargarAlertas = () => import('@features/alertas/AlertasPage')
 const AlertasPage = lazy(cargarAlertas)
 
-const PESTANAS = ['resumen', 'lote', 'bitacora', 'ambiente', 'alertas', 'datos'] as const
+// Ambiente (sensores) y Actuadores (relés K1-K4) son el monitoreo del
+// galpón: van juntos y en ese orden.
+const PESTANAS = ['resumen', 'lote', 'bitacora', 'ambiente', 'actuadores', 'alertas', 'datos'] as const
 type Pestana = (typeof PESTANAS)[number]
 
 function pestanaDe(valor: string | null): Pestana {
@@ -127,6 +130,7 @@ function GranjasPropietario() {
       setVistaBitacora(ruta.includes('vista=peso') ? 'peso' : 'resumen')
       setPestana('bitacora')
     } else if (ruta.startsWith('/alertas')) setPestana('alertas')
+    else if (ruta.startsWith('/monitoreo/actuadores')) setPestana('actuadores')
     else if (ruta.startsWith('/monitoreo')) setPestana('ambiente')
     else navigate(ruta)
   }
@@ -289,6 +293,7 @@ function GranjasPropietario() {
                 <Tabs.Trigger value="lote" className="gp-pestana">Lote</Tabs.Trigger>
                 <Tabs.Trigger value="bitacora" className="gp-pestana">Bitácora</Tabs.Trigger>
                 <Tabs.Trigger value="ambiente" className="gp-pestana">Ambiente</Tabs.Trigger>
+                <Tabs.Trigger value="actuadores" className="gp-pestana">Actuadores</Tabs.Trigger>
                 <Tabs.Trigger value="alertas" className="gp-pestana">
                   Alertas
                   {galpon.alertasAbiertas > 0 && <span className="gp-pestana-conteo">{galpon.alertasAbiertas}</span>}
@@ -324,6 +329,9 @@ function GranjasPropietario() {
                   revision={revision}
                   onCompletarUbicacion={puedeCompletarDatos(getRol()) ? () => setDatos({ tipo: 'granja', granja }) : undefined}
                 />
+              </Tabs.Content>
+              <Tabs.Content value="actuadores" className="gp-contenido">
+                <ActuadoresGalpon galponId={galpon.id} sensores={galpon.sensores} onCambio={() => { void recargarTodo() }} />
               </Tabs.Content>
               <Tabs.Content value="alertas" className="gp-contenido">
                 <Suspense fallback={<CargandoPestana />}>

@@ -8,6 +8,23 @@ el ESP32 la confirma en el `/ingest` siguiente. El código vive en
 
 Motores (persiana, alimentador) y puerta no tienen control remoto.
 
+## Identidad del relé: canal, no código
+
+Cada relé se identifica por su canal dentro del ESP32 autenticado:
+`rele:k1`…`rele:k4` (`canalDeRele()` en `ControlRemoto.h`). El firmware ya no
+necesita `CODIGO_RELE_*` en `config.h`.
+
+- El ESP32 envía `estados_reles` y las lecturas de K1-K4 con `canal`.
+- El backend entrega cada orden con `canal` (y `codigo`, solo para el
+  firmware anterior). El canal sale del sensor registrado en ese ESP32 en el
+  momento de entregar: si alguien movió el relé a otro ESP32, la orden no se
+  entrega a ninguno y expira.
+- Una orden sin `canal` o con un canal desconocido se rechaza con motivo; no
+  se adivina el relé.
+- En la web, «Registrar relés» crea los que falten y asocia los registros
+  `REL-K<n>-…` antiguos solo si no hay ambigüedad. Ver `README.md` →
+  «Relés K1-K4 por canal».
+
 ## Salida ordenada, no estado físico
 
 Lo que el ESP32 informa de cada relé (`estados_reles.encendido`,
@@ -118,5 +135,26 @@ fail-safe.
 - `test/test_reglas_control_remoto`: reglas de AUTORIZAR y SOSTENER.
   - En el computador: `pio test -e native` (necesita gcc/clang).
   - En la placa: `pio test -e esp32dev`.
-- Backend: `ordenes-actuadores.service.spec.ts` (incluye sesión de arranque)
+- Backend: `ordenes-actuadores.service.spec.ts` (incluye sesión de arranque
+  y relés por canal), `sensores/registro-reles.spec.ts` (registro idempotente)
   y `test/ordenes-actuadores-concurrencia.e2e-spec.ts` (necesita Postgres).
+
+## Prueba física pendiente (relés por canal)
+
+No se ha flasheado este cambio. En banco, con el backend actualizado:
+
+1. Con el firmware anterior aún puesto, pulsar «Registrar relés» para el
+   ESP32: los REL-K existentes deben quedar «asociados» (mismo id) y el
+   monitoreo debe seguir recibiendo K1-K4 por código.
+2. Flashear el firmware nuevo. En el monitor serie no debe aparecer «el
+   backend no registro todas las lecturas»; en la web, cada relé debe
+   mostrar su estado reportado (< 30 s).
+3. Desde Monitoreo → Actuadores, encender y apagar cada relé y comprobar con
+   un multímetro o la carga que conmuta **el relé físico correcto** (K1 pin
+   32, K2 pin 25, K3 pin 27, K4 pin 14).
+4. Repetir con las protecciones: K1 con calor, K4 con tanque lleno, DHT22
+   desconectado; la orden debe quedar «rechazada» con motivo.
+5. Cortar el WiFi con un relé en manual remoto: a los 60 s debe volver solo
+   a automático.
+6. Con dos ESP32 en el mismo galpón (o en dos galpones), registrar los relés
+   de ambos y comprobar que una orden a K2 de uno no mueve el K2 del otro.

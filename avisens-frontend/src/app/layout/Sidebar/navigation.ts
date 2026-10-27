@@ -30,6 +30,8 @@ export const LINK_DETAILS: Record<string, { description: string; descriptionAdmi
   '/guia-crecimiento': { description: 'El crecimiento de cada lote', keywords: ['peso', 'plan', 'curva', 'alimento'] },
   '/bitacora': { description: 'Lo que sucede en el galpón', keywords: ['pesajes', 'consumos', 'mortalidad', 'registro', 'sanidad'] },
   '/monitoreo': { description: 'El ambiente de tus galpones', keywords: ['temperatura', 'humedad', 'sensores', 'mediciones'] },
+  '/monitoreo/sensores': { description: 'Mediciones y estado de los sensores', keywords: ['monitoreo', 'temperatura', 'humedad', 'sensores', 'mediciones'] },
+  '/monitoreo/actuadores': { description: 'Relés K1-K4: estado y control', keywords: ['monitoreo', 'actuadores', 'reles', 'ventiladores', 'calefaccion', 'extractores', 'bomba', 'encender', 'apagar'] },
   '/alertas': { description: 'Lo que necesita tu atención', keywords: ['riesgos', 'avisos'] },
   '/inventario': { description: 'Insumos y movimientos', keywords: ['inventario', 'stock', 'alimento'] },
   '/ordenes-compra': { description: 'Pedidos y abastecimiento', keywords: ['ordenes', 'compras'] },

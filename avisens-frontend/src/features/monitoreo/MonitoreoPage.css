@@ -11,6 +11,44 @@
 .mon-badge--advertencia { background: var(--warning-soft); color: var(--warning3); }
 .mon-badge--optimo      { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--green-dd); }
 
+/* ─── Secciones de Monitoreo: Sensores · Actuadores ───────────────────────── */
+.mon-secciones {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  padding: 0.25rem;
+  border: 1px solid var(--color-borde);
+  border-radius: 12px;
+  background: var(--color-superficie-secundaria);
+  max-width: 100%;
+}
+.mon-seccion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 1.1rem;
+  border-radius: 9px;
+  color: var(--text2);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.mon-seccion:hover { color: var(--green-dd); }
+.mon-seccion:focus-visible { outline: 3px solid var(--color-foco); outline-offset: 2px; }
+.mon-seccion--activa {
+  background: var(--color-superficie);
+  color: var(--green-dd);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+.mon-ir-actuadores { margin: 0 0 1rem; color: var(--text2); font-size: 0.85rem; }
+.mon-ir-actuadores a { color: var(--green-dd); font-weight: 700; }
+
+@media (max-width: 480px) {
+  .mon-secciones { display: flex; }
+  .mon-seccion { flex: 1 1 0; }
+}
+
 /* ─── Selector de galpones ───────────────────────────────────────────────── */
 .mon-selector { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .mon-tab {

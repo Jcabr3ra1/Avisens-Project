@@ -9,9 +9,14 @@
 //   pnpm run seed:sensores-esp32 galpon2    → otro codigo_topic
 //
 // Es idempotente: un sensor cuyo código ya existe se deja como está.
+//
+// Los relés K1-K4 no van por código: se registran por canal (rele:k1..k4)
+// con la misma lógica que el botón «Registrar relés» de la web, que además
+// asocia sin riesgo los REL-K antiguos de este ESP32.
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
+import { registrarRelesDispositivo } from '../../src/modules/sensores/registro-reles';
 
 const adapter = new PrismaPg({
   connectionString: process.env['DATABASE_URL']!,
@@ -25,8 +30,8 @@ type SensorFirmware = {
   modelo: string;
 };
 
-// Mismos códigos que CODIGO_SENSOR_* / CODIGO_MOTOR_* / CODIGO_RELE_* del
-// firmware. Los de unidad "estado" reportan 1 (encendido) o 0 (apagado).
+// Mismos códigos que CODIGO_SENSOR_* / CODIGO_MOTOR_* del firmware. Los de
+// unidad "estado" reportan 1 (encendido) o 0 (apagado).
 const SENSORES_FIRMWARE: SensorFirmware[] = [
   {
     codigo: 'TEMP-G1-01',
@@ -68,30 +73,6 @@ const SENSORES_FIRMWARE: SensorFirmware[] = [
     tipo: 'Motor persiana',
     unidad_medida: 'estado',
     modelo: 'L293D canal A',
-  },
-  {
-    codigo: 'REL-K1-G1-01',
-    tipo: 'Bombillos calefacción (K1)',
-    unidad_medida: 'estado',
-    modelo: 'Relé K1',
-  },
-  {
-    codigo: 'REL-K2-G1-01',
-    tipo: 'Ventiladores (K2)',
-    unidad_medida: 'estado',
-    modelo: 'Relé K2',
-  },
-  {
-    codigo: 'REL-K3-G1-01',
-    tipo: 'Extractores (K3)',
-    unidad_medida: 'estado',
-    modelo: 'Relé K3',
-  },
-  {
-    codigo: 'REL-K4-G1-01',
-    tipo: 'Bomba de agua (K4)',
-    unidad_medida: 'estado',
-    modelo: 'Relé K4',
   },
 ];
 
@@ -138,6 +119,15 @@ async function main() {
     `Sensores del ESP32 para "${dispositivo.nombre}": ${creados} creados, ` +
       `${SENSORES_FIRMWARE.length - creados} ya existían`,
   );
+
+  const reles = await registrarRelesDispositivo(prisma, dispositivo);
+  for (const r of reles) {
+    console.log(
+      `  ${r.canal} (${r.nombre}): ${r.resultado}` +
+        (r.codigo ? ` · ${r.codigo}` : '') +
+        (r.motivo ? ` · ${r.motivo}` : ''),
+    );
+  }
 }
 
 main()

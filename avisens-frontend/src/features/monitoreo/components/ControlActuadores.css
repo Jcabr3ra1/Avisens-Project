@@ -1,5 +1,8 @@
-/* Una tarjeta por relé. En el móvil quedan una debajo de otra y los botones
-   ocupan todo el ancho, con el alto táctil de .adm-btn (44 px). */
+/* Una tarjeta por relé. En el móvil quedan una debajo de otra; los tres
+   botones siguen en una fila (ícono arriba, texto abajo, para que
+   "Automático" quepa sin cortarse), con el alto táctil de .adm-btn (44 px).
+   Solo variables de la paleta oficial (shared/styles/index.css): así el tema
+   oscuro se aplica solo. */
 .ctl-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
@@ -8,23 +11,120 @@
 
 .ctl-card { display: flex; flex-direction: column; gap: 0.7rem; padding: 1rem; min-width: 0; }
 .ctl-cabecera { display: flex; align-items: center; gap: 0.6rem; }
-.ctl-icono { font-size: 1.3rem; line-height: 1; }
+.ctl-icono {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 2.25rem; height: 2.25rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
+  color: var(--primary);
+}
 .ctl-nombre { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .ctl-nombre strong { font-size: 0.9rem; color: var(--dash-ink); overflow-wrap: anywhere; }
 .ctl-nombre small { font-size: 0.72rem; color: var(--text3); }
 
 .ctl-estado { margin: 0; font-size: 1.1rem; }
+.ctl-sin-dato { color: var(--text-disabled); font-weight: 600; }
 
-.ctl-acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.ctl-acciones .adm-btn { flex: 1 1 auto; justify-content: center; }
+/* ─── Modo que informó el ESP32 ───────────────────────────────────────── */
+/* El tamaño y la forma salen de .mon-estado-badge; aquí solo el color. */
+.ctl-modo { flex-shrink: 0; border: 1px solid transparent; }
+.ctl-modo--automatico   { background: var(--success-soft); border-color: var(--success-border); color: var(--success); }
+.ctl-modo--manual_remoto { background: var(--warning-soft); border-color: var(--warning-border); color: var(--warning3); }
+/* Manual local: mismo tono que el manual web, solo con borde (no hay un
+   segundo tono de advertencia en la paleta). */
+.ctl-modo--manual_local { background: transparent; border-color: var(--warning-border); color: var(--warning3); }
+/* Sin dato reciente: distinto de Automático, con borde discontinuo. */
+.ctl-modo--desconocido  { background: transparent; border: 1px dashed var(--border-strong); color: var(--text-muted); }
 
+/* ─── Botones ──────────────────────────────────────────────────────────── */
+/* Activo (aria-pressed) = lo que informó el ESP32, no lo que se pulsó. */
+.ctl-acciones {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+.adm-btn.ctl-opcion {
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.45rem 0.25rem;
+  border-color: var(--border-default);
+  background: var(--card);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.adm-btn.ctl-opcion svg { flex-shrink: 0; }
+
+/* El activo conserva su color al pasar el puntero. */
+.adm-btn.ctl-opcion:not([aria-pressed='true']):hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface-tinted);
+  color: var(--primary);
+}
+
+.adm-btn.ctl-opcion--encender[aria-pressed='true'] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.adm-btn.ctl-opcion--apagar[aria-pressed='true'] {
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.adm-btn.ctl-opcion--automatico[aria-pressed='true'] {
+  border-color: var(--success-border);
+  background: var(--success-soft);
+  color: var(--success);
+}
+.adm-btn.ctl-opcion[aria-pressed='true'] { font-weight: 700; }
+
+/* Pedida y esperando al ESP32: los mismos tonos que el mensaje "pendiente". */
+.adm-btn.ctl-opcion--solicitada {
+  border-style: dashed;
+  border-color: var(--info-border);
+  background: var(--info-soft);
+  color: var(--info3);
+}
+
+/* Bloqueados (orden en curso o sin dato vigente) se atenúan como todo
+   .adm-btn; el activo y el pedido siguen legibles para que se vea en qué
+   está el relé y qué se pidió. */
+.adm-btn.ctl-opcion[aria-pressed='true']:disabled,
+.adm-btn.ctl-opcion--solicitada:disabled { opacity: 1; }
+
+/* ─── Mensajes ─────────────────────────────────────────────────────────── */
 .ctl-mensajes { display: flex; flex-direction: column; gap: 0.35rem; min-height: 1.2rem; }
 .ctl-mensaje { margin: 0; font-size: 0.78rem; line-height: 1.35; }
-.ctl-mensajes .mon-estado-badge { border-radius: var(--radius-md); }
+/* El mensaje de la orden usa los colores de las insignias, con el tamaño
+   del resto de los mensajes. */
+.ctl-mensajes .mon-estado-badge { border-radius: var(--radius-md); font-size: 0.78rem; font-weight: 600; }
 .ctl-mensaje--tenue { color: var(--text3); }
 .ctl-mensaje--error { color: var(--red); }
+.ctl-nota { margin: -0.5rem 0 0.9rem; }
 .ctl-aviso { margin-bottom: 0.8rem; }
 
-@media (max-width: 480px) {
-  .ctl-acciones .adm-btn { flex-basis: 100%; }
+/* Acceso a la ficha administrativa: discreto, aparte de las órdenes. */
+.ctl-ficha {
+  align-self: flex-start;
+  min-height: 36px;
+  margin-top: auto;
+  padding: 0 0.2rem;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ctl-ficha:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-btn.ctl-opcion { transition: none; }
 }

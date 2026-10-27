@@ -39,6 +39,8 @@ function DashboardPage() {
     [monitoreo, dashboard.granjaId],
   )
   const galponMonitoreo = monitoreoGranja.find((item) => item.id === dashboard.galponId) ?? null
+  // Los motores (sensores de estado encendido/apagado) no son métricas
+  // ambientales: se ven en Monitoreo, no en este panel de tendencias.
   const sensoresDelGalpon = (galponMonitoreo?.sensores ?? []).filter((s) => !s.esEstado)
   const { indicadores, comparacion, cargando: cargandoLote } = useIndicadoresLote(dashboard.lote?.id ?? null)
   const rol = getRol()

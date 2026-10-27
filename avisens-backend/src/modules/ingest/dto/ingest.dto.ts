@@ -22,6 +22,10 @@ import {
   type ValidatorConstraintInterface,
   type ValidationArguments,
 } from 'class-validator';
+import {
+  PATRON_CANAL_RELE,
+  TIPO_LECTURA_RELE,
+} from '../../sensores/reles';
 
 @ValidatorConstraint({ name: 'identidadLectura', async: false })
 export class IdentidadLectura implements ValidatorConstraintInterface {
@@ -29,11 +33,18 @@ export class IdentidadLectura implements ValidatorConstraintInterface {
     const lectura = args.object as LecturaDto;
     const porCodigo =
       typeof lectura.codigo === 'string' && lectura.codigo.trim().length > 0;
-    const porConexion =
+    const porGpio =
       typeof lectura.tipo === 'string' &&
+      lectura.tipo !== TIPO_LECTURA_RELE &&
       /^[a-z][a-z0-9_]{0,49}$/.test(lectura.tipo) &&
       typeof lectura.canal === 'string' &&
       /^gpio:(0|[1-9]\d*)$/.test(lectura.canal);
+    // Relés K1-K4: el tipo es fijo ("rele") y el canal los identifica.
+    const porRele =
+      lectura.tipo === TIPO_LECTURA_RELE &&
+      typeof lectura.canal === 'string' &&
+      PATRON_CANAL_RELE.test(lectura.canal);
+    const porConexion = porGpio || porRele;
     return (
       (porCodigo &&
         lectura.tipo === undefined &&
@@ -65,7 +76,8 @@ export class LecturaDto {
 
   @ApiPropertyOptional({
     example: 'gpio:18',
-    description: 'Conexión estable del sensor en el controlador',
+    description:
+      'Conexión estable del sensor en el controlador: gpio:<n> (con su tipo) o rele:k1..rele:k4 (con tipo "rele")',
   })
   @IsOptional()
   @IsString()
@@ -124,17 +136,56 @@ export class ResultadoOrdenDto {
 
 // Lo que el ESP32 tiene AHORA en un relé: modo y salida, se haya fijado desde
 // la web, desde el monitor serie o por la lógica automática.
+@ValidatorConstraint({ name: 'identidadRele', async: false })
+export class IdentidadRele implements ValidatorConstraintInterface {
+  validate(_valor: unknown, args: ValidationArguments) {
+    const estado = args.object as EstadoReleDto;
+    const porCodigo =
+      typeof estado.codigo === 'string' && estado.codigo.trim().length > 0;
+    const porCanal =
+      typeof estado.canal === 'string' && PATRON_CANAL_RELE.test(estado.canal);
+    return (
+      (porCodigo && estado.canal === undefined) ||
+      (porCanal && estado.codigo === undefined)
+    );
+  }
+
+  defaultMessage() {
+    return 'Cada relé se informa por canal (rele:k1..rele:k4) o por codigo, no por ambos';
+  }
+}
+
+// Identidad del relé para ArrayUnique: un mismo relé no puede venir dos veces.
+export function identidadEstadoRele(e: EstadoReleDto): string {
+  return e.canal !== undefined ? `canal:${e.canal}` : `codigo:${e.codigo}`;
+}
+
 export class EstadoReleDto {
-  @ApiProperty({ example: 'REL-K2-G1-01', description: 'Código del relé' })
+  @ApiPropertyOptional({
+    example: 'REL-K2-G1-01',
+    description: 'Código del relé (firmware anterior)',
+  })
   @IsString()
   @MaxLength(100)
-  codigo: string;
+  @IsOptional()
+  codigo?: string;
+
+  @ApiPropertyOptional({
+    example: 'rele:k2',
+    description:
+      'Canal físico del relé en el ESP32 autenticado (firmware nuevo)',
+  })
+  @IsString()
+  @MaxLength(16)
+  @IsOptional()
+  canal?: string;
 
   @ApiProperty({
     enum: ['automatico', 'manual_remoto', 'manual_local'],
     example: 'manual_remoto',
   })
   @IsIn(['automatico', 'manual_remoto', 'manual_local'])
+  @Validate(IdentidadRele)
   modo: 'automatico' | 'manual_remoto' | 'manual_local';
 
   @ApiProperty({ example: true, description: 'Salida que el ESP32 ordenó al relé' })
@@ -220,7 +271,7 @@ export class IngestDto {
   })
   @IsArray()
   @ArrayMaxSize(10)
-  @ArrayUnique((e: EstadoReleDto) => e.codigo)
+  @ArrayUnique(identidadEstadoRele)
   @ValidateNested({ each: true })
   @Type(() => EstadoReleDto)
   @IsOptional()

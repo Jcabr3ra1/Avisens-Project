@@ -8,7 +8,7 @@
 //   /mi-jornada → solo Operario (OperarioPage)
 //   resto       → según permisos definidos en navConfig.tsx
 import { lazy, Suspense, type ReactNode } from 'react'
-import { Navigate, Routes, Route } from 'react-router-dom'
+import { Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { ROL_ADMIN } from './layout/Sidebar/navConfig'
 import CargaConLogo from '@shared/ui/Animacion/CargaConLogo'
@@ -59,11 +59,19 @@ function cargarPagina(page: ReactNode) {
 }
 
 // El administrador consulta el ambiente dentro de cada organización.
-// Propietario y Operario conservan la revisión de sus sensores.
-function MonitoreoPorRol() {
+// Propietario y Operario conservan la revisión de sus sensores y actuadores.
+function MonitoreoPorRol({ seccion }: { seccion: 'sensores' | 'actuadores' }) {
   return getRol() === ROL_ADMIN
     ? <Navigate to="/organizaciones" replace />
-    : cargarPagina(<MonitoreoPage />)
+    : cargarPagina(<MonitoreoPage seccion={seccion} />)
+}
+
+// /monitoreo abre Sensores. Se conserva ?granjaId= de los enlaces existentes.
+function MonitoreoInicio() {
+  const { search } = useLocation()
+  return getRol() === ROL_ADMIN
+    ? <Navigate to="/organizaciones" replace />
+    : <Navigate to={{ pathname: '/monitoreo/sensores', search }} replace />
 }
 
 function AppRoutes() {
@@ -92,7 +100,9 @@ function AppRoutes() {
         <Route path="/crm"             element={cargarPagina(<CrmPage />)} />
         <Route path="/guia-crecimiento" element={cargarPagina(<GuiaCrecimientoPage />)} />
         <Route path="/solicitudes-pqrs" element={cargarPagina(<SolicitudesPqrsPage />)} />
-        <Route path="/monitoreo"       element={<MonitoreoPorRol />} />
+        <Route path="/monitoreo"       element={<MonitoreoInicio />} />
+        <Route path="/monitoreo/sensores"   element={<MonitoreoPorRol seccion="sensores" />} />
+        <Route path="/monitoreo/actuadores" element={<MonitoreoPorRol seccion="actuadores" />} />
         <Route path="/bitacora"        element={cargarPagina(<BitacoraPage />)} />
         <Route path="/consumos-diarios" element={cargarPagina(<ConsumosDiariosPage />)} />
         <Route path="/alertas"         element={cargarPagina(<AlertasPage />)} />
