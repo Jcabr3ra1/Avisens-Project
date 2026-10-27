@@ -205,6 +205,7 @@ model Galpon {
   recomendaciones      Recomendacion[]
   analisis_bioacustico AnalisisBioacustico[]
   analisis_vision      AnalisisVision[]
+  capturas_vision      CapturaVision[]
 
   // El código se repite entre granjas (cada una tiene su "galpon1"), pero es
   // único dentro de una misma granja.
@@ -249,6 +250,7 @@ model Dispositivo {
   sensores Sensor[]
   ingestas IngestaDispositivo[]
   ordenes  OrdenActuador[]
+  capturas_vision CapturaVision[]
 
   // La relación compuesta impide conectar un sensor a un dispositivo de otro
   // galpón, incluso si se escribe directamente en la base de datos.
@@ -1881,10 +1883,34 @@ model AnalisisVision {
 
   galpon Galpon    @relation(fields: [galpon_id], references: [id])
   lote   Lote?     @relation(fields: [lote_id], references: [id])
-  modelo ModeloMl? @relation(fields: [modelo_id], references: [id])
+  modelo  ModeloMl?      @relation(fields: [modelo_id], references: [id])
+  captura CapturaVision?
 
   @@index([galpon_id])
   @@map("analisis_vision")
+}
+
+// Foto (JPEG) de la ESP32-CAM que originó un análisis de detección de pollos.
+// Va aparte de analisis_vision para no cargar los bytes en cada listado, y se
+// poda: quedan las últimas VISION_MAX_CAPTURAS por galpón más las que
+// dispararon alerta (con_alerta).
+model CapturaVision {
+  id             Int      @id @default(autoincrement())
+  analisis_id    Int      @unique
+  galpon_id      Int
+  dispositivo_id Int?
+  imagen         Bytes
+  tamano         Int
+  con_alerta     Boolean  @default(false)
+  fecha_hora     DateTime @default(now())
+
+  analisis    AnalisisVision @relation(fields: [analisis_id], references: [id], onDelete: Cascade)
+  galpon      Galpon         @relation(fields: [galpon_id], references: [id])
+  // Retirar la cámara no borra sus fotos: solo pierden el vínculo.
+  dispositivo Dispositivo?   @relation(fields: [dispositivo_id], references: [id], onDelete: SetNull)
+
+  @@index([galpon_id, fecha_hora])
+  @@map("capturas_vision")
 }
 
 // ---------------------------------------------------------------------------

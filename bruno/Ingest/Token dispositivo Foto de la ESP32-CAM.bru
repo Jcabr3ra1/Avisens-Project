@@ -1,0 +1,31 @@
+meta {
+  name: [Token dispositivo]  Foto de la ESP32-CAM
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/ingest/foto
+  body: file
+  auth: none
+}
+
+headers {
+  X-Device-Token: {{device_token}}
+  Content-Type: image/jpeg
+}
+
+body:file {
+  file: @file(foto-galpon.jpg) @contentType(image/jpeg)
+}
+
+docs {
+  Lo usa la ESP32-CAM del galpón cada INTERVALO_FOTO_MS. El cuerpo es el JPEG
+  crudo (máximo 2 MB). El servidor detecta los pollos con el modelo YOLO, los
+  sigue entre fotos y guarda la foto junto al análisis.
+
+  Respuesta 201: { analisis_id, conteo, quietos, posibles_muertos, duracion_ms }.
+  401 con token inválido; 422 si no es un JPEG; 502 si el servicio ML no responde.
+  Si hay pollos quietos más de VISION_MUERTO_MIN minutos se abre una alerta
+  "vision_pollo_inmovil".
+}

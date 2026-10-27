@@ -238,6 +238,64 @@ export class AlertasService {
       : declarada;
   }
 
+  // Alerta de la cámara del galpón: pollos que llevan mucho tiempo sin
+  // moverse. Como las de sensores, no se duplica: mientras haya una abierta
+  // del mismo tipo en el galpón, solo se actualiza cuántos son.
+  async registrarAlertaVision(
+    galponId: number,
+    loteId: number | null,
+    posiblesMuertos: number,
+    minutosUmbral: number,
+  ) {
+    const tipo = 'vision_pollo_inmovil';
+    const existente = await this.prisma.alerta.findFirst({
+      where: {
+        galpon_id: galponId,
+        tipo,
+        origen: 'automatica',
+        estado: { in: ['abierta', 'en_proceso'] },
+      },
+      select: { id: true },
+    });
+    if (existente) {
+      return this.prisma.alerta.update({
+        where: { id: existente.id },
+        data: { valor_detectado: posiblesMuertos },
+        select: ALERTA_SELECT,
+      });
+    }
+
+    const galpon = await this.prisma.galpon.findUnique({
+      where: { id: galponId },
+      select: { nombre: true, granja: { select: { propietario_id: true } } },
+    });
+    if (!galpon) return null;
+    const mensaje =
+      `La cámara de ${galpon.nombre} ve ${posiblesMuertos} pollo(s) sin moverse ` +
+      `hace más de ${minutosUmbral} min. Revisar: puede ser un pollo muerto o enfermo.`;
+    const alerta = await this.prisma.alerta.create({
+      data: {
+        galpon_id: galponId,
+        lote_id: loteId,
+        tipo,
+        origen: 'automatica',
+        criticidad: 'alta',
+        valor_detectado: posiblesMuertos,
+        valor_umbral: minutosUmbral,
+        mensaje,
+      },
+      select: ALERTA_SELECT,
+    });
+    await this.notificarNuevaAlerta(
+      alerta.id,
+      galpon.granja.propietario_id,
+      galponId,
+      mensaje,
+      'alta',
+    );
+    return alerta;
+  }
+
   private async notificarNuevaAlerta(
     alertaId: number,
     propietarioId: number,
