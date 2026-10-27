@@ -46,10 +46,27 @@ proyecta:
 | POST   | `/predecir`            | Proyecta crecimiento          |
 | POST   | `/predecir-mortalidad` | Proyecta mortalidad acumulada |
 | POST   | `/predecir-consumo`    | Proyecta consumo acumulado    |
+| POST   | `/vision/detectar`     | Detecta pollos en una foto    |
 
 Los endpoints de predicción requieren `X-ML-Token` cuando
 `ML_INTERNAL_TOKEN` está configurada. `/health` permanece disponible para el
 healthcheck interno.
+
+### Visión — `POST /vision/detectar`
+
+Recibe el JPEG crudo de la ESP32-CAM (cuerpo `image/jpeg`, máximo 2 MB) y
+devuelve las cajas de los pollos detectados por un modelo YOLO11n entrenado
+con fotos de galpón (`modelos/vision/pollos-v1.onnx`). Corre con ONNX Runtime
+en CPU, sin PyTorch: unos 130 ms por foto. `?confianza=0.40` ajusta el umbral.
+
+```json
+{ "modelo": "yolo11n-pollos-v1", "ancho": 640, "alto": 480, "conteo": 2,
+  "detecciones": [{ "x1": 10, "y1": 20, "x2": 60, "y2": 70, "confianza": 0.91, "clase": "broiler" }],
+  "duracion_ms": 134 }
+```
+
+422 si el cuerpo está vacío o no es una imagen; 413 si pasa de 2 MB. El
+seguimiento entre fotos (pollos quietos o posibles muertos) lo hace el backend.
 
 ### Ejemplo — `POST /predecir`
 
@@ -108,10 +125,13 @@ avisens-ml/
 ├── esquemas.py              Validación de las peticiones (Pydantic)
 ├── modelos/
 │   ├── polinomial.py        Regresión polinomial (peso, mortalidad, consumo)
-│   └── gompertz.py          Curva de Gompertz anclada a la curva genética
+│   ├── gompertz.py          Curva de Gompertz anclada a la curva genética
+│   ├── vision.py            Detección de pollos (YOLO11n en ONNX Runtime)
+│   └── vision/pollos-v1.onnx Pesos del modelo de visión
 ├── tests/
 │   ├── test_api.py          Contrato HTTP de los endpoints
-│   └── test_gompertz.py     Matemática del modelo de Gompertz
+│   ├── test_gompertz.py     Matemática del modelo de Gompertz
+│   └── test_vision.py       Detección y endpoint de visión
 ├── pyproject.toml           Configuración de pytest
 ├── requirements.txt         Dependencias de Python
 ├── requirements-dev.txt     Pytest, HTTPX y Ruff para calidad
