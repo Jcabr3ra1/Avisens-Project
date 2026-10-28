@@ -8,6 +8,9 @@
 // Solo redes de 2.4 GHz.
 #define WIFI_SSID     "TU_WIFI"
 #define WIFI_PASSWORD "TU_PASSWORD"
+// Potencia del WiFi. Baja = menos picos de corriente (fuentes justas); súbela
+// a WIFI_POWER_19_5dBm si el router está lejos.
+#define WIFI_POTENCIA WIFI_POWER_11dBm
 
 // ── Backend ─────────────────────────────────────────────────────────────────
 // URL completa del endpoint de fotos. Producción (Railway) o el backend local

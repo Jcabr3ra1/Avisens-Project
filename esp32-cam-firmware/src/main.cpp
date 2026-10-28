@@ -19,6 +19,10 @@
 #include "esp_camera.h"
 #include "config.h"
 
+#ifndef WIFI_POTENCIA
+#define WIFI_POTENCIA WIFI_POWER_11dBm
+#endif
+
 #if !defined(WIFI_SSID) || !defined(BACKEND_URL_FOTO) || !defined(DEVICE_TOKEN)
 #error "Copia include/config.example.h como include/config.h y completa tus valores."
 #endif
@@ -42,7 +46,7 @@
 #define PCLK_GPIO_NUM 22
 #define LED_FLASH_GPIO 4
 
-static const char *VERSION_FIRMWARE = "cam-1.0.0";
+static const char *VERSION_FIRMWARE = "cam-1.1.0";
 
 WebServer servidor(80);
 unsigned long ultimaFoto = 0;
@@ -74,7 +78,9 @@ bool iniciarCamara()
   config.pin_sccb_scl = SIOC_GPIO_NUM;
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
-  config.xclk_freq_hz = 20000000;
+  // 10 MHz en vez de 20: el OV2640 consume menos y una foto suelta no necesita
+  // más velocidad.
+  config.xclk_freq_hz = 10000000;
   config.pixel_format = PIXFORMAT_JPEG;
   config.frame_size = CAMARA_FRAMESIZE;
   config.jpeg_quality = CAMARA_CALIDAD;
@@ -113,7 +119,11 @@ camera_fb_t *tomarFoto()
 void conectarWiFi()
 {
   WiFi.mode(WIFI_STA);
-  WiFi.setSleep(false); // con ahorro de energía la cámara pierde paquetes
+  // Con fuentes justas (4.5 V) los picos del WiFi a plena potencia reinician
+  // la placa. El ahorro de energía y menos potencia los bajan; una foto cada
+  // pocos segundos no necesita más.
+  WiFi.setSleep(true);
+  WiFi.setTxPower(WIFI_POTENCIA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.printf("[WiFi] Conectando a %s", WIFI_SSID);
   for (int i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++)
@@ -215,12 +225,13 @@ void setup()
   pinMode(LED_FLASH_GPIO, OUTPUT);
   digitalWrite(LED_FLASH_GPIO, LOW); // el flash apagado: no molestar a los pollos
 
+  // El WiFi primero: así su pico de arranque no coincide con el de la cámara.
+  conectarWiFi();
   if (!iniciarCamara())
   {
     delay(5000);
     ESP.restart();
   }
-  conectarWiFi();
 
   servidor.on("/", paginaEstado);
   servidor.on("/capture", paginaCaptura);
