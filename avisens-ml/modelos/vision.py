@@ -22,6 +22,10 @@ NOMBRE_MODELO = "yolo11n-pollos-v1"
 CLASES = ["broiler"]
 TAMANO = 640
 IOU_NMS = 0.7  # el mismo valor por defecto de Ultralytics
+# Una caja casi entera dentro de otra mejor es el mismo pollo visto dos veces
+# (pasa con pollos grandes y cerca de la cámara). El IoU no la quita porque la
+# caja pequeña baja la unión; esto mide qué fracción de ella queda dentro.
+CONTENIDA_NMS = 0.85
 
 
 @lru_cache(maxsize=1)
@@ -50,8 +54,14 @@ def _letterbox(imagen: Image.Image):
     return tensor, escala, relleno_x, relleno_y
 
 
-def _nms(cajas: np.ndarray, puntajes: np.ndarray, umbral: float) -> list[int]:
-    """Supresión de no-máximos: de las cajas que se solapan, deja la mejor."""
+def _nms(
+    cajas: np.ndarray,
+    puntajes: np.ndarray,
+    umbral: float,
+    contenida: float = CONTENIDA_NMS,
+) -> list[int]:
+    """Supresión de no-máximos: de las cajas que se solapan, o de las que
+    quedan casi enteras dentro de otra, deja la mejor."""
     orden = puntajes.argsort()[::-1]
     areas = (cajas[:, 2] - cajas[:, 0]) * (cajas[:, 3] - cajas[:, 1])
     elegidas = []
@@ -64,7 +74,8 @@ def _nms(cajas: np.ndarray, puntajes: np.ndarray, umbral: float) -> list[int]:
         y2 = np.minimum(cajas[i, 3], cajas[orden[1:], 3])
         inter = np.clip(x2 - x1, 0, None) * np.clip(y2 - y1, 0, None)
         iou = inter / (areas[i] + areas[orden[1:]] - inter + 1e-9)
-        orden = orden[1:][iou <= umbral]
+        dentro = inter / (np.minimum(areas[i], areas[orden[1:]]) + 1e-9)
+        orden = orden[1:][(iou <= umbral) & (dentro < contenida)]
     return elegidas
 
 

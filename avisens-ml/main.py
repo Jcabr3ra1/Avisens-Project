@@ -94,9 +94,13 @@ async def vision_detectar_endpoint(
     if not datos:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Falta la imagen")
     if len(datos) > MAX_BYTES_FOTO:
-        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Imagen demasiado grande")
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Imagen demasiado grande"
+        )
     try:
         # ~130 ms de CPU: en un hilo aparte para no frenar los demás endpoints.
         return await run_in_threadpool(detectar, datos, confianza)
     except UnidentifiedImageError:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "El archivo no es una imagen válida")
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "El archivo no es una imagen válida"
+        )

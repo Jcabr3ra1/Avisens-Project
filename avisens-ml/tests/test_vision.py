@@ -33,9 +33,26 @@ def test_letterbox_respeta_la_proporcion():
 
 
 def test_nms_quita_la_caja_repetida():
-    cajas = np.array([[0, 0, 10, 10], [1, 1, 10, 10], [50, 50, 60, 60]], dtype=np.float32)
+    cajas = np.array(
+        [[0, 0, 10, 10], [1, 1, 10, 10], [50, 50, 60, 60]], dtype=np.float32
+    )
     puntajes = np.array([0.9, 0.8, 0.7], dtype=np.float32)
     assert sorted(_nms(cajas, puntajes, 0.7)) == [0, 2]
+
+
+def test_nms_quita_la_caja_contenida_en_otra():
+    # La segunda está entera dentro de la primera pero su IoU es solo 0.64:
+    # es el mismo pollo grande detectado dos veces.
+    cajas = np.array([[0, 0, 100, 100], [10, 10, 90, 90]], dtype=np.float32)
+    puntajes = np.array([0.7, 0.5], dtype=np.float32)
+    assert _nms(cajas, puntajes, 0.7) == [0]
+
+
+def test_nms_conserva_pollos_pegados():
+    # Dos pollos que se tocan comparten poco área: ninguno se descarta.
+    cajas = np.array([[0, 0, 40, 40], [30, 0, 70, 40]], dtype=np.float32)
+    puntajes = np.array([0.9, 0.8], dtype=np.float32)
+    assert sorted(_nms(cajas, puntajes, 0.7)) == [0, 1]
 
 
 def test_endpoint_detecta_sobre_una_foto():
@@ -60,5 +77,7 @@ def test_endpoint_exige_token_interno(monkeypatch):
     monkeypatch.setenv("ML_INTERNAL_TOKEN", "secreto")
     r = client.post("/vision/detectar", content=jpeg())
     assert r.status_code == 401
-    r = client.post("/vision/detectar", content=jpeg(), headers={"X-ML-Token": "secreto"})
+    r = client.post(
+        "/vision/detectar", content=jpeg(), headers={"X-ML-Token": "secreto"}
+    )
     assert r.status_code == 200
