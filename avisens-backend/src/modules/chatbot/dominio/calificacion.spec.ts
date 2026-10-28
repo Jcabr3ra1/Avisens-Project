@@ -43,20 +43,25 @@ describe('modelo de calificacion', () => {
 
 describe('tieneDolor', () => {
   it('la mortalidad ambiental repetida es dolor', () => {
-    expect(tieneDolor(A16_MORTALIDAD[0].texto, null)).toBe(true);
+    expect(tieneDolor('Sí, varias veces', null)).toBe(true);
   });
 
   it('un problema concreto es dolor aunque no haya perdido aves', () => {
-    expect(tieneDolor(A16_MORTALIDAD[2].texto, A14_DOLOR[0].texto)).toBe(true);
+    expect(tieneDolor('No', 'Calor y frío')).toBe(true);
   });
 
   it('"Nada en particular" NO es dolor', () => {
     // Cuando A14 era texto libre bastaba con que viniera lleno. Al pasar a
     // opciones, "Nada en particular" llega lleno y significa lo contrario:
     // marcaba señal caliente a quien decia que no tenia problemas.
-    const nada = A14_DOLOR[A14_DOLOR.length - 1];
-    expect(nada.puntaje).toBe(0);
-    expect(tieneDolor(A16_MORTALIDAD[2].texto, nada.texto)).toBe(false);
+    const nada = A14_DOLOR.find((o) => o.texto === 'Aún no lo tengo claro');
+    expect(nada?.puntaje).toBe(0);
+    expect(tieneDolor('No', nada?.texto)).toBe(false);
+  });
+
+  it('"No lo sé" y "No" no son dolor por sí solos', () => {
+    expect(tieneDolor('No lo sé', null)).toBe(false);
+    expect(tieneDolor('No', null)).toBe(false);
   });
 
   it('sin respuestas no hay dolor', () => {
@@ -97,5 +102,13 @@ describe('soporte a clientes', () => {
     // Sin un numero visible el cliente no tiene con que preguntar por su caso.
     expect(radicadoDe(42)).toBe('PQRS-000042');
     expect(radicadoDe(1)).toBe('PQRS-000001');
+  });
+});
+
+describe('quién decide (A20)', () => {
+  it('"no decide" se reconoce por su texto, no por su posición en la lista', () => {
+    expect(NO_DECIDE).toBe('Decide otra persona');
+    expect(A20_DECIDE.some((o) => o.texto === NO_DECIDE)).toBe(true);
+    expect(A20_DECIDE.find((o) => o.texto === NO_DECIDE)?.puntaje).toBe(0);
   });
 });

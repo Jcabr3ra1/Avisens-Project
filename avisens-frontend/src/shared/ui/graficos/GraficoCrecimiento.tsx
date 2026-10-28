@@ -2,6 +2,7 @@ import {
   Area, CartesianGrid, ComposedChart, Line, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
+import { formatearPeso } from '@features/guia-crecimiento/model/proyeccion'
 import { marcasDePeso } from './escalas'
 import './GraficoCrecimiento.css'
 
@@ -23,12 +24,12 @@ type Props = {
   etiquetaMarca: string | null
   descripcion: string
   altura?: number
+  diaSeleccionado?: number
+  mostrarProyeccion?: boolean
+  curvaComparacion?: { codigo: string; serie: PuntoCurvaCrecimiento[] } | null
 }
 
-type PuntoGrafico = PuntoCurvaCrecimiento & { banda: [number, number] }
-
-const numero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 })
-const kg = (gramos: number) => `${(gramos / 1000).toLocaleString('es-CO', { maximumFractionDigits: 1 })} kg`
+type PuntoGrafico = PuntoCurvaCrecimiento & { banda: [number, number]; comparacion_g: number | null }
 
 function movimientoReducido() {
   return typeof window !== 'undefined'
@@ -36,45 +37,114 @@ function movimientoReducido() {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-function Detalle({ active, payload, etiquetaEstandar, etiquetaMarca }: {
+function Detalle({ active, payload, etiquetaEstandar, etiquetaMarca, mostrarProyeccion, etiquetaComparacion }: {
   active?: boolean
   payload?: { payload: PuntoGrafico }[]
   etiquetaEstandar: string | null
   etiquetaMarca: string | null
+  mostrarProyeccion: boolean
+  etiquetaComparacion: string | null
 }) {
   const punto = active ? payload?.[0]?.payload : undefined
   if (!punto) return null
   return (
     <div className="gc-detalle">
       <strong>Día {punto.dia}</strong>
-      {punto.real_g !== null && <span className="gc-detalle-fila gc-detalle-fila--real">Pesaje <b>{numero.format(punto.real_g)} g</b></span>}
-      <span className="gc-detalle-fila gc-detalle-fila--proyeccion">Proyección <b>{numero.format(punto.proyectado_g)} g</b></span>
-      <span className="gc-detalle-rango">Rango probable {numero.format(punto.min_g)}–{numero.format(punto.max_g)} g</span>
-      {punto.estandar_g !== null && etiquetaEstandar && <span className="gc-detalle-fila gc-detalle-fila--estandar">{etiquetaEstandar} <b>{numero.format(punto.estandar_g)} g</b></span>}
-      {punto.marca_g !== null && etiquetaMarca && <span className="gc-detalle-fila gc-detalle-fila--marca">{etiquetaMarca} <b>{numero.format(punto.marca_g)} g</b></span>}
+      {punto.real_g !== null && (
+        <span className="gc-detalle-fila gc-detalle-fila--real">
+          Pesaje <b>{formatearPeso(punto.real_g)}</b>
+        </span>
+      )}
+      {mostrarProyeccion && <>
+        <span className="gc-detalle-fila gc-detalle-fila--proyeccion">
+          Proyección <b>{formatearPeso(punto.proyectado_g)}</b>
+        </span>
+        <span className="gc-detalle-rango">
+          Rango probable {formatearPeso(punto.min_g)} – {formatearPeso(punto.max_g)}
+        </span>
+      </>}
+      {punto.comparacion_g !== null && etiquetaComparacion && (
+        <span className="gc-detalle-fila gc-detalle-fila--comparacion">
+          {etiquetaComparacion} <b>{formatearPeso(punto.comparacion_g)}</b>
+        </span>
+      )}
+      {punto.estandar_g !== null && etiquetaEstandar && (
+        <span className="gc-detalle-fila gc-detalle-fila--estandar">
+          {etiquetaEstandar} <b>{formatearPeso(punto.estandar_g)}</b>
+        </span>
+      )}
+      {punto.marca_g !== null && etiquetaMarca && (
+        <span className="gc-detalle-fila gc-detalle-fila--marca">
+          {etiquetaMarca} <b>{formatearPeso(punto.marca_g)}</b>
+        </span>
+      )}
     </div>
   )
 }
 
+function crearEtiquetaFinal(texto: string, color: string, ultimoIndice: number, desplazamientoY = 3) {
+  return function EtiquetaFinal(props: { x?: number | string; y?: number | string; index?: number }) {
+    const xNum = typeof props.x === 'number' ? props.x : Number(props.x)
+    const yNum = typeof props.y === 'number' ? props.y : Number(props.y)
+    if (!Number.isFinite(xNum) || !Number.isFinite(yNum) || props.index !== ultimoIndice) return null
+    return (
+      <text x={xNum + 8} y={yNum + desplazamientoY} fill={color} fontSize={11} fontWeight={700}>{texto}</text>
+    )
+  }
+}
+
 function GraficoCrecimiento({
   serie, diaActual, pesoObjetivoG, etiquetaEstandar, etiquetaMarca, descripcion, altura = 420,
+  diaSeleccionado = diaActual, mostrarProyeccion = true, curvaComparacion = null,
 }: Props) {
-  const datos: PuntoGrafico[] = serie.map((punto) => ({ ...punto, banda: [punto.min_g, punto.max_g] }))
+  const porDiaComparacion = new Map(curvaComparacion?.serie.map((punto) => [punto.dia, punto.real_g ?? punto.proyectado_g]) ?? [])
+  const datos: PuntoGrafico[] = serie.map((punto) => ({
+    ...punto,
+    banda: [punto.min_g, punto.max_g],
+    comparacion_g: porDiaComparacion.get(punto.dia) ?? null,
+  }))
   const animar = !movimientoReducido()
   const hayMarca = etiquetaMarca !== null && serie.some((punto) => punto.marca_g !== null)
   const hayEstandar = etiquetaEstandar !== null && serie.some((punto) => punto.estandar_g !== null)
   const diaFinal = serie[serie.length - 1]?.dia ?? diaActual
-  const maximo = Math.max(
-    pesoObjetivoG ?? 0,
-    ...serie.flatMap((p) => [p.max_g, p.estandar_g ?? 0, p.marca_g ?? 0, p.real_g ?? 0]),
-  )
+  const maximo = Math.max(pesoObjetivoG ?? 0, ...datos.flatMap((p) => [
+    mostrarProyeccion ? p.max_g : 0,
+    p.estandar_g ?? 0,
+    p.marca_g ?? 0,
+    p.real_g ?? 0,
+    p.comparacion_g ?? 0,
+  ]))
   const marcas = marcasDePeso(maximo)
+
+  const marcasDias = [1, ...Array.from({ length: Math.floor(diaFinal / 7) }, (_, i) => (i + 1) * 7)]
+  if (!marcasDias.includes(diaFinal) && diaFinal - marcasDias[marcasDias.length - 1] >= 3) {
+    marcasDias.push(diaFinal)
+  }
+  const idxFinProyeccion = datos.length - 1
+  const idxFinEstandar = datos.map((d) => d.estandar_g !== null).lastIndexOf(true)
+  const idxFinMarca = datos.map((d) => d.marca_g !== null).lastIndexOf(true)
+  const idxFinComparacion = datos.map((d) => d.comparacion_g !== null).lastIndexOf(true)
+  const etiquetaComparacion = curvaComparacion ? `Lote ${curvaComparacion.codigo}` : null
+
+  const ultimoDato = datos[datos.length - 1]
+  const proyectadoFin = ultimoDato?.proyectado_g ?? 0
+  const estandarFin = ultimoDato?.estandar_g ?? null
+  const colisionan = estandarFin !== null && Math.abs(proyectadoFin - estandarFin) < 220
+  const despProyeccion = colisionan ? (proyectadoFin >= estandarFin ? -5 : 12) : 3
+  const despEstandar = colisionan ? (proyectadoFin >= estandarFin ? 12 : -5) : 3
+
+  const formateadorEje = (gramos: number) => {
+    if (gramos === 0) return '0'
+    if (gramos < 1000) return `${gramos} g`
+    const val = gramos / 1000
+    return `${val.toLocaleString('es-CO', { maximumFractionDigits: 1 })} kg`
+  }
 
   return (
     <figure className="gc" aria-label={descripcion}>
       <div className="gc-lienzo" style={{ height: altura }} aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={datos} margin={{ top: 26, right: 12, bottom: 4, left: 4 }}>
+          <ComposedChart data={datos} margin={{ top: 28, right: 105, bottom: 6, left: 4 }}>
             <defs>
               <linearGradient id="gc-banda" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.22} />
@@ -83,56 +153,72 @@ function GraficoCrecimiento({
             </defs>
             <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
             <XAxis
-              dataKey="dia" type="number" domain={[1, diaFinal]} tickCount={8} allowDecimals={false}
-              tick={{ fill: 'var(--text-muted)', fontSize: 12 }} tickLine={false}
+              dataKey="dia" type="number" domain={[1, diaFinal]} ticks={marcasDias} allowDecimals={false}
+              tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickLine={false}
               axisLine={{ stroke: 'var(--border-default)' }}
-              label={{ value: 'Día de vida', position: 'insideBottomRight', offset: -2, fill: 'var(--text-muted)', fontSize: 12 }}
+              label={{ value: 'Día de vida', position: 'insideBottomRight', offset: -2, fill: 'var(--text-muted)', fontSize: 11 }}
             />
             <YAxis
               ticks={marcas} domain={[0, marcas[marcas.length - 1]]}
-              tickFormatter={kg} width={56} tickLine={false} axisLine={false}
+              tickFormatter={formateadorEje} width={60} tickLine={false} axisLine={false}
               tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
             />
             <Tooltip
-              content={<Detalle etiquetaEstandar={etiquetaEstandar} etiquetaMarca={etiquetaMarca} />}
+              content={<Detalle etiquetaEstandar={etiquetaEstandar} etiquetaMarca={etiquetaMarca} mostrarProyeccion={mostrarProyeccion} etiquetaComparacion={etiquetaComparacion} />}
               cursor={{ stroke: 'var(--border-strong)', strokeDasharray: '3 3' }}
             />
-            <Area dataKey="banda" stroke="none" fill="url(#gc-banda)" isAnimationActive={animar} activeDot={false} />
+            {mostrarProyeccion && <Area dataKey="banda" stroke="none" fill="url(#gc-banda)" isAnimationActive={animar} activeDot={false} />}
             {hayMarca && (
-              <Line dataKey="marca_g" stroke="var(--border-strong)" strokeWidth={1.5} strokeDasharray="2 4" dot={false} connectNulls isAnimationActive={animar} activeDot={false} />
+              <Line
+                dataKey="marca_g"
+                stroke="#cbd5e1"
+                strokeWidth={1.5}
+                strokeDasharray="3 3"
+                dot={false}
+                connectNulls
+                isAnimationActive={animar}
+                activeDot={false}
+                label={crearEtiquetaFinal(etiquetaMarca ?? 'Alimento', '#94a3b8', idxFinMarca)}
+              />
             )}
             {hayEstandar && (
-              <Line dataKey="estandar_g" stroke="var(--avisens-maize)" strokeWidth={2.5} dot={false} connectNulls isAnimationActive={animar} activeDot={false} />
+              <Line
+                dataKey="estandar_g"
+                stroke="#94a3b8"
+                strokeWidth={1.8}
+                dot={false}
+                connectNulls
+                isAnimationActive={animar}
+                activeDot={false}
+                label={crearEtiquetaFinal(etiquetaEstandar ?? 'Estándar', '#64748b', idxFinEstandar, despEstandar)}
+              />
             )}
-            <Line dataKey="proyectado_g" stroke="var(--primary)" strokeWidth={2.5} strokeDasharray="7 5" dot={false} isAnimationActive={animar} activeDot={{ r: 4, fill: 'var(--primary)' }} />
+            {mostrarProyeccion && <Line dataKey="proyectado_g" stroke="var(--primary)" strokeWidth={3} strokeDasharray="7 5" dot={false} isAnimationActive={animar} activeDot={{ r: 5, fill: 'var(--primary)' }}
+              label={crearEtiquetaFinal('Proyección', 'var(--primary)', idxFinProyeccion, despProyeccion)}
+            />}
+            {etiquetaComparacion && <Line dataKey="comparacion_g" name={etiquetaComparacion} stroke="var(--avisens-deep)" strokeWidth={2.5} strokeDasharray="2 5" dot={false} connectNulls isAnimationActive={animar} activeDot={{ r: 5, fill: 'var(--avisens-deep)' }}
+              label={crearEtiquetaFinal(etiquetaComparacion, 'var(--avisens-deep)', idxFinComparacion, -7)}
+            />}
             <Line
               dataKey="real_g" stroke="transparent" isAnimationActive={animar}
-              dot={{ r: 5, fill: 'var(--avisens-ink)', stroke: 'var(--surface-base)', strokeWidth: 2 }}
-              activeDot={{ r: 6, fill: 'var(--avisens-ink)', stroke: 'var(--surface-base)', strokeWidth: 2 }}
+              dot={{ r: 5, fill: 'var(--primary-hover, #0f172a)', stroke: 'var(--surface-base, #ffffff)', strokeWidth: 2 }}
+              activeDot={{ r: 7, fill: 'var(--primary)', stroke: 'var(--surface-base, #ffffff)', strokeWidth: 2 }}
             />
             {pesoObjetivoG !== null && (
               <ReferenceLine
                 y={pesoObjetivoG} stroke="var(--danger)" strokeDasharray="4 4"
-                label={{ value: `Objetivo ${kg(pesoObjetivoG)}`, position: 'insideTopLeft', fill: 'var(--danger)', fontSize: 12 }}
+                label={{ value: `Meta ${formatearPeso(pesoObjetivoG)}`, position: 'insideTopLeft', fill: 'var(--danger)', fontSize: 11, fontWeight: 600 }}
               />
             )}
-            {diaActual >= 1 && diaActual <= diaFinal && (
+            {diaSeleccionado >= 1 && diaSeleccionado <= diaFinal && (
               <ReferenceLine
-                x={diaActual} stroke="var(--text-secondary)"
-                label={{ value: 'Hoy', position: 'top', fill: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}
+                x={diaSeleccionado} stroke="var(--avisens-maize)" strokeDasharray="4 4" strokeWidth={1.5}
+                label={{ value: diaSeleccionado === diaActual ? `Hoy · Día ${diaSeleccionado}` : `Día ${diaSeleccionado}`, position: 'top', fill: 'var(--text-primary)', fontSize: 11, fontWeight: 700 }}
               />
             )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <figcaption className="gc-leyenda">
-        <span className="gc-clave gc-clave--real">Pesajes del lote</span>
-        <span className="gc-clave gc-clave--proyeccion">Proyección</span>
-        <span className="gc-clave gc-clave--banda">Rango probable (90 %)</span>
-        {hayEstandar && <span className="gc-clave gc-clave--estandar">{etiquetaEstandar}</span>}
-        {hayMarca && <span className="gc-clave gc-clave--marca">{etiquetaMarca}</span>}
-        {pesoObjetivoG !== null && <span className="gc-clave gc-clave--objetivo">Peso objetivo</span>}
-      </figcaption>
     </figure>
   )
 }

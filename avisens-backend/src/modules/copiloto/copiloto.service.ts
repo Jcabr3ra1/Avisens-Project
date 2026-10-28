@@ -7,9 +7,11 @@ import { IndicadoresService } from '../indicadores/indicadores.service';
 import { PrediccionesService } from '../predicciones/predicciones.service';
 import { RecomendacionesService } from '../recomendaciones/recomendaciones.service';
 import { CurvaCrecimientoService } from '../predicciones/curva-crecimiento.service';
+import { RiesgoCalorService } from '../predicciones/riesgo-calor.service';
 import { HERRAMIENTAS } from './copiloto.herramientas';
 import {
   resumirCurvaParaClaude,
+  resumirRiesgoParaClaude,
   type Visualizacion,
 } from './copiloto.visualizaciones';
 import { PreguntarDto } from './dto/preguntar.dto';
@@ -31,7 +33,12 @@ Reglas:
 - Si el usuario menciona un lote de forma vaga, usa listar_lotes primero.
 - Para preguntas de crecimiento o peso futuro usa proyeccion_crecimiento: el
   usuario vera un grafico, asi que explica en 2 o 3 frases que significa
-  (va bien o mal frente al estandar, cuando llega al objetivo, que hacer).`;
+  (va bien o mal frente al estandar, cuando llega al objetivo, que hacer).
+- Para preguntas de calor, ventilacion o clima en el galpon usa
+  riesgo_calor_galpon y explica el nivel maximo, la hora del pico y que hacer.
+- Si riesgo_calor_galpon no trae temperatura ni humedad de interior, avisa
+  que el galpon no tiene sensores reportando y que el calculo usa solo el
+  clima exterior.`;
 
 @Injectable()
 export class CopilotoService {
@@ -47,6 +54,7 @@ export class CopilotoService {
     private prediccionesService: PrediccionesService,
     private recomendacionesService: RecomendacionesService,
     private curvaCrecimientoService: CurvaCrecimientoService,
+    private riesgoCalorService: RiesgoCalorService,
   ) {}
 
   private async ejecutarHerramienta(
@@ -90,6 +98,14 @@ export class CopilotoService {
             datos: curva,
           });
           return resumirCurvaParaClaude(curva);
+        }
+
+        case 'riesgo_calor_galpon': {
+          const riesgo = await this.riesgoCalorService.calcular(
+            Number(entrada.galpon_id),
+            solicitante,
+          );
+          return resumirRiesgoParaClaude(riesgo);
         }
 
         default:

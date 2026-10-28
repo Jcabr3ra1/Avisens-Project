@@ -34,10 +34,9 @@ export const PREGUNTAS_CHATBOT = [
     bloque: 'M',
     orden: 0,
     texto:
-      '👋 Hola, soy *AVIA* de AVISENS 🐔\n\n' +
-      'Ponemos sensores en tu galpón para que sepas qué está pasando ' +
-      'antes de perder aves.\n\n' +
-      '¿Qué necesitas?',
+      'Hola, soy *AVIA*, de AVISENS 🐔\n\n' +
+      'Te ayudo a saber qué pasa en tu galpón antes de que se pierdan aves.\n\n' +
+      '¿En qué te puedo ayudar?',
     tipo: 'opcion_unica',
     opciones: ['Quiero cotizar', 'Tengo dudas primero', 'Ya soy cliente'],
     campo_prospecto: null,
@@ -61,10 +60,10 @@ export const PREGUNTAS_CHATBOT = [
     bloque: 'A',
     orden: 1,
     texto:
-      '🔐 Antes de empezar: ¿autorizas el tratamiento de tus datos personales ' +
-      'según la Ley de Hábeas Data (Ley 1581)?\n\n' +
-      'Puedes consultar nuestra política aquí 👇\n' +
-      'https://avisens-project-production.up.railway.app/privacidad',
+      'Antes de seguir necesito tu permiso para guardar tus datos, como ' +
+      'manda la Ley de Hábeas Data (Ley 1581). Aquí puedes leer la política:\n' +
+      'https://avisens-project-production.up.railway.app/privacidad\n\n' +
+      '¿Me autorizas?',
     tipo: 'si_no',
     opciones: ['Sí autorizo', 'No autorizo'],
     campo_prospecto: 'consentimiento_habeas_data',
@@ -77,13 +76,26 @@ export const PREGUNTAS_CHATBOT = [
     codigo: 'A2',
     bloque: 'A',
     orden: 2,
-    texto: '👤 ¿Cómo te llamas?',
+    texto: '¿Cómo te llamas?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'nombre',
     omitir_si_canal: null,
     puntua: false,
-    siguiente: 'A16',
+    siguiente: 'A3',
+    saltos: null,
+  },
+  {
+    codigo: 'A3',
+    bloque: 'A',
+    orden: 3,
+    texto: '¿En qué municipio y departamento está tu granja? (Ej.: Timbío, Cauca)',
+    tipo: 'texto_libre',
+    opciones: null,
+    campo_prospecto: 'municipio',
+    omitir_si_canal: null,
+    puntua: false,
+    siguiente: 'A14',
     saltos: null,
   },
 
@@ -94,27 +106,27 @@ export const PREGUNTAS_CHATBOT = [
     codigo: 'A14',
     bloque: 'A',
     orden: 4,
-    texto: '😖 ¿Qué es lo que más te preocupa hoy?',
+    texto: '¿Qué te gustaría vigilar mejor en tus galpones?',
     tipo: 'opcion_unica',
     opciones: textosDe(A14_DOLOR),
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
-    siguiente: 'A18',
+    siguiente: 'A16',
     saltos: null,
   },
   {
     codigo: 'A16',
     bloque: 'A',
-    orden: 3,
+    orden: 5,
     texto:
-      '📉 En el último año, ¿perdiste aves por calor, frío o humedad?',
+      'En el último año, ¿se te han muerto aves durante épocas de calor, frío o humedad?',
     tipo: 'opcion_unica',
     opciones: textosDe(A16_MORTALIDAD),
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
-    siguiente: 'A14',
+    siguiente: 'A19',
     saltos: null,
   },
 
@@ -122,21 +134,21 @@ export const PREGUNTAS_CHATBOT = [
   {
     codigo: 'A18',
     bloque: 'A',
-    orden: 5,
-    texto: '💳 ¿Cómo preferirías pagarlo?',
+    orden: 8,
+    texto: '¿Cómo te gustaría pagarlo?',
     tipo: 'opcion_unica',
     opciones: textosDe(A18_PAGO),
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
-    siguiente: 'A19',
+    siguiente: 'C1',
     saltos: null,
   },
   {
     codigo: 'A19',
     bloque: 'A',
     orden: 6,
-    texto: '🔍 ¿Estás viendo otras opciones además de AVISENS?',
+    texto: '¿Estás mirando otras opciones además de AVISENS?',
     tipo: 'opcion_unica',
     opciones: textosDe(A19_MOMENTO),
     campo_prospecto: null,
@@ -149,13 +161,13 @@ export const PREGUNTAS_CHATBOT = [
     codigo: 'A20',
     bloque: 'A',
     orden: 7,
-    texto: '🤝 ¿La decisión de compra la tomas tú?',
+    texto: '¿La decisión de comprar la tomas tú?',
     tipo: 'opcion_unica',
     opciones: textosDe(A20_DECIDE),
     campo_prospecto: null,
     omitir_si_canal: null,
     puntua: true,
-    siguiente: 'C1',
+    siguiente: 'A18',
     saltos: { No: 'A21' },
   },
 
@@ -163,24 +175,11 @@ export const PREGUNTAS_CHATBOT = [
   {
     codigo: 'C1',
     bloque: 'A',
-    orden: 8,
-    texto: '📞 ¿A qué número te llamamos?',
+    orden: 9,
+    texto: '¿A qué número te puede llamar el asesor?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'telefono',
-    omitir_si_canal: 'whatsapp',
-    puntua: false,
-    siguiente: 'C2',
-    saltos: null,
-  },
-  {
-    codigo: 'C2',
-    bloque: 'A',
-    orden: 9,
-    texto: '📧 ¿Y tu correo? Ahí te enviamos la cotización.',
-    tipo: 'texto_libre',
-    opciones: null,
-    campo_prospecto: 'email',
     omitir_si_canal: 'whatsapp',
     puntua: false,
     siguiente: 'FIN',
@@ -196,7 +195,7 @@ export const PREGUNTAS_CHATBOT = [
     codigo: 'BMP',
     bloque: 'B',
     orden: 2,
-    texto: '❓ ¿Sobre qué necesitas ayuda?',
+    texto: '¿Qué quieres saber?',
     tipo: 'opcion_unica',
     opciones: [
       '¿Cuánto cuesta?',
@@ -230,11 +229,11 @@ export const PREGUNTAS_CHATBOT = [
     bloque: 'B',
     orden: 3,
     texto:
-      '💰 La instalación de AVISENS tiene un costo desde $3.500.000 COP, ' +
-      'dependiendo del tamaño de la granja, el número de galpones y la cantidad ' +
-      'de sensores que necesites. El valor incluye los equipos, la instalación ' +
-      'y la configuración inicial.\n\n' +
-      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+      'La instalación de AVISENS cuesta desde $3.500.000 COP. El valor final ' +
+      'depende del tamaño de tu granja, de cuántos galpones tenga y de cuántos ' +
+      'sensores hagan falta. Incluye los equipos, la instalación y la ' +
+      'configuración inicial.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
     campo_prospecto: null,
@@ -248,12 +247,11 @@ export const PREGUNTAS_CHATBOT = [
     bloque: 'B',
     orden: 4,
     texto:
-      '📦 AVISENS incluye sensores ambientales, unidad de comunicación, ' +
-      'plataforma web y app, configuración e instalación técnica. La cantidad ' +
-      'de sensores depende del número de galpones y de las necesidades de tu ' +
-      'granja. También va incluida una capacitación básica para que puedas ' +
-      'usarlo bien.\n\n' +
-      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+      'Incluye sensores ambientales, la unidad de comunicación, la plataforma ' +
+      'web y la app, la configuración y la instalación técnica. Cuántos ' +
+      'sensores lleva depende de tus galpones y de lo que necesites. También ' +
+      'va una capacitación básica para que lo uses con confianza.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
     campo_prospecto: null,
@@ -267,12 +265,11 @@ export const PREGUNTAS_CHATBOT = [
     bloque: 'B',
     orden: 5,
     texto:
-      '📶 Sí. AVISENS está diseñado para trabajar en zonas rurales. Si la ' +
-      'granja tiene internet inestable o poca cobertura celular, contamos con ' +
-      'alternativas de comunicación y almacenamiento temporal de datos para ' +
-      'mantener el monitoreo. Antes de instalar hacemos una evaluación de ' +
-      'conectividad para elegir la mejor alternativa.\n\n' +
-      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+      'Sí. AVISENS está pensado para el campo. Si tu granja tiene internet ' +
+      'inestable o poca señal, hay alternativas de comunicación y los datos se ' +
+      'guardan temporalmente para no perder el monitoreo. Antes de instalar ' +
+      'revisamos la conectividad y elegimos la mejor opción.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
     campo_prospecto: null,
@@ -286,10 +283,10 @@ export const PREGUNTAS_CHATBOT = [
     bloque: 'B',
     orden: 6,
     texto:
-      '⏱️ La instalación tarda entre 1 y 2 días por granja, según su tamaño y ' +
-      'la cantidad de equipos. La hace nuestro equipo técnico, que instala, ' +
-      'configura y verifica que todo quede funcionando.\n\n' +
-      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+      'La instalación tarda entre 1 y 2 días por granja, según el tamaño y los ' +
+      'equipos. La hace nuestro equipo técnico: instala, configura y verifica ' +
+      'que todo quede funcionando.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
     campo_prospecto: null,
@@ -303,11 +300,10 @@ export const PREGUNTAS_CHATBOT = [
     bloque: 'B',
     orden: 7,
     texto:
-      '✅ No necesitas conocimientos técnicos avanzados. AVISENS está pensado ' +
-      'para que sea fácil de usar: consultas los indicadores de tu granja y ' +
-      'recibes las alertas desde el celular o el computador. Además te damos ' +
-      'una capacitación básica durante la instalación.\n\n' +
-      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+      'No necesitas ser experto en tecnología. Ves los indicadores de tu ' +
+      'granja y recibes las alertas desde el celular o el computador, y durante ' +
+      'la instalación te damos una capacitación básica.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
     campo_prospecto: null,
@@ -321,10 +317,10 @@ export const PREGUNTAS_CHATBOT = [
     bloque: 'B',
     orden: 8,
     texto:
-      '💳 Sí. Ofrecemos financiación hasta en 12 cuotas, sujeta a aprobación. ' +
-      'También estamos trabajando en alianzas con cooperativas y entidades del ' +
-      'sector agropecuario para facilitar el acceso a la tecnología.\n\n' +
-      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+      'Sí, hay financiación hasta en 12 cuotas, sujeta a aprobación. También ' +
+      'estamos armando alianzas con cooperativas y entidades del sector ' +
+      'agropecuario para que sea más fácil acceder a la tecnología.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
     campo_prospecto: null,
@@ -338,11 +334,10 @@ export const PREGUNTAS_CHATBOT = [
     bloque: 'B',
     orden: 9,
     texto:
-      '🔋 El sistema tiene respaldo energético para seguir monitoreando durante ' +
-      'los cortes de electricidad. Según la configuración instalada, puede ' +
-      'operar varias horas y guardar los datos para sincronizarlos cuando ' +
-      'vuelva la energía.\n\n' +
-      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+      'El sistema tiene respaldo de energía para seguir monitoreando cuando se ' +
+      'va la luz. Según la configuración instalada, puede operar varias horas y ' +
+      'guarda los datos para sincronizarlos cuando vuelva la energía.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
     campo_prospecto: null,
@@ -356,10 +351,10 @@ export const PREGUNTAS_CHATBOT = [
     bloque: 'B',
     orden: 10,
     texto:
-      '📍 Sí, tenemos clientes en el Cauca. Podemos gestionar una referencia ' +
-      'comercial o, cuando el cliente lo autorice, coordinar una visita para ' +
-      'que veas de primera mano cómo funciona AVISENS en una granja.\n\n' +
-      '¿Quieres que preparemos una cotización personalizada para tu granja?',
+      'Sí, tenemos clientes en el Cauca. Podemos conseguirte una referencia ' +
+      'comercial o, si el cliente lo autoriza, coordinar una visita para que ' +
+      'veas cómo funciona AVISENS en una granja.\n\n' +
+      '¿Quieres que te preparemos una cotización para tu granja?',
     tipo: 'si_no',
     opciones: ['Sí', 'No'],
     campo_prospecto: null,
@@ -394,7 +389,7 @@ export const PREGUNTAS_CHATBOT = [
     bloque: 'S',
     orden: 200,
     texto:
-      '🪪 Para ubicar tu granja y tu contrato, ¿cuál es tu número de cédula?',
+      'Para encontrar tu granja y tu contrato, ¿cuál es tu número de cédula?',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: 'documento',
@@ -407,7 +402,7 @@ export const PREGUNTAS_CHATBOT = [
     codigo: 'S2',
     bloque: 'S',
     orden: 201,
-    texto: '🛠️ ¿Qué está pasando?',
+    texto: '¿Qué está pasando?',
     tipo: 'opcion_unica',
     opciones: [
       'Los sensores no reportan',
@@ -428,8 +423,8 @@ export const PREGUNTAS_CHATBOT = [
     bloque: 'S',
     orden: 202,
     texto:
-      '📝 Cuéntanos qué pasó, con el detalle que puedas. ' +
-      'Entre más nos digas, más rápido lo resolvemos.',
+      'Cuéntame qué pasó, con el detalle que puedas. ' +
+      'Entre más me digas, más rápido lo resolvemos.',
     tipo: 'texto_libre',
     opciones: null,
     campo_prospecto: null,

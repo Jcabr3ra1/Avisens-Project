@@ -58,4 +58,16 @@ export const HERRAMIENTAS: Anthropic.Tool[] = [
       required: ['lote_id'],
     },
   },
+  {
+    name: 'riesgo_calor_galpon',
+    description:
+      'Riesgo de estres por calor de un galpon en las proximas horas: cruza el pronostico del clima de la granja con la temperatura y humedad que miden sus sensores, calcula el indice THI y lo ajusta a la edad del lote activo. Devuelve el nivel maximo esperado, la hora del pico, la primera hora en alerta, cuantas horas pasa en cada nivel y recomendaciones de manejo. Usala cuando el usuario pregunte por calor, temperatura, si las aves van a sufrir, si debe ventilar o nebulizar, o como va a estar el clima en el galpon. Necesita el id numerico del galpon: si el usuario lo nombra de forma vaga, usa primero listar_lotes, que trae el galpon de cada lote.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        galpon_id: { type: 'number', description: 'Id numerico del galpon' },
+      },
+      required: ['galpon_id'],
+    },
+  },
 ];

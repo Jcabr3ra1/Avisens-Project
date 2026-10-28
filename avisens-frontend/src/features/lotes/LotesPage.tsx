@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
@@ -59,16 +60,21 @@ function LotesPage() {
     if (galponActivo) formulario.abrirCrear(galponActivo.id)
   }
 
-  function confirmarEliminacion(lote: Lote) {
-    const confirmado = window.confirm(
-      `¿Eliminar permanentemente el lote "${lote.codigo}"? Esta acción no se puede deshacer.`,
-    )
+  async function confirmarEliminacion(lote: Lote) {
+    const confirmado = (await confirmarAccion({
+      titulo: '¿Eliminar este lote?',
+      entidad: lote.codigo,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar lote',
+      tono: 'peligro',
+    }))
     if (confirmado) void gestion.eliminar(lote)
   }
 
   return (
     <div className="page-container adm-page">
       <CabeceraAdmin
+        eyebrow="Producción"
         titulo="Lotes"
         contexto={galponSeleccionado?.nombre}
         subtitulo={

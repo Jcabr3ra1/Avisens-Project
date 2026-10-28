@@ -1,21 +1,25 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRol } from '@shared/api'
-import CabeceraGranja from './components/CabeceraGranja'
+import HeroGranja from './components/HeroGranja'
+import { useClimaVisual } from '@features/granjas/propietario/useClimaVisual'
+import ResumenGalpon from './components/ResumenGalpon'
+import RiesgoCalorResumen from './components/RiesgoCalorResumen'
 import PanelAtencionGranja from './components/PanelAtencionGranja'
-import PanelGalpones from './components/PanelGalpones'
 import EstadoLote from './components/EstadoLote'
-import PanelMetricas from './components/PanelMetricas'
-import PlanoGalpon from './components/PlanoGalpon'
 import EstadoInicial from './components/EstadoInicial'
 import { tieneLecturaUtil, useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import { useIndicadoresLote } from './hooks/useIndicadoresLote'
 import { useDashboard } from './hooks/useDashboard'
-import { filasGalpones, itemsAtencionGranja, kpisGranja, type ItemAtencionGranja } from './model/resumenGranja'
+import { filasGalpones, itemsAtencionGranja, kpisGranja, lotesActivosDe, type ItemAtencionGranja } from './model/resumenGranja'
+import { estadoGranja } from './model/estadoGranja'
+import { sensoresDeEscena } from './model/escenaGalpon'
 import '@shared/ui/admin/AdminKit.css'
 import '@shared/ui/admin/CentroControl.css'
 import './DashboardPage.css'
 import './ResumenGranja.css'
+import './ResumenRediseno.css'
+import './ResumenAbajo.css'
 
 function DashboardSkeleton() {
   return (
@@ -33,6 +37,7 @@ function DashboardSkeleton() {
 function DashboardPage() {
   const navigate = useNavigate()
   const dashboard = useDashboard()
+  const clima = useClimaVisual(dashboard.granjaId)
   const { galpones: monitoreo, cargando: cargandoMonitoreo } = useMonitoreoAmbiental()
   const monitoreoGranja = useMemo(
     () => monitoreo.filter((galpon) => galpon.granjaId === dashboard.granjaId),
@@ -57,7 +62,8 @@ function DashboardPage() {
     alertas: dashboard.alertasGranja,
     galpones: dashboard.galpones,
     monitoreo: monitoreoGranja,
-  }), [dashboard.alertasGranja, dashboard.galpones, monitoreoGranja])
+    riesgosCrecimiento: dashboard.resumenCrecimiento?.riesgos ?? [],
+  }), [dashboard.alertasGranja, dashboard.galpones, dashboard.resumenCrecimiento, monitoreoGranja])
   const filas = useMemo(() => filasGalpones({
     galpones: dashboard.galpones,
     lotes: dashboard.lotes,
@@ -98,25 +104,61 @@ function DashboardPage() {
   }
 
   const reportando = sensoresDelGalpon.filter((sensor) => tieneLecturaUtil(sensor.estado)).length
+  const sensoresEscena = sensoresDeEscena(sensoresDelGalpon.map((sensor) => ({
+    id: sensor.id,
+    codigo: sensor.codigo,
+    tipo: sensor.tipo,
+    valor: sensor.valor,
+    unidad: sensor.unidad,
+    estado: sensor.estado,
+    ultimaLecturaTs: sensor.ultimaLecturaTs,
+    minUmbral: sensor.minUmbral,
+    maxUmbral: sensor.maxUmbral,
+  })))
+  const lotesActivos = lotesActivosDe(dashboard.galpones, dashboard.lotes)
+  const avesAlojadas = lotesActivos.reduce((total, lote) => total + lote.cantidadInicial, 0)
+  const diaUnico = lotesActivos.length === 1 ? dashboard.diaLote : null
 
   const enGranjas = (pestana: string, galponId = dashboard.galponId) =>
     navigate(`/granjas?granjaId=${dashboard.granjaId ?? ''}${galponId ? `&galpon=${galponId}` : ''}&pestana=${pestana}`)
 
+  const estado = estadoGranja({ atencion, filas })
+
+  function ejecutarAccion() {
+    if (!estado.accion) return
+    if (estado.accion.tipo === 'atencion') {
+      abrirPendiente(estado.accion.item)
+      return
+    }
+    navigate(dashboard.lote ? `/guia-crecimiento?lote=${dashboard.lote.id}` : '/guia-crecimiento')
+  }
+
   function abrirPendiente(item: ItemAtencionGranja) {
+    if (item.tipo === 'crecimiento' && item.loteId !== undefined) {
+      navigate(`/guia-crecimiento?lote=${item.loteId}`)
+      return
+    }
     enGranjas(item.tipo === 'alerta' ? 'alertas' : 'ambiente', item.galponId)
   }
 
   return (
     <div className="page-container dashboard-page resumen-page">
-      <CabeceraGranja
+      <HeroGranja
         nombre={nombre}
         fecha={fecha}
         granjas={dashboard.granjas}
         granjaId={dashboard.granjaId}
+        estado={estado}
         kpis={kpis}
+        diaLote={diaUnico}
+        aves={avesAlojadas}
+        nombreGalpon={dashboard.galpon?.nombre ?? null}
+        clima={clima}
+        sensores={sensoresEscena}
         cargando={dashboard.cargando || cargandoMonitoreo}
         onGranjaChange={dashboard.seleccionarGranja}
         onRecargar={() => void dashboard.recargar()}
+        onAccion={ejecutarAccion}
         onNavegar={(destino) => (destino.startsWith('/granjas') ? enGranjas(new URLSearchParams(destino.split('?')[1] ?? '').get('pestana') ?? 'resumen') : navigate(destino))}
       />
 
@@ -127,52 +169,39 @@ function DashboardPage() {
         </div>
       )}
 
-      <div className="admin-primary-grid">
+      {(atencion.length > 0 || (dashboard.cargando && atencion.length === 0)) && (
         <PanelAtencionGranja
           items={atencion}
-          cargando={dashboard.cargando && atencion.length === 0}
-          onAbrir={abrirPendiente}
-          onIrAlertas={() => enGranjas('alertas')}
-          onIrMonitoreo={() => enGranjas('ambiente')}
-          onIrBitacora={() => enGranjas('bitacora')}
+          cargando={(dashboard.cargando || dashboard.cargandoResumenCrecimiento) && atencion.length === 0}
+          errorCrecimiento={dashboard.errorCrecimiento}
+          onReintentarCrecimiento={dashboard.recargarCrecimiento}
         />
-        <PanelGalpones
-          filas={filas}
-          galponId={dashboard.galponId}
-          onSeleccionar={dashboard.seleccionarGalpon}
-          onGestionar={() => navigate(dashboard.granjaId ? `/galpones?granja=${dashboard.granjaId}` : '/granjas')}
-        />
-      </div>
+      )}
 
-      <section className="admin-card resumen-ambiente" aria-labelledby="resumen-ambiente-titulo">
-        <div className="admin-card-head">
-          <div>
-            <h2 id="resumen-ambiente-titulo" className="admin-card-title">
-              Ambiente{dashboard.galpon ? ` · ${dashboard.galpon.nombre}` : ''}
-            </h2>
-            <p className="admin-card-sub">Lecturas de los sensores del galpón en las últimas 24 horas</p>
-          </div>
-          {sensoresDelGalpon.length > 0 && (
-            <span className={`resumen-reportando${reportando < sensoresDelGalpon.length ? ' is-alerta' : ''}`}>
-              {reportando} de {sensoresDelGalpon.length} reportando
-            </span>
-          )}
-        </div>
-        <PanelMetricas sensores={sensoresDelGalpon} />
-      </section>
-
-      <div className="admin-secondary-grid resumen-lote-plano">
-        <EstadoLote
-          lote={dashboard.lote}
-          indicadores={indicadores}
-          comparacion={comparacion}
-          diaLote={dashboard.diaLote}
-          cargando={cargandoLote}
-          onAbrirBitacora={() => enGranjas('bitacora')}
-          onAbrirGuia={() => dashboard.lote && navigate(`/guia-crecimiento?lote=${dashboard.lote.id}`)}
-        />
-        <PlanoGalpon galpon={galponMonitoreo} />
-      </div>
+      <ResumenGalpon
+        titulo={dashboard.galpon ? dashboard.galpon.nombre : 'Tu galpón'}
+        detalle="Así está por dentro, ahora mismo"
+        etiqueta={sensoresDelGalpon.length > 0 ? `${reportando} de ${sensoresDelGalpon.length} sensores reportando` : null}
+        sensores={sensoresEscena}
+        aves={avesAlojadas}
+        diaLote={diaUnico}
+        clima={clima}
+        galpones={filas}
+        galponId={dashboard.galponId}
+        onSeleccionar={dashboard.seleccionarGalpon}
+        lote={(
+          <>
+            {dashboard.galponId !== null && <RiesgoCalorResumen galponId={dashboard.galponId} />}
+            <EstadoLote
+              lote={dashboard.lote}
+              indicadores={indicadores}
+              comparacion={comparacion}
+              diaLote={dashboard.diaLote}
+              cargando={cargandoLote}
+            />
+          </>
+        )}
+      />
     </div>
   )
 }

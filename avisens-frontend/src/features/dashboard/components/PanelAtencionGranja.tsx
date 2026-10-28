@@ -1,115 +1,86 @@
-import { useMemo, useState } from 'react'
-import * as Tabs from '@radix-ui/react-tabs'
-import { IcAlert, IcCheck, IcChevronRight, IcThermo } from '@shared/ui/icons/icons'
-import AnimacionAvisens from '@shared/ui/Animacion/AnimacionAvisens'
+import { IcAlert, IcChart, IcCheck, IcThermo } from '@shared/ui/icons/icons'
 import type { ItemAtencionGranja, TipoAtencionGranja } from '../model/resumenGranja'
-
-type Filtro = 'todas' | TipoAtencionGranja
 
 type Props = {
   items: ItemAtencionGranja[]
   cargando: boolean
-  onAbrir: (item: ItemAtencionGranja) => void
-  onIrAlertas: () => void
-  onIrMonitoreo: () => void
-  onIrBitacora: () => void
+  errorCrecimiento?: string
+  onReintentarCrecimiento?: () => void
 }
 
-function PanelAtencionGranja({ items, cargando, onAbrir, onIrAlertas, onIrMonitoreo, onIrBitacora }: Props) {
-  const [pestana, setPestana] = useState<Filtro>('todas')
-  const alertas = items.filter((item) => item.tipo === 'alerta').length
-  const sensores = items.length - alertas
-  const criticos = items.filter((item) => item.critico).length
-  const filtrados = useMemo(
-    () => (pestana === 'todas' ? items : items.filter((item) => item.tipo === pestana)),
-    [items, pestana],
-  )
+function IconoDeItem({ tipo }: { tipo: TipoAtencionGranja }) {
+  if (tipo === 'alerta') return <IcAlert size={16} />
+  if (tipo === 'crecimiento') return <IcChart size={16} />
+  return <IcThermo size={16} />
+}
 
+function PanelAtencionGranja({ items, cargando, errorCrecimiento, onReintentarCrecimiento }: Props) {
+  const criticos = items.filter((item) => item.critico).length
   return (
-    <section className="admin-card admin-attention" aria-labelledby="resumen-atencion-titulo" aria-busy={cargando}>
-      <div className="admin-card-head admin-attention-head">
+    <section className="rsm-atencion" aria-labelledby="resumen-atencion-titulo" aria-busy={cargando}>
+      <header className="rsm-cabecera">
         <div>
-          <div className="admin-card-title-row">
-            <h2 id="resumen-atencion-titulo" className="admin-card-title">Necesita tu atención</h2>
+          <h2 id="resumen-atencion-titulo" className="rsm-titulo">
+            Necesita tu atención
             {!cargando && criticos > 0 && (
-              <span className="admin-attention-badge is-critical">
-                {criticos} {criticos === 1 ? 'crítica' : 'críticas'}
+              <span className="rsm-etiqueta rsm-etiqueta--critico">
+                {criticos} {criticos === 1 ? 'urgente' : 'urgentes'}
               </span>
             )}
-          </div>
-          <p className="admin-card-sub">Alertas abiertas y sensores fuera de rango o sin señal en esta granja</p>
+          </h2>
+          <p className="rsm-subtitulo">Lo que conviene revisar hoy, lo más importante primero</p>
         </div>
 
-        {!cargando && items.length > 0 && (
-          <Tabs.Root value={pestana} onValueChange={(valor) => setPestana(valor as Filtro)}>
-            <Tabs.List className="admin-tabs-list" aria-label="Filtrar pendientes">
-              <Tabs.Trigger value="todas" className="admin-tab-trigger">Todas <span>{items.length}</span></Tabs.Trigger>
-              <Tabs.Trigger value="alerta" className="admin-tab-trigger">Alertas <span>{alertas}</span></Tabs.Trigger>
-              <Tabs.Trigger value="sensor" className="admin-tab-trigger">Sensores <span>{sensores}</span></Tabs.Trigger>
-            </Tabs.List>
-          </Tabs.Root>
-        )}
-      </div>
+      </header>
+
+      {errorCrecimiento && (
+        <p className="rsm-aviso" role="alert">
+          {errorCrecimiento} No podemos confirmar el estado de crecimiento de los lotes.
+          {onReintentarCrecimiento && <button type="button" onClick={onReintentarCrecimiento}>Reintentar</button>}
+        </p>
+      )}
 
       {cargando ? (
-        <div className="admin-attention-loading" aria-label="Cargando pendientes">
+        <div className="rsm-carga" aria-label="Cargando pendientes">
           <span /><span /><span />
         </div>
-      ) : filtrados.length === 0 ? (
-        <div className="admin-attention-empty">
-          <AnimacionAvisens
-            nombre={items.length === 0 ? 'exito' : 'bandeja-vacia'}
-            modo={items.length === 0 ? 'una-vez' : 'bucle'}
-            tamano={56}
-            respaldo={<span className="admin-attention-empty-icon" aria-hidden="true"><IcCheck size={18} /></span>}
-          />
+      ) : items.length === 0 ? (
+        <div className="rsm-vacio">
+          <span className="rsm-vacio-icono" aria-hidden="true">
+            {errorCrecimiento ? <IcAlert size={16} /> : <IcCheck size={18} />}
+          </span>
           <div>
-            <strong>{items.length === 0 ? 'Todo en orden' : 'Nada pendiente en esta categoría'}</strong>
+            <strong>
+              {errorCrecimiento
+                ? 'No pudimos revisar los lotes'
+                : 'Todo en orden'}
+            </strong>
             <p>
-              {items.length === 0
-                ? 'No hay alertas abiertas y todos los sensores reportan dentro de su rango.'
-                : 'Selecciona «Todas» para ver el resto de pendientes.'}
+              {errorCrecimiento
+                ? 'Vuelve a intentarlo para consultar las reglas de crecimiento.'
+                : 'No hay alertas abiertas y los sensores de esta granja reportan dentro de su rango.'}
             </p>
           </div>
         </div>
       ) : (
-        <ul className="admin-attention-list">
-          {filtrados.map((item) => (
+        <ul className="rsm-pendientes">
+          {items.map((item) => (
             <li key={item.id}>
-              <button
-                type="button"
-                className={`admin-attention-item resumen-atencion-item--${item.tipo}${item.critico ? ' is-critico' : ''}`}
-                onClick={() => onAbrir(item)}
-              >
-                <span className="admin-attention-icon" aria-hidden="true">
-                  {item.tipo === 'alerta' ? <IcAlert size={16} /> : <IcThermo size={16} />}
+              <div className={`rsm-pendiente rsm-pendiente--${item.tipo}${item.critico ? ' is-critico' : ''}`}>
+                <span className="rsm-pendiente-icono" aria-hidden="true"><IconoDeItem tipo={item.tipo} /></span>
+                <span className="rsm-pendiente-copia">
+                  <span className="rsm-pendiente-titulo">{item.titulo}</span>
+                  <span className="rsm-pendiente-detalle">{item.detalle}</span>
                 </span>
-                <span className="admin-attention-copy">
-                  <span className="admin-attention-meta">
-                    <strong>{item.etiqueta}</strong>
-                    {item.cuando && <time>{item.cuando}</time>}
-                  </span>
-                  <span className="admin-attention-title">{item.titulo}</span>
-                  <span className="admin-attention-detail">{item.detalle}</span>
+                <span className="rsm-nivel">
+                  <span aria-hidden="true" />
+                  {item.critico ? 'Urgente' : 'Por revisar'}
                 </span>
-                <IcChevronRight size={15} aria-hidden="true" />
-              </button>
+              </div>
             </li>
           ))}
         </ul>
       )}
-
-      <footer className="admin-attention-footer">
-        <button type="button" className="admin-attention-shortcut" onClick={onIrAlertas}>
-          Alertas <IcChevronRight size={12} />
-        </button>
-        <button type="button" className="admin-attention-shortcut" onClick={onIrMonitoreo}>
-          Monitoreo <IcChevronRight size={12} />
-        </button>
-        <button type="button" className="admin-attention-shortcut" onClick={onIrBitacora}>
-          Bitácora <IcChevronRight size={12} />
-        </button>
-      </footer>
     </section>
   )
 }

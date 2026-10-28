@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
 import { isAxiosError } from 'axios'
 import {
   iniciarConversacion,
@@ -7,17 +7,17 @@ import {
   type RespuestaChatbot,
   type RutaChat,
 } from '@features/landing/api/chatbot'
-import { IcAlert, IcRefresh, IcSend } from '@shared/ui/icons/icons'
+import { IcAlert } from '@shared/ui/icons/icons'
 import Ic from '@shared/ui/Ic/Ic'
-import { seLeenEnPar } from '@features/landing/model/opcionesChat'
-import AviaProgress from './AviaProgress'
+import AviaBoton from './AviaBoton'
+import VistaDudas from './VistaDudas'
+import VistaFin from './VistaFin'
+import VistaPaso from './VistaPaso'
+import mascotaPoster from '../../assets/avia/avia-chat-poster.png'
 import './FloatChat.css'
 import './FloatChat.tema.css'
 
-const RobotLottie = lazy(() => import('./RobotLottie'))
-
 const SIN_CONSENTIMIENTO = 'sin_consentimiento'
-const PUNTAJE_MAXIMO = 12
 
 type Mensaje = {
   autor: 'bot' | 'usuario' | 'bloque'
@@ -74,49 +74,24 @@ function traducirError(err: unknown, fallback: string): ErrorChat {
   return { texto: mensaje || fallback, reiniciar: true }
 }
 
-function etiquetaClasificacion(clasificacion: string | null): string {
-  if (!clasificacion) return 'Sin clasificación'
-  const normalizada = clasificacion.toLowerCase()
-  if (normalizada === 'frio') return 'Frío'
-  return normalizada.charAt(0).toUpperCase() + normalizada.slice(1)
-}
+// Los pasos del soporte son fijos: cédula, qué pasa y el relato.
+const PASOS_SOPORTE: Record<string, string> = { S1: 'Paso 1 de 3', S2: 'Paso 2 de 3', S3: 'Paso 3 de 3' }
 
-// Las tres puertas de entrada al asistente. Cada una lleva icono y color
-// propios para que se distingan antes de leerlas: quien viene a cotizar y quien
-// viene con un problema no buscan lo mismo.
-const ACCIONES_RAPIDAS: {
-  ruta: RutaChat
-  tono: 'cotizar' | 'dudas' | 'soporte'
-  titulo: string
-  detalle: string
-  icono: string
-}[] = [
-  {
-    ruta: 'cotizacion',
-    tono: 'cotizar',
-    titulo: 'Quiero cotizar',
-    detalle: 'Un asesor visita tu granja y te arma la propuesta',
-    icono: 'M9 7h6M9 11h6M9 15h3M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z',
-  },
-  {
-    ruta: 'general',
-    tono: 'dudas',
-    titulo: 'Tengo dudas primero',
-    detalle: 'Resolvemos tus preguntas antes de decidir',
-    icono: 'M12 17h.01M9.1 9a3 3 0 115.8 1c0 2-2.9 2.5-2.9 4M12 3a9 9 0 100 18 9 9 0 000-18z',
-  },
-  {
-    ruta: 'soporte',
-    tono: 'soporte',
-    titulo: 'Ya soy cliente y tengo un problema',
-    detalle: 'Radica una PQRS y te damos número de seguimiento',
-    icono: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z',
-  },
+// El servidor escribe con las marcas de WhatsApp (*negrita*): en el widget no
+// se interpretan y se verían los asteriscos.
+const sinMarcas = (texto: string) => texto.replace(/\*/g, '')
+
+// Las tres puertas de entrada al asistente, como botones de la pantalla de
+// inicio. Quien viene a cotizar y quien viene con un problema no buscan lo
+// mismo, así que cada una arranca una ruta distinta.
+const ACCIONES_RAPIDAS: { ruta: RutaChat; titulo: string }[] = [
+  { ruta: 'cotizacion', titulo: 'Quiero cotizar' },
+  { ruta: 'general', titulo: 'Tengo dudas primero' },
+  { ruta: 'soporte', titulo: 'Ya soy cliente' },
 ]
 
 function FloatChat() {
   const [open, setOpen] = useState(false)
-  const [saludando, setSaludando] = useState(false)
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [sesionId, setSesionId] = useState<string | null>(null)
   const [pregunta, setPregunta] = useState<PreguntaChatbot | null>(null)
@@ -131,8 +106,8 @@ function FloatChat() {
   const [error, setError] = useState<ErrorChat | null>(null)
   const [iniciado, setIniciado] = useState(false)
   const [porElegirRuta, setPorElegirRuta] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [ruta, setRuta] = useState<RutaChat>('cotizacion')
+  const [aviso, setAviso] = useState<string | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const autoAbierto = useRef(false)
 
@@ -152,11 +127,13 @@ function FloatChat() {
         ...m,
         {
           autor: 'bot',
-          texto: sinConsentimiento
-            ? 'Entendido, cerramos aquí. No quedaste registrado como prospecto y no guardamos ningún dato personal tuyo.'
-            : esPqrs
-              ? '¡Listo! Tu solicitud quedó radicada. Un asesor del equipo la revisará y te contactará.'
-              : 'Listo. Con eso tengo todo lo necesario para orientar tu cotización.',
+          texto: respuesta.mensaje_transicion
+            ? sinMarcas(respuesta.mensaje_transicion)
+            : sinConsentimiento
+              ? 'Entendido, lo dejamos aquí. No quedaste registrado y no guardé ningún dato personal tuyo.'
+              : esPqrs
+                ? 'Listo, tu solicitud quedó radicada. Un asesor del equipo la revisa y te contacta.'
+                : 'Listo. Con lo que me contaste ya puedo orientar tu cotización.',
         },
       ])
       return
@@ -178,10 +155,11 @@ function FloatChat() {
     }
   }, [])
 
-  const iniciar = useCallback(async (ruta: RutaChat = 'cotizacion') => {
-    setSaludando(false)
+  const iniciar = useCallback(async (rutaElegida: RutaChat = 'cotizacion') => {
+    setRuta(rutaElegida)
     setEnviando(true)
     setError(null)
+    setAviso(null)
     setMensajes([])
     setSesionId(null)
     setPregunta(null)
@@ -192,7 +170,7 @@ function FloatChat() {
     setPorElegirRuta(false)
 
     try {
-      const respuesta = await iniciarConversacion('web', ruta)
+      const respuesta = await iniciarConversacion('web', rutaElegida)
       setSesionId(respuesta.sesion_id)
       setIniciado(true)
       aplicar(respuesta)
@@ -213,6 +191,7 @@ function FloatChat() {
     setTotalPasos(null)
     setTexto('')
     setError(null)
+    setAviso(null)
     setPorElegirRuta(true)
   }, [])
 
@@ -220,9 +199,9 @@ function FloatChat() {
     const valor = respuesta.trim()
     if (!valor || !sesionId || enviando || resultado) return
 
-    setSaludando(false)
     setTexto('')
     setError(null)
+    setAviso(null)
     setMensajes((m) => [...m, { autor: 'usuario', texto: valor }])
     setEnviando(true)
 
@@ -233,7 +212,7 @@ function FloatChat() {
       if (fallo.reiniciar) {
         setError(fallo)
       } else {
-        setMensajes((m) => [...m, { autor: 'bot', texto: fallo.texto }])
+        setAviso(fallo.texto)
       }
     } finally {
       setEnviando(false)
@@ -241,7 +220,6 @@ function FloatChat() {
   }, [aplicar, enviando, resultado, sesionId])
 
   const cerrarChat = useCallback(() => {
-    setSaludando(false)
     setOpen(false)
     window.requestAnimationFrame(() => triggerRef.current?.focus())
   }, [])
@@ -256,16 +234,15 @@ function FloatChat() {
     }
 
     if (!iniciado && !enviando && !porElegirRuta) abrirConMenu()
-    setSaludando(evento.detail > 0 && !enviando)
     setOpen(true)
   }
 
   useEffect(() => {
     const abrirDesdeLaPagina = (evento: Event) => {
-      const ruta = (evento as CustomEvent<{ ruta?: RutaChat }>).detail?.ruta
+      const rutaPedida = (evento as CustomEvent<{ ruta?: RutaChat }>).detail?.ruta
       setOpen(true)
-      if (ruta && !enviando && (porElegirRuta || !iniciado)) {
-        void iniciar(ruta)
+      if (rutaPedida && !enviando && (porElegirRuta || !iniciado)) {
+        void iniciar(rutaPedida)
         return
       }
       if (!iniciado && !enviando && !porElegirRuta) abrirConMenu()
@@ -273,13 +250,6 @@ function FloatChat() {
     window.addEventListener('avisens:abrir-chat', abrirDesdeLaPagina)
     return () => window.removeEventListener('avisens:abrir-chat', abrirDesdeLaPagina)
   }, [abrirConMenu, enviando, iniciado, iniciar, porElegirRuta])
-
-  const terminarSaludo = useCallback(() => setSaludando(false), [])
-
-  function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    void enviar(texto)
-  }
 
   // El botón "Probar chatbot" del panel abre /?chat=1: deja el asistente
   // desplegado y con la conversación ya iniciada. El ref evita que StrictMode
@@ -293,15 +263,6 @@ function FloatChat() {
   }, [iniciar])
 
   useEffect(() => {
-    const caja = scrollRef.current
-    if (caja) caja.scrollTop = caja.scrollHeight
-  }, [mensajes, enviando, resultado, open])
-
-  useEffect(() => {
-    if (open && pregunta && !enviando) inputRef.current?.focus()
-  }, [open, pregunta, enviando])
-
-  useEffect(() => {
     if (!open) return
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -313,7 +274,19 @@ function FloatChat() {
   }, [cerrarChat, open])
 
   const opciones = pregunta?.opciones ?? []
-  const enPar = seLeenEnPar(opciones)
+  const enDudas = pregunta?.codigo === 'BMP' && !resultado
+  const ultimo = mensajes[mensajes.length - 1]
+  const anterior = mensajes[mensajes.length - 2]
+  const bloqueActual = ultimo?.autor === 'bot' && anterior?.autor === 'bloque' ? sinMarcas(anterior.texto) : null
+  const mensajeFinal = [...mensajes].reverse().find((mensaje) => mensaje.autor === 'bot')?.texto ?? null
+  const progresoTexto = !pregunta
+    ? null
+    : ruta === 'cotizacion' && totalPasos
+      ? `Pregunta ${Math.min(progreso + 1, totalPasos)} de ${totalPasos}`
+      : ruta === 'soporte'
+        ? PASOS_SOPORTE[pregunta.codigo] ?? null
+        : null
+  const conBarra = ruta === 'cotizacion' && totalPasos !== null && totalPasos > 0 && !resultado
   // La identidad («Asistente AVISENS») es fija y va en su propia línea; el
   // estado cambia. Antes compartían sitio, así que en cuanto AVIA escribía
   // desaparecía el nombre del producto.
@@ -322,41 +295,48 @@ function FloatChat() {
     : enviando
       ? 'Escribiendo…'
       : 'En línea ahora'
-  const placeholder = resultado
-    ? 'La conversación terminó'
-    : pregunta?.tipo === 'numero'
-      ? 'Escribe un número'
-      : 'Escribe tu respuesta...'
-
-  const avatarProgreso = (
-    <AviaProgress
-      progreso={progreso}
-      totalPasos={totalPasos}
-      finalizado={resultado !== null}
-    />
-  )
 
   return (
     <div className={`float-chat${open ? ' is-open' : ''}`}>
       <div
         id="avia-chat-panel"
+        data-lenis-prevent
         className={`float-panel ${open ? '' : 'hidden'}`}
         aria-hidden={!open}
         aria-labelledby="avia-chat-title"
       >
-        <div className="float-chat-topbar">
-          <div className="float-chat-avatar">
-            {open && (saludando || enviando) ? (
-              <Suspense fallback={avatarProgreso}>
-                <RobotLottie
-                  size={48}
-                  animando={enviando}
-                  saludar={saludando}
-                  onSaludoTerminado={terminarSaludo}
-                />
-              </Suspense>
-            ) : avatarProgreso}
+        {porElegirRuta ? (
+          <div className="float-inicio">
+            <div className="float-inicio-hero">
+              <div className="float-inicio-barra">
+                <img className="float-inicio-mascota" src={mascotaPoster} alt="" width={84} height={84} />
+                <button type="button" onClick={cerrarChat} className="float-chat-close" aria-label="Cerrar chat">
+                  <Ic d="M18 6L6 18M6 6l12 12" size={16} />
+                </button>
+              </div>
+              <h2 className="float-inicio-saludo" id="avia-chat-title">
+                <span>Hola, soy AVIA</span>
+                ¿En qué te ayudo?
+              </h2>
+            </div>
+            <div className="float-inicio-acciones">
+              {ACCIONES_RAPIDAS.map((accion) => (
+                <button
+                  key={accion.ruta}
+                  type="button"
+                  className="float-inicio-boton"
+                  onClick={() => void iniciar(accion.ruta)}
+                >
+                  <span>{accion.titulo}</span>
+                  <Ic d="M5 12h14M13 6l6 6-6 6" size={16} />
+                </button>
+              ))}
+            </div>
           </div>
+        ) : (
+          <>
+        <div className="float-chat-topbar">
+          <img className="float-chat-mascota" src={mascotaPoster} alt="" width={46} height={46} />
           <div className="float-chat-heading">
             <div className="float-chat-name" id="avia-chat-title">AVIA</div>
             <div className="float-chat-tagline">Asistente AVISENS</div>
@@ -372,19 +352,17 @@ function FloatChat() {
             className="float-chat-reset"
             onClick={() => abrirConMenu()}
             disabled={enviando}
-            aria-label="Reiniciar conversación"
-            title="Reiniciar conversación"
+            aria-label="Volver al inicio"
+            title="Volver al inicio"
           >
-            <IcRefresh size={15} />
+            <Ic d="M15 18l-6-6 6-6" size={16} />
           </button>
           <button type="button" onClick={cerrarChat} className="float-chat-close" aria-label="Cerrar chat">
             <Ic d="M18 6L6 18M6 6l12 12" size={16} />
           </button>
         </div>
 
-        {/* Sin total no se dibuja nada: una barra que divide por un número
-            inventado miente con aspecto de dato. */}
-        {totalPasos !== null && totalPasos > 0 && (
+        {conBarra && totalPasos !== null && (
           <div
             className="float-chat-progress"
             role="progressbar"
@@ -397,149 +375,49 @@ function FloatChat() {
           </div>
         )}
 
-        <div className="float-chat-msgs" ref={scrollRef}>
-          {porElegirRuta ? (
-            <div className="float-msg bot">
-              <div className="float-msg-bub">
-                ¡Hola! Soy AVIA. ¿En qué te puedo ayudar hoy?
+        {resultado ? (
+          <VistaFin
+            mensaje={mensajeFinal}
+            clasificacion={resultado.clasificacion}
+            onInicio={abrirConMenu}
+          />
+        ) : enDudas && pregunta ? (
+          <VistaDudas
+            titulo={pregunta.texto}
+            opciones={opciones}
+            deshabilitado={enviando || !sesionId}
+            error={error?.texto ?? null}
+            onElegir={(opcion) => void enviar(opcion)}
+          />
+        ) : pregunta ? (
+          <VistaPaso
+            pregunta={pregunta}
+            bloque={bloqueActual}
+            paso={progresoTexto}
+            enviando={enviando || !sesionId}
+            aviso={aviso}
+            texto={texto}
+            onTexto={setTexto}
+            onEnviar={(valor) => void enviar(valor)}
+          />
+        ) : (
+          <div className="float-paso float-paso--espera">
+            {enviando ? <div className="float-dots" role="status" aria-label="AVIA está escribiendo"><span /><span /><span /></div> : null}
+            {error ? (
+              <div className="float-chat-error">
+                <IcAlert size={15} />
+                <span>{error.texto}</span>
+                {error.reiniciar ? (
+                  <button type="button" onClick={() => void iniciar(ruta)} disabled={enviando}>
+                    Reintentar
+                  </button>
+                ) : null}
               </div>
-            </div>
-          ) : null}
-
-          {mensajes.map((mensaje, i) =>
-            mensaje.autor === 'bloque' ? (
-              <div key={`bloque-${i}`} className="float-bloque" role="separator">
-                <span>{mensaje.texto}</span>
-              </div>
-            ) : (
-              <div key={`${mensaje.autor}-${i}`} className={`float-msg ${mensaje.autor}`}>
-                <div className="float-msg-bub">{mensaje.texto}</div>
-              </div>
-            ),
-          )}
-
-          {enviando ? (
-            <div className="float-msg bot">
-              <div className="float-msg-bub">
-                <div className="float-dots">
-                  <span /><span /><span />
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {resultado ? (
-            resultado.clasificacion === SIN_CONSENTIMIENTO ? (
-              <div className="float-result float-result--cerrado">
-                <span>Conversación cerrada</span>
-                <p>Sin tratamiento de datos. Puedes reiniciar cuando quieras.</p>
-              </div>
-            ) : resultado.clasificacion === 'pqrs' ? (
-              <div className="float-result float-result--cerrado">
-                <span>Solicitud radicada</span>
-                <p>Guarda tu número de radicado para hacerle seguimiento.</p>
-              </div>
-            ) : resultado.clasificacion === 'consulta_atendida' ? (
-              <div className="float-result float-result--cerrado">
-                <span>Consulta resuelta</span>
-                <p>Si quieres acompañamiento, reinicia y elige «Solicitar acompañamiento».</p>
-              </div>
-            ) : (
-              <div className={`float-result float-result--${resultado.clasificacion ?? 'frio'}`}>
-                <span>Tu perfil</span>
-                <strong>{etiquetaClasificacion(resultado.clasificacion)}</strong>
-                <div
-                  className="float-result-barra"
-                  role="img"
-                  aria-label={`${resultado.puntaje ?? 0} de ${PUNTAJE_MAXIMO} puntos`}
-                >
-                  <div
-                    style={{
-                      width: `${Math.round(((resultado.puntaje ?? 0) / PUNTAJE_MAXIMO) * 100)}%`,
-                    }}
-                  />
-                </div>
-                <p>Un asesor te contactará con la cotización.</p>
-              </div>
-            )
-          ) : null}
-        </div>
-
-        {error ? (
-          <div className="float-chat-error">
-            <IcAlert size={15} />
-            <span>{error.texto}</span>
-            {error.reiniciar ? (
-              <button type="button" onClick={() => void iniciar('cotizacion')} disabled={enviando}>
-                Reintentar
-              </button>
             ) : null}
           </div>
-        ) : null}
-
-          {porElegirRuta && !enviando ? (
-            <div className="float-chat-options float-chat-menu">
-              <p className="float-chat-rotulo">Acciones rápidas</p>
-              {ACCIONES_RAPIDAS.map((accion) => (
-                <button
-                  key={accion.ruta}
-                  type="button"
-                  className={`float-accion float-accion--${accion.tono}`}
-                  onClick={() => void iniciar(accion.ruta)}
-                >
-                  <span className="float-accion-icono" aria-hidden="true">
-                    <Ic d={accion.icono} size={17} />
-                  </span>
-                  <span className="float-accion-texto">
-                    <strong>{accion.titulo}</strong>
-                    <small>{accion.detalle}</small>
-                  </span>
-                  <span className="float-accion-flecha" aria-hidden="true">
-                    <Ic d="M9 18l6-6-6-6" size={14} />
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : opciones.length > 0 && !resultado ? (
-          <div className={`float-chat-options${enPar ? ' float-chat-options--par' : ''}`}>
-            {/* Un sí o no se responde de un vistazo: en pareja y horizontal se
-                lee como una decisión, mientras que apilado a lo ancho parece
-                una lista de la que hay que escoger. Es también como los pinta
-                WhatsApp, que usa botones hasta tres opciones y lista a partir
-                de ahí, así que los dos canales se leen igual. */}
-            {opciones.map((opcion) => (
-              <button
-                key={opcion}
-                type="button"
-                onClick={() => void enviar(opcion)}
-                disabled={enviando || !sesionId}
-              >
-                {opcion}
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        <form className="float-chat-input-row" onSubmit={onSubmit}>
-          <input
-            ref={inputRef}
-            className="float-chat-inp"
-            aria-label="Escribe tu respuesta para AVIA"
-            placeholder={placeholder}
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            inputMode={pregunta?.tipo === 'numero' ? 'numeric' : 'text'}
-            disabled={enviando || !sesionId || resultado !== null || porElegirRuta}
-          />
-          <button
-            type="submit"
-            className="float-chat-send-btn"
-            disabled={enviando || !sesionId || !texto.trim() || resultado !== null || porElegirRuta}
-            aria-label="Enviar"
-          >
-            <IcSend size={17} />
-          </button>
-        </form>
+        )}
+          </>
+        )}
       </div>
 
       <button
@@ -558,17 +436,7 @@ function FloatChat() {
               <Ic d="M18 6L6 18M6 6l12 12" size={22} />
             </span>
           ) : (
-            <Suspense
-              fallback={
-                <Ic d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" size={26} />
-              }
-            >
-              <RobotLottie
-                size={112}
-                animando={false}
-                className="float-btn-robot"
-              />
-            </Suspense>
+            <AviaBoton size={112} className="float-btn-robot" />
           )}
         </span>
       </button>

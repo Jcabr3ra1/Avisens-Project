@@ -5,6 +5,8 @@ export type PuntoCurva = {
   fcrObjetivo?: number | null
 }
 
+export const MAX_DIA_OBJETIVO = 50
+
 function puntosOrdenados(puntos: PuntoCurva[]): PuntoCurva[] {
   return puntos
     .filter((punto) => Number.isFinite(punto.dia) && Number.isFinite(punto.pesoEsperadoG))
@@ -41,7 +43,7 @@ export function interpolarPuntoEnDia(
   }
   const primero = ordenados[0]
   const ultimo = ordenados[ordenados.length - 1]
-  if (diaObjetivo < 1 || diaObjetivo > 42 || diaObjetivo < primero.dia || diaObjetivo > ultimo.dia) {
+  if (diaObjetivo < 1 || diaObjetivo > MAX_DIA_OBJETIVO || diaObjetivo < primero.dia || diaObjetivo > ultimo.dia) {
     return { estado: 'fuera_de_rango' }
   }
   if (diaObjetivo === primero.dia) {
@@ -83,7 +85,7 @@ export function interpolarPesoEnDia(
   }
   const primero = ordenados[0]
   const ultimo = ordenados[ordenados.length - 1]
-  if (diaObjetivo < 1 || diaObjetivo > 42 || diaObjetivo < primero.dia || diaObjetivo > ultimo.dia) {
+  if (diaObjetivo < 1 || diaObjetivo > MAX_DIA_OBJETIVO || diaObjetivo < primero.dia || diaObjetivo > ultimo.dia) {
     return { estado: 'fuera_de_rango' }
   }
   if (diaObjetivo === primero.dia) return { estado: 'calculado', pesoEsperadoG: primero.pesoEsperadoG }

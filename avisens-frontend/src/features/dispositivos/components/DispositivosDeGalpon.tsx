@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useState, type FormEvent } from 'react'
 import { getRol } from '@shared/api'
 import { ROL_ADMIN } from '@shared/auth/permisos'
@@ -82,11 +83,13 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
   }
 
   async function handleToken(dispositivo: Dispositivo) {
-    const confirmar = window.confirm(
-      `¿Regenerar el token de "${dispositivo.nombre}"?\n` +
-        'El token anterior deja de servir: el ESP32 no podrá enviar mediciones ' +
-        'hasta que lo vuelvas a vincular por USB.',
-    )
+    const confirmar = (await confirmarAccion({
+      titulo: '¿Regenerar el token?',
+      entidad: dispositivo.nombre,
+      descripcion: 'El token anterior deja de servir. El ESP32 no podrá enviar mediciones hasta que lo vuelvas a vincular por USB.',
+      textoConfirmar: 'Regenerar token',
+      tono: 'aviso',
+    }))
     if (!confirmar) return
     setErrorAccion('')
     limpiarEstadoToken()
@@ -134,11 +137,13 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
   }
 
   async function handleEliminar(dispositivo: Dispositivo) {
-    const confirmar = window.confirm(
-      `¿Eliminar el controlador "${dispositivo.nombre}" y sus sensores?\n` +
-        'Dejará de recibir datos y su token queda anulado. Si ya envió lecturas, ' +
-        'el historial se conserva para los reportes.',
-    )
+    const confirmar = (await confirmarAccion({
+      titulo: '¿Eliminar este controlador?',
+      entidad: dispositivo.nombre,
+      descripcion: 'También se eliminan sus sensores. Dejará de recibir datos y su token queda anulado. Si ya envió lecturas, el historial se conserva para los reportes.',
+      textoConfirmar: 'Eliminar controlador',
+      tono: 'peligro',
+    }))
     if (!confirmar) return
     setErrorAccion('')
     setAvisoAccion('')

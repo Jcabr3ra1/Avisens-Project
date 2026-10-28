@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { IcArrowRight, IcBox, IcChevronDown, IcChevronRight, IcClose, IcGrid, IcLeaf, IcMoon, IcSearch, IcSidebar, IcSun } from '@shared/ui/icons/icons'
+import { IcArrowRight, IcBarn, IcBox, IcChevronDown, IcChevronRight, IcClose, IcGrid, IcLeaf, IcMoon, IcSearch, IcSidebar, IcSun } from '@shared/ui/icons/icons'
 import { logout } from '@shared/api'
 import { useFocoAtrapado } from '@shared/ui/Modal/useFocoAtrapado'
 import logoAvisens from '@shared/assets/logo-avisens.png'
@@ -10,7 +10,7 @@ import { useTemaPanel } from '../useTemaPanel'
 import { descripcionDe, matchesPath, navigationSpaces, spaceForPath, tieneUnSoloDestino, visibleSections, type NavigationSpace, type SpaceId } from './navigation'
 import './Sidebar.css'
 
-const SPACE_ICONS = { plataforma: IcGrid, granja: IcLeaf, gestion: IcBox }
+const SPACE_ICONS = { plataforma: IcGrid, granja: IcLeaf, bodega: IcBarn, gestion: IcBox }
 
 // Nombres cortos para que quepan bajo el ícono del riel.
 const ETIQUETA_RIEL: Record<string, string> = {

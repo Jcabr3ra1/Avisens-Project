@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getRol } from '@shared/api'
 import { ROL_ADMIN } from '@shared/auth/permisos'
@@ -153,31 +154,41 @@ function AsignarSensores({
   async function cambiarSensor(sensor: Sensor, accion: 'activar' | 'desactivar' | 'eliminar') {
     if (sensorOcupado !== null) return
     const nombre = `${etiquetaTipo(sensor.tipo)} (${sensor.codigo})`
-    if (accion === 'eliminar' && !window.confirm(
-      `¿Eliminar el sensor ${nombre}? Dejará de aparecer en Avisens. Si ya registró lecturas, su historial se conserva para los reportes.`,
-    )) return
-    if (accion === 'desactivar' && !window.confirm(
-      `¿Desactivar el sensor ${nombre}? Deja de contar en el monitoreo y sus lecturas guardadas se conservan.`,
-    )) return
-    setSensorOcupado(sensor.id)
-    setMensaje('')
-    setError('')
-    try {
-      if (accion === 'eliminar') {
-        const { retirado } = await eliminarSensor(sensor.id)
-        setMensaje(retirado
-          ? `Se eliminó el sensor ${nombre}. Sus lecturas anteriores se conservan en el historial.`
-          : `Se eliminó el sensor ${nombre}.`)
-      } else {
-        await (accion === 'activar' ? activarSensor(sensor.id) : desactivarSensor(sensor.id))
-        setMensaje(`El sensor ${nombre} quedó ${accion === 'activar' ? 'activo' : 'inactivo'}.`)
+    const aplicar = async () => {
+      setSensorOcupado(sensor.id)
+      setMensaje('')
+      setError('')
+      try {
+        if (accion === 'eliminar') {
+          const { retirado } = await eliminarSensor(sensor.id)
+          setMensaje(retirado
+            ? `Se eliminó el sensor ${nombre}. Sus lecturas anteriores se conservan en el historial.`
+            : `Se eliminó el sensor ${nombre}.`)
+        } else {
+          await (accion === 'activar' ? activarSensor(sensor.id) : desactivarSensor(sensor.id))
+          setMensaje(`El sensor ${nombre} quedó ${accion === 'activar' ? 'activo' : 'inactivo'}.`)
+        }
+        actualizarControladores()
+      } finally {
+        setSensorOcupado(null)
       }
-      actualizarControladores()
-    } catch (problema) {
-      setError(mensajeDeError(problema, 'No se pudo actualizar el sensor.'))
-    } finally {
-      setSensorOcupado(null)
     }
+    if (accion === 'activar') {
+      try { await aplicar() }
+      catch (problema) { setError(mensajeDeError(problema, 'No se pudo actualizar el sensor.')) }
+      return
+    }
+    await confirmarAccion({
+      titulo: accion === 'eliminar' ? '¿Eliminar este sensor?' : '¿Desactivar este sensor?',
+      entidad: nombre,
+      descripcion: accion === 'eliminar'
+        ? 'Dejará de aparecer en AVISENS. Si tiene lecturas o alertas, su historial se conserva para los reportes.'
+        : 'Deja de contar en el monitoreo. Sus lecturas guardadas se conservan.',
+      textoConfirmar: accion === 'eliminar' ? 'Eliminar sensor' : 'Desactivar sensor',
+      textoProcesando: accion === 'eliminar' ? 'Eliminando…' : 'Desactivando…',
+      tono: accion === 'eliminar' ? 'peligro' : 'aviso',
+      onConfirmar: aplicar,
+    })
   }
 
   async function registrar() {

@@ -11,7 +11,7 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { ROL_ADMIN } from './layout/Sidebar/navConfig'
-import CargaConLogo from '@shared/ui/Animacion/CargaConLogo'
+import CargaConLogo from '@shared/ui/Estados/CargaConLogo'
 
 // Cada pantalla se descarga solo cuando el usuario entra a su ruta. Antes se
 // enviaban todos los módulos (y todo su CSS) en el primer acceso, aunque la

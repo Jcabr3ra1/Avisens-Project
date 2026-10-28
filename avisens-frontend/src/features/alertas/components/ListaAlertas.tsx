@@ -1,7 +1,7 @@
 import { IcAlert, IcCheck, IcClock, IcEye } from '@shared/ui/icons/icons'
 import type { Alerta } from '../api/alertas'
 import { etiquetaCriticidad, etiquetaEstado } from '../model/alerta'
-import EstadoVacioAnimado from '@shared/ui/Animacion/EstadoVacioAnimado'
+import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
 
 interface ListaAlertasProps {
   alertas: Alerta[]
@@ -19,17 +19,15 @@ function fecha(fechaIso: string): string {
 function ListaAlertas({ alertas, hayAlertas, onLimpiarFiltros, actualizandoId, onAtender, onVerDetalle }: ListaAlertasProps) {
   if (alertas.length === 0) {
     return hayAlertas ? (
-      <EstadoVacioAnimado
+      <EstadoVacio
         className="ale-vacio"
-        animacion="sin-resultados"
         titulo="Sin coincidencias"
         texto="Ninguna alerta coincide con estos filtros."
         accion={<button type="button" className="adm-btn adm-btn--secundario" onClick={onLimpiarFiltros}>Limpiar filtros</button>}
       />
     ) : (
-      <EstadoVacioAnimado
+      <EstadoVacio
         className="ale-vacio"
-        animacion="exito"
         titulo="Todo en orden"
         texto="Los sensores no han detectado situaciones fuera de rango."
       />

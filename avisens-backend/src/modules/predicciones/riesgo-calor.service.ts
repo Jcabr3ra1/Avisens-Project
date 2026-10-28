@@ -20,6 +20,9 @@ interface RespuestaRiesgoMl {
   serie: unknown[];
   pico: { hora: string; thi: number; nivel: string };
   nivel_maximo: string;
+  horas_por_nivel: Record<string, number>;
+  primera_alerta: string | null;
+  recomendaciones: string[];
   modelo: { nombre: string; version: string };
 }
 

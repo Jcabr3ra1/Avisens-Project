@@ -1,5 +1,8 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
+import { getRol } from '@shared/api'
+import { permisosDeRegistro } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import FormularioConsumo from './FormularioConsumo'
 import ResumenConsumos from './ResumenConsumos'
@@ -20,6 +23,7 @@ type Props = {
 
 function GestionConsumos({ loteFijo = null, completo = false }: Props) {
   const gestion = useConsumosDiarios()
+  const permisos = permisosDeRegistro(getRol())
   const [abierto, setAbierto] = useState(false)
   const [editandoId, setEditandoId] = useState<number | null>(null)
   const [form, setForm] = useState<DatosFormularioConsumo>(FORMULARIO_CONSUMO_INICIAL)
@@ -97,8 +101,14 @@ function GestionConsumos({ loteFijo = null, completo = false }: Props) {
       .catch((err) => setErrorFormulario(mensajeDeError(err, 'No se pudo guardar el consumo.')))
       .finally(() => setGuardando(false))
   }
-  const eliminar = (c: ConsumoDiario) => {
-    if (!window.confirm(`¿Eliminar el consumo del lote ${c.lote.codigo}?`)) return
+  const eliminar = async (c: ConsumoDiario) => {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar este consumo?',
+      entidad: `Lote ${c.lote.codigo}`,
+      descripcion: 'Se eliminará el registro de consumo seleccionado.',
+      textoConfirmar: 'Eliminar consumo',
+      tono: 'peligro',
+    }))) return
     void gestion.eliminar(c.id).catch((error) => {
       toast.error(mensajeDeError(error, 'No se pudo eliminar el consumo.'))
     })
@@ -129,7 +139,7 @@ function GestionConsumos({ loteFijo = null, completo = false }: Props) {
       <p>{loteFijo === null ? 'Prueba otra búsqueda o lote.' : 'Prueba otra búsqueda.'}</p>
     </div>
   ) : (
-    <TablaConsumos consumos={visibles} onEditar={abrirEditar} onEliminar={eliminar} />
+    <TablaConsumos consumos={visibles} permisos={permisos} onEditar={abrirEditar} onEliminar={eliminar} />
   )
   const modal = abierto && (
     <FormularioConsumo

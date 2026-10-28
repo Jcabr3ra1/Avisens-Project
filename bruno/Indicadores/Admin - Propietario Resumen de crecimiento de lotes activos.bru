@@ -1,0 +1,15 @@
+meta {
+  name: [Admin · Propietario] Resumen de crecimiento de lotes activos
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/v1/indicadores/resumen-crecimiento
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

@@ -53,10 +53,11 @@
   color: var(--text-primary);
 }
 
-.gc-detalle-fila--real::before { background: var(--avisens-ink); }
+.gc-detalle-fila--real::before { background: var(--primary-hover, #0f172a); }
 .gc-detalle-fila--proyeccion::before { background: var(--primary); }
-.gc-detalle-fila--estandar::before { background: var(--avisens-maize); }
-.gc-detalle-fila--marca::before { background: var(--border-strong); }
+.gc-detalle-fila--estandar::before { background: #94a3b8; }
+.gc-detalle-fila--marca::before { background: #cbd5e1; }
+.gc-detalle-fila--comparacion::before { background: var(--avisens-deep); }
 
 .gc-detalle-rango {
   padding-left: 18px;

@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import type { Lote } from '@features/lotes/api/lotes'
@@ -121,8 +122,14 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
       .finally(() => setGuardando(false))
   }
 
-  function eliminar(movimiento: Movimiento) {
-    if (!window.confirm(`¿Eliminar «${movimiento.titulo}»? Esta acción no se puede deshacer.`)) return
+  async function eliminar(movimiento: Movimiento) {
+    if (!(await confirmarAccion({
+      titulo: '¿Eliminar este registro?',
+      entidad: movimiento.titulo,
+      descripcion: 'Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar registro',
+      tono: 'peligro',
+    }))) return
     const accion = movimiento.tipo === 'consumo'
       ? eliminarConsumoDiario(movimiento.id).then(() => datos.recargar())
       : datos.eliminar(movimiento.tipo, movimiento.id)

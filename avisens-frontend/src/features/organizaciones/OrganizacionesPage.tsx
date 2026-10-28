@@ -1,3 +1,4 @@
+import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
@@ -146,10 +147,14 @@ function OrganizacionesPage() {
     setEstado('todas')
   }
 
-  function alternarEstado(organizacion: Organizacion) {
-    if (organizacion.activa && !window.confirm(
-      `¿Suspender a ${organizacion.nombre}? Sus usuarios dejarán de poder entrar, pero no se borra nada.`,
-    )) return
+  async function alternarEstado(organizacion: Organizacion) {
+    if (organizacion.activa && !(await confirmarAccion({
+      titulo: '¿Suspender esta organización?',
+      entidad: organizacion.nombre,
+      descripcion: 'Sus usuarios dejarán de poder entrar. La información se conserva.',
+      textoConfirmar: 'Suspender organización',
+      tono: 'aviso',
+    }))) return
     void alternar(organizacion)
   }
 

@@ -1,10 +1,14 @@
 package com.project.avisensandroid.model
 
-import com.google.gson.annotations.SerializedName
-
 data class LoginResponse(
-    @SerializedName("requiere_cambio_password") val requiereCambioPassword: Boolean,
-    @SerializedName("access_token") val accessToken: String?,
-    @SerializedName("refresh_token") val refreshToken: String?,
-    @SerializedName("cambio_password_token") val cambioPasswordToken: String?
+    val access_token: String,
+    val refresh_token: String,
+    val usuario: UsuarioLoginResponse
+)
+
+data class UsuarioLoginResponse(
+    val id: Int,
+    val nombre: String,
+    val email: String,
+    val rol: String
 )

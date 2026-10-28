@@ -29,14 +29,30 @@ describe('flujo del cuestionario de cotización', () => {
     expect(recorrer('A1')).toEqual([
       'A1',
       'A2',
-      'A16',
+      'A3',
       'A14',
-      'A18',
+      'A16',
       'A19',
       'A20',
+      'A18',
       'C1',
-      'C2',
     ]);
+  });
+
+  it('pregunta el municipio como texto libre y lo guarda en el prospecto', () => {
+    const municipio = porCodigo.get('A3');
+    expect(municipio?.tipo).toBe('texto_libre');
+    expect(municipio?.campo_prospecto).toBe('municipio');
+    expect(municipio?.puntua).toBe(false);
+  });
+
+  it('el correo ya no se pide: C2 salió del cuestionario', () => {
+    expect(porCodigo.has('C2')).toBe(false);
+  });
+
+  it('el orden de las preguntas acompaña al recorrido', () => {
+    const ordenes = recorrer('A1').map((c) => Number(porCodigo.get(c)?.orden));
+    expect(ordenes).toEqual([...ordenes].sort((a, b) => a - b));
   });
 
   it('termina en FIN y no da vueltas', () => {
@@ -46,7 +62,7 @@ describe('flujo del cuestionario de cotización', () => {
 
   // Salen del cuestionario, no de la base: el seed las desactiva para que los
   // prospectos que ya las respondieron conserven su historial.
-  it.each(['A5', 'A6', 'A6B', 'A8', 'A9', 'A11', 'A13', 'A21'])(
+  it.each(['A5', 'A6', 'A6B', 'A8', 'A9', 'A11', 'A13', 'A21', 'C2'])(
     '%s ya no forma parte del cuestionario',
     (codigo) => {
       expect(porCodigo.has(codigo)).toBe(false);
@@ -64,7 +80,7 @@ describe('flujo del cuestionario de cotización', () => {
   // El puntaje no cambia con el recorte: son las mismas cinco preguntas.
   it('las cinco que puntúan siguen en el flujo', () => {
     const puntuan = recorrer('A1').filter((c) => porCodigo.get(c)?.puntua);
-    expect(puntuan).toEqual(['A16', 'A14', 'A18', 'A19', 'A20']);
+    expect(puntuan).toEqual(['A14', 'A16', 'A19', 'A20', 'A18']);
   });
 
   it('el menú de entrada sigue llevando al cuestionario', () => {
