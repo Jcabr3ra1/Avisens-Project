@@ -54,6 +54,9 @@ export interface EstadoRele {
 export interface UltimasOrdenes {
   ordenes: OrdenActuador[]
   reles: EstadoRele[]
+  // Hora del servidor (ms) en que armó la respuesta; null si no vino. Con
+  // ella se sabe qué edad tenía cada informe al responder (ver vencimientoEstado).
+  generadoEn: number | null
 }
 
 const ESTADOS: readonly EstadoOrden[] = ['pendiente', 'enviada', 'aplicada', 'rechazada', 'revertida', 'expirada', 'incierta']
@@ -99,11 +102,17 @@ function comoEstadoRele(datos: unknown): EstadoRele {
 }
 
 export async function listarUltimasOrdenes(galponId: number): Promise<UltimasOrdenes> {
-  const { data } = await api.get<{ ordenes?: unknown; reles?: unknown }>('/ordenes-actuadores/ultimas', {
-    params: { galpon_id: galponId },
-  })
+  const { data } = await api.get<{ ordenes?: unknown; reles?: unknown; generado_en?: unknown }>(
+    '/ordenes-actuadores/ultimas',
+    { params: { galpon_id: galponId } },
+  )
   if (!Array.isArray(data?.ordenes) || !Array.isArray(data?.reles)) {
     throw new Error('Respuesta inesperada del servidor al listar las órdenes.')
   }
-  return { ordenes: data.ordenes.map(comoOrden), reles: data.reles.map(comoEstadoRele) }
+  const generadoEn = typeof data.generado_en === 'string' ? Date.parse(data.generado_en) : Number.NaN
+  return {
+    ordenes: data.ordenes.map(comoOrden),
+    reles: data.reles.map(comoEstadoRele),
+    generadoEn: Number.isNaN(generadoEn) ? null : generadoEn,
+  }
 }

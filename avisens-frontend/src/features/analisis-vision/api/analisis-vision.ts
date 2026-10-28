@@ -70,3 +70,53 @@ export async function eliminarAnalisisVision(
   )
   return data
 }
+
+// ─── Cámara del galpón (ESP32-CAM + detección de pollos en el servidor) ──
+
+export type EstadoPolloCamara = 'normal' | 'quieto' | 'posible_muerto'
+
+export interface PolloCamara {
+  id: number
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  confianza: number
+  estado: EstadoPolloCamara
+  minutos_quieto: number
+}
+
+export interface ResultadoCamara {
+  modelo: string
+  ancho: number
+  alto: number
+  conteo: number
+  quietos: number
+  posibles_muertos: number
+  umbrales: { quieto_min: number; muerto_min: number }
+  pollos: PolloCamara[]
+}
+
+export interface CamaraGalpon {
+  ultimo: {
+    id: number
+    fecha_hora: string
+    tiene_imagen: boolean
+    resultado: ResultadoCamara
+  } | null
+  historial: { fecha_hora: string; conteo: number; quietos: number; posibles_muertos: number }[]
+}
+
+export async function obtenerCamaraGalpon(galponId: number): Promise<CamaraGalpon> {
+  const { data } = await api.get<CamaraGalpon>(`/analisis-vision/galpon/${galponId}/camara`)
+  return data
+}
+
+// La foto va protegida por la sesión: se pide como blob con el token, no con
+// un <img src> directo.
+export async function obtenerImagenAnalisis(analisisId: number): Promise<Blob> {
+  const { data } = await api.get<Blob>(`/analisis-vision/${analisisId}/imagen`, {
+    responseType: 'blob',
+  })
+  return data
+}

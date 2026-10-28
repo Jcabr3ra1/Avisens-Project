@@ -75,6 +75,15 @@ galpón seleccionado. Las rutas `/bitacora`, `/monitoreo` y `/alertas` siguen
 existiendo para el operario y para enlaces profundos, pero no se listan en el
 menú del propietario.
 
+Desde el 2026-10-20 Monitoreo tiene dos secciones hermanas: **Sensores**
+(`/monitoreo/sensores`, mediciones) y debajo **Actuadores**
+(`/monitoreo/actuadores`, relés K1-K4: estado reportado, órdenes y ficha). `/monitoreo`
+redirige a Sensores. El operario las ve como subítems de Monitoreo; el
+propietario, como la pestaña «Actuadores» junto a «Ambiente»; el administrador,
+como la vista «Actuadores» del galpón en Dispositivos. El registro de relés y la
+edición administrativa viven en «Configurar controladores y sensores», no junto a
+los controles.
+
 ### Al aplicarla
 
 Mover un hijo **no es borrar su ítem del menú**. Hay que darle lugar dentro del

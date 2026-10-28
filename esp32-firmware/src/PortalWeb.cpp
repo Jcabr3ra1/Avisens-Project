@@ -85,6 +85,9 @@ static void paginaEstado() {
   cuerpo += "<tr><td>WiFi</td><td>" + wifi + "</td></tr>";
   cuerpo += "<tr><td>Red propia</td><td>" + red + "</td></tr>";
   cuerpo += "<tr><td>Backend</td><td>" + escaparHtml(cfg.backendUrl) + "</td></tr>";
+  if (cfg.backendUrl2.length() > 0) {
+    cuerpo += "<tr><td>Espejo</td><td>" + escaparHtml(cfg.backendUrl2) + "</td></tr>";
+  }
   cuerpo += "<tr><td>Último envío</td><td>" + envio + "</td></tr>";
   cuerpo += "<tr><td>Configuración</td><td>" +
             String(configDesdeMemoria() ? "Guardada desde este portal" : "La de config.h") + "</td></tr>";
@@ -109,6 +112,10 @@ static void paginaConfig() {
   cuerpo += "<label>URL del backend (/ingest)</label><input name=\"backend_url\" required maxlength=\"200\" value=\"" +
             escaparHtml(cfg.backendUrl) + "\"><small>Ej.: https://tu-backend.up.railway.app/ingest</small>";
   cuerpo += F("<label>Token del dispositivo</label><input name=\"token\" type=\"password\" maxlength=\"200\" "
+              "placeholder=\"(vacío = no cambiar)\">");
+  cuerpo += "<label>Destino espejo (opcional)</label><input name=\"backend_url2\" maxlength=\"200\" value=\"" +
+            escaparHtml(cfg.backendUrl2) + "\"><small>Recibe las mismas lecturas. Solo el principal manda órdenes a los relés. Vacío = sin espejo.</small>";
+  cuerpo += F("<label>Token del espejo</label><input name=\"token2\" type=\"password\" maxlength=\"200\" "
               "placeholder=\"(vacío = no cambiar)\"><button type=\"submit\">Guardar y reiniciar</button></form>"
               "<form method=\"post\" action=\"/config/borrar\" "
               "onsubmit=\"return confirm('¿Volver a la configuración de config.h?')\">"
@@ -127,11 +134,17 @@ static void guardarConfig() {
   nueva.backendUrl.trim();
   if (servidor.arg("password").length() > 0) nueva.password = servidor.arg("password");
   if (servidor.arg("token").length() > 0) nueva.token = servidor.arg("token");
+  nueva.backendUrl2 = servidor.arg("backend_url2");
+  nueva.backendUrl2.trim();
+  if (servidor.arg("token2").length() > 0) nueva.token2 = servidor.arg("token2");
+  if (nueva.backendUrl2.isEmpty()) nueva.token2 = "";
 
   bool urlValida = nueva.backendUrl.startsWith("http://") || nueva.backendUrl.startsWith("https://");
-  if (nueva.ssid.isEmpty() || !urlValida) {
+  bool espejoValido = nueva.backendUrl2.isEmpty() || nueva.backendUrl2.startsWith("http://") ||
+                      nueva.backendUrl2.startsWith("https://");
+  if (nueva.ssid.isEmpty() || !urlValida || !espejoValido) {
     servidor.send(400, "text/html; charset=utf-8",
-                  pagina("Error", "<h1>No se guardó</h1><p>Falta la red WiFi o la URL no empieza por "
+                  pagina("Error", "<h1>No se guardó</h1><p>Falta la red WiFi o una URL no empieza por "
                                   "http:// o https://.</p><p><a href=\"/config\">← Volver</a></p>"));
     return;
   }

@@ -8,6 +8,7 @@ import {
   IcCoin,
   IcDoc,
   IcEye,
+  IcFan,
   IcGrid,
   IcHome,
   IcLeaf,
@@ -17,6 +18,7 @@ import {
   IcSeed,
   IcSend,
   IcServer,
+  IcThermo,
   IcUserCircle,
   IcUsers,
 } from '@shared/ui/icons/icons'
@@ -77,6 +79,10 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   '/guia-crecimiento':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/consumos-diarios':        [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/monitoreo':               [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  // Secciones de Monitoreo. /monitoreo lleva a Sensores. El administrador
+  // tiene ruta (lo redirige a Organizaciones) pero no ítem en el menú.
+  '/monitoreo/sensores':      [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
+  '/monitoreo/actuadores':    [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/sensores':                [ROL_ADMIN, ROL_PROPIETARIO],
   '/alertas':                 [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
   '/notificaciones':          [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO],
@@ -203,11 +209,28 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: <IcDoc size={16} />,
         rolesVisibles: [ROL_OPERARIO],
       },
+      // Sensores (mediciones) y Actuadores (relés K1-K4 y sus órdenes) son
+      // secciones hermanas: una no es prefijo de la otra, así el menú marca
+      // como activa solo la que está abierta.
       {
         path: '/monitoreo',
         label: 'Monitoreo',
         icon: <IcEye size={16} />,
         rolesVisibles: [ROL_OPERARIO],
+        children: [
+          {
+            path: '/monitoreo/sensores',
+            label: 'Sensores',
+            icon: <IcThermo size={16} />,
+            rolesVisibles: [ROL_OPERARIO],
+          },
+          {
+            path: '/monitoreo/actuadores',
+            label: 'Actuadores',
+            icon: <IcFan size={16} />,
+            rolesVisibles: [ROL_OPERARIO],
+          },
+        ],
       },
       {
         path: '/alertas',

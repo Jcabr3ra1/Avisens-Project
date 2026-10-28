@@ -36,7 +36,9 @@ body:json {
 docs {
   Lo que manda el ESP32 cuando ya aplicó una orden recibida en una respuesta
   anterior. La respuesta trae "ordenes": las que aún debe aplicar
-  ({ id, codigo, accion }).
+  ({ id, codigo, canal, accion }; canal solo si el relé está registrado por
+  canal). Este es el contrato por código del firmware anterior: el nuevo usa
+  canal (ver "Ingesta de relés por canal").
 
   arranque_id identifica la sesión de arranque del ESP32 (UUID nuevo en cada
   encendido). Si cambia, el backend pasa a "incierta" toda orden "enviada" a

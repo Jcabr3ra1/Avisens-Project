@@ -5,6 +5,25 @@
 #include <ArduinoJson.h>
 #include "config.h"
 #include "ConfigDispositivo.h"
+#include "BufferLecturas.h"
+#include <time.h>
+
+// config.h antiguos no definen estos valores: se usan los de abajo.
+#ifndef BUFFER_LECTURAS_CAPACIDAD
+#define BUFFER_LECTURAS_CAPACIDAD 48  // ~48 min de corte a 1 lectura por minuto
+#endif
+#ifndef INTERVALO_BUFFER_MS
+#define INTERVALO_BUFFER_MS 60000     // una lectura guardada por minuto sin red
+#endif
+#ifndef TIMEOUT_ESPEJO_MS
+#define TIMEOUT_ESPEJO_MS 2500        // el espejo es opcional: no debe frenar
+#endif
+#ifndef PAUSA_ESPEJO_CAIDO_MS
+#define PAUSA_ESPEJO_CAIDO_MS 30000   // tras un fallo, deja de intentarlo un rato
+#endif
+#ifndef MAX_REENVIOS_POR_CICLO
+#define MAX_REENVIOS_POR_CICLO 3
+#endif
 
 String generarIdLote() {
   uint8_t bytes[16];
@@ -36,6 +55,13 @@ static String lecturaJson(const char *codigo, const String &valor, const char *c
   return json + "},";
 }
 
+// Relé K1-K4 identificado por canal dentro de este ESP32: el backend lo
+// resuelve con el token del dispositivo, sin códigos compilados en config.h.
+static String lecturaReleJson(uint8_t indice, bool encendido) {
+  return "{\"tipo\":\"rele\",\"canal\":\"" + String(canalDeRele(indice)) +
+         "\",\"valor\":" + String(encendido ? 1 : 0) + "},";
+}
+
 static const char *textoResultado(ResultadoRemoto resultado) {
   switch (resultado) {
     case ResultadoRemoto::APLICADA: return "aplicada";
@@ -56,7 +82,7 @@ static const char *textoModo(ModoRele modo) {
 // hay AHORA en cada relé: con él la web muestra el estado actual y el
 // backend reconcilia las órdenes que el ESP32 ya no sostiene. Antes del
 // primer ciclo de tareaGalpon no hay nada cierto que informar y se omite.
-static String ordenesJson(const CicloIngesta &ciclo, const char *const codigosReles[4]) {
+static String ordenesJson(const CicloIngesta &ciclo) {
   String json = ",\"resultados_ordenes\":[";
   for (uint8_t i = 0; i < ciclo.cantidadResultados; i++) {
     const ResultadoOrdenRemota &r = ciclo.resultados[i];
@@ -75,7 +101,7 @@ static String ordenesJson(const CicloIngesta &ciclo, const char *const codigosRe
   json += ",\"estados_reles\":[";
   for (uint8_t i = 0; i < 4; i++) {
     if (i > 0) json += ",";
-    json += "{\"codigo\":\"" + String(codigosReles[i]) + "\"" +
+    json += "{\"canal\":\"" + String(canalDeRele(i)) + "\"" +
             ",\"modo\":\"" + textoModo(ciclo.reles.modo[i]) + "\"" +
             ",\"encendido\":" + (ciclo.reles.encendido[i] ? "true" : "false");
     if (ciclo.reles.modo[i] == ModoRele::MANUAL_REMOTO) {
@@ -90,56 +116,202 @@ static void leerOrdenes(JsonVariant campoOrdenes, RespuestaIngesta &respuesta) {
   if (!campoOrdenes.is<JsonArray>()) return;
   for (JsonVariant o : campoOrdenes.as<JsonArray>()) {
     if (respuesta.cantidadOrdenes >= MAX_ORDENES_POR_RESPUESTA) break;
-    if (!o["id"].is<uint32_t>() || !o["codigo"].is<const char *>() ||
-        !o["accion"].is<const char *>()) {
+    if (!o["id"].is<uint32_t>() || !o["accion"].is<const char *>()) {
       continue;  // forma inesperada: se ignora, el backend la repetirá o expirará
     }
     OrdenRecibida &destino = respuesta.ordenes[respuesta.cantidadOrdenes++];
     destino.id = o["id"].as<uint32_t>();
-    strlcpy(destino.codigo, o["codigo"].as<const char *>(), sizeof(destino.codigo));
+    // El relé se identifica por canal ("rele:k1".."rele:k4"). Una orden sin
+    // canal (relé antiguo que aún no se registró por canal en la web) sigue
+    // adelante con el canal vacío: ControlRemoto la rechaza con un motivo
+    // claro en vez de dejarla expirar en silencio. "codigo" se ignora: es
+    // solo para el firmware anterior.
+    destino.canal[0] = '\0';
+    if (o["canal"].is<const char *>()) {
+      strlcpy(destino.canal, o["canal"].as<const char *>(), sizeof(destino.canal));
+    }
     strlcpy(destino.accion, o["accion"].as<const char *>(), sizeof(destino.accion));
   }
 }
 
-bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote,
-                                RespuestaIngesta &salida) {
-  salida.contratoValido = false;
-  salida.cantidadOrdenes = 0;
+// ─── Hora por internet ───────────────────────────────────
+// El búfer necesita la hora real para fechar las lecturas que reenvía tarde.
+// Sin ella (todavía no llegó NTP) no se guarda nada y todo sigue como antes.
+static bool horaPedida = false;
+
+void iniciarHoraRed() {
+  if (horaPedida) return;
+  horaPedida = true;
+  configTime(0, 0, "pool.ntp.org", "time.google.com");
+}
+
+bool horaSincronizada() {
+  return time(nullptr) > 1700000000;  // noviembre de 2023: antes es el reloj sin ajustar
+}
+
+static String fechaJson(int64_t epoch) {
+  if (epoch <= 0) return String();
+  time_t t = static_cast<time_t>(epoch);
+  struct tm utc;
+  gmtime_r(&t, &utc);
+  char buf[32];
+  strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S.000Z", &utc);
+  return ",\"fecha_dispositivo\":\"" + String(buf) + "\"";
+}
+
+// Lecturas del ciclo en JSON, sin los corchetes del arreglo. `enviadas` es
+// cuántas incluye: el backend debe registrar exactamente ese número.
+static String armarLecturas(const CicloIngesta &ciclo, int &enviadas) {
   String lecturas;
-  int LECTURAS_ENVIADAS = 0;
+  enviadas = 0;
   if (ciclo.incluirDht) {
     lecturas += lecturaJson(CODIGO_SENSOR_TEMP, String(ciclo.temperatura, 1));
     lecturas += lecturaJson(CODIGO_SENSOR_HUM, String(ciclo.humedad, 1));
-    LECTURAS_ENVIADAS += 2;
+    enviadas += 2;
   }
   if (ciclo.incluirAgua) {
     lecturas += lecturaJson(CODIGO_SENSOR_AGUA, String(ciclo.distanciaAgua, 1));
-    LECTURAS_ENVIADAS += 1;
+    enviadas += 1;
   }
   if (ciclo.incluirGas) {
     lecturas += lecturaJson(CODIGO_SENSOR_GAS, String(ciclo.gasAdc));
-    LECTURAS_ENVIADAS += 1;
+    enviadas += 1;
   }
   if (ciclo.incluirPeso) {
     lecturas += lecturaJson(CODIGO_SENSOR_PESO, String(ciclo.pesoGramos, 1),
                             ciclo.pesoCalibrado ? nullptr : "sospechosa");
-    LECTURAS_ENVIADAS += 1;
+    enviadas += 1;
   }
   const EstadoActuadores &a = ciclo.actuadores;
-  const char *CODIGOS_RELES[4] = {CODIGO_RELE_K1, CODIGO_RELE_K2, CODIGO_RELE_K3, CODIGO_RELE_K4};
   lecturas += lecturaJson(CODIGO_MOTOR_ALIMENTADOR, String(a.alimentador ? 1 : 0));
   lecturas += lecturaJson(CODIGO_MOTOR_PERSIANA, String(a.persiana ? 1 : 0));
-  for (int i = 0; i < 4; i++) {
-    lecturas += lecturaJson(CODIGOS_RELES[i], String(a.reles[i] ? 1 : 0));
+  for (uint8_t i = 0; i < 4; i++) {
+    lecturas += lecturaReleJson(i, a.reles[i]);
   }
-  LECTURAS_ENVIADAS += 6;
+  enviadas += 6;
   lecturas.remove(lecturas.length() - 1);  // coma final
+  return lecturas;
+}
+
+// ─── Búfer de lecturas sin red y destino espejo ──────────
+static BufferLecturas<BUFFER_LECTURAS_CAPACIDAD> bufferLecturas;
+static unsigned long ultimoGuardadoMs = 0;
+static bool hayGuardado = false;
+static unsigned long espejoCaidoHastaMs = 0;
+static bool espejoEnPausa = false;
+
+// Cuerpo sin órdenes ni estado de relés: son datos que caducan y no deben
+// reenviarse tarde, ni llegar a un destino que no manda en los relés.
+static String cuerpoSoloLecturas(const String &idLote, int64_t epoch, const String &lecturas) {
+  return "{\"id_lote\":\"" + idLote + "\"" + fechaJson(epoch) + ",\"lecturas\":[" + lecturas + "]}";
+}
+
+// Un POST sin reintentos. Devuelve el código HTTP (negativo = sin conexión).
+static int postUnaVez(const String &url, const String &token, const String &cuerpo, int timeoutMs) {
+  HTTPClient http;
+  WiFiClient clientePlano;
+  WiFiClientSecure clienteTls;
+  if (url.startsWith("https://")) {
+    clienteTls.setInsecure();  // mismo criterio que el destino principal
+    http.begin(clienteTls, url);
+  } else {
+    http.begin(clientePlano, url);
+  }
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("X-Device-Token", token);
+  http.setTimeout(timeoutMs);
+  int codigo = http.POST(cuerpo);
+  http.getString();
+  http.end();
+  return codigo;
+}
+
+static void guardarEnBuffer(const String &idLote, int64_t epoch, const String &lecturas) {
+  if (epoch <= 0) return;  // sin hora real no se puede fechar el reenvío
+  if (hayGuardado && millis() - ultimoGuardadoMs < INTERVALO_BUFFER_MS) return;
+  bool guardada = false;
+  const bool descarto = bufferLecturas.agregar(idLote.c_str(), epoch, lecturas.c_str(), &guardada);
+  if (!guardada) {
+    LOG_WARN("Buffer: lectura demasiado larga, no se guardo");
+    return;
+  }
+  hayGuardado = true;
+  ultimoGuardadoMs = millis();
+  Serial.printf("[Buffer] Guardada (%u/%u)%s\n", static_cast<unsigned>(bufferLecturas.cantidad()),
+                static_cast<unsigned>(bufferLecturas.capacidad()),
+                descarto ? " - descarto la mas vieja" : "");
+}
+
+bool bufferListoParaGuardar() {
+  if (!horaSincronizada()) return false;
+  return !hayGuardado || millis() - ultimoGuardadoMs >= INTERVALO_BUFFER_MS;
+}
+
+void guardarCicloSinRed(const CicloIngesta &ciclo) {
+  int enviadas = 0;
+  const String lecturas = armarLecturas(ciclo, enviadas);
+  const int64_t epoch = horaSincronizada() ? static_cast<int64_t>(time(nullptr)) : 0;
+  guardarEnBuffer(generarIdLote(), epoch, lecturas);
+}
+
+size_t lecturasPendientes() {
+  return bufferLecturas.cantidad();
+}
+
+// Reenvía las más viejas con su hora original. Una confirmación o un 4xx
+// (lectura que el backend nunca aceptará) la quitan; un fallo de red o un
+// 5xx/429 detienen el reenvío hasta el próximo ciclo.
+static void reenviarPendientes() {
+  const ConfigDispositivo &cfg = configDispositivo();
+  for (int i = 0; i < MAX_REENVIOS_POR_CICLO && !bufferLecturas.vacio(); i++) {
+    const EntradaBufferLecturas *e = bufferLecturas.masVieja();
+    const String cuerpo = cuerpoSoloLecturas(String(e->idLote), e->epoch, String(e->lecturas));
+    const int codigo = postUnaVez(cfg.backendUrl, cfg.token, cuerpo, TIMEOUT_INGESTA_MS);
+    if (codigo >= 200 && codigo < 300) {
+      bufferLecturas.quitarMasVieja();
+    } else if (codigo >= 400 && codigo < 500 && codigo != 429) {
+      LOG_ERROR("Buffer: el backend rechazo una lectura guardada (" + String(codigo) + "), se descarta");
+      bufferLecturas.quitarMasVieja();
+    } else {
+      return;
+    }
+  }
+  if (!bufferLecturas.vacio()) {
+    Serial.printf("[Buffer] Quedan %u por reenviar\n", static_cast<unsigned>(bufferLecturas.cantidad()));
+  }
+}
+
+// Mismas lecturas al destino espejo, un solo intento. Su respuesta no se
+// usa: las órdenes de los relés vienen únicamente del destino principal.
+static void enviarEspejo(const String &idLote, int64_t epoch, const String &lecturas) {
+  const ConfigDispositivo &cfg = configDispositivo();
+  if (cfg.backendUrl2.isEmpty() || cfg.token2.isEmpty()) return;
+  if (espejoEnPausa && millis() < espejoCaidoHastaMs) return;
+
+  const int codigo = postUnaVez(cfg.backendUrl2, cfg.token2,
+                                cuerpoSoloLecturas(idLote, epoch, lecturas), TIMEOUT_ESPEJO_MS);
+  if (codigo >= 200 && codigo < 300) {
+    espejoEnPausa = false;
+    return;
+  }
+  espejoEnPausa = true;
+  espejoCaidoHastaMs = millis() + PAUSA_ESPEJO_CAIDO_MS;
+  Serial.printf("[Espejo] Sin respuesta (codigo %d), se reintenta en %d s\n", codigo,
+                PAUSA_ESPEJO_CAIDO_MS / 1000);
+}
+
+static bool enviarPrincipal(const CicloIngesta &ciclo, const String &idLote,
+                            const String &lecturas, int LECTURAS_ENVIADAS, int64_t epoch,
+                            RespuestaIngesta &salida, bool &agotado) {
+  salida.contratoValido = false;
+  salida.cantidadOrdenes = 0;
+  agotado = false;
 
   String arranque = ciclo.arranqueId != nullptr && ciclo.arranqueId[0] != '\0'
                         ? ",\"arranque_id\":\"" + String(ciclo.arranqueId) + "\""
                         : String();
-  String body = "{\"id_lote\":\"" + idLote + "\"" + arranque + ",\"lecturas\":[" + lecturas + "]" +
-                ordenesJson(ciclo, CODIGOS_RELES) + "}";
+  String body = "{\"id_lote\":\"" + idLote + "\"" + fechaJson(epoch) + arranque + ",\"lecturas\":[" + lecturas + "]" +
+                ordenesJson(ciclo) + "}";
 
   // URL y token salen de la configuración del portal (o de config.h): así
   // se apunta al backend desplegado sin recompilar.
@@ -236,7 +408,8 @@ bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote,
       // Reintentar no arregla un codigo mal configurado -- se abandona
       // sin gastar los reintentos que quedan.
       LOG_ERROR("Ingesta: el backend no registro todas las lecturas (revisar "
-                "CODIGO_SENSOR_* / CODIGO_MOTOR_* en config.h vs sensores registrados)");
+                "CODIGO_SENSOR_* / CODIGO_MOTOR_* en config.h vs sensores registrados, "
+                "y que los reles K1-K4 esten registrados por canal en la web)");
       return false;
     }
 
@@ -245,6 +418,24 @@ bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote,
     return true;
   }
 
-  LOG_ERROR("Ingesta: se agotaron los reintentos, ciclo abandonado (id_lote=" + idLote + ")");
+  LOG_ERROR("Ingesta: se agotaron los reintentos (id_lote=" + idLote + ")");
+  agotado = true;
   return false;
+}
+
+bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote,
+                                RespuestaIngesta &salida) {
+  int enviadas = 0;
+  const String lecturas = armarLecturas(ciclo, enviadas);
+  const int64_t epoch = horaSincronizada() ? static_cast<int64_t>(time(nullptr)) : 0;
+
+  bool agotado = false;
+  const bool ok = enviarPrincipal(ciclo, idLote, lecturas, enviadas, epoch, salida, agotado);
+
+  // Solo se guarda lo que se perdió por la red (reintentos agotados): un 4xx es
+  // configuración y reenviarlo mañana tampoco lo arreglaría.
+  if (agotado) guardarEnBuffer(idLote, epoch, lecturas);
+  if (ok) reenviarPendientes();
+  enviarEspejo(idLote, epoch, lecturas);
+  return ok;
 }

@@ -1,0 +1,6 @@
+# Artefactos de compilación de PlatformIO
+.pio/
+.vscode/
+
+# Configuración real con WiFi y token: NO se versiona (ver include/config.example.h)
+include/config.h

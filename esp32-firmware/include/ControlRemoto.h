@@ -35,11 +35,21 @@ enum class ResultadoRemoto : uint8_t { APLICADA, RECHAZADA, REVERTIDA };
 enum class ModoRele : uint8_t { AUTOMATICO, MANUAL_REMOTO, MANUAL_LOCAL };
 
 // Orden tal como viene en el JSON de /ingest, antes de traducirla a un relé.
+// El relé llega por canal ("rele:k1".."rele:k4"): su identidad física dentro
+// de este ESP32. Vacío si el backend no lo mandó (relé sin canal registrado).
 struct OrdenRecibida {
   uint32_t id;
-  char codigo[32];
+  char canal[16];
   char accion[16];
 };
+
+// Canal con el que se reportan y se reciben los relés: índice 0 = K1. Fijo
+// en el firmware y común a todos los ESP32, así registrar un galpón o un
+// ESP32 nuevo no exige editar config.h ni recompilar.
+inline const char *canalDeRele(uint8_t indice) {
+  static const char *const CANALES[4] = {"rele:k1", "rele:k2", "rele:k3", "rele:k4"};
+  return indice < 4 ? CANALES[indice] : "";
+}
 
 struct ResultadoOrdenRemota {
   uint32_t id;
@@ -136,7 +146,7 @@ class ControlRemoto {
                          bool estadoRele, const char *motivo);
   bool hayContactoBackend();
 
-  static uint8_t releDesdeCodigo(const char *codigo);
+  static uint8_t releDesdeCanal(const char *canal);
 };
 
 #endif  // CONTROL_REMOTO_H
