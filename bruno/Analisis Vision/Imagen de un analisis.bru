@@ -1,0 +1,21 @@
+meta {
+  name: Foto de un análisis
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/analisis-vision/1/imagen
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Devuelve el JPEG que envió la cámara para ese análisis (image/jpeg, cacheable
+  porque no cambia). 404 si el análisis no tiene foto (se podan las viejas sin
+  alerta); 403 sin acceso al galpón.
+}

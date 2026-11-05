@@ -16,8 +16,14 @@ import {
   ListarAnalisisVisionDto,
 } from './dto/create-analisis-vision.dto';
 import { UpdateAnalisisVisionDto } from './dto/update-analisis-vision.dto';
+import {
+  TIPO_DETECCION_POLLOS,
+  type ResultadoDeteccionPollos,
+} from './vision/vision-ingest.service';
 
 const SIN_ACCESO = 'No tienes acceso al galpón de este análisis';
+// Fotos que alimentan la mini gráfica de conteo de la tarjeta de la cámara.
+const HISTORIAL_CAMARA = 60;
 
 const SELECT = {
   id: true,
@@ -178,5 +184,76 @@ export class AnalisisVisionService {
     await this.obtener(id, solicitante);
     await this.prisma.analisisVision.delete({ where: { id } });
     return { id, eliminado: true };
+  }
+
+  // Lo que muestra la tarjeta de la cámara: el último análisis de la
+  // ESP32-CAM (con sus recuadros) y la evolución del conteo.
+  async camaraDelGalpon(galponId: number, solicitante: Solicitante) {
+    const galpon = await this.prisma.galpon.findUnique({
+      where: { id: galponId },
+      select: { granja: { select: { propietario_id: true } } },
+    });
+    if (!galpon) throw new NotFoundException('Galpón no encontrado');
+    await verificarAccesoGalpon(
+      this.prisma,
+      galponId,
+      solicitante,
+      SIN_ACCESO,
+      galpon.granja.propietario_id,
+    );
+
+    const recientes = await this.prisma.analisisVision.findMany({
+      where: { galpon_id: galponId, tipo_analisis: TIPO_DETECCION_POLLOS },
+      orderBy: { fecha_hora: 'desc' },
+      take: HISTORIAL_CAMARA,
+      select: {
+        id: true,
+        fecha_hora: true,
+        resultado: true,
+        captura: { select: { id: true } },
+      },
+    });
+    if (recientes.length === 0) return { ultimo: null, historial: [] };
+
+    const [ultimo] = recientes;
+    return {
+      ultimo: {
+        id: ultimo.id,
+        fecha_hora: ultimo.fecha_hora,
+        tiene_imagen: ultimo.captura !== null,
+        resultado: ultimo.resultado,
+      },
+      historial: recientes
+        .map((a) => {
+          const r = a.resultado as Partial<ResultadoDeteccionPollos> | null;
+          return {
+            fecha_hora: a.fecha_hora,
+            conteo: r?.conteo ?? 0,
+            quietos: r?.quietos ?? 0,
+            posibles_muertos: r?.posibles_muertos ?? 0,
+          };
+        })
+        .reverse(),
+    };
+  }
+
+  async imagenDeAnalisis(analisisId: number, solicitante: Solicitante) {
+    const captura = await this.prisma.capturaVision.findUnique({
+      where: { analisis_id: analisisId },
+      select: {
+        imagen: true,
+        galpon_id: true,
+        galpon: { select: { granja: { select: { propietario_id: true } } } },
+      },
+    });
+    if (!captura) throw new NotFoundException('Este análisis no tiene foto');
+    await verificarAccesoGalpon(
+      this.prisma,
+      captura.galpon_id,
+      solicitante,
+      SIN_ACCESO,
+      captura.galpon.granja.propietario_id,
+    );
+    return Buffer.from(captura.imagen);
   }
 }

@@ -62,3 +62,19 @@ struct RespuestaIngesta {
 
 bool enviarLecturaConReintentos(const CicloIngesta &ciclo, const String &idLote,
                                 RespuestaIngesta &respuesta);
+
+// Hora real por internet (NTP). El búfer la necesita para fechar lecturas.
+void iniciarHoraRed();
+bool horaSincronizada();
+
+// Guarda en el búfer las lecturas de un ciclo cuando no hay WiFi. Como mucho
+// una por INTERVALO_BUFFER_MS, para que el búfer cubra un corte largo.
+void guardarCicloSinRed(const CicloIngesta &ciclo);
+
+// true si ya toca guardar otra lectura (hay hora real y pasó el intervalo).
+// Se consulta ANTES de armar el ciclo: armarlo reinicia el aviso de que un
+// motor se encendió, y no debe gastarse en un ciclo que se va a descartar.
+bool bufferListoParaGuardar();
+
+// Lecturas guardadas que aún no se reenviaron.
+size_t lecturasPendientes();

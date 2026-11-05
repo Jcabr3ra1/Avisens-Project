@@ -9,6 +9,11 @@ struct ConfigDispositivo {
   String password;
   String backendUrl;  // URL completa de /ingest (http:// o https://)
   String token;       // X-Device-Token del dispositivo
+  // Destino espejo (opcional): recibe las mismas lecturas, pero no entrega
+  // órdenes de relés. Vacío = desactivado. Ej.: el backend de producción
+  // como principal y el local como espejo, o al revés.
+  String backendUrl2;
+  String token2;
 };
 
 // Lee la NVS; lo que no esté guardado toma el valor de config.h.

@@ -45,8 +45,10 @@ persiana, alimentador y puerta se deciden aquí, con los umbrales de
 | L293D canal B | `EN2_PIN` 21, `IN3_PIN` 22, `IN4_PIN` 23 | Alimentador (tornillo sinfín) |
 | Servo | `SERVO_PIN` 2 | Puerta |
 
-Los relés y los motores se reportan como sensores de unidad `estado`
-(`REL-K1-G1-01`… `REL-K4-G1-01`, `MOT-ALIM-G1-01`, `MOT-PERS-G1-01`).
+Los relés y los motores se reportan como sensores de unidad `estado`. Los
+motores por código (`MOT-ALIM-G1-01`, `MOT-PERS-G1-01`); los relés K1-K4 por
+**canal** (`rele:k1`… `rele:k4`), sin código en `config.h` (ver
+[Relés por canal](#relés-k1-k4-por-canal)).
 
 ### Configuración
 
@@ -111,6 +113,16 @@ no los usa**: asignar un DHT22 allí no tiene efecto en él.
 - [ ] **Un único `config.example.h`:** `develop` retiró `DEVICE_CODIGO_TOPIC`,
   `MQTT_*` y los `CODIGO_SENSOR_*` de la plantilla; en esta rama se conservan
   (`MQTT_*` no se usa: el transporte es HTTP).
+- [ ] **Dos destinos a la vez:** `develop` envía a producción (HTTPS, con búfer
+  de hasta 3 horas) y, si encuentra el computador de desarrollo por mDNS o IP
+  vecinas, también a local. Aquí se envía a una sola `BACKEND_URL`.
+- [ ] **Token vinculado desde la página:** `develop` recibe el token por USB con
+  «Vincular ESP32» y lo guarda en la memoria del ESP32, uno por destino. Aquí el
+  token sigue en `DEVICE_TOKEN` de `config.h`.
+- [ ] **Actualización por Wi-Fi (OTA):** `develop` descarga el firmware que
+  publica el administrador (lo anuncia `GET /ingest/configuracion`), verifica su
+  SHA-256 y se reinicia. Este firmware no consulta esa ruta, así que no se
+  actualiza solo.
 
 ---
 
@@ -123,9 +135,9 @@ no los usa**: asignar un DHT22 allí no tiene efecto en él.
 > la salida serie de ejemplo, «Qué hace hoy», el modo producción con TLS ni la
 > consulta de `/ingest/configuracion`.
 >
-> **Siguen siendo válidos aquí:** programar y operar sin computador, consultar
-> la IP LAN, abrir el backend solo para la prueba local y el diagnóstico del
-> `401`.
+> **Siguen siendo válidos aquí:** programar y operar sin computador y abrir el
+> backend a la red local (`scripts/esp32-lan.sh`). La vinculación del token con
+> «Vincular ESP32» **no** aplica: en esta rama el token va en `DEVICE_TOKEN`.
 
 Firmware del **nodo ESP32** que se instala en un galpón. Lee el DHT22,
 **controla el ventilador localmente** y envía temperatura y humedad al backend
@@ -321,21 +333,22 @@ En la primera conexión, la salida serie puede mostrar:
 
 ## Envío al backend
 
-Cada ciclo manda las lecturas identificadas por código (nunca por id de BD):
-temperatura, humedad, nivel de agua, gas (MQ-135, ADC crudo), peso (HX711),
-los dos motores del L293D y los relés K1-K4. Motores y relés van como unidad `estado` (1 = encendido desde el
-último envío, 0 = apagado). Un sensor que falla en el ciclo se omite y el
-resto se envía igual. La respuesta de `/ingest` trae además las órdenes
-remotas para K1-K4 (ver `ControlRemoto.h`).
+Cada ciclo manda las lecturas identificadas por código o por canal (nunca
+por id de BD): temperatura, humedad, nivel de agua, gas (MQ-135, ADC crudo),
+peso (HX711), los dos motores del L293D y los relés K1-K4. Motores y relés
+van como unidad `estado` (1 = encendido desde el último envío, 0 = apagado).
+Un sensor que falla en el ciclo se omite y el resto se envía igual. La
+respuesta de `/ingest` trae además las órdenes remotas para K1-K4 (ver
+`ControlRemoto.h`).
 
-Este firmware usa el contrato `{codigo, valor}`. La asociación dinámica por
-`{tipo, canal}` (`GET /ingest/configuracion`) existe en el backend pero este
-firmware todavía no la usa: ver [ASOCIACION-DINAMICA.md](ASOCIACION-DINAMICA.md).
+Los sensores y motores usan el contrato `{codigo, valor}`. La asociación
+dinámica de DHT22 por `{tipo, canal}` (`GET /ingest/configuracion`) existe en
+el backend pero este firmware todavía no la usa: ver
+[ASOCIACION-DINAMICA.md](ASOCIACION-DINAMICA.md).
 
-Los códigos (`CODIGO_SENSOR_*`, `CODIGO_MOTOR_*`, `CODIGO_RELE_*` en
-`config.h`) tienen que existir como sensores del mismo dispositivo en el
-backend, o el backend descarta esas lecturas. Para registrarlos de una vez en
-una base local:
+Los códigos (`CODIGO_SENSOR_*`, `CODIGO_MOTOR_*` en `config.h`) tienen que
+existir como sensores del mismo dispositivo en el backend, o el backend
+descarta esas lecturas. Para registrarlos de una vez en una base local:
 
 ```bash
 docker compose exec backend pnpm run seed:sensores-esp32 <codigo_topic>
@@ -343,6 +356,39 @@ docker compose exec backend pnpm run seed:sensores-esp32 <codigo_topic>
 
 En producción se registran desde la app (Sensores), con el mismo código,
 tipo y unidad.
+
+### Relés K1-K4 por canal
+
+Los relés no usan códigos en `config.h`. El firmware los reporta y los
+controla por su canal físico dentro del ESP32:
+
+| Relé | Pin | Canal | Nombre al registrarlo |
+|---|---|---|---|
+| K1 | `K1_PIN` 32 | `rele:k1` | Bombillos de calefacción |
+| K2 | `K2_PIN` 25 | `rele:k2` | Ventiladores |
+| K3 | `K3_PIN` 27 | `rele:k3` | Extractores |
+| K4 | `K4_PIN` 14 | `rele:k4` | Bomba de agua |
+
+- Lecturas: `{"tipo":"rele","canal":"rele:k2","valor":1}`.
+- Estado actual: `estados_reles: [{"canal":"rele:k2","modo":…,"encendido":…}]`.
+- Órdenes recibidas: `{"id":…,"canal":"rele:k2","accion":…}`. El campo
+  `codigo` que también trae la respuesta es para el firmware anterior y se
+  ignora. Una orden sin `canal` (relé antiguo sin registrar por canal) se
+  rechaza con el motivo «Orden sin canal K1-K4: registra los reles por canal
+  en la web».
+
+El backend resuelve el canal **dentro del ESP32 del token**: `rele:k1` de un
+ESP32 nunca toca un relé de otro ESP32 ni de otro galpón. Para dar de alta un
+ESP32 o un galpón nuevo basta con, en la web, pulsar **Registrar relés**
+(Configurar controladores y sensores → Actuadores): no hay que editar
+`config.h` ni recompilar. El mismo paso asocia sin riesgo los registros
+antiguos `REL-K<n>-…` de ese ESP32 y conserva su historial.
+
+**Orden de despliegue:** primero el backend con esta versión y el registro
+de relés en la web; después el firmware. El backend acepta los dos contratos
+(por código y por canal), así que el firmware anterior sigue funcionando
+mientras tanto. Si el destino espejo (`BACKEND_URL_2`) corre un backend
+anterior, rechazará los lotes con relés por canal (400) hasta actualizarlo.
 
 ---
 

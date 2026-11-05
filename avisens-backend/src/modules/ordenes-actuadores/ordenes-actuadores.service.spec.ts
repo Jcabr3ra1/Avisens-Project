@@ -80,6 +80,131 @@ describe('OrdenesActuadoresService', () => {
       expect(esReleControlable({ codigo: 'REL-K5-G1-01', unidad_medida: 'estado' })).toBe(false);
       expect(esReleControlable({ codigo: 'TEMP-G1-01', unidad_medida: '°C' })).toBe(false);
     });
+
+    it('con canal manda el canal: el código deja de importar', () => {
+      expect(
+        esReleControlable({ codigo: 'ESTADO-G1-AB12', unidad_medida: 'estado', canal: 'rele:k3' }),
+      ).toBe(true);
+      // Un código REL-K con canal GPIO no es un relé: manda la conexión física.
+      expect(
+        esReleControlable({ codigo: 'REL-K1-G1-01', unidad_medida: 'estado', canal: 'gpio:18' }),
+      ).toBe(false);
+      expect(
+        esReleControlable({ codigo: 'REL-K1-G1-01', unidad_medida: '°C', canal: 'rele:k1' }),
+      ).toBe(false);
+    });
+  });
+
+  describe('relés identificados por canal', () => {
+    it('crea la orden para un relé registrado por canal aunque su código no sea REL-K', async () => {
+      prisma.sensor.findUnique.mockResolvedValue(
+        releK2({ codigo: 'SIN-PATRON-01', canal: 'rele:k2' }),
+      );
+      prisma.ordenActuador.create.mockResolvedValue({ id: 50 });
+      await service.crear({ sensor_id: 12, accion: 'apagar' }, propietario);
+      expect(prisma.ordenActuador.create).toHaveBeenCalled();
+    });
+
+    it('entrega el canal del relé además del código (compatibilidad con firmware anterior)', async () => {
+      prisma.ordenActuador.findMany.mockResolvedValue([
+        { id: 41, accion: 'encender', sensor: { codigo: 'REL-K2-G3-D7', canal: 'rele:k2' } },
+        { id: 42, accion: 'apagar', sensor: { codigo: 'REL-K4-G1-01', canal: null } },
+      ]);
+
+      const res = await service.entregarPendientes(7, 'S');
+
+      expect(res).toEqual([
+        { id: 41, codigo: 'REL-K2-G3-D7', canal: 'rele:k2', accion: 'encender' },
+        // Registro antiguo sin canal: solo el código; el firmware nuevo la
+        // rechaza con motivo hasta que se registren los relés por canal.
+        { id: 42, codigo: 'REL-K4-G1-01', accion: 'apagar' },
+      ]);
+    });
+
+    it('solo entrega órdenes de relés que siguen en el ESP32 que consulta', async () => {
+      prisma.ordenActuador.findMany.mockResolvedValue([]);
+      await service.entregarPendientes(7, 'S');
+      const consulta = prisma.ordenActuador.findMany.mock.calls[0] as [
+        { where: Record<string, unknown> },
+      ];
+      expect(consulta[0].where).toMatchObject({
+        dispositivo_id: 7,
+        sensor: { dispositivo_id: 7 },
+      });
+    });
+
+    it('recibe el estado por canal y lo resuelve dentro del dispositivo autenticado', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 30, codigo: 'REL-K1-G3-D7', canal: 'rele:k1', unidad_medida: 'estado' },
+        { id: 31, codigo: 'REL-K2-G3-D7', canal: 'rele:k2', unidad_medida: 'estado' },
+      ]);
+
+      await service.procesarReporte(7, [], [
+        { canal: 'rele:k1', modo: 'automatico', encendido: true },
+        { canal: 'rele:k2', modo: 'manual_local', encendido: false },
+        // Canal sin relé registrado en este ESP32: se ignora.
+        { canal: 'rele:k3', modo: 'automatico', encendido: false },
+      ]);
+
+      const consulta = prisma.sensor.findMany.mock.calls[0] as [
+        { where: Record<string, unknown> },
+      ];
+      expect(consulta[0].where).toEqual({
+        dispositivo_id: 7,
+        OR: [
+          { codigo: { in: [] } },
+          { canal: { in: ['rele:k1', 'rele:k2', 'rele:k3'] } },
+        ],
+      });
+      const guardados = (
+        prisma.estadoActuador.upsert.mock.calls as Array<[{ where: { sensor_id: number } }]>
+      ).map((c) => c[0].where.sensor_id);
+      expect(guardados).toEqual([30, 31]);
+    });
+
+    it('sigue aceptando el estado por código del firmware anterior en un relé ya asociado a canal', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 12, codigo: 'REL-K2-G1-01', canal: 'rele:k2', unidad_medida: 'estado' },
+      ]);
+      await service.procesarReporte(7, [], [
+        { codigo: 'REL-K2-G1-01', modo: 'automatico', encendido: true },
+      ]);
+      const upsert = prisma.estadoActuador.upsert.mock.calls[0] as [
+        { where: { sensor_id: number } },
+      ];
+      expect(upsert[0].where).toEqual({ sensor_id: 12 });
+    });
+
+    it('un sensor de estado que no es relé no se toma como relé', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 40, codigo: 'MOT-ALIM-G1-01', canal: null, unidad_medida: 'estado' },
+      ]);
+      await service.procesarReporte(7, [], [
+        { codigo: 'MOT-ALIM-G1-01', modo: 'manual_remoto', encendido: true, orden_id: 9 },
+      ]);
+      expect(prisma.estadoActuador.upsert).not.toHaveBeenCalled();
+    });
+
+    it('la confirmación de una orden por canal sigue exigiendo el mismo dispositivo y sesión', async () => {
+      prisma.dispositivo.findUnique.mockResolvedValue({ arranque_id: 'S', arranque_anterior: null });
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 31, codigo: 'REL-K2-G3-D7', canal: 'rele:k2', unidad_medida: 'estado' },
+      ]);
+      await service.procesarReporte(
+        7,
+        [{ orden_id: 41, resultado: 'aplicada', estado_rele: true }],
+        [{ canal: 'rele:k2', modo: 'manual_remoto', encendido: true, orden_id: 41 }],
+        'S',
+      );
+      const confirmaciones = updates().filter((c) => c[0].data.estado === 'aplicada');
+      expect(confirmaciones[0][0].where).toMatchObject({ id: 41, dispositivo_id: 7, arranque_entrega: 'S' });
+      expect(confirmaciones[1][0].where).toMatchObject({
+        id: 41,
+        dispositivo_id: 7,
+        sensor_id: 31,
+        arranque_entrega: 'S',
+      });
+    });
   });
 
   describe('crear', () => {
@@ -272,6 +397,7 @@ describe('OrdenesActuadoresService', () => {
       ];
       expect(consulta[0].where).toEqual({
         dispositivo_id: 7,
+        sensor: { dispositivo_id: 7 },
         OR: [{ estado: 'pendiente' }, { estado: 'enviada', arranque_entrega: null }],
       });
     });
@@ -467,6 +593,7 @@ describe('OrdenesActuadoresService', () => {
       ];
       expect(consulta[0].where).toEqual({
         dispositivo_id: 7,
+        sensor: { dispositivo_id: 7 },
         OR: [{ estado: 'pendiente' }, { estado: 'enviada', arranque_entrega: SESION_B }],
       });
       const marcado = updates().find((c) => c[0].data.estado === 'enviada');

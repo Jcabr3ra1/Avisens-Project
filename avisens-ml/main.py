@@ -4,8 +4,10 @@ from contextlib import asynccontextmanager
 from secrets import compare_digest
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
+from PIL import UnidentifiedImageError
 
 import seguridad
 from esquemas import (
@@ -20,6 +22,7 @@ from modelos.anomalias import detectar
 from modelos.estres_calor import proyectar_riesgo
 from modelos.gompertz import proyectar_crecimiento
 from modelos.polinomial import predecir, predecir_consumo, predecir_mortalidad
+from modelos.vision import detectar as detectar_pollos
 
 logger = logging.getLogger("avisens-ml")
 
@@ -135,3 +138,30 @@ def anomalias_endpoint(peticion: PeticionAnomalias):
         [m.model_dump() for m in peticion.mortalidades],
         [p.model_dump() for p in peticion.curva_referencia],
     )
+
+
+# Una foto VGA en JPEG pesa ~25-40 KB; 2 MB deja margen sin aceptar cualquier cosa.
+MAX_BYTES_FOTO = 2 * 1024 * 1024
+
+
+@app.post("/vision/detectar", dependencies=PROTEGIDO)
+async def vision_detectar_endpoint(
+    request: Request,
+    confianza: Annotated[float, Query(ge=0.05, le=0.95)] = 0.40,
+):
+    # La foto llega tal cual en el cuerpo (image/jpeg), sin multipart: es lo
+    # que el backend reenvía desde la ESP32-CAM.
+    datos = await request.body()
+    if not datos:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Falta la imagen")
+    if len(datos) > MAX_BYTES_FOTO:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Imagen demasiado grande"
+        )
+    try:
+        # ~130 ms de CPU: en un hilo aparte para no frenar los demás endpoints.
+        return await run_in_threadpool(detectar_pollos, datos, confianza)
+    except UnidentifiedImageError:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "El archivo no es una imagen válida"
+        )

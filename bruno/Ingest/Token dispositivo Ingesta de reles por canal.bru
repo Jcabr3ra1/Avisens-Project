@@ -1,0 +1,53 @@
+meta {
+  name: [Token dispositivo]  Ingesta de relés por canal (firmware nuevo)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/ingest
+  body: json
+  auth: none
+}
+
+headers {
+  X-Device-Token: {{device_token}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "arranque_id": "0b6f8a52-3c1e-4d7a-9f20-6a1d2b3c4e5f",
+    "lecturas": [
+      { "tipo": "rele", "canal": "rele:k1", "valor": 0 },
+      { "tipo": "rele", "canal": "rele:k2", "valor": 1 },
+      { "tipo": "rele", "canal": "rele:k3", "valor": 0 },
+      { "tipo": "rele", "canal": "rele:k4", "valor": 0 }
+    ],
+    "resultados_ordenes": [
+      { "orden_id": 1, "resultado": "aplicada", "estado_rele": true }
+    ],
+    "estados_reles": [
+      { "canal": "rele:k1", "modo": "automatico", "encendido": false },
+      { "canal": "rele:k2", "modo": "manual_remoto", "encendido": true, "orden_id": 1 },
+      { "canal": "rele:k3", "modo": "automatico", "encendido": false },
+      { "canal": "rele:k4", "modo": "automatico", "encendido": false }
+    ]
+  }
+}
+
+docs {
+  Contrato del firmware nuevo: los relés se identifican por canal dentro del
+  ESP32 del token (X-Device-Token), sin códigos de relé en config.h.
+
+  - lecturas: { "tipo": "rele", "canal": "rele:k<n>", "valor": 1|0 }.
+  - estados_reles: { "canal": "rele:k<n>", ... } en lugar de "codigo".
+  - La respuesta trae "ordenes": { id, codigo, canal, accion }. El firmware
+    nuevo usa "canal"; "codigo" sigue ahí para el firmware anterior. Un relé
+    antiguo sin canal solo trae "codigo": el firmware nuevo la rechaza con
+    motivo hasta que se pulse «Registrar relés».
+
+  Un canal que no está registrado en este ESP32 se devuelve en "ignoradas"
+  (p. ej. "rele:k3"); nunca se busca en otro dispositivo ni galpón.
+  El contrato por código (petición anterior) sigue aceptándose.
+}

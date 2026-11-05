@@ -53,6 +53,82 @@ describe('IngestService', () => {
 
   const ARRANQUE = '0b6f8a52-3c1e-4d7a-9f20-6a1d2b3c4e5f';
 
+  describe('relés por canal', () => {
+    const medicionesGuardadas = () =>
+      (
+        prisma.medicion.createMany.mock.calls as Array<
+          [{ data: Array<{ sensor_id: number; valor: number }> }]
+        >
+      )[0][0].data;
+
+    it('resuelve rele:k1..k4 dentro del ESP32 autenticado, sin importar el nombre del relé', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 31, codigo: 'REL-K1-G3-D7', tipo: 'Bombillos de calefacción', canal: 'rele:k1', unidad_medida: 'estado' },
+        { id: 32, codigo: 'X-RENOMBRADO', tipo: 'Ventilador norte', canal: 'rele:k2', unidad_medida: 'estado' },
+      ]);
+
+      const res = await service.registrar(
+        {
+          lecturas: [
+            { tipo: 'rele', canal: 'rele:k1', valor: 1 },
+            { tipo: 'rele', canal: 'rele:k2', valor: 0 },
+            { tipo: 'rele', canal: 'rele:k3', valor: 0 },
+          ],
+        },
+        dispositivo,
+      );
+
+      // La consulta usa el dispositivo del token, nunca uno del cuerpo.
+      const consulta = prisma.sensor.findMany.mock.calls[0] as [
+        { where: Record<string, unknown> },
+      ];
+      expect(consulta[0].where).toMatchObject({ dispositivo_id: 7, galpon_id: 3 });
+      expect(medicionesGuardadas().map((m) => [m.sensor_id, m.valor])).toEqual([
+        [31, 1],
+        [32, 0],
+      ]);
+      // K3 no está registrado en este ESP32: se informa, no se adivina.
+      expect(res.ignoradas).toEqual(['rele:k3']);
+    });
+
+    it('el código del firmware anterior sigue funcionando en un relé ya asociado a canal', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 12, codigo: 'REL-K2-G1-01', tipo: 'Ventiladores (K2)', canal: 'rele:k2', unidad_medida: 'estado' },
+      ]);
+
+      const res = await service.registrar(
+        { lecturas: [{ codigo: 'REL-K2-G1-01', valor: 1 }] },
+        dispositivo,
+      );
+
+      expect(res.registradas).toBe(1);
+      expect(medicionesGuardadas()[0]).toMatchObject({ sensor_id: 12, valor: 1 });
+    });
+
+    it('un sensor con canal de relé pero sin unidad "estado" no recibe la lectura', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 40, codigo: 'RARO', tipo: 'rele', canal: 'rele:k1', unidad_medida: '°C' },
+      ]);
+      const res = await service.registrar(
+        { lecturas: [{ tipo: 'rele', canal: 'rele:k1', valor: 1 }] },
+        dispositivo,
+      );
+      expect(res.registradas).toBe(0);
+      expect(res.ignoradas).toEqual(['rele:k1']);
+    });
+
+    it('los DHT22 por GPIO siguen resolviéndose por tipo + canal', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 5, codigo: 'T', tipo: 'temperatura', canal: 'gpio:4', unidad_medida: '°C' },
+      ]);
+      const res = await service.registrar(
+        { lecturas: [{ tipo: 'temperatura', canal: 'gpio:4', valor: 24 }] },
+        dispositivo,
+      );
+      expect(res.registradas).toBe(1);
+    });
+  });
+
   describe('órdenes remotas de actuadores', () => {
     it('procesa las confirmaciones del ciclo y entrega las pendientes en la respuesta', async () => {
       prisma.sensor.findMany.mockResolvedValue([
@@ -106,16 +182,93 @@ describe('IngestService', () => {
         { id: 42, codigo: 'REL-K2-G1-01', accion: 'apagar' },
       ]);
 
+      // El reintento del ciclo normal lleva la sesión, como el envío original.
       const res = await service.registrar(
         {
           id_lote: 'ad65a582-4ef3-48c9-b847-2f9f6a8c6186',
+          arranque_id: ARRANQUE,
           lecturas: [{ codigo: 'REL-K2-G1-01', valor: 1 }],
         },
         dispositivo,
       );
 
       expect(res.duplicada).toBe(true);
+      expect(ordenes.entregarPendientes).toHaveBeenCalledWith(7, ARRANQUE);
       expect(res.ordenes).toHaveLength(1);
+    });
+
+    // Así llegan los reenvíos del búfer sin red y los envíos al destino
+    // espejo (cuerpoSoloLecturas en el firmware): sin arranque_id y sin leer
+    // la respuesta. Entregarles órdenes las marcaría "enviada" sin que el
+    // ESP32 las reciba, y el ciclo normal ya no las repetiría.
+    const LOTE_GUARDADO = {
+      id_lote: '5f0c2d1e-8a7b-4c3d-9e6f-1a2b3c4d5e6f',
+      fecha_dispositivo: '2026-10-19T14:00:00.000Z',
+      lecturas: [{ codigo: 'TEMP-G1-01', valor: 24.8 }],
+    };
+
+    it('un envío sin arranque_id (búfer o espejo) guarda las lecturas pero no consume órdenes', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 1, codigo: 'TEMP-G1-01' },
+      ]);
+      ordenes.procesarReporte.mockResolvedValue('legado');
+
+      const res = await service.registrar(LOTE_GUARDADO, dispositivo);
+
+      expect(res.registradas).toBe(1);
+      expect(prisma.medicion.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            sensor_id: 1,
+            valor: 24.8,
+            fecha_hora: new Date(LOTE_GUARDADO.fecha_dispositivo),
+          }),
+        ],
+      });
+      expect(ordenes.entregarPendientes).not.toHaveBeenCalled();
+      expect(res.ordenes).toEqual([]);
+    });
+
+    it('un lote guardado que ya había llegado (duplicado sin sesión) tampoco consume órdenes', async () => {
+      prisma.ingestaDispositivo.findUnique.mockResolvedValue({
+        clave_idempotencia: LOTE_GUARDADO.id_lote,
+        cantidad_registrada: 1,
+        codigos_ignorados: [],
+      });
+      ordenes.procesarReporte.mockResolvedValue('legado');
+
+      const res = await service.registrar(LOTE_GUARDADO, dispositivo);
+
+      expect(res.duplicada).toBe(true);
+      expect(ordenes.entregarPendientes).not.toHaveBeenCalled();
+      expect(res.ordenes).toEqual([]);
+    });
+
+    it('las confirmaciones de un envío sin arranque_id se procesan aunque no reciba órdenes', async () => {
+      prisma.sensor.findMany.mockResolvedValue([
+        { id: 1, codigo: 'REL-K2-G1-01' },
+      ]);
+      ordenes.procesarReporte.mockResolvedValue('legado');
+      const resultados = [
+        { orden_id: 41, resultado: 'aplicada' as const, estado_rele: true },
+      ];
+
+      const res = await service.registrar(
+        {
+          lecturas: [{ codigo: 'REL-K2-G1-01', valor: 1 }],
+          resultados_ordenes: resultados,
+        },
+        dispositivo,
+      );
+
+      expect(ordenes.procesarReporte).toHaveBeenCalledWith(
+        7,
+        resultados,
+        undefined,
+        undefined,
+      );
+      expect(ordenes.entregarPendientes).not.toHaveBeenCalled();
+      expect(res.ordenes).toEqual([]);
     });
 
     it('un envío retrasado de la sesión anterior al reinicio no recibe órdenes', async () => {

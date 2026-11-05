@@ -6,14 +6,14 @@
 // - La orden es historial: qué se pidió y qué respondió el ESP32 entonces.
 //   Una orden "aplicada" de hace una hora no dice que el relé siga en manual.
 import { estaEncendido, type SensorVista } from '../hooks/useMonitoreoAmbiental'
-import type { EstadoOrden, EstadoRele, OrdenActuador } from '../api/ordenesActuadores'
+import type { AccionOrden, EstadoOrden, EstadoRele, OrdenActuador } from '../api/ordenesActuadores'
+import { esReleControlable as esReleControlableBase } from '@features/sensores/model/reles'
 
 // Igual que en el backend (esReleControlable): solo K1-K4 tienen modo manual
-// en el firmware. Los motores también son "estado", pero no se controlan.
-const PATRON_RELE_CONTROLABLE = /^REL-K[1-4]-/i
-
-export function esReleControlable(sensor: Pick<SensorVista, 'esEstado' | 'codigo'>): boolean {
-  return sensor.esEstado && PATRON_RELE_CONTROLABLE.test(sensor.codigo)
+// en el firmware. Los motores también son "estado", pero no se controlan. La
+// regla vive con la identidad de los relés: canal o, si es antiguo, código.
+export function esReleControlable(sensor: Pick<SensorVista, 'esEstado' | 'codigo' | 'canal'>): boolean {
+  return esReleControlableBase(sensor)
 }
 
 export function ordenEnCurso(orden: OrdenActuador | null | undefined): boolean {
@@ -50,6 +50,110 @@ export function estadoActualRele(
     modo: 'desconocido',
     conectado: lecturaReciente,
   }
+}
+
+// Con un informe vigente y sin otra orden en curso se pueden pedir cambios.
+// Sin informe vigente no se sabe en qué está el relé: los botones se bloquean.
+export function puedeEnviarOrden(actual: EstadoActualRele, enCurso: boolean): boolean {
+  return actual.conectado && !enCurso
+}
+
+// Qué botón se marca como activo: el que corresponde a lo que el ESP32
+// informó (estado vigente), nunca al que se pulsó. Manual por la web
+// encendido → Encender; apagado → Apagar; automático → Automático. En manual
+// local (serial) o sin dato vigente ninguno lo es: la web no gobierna ese
+// relé, o no se sabe en qué está.
+export function opcionActiva(actual: EstadoActualRele): AccionOrden | null {
+  if (!actual.conectado) return null
+  if (actual.modo === 'automatico') return 'automatico'
+  if (actual.modo === 'manual_remoto' && actual.encendido !== null) {
+    return actual.encendido ? 'encender' : 'apagar'
+  }
+  return null
+}
+
+// La acción pedida que todavía espera al ESP32. Se muestra aparte de la
+// activa: pedida no es aplicada.
+export function opcionSolicitada(orden: OrdenActuador | null | undefined): AccionOrden | null {
+  return orden && ordenEnCurso(orden) ? orden.accion : null
+}
+
+// ─── Vigencia del estado en la pantalla ─────────────────────────────────
+// El servidor calcula `vigente` al responder, pero esa respuesta envejece en
+// la pantalla: si la consulta siguiente falla (sin red, backend caído), el
+// último estado no puede seguir presentándose como actual.
+
+// Igual que EN_LINEA_SEGUNDOS del backend: un informe del ESP32 de más de
+// 30 s ya no describe el relé de ahora.
+export const VIGENCIA_ESTADO_MS = 30_000
+
+export type RecepcionEstados = {
+  // Hora local en que SALIÓ la consulta. El servidor respondió después, así
+  // que contar desde aquí nunca subestima la edad del informe, aunque la
+  // respuesta tarde en llegar y aunque los relojes no coincidan.
+  consultadaEn: number
+  // Hora del servidor al responder (generado_en); null si no vino.
+  generadoEn: number | null
+}
+
+export type EstadosRecibidos = {
+  reles: Record<number, EstadoRele>
+  recepcion: RecepcionEstados | null
+  // Número de la consulta que los trajo: la respuesta de una consulta
+  // anterior que llega tarde no los reemplaza.
+  consulta: number
+}
+
+export const SIN_ESTADOS: EstadosRecibidos = { reles: {}, recepcion: null, consulta: 0 }
+
+// Solo una respuesta correcta llega aquí: una consulta fallida no renueva
+// nada, y el estado anterior sigue envejeciendo.
+export function aplicarRespuestaEstados(
+  actuales: EstadosRecibidos,
+  consulta: number,
+  reles: EstadoRele[],
+  recepcion: RecepcionEstados,
+): EstadosRecibidos {
+  if (consulta <= actuales.consulta) return actuales
+  return { reles: Object.fromEntries(reles.map((e) => [e.sensor_id, e])), recepcion, consulta }
+}
+
+// Hora local hasta la que el informe sigue vigente, o null si ya no lo era al
+// responder. Su edad al responder (generado_en - reportado_en, ambas del
+// reloj del servidor) se descuenta de los 30 s.
+export function vencimientoEstado(estado: EstadoRele, recepcion: RecepcionEstados): number | null {
+  if (!estado.vigente) return null
+  let edadAlResponder = 0
+  if (recepcion.generadoEn !== null) {
+    const reportado = Date.parse(estado.reportado_en)
+    if (Number.isNaN(reportado)) return null
+    edadAlResponder = Math.max(0, recepcion.generadoEn - reportado)
+  }
+  return recepcion.consultadaEn + VIGENCIA_ESTADO_MS - edadAlResponder
+}
+
+// Los estados recibidos con `vigente` recalculado para este momento.
+export function estadosVigentes(recibidos: EstadosRecibidos, ahora: number): Record<number, EstadoRele> {
+  const { recepcion } = recibidos
+  const resultado: Record<number, EstadoRele> = {}
+  for (const e of Object.values(recibidos.reles)) {
+    const vence = recepcion ? vencimientoEstado(e, recepcion) : null
+    resultado[e.sensor_id] = { ...e, vigente: vence !== null && ahora <= vence }
+  }
+  return resultado
+}
+
+// Próximo momento en que un estado hoy vigente deja de serlo (para volver a
+// pintar justo entonces), o null si no queda ninguno por vencer.
+export function proximoVencimiento(recibidos: EstadosRecibidos, ahora: number): number | null {
+  const { recepcion } = recibidos
+  if (!recepcion) return null
+  let proximo: number | null = null
+  for (const e of Object.values(recibidos.reles)) {
+    const vence = vencimientoEstado(e, recepcion)
+    if (vence !== null && vence >= ahora && (proximo === null || vence < proximo)) proximo = vence
+  }
+  return proximo
 }
 
 // Precedencia al juntar órdenes de varias respuestas: gana la orden más

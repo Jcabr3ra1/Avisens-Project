@@ -12,6 +12,7 @@ import {
   verificarAccesoSensor,
 } from '../../common/auth/alcance';
 import { CreateOrdenActuadorDto } from './dto/create-orden-actuador.dto';
+import { esCanalRele, esReleControlable } from '../sensores/reles';
 
 // Una orden que el ESP32 no recoge ni confirma en este tiempo ya no refleja
 // lo que el usuario quería "ahora": se marca expirada y no se entrega. El
@@ -26,18 +27,9 @@ export const EN_LINEA_SEGUNDOS = 30;
 // Solo los relés K1-K4 aceptan modo manual en el firmware
 // (GestorActuadores::establecerManual). Los motores de persiana y
 // alimentador también se reportan con unidad "estado", pero los gobiernan
-// sus propias máquinas de estados y no tienen control remoto.
-const PATRON_RELE_CONTROLABLE = /^REL-K[1-4]-/i;
-
-export function esReleControlable(sensor: {
-  codigo: string;
-  unidad_medida: string;
-}): boolean {
-  return (
-    sensor.unidad_medida.trim().toLowerCase() === 'estado' &&
-    PATRON_RELE_CONTROLABLE.test(sensor.codigo)
-  );
-}
+// sus propias máquinas de estados y no tienen control remoto. La regla vive
+// con la identidad de los relés (sensores/reles.ts): se reexporta aquí.
+export { esReleControlable };
 
 export type ResultadoOrdenReportado = {
   orden_id: number;
@@ -46,8 +38,11 @@ export type ResultadoOrdenReportado = {
   motivo?: string;
 };
 
+// El firmware nuevo identifica el relé por canal ("rele:k1"); el anterior,
+// por código. Llega uno de los dos (lo garantiza el DTO de /ingest).
 export type EstadoReleReportado = {
-  codigo: string;
+  codigo?: string;
+  canal?: string;
   modo: ModoActuador;
   encendido: boolean;
   orden_id?: number;
@@ -59,9 +54,14 @@ export type EstadoReleReportado = {
 // - legado: firmware que todavía no informa arranque_id.
 export type SesionReporte = 'actual' | 'anterior' | 'legado';
 
+// Lo que viaja al ESP32 en la respuesta de /ingest. `canal` es la identidad
+// que usa el firmware nuevo; `codigo` se mantiene para el firmware anterior.
+// Un relé antiguo sin canal solo lleva el código: el firmware nuevo la
+// rechaza con un motivo claro hasta que se registren los relés por canal.
 export type OrdenParaDispositivo = {
   id: number;
   codigo: string;
+  canal?: string;
   accion: AccionOrdenActuador;
 };
 
@@ -97,6 +97,7 @@ export class OrdenesActuadoresService {
       select: {
         id: true,
         codigo: true,
+        canal: true,
         unidad_medida: true,
         estado: true,
         galpon_id: true,
@@ -284,6 +285,9 @@ export class OrdenesActuadoresService {
     const ordenes = await this.prisma.ordenActuador.findMany({
       where: {
         dispositivo_id: dispositivoId,
+        // El relé tiene que seguir en este ESP32: si lo movieron a otro, la
+        // orden no viaja a ninguno (y expira).
+        sensor: { dispositivo_id: dispositivoId },
         OR: [
           { estado: 'pendiente' },
           { estado: 'enviada', arranque_entrega: sesion },
@@ -291,7 +295,11 @@ export class OrdenesActuadoresService {
       },
       orderBy: { id: 'asc' },
       take: 10,
-      select: { id: true, accion: true, sensor: { select: { codigo: true } } },
+      select: {
+        id: true,
+        accion: true,
+        sensor: { select: { codigo: true, canal: true } },
+      },
     });
     if (ordenes.length === 0) return [];
 
@@ -299,9 +307,12 @@ export class OrdenesActuadoresService {
       where: { id: { in: ordenes.map((o) => o.id) }, estado: 'pendiente' },
       data: { estado: 'enviada', fecha_envio: new Date(), arranque_entrega: sesion },
     });
+    // El canal sale del sensor en este momento, no de un código compilado
+    // en el firmware: es la identidad física del relé dentro de este ESP32.
     return ordenes.map((o) => ({
       id: o.id,
       codigo: o.sensor.codigo,
+      ...(esCanalRele(o.sensor.canal) ? { canal: o.sensor.canal } : {}),
       accion: o.accion,
     }));
   }
@@ -426,20 +437,39 @@ export class OrdenesActuadoresService {
     sesion: string | null,
     ahora: Date,
   ) {
+    // Solo relés de ESTE dispositivo: el canal "rele:k1" de otro ESP32 (u
+    // otro galpón) nunca se resuelve aquí, porque el dispositivo sale del
+    // token, no del cuerpo del envío.
+    const codigos = estados.flatMap((e) => (e.codigo ? [e.codigo] : []));
+    const canales = estados.flatMap((e) =>
+      esCanalRele(e.canal) ? [e.canal] : [],
+    );
     const sensores = await this.prisma.sensor.findMany({
       where: {
         dispositivo_id: dispositivoId,
-        codigo: { in: estados.map((e) => e.codigo) },
+        OR: [{ codigo: { in: codigos } }, { canal: { in: canales } }],
       },
-      select: { id: true, codigo: true, unidad_medida: true },
+      select: { id: true, codigo: true, canal: true, unidad_medida: true },
     });
-    const sensorPorCodigo = new Map(
-      sensores.filter(esReleControlable).map((s) => [s.codigo, s.id]),
+    const controlables = sensores.filter(esReleControlable);
+    const sensorPorCodigo = new Map(controlables.map((s) => [s.codigo, s.id]));
+    const sensorPorCanal = new Map<string, number>(
+      controlables.flatMap((s) =>
+        esCanalRele(s.canal) ? [[s.canal, s.id] as const] : [],
+      ),
     );
 
+    const procesados = new Set<number>();
     for (const e of estados) {
-      const sensorId = sensorPorCodigo.get(e.codigo);
-      if (sensorId === undefined) continue; // código ajeno o no controlable
+      const sensorId =
+        e.canal !== undefined
+          ? sensorPorCanal.get(e.canal)
+          : e.codigo !== undefined
+            ? sensorPorCodigo.get(e.codigo)
+            : undefined;
+      // Identidad ajena, no controlable o sin registrar por canal todavía.
+      if (sensorId === undefined || procesados.has(sensorId)) continue;
+      procesados.add(sensorId);
 
       const ordenId = e.modo === 'manual_remoto' ? (e.orden_id ?? null) : null;
       await this.prisma.estadoActuador.upsert({

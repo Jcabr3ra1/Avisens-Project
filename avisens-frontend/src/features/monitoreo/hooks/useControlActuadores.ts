@@ -7,16 +7,23 @@
 // Todo sale de una sola consulta (GET /ordenes-actuadores/ultimas), sin
 // importar cuántos relés haya: el límite de peticiones es por IP y en la
 // granja lo comparten el computador, el móvil y el propio ESP32.
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { mensajeDeError } from '@shared/utils/errores'
 import {
   crearOrden,
   listarUltimasOrdenes,
   type AccionOrden,
-  type EstadoRele,
   type OrdenActuador,
 } from '../api/ordenesActuadores'
-import { fusionarOrdenes, ordenEnCurso } from '../model/actuadores'
+import {
+  SIN_ESTADOS,
+  aplicarRespuestaEstados,
+  estadosVigentes,
+  fusionarOrdenes,
+  ordenEnCurso,
+  proximoVencimiento,
+  type EstadosRecibidos,
+} from '../model/actuadores'
 
 // Con una orden en curso la respuesta llega en 5-10 s: 4 s la ve pronto sin
 // martillar. En reposo basta para notar una reversión o un cambio hecho desde
@@ -26,7 +33,10 @@ const SONDEO_REPOSO_MS = 20_000
 
 export function useControlActuadores(galponId: number, onOrdenFinalizada: () => void) {
   const [ordenes, setOrdenes] = useState<Record<number, OrdenActuador>>({})
-  const [reles, setReles] = useState<Record<number, EstadoRele>>({})
+  // Lo que informó la última consulta correcta y cuándo salió esa consulta:
+  // la vigencia se recalcula con la hora actual (ver estadosVigentes).
+  const [recibidos, setRecibidos] = useState<EstadosRecibidos>(SIN_ESTADOS)
+  const [ahora, setAhora] = useState(() => Date.now())
   const [enviando, setEnviando] = useState<Record<number, boolean>>({})
   const [errores, setErrores] = useState<Record<number, string>>({})
   const [errorCarga, setErrorCarga] = useState('')
@@ -37,7 +47,6 @@ export function useControlActuadores(galponId: number, onOrdenFinalizada: () => 
   // El estado de los relés no tiene versión por fila (vigente depende de la
   // hora del servidor): se aplica solo la respuesta de la consulta más nueva.
   const secuencia = useRef(0)
-  const secuenciaAplicada = useRef(0)
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null)
   const siguienteCiclo = useRef<() => void>(() => undefined)
   const avisarFin = useRef(onOrdenFinalizada)
@@ -58,13 +67,17 @@ export function useControlActuadores(galponId: number, onOrdenFinalizada: () => 
 
   const cargar = useCallback(async () => {
     const mia = ++secuencia.current
+    const consultadaEn = Date.now()
     try {
       const respuesta = await listarUltimasOrdenes(galponId)
       const termino = aplicarOrdenes(respuesta.ordenes)
-      if (mia > secuenciaAplicada.current) {
-        secuenciaAplicada.current = mia
-        setReles(Object.fromEntries(respuesta.reles.map((e) => [e.sensor_id, e])))
-      }
+      setRecibidos((previos) =>
+        aplicarRespuestaEstados(previos, mia, respuesta.reles, {
+          consultadaEn,
+          generadoEn: respuesta.generadoEn,
+        }),
+      )
+      setAhora(Date.now())
       setErrorCarga('')
       if (termino) avisarFin.current()
     } catch (err) {
@@ -93,6 +106,17 @@ export function useControlActuadores(galponId: number, onOrdenFinalizada: () => 
       if (temporizador.current) clearTimeout(temporizador.current)
     }
   }, [cargar, programar])
+
+  // Si las consultas fallan, nada vuelve a pintar la pantalla: este
+  // temporizador lo hace justo cuando vence el próximo estado, para que pase
+  // a "Sin dato reciente" y se bloqueen sus botones a tiempo.
+  const reles = useMemo(() => estadosVigentes(recibidos, ahora), [recibidos, ahora])
+  useEffect(() => {
+    const vence = proximoVencimiento(recibidos, ahora)
+    if (vence === null) return
+    const espera = setTimeout(() => setAhora(Date.now()), Math.max(0, vence - Date.now()) + 1)
+    return () => clearTimeout(espera)
+  }, [recibidos, ahora])
 
   const enviar = useCallback(async (sensorId: number, accion: AccionOrden) => {
     setEnviando((e) => ({ ...e, [sensorId]: true }))
