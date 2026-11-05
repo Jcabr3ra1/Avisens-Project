@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { listarNotificaciones, marcarNotificacionLeida, marcarTodasLeidas, type Notificacion } from '@features/notificaciones/api/notificaciones'
 import { IcAlert, IcBell, IcCheck, IcRefresh, IcUserCircle } from '@shared/ui/icons/icons'
 import { useConteoNotificaciones } from '@features/notificaciones/hooks/useNotificaciones'
+import '@shared/ui/insignia-notificacion.css'
 import './CampanaNotificaciones.css'
 
 const VISIBLES = 5
@@ -31,6 +32,11 @@ function CampanaNotificaciones() {
   const [cargando, setCargando] = useState(false)
   const contenedor = useRef<HTMLDivElement>(null)
   const cerrar = useCallback(() => setAbierto(false), [])
+  const [conteoVisible, setConteoVisible] = useState(noLeidas)
+
+  useEffect(() => {
+    if (noLeidas > 0) setConteoVisible(noLeidas)
+  }, [noLeidas])
 
   useEffect(() => {
     if (!abierto) return
@@ -103,11 +109,11 @@ function CampanaNotificaciones() {
         title="Notificaciones"
       >
         <IcBell size={19} />
-        {noLeidas > 0 && (
-          <span className="dash-campana-punto" aria-hidden="true">
-            {noLeidas > 9 ? '9+' : noLeidas}
+        <span className="t-badge" data-open={noLeidas > 0} aria-hidden="true">
+          <span className="t-badge-dot dash-campana-punto">
+            {conteoVisible > 9 ? '9+' : conteoVisible}
           </span>
-        )}
+        </span>
       </button>
 
       {abierto && (

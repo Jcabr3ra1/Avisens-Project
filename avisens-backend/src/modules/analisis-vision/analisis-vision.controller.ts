@@ -9,10 +9,11 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { PERMISOS } from '../../common/auth/permisos';
 import { ROLES } from '../../common/auth/roles';
 import { Permisos } from '../../common/decorators/permisos.decorator';
@@ -57,6 +58,37 @@ export class AnalisisVisionController {
   @ApiOperation({ summary: 'Listar análisis de visión accesibles' })
   listar(@Query() query: ListarAnalisisVisionDto, @Req() req: AuthRequest) {
     return this.service.listar(req.user, query);
+  }
+
+  @Get('galpon/:galponId/camara')
+  @ApiOperation({
+    summary: 'Último análisis de la cámara del galpón y su historial de conteo',
+  })
+  camara(
+    @Param('galponId', ParseIntPipe) galponId: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.service.camaraDelGalpon(galponId, req.user);
+  }
+
+  @Get(':id/imagen')
+  @ApiOperation({ summary: 'Foto (JPEG) que originó el análisis' })
+  async imagen(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+    @Res() res: Response,
+  ) {
+    const imagen = await this.service.imagenDeAnalisis(id, req.user);
+    res
+      .status(200)
+      .set({
+        'Content-Type': 'image/jpeg',
+        'Content-Length': String(imagen.length),
+        // Cada análisis tiene su propia foto, que no cambia: se puede guardar
+        // en el navegador, pero no en cachés compartidas (es de un galpón).
+        'Cache-Control': 'private, max-age=86400, immutable',
+      })
+      .end(imagen);
   }
 
   @Get(':id')

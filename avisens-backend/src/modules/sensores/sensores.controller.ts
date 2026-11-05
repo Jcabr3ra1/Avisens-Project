@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
@@ -20,6 +22,7 @@ import { ROLES } from '../../common/auth/roles';
 import { SensoresService } from './sensores.service';
 import { CreateSensorDto } from './dto/create-sensor.dto';
 import { UpdateSensorDto } from './dto/update-sensor.dto';
+import { RegistrarRelesDto } from './dto/registrar-reles.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
@@ -43,6 +46,20 @@ export class SensoresController {
   @ApiOperation({ summary: 'Registrar un sensor en un galpón' })
   crear(@Body() dto: CreateSensorDto, @Req() req: AuthRequest) {
     return this.sensoresService.crear(dto, req.user);
+  }
+
+  // Registra de una vez los relés K1-K4 de un ESP32, identificados por canal.
+  // Idempotente: repetirlo no duplica nada. Responde 200 aunque haya
+  // conflictos: el detalle por canal dice qué se creó, qué se asoció, qué ya
+  // estaba y qué no se pudo resolver.
+  @Post('reles')
+  @Roles(ROLES.ADMINISTRADOR)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Registrar los relés K1-K4 de un ESP32 por canal (idempotente)',
+  })
+  registrarReles(@Body() dto: RegistrarRelesDto, @Req() req: AuthRequest) {
+    return this.sensoresService.registrarReles(dto, req.user);
   }
 
   @Get()

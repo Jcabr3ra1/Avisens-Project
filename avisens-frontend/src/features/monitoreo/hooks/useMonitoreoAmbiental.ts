@@ -81,6 +81,9 @@ export function esLecturaSinCalibrar(calidad: string | null | undefined): boolea
 export type SensorVista = {
   id: number
   codigo: string
+  // Conexión física en el ESP32 ("gpio:18", "rele:k2"); null si es un
+  // registro antiguo identificado solo por código.
+  canal?: string | null
   tipo: string
   unidad: string
   esEstado: boolean
@@ -177,6 +180,7 @@ export function construirVista(
         return {
           id: s.id,
           codigo: s.codigo,
+          canal: s.canal ?? null,
           tipo: s.tipo,
           unidad: s.unidad_medida,
           esEstado: esSensorDeEstado(s.unidad_medida),

@@ -14,6 +14,28 @@ export interface Prediccion {
   fecha_generacion: string
 }
 
+export type NivelConfianza = 'alta' | 'media' | 'baja'
+
+export interface RangoPrediccion {
+  min: number
+  max: number
+  cobertura_pct?: number
+}
+
+export interface FactorPrediccion {
+  factor: string
+  horas: number
+}
+
+export interface MetadataModeloMl {
+  nombre: string
+  version: string
+  confianza: number
+  nivel_confianza?: NivelConfianza
+  motivos?: string[]
+  puntos_usados: number
+}
+
 export interface LlegadaProyectada {
   dia_vida: number
   fecha: string
@@ -36,6 +58,15 @@ export interface ResultadoPrediccion {
   comparacion_objetivo: null
   comparacion_objetivo_motivo: string
   llegada_proyectada: LlegadaProyectada | null
+  rango?: RangoPrediccion
+  factores?: FactorPrediccion[]
+  rango_mortalidad?: RangoPrediccion | null
+  rango_consumo?: RangoPrediccion | null
+  modelos?: {
+    peso?: MetadataModeloMl
+    mortalidad?: MetadataModeloMl
+    consumo?: MetadataModeloMl
+  }
   predicciones_guardadas: Prediccion[] | null
 }
 
@@ -47,6 +78,13 @@ export interface HistorialPrediccionesQuery {
 
 export async function predecirLote(loteId: number): Promise<ResultadoPrediccion> {
   const { data } = await api.get<ResultadoPrediccion>(`/predicciones/${loteId}`)
+  return data
+}
+
+export async function simularFaena(loteId: number, diaFaena: number): Promise<ResultadoPrediccion> {
+  const { data } = await api.get<ResultadoPrediccion>(`/predicciones/lote/${loteId}/simulacion`, {
+    params: { dia_faena: diaFaena },
+  })
   return data
 }
 
@@ -100,7 +138,14 @@ export interface CurvaCrecimiento {
     fecha_al_objetivo: string | null
     punto_inflexion: { dia: number; peso_g: number; ganancia_max_g_dia: number }
   }
-  modelo: { nombre: string; version: string; confianza: number; puntos_usados: number }
+  modelo: {
+    nombre: string
+    version: string
+    confianza: number
+    nivel_confianza?: NivelConfianza
+    motivos?: string[]
+    puntos_usados: number
+  }
 }
 
 export async function obtenerCurvaCrecimiento(loteId: number): Promise<CurvaCrecimiento> {
@@ -138,5 +183,28 @@ export interface RiesgoCalor {
 
 export async function obtenerRiesgoCalor(galponId: number): Promise<RiesgoCalor> {
   const { data } = await api.get<RiesgoCalor>(`/predicciones/galpon/${galponId}/riesgo-calor`)
+  return data
+}
+
+export type SeveridadAnomalia = 'alta' | 'media' | 'baja'
+
+export interface AnomaliaLote {
+  tipo: string
+  severidad: SeveridadAnomalia
+  dia: number
+  mensaje: string
+  valor?: number
+}
+
+export interface AnomaliasLote {
+  lote_id: number
+  codigo: string
+  dia_actual: number
+  anomalias: AnomaliaLote[]
+  resumen: { total: number; severidad_maxima: SeveridadAnomalia | 'ninguna' }
+}
+
+export async function obtenerAnomalias(loteId: number): Promise<AnomaliasLote> {
+  const { data } = await api.get<AnomaliasLote>(`/predicciones/lote/${loteId}/anomalias`)
   return data
 }

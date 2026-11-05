@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { GalponMonitoreoVista, SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { DashboardAlerta, DashboardGalpon, DashboardLote } from './dashboard'
+import type { LoteResumenCrecimiento } from '@features/indicadores/api/indicadores'
 import { filasGalpones, itemsAtencionGranja, kpisGranja, lotesActivosDe } from './resumenGranja'
 
 const galpones: DashboardGalpon[] = [
@@ -87,6 +88,57 @@ describe('itemsAtencionGranja', () => {
     })
     expect(items[1]).toMatchObject({ etiqueta: 'Alerta atención', detalle: 'Galpón sur' })
     expect(items[2]).toMatchObject({ etiqueta: 'Sin señal', detalle: 'Galpón sur · nunca ha reportado', cuando: null })
+  })
+
+  it('incluye riesgos de crecimiento por lote, prioriza su posición y deja abrir la guía', () => {
+    const riesgo = {
+      lote_id: 10,
+      codigo: 'L-10',
+      granja_id: 9,
+      granja: 'Granja norte',
+      galpon_id: 1,
+      galpon: 'Galpón norte',
+      dia_vida: 20,
+      estado_indicador: 'calculado',
+      estado_peso: 'disponible',
+      peso_actual_g: 800,
+      peso_esperado_g: 900,
+      veredicto_peso: 'por_debajo',
+      desvio_peso_pct: -11,
+      fcr: 1.6,
+      fcr_objetivo: 1.5,
+      mortalidad_acumulada_pct: 2,
+      consumo_acumulado_g: 1200,
+      consumo_esperado_g: 1250,
+      desvio_consumo_pct: -4,
+      fecha_pesaje: '2026-10-17',
+      antiguedad_pesaje_dias: 0,
+      puntuacion: 1,
+      posicion_riesgo: 1,
+      motivo_principal: null,
+      alertas: [{
+        regla: 'peso_por_debajo',
+        titulo: 'Peso por debajo de la curva',
+        por_que: 'El peso está 11 % por debajo de la curva de referencia.',
+        que_hacer: 'Revisa los últimos pesajes.',
+        provisional: false,
+      }],
+    } as LoteResumenCrecimiento
+    const items = itemsAtencionGranja({
+      alertas: [],
+      galpones,
+      monitoreo: [],
+      riesgosCrecimiento: [riesgo],
+    })
+
+    expect(items[0]).toMatchObject({
+      id: 'crecimiento-10-peso_por_debajo',
+      tipo: 'crecimiento',
+      loteId: 10,
+      galponId: 1,
+      titulo: 'Peso por debajo de la curva',
+      etiqueta: 'Crecimiento',
+    })
   })
 })
 

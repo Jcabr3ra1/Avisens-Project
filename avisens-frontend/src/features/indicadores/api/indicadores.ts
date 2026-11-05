@@ -102,6 +102,60 @@ export async function obtenerFinanzasLote(loteId: number): Promise<FinanzasLote>
   return data
 }
 
+export interface AlertaCrecimiento {
+  regla: 'peso_por_debajo' | 'mortalidad_alta' | 'consumo_fuera_referencia' | 'pesaje_atrasado'
+  titulo: string
+  por_que: string
+  que_hacer: string
+  provisional: boolean
+}
+
+export interface LoteResumenCrecimiento {
+  lote_id: number
+  codigo: string
+  granja_id: number
+  granja: string
+  galpon_id: number
+  galpon: string
+  dia_vida: number | null
+  estado_indicador: EstadoCalculoIndicador | null
+  estado_peso: EstadoPesoIndicador | null
+  peso_actual_g: number | null
+  peso_esperado_g: number | null
+  veredicto_peso: VeredictoComparacion | null
+  desvio_peso_pct: number | null
+  fcr: number | null
+  fcr_objetivo: number | null
+  mortalidad_acumulada_pct: number | null
+  consumo_acumulado_g: number | null
+  consumo_esperado_g: number | null
+  desvio_consumo_pct: number | null
+  fecha_pesaje: string | null
+  antiguedad_pesaje_dias: number | null
+  puntuacion: number
+  posicion_riesgo?: number
+  motivo_principal: AlertaCrecimiento | null
+  alertas: AlertaCrecimiento[]
+}
+
+export interface ResumenCrecimiento {
+  fecha: string
+  umbrales: {
+    mortalidad_acumulada_pct_provisional: number
+    desvio_consumo_pct_provisional: number
+    pesaje_dias: number | null
+  }
+  lotes: LoteResumenCrecimiento[]
+  riesgos: LoteResumenCrecimiento[]
+}
+
+export async function obtenerResumenCrecimiento(granjaId?: number): Promise<ResumenCrecimiento> {
+  const { data } = await api.get<ResumenCrecimiento>('/indicadores/resumen-crecimiento', {
+    params: granjaId === undefined ? undefined : { granjaId },
+  })
+  return data
+}
+
 // Genera una alerta cuando el lote se aparta de la curva objetivo.
 export async function generarAlertaDesvio(loteId: number): Promise<{ id: number }> {
   const { data } = await api.post<{ id: number }>(`/indicadores/${loteId}/alerta-desvio`)

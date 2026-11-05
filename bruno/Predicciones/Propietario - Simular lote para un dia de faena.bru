@@ -1,0 +1,15 @@
+meta {
+  name: [Propietario] Simular lote para un día de faena
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/v1/predicciones/lote/1/simulacion?dia_faena=42
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

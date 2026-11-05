@@ -23,8 +23,9 @@ async function bootstrap() {
     rawBody: true,
   });
   const config = app.get(ConfigService);
+  // octet-stream: binarios de firmware; image/jpeg: fotos de la ESP32-CAM.
   app.useBodyParser('raw', {
-    type: 'application/octet-stream',
+    type: ['application/octet-stream', 'image/jpeg'],
     limit: '2mb',
   });
 

@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { Lote } from '@features/lotes/api/lotes'
 import type { SensorVista } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import type { DashboardIndicador } from '@features/dashboard/model/dashboard'
+import type { CurvaCrecimiento } from '@features/predicciones/api/predicciones'
 import type { GalponConLotes, GranjaConEstructura } from '../hooks/useEstructuraGranjas'
-import { progresoDatos, proximoPaso, sensoresReportando, tarjetaGalpon } from './explorador'
+import { pesajesDelLote, progresoDatos, proximoPaso, sensoresReportando, tarjetaGalpon } from './explorador'
 
 const loteCompleto = {
   id: 9, codigo: 'LOT-9', fecha_ingreso: '2026-10-16', cantidad_inicial: 500, raza: null, sexo: 'macho',
@@ -50,9 +51,45 @@ describe('proximoPaso', () => {
     expect(proximoPaso(galpon(), conPeso)).toMatchObject({ tono: 'ok', destino: { tipo: 'ruta', ruta: '/guia-crecimiento?lote=9' } })
   })
 
+  it('usa los pesajes reales del lote y no espera al indicador diario', () => {
+    const sinIndicador = galpon()
+    expect(proximoPaso(sinIndicador, null, 0)).toMatchObject({ titulo: 'Registra el primer pesaje' })
+    expect(proximoPaso(sinIndicador, null, 1)).toMatchObject({
+      tono: 'atencion', titulo: 'Registra 2 pesajes más', accion: 'Ir a la bitácora',
+    })
+    expect(proximoPaso(sinIndicador, null, 1).detalle).toMatch(/días distintos/)
+    expect(proximoPaso(sinIndicador, null, 2)).toMatchObject({ titulo: 'Registra 1 pesaje más' })
+    expect(proximoPaso(sinIndicador, null, 3)).toMatchObject({
+      tono: 'ok', titulo: 'Todo al día', destino: { tipo: 'ruta', ruta: '/guia-crecimiento?lote=9' },
+    })
+  })
+
+  it('mientras no se conocen los pesajes, cae en el indicador como antes', () => {
+    expect(proximoPaso(galpon(), null, null)).toMatchObject({ titulo: 'Registra el primer pesaje' })
+    expect(proximoPaso(galpon(), conPeso, null)).toMatchObject({ tono: 'ok' })
+  })
+
+  it('las alertas y los datos del lote siguen pasando antes que los pesajes', () => {
+    expect(proximoPaso(galpon({ alertasAbiertas: 1 }), null, 0)).toMatchObject({ tono: 'alerta' })
+  })
+
   it('explica un galpón vacío o inactivo sin proponer acciones', () => {
     expect(proximoPaso(galpon({ loteEnCurso: null }), null)).toMatchObject({ titulo: 'Galpón vacío', accion: null })
     expect(proximoPaso(galpon({ activo: false }), null)).toMatchObject({ titulo: 'Galpón inactivo', accion: null })
+  })
+})
+
+describe('pesajesDelLote', () => {
+  const curva = { modelo: { puntos_usados: 2 } } as CurvaCrecimiento
+
+  it('cuenta los días con pesaje que ya conoce la curva', () => {
+    expect(pesajesDelLote({ curva, problema: null, cargando: false })).toBe(2)
+    expect(pesajesDelLote({ curva: null, problema: { tipo: 'sin_pesajes' }, cargando: false })).toBe(0)
+  })
+
+  it('no adivina mientras carga o cuando la curva falló por otra causa', () => {
+    expect(pesajesDelLote({ curva: null, problema: null, cargando: true })).toBeNull()
+    expect(pesajesDelLote({ curva: null, problema: { tipo: 'error', mensaje: 'x' }, cargando: false })).toBeNull()
   })
 })
 

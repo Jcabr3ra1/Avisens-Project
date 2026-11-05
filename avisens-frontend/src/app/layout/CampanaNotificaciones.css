@@ -19,10 +19,12 @@
 .dash-campana-boton.abierta { border-color: var(--border-strong); background: var(--surface-tinted); }
 .dash-campana-boton:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-.dash-campana-punto {
-  position: absolute;
+.dash-campana-boton .t-badge {
   top: -6px;
   right: -6px;
+}
+
+.dash-campana-punto {
   min-width: 20px;
   padding: 0 5px;
   border: 2px solid var(--surface-page);

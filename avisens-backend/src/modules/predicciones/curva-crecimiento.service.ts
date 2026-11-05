@@ -20,7 +20,7 @@ const DIA_FINAL_POR_DEFECTO = 42;
 const MARGEN_PLAUSIBLE = { minimo: 0.4, maximo: 1.6 } as const;
 const DIA_MAXIMO_ML = 100;
 
-interface PuntoPeso {
+export interface PuntoPeso {
   dia: number;
   peso: number;
 }
@@ -202,7 +202,7 @@ export class CurvaCrecimientoService {
     };
   }
 
-  private async pesajesPorDia(
+  async pesajesPorDia(
     loteId: number,
     fechaIngreso: Date,
   ): Promise<PuntoPeso[]> {
@@ -229,7 +229,7 @@ export class CurvaCrecimientoService {
       }));
   }
 
-  private async curvaGenetica(lineaId: number | null, sexo: SexoCurva) {
+  async curvaGenetica(lineaId: number | null, sexo: SexoCurva) {
     if (lineaId === null) return null;
     const curva = await this.prisma.curvaGeneticaVersion.findFirst({
       where: { linea_genetica_id: lineaId, sexo, vigente: true },

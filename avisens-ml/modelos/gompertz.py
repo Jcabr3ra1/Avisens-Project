@@ -1,5 +1,7 @@
 import numpy as np
 
+from modelos.confianza import motivos_de, nivel_de_confianza
+
 PARAMETROS_POR_DEFECTO = (5500.0, 4.8, 0.051)
 
 
@@ -73,7 +75,8 @@ def parametros_de_referencia(curva):
 
 Z_90 = 1.645
 ERROR_PROCESO = 0.03
-VERSION_MODELO = "2.0.0"
+VERSION_MODELO = "2.1.0"
+PESAJES_PARA_CURVA_FIRME = 3
 
 
 def dia_para_peso(peso, theta):
@@ -103,6 +106,8 @@ def proyectar_crecimiento(
     margen = Z_90 * np.sqrt(varianza + (curva * ERROR_PROCESO) ** 2)
 
     a, b, k = np.exp(theta)
+    confianza = round(max(0.0, 1 - float(margen[-1] / curva[-1])), 4)
+    ultimo_dia = int(dias.max())
     llegada = dia_para_peso(peso_objetivo_g, theta) if peso_objetivo_g else None
 
     return {
@@ -134,7 +139,11 @@ def proyectar_crecimiento(
             "framework": "numpy",
             "tipo": "gompertz_anclado_a_curva_genetica",
             "objetivo": "curva_crecimiento",
-            "confianza": round(max(0.0, 1 - float(margen[-1] / curva[-1])), 4),
+            "confianza": confianza,
+            "nivel_confianza": nivel_de_confianza(confianza),
+            "motivos": motivos_de(
+                len(pesajes), PESAJES_PARA_CURVA_FIRME, max(0, dia_final - ultimo_dia)
+            ),
             "puntos_usados": len(pesajes),
         },
     }

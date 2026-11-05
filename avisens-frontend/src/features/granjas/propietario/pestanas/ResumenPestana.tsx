@@ -6,7 +6,7 @@ import { IcAlert, IcArrowRight, IcCheck, IcDoc, IcEye, IcScale } from '@shared/u
 import type { GalponConLotes } from '../../hooks/useEstructuraGranjas'
 import { avesActuales, diasDeVida, lecturaPorTipo } from '../../model/estructura'
 import type { DestinoPaso, ProximoPaso } from '../explorador'
-import { useCurvaLote } from '../useCurvaLote'
+import type { useCurvaLote } from '../useCurvaLote'
 
 const GraficoCrecimiento = lazy(() => import('@shared/ui/graficos/GraficoCrecimiento'))
 
@@ -14,7 +14,7 @@ type Props = {
   galpon: GalponConLotes
   indicador: DashboardIndicador | null
   paso: ProximoPaso
-  revision: number
+  curvaLote: ReturnType<typeof useCurvaLote>
   onDestino: (destino: DestinoPaso) => void
   onNavegar: (ruta: string) => void
 }
@@ -31,8 +31,8 @@ function Cifra({ etiqueta, valor, detalle }: { etiqueta: string; valor: string; 
   )
 }
 
-function CurvaMini({ lote, revision, onNavegar }: { lote: Lote; revision: number; onNavegar: (ruta: string) => void }) {
-  const { curva, problema, cargando } = useCurvaLote(lote.id, revision)
+function CurvaMini({ lote, estado, onNavegar }: { lote: Lote; estado: ReturnType<typeof useCurvaLote>; onNavegar: (ruta: string) => void }) {
+  const { curva, problema, cargando } = estado
   if (cargando) return <div className="gp-curva-vacia" role="status">Calculando la curva del lote…</div>
   if (problema) {
     return (
@@ -65,7 +65,7 @@ function CurvaMini({ lote, revision, onNavegar }: { lote: Lote; revision: number
   )
 }
 
-function ResumenPestana({ galpon, indicador, paso, revision, onDestino, onNavegar }: Props) {
+function ResumenPestana({ galpon, indicador, paso, curvaLote, onDestino, onNavegar }: Props) {
   const lote = galpon.loteEnCurso
   const temperatura = lecturaPorTipo(galpon.sensores, 'temp')
   const humedad = lecturaPorTipo(galpon.sensores, 'hum')
@@ -108,7 +108,7 @@ function ResumenPestana({ galpon, indicador, paso, revision, onDestino, onNavega
               Ver guía completa <IcArrowRight size={13} aria-hidden="true" />
             </button>
           </div>
-          <CurvaMini lote={lote} revision={revision} onNavegar={onNavegar} />
+          <CurvaMini lote={lote} estado={curvaLote} onNavegar={onNavegar} />
         </section>
       )}
 

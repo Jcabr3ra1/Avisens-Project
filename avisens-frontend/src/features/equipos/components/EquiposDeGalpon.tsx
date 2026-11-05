@@ -111,9 +111,17 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
         </div>
         <div className="eq-stat">
           <span className="eq-stat-valor">{actuadores}</span>
-          <span className="eq-stat-label">Actuadores</span>
+          <span className="eq-stat-label">Con motor o relé</span>
         </div>
       </div>
+
+      {/* Equipos es inventario, no control: sin esta nota se confunde con los
+          relés K1-K4, que viven en Sensores y se accionan desde Monitoreo. */}
+      <p className="eq-nota">
+        Inventario de las máquinas del galpón para llevar mantenimientos, desgaste y costos.
+        Desde aquí no se controla nada: los relés K1-K4 se encienden y apagan en
+        Monitoreo → Actuadores.
+      </p>
 
       {error && <div className="eq-alert eq-alert--error" role="alert">{error}</div>}
       {errorAccion && (
@@ -133,7 +141,7 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
             <input
               value={form.codigo}
               onChange={(e) => campo('codigo', e.target.value)}
-              placeholder="VENT-G1-01"
+              placeholder="COM-G1-01"
               required
             />
           </label>
@@ -142,7 +150,7 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
             <input
               value={form.nombre}
               onChange={(e) => campo('nombre', e.target.value)}
-              placeholder="Ventilador extractor"
+              placeholder="Comedero lineal"
               required
             />
           </label>
@@ -151,7 +159,7 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
             <input
               value={form.tipo}
               onChange={(e) => campo('tipo', e.target.value)}
-              placeholder="ventilacion"
+              placeholder="alimentación"
             />
           </label>
           <label className="eq-campo">
@@ -201,7 +209,7 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
               checked={form.es_actuador}
               onChange={(e) => campo('es_actuador', e.target.checked)}
             />
-            <span>Es actuador (el sistema puede accionarlo)</span>
+            <span>Lo mueve un motor o un relé <em>(solo informativo: no se controla desde aquí)</em></span>
           </label>
         </div>
 
@@ -252,7 +260,7 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
                       <td><code>{equipo.codigo}</code></td>
                       <td>
                         {equipo.nombre}
-                        {equipo.es_actuador && <span className="eq-tag">actuador</span>}
+                        {equipo.es_actuador && <span className="eq-tag">motor o relé</span>}
                       </td>
                       <td>{equipo.tipo ?? '—'}</td>
                       <td>

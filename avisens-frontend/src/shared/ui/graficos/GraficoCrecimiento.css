@@ -57,6 +57,7 @@
 .gc-detalle-fila--proyeccion::before { background: var(--primary); }
 .gc-detalle-fila--estandar::before { background: #94a3b8; }
 .gc-detalle-fila--marca::before { background: #cbd5e1; }
+.gc-detalle-fila--comparacion::before { background: var(--avisens-deep); }
 
 .gc-detalle-rango {
   padding-left: 18px;

@@ -61,6 +61,19 @@ describe('diasDeVida', () => {
     expect(diasDeVida('2026-08-12T00:00:00', local('2026-08-15T09:00:00'))).toBe(4)
   })
 
+  it('la fecha de ingreso como medianoche UTC cuenta el mismo día de calendario', () => {
+    // Así llega fecha_ingreso desde la API. Antes, en UTC-5, se leía como el
+    // día anterior por la tarde y el lote salía con un día de más.
+    expect(diasDeVida('2026-10-16T00:00:00.000Z', local('2026-10-24T10:00:00'))).toBe(9)
+    expect(diasDeVida('2026-10-16T00:00:00.000Z', local('2026-10-16T09:00:00'))).toBe(1)
+    expect(diasDeVida('2026-10-16T00:00:00.000Z', local('2026-10-16T23:00:00'))).toBe(1)
+  })
+
+  it('da el mismo día con la fecha suelta y con medianoche UTC', () => {
+    const ahora = local('2026-11-03T15:00:00')
+    expect(diasDeVida('2026-10-16T00:00:00.000Z', ahora)).toBe(diasDeVida('2026-10-16', ahora))
+  })
+
   it('una fecha inválida no rompe la pantalla', () => {
     expect(diasDeVida('no-es-fecha', local('2026-08-15T09:00:00'))).toBe(1)
   })

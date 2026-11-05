@@ -29,6 +29,7 @@
   background: var(--card);
 }
 
+.eq-nota { margin: 0 0 1rem; color: var(--text2); font-size: 0.85rem; line-height: 1.45; }
 .eq-form-titulo { margin: 0 0 1rem; color: var(--text); font-size: 1rem; font-weight: 600; }
 
 .eq-grid {

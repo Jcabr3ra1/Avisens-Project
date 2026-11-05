@@ -12,6 +12,8 @@ import type { Galpon } from '@features/galpones/api/galpones'
 import { useCatalogoSensores } from '../hooks/useCatalogoSensores'
 import { useSensores } from '../hooks/useSensores'
 import FormularioSensor from './FormularioSensor'
+import FichaActuador from './FichaActuador'
+import { esSensorRele } from '../model/reles'
 import {
   FORMULARIO_SENSOR_INICIAL,
   type DatosSensor,
@@ -21,7 +23,7 @@ import '../SensoresPage.css'
 import { toast } from 'sonner'
 
 function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
-  const { sensores, cargando, error, crear, actualizar, alternar, eliminar } = useSensores(
+  const { sensores, cargando, error, crear, actualizar, alternar, eliminar, recargar } = useSensores(
     galpon.id,
   )
   const { tipos } = useCatalogoSensores()
@@ -337,7 +339,17 @@ function SensoresDeGalpon({ galpon }: { galpon: Galpon }) {
 
       <MedicionesVivas sensores={sensores} />
 
-      {editando && (
+      {/* Un relé se edita en su ficha: protege ESP32, canal y código, que
+          deciden a dónde llegan sus órdenes. */}
+      {editando && esSensorRele(editando) && (
+        <FichaActuador
+          sensorId={editando.id}
+          puedeEditar={puedeGestionar}
+          onCerrar={() => setEditando(null)}
+          onGuardado={() => { void recargar() }}
+        />
+      )}
+      {editando && !esSensorRele(editando) && (
         <FormularioSensor
           sensor={editando}
           onGuardar={actualizar}

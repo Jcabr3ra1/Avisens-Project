@@ -5,6 +5,8 @@ import { ClienteMlService } from './cliente-ml.service';
 import { CurvaCrecimientoService } from './curva-crecimiento.service';
 import { PronosticoClimaService } from './pronostico-clima.service';
 import { RiesgoCalorService } from './riesgo-calor.service';
+import { AnomaliasService } from './anomalias.service';
+import { CalorHistoricoService } from './calor-historico.service';
 import { PlanLoteModule } from '../plan-lote/plan-lote.module';
 
 @Module({
@@ -16,6 +18,8 @@ import { PlanLoteModule } from '../plan-lote/plan-lote.module';
     CurvaCrecimientoService,
     PronosticoClimaService,
     RiesgoCalorService,
+    AnomaliasService,
+    CalorHistoricoService,
   ],
   exports: [PrediccionesService, CurvaCrecimientoService, RiesgoCalorService],
 })

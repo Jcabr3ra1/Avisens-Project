@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import AsignarSensores from '@features/monitoreo/AsignarSensores'
+import { ActuadoresGalpon } from '@features/monitoreo/components/ActuadoresGalpon'
 import { tieneLecturaUtil, useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
 import SensoresGalpon from '@features/granjas/propietario/pestanas/ambiente/SensoresGalpon'
 import '@fontsource-variable/oswald'
@@ -10,7 +11,24 @@ import type { EstadoGalponFlota, FilaFlota } from '../model/flota'
 
 const REFRESCO_MS = 20000
 
-type Vista = 'monitoreo' | 'configurar'
+type Vista = 'monitoreo' | 'actuadores' | 'configurar'
+
+const TEXTO_VISTA: Record<Vista, string> = {
+  monitoreo: 'Monitoreo en vivo',
+  actuadores: 'Actuadores',
+  configurar: 'Configurar controladores y sensores',
+}
+
+// Actuadores del galpón con sus controles y su ficha. Mismos datos en vivo
+// que el monitoreo; las órdenes se sondean aparte (useControlActuadores).
+function ActuadoresEnVivo({ galponId }: { galponId: number }) {
+  const { galpones, cargando, recargar } = useMonitoreoAmbiental()
+  const galpon = galpones.find((item) => item.id === galponId) ?? null
+  if (!galpon) {
+    return <p className="flota-detalle-nota" role="status">{cargando ? 'Cargando actuadores…' : 'Este galpón todavía no tiene datos.'}</p>
+  }
+  return <ActuadoresGalpon galponId={galponId} sensores={galpon.sensores} onCambio={() => { void recargar() }} />
+}
 
 function MonitoreoEnVivo({ galponId }: { galponId: number }) {
   const { galpones, cargando, recargar } = useMonitoreoAmbiental()
@@ -101,17 +119,17 @@ function DetalleGalpon({ fila, sensores, versionPublicada, cargando, onCambio }:
           </ul>
 
           <div className="flota-vistas" role="tablist" aria-label={`Vistas de ${fila.galpon.nombre}`}>
-            {(['monitoreo', 'configurar'] as const).map((id) => (
+            {(['monitoreo', 'actuadores', 'configurar'] as const).map((id) => (
               <button
                 key={id}
                 type="button"
                 role="tab"
                 aria-selected={vista === id}
                 className="flota-vista"
-                disabled={id === 'monitoreo' && !tieneEquipo}
+                disabled={id !== 'configurar' && !tieneEquipo}
                 onClick={() => setEleccion({ galponId: fila.galpon.id, vista: id })}
               >
-                {id === 'monitoreo' ? 'Monitoreo en vivo' : 'Configurar controladores y sensores'}
+                {TEXTO_VISTA[id]}
               </button>
             ))}
           </div>
@@ -119,6 +137,8 @@ function DetalleGalpon({ fila, sensores, versionPublicada, cargando, onCambio }:
           <div className="flota-detalle-config">
             {vista === 'monitoreo' ? (
               <MonitoreoEnVivo galponId={fila.galpon.id} />
+            ) : vista === 'actuadores' ? (
+              <ActuadoresEnVivo key={fila.galpon.id} galponId={fila.galpon.id} />
             ) : (
               <AsignarSensores
                 key={fila.galpon.id}

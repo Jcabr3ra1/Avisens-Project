@@ -1,7 +1,8 @@
 import type { ComparacionIndicador } from '@features/indicadores/api/indicadores'
 import { formatearPeso } from '@features/guia-crecimiento/model/proyeccion'
-import { IcChevronRight } from '@shared/ui/icons/icons'
+import { useCurvaLote } from '@features/granjas/propietario/useCurvaLote'
 import type { DashboardIndicador, DashboardLote } from '../model/dashboard'
+import { filaDeFaena } from '../model/faena'
 import { comparacionVigente, esDatoVerificado, lineaSparkline, mismaRevision, pesoActualParaSparkline, serieDePesoVerificado, textoComparacion, textoComparacionFcr, textoFechaPesaje, type Fila } from '../model/estadoLote'
 
 type Props = {
@@ -10,12 +11,11 @@ type Props = {
   comparacion: ComparacionIndicador | null
   diaLote: number | null
   cargando: boolean
-  onAbrirBitacora: () => void
-  onAbrirGuia: () => void
 }
 
-function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrirBitacora, onAbrirGuia }: Props) {
+function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando }: Props) {
   const reciente = indicadores[0] ?? null
+  const { curva } = useCurvaLote(lote?.id ?? null, 0)
   const datosVerificados = reciente !== null && esDatoVerificado(reciente.estadoCalculo)
   const notaVigente =
     datosVerificados &&
@@ -59,6 +59,8 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
     },
     { etiqueta: 'Lote', valor: lote?.codigo ?? '—', mono: true },
   ]
+  const faena = filaDeFaena(curva)
+  if (faena) filas.splice(filas.length - 1, 0, { ...faena, mono: true })
 
   // La serie va del indicador más antiguo al más reciente: el sparkline se
   // lee de izquierda a derecha, igual que la gráfica de mediciones.
@@ -66,56 +68,45 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando, onAbrir
   const pesoRecienteVerificado = pesoActualParaSparkline(reciente)
 
   return (
-    <section className="dash-lote" aria-labelledby="dash-lote-titulo">
-      <div className="dash-lote-cabecera">
-        <h2 id="dash-lote-titulo">Estado del lote</h2>
-        {lote && (
-          <div className="dash-lote-enlaces">
-            <button type="button" className="dash-lote-enlace" onClick={onAbrirGuia}>
-              Guía de peso <IcChevronRight size={13} />
-            </button>
-            <button type="button" className="dash-lote-enlace" onClick={onAbrirBitacora}>
-              Bitácora <IcChevronRight size={13} />
-            </button>
-          </div>
-        )}
-      </div>
+    <section className="rsm-lote" aria-labelledby="dash-lote-titulo">
+      <header className="rsm-lote-cabecera">
+        <div>
+          <h2 id="dash-lote-titulo" className="rsm-titulo">Estado del lote</h2>
+          {lote && <p className="rsm-subtitulo mono">{lote.codigo}</p>}
+        </div>
+      </header>
 
       {cargando ? (
-        <p className="dash-lote-mensaje" role="status">Cargando indicadores…</p>
+        <p className="rsm-lote-mensaje" role="status">Cargando indicadores…</p>
       ) : !lote ? (
-        <p className="dash-lote-mensaje">Este galpón no tiene un lote activo.</p>
+        <p className="rsm-lote-mensaje">Este galpón no tiene un lote activo.</p>
       ) : (
         <>
-          <dl className="dash-lote-filas">
-            {filas.map((fila) => (
-              <div key={fila.etiqueta} className="dash-lote-fila">
+          <dl className="rsm-lote-datos">
+            {filas.filter((fila) => fila.etiqueta !== 'Lote').map((fila) => (
+              <div key={fila.etiqueta} className={`rsm-dato${fila.alerta ? ' es-alerta' : ''}`}>
                 <dt>{fila.etiqueta}</dt>
-                <dd>
-                  <span className={`${fila.mono ? 'mono ' : ''}${fila.alerta ? 'es-alerta' : ''}`}>
-                    {fila.valor}
-                  </span>
-                  {fila.nota && <small>{fila.nota}</small>}
-                </dd>
+                <dd className={fila.mono ? 'mono' : undefined}>{fila.valor}</dd>
+                {fila.nota && <small>{fila.nota}</small>}
               </div>
             ))}
           </dl>
 
           {!reciente && (
-            <p className="dash-lote-mensaje">
+            <p className="rsm-lote-mensaje">
               Aún no hay indicadores calculados. Registra peso, mortalidad y consumo
               en la bitácora.
             </p>
           )}
 
           {pesoRecienteVerificado !== null && seriePeso.length > 1 && (
-            <div className="dash-lote-pie">
-              <div className="dash-lote-pie-fila">
+            <div className="rsm-lote-peso">
+              <div className="rsm-lote-peso-fila">
                 <span>Peso promedio ({seriePeso.length} registros)</span>
                 <span className="mono">{formatearPeso(pesoRecienteVerificado)}</span>
               </div>
               <svg
-                className="dash-lote-spark"
+                className="rsm-lote-linea"
                 viewBox="0 0 240 44"
                 preserveAspectRatio="none"
                 role="img"
