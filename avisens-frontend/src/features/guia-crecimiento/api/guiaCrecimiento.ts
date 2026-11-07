@@ -198,6 +198,27 @@ export type PlanAlimentoGuia = {
       consumo_por_ave_g: number
       consumo_total_kg: number
     }>
+    etapa_actual?: {
+      etapa: string | null
+      nombre_etapa: string
+      alimento: string
+      dia_inicio: number
+      dia_fin: number
+      dias_para_cambio: number
+      proximo_alimento: string | null
+      proxima_etapa: string | null
+    } | null
+    fases?: Array<{
+      orden: number
+      etapa: string | null
+      nombre_etapa: string
+      alimento: string
+      dia_inicio: number
+      dia_fin: number
+      consumo_por_ave_g: number
+      consumo_total_kg: number
+      bultos_40kg: number
+    }>
   }
   efectiva: boolean
   plan_vigente: {
@@ -233,7 +254,10 @@ export type PlanAlimentoGuia = {
 }
 
 export type GuardarPlanLotePayload = { motivo?: string }
-export type GuardarPlanAlimentoPayload = { motivo?: string }
+export type GuardarPlanAlimentoPayload = {
+  motivo?: string
+  permitir_fallback_estandar?: boolean
+}
 export type CrearPlanLotePayload = { peso_objetivo_g: number; motivo?: string }
 
 export async function listarLotes(): Promise<LoteGuia[]> {
