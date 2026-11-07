@@ -31,6 +31,7 @@ export const ETAPAS_ALIMENTACION = [
   'preiniciacion',
   'iniciacion',
   'engorde',
+  'finalizacion',
 ] as const;
 
 export type MarcaAlimento = (typeof MARCAS_ALIMENTO)[number];

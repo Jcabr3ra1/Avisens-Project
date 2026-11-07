@@ -293,6 +293,27 @@ describe('PlanAlimentoService', () => {
       expect(data.renglones_alimento).toEqual({ create: [] });
     });
 
+    it('estado_alimento=calculado sin marca pero con permitir_fallback_estandar: persiste desglose estandar', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
+      conCallback();
+      tx.$queryRaw.mockResolvedValueOnce([filaLote()]);
+      tx.$queryRaw.mockResolvedValueOnce([filaPlan()]);
+      tx.registroMortalidad.findMany.mockResolvedValue([]);
+      tx.puntoCurvaGenetica.findMany.mockResolvedValue(puntosCurva);
+      tx.tipoAlimento.findMany.mockResolvedValue([]);
+      tx.estimacionAlimentoPlan.findFirst.mockResolvedValue(null);
+      tx.estimacionAlimentoPlan.create.mockResolvedValue(estimacionCreada());
+
+      await service.crear(3, { permitir_fallback_estandar: true }, admin);
+
+      const data = dataDe(tx.estimacionAlimentoPlan.create);
+      expect(data.estado_desglose).toBe('calculado');
+      expect(data.marca_alimento_snapshot).toBe('estandar');
+      expect(
+        (data.renglones_alimento as { create: unknown[] }).create.length,
+      ).toBeGreaterThan(0);
+    });
+
     it('estado_alimento=calculado con marca y catalogo: persiste el desglose como escritura anidada renglones_alimento.create', async () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-08-08T15:00:00.000Z'));
       conCallback();
