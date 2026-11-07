@@ -5,6 +5,7 @@ import { etiquetaSeveridad } from '../model/confianza'
 import {
   diaDeFraccion, diaTrasTecla, marcasDeRegla, posicionDeDia, PX_POR_UNIDAD_POLLO,
 } from '../model/reglaCiclo'
+import { construirGradienteEtapas, type FaseCicloVisual } from '../model/etapasAlimentacion'
 import { colorDeEdad, escalaDelPollito } from '@features/dashboard/model/escenaGalpon'
 import PolloMarcador3D from './PolloMarcador3D'
 import banderaSalida from '../assets/bandera-salida-low-poly.png'
@@ -19,13 +20,14 @@ type Props = {
   alertas: { dia: number; severidad: SeveridadAnomalia }[]
   etiquetaSalida: string
   detalleSalida: string
+  fases?: FaseCicloVisual[]
   onDiaChange: (dia: number) => void
 }
 
 const ESCALA_EN_REGLA = 1.35
 
 function ReglaCiclo({
-  primerDia, diaFinal, diaActual, diaSeleccionado, diasConPesaje, alertas, etiquetaSalida, detalleSalida, onDiaChange,
+  primerDia, diaFinal, diaActual, diaSeleccionado, diasConPesaje, alertas, etiquetaSalida, detalleSalida, fases = [], onDiaChange,
 }: Props) {
   const pista = useRef<HTMLDivElement>(null)
   const arrastrando = useRef(false)
@@ -66,6 +68,8 @@ function ReglaCiclo({
     onDiaChange(siguiente)
   }
 
+  const gradienteEtapas = construirGradienteEtapas(fases, primerDia, diaFinal)
+
   return (
     <div
       className="regla"
@@ -73,10 +77,12 @@ function ReglaCiclo({
         '--edad': colorDeEdad(diaActual),
         '--al-hoy': alHoy,
         '--al-seleccionado': alSeleccionado,
+        '--gradiente-etapas': gradienteEtapas,
       } as CSSProperties}
     >
       <div ref={pista} className="regla-lienzo">
         <div className="regla-pista" aria-hidden="true">
+          <span className="regla-pista-fondo" />
           <span className="regla-recorrido" />
           <span className="regla-futuro" />
         </div>
@@ -165,6 +171,18 @@ function ReglaCiclo({
           onKeyDown={alPresionarTecla}
         />
       </div>
+
+      {fases.length > 0 && (
+        <div className="regla-etapas-leyenda" aria-label="Etapas de cría y alimentación">
+          {fases.map((fase) => (
+            <span key={fase.orden} className="regla-etapa-chip">
+              <span className={`regla-etapa-punto regla-etapa-punto--${fase.etapa}`} aria-hidden="true" />
+              <strong>{fase.nombreEtapa}</strong>
+              <small>({fase.diaInicio === fase.diaFin ? `Día ${fase.diaInicio}` : `Días ${fase.diaInicio}–${fase.diaFin}`})</small>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
