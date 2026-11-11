@@ -7,9 +7,10 @@ interface FiltrosAlertasProps {
   filtros: Filtros
   onCambiar: (filtros: Filtros) => void
   onLimpiar: () => void
+  etiquetaTodos?: string
 }
 
-function FiltrosAlertas({ alertas, filtros, onCambiar, onLimpiar }: FiltrosAlertasProps) {
+function FiltrosAlertas({ alertas, filtros, onCambiar, onLimpiar, etiquetaTodos = 'Todos los galpones' }: FiltrosAlertasProps) {
   const galpones = [...new Map(alertas.map((alerta) => [alerta.galpon_id, alerta.galpon])).values()]
   const filtrando = filtros.estado !== 'todas' || filtros.criticidad !== 'todas' || filtros.galponId !== 'todos'
 
@@ -43,7 +44,7 @@ function FiltrosAlertas({ alertas, filtros, onCambiar, onLimpiar }: FiltrosAlert
         <span>Galpón</span>
         <span className="ale-selector">
           <select value={filtros.galponId} onChange={(event) => onCambiar({ ...filtros, galponId: event.target.value })}>
-            <option value="todos">Todos los galpones</option>
+            <option value="todos">{etiquetaTodos}</option>
             {galpones.map((galpon) => <option key={galpon.id} value={galpon.id}>{galpon.nombre} · {galpon.granja.nombre}</option>)}
           </select>
           <IcChevronDown size={16} aria-hidden="true" />

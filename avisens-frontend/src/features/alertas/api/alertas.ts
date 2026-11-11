@@ -161,3 +161,13 @@ export async function eliminarAlerta(
   )
   return data
 }
+
+// Cuántos galpones puede ver la sesión. El backend ya acota por alcance: al
+// operario solo le cuenta los galpones asignados y activos. Sirve para
+// distinguir «no hay alertas» de «no tienes galpones a cargo».
+export async function contarGalponesVisibles(): Promise<number> {
+  const { data } = await api.get<{ meta: { total: number } }>('/galpones', {
+    params: { page: 1, limit: 1 },
+  })
+  return data.meta.total
+}

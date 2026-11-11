@@ -104,7 +104,9 @@ function AcordeonInsumo({
               onClick={() => onRegistrarMovimiento(insumo)}
             >
               <IcPlus size={13} aria-hidden="true" />
-              Movimiento
+              {permisos.tiposMovimiento.length === 1 && permisos.tiposMovimiento[0] === 'salida'
+                ? 'Salida'
+                : 'Movimiento'}
             </button>
           )}
 
@@ -128,6 +130,7 @@ function AcordeonInsumo({
                 )}
               </span>
             </div>
+            {permisos.verCostos && <>
             <div>
               <span className="inv-ficha-etiqueta">Precio unitario</span>
               <span className="inv-ficha-valor">
@@ -156,6 +159,7 @@ function AcordeonInsumo({
                 )}
               </span>
             </div>
+            </>}
             <div>
               <span className="inv-ficha-etiqueta">Vence</span>
               <span className="inv-ficha-valor">
