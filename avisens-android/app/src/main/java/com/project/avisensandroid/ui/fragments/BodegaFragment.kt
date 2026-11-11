@@ -1,6 +1,6 @@
+
 package com.project.avisensandroid.ui.fragments
 
-import android.graphics.Typeface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -26,6 +26,10 @@ class BodegaFragment : BaseBottomNavFragment() {
     private val binding get() = _binding!!
 
     private val proveedoresPorId = mutableMapOf<Int, ProveedorResponse>()
+    private var cargando = false
+    private val preferenciasStock by lazy {
+        requireContext().getSharedPreferences("bodega_referencia_stock", android.content.Context.MODE_PRIVATE)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -62,7 +66,8 @@ class BodegaFragment : BaseBottomNavFragment() {
         }
 
         binding.btnNuevoInsumo.visibility =
-            if (activity.obtenerRolActual() == com.project.avisensandroid.model.UserRole.PROPIETARIO) {
+            if (activity.obtenerGranjaSeleccionadaId() != null &&
+                activity.obtenerRolActual() == com.project.avisensandroid.model.UserRole.PROPIETARIO) {
                 View.VISIBLE
             } else {
                 View.GONE
@@ -72,7 +77,7 @@ class BodegaFragment : BaseBottomNavFragment() {
             activity.mostrarDialogNuevoInsumo()
         }
 
-        cargarDatosBodega()
+        // onResume realiza la carga inicial y las recargas al volver de un diálogo.
     }
 
 
@@ -98,8 +103,24 @@ class BodegaFragment : BaseBottomNavFragment() {
     }
 
     private fun cargarDatosBodega() {
+        if (cargando || _binding == null) return
+        val activity = requireActivity() as MainActivity
+        val granjaId = activity.obtenerGranjaSeleccionadaId()
+        binding.btnNuevoInsumo.visibility =
+            if (granjaId != null && activity.obtenerRolActual() == UserRole.PROPIETARIO)
+                View.VISIBLE else View.GONE
+        if (granjaId == null) {
+            binding.contenedorInsumos.removeAllViews()
+            binding.progressInsumos.visibility = View.GONE
+            binding.txtSinInsumos.text = "Selecciona primero una granja en Inicio para consultar su inventario."
+            binding.txtSinInsumos.visibility = View.VISIBLE
+            binding.txtCriticos.text = "● 0 críticos"
+            return
+        }
+        cargando = true
         binding.progressInsumos.visibility = View.VISIBLE
         binding.txtSinInsumos.visibility = View.GONE
+        binding.txtSinInsumos.text = "No hay insumos registrados"
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
@@ -107,7 +128,9 @@ class BodegaFragment : BaseBottomNavFragment() {
                 val insumos = cargarTodosLosInsumos()
                 mostrarInsumos(insumos)
             } catch (e: Exception) {
-                if (isAdded) {
+                if (_binding != null && isAdded) {
+                    binding.txtSinInsumos.text = "No se pudieron cargar los alimentos. ${e.message ?: "Intenta nuevamente."}"
+                    binding.txtSinInsumos.visibility = View.VISIBLE
                     Toast.makeText(
                         requireContext(),
                         "Error al cargar bodega: ${e.message ?: "error desconocido"}",
@@ -115,9 +138,8 @@ class BodegaFragment : BaseBottomNavFragment() {
                     ).show()
                 }
             } finally {
-                if (_binding != null) {
-                    binding.progressInsumos.visibility = View.GONE
-                }
+                cargando = false
+                _binding?.progressInsumos?.visibility = View.GONE
             }
         }
     }
@@ -177,9 +199,11 @@ class BodegaFragment : BaseBottomNavFragment() {
         val activity = requireActivity() as MainActivity
         val granjaIdSeleccionada = activity.obtenerGranjaSeleccionadaId()
 
-        val activos = insumos.filter { insumo ->
-            insumo.activo &&
-                    (granjaIdSeleccionada == null || insumo.granja_id == granjaIdSeleccionada)
+        val disponibles = insumos.filter { it.activo }
+        // Solo se visualiza el inventario de la granja elegida por el usuario.
+        // No se muestran datos de otras granjas como alternativa si la lista está vacía.
+        val activos = disponibles.filter { insumo ->
+            granjaIdSeleccionada != null && insumo.granja_id == granjaIdSeleccionada
         }
 
         if (activos.isEmpty()) {
@@ -223,16 +247,34 @@ class BodegaFragment : BaseBottomNavFragment() {
         itemBinding.txtCantidadInsumo.text = formatearNumero(stockActual)
         itemBinding.txtUnidadInsumo.text = insumo.unidad_medida
 
-        // La barra representa qué tan cerca está el stock actual del mínimo.
-        // Al llegar al mínimo o superarlo, queda completa y el estado pasa a OK.
-        val porcentaje = if (stockMinimo > 0.0) {
-            ((stockActual / stockMinimo) * 100.0)
+        // Si el backend ya entrega el máximo histórico, utilizarlo.
+        // En versiones anteriores de la API ese campo no existe. En ese caso,
+        // guardar el MAYOR STOCK REAL observado por esta instalación, nunca
+        // un multiplicador inventado ni una capacidad ficticia.
+        val claveReferencia = "insumo_${insumo.id}_max_observado"
+        val observadoAnterior = preferenciasStock.getString(claveReferencia, null)
+            ?.toDoubleOrNull()
+            ?.takeIf { it.isFinite() && it > 0.0 }
+            ?: 0.0
+        val referenciaBackend = insumo.stock_referencia
+            ?.takeIf { it.isFinite() && it > 0.0 }
+            ?: 0.0
+        val referencia = maxOf(stockActual, observadoAnterior, referenciaBackend)
+        if (referencia > observadoAnterior) {
+            preferenciasStock.edit()
+                .putString(claveReferencia, referencia.toString())
+                .apply()
+        }
+        val porcentaje = if (referencia > 0.0) {
+            ((stockActual / referencia) * 100.0)
                 .coerceIn(0.0, 100.0)
                 .toInt()
         } else {
-            100
+            0
         }
 
+        // La barra debe verse siempre, incluso en insumos antiguos o agotados.
+        itemBinding.progressStock.visibility = View.VISIBLE
         itemBinding.progressStock.max = 100
         itemBinding.progressStock.progress = porcentaje
         itemBinding.progressStock.progressDrawable = ContextCompat.getDrawable(

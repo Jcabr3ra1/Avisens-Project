@@ -99,6 +99,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
+                android:id="@+id/tarjetaSeleccionGranja"
                 android:background="@drawable/bg_farm_card"
                 android:orientation="vertical"
                 android:padding="18dp">
@@ -119,12 +120,14 @@
                     android:layout_marginTop="10dp"
                     android:background="@drawable/bg_farm_spinner"
                     android:dropDownWidth="match_parent"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
+                    android:dropDownHorizontalOffset="0dp"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="0dp"
                     android:popupBackground="@drawable/bg_spinner_popup"
                     android:spinnerMode="dropdown" />
 
                 <LinearLayout
+                    android:id="@+id/cabeceraGalponesInicio"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"

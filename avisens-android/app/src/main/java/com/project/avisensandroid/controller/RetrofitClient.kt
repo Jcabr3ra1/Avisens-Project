@@ -43,17 +43,6 @@ object RetrofitClient {
         appContext = context.applicationContext
     }
 
-    // =========================================================
-    // LOGGING
-    // =========================================================
-
-    /**
-     * Solo en compilaciones de depuración (BuildConfig.DEBUG, que Gradle
-     * genera según el buildType). En release no se registra nada.
-     *
-     * Aun en depuración, la cabecera Authorization se oculta y las rutas con
-     * contraseñas o tokens se registran sin cuerpo (ver RegistroHttp).
-     */
     private fun interceptorDeRegistro(): Interceptor? {
         if (!BuildConfig.DEBUG) return null
 
@@ -188,14 +177,6 @@ object RetrofitClient {
         }
     }
 
-    /**
-     * Hace el refresh con un cliente OkHttp independiente para que la propia
-     * petición de refresh no dispare el Authenticator ni el interceptor de
-     * access token.
-     *
-     * El backend usa jwt-refresh con ExtractJwt.fromBodyField('refresh_token'):
-     * espera {"refresh_token": "..."} en el body, no en Authorization.
-     */
     private fun renovarAccessToken(refreshToken: String): ResultadoRenovacion {
         val request = Request.Builder()
             .url("${BASE_URL}v1/auth/refresh")
@@ -227,12 +208,6 @@ object RetrofitClient {
     // CIERRE DE SESIÓN REMOTO
     // =========================================================
 
-    /**
-     * Revoca la sesión en el backend (POST /v1/auth/logout, 204). Es de mejor
-     * esfuerzo y asíncrono: la sesión local ya se borró antes de llamarlo,
-     * así que un fallo de red no impide cerrar sesión en el teléfono. Si la
-     * petición no llega, el refresh token caduca solo en el servidor.
-     */
     fun cerrarSesionRemota(refreshToken: String) {
         val request = Request.Builder()
             .url("${BASE_URL}v1/auth/logout")
@@ -264,8 +239,6 @@ object RetrofitClient {
     // OKHTTP
     // =========================================================
 
-    // Sin interceptores ni Authenticator: refresh y logout nunca se
-    // registran ni disparan otra renovación.
     private val clienteAutenticacion: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)

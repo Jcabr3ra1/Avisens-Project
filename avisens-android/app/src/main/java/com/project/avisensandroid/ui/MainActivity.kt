@@ -1429,6 +1429,14 @@ class MainActivity : AppCompatActivity() {
             val unidadSeleccionada = binding.spinnerUnidadInsumo.selectedItemPosition
             val unidad = binding.spinnerUnidadInsumo.selectedItem?.toString()?.trim().orEmpty()
             val cantidad = cantidadTexto.toDoubleOrNull()
+            val minimoTexto = binding.edtStockMinimoInsumo.text.toString().trim()
+                .replace(',', '.')
+            val stockMinimo = minimoTexto.takeIf { it.isNotBlank() }?.toDoubleOrNull()
+
+            if (minimoTexto.isNotBlank() && (stockMinimo == null || stockMinimo <= 0.0 || !stockMinimo.isFinite())) {
+                binding.edtStockMinimoInsumo.error = "Ingresa un mínimo mayor que 0"
+                return@setOnClickListener
+            }
 
             if (tipoAlimento == null) {
                 Toast.makeText(
@@ -1463,7 +1471,8 @@ class MainActivity : AppCompatActivity() {
                 categoria = "alimento",
                 cantidad = cantidad,
                 unidad = unidad,
-                proveedorId = proveedorId
+                proveedorId = proveedorId,
+                stockMinimo = stockMinimo
             )
         }
     }
@@ -1581,7 +1590,8 @@ class MainActivity : AppCompatActivity() {
         categoria: String,
         cantidad: Double,
         unidad: String,
-        proveedorId: Int?
+        proveedorId: Int?,
+        stockMinimo: Double?
     ) {
         binding.btnAgregarInsumo.isEnabled = false
 
@@ -1595,7 +1605,7 @@ class MainActivity : AppCompatActivity() {
                     tipo = categoria,
                     unidad_medida = unidad,
                     stock_actual = cantidad,
-                    stock_minimo = null,
+                    stock_minimo = stockMinimo,
                     precio_unitario_cop = null,
                     proveedor_habitual_id = proveedorId,
                     ubicacion_almacen = null,
@@ -1605,6 +1615,9 @@ class MainActivity : AppCompatActivity() {
                 val response = RetrofitClient.api.crearInsumo(request)
 
                 if (response.isSuccessful) {
+                    // Mostrar la granja en la que el backend acaba de crear el alimento.
+                    // Evita que Bodega lo oculte por un selector anterior.
+                    seleccionarGranja(response.body()?.granja_id ?: granjaId)
                     Toast.makeText(
                         this@MainActivity,
                         "Alimento agregado correctamente",

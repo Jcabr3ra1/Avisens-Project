@@ -25,6 +25,8 @@ import com.google.android.material.button.MaterialButton
 import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.Po05AlertasOpBinding
+import com.project.avisensandroid.model.InsumoResponse
+import com.project.avisensandroid.model.LoteResponse
 import com.project.avisensandroid.model.AlertaResponse
 import com.project.avisensandroid.model.CerrarAlertaRequest
 import com.project.avisensandroid.model.PaginatedResponse
@@ -40,7 +42,9 @@ class AlertasFragment : BaseBottomNavFragment() {
     private val binding get() = _binding!!
 
     private var alertas: List<AlertaResponse> = emptyList()
+    private var alertasStock: List<InsumoResponse> = emptyList()
     private var mostrandoHistorial = false
+    private var lotesActivos: List<LoteResponse> = emptyList()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -67,7 +71,7 @@ class AlertasFragment : BaseBottomNavFragment() {
             mostrarLista()
         }
 
-        cargarAlertas()
+        // La carga se hace en onResume, también al regresar de Inicio.
     }
 
     override fun onResume() {
@@ -76,29 +80,86 @@ class AlertasFragment : BaseBottomNavFragment() {
     }
 
     private fun cargarAlertas() {
-        val galponId = (activity as? MainActivity)?.obtenerGalponSeleccionadoId()
-        if (galponId == null) {
+        val mainActivity = activity as? MainActivity ?: return
+        val granjaId = mainActivity.obtenerGranjaSeleccionadaId()
+        if (granjaId == null) {
             alertas = emptyList()
-            binding.tvResumenAlertas.text = "Selecciona un galpón desde Inicio"
-            actualizarResumen()
-            mostrarLista()
+            alertasStock = emptyList()
+            lotesActivos = emptyList()
+            binding.containerAlertas.removeAllViews()
+            binding.tvBadgeActivas.text = "0"
+            binding.tvBadgeHistorial.text = "0"
+            binding.tvCriticas.text = "●  0 críticas"
+            binding.tvAdvertencias.text = "●  0 advertencias"
+            binding.tvResumenAlertas.text = "Selecciona primero una granja en Inicio."
+            binding.containerAlertas.addView(
+                texto("Selecciona una granja en Inicio para consultar sus alertas.", 13f, "#78847E", false)
+            )
             return
         }
-
+        val galponId = mainActivity.obtenerGalponSeleccionadoId()
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 binding.tvResumenAlertas.text = "Cargando alertas del galpón seleccionado..."
-                val response = RetrofitClient.api.listarAlertasDeGalpon(
-                    galponId = galponId,
-                    page = 1,
-                    limit = 100
-                )
-
-                if (!response.isSuccessful) {
-                    throw IllegalStateException("Código ${response.code()}")
+                alertas = if (galponId != null) {
+                    val response = RetrofitClient.api.listarAlertasDeGalpon(
+                        galponId = galponId, page = 1, limit = 100
+                    )
+                    if (!response.isSuccessful) {
+                        throw IllegalStateException("Código ${response.code()}")
+                    }
+                    response.body()?.data ?: emptyList()
+                } else emptyList()
+                // Los insumos pertenecen a granjas, NO a galpones. Se consultan
+                // con el filtro de acceso que ya aplica el backend por rol.
+                val stockBajo = mutableListOf<InsumoResponse>()
+                var pagina = 1
+                var continuar = true
+                while (continuar) {
+                    val insumosResponse = RetrofitClient.api.listarInsumos(page = pagina, limit = 100)
+                    if (!insumosResponse.isSuccessful) {
+                        throw IllegalStateException("No se pudo consultar Bodega: ${insumosResponse.code()}")
+                    }
+                    val cuerpo = insumosResponse.body()
+                        ?: throw IllegalStateException("Respuesta vacía al consultar Bodega")
+                    stockBajo.addAll(cuerpo.data.filter { insumo ->
+                        insumo.activo &&
+                                insumo.granja_id == granjaId &&
+                                (insumo.stock_minimo ?: 0.0) > 0.0 &&
+                                (insumo.stock_actual ?: Double.POSITIVE_INFINITY) <= (insumo.stock_minimo ?: 0.0)
+                    })
+                    continuar = pagina < cuerpo.meta.totalPages
+                    pagina++
                 }
-
-                alertas = response.body()?.data ?: emptyList()
+                alertasStock = stockBajo
+                // El inventario pertenece a la granja. Consultamos los lotes
+                // exclusivamente para identificar el código real cuando no
+                // exista ambigüedad; un error aquí no oculta las alertas.
+                lotesActivos = try {
+                    val lotes = mutableListOf<LoteResponse>()
+                    var paginaLotes = 1
+                    var hayMas = true
+                    while (hayMas) {
+                        val respuesta = RetrofitClient.api.listarLotesCompletos(
+                            page = paginaLotes, limit = 100
+                        )
+                        if (!respuesta.isSuccessful) {
+                            throw IllegalStateException("No se pudieron consultar los lotes")
+                        }
+                        val cuerpo = respuesta.body()
+                            ?: throw IllegalStateException("Respuesta vacía de lotes")
+                        lotes.addAll(cuerpo.data.filter {
+                            it.estado.equals("activo", ignoreCase = true)
+                        })
+                        hayMas = paginaLotes < cuerpo.meta.totalPages
+                        paginaLotes++
+                    }
+                    lotes
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    emptyList()
+                }
                 actualizarResumen()
                 mostrarLista()
             } catch (e: CancellationException) {
@@ -117,11 +178,11 @@ class AlertasFragment : BaseBottomNavFragment() {
     }
 
     private fun actualizarResumen() {
-        val activas = alertas.count { it.estado != "cerrada" }
+        val activas = alertas.count { it.estado != "cerrada" } + alertasStock.size
         val historial = alertas.count { it.estado == "cerrada" }
         val criticas = alertas.count {
             it.criticidad.equals("alta", true) || it.criticidad.equals("critica", true)
-        }
+        } + alertasStock.size
         val advertencias = (activas - criticas).coerceAtLeast(0)
 
         binding.tvBadgeActivas.text = activas.toString()
@@ -129,8 +190,8 @@ class AlertasFragment : BaseBottomNavFragment() {
         binding.tvCriticas.text = "●  $criticas críticas"
         binding.tvAdvertencias.text = "●  $advertencias advertencias"
         binding.tvResumenAlertas.text =
-            if (activas == 1) "1 alerta activa en el galpón seleccionado"
-            else "$activas alertas activas en el galpón seleccionado"
+            if (activas == 1) "1 alerta activa en el galpón o la granja seleccionada"
+            else "$activas alertas activas en el galpón o la granja seleccionada"
     }
 
     private fun pintarTabs() {
@@ -154,7 +215,8 @@ class AlertasFragment : BaseBottomNavFragment() {
             alertas.filter { it.estado != "cerrada" }
         }
 
-        if (filtradas.isEmpty()) {
+        val mostrarStock = !mostrandoHistorial && alertasStock.isNotEmpty()
+        if (filtradas.isEmpty() && !mostrarStock) {
             binding.containerAlertas.addView(
                 texto(
                     if (mostrandoHistorial) "No hay alertas cerradas para este galpón."
@@ -165,6 +227,17 @@ class AlertasFragment : BaseBottomNavFragment() {
                 )
             )
             return
+        }
+
+        if (mostrarStock) {
+            alertasStock.forEach { insumo ->
+                binding.containerAlertas.addView(crearTarjetaStockBajo(insumo))
+                binding.containerAlertas.addView(View(requireContext()).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(8)
+                    )
+                })
+            }
         }
 
         filtradas.forEachIndexed { index, alerta ->
@@ -180,6 +253,37 @@ class AlertasFragment : BaseBottomNavFragment() {
                 )
             }
         }
+    }
+
+    // Esta tarjeta representa un estado actual del inventario, no una Alerta
+    // de galpón. No presenta acciones de cerrar/escalar: esas rutas solo
+    // aceptan IDs reales de la tabla alertas.
+    private fun crearTarjetaStockBajo(insumo: InsumoResponse): View {
+        val tarjeta = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            background = resources.getDrawable(R.drawable.bg_alert_card_critical, null)
+            elevation = dp(2).toFloat()
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+        }
+        // Un insumo está asociado a una granja y no a un lote específico.
+        // Solo mostramos un código de lote si esa granja tiene exactamente
+        // un lote activo; con varios lotes se evita atribuirlo al incorrecto.
+        val lotesDeGranja = lotesActivos.filter {
+            it.galpon.granja.id == insumo.granja_id
+        }
+        val ubicacion = lotesDeGranja.singleOrNull()?.codigo
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "Lote $it" }
+            ?: "Inventario de granja"
+        tarjeta.addView(texto("●  Bodega · $ubicacion", 12f, "#5D6862", true))
+        tarjeta.addView(texto("Stock bajo: ${insumo.nombre}", 16f, "#183C2E", true, 7))
+        tarjeta.addView(texto(
+            "Disponible: ${formatearValor(insumo.stock_actual ?: 0.0)} ${insumo.unidad_medida} · " +
+                    "Mínimo: ${formatearValor(insumo.stock_minimo ?: 0.0)} ${insumo.unidad_medida}",
+            12f, "#C62828", true, 5
+        ))
+        tarjeta.addView(texto("Repón este insumo desde Bodega para resolver la alerta.", 12f, "#78847E", false, 4))
+        return tarjeta
     }
 
     private fun crearTarjetaAlerta(alerta: AlertaResponse): View {
@@ -198,10 +302,22 @@ class AlertasFragment : BaseBottomNavFragment() {
             gravity = Gravity.CENTER_VERTICAL
         }
 
-        val nombreGalpon = alerta.galpon?.let { "${it.nombre} (${it.codigo})" } ?: "Galpón ${alerta.galpon_id}"
+        // Las alertas ambientales pueden incluir el lote directamente.
+        // Si no, buscamos un único lote activo del galpón. En cualquier
+        // otro caso mostramos el código real del galpón como referencia.
+        val codigoLote = alerta.lote?.codigo?.takeIf { it.isNotBlank() }
+            ?: lotesActivos.filter { it.galpon.id == alerta.galpon_id }
+                .singleOrNull()?.codigo?.takeIf { it.isNotBlank() }
+        val referencia = if (codigoLote != null) {
+            "Lote $codigoLote"
+        } else {
+            alerta.galpon?.codigo?.takeIf { it.isNotBlank() }
+                ?.let { "Galpón $it" }
+                ?: "Galpón ${alerta.galpon_id}"
+        }
         fila.addView(
             texto(
-                "●  $nombreGalpon",
+                "●  Sensores · $referencia",
                 12f,
                 "#5D6862",
                 true

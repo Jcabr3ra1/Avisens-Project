@@ -1,3 +1,4 @@
+
 package com.project.avisensandroid.ui.fragments
 
 import android.graphics.Color
@@ -77,9 +78,15 @@ class ProveedoresFragment : BaseBottomNavFragment() {
             actualizarPestanaActiva(insumosActivos = false)
         }
 
-        cargarProveedores()
+        // onResume consulta la selección actual y carga los proveedores.
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (_binding != null && (requireActivity() as MainActivity).obtenerRolActual() != UserRole.OPERARIO) {
+            cargarProveedores()
+        }
+    }
 
     private fun actualizarPestanaActiva(insumosActivos: Boolean) {
         val colorActivo = Color.parseColor("#2E7D5B")
@@ -97,6 +104,10 @@ class ProveedoresFragment : BaseBottomNavFragment() {
 
     private fun cargarProveedores() {
         binding.contenedorProveedores.removeAllViews()
+        if ((requireActivity() as MainActivity).obtenerGranjaSeleccionadaId() == null) {
+            mostrarMensajeProveedores("Selecciona primero una granja en Inicio para consultar los proveedores.")
+            return
+        }
 
         lifecycleScope.launch {
             try {
@@ -415,11 +426,14 @@ class ProveedoresFragment : BaseBottomNavFragment() {
     }
 
     private fun mostrarMensajeSinProveedores() {
+        mostrarMensajeProveedores("Aún no hay proveedores registrados")
+    }
+
+    private fun mostrarMensajeProveedores(mensajeTexto: String) {
         val mensaje =
             TextView(requireContext()).apply {
 
-                text =
-                    "Aún no hay proveedores registrados"
+                text = mensajeTexto
 
                 setTextColor(
                     ContextCompat.getColor(
