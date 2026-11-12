@@ -26,6 +26,7 @@ import com.project.avisensandroid.model.PesajeResponse
 import com.project.avisensandroid.model.ConsumoDiarioResponse
 import com.project.avisensandroid.model.SensorResponse
 import com.project.avisensandroid.model.MedicionResponse
+import com.project.avisensandroid.model.UltimasLecturasResponse
 import com.project.avisensandroid.model.AlertaResponse
 import com.project.avisensandroid.model.CerrarAlertaRequest
 import com.project.avisensandroid.model.IndicadorLoteResponse
@@ -37,6 +38,7 @@ import com.project.avisensandroid.model.CrearEstimacionAlimentoRequest
 import com.project.avisensandroid.model.RecalcularPlanLoteRequest
 import com.project.avisensandroid.model.CrearPlanLoteRequest
 import com.project.avisensandroid.model.LoteResponse
+import com.project.avisensandroid.model.RefreshTokenRequest
 import com.project.avisensandroid.model.RefreshTokenResponse
 import com.project.avisensandroid.model.InterpretarComandoVozRequest
 import com.project.avisensandroid.model.RespuestaComandoVoz
@@ -62,9 +64,11 @@ interface ApiService {
         @Body request: LoginRequest
     ): Response<LoginResponse>
 
+    // La renovación automática la hace RetrofitClient con su propio cliente.
+    // El backend lee el refresh token del body, no de Authorization.
     @POST("v1/auth/refresh")
     suspend fun refreshToken(
-        @Header("Authorization") refreshAuthorization: String
+        @Body request: RefreshTokenRequest
     ): Response<RefreshTokenResponse>
 
     @GET("v1/auth/me")
@@ -238,6 +242,13 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20
     ): Response<PaginatedResponse<MedicionResponse>>
+
+    // Última medición de cada sensor vigente del galpón, con la antigüedad
+    // calculada por el servidor. Una sola petición para todo el galpón.
+    @GET("v1/mediciones/ultimas")
+    suspend fun listarUltimasLecturas(
+        @Query("galpon_id") galponId: Int
+    ): Response<UltimasLecturasResponse>
 
     @GET("v1/alertas/galpon/{galponId}")
     suspend fun listarAlertasDeGalpon(

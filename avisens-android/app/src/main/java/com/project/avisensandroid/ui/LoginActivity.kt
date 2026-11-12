@@ -1,3 +1,4 @@
+
 package com.project.avisensandroid.ui
 
 import android.content.Intent
@@ -8,17 +9,21 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.project.avisensandroid.R
+import com.project.avisensandroid.controller.RegistroHttp
 import com.project.avisensandroid.controller.RetrofitClient
+import com.project.avisensandroid.controller.SesionExpirada
 import com.project.avisensandroid.databinding.ActivityLoginBinding
 import com.project.avisensandroid.model.LoginRequest
+import com.project.avisensandroid.model.ResultadoLogin
 import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.model.UserSession
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
-
     private var passwordVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,12 +31,15 @@ class LoginActivity : AppCompatActivity() {
 
         RetrofitClient.inicializar(applicationContext)
 
-        binding =
-            ActivityLoginBinding.inflate(layoutInflater)
-
+        binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         configurarPassword()
+
+        if (intent.getBooleanExtra(SesionExpirada.EXTRA_SESION_EXPIRADA, false)) {
+            binding.txtError.text =
+                "Tu sesión expiró. Inicia sesión nuevamente."
+        }
 
         binding.btnEntrar.setOnClickListener {
             hacerLogin()
@@ -43,22 +51,17 @@ class LoginActivity : AppCompatActivity() {
     // =========================================================
 
     private fun configurarPassword() {
-
         binding.btnTogglePassword.setOnClickListener {
-
             passwordVisible = !passwordVisible
 
             if (passwordVisible) {
-
                 binding.etContrasena.transformationMethod =
                     HideReturnsTransformationMethod.getInstance()
 
                 binding.btnTogglePassword.setImageResource(
                     R.drawable.ic_eye
                 )
-
             } else {
-
                 binding.etContrasena.transformationMethod =
                     PasswordTransformationMethod.getInstance()
 
@@ -79,158 +82,126 @@ class LoginActivity : AppCompatActivity() {
 
     private fun hacerLogin() {
 
-        val email =
-            binding.etCorreo.text
-                .toString()
-                .trim()
+        val username = binding.etCorreo.text
+            .toString()
+            .trim()
 
-        val password =
-            binding.etContrasena.text
-                .toString()
-                .trim()
+        val password = binding.etContrasena.text
+            .toString()
+            .trim()
 
         binding.txtError.text = ""
 
-        // =====================================================
-        // VALIDACIONES
-        // =====================================================
-
-        if (email.isEmpty()) {
-
+        // Validaciones locales
+        if (username.isEmpty()) {
             binding.txtError.text =
-                "Ingresa tu correo electrónico"
-
+                "Ingresa tu nombre de usuario"
             return
         }
 
         if (password.isEmpty()) {
-
             binding.txtError.text =
                 "Ingresa tu contraseña"
-
             return
         }
 
-        // =====================================================
-        // CARGANDO
-        // =====================================================
-
-        binding.progressLogin.visibility =
-            View.VISIBLE
-
+        binding.progressLogin.visibility = View.VISIBLE
         binding.btnEntrar.isEnabled = false
 
-        // =====================================================
-        // API
-        // =====================================================
-
         lifecycleScope.launch {
-
             try {
-
-                val response =
-                    RetrofitClient.api.login(
-                        LoginRequest(
-                            email = email,
-                            password = password
-                        )
+                val response = RetrofitClient.api.login(
+                    LoginRequest(
+                        username = username,
+                        password = password
                     )
+                )
 
                 if (response.isSuccessful) {
 
-                    val loginData =
-                        response.body()
+                    when (val resultado = ResultadoLogin.desde(response.body())) {
 
-                    if (loginData == null) {
+                        is ResultadoLogin.SesionIniciada -> {
+                            guardarSesion(
+                                token = resultado.accessToken,
+                                refreshToken = resultado.refreshToken,
+                                usuarioId = resultado.usuarioId,
+                                nombre = resultado.nombre,
+                                email = resultado.email,
+                                rol = resultado.rol
+                            )
+                            SesionExpirada.reiniciar()
 
-                        binding.txtError.text =
-                            "El servidor no devolvió información"
+                            startActivity(
+                                Intent(
+                                    this@LoginActivity,
+                                    MainActivity::class.java
+                                )
+                            )
 
-                        return@launch
+                            finish()
+                        }
+
+                        // La app aún no tiene la pantalla de cambio de
+                        // contraseña temporal: el token de cambio no se guarda.
+                        ResultadoLogin.CambioPasswordRequerido -> {
+                            binding.txtError.text =
+                                "Tu contraseña es temporal y debes cambiarla. " +
+                                        "Hazlo desde la web de AVÍSENS y vuelve a iniciar sesión aquí."
+                        }
+
+                        is ResultadoLogin.RolNoValido -> {
+                            binding.txtError.text =
+                                "El usuario no tiene un rol válido: ${resultado.rol ?: "sin rol"}"
+                        }
+
+                        ResultadoLogin.RespuestaIncompleta -> {
+                            binding.txtError.text =
+                                "El servidor devolvió una respuesta incompleta. Inténtalo de nuevo."
+                        }
                     }
-
-                    // =================================================
-                    // DATOS DEL USUARIO
-                    // =================================================
-
-                    val usuario =
-                        loginData.usuario
-
-                    val role =
-                        UserRole.fromApiValue(usuario.rol)
-
-                    if (role == null) {
-
-                        binding.txtError.text =
-                            "El usuario no tiene un rol válido: ${usuario.rol}"
-
-                        return@launch
-                    }
-
-                    // =================================================
-                    // GUARDAR SESIÓN CON EL ROL REAL DE LA API
-                    // =================================================
-
-                    guardarSesion(
-                        token = loginData.access_token,
-                        refreshToken = loginData.refresh_token,
-                        usuarioId = usuario.id,
-                        nombre = usuario.nombre,
-                        email = usuario.email,
-                        rol = role
-                    )
-
-                    // =================================================
-                    // IR A MAIN
-                    // =================================================
-
-                    startActivity(
-                        Intent(
-                            this@LoginActivity,
-                            MainActivity::class.java
-                        )
-                    )
-
-                    finish()
 
                 } else {
 
-                    when (response.code()) {
+                    // El backend responde {"message": "..."} con textos
+                    // pensados para el usuario (cuenta bloqueada, contraseña
+                    // temporal vencida, sesión ocupada...).
+                    val detalle = RegistroHttp.mensajeDeError(
+                        response.errorBody()?.string()
+                    )
 
-                        401 -> {
+                    binding.txtError.text = when (response.code()) {
 
-                            binding.txtError.text =
-                                "Correo o contraseña incorrectos"
-                        }
+                        400 -> detalle
+                            ?: "Revisa el nombre de usuario y la contraseña"
 
-                        403 -> {
+                        401 -> "Nombre de usuario o contraseña incorrectos"
 
-                            binding.txtError.text =
-                                "No tienes permisos para acceder"
-                        }
+                        403 -> detalle ?: "No tienes permisos para acceder"
 
-                        else -> {
+                        409 -> detalle
+                            ?: "No se pudo iniciar sesión. Inténtalo de nuevo."
 
-                            binding.txtError.text =
-                                "Error del servidor: ${response.code()}"
-                        }
+                        429 -> "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
+
+                        else -> "Error del servidor: ${response.code()}"
                     }
                 }
 
-            } catch (e: Exception) {
+            } catch (cancelacion: CancellationException) {
+                throw cancelacion
 
+            } catch (e: IOException) {
                 binding.txtError.text =
-                    "Error de conexión: ${
-                        e.message ?: "error desconocido"
-                    }"
+                    "Error de conexión: ${e.message ?: "error desconocido"}"
+
+            } catch (e: Exception) {
+                binding.txtError.text =
+                    "No se pudo procesar la respuesta del servidor."
 
             } finally {
-
-                binding.progressLogin.visibility =
-                    View.GONE
-
-                binding.btnEntrar.isEnabled =
-                    true
+                binding.progressLogin.visibility = View.GONE
+                binding.btnEntrar.isEnabled = true
             }
         }
     }
@@ -244,10 +215,9 @@ class LoginActivity : AppCompatActivity() {
         refreshToken: String,
         usuarioId: Int,
         nombre: String,
-        email: String,
+        email: String?,
         rol: UserRole
     ) {
-
         UserSession.save(
             context = this,
             token = token,
