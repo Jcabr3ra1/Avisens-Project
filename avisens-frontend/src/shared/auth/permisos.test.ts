@@ -71,6 +71,20 @@ describe('permisosDeInsumo', () => {
 
   it('sin sesión no se puede ni mover stock', () => {
     expect(permisosDeInsumo(null).registrarMovimiento).toBe(false)
+    expect(permisosDeInsumo(null).tiposMovimiento).toEqual([])
+  })
+
+  it('el operario solo registra salidas; admin y propietario, los tres tipos', () => {
+    expect(permisosDeInsumo(ROL_OPERARIO).tiposMovimiento).toEqual(['salida'])
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO]) {
+      expect(permisosDeInsumo(rol).tiposMovimiento).toEqual(['entrada', 'salida', 'ajuste'])
+    }
+  })
+
+  it('el operario no ve precios ni el valor de la bodega', () => {
+    expect(permisosDeInsumo(ROL_OPERARIO).verCostos).toBe(false)
+    expect(permisosDeInsumo(ROL_ADMIN).verCostos).toBe(true)
+    expect(permisosDeInsumo(ROL_PROPIETARIO).verCostos).toBe(true)
   })
 })
 

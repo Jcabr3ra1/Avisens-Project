@@ -26,6 +26,10 @@ import { ActuadoresGalpon } from './components/ActuadoresGalpon'
 import { esReleControlable } from './model/actuadores'
 import AsignarSensores from './AsignarSensores'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
+import BotonActualizar from '@shared/ui/BotonActualizar/BotonActualizar'
+import SinGalponesAsignados from '@shared/ui/Estados/SinGalponesAsignados'
+import { getRol } from '@shared/api'
+import { ROL_OPERARIO } from '@shared/auth/permisos'
 import { IcServer } from '@shared/ui/icons/icons'
 import '@shared/ui/admin/AdminKit.css'
 import './MonitoreoPage.css'
@@ -120,13 +124,16 @@ function MonitoreoPage({ seccion = 'sensores' }: { seccion?: Seccion }) {
         subtitulo={enActuadores
           ? 'Relés K1-K4 del galpón: estado que informa el ESP32, órdenes y ficha de cada equipo.'
           : 'Lecturas en tiempo real. Selecciona un sensor para consultar sus detalles.'}
-        acciones={galpon && !enActuadores ? (
+        acciones={<>
+          {galpon && !enActuadores && (
           <div className="mon-resumen">
             {criticos    > 0 && <span className="mon-badge mon-badge--critico"><span className="mon-dot mon-dot--critico" /> {criticos} crítico{criticos > 1 ? 's' : ''}</span>}
             {advertencia > 0 && <span className="mon-badge mon-badge--advertencia"><span className="mon-dot mon-dot--advertencia" /> {advertencia} advertencia{advertencia > 1 ? 's' : ''}</span>}
             <span className="mon-badge mon-badge--optimo"><span className="mon-dot mon-dot--optimo" /> {optimos} óptimo{optimos > 1 ? 's' : ''}</span>
           </div>
-        ) : undefined}
+          )}
+          <BotonActualizar cargando={cargando} onActualizar={recargar} />
+        </>}
       />
 
       <nav className="mon-secciones" aria-label="Secciones de Monitoreo">
@@ -146,7 +153,12 @@ function MonitoreoPage({ seccion = 'sensores' }: { seccion?: Seccion }) {
       {!error && avisoUltimas && <div className="mon-alert adm-aviso" role="status">{avisoUltimas}</div>}
 
       {galpones.length === 0 ? (
-        <p className="mon-cargando">No hay galpones registrados todavía.</p>
+        // Al operario el backend solo le devuelve sus galpones asignados: una
+        // lista vacía significa «sin asignación», no «granja sin galpones»
+        // (auditoría QA 2026-10-30, HALL-02).
+        getRol() === ROL_OPERARIO
+          ? <SinGalponesAsignados queVerias="las lecturas de los sensores de tus galpones" />
+          : <p className="mon-cargando">No hay galpones registrados todavía.</p>
       ) : !galpon ? null : (
         <>
           <div className="mon-contexto-selectores">

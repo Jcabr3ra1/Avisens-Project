@@ -54,3 +54,27 @@ export function proveedorAFormulario(proveedor: Proveedor): FormularioProveedor 
     direccion: proveedor.direccion ?? '',
   }
 }
+
+// Indicador «Tipos» de la cabecera. Antes contaba solo los tipos con nombre y
+// la nota decía «Clasificaciones distintas» aunque la tabla mostrara
+// «Sin clasificar» (auditoría QA 2026-10-30, HALL-05). Ahora devuelve también
+// cuántos proveedores no tienen tipo, para decirlo en la nota.
+// «Alimento» y «alimento » cuentan como un solo tipo.
+export function resumirTiposProveedor(proveedores: Pick<Proveedor, 'tipo_proveedor'>[]): {
+  tipos: number
+  sinClasificar: number
+} {
+  const tipos = new Set<string>()
+  let sinClasificar = 0
+  for (const { tipo_proveedor } of proveedores) {
+    const tipo = tipo_proveedor?.trim().toLocaleLowerCase('es-CO') ?? ''
+    if (tipo) tipos.add(tipo)
+    else sinClasificar += 1
+  }
+  return { tipos: tipos.size, sinClasificar }
+}
+
+export function notaTiposProveedor(sinClasificar: number): string {
+  if (sinClasificar === 0) return 'Clasificaciones distintas'
+  return sinClasificar === 1 ? '1 sin clasificar' : `${sinClasificar} sin clasificar`
+}
