@@ -864,42 +864,75 @@ describe('PlanAlimentoService', () => {
       expect(res.motivos_desactualizacion).toEqual([]);
     });
 
-    it('motivo marca_alimento_cambio si Lote.marca_alimento cambio despues de calcular', async () => {
-      prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
-        filaEstimacion({
-          estado_desglose: 'calculado',
-          version_desglose: VERSION_DESGLOSE_ACTUAL,
-          marca_alimento_snapshot: 'italcol',
-          renglones_alimento: [
-            {
-              orden: 1,
-              tipo_alimento_id: 9,
-              tipo_alimento_nombre_snapshot: 'Unico',
-              etapa_snapshot: 'preiniciacion',
-              dia_inicio: 1,
-              dia_fin: 21,
-              extendido_hasta_dia_objetivo: false,
-              consumo_por_ave_g: new Prisma.Decimal(1190),
-              consumo_total_kg: new Prisma.Decimal('1161.850'),
-            },
-          ],
-        }),
-      );
-      prisma.lote.findUniqueOrThrow.mockResolvedValue({
-        cantidad_inicial: 1000,
-        marca_alimento: 'solla',
-      });
-      prisma.registroMortalidad.findMany.mockResolvedValue([
-        { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
-        { fecha: new Date('2026-08-03T00:00:00.000Z'), cantidad_aves: 10 },
-      ]);
-      jest.useFakeTimers().setSystemTime(new Date('2026-08-15T15:00:00.000Z'));
+    it.each([
+      {
+        perfil: 'italcol',
+        marcaOriginal: null,
+        marcaActual: 'solla',
+        cambio: true,
+      },
+      {
+        perfil: 'estandar',
+        marcaOriginal: null,
+        marcaActual: null,
+        cambio: false,
+      },
+      {
+        perfil: 'estandar',
+        marcaOriginal: 'solla',
+        marcaActual: 'solla',
+        cambio: false,
+      },
+      {
+        perfil: 'estandar',
+        marcaOriginal: 'solla',
+        marcaActual: 'italcol',
+        cambio: true,
+      },
+    ])(
+      'detecta el cambio de marca del lote con perfil $perfil, de $marcaOriginal a $marcaActual',
+      async ({ perfil, marcaOriginal, marcaActual, cambio }) => {
+        prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(
+          filaEstimacion({
+            estado_desglose: 'calculado',
+            version_desglose: VERSION_DESGLOSE_ACTUAL,
+            marca_alimento_snapshot: perfil,
+            marca_alimento_lote_snapshot: marcaOriginal,
+            renglones_alimento: [
+              {
+                orden: 1,
+                tipo_alimento_id: 9,
+                tipo_alimento_nombre_snapshot: 'Unico',
+                etapa_snapshot: 'preiniciacion',
+                dia_inicio: 1,
+                dia_fin: 21,
+                extendido_hasta_dia_objetivo: false,
+                consumo_por_ave_g: new Prisma.Decimal(1190),
+                consumo_total_kg: new Prisma.Decimal('1161.850'),
+              },
+            ],
+          }),
+        );
+        prisma.lote.findUniqueOrThrow.mockResolvedValue({
+          cantidad_inicial: 1000,
+          marca_alimento: marcaActual,
+        });
+        prisma.registroMortalidad.findMany.mockResolvedValue([
+          { fecha: new Date('2026-07-31T00:00:00.000Z'), cantidad_aves: 15 },
+          { fecha: new Date('2026-08-03T00:00:00.000Z'), cantidad_aves: 10 },
+        ]);
+        jest
+          .useFakeTimers()
+          .setSystemTime(new Date('2026-08-15T15:00:00.000Z'));
 
-      const res = await service.obtener(3, admin);
+        const res = await service.obtener(3, admin);
 
-      expect(res.desactualizado).toBe(true);
-      expect(res.motivos_desactualizacion).toContain('marca_alimento_cambio');
-    });
+        expect(res.desactualizado).toBe(cambio);
+        expect(res.motivos_desactualizacion).toEqual(
+          cambio ? ['marca_alimento_cambio'] : [],
+        );
+      },
+    );
 
     it('motivo algoritmo_desglose_cambio con una version de desglose vieja o nula (legado)', async () => {
       prisma.estimacionAlimentoPlan.findFirst.mockResolvedValue(

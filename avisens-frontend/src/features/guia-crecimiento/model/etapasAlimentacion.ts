@@ -496,5 +496,3 @@ export function construirGradienteEtapas(
 
   return `linear-gradient(90deg, ${paradas.join(', ')})`
 }
-
-

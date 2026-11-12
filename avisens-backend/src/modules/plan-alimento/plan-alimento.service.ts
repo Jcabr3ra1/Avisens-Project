@@ -29,6 +29,7 @@ import {
   VERSION_DESGLOSE_ACTUAL,
   RenglonDesglose,
   enriquecerEtapasAlimento,
+  MARCA_ESTANDAR,
 } from './desglose-alimento';
 import { normalizarMarcaCatalogo } from '../../common/avicultura/vocabulario';
 import { CrearEstimacionAlimentoDto } from './dto/crear-estimacion-alimento.dto';
@@ -64,6 +65,7 @@ const ESTIMACION_SELECT = {
   estado_desglose: true,
   version_desglose: true,
   marca_alimento_snapshot: true,
+  marca_alimento_lote_snapshot: true,
   renglones_alimento: {
     orderBy: { orden: 'asc' },
     select: {
@@ -369,7 +371,11 @@ export class PlanAlimentoService {
           marcaAlimentoActual === null
             ? null
             : normalizarMarcaCatalogo(marcaAlimentoActual);
-        if (marcaActualNormalizada !== estimacion.marca_alimento_snapshot) {
+        const marcaOriginal =
+          estimacion.marca_alimento_snapshot === MARCA_ESTANDAR
+            ? estimacion.marca_alimento_lote_snapshot
+            : estimacion.marca_alimento_snapshot;
+        if (marcaActualNormalizada !== marcaOriginal) {
           motivos.push('marca_alimento_cambio');
         }
       }
@@ -835,6 +841,11 @@ export class PlanAlimentoService {
             cantidad_inicial_snapshot: lote.cantidad_inicial,
             motivo: dto.motivo,
             creado_por_id: solicitante.id,
+            marca_alimento_lote_snapshot:
+              datosParaGuardar.marca_alimento_snapshot === MARCA_ESTANDAR &&
+              lote.marca_alimento !== null
+                ? normalizarMarcaCatalogo(lote.marca_alimento)
+                : null,
             ...datosParaGuardar,
             renglones_alimento: {
               create: renglones.map((r) => ({
