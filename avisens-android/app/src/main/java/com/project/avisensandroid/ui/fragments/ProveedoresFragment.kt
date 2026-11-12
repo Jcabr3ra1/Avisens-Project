@@ -104,11 +104,6 @@ class ProveedoresFragment : BaseBottomNavFragment() {
 
     private fun cargarProveedores() {
         binding.contenedorProveedores.removeAllViews()
-        if ((requireActivity() as MainActivity).obtenerGranjaSeleccionadaId() == null) {
-            mostrarMensajeProveedores("Selecciona primero una granja en Inicio para consultar los proveedores.")
-            return
-        }
-
         lifecycleScope.launch {
             try {
                 val response = RetrofitClient.api.listarProveedores(

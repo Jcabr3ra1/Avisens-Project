@@ -45,7 +45,6 @@ class BodegaFragment : BaseBottomNavFragment() {
 
         val activity = requireActivity() as MainActivity
         configurarBottomNav(R.id.nav_bodega)
-
         val esOperario = activity.obtenerRolActual() == UserRole.OPERARIO
 
         // El Operario solo trabaja con Insumos: no se muestra la barra de pestañas.
@@ -66,8 +65,7 @@ class BodegaFragment : BaseBottomNavFragment() {
         }
 
         binding.btnNuevoInsumo.visibility =
-            if (activity.obtenerGranjaSeleccionadaId() != null &&
-                activity.obtenerRolActual() == com.project.avisensandroid.model.UserRole.PROPIETARIO) {
+            if (activity.obtenerRolActual() == com.project.avisensandroid.model.UserRole.PROPIETARIO) {
                 View.VISIBLE
             } else {
                 View.GONE
@@ -105,18 +103,9 @@ class BodegaFragment : BaseBottomNavFragment() {
     private fun cargarDatosBodega() {
         if (cargando || _binding == null) return
         val activity = requireActivity() as MainActivity
-        val granjaId = activity.obtenerGranjaSeleccionadaId()
         binding.btnNuevoInsumo.visibility =
-            if (granjaId != null && activity.obtenerRolActual() == UserRole.PROPIETARIO)
+            if (activity.obtenerRolActual() == UserRole.PROPIETARIO)
                 View.VISIBLE else View.GONE
-        if (granjaId == null) {
-            binding.contenedorInsumos.removeAllViews()
-            binding.progressInsumos.visibility = View.GONE
-            binding.txtSinInsumos.text = "Selecciona primero una granja en Inicio para consultar su inventario."
-            binding.txtSinInsumos.visibility = View.VISIBLE
-            binding.txtCriticos.text = "● 0 críticos"
-            return
-        }
         cargando = true
         binding.progressInsumos.visibility = View.VISIBLE
         binding.txtSinInsumos.visibility = View.GONE
@@ -200,10 +189,10 @@ class BodegaFragment : BaseBottomNavFragment() {
         val granjaIdSeleccionada = activity.obtenerGranjaSeleccionadaId()
 
         val disponibles = insumos.filter { it.activo }
-        // Solo se visualiza el inventario de la granja elegida por el usuario.
-        // No se muestran datos de otras granjas como alternativa si la lista está vacía.
+        // Si hay selección, muestra esa granja. Si aún no existe, muestra
+        // los insumos autorizados por el backend para el usuario.
         val activos = disponibles.filter { insumo ->
-            granjaIdSeleccionada != null && insumo.granja_id == granjaIdSeleccionada
+            granjaIdSeleccionada == null || insumo.granja_id == granjaIdSeleccionada
         }
 
         if (activos.isEmpty()) {

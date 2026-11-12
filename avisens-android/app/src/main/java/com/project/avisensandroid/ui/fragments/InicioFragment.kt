@@ -87,7 +87,6 @@ class InicioFragment : BaseBottomNavFragment() {
         val activity = requireActivity() as MainActivity
         configurarBottomNav(R.id.nav_inicio)
         configurarEncabezado(activity)
-        mostrarContenidoSegunGranja(false)
 
         // Inicio es compartido entre Propietario y Operario, pero la sección
         // de sensores solo pertenece al Propietario porque el Operario ya
@@ -124,7 +123,6 @@ class InicioFragment : BaseBottomNavFragment() {
             }
         }
 
-        mostrarContenidoSegunGranja(false)
         cargarDatosIniciales()
         if (esPropietario()) iniciarActualizacionPeriodicaDeSensores()
     }
@@ -151,30 +149,6 @@ class InicioFragment : BaseBottomNavFragment() {
                 }
             }
         }
-    }
-
-    /** Solo muestra el panel después de elegir una granja válida. */
-    private fun mostrarContenidoSegunGranja(seleccionada: Boolean) {
-        // Se conserva el saludo y la tarjeta de selección; todo lo que está
-        // después de ella pertenece al panel de la granja elegida.
-        val contenedor = binding.scrollContent.getChildAt(0) as? ViewGroup ?: return
-        val indiceTarjeta = contenedor.indexOfChild(binding.tarjetaSeleccionGranja)
-        if (indiceTarjeta >= 0) {
-            for (indice in (indiceTarjeta + 1) until contenedor.childCount) {
-                contenedor.getChildAt(indice).visibility =
-                    if (seleccionada) View.VISIBLE else View.GONE
-            }
-        }
-        binding.cabeceraGalponesInicio.visibility =
-            if (seleccionada) View.VISIBLE else View.GONE
-        binding.scrollGalpones.visibility =
-            if (seleccionada) View.VISIBLE else View.GONE
-        // La sección de sensores es exclusiva del propietario.
-        binding.sectionSensoresInicio.visibility =
-            if (seleccionada && esPropietario()) View.VISIBLE else View.GONE
-        // Operario no tiene acceso a guía de peso.
-        binding.btnGuiaPeso.visibility =
-            if (seleccionada && (requireActivity() as MainActivity).obtenerRolActual() != UserRole.OPERARIO) View.VISIBLE else View.GONE
     }
 
     private fun configurarEncabezado(activity: MainActivity) {
@@ -254,17 +228,11 @@ class InicioFragment : BaseBottomNavFragment() {
                     return@launch
                 }
 
-                // Una sesión nueva comienza sin granja elegida. No seleccionar
-                // automáticamente la primera opción: el usuario debe elegir.
+                // Restablece la selección automática del primer registro accesible.
                 val idGuardado = activity.obtenerGranjaSeleccionadaId()
-                val posicionGuardada = granjas.indexOfFirst { it.id == idGuardado }
-                if (posicionGuardada >= 0) {
-                    binding.spinnerGranjas.setSelection(posicionGuardada + 1)
-                    seleccionarGranjaEnInicio(granjas[posicionGuardada])
-                } else {
-                    activity.limpiarGranjaSeleccionada()
-                    mostrarContenidoSegunGranja(false)
-                }
+                val granjaInicial = granjas.firstOrNull { it.id == idGuardado }
+                    ?: granjas.first()
+                seleccionarGranjaEnInicio(granjaInicial)
 
             } catch (e: Exception) {
                 mostrarMensaje("Error al cargar inicio: ${e.message ?: "error desconocido"}")
@@ -333,7 +301,7 @@ class InicioFragment : BaseBottomNavFragment() {
         }
 
     private fun configurarSpinnerGranjas() {
-        val nombres = listOf("Selecciona tu granja") + granjas.map { it.nombre }
+        val nombres = granjas.map { it.nombre }
         val adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_item,
@@ -341,37 +309,28 @@ class InicioFragment : BaseBottomNavFragment() {
         )
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerGranjas.adapter = adapter
-
         binding.spinnerGranjas.onItemSelectedListener =
             object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(
-                    parent: AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    id: Long
+                    parent: AdapterView<*>?, view: View?, position: Int, id: Long
                 ) {
-                    val indiceGranja = position - 1
-                    if (indiceGranja in granjas.indices &&
-                        granjaSeleccionada?.id != granjas[indiceGranja].id
-                    ) {
-                        seleccionarGranjaEnInicio(granjas[indiceGranja])
+                    if (position in granjas.indices && granjaSeleccionada?.id != granjas[position].id) {
+                        seleccionarGranjaEnInicio(granjas[position])
                     }
                 }
-
                 override fun onNothingSelected(parent: AdapterView<*>?) = Unit
             }
     }
 
     private fun seleccionarGranjaEnInicio(granja: GranjaResponse) {
         granjaSeleccionada = granja
-        mostrarContenidoSegunGranja(true)
 
         val activity = requireActivity() as MainActivity
         activity.seleccionarGranja(granja.id)
 
         val posicion = granjas.indexOfFirst { it.id == granja.id }
-        if (posicion >= 0 && binding.spinnerGranjas.selectedItemPosition != posicion + 1) {
-            binding.spinnerGranjas.setSelection(posicion + 1, false)
+        if (posicion >= 0 && binding.spinnerGranjas.selectedItemPosition != posicion) {
+            binding.spinnerGranjas.setSelection(posicion, false)
         }
 
         // Respeta el galpón guardado previamente si sigue perteneciendo

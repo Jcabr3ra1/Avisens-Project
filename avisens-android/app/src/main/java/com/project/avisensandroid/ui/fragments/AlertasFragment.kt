@@ -58,7 +58,6 @@ class AlertasFragment : BaseBottomNavFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         configurarBottomNav(R.id.nav_alertas)
-
         binding.tabActivas.setOnClickListener {
             mostrandoHistorial = false
             pintarTabs()
@@ -82,22 +81,9 @@ class AlertasFragment : BaseBottomNavFragment() {
     private fun cargarAlertas() {
         val mainActivity = activity as? MainActivity ?: return
         val granjaId = mainActivity.obtenerGranjaSeleccionadaId()
-        if (granjaId == null) {
-            alertas = emptyList()
-            alertasStock = emptyList()
-            lotesActivos = emptyList()
-            binding.containerAlertas.removeAllViews()
-            binding.tvBadgeActivas.text = "0"
-            binding.tvBadgeHistorial.text = "0"
-            binding.tvCriticas.text = "●  0 críticas"
-            binding.tvAdvertencias.text = "●  0 advertencias"
-            binding.tvResumenAlertas.text = "Selecciona primero una granja en Inicio."
-            binding.containerAlertas.addView(
-                texto("Selecciona una granja en Inicio para consultar sus alertas.", 13f, "#78847E", false)
-            )
-            return
-        }
         val galponId = mainActivity.obtenerGalponSeleccionadoId()
+        binding.tvBadgeActivas.visibility = View.GONE
+        binding.tvBadgeHistorial.visibility = View.GONE
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 binding.tvResumenAlertas.text = "Cargando alertas del galpón seleccionado..."
@@ -124,7 +110,7 @@ class AlertasFragment : BaseBottomNavFragment() {
                         ?: throw IllegalStateException("Respuesta vacía al consultar Bodega")
                     stockBajo.addAll(cuerpo.data.filter { insumo ->
                         insumo.activo &&
-                                insumo.granja_id == granjaId &&
+                                (granjaId == null || insumo.granja_id == granjaId) &&
                                 (insumo.stock_minimo ?: 0.0) > 0.0 &&
                                 (insumo.stock_actual ?: Double.POSITIVE_INFINITY) <= (insumo.stock_minimo ?: 0.0)
                     })
@@ -186,7 +172,9 @@ class AlertasFragment : BaseBottomNavFragment() {
         val advertencias = (activas - criticas).coerceAtLeast(0)
 
         binding.tvBadgeActivas.text = activas.toString()
+        binding.tvBadgeActivas.visibility = if (activas > 0) View.VISIBLE else View.GONE
         binding.tvBadgeHistorial.text = historial.toString()
+        binding.tvBadgeHistorial.visibility = if (historial > 0) View.VISIBLE else View.GONE
         binding.tvCriticas.text = "●  $criticas críticas"
         binding.tvAdvertencias.text = "●  $advertencias advertencias"
         binding.tvResumenAlertas.text =
