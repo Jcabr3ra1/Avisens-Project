@@ -65,6 +65,60 @@ describe('construirDesgloseAlimento -- lote_sin_marca_alimento y marca_sin_catal
     expect(resultado.marcaAlimentoSnapshot).toBe('italcol');
     expect(resultado.renglones).toEqual([]);
   });
+
+  it('con permitirFallbackEstandar y dia_objetivo <= 34 (4 lb): genera 3 etapas', () => {
+    const resultado = construirDesgloseAlimento(
+      parametrosBase({
+        marcaAlimento: null,
+        diaObjetivoSnapshot: 31,
+        consumoPorAveGEsperado: new Prisma.Decimal(2500),
+        consumoTotalKgEsperado: new Prisma.Decimal(25000),
+        acumuladoPorAveEnDia: (dia: number) => new Prisma.Decimal(dia * (2500 / 31)),
+        acumuladoTotalKgEnDia: (dia: number) => new Prisma.Decimal(dia * (25000 / 31)),
+        permitirFallbackEstandar: true,
+      }),
+    );
+
+    expect(resultado.estado).toBe('calculado');
+    expect(resultado.marcaAlimentoSnapshot).toBe('estandar');
+    expect(resultado.renglones.length).toBe(3);
+    expect(resultado.renglones.map((r) => r.etapaSnapshot)).toEqual([
+      'preiniciacion',
+      'iniciacion',
+      'engorde',
+    ]);
+    expect(resultado.renglones[0]).toMatchObject({ diaInicio: 1, diaFin: 8, extendidoHastaDiaObjetivo: false });
+    expect(resultado.renglones[1]).toMatchObject({ diaInicio: 9, diaFin: 21, extendidoHastaDiaObjetivo: false });
+    expect(resultado.renglones[2]).toMatchObject({ diaInicio: 22, diaFin: 31, extendidoHastaDiaObjetivo: true });
+  });
+
+  it('con permitirFallbackEstandar y dia_objetivo >= 35 (6 lb): genera 4 etapas incluyendo finalizacion', () => {
+    const resultado = construirDesgloseAlimento(
+      parametrosBase({
+        marcaAlimento: null,
+        diaObjetivoSnapshot: 42,
+        consumoPorAveGEsperado: new Prisma.Decimal(4500),
+        consumoTotalKgEsperado: new Prisma.Decimal(45000),
+        acumuladoPorAveEnDia: (dia: number) => new Prisma.Decimal(dia * (4500 / 42)),
+        acumuladoTotalKgEnDia: (dia: number) => new Prisma.Decimal(dia * (45000 / 42)),
+        permitirFallbackEstandar: true,
+      }),
+    );
+
+    expect(resultado.estado).toBe('calculado');
+    expect(resultado.marcaAlimentoSnapshot).toBe('estandar');
+    expect(resultado.renglones.length).toBe(4);
+    expect(resultado.renglones.map((r) => r.etapaSnapshot)).toEqual([
+      'preiniciacion',
+      'iniciacion',
+      'engorde',
+      'finalizacion',
+    ]);
+    expect(resultado.renglones[0]).toMatchObject({ diaInicio: 1, diaFin: 8, extendidoHastaDiaObjetivo: false });
+    expect(resultado.renglones[1]).toMatchObject({ diaInicio: 9, diaFin: 21, extendidoHastaDiaObjetivo: false });
+    expect(resultado.renglones[2]).toMatchObject({ diaInicio: 22, diaFin: 34, extendidoHastaDiaObjetivo: false });
+    expect(resultado.renglones[3]).toMatchObject({ diaInicio: 35, diaFin: 42, extendidoHastaDiaObjetivo: true });
+  });
 });
 
 describe('construirDesgloseAlimento -- catalogo_invalido', () => {

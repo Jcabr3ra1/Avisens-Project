@@ -2482,6 +2482,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
       // Curva con peso Y consumo: dia 7 -> 211g/140g, dia 14 -> 535g/490g,
       // dia 21 -> 900g/1190g -- el mismo ejemplo verificado a mano en el
       // diseño de Fase 2A (da 1161.850 kg con la mortalidad de las pruebas).
+      // El punto del día 35 permite probar el inicio de finalización.
       const linea = await request(servidor)
         .post('/v1/lineas-geneticas')
         .set('Authorization', `Bearer ${tokenAdminAlimento}`)
@@ -2504,6 +2505,7 @@ describe('Núcleo multi-tenant (e2e)', () => {
             { dia: 7, peso_esperado_g: 211, consumo_acumulado_g: 140 },
             { dia: 14, peso_esperado_g: 535, consumo_acumulado_g: 490 },
             { dia: 21, peso_esperado_g: 900, consumo_acumulado_g: 1190 },
+            { dia: 35, peso_esperado_g: 2000, consumo_acumulado_g: 3300 },
           ],
         })
         .expect(200);
@@ -3024,6 +3026,62 @@ describe('Núcleo multi-tenant (e2e)', () => {
         expect(
           (cuerpo.resultado as Record<string, unknown>).consumo_total_kg,
         ).not.toBeNull();
+      });
+
+      it('persiste la finalización del perfil estándar en un lote sin marca', async () => {
+        const lote = await crearLoteDirecto();
+        await crearPlanCalculado(lote.id, 2000);
+
+        const res = await request(servidor)
+          .post(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .send({ permitir_fallback_estandar: true })
+          .expect(201);
+        const cuerpo = JSON.parse(res.text) as {
+          id: number;
+          desglose: unknown;
+        };
+
+        expect(cuerpo.desglose).toMatchObject({
+          estado: 'calculado',
+          marca_alimento_snapshot: 'estandar',
+          etapa_actual: { etapa: 'finalizacion', dia_inicio: 35, dia_fin: 35 },
+        });
+
+        const finalizacion = await prisma.renglonEstimacionAlimento.findFirst({
+          where: { estimacion_id: cuerpo.id, etapa_snapshot: 'finalizacion' },
+        });
+        expect(finalizacion).toMatchObject({
+          tipo_alimento_id: null,
+          tipo_alimento_nombre_snapshot: 'Finalizador Estándar',
+          dia_inicio: 35,
+          dia_fin: 35,
+        });
+
+        const vigente = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        expect(JSON.parse(vigente.text)).toMatchObject({
+          id: cuerpo.id,
+          desactualizado: false,
+          motivos_desactualizacion: [],
+        });
+
+        await prisma.lote.update({
+          where: { id: lote.id },
+          data: { marca_alimento: 'italcol' },
+        });
+
+        const desactualizada = await request(servidor)
+          .get(`/v1/lotes/${lote.id}/plan/alimento`)
+          .set('Authorization', `Bearer ${tokenAdminAlimento}`)
+          .expect(200);
+        expect(JSON.parse(desactualizada.text)).toMatchObject({
+          id: cuerpo.id,
+          desactualizado: true,
+          motivos_desactualizacion: ['marca_alimento_cambio'],
+        });
       });
 
       it('marca_sin_catalogo: el lote tiene marca pero ninguna fila activa la referencia', async () => {
