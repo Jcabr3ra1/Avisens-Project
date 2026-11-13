@@ -22,6 +22,21 @@ async function errores(datos: Record<string, unknown>) {
 }
 
 describe('DatosGranjaDto', () => {
+  it('QA-05: rechaza una dirección de solo números como "1111…"', async () => {
+    await expect(
+      errores({ ...VALIDOS, direccion: '1'.repeat(38) }),
+    ).resolves.toEqual(['direccion']);
+  });
+
+  it('QA-05: acepta la dirección guiada urbana y rural', async () => {
+    await expect(
+      errores({ ...VALIDOS, direccion: 'Carrera 10A # 5-23, Barrio Centro' }),
+    ).resolves.toEqual([]);
+    await expect(
+      errores({ ...VALIDOS, direccion: 'Kilómetro 4, Vía Toribío' }),
+    ).resolves.toEqual([]);
+  });
+
   it('acepta los datos descriptivos completos', async () => {
     await expect(errores(VALIDOS)).resolves.toEqual([]);
   });

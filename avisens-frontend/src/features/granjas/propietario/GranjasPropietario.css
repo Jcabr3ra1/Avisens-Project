@@ -1069,6 +1069,12 @@
   font-size: 0.9rem;
 }
 
+/* Registro imposible guardado antes de los topes (QA-01): se resalta para
+   que se corrija o elimine, sin mostrar la cifra absurda. */
+.gb-movimiento.is-fuera-de-rango .gb-movimiento-texto strong {
+  color: var(--danger3);
+}
+
 .gb-movimiento-texto span {
   overflow: hidden;
   color: var(--text-muted);

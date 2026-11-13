@@ -19,6 +19,7 @@ import {
   filtrarInsumos,
   ordenarPorUrgencia,
   resumirInventario,
+  textoBodegaVacia,
   type FiltroStock,
 } from './model/inventario'
 import './InventarioPage.css'
@@ -167,11 +168,7 @@ function InventarioPage() {
             <IcBox size={26} />
           </span>
           <h2>La bodega todavía no tiene insumos.</h2>
-          <p>
-            {permisos.crear
-              ? 'Registra el primero para llevar su stock y dejar rastro de cada entrada y salida.'
-              : 'Cuando el administrador registre los insumos de la granja aparecerán aquí, y podrás anotar lo que saques para tu galpón.'}
-          </p>
+          <p>{textoBodegaVacia(permisos)}</p>
           {permisos.crear && (
             <button
               type="button"

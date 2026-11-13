@@ -7,7 +7,9 @@ import {
   porcentajeDeStock,
   resumirInventario,
   signoDeMovimiento,
+  textoBodegaVacia,
 } from './inventario'
+import { permisosDeInsumo, ROL_ADMIN, ROL_OPERARIO, ROL_PROPIETARIO } from '@shared/auth/permisos'
 
 function insumo(parcial: Partial<Insumo>): Insumo {
   return {
@@ -186,5 +188,21 @@ describe('signoDeMovimiento', () => {
 
   it('el ajuste no lleva signo porque fija el stock, no lo desplaza', () => {
     expect(signoDeMovimiento('ajuste')).toBe('')
+  })
+})
+
+describe('QA-06: texto de la bodega vacía por rol', () => {
+  it('el propietario no ve el texto del operario', () => {
+    const texto = textoBodegaVacia(permisosDeInsumo(ROL_PROPIETARIO))
+    expect(texto).not.toMatch(/tu galpón/)
+    expect(texto).toMatch(/entradas, salidas y ajustes/)
+  })
+
+  it('el operario conserva su texto de salidas', () => {
+    expect(textoBodegaVacia(permisosDeInsumo(ROL_OPERARIO))).toMatch(/lo que saques para tu galpón/)
+  })
+
+  it('el administrador recibe la invitación a registrar el primero', () => {
+    expect(textoBodegaVacia(permisosDeInsumo(ROL_ADMIN))).toMatch(/Registra el primero/)
   })
 })

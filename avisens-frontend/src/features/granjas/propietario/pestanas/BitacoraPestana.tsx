@@ -15,7 +15,8 @@ import { listarTiposAlimento, type TipoAlimento } from '@features/consumos-diari
 import { FORMULARIO_CONSUMO_INICIAL, type FormularioConsumo as DatosConsumo } from '@features/consumos-diarios/model/consumoDiario'
 import { IcDrop, IcEdit, IcHeart, IcScale, IcSeed, IcTrash } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
-import { agruparPorDia, formConsumoDesde, lineaDeTiempo, payloadConsumo, type Movimiento, type TipoMovimiento } from '../bitacoraLote'
+import { agruparPorDia, formConsumoDesde, lineaDeTiempo, payloadConsumo, totalesConsumo, type Movimiento, type TipoMovimiento } from '../bitacoraLote'
+import { pesoCreible } from '@shared/utils/rangosAvicolas'
 
 type Props = { lote: Lote; vistaInicial?: 'resumen' | 'peso' }
 type Filtro = 'todo' | TipoMovimiento
@@ -54,8 +55,8 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
   }, [])
 
   const movimientos = useMemo(
-    () => lineaDeTiempo(lote.id, datos.pesajes, datos.mortalidad, datos.sanitarios, datos.consumos),
-    [lote.id, datos.pesajes, datos.mortalidad, datos.sanitarios, datos.consumos],
+    () => lineaDeTiempo(lote.id, datos.pesajes, datos.mortalidad, datos.sanitarios, datos.consumos, lote.cantidad_inicial),
+    [lote.id, lote.cantidad_inicial, datos.pesajes, datos.mortalidad, datos.sanitarios, datos.consumos],
   )
   const conteo = (tipo: Filtro) => (tipo === 'todo' ? movimientos.length : movimientos.filter((m) => m.tipo === tipo).length)
   const dias = useMemo(
@@ -66,8 +67,10 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
   const pesoUltimo = ultimoPeso ? datos.pesajes.find((p) => p.id === ultimoPeso.id) : undefined
   const muertas = datos.mortalidad.filter((m) => m.lote_id === lote.id).reduce((t, m) => t + m.cantidad_aves, 0)
   const consumosLote = datos.consumos.filter((c) => c.lote_id === lote.id)
-  const alimento = consumosLote.reduce((t, c) => t + Number(c.alimento_kg ?? 0), 0)
-  const agua = consumosLote.reduce((t, c) => t + Number(c.agua_litros ?? 0), 0)
+  const { alimentoKg: alimento, aguaLitros: agua, fueraDeRango } = totalesConsumo(consumosLote, lote.cantidad_inicial)
+  const avisoFueraDeRango = fueraDeRango > 0
+    ? `Sin ${fueraDeRango} ${fueraDeRango === 1 ? 'registro fuera de rango' : 'registros fuera de rango'}`
+    : null
 
   function abrir(tipo: TipoMovimiento, id: number | null = null) {
     setError('')
@@ -145,7 +148,7 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
       <dl className="gp-cifras">
         <div className="gp-cifra">
           <dt>Último pesaje</dt>
-          <dd>{pesoUltimo ? `${entero.format(pesoUltimo.peso_promedio_g)} g` : '—'}</dd>
+          <dd>{!pesoUltimo ? '—' : pesoCreible(pesoUltimo.peso_promedio_g) ? `${entero.format(pesoUltimo.peso_promedio_g)} g` : 'Fuera de rango'}</dd>
           {pesoUltimo && <dd className="gp-cifra-detalle">{new Date(`${pesoUltimo.fecha.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CO')}</dd>}
         </div>
         <div className="gp-cifra">
@@ -156,10 +159,12 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
         <div className="gp-cifra">
           <dt>Alimento</dt>
           <dd>{decimal.format(alimento)} kg</dd>
+          {avisoFueraDeRango && <dd className="gp-cifra-detalle">{avisoFueraDeRango}</dd>}
         </div>
         <div className="gp-cifra">
           <dt>Agua</dt>
           <dd>{decimal.format(agua)} L</dd>
+          {avisoFueraDeRango && <dd className="gp-cifra-detalle">{avisoFueraDeRango}</dd>}
         </div>
       </dl>
 
@@ -209,7 +214,7 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
                   {dia.movimientos.map((movimiento) => {
                     const Icono = ACCIONES.find((accion) => accion.tipo === movimiento.tipo)?.icono ?? IcScale
                     return (
-                      <li key={movimiento.clave} className={`gb-movimiento gb-movimiento--${movimiento.tipo}`}>
+                      <li key={movimiento.clave} className={`gb-movimiento gb-movimiento--${movimiento.tipo}${movimiento.fueraDeRango ? ' is-fuera-de-rango' : ''}`}>
                         <span className="gb-movimiento-icono" aria-hidden="true"><Icono size={16} /></span>
                         <span className="gb-movimiento-texto">
                           <strong>{movimiento.titulo}</strong>

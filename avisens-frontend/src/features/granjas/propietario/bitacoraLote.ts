@@ -1,6 +1,7 @@
 import type { ConsumoDiario, CrearConsumoDiarioPayload } from '@features/consumos-diarios/api/consumosDiarios'
 import type { FormularioConsumo } from '@features/consumos-diarios/model/consumoDiario'
 import type { EventoSanitario, Mortalidad, Pesaje } from '@features/bitacora/model/bitacora'
+import { aguaCreible, alimentoCreible, pesoCreible } from '@shared/utils/rangosAvicolas'
 
 export type TipoMovimiento = 'peso' | 'mortalidad' | 'sanitario' | 'consumo'
 
@@ -11,6 +12,7 @@ export type Movimiento = {
   fecha: string
   titulo: string
   detalle: string
+  fueraDeRango?: boolean
 }
 
 export type DiaMovimientos = { fecha: string; etiqueta: string; movimientos: Movimiento[] }
@@ -32,12 +34,16 @@ export function lineaDeTiempo(
   mortalidad: Mortalidad[],
   sanitarios: EventoSanitario[],
   consumos: ConsumoDiario[],
+  avesLote = 0,
 ): Movimiento[] {
   const delLote = <T extends { lote_id: number }>(lista: T[]) => lista.filter((item) => item.lote_id === loteId)
   const movimientos: Movimiento[] = [
     ...delLote(pesajes).map((p) => ({
       clave: `peso-${p.id}`, tipo: 'peso' as const, id: p.id, fecha: p.fecha.slice(0, 10),
-      titulo: `Pesaje · ${entero.format(p.peso_promedio_g)} g por ave`,
+      ...(pesoCreible(p.peso_promedio_g) ? {} : { fueraDeRango: true }),
+      titulo: pesoCreible(p.peso_promedio_g)
+        ? `Pesaje · ${entero.format(p.peso_promedio_g)} g por ave`
+        : 'Pesaje · dato fuera de rango',
       detalle: [p.cantidad_aves_pesadas ? `${entero.format(p.cantidad_aves_pesadas)} aves pesadas` : null, p.observaciones]
         .filter(Boolean).join(' · ') || 'Sin observaciones',
     })),
@@ -51,12 +57,23 @@ export function lineaDeTiempo(
       titulo: EVENTOS[s.tipo] ?? s.tipo,
       detalle: [s.producto, s.diagnostico].filter(Boolean).join(' · ') || 'Sin detalle',
     })),
-    ...delLote(consumos).map((c) => ({
-      clave: `consumo-${c.id}`, tipo: 'consumo' as const, id: c.id, fecha: c.fecha.slice(0, 10),
-      titulo: `Consumo${c.alimento_kg ? ` · ${decimal.format(c.alimento_kg)} kg de alimento` : ''}`,
-      detalle: [c.tipo_alimento?.nombre, c.agua_litros ? `${decimal.format(c.agua_litros)} L de agua` : null]
-        .filter(Boolean).join(' · ') || 'Sin detalle',
-    })),
+    ...delLote(consumos).map((c) => {
+      const base = { clave: `consumo-${c.id}`, tipo: 'consumo' as const, id: c.id, fecha: c.fecha.slice(0, 10) }
+      if (!consumoCreible(c, avesLote)) {
+        return {
+          ...base,
+          fueraDeRango: true,
+          titulo: 'Consumo · dato fuera de rango',
+          detalle: 'El alimento o el agua registrados son imposibles para este lote. Edítalo o elimínalo.',
+        }
+      }
+      return {
+        ...base,
+        titulo: `Consumo${c.alimento_kg ? ` · ${decimal.format(c.alimento_kg)} kg de alimento` : ''}`,
+        detalle: [c.tipo_alimento?.nombre, c.agua_litros ? `${decimal.format(c.agua_litros)} L de agua` : null]
+          .filter(Boolean).join(' · ') || 'Sin detalle',
+      }
+    }),
   ]
   return movimientos.sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id)
 }
@@ -68,6 +85,23 @@ function etiquetaDia(fecha: string, hoy: Date): string {
   if (diferencia === 0) return 'Hoy'
   if (diferencia === 1) return 'Ayer'
   return dia.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
+// Con avesLote = 0 (desconocido) no se descarta nada: no hay contra qué medir.
+export function consumoCreible(consumo: Pick<ConsumoDiario, 'alimento_kg' | 'agua_litros'>, avesLote: number): boolean {
+  if (avesLote <= 0) return true
+  return alimentoCreible(consumo.alimento_kg, avesLote) && aguaCreible(consumo.agua_litros, avesLote)
+}
+
+// Totales de la bitácora sin los registros imposibles (QA-01, Figura 2): un
+// solo consumo de 1e40 kg no puede volver ilegible el total del lote.
+export function totalesConsumo(consumos: Pick<ConsumoDiario, 'alimento_kg' | 'agua_litros'>[], avesLote: number) {
+  const creibles = consumos.filter((consumo) => consumoCreible(consumo, avesLote))
+  return {
+    alimentoKg: creibles.reduce((total, c) => total + Number(c.alimento_kg ?? 0), 0),
+    aguaLitros: creibles.reduce((total, c) => total + Number(c.agua_litros ?? 0), 0),
+    fueraDeRango: consumos.length - creibles.length,
+  }
 }
 
 export function agruparPorDia(movimientos: Movimiento[], hoy: Date = new Date()): DiaMovimientos[] {

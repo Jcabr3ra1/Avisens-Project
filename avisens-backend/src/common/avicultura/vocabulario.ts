@@ -43,3 +43,20 @@ export function normalizarMarcaCatalogo(valor: string): string {
 }
 
 export const PESO_MAXIMO_POLLO_G = 10000;
+
+// Topes de consumo diario por ave. Un pollo de engorde en su pico come
+// unos 0,25 kg y toma unos 0,5 L al día (más con calor); los topes dejan
+// margen de sobra, solo detienen errores de digitación (un cero de más,
+// litros en mililitros) que dañan el FCR y la guía de crecimiento.
+export const ALIMENTO_MAXIMO_KG_POR_AVE_DIA = 0.4;
+export const AGUA_MAXIMA_L_POR_AVE_DIA = 1.5;
+
+// Topes absolutos de un registro de consumo, sin importar el tamaño del lote.
+export const ALIMENTO_MAXIMO_KG_DIA = 100_000;
+export const AGUA_MAXIMA_L_DIA = 300_000;
+
+// Tope de un movimiento financiero en pesos. La columna admite hasta
+// 999.999.999.999,99; diez mil millones ya supera cualquier operación
+// real de una granja y deja el error de digitación con un mensaje claro
+// en vez de un fallo de la base de datos.
+export const VALOR_MAXIMO_MOVIMIENTO_COP = 10_000_000_000;
