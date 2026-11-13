@@ -69,12 +69,19 @@ export function payloadDesdeFormulario(
   return payload
 }
 
+// Mismo tope que el backend (VALOR_MAXIMO_MOVIMIENTO_COP): se avisa antes de
+// enviar, en vez de dejar que la base rechace el monto.
+export const VALOR_MAXIMO_COP = 10_000_000_000
+
 export function errorDeFormulario(form: FormularioMovimiento): string {
   if (!form.categoria_id) return 'Elige una categoría.'
   if (!form.granja_id) return 'Elige la granja del movimiento.'
   const valor = Number(form.valor_cop)
   if (!form.valor_cop || Number.isNaN(valor)) return 'Escribe el monto en pesos.'
   if (valor <= 0) return 'El monto debe ser mayor que cero.'
+  if (valor > VALOR_MAXIMO_COP) {
+    return 'Ingrese un monto razonable: el máximo por movimiento es $10.000.000.000. Revisa si sobran dígitos.'
+  }
   if (!form.fecha) return 'Elige la fecha del movimiento.'
   return ''
 }
@@ -89,4 +96,20 @@ export function categoriasParaTipo(
   return categorias.filter(
     (categoria) => categoria.tipo === null || categoria.tipo === tipo,
   )
+}
+
+// La fecha del movimiento es un día de calendario (columna DATE): llega como
+// '2026-10-16T00:00:00.000Z'. Formatearla con la zona local la corría al día
+// anterior en Colombia (UTC-5), y el listado mostraba el 15 mientras el
+// formulario de edición mostraba el 16 (QA-03). Se formatea en UTC para que
+// listado y edición digan el mismo día.
+export function fechaCorta(fecha: string): string {
+  const dia = fecha.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return '—'
+  return new Intl.DateTimeFormat('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${dia}T00:00:00.000Z`))
 }

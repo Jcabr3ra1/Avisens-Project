@@ -1,5 +1,6 @@
 import type { EstadoCalculoIndicador } from '@features/indicadores/api/indicadores'
 import type { DashboardIndicador } from './dashboard'
+import { pesoCreible } from '@shared/utils/rangosAvicolas'
 
 export type Fila = {
   etiqueta: string
@@ -8,6 +9,20 @@ export type Fila = {
   alerta?: boolean
   mono?: boolean
 }
+
+// Límites físicos de un pollo de engorde. Un dato fuera de ellos es un error
+// de digitación que ya quedó guardado (QA-01): se avisa en vez de mostrar
+// "1.000.000.000.000 kg" o una conversión de 2e+24 como si fueran reales.
+// El tope de peso es el mismo del backend y de la bitácora (rangosAvicolas).
+export const FCR_MAXIMO_CREIBLE = 10
+export { pesoCreible }
+
+export function fcrCreible(fcr: number | null | undefined): boolean {
+  return typeof fcr === 'number' && Number.isFinite(fcr) && fcr > 0 && fcr <= FCR_MAXIMO_CREIBLE
+}
+
+export const TEXTO_DATO_IMPOSIBLE = 'Dato fuera de rango'
+export const NOTA_DATO_IMPOSIBLE = 'Revisa los pesajes y consumos en la bitácora'
 
 // Compara contra la curva objetivo. Sin curva sembrada no hay con qué
 // comparar, y decirlo vale más que ocultar la fila.
@@ -85,7 +100,7 @@ export function esDatoVerificado(estadoCalculo: EstadoCalculoIndicador | undefin
 // tenga un peso real y verificado), ni de una fila sin peso verificado.
 export function pesoActualParaSparkline(reciente: DashboardIndicador | null): number | null {
   if (!reciente || !esDatoVerificado(reciente.estadoCalculo)) return null
-  return reciente.pesoPromedioG
+  return pesoCreible(reciente.pesoPromedioG) ? reciente.pesoPromedioG : null
 }
 
 // El sparkline es una serie de crecimiento VERIFICADO: una fila
@@ -95,7 +110,7 @@ export function serieDePesoVerificado(indicadores: DashboardIndicador[]): number
   return indicadores
     .filter((indicador) => esDatoVerificado(indicador.estadoCalculo))
     .map((indicador) => indicador.pesoPromedioG)
-    .filter((peso): peso is number => peso !== null)
+    .filter((peso): peso is number => pesoCreible(peso))
 }
 
 // El chip "vs. curva" solo puede mostrar el desvio si la comparacion es del
