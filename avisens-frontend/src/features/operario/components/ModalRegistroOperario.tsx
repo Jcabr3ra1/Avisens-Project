@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { IcClose, IcHeart, IcSeed } from '@shared/ui/icons/icons'
-import type { JornadaOperario } from '../model/jornadaOperario'
+import { useRef, useState, type FormEvent } from 'react'
+import Modal from '@shared/ui/Modal/Modal'
+import { IcHeart, IcSeed } from '@shared/ui/icons/icons'
 import { fechaDeHoy } from '@shared/utils/fechas'
+import type { JornadaOperario } from '../model/jornadaOperario'
+import { validarConsumo, validarFechaRegistro, validarMortalidad } from '../model/registroOperario'
 
 type TipoRegistro = 'mortalidad' | 'consumo'
 
@@ -20,10 +22,10 @@ type Props = {
   ) => Promise<void>
 }
 
-function fechaActual() {
-  return fechaDeHoy()
-}
+const ID_FORMULARIO = 'registro-operario'
 
+// Usa el mismo Modal que el resto de la plataforma (foco atrapado, Escape,
+// animación y estilos), en vez del diálogo propio que tenía Mi jornada.
 function ModalRegistroOperario({
   tipo,
   jornada,
@@ -33,7 +35,7 @@ function ModalRegistroOperario({
   onRegistrarConsumo,
 }: Props) {
   const campoRef = useRef<HTMLInputElement>(null)
-  const [fecha, setFecha] = useState(fechaActual)
+  const [fecha, setFecha] = useState(fechaDeHoy)
   const [cantidadAves, setCantidadAves] = useState('')
   const [causa, setCausa] = useState('')
   const [disposicion, setDisposicion] = useState('')
@@ -43,21 +45,21 @@ function ModalRegistroOperario({
   const esMortalidad = tipo === 'mortalidad'
   const lote = jornada.lote
 
-  useEffect(() => {
-    campoRef.current?.focus()
-    const cerrarConEscape = (evento: KeyboardEvent) => {
-      if (evento.key === 'Escape' && !guardando) onCerrar()
-    }
-    window.addEventListener('keydown', cerrarConEscape)
-    return () => window.removeEventListener('keydown', cerrarConEscape)
-  }, [guardando, onCerrar])
-
   if (!lote) return null
 
   async function guardar(evento: FormEvent) {
     evento.preventDefault()
-    setError('')
     if (!lote) return
+
+    const problema = validarFechaRegistro(fecha, fechaDeHoy())
+      ?? (esMortalidad
+        ? validarMortalidad(cantidadAves, lote.cantidad_inicial)
+        : validarConsumo(alimento, agua))
+    if (problema) {
+      setError(problema)
+      return
+    }
+    setError('')
 
     try {
       if (esMortalidad) {
@@ -68,130 +70,113 @@ function ModalRegistroOperario({
           disposicion: disposicion.trim() || undefined,
         })
       } else {
-        const alimentoKg = alimento ? Number(alimento) : undefined
-        const aguaLitros = agua ? Number(agua) : undefined
-        if (!alimentoKg && !aguaLitros) {
-          setError('Indica al menos el alimento o el agua consumida.')
-          return
-        }
         await onRegistrarConsumo(lote.id, {
           fecha,
-          alimento_kg: alimentoKg,
-          agua_litros: aguaLitros,
+          alimento_kg: alimento.trim() ? Number(alimento) : undefined,
+          agua_litros: agua.trim() ? Number(agua) : undefined,
         })
       }
       onCerrar()
     } catch (err) {
+      // useJornadaOperario ya traduce el error del servidor y lo relanza.
       setError(err instanceof Error ? err.message : 'No fue posible guardar el registro.')
     }
   }
 
   return (
-    <div className="operario-modal-overlay">
-      <div
-        className="operario-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="operario-registro-titulo"
-      >
-        <div className="operario-modal-head">
-          <div>
-            <span className="operario-modal-icon">
-              {esMortalidad ? <IcHeart size={20} /> : <IcSeed size={20} />}
-            </span>
-            <h2 id="operario-registro-titulo">
-              {esMortalidad ? 'Registrar mortalidad' : 'Registrar consumo'}
-            </h2>
-            <p>{jornada.galpon.nombre} · {lote.codigo}</p>
-          </div>
-          <button
-            type="button"
-            className="operario-modal-close"
-            onClick={onCerrar}
-            disabled={guardando}
-            aria-label="Cerrar formulario"
-          >
-            <IcClose size={20} />
+    <Modal
+      titulo={esMortalidad ? 'Registrar mortalidad' : 'Registrar consumo'}
+      subtitulo={`${jornada.galpon.nombre} · ${lote.codigo}`}
+      icono={esMortalidad ? <IcHeart size={20} /> : <IcSeed size={20} />}
+      onCerrar={onCerrar}
+      bloqueado={guardando}
+      focoInicial={campoRef}
+      ancho="compacto"
+      acciones={(
+        <>
+          <button type="button" className="modal-btn" onClick={onCerrar} disabled={guardando}>
+            Cancelar
           </button>
-        </div>
+          <button type="submit" form={ID_FORMULARIO} className="modal-btn modal-btn--primary" disabled={guardando}>
+            {guardando ? 'Guardando…' : 'Guardar registro'}
+          </button>
+        </>
+      )}
+    >
+      <form id={ID_FORMULARIO} onSubmit={guardar} noValidate>
+        <label className="modal-campo">
+          <span>Fecha</span>
+          <input
+            type="date"
+            value={fecha}
+            max={fechaDeHoy()}
+            onChange={(evento) => setFecha(evento.target.value)}
+            required
+          />
+        </label>
 
-        <form className="operario-form" onSubmit={guardar}>
-          <label>
-            <span>Fecha</span>
-            <input type="date" value={fecha} onChange={(evento) => setFecha(evento.target.value)} required />
-          </label>
-
-          {esMortalidad ? (
-            <>
-              <label>
-                <span>Aves fallecidas</span>
-                <input
-                  ref={campoRef}
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={cantidadAves}
-                  onChange={(evento) => setCantidadAves(evento.target.value)}
-                  inputMode="numeric"
-                  required
-                />
-              </label>
-              <label>
-                <span>Causa probable <em>(opcional)</em></span>
-                <input value={causa} onChange={(evento) => setCausa(evento.target.value)} />
-              </label>
-              <label>
-                <span>¿Qué hiciste con las aves? <em>(opcional)</em></span>
-                <select value={disposicion} onChange={(evento) => setDisposicion(evento.target.value)}>
-                  <option value="">Sin manejar aún</option>
-                  <option value="compostaje">Compostaje</option>
-                  <option value="incineracion">Incineración</option>
-                  <option value="entierro">Entierro</option>
-                  <option value="otro">Otro</option>
-                </select>
-              </label>
-            </>
-          ) : (
-            <div className="operario-form-grid">
-              <label>
-                <span>Alimento (kg) <em>(opcional)</em></span>
-                <input
-                  ref={campoRef}
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={alimento}
-                  onChange={(evento) => setAlimento(evento.target.value)}
-                  inputMode="decimal"
-                />
-              </label>
-              <label>
-                <span>Agua (litros) <em>(opcional)</em></span>
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={agua}
-                  onChange={(evento) => setAgua(evento.target.value)}
-                  inputMode="decimal"
-                />
-              </label>
-            </div>
-          )}
-
-          {error && <p className="operario-form-error" role="alert">{error}</p>}
-
-          <div className="operario-form-actions">
-            <button type="button" className="operario-btn-secondary" onClick={onCerrar} disabled={guardando}>
-              Cancelar
-            </button>
-            <button type="submit" className="operario-btn-primary" disabled={guardando}>
-              {guardando ? 'Guardando…' : 'Guardar registro'}
-            </button>
+        {esMortalidad ? (
+          <>
+            <label className="modal-campo">
+              <span>Aves fallecidas</span>
+              <input
+                ref={campoRef}
+                type="number"
+                min="1"
+                max={lote.cantidad_inicial}
+                step="1"
+                value={cantidadAves}
+                onChange={(evento) => setCantidadAves(evento.target.value)}
+                inputMode="numeric"
+                required
+              />
+            </label>
+            <label className="modal-campo">
+              <span>Causa probable <em>(opcional)</em></span>
+              <input value={causa} onChange={(evento) => setCausa(evento.target.value)} />
+            </label>
+            <label className="modal-campo">
+              <span>¿Qué hiciste con las aves? <em>(opcional)</em></span>
+              <select value={disposicion} onChange={(evento) => setDisposicion(evento.target.value)}>
+                <option value="">Sin manejar aún</option>
+                <option value="compostaje">Compostaje</option>
+                <option value="incineracion">Incineración</option>
+                <option value="entierro">Entierro</option>
+                <option value="otro">Otro</option>
+              </select>
+            </label>
+          </>
+        ) : (
+          <div className="modal-fila">
+            <label className="modal-campo">
+              <span>Alimento (kg) <em>(opcional)</em></span>
+              <input
+                ref={campoRef}
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={alimento}
+                onChange={(evento) => setAlimento(evento.target.value)}
+                inputMode="decimal"
+              />
+            </label>
+            <label className="modal-campo">
+              <span>Agua (litros) <em>(opcional)</em></span>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={agua}
+                onChange={(evento) => setAgua(evento.target.value)}
+                inputMode="decimal"
+              />
+            </label>
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+
+        {error && <p className="modal-error" role="alert">{error}</p>}
+      </form>
+    </Modal>
   )
 }
 

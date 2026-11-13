@@ -2,7 +2,8 @@ import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useEffect, useMemo, useState } from 'react'
 import { getRol } from '@shared/api'
 import { permisosDeInsumo, ROL_ADMIN } from '@shared/auth/permisos'
-import { IcAlert, IcBox, IcCoin, IcPlus, IcRefresh, IcSearch } from '@shared/ui/icons/icons'
+import { IcAlert, IcBox, IcCoin, IcPlus, IcSearch } from '@shared/ui/icons/icons'
+import BotonActualizar from '@shared/ui/BotonActualizar/BotonActualizar'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import '@shared/ui/admin/AdminKit.css'
@@ -18,6 +19,7 @@ import {
   filtrarInsumos,
   ordenarPorUrgencia,
   resumirInventario,
+  textoBodegaVacia,
   type FiltroStock,
 } from './model/inventario'
 import './InventarioPage.css'
@@ -38,6 +40,9 @@ function InventarioPage() {
   // respondía 400 sin que la pantalla pudiera explicarlo.
   const [granjas, setGranjas] = useState<Granja[]>([])
   useEffect(() => {
+    // Solo quien crea insumos necesita elegir granja; al operario esta
+    // consulta le respondía 403.
+    if (!permisos.crear) return
     let vigente = true
     void listarGranjas()
       .then((lista) => {
@@ -49,7 +54,7 @@ function InventarioPage() {
     return () => {
       vigente = false
     }
-  }, [])
+  }, [permisos.crear])
   const formulario = useFormularioInsumo(
     gestion.guardar,
     granjas.length === 1 ? granjas[0].id : 0,
@@ -82,7 +87,8 @@ function InventarioPage() {
       icono: <IcAlert size={18} />,
       tono: resumen.agotados > 0 ? 'peligro' : 'neutral',
     },
-    {
+    // El operario maneja cantidades, no dinero (auditoría QA, HALL-01).
+    ...(permisos.verCostos ? [{
       label: 'Valor en bodega',
       valor: resumen.valorTotalCop.toLocaleString('es-CO', {
         style: 'currency',
@@ -90,8 +96,8 @@ function InventarioPage() {
         maximumFractionDigits: 0,
       }),
       icono: <IcCoin size={18} />,
-      tono: 'info',
-    },
+      tono: 'info' as const,
+    }] : []),
   ]
 
   async function confirmarEliminacion(insumo: Insumo) {
@@ -124,17 +130,15 @@ function InventarioPage() {
       <CabeceraAdmin
         eyebrow={esAdministrador ? 'Control de bodega' : 'Bodega'}
         titulo="Insumos"
-        subtitulo="Stock, movimientos y reposición. Cada insumo guarda su propio historial."
+        subtitulo={permisos.verCostos
+          ? 'Stock, movimientos y reposición. Cada insumo guarda su propio historial.'
+          : 'Lo que hay en bodega. Anota cada salida que lleves a tu galpón.'}
         acciones={(
           <>
-            <button
-              type="button"
-              className="adm-btn adm-btn--secundario"
-              onClick={() => void gestion.recargar()}
-            >
-              <IcRefresh size={14} aria-hidden="true" />
-              Actualizar
-            </button>
+            <BotonActualizar
+              cargando={gestion.cargando}
+              onActualizar={gestion.recargar}
+            />
             {permisos.crear && (
               <button
                 type="button"
@@ -164,9 +168,7 @@ function InventarioPage() {
             <IcBox size={26} />
           </span>
           <h2>La bodega todavía no tiene insumos.</h2>
-          <p>
-            Registra el primero para llevar su stock y dejar rastro de cada entrada y salida.
-          </p>
+          <p>{textoBodegaVacia(permisos)}</p>
           {permisos.crear && (
             <button
               type="button"
@@ -254,6 +256,7 @@ function InventarioPage() {
       {movimientoDe && (
         <FormularioMovimiento
           insumo={movimientoDe}
+          tiposPermitidos={permisos.tiposMovimiento}
           onCerrar={() => setMovimientoDe(null)}
           onRegistrar={async (payload) => {
             await gestion.registrarMovimiento(movimientoDe.id, payload)

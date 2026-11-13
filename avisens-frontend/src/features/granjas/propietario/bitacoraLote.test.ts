@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ConsumoDiario } from '@features/consumos-diarios/api/consumosDiarios'
-import { agruparPorDia, lineaDeTiempo, payloadConsumo } from './bitacoraLote'
+import { agruparPorDia, consumoCreible, totalesConsumo, lineaDeTiempo, payloadConsumo } from './bitacoraLote'
 
 const pesaje = { id: 1, lote_id: 9, fecha: '2026-10-17', peso_promedio_g: 2100, cantidad_aves_pesadas: 50, peso_objetivo_g: null, observaciones: null }
 const muerte = { id: 2, lote_id: 9, fecha: '2026-10-17', cantidad_aves: 1, causa_presuntiva: 'Calor', disposicion: null, observaciones: null }
@@ -34,5 +34,25 @@ describe('payloadConsumo', () => {
       error: null,
       payload: { lote_id: 9, fecha: '2026-10-17', tipo_alimento_id: undefined, alimento_kg: undefined, agua_litros: 40, metodo_registro: 'manual' },
     })
+  })
+})
+
+describe('QA-01 / Figura 2: registros imposibles ya guardados', () => {
+  const absurdo = { ...consumo, id: 6, alimento_kg: 1.1e40, agua_litros: 1.1e50 } as ConsumoDiario
+
+  it('un consumo de 1,1e+40 kg no es creíble para 500 aves; uno real sí', () => {
+    expect(consumoCreible(absurdo, 500)).toBe(false)
+    expect(consumoCreible(consumo, 500)).toBe(true)
+  })
+
+  it('los totales de alimento y agua no suman el registro imposible y avisan cuántos quedaron fuera', () => {
+    expect(totalesConsumo([consumo, absurdo], 500)).toEqual({ alimentoKg: 25.5, aguaLitros: 60, fueraDeRango: 1 })
+  })
+
+  it('el historial marca el registro como fuera de rango sin mostrar la cifra absurda', () => {
+    const pesoAbsurdo = { ...pesaje, id: 7, peso_promedio_g: 1e15 }
+    const movimientos = lineaDeTiempo(9, [pesoAbsurdo], [], [], [absurdo], 500)
+    expect(movimientos.every((m) => m.fueraDeRango)).toBe(true)
+    expect(movimientos.map((m) => m.titulo)).toEqual(['Pesaje · dato fuera de rango', 'Consumo · dato fuera de rango'])
   })
 })

@@ -84,6 +84,7 @@ export function navigationFilter(value: string, search: string, keywords: string
 }
 
 const TITULOS_FUERA_DEL_MENU: Record<string, string> = {
+  '/consumos-diarios': 'Consumos diarios',
   '/notificaciones': 'Notificaciones',
   '/perfil': 'Mi perfil',
 }

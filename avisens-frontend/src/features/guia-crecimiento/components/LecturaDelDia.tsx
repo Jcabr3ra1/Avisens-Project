@@ -2,6 +2,7 @@ import type { AnomaliaLote, CurvaCrecimiento } from '@features/predicciones/api/
 import { etiquetaConfianza } from '../model/confianza'
 import { formatearPeso } from '../model/proyeccion'
 import { lecturaDelDia, textoDeLlegada } from '../model/reglaCiclo'
+import type { InfoEtapaDia } from '../model/etapasAlimentacion'
 import { ChipDesvio, ConteoValor } from './Medidas'
 
 type Props = {
@@ -9,9 +10,10 @@ type Props = {
   dia: number
   referencia: string | null
   alertasDelDia: AnomaliaLote[]
+  etapaDia?: InfoEtapaDia | null
 }
 
-function LecturaDelDia({ curva, dia, referencia, alertasDelDia }: Props) {
+function LecturaDelDia({ curva, dia, referencia, alertasDelDia, etapaDia }: Props) {
   const lectura = lecturaDelDia(curva, dia)
   const suficiente = (curva?.modelo.puntos_usados ?? 0) >= 3
   const final = curva?.serie[curva.serie.length - 1]
@@ -27,6 +29,25 @@ function LecturaDelDia({ curva, dia, referencia, alertasDelDia }: Props) {
         {lectura?.esHoy && <span className="gdc-lectura-sello">Hoy</span>}
         {futuro && <span className="gdc-lectura-sello gdc-lectura-sello--tenue">Estimado</span>}
       </header>
+
+      {etapaDia && (
+        <div className={`gdc-lectura-etapa gdc-lectura-etapa--${etapaDia.etapa}`}>
+          <div className="gdc-lectura-etapa-cabecera">
+            <span className={`regla-etapa-punto regla-etapa-punto--${etapaDia.etapa}`} aria-hidden="true" />
+            <strong className="gdc-lectura-etapa-nombre">Etapa: {etapaDia.nombreEtapa}</strong>
+            <span className="gdc-lectura-etapa-dias">({etapaDia.diaInicio === etapaDia.diaFin ? `Día ${etapaDia.diaInicio}` : `Días ${etapaDia.diaInicio}–${etapaDia.diaFin}`})</span>
+          </div>
+          <div className="gdc-lectura-alimento">
+            <span className="gdc-lectura-alimento-etiqueta">Alimento recomendado:</span>
+            <span className="gdc-lectura-alimento-valor">{etapaDia.alimento}</span>
+          </div>
+          {etapaDia.diasParaCambio > 0 && etapaDia.proximaEtapa && (
+            <p className="gdc-lectura-etapa-cambio">
+              Cambio en {etapaDia.diasParaCambio} {etapaDia.diasParaCambio === 1 ? 'día' : 'días'} a <strong>{etapaDia.proximaEtapa}</strong> ({etapaDia.proximoAlimento})
+            </p>
+          )}
+        </div>
+      )}
 
       {lectura ? (
         <dl className="gdc-lectura-lista">

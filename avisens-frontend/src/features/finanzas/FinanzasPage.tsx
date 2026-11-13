@@ -6,6 +6,7 @@ import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import { IcArrowUp, IcCoin, IcRefresh } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import { fechaDeHoy } from '@shared/utils/fechas'
+import { fechaCorta } from './model/movimiento'
 import FormularioMovimiento from './components/FormularioMovimiento'
 import { useMovimientosFinancieros } from './hooks/useMovimientosFinancieros'
 import {
@@ -30,13 +31,6 @@ function cop(valor: number): string {
   }).format(valor)
 }
 
-function fechaCorta(fecha: string): string {
-  return new Intl.DateTimeFormat('es-CO', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(fecha))
-}
 
 function presentarTipo(tipo: MovimientoFinanciero['tipo']): {
   clase: TipoPresentado

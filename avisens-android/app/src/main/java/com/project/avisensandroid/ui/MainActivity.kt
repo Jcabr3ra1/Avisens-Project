@@ -20,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.core.os.bundleOf
 import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
+import com.project.avisensandroid.controller.SesionExpirada
 import com.project.avisensandroid.databinding.Au02RecuperarContrasenaBinding
 import com.project.avisensandroid.databinding.Au03VerificarCodigoBinding
 import com.project.avisensandroid.databinding.Au04NuevaContrasenaBinding
@@ -281,6 +282,30 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Una sola redirección aunque varias peticiones reciban 401 a la vez:
+    // SesionExpirada avisa una vez e irALogin ignora llamadas repetidas.
+    private val alExpirarSesion: () -> Unit = {
+        irALogin(sesionExpirada = true)
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        // Si la sesión se perdió con la app en segundo plano, nadie recibió
+        // el aviso: se comprueba al volver.
+        if (rolActual != null && !UserSession.isLoggedIn(this)) {
+            irALogin(sesionExpirada = true)
+            return
+        }
+
+        SesionExpirada.registrar(alExpirarSesion)
+    }
+
+    override fun onStop() {
+        SesionExpirada.quitar(alExpirarSesion)
+        super.onStop()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt(STATE_GRANJA_ID, granjaSeleccionadaId ?: 0)
@@ -327,8 +352,17 @@ class MainActivity : AppCompatActivity() {
         cerrarSesion()
     }
 
+    /**
+     * Cierra la sesión local de inmediato y pide al backend revocarla
+     * (POST /v1/auth/logout). La revocación remota no bloquea ni puede
+     * impedir el cierre local si no hay red.
+     */
     private fun cerrarSesion() {
+        val refreshToken = UserSession.refreshToken(this)
         UserSession.clear(this)
+        if (!refreshToken.isNullOrBlank()) {
+            RetrofitClient.cerrarSesionRemota(refreshToken)
+        }
         irALogin()
     }
 
@@ -531,13 +565,19 @@ class MainActivity : AppCompatActivity() {
     // IR AL LOGIN
     // =========================================================
 
-    private fun irALogin() {
+    private fun irALogin(sesionExpirada: Boolean = false) {
 
+        if (isFinishing) return
+
+        // Limpia la tarea para que Atrás no regrese a pantallas sin sesión.
         startActivity(
             Intent(
                 this,
                 LoginActivity::class.java
-            )
+            ).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                putExtra(SesionExpirada.EXTRA_SESION_EXPIRADA, sesionExpirada)
+            }
         )
 
         finish()
@@ -1389,6 +1429,14 @@ class MainActivity : AppCompatActivity() {
             val unidadSeleccionada = binding.spinnerUnidadInsumo.selectedItemPosition
             val unidad = binding.spinnerUnidadInsumo.selectedItem?.toString()?.trim().orEmpty()
             val cantidad = cantidadTexto.toDoubleOrNull()
+            val minimoTexto = binding.edtStockMinimoInsumo.text.toString().trim()
+                .replace(',', '.')
+            val stockMinimo = minimoTexto.takeIf { it.isNotBlank() }?.toDoubleOrNull()
+
+            if (minimoTexto.isNotBlank() && (stockMinimo == null || stockMinimo <= 0.0 || !stockMinimo.isFinite())) {
+                binding.edtStockMinimoInsumo.error = "Ingresa un mínimo mayor que 0"
+                return@setOnClickListener
+            }
 
             if (tipoAlimento == null) {
                 Toast.makeText(
@@ -1423,7 +1471,8 @@ class MainActivity : AppCompatActivity() {
                 categoria = "alimento",
                 cantidad = cantidad,
                 unidad = unidad,
-                proveedorId = proveedorId
+                proveedorId = proveedorId,
+                stockMinimo = stockMinimo
             )
         }
     }
@@ -1541,7 +1590,8 @@ class MainActivity : AppCompatActivity() {
         categoria: String,
         cantidad: Double,
         unidad: String,
-        proveedorId: Int?
+        proveedorId: Int?,
+        stockMinimo: Double?
     ) {
         binding.btnAgregarInsumo.isEnabled = false
 
@@ -1555,7 +1605,7 @@ class MainActivity : AppCompatActivity() {
                     tipo = categoria,
                     unidad_medida = unidad,
                     stock_actual = cantidad,
-                    stock_minimo = null,
+                    stock_minimo = stockMinimo,
                     precio_unitario_cop = null,
                     proveedor_habitual_id = proveedorId,
                     ubicacion_almacen = null,
@@ -1565,6 +1615,9 @@ class MainActivity : AppCompatActivity() {
                 val response = RetrofitClient.api.crearInsumo(request)
 
                 if (response.isSuccessful) {
+                    // Mostrar la granja en la que el backend acaba de crear el alimento.
+                    // Evita que Bodega lo oculte por un selector anterior.
+                    seleccionarGranja(response.body()?.granja_id ?: granjaId)
                     Toast.makeText(
                         this@MainActivity,
                         "Alimento agregado correctamente",

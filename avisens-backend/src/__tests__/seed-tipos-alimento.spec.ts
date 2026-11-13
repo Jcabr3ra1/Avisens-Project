@@ -10,15 +10,16 @@ describe('sembrarTiposAlimento', () => {
     tipoAlimento: { findFirst: jest.fn(), create: jest.fn() },
   };
 
-  const sembrar = () =>
-    sembrarTiposAlimento(prisma as unknown as PrismaClient);
+  const sembrar = () => sembrarTiposAlimento(prisma as unknown as PrismaClient);
 
-  const creados = () =>
+  const creadosDeMarca = (marca: 'italcol' | 'estandar') =>
     (
       prisma.tipoAlimento.create.mock.calls as Array<
         [{ data: Record<string, unknown> }]
       >
-    ).map(([arg]) => arg.data);
+    )
+      .map(([arg]) => arg.data)
+      .filter((tipo) => tipo.marca === marca);
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -27,7 +28,7 @@ describe('sembrarTiposAlimento', () => {
 
     await sembrar();
 
-    expect(creados().map((t) => t.nombre)).toEqual([
+    expect(creadosDeMarca('italcol').map((t) => t.nombre)).toEqual([
       'Pollito Preiniciador',
       'Súper Pollito Iniciación',
       'Súper Pollo Engorde Granja',
@@ -42,9 +43,9 @@ describe('sembrarTiposAlimento', () => {
 
     await sembrar();
 
-    expect(creados().map((t) => t.consumo_total_esperado_g)).toEqual([
-      200, 1000, 2800,
-    ]);
+    expect(
+      creadosDeMarca('italcol').map((t) => t.consumo_total_esperado_g),
+    ).toEqual([200, 1000, 2800]);
   });
 
   // Italcol cambia de alimento por gramos consumidos, no por días: los rangos
@@ -54,7 +55,10 @@ describe('sembrarTiposAlimento', () => {
 
     await sembrar();
 
-    const tramos = creados().map((t) => [t.dia_inicio, t.dia_fin]);
+    const tramos = creadosDeMarca('italcol').map((t) => [
+      t.dia_inicio,
+      t.dia_fin,
+    ]);
     expect(tramos).toEqual([
       [1, 8],
       [9, 21],
@@ -67,10 +71,25 @@ describe('sembrarTiposAlimento', () => {
 
     await sembrar();
 
-    expect(creados().map((t) => t.etapa)).toEqual([
+    expect(creadosDeMarca('italcol').map((t) => t.etapa)).toEqual([
       'preiniciacion',
       'iniciacion',
       'engorde',
+    ]);
+  });
+
+  it('siembra las cuatro etapas del perfil estándar con sus rangos', async () => {
+    prisma.tipoAlimento.findFirst.mockResolvedValue(null);
+
+    await sembrar();
+
+    expect(
+      creadosDeMarca('estandar').map((t) => [t.etapa, t.dia_inicio, t.dia_fin]),
+    ).toEqual([
+      ['preiniciacion', 1, 8],
+      ['iniciacion', 9, 21],
+      ['engorde', 22, 34],
+      ['finalizacion', 35, null],
     ]);
   });
 

@@ -119,6 +119,8 @@ describe('tituloDeRuta', () => {
   it('nombra rutas que el rol abre aunque no estén en su menú', () => {
     expect(tituloDeRuta('/alertas', 'Administrador')).toBe('Alertas')
     expect(tituloDeRuta('/notificaciones', 'Administrador')).toBe('Notificaciones')
+    // Antes la miga decía «Granja › Avisens» en Consumos diarios.
+    expect(tituloDeRuta('/consumos-diarios', ROL_OPERARIO)).toBe('Consumos diarios')
   })
 
   it('sin coincidencia muestra la marca, no un texto genérico', () => {

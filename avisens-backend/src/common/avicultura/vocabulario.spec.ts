@@ -29,6 +29,7 @@ describe('vocabulario ganadero', () => {
       'preiniciacion',
       'iniciacion',
       'engorde',
+      'finalizacion',
     ]);
   });
 

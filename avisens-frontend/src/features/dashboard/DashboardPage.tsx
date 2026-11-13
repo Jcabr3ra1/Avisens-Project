@@ -122,7 +122,10 @@ function DashboardPage() {
   const enGranjas = (pestana: string, galponId = dashboard.galponId) =>
     navigate(`/granjas?granjaId=${dashboard.granjaId ?? ''}${galponId ? `&galpon=${galponId}` : ''}&pestana=${pestana}`)
 
-  const estado = estadoGranja({ atencion, filas })
+  const sensoresGranja = cargandoMonitoreo
+    ? undefined
+    : monitoreoGranja.flatMap((galpon) => galpon.sensores).filter((sensor) => !sensor.esEstado).length
+  const estado = estadoGranja({ atencion, filas, sensores: sensoresGranja })
 
   function ejecutarAccion() {
     if (!estado.accion) return
@@ -175,6 +178,7 @@ function DashboardPage() {
           cargando={(dashboard.cargando || dashboard.cargandoResumenCrecimiento) && atencion.length === 0}
           errorCrecimiento={dashboard.errorCrecimiento}
           onReintentarCrecimiento={dashboard.recargarCrecimiento}
+          sinSensores={sensoresGranja === 0}
         />
       )}
 

@@ -26,3 +26,22 @@ export function crearJornadasOperario(
       }
     })
 }
+
+export type ResumenJornada = {
+  galpones: number
+  lotesActivos: number
+  avesEnSeguimiento: number
+  galponesSinLote: number
+}
+
+// Cifras de la franja de resumen de Mi jornada, con las mismas tarjetas que
+// usan las pantallas del administrador y del propietario.
+export function resumirJornada(jornadas: JornadaOperario[]): ResumenJornada {
+  const conLote = jornadas.filter((jornada) => jornada.lote !== null)
+  return {
+    galpones: jornadas.length,
+    lotesActivos: conLote.length,
+    avesEnSeguimiento: conLote.reduce((total, jornada) => total + (jornada.lote?.cantidad_inicial ?? 0), 0),
+    galponesSinLote: jornadas.length - conLote.length,
+  }
+}

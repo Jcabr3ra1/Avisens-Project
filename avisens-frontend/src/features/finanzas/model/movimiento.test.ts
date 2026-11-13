@@ -3,6 +3,8 @@ import type { CategoriaFinanciera } from '../api/movimientos-financieros'
 import {
   categoriasParaTipo,
   errorDeFormulario,
+  fechaCorta,
+  formularioDesde,
   formularioVacio,
   payloadDesdeFormulario,
 } from './movimiento'
@@ -81,5 +83,29 @@ describe('categoriasParaTipo', () => {
 
   it('las categorías sin tipo sirven para ambos', () => {
     expect(categoriasParaTipo(categorias, 'ingreso').map((c) => c.id)).toEqual([1, 3])
+  })
+})
+
+describe('QA-03: la fecha del listado coincide con la del formulario de edición', () => {
+  it('muestra el mismo día de calendario que se edita, sin correrlo por la zona horaria', () => {
+    const iso = '2026-10-16T00:00:00.000Z'
+    expect(fechaCorta(iso)).toMatch(/16/)
+    expect(fechaCorta(iso)).not.toMatch(/15/)
+    expect(formularioDesde({ tipo: 'ingreso', categoria_id: 1, valor_cop: 1, fecha: iso, granja_id: 1, lote_id: null } as unknown as Parameters<typeof formularioDesde>[0]).fecha).toBe('2026-10-16')
+  })
+
+  it('una fecha ilegible no se muestra como fecha', () => {
+    expect(fechaCorta('no-es-fecha')).toBe('—')
+  })
+})
+
+describe('Finanzas: monto desproporcionado', () => {
+  it('avisa "Ingrese un monto razonable" antes de enviar los 33 dígitos de QA', () => {
+    expect(errorDeFormulario(formulario({ valor_cop: '133333335131313213213213213213' })))
+      .toMatch(/Ingrese un monto razonable/)
+  })
+
+  it('deja pasar los $100.000.000 reales de la prueba', () => {
+    expect(errorDeFormulario(formulario({ valor_cop: '100000000' }))).toBe('')
   })
 })

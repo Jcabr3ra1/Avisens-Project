@@ -15,8 +15,10 @@ import MetaDelLote from './components/MetaDelLote'
 import ReglaCiclo from './components/ReglaCiclo'
 import ProyeccionFaena from './components/ProyeccionFaena'
 import ReportesCrecimiento from './components/ReportesCrecimiento'
+import ResumenAlimentacionLote from './components/ResumenAlimentacionLote'
 import { fraseDeCrecimiento, severidadPorDia } from './model/reglaCiclo'
 import { formatearPeso } from './model/proyeccion'
+import { obtenerEtapaDelDia, obtenerFasesCiclo } from './model/etapasAlimentacion'
 import './GuiaCrecimientoPage.css'
 import './GuiaCiclo.css'
 
@@ -110,6 +112,16 @@ function GuiaCrecimientoPage() {
     pesoMeta ? formatearPeso(pesoMeta) : null,
   ].filter(Boolean).join(' · ') || 'Sin meta definida'
 
+  const fases = obtenerFasesCiclo(
+    diaFinal,
+    guia.alimento,
+    guia.curva?.puntos,
+    lote.cantidad_inicial,
+    guia.mortalidad,
+    lote.fecha_ingreso,
+  )
+  const etapaDia = obtenerEtapaDelDia(diaSeleccionado, fases)
+
   return (
     <div className="page-container adm-page guia-page gdc">
       {guia.error && <div className="adm-alerta" role="alert"><span>{guia.error}</span><button type="button" onClick={guia.recargar} disabled={guia.guardando}>Reintentar</button></div>}
@@ -156,6 +168,7 @@ function GuiaCrecimientoPage() {
           alertas={alertasEnRegla}
           etiquetaSalida={`Salida · día ${diaFinal}`}
           detalleSalida={detalleSalida}
+          fases={fases}
           onDiaChange={setDiaElegido}
         />
         <AlertasTempranas
@@ -186,32 +199,45 @@ function GuiaCrecimientoPage() {
           dia={diaSeleccionado}
           referencia={referencia}
           alertasDelDia={alertasDelCiclo.filter((alerta) => alerta.dia === diaSeleccionado)}
+          etapaDia={etapaDia}
         />
       </div>
 
       <section className="gdc-cierre" aria-labelledby="gdc-cierre-titulo">
         <h2 id="gdc-cierre-titulo">Cierre del lote</h2>
-        <div className="gdc-cierre-columnas">
-          <MetaDelLote
-            loteId={lote.id}
-            plan={guia.plan}
-            puedeRegistrar={permisos.registrar}
-            cargando={guia.cargandoPlan}
-            error={guia.errorPlan}
-            ocupado={guia.guardando || guia.cargandoPlan || guia.cargandoDetalle}
-            minLibras={MIN_PESO_OBJETIVO_G / 453.59237}
-            onGuardar={guardarPesoObjetivo}
-            onRecalcular={() => void ejecutarAccion(() => guia.recalcularPlan())}
-            onReintentar={guia.recargar}
-          />
-          <ProyeccionFaena
-            loteId={lote.id}
-            curva={curva}
-            plan={guia.plan}
-            prediccion={proyeccion.prediccion}
-            error={proyeccion.errorPrediccion}
-            cargando={proyeccion.cargandoPrediccion}
-          />
+        <div className="gdc-cierre-layout">
+          <div className="gdc-cierre-col-plan">
+            <MetaDelLote
+              loteId={lote.id}
+              plan={guia.plan}
+              puedeRegistrar={permisos.registrar}
+              cargando={guia.cargandoPlan}
+              error={guia.errorPlan}
+              ocupado={guia.guardando || guia.cargandoPlan || guia.cargandoDetalle}
+              minLibras={MIN_PESO_OBJETIVO_G / 453.59237}
+              onGuardar={guardarPesoObjetivo}
+              onRecalcular={() => void ejecutarAccion(() => guia.recalcularPlan())}
+              onReintentar={guia.recargar}
+            />
+            <ProyeccionFaena
+              loteId={lote.id}
+              curva={curva}
+              plan={guia.plan}
+              prediccion={proyeccion.prediccion}
+              error={proyeccion.errorPrediccion}
+              cargando={proyeccion.cargandoPrediccion}
+            />
+          </div>
+          <div className="gdc-cierre-col-alimento">
+            <ResumenAlimentacionLote
+              plan={guia.plan}
+              alimento={guia.alimento}
+              fases={fases}
+              lote={lote}
+              mortalidad={guia.mortalidad}
+              cargandoAlimento={guia.cargandoAlimento}
+            />
+          </div>
         </div>
         <ReportesCrecimiento
           lote={lote}

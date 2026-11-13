@@ -58,6 +58,15 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         }
         break;
       }
+      case 'P2020': {
+        // Valor fuera del rango de la columna (p. ej. un monto con más
+        // dígitos de los que caben). Es un dato mal digitado, no una falla
+        // del servidor: se responde 400 con un mensaje que se pueda corregir.
+        status = HttpStatus.BAD_REQUEST;
+        message =
+          'Un valor es demasiado grande para guardarse. Revisa las cifras e ingresa un valor razonable';
+        break;
+      }
       default:
         this.logger.error(`Prisma ${exception.code}: ${exception.message}`);
     }

@@ -55,23 +55,41 @@ export function gestionaAlgo(permisos: PermisosGestion): boolean {
 // movimiento de stock lo registran los tres roles — el operario apunta lo
 // que consume en campo y esa es la razón de ser del módulo.
 // Fuente: avisens-backend/src/modules/insumos/insumos.controller.ts
+//
+// Auditoría QA del 2026-10-30 (HALL-01 / CP-06): el operario maneja
+// cantidades físicas, no dinero. No ve precios ni el valor de la bodega, y
+// solo registra salidas (lo que saca para su galpón); las entradas por compra
+// y los ajustes de conteo son del administrador y del propietario.
+// Ojo: el backend todavía le acepta entradas y ajustes y le devuelve el
+// precio; esto es solo la interfaz.
+export type TipoMovimientoInsumo = 'entrada' | 'salida' | 'ajuste'
+
 export type PermisosInsumo = {
   crear: boolean
   editar: boolean
   alternarActivo: boolean
   eliminar: boolean
   registrarMovimiento: boolean
+  tiposMovimiento: TipoMovimientoInsumo[]
+  verCostos: boolean
 }
 
 export function permisosDeInsumo(rol: string | null): PermisosInsumo {
   const esAdmin = rol === ROL_ADMIN
+  const gestionaBodega = esAdmin || rol === ROL_PROPIETARIO
+  const tiposMovimiento: TipoMovimientoInsumo[] = gestionaBodega
+    ? ['entrada', 'salida', 'ajuste']
+    : rol === ROL_OPERARIO
+      ? ['salida']
+      : []
   return {
     crear: esAdmin,
     editar: esAdmin,
     alternarActivo: esAdmin,
     eliminar: esAdmin,
-    registrarMovimiento:
-      rol === ROL_ADMIN || rol === ROL_PROPIETARIO || rol === ROL_OPERARIO,
+    registrarMovimiento: tiposMovimiento.length > 0,
+    tiposMovimiento,
+    verCostos: gestionaBodega,
   }
 }
 

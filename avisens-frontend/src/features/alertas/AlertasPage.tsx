@@ -1,11 +1,16 @@
 import { useMemo, useState } from 'react'
-import { IcRefresh } from '@shared/ui/icons/icons'
+import { getRol } from '@shared/api'
+import { ROL_OPERARIO } from '@shared/auth/permisos'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
+import BotonActualizar from '@shared/ui/BotonActualizar/BotonActualizar'
+import SinGalponesAsignados from '@shared/ui/Estados/SinGalponesAsignados'
 import BannerAlertaCritica from './components/BannerAlertaCritica'
 import FiltrosAlertas from './components/FiltrosAlertas'
 import ListaAlertas from './components/ListaAlertas'
 import PanelAlerta from './components/PanelAlerta'
 import ResumenAlertas from './components/ResumenAlertas'
 import { useAlertas } from './hooks/useAlertas'
+import { useGalponesAsignados } from './hooks/useGalponesAsignados'
 import {
   filtrarAlertas,
   obtenerResumenAlertas,
@@ -29,6 +34,11 @@ type Props = {
 function AlertasPage({ galponFijo }: Props = {}) {
   const embebida = galponFijo !== undefined
   const { alertas: todas, cargando, actualizandoId, error, recargar, aceptar, cerrar, escalar } = useAlertas()
+  // El operario solo ve sus galpones asignados: los textos hablan de «tus
+  // galpones» y, si no tiene ninguno, se le dice en vez de un «Todo en orden»
+  // engañoso (auditoría QA 2026-10-30, HALL-03).
+  const esOperario = getRol() === ROL_OPERARIO
+  const asignacion = useGalponesAsignados(esOperario && !embebida)
   const alertas = useMemo(
     () => (embebida ? todas.filter((alerta) => alerta.galpon_id === galponFijo) : todas),
     [embebida, galponFijo, todas],
@@ -49,20 +59,25 @@ function AlertasPage({ galponFijo }: Props = {}) {
 
   return (
     <div className={embebida ? 'ale-page ale-page--embebida' : 'page-container ale-page adm-page'}>
-      {!embebida && <header className="ale-cabecera">
-        <div>
-          <span className="adm-eyebrow">
-            <span className="adm-eyebrow-punto" aria-hidden="true" />
-            Monitoreo · Alertas
-          </span>
-          <h1 className="ale-titulo">Alertas</h1>
-          <p className="ale-subtitulo">Revisa, atiende y deja registrada cada situación detectada por los sensores.</p>
-        </div>
-        <button type="button" className="ale-boton-cabecera" onClick={() => void recargar()} disabled={cargando}>
-          <IcRefresh size={17} aria-hidden="true" />
-          {cargando ? 'Actualizando…' : 'Actualizar'}
-        </button>
-      </header>}
+      {!embebida && (
+        <CabeceraAdmin
+          eyebrow="Monitoreo · Alertas"
+          titulo="Alertas"
+          subtitulo={esOperario
+            ? 'Revisa, atiende y deja registrada cada situación que detecten los sensores de tus galpones.'
+            : 'Revisa, atiende y deja registrada cada situación detectada por los sensores.'}
+          acciones={(
+            <BotonActualizar
+              cargando={cargando}
+              onActualizar={() => Promise.all([recargar(), asignacion.recargar()])}
+            />
+          )}
+        />
+      )}
+
+      {asignacion.sinGalpones ? (
+        <SinGalponesAsignados queVerias="las alertas que detecten los sensores de tus galpones" />
+      ) : <>
 
       {error && (
         <div className="ale-error adm-alerta" role="alert">
@@ -71,9 +86,14 @@ function AlertasPage({ galponFijo }: Props = {}) {
         </div>
       )}
       <BannerAlertaCritica alertas={alertas} onAbrir={setSeleccionada} />
-      <ResumenAlertas resumen={resumen} cargando={cargando} alcance={embebida ? 'En este galpón' : undefined} />
+      <ResumenAlertas
+        resumen={resumen}
+        cargando={cargando}
+        alcance={embebida ? 'En este galpón' : esOperario ? 'En tus galpones' : undefined}
+      />
       {!embebida && <FiltrosAlertas
         alertas={alertas}
+        etiquetaTodos={esOperario ? 'Todos mis galpones' : undefined}
         filtros={filtros}
         onCambiar={setFiltros}
         onLimpiar={() => setFiltros(FILTROS_INICIALES)}
@@ -90,6 +110,7 @@ function AlertasPage({ galponFijo }: Props = {}) {
           onVerDetalle={setSeleccionada}
         />
       )}
+      </>}
       <PanelAlerta
         alerta={seleccionada}
         cerrando={actualizandoId === seleccionada?.id}
