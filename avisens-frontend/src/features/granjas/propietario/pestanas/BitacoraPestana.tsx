@@ -6,6 +6,7 @@ import { useBitacora } from '@features/bitacora/hooks/useBitacora'
 import FormularioRegistro from '@features/bitacora/components/FormularioRegistro'
 import AlimentoEstimadoPesaje from '@features/bitacora/components/AlimentoEstimadoPesaje'
 import {
+  errorDeRegistro,
   FORMULARIO_INICIAL, formularioDesde, payloadRegistro,
   type FormularioRegistro as DatosRegistro, type TipoRegistro,
 } from '@features/bitacora/model/bitacora'
@@ -86,6 +87,11 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
   function guardarRegistro(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     if (!registro) return
+    const problema = errorDeRegistro(registro.tipo, formRegistro)
+    if (problema) {
+      setError(problema)
+      return
+    }
     const payload = payloadRegistro(registro.tipo, formRegistro, lote.id)
     setGuardando(true)
     setError('')

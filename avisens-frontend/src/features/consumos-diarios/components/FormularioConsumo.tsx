@@ -2,7 +2,11 @@ import { useEffect, useRef, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import type { Lote } from '@features/lotes/api/lotes'
 import type { TipoAlimento } from '@features/consumos-diarios/api/tipos-alimento'
-import type { FormularioConsumo as DatosConsumo } from '../model/consumoDiario'
+import {
+  AGUA_MAXIMO_LITROS,
+  ALIMENTO_MAXIMO_KG,
+  type FormularioConsumo as DatosConsumo,
+} from '../model/consumoDiario'
 
 type Props = {
   form: DatosConsumo
@@ -107,7 +111,8 @@ function FormularioConsumo({
             <input
               type="number"
               inputMode="decimal"
-              min="0"
+              min="0.001"
+              max={ALIMENTO_MAXIMO_KG}
               step="0.001"
               value={form.alimento_kg}
               onChange={(evento) => onCambiar('alimento_kg', evento.target.value)}
@@ -118,7 +123,8 @@ function FormularioConsumo({
             <input
               type="number"
               inputMode="decimal"
-              min="0"
+              min="0.001"
+              max={AGUA_MAXIMO_LITROS}
               step="0.001"
               value={form.agua_litros}
               onChange={(evento) => onCambiar('agua_litros', evento.target.value)}

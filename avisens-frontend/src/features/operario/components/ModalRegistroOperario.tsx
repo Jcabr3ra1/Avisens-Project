@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { IcClose, IcHeart, IcSeed } from '@shared/ui/icons/icons'
 import type { JornadaOperario } from '../model/jornadaOperario'
 import { fechaDeHoy } from '@shared/utils/fechas'
+import { AGUA_MAXIMO_LITROS, ALIMENTO_MAXIMO_KG } from '@features/consumos-diarios/model/consumoDiario'
 
 type TipoRegistro = 'mortalidad' | 'consumo'
 
@@ -72,6 +73,14 @@ function ModalRegistroOperario({
         const aguaLitros = agua ? Number(agua) : undefined
         if (!alimentoKg && !aguaLitros) {
           setError('Indica al menos el alimento o el agua consumida.')
+          return
+        }
+        if (alimentoKg !== undefined && alimentoKg > ALIMENTO_MAXIMO_KG) {
+          setError(`Indica una cantidad de alimento razonable (máximo ${ALIMENTO_MAXIMO_KG.toLocaleString('es-CO')} kg).`)
+          return
+        }
+        if (aguaLitros !== undefined && aguaLitros > AGUA_MAXIMO_LITROS) {
+          setError(`Indica una cantidad de agua razonable (máximo ${AGUA_MAXIMO_LITROS.toLocaleString('es-CO')} L).`)
           return
         }
         await onRegistrarConsumo(lote.id, {
@@ -159,6 +168,7 @@ function ModalRegistroOperario({
                   ref={campoRef}
                   type="number"
                   min="0.01"
+                  max={ALIMENTO_MAXIMO_KG}
                   step="0.01"
                   value={alimento}
                   onChange={(evento) => setAlimento(evento.target.value)}
@@ -170,6 +180,7 @@ function ModalRegistroOperario({
                 <input
                   type="number"
                   min="0.01"
+                  max={AGUA_MAXIMO_LITROS}
                   step="0.01"
                   value={agua}
                   onChange={(evento) => setAgua(evento.target.value)}

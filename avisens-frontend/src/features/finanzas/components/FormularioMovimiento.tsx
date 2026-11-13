@@ -6,6 +6,7 @@ import type { CategoriaFinanciera } from '../api/movimientos-financieros'
 import {
   categoriasParaTipo,
   METODOS_PAGO,
+  MONTO_MAXIMO_COP,
   type FormularioMovimiento as DatosMovimiento,
 } from '../model/movimiento'
 
@@ -103,6 +104,7 @@ function FormularioMovimiento({
           <input
             type="number"
             min="1"
+            max={MONTO_MAXIMO_COP}
             step="1"
             inputMode="numeric"
             value={form.valor_cop}

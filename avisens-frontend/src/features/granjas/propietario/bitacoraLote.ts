@@ -1,5 +1,5 @@
 import type { ConsumoDiario, CrearConsumoDiarioPayload } from '@features/consumos-diarios/api/consumosDiarios'
-import type { FormularioConsumo } from '@features/consumos-diarios/model/consumoDiario'
+import { errorDeConsumo, type FormularioConsumo } from '@features/consumos-diarios/model/consumoDiario'
 import type { EventoSanitario, Mortalidad, Pesaje } from '@features/bitacora/model/bitacora'
 
 export type TipoMovimiento = 'peso' | 'mortalidad' | 'sanitario' | 'consumo'
@@ -94,10 +94,10 @@ export function payloadConsumo(
   form: FormularioConsumo,
   loteId: number,
 ): { payload: CrearConsumoDiarioPayload; error: null } | { payload: null; error: string } {
+  const problema = errorDeConsumo(form)
+  if (problema) return { payload: null, error: problema }
   const alimento = form.alimento_kg ? Number(form.alimento_kg) : undefined
   const agua = form.agua_litros ? Number(form.agua_litros) : undefined
-  if (!alimento && !agua) return { payload: null, error: 'Registra al menos el alimento o el agua consumida.' }
-  if (alimento && !form.tipo_alimento_id) return { payload: null, error: 'Selecciona el tipo de alimento consumido.' }
   return {
     error: null,
     payload: {

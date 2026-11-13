@@ -35,4 +35,11 @@ describe('payloadConsumo', () => {
       payload: { lote_id: 9, fecha: '2026-10-17', tipo_alimento_id: undefined, alimento_kg: undefined, agua_litros: 40, metodo_registro: 'manual' },
     })
   })
+
+  it('rechaza cantidades desproporcionadas o astronómicas de alimento o agua', () => {
+    const baseAlimento = { lote_id: '9', tipo_alimento_id: '1', fecha: '2026-10-17', alimento_kg: '999999', agua_litros: '' }
+    expect(payloadConsumo(baseAlimento, 9).error).toMatch(/razonable/)
+    const baseAgua = { lote_id: '9', tipo_alimento_id: '', fecha: '2026-10-17', alimento_kg: '', agua_litros: '999999' }
+    expect(payloadConsumo(baseAgua, 9).error).toMatch(/razonable/)
+  })
 })

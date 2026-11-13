@@ -61,6 +61,10 @@ describe('errorDeFormulario', () => {
     expect(errorDeFormulario(formulario({ valor_cop: '-500' }))).toMatch(/mayor que cero/)
   })
 
+  it('rechaza montos superiores no razonables', () => {
+    expect(errorDeFormulario(formulario({ valor_cop: '10000000001' }))).toMatch(/monto superior razonable/)
+  })
+
   it('exige categoría y granja', () => {
     expect(errorDeFormulario(formulario({ categoria_id: '' }))).toMatch(/categoría/)
     expect(errorDeFormulario(formulario({ granja_id: '' }))).toMatch(/granja/)

@@ -69,12 +69,15 @@ export function payloadDesdeFormulario(
   return payload
 }
 
+export const MONTO_MAXIMO_COP = 10_000_000_000
+
 export function errorDeFormulario(form: FormularioMovimiento): string {
   if (!form.categoria_id) return 'Elige una categoría.'
   if (!form.granja_id) return 'Elige la granja del movimiento.'
   const valor = Number(form.valor_cop)
   if (!form.valor_cop || Number.isNaN(valor)) return 'Escribe el monto en pesos.'
   if (valor <= 0) return 'El monto debe ser mayor que cero.'
+  if (valor > MONTO_MAXIMO_COP) return 'Ingrese monto superior razonable.'
   if (!form.fecha) return 'Elige la fecha del movimiento.'
   return ''
 }

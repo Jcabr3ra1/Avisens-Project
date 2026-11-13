@@ -18,6 +18,9 @@ export function pesoAEnviar(pesoActualG: number | null, editado: boolean, libras
   return !editado && pesoActualG !== null ? pesoActualG : librasAGramos(libras)
 }
 
+// Límite razonable con amplio margen sobre tablas de peso (30 kg ~ 66 lb).
+export const PESO_OBJETIVO_MAXIMO_G = 30_000
+
 // Acepta decimales con punto o coma y valida el gramo que se enviará. Un
 // objetivo original no editado conserva su precisión, incluso en el mínimo.
 export function validarPesoObjetivo(
@@ -32,5 +35,5 @@ export function validarPesoObjetivo(
   if (!Number.isFinite(libras) || libras <= 0) return null
   const gramos = pesoAEnviar(pesoActualG, editado, libras)
   const minimoG = librasAGramos(minLibras)
-  return Number.isFinite(gramos) && gramos > 0 && gramos >= minimoG ? gramos : null
+  return Number.isFinite(gramos) && gramos > 0 && gramos >= minimoG && gramos <= PESO_OBJETIVO_MAXIMO_G ? gramos : null
 }

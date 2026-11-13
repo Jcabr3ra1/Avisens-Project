@@ -8,7 +8,7 @@ describe('validación del peso que se envía al plan', () => {
     expect(validarPesoObjetivo(null, true, ',5')).toBe(227)
   })
 
-  it.each(['0', '-1', '', ' ', 'NaN', 'Infinity', '1e999', '0x10', '0,000001', '1,2,3'])('rechaza %s sin enviarlo al servidor', (texto) => {
+  it.each(['0', '-1', '', ' ', 'NaN', 'Infinity', '1e999', '0x10', '0,000001', '1,2,3', '100'])('rechaza %s sin enviarlo al servidor', (texto) => {
     expect(validarPesoObjetivo(null, true, texto)).toBeNull()
   })
 

@@ -9,6 +9,7 @@ import ResumenConsumos from './ResumenConsumos'
 import TablaConsumos from './TablaConsumos'
 import { useConsumosDiarios } from '../hooks/useConsumosDiarios'
 import {
+  errorDeConsumo,
   FORMULARIO_CONSUMO_INICIAL,
   type ConsumoDiario,
   type CrearConsumoDiarioPayload,
@@ -74,16 +75,13 @@ function GestionConsumos({ loteFijo = null, completo = false }: Props) {
   ) => setForm((actual) => ({ ...actual, [campo]: valor }))
   const guardar = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const problema = errorDeConsumo(form)
+    if (problema) {
+      setErrorFormulario(problema)
+      return
+    }
     const alimento = form.alimento_kg ? Number(form.alimento_kg) : undefined
     const agua = form.agua_litros ? Number(form.agua_litros) : undefined
-    if (!alimento && !agua) {
-      setErrorFormulario('Registra al menos el alimento o el agua consumida.')
-      return
-    }
-    if (alimento && !form.tipo_alimento_id) {
-      setErrorFormulario('Selecciona el tipo de alimento consumido.')
-      return
-    }
     const datos: CrearConsumoDiarioPayload = {
       lote_id: Number(form.lote_id),
       fecha: form.fecha,
