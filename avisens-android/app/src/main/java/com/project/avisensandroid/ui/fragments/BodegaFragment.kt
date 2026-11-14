@@ -100,6 +100,10 @@ class BodegaFragment : BaseBottomNavFragment() {
         }
     }
 
+    fun actualizarAlRecuperarInternet() {
+        if (_binding != null && isAdded) cargarDatosBodega()
+    }
+
     private fun cargarDatosBodega() {
         if (cargando || _binding == null) return
         val activity = requireActivity() as MainActivity

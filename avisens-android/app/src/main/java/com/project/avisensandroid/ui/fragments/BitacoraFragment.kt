@@ -66,6 +66,10 @@ class BitacoraFragment : BaseBottomNavFragment() {
         }
     }
 
+    fun actualizarAlRecuperarInternet() {
+        if (_binding != null && isAdded) cargarBitacora()
+    }
+
     private fun cargarBitacora() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {

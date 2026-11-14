@@ -165,6 +165,10 @@ class InicioFragment : BaseBottomNavFragment() {
             else -> "Buenas noches"
         }
 
+    fun actualizarAlRecuperarInternet() {
+        if (_binding != null && isAdded) cargarDatosIniciales()
+    }
+
     private fun cargarDatosIniciales() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
@@ -235,7 +239,7 @@ class InicioFragment : BaseBottomNavFragment() {
                 seleccionarGranjaEnInicio(granjaInicial)
 
             } catch (e: Exception) {
-                mostrarMensaje("Error al cargar inicio: ${e.message ?: "error desconocido"}")
+                mostrarMensaje("No hay datos guardados para mostrar. Conéctate a internet y vuelve a intentarlo.")
             }
         }
     }

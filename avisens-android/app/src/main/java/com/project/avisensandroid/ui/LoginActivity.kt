@@ -9,6 +9,7 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.project.avisensandroid.R
+import com.project.avisensandroid.controller.OfflineCache
 import com.project.avisensandroid.controller.RegistroHttp
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.controller.SesionExpirada
@@ -35,6 +36,14 @@ class LoginActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         configurarPassword()
+
+        // Solo reutiliza una sesión previamente autenticada en este dispositivo.
+        // Nunca permite un primer ingreso sin validación del servidor.
+        if (!intent.getBooleanExtra(SesionExpirada.EXTRA_SESION_EXPIRADA, false) &&
+            UserSession.isLoggedIn(this) && UserSession.role(this) != null) {
+            abrirSesionGuardada()
+            return
+        }
 
         if (intent.getBooleanExtra(SesionExpirada.EXTRA_SESION_EXPIRADA, false)) {
             binding.txtError.text =
@@ -80,7 +89,23 @@ class LoginActivity : AppCompatActivity() {
     // LOGIN
     // =========================================================
 
+    private fun abrirSesionGuardada() {
+        startActivity(Intent(this, MainActivity::class.java))
+        finish()
+    }
+
     private fun hacerLogin() {
+        if (!OfflineCache.hayInternet(this)) {
+            if (UserSession.isLoggedIn(this) && UserSession.role(this) != null) {
+                abrirSesionGuardada()
+            } else {
+                binding.txtError.text =
+                    "Para entrar por primera vez necesitas conexión a internet. " +
+                            "Después podrás consultar los últimos datos guardados sin conexión."
+            }
+            return
+        }
+
 
         val username = binding.etCorreo.text
             .toString()
@@ -193,7 +218,7 @@ class LoginActivity : AppCompatActivity() {
 
             } catch (e: IOException) {
                 binding.txtError.text =
-                    "Error de conexión: ${e.message ?: "error desconocido"}"
+                    "Sin conexión. Revisa tu Wi-Fi o datos móviles e inténtalo de nuevo."
 
             } catch (e: Exception) {
                 binding.txtError.text =

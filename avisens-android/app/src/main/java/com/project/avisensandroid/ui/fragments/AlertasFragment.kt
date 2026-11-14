@@ -78,6 +78,10 @@ class AlertasFragment : BaseBottomNavFragment() {
         if (_binding != null) cargarAlertas()
     }
 
+    fun actualizarAlRecuperarInternet() {
+        if (_binding != null && isAdded) cargarAlertas()
+    }
+
     private fun cargarAlertas() {
         val mainActivity = activity as? MainActivity ?: return
         val granjaId = mainActivity.obtenerGranjaSeleccionadaId()

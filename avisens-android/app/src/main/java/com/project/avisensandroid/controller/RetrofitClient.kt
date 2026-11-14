@@ -246,12 +246,15 @@ object RetrofitClient {
             .build()
     }
 
-    private val client =
+    private val client: OkHttpClient by lazy {
+        check(::appContext.isInitialized) { "RetrofitClient debe inicializarse antes de usar la API" }
         OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
+            .addInterceptor(OfflineCache.interceptor(appContext))
             .authenticator(tokenAuthenticator)
             .apply { interceptorDeRegistro()?.let { addInterceptor(it) } }
             .build()
+    }
 
     // =========================================================
     // RETROFIT

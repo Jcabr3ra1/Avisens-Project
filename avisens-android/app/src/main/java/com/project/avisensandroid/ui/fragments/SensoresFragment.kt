@@ -9,6 +9,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.project.avisensandroid.R
+import com.project.avisensandroid.controller.OfflineCache
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.Po02SensoresOpBinding
 import com.project.avisensandroid.model.ClasificadorSensores
@@ -93,8 +94,7 @@ class SensoresFragment : BaseBottomNavFragment() {
             } catch (e: Exception) {
                 if (_binding != null) {
                     binding.txtEstadoConexion.text =
-                        e.message?.let { "Error de conexión: $it" }
-                            ?: "No fue posible consultar el backend."
+                        "Sin conexión. Abre Sensores con internet una vez para guardar los datos."
                     actualizarResumenSensores()
                     indicadores().forEach { mostrarEstado(it.estado, "Error de consulta", EstadoLectura.ERROR) }
                 }
@@ -106,6 +106,21 @@ class SensoresFragment : BaseBottomNavFragment() {
                     actualizarLecturasDelGalpon()
                     delay(INTERVALO_ACTUALIZACION_MS)
                 }
+            }
+        }
+    }
+
+    fun actualizarAlRecuperarInternet() {
+        if (_binding == null || !isAdded) return
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                cargarCatalogos()
+                prepararSeleccionInicial()
+                actualizarLecturasDelGalpon()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // El siguiente ciclo de actualización puede volver a intentarlo.
             }
         }
     }
@@ -365,8 +380,11 @@ class SensoresFragment : BaseBottomNavFragment() {
                 pintarIndicador(indicador, lectura)
             }
 
+            val sinConexion = !OfflineCache.hayInternet(requireContext())
             val hora = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-            binding.txtEstadoConexion.text = buildString {
+            binding.txtEstadoConexion.text = if (sinConexion) {
+                "Sin internet · Mostrando las últimas lecturas guardadas. Los valores no son actuales."
+            } else buildString {
                 append("Actualizado $hora · $variablesRecientes de $variablesConfiguradas variables con lectura reciente.")
                 if (resultadosTodos.any { it.errorConsulta }) {
                     append(" No se pudieron consultar las lecturas; se reintentará automáticamente.")

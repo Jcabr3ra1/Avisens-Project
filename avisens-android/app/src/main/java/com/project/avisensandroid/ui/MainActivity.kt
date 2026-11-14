@@ -3,6 +3,11 @@ package com.project.avisensandroid.ui
 import android.app.DatePickerDialog
 import android.app.Dialog
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.os.Handler
+import android.os.Looper
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -65,6 +70,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val STATE_GRANJA_ID = "state_granja_id"
         private const val STATE_GALPON_ID = "state_galpon_id"
+        private const val SELECCION_PREFS = "avisens_seleccion_por_usuario"
     }
 
     // =========================================================
@@ -213,27 +219,80 @@ class MainActivity : AppCompatActivity() {
     // Se conserva mientras el usuario navega entre las pantallas.
     private var galponSeleccionadoId: Int? = null
 
+    private val networkManager by lazy { getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager }
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var ultimaConexionValidada: Boolean? = null
+    private var observandoConexion = false
+    private var reconexionPendiente = false
+    private val reconectarRunnable = Runnable { actualizarPantallaTrasReconectar() }
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) = revisarConexion()
+        override fun onLost(network: Network) = revisarConexion()
+        override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) = revisarConexion()
+    }
+
+    private fun revisarConexion() {
+        mainHandler.post {
+            if (!observandoConexion) return@post
+            val red = networkManager.activeNetwork
+            val caps = red?.let { networkManager.getNetworkCapabilities(it) }
+            val conectada = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+            val anterior = ultimaConexionValidada
+            ultimaConexionValidada = conectada
+            if (!conectada) {
+                reconexionPendiente = true
+                mainHandler.removeCallbacks(reconectarRunnable)
+            } else if (anterior == false || reconexionPendiente) {
+                reconexionPendiente = false
+                mainHandler.removeCallbacks(reconectarRunnable)
+                mainHandler.postDelayed(reconectarRunnable, 1200L)
+            }
+        }
+    }
+
+    private fun actualizarPantallaTrasReconectar() {
+        if (!observandoConexion || supportFragmentManager.isStateSaved) return
+        if (!com.project.avisensandroid.controller.OfflineCache.hayInternet(this)) return
+        // Actualizar el fragmento existente, sin destruirlo ni cambiar de apartado.
+        val visible = supportFragmentManager.fragments.lastOrNull { it.isAdded && it.isVisible }
+        when (visible) {
+            is InicioFragment -> visible.actualizarAlRecuperarInternet()
+            is SensoresFragment -> visible.actualizarAlRecuperarInternet()
+            is BodegaFragment -> visible.actualizarAlRecuperarInternet()
+            is BitacoraFragment -> visible.actualizarAlRecuperarInternet()
+            is AlertasFragment -> visible.actualizarAlRecuperarInternet()
+        }
+    }
+
+    private fun preferenciasSeleccion() = getSharedPreferences(SELECCION_PREFS, MODE_PRIVATE)
+    private fun claveSeleccion(tipo: String): String = "${UserSession.userId(this) ?: 0}_$tipo"
+
     fun obtenerRolActual(): UserRole? = rolActual
 
     fun obtenerGranjaSeleccionadaId(): Int? = granjaSeleccionadaId
 
     fun seleccionarGranja(granjaId: Int) {
         granjaSeleccionadaId = granjaId
+        preferenciasSeleccion().edit().putInt(claveSeleccion("granja"), granjaId).apply()
     }
 
     fun obtenerGalponSeleccionadoId(): Int? = galponSeleccionadoId
 
     fun seleccionarGalpon(galponId: Int) {
         galponSeleccionadoId = galponId
+        preferenciasSeleccion().edit().putInt(claveSeleccion("galpon"), galponId).apply()
     }
 
     fun limpiarGalponSeleccionado() {
         galponSeleccionadoId = null
+        preferenciasSeleccion().edit().remove(claveSeleccion("galpon")).apply()
     }
 
     fun limpiarGranjaSeleccionada() {
         granjaSeleccionadaId = null
         galponSeleccionadoId = null
+        preferenciasSeleccion().edit().remove(claveSeleccion("granja"))
+            .remove(claveSeleccion("galpon")).apply()
     }
 
     fun obtenerNombreUsuario(): String =
@@ -248,7 +307,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         granjaSeleccionadaId = savedInstanceState?.getInt(STATE_GRANJA_ID)?.takeIf { it != 0 }
+            ?: preferenciasSeleccion().getInt(claveSeleccion("granja"), 0).takeIf { it > 0 }
         galponSeleccionadoId = savedInstanceState?.getInt(STATE_GALPON_ID)?.takeIf { it != 0 }
+            ?: preferenciasSeleccion().getInt(claveSeleccion("galpon"), 0).takeIf { it > 0 }
 
         RetrofitClient.inicializar(applicationContext)
 
@@ -299,9 +360,25 @@ class MainActivity : AppCompatActivity() {
         }
 
         SesionExpirada.registrar(alExpirarSesion)
+        ultimaConexionValidada = com.project.avisensandroid.controller.OfflineCache.hayInternet(this)
+        if (!ultimaConexionValidada!!) reconexionPendiente = true
+        try {
+            networkManager.registerDefaultNetworkCallback(networkCallback)
+            observandoConexion = true
+        } catch (_: Exception) {
+            observandoConexion = false
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (observandoConexion) revisarConexion()
     }
 
     override fun onStop() {
+        observandoConexion = false
+        mainHandler.removeCallbacks(reconectarRunnable)
+        try { networkManager.unregisterNetworkCallback(networkCallback) } catch (_: Exception) { }
         SesionExpirada.quitar(alExpirarSesion)
         super.onStop()
     }
@@ -359,6 +436,8 @@ class MainActivity : AppCompatActivity() {
      */
     private fun cerrarSesion() {
         val refreshToken = UserSession.refreshToken(this)
+        preferenciasSeleccion().edit().remove(claveSeleccion("granja"))
+            .remove(claveSeleccion("galpon")).apply()
         UserSession.clear(this)
         if (!refreshToken.isNullOrBlank()) {
             RetrofitClient.cerrarSesionRemota(refreshToken)
