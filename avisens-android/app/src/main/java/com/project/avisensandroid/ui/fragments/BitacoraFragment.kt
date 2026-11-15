@@ -70,7 +70,11 @@ class BitacoraFragment : BaseBottomNavFragment() {
         if (_binding != null && isAdded) cargarBitacora()
     }
 
-    private fun cargarBitacora() {
+    fun actualizarSilenciosamente() {
+        if (_binding != null && isAdded) cargarBitacora(silenciosa = true)
+    }
+
+    private fun cargarBitacora(silenciosa: Boolean = false) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val response = RetrofitClient.api.listarRegistrosMortalidad(
@@ -79,7 +83,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
                 )
 
                 if (!response.isSuccessful) {
-                    Toast.makeText(
+                    if (!silenciosa) Toast.makeText(
                         requireContext(),
                         "No se pudieron cargar los registros de mortalidad. Código: ${response.code()}",
                         Toast.LENGTH_LONG
@@ -90,7 +94,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
                 val registros = response.body()?.data
 
                 if (registros == null) {
-                    Toast.makeText(
+                    if (!silenciosa) Toast.makeText(
                         requireContext(),
                         "La API no devolvió registros de mortalidad",
                         Toast.LENGTH_LONG
@@ -117,7 +121,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
                 // No debe mostrarse como un error al usuario.
                 throw e
             } catch (e: Exception) {
-                if (_binding != null) {
+                if (!silenciosa && _binding != null) {
                     Toast.makeText(
                         requireContext(),
                         "Error al cargar la bitácora: ${e.message ?: "error desconocido"}",

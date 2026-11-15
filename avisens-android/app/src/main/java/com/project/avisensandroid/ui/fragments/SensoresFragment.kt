@@ -110,6 +110,12 @@ class SensoresFragment : BaseBottomNavFragment() {
         }
     }
 
+    fun actualizarSilenciosamente() {
+        if (_binding != null && isAdded) {
+            viewLifecycleOwner.lifecycleScope.launch { actualizarLecturasDelGalpon() }
+        }
+    }
+
     fun actualizarAlRecuperarInternet() {
         if (_binding == null || !isAdded) return
         viewLifecycleOwner.lifecycleScope.launch {

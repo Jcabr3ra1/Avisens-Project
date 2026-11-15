@@ -82,15 +82,21 @@ class AlertasFragment : BaseBottomNavFragment() {
         if (_binding != null && isAdded) cargarAlertas()
     }
 
-    private fun cargarAlertas() {
+    fun actualizarSilenciosamente() {
+        if (_binding != null && isAdded) cargarAlertas(silenciosa = true)
+    }
+
+    private fun cargarAlertas(silenciosa: Boolean = false) {
         val mainActivity = activity as? MainActivity ?: return
         val granjaId = mainActivity.obtenerGranjaSeleccionadaId()
         val galponId = mainActivity.obtenerGalponSeleccionadoId()
-        binding.tvBadgeActivas.visibility = View.GONE
-        binding.tvBadgeHistorial.visibility = View.GONE
+        if (!silenciosa) {
+            binding.tvBadgeActivas.visibility = View.GONE
+            binding.tvBadgeHistorial.visibility = View.GONE
+        }
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                binding.tvResumenAlertas.text = "Cargando alertas del galpón seleccionado..."
+                if (!silenciosa) binding.tvResumenAlertas.text = "Cargando alertas del galpón seleccionado..."
                 alertas = if (galponId != null) {
                     val response = RetrofitClient.api.listarAlertasDeGalpon(
                         galponId = galponId, page = 1, limit = 100
@@ -155,7 +161,7 @@ class AlertasFragment : BaseBottomNavFragment() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (_binding != null) {
+                if (!silenciosa && _binding != null) {
                     binding.tvResumenAlertas.text = "No se pudieron cargar las alertas"
                     Toast.makeText(
                         requireContext(),

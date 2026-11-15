@@ -169,6 +169,12 @@ class InicioFragment : BaseBottomNavFragment() {
         if (_binding != null && isAdded) cargarDatosIniciales()
     }
 
+    fun actualizarSilenciosamente() {
+        if (_binding != null && isAdded) {
+            galponSeleccionadoId?.let { cargarDashboardDelGalpon(it) }
+        }
+    }
+
     private fun cargarDatosIniciales() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {

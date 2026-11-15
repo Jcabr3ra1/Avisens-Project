@@ -182,6 +182,42 @@
             android:inputType="textMultiLine"
             android:overScrollMode="ifContentScrolls" />
 
+        <!-- EVIDENCIA FOTOGRÁFICA LOCAL -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Fotografía de mortalidad (opcional)"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTomarFotoMortalidad"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Tomar fotografía"
+            android:textAllCaps="false"
+            android:backgroundTint="#2E8B57" />
+
+        <ImageView
+            android:id="@+id/imgFotoMortalidad"
+            android:layout_width="match_parent"
+            android:layout_height="160dp"
+            android:layout_marginTop="8dp"
+            android:scaleType="centerCrop"
+            android:contentDescription="Vista previa de la fotografía de mortalidad"
+            android:visibility="gone" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="La fotografía se guarda solo en este celular; no se envía al servidor."
+            android:textSize="11sp"
+            android:textColor="@color/text_secondary" />
+
         <!-- BOTONES -->
 
         <LinearLayout

@@ -104,15 +104,21 @@ class BodegaFragment : BaseBottomNavFragment() {
         if (_binding != null && isAdded) cargarDatosBodega()
     }
 
-    private fun cargarDatosBodega() {
+    fun actualizarSilenciosamente() {
+        if (_binding != null && isAdded) cargarDatosBodega(silenciosa = true)
+    }
+
+    private fun cargarDatosBodega(silenciosa: Boolean = false) {
         if (cargando || _binding == null) return
         val activity = requireActivity() as MainActivity
         binding.btnNuevoInsumo.visibility =
             if (activity.obtenerRolActual() == UserRole.PROPIETARIO)
                 View.VISIBLE else View.GONE
         cargando = true
-        binding.progressInsumos.visibility = View.VISIBLE
-        binding.txtSinInsumos.visibility = View.GONE
+        if (!silenciosa) {
+            binding.progressInsumos.visibility = View.VISIBLE
+            binding.txtSinInsumos.visibility = View.GONE
+        }
         binding.txtSinInsumos.text = "No hay insumos registrados"
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -121,7 +127,7 @@ class BodegaFragment : BaseBottomNavFragment() {
                 val insumos = cargarTodosLosInsumos()
                 mostrarInsumos(insumos)
             } catch (e: Exception) {
-                if (_binding != null && isAdded) {
+                if (!silenciosa && _binding != null && isAdded) {
                     binding.txtSinInsumos.text = "No se pudieron cargar los alimentos. ${e.message ?: "Intenta nuevamente."}"
                     binding.txtSinInsumos.visibility = View.VISIBLE
                     Toast.makeText(

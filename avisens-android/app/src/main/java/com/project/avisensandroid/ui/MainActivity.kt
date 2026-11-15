@@ -2,6 +2,14 @@ package com.project.avisensandroid.ui
 
 import android.app.DatePickerDialog
 import android.app.Dialog
+import android.net.Uri
+import android.widget.ProgressBar
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.graphics.Color
+import androidx.core.content.FileProvider
+import androidx.activity.result.contract.ActivityResultContracts
+import java.io.File
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
@@ -219,12 +227,79 @@ class MainActivity : AppCompatActivity() {
     // Se conserva mientras el usuario navega entre las pantallas.
     private var galponSeleccionadoId: Int? = null
 
+    // Fotografía local de mortalidad: la API actual no admite archivos adjuntos.
+    private var fotoMortalidadTemporal: File? = null
+    private var fotoMortalidadTomada: Boolean = false
+    private var fotoMortalidadVistaPrevia: android.widget.ImageView? = null
+    private val capturarFotoMortalidad = registerForActivityResult(ActivityResultContracts.TakePicture()) { exito ->
+        fotoMortalidadTomada = exito && fotoMortalidadTemporal?.exists() == true
+        val archivo = fotoMortalidadTemporal
+        if (fotoMortalidadTomada && archivo != null) {
+            fotoMortalidadVistaPrevia?.apply {
+                setImageURI(null)
+                setImageURI(Uri.fromFile(archivo))
+                visibility = View.VISIBLE
+            }
+        } else {
+            fotoMortalidadVistaPrevia?.visibility = View.GONE
+            archivo?.delete()
+            fotoMortalidadTemporal = null
+        }
+    }
+
+    // El indicador es exclusivo de la reconexión, nunca del sondeo cada 15 s.
+    private var indicadorReconexion: View? = null
+    private val ocultarIndicadorReconexion = Runnable { ocultarCargaReconexion() }
+
+    private fun mostrarCargaReconexion() {
+        val raiz = findViewById<ViewGroup>(android.R.id.content) ?: return
+        ocultarCargaReconexion()
+        // Indicador pequeño en la zona superior, sin bloquear ni cubrir el contenido.
+        val densidad = resources.displayMetrics.density
+        val tamano = (32 * densidad).toInt()
+        val contenedor = FrameLayout(this).apply {
+            isClickable = false
+            isFocusable = false
+            elevation = 8 * densidad
+        }
+        contenedor.addView(ProgressBar(this).apply {
+            isIndeterminate = true
+        }, FrameLayout.LayoutParams(tamano, tamano))
+        val posicion = FrameLayout.LayoutParams(
+            tamano, tamano, android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
+        ).apply { topMargin = (72 * densidad).toInt() }
+        raiz.addView(contenedor, posicion)
+        indicadorReconexion = contenedor
+        // Evita dejar el indicador bloqueado si la petición tarda o falla.
+        mainHandler.postDelayed(ocultarIndicadorReconexion, 2500L)
+    }
+
+    private fun ocultarCargaReconexion() {
+        mainHandler.removeCallbacks(ocultarIndicadorReconexion)
+        indicadorReconexion?.let { (it.parent as? ViewGroup)?.removeView(it) }
+        indicadorReconexion = null
+    }
+
     private val networkManager by lazy { getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager }
     private val mainHandler = Handler(Looper.getMainLooper())
     private var ultimaConexionValidada: Boolean? = null
     private var observandoConexion = false
     private var reconexionPendiente = false
-    private val reconectarRunnable = Runnable { actualizarPantallaTrasReconectar() }
+    private val reconectarRunnable = Runnable { actualizarPantallaTrasReconectar(false) }
+
+    // Consulta el apartado visible cada 15 s mientras la app está en primer plano.
+    // Así detecta cambios realizados por otras cuentas sin depender de una reconexión.
+    private val intervaloActualizacionMs = 15_000L
+    private val actualizacionPeriodica = object : Runnable {
+        override fun run() {
+            if (!observandoConexion) return
+            if (com.project.avisensandroid.controller.OfflineCache.hayInternet(this@MainActivity)) {
+                actualizarPantallaTrasReconectar(true)
+            }
+            mainHandler.postDelayed(this, intervaloActualizacionMs)
+        }
+    }
+
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) = revisarConexion()
         override fun onLost(network: Network) = revisarConexion()
@@ -250,17 +325,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun actualizarPantallaTrasReconectar() {
+    private fun actualizarPantallaTrasReconectar(silenciosa: Boolean) {
         if (!observandoConexion || supportFragmentManager.isStateSaved) return
         if (!com.project.avisensandroid.controller.OfflineCache.hayInternet(this)) return
         // Actualizar el fragmento existente, sin destruirlo ni cambiar de apartado.
         val visible = supportFragmentManager.fragments.lastOrNull { it.isAdded && it.isVisible }
+        if (!silenciosa && visible is InicioFragment ||
+            !silenciosa && visible is SensoresFragment ||
+            !silenciosa && visible is BodegaFragment ||
+            !silenciosa && visible is BitacoraFragment ||
+            !silenciosa && visible is AlertasFragment) {
+            mostrarCargaReconexion()
+        }
         when (visible) {
-            is InicioFragment -> visible.actualizarAlRecuperarInternet()
-            is SensoresFragment -> visible.actualizarAlRecuperarInternet()
-            is BodegaFragment -> visible.actualizarAlRecuperarInternet()
-            is BitacoraFragment -> visible.actualizarAlRecuperarInternet()
-            is AlertasFragment -> visible.actualizarAlRecuperarInternet()
+            is InicioFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
+            is SensoresFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
+            // Bodega ya tiene su propio progressInsumos para la carga inicial.
+            // En reconexión se usa únicamente el indicador superior común.
+            is BodegaFragment -> visible.actualizarSilenciosamente()
+            is BitacoraFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
+            is AlertasFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
         }
     }
 
@@ -368,6 +452,10 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {
             observandoConexion = false
         }
+        mainHandler.removeCallbacks(actualizacionPeriodica)
+        if (observandoConexion) {
+            mainHandler.postDelayed(actualizacionPeriodica, intervaloActualizacionMs)
+        }
     }
 
     override fun onResume() {
@@ -378,6 +466,8 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         observandoConexion = false
         mainHandler.removeCallbacks(reconectarRunnable)
+        mainHandler.removeCallbacks(actualizacionPeriodica)
+        ocultarCargaReconexion()
         try { networkManager.unregisterNetworkCallback(networkCallback) } catch (_: Exception) { }
         SesionExpirada.quitar(alExpirarSesion)
         super.onStop()
@@ -1909,6 +1999,30 @@ class MainActivity : AppCompatActivity() {
             binding.root
         )
 
+        // Foto opcional, almacenada localmente y asociada al ID del registro.
+        fotoMortalidadTemporal = null
+        fotoMortalidadTomada = false
+        fotoMortalidadVistaPrevia = binding.imgFotoMortalidad
+        binding.btnTomarFotoMortalidad.setOnClickListener {
+            try {
+                val carpeta = File(filesDir, "evidencias_mortalidad").apply { mkdirs() }
+                val archivo = File.createTempFile("captura_", ".jpg", carpeta)
+                fotoMortalidadTemporal = archivo
+                val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", archivo)
+                capturarFotoMortalidad.launch(uri)
+            } catch (e: Exception) {
+                Toast.makeText(this, "No se pudo abrir la cámara", Toast.LENGTH_LONG).show()
+            }
+        }
+        dialog.setOnDismissListener {
+            fotoMortalidadVistaPrevia = null
+            if (fotoMortalidadTemporal?.name?.startsWith("captura_") == true) {
+                fotoMortalidadTemporal?.delete()
+            }
+            fotoMortalidadTemporal = null
+            fotoMortalidadTomada = false
+        }
+
         binding.root.alpha = 0f
 
         binding.root.animate()
@@ -2083,6 +2197,19 @@ class MainActivity : AppCompatActivity() {
                                 )
 
                         if (response.isSuccessful) {
+                            val registroId = response.body()?.id
+                            val foto = fotoMortalidadTemporal
+                            if (registroId != null && fotoMortalidadTomada && foto != null && foto.exists()) {
+                                try {
+                                    val definitiva = File(foto.parentFile, "registro_${registroId}_usuario_${UserSession.userId(this@MainActivity) ?: 0}.jpg")
+                                    foto.copyTo(definitiva, overwrite = true)
+                                    getSharedPreferences("fotos_mortalidad_local", MODE_PRIVATE).edit()
+                                        .putString("registro_${registroId}_usuario_${UserSession.userId(this@MainActivity) ?: 0}", definitiva.absolutePath)
+                                        .apply()
+                                } catch (_: Exception) {
+                                    Toast.makeText(this@MainActivity, "Registro guardado, pero no se pudo conservar la fotografía", Toast.LENGTH_LONG).show()
+                                }
+                            }
 
                             Toast.makeText(
                                 this@MainActivity,
