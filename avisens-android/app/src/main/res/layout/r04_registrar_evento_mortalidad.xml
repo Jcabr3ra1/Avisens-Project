@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -16,7 +15,6 @@
         android:background="@drawable/bg_dialog_white">
 
         <!-- TÍTULO -->
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -27,7 +25,6 @@
             android:layout_marginBottom="10dp" />
 
         <!-- LOTE -->
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -44,19 +41,18 @@
 
             <Spinner
                 android:id="@+id/spinnerLote"
-                android:dropDownWidth="match_parent"
-                android:dropDownHorizontalOffset="0dp"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:dropDownWidth="match_parent"
+                android:dropDownHorizontalOffset="0dp"
                 android:background="@android:color/transparent"
                 android:paddingStart="0dp"
-                android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown"
-                />
+                android:paddingEnd="0dp"
+                android:popupBackground="@drawable/bg_spinner_dropdown" />
 
         </FrameLayout>
 
-        <!-- CANTIDAD + FECHA -->
-
+        <!-- CANTIDAD Y FECHA -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -65,7 +61,6 @@
             android:weightSum="2">
 
             <!-- CANTIDAD -->
-
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -98,7 +93,6 @@
             </LinearLayout>
 
             <!-- FECHA -->
-
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -134,7 +128,6 @@
         </LinearLayout>
 
         <!-- CAUSA PRESUNTIVA -->
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -158,7 +151,6 @@
             android:singleLine="true" />
 
         <!-- OBSERVACIONES -->
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -182,44 +174,140 @@
             android:inputType="textMultiLine"
             android:overScrollMode="ifContentScrolls" />
 
-        <!-- EVIDENCIA FOTOGRÁFICA LOCAL -->
+        <!-- EVIDENCIA FOTOGRÁFICA -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Fotografía de mortalidad (opcional)"
+            android:text="Evidencia (opcional)"
             android:textColor="@color/text_primary"
             android:textSize="12sp"
             android:textStyle="bold" />
 
+        <!-- RECUADRO INICIAL PARA ADJUNTAR FOTO -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnTomarFotoMortalidad"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="130dp"
             android:layout_marginTop="6dp"
-            android:text="Tomar fotografía"
+            android:text="Adjuntar foto"
+            android:textSize="13sp"
+            android:textColor="#7D8985"
             android:textAllCaps="false"
-            android:backgroundTint="#2E8B57" />
+            android:backgroundTint="#FFFFFF"
+            android:gravity="center"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:cornerRadius="12dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="#E4EAE7"
+            app:icon="@drawable/ic_camera_evidencia"
+            app:iconTint="#7D8985"
+            app:iconSize="26dp"
+            app:iconPadding="8dp"
+            app:iconGravity="textTop" />
 
-        <ImageView
-            android:id="@+id/imgFotoMortalidad"
+        <!-- FOTOGRAFÍA CON CONTROLES SUPERPUESTOS -->
+        <FrameLayout
+            android:id="@+id/contenedorFotoMortalidad"
             android:layout_width="match_parent"
-            android:layout_height="160dp"
-            android:layout_marginTop="8dp"
-            android:scaleType="centerCrop"
-            android:contentDescription="Vista previa de la fotografía de mortalidad"
-            android:visibility="gone" />
+            android:layout_height="220dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_foto_mortalidad"
+            android:clipToOutline="true"
+            android:visibility="gone">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="La fotografía se guarda solo en este celular; no se envía al servidor."
-            android:textSize="11sp"
-            android:textColor="@color/text_secondary" />
+            <!-- FOTOGRAFÍA OCUPANDO TODO EL RECUADRO -->
+            <ImageView
+                android:id="@+id/imgFotoMortalidad"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#F4F7F5"
+                android:scaleType="centerCrop"
+                android:contentDescription="Vista previa de la fotografía"
+                android:clickable="true"
+                android:focusable="true" />
 
-        <!-- BOTONES -->
+            <!-- FRANJA OSCURA SEMITRANSPARENTE -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_gravity="bottom"
+                android:background="#66000000"
+                android:gravity="center"
+                android:orientation="horizontal">
 
+                <!-- AMPLIAR FOTOGRAFÍA -->
+                <LinearLayout
+                    android:id="@+id/btnAmpliarFotoMortalidad"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Ampliar fotografía">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_ampliar_foto_mortalidad"
+                        android:tint="@android:color/white"
+                        android:contentDescription="Icono ampliar" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="Ampliar"
+                        android:textSize="13sp"
+                        android:textColor="@android:color/white" />
+
+                </LinearLayout>
+
+                <!-- SEPARADOR -->
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="22dp"
+                    android:background="#66FFFFFF" />
+
+                <!-- ELIMINAR FOTOGRAFÍA -->
+                <LinearLayout
+                    android:id="@+id/btnEliminarFotoMortalidad"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Eliminar fotografía">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_eliminar_foto_mortalidad"
+                        android:tint="#FFB5B5"
+                        android:contentDescription="Icono eliminar" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="Eliminar"
+                        android:textSize="13sp"
+                        android:textColor="#FFB5B5" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </FrameLayout>
+
+        <!-- BOTONES DEL FORMULARIO -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="42dp"
@@ -228,7 +316,6 @@
             android:layout_marginTop="10dp">
 
             <!-- CANCELAR -->
-
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCancelarEvento"
                 android:layout_width="0dp"
@@ -251,7 +338,6 @@
                 app:strokeColor="#D6DED9" />
 
             <!-- GUARDAR -->
-
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnGuardarEvento"
                 android:layout_width="0dp"

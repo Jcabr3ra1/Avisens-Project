@@ -231,6 +231,8 @@ class MainActivity : AppCompatActivity() {
     private var fotoMortalidadTemporal: File? = null
     private var fotoMortalidadTomada: Boolean = false
     private var fotoMortalidadVistaPrevia: android.widget.ImageView? = null
+    private var fotoMortalidadBotonAdjuntar: View? = null
+    private var fotoMortalidadContenedorPrevia: View? = null
     private val capturarFotoMortalidad = registerForActivityResult(ActivityResultContracts.TakePicture()) { exito ->
         fotoMortalidadTomada = exito && fotoMortalidadTemporal?.exists() == true
         val archivo = fotoMortalidadTemporal
@@ -240,8 +242,12 @@ class MainActivity : AppCompatActivity() {
                 setImageURI(Uri.fromFile(archivo))
                 visibility = View.VISIBLE
             }
+            fotoMortalidadBotonAdjuntar?.visibility = View.GONE
+            fotoMortalidadContenedorPrevia?.visibility = View.VISIBLE
         } else {
             fotoMortalidadVistaPrevia?.visibility = View.GONE
+            fotoMortalidadBotonAdjuntar?.visibility = View.VISIBLE
+            fotoMortalidadContenedorPrevia?.visibility = View.GONE
             archivo?.delete()
             fotoMortalidadTemporal = null
         }
@@ -2003,6 +2009,45 @@ class MainActivity : AppCompatActivity() {
         fotoMortalidadTemporal = null
         fotoMortalidadTomada = false
         fotoMortalidadVistaPrevia = binding.imgFotoMortalidad
+        fotoMortalidadBotonAdjuntar = binding.btnTomarFotoMortalidad
+        fotoMortalidadContenedorPrevia = binding.contenedorFotoMortalidad
+
+        binding.imgFotoMortalidad.setOnClickListener {
+            val foto = fotoMortalidadTemporal
+            if (fotoMortalidadTomada && foto?.exists() == true) {
+                val visor = Dialog(this)
+                val imagenAmpliada = android.widget.ImageView(this).apply {
+                    setImageURI(Uri.fromFile(foto))
+                    scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                    adjustViewBounds = true
+                    setBackgroundColor(android.graphics.Color.BLACK)
+                }
+                visor.setContentView(imagenAmpliada)
+                visor.show()
+                visor.window?.setBackgroundDrawableResource(android.R.color.black)
+                visor.window?.setLayout(
+                    (resources.displayMetrics.widthPixels * 0.95f).toInt(),
+                    (resources.displayMetrics.heightPixels * 0.85f).toInt()
+                )
+                imagenAmpliada.setOnClickListener { visor.dismiss() }
+            }
+        }
+
+        // El botón inferior "Ampliar" utiliza la misma vista previa que la foto.
+        binding.btnAmpliarFotoMortalidad.setOnClickListener {
+            binding.imgFotoMortalidad.performClick()
+        }
+
+        binding.btnEliminarFotoMortalidad.setOnClickListener {
+            fotoMortalidadTemporal?.delete()
+            fotoMortalidadTemporal = null
+            fotoMortalidadTomada = false
+            binding.imgFotoMortalidad.setImageDrawable(null)
+            binding.imgFotoMortalidad.visibility = View.GONE
+            binding.contenedorFotoMortalidad.visibility = View.GONE
+            binding.btnTomarFotoMortalidad.visibility = View.VISIBLE
+        }
+
         binding.btnTomarFotoMortalidad.setOnClickListener {
             try {
                 val carpeta = File(filesDir, "evidencias_mortalidad").apply { mkdirs() }
@@ -2016,6 +2061,8 @@ class MainActivity : AppCompatActivity() {
         }
         dialog.setOnDismissListener {
             fotoMortalidadVistaPrevia = null
+            fotoMortalidadBotonAdjuntar = null
+            fotoMortalidadContenedorPrevia = null
             if (fotoMortalidadTemporal?.name?.startsWith("captura_") == true) {
                 fotoMortalidadTemporal?.delete()
             }
