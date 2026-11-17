@@ -1,3 +1,5 @@
+import { AGUA_MAXIMO_LITROS, ALIMENTO_MAXIMO_KG } from '@features/consumos-diarios/model/consumoDiario'
+
 // Validación de los registros rápidos de Mi jornada (mortalidad y consumo).
 // Caso CP-03 de la auditoría QA 2026-10-30: no aceptar negativos, letras ni
 // decimales en las aves, ni fechas futuras. Devuelve el mensaje de error o
@@ -21,16 +23,27 @@ export function validarMortalidad(cantidad: string, avesDelLote: number): string
   return null
 }
 
-function validarCantidadOpcional(valor: string, nombre: string): string | null {
+function validarCantidadOpcional(
+  valor: string,
+  nombre: string,
+  maximo: number,
+  unidad: string,
+): string | null {
   const texto = valor.trim()
   if (!texto) return null
   const numero = Number(texto)
   if (!Number.isFinite(numero)) return `${nombre} debe ser un número.`
   if (numero <= 0) return `${nombre} debe ser mayor que cero.`
+  if (numero > maximo) {
+    return `Indica una cantidad de ${nombre.replace(/^El\s+/i, '').toLowerCase()} razonable (máximo ${maximo.toLocaleString('es-CO')} ${unidad}).`
+  }
   return null
 }
 
 export function validarConsumo(alimento: string, agua: string): string | null {
   if (!alimento.trim() && !agua.trim()) return 'Indica al menos el alimento o el agua consumida.'
-  return validarCantidadOpcional(alimento, 'El alimento') ?? validarCantidadOpcional(agua, 'El agua')
+  return (
+    validarCantidadOpcional(alimento, 'El alimento', ALIMENTO_MAXIMO_KG, 'kg') ??
+    validarCantidadOpcional(agua, 'El agua', AGUA_MAXIMO_LITROS, 'L')
+  )
 }

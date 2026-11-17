@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { AGUA_MAXIMO_LITROS, ALIMENTO_MAXIMO_KG } from '@features/consumos-diarios/model/consumoDiario'
 import { validarConsumo, validarFechaRegistro, validarMortalidad } from './registroOperario'
 
 describe('validarFechaRegistro', () => {
@@ -46,5 +47,10 @@ describe('validarConsumo', () => {
   it('rechaza cero y negativos', () => {
     expect(validarConsumo('0', '')).toMatch(/alimento debe ser mayor que cero/)
     expect(validarConsumo('', '-5')).toMatch(/agua debe ser mayor que cero/)
+  })
+
+  it('rechaza cantidades astronómicas de alimento o agua', () => {
+    expect(validarConsumo(String(ALIMENTO_MAXIMO_KG + 1), '')).toMatch(/razonable/)
+    expect(validarConsumo('', String(AGUA_MAXIMO_LITROS + 1))).toMatch(/razonable/)
   })
 })

@@ -100,7 +100,9 @@ describe('QA-03: la fecha del listado coincide con la del formulario de edición
 })
 
 describe('Finanzas: monto desproporcionado', () => {
-  it('avisa "Ingrese un monto razonable" antes de enviar los 33 dígitos de QA', () => {
+  it('avisa "Ingrese un monto razonable" antes de enviar los 33 dígitos de QA o superar el tope', () => {
+    expect(errorDeFormulario(formulario({ valor_cop: '10000000001' })))
+      .toMatch(/Ingrese un monto razonable/)
     expect(errorDeFormulario(formulario({ valor_cop: '133333335131313213213213213213' })))
       .toMatch(/Ingrese un monto razonable/)
   })

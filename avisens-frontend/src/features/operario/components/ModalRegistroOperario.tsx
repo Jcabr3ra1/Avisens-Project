@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import { IcHeart, IcSeed } from '@shared/ui/icons/icons'
 import { fechaDeHoy } from '@shared/utils/fechas'
+import { AGUA_MAXIMO_LITROS, ALIMENTO_MAXIMO_KG } from '@features/consumos-diarios/model/consumoDiario'
 import type { JornadaOperario } from '../model/jornadaOperario'
 import { validarConsumo, validarFechaRegistro, validarMortalidad } from '../model/registroOperario'
 
@@ -154,6 +155,7 @@ function ModalRegistroOperario({
                 ref={campoRef}
                 type="number"
                 min="0.01"
+                max={ALIMENTO_MAXIMO_KG}
                 step="0.01"
                 value={alimento}
                 onChange={(evento) => setAlimento(evento.target.value)}
@@ -165,6 +167,7 @@ function ModalRegistroOperario({
               <input
                 type="number"
                 min="0.01"
+                max={AGUA_MAXIMO_LITROS}
                 step="0.01"
                 value={agua}
                 onChange={(evento) => setAgua(evento.target.value)}

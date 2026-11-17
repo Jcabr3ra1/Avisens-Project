@@ -16,6 +16,7 @@ import HistorialRegistros from './components/HistorialRegistros'
 import ResumenLote from './components/ResumenLote'
 import { useBitacora } from './hooks/useBitacora'
 import {
+  errorDeRegistro,
   FORMULARIO_INICIAL,
   formularioDesde,
   payloadRegistro,
@@ -150,6 +151,12 @@ function BitacoraPage() {
   const guardar = (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault()
     if (!modal || !loteSeleccionadoId) return
+
+    const problema = errorDeRegistro(modal, form)
+    if (problema) {
+      setErrorForm(problema)
+      return
+    }
 
     const payload = payloadRegistro(modal, form, loteSeleccionadoId)
 
