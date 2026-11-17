@@ -3,10 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as Tabs from '@radix-ui/react-tabs'
 import NumeroAnimado from '@features/organizaciones/components/NumeroAnimado'
 import type { Lote } from '@features/lotes/api/lotes'
-import { IcArrowRight, IcCheck, IcChevronRight, IcLeaf, IcRefresh } from '@shared/ui/icons/icons'
+import { IcArrowRight, IcBell, IcCheck, IcChevronRight, IcLeaf, IcRefresh } from '@shared/ui/icons/icons'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import { getRol } from '@shared/api'
-import { permisosOperativosDeGalpon, puedeCompletarDatos } from '@shared/auth/permisos'
+import { permisosOperativosDeGalpon, puedeCompletarDatos, ROL_PROPIETARIO } from '@shared/auth/permisos'
+import ConfiguracionAlertas from '@features/alertas/components/ConfiguracionAlertas'
 import type { Granja } from '../api/granjas'
 import EsqueletoGranjas from '../components/EsqueletoGranjas'
 import { ModalDatosGranja, ModalDatosLote } from '../components/ModalesDatos'
@@ -73,6 +74,9 @@ function GranjasPropietario() {
   const [enDetalle, setEnDetalle] = useState(() => parametros.get('galpon') !== null)
   const [revision, setRevision] = useState(0)
   const [datos, setDatos] = useState<DatosAbiertos>(null)
+  const [configurandoAlertas, setConfigurandoAlertas] = useState(false)
+  // HU-25: los canales y tiempos de escalamiento los decide el dueño de la granja.
+  const puedeConfigurarAlertas = getRol() === ROL_PROPIETARIO
   const llegoConDestino = useRef(parametros.get('pestana') !== null || parametros.get('galpon') !== null)
 
   const seleccionada = estructura.find((item) => item.granja.id === granjaId) ?? estructura[0] ?? null
@@ -238,6 +242,12 @@ function GranjasPropietario() {
                 <IcArrowRight size={15} aria-hidden="true" />
               </button>
             ) : null}
+            {puedeConfigurarAlertas && (
+              <button type="button" className="adm-btn adm-btn--secundario" onClick={() => setConfigurandoAlertas(true)}>
+                <IcBell size={15} aria-hidden="true" />
+                Configurar alertas
+              </button>
+            )}
             <button type="button" className="adm-btn adm-btn--secundario" onClick={() => void recargarTodo()} disabled={cargando}>
               <IcRefresh size={15} aria-hidden="true" />
               {cargando ? 'Actualizando…' : 'Actualizar'}
@@ -360,6 +370,9 @@ function GranjasPropietario() {
         )}
       </div>
 
+      {configurandoAlertas && (
+        <ConfiguracionAlertas granja={granja} onCerrar={() => setConfigurandoAlertas(false)} />
+      )}
       {datos?.tipo === 'granja' && (
         <ModalDatosGranja granja={datos.granja} onCerrar={() => setDatos(null)} onGuardado={recargarTodo} />
       )}
