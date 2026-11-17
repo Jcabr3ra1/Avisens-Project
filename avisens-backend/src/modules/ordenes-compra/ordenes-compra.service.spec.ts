@@ -239,6 +239,43 @@ describe('OrdenesCompraService', () => {
       );
     });
 
+    it('califica al proveedor de un pedido entregado (HU-32)', async () => {
+      prisma.ordenCompra.findUnique.mockResolvedValue({
+        ...ordenExistente,
+        estado: EstadoOrdenCompra.entregada,
+      });
+      prisma.ordenCompra.update.mockResolvedValue(ordenExistente);
+
+      await service.actualizar(
+        1,
+        {
+          calificacion_cumplimiento: 5,
+          calificacion_calidad: 4,
+          calificacion_tiempo: 3,
+        },
+        propietario,
+      );
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const llamada = prisma.ordenCompra.update.mock.calls[0][0] as {
+        data: Record<string, unknown>;
+      };
+      expect(llamada.data).toEqual(
+        expect.objectContaining({
+          calificacion_cumplimiento: 5,
+          calificacion_calidad: 4,
+          calificacion_tiempo: 3,
+        }),
+      );
+    });
+
+    it('no deja calificar un pedido que no se ha entregado (HU-32)', async () => {
+      await expect(
+        service.actualizar(1, { calificacion_calidad: 4 }, propietario),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.ordenCompra.update).not.toHaveBeenCalled();
+    });
+
     it('no actualiza una orden inexistente', async () => {
       prisma.ordenCompra.findUnique.mockResolvedValue(null);
 

@@ -1,3 +1,4 @@
+import { ETIQUETA_SEMAFORO, promedioDeOrden, semaforoDe } from '../model/evaluacionProveedor'
 import type { OrdenCompra } from '../model/ordenCompra'
 
 type Props = { ordenes: OrdenCompra[]; onAbrir: (orden: OrdenCompra) => void; onCancelar: (orden: OrdenCompra) => void }
@@ -12,10 +13,23 @@ function TablaOrdenes({ ordenes, onAbrir, onCancelar }: Props) {
         <td>{orden.proveedor.nombre}</td><td>{orden.granja.nombre}</td>
         <td>{orden.fecha_entrega_estimada ? new Date(`${orden.fecha_entrega_estimada.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CO') : 'Sin fecha'}</td>
         <td>{Number(orden.valor_total_cop ?? 0).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}</td>
-        <td><span className={`oc-estado oc-estado--${orden.estado}`}>{ETIQUETAS[orden.estado]}</span></td>
+        <td><span className={`oc-estado oc-estado--${orden.estado}`}>{ETIQUETAS[orden.estado]}</span>{orden.estado === 'entregada' && <Evaluacion orden={orden} />}</td>
         <td><div className="oc-acciones-fila"><button type="button" onClick={() => onAbrir(orden)}>Ver</button>{orden.estado === 'pendiente' && <button type="button" className="oc-accion-cancelar" onClick={() => onCancelar(orden)}>Cancelar</button>}</div></td>
       </tr>)}
     </tbody></table></div>
+  )
+}
+
+// HU-32: el resultado de la evaluación queda a la vista en el historial.
+function Evaluacion({ orden }: { orden: OrdenCompra }) {
+  const promedio = promedioDeOrden(orden)
+  if (promedio === null) return <span className="oc-sin-evaluar">Sin evaluar</span>
+  const semaforo = semaforoDe(promedio)
+  return (
+    <span className={`oc-semaforo oc-semaforo--${semaforo} oc-semaforo--fila`} title={ETIQUETA_SEMAFORO[semaforo]}>
+      <span className="oc-semaforo-luz" aria-hidden="true" />
+      {promedio.toLocaleString('es-CO')}
+    </span>
   )
 }
 

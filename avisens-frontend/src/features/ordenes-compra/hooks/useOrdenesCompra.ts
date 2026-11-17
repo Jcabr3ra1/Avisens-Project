@@ -14,6 +14,7 @@ import {
   recibirOrdenCompra,
 } from '../api/ordenesCompra'
 import type { CrearDetalleOrdenPayload, CrearOrdenCompraPayload, OrdenCompra, RecibirOrdenPayload } from '../model/ordenCompra'
+import type { Calificaciones } from '../model/evaluacionProveedor'
 
 export function useOrdenesCompra() {
   const [ordenes, setOrdenes] = useState<OrdenCompra[]>([])
@@ -84,5 +85,12 @@ export function useOrdenesCompra() {
     return orden
   }, [actualizarEnLista])
 
-  return { ordenes, granjas, proveedores, lotes, insumos, cargando, error, recargar, crear, agregarDetalle, eliminarDetalle, recibir, cancelar }
+  // HU-32: la evaluación del proveedor se guarda en el propio pedido.
+  const calificar = useCallback(async (id: number, calificaciones: Calificaciones) => {
+    const orden = await actualizarOrdenCompra(id, calificaciones)
+    actualizarEnLista(orden)
+    return orden
+  }, [actualizarEnLista])
+
+  return { ordenes, granjas, proveedores, lotes, insumos, cargando, error, recargar, crear, agregarDetalle, eliminarDetalle, recibir, cancelar, calificar }
 }
