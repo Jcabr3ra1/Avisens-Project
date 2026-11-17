@@ -1,9 +1,12 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import type { Insumo } from '@features/inventario/api/insumos'
 import { IcClose } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import { nuevaClaveIdempotencia } from '@shared/utils/idempotencia'
+import type { Calificaciones } from '../model/evaluacionProveedor'
 import type { CrearDetalleOrdenPayload, OrdenCompra } from '../model/ordenCompra'
+import EvaluacionProveedor from './EvaluacionProveedor'
 
 type Props = {
   orden: OrdenCompra
@@ -15,9 +18,10 @@ type Props = {
     items: { detalle_id: number; cantidad: number }[],
     claveIdempotencia: string,
   ) => Promise<unknown>
+  onCalificar: (calificaciones: Calificaciones) => Promise<unknown>
 }
 
-function PanelOrden({ orden, insumos, onCerrar, onAgregarDetalle, onEliminarDetalle, onRecibir }: Props) {
+function PanelOrden({ orden, insumos, onCerrar, onAgregarDetalle, onEliminarDetalle, onRecibir, onCalificar }: Props) {
   const [insumoId, setInsumoId] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [precio, setPrecio] = useState('')
@@ -88,7 +92,10 @@ function PanelOrden({ orden, insumos, onCerrar, onAgregarDetalle, onEliminarDeta
     ? 'En recepción'
     : orden.estado[0].toUpperCase() + orden.estado.slice(1)
 
-  return (
+  // Va en un portal: la vista entra con una animación de opacidad que crea
+  // su propio contexto de apilamiento, y dentro de él el z-index del panel no
+  // superaba a la barra superior, que tapaba el botón de cerrar.
+  return createPortal(
     <aside className="oc-panel" aria-labelledby="oc-panel-titulo">
       <header className="oc-panel-cabecera">
         <div>
@@ -199,6 +206,10 @@ function PanelOrden({ orden, insumos, onCerrar, onAgregarDetalle, onEliminarDeta
         )}
       </section>
 
+      {orden.estado === 'entregada' && (
+        <EvaluacionProveedor key={orden.id} orden={orden} onCalificar={onCalificar} />
+      )}
+
       {editable && pendientes.length > 0 && (
         <section className="oc-recepcion">
           <h3>Registrar recepción</h3>
@@ -239,7 +250,8 @@ function PanelOrden({ orden, insumos, onCerrar, onAgregarDetalle, onEliminarDeta
           </button>
         </section>
       )}
-    </aside>
+    </aside>,
+    document.body,
   )
 }
 

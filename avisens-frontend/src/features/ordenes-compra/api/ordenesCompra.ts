@@ -7,6 +7,7 @@ import type {
   OrdenCompra,
   RecibirOrdenPayload,
 } from '../model/ordenCompra'
+import type { Calificaciones } from '../model/evaluacionProveedor'
 
 export type { CrearDetalleOrdenPayload, CrearOrdenCompraPayload, DetalleOrdenCompra, OrdenCompra, RecibirOrdenPayload } from '../model/ordenCompra'
 
@@ -27,7 +28,7 @@ export async function crearOrdenCompra(payload: CrearOrdenCompraPayload): Promis
   return data
 }
 
-export async function actualizarOrdenCompra(id: number, payload: Partial<CrearOrdenCompraPayload> & { estado?: string }): Promise<OrdenCompra> {
+export async function actualizarOrdenCompra(id: number, payload: Partial<CrearOrdenCompraPayload> & Partial<Calificaciones> & { estado?: string }): Promise<OrdenCompra> {
   const { data } = await api.patch<OrdenCompra>(`/ordenes-compra/${id}`, payload)
   return data
 }

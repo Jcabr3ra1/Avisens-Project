@@ -31,6 +31,10 @@ export type OrdenCompra = {
   fecha_entrega_real: string | null
   valor_total_cop: number | null
   estado: EstadoOrdenCompra
+  // HU-32: notas de 0 a 5 que el propietario pone al recibir el pedido.
+  calificacion_cumplimiento: number | null
+  calificacion_calidad: number | null
+  calificacion_tiempo: number | null
   usuario_id: number
   fecha_registro: string
   granja: { id: number; nombre: string; propietario_id: number }

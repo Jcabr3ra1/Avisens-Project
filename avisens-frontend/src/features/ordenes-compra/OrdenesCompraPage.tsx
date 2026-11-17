@@ -6,6 +6,7 @@ import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcPlus } from '@shared/ui/icons/icons'
 import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
+import DesempenoProveedores from './components/DesempenoProveedores'
 import FormularioOrden from './components/FormularioOrden'
 import PanelOrden from './components/PanelOrden'
 import ResumenOrdenes from './components/ResumenOrdenes'
@@ -85,6 +86,8 @@ function OrdenesCompraPage() {
 
       <ResumenOrdenes ordenes={gestion.ordenes} />
 
+      <DesempenoProveedores ordenes={gestion.ordenes} onVerPendientes={() => setEstado('entregada')} />
+
       {gestion.error && (
         <div className="adm-alerta" role="alert">
           <span>{gestion.error}</span>
@@ -154,6 +157,10 @@ function OrdenesCompraPage() {
             clave_idempotencia: claveIdempotencia,
             items,
           })}
+          onCalificar={async (calificaciones) => {
+            await gestion.calificar(ordenSeleccionada.id, calificaciones)
+            toast.success(`Evaluación de ${ordenSeleccionada.proveedor.nombre} guardada`)
+          }}
         />
       )}
     </div>
