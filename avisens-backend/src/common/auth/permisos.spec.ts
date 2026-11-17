@@ -58,6 +58,21 @@ describe('matriz RBAC', () => {
       ]),
     ).toBe(true);
   });
+
+  // HU-58: el propietario da de alta al proveedor que le falta, pero el
+  // directorio es compartido entre organizaciones, así que editarlo o
+  // desactivarlo sigue siendo del administrador.
+  it('el propietario crea proveedores pero no gestiona el directorio', () => {
+    expect(
+      rolTienePermisos(ROLES.PROPIETARIO, [PERMISOS.PROVEEDORES_CREAR]),
+    ).toBe(true);
+    expect(
+      rolTienePermisos(ROLES.PROPIETARIO, [PERMISOS.PROVEEDORES_GESTIONAR]),
+    ).toBe(false);
+    expect(rolTienePermisos(ROLES.OPERARIO, [PERMISOS.PROVEEDORES_CREAR])).toBe(
+      false,
+    );
+  });
 });
 
 // roles_permisos es una proyección de PERMISOS_POR_ROL, no una fuente
