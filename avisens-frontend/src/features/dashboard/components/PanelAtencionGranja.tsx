@@ -6,6 +6,7 @@ type Props = {
   cargando: boolean
   errorCrecimiento?: string
   onReintentarCrecimiento?: () => void
+  sinSensores?: boolean
 }
 
 function IconoDeItem({ tipo }: { tipo: TipoAtencionGranja }) {
@@ -14,7 +15,7 @@ function IconoDeItem({ tipo }: { tipo: TipoAtencionGranja }) {
   return <IcThermo size={16} />
 }
 
-function PanelAtencionGranja({ items, cargando, errorCrecimiento, onReintentarCrecimiento }: Props) {
+function PanelAtencionGranja({ items, cargando, errorCrecimiento, onReintentarCrecimiento, sinSensores = false }: Props) {
   const criticos = items.filter((item) => item.critico).length
   return (
     <section className="rsm-atencion" aria-labelledby="resumen-atencion-titulo" aria-busy={cargando}>
@@ -53,12 +54,16 @@ function PanelAtencionGranja({ items, cargando, errorCrecimiento, onReintentarCr
             <strong>
               {errorCrecimiento
                 ? 'No pudimos revisar los lotes'
-                : 'Todo en orden'}
+                : sinSensores
+                  ? 'Sin alertas abiertas'
+                  : 'Todo en orden'}
             </strong>
             <p>
               {errorCrecimiento
                 ? 'Vuelve a intentarlo para consultar las reglas de crecimiento.'
-                : 'No hay alertas abiertas y los sensores de esta granja reportan dentro de su rango.'}
+                : sinSensores
+                  ? 'Esta granja no tiene sensores registrados, así que no podemos confirmar que el ambiente esté dentro de rango.'
+                  : 'No hay alertas abiertas y los sensores de esta granja reportan dentro de su rango.'}
             </p>
           </div>
         </div>

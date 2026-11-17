@@ -86,4 +86,14 @@ describe('PrismaExceptionFilter', () => {
       );
     });
   });
+
+  describe('P2020: valor fuera de rango', () => {
+    it('responde 400 con un mensaje que se puede corregir, no "Error de base de datos"', () => {
+      filter.catch(errorPrisma('P2020'), hostCon('POST'));
+
+      expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(respuesta().message).toMatch(/valor razonable/);
+      expect(respuesta().message).not.toBe('Error de base de datos');
+    });
+  });
 });

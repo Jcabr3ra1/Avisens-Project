@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { numeroOpcional, porcentajeDesgaste } from './equipo'
+import {
+  equiposPorMantener,
+  etiquetaEstadoEquipo,
+  numeroOpcional,
+  porcentajeDesgaste,
+  requiereMantenimiento,
+} from './equipo'
 
 describe('numeroOpcional', () => {
   it('distingue vacío de cero: en blanco es "no lo sé", no "vale 0"', () => {
@@ -36,5 +42,44 @@ describe('porcentajeDesgaste', () => {
 
   it('no pasa de 100 aunque el equipo haya superado su vida útil', () => {
     expect(porcentajeDesgaste(2500, 1000)).toBe(100)
+  })
+})
+
+describe('requiereMantenimiento', () => {
+  it('avisa desde el 95 % de la vida útil', () => {
+    expect(requiereMantenimiento(94)).toBe(false)
+    expect(requiereMantenimiento(95)).toBe(true)
+    expect(requiereMantenimiento(100)).toBe(true)
+  })
+
+  it('no avisa si el equipo no declara vida útil', () => {
+    expect(requiereMantenimiento(null)).toBe(false)
+  })
+})
+
+describe('equiposPorMantener', () => {
+  const equipo = (estado_actual: string, horas_operacion: number | null, vida_util_horas: number | null) =>
+    ({ estado_actual, horas_operacion, vida_util_horas })
+
+  it('cuenta solo los operativos que llegaron al umbral', () => {
+    const equipos = [
+      equipo('operativo', 960, 1000),
+      equipo('operativo', 500, 1000),
+      equipo('en_mantenimiento', 990, 1000),
+      equipo('baja', 1000, 1000),
+      equipo('operativo', 5000, null),
+    ]
+    expect(equiposPorMantener(equipos)).toEqual([equipos[0]])
+  })
+})
+
+describe('etiquetaEstadoEquipo', () => {
+  it('traduce los estados del backend a texto legible', () => {
+    expect(etiquetaEstadoEquipo('en_mantenimiento')).toBe('En mantenimiento')
+    expect(etiquetaEstadoEquipo('baja')).toBe('De baja')
+  })
+
+  it('deja pasar un estado desconocido tal cual', () => {
+    expect(etiquetaEstadoEquipo('reparado')).toBe('reparado')
   })
 })

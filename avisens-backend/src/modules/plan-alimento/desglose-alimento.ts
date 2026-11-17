@@ -2,6 +2,7 @@ import { Prisma, EstadoDesgloseAlimento } from '@prisma/client';
 import {
   normalizarMarcaCatalogo,
   ETAPAS_ALIMENTACION,
+  EtapaAlimentacion,
 } from '../../common/avicultura/vocabulario';
 
 export interface RenglonDesglose {
@@ -79,7 +80,7 @@ export function validarDesgloseAlimento(
       r.tipoAlimentoNombreSnapshot === null &&
       r.etapaSnapshot === null;
     const esReal =
-      r.tipoAlimentoId !== null &&
+      (r.tipoAlimentoId !== null || r.tipoAlimentoNombreSnapshot !== null) &&
       typeof r.tipoAlimentoNombreSnapshot === 'string' &&
       r.tipoAlimentoNombreSnapshot.trim().length > 0 &&
       r.etapaSnapshot !== null &&
@@ -100,7 +101,7 @@ export function validarDesgloseAlimento(
     if (ordenados[i].diaInicio !== ordenados[i - 1].diaFin + 1) return false;
   }
 
-  const sinteticos = ordenados.filter((r) => r.tipoAlimentoId === null);
+  const sinteticos = ordenados.filter((r) => r.etapaSnapshot === null);
   if (params.estadoDesglose === 'calculado' && sinteticos.length > 0) {
     return false;
   }
@@ -133,6 +134,7 @@ export function validarDesgloseAlimento(
 }
 
 export const VERSION_DESGLOSE_ACTUAL = 'desglose_etapas_rango_dias_v1';
+export const MARCA_ESTANDAR = 'estandar';
 
 /**
  * Fila del catalogo tal como la entrega el llamador. Precondicion: ya viene
@@ -159,6 +161,7 @@ export interface ParametrosConstruccionDesglose {
   // decrecientes. Se construyen en consumo-curva.ts al conectar el servicio.
   acumuladoPorAveEnDia: (dia: number) => Prisma.Decimal;
   acumuladoTotalKgEnDia: (dia: number) => Prisma.Decimal;
+  permitirFallbackEstandar?: boolean;
 }
 
 export interface ResultadoDesglose {
@@ -177,6 +180,146 @@ function esFilaCatalogoValida(fila: FilaCatalogoAlimento): boolean {
     fila.etapa !== null &&
     (ETAPAS_ALIMENTACION as readonly string[]).includes(fila.etapa)
   );
+}
+
+function obtenerFilasEstandar(
+  catalogo: FilaCatalogoAlimento[],
+  diaObjetivo: number,
+): Array<{
+  id: number | null;
+  nombre: string;
+  etapa: EtapaAlimentacion;
+  diaInicio: number;
+  diaFin: number | null;
+}> {
+  const filasEstandarCatalogo = catalogo.filter(
+    (f) =>
+      f.marca !== null && normalizarMarcaCatalogo(f.marca) === MARCA_ESTANDAR,
+  );
+
+  const buscarEnCatalogo = (etapa: EtapaAlimentacion) =>
+    filasEstandarCatalogo.find((f) => f.etapa === etapa);
+
+  const pre = buscarEnCatalogo('preiniciacion');
+  const ini = buscarEnCatalogo('iniciacion');
+  const eng = buscarEnCatalogo('engorde');
+  const fin = buscarEnCatalogo('finalizacion');
+
+  if (diaObjetivo <= 34) {
+    return [
+      {
+        id: pre?.id ?? null,
+        nombre: pre?.nombre ?? 'Preiniciador Estándar',
+        etapa: 'preiniciacion',
+        diaInicio: 1,
+        diaFin: 8,
+      },
+      {
+        id: ini?.id ?? null,
+        nombre: ini?.nombre ?? 'Iniciación Estándar',
+        etapa: 'iniciacion',
+        diaInicio: 9,
+        diaFin: 21,
+      },
+      {
+        id: eng?.id ?? null,
+        nombre: eng?.nombre ?? 'Engorde Estándar',
+        etapa: 'engorde',
+        diaInicio: 22,
+        diaFin: null,
+      },
+    ];
+  }
+
+  return [
+    {
+      id: pre?.id ?? null,
+      nombre: pre?.nombre ?? 'Preiniciador Estándar',
+      etapa: 'preiniciacion',
+      diaInicio: 1,
+      diaFin: 8,
+    },
+    {
+      id: ini?.id ?? null,
+      nombre: ini?.nombre ?? 'Iniciación Estándar',
+      etapa: 'iniciacion',
+      diaInicio: 9,
+      diaFin: 21,
+    },
+    {
+      id: eng?.id ?? null,
+      nombre: eng?.nombre ?? 'Engorde Estándar',
+      etapa: 'engorde',
+      diaInicio: 22,
+      diaFin: 34,
+    },
+    {
+      id: fin?.id ?? null,
+      nombre: fin?.nombre ?? 'Finalizador Estándar',
+      etapa: 'finalizacion',
+      diaInicio: 35,
+      diaFin: null,
+    },
+  ];
+}
+
+function construirDesgloseEstandarInterno(
+  params: ParametrosConstruccionDesglose,
+  finalizar: (
+    estado: EstadoDesgloseAlimento,
+    marcaAlimentoSnapshot: string | null,
+    renglones: RenglonDesglose[],
+  ) => ResultadoDesglose,
+): ResultadoDesglose {
+  const tramosBase = obtenerFilasEstandar(
+    params.catalogo,
+    params.diaObjetivoSnapshot,
+  );
+  const tramosFiltrados = tramosBase.filter(
+    (tramo) => tramo.diaInicio <= params.diaObjetivoSnapshot,
+  );
+
+  const renglones: RenglonDesglose[] = tramosFiltrados.map((tramo, indice) => {
+    const esUltimo = indice === tramosFiltrados.length - 1;
+    const diaFin = esUltimo
+      ? params.diaObjetivoSnapshot
+      : Math.min(
+          tramo.diaFin ?? params.diaObjetivoSnapshot,
+          params.diaObjetivoSnapshot,
+        );
+    const extendido = esUltimo;
+
+    const consumoPorAveG = params
+      .acumuladoPorAveEnDia(diaFin)
+      .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP)
+      .minus(
+        params
+          .acumuladoPorAveEnDia(tramo.diaInicio - 1)
+          .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP),
+      );
+    const consumoTotalKg = params
+      .acumuladoTotalKgEnDia(diaFin)
+      .toDecimalPlaces(3, Prisma.Decimal.ROUND_HALF_UP)
+      .minus(
+        params
+          .acumuladoTotalKgEnDia(tramo.diaInicio - 1)
+          .toDecimalPlaces(3, Prisma.Decimal.ROUND_HALF_UP),
+      );
+
+    return {
+      orden: indice + 1,
+      tipoAlimentoId: tramo.id,
+      tipoAlimentoNombreSnapshot: tramo.nombre,
+      etapaSnapshot: tramo.etapa,
+      diaInicio: tramo.diaInicio,
+      diaFin,
+      extendidoHastaDiaObjetivo: extendido,
+      consumoPorAveG,
+      consumoTotalKg,
+    };
+  });
+
+  return finalizar('calculado', MARCA_ESTANDAR, renglones);
 }
 
 /**
@@ -214,6 +357,9 @@ export function construirDesgloseAlimento(
   }
 
   if (params.marcaAlimento === null) {
+    if (params.permitirFallbackEstandar) {
+      return construirDesgloseEstandarInterno(params, finalizar);
+    }
     return finalizar('lote_sin_marca_alimento', null, []);
   }
 
@@ -225,6 +371,9 @@ export function construirDesgloseAlimento(
   );
 
   if (filasMarca.length === 0) {
+    if (params.permitirFallbackEstandar) {
+      return construirDesgloseEstandarInterno(params, finalizar);
+    }
     return finalizar('marca_sin_catalogo', marcaNormalizada, []);
   }
 
@@ -345,4 +494,108 @@ export function construirDesgloseAlimento(
   });
 
   return finalizar(estado, marcaNormalizada, renglones);
+}
+
+export interface InfoEtapaActual {
+  etapa: string | null;
+  nombre_etapa: string;
+  alimento: string;
+  dia_inicio: number;
+  dia_fin: number;
+  dias_para_cambio: number;
+  proximo_alimento: string | null;
+  proxima_etapa: string | null;
+}
+
+export interface ResumenFaseAlimento {
+  orden: number;
+  etapa: string | null;
+  nombre_etapa: string;
+  alimento: string;
+  dia_inicio: number;
+  dia_fin: number;
+  consumo_por_ave_g: number;
+  consumo_total_kg: number;
+  bultos_40kg: number;
+}
+
+export function formatearNombreEtapa(etapa: string | null): string {
+  switch (etapa) {
+    case 'preiniciacion':
+      return 'Preinicio';
+    case 'iniciacion':
+      return 'Iniciación';
+    case 'engorde':
+      return 'Engorde';
+    case 'finalizacion':
+      return 'Finalización';
+    default:
+      return etapa ?? 'Desconocida';
+  }
+}
+
+export function enriquecerEtapasAlimento(
+  renglones: Array<{
+    orden: number;
+    etapa: string | null;
+    tipo_alimento_nombre_snapshot: string | null;
+    dia_inicio: number;
+    dia_fin: number;
+    consumo_por_ave_g: number;
+    consumo_total_kg: number;
+  }>,
+  diaActual: number,
+): {
+  etapa_actual: InfoEtapaActual | null;
+  fases: ResumenFaseAlimento[];
+} {
+  const fases: ResumenFaseAlimento[] = renglones.map((r) => ({
+    orden: r.orden,
+    etapa: r.etapa,
+    nombre_etapa: formatearNombreEtapa(r.etapa),
+    alimento:
+      r.tipo_alimento_nombre_snapshot ??
+      `Alimento ${formatearNombreEtapa(r.etapa)}`,
+    dia_inicio: r.dia_inicio,
+    dia_fin: r.dia_fin,
+    consumo_por_ave_g: r.consumo_por_ave_g,
+    consumo_total_kg: r.consumo_total_kg,
+    bultos_40kg: Math.ceil(r.consumo_total_kg / 40),
+  }));
+
+  if (fases.length === 0) {
+    return { etapa_actual: null, fases: [] };
+  }
+
+  const indiceActual = fases.findIndex(
+    (f) => diaActual >= f.dia_inicio && diaActual <= f.dia_fin,
+  );
+
+  const faseActual =
+    indiceActual >= 0
+      ? fases[indiceActual]
+      : diaActual < fases[0].dia_inicio
+        ? fases[0]
+        : fases[fases.length - 1];
+
+  const proximaFase =
+    indiceActual >= 0 && indiceActual + 1 < fases.length
+      ? fases[indiceActual + 1]
+      : null;
+
+  const etapaActual: InfoEtapaActual = {
+    etapa: faseActual.etapa,
+    nombre_etapa: faseActual.nombre_etapa,
+    alimento: faseActual.alimento,
+    dia_inicio: faseActual.dia_inicio,
+    dia_fin: faseActual.dia_fin,
+    dias_para_cambio: Math.max(0, faseActual.dia_fin - diaActual),
+    proximo_alimento: proximaFase ? proximaFase.alimento : null,
+    proxima_etapa: proximaFase ? proximaFase.nombre_etapa : null,
+  };
+
+  return {
+    etapa_actual: etapaActual,
+    fases,
+  };
 }

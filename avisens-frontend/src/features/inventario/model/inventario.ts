@@ -104,3 +104,16 @@ export function signoDeMovimiento(tipo: TipoMovimiento): '+' | '−' | '' {
   if (tipo === 'salida') return '−'
   return ''
 }
+
+// Texto de la bodega vacía según lo que cada rol puede hacer en ella (QA-06).
+// Antes el propietario veía el texto del operario («lo que saques para tu
+// galpón»), aunque él gestiona entradas, ajustes y costos.
+export function textoBodegaVacia(permisos: { crear: boolean; verCostos: boolean }): string {
+  if (permisos.crear) {
+    return 'Registra el primero para llevar su stock y dejar rastro de cada entrada y salida.'
+  }
+  if (permisos.verCostos) {
+    return 'Cuando el administrador registre los insumos de tu granja aparecerán aquí. Desde entonces podrás registrar entradas, salidas y ajustes, y ver el valor de tu bodega.'
+  }
+  return 'Cuando el administrador registre los insumos de la granja aparecerán aquí, y podrás anotar lo que saques para tu galpón.'
+}

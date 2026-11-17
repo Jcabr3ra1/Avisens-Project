@@ -17,28 +17,37 @@
 
 .regla-pista {
   position: absolute;
-  top: 66px;
+  top: 65px;
   right: 0;
   left: 0;
-  height: 8px;
+  height: 10px;
   border-radius: 999px;
   background: var(--surface-subtle);
   overflow: hidden;
 }
 
+.regla-pista-fondo {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--gradiente-etapas, var(--surface-subtle));
+  opacity: 0.22;
+}
+
 .regla-recorrido {
   position: absolute;
-  inset: 0 auto 0 0;
-  width: calc(var(--al-hoy, 0) * 100%);
+  inset: 0;
   border-radius: inherit;
-  background: var(--primary);
-  transition: width 700ms cubic-bezier(0.16, 1, 0.3, 1);
+  background: var(--gradiente-etapas, var(--primary));
+  clip-path: inset(0 calc((1 - var(--al-hoy, 0)) * 100%) 0 0 round 999px);
+  transition: clip-path 700ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .regla-futuro {
   position: absolute;
   inset: 0 0 0 calc(var(--al-hoy, 0) * 100%);
-  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--primary) 38%, transparent) 0 6px, transparent 6px 12px);
+  background: repeating-linear-gradient(90deg, rgb(0 0 0 / 14%) 0 6px, transparent 6px 12px);
+  pointer-events: none;
 }
 
 .regla-marca {
@@ -264,3 +273,43 @@
   .regla-hoy-modelo-fallback,
   .regla-alerta svg { transition: none; }
 }
+
+/* ── Leyenda de etapas de alimentación ─────────────────────── */
+.regla-etapas-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1.1rem;
+  margin-top: 0.9rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border-subtle);
+}
+
+.regla-etapa-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+.regla-etapa-chip strong {
+  color: var(--text-primary);
+  font-weight: 650;
+}
+
+.regla-etapa-chip small {
+  color: var(--text-muted);
+}
+
+.regla-etapa-punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.regla-etapa-punto--preinicio { background: #10b981; }
+.regla-etapa-punto--inicio { background: #3b82f6; }
+.regla-etapa-punto--engorde { background: #f59e0b; }
+.regla-etapa-punto--finalizacion { background: #8b5cf6; }

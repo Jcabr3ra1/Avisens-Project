@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CrearEstimacionAlimentoDto {
   @ApiPropertyOptional({
@@ -9,4 +9,13 @@ export class CrearEstimacionAlimentoDto {
   @IsString()
   @IsOptional()
   motivo?: string;
+
+  @ApiPropertyOptional({
+    example: true,
+    description:
+      'Permite usar el perfil zootécnico estándar si el lote no tiene marca',
+  })
+  @IsBoolean()
+  @IsOptional()
+  permitir_fallback_estandar?: boolean;
 }

@@ -5,7 +5,9 @@ import {
   esDatoVerificado,
   lineaSparkline,
   mismaRevision,
+  fcrCreible,
   pesoActualParaSparkline,
+  pesoCreible,
   serieDePesoVerificado,
   textoComparacion,
   textoComparacionFcr,
@@ -246,5 +248,32 @@ describe('lineaSparkline', () => {
     // Sin este caso, un rango de cero divide por cero y la línea desaparece.
     const puntos = lineaSparkline([80, 80, 80], 200, 40).split(' ')
     expect(puntos.every((punto) => punto.endsWith(',20.0'))).toBe(true)
+  })
+})
+
+describe('QA-01: datos imposibles no se muestran como reales', () => {
+  it('el peso de 1.000.000.000.000 kg que vio QA no es creíble', () => {
+    expect(pesoCreible(1e15)).toBe(false)
+    expect(pesoCreible(2850)).toBe(true)
+    expect(pesoCreible(10_000)).toBe(true)
+    expect(pesoCreible(0)).toBe(false)
+  })
+
+  it('la conversión 2e+24 que vio QA no es creíble', () => {
+    expect(fcrCreible(2.000000000000002e24)).toBe(false)
+    expect(fcrCreible(1.65)).toBe(true)
+  })
+
+  it('el sparkline descarta pesos imposibles en vez de dibujarlos', () => {
+    const serie = serieDePesoVerificado([
+      indicador({ pesoPromedioG: 220 }),
+      indicador({ pesoPromedioG: 1e15 }),
+      indicador({ pesoPromedioG: 900 }),
+    ])
+    expect(serie).toEqual([220, 900])
+  })
+
+  it('el peso actual del sparkline no usa un dato imposible', () => {
+    expect(pesoActualParaSparkline(indicador({ pesoPromedioG: 1e15 }))).toBeNull()
   })
 })

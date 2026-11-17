@@ -1283,6 +1283,7 @@ model EstimacionAlimentoPlan {
   estado_desglose         EstadoDesgloseAlimento?
   version_desglose        String?
   marca_alimento_snapshot String?
+  marca_alimento_lote_snapshot String?
 
   motivo         String?
   creado_por_id  Int

@@ -18,7 +18,7 @@ function fila(parcial: Partial<FilaGalpon>): FilaGalpon {
 
 describe('estadoGranja', () => {
   it('sin pendientes y con un lote dice que todo va bien y propone la guía', () => {
-    const estado = estadoGranja({ atencion: [], filas: [fila({})] })
+    const estado = estadoGranja({ atencion: [], filas: [fila({})], sensores: 3 })
     expect(estado.tono).toBe('ok')
     expect(estado.titulo).toBe('Todo va bien hoy')
     expect(estado.detalle).toBe('LOT-1 va en el día 9 · 500 aves')
@@ -70,5 +70,25 @@ describe('estadoGranja', () => {
   it('un galpón inactivo no cuenta como lote en marcha', () => {
     const estado = estadoGranja({ atencion: [], filas: [fila({ activo: false })] })
     expect(estado.titulo).toBe('Tu granja está lista para un lote nuevo')
+  })
+
+  describe('QA-04: sin sensores no se comunica normalidad', () => {
+    it('con cero sensores no dice "Todo va bien" y explica que el ambiente no se vigila', () => {
+      const estado = estadoGranja({ atencion: [], filas: [fila({})], sensores: 0 })
+      expect(estado.titulo).not.toBe('Todo va bien hoy')
+      expect(estado.titulo).toBe('Sin alertas, pero sin sensores')
+      expect(estado.detalle).toMatch(/no tienen sensores/)
+      expect(estado.tono).toBe('atencion')
+    })
+
+    it('con sensores registrados mantiene "Todo va bien hoy"', () => {
+      const estado = estadoGranja({ atencion: [], filas: [fila({})], sensores: 4 })
+      expect(estado.titulo).toBe('Todo va bien hoy')
+    })
+
+    it('mientras se consultan los sensores no afirma que todo va bien', () => {
+      const estado = estadoGranja({ atencion: [], filas: [fila({})] })
+      expect(estado.titulo).toBe('Revisando tu granja…')
+    })
   })
 })

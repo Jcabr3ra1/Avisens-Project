@@ -1,0 +1,26 @@
+.btn-actualizar {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.btn-actualizar-hora {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.btn-actualizar-icono.is-girando {
+  animation: btn-actualizar-giro 0.9s linear infinite;
+}
+
+@keyframes btn-actualizar-giro {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-actualizar-icono.is-girando { animation: none; }
+}

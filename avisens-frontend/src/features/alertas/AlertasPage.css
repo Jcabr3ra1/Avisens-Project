@@ -48,13 +48,6 @@
 .ale-form-escalar label { display: grid; gap: .4rem; color: var(--dash-ink); font-size: .87rem; font-weight: 700; }
 @media (max-width: 600px) { .ale-banner-critico { align-items: start; flex-wrap: wrap; } .ale-banner-critico button { width: 100%; min-height: 44px; } .ale-card { display: grid; grid-template-columns: 5px 1fr; } .ale-card-acciones { grid-column: 2; padding: 0 1rem 1rem; } .ale-card-acciones .ale-btn { flex: 1; } .ale-card-encabezado time { width: 100%; margin-left: 0; } }
 
-.ale-cabecera { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--border-subtle); }
-.ale-titulo { margin: 0; color: var(--text-primary); font-size: clamp(1.5rem, 1.25rem + .8vw, 1.9rem); font-weight: 750; letter-spacing: -.025em; line-height: 1.15; }
-.ale-subtitulo { margin: .3rem 0 0; color: var(--text-secondary); font-size: .9rem; }
-.ale-boton-cabecera { display: inline-flex; min-width: 184px; min-height: 40px; flex: 0 0 auto; align-items: center; justify-content: center; gap: .45rem; padding: 0 1rem; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-base); color: var(--text-primary); font: inherit; font-size: .86rem; font-weight: 650; cursor: pointer; }
-.ale-boton-cabecera:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-tinted); }
-.ale-boton-cabecera:disabled { cursor: progress; opacity: .6; }
-.ale-boton-cabecera:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 .ale-indicadores { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-base); box-shadow: var(--shadow-sm); list-style: none; }
 .ale-indicadores li { display: flex; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: .28rem; padding: var(--space-4) var(--space-3); text-align: center; }
@@ -77,8 +70,6 @@
 .ale-limpiar:hover { border-color: var(--border-strong); background: var(--surface-subtle); }
 
 @media (max-width: 900px) {
-  .ale-cabecera { flex-direction: column; align-items: stretch; }
-  .ale-boton-cabecera { width: 100%; }
   .ale-indicadores { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ale-indicadores li:nth-child(3) { border-left: 0; }
   .ale-indicadores li:nth-child(n + 3) { border-top: 1px solid var(--border-subtle); }

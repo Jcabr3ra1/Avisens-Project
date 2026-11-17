@@ -18,3 +18,6 @@
   .estado-cargando-punto,
   .carga-logo-marca { animation: none; }
 }
+
+.estado-sin-galpones { gap: var(--space-3); padding-block: var(--space-7, 3rem); }
+.estado-sin-galpones-icono { display: grid; width: 56px; height: 56px; place-items: center; border-radius: 16px; background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }

@@ -3,7 +3,7 @@ import { formatearPeso } from '@features/guia-crecimiento/model/proyeccion'
 import { useCurvaLote } from '@features/granjas/propietario/useCurvaLote'
 import type { DashboardIndicador, DashboardLote } from '../model/dashboard'
 import { filaDeFaena } from '../model/faena'
-import { comparacionVigente, esDatoVerificado, lineaSparkline, mismaRevision, pesoActualParaSparkline, serieDePesoVerificado, textoComparacion, textoComparacionFcr, textoFechaPesaje, type Fila } from '../model/estadoLote'
+import { NOTA_DATO_IMPOSIBLE, TEXTO_DATO_IMPOSIBLE, comparacionVigente, esDatoVerificado, fcrCreible, pesoCreible, lineaSparkline, mismaRevision, pesoActualParaSparkline, serieDePesoVerificado, textoComparacion, textoComparacionFcr, textoFechaPesaje, type Fila } from '../model/estadoLote'
 
 type Props = {
   lote: DashboardLote | null
@@ -25,6 +25,9 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando }: Props
   // "comparacion" -- son dos llamadas HTTP independientes.
   const fechaFcr = datosVerificados ? textoFechaPesaje(reciente?.pesajeFechaSnapshot) : undefined
 
+  const pesoImposible = datosVerificados && reciente?.pesoPromedioG != null && !pesoCreible(reciente.pesoPromedioG)
+  const fcrImposible = datosVerificados && reciente?.fcr != null && !fcrCreible(reciente.fcr)
+
   const filas: Fila[] = [
     { etiqueta: 'Edad', valor: diaLote === null ? '—' : `${diaLote} días`, mono: true },
     { etiqueta: 'Aves alojadas', valor: lote ? lote.cantidadInicial.toLocaleString('es-CO') : '—', mono: true },
@@ -38,10 +41,15 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando }: Props
     },
     {
       etiqueta: 'Peso promedio',
-      valor: !datosVerificados || reciente?.pesoPromedioG == null ? '—' : formatearPeso(reciente.pesoPromedioG),
-      nota: notaVigente
-        ? textoComparacion(comparacion?.desvio_peso_pct ?? null, comparacion?.objetivo?.peso_esperado_g ?? null, 'g')
-        : undefined,
+      valor: !datosVerificados || reciente?.pesoPromedioG == null
+        ? '—'
+        : pesoImposible ? TEXTO_DATO_IMPOSIBLE : formatearPeso(reciente.pesoPromedioG),
+      nota: pesoImposible
+        ? NOTA_DATO_IMPOSIBLE
+        : notaVigente
+          ? textoComparacion(comparacion?.desvio_peso_pct ?? null, comparacion?.objetivo?.peso_esperado_g ?? null, 'g')
+          : undefined,
+      alerta: pesoImposible,
       mono: true,
     },
     {
@@ -49,12 +57,17 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando }: Props
       valor:
         !datosVerificados || reciente?.fcr == null
           ? '—'
-          : fechaFcr
-            ? `${reciente.fcr} (${fechaFcr})`
-            : String(reciente.fcr),
-      nota: notaVigente
-        ? textoComparacionFcr(comparacion?.desvio_fcr ?? null, comparacion?.objetivo?.fcr_objetivo ?? null)
-        : undefined,
+          : fcrImposible
+            ? TEXTO_DATO_IMPOSIBLE
+            : fechaFcr
+              ? `${reciente.fcr} (${fechaFcr})`
+              : String(reciente.fcr),
+      nota: fcrImposible
+        ? NOTA_DATO_IMPOSIBLE
+        : notaVigente
+          ? textoComparacionFcr(comparacion?.desvio_fcr ?? null, comparacion?.objetivo?.fcr_objetivo ?? null)
+          : undefined,
+      alerta: fcrImposible,
       mono: true,
     },
     { etiqueta: 'Lote', valor: lote?.codigo ?? '—', mono: true },

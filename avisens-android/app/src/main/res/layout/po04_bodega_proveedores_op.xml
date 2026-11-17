@@ -40,7 +40,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Bodega e Inventario"
+                android:text="Proveedores"
                 android:textColor="@color/text_primary"
                 android:textSize="28sp"
                 android:layout_marginTop="20dp"
@@ -50,7 +50,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
-                android:text="Stock de insumos y directorio de proveedores"
+                android:text="Directorio y gestión de proveedores"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"/>
 
@@ -96,19 +96,17 @@
 
 
             <!-- ============================== -->
-            <!-- SELECTOR -->
+            <!-- BARRA INSUMOS / PROVEEDORES -->
             <!-- ============================== -->
 
             <LinearLayout
                 android:id="@+id/tabsBodega"
                 android:layout_width="match_parent"
                 android:layout_height="42dp"
-                android:layout_marginTop="9dp"
+                android:layout_marginTop="10dp"
                 android:background="@drawable/bg_bodega_tabs"
                 android:padding="4dp"
                 android:orientation="horizontal">
-
-                <!-- INSUMOS -->
 
                 <TextView
                     android:id="@+id/btnInsumos"
@@ -116,27 +114,23 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:gravity="center"
-                    android:text="⬡ Insumos"
+                    android:text="▣ Insumos"
                     android:textColor="#89938E"
                     android:textSize="13sp"
-                    android:textStyle="bold"/>
-
-                <!-- PROVEEDORES SELECCIONADO -->
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/btnProveedores"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:background="@drawable/bg_bodega_tab_selected"
                     android:gravity="center"
                     android:text="♧ Proveedores"
-                    android:textColor="@color/text_primary"
+                    android:textColor="#89938E"
                     android:textSize="13sp"
-                    android:textStyle="bold"/>
+                    android:textStyle="bold" />
 
             </LinearLayout>
-
 
             <!-- ============================== -->
             <!-- PROVEEDORES DINÁMICOS -->

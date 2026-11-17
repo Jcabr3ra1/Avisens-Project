@@ -42,6 +42,42 @@ const TIPOS_ALIMENTO = [
     dia_fin: 42,
     consumo_total_esperado_g: 2800,
   },
+  {
+    nombre: 'Preiniciador Estándar',
+    marca: 'estandar',
+    etapa: 'preiniciacion',
+    presentacion: 'migaja',
+    dia_inicio: 1,
+    dia_fin: 8,
+    consumo_total_esperado_g: 206,
+  },
+  {
+    nombre: 'Iniciación Estándar',
+    marca: 'estandar',
+    etapa: 'iniciacion',
+    presentacion: 'peletizado',
+    dia_inicio: 9,
+    dia_fin: 21,
+    consumo_total_esperado_g: 949,
+  },
+  {
+    nombre: 'Engorde Estándar',
+    marca: 'estandar',
+    etapa: 'engorde',
+    presentacion: 'peletizado',
+    dia_inicio: 22,
+    dia_fin: 34,
+    consumo_total_esperado_g: 1876,
+  },
+  {
+    nombre: 'Finalizador Estándar',
+    marca: 'estandar',
+    etapa: 'finalizacion',
+    presentacion: 'peletizado',
+    dia_inicio: 35,
+    dia_fin: null,
+    consumo_total_esperado_g: 1555,
+  },
 ];
 
 export async function sembrarTiposAlimento(prisma: PrismaClient) {

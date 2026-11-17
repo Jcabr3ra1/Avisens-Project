@@ -7,7 +7,9 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Max,
 } from 'class-validator';
+import { VALOR_MAXIMO_MOVIMIENTO_COP } from '../../../common/avicultura/vocabulario';
 
 export class CreateMovimientoFinancieroDto {
   @ApiPropertyOptional({
@@ -32,7 +34,11 @@ export class CreateMovimientoFinancieroDto {
 
   @ApiProperty({ example: 1500000, description: 'Valor del movimiento en COP' })
   @IsNumber()
-  @IsPositive()
+  @IsPositive({ message: 'El monto debe ser mayor que cero' })
+  @Max(VALOR_MAXIMO_MOVIMIENTO_COP, {
+    message:
+      'Ingrese un monto razonable: el máximo por movimiento es $10.000.000.000. Revisa si sobran dígitos',
+  })
   valor_cop: number;
 
   @ApiProperty({ example: '2026-08-18', description: 'Fecha del movimiento' })

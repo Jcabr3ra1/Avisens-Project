@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConsumosDiariosService } from './consumos-diarios.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -53,6 +57,7 @@ describe('ConsumosDiariosService', () => {
     prisma.$transaction.mockResolvedValue([[], 0]);
     prisma.lote.findUnique.mockResolvedValue({
       id: 3,
+      cantidad_inicial: 500,
       galpon: { granja: { propietario_id: 5 } },
     });
     prisma.tipoAlimento.findUnique.mockResolvedValue({ id: 2 });
@@ -174,6 +179,45 @@ describe('ConsumosDiariosService', () => {
       await expect(
         service.actualizar(1, { lote_id: 9 }, propietario),
       ).rejects.toThrow(ForbiddenException);
+      expect(prisma.consumoDiario.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('topes por ave (QA-01)', () => {
+    it('rechaza 1,1e+40 kg de alimento para 500 aves y no guarda nada', async () => {
+      await expect(
+        service.crear({ ...dtoCrear, alimento_kg: 1.1e40 }, propietario),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.consumoDiario.create).not.toHaveBeenCalled();
+    });
+
+    it('rechaza más de 1,5 L de agua por ave en un día', async () => {
+      await expect(
+        service.crear({ ...dtoCrear, agua_litros: 751 }, propietario),
+      ).rejects.toThrow(/imposible para 500 aves/);
+    });
+
+    it('acepta el tope exacto (0,4 kg y 1,5 L por ave)', async () => {
+      prisma.consumoDiario.create.mockResolvedValue({ id: 1 });
+      await service.crear(
+        { ...dtoCrear, alimento_kg: 200, agua_litros: 750 },
+        propietario,
+      );
+      expect(prisma.consumoDiario.create).toHaveBeenCalled();
+    });
+
+    it('al editar mide el valor nuevo contra el lote del registro', async () => {
+      prisma.consumoDiario.findUnique.mockResolvedValue({
+        id: 1,
+        lote_id: 3,
+        alimento_kg: 45,
+        agua_litros: 90,
+        lote: { galpon: { granja: { propietario_id: 5 } } },
+      });
+
+      await expect(
+        service.actualizar(1, { alimento_kg: 1.1e40 }, propietario),
+      ).rejects.toThrow(BadRequestException);
       expect(prisma.consumoDiario.update).not.toHaveBeenCalled();
     });
   });
