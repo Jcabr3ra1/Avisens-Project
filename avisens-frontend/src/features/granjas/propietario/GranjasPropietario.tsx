@@ -27,6 +27,7 @@ import LotePestana from './pestanas/LotePestana'
 import AmbientePestana from './pestanas/AmbientePestana'
 import { ActuadoresGalpon } from '@features/monitoreo/components/ActuadoresGalpon'
 import UmbralesPestana from './pestanas/UmbralesPestana'
+import EquiposDeGalpon from '@features/equipos/components/EquiposDeGalpon'
 import DatosPestana from './pestanas/DatosPestana'
 import BitacoraPestana from './pestanas/BitacoraPestana'
 import '@shared/ui/admin/AdminKit.css'
@@ -40,7 +41,7 @@ const AlertasPage = lazy(cargarAlertas)
 
 // Ambiente (sensores) y Actuadores (relés K1-K4) son el monitoreo del
 // galpón: van juntos y en ese orden.
-const PESTANAS = ['resumen', 'lote', 'bitacora', 'ambiente', 'actuadores', 'umbrales', 'alertas', 'datos'] as const
+const PESTANAS = ['resumen', 'lote', 'bitacora', 'ambiente', 'actuadores', 'equipos', 'umbrales', 'alertas', 'datos'] as const
 type Pestana = (typeof PESTANAS)[number]
 
 function pestanaDe(valor: string | null): Pestana {
@@ -309,6 +310,7 @@ function GranjasPropietario() {
                 <Tabs.Trigger value="bitacora" className="gp-pestana">Bitácora</Tabs.Trigger>
                 <Tabs.Trigger value="ambiente" className="gp-pestana">Ambiente</Tabs.Trigger>
                 <Tabs.Trigger value="actuadores" className="gp-pestana">Actuadores</Tabs.Trigger>
+                <Tabs.Trigger value="equipos" className="gp-pestana">Equipos</Tabs.Trigger>
                 <Tabs.Trigger value="umbrales" className="gp-pestana">Umbrales</Tabs.Trigger>
                 <Tabs.Trigger value="alertas" className="gp-pestana">
                   Alertas
@@ -348,6 +350,12 @@ function GranjasPropietario() {
               </Tabs.Content>
               <Tabs.Content value="actuadores" className="gp-contenido">
                 <ActuadoresGalpon galponId={galpon.id} sensores={galpon.sensores} onCambio={() => { void recargarTodo() }} />
+              </Tabs.Content>
+              {/* HU-37: inventario de máquinas del galpón, su estado y sus
+                  mantenimientos. Antes solo se abría desde la pantalla del
+                  administrador, donde es de solo lectura. */}
+              <Tabs.Content value="equipos" className="gp-contenido">
+                <EquiposDeGalpon key={galpon.id} galpon={galpon} />
               </Tabs.Content>
               <Tabs.Content value="umbrales" className="gp-contenido">
                 <UmbralesPestana galpon={galpon} puedeConfigurar={permisosOperativosDeGalpon(getRol()).configurar} />

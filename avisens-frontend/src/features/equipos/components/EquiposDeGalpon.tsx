@@ -9,14 +9,22 @@ import { useEquipos } from '../hooks/useEquipos'
 import {
   ESTADOS_EQUIPO,
   FORMULARIO_EQUIPO_INICIAL,
+  UMBRAL_MANTENIMIENTO,
+  equiposPorMantener,
+  etiquetaEstadoEquipo,
   numeroOpcional,
   porcentajeDesgaste,
+  requiereMantenimiento,
   type DatosEquipo,
 } from '../model/equipo'
 import MantenimientosDeEquipo from './MantenimientosDeEquipo'
 import './EquiposDeGalpon.css'
 
-function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
+// Solo usa id, código y nombre: así lo abren tanto la pantalla de galpones
+// (admin) como la pestaña Equipos de la granja del propietario (HU-37).
+type GalponDeEquipos = Pick<Galpon, 'id' | 'codigo' | 'nombre'>
+
+function EquiposDeGalpon({ galpon }: { galpon: GalponDeEquipos }) {
   const { equipos, cargando, error, crear, actualizar, eliminar } = useEquipos(galpon.id)
   // Registrar equipos, cambiar su estado o darlos de baja es operación del
   // galpón: la hace el propietario; el administrador la consulta.
@@ -97,6 +105,7 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
 
   const operativos = equipos.filter((e) => e.estado_actual === 'operativo').length
   const actuadores = equipos.filter((e) => e.es_actuador).length
+  const porMantener = equiposPorMantener(equipos)
 
   return (
     <div className="eq">
@@ -122,6 +131,19 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
         Desde aquí no se controla nada: los relés K1-K4 se encienden y apagan en
         Monitoreo → Actuadores.
       </p>
+
+      {porMantener.length > 0 && (
+        <div className="eq-alert eq-alert--aviso" role="status">
+          <strong>
+            {porMantener.length === 1
+              ? '1 equipo necesita mantenimiento.'
+              : `${porMantener.length} equipos necesitan mantenimiento.`}
+          </strong>{' '}
+          {porMantener.map((e) => e.nombre).join(', ')}{' '}
+          {porMantener.length === 1 ? 'llegó' : 'llegaron'} al {UMBRAL_MANTENIMIENTO} % de su vida útil.
+          {permisos.configurar && ' Abre «Mantenimientos» para programarlo.'}
+        </div>
+      )}
 
       {error && <div className="eq-alert eq-alert--error" role="alert">{error}</div>}
       {errorAccion && (
@@ -269,6 +291,9 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
                         ) : (
                           <span className={desgaste >= 90 ? 'eq-desgaste-alto' : ''}>
                             {desgaste}%
+                            {requiereMantenimiento(desgaste) && equipo.estado_actual === 'operativo' && (
+                              <span className="eq-tag eq-tag--aviso">mantenimiento</span>
+                            )}
                           </span>
                         )}
                       </td>
@@ -280,11 +305,11 @@ function EquiposDeGalpon({ galpon }: { galpon: Galpon }) {
                             onChange={(e) => void handleEstado(equipo, e.target.value)}
                           >
                             {ESTADOS_EQUIPO.map((estado) => (
-                              <option key={estado} value={estado}>{estado}</option>
+                              <option key={estado} value={estado}>{etiquetaEstadoEquipo(estado)}</option>
                             ))}
                           </select>
                         ) : (
-                          equipo.estado_actual
+                          etiquetaEstadoEquipo(equipo.estado_actual)
                         )}
                       </td>
                       <td className="eq-acciones">

@@ -114,6 +114,17 @@
 .eq-cabecera-equipo span { color: var(--text2); font-size: 0.82rem; }
 
 .eq-alert { margin: 0 0 1rem; padding: 0.6rem 0.8rem; border-radius: 8px; font-size: 0.85rem; }
+.eq-alert--aviso {
+  color: var(--warning-text);
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+}
+
+.eq-tag--aviso {
+  color: var(--warning-text);
+  background: var(--warning-bg);
+}
+
 .eq-alert--error {
   color: var(--danger, var(--danger));
   background: var(--danger-soft);
