@@ -10,6 +10,8 @@ export interface FormularioInsumoDatos {
   precio_unitario_cop: string
   ubicacion_almacen: string
   fecha_vencimiento: string
+  // 0 = sin proveedor. El select trabaja con números y 0 nunca es un id.
+  proveedor_habitual_id: number
 }
 
 export function crearFormularioInsumo(granjaId = 0): FormularioInsumoDatos {
@@ -23,6 +25,7 @@ export function crearFormularioInsumo(granjaId = 0): FormularioInsumoDatos {
     precio_unitario_cop: '',
     ubicacion_almacen: '',
     fecha_vencimiento: '',
+    proveedor_habitual_id: 0,
   }
 }
 
@@ -38,6 +41,7 @@ export function formularioDesdeInsumo(insumo: Insumo): FormularioInsumoDatos {
       insumo.precio_unitario_cop === null ? '' : String(insumo.precio_unitario_cop),
     ubicacion_almacen: insumo.ubicacion_almacen ?? '',
     fecha_vencimiento: insumo.fecha_vencimiento?.slice(0, 10) ?? '',
+    proveedor_habitual_id: insumo.proveedor_habitual_id ?? 0,
   }
 }
 
@@ -64,6 +68,7 @@ export function crearPayloadInsumo(form: FormularioInsumoDatos): CrearInsumoPayl
     precio_unitario_cop: numeroOpcional(form.precio_unitario_cop),
     ubicacion_almacen: textoOpcional(form.ubicacion_almacen),
     fecha_vencimiento: textoOpcional(form.fecha_vencimiento),
+    proveedor_habitual_id: form.proveedor_habitual_id > 0 ? form.proveedor_habitual_id : undefined,
   }
 }
 
@@ -78,4 +83,36 @@ export function actualizarPayloadInsumo(form: FormularioInsumoDatos): Actualizar
   // otra bodega sin dejar un movimiento que lo explique.
   delete parcial.granja_id
   return payload
+}
+
+// HU-58 · escenario 2. «Alimento Iniciación» y «alimento iniciacion » son el
+// mismo insumo: se compara sin mayúsculas, tildes ni espacios sobrantes.
+export function normalizarNombreInsumo(nombre: string): string {
+  return nombre
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLocaleLowerCase('es-CO')
+}
+
+/**
+ * El insumo activo de la misma granja con el mismo nombre y el mismo
+ * proveedor, si existe. En ese caso no se crea otro: se ofrece sumar la
+ * cantidad al existente con un movimiento de entrada, que deja rastro.
+ */
+export function buscarInsumoDuplicado(
+  insumos: Pick<Insumo, 'id' | 'granja_id' | 'nombre' | 'proveedor_habitual_id' | 'activo'>[],
+  form: Pick<FormularioInsumoDatos, 'granja_id' | 'nombre' | 'proveedor_habitual_id'>,
+): number | null {
+  const nombre = normalizarNombreInsumo(form.nombre)
+  if (!nombre) return null
+  const proveedor = form.proveedor_habitual_id > 0 ? form.proveedor_habitual_id : null
+  const duplicado = insumos.find((insumo) =>
+    insumo.activo
+    && insumo.granja_id === form.granja_id
+    && (insumo.proveedor_habitual_id ?? null) === proveedor
+    && normalizarNombreInsumo(insumo.nombre) === nombre,
+  )
+  return duplicado?.id ?? null
 }

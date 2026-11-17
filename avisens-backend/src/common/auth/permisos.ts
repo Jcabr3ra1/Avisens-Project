@@ -7,6 +7,11 @@ export const PERMISOS = {
   CATALOGOS_LEER: 'catalogos:leer',
   CATALOGOS_GESTIONAR: 'catalogos:gestionar',
   PROVEEDORES_LEER: 'proveedores:leer',
+  // Alta en el directorio compartido (HU-58): el propietario registra al
+  // proveedor que le falta al crear un insumo. Editar, desactivar o borrar
+  // sigue siendo del administrador, porque el directorio es de todas las
+  // organizaciones y un cliente no debe cambiar los datos que usa otro.
+  PROVEEDORES_CREAR: 'proveedores:crear',
   PROVEEDORES_GESTIONAR: 'proveedores:gestionar',
   INFRAESTRUCTURA_LEER: 'infraestructura:leer',
   INFRAESTRUCTURA_GESTIONAR: 'infraestructura:gestionar',
@@ -30,6 +35,7 @@ export const PERMISOS_POR_ROL: Readonly<Record<string, readonly Permiso[]>> = {
     PERMISOS.USUARIOS_GESTIONAR,
     PERMISOS.CATALOGOS_LEER,
     PERMISOS.PROVEEDORES_LEER,
+    PERMISOS.PROVEEDORES_CREAR,
     PERMISOS.INFRAESTRUCTURA_LEER,
     PERMISOS.INFRAESTRUCTURA_GESTIONAR,
     PERMISOS.OPERACION_REGISTRAR,
