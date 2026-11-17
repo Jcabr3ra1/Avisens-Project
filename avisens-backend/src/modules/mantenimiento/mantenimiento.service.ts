@@ -17,6 +17,14 @@ import {
   verificarAccesoEquipo,
 } from '../../common/auth/alcance';
 
+// Los estados se escriben a mano en varios clientes; estas son las formas
+// que significan «el trabajo ya se hizo».
+const ESTADOS_COMPLETADOS = ['completo', 'completado', 'realizado'];
+
+function esCompletado(estado: string | null | undefined): boolean {
+  return ESTADOS_COMPLETADOS.includes((estado ?? '').trim().toLowerCase());
+}
+
 type StockBloqueado = { stock_actual: Prisma.Decimal };
 type RepuestoBloqueado = {
   id: number;
@@ -146,7 +154,7 @@ export class MantenimientoService {
     updateDto: UpdateMantenimientoDto,
     solicitante: Solicitante,
   ) {
-    await this.findOne(id, solicitante);
+    const actual = await this.findOne(id, solicitante);
 
     if (updateDto.equipo_id !== undefined) {
       const repuestos = await this.prisma.mantenimientoRepuesto.count({
@@ -162,7 +170,7 @@ export class MantenimientoService {
 
     const { fecha_programada, fecha_ejecucion, ...data } = updateDto;
 
-    return this.prisma.mantenimiento.update({
+    const actualizacion = {
       where: {
         id: Number(id),
       },
@@ -180,6 +188,27 @@ export class MantenimientoService {
       include: {
         equipo: true,
       },
+    };
+
+    // HU-37: al completar un mantenimiento el equipo vuelve a estar operativo
+    // y su contador de horas de uso arranca de cero, así el desgaste mide el
+    // tiempo desde la última intervención. Va en la misma transacción para que
+    // no quede un mantenimiento completado con el equipo sin actualizar.
+    const seCompleta =
+      updateDto.estado !== undefined &&
+      esCompletado(updateDto.estado) &&
+      !esCompletado(actual.estado);
+
+    if (!seCompleta) {
+      return this.prisma.mantenimiento.update(actualizacion);
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.equipo.update({
+        where: { id: updateDto.equipo_id ?? actual.equipo_id },
+        data: { horas_operacion: 0, estado_actual: 'operativo' },
+      });
+      return tx.mantenimiento.update(actualizacion);
     });
   }
 

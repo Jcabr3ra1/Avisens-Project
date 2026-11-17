@@ -15,6 +15,7 @@ describe('MantenimientoService', () => {
   const prisma = {
     equipo: {
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
     mantenimiento: {
       create: jest.fn(),
@@ -275,6 +276,42 @@ describe('MantenimientoService', () => {
           },
         }),
       );
+    });
+
+    it('al completarlo deja el equipo operativo y reinicia sus horas de uso (HU-37)', async () => {
+      prisma.mantenimiento.update.mockResolvedValue({ id: 1, estado: 'completado' });
+
+      await service.update('1', { estado: 'completado' }, propietario);
+
+      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(prisma.equipo.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { horas_operacion: 0, estado_actual: 'operativo' },
+      });
+      expect(prisma.mantenimiento.update).toHaveBeenCalled();
+    });
+
+    it('no reinicia las horas si el mantenimiento ya estaba completado', async () => {
+      prisma.mantenimiento.findUnique.mockResolvedValue({
+        id: 1,
+        equipo_id: 1,
+        estado: 'Realizado',
+        equipo: { galpon: { granja: { id: 10, propietario_id: 5 } } },
+        repuestos: [],
+      });
+      prisma.mantenimiento.update.mockResolvedValue({ id: 1 });
+
+      await service.update('1', { estado: 'completado' }, propietario);
+
+      expect(prisma.equipo.update).not.toHaveBeenCalled();
+    });
+
+    it('no toca el equipo en una edición que no lo completa', async () => {
+      prisma.mantenimiento.update.mockResolvedValue({ id: 1 });
+
+      await service.update('1', { tecnico_responsable: 'Pedro' }, propietario);
+
+      expect(prisma.equipo.update).not.toHaveBeenCalled();
     });
 
     it('si cambia el equipo, valida el nuevo equipo', async () => {
