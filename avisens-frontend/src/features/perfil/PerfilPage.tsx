@@ -53,6 +53,9 @@ function PerfilPage() {
   }, [])
 
   const nivel = fortaleza(nueva)
+  // QA 17-nov: el Propietario solo ve sus datos y pide otra contraseña al
+  // administrador; el servidor también lo exige.
+  const puedeCambiarClave = perfil !== null && perfil.rol !== 'Propietario'
 
   async function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
@@ -88,7 +91,7 @@ function PerfilPage() {
       {!perfil && !errorCarga ? (
         <Cargando texto="Cargando tu perfil…" />
       ) : perfil && (
-        <div className="per-cuerpo">
+        <div className={`per-cuerpo${puedeCambiarClave ? '' : ' per-cuerpo--solo'}`}>
           <section className="per-tarjeta" aria-labelledby="per-datos-titulo">
             <div className="per-identidad">
               <span className="per-avatar" aria-hidden="true"><AvatarUsuario nombre={perfil.nombre_completo} tamano={72} /></span>
@@ -105,9 +108,14 @@ function PerfilPage() {
               <div><dt>Último ingreso</dt><dd>{fecha(perfil.fecha_ultimo_login, FECHA_HORA)}</dd></div>
               <div><dt>Contraseña cambiada</dt><dd>{fecha(perfil.fecha_ultimo_cambio_password)}</dd></div>
             </dl>
-            <p className="per-nota">¿Algún dato está mal? Pídele al administrador que lo corrija.</p>
+            <p className="per-nota">
+              {puedeCambiarClave
+                ? '¿Algún dato está mal? Pídele al administrador que lo corrija.'
+                : '¿Algún dato está mal o necesitas otra contraseña? Pídeselo al administrador.'}
+            </p>
           </section>
 
+          {puedeCambiarClave && (
           <section className="per-tarjeta" aria-labelledby="per-seguridad-titulo">
             <h2 id="per-seguridad-titulo">Cambiar contraseña</h2>
             <p className="per-ayuda">Al guardar se cerrarán todas tus sesiones y tendrás que entrar de nuevo.</p>
@@ -131,6 +139,7 @@ function PerfilPage() {
               </button>
             </form>
           </section>
+          )}
         </div>
       )}
     </div>

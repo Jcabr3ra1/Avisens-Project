@@ -16,6 +16,9 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { CambiarPasswordDto } from './dto/cambiar-password.dto';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { ROLES } from '../../common/auth/roles';
 
 interface AuthRequest extends Request {
   user: {
@@ -53,14 +56,18 @@ export class AuthController {
     return this.authService.perfil(req.user.id);
   }
 
+  // QA 17-nov: el Propietario no cambia su contraseña desde Mi perfil; la
+  // recupera con la solicitud asistida (recuperaciones-password), que aprueba
+  // un administrador. Administrador y Operario la siguen cambiando aquí.
   @Post('cambiar-password')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(ROLES.ADMINISTRADOR, ROLES.OPERARIO)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      'Cambiar la contraseña propia confirmando la actual (cierra todas las sesiones)',
+      'Cambiar la contraseña propia confirmando la actual (Administrador y Operario; cierra todas las sesiones)',
   })
   cambiarPassword(@Body() dto: CambiarPasswordDto, @Req() req: AccessRequest) {
     return this.authService.cambiarPassword(
