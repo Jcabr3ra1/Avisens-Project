@@ -1,8 +1,9 @@
 import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 import type { Usuario } from '@shared/api'
 import type { Galpon } from '@features/galpones/api/galpones'
-import { IcClose } from '@shared/ui/icons/icons'
+import Modal from '@shared/ui/Modal/Modal'
+import { IcBarn, IcPlus, IcTrash } from '@shared/ui/icons/icons'
 import type { AsignacionGalpon } from '../api/asignacionesGalpon'
 
 type Props = {
@@ -17,6 +18,9 @@ type Props = {
   onRetirar: (galponId: number) => Promise<void>
 }
 
+// QA 17-nov: el panel se pintaba al pie de la página con controles del
+// navegador sin estilo. Ahora usa el Modal compartido (portal, velo, foco
+// atrapado y Escape) y los mismos campos y botones del resto de formularios.
 function ModalAsignacionesGalpon({
   usuario,
   asignaciones,
@@ -41,18 +45,7 @@ function ModalAsignacionesGalpon({
     )),
     [asignacionesActivas, galpones],
   )
-
-  useEffect(() => {
-    if (!cargando) selectorRef.current?.focus()
-  }, [cargando])
-
-  useEffect(() => {
-    const cerrarConEscape = (evento: KeyboardEvent) => {
-      if (evento.key === 'Escape') onCerrar()
-    }
-    window.addEventListener('keydown', cerrarConEscape)
-    return () => window.removeEventListener('keydown', cerrarConEscape)
-  }, [onCerrar])
+  const sinDisponibles = galponesDisponibles.length === 0
 
   async function enviarAsignacion(evento: FormEvent) {
     evento.preventDefault()
@@ -84,49 +77,38 @@ function ModalAsignacionesGalpon({
   }
 
   return (
-    <div className="usuarios-modal-overlay">
-      <div
-        className="usuarios-modal usuarios-modal-asignaciones"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="usuarios-asignaciones-titulo"
-      >
-        <div className="usuarios-modal-cabecera">
-          <div>
-            <h2 id="usuarios-asignaciones-titulo" className="usuarios-modal-titulo">
-              Galpones de {usuario.nombre_completo}
-            </h2>
-            <p className="usuarios-asignaciones-ayuda">
-              Asigna los galpones que este operario debe atender.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="usuarios-modal-cerrar"
-            onClick={onCerrar}
-            disabled={guardando}
-            aria-label="Cerrar gestión de galpones"
-          >
-            <IcClose size={20} />
-          </button>
-        </div>
-
-        {cargando ? (
-          <p className="usuarios-asignaciones-cargando" role="status">Cargando galpones…</p>
-        ) : (
-          <>
-            <form className="usuarios-asignaciones-form" onSubmit={enviarAsignacion}>
-              <label className="usuarios-campo">
+    <Modal
+      titulo={`Galpones de ${usuario.nombre_completo}`}
+      subtitulo="Asigna los galpones que este operario debe atender."
+      onCerrar={onCerrar}
+      ancho="ancho"
+      bloqueado={guardando}
+      focoInicial={selectorRef}
+      icono={<span className="usuarios-asig-icono" aria-hidden="true"><IcBarn size={20} /></span>}
+      acciones={
+        <button type="button" className="modal-btn modal-btn--primary" onClick={onCerrar} disabled={guardando}>
+          Listo
+        </button>
+      }
+    >
+      {cargando ? (
+        <p className="usuarios-asignaciones-cargando" role="status">Cargando galpones…</p>
+      ) : (
+        <>
+          <form className="usuarios-asig-form" onSubmit={enviarAsignacion} aria-labelledby="usuarios-asig-nuevo">
+            <h3 id="usuarios-asig-nuevo" className="usuarios-asig-subtitulo">Asignar un galpón</h3>
+            <div className="usuarios-asig-campos">
+              <label className="modal-campo">
                 <span>Galpón</span>
                 <select
                   ref={selectorRef}
                   value={galponId}
                   onChange={(evento) => setGalponId(evento.target.value)}
-                  disabled={guardando || galponesDisponibles.length === 0}
+                  disabled={guardando || sinDisponibles}
                   required
                 >
                   <option value="">
-                    {galponesDisponibles.length === 0 ? 'No hay galpones disponibles' : 'Selecciona un galpón'}
+                    {sinDisponibles ? 'No hay galpones disponibles' : 'Selecciona un galpón'}
                   </option>
                   {galponesDisponibles.map((galpon) => (
                     <option key={galpon.id} value={galpon.id}>
@@ -136,58 +118,71 @@ function ModalAsignacionesGalpon({
                 </select>
               </label>
 
-              <label className="usuarios-campo">
+              <label className="modal-campo">
                 <span>Responsabilidad <em>(Opcional)</em></span>
                 <input
                   value={rolAsignacion}
                   onChange={(evento) => setRolAsignacion(evento.target.value)}
                   placeholder="Ej.: revisión diaria"
                   maxLength={100}
-                  disabled={guardando || galponesDisponibles.length === 0}
+                  disabled={guardando || sinDisponibles}
                 />
               </label>
+            </div>
 
+            <div className="usuarios-asig-acciones">
+              {sinDisponibles && (
+                <p className="modal-ayuda">Todos los galpones activos ya están asignados a este operario.</p>
+              )}
               <button
                 type="submit"
-                className="usuarios-btn-primary"
+                className="modal-btn modal-btn--primary usuarios-asig-boton"
                 disabled={guardando || !galponId}
               >
+                <IcPlus size={16} />
                 {guardando ? 'Asignando…' : 'Asignar galpón'}
               </button>
-            </form>
+            </div>
+          </form>
 
-            {error && <p className="usuarios-modal-error" role="alert">{error}</p>}
+          {error && <p className="modal-error" role="alert">{error}</p>}
 
-            <section className="usuarios-asignaciones-listado" aria-label="Galpones asignados">
-              <h3>Galpones asignados</h3>
-              {asignacionesActivas.length === 0 ? (
-                <p className="usuarios-asignaciones-vacio">Este operario todavía no tiene galpones asignados.</p>
-              ) : (
-                <ul className="usuarios-asignaciones-lista">
-                  {asignacionesActivas.map((asignacion) => (
-                    <li key={asignacion.id} className="usuarios-asignacion">
-                      <div className="usuarios-asignacion-info">
-                        <strong>{asignacion.galpon.nombre}</strong>
-                        <span>{asignacion.galpon.codigo} · {asignacion.galpon.granja.nombre}</span>
-                        {asignacion.rol_asignacion && <small>{asignacion.rol_asignacion}</small>}
-                      </div>
-                      <button
-                        type="button"
-                        className="usuarios-btn-retirar"
-                        onClick={() => confirmarRetiro(asignacion)}
-                        disabled={guardando}
-                      >
-                        Retirar
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </>
-        )}
-      </div>
-    </div>
+          <section className="usuarios-asig-listado" aria-labelledby="usuarios-asig-lista">
+            <h3 id="usuarios-asig-lista" className="usuarios-asig-subtitulo">
+              Galpones asignados <span className="usuarios-asig-cuenta">{asignacionesActivas.length}</span>
+            </h3>
+            {asignacionesActivas.length === 0 ? (
+              <p className="usuarios-asignaciones-vacio">
+                Este operario todavía no tiene galpones asignados. Elige uno arriba y pulsa «Asignar galpón».
+              </p>
+            ) : (
+              <ul className="usuarios-asig-lista">
+                {asignacionesActivas.map((asignacion) => (
+                  <li key={asignacion.id} className="usuarios-asig-item">
+                    <span className="usuarios-asig-icono" aria-hidden="true"><IcBarn size={18} /></span>
+                    <div className="usuarios-asig-info">
+                      <strong>{asignacion.galpon.nombre}</strong>
+                      <span>{asignacion.galpon.codigo} · {asignacion.galpon.granja.nombre}</span>
+                      {asignacion.rol_asignacion && <small>{asignacion.rol_asignacion}</small>}
+                    </div>
+                    <button
+                      type="button"
+                      className="modal-btn modal-btn--danger usuarios-asig-retirar"
+                      onClick={() => confirmarRetiro(asignacion)}
+                      disabled={guardando}
+                      aria-label={`Retirar ${asignacion.galpon.nombre}`}
+                    >
+                      <IcTrash size={15} />
+                      Retirar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </>
+      )}
+    </Modal>
   )
 }
 

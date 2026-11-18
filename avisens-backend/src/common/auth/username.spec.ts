@@ -14,7 +14,7 @@ const validar = (metatype: new () => object, datos: object) =>
   pipe.transform(datos, { type: 'body', metatype });
 const cuenta = {
   nombre_completo: 'María López',
-  cedula: '12345',
+  cedula: '1098765432',
   username: ' MARIA.LOPEZ ',
   password: 'UnaClave123!',
   rol_id: 2,
@@ -87,6 +87,39 @@ describe('contrato de acceso por usuario', () => {
     await expect(
       validar(CreateUsuarioDto, { ...cuenta, email: 'no-es-correo' }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('exige cédula de 6 a 10 dígitos y teléfono de al menos 10 (QA 17-nov)', async () => {
+    for (const cedula of ['987654321@', 'CC1234567', '1.098.765', '123']) {
+      await expect(
+        validar(CreateUsuarioDto, { ...cuenta, cedula }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    }
+    for (const telefono of ['123', '300abc4567']) {
+      await expect(
+        validar(CreateUsuarioDto, { ...cuenta, telefono }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    }
+    await expect(
+      validar(CreateUsuarioDto, { ...cuenta, telefono: '+57 300 123-4567' }),
+    ).resolves.toMatchObject({ telefono: '+573001234567' });
+    await expect(
+      validar(UpdateUsuarioDto, { telefono: '' }),
+    ).resolves.toMatchObject({ telefono: null });
+  });
+
+  it('responde en español cuando el correo no es válido', async () => {
+    const error: unknown = await validar(CreateUsuarioDto, {
+      ...cuenta,
+      email: 'a@aa',
+    }).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect(
+      JSON.stringify((error as BadRequestException).getResponse()),
+    ).toContain('Escribe un correo válido');
   });
 
   it('no permite borrar el usuario de acceso al editar', async () => {

@@ -48,3 +48,17 @@ describe('errorDeRegistro', () => {
     expect(errorDeRegistro('peso', formularioPeso({ fecha: '' }))).toMatch(/fecha/)
   })
 })
+
+describe('errorDeRegistro · sanidad (QA 17-nov)', () => {
+  const base = { ...FORMULARIO_INICIAL, fecha: '2026-11-17', tipo: 'tratamiento' }
+
+  it('rechaza producto o diagnóstico de solo números', () => {
+    expect(errorDeRegistro('sanitario', { ...base, producto: '77777' })).toMatch(/producto o vacuna/)
+    expect(errorDeRegistro('sanitario', { ...base, diagnostico: '8888' })).toMatch(/diagnóstico/)
+  })
+
+  it('acepta nombres con números y los campos vacíos', () => {
+    expect(errorDeRegistro('sanitario', { ...base, producto: 'Enrofloxacina 10 %', diagnostico: 'CRD' })).toBe('')
+    expect(errorDeRegistro('sanitario', base)).toBe('')
+  })
+})
