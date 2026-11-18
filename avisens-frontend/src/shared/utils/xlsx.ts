@@ -86,7 +86,9 @@ const ESTILOS_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
   + '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
   + '<xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
   + '<xf numFmtId="2" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
-  + '</cellXfs></styleSheet>'
+  + '</cellXfs>'
+  + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+  + '</styleSheet>'
 
 function partesDelLibro(hojas: HojaXlsx[]): [string, string][] {
   const nombres = hojas.map((hoja) => nombreDeHoja(hoja.nombre))

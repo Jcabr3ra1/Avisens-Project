@@ -113,6 +113,8 @@
   font-weight: 750;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+  /* Una cifra fuera de lo normal no debe pisar la columna vecina. */
+  overflow-wrap: anywhere;
 }
 
 .rfl-valor--ok {

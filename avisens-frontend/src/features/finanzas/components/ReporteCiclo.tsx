@@ -1,4 +1,5 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import { IcAlert, IcArrowUp, IcChart, IcCoin, IcDoc } from '@shared/ui/icons/icons'
@@ -38,6 +39,7 @@ function ReporteCiclo({ lotes, granjas }: ReporteCicloProps) {
   const [reporte, setReporte] = useState<ReporteFinanciero | null>(null)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
+  const [imprimiendo, setImprimiendo] = useState(false)
 
   const lotesOrdenados = useMemo(
     () => [...lotes].sort((a, b) => a.codigo.localeCompare(b.codigo, 'es')),
@@ -81,16 +83,27 @@ function ReporteCiclo({ lotes, granjas }: ReporteCicloProps) {
     toast.success('Reporte exportado a Excel')
   }
 
-  // El PDF sale del diálogo de impresión del navegador («Guardar como PDF»):
-  // la hoja de estilos de impresión deja solo el reporte, sin menú ni filtros.
+  // El PDF sale del diálogo de impresión del navegador («Guardar como PDF»).
+  // Imprimir la página tal cual no sirve: la barra lateral oculta sigue
+  // ocupando espacio y el reporte salía corrido y cortado. Por eso se monta
+  // una copia en un portal de <body> y la hoja de impresión oculta lo demás.
   function exportarPdf() {
-    if (!reporte) return
+    if (reporte) setImprimiendo(true)
+  }
+
+  useEffect(() => {
+    if (!imprimiendo || !reporte) return
     const tituloAnterior = document.title
     // El título del documento es el nombre que el navegador propone al guardar.
     document.title = nombreArchivoReporte(reporte)
-    window.addEventListener('afterprint', () => { document.title = tituloAnterior }, { once: true })
+    const terminar = () => {
+      document.title = tituloAnterior
+      setImprimiendo(false)
+    }
+    window.addEventListener('afterprint', terminar, { once: true })
     window.print()
-  }
+    return () => window.removeEventListener('afterprint', terminar)
+  }, [imprimiendo, reporte])
 
   const stats: Stat[] = reporte ? [
     { label: 'Ingresos', valor: formatoCop(reporte.totales.ingresos), icono: <IcArrowUp size={18} />, tono: 'ok' },
@@ -111,6 +124,135 @@ function ReporteCiclo({ lotes, granjas }: ReporteCicloProps) {
 
   const avisosIncompletos = reporte?.avisos.filter((aviso) => !esAvisoInformativo(aviso.codigo)) ?? []
   const avisosInformativos = reporte?.avisos.filter((aviso) => esAvisoInformativo(aviso.codigo)) ?? []
+
+  // Se arma una vez: va en la página y, al imprimir, también en un portal
+  // colgado de <body>, fuera del layout del panel (ver ReporteCiclo.css).
+  const cuerpo = reporte && (
+    <section className="rc-imprimible" aria-label="Reporte financiero">
+      <header className="rc-cabecera">
+        <div>
+          <p className="rc-eyebrow">Reporte financiero por ciclo</p>
+          <h2 className="rc-titulo">{descripcionAlcance(reporte, nombreGranja)}</h2>
+          <p className="rc-generado">Generado el {new Date(reporte.generado_en).toLocaleString('es-CO')}</p>
+        </div>
+        <div className="rc-acciones rc-no-imprimir">
+          <button type="button" className="adm-btn adm-btn--secundario" onClick={exportarExcel}>
+            <IcDoc size={16} aria-hidden="true" /> Exportar Excel
+          </button>
+          <button type="button" className="adm-btn adm-btn--secundario" onClick={exportarPdf}>
+            <IcDoc size={16} aria-hidden="true" /> Exportar PDF
+          </button>
+        </div>
+      </header>
+
+      {avisosIncompletos.length > 0 && (
+        <div className="adm-aviso rc-avisos" role="status">
+          <IcAlert size={18} aria-hidden="true" />
+          <div>
+            <strong>Reporte parcial: hay datos incompletos</strong>
+            <ul>{avisosIncompletos.map((aviso) => <li key={aviso.mensaje}>{aviso.mensaje}</li>)}</ul>
+          </div>
+        </div>
+      )}
+      {avisosInformativos.length > 0 && (
+        <ul className="rc-notas">
+          {avisosInformativos.map((aviso) => <li key={aviso.mensaje}>{aviso.mensaje}</li>)}
+        </ul>
+      )}
+
+      <div className="rc-totales">
+        <TarjetasResumen stats={stats} etiqueta="Totales del reporte" />
+      </div>
+
+      {reporte.lotes.length > 0 && (
+        <div className="rc-lotes">
+          {reporte.lotes.map((lote) => (
+            <ResumenFinancieroLote
+              key={lote.lote_id}
+              codigoLote={`${lote.codigo} · ${lote.granja}`}
+              cantidadAves={lote.aves_vivas}
+              diaVida={lote.dia_vida}
+              estado={lote.estado}
+              ingresos={lote.ingresos}
+              egresos={lote.egresos}
+              pesoActualKg={lote.peso_actual_kg}
+              pesoObjetivoKg={lote.peso_objetivo_kg}
+              margenNetoPct={lote.margen_neto_pct}
+            />
+          ))}
+        </div>
+      )}
+
+      {reporte.gastos_generales.movimientos > 0 && (
+        <p className="rc-generales">
+          Incluye gastos generales de granja sin lote asignado: egresos {formatoCop(reporte.gastos_generales.egresos)}
+          {reporte.gastos_generales.ingresos > 0 && `, ingresos ${formatoCop(reporte.gastos_generales.ingresos)}`}.
+        </p>
+      )}
+
+      {reporte.lotes.some((lote) => lote.presupuesto_cop !== null) && (
+        <section className="adm-panel rc-tabla-card" aria-label="Costos por lote">
+          <h3 className="rc-subtitulo">Costos por lote</h3>
+          <div className="fin-tabla-scroll">
+            <table className="fin-tabla rc-tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Lote</th>
+                  <th scope="col">Costo por ave</th>
+                  <th scope="col">Presupuesto</th>
+                  <th scope="col">Presupuesto usado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reporte.lotes.map((lote) => (
+                  <tr key={lote.lote_id}>
+                    <td>{lote.codigo}</td>
+                    <td>{lote.costo_por_ave === null ? '—' : formatoCop(lote.costo_por_ave)}</td>
+                    <td>{lote.presupuesto_cop === null ? 'Sin presupuesto' : formatoCop(lote.presupuesto_cop)}</td>
+                    <td className={lote.presupuesto_usado_pct !== null && lote.presupuesto_usado_pct > 100 ? 'rc-excedido' : undefined}>
+                      {formatoPorcentaje(lote.presupuesto_usado_pct)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {reporte.por_categoria.length > 0 && (
+        <section className="adm-panel rc-tabla-card" aria-label="Totales por categoría">
+          <h3 className="rc-subtitulo">Totales por categoría</h3>
+          <div className="fin-tabla-scroll">
+            <table className="fin-tabla rc-tabla">
+              <thead>
+                <tr>
+                  <th scope="col">Tipo</th>
+                  <th scope="col">Categoría</th>
+                  <th scope="col">Movimientos</th>
+                  <th scope="col">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reporte.por_categoria.map((categoria) => (
+                  <tr key={`${categoria.tipo}-${categoria.categoria_id}`}>
+                    <td>
+                      <span className={`fin-tipo-badge fin-tipo-badge--${categoria.tipo}`}>
+                        {categoria.tipo === 'ingreso' ? 'Ingreso' : 'Egreso'}
+                      </span>
+                    </td>
+                    <td>{categoria.nombre}</td>
+                    <td>{categoria.movimientos}</td>
+                    <td className={`fin-monto fin-monto--${categoria.tipo}`}>{formatoCop(categoria.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </section>
+  )
 
   return (
     <div className="rc">
@@ -171,129 +313,10 @@ function ReporteCiclo({ lotes, granjas }: ReporteCicloProps) {
         </div>
       )}
 
-      {reporte && (
-        <section className="rc-imprimible" aria-label="Reporte financiero">
-          <header className="rc-cabecera">
-            <div>
-              <p className="rc-eyebrow">Reporte financiero por ciclo</p>
-              <h2 className="rc-titulo">{descripcionAlcance(reporte, nombreGranja)}</h2>
-              <p className="rc-generado">Generado el {new Date(reporte.generado_en).toLocaleString('es-CO')}</p>
-            </div>
-            <div className="rc-acciones rc-no-imprimir">
-              <button type="button" className="adm-btn adm-btn--secundario" onClick={exportarExcel}>
-                <IcDoc size={16} aria-hidden="true" /> Exportar Excel
-              </button>
-              <button type="button" className="adm-btn adm-btn--secundario" onClick={exportarPdf}>
-                <IcDoc size={16} aria-hidden="true" /> Exportar PDF
-              </button>
-            </div>
-          </header>
-
-          {avisosIncompletos.length > 0 && (
-            <div className="adm-aviso rc-avisos" role="status">
-              <IcAlert size={18} aria-hidden="true" />
-              <div>
-                <strong>Reporte parcial: hay datos incompletos</strong>
-                <ul>{avisosIncompletos.map((aviso) => <li key={aviso.mensaje}>{aviso.mensaje}</li>)}</ul>
-              </div>
-            </div>
-          )}
-          {avisosInformativos.length > 0 && (
-            <ul className="rc-notas">
-              {avisosInformativos.map((aviso) => <li key={aviso.mensaje}>{aviso.mensaje}</li>)}
-            </ul>
-          )}
-
-          <TarjetasResumen stats={stats} etiqueta="Totales del reporte" />
-
-          {reporte.lotes.length > 0 && (
-            <div className="rc-lotes">
-              {reporte.lotes.map((lote) => (
-                <ResumenFinancieroLote
-                  key={lote.lote_id}
-                  codigoLote={`${lote.codigo} · ${lote.granja}`}
-                  cantidadAves={lote.aves_vivas}
-                  diaVida={lote.dia_vida}
-                  estado={lote.estado}
-                  ingresos={lote.ingresos}
-                  egresos={lote.egresos}
-                  pesoActualKg={lote.peso_actual_kg}
-                  pesoObjetivoKg={lote.peso_objetivo_kg}
-                  margenNetoPct={lote.margen_neto_pct}
-                />
-              ))}
-            </div>
-          )}
-
-          {reporte.gastos_generales.movimientos > 0 && (
-            <p className="rc-generales">
-              Incluye gastos generales de granja sin lote asignado: egresos {formatoCop(reporte.gastos_generales.egresos)}
-              {reporte.gastos_generales.ingresos > 0 && `, ingresos ${formatoCop(reporte.gastos_generales.ingresos)}`}.
-            </p>
-          )}
-
-          {reporte.lotes.some((lote) => lote.presupuesto_cop !== null) && (
-            <section className="adm-panel rc-tabla-card" aria-label="Costos por lote">
-              <h3 className="rc-subtitulo">Costos por lote</h3>
-              <div className="fin-tabla-scroll">
-                <table className="fin-tabla rc-tabla">
-                  <thead>
-                    <tr>
-                      <th scope="col">Lote</th>
-                      <th scope="col">Costo por ave</th>
-                      <th scope="col">Presupuesto</th>
-                      <th scope="col">Presupuesto usado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reporte.lotes.map((lote) => (
-                      <tr key={lote.lote_id}>
-                        <td>{lote.codigo}</td>
-                        <td>{lote.costo_por_ave === null ? '—' : formatoCop(lote.costo_por_ave)}</td>
-                        <td>{lote.presupuesto_cop === null ? 'Sin presupuesto' : formatoCop(lote.presupuesto_cop)}</td>
-                        <td className={lote.presupuesto_usado_pct !== null && lote.presupuesto_usado_pct > 100 ? 'rc-excedido' : undefined}>
-                          {formatoPorcentaje(lote.presupuesto_usado_pct)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-
-          {reporte.por_categoria.length > 0 && (
-            <section className="adm-panel rc-tabla-card" aria-label="Totales por categoría">
-              <h3 className="rc-subtitulo">Totales por categoría</h3>
-              <div className="fin-tabla-scroll">
-                <table className="fin-tabla rc-tabla">
-                  <thead>
-                    <tr>
-                      <th scope="col">Tipo</th>
-                      <th scope="col">Categoría</th>
-                      <th scope="col">Movimientos</th>
-                      <th scope="col">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reporte.por_categoria.map((categoria) => (
-                      <tr key={`${categoria.tipo}-${categoria.categoria_id}`}>
-                        <td>
-                          <span className={`fin-tipo-badge fin-tipo-badge--${categoria.tipo}`}>
-                            {categoria.tipo === 'ingreso' ? 'Ingreso' : 'Egreso'}
-                          </span>
-                        </td>
-                        <td>{categoria.nombre}</td>
-                        <td>{categoria.movimientos}</td>
-                        <td className={`fin-monto fin-monto--${categoria.tipo}`}>{formatoCop(categoria.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-        </section>
+      {cuerpo}
+      {imprimiendo && cuerpo && createPortal(
+        <div className="rc-impresion"><div className="adm-page">{cuerpo}</div></div>,
+        document.body,
       )}
     </div>
   )

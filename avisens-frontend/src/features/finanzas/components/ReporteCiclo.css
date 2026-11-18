@@ -88,9 +88,12 @@
   gap: var(--space-2);
 }
 
-.rc-avisos {
+/* Doble clase: .adm-aviso reparte el contenido a los extremos y AdminKit
+   puede cargarse después de esta hoja. */
+.adm-aviso.rc-avisos {
   align-items: flex-start;
   justify-content: flex-start;
+  text-align: left;
 }
 
 .rc-avisos ul {
@@ -107,8 +110,31 @@
 
 .rc-lotes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 36rem), 1fr));
   gap: var(--space-4);
+}
+
+/* Los montos del reporte llegan a nueve cifras: con cuatro tarjetas en la
+   rejilla general (158px) el valor se cortaba. Aquí van de a dos por fila,
+   o las cuatro en línea cuando hay espacio. */
+.rc-totales .adm-resumen {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 1200px) {
+  .rc-totales .adm-resumen {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .rc-totales .adm-resumen {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rc-totales .adm-stat-valor {
+  overflow-wrap: anywhere;
 }
 
 .rc-generales {
@@ -150,45 +176,49 @@
   }
 }
 
-/* ─── Exportar a PDF: solo se imprime el reporte ─── */
+/* ─── Exportar a PDF ───
+   Al imprimir se muestra solo la copia del reporte montada en un portal
+   directo de <body> (.rc-impresion); la app entera (#root) se oculta. Así el
+   reporte no hereda el ancho de la barra lateral ni las transformaciones
+   del panel. */
+
+.rc-impresion {
+  display: none;
+}
 
 @media print {
-  body * {
-    visibility: hidden;
-  }
-
-  .rc-imprimible,
-  .rc-imprimible * {
-    visibility: visible;
-  }
-
-  .rc-imprimible {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    color: #000;
-  }
-
-  .rc-no-imprimir {
+  body > :not(.rc-impresion) {
     display: none !important;
   }
 
-  .rc-imprimible .adm-panel,
-  .rc-imprimible .adm-stat {
+  .rc-impresion {
+    display: block;
+    color: #000;
+  }
+
+  .rc-impresion .rc-no-imprimir {
+    display: none !important;
+  }
+
+  .rc-impresion .adm-panel,
+  .rc-impresion .adm-stat {
     box-shadow: none;
     break-inside: avoid;
   }
 
-  .rc-imprimible .fin-tabla-scroll {
+  .rc-impresion .fin-tabla-scroll {
     overflow: visible;
   }
 
-  .rc-imprimible .rc-tabla {
+  .rc-impresion .rc-tabla {
     min-width: 0;
   }
 
-  .rc-lotes {
+  .rc-impresion .rc-lotes {
     grid-template-columns: 1fr;
+  }
+
+  .rc-impresion .rc-totales .adm-resumen {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

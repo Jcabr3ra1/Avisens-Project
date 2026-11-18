@@ -84,7 +84,9 @@ function ResumenFinancieroLote({
           </strong>
           {margenNetoPct !== undefined && (
             <span className="rfl-nota">
-              Margen neto {margenNetoPct === null ? '—' : `${margenNetoPct.toFixed(1)} %`}
+              Margen neto {margenNetoPct === null
+                ? '—'
+                : `${margenNetoPct.toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`}
             </span>
           )}
         </div>
