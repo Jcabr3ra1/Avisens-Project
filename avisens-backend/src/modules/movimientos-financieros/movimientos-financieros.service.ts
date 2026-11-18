@@ -10,6 +10,13 @@ import { CreateMovimientoFinancieroDto } from './dto/create-movimiento-financier
 import { UpdateMovimientoFinancieroDto } from './dto/update-movimiento-financiero.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
+import { ReporteFinancieroQueryDto } from './dto/reporte-financiero-query.dto';
+import {
+  AlcanceReporte,
+  armarReporte,
+  LoteDelReporte,
+  ReporteFinanciero,
+} from './reporte-financiero';
 import {
   esPropietario,
   verificarDueno,
@@ -17,6 +24,10 @@ import {
 } from '../../common/auth/acceso';
 
 const SIN_ACCESO = 'Solo puedes gestionar movimientos de tus propias granjas';
+
+/** Dos años: más que eso deja de ser un reporte de ciclo y se vuelve lento. */
+const DIAS_MAXIMOS_REPORTE = 731;
+const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
 const MOVIMIENTO_SELECT = {
   id: true,
@@ -312,5 +323,185 @@ export class MovimientosFinancierosService {
 
     await this.prisma.movimientoFinanciero.delete({ where: { id } });
     return { id, eliminado: true };
+  }
+
+  /**
+   * Reporte financiero consolidado por ciclo (HU-33): por lote —el ciclo
+   * completo— o por periodo, con balance, margen neto, costo por ave y avisos
+   * de datos incompletos.
+   */
+  async reporte(
+    filtro: ReporteFinancieroQueryDto,
+    solicitante: Solicitante,
+  ): Promise<ReporteFinanciero> {
+    const alcance = await this.resolverAlcance(filtro, solicitante);
+
+    const where =
+      alcance.tipo === 'lote'
+        ? { lote_id: alcance.lote_id }
+        : {
+            fecha: {
+              gte: new Date(`${alcance.fecha_desde}T00:00:00.000Z`),
+              lte: new Date(`${alcance.fecha_hasta}T00:00:00.000Z`),
+            },
+            ...(alcance.granja_id !== null
+              ? { granja_id: alcance.granja_id }
+              : {}),
+            ...(esPropietario(solicitante)
+              ? { granja: { propietario_id: solicitante.id } }
+              : {}),
+          };
+
+    const filas = await this.prisma.movimientoFinanciero.findMany({
+      where,
+      select: {
+        lote_id: true,
+        tipo: true,
+        valor_cop: true,
+        fecha: true,
+        categoria: { select: { id: true, nombre: true, tipo: true } },
+      },
+      orderBy: { fecha: 'asc' },
+    });
+    const movimientos = filas.map((fila) => ({
+      ...fila,
+      valor_cop: Number(fila.valor_cop),
+    }));
+
+    const loteIds =
+      alcance.tipo === 'lote'
+        ? [alcance.lote_id]
+        : [
+            ...new Set(
+              movimientos
+                .map((movimiento) => movimiento.lote_id)
+                .filter((id): id is number => id !== null),
+            ),
+          ];
+    const lotes = await this.lotesDelReporte(loteIds);
+
+    await this.registrarConsultaAjena(solicitante, {
+      alcance: 'reporte',
+      filtro: alcance,
+      movimientos: movimientos.length,
+    });
+
+    return armarReporte(alcance, lotes, movimientos);
+  }
+
+  private async resolverAlcance(
+    filtro: ReporteFinancieroQueryDto,
+    solicitante: Solicitante,
+  ): Promise<AlcanceReporte> {
+    const { lote_id, granja_id, fecha_desde, fecha_hasta } = filtro;
+
+    if (lote_id !== undefined) {
+      if (fecha_desde || fecha_hasta || granja_id !== undefined) {
+        throw new BadRequestException(
+          'Pide el reporte por lote o por periodo, no ambos a la vez',
+        );
+      }
+      // resolverGranja ya valida que el lote exista y sea del solicitante.
+      await this.resolverGranja(undefined, lote_id, solicitante);
+      return { tipo: 'lote', lote_id };
+    }
+
+    if (!fecha_desde || !fecha_hasta) {
+      throw new BadRequestException(
+        'Indica un lote, o la fecha inicial y final del periodo',
+      );
+    }
+    const desde = fecha_desde.slice(0, 10);
+    const hasta = fecha_hasta.slice(0, 10);
+    const dias =
+      (new Date(`${hasta}T00:00:00.000Z`).getTime() -
+        new Date(`${desde}T00:00:00.000Z`).getTime()) /
+      MS_POR_DIA;
+    if (dias < 0) {
+      throw new BadRequestException(
+        'La fecha inicial no puede ser posterior a la final',
+      );
+    }
+    if (dias > DIAS_MAXIMOS_REPORTE) {
+      throw new BadRequestException(
+        'El periodo del reporte no puede superar dos años',
+      );
+    }
+
+    if (granja_id !== undefined) {
+      await this.resolverGranja(granja_id, undefined, solicitante);
+    }
+
+    return {
+      tipo: 'periodo',
+      fecha_desde: desde,
+      fecha_hasta: hasta,
+      granja_id: granja_id ?? null,
+    };
+  }
+
+  private async lotesDelReporte(ids: number[]): Promise<LoteDelReporte[]> {
+    if (ids.length === 0) return [];
+
+    const [lotes, mortalidad] = await Promise.all([
+      this.prisma.lote.findMany({
+        where: { id: { in: ids } },
+        select: {
+          id: true,
+          codigo: true,
+          estado: true,
+          fecha_ingreso: true,
+          fecha_salida_real: true,
+          cantidad_inicial: true,
+          presupuesto_total_cop: true,
+          galpon: { select: { granja: { select: { nombre: true } } } },
+          pesajes: {
+            orderBy: { fecha: 'desc' },
+            take: 1,
+            select: { peso_promedio_g: true, peso_objetivo_g: true },
+          },
+          planes: {
+            where: { vigente: true },
+            take: 1,
+            select: { peso_objetivo_g: true },
+          },
+        },
+        orderBy: { codigo: 'asc' },
+      }),
+      this.prisma.registroMortalidad.groupBy({
+        by: ['lote_id'],
+        where: { lote_id: { in: ids } },
+        _sum: { cantidad_aves: true },
+      }),
+    ]);
+
+    const muertesPorLote = new Map(
+      mortalidad.map((fila) => [fila.lote_id, fila._sum.cantidad_aves ?? 0]),
+    );
+
+    return lotes.map((lote) => {
+      const ultimoPesaje = lote.pesajes[0];
+      const plan = lote.planes[0];
+      return {
+        id: lote.id,
+        codigo: lote.codigo,
+        granja: lote.galpon.granja.nombre,
+        estado: lote.estado,
+        fecha_ingreso: lote.fecha_ingreso,
+        fecha_salida_real: lote.fecha_salida_real,
+        cantidad_inicial: lote.cantidad_inicial,
+        presupuesto_total_cop:
+          lote.presupuesto_total_cop !== null
+            ? Number(lote.presupuesto_total_cop)
+            : null,
+        mortalidad: muertesPorLote.get(lote.id) ?? 0,
+        peso_actual_g: ultimoPesaje?.peso_promedio_g ?? null,
+        // El plan vigente manda; si el lote no tiene plan, se usa el objetivo
+        // que traía el último pesaje.
+        peso_objetivo_g: plan
+          ? Number(plan.peso_objetivo_g)
+          : (ultimoPesaje?.peso_objetivo_g ?? null),
+      };
+    });
   }
 }

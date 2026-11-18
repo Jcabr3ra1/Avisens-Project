@@ -1,0 +1,175 @@
+/* Resumen financiero por lote — mantiene el lenguaje visual `adm-` */
+
+.rfl-card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Cabecera ─── */
+
+.rfl-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, rgba(0, 91, 72, 0.025), transparent);
+}
+
+.rfl-head-info {
+  min-width: 0;
+}
+
+.rfl-codigo {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rfl-meta {
+  margin: 0.15rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.rfl-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.rfl-badge--activo {
+  background: rgba(16, 185, 129, 0.13);
+  color: var(--green-d);
+}
+
+.rfl-badge--inactivo {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--danger3);
+}
+
+.rfl-badge--finalizado {
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+}
+
+/* ─── Bloques de datos ─── */
+
+.rfl-bloque {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.rfl-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.rfl-item--icono {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rfl-icono {
+  display: grid;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(0, 91, 72, 0.08);
+  color: var(--primary);
+}
+
+.rfl-label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.rfl-valor {
+  display: block;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  /* Una cifra fuera de lo normal no debe pisar la columna vecina. */
+  overflow-wrap: anywhere;
+}
+
+.rfl-valor--ok {
+  color: var(--green-d);
+}
+
+.rfl-valor--peligro {
+  color: var(--danger3);
+}
+
+.rfl-nota {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Bloque de proyección ─── */
+
+.rfl-proyeccion {
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  background: var(--surface-tinted);
+}
+
+.rfl-proyeccion-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: var(--space-3);
+  color: var(--primary);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rfl-proyeccion-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 760px) {
+  .rfl-bloque {
+    grid-template-columns: 1fr;
+  }
+
+  .rfl-proyeccion-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .rfl-proyeccion-grid {
+    grid-template-columns: 1fr;
+  }
+}
