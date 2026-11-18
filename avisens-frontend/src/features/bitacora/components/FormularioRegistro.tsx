@@ -1,7 +1,14 @@
 import { useEffect, useRef, type FormEvent, type ReactNode } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import type { Insumo } from '@features/inventario/api/insumos'
-import { VIAS_APLICACION, type FormularioRegistro as Datos, type TipoRegistro } from '../model/bitacora'
+import {
+  AVES_MAXIMO,
+  PESO_MAXIMO_G,
+  PESO_MINIMO_G,
+  VIAS_APLICACION,
+  type FormularioRegistro as Datos,
+  type TipoRegistro,
+} from '../model/bitacora'
 
 type Props = {
   tipo: TipoRegistro
@@ -85,7 +92,8 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
               <span>Peso promedio (g)</span>
               <input
                 type="number"
-                min="1"
+                min={PESO_MINIMO_G}
+                max={PESO_MAXIMO_G}
                 value={form.peso_promedio_g}
                 onChange={(evento) => onCambiar('peso_promedio_g', evento.target.value)}
                 required
@@ -97,6 +105,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
                 <input
                   type="number"
                   min="1"
+                  max={AVES_MAXIMO}
                   value={form.cantidad_aves_pesadas}
                   onChange={(evento) => onCambiar('cantidad_aves_pesadas', evento.target.value)}
                 />
@@ -105,7 +114,8 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
                 <span>Peso objetivo (g) <em>(Opcional)</em></span>
                 <input
                   type="number"
-                  min="1"
+                  min={PESO_MINIMO_G}
+                  max={PESO_MAXIMO_G}
                   value={form.peso_objetivo_g}
                   onChange={(evento) => onCambiar('peso_objetivo_g', evento.target.value)}
                 />
@@ -121,6 +131,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
               <input
                 type="number"
                 min="1"
+                max={AVES_MAXIMO}
                 value={form.cantidad_aves}
                 onChange={(evento) => onCambiar('cantidad_aves', evento.target.value)}
                 required
@@ -203,6 +214,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
                 <input
                   type="number"
                   min="1"
+                  max={AVES_MAXIMO}
                   step="1"
                   inputMode="numeric"
                   value={form.cantidad_aves}

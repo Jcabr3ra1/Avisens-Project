@@ -3,7 +3,7 @@ import { formatearPeso } from '@features/guia-crecimiento/model/proyeccion'
 import { useCurvaLote } from '@features/granjas/propietario/useCurvaLote'
 import type { DashboardIndicador, DashboardLote } from '../model/dashboard'
 import { filaDeFaena } from '../model/faena'
-import { NOTA_DATO_IMPOSIBLE, TEXTO_DATO_IMPOSIBLE, comparacionVigente, esDatoVerificado, fcrCreible, pesoCreible, lineaSparkline, mismaRevision, pesoActualParaSparkline, serieDePesoVerificado, textoComparacion, textoComparacionFcr, textoFechaPesaje, type Fila } from '../model/estadoLote'
+import { NOTA_DATO_IMPOSIBLE, TEXTO_DATO_IMPOSIBLE, comparacionVigente, esDatoVerificado, fcrCreible, formatearFcr, pesoCreible, lineaSparkline, mismaRevision, pesoActualParaSparkline, serieDePesoVerificado, textoComparacion, textoComparacionFcr, textoFechaPesaje, type Fila } from '../model/estadoLote'
 
 type Props = {
   lote: DashboardLote | null
@@ -60,8 +60,8 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando }: Props
           : fcrImposible
             ? TEXTO_DATO_IMPOSIBLE
             : fechaFcr
-              ? `${reciente.fcr} (${fechaFcr})`
-              : String(reciente.fcr),
+              ? `${formatearFcr(reciente.fcr)} (${fechaFcr})`
+              : formatearFcr(reciente.fcr),
       nota: fcrImposible
         ? NOTA_DATO_IMPOSIBLE
         : notaVigente

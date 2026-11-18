@@ -51,7 +51,9 @@ export function gestionaAlgo(permisos: PermisosGestion): boolean {
   return permisos.editar || permisos.alternarActivo || permisos.eliminar
 }
 
-// Bodega: el catálogo de insumos lo administra el administrador, pero el
+// Bodega: el catálogo de insumos de una granja lo administran el
+// administrador y su propietario (HU-58: el propietario da de alta lo que
+// compra). Borrar definitivo sigue siendo solo del administrador. El
 // movimiento de stock lo registran los tres roles — el operario apunta lo
 // que consume en campo y esa es la razón de ser del módulo.
 // Fuente: avisens-backend/src/modules/insumos/insumos.controller.ts
@@ -83,9 +85,9 @@ export function permisosDeInsumo(rol: string | null): PermisosInsumo {
       ? ['salida']
       : []
   return {
-    crear: esAdmin,
-    editar: esAdmin,
-    alternarActivo: esAdmin,
+    crear: gestionaBodega,
+    editar: gestionaBodega,
+    alternarActivo: gestionaBodega,
     eliminar: esAdmin,
     registrarMovimiento: tiposMovimiento.length > 0,
     tiposMovimiento,
@@ -116,16 +118,23 @@ export function permisosDeRegistro(rol: string | null): PermisosRegistro {
 }
 
 // Proveedores: el directorio lo administra solo el administrador
-// (proveedores:gestionar). El operario lo consulta desde su Bodega para saber
-// a quién pedir un insumo (proveedores:leer), sin crear, editar ni borrar.
+// (proveedores:gestionar). El propietario puede dar de alta al que le falta
+// cuando registra un insumo (proveedores:crear, HU-58), pero no editar ni
+// desactivar: el directorio es compartido entre organizaciones. El operario
+// lo consulta desde su Bodega para saber a quién pedir un insumo
+// (proveedores:leer).
 // Fuente: avisens-backend/src/modules/proveedores/proveedores.controller.ts y
 // avisens-backend/src/common/auth/permisos.ts
 export type PermisosProveedor = {
+  crear: boolean
   gestionar: boolean
 }
 
 export function permisosDeProveedor(rol: string | null): PermisosProveedor {
-  return { gestionar: rol === ROL_ADMIN }
+  return {
+    crear: rol === ROL_ADMIN || rol === ROL_PROPIETARIO,
+    gestionar: rol === ROL_ADMIN,
+  }
 }
 
 // Equipos, mantenimientos, repuestos y umbrales ambientales siguen la regla

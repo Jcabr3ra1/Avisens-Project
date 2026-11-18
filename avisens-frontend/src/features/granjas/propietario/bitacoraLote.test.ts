@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ConsumoDiario } from '@features/consumos-diarios/api/consumosDiarios'
-import { agruparPorDia, consumoCreible, totalesConsumo, lineaDeTiempo, payloadConsumo } from './bitacoraLote'
+import { agruparPorDia, consumoCreible, detalleSanitario, totalesConsumo, lineaDeTiempo, payloadConsumo } from './bitacoraLote'
 
 const pesaje = { id: 1, lote_id: 9, fecha: '2026-10-17', peso_promedio_g: 2100, cantidad_aves_pesadas: 50, peso_objetivo_g: null, observaciones: null }
 const muerte = { id: 2, lote_id: 9, fecha: '2026-10-17', cantidad_aves: 1, causa_presuntiva: 'Calor', disposicion: null, observaciones: null }
@@ -14,7 +14,7 @@ describe('lineaDeTiempo', () => {
     expect(movimientos.map((m) => m.clave)).toEqual(['mortalidad-2', 'peso-1', 'consumo-4', 'sanitario-3'])
     expect(movimientos[1]).toMatchObject({ titulo: 'Pesaje · 2.100 g por ave', detalle: '50 aves pesadas' })
     expect(movimientos[2]).toMatchObject({ titulo: 'Consumo · 25,5 kg de alimento', detalle: 'Preiniciador · 60 L de agua' })
-    expect(movimientos[3]).toMatchObject({ titulo: 'Vacunación', detalle: 'Newcastle' })
+    expect(movimientos[3]).toMatchObject({ titulo: 'Vacunación', detalle: 'Producto: Newcastle' })
   })
 })
 
@@ -35,6 +35,13 @@ describe('payloadConsumo', () => {
       payload: { lote_id: 9, fecha: '2026-10-17', tipo_alimento_id: undefined, alimento_kg: undefined, agua_litros: 40, metodo_registro: 'manual' },
     })
   })
+
+  it('rechaza cantidades desproporcionadas o astronómicas de alimento o agua', () => {
+    const baseAlimento = { lote_id: '9', tipo_alimento_id: '1', fecha: '2026-10-17', alimento_kg: '999999', agua_litros: '' }
+    expect(payloadConsumo(baseAlimento, 9).error).toMatch(/razonable/)
+    const baseAgua = { lote_id: '9', tipo_alimento_id: '', fecha: '2026-10-17', alimento_kg: '', agua_litros: '999999' }
+    expect(payloadConsumo(baseAgua, 9).error).toMatch(/razonable/)
+  })
 })
 
 describe('QA-01 / Figura 2: registros imposibles ya guardados', () => {
@@ -54,5 +61,18 @@ describe('QA-01 / Figura 2: registros imposibles ya guardados', () => {
     const movimientos = lineaDeTiempo(9, [pesoAbsurdo], [], [], [absurdo], 500)
     expect(movimientos.every((m) => m.fueraDeRango)).toBe(true)
     expect(movimientos.map((m) => m.titulo)).toEqual(['Pesaje · dato fuera de rango', 'Consumo · dato fuera de rango'])
+  })
+})
+
+describe('detalleSanitario (QA 17-nov)', () => {
+  it('etiqueta el producto, el diagnóstico y las aves para que se lean solos', () => {
+    expect(detalleSanitario({ producto: 'Enrofloxacina', diagnostico: 'CRD', cantidad_aves: 500 }))
+      .toBe('Producto: Enrofloxacina · Diagnóstico: CRD · 500 aves')
+    expect(detalleSanitario({ producto: '77777', diagnostico: '8888', cantidad_aves: null }))
+      .toBe('Producto: 77777 · Diagnóstico: 8888')
+  })
+
+  it('dice qué falta cuando no hay producto ni diagnóstico', () => {
+    expect(detalleSanitario({ producto: null, diagnostico: '  ', cantidad_aves: null })).toBe('Sin producto ni diagnóstico')
   })
 })

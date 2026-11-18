@@ -11,6 +11,7 @@ import {
   serieDePesoVerificado,
   textoComparacion,
   textoComparacionFcr,
+  formatearFcr,
   textoFechaPesaje,
 } from './estadoLote'
 import type { DashboardIndicador } from './dashboard'
@@ -51,8 +52,8 @@ describe('textoComparacion', () => {
 
 describe('textoComparacionFcr', () => {
   it('no agrega "%": el desvio de FCR es una diferencia absoluta, no un porcentaje', () => {
-    expect(textoComparacionFcr(-0.15, 1.62)).toBe('-0.15 bajo la curva · meta 1.62')
-    expect(textoComparacionFcr(0.08, 1.5)).toBe('+0.08 sobre la curva · meta 1.5')
+    expect(textoComparacionFcr(-0.15, 1.62)).toBe('-0,15 bajo la curva · meta 1,62')
+    expect(textoComparacionFcr(0.08, 1.5)).toBe('+0,08 sobre la curva · meta 1,50')
   })
 
   it('no dice nada cuando no hay con qué comparar', () => {
@@ -61,11 +62,11 @@ describe('textoComparacionFcr', () => {
   })
 
   it('omite la meta si no viene', () => {
-    expect(textoComparacionFcr(-0.1, null)).toBe('-0.1 bajo la curva')
+    expect(textoComparacionFcr(-0.1, null)).toBe('-0,10 bajo la curva')
   })
 
   it('dice "en la curva" cuando el desvio es exactamente cero', () => {
-    expect(textoComparacionFcr(0, 1.62)).toBe('en la curva · meta 1.62')
+    expect(textoComparacionFcr(0, 1.62)).toBe('en la curva · meta 1,62')
   })
 })
 
@@ -275,5 +276,13 @@ describe('QA-01: datos imposibles no se muestran como reales', () => {
 
   it('el peso actual del sparkline no usa un dato imposible', () => {
     expect(pesoActualParaSparkline(indicador({ pesoPromedioG: 1e15 }))).toBeNull()
+  })
+})
+
+describe('formatearFcr', () => {
+  it('redondea la conversión a dos decimales con coma (QA 17-nov)', () => {
+    expect(formatearFcr(0.02666666666666667)).toBe('0,03')
+    expect(formatearFcr(1.5)).toBe('1,50')
+    expect(formatearFcr(1.625)).toMatch(/^1,6[23]$/)
   })
 })

@@ -332,3 +332,11 @@
   .modal-tarjeta--compacta .modal-pie { padding: var(--space-3) var(--space-4); }
   .modal-tarjeta--compacta .modal-pie .modal-btn { flex: 1 1 110px; }
 }
+
+/* Campo que no pasó la validación: recuadro rojo junto a su mensaje. */
+.modal-campo input[aria-invalid='true'],
+.modal-campo select[aria-invalid='true'],
+.modal-campo textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
