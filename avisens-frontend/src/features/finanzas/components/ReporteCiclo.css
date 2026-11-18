@@ -191,9 +191,19 @@
     display: none !important;
   }
 
+  body {
+    background: #fff !important;
+  }
+
   .rc-impresion {
     display: block;
     color: #000;
+  }
+
+  /* La hoja mide menos de 760px y la regla móvil de la tarjeta la apilaba
+     en una columna; en papel caben las tres. */
+  .rc-impresion .rfl-bloque {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .rc-impresion .rc-no-imprimir {
