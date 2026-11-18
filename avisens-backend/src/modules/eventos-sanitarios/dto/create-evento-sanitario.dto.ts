@@ -5,7 +5,11 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Matches,
 } from 'class-validator';
+
+// Un producto o un diagnóstico siempre tiene letras: «77777» no dice nada (QA 17-nov).
+const TIENE_LETRAS = /\p{L}/u;
 
 export class CreateEventoSanitarioDto {
   @ApiProperty({ example: 1, description: 'ID del lote' })
@@ -37,6 +41,9 @@ export class CreateEventoSanitarioDto {
     description: 'Enfermedad diagnosticada (texto libre)',
   })
   @IsString()
+  @Matches(TIENE_LETRAS, {
+    message: 'Escribe el diagnóstico con palabras, no solo números',
+  })
   @IsOptional()
   diagnostico?: string;
 
@@ -45,6 +52,9 @@ export class CreateEventoSanitarioDto {
     description: 'Producto aplicado',
   })
   @IsString()
+  @Matches(TIENE_LETRAS, {
+    message: 'Escribe el nombre del producto o vacuna, no solo números',
+  })
   @IsOptional()
   producto?: string;
 

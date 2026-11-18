@@ -20,6 +20,17 @@ export type DiaMovimientos = { fecha: string; etiqueta: string; movimientos: Mov
 const entero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 })
 const decimal = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
 
+// QA 17-nov: «77777 · 8888» no decía qué era cada número. Cada dato lleva su
+// etiqueta para que el subtítulo se lea solo.
+export function detalleSanitario(s: Pick<EventoSanitario, 'producto' | 'diagnostico' | 'cantidad_aves'>): string {
+  const partes = [
+    s.producto?.trim() ? `Producto: ${s.producto.trim()}` : null,
+    s.diagnostico?.trim() ? `Diagnóstico: ${s.diagnostico.trim()}` : null,
+    s.cantidad_aves ? `${entero.format(s.cantidad_aves)} ${s.cantidad_aves === 1 ? 'ave' : 'aves'}` : null,
+  ]
+  return partes.filter(Boolean).join(' · ') || 'Sin producto ni diagnóstico'
+}
+
 const EVENTOS: Record<string, string> = {
   vacunacion: 'Vacunación',
   medicacion: 'Medicación',
@@ -55,7 +66,7 @@ export function lineaDeTiempo(
     ...delLote(sanitarios).map((s) => ({
       clave: `sanitario-${s.id}`, tipo: 'sanitario' as const, id: s.id, fecha: s.fecha.slice(0, 10),
       titulo: EVENTOS[s.tipo] ?? s.tipo,
-      detalle: [s.producto, s.diagnostico].filter(Boolean).join(' · ') || 'Sin detalle',
+      detalle: detalleSanitario(s),
     })),
     ...delLote(consumos).map((c) => {
       const base = { clave: `consumo-${c.id}`, tipo: 'consumo' as const, id: c.id, fecha: c.fecha.slice(0, 10) }

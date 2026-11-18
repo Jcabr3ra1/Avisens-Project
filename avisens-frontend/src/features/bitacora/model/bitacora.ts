@@ -12,6 +12,9 @@ export const PESO_MINIMO_G = 1
 export const PESO_MAXIMO_G = 30_000
 export const AVES_MAXIMO = 100_000
 
+// Un producto o un diagnóstico siempre tiene letras («Newcastle», «Enrofloxacina 10 %»).
+export const TIENE_LETRAS = /\p{L}/u
+
 export function errorDeRegistro(tipo: TipoRegistro, form: FormularioRegistro): string {
   if (!form.fecha) return 'Selecciona la fecha del registro.'
   if (tipo === 'peso') {
@@ -43,6 +46,14 @@ export function errorDeRegistro(tipo: TipoRegistro, form: FormularioRegistro): s
     if (!form.cantidad_aves || Number.isNaN(cant) || cant < 1) return 'La cantidad de aves fallecidas debe ser al menos 1.'
     if (cant > AVES_MAXIMO) {
       return `La cantidad de aves fallecidas no puede superar ${AVES_MAXIMO.toLocaleString('es-CO')}.`
+    }
+  }
+  if (tipo === 'sanitario') {
+    if (form.producto.trim() && !TIENE_LETRAS.test(form.producto)) {
+      return 'Escribe el nombre del producto o vacuna, no solo números.'
+    }
+    if (form.diagnostico.trim() && !TIENE_LETRAS.test(form.diagnostico)) {
+      return 'Escribe el diagnóstico con palabras, no solo números.'
     }
   }
   return ''
