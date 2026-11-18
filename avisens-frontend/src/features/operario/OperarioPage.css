@@ -1,8 +1,19 @@
-/* Mi jornada usa el kit compartido (.adm-page, CabeceraAdmin,
-   TarjetasResumen, Modal). Aquí solo queda lo propio de la tarjeta de cada
-   galpón asignado. */
+/* Mi jornada usa el mismo resumen del propietario (hero, pendientes y
+   galpón 3D, con los estilos de features/dashboard) y el Modal compartido.
+   Aquí solo queda lo propio del operario: la sección «Registro de hoy» con
+   la tarjeta de cada galpón asignado. */
 .operario-page {
   width: 100%;
+}
+
+.operario-registro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.operario-page .operario-sin-lote {
+  margin: 1rem 0;
 }
 
 .operario-success {
@@ -253,7 +264,196 @@
   outline-offset: 2px;
 }
 
+/* «Tu lote hoy»: cifras del lote (las mismas de la app) y salud. */
+.operario-lote-resumen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.operario-lote-error {
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
+  border-radius: 12px;
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 9%, transparent);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.operario-cifras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.operario-cifra {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "icono etiqueta"
+    "valor valor"
+    "nota nota"
+    "aviso aviso";
+  align-items: center;
+  gap: 0.2rem 0.55rem;
+  min-width: 0;
+  padding: 0.95rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--adm-shadow);
+}
+
+.operario-cifra-icono {
+  grid-area: icono;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--green-d);
+  background: color-mix(in srgb, var(--green) 10%, transparent);
+  border-radius: 10px;
+}
+
+.operario-cifra-etiqueta {
+  grid-area: etiqueta;
+  min-width: 0;
+  color: var(--text3);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.operario-cifra-valor {
+  grid-area: valor;
+  margin-top: 0.35rem;
+  color: var(--dash-ink);
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.operario-cifra-nota {
+  grid-area: nota;
+  color: var(--text3);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.operario-cifra-aviso {
+  grid-area: aviso;
+  justify-self: start;
+  margin-top: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.operario-cifra--peligro .operario-cifra-icono {
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+}
+
+.operario-cifra--peligro .operario-cifra-valor {
+  color: var(--red);
+}
+
+.operario-cifra--aviso .operario-cifra-icono {
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+}
+
+.operario-cifra--aviso .operario-cifra-valor {
+  font-size: 1.05rem;
+}
+
+.operario-salud {
+  --salud-color: var(--green-d);
+  padding: 1rem 1.1rem;
+  background: var(--card);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--adm-shadow);
+}
+
+.operario-salud--critico { --salud-color: var(--red); }
+.operario-salud--atencion,
+.operario-salud--seguimiento { --salud-color: var(--amber); }
+.operario-salud--sin_datos { --salud-color: var(--text3); }
+
+.operario-salud-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.operario-salud-titulo {
+  color: var(--text3);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.operario-salud-estado {
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  color: var(--salud-color);
+  background: color-mix(in srgb, var(--salud-color) 12%, transparent);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.operario-salud-barra {
+  height: 10px;
+  margin: 0.8rem 0 0.6rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--avisens-ink) 8%, transparent);
+}
+
+.operario-salud-barra span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--salud-color);
+  transition: width 0.4s ease;
+}
+
+.operario-salud-detalle {
+  margin: 0;
+  color: var(--text2);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 @media (max-width: 640px) {
+  .operario-cifras {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operario-cifra {
+    padding: 0.8rem;
+  }
+
+  .operario-cifra-valor {
+    font-size: 1.2rem;
+  }
+
   .operario-galpones {
     grid-template-columns: 1fr;
   }
@@ -274,6 +474,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .operario-salud-barra span,
   .operario-btn,
   .operario-link-alertas {
     transition: none;

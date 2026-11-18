@@ -34,7 +34,10 @@ function TablaConsumos({ consumos, permisos, onEditar, onEliminar }: Props) {
               <td><b>{c.lote.codigo}</b></td>
               <td>{c.tipo_alimento?.nombre ?? 'Sin alimento'}</td>
               <td>{c.alimento_kg === null ? '—' : `${Number(c.alimento_kg).toLocaleString('es-CO')} kg`}</td>
-              <td>{c.agua_litros === null ? '—' : `${Number(c.agua_litros).toLocaleString('es-CO')} L`}</td>
+              <td>
+                {c.agua_litros === null ? '—' : `${Number(c.agua_litros).toLocaleString('es-CO')} L`}
+                {c.alerta_agua_baja && <span className="cd-agua-baja">Agua baja</span>}
+              </td>
               {hayAcciones && (
                 <td>
                   <div>

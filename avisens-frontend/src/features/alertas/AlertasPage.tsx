@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { getRol } from '@shared/api'
-import { ROL_OPERARIO } from '@shared/auth/permisos'
+import { ROL_OPERARIO, ROL_PROPIETARIO } from '@shared/auth/permisos'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import BotonActualizar from '@shared/ui/BotonActualizar/BotonActualizar'
 import SinGalponesAsignados from '@shared/ui/Estados/SinGalponesAsignados'
+import AvisoStockBajo from './components/AvisoStockBajo'
 import BannerAlertaCritica from './components/BannerAlertaCritica'
 import FiltrosAlertas from './components/FiltrosAlertas'
 import ListaAlertas from './components/ListaAlertas'
@@ -11,6 +12,7 @@ import PanelAlerta from './components/PanelAlerta'
 import ResumenAlertas from './components/ResumenAlertas'
 import { useAlertas } from './hooks/useAlertas'
 import { useGalponesAsignados } from './hooks/useGalponesAsignados'
+import { useStockBajo } from './hooks/useStockBajo'
 import {
   filtrarAlertas,
   obtenerResumenAlertas,
@@ -39,6 +41,10 @@ function AlertasPage({ galponFijo }: Props = {}) {
   // engañoso (auditoría QA 2026-10-30, HALL-03).
   const esOperario = getRol() === ROL_OPERARIO
   const asignacion = useGalponesAsignados(esOperario && !embebida)
+  // Quien trabaja la bodega de su granja ve aquí lo que falta reponer. El
+  // administrador no: vería la bodega de todas las organizaciones.
+  const rol = getRol()
+  const stock = useStockBajo(!embebida && (esOperario || rol === ROL_PROPIETARIO))
   const alertas = useMemo(
     () => (embebida ? todas.filter((alerta) => alerta.galpon_id === galponFijo) : todas),
     [embebida, galponFijo, todas],
@@ -69,7 +75,7 @@ function AlertasPage({ galponFijo }: Props = {}) {
           acciones={(
             <BotonActualizar
               cargando={cargando}
-              onActualizar={() => Promise.all([recargar(), asignacion.recargar()])}
+              onActualizar={() => Promise.all([recargar(), asignacion.recargar(), stock.recargar()])}
             />
           )}
         />
@@ -91,6 +97,7 @@ function AlertasPage({ galponFijo }: Props = {}) {
         cargando={cargando}
         alcance={embebida ? 'En este galpón' : esOperario ? 'En tus galpones' : undefined}
       />
+      {!embebida && <AvisoStockBajo insumos={stock.porReponer} />}
       {!embebida && <FiltrosAlertas
         alertas={alertas}
         etiquetaTodos={esOperario ? 'Todos mis galpones' : undefined}
