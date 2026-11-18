@@ -312,12 +312,28 @@ class InicioFragment : BaseBottomNavFragment() {
 
     private fun configurarSpinnerGranjas() {
         val nombres = granjas.map { it.nombre }
-        val adapter = ArrayAdapter(
+        val adapter = object : ArrayAdapter<String>(
             requireContext(),
             android.R.layout.simple_spinner_item,
             nombres
-        )
+        ) {
+            override fun getView(
+                position: Int,
+                convertView: View?,
+                parent: android.view.ViewGroup
+            ): View {
+                val vista = super.getView(position, convertView, parent)
+                // Siempre blanco, incluso si solo hay una granja.
+                (vista as? TextView)?.setTextColor(Color.WHITE)
+                return vista
+            }
+        }
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        // La flecha solo se ve con dos o más granjas.
+        binding.ivFlechaGranjas.visibility =
+            if (granjas.size >= 2) View.VISIBLE else View.GONE
+        // No deshabilitar: Android atenúa el texto de los Spinner deshabilitados.
+        binding.spinnerGranjas.isEnabled = true
         binding.spinnerGranjas.adapter = adapter
         binding.spinnerGranjas.onItemSelectedListener =
             object : AdapterView.OnItemSelectedListener {

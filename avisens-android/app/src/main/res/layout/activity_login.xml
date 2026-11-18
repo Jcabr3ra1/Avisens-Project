@@ -175,7 +175,7 @@
                     app:layout_constraintEnd_toEndOf="parent" />
 
                 <!-- ===================================================== -->
-                <!-- CORREO                                                 -->
+                <!-- NOMBRE DE USUARIO                                      -->
                 <!-- ===================================================== -->
 
                 <TextView
@@ -210,7 +210,7 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent" />
 
-                <!-- Icono correo -->
+                <!-- Icono de usuario -->
 
                 <ImageView
                     android:id="@+id/iconCorreo"
@@ -290,7 +290,7 @@
                     app:layout_constraintEnd_toEndOf="@id/etContrasena" />
 
                 <!-- ===================================================== -->
-                <!-- RECORDAR / OLVIDÉ MI CONTRASEÑA                        -->
+                <!-- RECORDARME                                              -->
                 <!-- ===================================================== -->
 
                 <CheckBox
@@ -304,11 +304,10 @@
                     android:textColor="#4A5D55"
                     android:textSize="12sp"
                     app:layout_constraintTop_toBottomOf="@id/etContrasena"
-                    app:layout_constraintStart_toStartOf="parent"/>
-
+                    app:layout_constraintStart_toStartOf="parent" />
 
                 <!-- ===================================================== -->
-                <!-- BOTÓN MATERIAL                                         -->
+                <!-- BOTÓN DE INGRESO                                       -->
                 <!-- ===================================================== -->
 
                 <com.google.android.material.button.MaterialButton

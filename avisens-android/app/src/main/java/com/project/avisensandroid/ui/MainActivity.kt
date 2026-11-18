@@ -1319,50 +1319,27 @@ class MainActivity : AppCompatActivity() {
                         .toString()
                         .trim()
 
-                when {
-
-                    nombre.isEmpty() -> {
-
-                        perfilBinding
-                            .edtNombrePerfil
-                            .error =
-                            "Ingresa tu nombre"
-                    }
-
-                    !Patterns.EMAIL_ADDRESS
-                        .matcher(correo)
-                        .matches() -> {
-
-                        perfilBinding
-                            .edtCorreoPerfil
-                            .error =
-                            "Ingresa un correo válido"
-                    }
-
-                    telefono.isEmpty() -> {
-
-                        perfilBinding
-                            .edtTelefonoPerfil
-                            .error =
-                            "Ingresa tu teléfono"
-                    }
-
-                    else -> {
-
-                        setPerfilEditable(false)
-
-                        perfilBinding
-                            .btnGuardarPerfil
-                            .visibility =
-                            View.GONE
-
-                        Toast.makeText(
-                            this,
-                            "Perfil actualizado",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                var primerError: View? = null
+                if (nombre.isBlank()) {
+                    perfilBinding.edtNombrePerfil.error = "Ingresa tu nombre"
+                    primerError = primerError ?: perfilBinding.edtNombrePerfil
                 }
+                if (!Patterns.EMAIL_ADDRESS.matcher(correo).matches()) {
+                    perfilBinding.edtCorreoPerfil.error = "Ingresa un correo válido"
+                    primerError = primerError ?: perfilBinding.edtCorreoPerfil
+                }
+                if (telefono.isBlank()) {
+                    perfilBinding.edtTelefonoPerfil.error = "Ingresa tu teléfono"
+                    primerError = primerError ?: perfilBinding.edtTelefonoPerfil
+                }
+                if (primerError != null) {
+                    primerError.requestFocus()
+                } else {
+                    setPerfilEditable(false)
+                    perfilBinding.btnGuardarPerfil.visibility = View.GONE
+                    Toast.makeText(this, "Perfil actualizado", Toast.LENGTH_SHORT).show()
+                }
+
             }
     }
 
@@ -1445,35 +1422,17 @@ class MainActivity : AppCompatActivity() {
                         .toString()
                         .trim()
 
-                if (nombre.isEmpty()) {
-
-                    binding
-                        .edtNombreGalpon
-                        .error =
-                        "Ingresa el nombre del galpón"
-
-                    return@setOnClickListener
+                var primerError: View? = null
+                if (nombre.isBlank()) {
+                    binding.edtNombreGalpon.error = "Ingresa el nombre del galpón"
+                    primerError = primerError ?: binding.edtNombreGalpon
                 }
-
-                if (cantidad.isEmpty()) {
-
-                    binding
-                        .edtCantidadPollos
-                        .error =
-                        "Ingresa la cantidad de pollos"
-
-                    return@setOnClickListener
+                if ((cantidad.toIntOrNull() ?: 0) <= 0) {
+                    binding.edtCantidadPollos.error = "Ingresa una cantidad mayor que cero"
+                    primerError = primerError ?: binding.edtCantidadPollos
                 }
-
-                if (
-                    (cantidad.toIntOrNull() ?: 0) <= 0
-                ) {
-
-                    binding
-                        .edtCantidadPollos
-                        .error =
-                        "La cantidad debe ser mayor que cero"
-
+                if (primerError != null) {
+                    primerError.requestFocus()
                     return@setOnClickListener
                 }
 
@@ -1608,43 +1567,39 @@ class MainActivity : AppCompatActivity() {
                 .replace(',', '.')
             val stockMinimo = minimoTexto.takeIf { it.isNotBlank() }?.toDoubleOrNull()
 
-            if (minimoTexto.isNotBlank() && (stockMinimo == null || stockMinimo <= 0.0 || !stockMinimo.isFinite())) {
+            var primerError: View? = null
+            val faltanSelecciones = mutableListOf<String>()
+            if (minimoTexto.isNotBlank() &&
+                (stockMinimo == null || stockMinimo <= 0.0 || !stockMinimo.isFinite())) {
                 binding.edtStockMinimoInsumo.error = "Ingresa un mínimo mayor que 0"
-                return@setOnClickListener
+                primerError = primerError ?: binding.edtStockMinimoInsumo
             }
-
-            if (tipoAlimento == null) {
-                Toast.makeText(
-                    this,
-                    "Selecciona un tipo de alimento",
-                    Toast.LENGTH_SHORT
-                ).show()
-                return@setOnClickListener
-            }
-
+            if (tipoAlimento == null) faltanSelecciones.add("tipo de alimento")
             if (cantidad == null || cantidad < 0.0) {
                 binding.edtCantidadInsumo.error = "Ingresa una cantidad válida"
-                return@setOnClickListener
+                primerError = primerError ?: binding.edtCantidadInsumo
             }
-
-            if (unidadSeleccionada <= 0 || unidad.isEmpty()) {
-                Toast.makeText(
-                    this,
-                    "Selecciona una unidad de medida",
-                    Toast.LENGTH_SHORT
+            if (unidadSeleccionada <= 0 || unidad.isEmpty()) faltanSelecciones.add("unidad de medida")
+            if (faltanSelecciones.isNotEmpty() || primerError != null) {
+                if (faltanSelecciones.isNotEmpty()) Toast.makeText(
+                    this, "Selecciona: ${faltanSelecciones.joinToString(", ")}", Toast.LENGTH_SHORT
                 ).show()
+                primerError?.requestFocus()
                 return@setOnClickListener
             }
 
             val posicionProveedor = binding.spinnerProveedor.selectedItemPosition
             val proveedorId = idsProveedores.getOrNull(posicionProveedor)
 
+            val tipoAlimentoValidado = tipoAlimento ?: return@setOnClickListener
+            val cantidadValidada = cantidad ?: return@setOnClickListener
+
             crearInsumo(
                 dialog = dialog,
                 binding = binding,
-                nombre = tipoAlimento.nombre.trim(),
+                nombre = tipoAlimentoValidado.nombre.trim(),
                 categoria = "alimento",
-                cantidad = cantidad,
+                cantidad = cantidadValidada,
                 unidad = unidad,
                 proveedorId = proveedorId,
                 stockMinimo = stockMinimo
@@ -2172,44 +2127,30 @@ class MainActivity : AppCompatActivity() {
                             null
                         }
 
-                when {
-
-                    loteId == null -> {
-
-                        Toast.makeText(
-                            this,
-                            "Selecciona un lote",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        return@setOnClickListener
-                    }
-
-                    fecha.isEmpty() -> {
-
-                        binding
-                            .edtFecha
-                            .error =
-                            "Selecciona una fecha"
-
-                        return@setOnClickListener
-                    }
-
-                    cantidad.toIntOrNull() == null ||
-                            cantidad.toInt() <= 0 -> {
-
-                        binding
-                            .edtCantidadAves
-                            .error =
-                            "Ingresa una cantidad válida mayor que cero"
-
-                        return@setOnClickListener
-                    }
+                var primerError: View? = null
+                var faltanSelecciones = false
+                if (loteId == null) faltanSelecciones = true
+                if (fecha.isBlank()) {
+                    binding.edtFecha.error = "Selecciona una fecha"
+                    primerError = primerError ?: binding.edtFecha
                 }
+                if ((cantidad.toIntOrNull() ?: 0) <= 0) {
+                    binding.edtCantidadAves.error = "Ingresa una cantidad válida mayor que cero"
+                    primerError = primerError ?: binding.edtCantidadAves
+                }
+                if (faltanSelecciones || primerError != null) {
+                    if (faltanSelecciones) Toast.makeText(this, "Selecciona un lote", Toast.LENGTH_SHORT).show()
+                    primerError?.requestFocus()
+                    return@setOnClickListener
+                }
+
+                // Las validaciones anteriores ya mostraron todos los errores.
+                // A partir de aquí se utilizan valores no nulos para construir la solicitud.
+                val loteIdValidado = loteId ?: return@setOnClickListener
 
                 val request =
                     RegistroMortalidadRequest(
-                        lote_id = loteId,
+                        lote_id = loteIdValidado,
                         fecha =
                             convertirFechaParaApi(
                                 fecha
@@ -2351,23 +2292,20 @@ class MainActivity : AppCompatActivity() {
 
             val cantidad = cantidadTexto.toIntOrNull()
 
-            when {
-                lotePosition <= 0 || loteId == null -> {
-                    Toast.makeText(
-                        this,
-                        "Selecciona un lote",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@setOnClickListener
-                }
-                fecha.isEmpty() -> {
-                    binding.edtFechaSeguimiento.error = "Selecciona una fecha"
-                    return@setOnClickListener
-                }
-                cantidad == null || cantidad < 0 -> {
-                    binding.edtCantidadAvesSeguimiento.error = "Ingresa una cantidad válida"
-                    return@setOnClickListener
-                }
+            var primerError: View? = null
+            val lotePendiente = lotePosition <= 0 || loteId == null
+            if (fecha.isBlank()) {
+                binding.edtFechaSeguimiento.error = "Selecciona una fecha"
+                primerError = primerError ?: binding.edtFechaSeguimiento
+            }
+            if (cantidad == null || cantidad < 0) {
+                binding.edtCantidadAvesSeguimiento.error = "Ingresa una cantidad válida"
+                primerError = primerError ?: binding.edtCantidadAvesSeguimiento
+            }
+            if (lotePendiente || primerError != null) {
+                if (lotePendiente) Toast.makeText(this, "Selecciona un lote", Toast.LENGTH_SHORT).show()
+                primerError?.requestFocus()
+                return@setOnClickListener
             }
 
             // El estado pertenece a cada seguimiento y se determina de forma
@@ -2584,60 +2522,28 @@ class MainActivity : AppCompatActivity() {
                         .toString()
                         .trim()
 
-                when {
-
-                    loteId == null -> {
-
-                        Toast.makeText(
-                            this,
-                            "Selecciona un lote",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        return@setOnClickListener
+                var primerError: View? = null
+                val seleccionesPendientes = mutableListOf<String>()
+                if (loteId == null) seleccionesPendientes.add("lote")
+                if (insumoId == null) seleccionesPendientes.add("insumo")
+                if (fecha.isBlank()) {
+                    binding.edtFechaEnfermo.error = "Selecciona una fecha"
+                    primerError = primerError ?: binding.edtFechaEnfermo
+                }
+                if ((cantidad.toIntOrNull() ?: 0) <= 0) {
+                    binding.edtCantidadAvesEnfermo.error = "Ingresa una cantidad válida mayor que cero"
+                    primerError = primerError ?: binding.edtCantidadAvesEnfermo
+                }
+                if (dosis.isBlank()) {
+                    binding.edtDosisEnfermo.error = "Ingresa la dosis"
+                    primerError = primerError ?: binding.edtDosisEnfermo
+                }
+                if (seleccionesPendientes.isNotEmpty() || primerError != null) {
+                    if (seleccionesPendientes.isNotEmpty()) {
+                        Toast.makeText(this, "Selecciona: ${seleccionesPendientes.joinToString(", ")}", Toast.LENGTH_SHORT).show()
                     }
-
-                    insumoId == null -> {
-
-                        Toast.makeText(
-                            this,
-                            "Selecciona un insumo",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        return@setOnClickListener
-                    }
-
-                    fecha.isEmpty() -> {
-
-                        binding
-                            .edtFechaEnfermo
-                            .error =
-                            "Selecciona una fecha"
-
-                        return@setOnClickListener
-                    }
-
-                    cantidad.toIntOrNull() == null ||
-                            cantidad.toInt() <= 0 -> {
-
-                        binding
-                            .edtCantidadAvesEnfermo
-                            .error =
-                            "Ingresa una cantidad válida mayor que cero"
-
-                        return@setOnClickListener
-                    }
-
-                    dosis.isEmpty() -> {
-
-                        binding
-                            .edtDosisEnfermo
-                            .error =
-                            "Ingresa la dosis"
-
-                        return@setOnClickListener
-                    }
+                    primerError?.requestFocus()
+                    return@setOnClickListener
                 }
 
                 val via =
@@ -2650,15 +2556,19 @@ class MainActivity : AppCompatActivity() {
                             null
                         }
 
+                // Solo continuar con IDs no nulos después de validar todos los campos.
+                val loteIdValidado = loteId ?: return@setOnClickListener
+                val insumoIdValidado = insumoId ?: return@setOnClickListener
+
                 val request =
                     EventoSanitarioRequest(
-                        lote_id = loteId,
+                        lote_id = loteIdValidado,
                         tipo = "tratamiento",
                         fecha =
                             convertirFechaParaApi(
                                 fecha
                             ),
-                        insumo_id = insumoId,
+                        insumo_id = insumoIdValidado,
                         diagnostico = null,
                         producto = null,
                         dosis = dosis,

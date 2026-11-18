@@ -69,6 +69,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             R.id.nav_usuarios
         )
 
+
         containerOperarios =
             view.findViewById(
                 R.id.containerOperarios

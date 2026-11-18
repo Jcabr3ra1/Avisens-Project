@@ -1,12 +1,16 @@
-
 package com.project.avisensandroid.ui
 
 import android.content.Intent
+import android.graphics.Rect
 import android.os.Bundle
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
 import android.view.View
+import android.view.ViewTreeObserver
+import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.OfflineCache
@@ -25,27 +29,52 @@ import java.io.IOException
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
+
     private var passwordVisible = false
+
+    // Control del teclado.
+    private var tecladoVisible = false
+    private var alturaNormalVentana = 0
+
+    private var listenerTeclado:
+            ViewTreeObserver.OnGlobalLayoutListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         RetrofitClient.inicializar(applicationContext)
 
+        // Android ajusta la ventana al abrir el teclado.
+        window.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
+        )
+
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         configurarPassword()
+        configurarDesplazamientoTeclado()
 
-        // Solo reutiliza una sesión previamente autenticada en este dispositivo.
-        // Nunca permite un primer ingreso sin validación del servidor.
-        if (!intent.getBooleanExtra(SesionExpirada.EXTRA_SESION_EXPIRADA, false) &&
-            UserSession.isLoggedIn(this) && UserSession.role(this) != null) {
+        // Reutilizar únicamente una sesión previamente autenticada.
+        if (
+            !intent.getBooleanExtra(
+                SesionExpirada.EXTRA_SESION_EXPIRADA,
+                false
+            ) &&
+            UserSession.isLoggedIn(this) &&
+            UserSession.role(this) != null
+        ) {
             abrirSesionGuardada()
             return
         }
 
-        if (intent.getBooleanExtra(SesionExpirada.EXTRA_SESION_EXPIRADA, false)) {
+        if (
+            intent.getBooleanExtra(
+                SesionExpirada.EXTRA_SESION_EXPIRADA,
+                false
+            )
+        ) {
             binding.txtError.text =
                 "Tu sesión expiró. Inicia sesión nuevamente."
         }
@@ -56,21 +85,251 @@ class LoginActivity : AppCompatActivity() {
     }
 
     // =========================================================
+    // DESPLAZAMIENTO AUTOMÁTICO DEL LOGIN
+    // =========================================================
+
+    private fun configurarDesplazamientoTeclado() {
+
+        val root = binding.root
+        val tarjeta = binding.cardLogin
+
+        // Altura inicial de la ventana.
+        root.post {
+            val rect = Rect()
+            root.getWindowVisibleDisplayFrame(rect)
+
+            alturaNormalVentana = rect.height()
+            tarjeta.translationY = 0f
+        }
+
+        // Detector principal del teclado.
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+
+            val imeVisible = insets.isVisible(
+                WindowInsetsCompat.Type.ime()
+            )
+
+            if (imeVisible) {
+
+                actualizarEstadoTeclado(true)
+
+            } else {
+
+                // Algunos celulares no informan correctamente
+                // el estado del teclado mediante WindowInsets.
+                root.post {
+                    comprobarTecladoPorAreaVisible()
+                }
+            }
+
+            insets
+        }
+
+        // Detector alternativo para diferentes celulares.
+        val listener = ViewTreeObserver.OnGlobalLayoutListener {
+            comprobarTecladoPorAreaVisible()
+        }
+
+        listenerTeclado = listener
+
+        root.viewTreeObserver.addOnGlobalLayoutListener(listener)
+
+        // Recalcular el desplazamiento al cambiar de campo.
+        binding.etCorreo.setOnFocusChangeListener { _, tieneFoco ->
+
+            if (tieneFoco && tecladoVisible) {
+                root.post {
+                    moverTarjetaSobreTeclado()
+                }
+            }
+        }
+
+        binding.etContrasena.setOnFocusChangeListener { _, tieneFoco ->
+
+            if (tieneFoco && tecladoVisible) {
+                root.post {
+                    moverTarjetaSobreTeclado()
+                }
+            }
+        }
+
+        ViewCompat.requestApplyInsets(root)
+    }
+
+    // =========================================================
+    // DETECTAR TECLADO POR ÁREA VISIBLE
+    // =========================================================
+
+    private fun comprobarTecladoPorAreaVisible() {
+
+        if (!::binding.isInitialized) return
+
+        val root = binding.root
+
+        if (!ViewCompat.isAttachedToWindow(root)) return
+
+        val rect = Rect()
+        root.getWindowVisibleDisplayFrame(rect)
+
+        val alturaVisible = rect.height()
+
+        if (alturaVisible <= 0) return
+
+        if (alturaVisible > alturaNormalVentana) {
+            alturaNormalVentana = alturaVisible
+        }
+
+        if (alturaNormalVentana <= 0) return
+
+        val diferencia =
+            alturaNormalVentana - alturaVisible
+
+        val tecladoAbierto =
+            diferencia > dp(150)
+
+        if (tecladoAbierto) {
+
+            actualizarEstadoTeclado(true)
+
+        } else {
+
+            val insets = ViewCompat.getRootWindowInsets(root)
+
+            val imeVisible = insets?.isVisible(
+                WindowInsetsCompat.Type.ime()
+            ) == true
+
+            if (!imeVisible) {
+                actualizarEstadoTeclado(false)
+            }
+        }
+    }
+
+    // =========================================================
+    // ACTUALIZAR ESTADO DEL TECLADO
+    // =========================================================
+
+    private fun actualizarEstadoTeclado(visible: Boolean) {
+
+        if (!::binding.isInitialized) return
+
+        val cambioEstado = tecladoVisible != visible
+
+        tecladoVisible = visible
+
+        if (visible) {
+
+            binding.root.post {
+
+                if (tecladoVisible) {
+                    moverTarjetaSobreTeclado()
+                }
+            }
+
+        } else if (
+            cambioEstado ||
+            binding.cardLogin.translationY != 0f
+        ) {
+
+            // Regresar a la posición original.
+            binding.cardLogin.animate().cancel()
+            binding.cardLogin.translationY = 0f
+        }
+    }
+
+    // =========================================================
+    // MOVER TARJETA SOBRE EL TECLADO
+    // =========================================================
+
+    private fun moverTarjetaSobreTeclado() {
+
+        if (!tecladoVisible) return
+
+        val tarjeta = binding.cardLogin
+        val root = binding.root
+
+        if (!ViewCompat.isAttachedToWindow(tarjeta)) return
+
+        val rectVisible = Rect()
+        root.getWindowVisibleDisplayFrame(rectVisible)
+
+        val posicionTarjeta = IntArray(2)
+        tarjeta.getLocationOnScreen(posicionTarjeta)
+
+        // Recuperar la posición original de la tarjeta.
+        val parteInferiorOriginal =
+            posicionTarjeta[1] -
+                    tarjeta.translationY +
+                    tarjeta.height
+
+        // Utilizar solamente el área visible real.
+        // No descontar nuevamente la altura del teclado.
+        val limiteInferior = rectVisible.bottom
+
+        // Margen pequeño sobre el teclado.
+        val margen = dp(12)
+
+        val desplazamientoNecesario =
+            (parteInferiorOriginal - limiteInferior + margen)
+                .coerceAtLeast(0f)
+
+        // Desplazar únicamente lo necesario.
+        tarjeta.translationY = -desplazamientoNecesario
+    }
+
+    private fun dp(valor: Int): Int {
+        return (valor * resources.displayMetrics.density).toInt()
+    }
+
+    // =========================================================
+    // LIMPIEZA DE LISTENERS
+    // =========================================================
+
+    override fun onDestroy() {
+
+        if (::binding.isInitialized) {
+
+            listenerTeclado?.let { listener ->
+
+                val observer = binding.root.viewTreeObserver
+
+                if (observer.isAlive) {
+                    observer.removeOnGlobalLayoutListener(listener)
+                }
+            }
+
+            ViewCompat.setOnApplyWindowInsetsListener(
+                binding.root,
+                null
+            )
+        }
+
+        listenerTeclado = null
+
+        super.onDestroy()
+    }
+
+    // =========================================================
     // MOSTRAR / OCULTAR CONTRASEÑA
     // =========================================================
 
     private fun configurarPassword() {
+
         binding.btnTogglePassword.setOnClickListener {
+
             passwordVisible = !passwordVisible
 
             if (passwordVisible) {
+
                 binding.etContrasena.transformationMethod =
                     HideReturnsTransformationMethod.getInstance()
 
                 binding.btnTogglePassword.setImageResource(
                     R.drawable.ic_eye
                 )
+
             } else {
+
                 binding.etContrasena.transformationMethod =
                     PasswordTransformationMethod.getInstance()
 
@@ -86,26 +345,45 @@ class LoginActivity : AppCompatActivity() {
     }
 
     // =========================================================
-    // LOGIN
+    // SESIÓN GUARDADA
     // =========================================================
 
     private fun abrirSesionGuardada() {
-        startActivity(Intent(this, MainActivity::class.java))
+
+        startActivity(
+            Intent(
+                this,
+                MainActivity::class.java
+            )
+        )
+
         finish()
     }
 
+    // =========================================================
+    // INICIO DE SESIÓN
+    // =========================================================
+
     private fun hacerLogin() {
+
         if (!OfflineCache.hayInternet(this)) {
-            if (UserSession.isLoggedIn(this) && UserSession.role(this) != null) {
+
+            if (
+                UserSession.isLoggedIn(this) &&
+                UserSession.role(this) != null
+            ) {
+
                 abrirSesionGuardada()
+
             } else {
+
                 binding.txtError.text =
                     "Para entrar por primera vez necesitas conexión a internet. " +
                             "Después podrás consultar los últimos datos guardados sin conexión."
             }
+
             return
         }
-
 
         val username = binding.etCorreo.text
             .toString()
@@ -117,16 +395,20 @@ class LoginActivity : AppCompatActivity() {
 
         binding.txtError.text = ""
 
-        // Validaciones locales
+        // Validaciones locales.
         if (username.isEmpty()) {
+
             binding.txtError.text =
                 "Ingresa tu nombre de usuario"
+
             return
         }
 
         if (password.isEmpty()) {
+
             binding.txtError.text =
                 "Ingresa tu contraseña"
+
             return
         }
 
@@ -134,7 +416,9 @@ class LoginActivity : AppCompatActivity() {
         binding.btnEntrar.isEnabled = false
 
         lifecycleScope.launch {
+
             try {
+
                 val response = RetrofitClient.api.login(
                     LoginRequest(
                         username = username,
@@ -144,9 +428,14 @@ class LoginActivity : AppCompatActivity() {
 
                 if (response.isSuccessful) {
 
-                    when (val resultado = ResultadoLogin.desde(response.body())) {
+                    when (
+                        val resultado = ResultadoLogin.desde(
+                            response.body()
+                        )
+                    ) {
 
                         is ResultadoLogin.SesionIniciada -> {
+
                             guardarSesion(
                                 token = resultado.accessToken,
                                 refreshToken = resultado.refreshToken,
@@ -155,6 +444,7 @@ class LoginActivity : AppCompatActivity() {
                                 email = resultado.email,
                                 rol = resultado.rol
                             )
+
                             SesionExpirada.reiniciar()
 
                             startActivity(
@@ -167,64 +457,74 @@ class LoginActivity : AppCompatActivity() {
                             finish()
                         }
 
-                        // La app aún no tiene la pantalla de cambio de
-                        // contraseña temporal: el token de cambio no se guarda.
                         ResultadoLogin.CambioPasswordRequerido -> {
+
                             binding.txtError.text =
                                 "Tu contraseña es temporal y debes cambiarla. " +
                                         "Hazlo desde la web de AVÍSENS y vuelve a iniciar sesión aquí."
                         }
 
                         is ResultadoLogin.RolNoValido -> {
+
                             binding.txtError.text =
-                                "El usuario no tiene un rol válido: ${resultado.rol ?: "sin rol"}"
+                                "El usuario no tiene un rol válido: " +
+                                        "${resultado.rol ?: "sin rol"}"
                         }
 
                         ResultadoLogin.RespuestaIncompleta -> {
+
                             binding.txtError.text =
-                                "El servidor devolvió una respuesta incompleta. Inténtalo de nuevo."
+                                "El servidor devolvió una respuesta incompleta. " +
+                                        "Inténtalo de nuevo."
                         }
                     }
 
                 } else {
 
-                    // El backend responde {"message": "..."} con textos
-                    // pensados para el usuario (cuenta bloqueada, contraseña
-                    // temporal vencida, sesión ocupada...).
                     val detalle = RegistroHttp.mensajeDeError(
                         response.errorBody()?.string()
                     )
 
-                    binding.txtError.text = when (response.code()) {
+                    binding.txtError.text = when (
+                        response.code()
+                    ) {
 
                         400 -> detalle
                             ?: "Revisa el nombre de usuario y la contraseña"
 
-                        401 -> "Nombre de usuario o contraseña incorrectos"
+                        401 ->
+                            "Nombre de usuario o contraseña incorrectos"
 
-                        403 -> detalle ?: "No tienes permisos para acceder"
+                        403 -> detalle
+                            ?: "No tienes permisos para acceder"
 
                         409 -> detalle
                             ?: "No se pudo iniciar sesión. Inténtalo de nuevo."
 
-                        429 -> "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
+                        429 ->
+                            "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
 
-                        else -> "Error del servidor: ${response.code()}"
+                        else ->
+                            "Error del servidor: ${response.code()}"
                     }
                 }
 
             } catch (cancelacion: CancellationException) {
+
                 throw cancelacion
 
             } catch (e: IOException) {
+
                 binding.txtError.text =
                     "Sin conexión. Revisa tu Wi-Fi o datos móviles e inténtalo de nuevo."
 
             } catch (e: Exception) {
+
                 binding.txtError.text =
                     "No se pudo procesar la respuesta del servidor."
 
             } finally {
+
                 binding.progressLogin.visibility = View.GONE
                 binding.btnEntrar.isEnabled = true
             }
@@ -243,6 +543,7 @@ class LoginActivity : AppCompatActivity() {
         email: String?,
         rol: UserRole
     ) {
+
         UserSession.save(
             context = this,
             token = token,
