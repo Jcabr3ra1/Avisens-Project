@@ -25,6 +25,8 @@ describe('Cuentas entregadas: usuario y contraseña (HTTP + PostgreSQL)', () => 
   let orgConvertidaId: number;
   let prospectoId: number;
   const sufijo = Date.now().toString(36);
+  // La cédula solo admite dígitos (6 a 10): se deriva del reloj para no chocar.
+  const cedulaBase = Date.now().toString().slice(-9);
   const username = `cliente.${sufijo}`;
   const password = 'ClaveDePrueba123!';
   const auth = () => ({ Authorization: `Bearer ${token}` });
@@ -122,7 +124,7 @@ describe('Cuentas entregadas: usuario y contraseña (HTTP + PostgreSQL)', () => 
       .set(auth())
       .send({
         nombre_completo: 'María López',
-        cedula: `cliente-${sufijo}`,
+        cedula: `1${cedulaBase}`,
         username: ` ${username.toUpperCase()} `,
         password,
         rol_id: rolPropietarioId,
@@ -153,7 +155,7 @@ describe('Cuentas entregadas: usuario y contraseña (HTTP + PostgreSQL)', () => 
       .set(auth())
       .send({
         nombre_completo: 'Otra persona',
-        cedula: `otra-${sufijo}`,
+        cedula: `2${cedulaBase}`,
         username: username.toUpperCase(),
         password,
         rol_id: rolPropietarioId,

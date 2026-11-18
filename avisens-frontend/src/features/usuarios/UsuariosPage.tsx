@@ -206,6 +206,7 @@ function UsuariosPage() {
           modoEdicion={formulario.modoEdicion}
           guardando={formulario.guardando}
           error={formulario.error}
+          errores={formulario.errores}
           verPassword={formulario.verPassword}
           roles={rolesCatalogo}
           organizaciones={organizaciones}
