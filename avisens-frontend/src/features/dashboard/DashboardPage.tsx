@@ -9,6 +9,8 @@ import PanelAtencionGranja from './components/PanelAtencionGranja'
 import EstadoLote from './components/EstadoLote'
 import EstadoInicial from './components/EstadoInicial'
 import { tieneLecturaUtil, useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
+import { avesActuales } from '@features/granjas/model/estructura'
 import { useIndicadoresLote } from './hooks/useIndicadoresLote'
 import { useDashboard } from './hooks/useDashboard'
 import { filasGalpones, itemsAtencionGranja, kpisGranja, lotesActivosDe, type ItemAtencionGranja } from './model/resumenGranja'
@@ -37,6 +39,7 @@ function DashboardSkeleton() {
 function DashboardPage() {
   const navigate = useNavigate()
   const dashboard = useDashboard()
+  useRefetchOnFocus(dashboard.recargar)
   const clima = useClimaVisual(dashboard.granjaId)
   const { galpones: monitoreo, cargando: cargandoMonitoreo } = useMonitoreoAmbiental()
   const monitoreoGranja = useMemo(
@@ -47,7 +50,8 @@ function DashboardPage() {
   // Los motores (sensores de estado encendido/apagado) no son métricas
   // ambientales: se ven en Monitoreo, no en este panel de tendencias.
   const sensoresDelGalpon = (galponMonitoreo?.sensores ?? []).filter((s) => !s.esEstado)
-  const { indicadores, comparacion, cargando: cargandoLote } = useIndicadoresLote(dashboard.lote?.id ?? null)
+  const { indicadores, comparacion, cargando: cargandoLote, recargar: recargarIndicadores } = useIndicadoresLote(dashboard.lote?.id ?? null)
+  useRefetchOnFocus(recargarIndicadores)
   const rol = getRol()
   const nombre = dashboard.usuario?.nombre?.trim().split(/\s+/)[0] || 'equipo'
   const fecha = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -117,6 +121,9 @@ function DashboardPage() {
   })))
   const lotesActivos = lotesActivosDe(dashboard.galpones, dashboard.lotes)
   const avesAlojadas = lotesActivos.reduce((total, lote) => total + lote.cantidadInicial, 0)
+  const vivasLoteActual = dashboard.lote
+    ? avesActuales(dashboard.lote.cantidadInicial, indicadores[0]?.mortalidadAcumuladaPct ?? null)
+    : avesAlojadas
   const diaUnico = lotesActivos.length === 1 ? dashboard.diaLote : null
 
   const enGranjas = (pestana: string, galponId = dashboard.galponId) =>
@@ -187,7 +194,7 @@ function DashboardPage() {
         detalle="Así está por dentro, ahora mismo"
         etiqueta={sensoresDelGalpon.length > 0 ? `${reportando} de ${sensoresDelGalpon.length} sensores reportando` : null}
         sensores={sensoresEscena}
-        aves={avesAlojadas}
+        aves={vivasLoteActual}
         diaLote={diaUnico}
         clima={clima}
         galpones={filas}

@@ -17,7 +17,7 @@ type Props = {
 
 const entero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
 const falta = <em>Falta</em>
-const delAdmin = <em className="gp-dato-admin">Lo registra el administrador</em>
+const delAdmin = <em className="gp-dato-admin">Dato técnico (registrado al instalar sensores)</em>
 const capitalizar = (texto: string) => texto.charAt(0).toUpperCase() + texto.slice(1)
 
 function Bloque({ titulo, faltan, pendientesAdmin = [], onEditar, nota, children }: {
@@ -83,8 +83,8 @@ function DatosPestana({ granja, galpon, onEditarGranja, onEditarLote }: Props) {
         titulo={`Galpón ${galpon.nombre}`}
         faltan={[]}
         nota={faltantesGalpon(g).length > 0
-          ? 'Las medidas y la instalación las registra el administrador: con ellas se ubican los sensores.'
-          : 'Registrado por el administrador al instalar los sensores.'}
+          ? 'Las medidas y la instalación las registra el soporte técnico: con ellas se calibran y ubican los sensores.'
+          : 'Registrado por el soporte técnico al instalar los sensores.'}
       >
         <div><dt>Capacidad</dt><dd>{g.capacidad_aves !== null ? `${entero.format(g.capacidad_aves)} aves` : delAdmin}</dd></div>
         <div><dt>Medidas</dt><dd>{g.ancho_metros !== null && g.largo_metros !== null ? `${entero.format(g.ancho_metros)} × ${entero.format(g.largo_metros)} m` : delAdmin}</dd></div>

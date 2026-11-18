@@ -161,14 +161,16 @@ function TablaUsuarios({
                   <p>{seccion.subtitulo}</p>
                 </div>
 
-                <button
-                  type="button"
-                  className="usuarios-rol-add-btn"
-                  onClick={() => onCrearPorRol(seccion.rol)}
-                >
-                  <IcPlus size={14} aria-hidden="true" />
-                  <span>{seccion.botonCrear}</span>
-                </button>
+                {!esPropietario && (
+                  <button
+                    type="button"
+                    className="usuarios-rol-add-btn"
+                    onClick={() => onCrearPorRol(seccion.rol)}
+                  >
+                    <IcPlus size={14} aria-hidden="true" />
+                    <span>{seccion.botonCrear}</span>
+                  </button>
+                )}
               </header>
 
               {cuentasRol.length === 0 ? (

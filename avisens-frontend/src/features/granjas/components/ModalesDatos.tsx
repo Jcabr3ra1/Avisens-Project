@@ -153,7 +153,7 @@ export function ModalDatosGranja({ granja, ...base }: Base & { granja: Granja })
           <input value={form.departamento} onChange={(e) => cambiar('departamento')(e.target.value)} placeholder="Antioquia" maxLength={100} />
         </Campo>
       </div>
-      <p className="modal-ayuda gr-ayuda-coordenadas">Las coordenadas y el área las registra el administrador cuando instala los sensores.</p>
+      <p className="modal-ayuda gr-ayuda-coordenadas">Las coordenadas y el área las registra el soporte técnico de AVISENS al instalar los sensores.</p>
     </ModalDatos>
   )
 }

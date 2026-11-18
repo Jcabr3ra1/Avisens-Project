@@ -2,6 +2,7 @@ import { Transform } from 'class-transformer';
 import { NombreUsuario } from '../../../common/auth/username';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsEmail,
   IsInt,
   IsOptional,
@@ -88,4 +89,14 @@ export class CreateUsuarioDto {
   @MinLength(2)
   @IsOptional()
   organizacion_nombre?: string;
+
+  @ApiPropertyOptional({
+    example: [1, 2],
+    description: 'Galpones asignados al operario (obligatorio para Propietario)',
+    type: [Number],
+  })
+  @IsArray()
+  @IsInt({ each: true })
+  @IsOptional()
+  galpon_ids?: number[];
 }

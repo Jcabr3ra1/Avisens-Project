@@ -45,6 +45,22 @@ const USUARIO_SELECT = {
   organizacion_id: true,
   rol: { select: { id: true, nombre: true } },
   organizacion: { select: { id: true, nombre: true } },
+  usuarios_galpones: {
+    where: { activa: true },
+    select: {
+      id: true,
+      galpon_id: true,
+      rol_asignacion: true,
+      galpon: {
+        select: {
+          id: true,
+          nombre: true,
+          codigo: true,
+          granja: { select: { id: true, nombre: true } },
+        },
+      },
+    },
+  },
 } as const;
 
 const ASIGNACION_SELECT = {
@@ -214,8 +230,33 @@ export class UsuariosService {
       });
       if (!rolOperario)
         throw new NotFoundException('Rol Operario no encontrado');
+      if (dto.rol_id && dto.rol_id !== rolOperario.id) {
+        throw new BadRequestException(
+          'El Propietario solo puede crear cuentas de Operario',
+        );
+      }
       rolId = rolOperario.id;
       organizacionId = this.organizacionDelPropietario(solicitante);
+
+      if (
+        !dto.galpon_ids ||
+        !Array.isArray(dto.galpon_ids) ||
+        dto.galpon_ids.length === 0
+      ) {
+        throw new BadRequestException(
+          'Debes asignar al menos un galpón al operario',
+        );
+      }
+
+      for (const galponId of dto.galpon_ids) {
+        await this.validarGalponParaOperario(
+          galponId,
+          organizacionId,
+          solicitante,
+          true,
+          tx,
+        );
+      }
     } else {
       const rol = await tx.rol.findUnique({ where: { id: dto.rol_id } });
       if (!rol) throw new NotFoundException('Rol no encontrado');
@@ -248,7 +289,7 @@ export class UsuariosService {
       organizacionId = organizacion.id;
     }
 
-    return tx.usuario.create({
+    const usuario = await tx.usuario.create({
       data: {
         nombre_completo: dto.nombre_completo,
         cedula: dto.cedula,
@@ -261,6 +302,25 @@ export class UsuariosService {
       },
       select: USUARIO_SELECT,
     });
+
+    if (dto.galpon_ids && dto.galpon_ids.length > 0) {
+      for (const galponId of dto.galpon_ids) {
+        await tx.usuarioGalpon.create({
+          data: {
+            usuario_id: usuario.id,
+            galpon_id: galponId,
+            rol_asignacion: 'operario_galpon',
+            activa: true,
+          },
+        });
+      }
+      return tx.usuario.findUniqueOrThrow({
+        where: { id: usuario.id },
+        select: USUARIO_SELECT,
+      });
+    }
+
+    return usuario;
   }
 
   async crear(dto: CreateUsuarioDto, solicitante: Solicitante) {
@@ -367,6 +427,23 @@ export class UsuariosService {
       if (!rol) throw new NotFoundException('Rol no encontrado');
     }
 
+    if (esPropietario(solicitante) && dto.galpon_ids !== undefined) {
+      if (!Array.isArray(dto.galpon_ids) || dto.galpon_ids.length === 0) {
+        throw new BadRequestException(
+          'Debes asignar al menos un galpón al operario',
+        );
+      }
+      const organizacionId = this.organizacionDelPropietario(solicitante);
+      for (const galponId of dto.galpon_ids) {
+        await this.validarGalponParaOperario(
+          galponId,
+          organizacionId,
+          solicitante,
+          true,
+        );
+      }
+    }
+
     const data = {
       nombre_completo: dto.nombre_completo,
       cedula: dto.cedula,
@@ -380,40 +457,61 @@ export class UsuariosService {
       activo: dto.activo,
     };
 
-    if (dto.activo !== false) {
-      return this.prisma.usuario.update({
+    return this.prisma.$transaction(async (tx) => {
+      await tx.usuario.update({
         where: { id },
         data,
+      });
+
+      if (dto.galpon_ids !== undefined) {
+        const actuales = await tx.usuarioGalpon.findMany({
+          where: { usuario_id: id },
+        });
+        const deseados = new Set(dto.galpon_ids);
+
+        for (const act of actuales) {
+          if (!deseados.has(act.galpon_id) && act.activa) {
+            await tx.usuarioGalpon.update({
+              where: { id: act.id },
+              data: { activa: false },
+            });
+          }
+        }
+        for (const gId of dto.galpon_ids) {
+          const existente = actuales.find((a) => a.galpon_id === gId);
+          if (existente) {
+            if (!existente.activa) {
+              await tx.usuarioGalpon.update({
+                where: { id: existente.id },
+                data: { activa: true, fecha_asignacion: new Date() },
+              });
+            }
+          } else {
+            await tx.usuarioGalpon.create({
+              data: {
+                usuario_id: id,
+                galpon_id: gId,
+                rol_asignacion: 'operario_galpon',
+                activa: true,
+              },
+            });
+          }
+        }
+      }
+
+      if (dto.activo === false) {
+        await tx.sesion.deleteMany({ where: { usuario_id: id } });
+        await tx.usuarioGalpon.updateMany({
+          where: { usuario_id: id, activa: true },
+          data: { activa: false },
+        });
+      }
+
+      return tx.usuario.findUniqueOrThrow({
+        where: { id },
         select: USUARIO_SELECT,
       });
-    }
-
-    try {
-      return await transaccionConPresupuesto(
-        this.prisma,
-        TOPE_ESPERA_ESCRITURA_MS,
-        async (p) => {
-          await p.paso('actualizar usuario', (tx) =>
-            tx.usuario.update({ where: { id }, data, select: { id: true } }),
-          );
-          const actualizado = await p.paso(
-            'leer usuario actualizado',
-            (tx) =>
-              tx.usuario.findUniqueOrThrow({
-                where: { id },
-                select: USUARIO_SELECT,
-              }),
-            3,
-          );
-          await revocarSesionesDelUsuario(p, id);
-          await revocarAsignacionesDelUsuario(p, id);
-          return actualizado;
-        },
-      );
-    } catch (error) {
-      this.traducirTimeoutDeUsuario(error);
-      throw error;
-    }
+    });
   }
 
   private traducirTimeoutDeUsuario(error: unknown): void {

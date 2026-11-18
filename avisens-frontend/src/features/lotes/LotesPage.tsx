@@ -17,12 +17,14 @@ import { useFiltroLotes } from './hooks/useFiltroLotes'
 import { useFormularioLote } from './hooks/useFormularioLote'
 import { useLotes } from './hooks/useLotes'
 import { useResumenLotes } from './hooks/useResumenLotes'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { evaluarAltaDeLote } from './model/loteVista'
 
 function LotesPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const gestion = useLotes()
+  useRefetchOnFocus(gestion.recargar)
   const permisos = permisosDeGestion(getRol())
   const galponParam = searchParams.get('galpon')
   const galponId = Number(galponParam)

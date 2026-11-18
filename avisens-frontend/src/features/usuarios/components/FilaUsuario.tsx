@@ -69,15 +69,6 @@ function FilaUsuario({
       </td>
       <td className="usuarios-col-acciones">
         <div className="usuarios-acciones-wrap">
-          {esOperario && (
-            <button
-              type="button"
-              className="usuarios-btn-galpones"
-              onClick={() => onGestionarAsignaciones(usuario)}
-            >
-              Galpones
-            </button>
-          )}
           <button
             type="button"
             className="usuarios-btn-menu"

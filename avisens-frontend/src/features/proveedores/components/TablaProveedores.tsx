@@ -43,7 +43,17 @@ function TablaProveedores({ proveedores, gestionar, onEditar, onAlternarActivo, 
               </td>
               <td className="prv-num">{proveedor.nit}</td>
               <td>
-                <span className={`prv-tipo${proveedor.tipo_proveedor ? '' : ' is-vacio'}`}>{proveedor.tipo_proveedor || 'Sin clasificar'}</span>
+                <div className="prv-tipos-contenedor">
+                  {proveedor.tipo_proveedor ? (
+                    proveedor.tipo_proveedor.split(',').map((cat) => (
+                      <span key={cat.trim()} className="prv-tipo-chip">
+                        {cat.trim()}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="prv-tipo is-vacio">Sin clasificar</span>
+                  )}
+                </div>
               </td>
               <td>
                 <span className="prv-celda-texto prv-celda-texto--centro">

@@ -1,6 +1,7 @@
 import type { ComparacionIndicador } from '@features/indicadores/api/indicadores'
 import { formatearPeso } from '@features/guia-crecimiento/model/proyeccion'
 import { useCurvaLote } from '@features/granjas/propietario/useCurvaLote'
+import { avesActuales } from '@features/granjas/model/estructura'
 import type { DashboardIndicador, DashboardLote } from '../model/dashboard'
 import { filaDeFaena } from '../model/faena'
 import { NOTA_DATO_IMPOSIBLE, TEXTO_DATO_IMPOSIBLE, comparacionVigente, esDatoVerificado, fcrCreible, formatearFcr, pesoCreible, lineaSparkline, mismaRevision, pesoActualParaSparkline, serieDePesoVerificado, textoComparacion, textoComparacionFcr, textoFechaPesaje, type Fila } from '../model/estadoLote'
@@ -28,9 +29,19 @@ function EstadoLote({ lote, indicadores, comparacion, diaLote, cargando }: Props
   const pesoImposible = datosVerificados && reciente?.pesoPromedioG != null && !pesoCreible(reciente.pesoPromedioG)
   const fcrImposible = datosVerificados && reciente?.fcr != null && !fcrCreible(reciente.fcr)
 
+  const vivas = lote
+    ? avesActuales(lote.cantidadInicial, reciente?.mortalidadAcumuladaPct ?? null)
+    : null
+  const tieneBajas = vivas !== null && lote !== null && vivas < lote.cantidadInicial
+
   const filas: Fila[] = [
     { etiqueta: 'Edad', valor: diaLote === null ? '—' : `${diaLote} días`, mono: true },
-    { etiqueta: 'Aves alojadas', valor: lote ? lote.cantidadInicial.toLocaleString('es-CO') : '—', mono: true },
+    {
+      etiqueta: tieneBajas ? 'Aves vivas' : 'Aves alojadas',
+      valor: vivas === null ? '—' : vivas.toLocaleString('es-CO'),
+      nota: tieneBajas ? `de ${lote!.cantidadInicial.toLocaleString('es-CO')} iniciales` : undefined,
+      mono: true,
+    },
     {
       etiqueta: 'Mortalidad',
       valor: !datosVerificados || reciente?.mortalidadAcumuladaPct === null

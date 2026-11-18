@@ -137,13 +137,20 @@ function ModalAsignacionesGalpon({
               <button
                 type="submit"
                 className="modal-btn modal-btn--primary usuarios-asig-boton"
-                disabled={guardando || !galponId}
+                disabled={guardando || !galponId || sinDisponibles}
+                title={!galponId ? 'Selecciona un galpón de la lista para asignar' : undefined}
               >
                 <IcPlus size={16} />
                 {guardando ? 'Asignando…' : 'Asignar galpón'}
               </button>
             </div>
           </form>
+
+          {!galponId && !sinDisponibles && (
+            <p className="modal-ayuda" style={{ marginTop: 'var(--space-1)' }}>
+              * Selecciona un galpón arriba para habilitar la asignación.
+            </p>
+          )}
 
           {error && <p className="modal-error" role="alert">{error}</p>}
 
