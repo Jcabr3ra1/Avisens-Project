@@ -15,6 +15,7 @@ import FormularioRegistro from './components/FormularioRegistro'
 import HistorialRegistros from './components/HistorialRegistros'
 import ResumenLote from './components/ResumenLote'
 import { useBitacora } from './hooks/useBitacora'
+import { useInsumosDeGranja } from './hooks/useInsumosDeGranja'
 import {
   FORMULARIO_INICIAL,
   formularioDesde,
@@ -113,6 +114,7 @@ function BitacoraPage() {
     : (lotesDelGalpon[0]?.id ?? null)
 
   const lote = lotesDelGalpon.find((item) => item.id === loteSeleccionadoId)
+  const insumosGranja = useInsumosDeGranja(lote?.galpon.granja.id ?? null, modal === 'sanitario')
   const pesajes = useMemo(() => filtrarRegistrosPorLote(datos.pesajes, loteSeleccionadoId), [datos.pesajes, loteSeleccionadoId])
   const mortalidad = useMemo(() => filtrarRegistrosPorLote(datos.mortalidad, loteSeleccionadoId), [datos.mortalidad, loteSeleccionadoId])
   const sanitarios = useMemo(() => filtrarRegistrosPorLote(datos.sanitarios, loteSeleccionadoId), [datos.sanitarios, loteSeleccionadoId])
@@ -329,6 +331,7 @@ function BitacoraPage() {
             setEditandoId(null)
           }}
           editando={editandoId !== null}
+          insumos={insumosGranja}
           complemento={
             modal === 'peso' && loteSeleccionadoId !== null
               ? <AlimentoEstimadoPesaje loteId={loteSeleccionadoId} />

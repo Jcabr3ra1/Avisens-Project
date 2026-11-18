@@ -1,10 +1,24 @@
 import { fechaDeHoy } from '@shared/utils/fechas'
 export type Pesaje = { id:number; lote_id:number; fecha:string; peso_promedio_g:number; cantidad_aves_pesadas:number|null; peso_objetivo_g:number|null; observaciones:string|null }
 export type Mortalidad = { id:number; lote_id:number; fecha:string; cantidad_aves:number; causa_presuntiva:string|null; disposicion:string|null; observaciones:string|null }
-export type EventoSanitario = { id:number; lote_id:number; fecha:string; tipo:string; producto:string|null; diagnostico:string|null; cantidad_aves:number|null; observaciones:string|null }
+export type EventoSanitario = { id:number; lote_id:number; fecha:string; tipo:string; producto:string|null; diagnostico:string|null; cantidad_aves:number|null; observaciones:string|null; insumo_id?:number|null; dosis?:string|null; via_aplicacion?:string|null }
 export type TipoRegistro = 'peso' | 'mortalidad' | 'sanitario'
-export type FormularioRegistro = { fecha:string; peso_promedio_g:string; cantidad_aves_pesadas:string; peso_objetivo_g:string; cantidad_aves:string; causa_presuntiva:string; tipo:string; producto:string; diagnostico:string; observaciones:string }
-export const FORMULARIO_INICIAL: FormularioRegistro = { fecha:fechaDeHoy(), peso_promedio_g:'', cantidad_aves_pesadas:'', peso_objetivo_g:'', cantidad_aves:'', causa_presuntiva:'', tipo:'vacunacion', producto:'', diagnostico:'', observaciones:'' }
+export type FormularioRegistro = { fecha:string; peso_promedio_g:string; cantidad_aves_pesadas:string; peso_objetivo_g:string; cantidad_aves:string; causa_presuntiva:string; tipo:string; producto:string; diagnostico:string; observaciones:string; dosis:string; via_aplicacion:string; insumo_id:string }
+export const FORMULARIO_INICIAL: FormularioRegistro = { fecha:fechaDeHoy(), peso_promedio_g:'', cantidad_aves_pesadas:'', peso_objetivo_g:'', cantidad_aves:'', causa_presuntiva:'', tipo:'vacunacion', producto:'', diagnostico:'', observaciones:'', dosis:'', via_aplicacion:'', insumo_id:'' }
+
+// Vías de aplicación de un tratamiento. El backend guarda texto libre; estas
+// son las de su documentación (ocular, oral, agua, subcutánea, intramuscular)
+// más las que ofrece la app Android.
+export const VIAS_APLICACION = [
+  ['ocular', 'Ocular'],
+  ['nasal', 'Nasal'],
+  ['oral', 'Oral'],
+  ['agua', 'En el agua de bebida'],
+  ['alimento', 'En el alimento'],
+  ['subcutanea', 'Subcutánea'],
+  ['intramuscular', 'Intramuscular'],
+  ['otra', 'Otra'],
+] as const
 
 const texto = (valor: number | string | null | undefined) => (valor === null || valor === undefined ? '' : String(valor))
 
@@ -24,7 +38,16 @@ export function formularioDesde(tipo: TipoRegistro, registro: Pesaje | Mortalida
     return { ...base, cantidad_aves: texto(muerte.cantidad_aves), causa_presuntiva: texto(muerte.causa_presuntiva) }
   }
   const evento = registro as EventoSanitario
-  return { ...base, tipo: evento.tipo, producto: texto(evento.producto), diagnostico: texto(evento.diagnostico) }
+  return {
+    ...base,
+    tipo: evento.tipo,
+    producto: texto(evento.producto),
+    diagnostico: texto(evento.diagnostico),
+    cantidad_aves: texto(evento.cantidad_aves),
+    dosis: texto(evento.dosis),
+    via_aplicacion: texto(evento.via_aplicacion),
+    insumo_id: texto(evento.insumo_id),
+  }
 }
 
 export function payloadRegistro(tipo: TipoRegistro, form: FormularioRegistro, loteId: number): object {
@@ -45,5 +68,14 @@ export function payloadRegistro(tipo: TipoRegistro, form: FormularioRegistro, lo
   if (tipo === 'mortalidad') {
     return { ...base, cantidad_aves: Number(form.cantidad_aves), causa_presuntiva: form.causa_presuntiva || undefined }
   }
-  return { ...base, tipo: form.tipo, producto: form.producto || undefined, diagnostico: form.diagnostico || undefined }
+  return {
+    ...base,
+    tipo: form.tipo,
+    producto: form.producto || undefined,
+    diagnostico: form.diagnostico || undefined,
+    cantidad_aves: form.cantidad_aves ? Number(form.cantidad_aves) : undefined,
+    dosis: form.dosis.trim() || undefined,
+    via_aplicacion: form.via_aplicacion || undefined,
+    insumo_id: form.insumo_id ? Number(form.insumo_id) : undefined,
+  }
 }

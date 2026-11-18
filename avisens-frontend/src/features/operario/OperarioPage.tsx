@@ -1,71 +1,146 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getUsuario } from '@shared/api'
-import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
-import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
-import BotonActualizar from '@shared/ui/BotonActualizar/BotonActualizar'
-import Cargando from '@shared/ui/Estados/Cargando'
+import HeroGranja from '@features/dashboard/components/HeroGranja'
+import PanelAtencionGranja from '@features/dashboard/components/PanelAtencionGranja'
+import ResumenGalpon from '@features/dashboard/components/ResumenGalpon'
+import RiesgoCalorResumen from '@features/dashboard/components/RiesgoCalorResumen'
+import EstadoLote from '@features/dashboard/components/EstadoLote'
 import SinGalponesAsignados from '@shared/ui/Estados/SinGalponesAsignados'
-import { IcBarn, IcEgg, IcLeaf, IcUsers } from '@shared/ui/icons/icons'
-import '@shared/ui/admin/AdminKit.css'
 import ModalRegistroOperario from './components/ModalRegistroOperario'
+import ResumenLoteOperario from './components/ResumenLoteOperario'
 import TarjetaJornada from './components/TarjetaJornada'
+import { useInicioOperario } from './hooks/useInicioOperario'
 import { useJornadaOperario } from './hooks/useJornadaOperario'
-import { resumirJornada, type JornadaOperario } from './model/jornadaOperario'
+import { useResumenLoteOperario } from './hooks/useResumenLoteOperario'
+import { rutaDeAtencion, rutaDeOperario } from './model/destinosOperario'
+import type { JornadaOperario } from './model/jornadaOperario'
+import '@shared/ui/admin/AdminKit.css'
+import '@shared/ui/admin/CentroControl.css'
+import '@features/dashboard/DashboardPage.css'
+import '@features/dashboard/ResumenGranja.css'
+import '@features/dashboard/ResumenRediseno.css'
+import '@features/dashboard/ResumenAbajo.css'
 import './OperarioPage.css'
 
 type RegistroAbierto = { tipo: 'mortalidad' | 'consumo'; jornada: JornadaOperario } | null
 
-// Inicio del operario. Usa las mismas piezas que las pantallas del
-// administrador y del propietario (cabecera, franja de resumen, avisos y
-// estados vacíos del kit compartido) para que el rol se vea igual que el resto.
+function EsqueletoJornada() {
+  return (
+    <div className="page-container dashboard-page" aria-busy="true" aria-label="Cargando tu jornada">
+      <div className="dashboard-skeleton dashboard-skeleton--header" />
+      <div className="dashboard-skeleton dashboard-skeleton--state" />
+      <div className="dashboard-skeleton-grid">
+        <div className="dashboard-skeleton dashboard-skeleton--panel" />
+        <div className="dashboard-skeleton dashboard-skeleton--panel" />
+      </div>
+    </div>
+  )
+}
+
+// Inicio del operario con el mismo diseño que el resumen del propietario:
+// el hero ilustrado de la granja, lo que pide atención y el galpón con sus
+// sensores. Debajo del hero va lo propio de su rol: registrar mortalidad y
+// consumo en cada galpón asignado. Los atajos que en el propietario llevan a
+// /granjas aquí llevan a Alertas, Sensores o Bitácora (destinosOperario).
 function OperarioPage() {
   const navigate = useNavigate()
-  const usuario = getUsuario()
+  const inicio = useInicioOperario()
   const jornada = useJornadaOperario()
+  const registrosLote = useResumenLoteOperario()
   const [registroAbierto, setRegistroAbierto] = useState<RegistroAbierto>(null)
-  const nombre = usuario?.nombre.trim().split(/\s+/)[0] || 'operario'
-  const resumen = useMemo(() => resumirJornada(jornada.jornadas), [jornada.jornadas])
-  const primeraCarga = jornada.cargando && jornada.jornadas.length === 0
+  const { dashboard } = inicio
+  const nombre = dashboard.usuario?.nombre?.trim().split(/\s+/)[0] || 'operario'
+  const fecha = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
 
-  const stats: Stat[] = [
-    { label: 'Galpones a tu cargo', valor: resumen.galpones, icono: <IcBarn size={18} />, tono: 'neutral' },
-    { label: 'Lotes activos', valor: resumen.lotesActivos, icono: <IcEgg size={18} />, tono: 'ok' },
-    { label: 'Aves en seguimiento', valor: resumen.avesEnSeguimiento, icono: <IcUsers size={18} />, tono: 'info' },
-    {
-      label: 'Galpones sin lote',
-      valor: resumen.galponesSinLote,
-      icono: <IcLeaf size={18} />,
-      tono: resumen.galponesSinLote > 0 ? 'aviso' : 'neutral',
-    },
-  ]
+  function recargarTodo() {
+    void dashboard.recargar()
+    void jornada.recargar()
+    void registrosLote.recargar()
+  }
+
+  if (dashboard.cargando && dashboard.granjas.length === 0) return <EsqueletoJornada />
+
+  if (!dashboard.cargando && !jornada.cargando && dashboard.totalGalpones === 0 && jornada.jornadas.length === 0) {
+    return (
+      <div className="page-container dashboard-page operario-page">
+        <SinGalponesAsignados queVerias="tu jornada: el estado de cada galpón, sus sensores y los botones para registrar mortalidad y consumo" />
+      </div>
+    )
+  }
+
+  function ejecutarAccion() {
+    const accion = inicio.estado.accion
+    if (!accion) return
+    if (accion.tipo === 'atencion') {
+      navigate(rutaDeAtencion(accion.item))
+      return
+    }
+    navigate(dashboard.lote ? `/guia-crecimiento?lote=${dashboard.lote.id}` : '/guia-crecimiento')
+  }
 
   return (
-    <div className="page-container operario-page adm-page">
-      <CabeceraAdmin
-        eyebrow="Mi jornada"
-        titulo={`Hola, ${nombre}`}
-        subtitulo="Registra lo que sucede hoy en los galpones a tu cargo."
-        acciones={<BotonActualizar cargando={jornada.cargando} onActualizar={jornada.recargar} />}
+    <div className="page-container dashboard-page resumen-page operario-page">
+      <HeroGranja
+        nombre={nombre}
+        fecha={fecha}
+        granjas={dashboard.granjas}
+        granjaId={dashboard.granjaId}
+        estado={inicio.estado}
+        kpis={inicio.kpis}
+        diaLote={inicio.diaUnico}
+        aves={inicio.avesAlojadas}
+        nombreGalpon={dashboard.galpon?.nombre ?? null}
+        clima={inicio.clima}
+        sensores={inicio.sensoresEscena}
+        cargando={dashboard.cargando || inicio.cargandoMonitoreo || jornada.cargando}
+        onGranjaChange={dashboard.seleccionarGranja}
+        onRecargar={recargarTodo}
+        onAccion={ejecutarAccion}
+        onNavegar={(destino) => navigate(rutaDeOperario(destino))}
       />
 
-      {jornada.error && (
+      {(dashboard.error || jornada.error) && (
         <div className="adm-alerta" role="alert">
-          <span>{jornada.error}</span>
-          <button type="button" onClick={() => void jornada.recargar()}>Reintentar</button>
+          <span>{jornada.error || dashboard.error}</span>
+          <button type="button" onClick={recargarTodo}>Reintentar</button>
         </div>
       )}
 
       {jornada.mensaje && <p className="operario-success" role="status">{jornada.mensaje}</p>}
 
-      {primeraCarga ? (
-        <Cargando texto="Cargando tu jornada…" />
-      ) : jornada.jornadas.length === 0 ? (
-        <SinGalponesAsignados queVerias="tu jornada: el lote de cada galpón y los botones para registrar mortalidad y consumo" />
-      ) : (
-        <>
-          <TarjetasResumen stats={stats} etiqueta="Resumen de tu jornada" />
-          <section className="operario-galpones" aria-label="Galpones asignados">
+      {inicio.atencion.length > 0 && (
+        <PanelAtencionGranja
+          items={inicio.atencion}
+          cargando={false}
+          sinSensores={inicio.sensoresGranja === 0}
+        />
+      )}
+
+      <ResumenLoteOperario
+        lote={dashboard.lote}
+        nombreGalpon={dashboard.galpon?.nombre ?? null}
+        galponId={dashboard.galponId}
+        galpones={inicio.filas}
+        onSeleccionarGalpon={dashboard.seleccionarGalpon}
+        mortalidad={registrosLote.mortalidad}
+        consumos={registrosLote.consumos}
+        eventos={registrosLote.eventos}
+        alertas={dashboard.alertasGranja}
+        indicadores={inicio.indicadores}
+        cargandoRegistros={registrosLote.cargando}
+        cargandoIndicadores={inicio.cargandoLote}
+        error={registrosLote.error}
+      />
+
+      {jornada.jornadas.length > 0 && (
+        <section className="operario-registro" aria-labelledby="operario-registro-titulo">
+          <header className="rsm-cabecera">
+            <div>
+              <h2 id="operario-registro-titulo" className="rsm-titulo rsm-titulo--grande">Registro de hoy</h2>
+              <p className="rsm-subtitulo">Anota la mortalidad y el consumo de cada galpón a tu cargo.</p>
+            </div>
+          </header>
+          <div className="operario-galpones">
             {jornada.jornadas.map((item) => (
               <TarjetaJornada
                 key={item.galpon.id}
@@ -76,9 +151,36 @@ function OperarioPage() {
                 onVerCrecimiento={() => item.lote && navigate(`/guia-crecimiento?lote=${item.lote.id}`)}
               />
             ))}
-          </section>
-        </>
+          </div>
+        </section>
       )}
+
+      <ResumenGalpon
+        titulo={dashboard.galpon ? dashboard.galpon.nombre : 'Tu galpón'}
+        detalle="Así está por dentro, ahora mismo"
+        etiqueta={inicio.sensoresDelGalpon > 0
+          ? `${inicio.reportando} de ${inicio.sensoresDelGalpon} sensores reportando`
+          : null}
+        sensores={inicio.sensoresEscena}
+        aves={inicio.avesAlojadas}
+        diaLote={inicio.diaUnico}
+        clima={inicio.clima}
+        galpones={inicio.filas}
+        galponId={dashboard.galponId}
+        onSeleccionar={dashboard.seleccionarGalpon}
+        lote={(
+          <>
+            {dashboard.galponId !== null && <RiesgoCalorResumen galponId={dashboard.galponId} />}
+            <EstadoLote
+              lote={dashboard.lote}
+              indicadores={inicio.indicadores}
+              comparacion={inicio.comparacion}
+              diaLote={dashboard.diaLote}
+              cargando={inicio.cargandoLote}
+            />
+          </>
+        )}
+      />
 
       {registroAbierto && (
         <ModalRegistroOperario
@@ -86,8 +188,16 @@ function OperarioPage() {
           jornada={registroAbierto.jornada}
           guardando={jornada.guardando}
           onCerrar={() => setRegistroAbierto(null)}
-          onRegistrarMortalidad={jornada.registrarMortalidad}
-          onRegistrarConsumo={jornada.registrarConsumo}
+          onRegistrarMortalidad={async (loteId, registro) => {
+            await jornada.registrarMortalidad(loteId, registro)
+            void dashboard.recargar()
+            void registrosLote.recargar()
+          }}
+          onRegistrarConsumo={async (loteId, registro) => {
+            await jornada.registrarConsumo(loteId, registro)
+            void dashboard.recargar()
+            void registrosLote.recargar()
+          }}
         />
       )}
     </div>
