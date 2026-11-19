@@ -6,6 +6,7 @@ import { ROL_ADMIN, permisosDeRegistro } from '@shared/auth/permisos'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcDoc, IcDrop, IcHeart, IcScale, IcSeed } from '@shared/ui/icons/icons'
 import BotonActualizar from '@shared/ui/BotonActualizar/BotonActualizar'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import GestionConsumos from '@features/consumos-diarios/components/GestionConsumos'
 import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
@@ -41,6 +42,7 @@ const ETIQUETA: Record<TipoRegistro, string> = {
 
 function BitacoraPage() {
   const datos = useBitacora()
+  useRefetchOnFocus(datos.recargar)
   const rol = getRol()
   const esAdministrador = rol === ROL_ADMIN
   const permisosRegistro = permisosDeRegistro(rol)
@@ -271,7 +273,13 @@ function BitacoraPage() {
             <div>
               <p className="bit-kicker">Lote activo</p>
               <h2>{lote.codigo}</h2>
-              <p>Galpón {lote.galpon.nombre} · {lote.cantidad_inicial.toLocaleString('es-CO')} aves iniciales</p>
+              <p>
+                Galpón {lote.galpon.nombre} · {resumen.avesMuertas > 0 ? (
+                  <><strong>{Math.max(0, lote.cantidad_inicial - resumen.avesMuertas).toLocaleString('es-CO')}</strong> aves vivas ({lote.cantidad_inicial.toLocaleString('es-CO')} iniciales)</>
+                ) : (
+                  <>{lote.cantidad_inicial.toLocaleString('es-CO')} aves iniciales</>
+                )}
+              </p>
             </div>
             <span role="status" aria-atomic="true">{resumen.totalRegistros} registros en este lote</span>
           </section>

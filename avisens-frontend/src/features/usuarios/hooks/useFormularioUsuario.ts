@@ -11,6 +11,7 @@ const FORMULARIO_VACIO: CrearUsuarioPayload = {
   password: '',
   telefono: '',
   rol_id: 0,
+  galpon_ids: [],
 }
 
 type AlGuardar = (
@@ -29,16 +30,16 @@ export function useFormularioUsuario(alGuardar: AlGuardar) {
 
   const modoEdicion = editandoId !== null
 
-  const abrirCrear = useCallback((rolId: number) => {
+  const abrirCrear = useCallback((rolId: number, galponIds: number[] = []) => {
     setEditandoId(null)
-    setForm({ ...FORMULARIO_VACIO, rol_id: rolId })
+    setForm({ ...FORMULARIO_VACIO, rol_id: rolId, galpon_ids: galponIds })
     setError('')
     setErrores({})
     setVerPassword(false)
     setAbierto(true)
   }, [])
 
-  const abrirEditar = useCallback((usuario: Usuario) => {
+  const abrirEditar = useCallback((usuario: Usuario, galponIds: number[] = []) => {
     setEditandoId(usuario.id)
     setForm({
       nombre_completo: usuario.nombre_completo,
@@ -49,6 +50,7 @@ export function useFormularioUsuario(alGuardar: AlGuardar) {
       telefono: usuario.telefono ?? '',
       rol_id: usuario.rol.id,
       organizacion_id: usuario.organizacion_id ?? undefined,
+      galpon_ids: galponIds.length > 0 ? galponIds : (usuario.usuarios_galpones?.map((a) => a.galpon_id) ?? []),
     })
     setError('')
     setErrores({})

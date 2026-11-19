@@ -4,6 +4,7 @@ import * as Tabs from '@radix-ui/react-tabs'
 import NumeroAnimado from '@features/organizaciones/components/NumeroAnimado'
 import type { Lote } from '@features/lotes/api/lotes'
 import { IcArrowRight, IcBell, IcCheck, IcChevronRight, IcLeaf, IcRefresh } from '@shared/ui/icons/icons'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import { getRol } from '@shared/api'
 import { permisosOperativosDeGalpon, puedeCompletarDatos, ROL_PROPIETARIO } from '@shared/auth/permisos'
@@ -113,6 +114,8 @@ function GranjasPropietario() {
     await recargar()
     setRevision((valor) => valor + 1)
   }
+
+  useRefetchOnFocus(recargarTodo)
 
   function abrirPendiente(pendiente: PendienteDatos) {
     if (!seleccionada) return

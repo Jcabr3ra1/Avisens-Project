@@ -8,6 +8,7 @@ import FormularioProveedor from './components/FormularioProveedor'
 import TablaProveedores from './components/TablaProveedores'
 import { useFormularioProveedor } from './hooks/useFormularioProveedor'
 import { useProveedores } from './hooks/useProveedores'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import type { FormularioProveedor as DatosProveedor, Proveedor } from './model/proveedor'
 import { notaTiposProveedor, resumirTiposProveedor } from './model/proveedor'
 import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
@@ -38,6 +39,7 @@ function ProveedoresPage() {
   // su Bodega para saber a quién pedir un insumo.
   const { gestionar } = permisosDeProveedor(getRol())
   const gestion = useProveedores()
+  useRefetchOnFocus(gestion.recargar)
   const [busqueda, setBusqueda] = useState('')
   const [estado, setEstado] = useState<FiltroEstado>('todos')
 
