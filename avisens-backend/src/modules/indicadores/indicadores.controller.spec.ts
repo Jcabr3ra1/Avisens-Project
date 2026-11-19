@@ -16,4 +16,15 @@ describe('IndicadoresController · resumen de crecimiento', () => {
     expect(roles).toEqual([ROLES.ADMINISTRADOR, ROLES.PROPIETARIO]);
     expect(roles).not.toContain(ROLES.OPERARIO);
   });
+
+  it('reserva la comparación día a día entre dos lotes a administrador y propietario', () => {
+    const metodo = Object.getOwnPropertyDescriptor(
+      IndicadoresController.prototype,
+      'compararLotes',
+    )?.value as object;
+    const roles = Reflect.getMetadata(ROLES_KEY, metodo) as string[];
+
+    expect(roles).toEqual([ROLES.ADMINISTRADOR, ROLES.PROPIETARIO]);
+    expect(roles).not.toContain(ROLES.OPERARIO);
+  });
 });

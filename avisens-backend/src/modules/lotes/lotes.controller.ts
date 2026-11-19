@@ -21,6 +21,7 @@ import { LotesService } from './lotes.service';
 import { CreateLoteDto } from './dto/create-lote.dto';
 import { UpdateLoteDto } from './dto/update-lote.dto';
 import { DatosLoteDto } from './dto/datos-lote.dto';
+import { CerrarLoteDto } from './dto/cerrar-lote.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 
 interface AuthRequest extends Request {
@@ -84,6 +85,20 @@ export class LotesController {
     @Req() req: AuthRequest,
   ) {
     return this.lotesService.actualizar(id, dto, req.user);
+  }
+
+  @Patch(':id/cerrar')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({
+    summary:
+      'Cerrar un lote activo con liquidación de venta, validando días faltantes y registrando ingreso financiero',
+  })
+  cerrar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CerrarLoteDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.lotesService.cerrar(id, dto, req.user);
   }
 
   @Patch(':id/activar')
