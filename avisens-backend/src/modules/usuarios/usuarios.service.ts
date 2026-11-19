@@ -45,6 +45,10 @@ const USUARIO_SELECT = {
   organizacion_id: true,
   rol: { select: { id: true, nombre: true } },
   organizacion: { select: { id: true, nombre: true } },
+} as const;
+
+const USUARIO_CON_GALPONES_SELECT = {
+  ...USUARIO_SELECT,
   usuarios_galpones: {
     where: { activa: true },
     select: {
@@ -309,7 +313,7 @@ export class UsuariosService {
       }
       return tx.usuario.findUniqueOrThrow({
         where: { id: usuario.id },
-        select: USUARIO_SELECT,
+        select: USUARIO_CON_GALPONES_SELECT,
       });
     }
 
@@ -334,7 +338,7 @@ export class UsuariosService {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.usuario.findMany({
         where,
-        select: USUARIO_SELECT,
+        select: USUARIO_CON_GALPONES_SELECT,
         orderBy: { fecha_creacion: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -359,7 +363,7 @@ export class UsuariosService {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id },
       select: {
-        ...USUARIO_SELECT,
+        ...USUARIO_CON_GALPONES_SELECT,
         seguridad_cuenta: {
           select: {
             intentos_fallidos: true,
@@ -502,7 +506,7 @@ export class UsuariosService {
 
         return tx.usuario.findUniqueOrThrow({
           where: { id },
-          select: USUARIO_SELECT,
+          select: USUARIO_CON_GALPONES_SELECT,
         });
       });
     }
