@@ -44,7 +44,8 @@ class AlertasFragment : BaseBottomNavFragment() {
 
     private var alertas: List<AlertaResponse> = emptyList()
     private var alertasStock: List<InsumoResponse> = emptyList()
-    private var mostrandoHistorial = false
+    private enum class Pestana { ACTIVAS, HISTORIAL, ESCALADAS }
+    private var pestanaActual = Pestana.ACTIVAS
     private var lotesActivos: List<LoteResponse> = emptyList()
 
     override fun onCreateView(
@@ -60,16 +61,24 @@ class AlertasFragment : BaseBottomNavFragment() {
         super.onViewCreated(view, savedInstanceState)
         configurarBottomNav(R.id.nav_alertas)
         binding.tabActivas.setOnClickListener {
-            mostrandoHistorial = false
+            pestanaActual = Pestana.ACTIVAS
             pintarTabs()
             mostrarLista()
         }
 
         binding.tabHistorial.setOnClickListener {
-            mostrandoHistorial = true
+            pestanaActual = Pestana.HISTORIAL
             pintarTabs()
             mostrarLista()
         }
+
+        binding.tabEscaladas.setOnClickListener {
+            pestanaActual = Pestana.ESCALADAS
+            pintarTabs()
+            mostrarLista()
+        }
+        binding.tabEscaladas.visibility = if (esPropietario()) View.VISIBLE else View.GONE
+        pintarTabs()
 
         // La carga se hace en onResume, también al regresar de Inicio.
     }
@@ -94,6 +103,7 @@ class AlertasFragment : BaseBottomNavFragment() {
         if (!silenciosa) {
             binding.tvBadgeActivas.visibility = View.GONE
             binding.tvBadgeHistorial.visibility = View.GONE
+            binding.tvBadgeEscaladas.visibility = View.GONE
         }
         viewLifecycleOwner.lifecycleScope.launch {
             try {
@@ -158,6 +168,7 @@ class AlertasFragment : BaseBottomNavFragment() {
                     emptyList()
                 }
                 actualizarResumen()
+                pintarTabs()
                 mostrarLista()
             } catch (e: CancellationException) {
                 throw e
@@ -184,53 +195,76 @@ class AlertasFragment : BaseBottomNavFragment() {
 
         binding.tvBadgeActivas.text = activas.toString()
         binding.tvBadgeActivas.visibility = if (activas > 0) View.VISIBLE else View.GONE
+        val escaladas = alertas.count { it.escalado_a_id != null }
+        binding.tvBadgeEscaladas.text = escaladas.toString()
+        binding.tvBadgeEscaladas.visibility = if (escaladas > 0 && esPropietario()) View.VISIBLE else View.GONE
         binding.tvBadgeHistorial.text = historial.toString()
         binding.tvBadgeHistorial.visibility = if (historial > 0) View.VISIBLE else View.GONE
         binding.tvCriticas.text = "●  $criticas críticas"
         binding.tvAdvertencias.text = "●  $advertencias advertencias"
-        binding.tvResumenAlertas.text =
-            if (activas == 1) "1 alerta activa en el galpón o la granja seleccionada"
+        actualizarTextoResumen()
+    }
+
+    private fun esPropietario(): Boolean =
+        (activity as? MainActivity)?.obtenerRolActual() == UserRole.PROPIETARIO
+
+    private fun actualizarTextoResumen() {
+        if (_binding == null) return
+        val activas = alertas.count { it.estado != "cerrada" } + alertasStock.size
+        binding.tvResumenAlertas.text = when (pestanaActual) {
+            Pestana.ACTIVAS -> if (activas == 1)
+                "1 alerta activa en el galpón o la granja seleccionada"
             else "$activas alertas activas en el galpón o la granja seleccionada"
+            Pestana.HISTORIAL -> "Alertas cerradas del galpón seleccionado"
+            Pestana.ESCALADAS -> "Alertas escaladas del galpón seleccionado"
+        }
     }
 
     private fun pintarTabs() {
-        // Los contadores corresponden a las alertas activas, no al historial.
-        binding.tvCriticas.visibility = if (mostrandoHistorial) View.GONE else View.VISIBLE
-        binding.tvAdvertencias.visibility = if (mostrandoHistorial) View.GONE else View.VISIBLE
+        if (_binding == null) return
+        if (pestanaActual == Pestana.ESCALADAS && !esPropietario()) {
+            pestanaActual = Pestana.ACTIVAS
+        }
+        binding.tabEscaladas.visibility = if (esPropietario()) View.VISIBLE else View.GONE
+        val mostrarContadores = pestanaActual == Pestana.ACTIVAS
+        binding.tvCriticas.visibility = if (mostrarContadores) View.VISIBLE else View.GONE
+        binding.tvAdvertencias.visibility = if (mostrarContadores) View.VISIBLE else View.GONE
         binding.tabActivas.setBackgroundResource(
-            if (!mostrandoHistorial) R.drawable.bg_tab_selected else R.drawable.bg_tabs
+            if (pestanaActual == Pestana.ACTIVAS) R.drawable.bg_tab_selected else R.drawable.bg_tabs
         )
         binding.tabHistorial.setBackgroundResource(
-            if (mostrandoHistorial) R.drawable.bg_tab_selected else R.drawable.bg_tabs
+            if (pestanaActual == Pestana.HISTORIAL) R.drawable.bg_tab_selected else R.drawable.bg_tabs
         )
-        binding.tvTituloListaAlertas.text =
-            if (mostrandoHistorial) "Historial de alertas" else "Alertas activas"
+        binding.tabEscaladas.setBackgroundResource(
+            if (pestanaActual == Pestana.ESCALADAS) R.drawable.bg_tab_selected else R.drawable.bg_tabs
+        )
+        binding.tvTituloListaAlertas.text = when (pestanaActual) {
+            Pestana.ACTIVAS -> "Alertas activas"
+            Pestana.HISTORIAL -> "Historial de alertas"
+            Pestana.ESCALADAS -> "Historial de escaladas"
+        }
+        actualizarTextoResumen()
     }
 
     private fun mostrarLista() {
         if (_binding == null) return
         binding.containerAlertas.removeAllViews()
-
-        val filtradas = if (mostrandoHistorial) {
-            alertas.filter { it.estado == "cerrada" }
-        } else {
-            alertas.filter { it.estado != "cerrada" }
+        val filtradas = when (pestanaActual) {
+            Pestana.ACTIVAS -> alertas.filter { it.estado != "cerrada" }
+            Pestana.HISTORIAL -> alertas.filter { it.estado == "cerrada" }
+            Pestana.ESCALADAS -> if (esPropietario())
+                alertas.filter { it.escalado_a_id != null } else emptyList()
         }
-
-        val mostrarStock = !mostrandoHistorial && alertasStock.isNotEmpty()
+        val mostrarStock = pestanaActual == Pestana.ACTIVAS && alertasStock.isNotEmpty()
         if (filtradas.isEmpty() && !mostrarStock) {
-            binding.containerAlertas.addView(
-                texto(
-                    if (mostrandoHistorial) "No hay alertas cerradas para este galpón."
-                    else "No hay alertas activas para este galpón.",
-                    13f,
-                    "#78847E",
-                    false
-                )
-            )
+            val mensaje = when (pestanaActual) {
+                Pestana.ACTIVAS -> "No hay alertas activas para este galpón."
+                Pestana.HISTORIAL -> "No hay alertas cerradas para este galpón."
+                Pestana.ESCALADAS -> "No hay alertas escaladas registradas para este galpón."
+            }
+            binding.containerAlertas.addView(texto(mensaje, 13f, "#111111", false))
             return
         }
-
         if (mostrarStock) {
             alertasStock.forEach { insumo ->
                 binding.containerAlertas.addView(crearTarjetaStockBajo(insumo))
@@ -241,32 +275,112 @@ class AlertasFragment : BaseBottomNavFragment() {
                 })
             }
         }
-
-        // Activas: fecha de creación. Historial: fecha de resolución.
-        // Las alertas antiguas sin fecha de cierre se agrupan como "SIN FECHA DE CIERRE".
+        // No existe fecha_escalamiento en el API: no se presenta una fecha inventada.
+        // Las escaladas se agrupan por creación, y las cerradas por resolución.
+        val agruparPorCierre = pestanaActual == Pestana.HISTORIAL
         val ordenadas = filtradas.sortedWith(
             compareByDescending<AlertaResponse> {
-                if (mostrandoHistorial) it.fecha_cierre.orEmpty() else it.fecha_creacion.orEmpty()
+                if (agruparPorCierre) it.fecha_cierre.orEmpty() else it.fecha_creacion.orEmpty()
             }.thenByDescending { it.fecha_creacion.orEmpty() }
         )
         var fechaAnterior: String? = null
         ordenadas.forEach { alerta ->
-            val fechaAgrupacion = if (mostrandoHistorial) alerta.fecha_cierre else alerta.fecha_creacion
-            val fechaActual = if (mostrandoHistorial && fechaAgrupacion.isNullOrBlank()) {
-                "SIN FECHA DE CIERRE"
-            } else fechaEncabezado(fechaAgrupacion)
+            val fechaAgrupacion = if (agruparPorCierre) alerta.fecha_cierre else alerta.fecha_creacion
+            val fechaActual = if (agruparPorCierre && fechaAgrupacion.isNullOrBlank())
+                "SIN FECHA DE CIERRE" else fechaEncabezado(fechaAgrupacion)
             if (fechaActual != fechaAnterior) {
                 binding.containerAlertas.addView(texto(fechaActual, 13f, "#52675C", true, 18).apply {
                     setPadding(dp(4), dp(2), dp(4), dp(8))
                 })
                 fechaAnterior = fechaActual
             }
-            binding.containerAlertas.addView(crearTarjetaAlerta(alerta))
+            binding.containerAlertas.addView(
+                if (pestanaActual == Pestana.ESCALADAS) crearTarjetaEscalada(alerta)
+                else crearTarjetaAlerta(alerta)
+            )
             binding.containerAlertas.addView(View(requireContext()).apply {
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(10))
             })
         }
     }
+
+    private fun crearTarjetaEscalada(alerta: AlertaResponse): View {
+        val critica = alerta.criticidad.equals("alta", true) ||
+                alerta.criticidad.equals("critica", true)
+        val tarjeta = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            background = resources.getDrawable(
+                if (critica) R.drawable.bg_alert_card_critical else R.drawable.bg_alert_card_warning, null
+            )
+            elevation = dp(2).toFloat()
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+        }
+        val encabezado = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        encabezado.addView(texto(
+            "●  ${alerta.galpon?.nombre ?: "Galpón ${alerta.galpon_id}"}",
+            12f, "#111111", true
+        ).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        encabezado.addView(crearBadgeEstadoAlerta(alerta.estado))
+        tarjeta.addView(encabezado)
+        tarjeta.addView(texto(etiquetaTipoAlerta(alerta.tipo), 16f, "#111111", true, 8))
+        tarjeta.addView(texto(
+            "Escalada a: ${alerta.escalado_a?.nombre_completo?.takeIf { it.isNotBlank() } ?: "Usuario no disponible"}",
+            12f, "#111111", true, 6
+        ))
+        tarjeta.addView(texto(
+            "Responsable que aceptó: ${alerta.responsable?.nombre_completo?.takeIf { it.isNotBlank() } ?: "Sin aceptación registrada"}",
+            12f, "#111111", false, 5
+        ))
+        alerta.fecha_creacion?.takeIf { it.isNotBlank() }?.let {
+            tarjeta.addView(texto("Generada: ${formatearFechaAlerta(it)}", 12f, "#111111", false, 5))
+        }
+        val aceptacion = alerta.fecha_aceptacion
+        if (!aceptacion.isNullOrBlank()) {
+            tarjeta.addView(texto("Aceptada: ${formatearFechaAlerta(aceptacion)}", 12f, "#111111", false, 5))
+            val minutos = calcularMinutosRespuesta(alerta.fecha_creacion, aceptacion)
+            if (minutos != null) tarjeta.addView(texto(
+                "Tiempo hasta aceptación: ${formatearDuracion(minutos)}",
+                12f, "#111111", true, 5
+            ))
+        } else {
+            tarjeta.addView(texto("Tiempo hasta aceptación: No disponible", 12f, "#111111", false, 5))
+        }
+        // No se atribuye al responsable que aceptó el papel de operario original:
+        // ese dato y la fecha del escalamiento no existen en la respuesta del API.
+        tarjeta.addView(texto(
+            "Estado actual: ${when (alerta.estado.lowercase(Locale.ROOT)) {
+                "cerrada" -> "Cerrada"
+                "en_proceso" -> "En proceso"
+                else -> "Abierta"
+            }}", 12f, "#111111", true, 6
+        ))
+        alerta.mensaje?.takeIf { it.isNotBlank() }?.let {
+            tarjeta.addView(texto(it, 12f, "#111111", false, 7))
+        }
+        if (alerta.estado == "cerrada") {
+            alerta.accion_correctiva?.takeIf { it.isNotBlank() }?.let {
+                tarjeta.addView(texto("Acción correctiva: $it", 12f, "#111111", false, 8))
+            }
+        }
+        return tarjeta
+    }
+
+    private fun calcularMinutosRespuesta(creacion: String?, aceptacion: String?): Long? {
+        if (creacion.isNullOrBlank() || aceptacion.isNullOrBlank()) return null
+        return try {
+            val inicio = java.time.Instant.parse(creacion)
+            val fin = java.time.Instant.parse(aceptacion)
+            java.time.Duration.between(inicio, fin).toMinutes().takeIf { it >= 0 }
+        } catch (_: Exception) { null }
+    }
+
+    private fun formatearDuracion(minutos: Long): String =
+        if (minutos < 60) "$minutos min" else "${minutos / 60} h ${minutos % 60} min"
 
     // Esta tarjeta representa un estado actual del inventario, no una Alerta
     // de galpón. No presenta acciones de cerrar/escalar: esas rutas solo
