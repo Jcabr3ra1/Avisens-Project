@@ -1,0 +1,26 @@
+meta {
+  name: [Admin · Propietario] Comparar dos lotes dia por dia
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/v1/indicadores/comparar-lotes?lote1Id=1&lote2Id=2
+  body: none
+  auth: bearer
+}
+
+params:query {
+  lote1Id: 1
+  lote2Id: 2
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Devuelve la evolución de ambos lotes organizada día por día (Día 1, Día 2, ...)
+  con peso promedio, mortalidad diaria/acumulada, consumo de alimento y FCR
+  para graficar las dos curvas superpuestas.
+}

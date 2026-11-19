@@ -17,6 +17,8 @@ import { ROLES } from '../../common/auth/roles';
 import { IndicadoresService } from './indicadores.service';
 import { ResumenCrecimientoDto } from './dto/resumen-crecimiento.dto';
 import { ResumenCrecimientoService } from './resumen-crecimiento.service';
+import { CompararLotesDto } from './dto/comparar-lotes.dto';
+import { CompararLotesService } from './comparar-lotes.service';
 
 interface AuthRequest extends Request {
   user: { id: number; email?: string | null; rol: string };
@@ -31,6 +33,7 @@ export class IndicadoresController {
   constructor(
     private indicadoresService: IndicadoresService,
     private resumenCrecimientoService: ResumenCrecimientoService,
+    private compararLotesService: CompararLotesService,
   ) {}
 
   @Get('resumen-crecimiento')
@@ -41,6 +44,23 @@ export class IndicadoresController {
     @Req() req: AuthRequest,
   ) {
     return this.resumenCrecimientoService.obtener(req.user, query);
+  }
+
+  @Get('comparar-lotes')
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
+  @ApiOperation({
+    summary:
+      'Comparar dos lotes organizados día por día para graficar curvas superpuestas',
+  })
+  compararLotes(
+    @Query() query: CompararLotesDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.compararLotesService.comparar(
+      query.lote1Id,
+      query.lote2Id,
+      req.user,
+    );
   }
 
   @Post('calcular/:loteId')

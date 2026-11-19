@@ -23,6 +23,10 @@ describe('LotesService', () => {
     },
     galpon: { findUnique: jest.fn() },
     proveedor: { findUnique: jest.fn() },
+    consumoDiario: { findMany: jest.fn() },
+    registroMortalidad: { findMany: jest.fn() },
+    categoriaFinanciera: { findFirst: jest.fn(), create: jest.fn() },
+    movimientoFinanciero: { create: jest.fn() },
     $queryRaw: jest.fn(),
     $transaction: jest.fn(),
   };
@@ -454,6 +458,226 @@ describe('LotesService', () => {
       const res = await service.eliminarPermanente(1, propietario);
 
       expect(res).toEqual({ id: 1, eliminado: true });
+    });
+  });
+
+  describe('cerrar', () => {
+    const loteActivo = {
+      id: 10,
+      codigo: 'LOT-2026-000010',
+      estado: 'activo',
+      fecha_ingreso: new Date('2026-08-01T00:00:00.000Z'),
+      cantidad_inicial: 1000,
+      galpon: {
+        id: 3,
+        nombre: 'Galpón 1',
+        granja: { id: 2, nombre: 'La Palma', propietario_id: 5 },
+      },
+    };
+
+    const dtoCierre = {
+      fecha_salida_real: '2026-08-03',
+      cantidad_aves_vendidas: 950,
+      peso_promedio_final_g: 2000,
+      valor_venta_total_cop: 9500000,
+    };
+
+    const consumosCompletos = [
+      { fecha: new Date('2026-08-01T00:00:00.000Z'), alimento_kg: 1000 },
+      { fecha: new Date('2026-08-02T00:00:00.000Z'), alimento_kg: 1000 },
+      { fecha: new Date('2026-08-03T00:00:00.000Z'), alimento_kg: 1040 },
+    ];
+
+    const mortalidadEjemplo = [
+      { fecha: new Date('2026-08-02T00:00:00.000Z'), cantidad_aves: 50 },
+    ];
+
+    beforeEach(() => {
+      prisma.lote.findUnique.mockResolvedValue(loteActivo);
+      prisma.consumoDiario.findMany.mockResolvedValue(consumosCompletos);
+      prisma.registroMortalidad.findMany.mockResolvedValue(mortalidadEjemplo);
+      prisma.$queryRaw.mockResolvedValue([{ id: 10, estado: 'activo' }]);
+      prisma.categoriaFinanciera.findFirst.mockResolvedValue({
+        id: 1,
+        nombre: 'Venta de aves',
+        tipo: 'ingreso',
+      });
+      prisma.movimientoFinanciero.create.mockResolvedValue({
+        id: 77,
+        valor_cop: 9500000,
+        tipo: 'ingreso',
+      });
+      prisma.lote.update.mockResolvedValue({
+        ...loteActivo,
+        estado: 'finalizado',
+        fecha_salida_real: new Date('2026-08-03T00:00:00.000Z'),
+        cantidad_aves_vendidas: 950,
+        peso_promedio_final_g: 2000,
+        valor_venta_total_cop: 9500000,
+        precio_venta_kg_cop: 5000,
+        mortalidad_acumulada_final_pct: 5,
+        fcr_final: 1.6,
+        cerrado_por_id: 5,
+      });
+    });
+
+    it('rechaza (404) si el lote no existe', async () => {
+      prisma.lote.findUnique.mockResolvedValue(null);
+
+      await expect(service.cerrar(10, dtoCierre, propietario)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('rechaza (403) si el Propietario intenta cerrar un lote de otra granja', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        ...loteActivo,
+        galpon: {
+          ...loteActivo.galpon,
+          granja: { id: 9, nombre: 'Ajena', propietario_id: 999 },
+        },
+      });
+
+      await expect(service.cerrar(10, dtoCierre, propietario)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.lote.update).not.toHaveBeenCalled();
+    });
+
+    it('rechaza (409) si el lote no está activo', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        ...loteActivo,
+        estado: 'finalizado',
+      });
+
+      await expect(service.cerrar(10, dtoCierre, propietario)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prisma.lote.update).not.toHaveBeenCalled();
+    });
+
+    it('rechaza (400) si la fecha de salida es anterior a la fecha de ingreso', async () => {
+      await expect(
+        service.cerrar(
+          10,
+          { ...dtoCierre, fecha_salida_real: '2026-07-31' },
+          propietario,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rechaza (400) si las aves vendidas superan la cantidad inicial', async () => {
+      await expect(
+        service.cerrar(
+          10,
+          { ...dtoCierre, cantidad_aves_vendidas: 1001 },
+          propietario,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('no cierra y devuelve aviso con días faltantes si falta alimento y no viene confirmación', async () => {
+      prisma.consumoDiario.findMany.mockResolvedValue([
+        { fecha: new Date('2026-08-01T00:00:00.000Z'), alimento_kg: 1000 },
+      ]);
+
+      const resultado = await service.cerrar(10, dtoCierre, propietario);
+
+      expect(resultado.cerrado).toBe(false);
+      expect(resultado.requiere_confirmacion).toBe(true);
+      if (!resultado.cerrado) {
+        expect(resultado.dias_sin_alimento).toEqual([
+          { dia: 2, fecha: '2026-08-02' },
+          { dia: 3, fecha: '2026-08-03' },
+        ]);
+        expect(resultado.dias_sin_mortalidad).toEqual([
+          { dia: 1, fecha: '2026-08-01' },
+          { dia: 3, fecha: '2026-08-03' },
+        ]);
+      }
+      expect(prisma.lote.update).not.toHaveBeenCalled();
+      expect(prisma.movimientoFinanciero.create).not.toHaveBeenCalled();
+    });
+
+    it('cierra el lote aunque falten días cuando confirmar_cierre es true', async () => {
+      prisma.consumoDiario.findMany.mockResolvedValue([
+        { fecha: new Date('2026-08-01T00:00:00.000Z'), alimento_kg: 3040 },
+      ]);
+
+      const resultado = await service.cerrar(
+        10,
+        { ...dtoCierre, confirmar_cierre: true },
+        propietario,
+      );
+
+      expect(resultado.cerrado).toBe(true);
+      expect(prisma.lote.update).toHaveBeenCalledTimes(1);
+    });
+
+    it('cierra el lote, guarda datos de liquidación, calcula mortalidad/FCR y registra ingreso en Venta de aves', async () => {
+      const resultado = await service.cerrar(10, dtoCierre, propietario);
+
+      expect(resultado.cerrado).toBe(true);
+      expect(resultado.requiere_confirmacion).toBe(false);
+
+      const datosLote = dataDe(prisma.lote.update);
+      expect(datosLote.estado).toBe('finalizado');
+      expect(datosLote.cantidad_aves_vendidas).toBe(950);
+      expect(datosLote.peso_promedio_final_g).toBe(2000);
+      expect(datosLote.valor_venta_total_cop).toBe(9500000);
+      // 950 aves * 2 kg = 1900 kg -> 9,500,000 / 1900 = 5000 COP/kg
+      expect(datosLote.precio_venta_kg_cop).toBe(5000);
+      // 50 / 1000 * 100 = 5%
+      expect(datosLote.mortalidad_acumulada_final_pct).toBe(5);
+      // 3040 kg alimento / 1900 kg peso vivo = 1.6
+      expect(datosLote.fcr_final).toBe(1.6);
+      expect(datosLote.cerrado_por_id).toBe(propietario.id);
+      expect(datosLote.fecha_cierre).toBeInstanceOf(Date);
+
+      const datosMov = dataDe(prisma.movimientoFinanciero.create);
+      expect(datosMov).toMatchObject({
+        granja_id: 2,
+        lote_id: 10,
+        categoria_id: 1,
+        tipo: 'ingreso',
+        valor_cop: 9500000,
+        usuario_id: propietario.id,
+      });
+    });
+
+    it('crea la categoría Venta de aves si no existía y respeta precio_venta_kg_cop manual', async () => {
+      prisma.categoriaFinanciera.findFirst.mockResolvedValue(null);
+      prisma.categoriaFinanciera.create.mockResolvedValue({
+        id: 88,
+        nombre: 'Venta de aves',
+        tipo: 'ingreso',
+      });
+
+      await service.cerrar(
+        10,
+        { ...dtoCierre, precio_venta_kg_cop: 5200 },
+        admin,
+      );
+
+      expect(prisma.categoriaFinanciera.create).toHaveBeenCalledWith({
+        data: { nombre: 'Venta de aves', tipo: 'ingreso' },
+        select: { id: true },
+      });
+      expect(dataDe(prisma.lote.update).precio_venta_kg_cop).toBe(5200);
+      expect(dataDe(prisma.movimientoFinanciero.create).categoria_id).toBe(88);
+    });
+
+    it('no crea movimiento financiero si no se informó dinero de venta', async () => {
+      const { valor_venta_total_cop: _omitido, ...sinVenta } = dtoCierre;
+      void _omitido;
+
+      const resultado = await service.cerrar(10, sinVenta, propietario);
+
+      expect(resultado.cerrado).toBe(true);
+      if (resultado.cerrado) {
+        expect(resultado.movimiento_financiero).toBeNull();
+      }
+      expect(prisma.movimientoFinanciero.create).not.toHaveBeenCalled();
     });
   });
 });

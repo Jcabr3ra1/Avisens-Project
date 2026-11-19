@@ -93,6 +93,7 @@ model Usuario {
   organizacion               Organizacion?          @relation(fields: [organizacion_id], references: [id], onDelete: Restrict)
   recomendaciones            Recomendacion[]
   conversaciones_ia          ConversacionIa[]
+  lotes_cerrados             Lote[]                 @relation("LoteCerradoPor")
 
   // Permite que la FK compuesta de granjas garantice que el propietario y la
   // granja pertenezcan a la misma organización.
@@ -495,14 +496,23 @@ model Lote {
   marca_alimento         String?
   costo_pollito_unitario Decimal?   @db.Decimal(14, 2)
   presupuesto_total_cop  Decimal?   @db.Decimal(14, 2)
-  fecha_salida_estimada  DateTime?  @db.Date
-  fecha_salida_real      DateTime?  @db.Date
-  estado                 EstadoLote @default(activo)
-  linea_genetica_id      Int?
+  fecha_salida_estimada          DateTime?  @db.Date
+  fecha_salida_real              DateTime?  @db.Date
+  cantidad_aves_vendidas         Int?
+  peso_promedio_final_g          Float?
+  valor_venta_total_cop          Decimal?   @db.Decimal(14, 2)
+  precio_venta_kg_cop            Decimal?   @db.Decimal(14, 2)
+  mortalidad_acumulada_final_pct Float?
+  fcr_final                      Float?
+  cerrado_por_id                 Int?
+  fecha_cierre                   DateTime?
+  estado                         EstadoLote @default(activo)
+  linea_genetica_id              Int?
 
   galpon         Galpon         @relation(fields: [galpon_id], references: [id])
   proveedor      Proveedor?     @relation(fields: [proveedor_id], references: [id], onDelete: Restrict)
   linea_genetica LineaGenetica? @relation(fields: [linea_genetica_id], references: [id], onDelete: Restrict)
+  cerrado_por    Usuario?       @relation("LoteCerradoPor", fields: [cerrado_por_id], references: [id], onDelete: Restrict)
 
   pesajes                 Pesaje[]
   registros_mortalidad    RegistroMortalidad[]
@@ -521,6 +531,7 @@ model Lote {
   planes                  PlanLote[]
 
   @@index([galpon_id, estado])
+  @@index([cerrado_por_id])
   @@map("lotes")
 }
 
