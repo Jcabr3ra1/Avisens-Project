@@ -78,7 +78,7 @@ function UmbralesDeGalpon({ galpon }: Props) {
       descripcion:
         'Se completarán las semanas sin definir con los valores técnicos recomendados. Podrás editarlos o revisarlos en cualquier momento.',
       textoConfirmar: 'Cargar sugeridos',
-      tono: 'info',
+      tono: 'normal',
     })
     if (!confirmado) return
 

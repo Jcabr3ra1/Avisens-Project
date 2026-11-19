@@ -91,7 +91,7 @@ function useParalaje(ref: React.RefObject<HTMLElement | null>) {
 
 function HeroGranja({
   nombre, fecha, granjas, granjaId, estado, kpis, diaLote, aves, nombreGalpon, clima, sensores,
-  cargando, hora, onGranjaChange, onRecargar, onAccion, onNavegar,
+  cargando, hora, onGranjaChange, onAccion, onNavegar,
 }: Props) {
   const raiz = useRef<HTMLElement>(null)
   const [resaltado, setResaltado] = useState<KpiGranja['id'] | null>(null)

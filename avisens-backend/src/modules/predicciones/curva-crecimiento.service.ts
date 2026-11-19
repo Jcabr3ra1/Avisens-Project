@@ -208,20 +208,13 @@ export class CurvaCrecimientoService {
   ): Promise<PuntoPeso[]> {
     const pesajes = await this.prisma.pesaje.findMany({
       where: { lote_id: loteId },
-      orderBy: { fecha: 'asc' },
       select: { fecha: true, peso_promedio_g: true },
     });
 
-    if (pesajes.length === 0) return [];
-
-    const primeraFechaPesaje = pesajes[0].fecha;
-    const inicioEfectivo =
-      fechaIngreso > primeraFechaPesaje ? primeraFechaPesaje : fechaIngreso;
-
     const porDia = new Map<number, { total: number; cantidad: number }>();
     for (const pesaje of pesajes) {
-      const dia = Math.max(1, diaDeVidaDeFecha(inicioEfectivo, pesaje.fecha));
-      if (dia >= DIA_MAXIMO_ML) continue;
+      const dia = diaDeVidaDeFecha(fechaIngreso, pesaje.fecha);
+      if (dia < 1 || dia >= DIA_MAXIMO_ML) continue;
       const acumulado = porDia.get(dia) ?? { total: 0, cantidad: 0 };
       acumulado.total += pesaje.peso_promedio_g;
       acumulado.cantidad += 1;

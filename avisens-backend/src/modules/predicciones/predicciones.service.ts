@@ -259,23 +259,11 @@ export class PrediccionesService {
       select: { fecha: true, peso_promedio_g: true },
     });
 
-    if (pesajes.length === 0) {
-      throw new BadRequestException(
-        'Se necesitan pesajes de al menos 3 días distintos para predecir',
-      );
-    }
-
-    const primeraFechaPesaje = pesajes[0].fecha;
-    const inicioEfectivo =
-      lote.fecha_ingreso > primeraFechaPesaje
-        ? primeraFechaPesaje
-        : lote.fecha_ingreso;
-
     let pesajesDescartados = 0;
     const pesoPorDia = new Map<number, { total: number; cantidad: number }>();
     for (const pesaje of pesajes) {
-      const dia = Math.max(1, diaDeVidaDeFecha(inicioEfectivo, pesaje.fecha));
-      if (dia >= LIMITE_DIA_FAENA_ML.max) {
+      const dia = diaDeVidaDeFecha(lote.fecha_ingreso, pesaje.fecha);
+      if (dia < 1) {
         pesajesDescartados++;
         continue;
       }

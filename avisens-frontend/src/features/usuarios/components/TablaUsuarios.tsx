@@ -199,7 +199,6 @@ function TablaUsuarios({
                           key={usuario.id}
                           usuario={usuario}
                           onAlternarActivo={onAlternarActivo}
-                          onGestionarAsignaciones={onGestionarAsignaciones}
                           onMenu={alternarMenu}
                         />
                       ))}
