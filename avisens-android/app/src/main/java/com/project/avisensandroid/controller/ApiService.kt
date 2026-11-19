@@ -38,6 +38,7 @@ import com.project.avisensandroid.model.PlanLoteApiResponse
 import com.project.avisensandroid.model.CrearEstimacionAlimentoRequest
 import com.project.avisensandroid.model.RecalcularPlanLoteRequest
 import com.project.avisensandroid.model.CrearPlanLoteRequest
+import com.project.avisensandroid.model.UmbralAmbientalResponse
 import com.project.avisensandroid.model.LoteResponse
 import com.project.avisensandroid.model.RefreshTokenRequest
 import com.project.avisensandroid.model.RefreshTokenResponse
@@ -249,6 +250,13 @@ interface ApiService {
 
     // Última medición de cada sensor vigente del galpón, con la antigüedad
     // calculada por el servidor. Una sola petición para todo el galpón.
+    @GET("v1/umbrales")
+    suspend fun listarUmbralesAmbientales(
+        @Query("galpon_id") galponId: Int,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<UmbralAmbientalResponse>>
+
     @GET("v1/mediciones/ultimas")
     suspend fun listarUltimasLecturas(
         @Query("galpon_id") galponId: Int

@@ -31,6 +31,7 @@ import com.project.avisensandroid.model.AlertaResponse
 import com.project.avisensandroid.model.CerrarAlertaRequest
 import com.project.avisensandroid.model.PaginatedResponse
 import com.project.avisensandroid.model.UsuarioGestionResponse
+import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -193,6 +194,9 @@ class AlertasFragment : BaseBottomNavFragment() {
     }
 
     private fun pintarTabs() {
+        // Los contadores corresponden a las alertas activas, no al historial.
+        binding.tvCriticas.visibility = if (mostrandoHistorial) View.GONE else View.VISIBLE
+        binding.tvAdvertencias.visibility = if (mostrandoHistorial) View.GONE else View.VISIBLE
         binding.tabActivas.setBackgroundResource(
             if (!mostrandoHistorial) R.drawable.bg_tab_selected else R.drawable.bg_tabs
         )
@@ -238,18 +242,29 @@ class AlertasFragment : BaseBottomNavFragment() {
             }
         }
 
-        filtradas.forEachIndexed { index, alerta ->
-            binding.containerAlertas.addView(crearTarjetaAlerta(alerta))
-            if (index < filtradas.lastIndex) {
-                binding.containerAlertas.addView(
-                    View(requireContext()).apply {
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            dp(8)
-                        )
-                    }
-                )
+        // Activas: fecha de creación. Historial: fecha de resolución.
+        // Las alertas antiguas sin fecha de cierre se agrupan como "SIN FECHA DE CIERRE".
+        val ordenadas = filtradas.sortedWith(
+            compareByDescending<AlertaResponse> {
+                if (mostrandoHistorial) it.fecha_cierre.orEmpty() else it.fecha_creacion.orEmpty()
+            }.thenByDescending { it.fecha_creacion.orEmpty() }
+        )
+        var fechaAnterior: String? = null
+        ordenadas.forEach { alerta ->
+            val fechaAgrupacion = if (mostrandoHistorial) alerta.fecha_cierre else alerta.fecha_creacion
+            val fechaActual = if (mostrandoHistorial && fechaAgrupacion.isNullOrBlank()) {
+                "SIN FECHA DE CIERRE"
+            } else fechaEncabezado(fechaAgrupacion)
+            if (fechaActual != fechaAnterior) {
+                binding.containerAlertas.addView(texto(fechaActual, 13f, "#52675C", true, 18).apply {
+                    setPadding(dp(4), dp(2), dp(4), dp(8))
+                })
+                fechaAnterior = fechaActual
             }
+            binding.containerAlertas.addView(crearTarjetaAlerta(alerta))
+            binding.containerAlertas.addView(View(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(10))
+            })
         }
     }
 
@@ -317,7 +332,7 @@ class AlertasFragment : BaseBottomNavFragment() {
             texto(
                 "●  Sensores · $referencia",
                 12f,
-                "#5D6862",
+                "#111111",
                 true
             ).apply {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -334,11 +349,22 @@ class AlertasFragment : BaseBottomNavFragment() {
             texto(
                 if (valor != null) "$titulo $valor" else titulo,
                 16f,
-                "#183C2E",
+                "#111111",
                 true,
                 7
             )
         )
+
+        // En el historial, el responsable va justo debajo del motivo.
+        if (alerta.estado.equals("cerrada", ignoreCase = true)) {
+            val responsable = alerta.responsable?.nombre_completo?.takeIf { it.isNotBlank() }
+                ?: "Responsable no registrado"
+            card.addView(texto("Atendida por: $responsable", 12f, "#111111", true, 6))
+        }
+
+        alerta.fecha_creacion?.takeIf { it.isNotBlank() }?.let {
+            card.addView(texto("Generada: ${formatearFechaAlerta(it)}", 11f, "#111111", false, 5))
+        }
 
         val umbral = alerta.valor_umbral?.let { formatearValor(it) }
         val detalle = when {
@@ -346,55 +372,57 @@ class AlertasFragment : BaseBottomNavFragment() {
             umbral != null -> "Umbral: $umbral"
             else -> "Sin detalle adicional"
         }
-        card.addView(texto(detalle ?: "", 12f, "#78847E", false, 3))
-
+        card.addView(texto(detalle ?: "", 12f, "#111111", false, 6))
         if (umbral != null && alerta.valor_detectado != null) {
-            card.addView(
-                texto(
-                    "Valor detectado: ${formatearValor(alerta.valor_detectado)} · Umbral: $umbral",
-                    11f,
-                    if (critica) "#E53935" else "#A56B12",
-                    true,
-                    4
-                )
-            )
+            card.addView(texto(
+                "Valor detectado: ${formatearValor(alerta.valor_detectado)} · Umbral: $umbral",
+                11f, if (critica) "#E53935" else "#A56B12", true, 5
+            ))
         }
 
-        val fecha = alerta.fecha_creacion?.take(10)
-        if (!fecha.isNullOrBlank()) {
-            card.addView(texto("Fecha: $fecha", 11f, "#78847E", false, 5))
-        }
-
-        if (alerta.estado != "cerrada") {
+        if (alerta.estado.equals("cerrada", ignoreCase = true)) {
+            alerta.accion_correctiva?.takeIf { it.isNotBlank() }?.let {
+                card.addView(View(requireContext()).apply {
+                    setBackgroundColor(Color.parseColor("#E5ECE7"))
+                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)).apply {
+                        topMargin = dp(12)
+                        bottomMargin = dp(9)
+                    }
+                })
+                card.addView(texto("Acción correctiva", 12f, "#111111", true))
+                card.addView(texto(it, 12f, "#111111", false, 4))
+            }
+        } else {
+            val confirmada = alerta.estado.equals("en_proceso", ignoreCase = true)
             val botones = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.HORIZONTAL
                 layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(40)
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(40)
                 ).apply { topMargin = dp(10) }
             }
-
-            val btnEscalar = MaterialButton(requireContext()).apply {
-                text = "Escalar"
-                isAllCaps = false
-                textSize = 12f
-                setTextColor(Color.parseColor("#6D4C1D"))
-                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFF0D8"))
-                cornerRadius = dp(9)
-                minWidth = 0
-                minHeight = 0
-                insetTop = 0
-                insetBottom = 0
-                layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f)
-                setOnClickListener { mostrarDialogEscalar(alerta) }
+            val puedeEscalar = (activity as? MainActivity)?.obtenerRolActual() != UserRole.OPERARIO
+            if (puedeEscalar) {
+                val btnEscalar = MaterialButton(requireContext()).apply {
+                    text = "Escalar"
+                    isAllCaps = false
+                    textSize = 12f
+                    setTextColor(Color.parseColor("#6D4C1D"))
+                    backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFF0D8"))
+                    cornerRadius = dp(9)
+                    minWidth = 0
+                    minHeight = 0
+                    insetTop = 0
+                    insetBottom = 0
+                    layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f)
+                    setOnClickListener { mostrarDialogEscalar(alerta) }
+                }
+                botones.addView(btnEscalar)
+                botones.addView(View(requireContext()).apply {
+                    layoutParams = LinearLayout.LayoutParams(dp(8), 1)
+                })
             }
-
-            val espacio = View(requireContext()).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(8), 1)
-            }
-
-            val btnCerrar = MaterialButton(requireContext()).apply {
-                text = "Cerrar alerta"
+            val btnAccion = MaterialButton(requireContext()).apply {
+                text = if (confirmada) "Cerrar alerta" else "Confirmar lectura"
                 isAllCaps = false
                 textSize = 12f
                 setTextColor(Color.WHITE)
@@ -405,16 +433,77 @@ class AlertasFragment : BaseBottomNavFragment() {
                 insetTop = 0
                 insetBottom = 0
                 layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f)
-                setOnClickListener { mostrarDialogCerrar(alerta) }
+                setOnClickListener {
+                    if (confirmada) mostrarDialogCerrar(alerta)
+                    else confirmarLectura(alerta, this)
+                }
             }
-
-            botones.addView(btnEscalar)
-            botones.addView(espacio)
-            botones.addView(btnCerrar)
+            botones.addView(btnAccion)
             card.addView(botones)
+            if (confirmada) {
+                val responsable = alerta.responsable?.nombre_completo?.takeIf { it.isNotBlank() }
+                card.addView(texto(
+                    if (responsable != null) "Lectura confirmada por: $responsable"
+                    else "Lectura confirmada · En proceso",
+                    11f, "#176747", false, 6
+                ))
+            }
         }
 
         return card
+    }
+
+    private fun fechaEncabezado(fecha: String?): String {
+        if (fecha.isNullOrBlank()) return "SIN FECHA"
+        return try {
+            val dia = java.time.Instant.parse(fecha)
+                .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+            java.time.format.DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale("es", "CO"))
+                .format(dia).uppercase(Locale("es", "CO"))
+        } catch (_: Exception) {
+            fecha.take(10)
+        }
+    }
+
+    private fun formatearFechaAlerta(fecha: String): String {
+        return try {
+            val instante = java.time.Instant.parse(fecha)
+            val formato = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.getDefault())
+            formato.withZone(java.time.ZoneId.systemDefault()).format(instante)
+        } catch (_: Exception) {
+            fecha.take(16).replace('T', ' ')
+        }
+    }
+
+    private fun confirmarLectura(alerta: AlertaResponse, boton: MaterialButton) {
+        boton.isEnabled = false
+        boton.text = "Confirmando…"
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val respuesta = RetrofitClient.api.aceptarAlerta(alerta.id)
+                if (!respuesta.isSuccessful) {
+                    throw IllegalStateException("El servidor respondió HTTP ${respuesta.code()}")
+                }
+                val confirmada = respuesta.body()
+                    ?: throw IllegalStateException("El servidor no devolvió la alerta confirmada")
+                if (!confirmada.estado.equals("en_proceso", ignoreCase = true)) {
+                    throw IllegalStateException("El servidor no confirmó la lectura")
+                }
+                alertas = alertas.map { if (it.id == alerta.id) confirmada else it }
+                if (_binding != null) {
+                    actualizarResumen()
+                    mostrarLista()
+                }
+                if (isAdded) Toast.makeText(requireContext(), "Lectura confirmada. Ya puedes cerrar la alerta.", Toast.LENGTH_SHORT).show()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (isAdded) Toast.makeText(requireContext(), "No se pudo confirmar: ${e.message}", Toast.LENGTH_LONG).show()
+            } finally {
+                boton.isEnabled = true
+                boton.text = "Confirmar lectura"
+            }
+        }
     }
 
     private fun etiquetaTipoAlerta(tipo: String): String {

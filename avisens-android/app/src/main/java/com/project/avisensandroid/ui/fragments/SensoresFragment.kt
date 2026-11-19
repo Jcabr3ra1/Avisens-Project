@@ -21,6 +21,7 @@ import com.project.avisensandroid.model.LecturaDeSensor
 import com.project.avisensandroid.model.LecturasSensores
 import com.project.avisensandroid.model.PaginatedResponse
 import com.project.avisensandroid.model.SensorResponse
+import com.project.avisensandroid.model.UmbralAmbientalResponse
 import com.project.avisensandroid.model.VariableSensor
 import com.project.avisensandroid.model.VigenciaLectura
 import com.project.avisensandroid.ui.MainActivity
@@ -34,6 +35,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import retrofit2.Response
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -58,6 +60,8 @@ class SensoresFragment : BaseBottomNavFragment() {
     private var actuadoresActivos: List<SensorResponse> = emptyList()
     private var alertasActivasGalpon: List<AlertaResponse> = emptyList()
     private var galponSeleccionadoId: Int? = null
+    private var umbralesActuales: List<UmbralAmbientalResponse> = emptyList()
+    private var semanaActual: Int? = null
     private val mutexLecturas = Mutex()
 
     private enum class EstadoLectura { NORMAL, ATENCION, ERROR, SIN_DATOS }
@@ -138,6 +142,8 @@ class SensoresFragment : BaseBottomNavFragment() {
             Indicador(VariableSensor.TEMPERATURA, binding.txtTemperatura, binding.txtEstadoTemperatura, binding.arcTemperatura),
             Indicador(VariableSensor.HUMEDAD, binding.txtHumedad, binding.txtEstadoHumedad, binding.arcHumedad),
             Indicador(VariableSensor.CALIDAD_AIRE, binding.txtCalidadAire, binding.txtEstadoCalidadAire, binding.arcCalidadAire, binding.txtLabelCalidadAire),
+            Indicador(VariableSensor.CO2, binding.txtCo2, binding.txtEstadoCo2, binding.arcCo2, binding.txtLabelCo2),
+            Indicador(VariableSensor.AMONIACO, binding.txtAmoniaco, binding.txtEstadoAmoniaco, binding.arcAmoniaco, binding.txtLabelAmoniaco),
             Indicador(VariableSensor.PESO, binding.txtPeso, binding.txtEstadoPeso, binding.arcPeso, binding.txtLabelPeso),
             Indicador(VariableSensor.NIVEL_AGUA, binding.txtNivelAgua, binding.txtEstadoNivelAgua, binding.arcNivelAgua, binding.txtLabelNivelAgua)
         )
@@ -353,6 +359,8 @@ class SensoresFragment : BaseBottomNavFragment() {
                 return@withLock
             }
 
+            consultarUmbralesSemanales(galponId)
+
             alertasActivasGalpon = try {
                 val respuestaAlertas = RetrofitClient.api.listarAlertasDeGalpon(
                     galponId = galponId,
@@ -405,6 +413,52 @@ class SensoresFragment : BaseBottomNavFragment() {
         }
     }
 
+    /** Consulta umbrales reales. Si no hay lote activo o falla la consulta, no inventa estados. */
+    private suspend fun consultarUmbralesSemanales(galponId: Int) {
+        umbralesActuales = emptyList()
+        semanaActual = null
+        try {
+            val lotes = cargarTodasLasPaginas { pagina ->
+                RetrofitClient.api.listarLotesCompletos(page = pagina, limit = 100)
+            }
+            val lote = lotes.filter { it.galpon.id == galponId && it.estado.equals("activo", true) }
+                .maxByOrNull { it.fecha_ingreso }
+                ?: return
+            val fechaIngreso = parseDate(lote.fecha_ingreso) ?: return
+            val inicio = Calendar.getInstance().apply {
+                time = fechaIngreso
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }
+            val hoy = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }
+            var dias = 0
+            while (inicio.before(hoy) && dias < 10000) {
+                inicio.add(Calendar.DAY_OF_MONTH, 1)
+                dias++
+            }
+            semanaActual = dias / 7 // Día de ingreso = día 1; semana inicial = 0.
+            umbralesActuales = cargarTodasLasPaginas { pagina ->
+                RetrofitClient.api.listarUmbralesAmbientales(galponId, page = pagina, limit = 100)
+            }.filter { it.vigente && it.galpon_id == galponId && it.semana_vida == semanaActual }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            umbralesActuales = emptyList()
+            semanaActual = null
+        }
+    }
+
+    private fun claveUmbral(variable: VariableSensor): String? = when (variable) {
+        VariableSensor.TEMPERATURA -> "temperatura"
+        VariableSensor.HUMEDAD -> "humedad"
+        VariableSensor.CO2 -> "co2"
+        VariableSensor.AMONIACO -> "amoniaco"
+        else -> null
+    }
+
     /** El galpón no tiene sensores físicos identificados (puede tener actuadores). */
     private fun pintarSinSensoresIdentificados(sinIdentificar: List<SensorResponse>) {
         reiniciarIndicadores()
@@ -448,6 +502,31 @@ class SensoresFragment : BaseBottomNavFragment() {
         val noReciente = LecturasSensores.etiquetaNoReciente(lectura.vigencia)
         if (noReciente != null) {
             pintarNoReciente(indicador, valorMedido, ultima.fecha_hora, noReciente)
+            return
+        }
+
+        val clave = claveUmbral(indicador.variable)
+        if (clave != null) {
+            val umbral = umbralesActuales.firstOrNull { it.variable.equals(clave, true) }
+            indicador.arco.setProgressFraction(fraccionVisual(indicador.variable, valorMedido))
+            indicador.valor.setTextColor(colorDe(R.color.text_primary))
+            indicador.valor.text = textoValor(indicador.variable, valorMedido)
+            if (umbral == null) {
+                indicador.arco.setArcColor(colorDe(R.color.ring_track))
+                mostrarEstado(indicador.estado, "Sin umbral configurado", EstadoLectura.SIN_DATOS)
+                return
+            }
+            val dentro = valorMedido >= umbral.valor_minimo && valorMedido <= umbral.valor_maximo
+            if (dentro) {
+                indicador.arco.setArcColor(colorDe(R.color.gauge_green))
+                mostrarEstado(indicador.estado, "Óptimo", EstadoLectura.NORMAL)
+            } else {
+                val critica = umbral.criticidad.equals("alta", true) ||
+                        umbral.criticidad.equals("critica", true) || umbral.criticidad.equals("critico", true)
+                indicador.arco.setArcColor(colorDe(if (critica) R.color.gauge_red else R.color.gauge_orange))
+                mostrarEstado(indicador.estado, if (critica) "Crítico" else "Atención",
+                    if (critica) EstadoLectura.ERROR else EstadoLectura.ATENCION)
+            }
             return
         }
 
@@ -506,7 +585,7 @@ class SensoresFragment : BaseBottomNavFragment() {
             VariableSensor.TEMPERATURA -> "$numero°"
             VariableSensor.HUMEDAD -> "$numero%"
             // La unidad va en la etiqueta para que el número quepa en el arco.
-            VariableSensor.CALIDAD_AIRE, VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> numero
+            VariableSensor.CALIDAD_AIRE, VariableSensor.CO2, VariableSensor.AMONIACO, VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> numero
         }
     }
 
@@ -547,6 +626,7 @@ class SensoresFragment : BaseBottomNavFragment() {
             VariableSensor.TEMPERATURA -> 50f
             VariableSensor.HUMEDAD -> 100f
             VariableSensor.CALIDAD_AIRE -> ClasificadorSensores.ADC_MAXIMO
+            VariableSensor.CO2, VariableSensor.AMONIACO -> return 1f
             VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> return 1f
         }
         return (valor.toFloat() / escala).coerceIn(0f, 1f)
@@ -556,6 +636,8 @@ class SensoresFragment : BaseBottomNavFragment() {
         VariableSensor.TEMPERATURA -> "Temperatura"
         VariableSensor.HUMEDAD -> "Humedad"
         VariableSensor.CALIDAD_AIRE -> "Calidad del aire"
+        VariableSensor.CO2 -> "CO₂"
+        VariableSensor.AMONIACO -> "NH₃"
         VariableSensor.PESO -> "Peso de alimento"
         VariableSensor.NIVEL_AGUA -> "Distancia al agua"
     }

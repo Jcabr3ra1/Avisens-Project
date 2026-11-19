@@ -860,7 +860,7 @@ class InicioFragment : BaseBottomNavFragment() {
         VariableSensor.HUMEDAD -> "${formatearNumero(valor, 1)}%"
         // El ADC del MQ-135 es un entero; la unidad va en la etiqueta.
         VariableSensor.CALIDAD_AIRE -> formatearNumero(valor, 0)
-        VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> formatearNumero(valor, 1)
+        VariableSensor.CO2, VariableSensor.AMONIACO, VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> formatearNumero(valor, 1)
     }
 
     /** "dd/MM HH:mm" en la hora del teléfono; null si no hay fecha válida. */
@@ -888,7 +888,7 @@ class InicioFragment : BaseBottomNavFragment() {
             VariableSensor.TEMPERATURA -> 50f
             VariableSensor.HUMEDAD -> 100f
             VariableSensor.CALIDAD_AIRE -> ClasificadorSensores.ADC_MAXIMO
-            VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> return 1f
+            VariableSensor.CO2, VariableSensor.AMONIACO, VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> return 1f
         }
         return (valor.toFloat() / escala).coerceIn(0f, 1f)
     }
@@ -897,6 +897,8 @@ class InicioFragment : BaseBottomNavFragment() {
         VariableSensor.TEMPERATURA -> "Temperatura"
         VariableSensor.HUMEDAD -> "Humedad"
         VariableSensor.CALIDAD_AIRE -> "Calidad del aire"
+        VariableSensor.CO2 -> "CO₂"
+        VariableSensor.AMONIACO -> "NH₃"
         VariableSensor.PESO -> "Peso de alimento"
         VariableSensor.NIVEL_AGUA -> "Distancia al agua"
     }

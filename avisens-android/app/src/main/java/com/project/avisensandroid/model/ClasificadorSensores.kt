@@ -20,6 +20,12 @@ enum class VariableSensor {
     /** MQ-135, lectura ADC cruda filtrada (0-4095). No es ppm. */
     CALIDAD_AIRE,
 
+    /** Sensor de CO₂ con concentración real en ppm. */
+    CO2,
+
+    /** Sensor de amoniaco con concentración real en ppm. */
+    AMONIACO,
+
     /** HX711, gramos en la tolva. Llega "sospechosa" mientras no esté calibrado. */
     PESO,
 
@@ -71,6 +77,8 @@ object ClasificadorSensores {
             "temperatura" in t -> VariableSensor.TEMPERATURA
             "humedad" in t -> VariableSensor.HUMEDAD
             "mq135" in m || u == "adc" -> VariableSensor.CALIDAD_AIRE
+            (t == "co2" || t == "dioxidodecarbono") && u == "ppm" -> VariableSensor.CO2
+            (t == "amoniaco" || t == "nh3") && u == "ppm" -> VariableSensor.AMONIACO
             "hx711" in m || "peso" in t -> VariableSensor.PESO
             "hcsr04" in m || "niveldeagua" in t || "nivelagua" in t -> VariableSensor.NIVEL_AGUA
             else -> null

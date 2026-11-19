@@ -379,8 +379,7 @@ class LoginActivity : AppCompatActivity() {
             } else {
 
                 binding.txtError.text =
-                    "Para entrar por primera vez necesitas conexión a internet. " +
-                            "Después podrás consultar los últimos datos guardados sin conexión."
+                    "Sin conexión a internet. Inténtalo de nuevo."
             }
 
             return
@@ -527,7 +526,7 @@ class LoginActivity : AppCompatActivity() {
             } catch (e: IOException) {
 
                 binding.txtError.text =
-                    "Sin conexión. Revisa tu Wi-Fi o datos móviles e inténtalo de nuevo."
+                    "Sin conexión a internet. Inténtalo de nuevo."
 
             } catch (e: Exception) {
 
