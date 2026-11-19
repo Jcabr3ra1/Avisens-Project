@@ -1,3 +1,4 @@
+
 package com.project.avisensandroid.ui
 
 import android.content.Intent
@@ -493,16 +494,26 @@ class LoginActivity : AppCompatActivity() {
                             ?: "Revisa el nombre de usuario y la contraseña"
 
                         401 ->
-                            "Nombre de usuario o contraseña incorrectos"
+                            "Usuario o contraseña incorrectos."
 
-                        403 -> detalle
-                            ?: "No tienes permisos para acceder"
+                        403 -> {
+                            if (
+                                detalle?.contains(
+                                    "bloqueada temporalmente",
+                                    ignoreCase = true
+                                ) == true
+                            ) {
+                                "Cuenta bloqueada por seguridad, intenta de nuevo en 15 minutos."
+                            } else {
+                                detalle ?: "Acceso denegado."
+                            }
+                        }
 
                         409 -> detalle
                             ?: "No se pudo iniciar sesión. Inténtalo de nuevo."
 
                         429 ->
-                            "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
+                            "Demasiados intentos. Espera un minuto."
 
                         else ->
                             "Error del servidor: ${response.code()}"

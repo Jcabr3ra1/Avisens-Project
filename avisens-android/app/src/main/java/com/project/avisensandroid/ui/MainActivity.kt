@@ -32,6 +32,8 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.core.os.bundleOf
 import com.project.avisensandroid.R
+import com.project.avisensandroid.controller.Hu56OfflineQueue
+import com.project.avisensandroid.controller.OfflineCache
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.controller.SesionExpirada
 import com.project.avisensandroid.databinding.Au02RecuperarContrasenaBinding
@@ -402,6 +404,7 @@ class MainActivity : AppCompatActivity() {
             ?: preferenciasSeleccion().getInt(claveSeleccion("galpon"), 0).takeIf { it > 0 }
 
         RetrofitClient.inicializar(applicationContext)
+        Hu56OfflineQueue.programar(applicationContext)
 
         rolActual = UserSession.role(this)
 
@@ -2176,6 +2179,18 @@ class MainActivity : AppCompatActivity() {
 
                 lifecycleScope.launch {
 
+                    if (!OfflineCache.hayInternet(this@MainActivity)) {
+                        val guardado = Hu56OfflineQueue.guardar(this@MainActivity, "mortalidad", request)
+                        binding.btnGuardarEvento.isEnabled = !guardado
+                        Toast.makeText(this@MainActivity,
+                            if (guardado) "Registro guardado sin conexión. Pendiente de sincronizar" else "No se pudo guardar localmente el registro",
+                            Toast.LENGTH_LONG).show()
+                        if (guardado) {
+                            dialog.dismiss()
+                            mostrarFragment(BitacoraFragment())
+                        }
+                        return@launch
+                    }
                     try {
 
                         val response =
@@ -2592,6 +2607,18 @@ class MainActivity : AppCompatActivity() {
 
                 lifecycleScope.launch {
 
+                    if (!OfflineCache.hayInternet(this@MainActivity)) {
+                        val guardado = Hu56OfflineQueue.guardar(this@MainActivity, "sanitario", request)
+                        binding.btnGuardarEnfermo.isEnabled = !guardado
+                        Toast.makeText(this@MainActivity,
+                            if (guardado) "Registro guardado sin conexión. Pendiente de sincronizar" else "No se pudo guardar localmente el registro",
+                            Toast.LENGTH_LONG).show()
+                        if (guardado) {
+                            dialog.dismiss()
+                            mostrarFragment(BitacoraEnfermoFragment())
+                        }
+                        return@launch
+                    }
                     try {
 
                         val response =

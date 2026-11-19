@@ -77,30 +77,39 @@ class BitacoraFragment : BaseBottomNavFragment() {
     private fun cargarBitacora(silenciosa: Boolean = false) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val response = RetrofitClient.api.listarRegistrosMortalidad(
-                    page = 1,
-                    limit = 100
-                )
+                val registros = mutableListOf<RegistroMortalidadResponse>()
+                var pagina = 1
+                var totalPaginas = 1
 
-                if (!response.isSuccessful) {
-                    if (!silenciosa) Toast.makeText(
-                        requireContext(),
-                        "No se pudieron cargar los registros de mortalidad. Código: ${response.code()}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@launch
-                }
+                do {
+                    val response = RetrofitClient.api.listarRegistrosMortalidad(
+                        page = pagina,
+                        limit = 100
+                    )
 
-                val registros = response.body()?.data
+                    if (!response.isSuccessful) {
+                        if (!silenciosa) Toast.makeText(
+                            requireContext(),
+                            "No se pudieron cargar los registros de mortalidad. Código: ${response.code()}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@launch
+                    }
 
-                if (registros == null) {
-                    if (!silenciosa) Toast.makeText(
-                        requireContext(),
-                        "La API no devolvió registros de mortalidad",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@launch
-                }
+                    val body = response.body()
+                    if (body == null) {
+                        if (!silenciosa) Toast.makeText(
+                            requireContext(),
+                            "La API no devolvió registros de mortalidad",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@launch
+                    }
+
+                    registros.addAll(body.data)
+                    totalPaginas = body.meta.totalPages.coerceAtLeast(pagina)
+                    pagina++
+                } while (pagina <= totalPaginas)
 
                 val activity = requireActivity() as MainActivity
                 val galponIdSeleccionado = activity.obtenerGalponSeleccionadoId()
@@ -114,7 +123,10 @@ class BitacoraFragment : BaseBottomNavFragment() {
                     emptyList()
                 }
 
-                mostrarRegistros(registrosFiltrados)
+                mostrarRegistros(registrosFiltrados.sortedWith(
+                    compareByDescending<RegistroMortalidadResponse> { it.fecha.take(10) }
+                        .thenByDescending { it.fecha_registro }
+                ))
 
             } catch (e: CancellationException) {
                 // La cancelación del job es normal cuando el fragment sale de pantalla.
@@ -333,14 +345,14 @@ class BitacoraFragment : BaseBottomNavFragment() {
     }
 
     private fun formatearFecha(fecha: String): String {
-        return try {
-            val partes = fecha.split("-")
-            if (partes.size == 3) {
-                "${partes[2]}/${partes[1]}/${partes[0]}"
-            } else {
-                fecha
-            }
-        } catch (_: Exception) {
+        // El backend devuelve fechas ISO (p. ej. 2026-11-18T00:00:00.000Z).
+        // Tomar la fecha de calendario evita desplazar el día por zona horaria.
+        val dia = fecha.take(10)
+        val partes = dia.split("-")
+        return if (partes.size == 3 && partes[0].length == 4 &&
+            partes[1].length == 2 && partes[2].length == 2) {
+            "${partes[2]}/${partes[1]}/${partes[0]}"
+        } else {
             fecha
         }
     }

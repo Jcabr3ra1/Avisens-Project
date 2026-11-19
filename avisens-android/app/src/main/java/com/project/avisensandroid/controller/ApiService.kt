@@ -23,6 +23,7 @@ import com.project.avisensandroid.model.ActualizarEstadoUsuarioRequest
 import com.project.avisensandroid.model.UsuarioGalponResponse
 import com.project.avisensandroid.model.UserResponse
 import com.project.avisensandroid.model.PesajeResponse
+import com.project.avisensandroid.model.CreateConsumoDiarioRequest
 import com.project.avisensandroid.model.ConsumoDiarioResponse
 import com.project.avisensandroid.model.SensorResponse
 import com.project.avisensandroid.model.MedicionResponse
@@ -223,6 +224,9 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 100
     ): Response<PaginatedResponse<PesajeResponse>>
+
+    @POST("v1/consumos-diarios")
+    suspend fun crearConsumoDiario(@Body request: CreateConsumoDiarioRequest): Response<ConsumoDiarioResponse>
 
     @GET("v1/consumos-diarios")
     suspend fun listarConsumosDiarios(
