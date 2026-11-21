@@ -109,13 +109,23 @@ class AlertasFragment : BaseBottomNavFragment() {
             try {
                 if (!silenciosa) binding.tvResumenAlertas.text = "Cargando alertas del galpón seleccionado..."
                 alertas = if (galponId != null) {
-                    val response = RetrofitClient.api.listarAlertasDeGalpon(
-                        galponId = galponId, page = 1, limit = 100
-                    )
-                    if (!response.isSuccessful) {
-                        throw IllegalStateException("Código ${response.code()}")
+                    val todas = mutableListOf<AlertaResponse>()
+                    var paginaAlertas = 1
+                    var hayMasAlertas = true
+                    while (hayMasAlertas) {
+                        val response = RetrofitClient.api.listarAlertasDeGalpon(
+                            galponId = galponId, page = paginaAlertas, limit = 100
+                        )
+                        if (!response.isSuccessful) {
+                            throw IllegalStateException("Código ${response.code()}")
+                        }
+                        val cuerpo = response.body()
+                            ?: throw IllegalStateException("Respuesta vacía al consultar alertas")
+                        todas.addAll(cuerpo.data)
+                        hayMasAlertas = paginaAlertas < cuerpo.meta.totalPages
+                        paginaAlertas++
                     }
-                    response.body()?.data ?: emptyList()
+                    todas
                 } else emptyList()
                 // Los insumos pertenecen a granjas, NO a galpones. Se consultan
                 // con el filtro de acceso que ya aplica el backend por rol.
@@ -186,8 +196,8 @@ class AlertasFragment : BaseBottomNavFragment() {
     }
 
     private fun actualizarResumen() {
-        val activas = alertas.count { it.estado != "cerrada" } + alertasStock.size
-        val historial = alertas.count { it.estado == "cerrada" }
+        val activas = alertas.count { !estaCerrada(it) } + alertasStock.size
+        val historial = alertas.count { estaCerrada(it) }
         val criticas = alertas.count {
             it.criticidad.equals("alta", true) || it.criticidad.equals("critica", true)
         } + alertasStock.size
@@ -205,12 +215,15 @@ class AlertasFragment : BaseBottomNavFragment() {
         actualizarTextoResumen()
     }
 
+    private fun estaCerrada(alerta: AlertaResponse): Boolean =
+        alerta.estado.trim().equals("cerrada", ignoreCase = true)
+
     private fun esPropietario(): Boolean =
         (activity as? MainActivity)?.obtenerRolActual() == UserRole.PROPIETARIO
 
     private fun actualizarTextoResumen() {
         if (_binding == null) return
-        val activas = alertas.count { it.estado != "cerrada" } + alertasStock.size
+        val activas = alertas.count { !estaCerrada(it) } + alertasStock.size
         binding.tvResumenAlertas.text = when (pestanaActual) {
             Pestana.ACTIVAS -> if (activas == 1)
                 "1 alerta activa en el galpón o la granja seleccionada"
@@ -238,6 +251,25 @@ class AlertasFragment : BaseBottomNavFragment() {
         binding.tabEscaladas.setBackgroundResource(
             if (pestanaActual == Pestana.ESCALADAS) R.drawable.bg_tab_selected else R.drawable.bg_tabs
         )
+        // El color del texto debe seguir la pestaña seleccionada, no quedar fijo en XML.
+        val colorSeleccionado = Color.parseColor("#111111")
+        val colorNoSeleccionado = Color.parseColor("#808A85")
+        listOf(
+            binding.tabActivas to (pestanaActual == Pestana.ACTIVAS),
+            binding.tabHistorial to (pestanaActual == Pestana.HISTORIAL),
+            binding.tabEscaladas to (pestanaActual == Pestana.ESCALADAS)
+        ).forEach { (tab, seleccionada) ->
+            for (i in 0 until tab.childCount) {
+                (tab.getChildAt(i) as? TextView)?.let { texto ->
+                    if (texto.id != R.id.tvBadgeActivas &&
+                        texto.id != R.id.tvBadgeHistorial &&
+                        texto.id != R.id.tvBadgeEscaladas
+                    ) {
+                        texto.setTextColor(if (seleccionada) colorSeleccionado else colorNoSeleccionado)
+                    }
+                }
+            }
+        }
         binding.tvTituloListaAlertas.text = when (pestanaActual) {
             Pestana.ACTIVAS -> "Alertas activas"
             Pestana.HISTORIAL -> "Historial de alertas"
@@ -250,8 +282,8 @@ class AlertasFragment : BaseBottomNavFragment() {
         if (_binding == null) return
         binding.containerAlertas.removeAllViews()
         val filtradas = when (pestanaActual) {
-            Pestana.ACTIVAS -> alertas.filter { it.estado != "cerrada" }
-            Pestana.HISTORIAL -> alertas.filter { it.estado == "cerrada" }
+            Pestana.ACTIVAS -> alertas.filter { !estaCerrada(it) }
+            Pestana.HISTORIAL -> alertas.filter { estaCerrada(it) }
             Pestana.ESCALADAS -> if (esPropietario())
                 alertas.filter { it.escalado_a_id != null } else emptyList()
         }
@@ -815,12 +847,16 @@ class AlertasFragment : BaseBottomNavFragment() {
 
                 if (dialog.isShowing) dialog.dismiss()
                 if (_binding != null) {
+                    // Conservar la pestaña actual: las escaladas cerradas siguen visibles.
                     actualizarResumen()
+                    pintarTabs()
                     mostrarLista()
+                    // Sincronizar nuevamente con el servidor después del cierre.
+                    cargarAlertas(silenciosa = true)
                 }
                 Toast.makeText(
                     requireContext(),
-                    "Alerta cerrada correctamente y añadida al historial.",
+                    "Alerta cerrada correctamente.",
                     Toast.LENGTH_LONG
                 ).show()
             } catch (e: CancellationException) {

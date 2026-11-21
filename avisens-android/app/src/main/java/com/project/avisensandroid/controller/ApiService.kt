@@ -6,7 +6,6 @@ import com.project.avisensandroid.model.GalponResponse
 import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.InsumoRequest
 import com.project.avisensandroid.model.InsumoResponse
-import com.project.avisensandroid.model.RegistrarMovimientoRequest
 import com.project.avisensandroid.model.TipoAlimentoResponse
 import com.project.avisensandroid.model.LoginRequest
 import com.project.avisensandroid.model.LoginResponse
@@ -152,12 +151,6 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20
     ): Response<PaginatedResponse<InsumoResponse>>
-
-    @POST("v1/insumos/{id}/movimientos")
-    suspend fun registrarMovimientoInsumo(
-        @Path("id") insumoId: Int,
-        @Body request: RegistrarMovimientoRequest
-    ): Response<Any>
 
 
     // =========================================================

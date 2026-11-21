@@ -13,7 +13,6 @@ import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.ItemInsumoBinding
 import com.project.avisensandroid.databinding.Po03BodegaOpBinding
 import com.project.avisensandroid.model.InsumoResponse
-import com.project.avisensandroid.model.ProveedorResponse
 import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.launch
@@ -25,7 +24,6 @@ class BodegaFragment : BaseBottomNavFragment() {
     private var _binding: Po03BodegaOpBinding? = null
     private val binding get() = _binding!!
 
-    private val proveedoresPorId = mutableMapOf<Int, ProveedorResponse>()
     private var cargando = false
     private val preferenciasStock by lazy {
         requireContext().getSharedPreferences("bodega_referencia_stock", android.content.Context.MODE_PRIVATE)
@@ -45,25 +43,6 @@ class BodegaFragment : BaseBottomNavFragment() {
 
         val activity = requireActivity() as MainActivity
         configurarBottomNav(R.id.nav_bodega)
-        val esOperario = activity.obtenerRolActual() == UserRole.OPERARIO
-
-        // El Operario solo trabaja con Insumos: no se muestra la barra de pestañas.
-        // Propietario/Admin conservan ambas pestañas y el diseño original.
-        binding.tabsBodega.visibility = if (esOperario) View.GONE else View.VISIBLE
-        binding.btnProveedores.visibility = View.VISIBLE
-        binding.btnInsumos.visibility = View.VISIBLE
-        actualizarPestanaActiva(insumosActivos = true)
-
-        binding.btnInsumos.setOnClickListener {
-            actualizarPestanaActiva(insumosActivos = true)
-        }
-
-        binding.btnProveedores.setOnClickListener {
-            if (!esOperario) {
-                activity.mostrarFragment(ProveedoresFragment())
-            }
-        }
-
         binding.btnNuevoInsumo.visibility =
             if (activity.obtenerRolActual() == com.project.avisensandroid.model.UserRole.PROPIETARIO) {
                 View.VISIBLE
@@ -78,20 +57,6 @@ class BodegaFragment : BaseBottomNavFragment() {
         // onResume realiza la carga inicial y las recargas al volver de un diálogo.
     }
 
-
-    private fun actualizarPestanaActiva(insumosActivos: Boolean) {
-        val colorActivo = android.graphics.Color.parseColor("#2E7D5B")
-        val colorInactivo = android.graphics.Color.parseColor("#89938E")
-
-        binding.btnInsumos.setBackgroundResource(
-            if (insumosActivos) R.drawable.bg_bodega_tab_selected else android.R.color.transparent
-        )
-        binding.btnProveedores.setBackgroundResource(
-            if (!insumosActivos) R.drawable.bg_bodega_tab_selected else android.R.color.transparent
-        )
-        binding.btnInsumos.setTextColor(if (insumosActivos) colorActivo else colorInactivo)
-        binding.btnProveedores.setTextColor(if (!insumosActivos) colorActivo else colorInactivo)
-    }
 
     override fun onResume() {
         super.onResume()
@@ -123,7 +88,6 @@ class BodegaFragment : BaseBottomNavFragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                cargarProveedores()
                 val insumos = cargarTodosLosInsumos()
                 mostrarInsumos(insumos)
             } catch (e: Exception) {
@@ -176,21 +140,6 @@ class BodegaFragment : BaseBottomNavFragment() {
         return todos.distinctBy { it.id }
     }
 
-    private suspend fun cargarProveedores() {
-        try {
-            val response = RetrofitClient.api.listarProveedores(page = 1, limit = 100)
-            if (response.isSuccessful) {
-                proveedoresPorId.clear()
-                response.body()?.data
-                    ?.filter { it.activo }
-                    ?.forEach { proveedor ->
-                        proveedoresPorId[proveedor.id] = proveedor
-                    }
-            }
-        } catch (_: Exception) {
-            // El nombre del proveedor es solo informativo.
-        }
-    }
 
     private fun mostrarInsumos(insumos: List<InsumoResponse>) {
         binding.contenedorInsumos.removeAllViews()
@@ -246,31 +195,16 @@ class BodegaFragment : BaseBottomNavFragment() {
         itemBinding.txtCantidadInsumo.text = formatearNumero(stockActual)
         itemBinding.txtUnidadInsumo.text = insumo.unidad_medida
 
-        // Si el backend ya entrega el máximo histórico, utilizarlo.
-        // En versiones anteriores de la API ese campo no existe. En ese caso,
-        // guardar el MAYOR STOCK REAL observado por esta instalación, nunca
-        // un multiplicador inventado ni una capacidad ficticia.
-        val claveReferencia = "insumo_${insumo.id}_max_observado"
-        val observadoAnterior = preferenciasStock.getString(claveReferencia, null)
-            ?.toDoubleOrNull()
-            ?.takeIf { it.isFinite() && it > 0.0 }
-            ?: 0.0
-        val referenciaBackend = insumo.stock_referencia
-            ?.takeIf { it.isFinite() && it > 0.0 }
-            ?: 0.0
-        val referencia = maxOf(stockActual, observadoAnterior, referenciaBackend)
-        if (referencia > observadoAnterior) {
-            preferenciasStock.edit()
-                .putString(claveReferencia, referencia.toString())
-                .apply()
+        // Si existe mínimo, la barra representa el stock disponible frente a ese
+        // umbral: 180 kg / 300 kg = 60 %. No depender del máximo observado.
+        // Si no hay mínimo configurado, usar la referencia real del backend.
+        val referencia = if (stockMinimo > 0.0) stockMinimo else {
+            insumo.stock_referencia?.takeIf { it.isFinite() && it > 0.0 }
+                ?: stockActual
         }
         val porcentaje = if (referencia > 0.0) {
-            ((stockActual / referencia) * 100.0)
-                .coerceIn(0.0, 100.0)
-                .toInt()
-        } else {
-            0
-        }
+            ((stockActual / referencia) * 100.0).coerceIn(0.0, 100.0).toInt()
+        } else 0
 
         // La barra debe verse siempre, incluso en insumos antiguos o agotados.
         itemBinding.progressStock.visibility = View.VISIBLE
@@ -288,12 +222,6 @@ class BodegaFragment : BaseBottomNavFragment() {
             "Mínimo: no configurado"
         }
 
-        val proveedorId = insumo.proveedor_habitual_id
-        itemBinding.txtProveedorInsumo.text = when {
-            proveedorId == null -> "Sin proveedor"
-            proveedoresPorId[proveedorId] != null -> proveedoresPorId[proveedorId]!!.nombre
-            else -> "Proveedor #$proveedorId"
-        }
 
         itemBinding.txtEstadoInsumo.text = if (esCritico) {
             "Stock crítico"
@@ -318,9 +246,6 @@ class BodegaFragment : BaseBottomNavFragment() {
             else R.drawable.bg_bodega_card
         )
 
-        itemBinding.btnMovimientoInsumo.setOnClickListener {
-            (requireActivity() as MainActivity).mostrarDialogMovimientoInsumo(insumo)
-        }
 
         val params = itemBinding.cardInsumo.layoutParams as ViewGroup.MarginLayoutParams
         params.topMargin = dp(11)

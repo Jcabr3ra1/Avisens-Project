@@ -1,3 +1,4 @@
+
 package com.project.avisensandroid.ui.fragments
 
 import android.graphics.Color
@@ -10,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.project.avisensandroid.R
 import com.project.avisensandroid.controller.RetrofitClient
@@ -18,11 +20,18 @@ import com.project.avisensandroid.model.RegistroMortalidadResponse
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class BitacoraFragment : BaseBottomNavFragment() {
 
     private var _binding: Po06BitacoraMortalidadOpBinding? = null
-    private val binding get() = _binding!!
+
+    private val binding
+        get() = _binding!!
+
+    private val localeEspanol = Locale("es", "ES")
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -34,10 +43,14 @@ class BitacoraFragment : BaseBottomNavFragment() {
             container,
             false
         )
+
         return binding.root
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    override fun onViewCreated(
+        view: View,
+        savedInstanceState: Bundle?
+    ) {
         super.onViewCreated(view, savedInstanceState)
 
         configurarBottomNav(R.id.nav_bitacora)
@@ -55,307 +68,506 @@ class BitacoraFragment : BaseBottomNavFragment() {
         }
 
         binding.btnRegistrarEvento.setOnClickListener {
-            (requireActivity() as MainActivity).mostrarDialogRegistrarEvento()
+            (requireActivity() as MainActivity)
+                .mostrarDialogRegistrarEvento()
         }
     }
 
     override fun onResume() {
         super.onResume()
+
         if (_binding != null) {
             cargarBitacora()
         }
     }
 
     fun actualizarAlRecuperarInternet() {
-        if (_binding != null && isAdded) cargarBitacora()
+        if (_binding != null && isAdded) {
+            cargarBitacora()
+        }
     }
 
     fun actualizarSilenciosamente() {
-        if (_binding != null && isAdded) cargarBitacora(silenciosa = true)
+        if (_binding != null && isAdded) {
+            cargarBitacora(silenciosa = true)
+        }
     }
 
-    private fun cargarBitacora(silenciosa: Boolean = false) {
+    // ============================================================
+    // CARGAR REGISTROS DE MORTALIDAD
+    // ============================================================
+
+    private fun cargarBitacora(
+        silenciosa: Boolean = false
+    ) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val registros = mutableListOf<RegistroMortalidadResponse>()
+                val registros =
+                    mutableListOf<RegistroMortalidadResponse>()
+
                 var pagina = 1
                 var totalPaginas = 1
 
                 do {
-                    val response = RetrofitClient.api.listarRegistrosMortalidad(
-                        page = pagina,
-                        limit = 100
-                    )
+                    val response =
+                        RetrofitClient.api.listarRegistrosMortalidad(
+                            page = pagina,
+                            limit = 100
+                        )
 
                     if (!response.isSuccessful) {
-                        if (!silenciosa) Toast.makeText(
-                            requireContext(),
-                            "No se pudieron cargar los registros de mortalidad. Código: ${response.code()}",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        if (!silenciosa) {
+                            mostrarError(
+                                "No se pudieron cargar los registros. " +
+                                        "Código: ${response.code()}"
+                            )
+                        }
+
                         return@launch
                     }
 
                     val body = response.body()
+
                     if (body == null) {
-                        if (!silenciosa) Toast.makeText(
-                            requireContext(),
-                            "La API no devolvió registros de mortalidad",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        if (!silenciosa) {
+                            mostrarError(
+                                "La API no devolvió registros de mortalidad"
+                            )
+                        }
+
                         return@launch
                     }
 
                     registros.addAll(body.data)
-                    totalPaginas = body.meta.totalPages.coerceAtLeast(pagina)
+
+                    totalPaginas =
+                        body.meta.totalPages.coerceAtLeast(pagina)
+
                     pagina++
+
                 } while (pagina <= totalPaginas)
 
                 val activity = requireActivity() as MainActivity
-                val galponIdSeleccionado = activity.obtenerGalponSeleccionadoId()
 
-                val registrosFiltrados = if (galponIdSeleccionado != null) {
-                    val idsLotesDelGalpon =
-                        activity.obtenerIdsLotesDeGalponSeleccionado()
+                val galponId =
+                    activity.obtenerGalponSeleccionadoId()
 
-                    registros.filter { it.lote_id in idsLotesDelGalpon }
-                } else {
-                    emptyList()
+                if (galponId == null) {
+                    if (_binding != null) {
+                        mostrarRegistros(
+                            emptyList(),
+                            emptyMap()
+                        )
+                    }
+
+                    return@launch
                 }
 
-                mostrarRegistros(registrosFiltrados.sortedWith(
-                    compareByDescending<RegistroMortalidadResponse> { it.fecha.take(10) }
-                        .thenByDescending { it.fecha_registro }
-                ))
+                // Obtener los lotes relacionados con el galpón
+                // seleccionado y sus nombres reales.
+
+                val nombresGalponPorLote =
+                    mutableMapOf<Int, String>()
+
+                val idsLotesDelGalpon =
+                    mutableSetOf<Int>()
+
+                var paginaLotes = 1
+                var totalPaginasLotes = 1
+
+                do {
+                    val respuestaLotes =
+                        RetrofitClient.api.listarLotes(
+                            page = paginaLotes,
+                            limit = 100
+                        )
+
+                    if (!respuestaLotes.isSuccessful) {
+                        throw IllegalStateException(
+                            "No se pudieron consultar los lotes"
+                        )
+                    }
+
+                    val cuerpoLotes =
+                        respuestaLotes.body()
+                            ?: throw IllegalStateException(
+                                "No se recibieron datos de lotes"
+                            )
+
+                    cuerpoLotes.data.forEach { lote ->
+                        if (lote.galpon?.id == galponId) {
+
+                            idsLotesDelGalpon.add(lote.id)
+
+                            val nombre =
+                                lote.galpon.nombre.trim()
+
+                            nombresGalponPorLote[lote.id] =
+                                nombre.ifBlank {
+                                    "Galpón $galponId"
+                                }
+                        }
+                    }
+
+                    totalPaginasLotes =
+                        cuerpoLotes.meta.totalPages
+                            .coerceAtLeast(paginaLotes)
+
+                    paginaLotes++
+
+                } while (paginaLotes <= totalPaginasLotes)
+
+                // Filtrar y ordenar por fecha del evento.
+
+                val filtrados = registros
+                    .filter {
+                        it.lote_id in idsLotesDelGalpon
+                    }
+                    .sortedWith(
+                        compareByDescending<RegistroMortalidadResponse> {
+                            it.fecha.take(10)
+                        }.thenByDescending {
+                            it.fecha_registro
+                        }
+                    )
+
+                if (_binding != null) {
+                    mostrarRegistros(
+                        filtrados,
+                        nombresGalponPorLote
+                    )
+                }
 
             } catch (e: CancellationException) {
-                // La cancelación del job es normal cuando el fragment sale de pantalla.
-                // No debe mostrarse como un error al usuario.
                 throw e
+
             } catch (e: Exception) {
-                if (!silenciosa && _binding != null) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Error al cargar la bitácora: ${e.message ?: "error desconocido"}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                if (!silenciosa && _binding != null && isAdded) {
+                    mostrarError(
+                        "Error al cargar mortalidad: " +
+                                (e.message ?: "error desconocido")
+                    )
                 }
             }
         }
     }
 
-    private fun mostrarRegistros(registros: List<RegistroMortalidadResponse>) {
-        binding.containerRegistros.removeAllViews()
+    // ============================================================
+    // MOSTRAR REGISTROS AGRUPADOS POR FECHA
+    // ============================================================
+
+    private fun mostrarRegistros(
+        registros: List<RegistroMortalidadResponse>,
+        nombresGalponPorLote: Map<Int, String>
+    ) {
+        val contenedor = binding.containerRegistros
+
+        contenedor.removeAllViews()
 
         if (registros.isEmpty()) {
-            val mensaje = TextView(requireContext()).apply {
-                text = "No hay registros de mortalidad"
-                setTextColor(
-                    resources.getColor(
-                        R.color.text_secondary,
-                        requireContext().theme
-                    )
-                )
-                textSize = 14f
-                gravity = Gravity.CENTER
-                setPadding(20, 40, 20, 40)
-            }
+            contenedor.addView(
+                TextView(requireContext()).apply {
+                    text = "No hay registros de mortalidad"
+                    textSize = 14f
+                    gravity = Gravity.CENTER
 
-            binding.containerRegistros.addView(mensaje)
+                    setTextColor(
+                        Color.parseColor("#66736D")
+                    )
+
+                    setPadding(
+                        dp(16),
+                        dp(40),
+                        dp(16),
+                        dp(40)
+                    )
+                }
+            )
+
             return
         }
 
-        registros.forEachIndexed { index, registro ->
-            agregarRegistro(registro)
+        // Agrupar registros por fecha seleccionada
+        // al registrar el evento.
 
-            if (index < registros.lastIndex) {
-                val separador = View(requireContext()).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        1
+        registros.groupBy {
+            it.fecha.take(10)
+        }.forEach { (fecha, registrosDelDia) ->
+
+            val encabezadoFecha =
+                TextView(requireContext()).apply {
+
+                    text = formatearFechaLarga(fecha)
+
+                    textSize = 15f
+
+                    setTypeface(
+                        null,
+                        Typeface.BOLD
                     )
-                    setBackgroundColor(Color.parseColor("#EEEEEE"))
+
+                    setTextColor(
+                        Color.parseColor("#183C2E")
+                    )
+
+                    setPadding(
+                        dp(2),
+                        dp(16),
+                        0,
+                        dp(10)
+                    )
                 }
 
-                binding.containerRegistros.addView(separador)
+            contenedor.addView(encabezadoFecha)
+
+            // Una tarjeta independiente por registro.
+
+            registrosDelDia.forEach { registro ->
+
+                val nombreGalpon =
+                    nombresGalponPorLote[registro.lote_id]
+                        ?: "Galpón no disponible"
+
+                agregarRegistro(
+                    registro,
+                    nombreGalpon
+                )
             }
         }
     }
 
-    private fun agregarRegistro(registro: RegistroMortalidadResponse) {
-        val contenedor = LinearLayout(requireContext()).apply {
+    // ============================================================
+    // CREAR TARJETA DE REGISTRO
+    // ============================================================
+
+    private fun agregarRegistro(
+        registro: RegistroMortalidadResponse,
+        nombreGalpon: String
+    ) {
+        val contexto = requireContext()
+
+        val tarjeta = LinearLayout(contexto).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, 18, 0, 18)
+
+            background = ContextCompat.getDrawable(
+                contexto,
+                R.drawable.bg_tarjeta_mortalidad
+            )
+
+            elevation = dp(2).toFloat()
+
+            setPadding(
+                dp(14),
+                dp(14),
+                dp(14),
+                dp(14)
+            )
+
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
-            )
+            ).apply {
+                bottomMargin = dp(10)
+            }
         }
 
-        val filaSuperior = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        }
+        // --------------------------------------------------------
+        // FUNCIÓN PARA CREAR TEXTOS
+        // --------------------------------------------------------
 
-        val lote = TextView(requireContext()).apply {
-            text = registro.lote.codigo
-            setTextColor(
-                resources.getColor(
-                    R.color.text_primary,
-                    requireContext().theme
+        fun crearTexto(
+            valor: String,
+            tamano: Float,
+            color: String,
+            negrita: Boolean = false
+        ): TextView {
+            return TextView(contexto).apply {
+                text = valor
+                textSize = tamano
+
+                setTextColor(
+                    Color.parseColor(color)
                 )
+
+                if (negrita) {
+                    setTypeface(
+                        null,
+                        Typeface.BOLD
+                    )
+                }
+            }
+        }
+
+        // --------------------------------------------------------
+        // 1. NOMBRE DEL GALPÓN
+        // --------------------------------------------------------
+
+        tarjeta.addView(
+            crearTexto(
+                nombreGalpon,
+                14f,
+                "#345846",
+                true
             )
-            textSize = 12f
-            setTypeface(null, Typeface.BOLD)
-            layoutParams = LinearLayout.LayoutParams(
+        )
+
+        // --------------------------------------------------------
+        // 2. CANTIDAD DE AVES
+        // --------------------------------------------------------
+
+        val textoCantidad = crearTexto(
+            "${registro.cantidad_aves} aves registradas",
+            16f,
+            "#183C2E",
+            true
+        ).apply {
+            setPadding(
                 0,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                1f
+                dp(9),
+                0,
+                dp(5)
             )
         }
 
-        filaSuperior.addView(lote)
+        tarjeta.addView(textoCantidad)
 
-        val fecha = TextView(requireContext()).apply {
-            text = formatearFecha(registro.fecha)
-            setTextColor(
-                resources.getColor(
-                    R.color.text_secondary,
-                    requireContext().theme
-                )
-            )
-            textSize = 11f
-            setTypeface(null, Typeface.BOLD)
-        }
+        // --------------------------------------------------------
+        // FUNCIÓN PARA MOSTRAR DETALLES
+        // --------------------------------------------------------
 
-        filaSuperior.addView(fecha)
-        contenedor.addView(filaSuperior)
-
-        val cantidad = TextView(requireContext()).apply {
-            text = "${registro.cantidad_aves} aves"
-            setTextColor(
-                resources.getColor(
-                    R.color.text_primary,
-                    requireContext().theme
-                )
-            )
-            textSize = 13f
-            setTypeface(null, Typeface.BOLD)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = 7
+        fun agregarDetalle(
+            titulo: String,
+            valor: String?
+        ) {
+            if (valor.isNullOrBlank()) {
+                return
             }
-        }
 
-        contenedor.addView(cantidad)
-
-        val causa = TextView(requireContext()).apply {
-            val texto = registro.causa_presuntiva?.trim()
-            text = if (!texto.isNullOrBlank()) {
-                "Causa probable: $texto"
-            } else {
-                "Causa probable: No especificada"
-            }
-            setTextColor(
-                resources.getColor(
-                    R.color.text_secondary,
-                    requireContext().theme
-                )
+            val detalle = crearTexto(
+                "$titulo: $valor",
+                12f,
+                "#46544C"
             )
-            textSize = 12f
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = 4
-            }
-        }
 
-        contenedor.addView(causa)
-
-        val disposicionTexto = registro.disposicion?.trim()
-        if (!disposicionTexto.isNullOrBlank()) {
-            val disposicion = TextView(requireContext()).apply {
-                text = "Disposición: $disposicionTexto"
-                setTextColor(
-                    resources.getColor(
-                        R.color.text_secondary,
-                        requireContext().theme
-                    )
-                )
-                textSize = 12f
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
+            tarjeta.addView(
+                detalle,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    topMargin = 4
+                    topMargin = dp(5)
                 }
-            }
-
-            contenedor.addView(disposicion)
-        }
-
-        val observacionesTexto = registro.observaciones?.trim()
-        if (!observacionesTexto.isNullOrBlank()) {
-            val observaciones = TextView(requireContext()).apply {
-                text = "Observaciones: $observacionesTexto"
-                setTextColor(
-                    resources.getColor(
-                        R.color.text_secondary,
-                        requireContext().theme
-                    )
-                )
-                textSize = 12f
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    topMargin = 4
-                }
-            }
-
-            contenedor.addView(observaciones)
-        }
-
-        val registradoPor = TextView(requireContext()).apply {
-            text = "Registró: Usuario #${registro.usuario_id}"
-            setTextColor(
-                resources.getColor(
-                    R.color.text_secondary,
-                    requireContext().theme
-                )
             )
-            textSize = 11f
-            setTypeface(null, Typeface.BOLD)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = 5
-            }
         }
 
-        contenedor.addView(registradoPor)
-        binding.containerRegistros.addView(contenedor)
+        // --------------------------------------------------------
+        // 3. USUARIO QUE REALIZÓ EL REGISTRO
+        // --------------------------------------------------------
+
+        agregarDetalle(
+            "Registró",
+            "Usuario #${registro.usuario_id}"
+        )
+
+        // --------------------------------------------------------
+        // 4. CAUSA PROBABLE
+        // --------------------------------------------------------
+
+        agregarDetalle(
+            "Causa probable",
+            registro.causa_presuntiva
+        )
+
+        // --------------------------------------------------------
+        // 5. DISPOSICIÓN
+        // --------------------------------------------------------
+
+        agregarDetalle(
+            "Disposición",
+            registro.disposicion
+        )
+
+        // --------------------------------------------------------
+        // 6. OBSERVACIONES
+        // Se dejan al final porque pueden ocupar varias líneas.
+        // --------------------------------------------------------
+
+        agregarDetalle(
+            "Observaciones",
+            registro.observaciones
+        )
+
+        // --------------------------------------------------------
+        // FUTURA FOTOGRAFÍA
+        //
+        // Cuando esté disponible la recuperación de imágenes,
+        // se mostrará debajo de las observaciones.
+        //
+        // Por ahora no agregamos un espacio vacío.
+        // --------------------------------------------------------
+
+        binding.containerRegistros.addView(tarjeta)
     }
 
-    private fun formatearFecha(fecha: String): String {
-        // El backend devuelve fechas ISO (p. ej. 2026-11-18T00:00:00.000Z).
-        // Tomar la fecha de calendario evita desplazar el día por zona horaria.
-        val dia = fecha.take(10)
-        val partes = dia.split("-")
-        return if (partes.size == 3 && partes[0].length == 4 &&
-            partes[1].length == 2 && partes[2].length == 2) {
-            "${partes[2]}/${partes[1]}/${partes[0]}"
-        } else {
+    // ============================================================
+    // FORMATEAR FECHA
+    // Ejemplo: 2026-11-20 -> 20 noviembre 2026
+    // ============================================================
+
+    private fun formatearFechaLarga(
+        fecha: String
+    ): String {
+        return try {
+            val fechaLocal = LocalDate.parse(
+                fecha.take(10),
+                DateTimeFormatter.ISO_LOCAL_DATE
+            )
+
+            fechaLocal.format(
+                DateTimeFormatter.ofPattern(
+                    "d MMMM yyyy",
+                    localeEspanol
+                )
+            )
+
+        } catch (_: Exception) {
             fecha
         }
     }
+
+    // ============================================================
+    // MOSTRAR ERRORES
+    // ============================================================
+
+    private fun mostrarError(
+        mensaje: String
+    ) {
+        if (!isAdded) {
+            return
+        }
+
+        Toast.makeText(
+            requireContext(),
+            mensaje,
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    // ============================================================
+    // CONVERTIR DP
+    // ============================================================
+
+    private fun dp(
+        valor: Int
+    ): Int {
+        return (
+                valor * resources.displayMetrics.density
+                ).toInt()
+    }
+
+    // ============================================================
+    // LIMPIAR BINDING
+    // ============================================================
 
     override fun onDestroyView() {
         super.onDestroyView()

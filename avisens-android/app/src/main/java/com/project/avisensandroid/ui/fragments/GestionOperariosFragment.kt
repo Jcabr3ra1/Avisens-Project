@@ -6,6 +6,9 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.Typeface
 import android.os.Bundle
+import android.view.WindowManager
+import android.graphics.Rect
+import android.widget.ScrollView
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -383,26 +386,42 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         (value * resources.displayMetrics.density).roundToInt()
 
     private fun confirmarEliminarOperario(usuario: UsuarioGestionResponse) {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Eliminar operario")
-            .setMessage("¿Estás seguro de que deseas eliminar a ${usuario.nombre_completo}? Su cuenta será desactivada y perderá el acceso a la aplicación.")
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Eliminar") { _, _ ->
-                viewLifecycleOwner.lifecycleScope.launch {
-                    try {
-                        val response = RetrofitClient.api.eliminarOperario(usuario.id)
-                        if (response.isSuccessful) {
-                            Toast.makeText(requireContext(), "Operario eliminado correctamente", Toast.LENGTH_SHORT).show()
-                            cargarOperarios()
-                        } else {
-                            Toast.makeText(requireContext(), "No se pudo eliminar el operario (código ${response.code()})", Toast.LENGTH_LONG).show()
-                        }
-                    } catch (e: Exception) {
-                        if (isAdded) Toast.makeText(requireContext(), "Error al eliminar operario: ${e.message ?: "Sin conexión"}", Toast.LENGTH_LONG).show()
+        val context = requireContext()
+        val dialogView = layoutInflater.inflate(R.layout.dialog_confirmar_eliminar_operario, null)
+        dialogView.findViewById<TextView>(R.id.tvMensajeEliminarOperario).text =
+            "¿Deseas eliminar a ${usuario.nombre_completo}? Su cuenta será desactivada y perderá el acceso a la aplicación."
+
+        val dialog = AlertDialog.Builder(context).setView(dialogView).create()
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.90).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+
+        dialogView.findViewById<View>(R.id.btnCancelarEliminarOperario).setOnClickListener {
+            dialog.dismiss()
+        }
+        val btnEliminar = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnConfirmarEliminarOperario)
+        btnEliminar.setOnClickListener {
+            btnEliminar.isEnabled = false
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val response = RetrofitClient.api.eliminarOperario(usuario.id)
+                    if (!isAdded) return@launch
+                    if (response.isSuccessful) {
+                        dialog.dismiss()
+                        Toast.makeText(requireContext(), "Operario eliminado correctamente", Toast.LENGTH_SHORT).show()
+                        cargarOperarios()
+                    } else {
+                        Toast.makeText(requireContext(), "No se pudo eliminar el operario (código ${response.code()})", Toast.LENGTH_LONG).show()
+                        btnEliminar.isEnabled = true
+                    }
+                } catch (e: Exception) {
+                    if (isAdded) {
+                        Toast.makeText(requireContext(), "Error al eliminar operario: ${e.message ?: "Sin conexión"}", Toast.LENGTH_LONG).show()
+                        btnEliminar.isEnabled = true
                     }
                 }
             }
-            .show()
+        }
     }
 
     // ============================================================
@@ -823,13 +842,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 }
 
                 if (fallos == 0) {
-
-                    Toast.makeText(
-                        requireContext(),
-                        "Granja asignada correctamente " +
-                                "(${galponesDeGranja.size} galpón${if (galponesDeGranja.size == 1) "" else "es"})",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    // Asignación exitosa: actualización silenciosa.
 
                 } else {
 
@@ -862,86 +875,89 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         onSuccess: (() -> Unit)? = null,
         onSolicitudPendiente: ((List<Int>) -> Unit)? = null
     ) {
-
-        AlertDialog.Builder(
-            requireContext()
+        val context = requireContext()
+        val contenido = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(20), dp(20), dp(18))
+            background = GradientDrawable().apply {
+                setColor(Color.WHITE)
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(1), Color.parseColor("#D8E7DE"))
+            }
+        }
+        fun linea(valor: String, tamano: Float, color: String, bold: Boolean = false) =
+            TextView(context).apply {
+                text = valor
+                textSize = tamano
+                setTextColor(Color.parseColor(color))
+                if (bold) setTypeface(null, Typeface.BOLD)
+            }
+        contenido.addView(linea("AVISENS · OPERARIOS", 10f, "#176747", true))
+        contenido.addView(linea("Quitar asignación", 20f, "#183C2E", true).apply {
+            setPadding(0, dp(6), 0, 0)
+        })
+        contenido.addView(linea(
+            "¿Deseas quitar la granja \"$nombreGranja\"? Se retirarán ${galponIds.size} galpones asignados.",
+            13f, "#66756D"
+        ).apply { setPadding(0, dp(9), 0, dp(15)) })
+        val botones = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        fun boton(etiqueta: String, fondo: String, texto: String) =
+            com.google.android.material.button.MaterialButton(context).apply {
+                this.text = etiqueta
+                isAllCaps = false
+                textSize = 13f
+                setTextColor(Color.parseColor(texto))
+                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor(fondo))
+                cornerRadius = dp(10)
+                minWidth = 0
+                minHeight = 0
+                insetTop = 0
+                insetBottom = 0
+                layoutParams = LinearLayout.LayoutParams(0, dp(44), 1f)
+            }
+        val cancelar = boton("Cancelar", "#EEF4F0", "#176747")
+        val quitar = boton("Quitar", "#176747", "#FFFFFF")
+        (quitar.layoutParams as LinearLayout.LayoutParams).marginStart = dp(8)
+        botones.addView(cancelar)
+        botones.addView(quitar)
+        contenido.addView(botones)
+        val dialog = android.app.Dialog(context)
+        dialog.setContentView(contenido)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.show()
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels - dp(32)).coerceAtMost(dp(440)),
+            ViewGroup.LayoutParams.WRAP_CONTENT
         )
-            .setTitle(
-                "Quitar asignación"
-            )
-            .setMessage(
-                "¿Quieres quitar \"$nombreGranja\" del operario? " +
-                        "Se le quitarán sus ${galponIds.size} galpón${if (galponIds.size == 1) "" else "es"} asignados."
-            )
-            .setNegativeButton(
-                "Cancelar",
-                null
-            )
-            .setPositiveButton(
-                "Quitar"
-            ) { _, _ ->
-
-                // En el formulario de Editar Operario la eliminación
-                // es solo visual y queda pendiente hasta pulsar Guardar.
-                if (onSolicitudPendiente != null) {
-                    onSolicitudPendiente.invoke(galponIds)
-                    Toast.makeText(
-                        requireContext(),
-                        "Granja marcada para quitar. Pulsa Guardar para aplicar los cambios.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@setPositiveButton
-                }
-
-                viewLifecycleOwner.lifecycleScope.launch {
-
-                    try {
-
-                        var fallos = 0
-
-                        galponIds.forEach { galponId ->
-
-                            val response =
-                                RetrofitClient.api
-                                    .desasignarGalpon(
-                                        usuarioId,
-                                        galponId
-                                    )
-
-                            if (!response.isSuccessful) {
-                                fallos++
-                            }
-                        }
-
-                        if (fallos == 0) {
-
-                            Toast.makeText(
-                                requireContext(),
-                                "Granja retirada",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                        } else {
-
-                            mostrarError(
-                                "Se retiró la granja, pero $fallos galpón(es) fallaron."
-                            )
-                        }
-
-                        onSuccess?.invoke()
-                        cargarOperarios()
-
-                    } catch (e: Exception) {
-
-                        mostrarError(
-                            "Error al quitar la asignación: " +
-                                    (e.message
-                                        ?: "sin detalle")
-                        )
+        cancelar.setOnClickListener { dialog.dismiss() }
+        quitar.setOnClickListener {
+            dialog.dismiss()
+            if (onSolicitudPendiente != null) {
+                // En Editar operario, aplicar la desasignación únicamente al guardar.
+                onSolicitudPendiente.invoke(galponIds)
+                return@setOnClickListener
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    var fallos = 0
+                    galponIds.forEach { galponId ->
+                        val response = RetrofitClient.api.desasignarGalpon(usuarioId, galponId)
+                        if (!response.isSuccessful) fallos++
                     }
+                    if (fallos > 0) {
+                        mostrarError("No se pudieron quitar $fallos galpón(es).")
+                    } else {
+                        onSuccess?.invoke()
+                    }
+                    cargarOperarios()
+                } catch (e: Exception) {
+                    mostrarError("Error al quitar la asignación: ${e.message ?: "sin detalle"}")
                 }
             }
-            .show()
+        }
     }
 
     // ============================================================
@@ -1258,11 +1274,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 }
 
                 if (fallos == 0) {
-                    Toast.makeText(
-                        requireContext(),
-                        "${granja.nombre} asignada correctamente.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    // Asignación exitosa sin Toast.
                     alTerminar()
                 } else {
                     mostrarError(
@@ -1317,6 +1329,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             dialogView.findViewById<TextInputEditText>(
                 R.id.etTelefonoOperario
             )
+
+        val etUsername = dialogView.findViewById<TextInputEditText>(R.id.etUsernameOperario)
 
         val etPassword =
             dialogView.findViewById<TextInputEditText>(
@@ -1375,18 +1389,39 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             )
         )
 
-        // --------------------------------------------------------
-        // Tamaño del diálogo
-        // --------------------------------------------------------
-
-        dialog.window?.setLayout(
-            (
-                    resources.displayMetrics.widthPixels * 0.90
-                    ).toInt(),
-            (
-                    resources.displayMetrics.heightPixels * 0.82
-                    ).toInt()
+        // Ajustar altura real del dialogo al espacio visible al abrir el teclado.
+        val scrollCrear = dialogView.findViewById<ScrollView>(R.id.scrollCrearOperario)
+        val window = dialog.window
+        window?.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
         )
+        val ancho = (resources.displayMetrics.widthPixels * 0.90f).toInt()
+        val altoMaximo = (resources.displayMetrics.heightPixels * 0.82f).toInt()
+        window?.setLayout(ancho, altoMaximo)
+        val decor = window?.decorView
+        var altoAnterior = -1
+        decor?.viewTreeObserver?.addOnGlobalLayoutListener {
+            if (!dialog.isShowing) return@addOnGlobalLayoutListener
+            val rect = Rect()
+            decor.getWindowVisibleDisplayFrame(rect)
+            val alto = minOf(altoMaximo, (rect.height() - dp(12)).coerceAtLeast(dp(220)))
+            if (kotlin.math.abs(alto - altoAnterior) > dp(4)) {
+                altoAnterior = alto
+                window.setLayout(ancho, alto)
+            }
+        }
+        etConfirmarPassword.setOnFocusChangeListener { campo, tieneFoco ->
+            if (tieneFoco) campo.postDelayed({
+                if (dialog.isShowing) {
+                    val posicion = IntArray(2)
+                    val posicionScroll = IntArray(2)
+                    campo.getLocationOnScreen(posicion)
+                    scrollCrear.getLocationOnScreen(posicionScroll)
+                    scrollCrear.smoothScrollBy(0, posicion[1] - posicionScroll[1] - scrollCrear.height / 2)
+                }
+            }, 250)
+        }
 
         // --------------------------------------------------------
         // CANCELAR
@@ -1434,6 +1469,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                         null
                     }
 
+            val username = etUsername.text?.toString()?.trim()?.lowercase(java.util.Locale.ROOT).orEmpty()
+
             val password =
                 etPassword.text
                     ?.toString()
@@ -1451,6 +1488,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             etNombre.error = null
             etCedula.error = null
             etEmail.error = null
+            etUsername.error = null
             etPassword.error = null
             etConfirmarPassword.error = null
 
@@ -1500,6 +1538,18 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
                 etEmail.requestFocus()
 
+                return@setOnClickListener
+            }
+
+            if (username.isBlank()) {
+                etUsername.error = "Ingresa un nombre de usuario"
+                etUsername.requestFocus()
+                return@setOnClickListener
+            }
+
+            if (!username.matches(Regex("^[a-z0-9._-]{3,30}$"))) {
+                etUsername.error = "Usa de 3 a 30 caracteres: letras, números, punto, guion o guion bajo"
+                etUsername.requestFocus()
                 return@setOnClickListener
             }
 
@@ -1578,6 +1628,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 botonCancelar = btnCancelar,
                 nombre = nombre,
                 cedula = cedula,
+                username = username,
                 email = email,
                 telefono = telefono,
                 password = password,
@@ -1596,6 +1647,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         botonCancelar: View,
         nombre: String,
         cedula: String,
+        username: String,
         email: String,
         telefono: String?,
         password: String,
@@ -1612,6 +1664,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                         CreateUsuarioRequest(
                             nombre_completo = nombre,
                             cedula = cedula,
+                            username = username,
                             email = email,
                             password = password,
                             telefono = telefono,
@@ -1644,9 +1697,20 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                     botonCrear.isEnabled = true
                     botonCancelar.isEnabled = true
 
+                    val detalle = try {
+                        val body = response.errorBody()?.string().orEmpty()
+                        val json = org.json.JSONObject(body)
+                        val mensaje = json.opt("message")
+                        when (mensaje) {
+                            is org.json.JSONArray -> (0 until mensaje.length()).joinToString(". ") { mensaje.optString(it) }
+                            is String -> mensaje
+                            else -> ""
+                        }
+                    } catch (_: Exception) { "" }
+
                     mostrarError(
-                        "No se pudo crear el operario. " +
-                                "Código: ${response.code()}"
+                        if (detalle.isNotBlank()) "No se pudo crear el operario: $detalle"
+                        else "No se pudo crear el operario. Código: ${response.code()}"
                     )
                 }
 
