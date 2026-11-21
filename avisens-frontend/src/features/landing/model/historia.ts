@@ -1,13 +1,20 @@
 import avicultor from '../assets/hero/avicultor.webp'
 import comunidad from '../assets/hero/comunidad.webp'
 import aves from '../assets/hero/pollos-engorde.webp'
+import pollitoDia1 from '../assets/vitrina/pollito-dia1.webp'
+import pollosComederos from '../assets/vitrina/pollos-comederos.webp'
 
 export const fotos = { avicultor, comunidad, aves }
 
+export const vitrina = {
+  pollitoDia1,
+  pollosComederos,
+}
+
 const base = import.meta.env.BASE_URL
 
-const video = (nombre: string) => ({
-  hevc: `${base}videos/${nombre}-hevc.mp4`,
+const video = (nombre: string, conHevc = true) => ({
+  hevc: conHevc ? `${base}videos/${nombre}-hevc.mp4` : undefined,
   h264: `${base}videos/${nombre}.mp4`,
   poster: `${base}videos/${nombre}-poster.webp`,
 })
@@ -18,6 +25,8 @@ export const videos = {
   calor: video('problema-calor'),
   lluvia: video('problema-lluvia'),
   solucion: video('solucion'),
+  beneficioLote: video('beneficio-lote', false),
+  beneficioCelular: video('beneficio-celular', false),
 }
 
 export const inicio = {
