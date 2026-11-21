@@ -15,8 +15,6 @@ import {
   IcNote,
   IcRefresh,
   IcSearch,
-  IcSeed,
-  IcSend,
   IcServer,
   IcThermo,
   IcUserCircle,
@@ -98,9 +96,6 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   // de la interfaz, que era la que estaba abierta.
   '/finanzas':                [ROL_PROPIETARIO],
   '/usuarios':                [ROL_ADMIN, ROL_PROPIETARIO],
-  // El directorio lo gestiona el admin; el operario no entra (2026-11-21).
-  '/proveedores':             [ROL_ADMIN],
-  '/ordenes-compra':          [ROL_ADMIN, ROL_PROPIETARIO],
   '/recuperaciones-password': [ROL_ADMIN],
   '/auditoria':               [ROL_ADMIN],
   '/catalogos':               [ROL_ADMIN],
@@ -176,12 +171,6 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: <IcRefresh size={16} />,
       },
       {
-        path: '/proveedores',
-        label: 'Proveedores',
-        icon: <IcSeed size={16} />,
-        rolesVisibles: [ROL_ADMIN],
-      },
-      {
         path: '/catalogos',
         label: 'Catálogos',
         icon: <IcNote size={16} />,
@@ -240,9 +229,7 @@ export const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
-  // Se llamaba 'Operación', pero dentro no hay nada operativo: es el papeleo
-  // de la granja. Los tres primeros son una cadena —lo que hay, lo que se
-  // pide, a quién— y están en ese orden a propósito.
+  // Gestión de recursos, finanzas y operarios de la granja.
   {
     label: 'Gestión',
     items: [
@@ -250,12 +237,6 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/inventario',
         label: 'Bodega',
         icon: <IcBox size={16} />,
-        rolesVisibles: [ROL_PROPIETARIO],
-      },
-      {
-        path: '/ordenes-compra',
-        label: 'Compras',
-        icon: <IcSend size={16} />,
         rolesVisibles: [ROL_PROPIETARIO],
       },
       {
@@ -271,10 +252,8 @@ export const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
-  // La bodega del operario: consulta lo que hay en ella. Va en su propio
-  // espacio y no en 'Administración' porque para el operario no es papeleo.
-  // El propietario conserva su ítem «Bodega» en Administración; el admin,
-  // Proveedores en Plataforma.
+  // La bodega del operario: consulta lo que hay en ella (stock y mínimo).
+  // El propietario conserva su ítem «Bodega» en Gestión.
   {
     label: 'Bodega',
     items: [

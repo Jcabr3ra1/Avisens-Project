@@ -4,7 +4,6 @@ import {
   permisosDeGestion,
   permisosDeInsumo,
   permisosDePlan,
-  permisosDeProveedor,
   permisosDeRegistro,
   permisosOperativosDeGalpon,
   puedeCompletarDatos,
@@ -109,30 +108,6 @@ describe('permisosDeRegistro', () => {
   it('sin sesión o con un rol desconocido no se opera', () => {
     for (const rol of [null, 'Auditor']) {
       expect(permisosDeRegistro(rol)).toEqual({ editar: false, eliminar: false })
-    }
-  })
-})
-
-describe('permisosDeProveedor', () => {
-  it('solo el administrador gestiona el directorio de proveedores', () => {
-    expect(permisosDeProveedor(ROL_ADMIN).gestionar).toBe(true)
-  })
-
-  it('el operario y el propietario no gestionan el directorio', () => {
-    expect(permisosDeProveedor(ROL_OPERARIO).gestionar).toBe(false)
-    expect(permisosDeProveedor(ROL_PROPIETARIO).gestionar).toBe(false)
-  })
-
-  it('el propietario da de alta proveedores; el operario no (HU-58)', () => {
-    expect(permisosDeProveedor(ROL_ADMIN).crear).toBe(true)
-    expect(permisosDeProveedor(ROL_PROPIETARIO).crear).toBe(true)
-    expect(permisosDeProveedor(ROL_OPERARIO).crear).toBe(false)
-    expect(permisosDeProveedor(null).crear).toBe(false)
-  })
-
-  it('sin sesión o con un rol desconocido no se gestiona', () => {
-    for (const rol of [null, 'Auditor']) {
-      expect(permisosDeProveedor(rol).gestionar).toBe(false)
     }
   })
 })

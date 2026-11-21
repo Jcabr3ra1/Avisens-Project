@@ -24,9 +24,6 @@ function EstadoInicial({ granjas, galpones, rol, onIrAProduccion, onRecargar }: 
             Un administrador debe registrar y asignarte una granja antes de que puedas agregar galpones y lotes.
           </p>
         </div>
-        <button className="dashboard-secondary-button" type="button" onClick={onRecargar}>
-          Actualizar información
-        </button>
         <p className="dashboard-setup__help">Cuando la asignación esté lista, aquí verás el siguiente paso.</p>
       </section>
     )

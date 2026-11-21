@@ -53,9 +53,7 @@ export function gestionaAlgo(permisos: PermisosGestion): boolean {
 
 // Bodega: el catálogo de insumos de una granja lo administran el
 // administrador y su propietario (HU-58: el propietario da de alta lo que
-// compra). Borrar definitivo sigue siendo solo del administrador. El
-// movimiento de stock lo registran los tres roles — el operario apunta lo
-// que consume en campo y esa es la razón de ser del módulo.
+// compra). Borrar definitivo sigue siendo solo del administrador.
 // Fuente: avisens-backend/src/modules/insumos/insumos.controller.ts
 //
 // Auditoría QA del 2026-10-30 (HALL-01 / CP-06): el operario maneja
@@ -113,25 +111,6 @@ export function permisosDeRegistro(rol: string | null): PermisosRegistro {
   return {
     editar: puedeOperar,
     eliminar: rol === ROL_ADMIN || rol === ROL_PROPIETARIO,
-  }
-}
-
-// Proveedores: el directorio lo administra solo el administrador
-// (proveedores:gestionar). El propietario puede dar de alta al que le falta
-// cuando registra un insumo (proveedores:crear, HU-58), pero no editar ni
-// desactivar: el directorio es compartido entre organizaciones. El operario
-// no entra al directorio (2026-11-21).
-// Fuente: avisens-backend/src/modules/proveedores/proveedores.controller.ts y
-// avisens-backend/src/common/auth/permisos.ts
-export type PermisosProveedor = {
-  crear: boolean
-  gestionar: boolean
-}
-
-export function permisosDeProveedor(rol: string | null): PermisosProveedor {
-  return {
-    crear: rol === ROL_ADMIN || rol === ROL_PROPIETARIO,
-    gestionar: rol === ROL_ADMIN,
   }
 }
 

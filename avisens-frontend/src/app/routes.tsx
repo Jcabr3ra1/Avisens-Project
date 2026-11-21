@@ -36,8 +36,6 @@ const SensoresPage = lazy(() => import('@features/sensores/SensoresPage'))
 const OperarioPage = lazy(() => import('@features/operario/OperarioPage'))
 const CaptacionPage = lazy(() => import('@features/captacion/CaptacionPage'))
 const SolicitudesPqrsPage = lazy(() => import('@features/solicitudes-pqrs/SolicitudesPqrsPage'))
-const ProveedoresPage = lazy(() => import('@features/proveedores/ProveedoresPage'))
-const OrdenesCompraPage = lazy(() => import('@features/ordenes-compra/OrdenesCompraPage'))
 const ConsumosDiariosPage = lazy(() => import('@features/consumos-diarios/ConsumosDiariosPage'))
 const NotificacionesPage = lazy(() => import('@features/notificaciones/NotificacionesPage'))
 const PerfilPage = lazy(() => import('@features/perfil/PerfilPage'))
@@ -111,8 +109,6 @@ function AppRoutes() {
         <Route path="/finanzas"        element={cargarPagina(<FinanzasPage />)} />
         <Route path="/inventario"      element={cargarPagina(<InventarioPage />)} />
         <Route path="/usuarios"        element={cargarPagina(<UsuariosPage />)} />
-        <Route path="/proveedores"     element={cargarPagina(<ProveedoresPage />)} />
-        <Route path="/ordenes-compra"  element={cargarPagina(<OrdenesCompraPage />)} />
         <Route path="/recuperaciones-password" element={cargarPagina(<RecuperacionesPasswordPage />)} />
         <Route path="/auditoria"        element={cargarPagina(<AuditoriaPage />)} />
         <Route path="/catalogos"        element={cargarPagina(<CatalogosPage />)} />

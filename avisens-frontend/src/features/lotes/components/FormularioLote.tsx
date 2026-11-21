@@ -1,7 +1,6 @@
 import { useMemo, useState, type FormEventHandler } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import type { Galpon } from '@features/galpones/api/galpones'
-import type { Proveedor } from '@features/proveedores/api/proveedores'
 import type { LineaGenetica } from '../api/lineas-geneticas'
 import {
   MARCAS_ALIMENTO,
@@ -15,7 +14,6 @@ interface Props {
   form: FormularioLoteDatos
   modoEdicion: boolean
   galpones: Galpon[]
-  proveedores: Proveedor[]
   lineasGeneticas: LineaGenetica[]
   errorLineasGeneticas: string
   guardando: boolean
@@ -38,7 +36,6 @@ function FormularioLote({
   form,
   modoEdicion,
   galpones,
-  proveedores,
   lineasGeneticas,
   errorLineasGeneticas,
   guardando,
@@ -56,7 +53,7 @@ function FormularioLote({
   return (
     <Modal
       titulo={modoEdicion ? 'Editar lote' : 'Nuevo lote'}
-      subtitulo="El código se genera automáticamente. Puedes asociar el proveedor ahora o hacerlo después."
+      subtitulo="El código se genera automáticamente."
       onCerrar={onCerrar}
       acciones={
         <>
@@ -90,23 +87,6 @@ function FormularioLote({
               {galpones.map((galpon) => (
                 <option key={galpon.id} value={galpon.id}>
                   {galpon.granja.nombre} · {galpon.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="modal-campo">
-            <span>Proveedor <em>(Opcional)</em></span>
-            <select
-              value={form.proveedor_id ?? ''}
-              onChange={(evento) => {
-                const proveedorId = evento.target.value
-                onCambiar('proveedor_id', proveedorId === '' ? null : Number(proveedorId))
-              }}
-            >
-              <option value="">Sin proveedor por ahora</option>
-              {proveedores.map((proveedor) => (
-                <option key={proveedor.id} value={proveedor.id}>
-                  {proveedor.nombre}
                 </option>
               ))}
             </select>

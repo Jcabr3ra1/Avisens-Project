@@ -3,7 +3,6 @@ import type { Usuario } from '@shared/api'
 type Props = {
   usuario: Usuario
   onAlternarActivo: (usuario: Usuario) => void
-  onGestionarAsignaciones: (usuario: Usuario) => void
   onMenu: (evento: React.MouseEvent, usuario: Usuario) => void
 }
 
@@ -22,11 +21,9 @@ function obtenerIniciales(nombre: string): string {
 function FilaUsuario({
   usuario,
   onAlternarActivo,
-  onGestionarAsignaciones,
   onMenu,
 }: Props) {
   const rolClase = usuario.rol.nombre.toLowerCase()
-  const esOperario = usuario.rol.nombre === 'Operario'
 
   return (
     <tr className={usuario.activo ? '' : 'is-inactive'}>
@@ -69,15 +66,6 @@ function FilaUsuario({
       </td>
       <td className="usuarios-col-acciones">
         <div className="usuarios-acciones-wrap">
-          {esOperario && (
-            <button
-              type="button"
-              className="usuarios-btn-galpones"
-              onClick={() => onGestionarAsignaciones(usuario)}
-            >
-              Galpones
-            </button>
-          )}
           <button
             type="button"
             className="usuarios-btn-menu"

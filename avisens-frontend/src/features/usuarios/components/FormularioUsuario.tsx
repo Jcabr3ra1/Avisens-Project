@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import type { CrearUsuarioPayload, RolResumen } from '@shared/api'
 import type { Organizacion } from '@features/organizaciones/api/organizaciones'
+import type { Galpon } from '@features/galpones/api/galpones'
 import { IcEye, IcEyeOff } from '@shared/ui/icons/icons'
 import type { CampoValidado, ErroresUsuario } from '../model/validacionUsuario'
 
@@ -16,6 +17,8 @@ type Props = {
   organizaciones: Organizacion[]
   rolBloqueado: boolean
   titulo: string
+  esPropietario?: boolean
+  galpones?: Galpon[]
   onCambiar: <K extends keyof CrearUsuarioPayload>(
     campo: K,
     valor: CrearUsuarioPayload[K],
@@ -38,6 +41,8 @@ function FormularioUsuario({
   organizaciones,
   rolBloqueado,
   titulo,
+  esPropietario = false,
+  galpones = [],
   onCambiar,
   onAlternarPassword,
   onGuardar,
@@ -56,11 +61,11 @@ function FormularioUsuario({
       </small>
     ) : null
   const rolSeleccionado = roles.find((rol) => rol.id === form.rol_id)
-  const solicitaOrganizacion = !modoEdicion && !rolBloqueado && rolSeleccionado?.nombre === 'Operario'
+  const solicitaOrganizacion = !modoEdicion && !rolBloqueado && !esPropietario && rolSeleccionado?.nombre === 'Operario'
   const permiteNombreOrganizacion =
-    !modoEdicion && !rolBloqueado && rolSeleccionado?.nombre === 'Propietario'
-  const ayudaRol = rolBloqueado
-    ? 'Crearás una cuenta de Operario para tu organización.'
+    !modoEdicion && !rolBloqueado && !esPropietario && rolSeleccionado?.nombre === 'Propietario'
+  const ayudaRol = rolBloqueado || esPropietario
+    ? ''
     : rolSeleccionado?.nombre === 'Administrador'
       ? 'Tendrá acceso general a la organización y a sus módulos de gestión.'
       : rolSeleccionado?.nombre === 'Propietario'
@@ -68,6 +73,9 @@ function FormularioUsuario({
         : rolSeleccionado?.nombre === 'Operario'
           ? 'Debes indicar la organización donde trabajará.'
           : 'Selecciona el tipo de acceso antes de completar los datos.'
+
+  const sinGalponesSeleccionados = esPropietario && (!form.galpon_ids || form.galpon_ids.length === 0)
+  const botonDeshabilitado = guardando || (esPropietario && (sinGalponesSeleccionados || galpones.length === 0))
 
   // Si el Administrador no tiene ninguna organización creada todavía, no
   // tiene sentido mostrarle un desplegable vacío que lo obliga a elegir
@@ -93,7 +101,7 @@ function FormularioUsuario({
             type="submit"
             form={ID_FORMULARIO}
             className="modal-btn modal-btn--primary"
-            disabled={guardando}
+            disabled={botonDeshabilitado}
           >
             {guardando ? 'Guardando…' : modoEdicion ? 'Guardar cambios' : 'Crear usuario'}
           </button>
@@ -101,7 +109,7 @@ function FormularioUsuario({
       }
     >
       <form id={ID_FORMULARIO} className="usuarios-form" onSubmit={onGuardar}>
-        {!modoEdicion && (
+        {!modoEdicion && !esPropietario && (
           <>
             <label className="modal-campo">
               <span>Tipo de cuenta</span>
@@ -117,10 +125,93 @@ function FormularioUsuario({
               </select>
             </label>
 
-            <p id="usuarios-ayuda-rol" className="usuarios-rol-ayuda">
-              {ayudaRol}
-            </p>
+            {ayudaRol && (
+              <p id="usuarios-ayuda-rol" className="usuarios-rol-ayuda">
+                {ayudaRol}
+              </p>
+            )}
           </>
+        )}
+
+        {esPropietario && (
+          <div className="modal-campo">
+            <span id="label-galpones-asignados">
+              Galpón(es) asignado(s) <span style={{ color: 'var(--danger)' }}>*</span>
+            </span>
+            {galpones.length === 0 ? (
+              <div
+                style={{
+                  padding: 'var(--space-3)',
+                  background: 'var(--surface-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px dashed var(--border-default)',
+                }}
+              >
+                <p style={{ margin: '0 0 var(--space-2) 0', fontSize: '0.9rem' }}>
+                  Aún no tienes galpones creados en tus granjas. Primero debes registrar al menos un galpón antes de asignar operarios.
+                </p>
+                <a
+                  href="/granjas"
+                  className="adm-btn adm-btn--secundario"
+                  style={{ display: 'inline-flex', padding: 'var(--space-1) var(--space-3)', fontSize: '0.85rem' }}
+                >
+                  Ir a Granjas y Galpones
+                </a>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-2)',
+                  maxHeight: '160px',
+                  overflowY: 'auto',
+                  padding: 'var(--space-2)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--surface-base)',
+                }}
+                role="group"
+                aria-labelledby="label-galpones-asignados"
+              >
+                {galpones.map((g) => {
+                  const check = (form.galpon_ids ?? []).includes(g.id)
+                  return (
+                    <label
+                      key={g.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--space-2)',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={check}
+                        onChange={(e) => {
+                          const actuales = form.galpon_ids ?? []
+                          const nuevos = e.target.checked
+                            ? [...actuales, g.id]
+                            : actuales.filter((id) => id !== g.id)
+                          onCambiar('galpon_ids', nuevos)
+                        }}
+                      />
+                      <span>
+                        <strong>{g.nombre}</strong> <span style={{ color: 'var(--text-muted)' }}>({g.granja?.nombre ?? 'Granja'})</span>
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+            {sinGalponesSeleccionados && galpones.length > 0 && (
+              <small style={{ color: 'var(--danger)', marginTop: 'var(--space-1)', display: 'block' }}>
+                Debes asignar al menos un galpón obligatoriamente.
+              </small>
+            )}
+          </div>
         )}
 
         <label className="modal-campo">

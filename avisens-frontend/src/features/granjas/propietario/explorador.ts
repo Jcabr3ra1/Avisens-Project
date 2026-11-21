@@ -102,7 +102,7 @@ export function proximoPaso(
     return {
       tono: 'atencion',
       titulo: faltan === 1 ? 'Registra 1 pesaje más' : `Registra ${faltan} pesajes más`,
-      detalle: `Llevas ${pesajes} ${pesajes === 1 ? 'pesaje' : 'pesajes'}. Con pesajes de tres días distintos se proyecta la curva del lote hasta el día de salida.`,
+      detalle: `Tienes ${pesajes} de ${PESAJES_PARA_PROYECTAR} pesajes. Con pesajes de tres días distintos se proyecta la curva del lote hasta el día de salida.`,
       accion: 'Ir a la bitácora',
       destino: { tipo: 'ruta', ruta: '/bitacora' },
     }
@@ -110,7 +110,7 @@ export function proximoPaso(
   return {
     tono: 'ok',
     titulo: 'Todo al día',
-    detalle: 'Revisa en la Guía de peso cómo va la curva frente al estándar.',
+    detalle: `Tienes ${pesajes} de ${PESAJES_PARA_PROYECTAR} pesajes. Revisa en la Guía de peso cómo va la curva frente al estándar.`,
     accion: 'Abrir guía de peso',
     destino: { tipo: 'ruta', ruta: `/guia-crecimiento?lote=${lote.id}` },
   }

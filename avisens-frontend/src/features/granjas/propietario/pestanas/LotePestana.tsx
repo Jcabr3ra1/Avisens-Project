@@ -82,7 +82,6 @@ function LotePestana({ galpon, indicador, consumo, onEditarDatos, onNavegar }: P
             <div><dt>Línea genética</dt><dd>{lote.linea_genetica?.nombre ?? <em>Falta</em>}</dd></div>
             <div><dt>Sexo</dt><dd>{lote.sexo ? capitalizar(lote.sexo) : <em>Falta</em>}</dd></div>
             <div><dt>Marca de alimento</dt><dd>{lote.marca_alimento ? capitalizar(lote.marca_alimento) : <em>Falta</em>}</dd></div>
-            <div><dt>Proveedor</dt><dd>{lote.proveedor?.nombre ?? <em>Falta</em>}</dd></div>
           </dl>
           {faltantesLote(lote).length > 0 && (
             <p className="gp-nota-falta">

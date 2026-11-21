@@ -5,6 +5,18 @@
 #include "config.h"
 #include "MovingAverage.h"
 
+// Un MQ-135 conectado y caliente nunca da un ADC de casi 0 en el aire del
+// galpón: eso es el pin sin sensor (o el sensor sin alimentación). Por debajo
+// de este valor la lectura se da por inválida y no se envía.
+#ifndef MQ135_ADC_MIN_CONECTADO
+#define MQ135_ADC_MIN_CONECTADO 20
+#endif
+// Lecturas seguidas por debajo del mínimo antes de avisar en el monitor serie
+// que el sensor está desconectado (a INTERVALO_SENSORES = 2 s, unos 10 s).
+#ifndef MQ135_LECTURAS_DESCONECTADO
+#define MQ135_LECTURAS_DESCONECTADO 5
+#endif
+
 /**
  * @class SensorMQ135
  * @brief Gestor del sensor MQ135 (NH3/CO2) con filtro de media móvil.
@@ -47,10 +59,16 @@ class SensorMQ135 {
    */
   void reset();
 
+  /**
+   * @brief true si lleva MQ135_LECTURAS_DESCONECTADO lecturas seguidas en ~0.
+   */
+  bool desconectado() const;
+
  private:
   MovingAverage<int, MOVING_AVG_SIZE> filtroRaw_;
   LecturaMQ135 ultimaLectura_;
   unsigned long ultimoIntento_;
+  uint8_t lecturasEnCero_;
 
   String clasificarNivel(int rawValue) const;
 };

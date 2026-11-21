@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { IcArrowRight, IcRefresh } from '@shared/ui/icons/icons'
+import { IcArrowRight } from '@shared/ui/icons/icons'
 import type { DashboardGranja } from '../model/dashboard'
 import type { EstadoGranja } from '../model/estadoGranja'
 import { detalleDeKpi, faseDelDia, lecturaDeSensor, posicionDelAstro, type SensorEscena } from '../model/escenaGalpon'
@@ -27,7 +27,7 @@ type Props = {
   cargando: boolean
   hora?: number
   onGranjaChange: (id: number) => void
-  onRecargar: () => void
+  onRecargar?: () => void
   onAccion: () => void
   onNavegar: (destino: string) => void
 }
@@ -91,7 +91,7 @@ function useParalaje(ref: React.RefObject<HTMLElement | null>) {
 
 function HeroGranja({
   nombre, fecha, granjas, granjaId, estado, kpis, diaLote, aves, nombreGalpon, clima, sensores,
-  cargando, hora, onGranjaChange, onRecargar, onAccion, onNavegar,
+  cargando, hora, onGranjaChange, onAccion, onNavegar,
 }: Props) {
   const raiz = useRef<HTMLElement>(null)
   const [resaltado, setResaltado] = useState<KpiGranja['id'] | null>(null)
@@ -144,10 +144,6 @@ function HeroGranja({
             </select>
           </label>
         )}
-        <button type="button" className={`hero-granja-sync${cargando ? ' is-spinning' : ''}`} onClick={onRecargar} disabled={cargando}>
-          <IcRefresh size={14} aria-hidden="true" />
-          <span>{cargando ? 'Actualizando…' : 'Actualizar'}</span>
-        </button>
       </div>
 
       <div className="hero-granja-cuerpo">

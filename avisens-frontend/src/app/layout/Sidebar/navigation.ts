@@ -12,7 +12,7 @@ export type NavigationSpace = {
 const SPACE_DEFINITIONS = [
   { id: 'plataforma', label: 'Plataforma', description: 'Organizaciones, prospectos, soporte y personas', sections: ['Organizaciones', 'Plataforma'] },
   { id: 'granja', label: 'Granja', description: 'El día a día de tus aves', sections: ['Granja'] },
-  { id: 'bodega', label: 'Bodega', description: 'Insumos y proveedores', sections: ['Bodega'] },
+  { id: 'bodega', label: 'Bodega', description: 'Insumos y movimientos', sections: ['Bodega'] },
   { id: 'gestion', label: 'Gestión', description: 'Recursos y equipo', sections: ['Gestión'] },
 ] as const
 
@@ -35,8 +35,6 @@ export const LINK_DETAILS: Record<string, { description: string; descriptionAdmi
   '/monitoreo/actuadores': { description: 'Relés K1-K4: estado y control', keywords: ['monitoreo', 'actuadores', 'reles', 'ventiladores', 'calefaccion', 'extractores', 'bomba', 'encender', 'apagar'] },
   '/alertas': { description: 'Lo que necesita tu atención', keywords: ['riesgos', 'avisos'] },
   '/inventario': { description: 'Insumos y movimientos', keywords: ['inventario', 'stock', 'alimento'] },
-  '/ordenes-compra': { description: 'Pedidos y abastecimiento', keywords: ['ordenes', 'compras'] },
-  '/proveedores': { description: 'Quienes abastecen tu granja', descriptionAdmin: 'Aliados de alimento e insumos', keywords: ['proveedor'] },
   '/finanzas': { description: 'Ingresos y gastos de tu granja', keywords: ['costos', 'dinero', 'pagos'] },
   '/usuarios': { description: 'Las personas de tu equipo', descriptionAdmin: 'Todas las cuentas y sus roles', keywords: ['usuarios', 'operarios', 'propietarios'] },
 }

@@ -451,35 +451,3 @@
   .inv-tipos { grid-template-columns: 1fr; }
   .inv-insumo-panel { padding-left: 0.9rem; }
 }
-
-/* HU-58: acceso para registrar un proveedor desde el formulario de insumo.
-   Va dentro del modal (portal), así que no depende de .inv-page. */
-.inv-enlace {
-  align-self: flex-start;
-  min-height: 36px;
-  margin-top: 0.15rem;
-  padding: 0.35rem 0;
-  border: 0;
-  color: var(--primary);
-  background: none;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.inv-enlace:hover { text-decoration: underline; }
-
-.inv-enlace:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm);
-}
-
-/* La etiqueta del proveedor es un <label> aparte (el campo lleva también el
-   enlace de alta), así que el «(opcional)» no hereda el estilo de los demás. */
-.modal-campo-etiqueta em {
-  color: var(--text-muted);
-  font-style: normal;
-  font-weight: 500;
-}

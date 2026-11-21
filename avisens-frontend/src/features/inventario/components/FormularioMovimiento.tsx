@@ -115,7 +115,7 @@ function FormularioMovimiento({ insumo, tiposPermitidos, onRegistrar, onCerrar }
         <input
           value={motivo}
           onChange={(evento) => setMotivo(evento.target.value)}
-          placeholder={soloSalida ? 'Consumo del galpón 2, cambio de cama…' : 'Compra a proveedor, consumo del galpón 2…'}
+          placeholder={soloSalida ? 'Consumo del galpón 2, cambio de cama…' : 'Compra de insumo, consumo del galpón 2…'}
         />
       </label>
 

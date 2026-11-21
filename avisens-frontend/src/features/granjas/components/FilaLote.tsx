@@ -67,7 +67,6 @@ function FilaLote({
         {lote.linea_genetica && <span className="gr-dato">{lote.linea_genetica.nombre}</span>}
         {lote.sexo && <span className="gr-dato">{lote.sexo.charAt(0).toUpperCase() + lote.sexo.slice(1)}</span>}
         {lote.marca_alimento && <span className="gr-dato">Alimento {lote.marca_alimento.charAt(0).toUpperCase() + lote.marca_alimento.slice(1)}</span>}
-        {lote.proveedor && <span className="gr-dato">{lote.proveedor.nombre}</span>}
         {faltan.length > 0 && onEditarDatos && (
           <button type="button" className="gr-dato gr-dato--falta" onClick={() => onEditarDatos(lote)}>
             Completar {unir(faltan)}

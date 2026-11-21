@@ -3,11 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as Tabs from '@radix-ui/react-tabs'
 import NumeroAnimado from '@features/organizaciones/components/NumeroAnimado'
 import type { Lote } from '@features/lotes/api/lotes'
-import { IcArrowRight, IcBell, IcCheck, IcChevronRight, IcLeaf, IcRefresh } from '@shared/ui/icons/icons'
+import { IcArrowRight, IcCheck, IcChevronRight, IcLeaf, IcRefresh } from '@shared/ui/icons/icons'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import { getRol } from '@shared/api'
-import { permisosOperativosDeGalpon, puedeCompletarDatos, ROL_PROPIETARIO } from '@shared/auth/permisos'
-import ConfiguracionAlertas from '@features/alertas/components/ConfiguracionAlertas'
+import { permisosOperativosDeGalpon, puedeCompletarDatos } from '@shared/auth/permisos'
 import type { Granja } from '../api/granjas'
 import EsqueletoGranjas from '../components/EsqueletoGranjas'
 import { ModalDatosGranja, ModalDatosLote } from '../components/ModalesDatos'
@@ -67,7 +67,7 @@ function GranjasPropietario() {
   const fase = faseDelDia(hora)
   const astro = posicionDelAstro(hora)
   const [parametros] = useSearchParams()
-  const { estructura, proveedores, lineasGeneticas, consumoPorLote, cargando, error, recargar } = useEstructuraGranjas()
+  const { estructura, lineasGeneticas, consumoPorLote, cargando, error, recargar } = useEstructuraGranjas()
   const [granjaId, setGranjaId] = useState<number | null>(() => enteroPositivo(parametros.get('granjaId')))
   const [galponId, setGalponId] = useState<number | null>(() => enteroPositivo(parametros.get('galpon')))
   const [pestana, setPestana] = useState<Pestana>(() => pestanaDe(parametros.get('pestana')))
@@ -75,9 +75,6 @@ function GranjasPropietario() {
   const [enDetalle, setEnDetalle] = useState(() => parametros.get('galpon') !== null)
   const [revision, setRevision] = useState(0)
   const [datos, setDatos] = useState<DatosAbiertos>(null)
-  const [configurandoAlertas, setConfigurandoAlertas] = useState(false)
-  // HU-25: los canales y tiempos de escalamiento los decide el dueño de la granja.
-  const puedeConfigurarAlertas = getRol() === ROL_PROPIETARIO
   const llegoConDestino = useRef(parametros.get('pestana') !== null || parametros.get('galpon') !== null)
 
   const seleccionada = estructura.find((item) => item.granja.id === granjaId) ?? estructura[0] ?? null
@@ -113,6 +110,8 @@ function GranjasPropietario() {
     await recargar()
     setRevision((valor) => valor + 1)
   }
+
+  useRefetchOnFocus(recargarTodo)
 
   function abrirPendiente(pendiente: PendienteDatos) {
     if (!seleccionada) return
@@ -243,12 +242,6 @@ function GranjasPropietario() {
                 <IcArrowRight size={15} aria-hidden="true" />
               </button>
             ) : null}
-            {puedeConfigurarAlertas && (
-              <button type="button" className="adm-btn adm-btn--secundario" onClick={() => setConfigurandoAlertas(true)}>
-                <IcBell size={15} aria-hidden="true" />
-                Configurar alertas
-              </button>
-            )}
             <button type="button" className="adm-btn adm-btn--secundario" onClick={() => void recargarTodo()} disabled={cargando}>
               <IcRefresh size={15} aria-hidden="true" />
               {cargando ? 'Actualizando…' : 'Actualizar'}
@@ -346,6 +339,8 @@ function GranjasPropietario() {
                   galpon={galpon}
                   revision={revision}
                   onCompletarUbicacion={puedeCompletarDatos(getRol()) ? () => setDatos({ tipo: 'granja', granja }) : undefined}
+                  onIrABitacora={() => irA('/bitacora')}
+                  onCambioEstructura={() => { void recargarTodo() }}
                 />
               </Tabs.Content>
               <Tabs.Content value="actuadores" className="gp-contenido">
@@ -378,9 +373,6 @@ function GranjasPropietario() {
         )}
       </div>
 
-      {configurandoAlertas && (
-        <ConfiguracionAlertas granja={granja} onCerrar={() => setConfigurandoAlertas(false)} />
-      )}
       {datos?.tipo === 'granja' && (
         <ModalDatosGranja granja={datos.granja} onCerrar={() => setDatos(null)} onGuardado={recargarTodo} />
       )}
@@ -388,7 +380,6 @@ function GranjasPropietario() {
         <ModalDatosLote
           lote={datos.lote}
           lineasGeneticas={lineasGeneticas}
-          proveedores={proveedores}
           onCerrar={() => setDatos(null)}
           onGuardado={recargarTodo}
         />

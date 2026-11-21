@@ -153,15 +153,14 @@ export function ModalDatosGranja({ granja, ...base }: Base & { granja: Granja })
           <input value={form.departamento} onChange={(e) => cambiar('departamento')(e.target.value)} placeholder="Antioquia" maxLength={100} />
         </Campo>
       </div>
-      <p className="modal-ayuda gr-ayuda-coordenadas">Las coordenadas y el área las registra el administrador cuando instala los sensores.</p>
+      <p className="modal-ayuda gr-ayuda-coordenadas">Las coordenadas y el área las registra el soporte técnico de AVISENS al instalar los sensores.</p>
     </ModalDatos>
   )
 }
 
-export function ModalDatosLote({ lote, lineasGeneticas, proveedores, ...base }: Base & {
+export function ModalDatosLote({ lote, lineasGeneticas, ...base }: Base & {
   lote: Lote
   lineasGeneticas: LineaGenetica[]
-  proveedores: { id: number; nombre: string }[]
 }) {
   const [form, setForm] = useState<FormDatosLote>(() => formDatosLote(lote))
   const cambiar = (campo: keyof FormDatosLote) => (valor: string) => setForm((actual) => ({ ...actual, [campo]: valor }))
@@ -202,12 +201,6 @@ export function ModalDatosLote({ lote, lineasGeneticas, proveedores, ...base }: 
           </select>
         </Campo>
       </div>
-      <Campo etiqueta="Proveedor de los pollitos">
-        <select value={form.proveedor_id} onChange={(e) => cambiar('proveedor_id')(e.target.value)}>
-          <option value="">Elige el proveedor</option>
-          {proveedores.map((proveedor) => <option key={proveedor.id} value={proveedor.id}>{proveedor.nombre}</option>)}
-        </select>
-      </Campo>
     </ModalDatos>
   )
 }

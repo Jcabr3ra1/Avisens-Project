@@ -46,7 +46,6 @@ const ENTIDADES_ETIQUETA: Record<string, string> = {
   sensores: 'Sensores',
   auth: 'Sesión',
   organizaciones: 'Organizaciones',
-  proveedores: 'Proveedores',
   prospectos: 'Prospectos',
 }
 

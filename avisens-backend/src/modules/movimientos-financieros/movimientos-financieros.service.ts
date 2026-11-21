@@ -34,7 +34,6 @@ const MOVIMIENTO_SELECT = {
   granja_id: true,
   lote_id: true,
   categoria_id: true,
-  proveedor_id: true,
   tipo: true,
   valor_cop: true,
   fecha: true,
@@ -180,19 +179,6 @@ export class MovimientosFinancierosService {
     }
   }
 
-  private async validarProveedor(proveedorId?: number) {
-    if (proveedorId === undefined) return;
-
-    const proveedor = await this.prisma.proveedor.findUnique({
-      where: { id: proveedorId },
-      select: { id: true },
-    });
-
-    if (!proveedor) {
-      throw new NotFoundException('Proveedor no encontrado');
-    }
-  }
-
   async crear(dto: CreateMovimientoFinancieroDto, solicitante: Solicitante) {
     const granjaId = await this.resolverGranja(
       dto.granja_id,
@@ -200,7 +186,6 @@ export class MovimientosFinancierosService {
       solicitante,
     );
     await this.validarCategoria(dto.categoria_id, dto.tipo);
-    await this.validarProveedor(dto.proveedor_id);
 
     return this.prisma.movimientoFinanciero.create({
       data: {
@@ -210,7 +195,6 @@ export class MovimientosFinancierosService {
         valor_cop: dto.valor_cop,
         fecha: new Date(dto.fecha),
         lote_id: dto.lote_id,
-        proveedor_id: dto.proveedor_id,
         descripcion: dto.descripcion,
         numero_factura: dto.numero_factura,
         metodo_pago: dto.metodo_pago,
@@ -282,7 +266,6 @@ export class MovimientosFinancierosService {
     if (dto.categoria_id !== undefined || dto.tipo !== undefined) {
       await this.validarCategoria(categoriaResultante, tipoResultante);
     }
-    await this.validarProveedor(dto.proveedor_id);
 
     const loteId =
       dto.lote_id !== undefined
@@ -309,7 +292,6 @@ export class MovimientosFinancierosService {
         valor_cop: dto.valor_cop,
         fecha: dto.fecha ? new Date(dto.fecha) : undefined,
         lote_id: dto.lote_id,
-        proveedor_id: dto.proveedor_id,
         descripcion: dto.descripcion,
         numero_factura: dto.numero_factura,
         metodo_pago: dto.metodo_pago,

@@ -15,7 +15,6 @@ import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
 import { SensoresModule } from './modules/sensores/sensores.module';
 import { MedicionesModule } from './modules/mediciones/mediciones.module';
 import { UmbralesModule } from './modules/umbrales/umbrales.module';
-import { ProveedoresModule } from './modules/proveedores/proveedores.module';
 import { InsumosModule } from './modules/insumos/insumos.module';
 import { IngestModule } from './modules/ingest/ingest.module';
 import { LotesModule } from './modules/lotes/lotes.module';
@@ -32,12 +31,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClimaModule } from './modules/clima/clima.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
 import { CategoriasFinancierasModule } from './modules/categorias-financieras/categorias-financieras.module';
-import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-alerta.module';
-import { AlertasCanalesModule } from './modules/alertas-canales/alertas-canales.module';
 import { EvidenciaAlertaModule } from './modules/evidencia-alerta/evidencia-alerta.module';
 import { AccionamientosEquiposModule } from './modules/accionamientos-equipos/accionamientos-equipos.module';
 import { OrdenesActuadoresModule } from './modules/ordenes-actuadores/ordenes-actuadores.module';
-import { OrdenesCompraModule } from './modules/ordenes-compra/ordenes-compra.module';
 import { MovimientosFinancierosModule } from './modules/movimientos-financieros/movimientos-financieros.module';
 import { PrediccionesModule } from './modules/predicciones/predicciones.module';
 import { CopilotoModule } from './modules/copiloto/copiloto.module';
@@ -112,7 +108,6 @@ import { PlanAlimentoModule } from './modules/plan-alimento/plan-alimento.module
     GalponesModule,
     DispositivosModule,
     SensoresModule,
-    ProveedoresModule,
     InsumosModule,
     MedicionesModule,
     UmbralesModule,
@@ -132,12 +127,9 @@ import { PlanAlimentoModule } from './modules/plan-alimento/plan-alimento.module
     CategoriasFinancierasModule,
     HealthModule,
     LegalModule,
-    PoliticasAlertaModule,
-    AlertasCanalesModule,
     EvidenciaAlertaModule,
     AccionamientosEquiposModule,
     OrdenesActuadoresModule,
-    OrdenesCompraModule,
     MovimientosFinancierosModule,
     PrediccionesModule,
     RecomendacionesModule,

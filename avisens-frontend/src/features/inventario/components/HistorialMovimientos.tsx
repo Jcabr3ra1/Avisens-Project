@@ -30,9 +30,6 @@ function HistorialMovimientos({ movimientos, cargando, unidad }: Props) {
           </span>
           <span className="inv-mov-detalle">
             {movimiento.motivo || 'Sin motivo registrado'}
-            {movimiento.detalle_orden_compra_id !== null && (
-              <em> · recepción de compra</em>
-            )}
           </span>
           <span className="inv-mov-pie">
             {movimiento.fecha_movimiento.slice(0, 10)}

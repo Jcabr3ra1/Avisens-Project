@@ -14,7 +14,7 @@ function ListaGalpones({ galpones, galponId, onSeleccionar }: Props) {
       <div className="gp-lista-vacia">
         <IcBarn size={22} aria-hidden="true" />
         <strong>Esta granja todavía no tiene galpones</strong>
-        <span>El administrador los registra al instalar los sensores.</span>
+        <span>El soporte técnico los registra al instalar los sensores.</span>
       </div>
     )
   }

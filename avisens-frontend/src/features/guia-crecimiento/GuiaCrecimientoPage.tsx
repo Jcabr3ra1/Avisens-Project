@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { permisosDePlan, ROL_ADMIN, ROL_PROPIETARIO } from '@shared/auth/permisos'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import '@shared/ui/admin/AdminKit.css'
 import { useGuiaCrecimiento } from './hooks/useGuiaCrecimiento'
@@ -31,6 +32,7 @@ function GuiaCrecimientoPage() {
   const loteId = valorLote && /^[1-9]\d*$/.test(valorLote) && Number.isSafeInteger(Number(valorLote))
     ? Number(valorLote) : null
   const guia = useGuiaCrecimiento(loteId)
+  useRefetchOnFocus(guia.recargar)
   const permisos = permisosDePlan(getRol())
   const puedeComparar = getRol() === ROL_ADMIN || getRol() === ROL_PROPIETARIO
   const lote = guia.loteSeleccionado
@@ -121,6 +123,8 @@ function GuiaCrecimientoPage() {
     lote.fecha_ingreso,
   )
   const etapaDia = obtenerEtapaDelDia(diaSeleccionado, fases)
+  const totalMuertes = guia.mortalidad.reduce((total, m) => total + m.cantidad_aves, 0)
+  const avesVivas = Math.max(0, lote.cantidad_inicial - totalMuertes)
 
   return (
     <div className="page-container adm-page guia-page gdc">
@@ -139,7 +143,13 @@ function GuiaCrecimientoPage() {
             {lote.linea_genetica ? ` · Línea ${lote.linea_genetica.nombre}` : ''}
           </p>
           <p className="gdc-contexto gdc-contexto--datos">
-            {lote.cantidad_inicial.toLocaleString('es-CO')} aves · encasetado el {formatearFechaCalendario(lote.fecha_ingreso)}
+            {totalMuertes > 0 ? (
+              <>
+                <strong>{avesVivas.toLocaleString('es-CO')}</strong> aves vivas ({lote.cantidad_inicial.toLocaleString('es-CO')} iniciales)
+              </>
+            ) : (
+              <>{lote.cantidad_inicial.toLocaleString('es-CO')} aves</>
+            )} · encasetado el {formatearFechaCalendario(lote.fecha_ingreso)}
           </p>
         </div>
         <div className="gdc-cabecera-acciones">

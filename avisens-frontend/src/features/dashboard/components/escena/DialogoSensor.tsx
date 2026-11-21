@@ -3,7 +3,7 @@ import type { CSSProperties, KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { IcClose } from '@shared/ui/icons/icons'
 import { useSerieSensor } from '../../hooks/useSerieSensor'
-import { antiguedadDeLectura, lecturaDeSensor, rangoConfigurado, senalDeSensor, type SensorEscena } from '../../model/escenaGalpon'
+import { antiguedadDeLectura, lecturaDeSensor, nombreConZona, rangoConfigurado, senalDeSensor, type SensorEscena } from '../../model/escenaGalpon'
 
 const GraficoSerie = lazy(() => import('@shared/ui/graficos/GraficoSerie'))
 
@@ -116,7 +116,7 @@ function DialogoSensor({ sensor, imagen, ancla, lado, onCerrar }: Props) {
         <header className="escena-dialogo-cabecera">
           <img src={imagen} alt="" />
           <div>
-            <h2 id={titulo}>{sensor.nombre}</h2>
+            <h2 id={titulo}>{nombreConZona(sensor)}</h2>
             <span className="escena-dialogo-estado">{sensor.etiquetaEstado}</span>
           </div>
           <button type="button" className="escena-dialogo-cerrar" onClick={onCerrar} aria-label="Cerrar">
@@ -140,6 +140,20 @@ function DialogoSensor({ sensor, imagen, ancla, lado, onCerrar }: Props) {
             <div><dt>Sensor</dt><dd className="escena-dialogo-codigo">{sensor.codigo}</dd></div>
           </dl>
         </section>
+
+        {sensor.otrasZonas.length > 0 && (
+          <section className="escena-dialogo-bloque" aria-label="Otras zonas del galpón">
+            <h3>Otras zonas del galpón</h3>
+            <dl className="escena-dialogo-datos">
+              {sensor.otrasZonas.map((otra) => (
+                <div key={otra.id}>
+                  <dt>Zona {otra.zona} <span className="escena-dialogo-codigo">· {otra.codigo}</span></dt>
+                  <dd>{lecturaDeSensor(otra)}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
 
         <section className="escena-dialogo-bloque" aria-label="Datos que envía">
           <h3>Datos que envía · últimas 24 h</h3>

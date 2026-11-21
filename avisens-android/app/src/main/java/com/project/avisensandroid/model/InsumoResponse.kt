@@ -10,7 +10,6 @@ data class InsumoResponse(
     val stock_minimo: Double?,
     val stock_referencia: Double? = null,
     val precio_unitario_cop: Double?,
-    val proveedor_habitual_id: Int?,
     val ubicacion_almacen: String?,
     val fecha_vencimiento: String?,
     val activo: Boolean

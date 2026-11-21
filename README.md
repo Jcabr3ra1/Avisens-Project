@@ -84,9 +84,8 @@ Está pensado para:
   con esa curva, y a partir de ahí **estima** cuánto alimento haría falta por
   etapa. Son estimaciones para planear — no son una garantía del resultado
   final, ni el sistema cierra el lote automáticamente.
-- **Catálogo de insumos** — proveedores, insumos y tipos de alimento, con el
-  consumo diario registrado por lote, como base para decidir cuánto y qué
-  comprar.
+- **Catálogo de insumos** — insumos y tipos de alimento, con el
+  consumo diario registrado por lote, como base para controlar el stock.
 
 ## Un recorrido simple de la granja al lote
 
@@ -222,7 +221,7 @@ en desarrollo).
 | **Autenticación** | `auth` (login, refresh, logout), `usuarios` (RBAC) |
 | **Estructura** | `granjas`, `galpones`, `lotes` |
 | **Monitoreo IoT** | `dispositivos`, `sensores`, `mediciones`, `umbrales`, `ingest` (ESP32 por token) |
-| **Catálogos** | `proveedores`, `insumos`, `tipos-alimento` |
+| **Catálogos** | `insumos`, `tipos-alimento` |
 | **Bitácora productiva** | `pesajes`, `consumos-diarios`, `registros-mortalidad`, `eventos-sanitarios`, `registros-plagas` |
 | **Auditoría** | `auditoria` (log automático de acciones sensibles) |
 | **Inteligencia (Fase 1)** | `indicadores` (KPIs **FCR / EPEF** / mortalidad, job `@Cron` diario), `curvas-objetivo` (curva de referencia por marca de alimento) |

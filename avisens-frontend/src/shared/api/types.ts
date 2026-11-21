@@ -2,7 +2,7 @@
 // Coinciden con los DTOs y los `select` del backend NestJS.
 
 // Forma estándar de un listado paginado del backend: { data, meta }. TODAS las
-// rutas de listado (usuarios, granjas, galpones, sensores, proveedores…)
+// rutas de listado (usuarios, granjas, galpones, sensores…)
 // devuelven esto — nunca un array plano. Al consumirlas hay que desempaquetar
 // `.data`, o el componente reventará al hacer `.filter(...)` sobre el objeto.
 export interface PaginatedResponse<T> {
@@ -20,6 +20,18 @@ export interface RolResumen {
   nombre: string
 }
 
+export interface AsignacionGalponResumen {
+  id: number
+  galpon_id: number
+  rol_asignacion: string | null
+  galpon: {
+    id: number
+    nombre: string
+    codigo: string
+    granja: { id: number; nombre: string }
+  }
+}
+
 export interface Usuario {
   id: number
   nombre_completo: string
@@ -32,6 +44,7 @@ export interface Usuario {
   organizacion_id: number | null
   rol: RolResumen
   organizacion: { id: number; nombre: string } | null
+  usuarios_galpones?: AsignacionGalponResumen[]
 }
 
 // ----- Auth -----
@@ -80,6 +93,7 @@ export interface CrearUsuarioPayload {
   rol_id: number
   organizacion_id?: number
   organizacion_nombre?: string
+  galpon_ids?: number[]
 }
 
 // En una edición todos los campos son opcionales: solo se envía lo que cambia.

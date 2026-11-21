@@ -2,17 +2,13 @@ import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { getRol } from '@shared/api'
-import { permisosDeInsumo, permisosDeProveedor, ROL_ADMIN } from '@shared/auth/permisos'
-import { mensajeDeError } from '@shared/utils/errores'
+import { permisosDeInsumo, ROL_ADMIN } from '@shared/auth/permisos'
 import { IcAlert, IcBox, IcCoin, IcPlus, IcSearch } from '@shared/ui/icons/icons'
 import BotonActualizar from '@shared/ui/BotonActualizar/BotonActualizar'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import '@shared/ui/admin/AdminKit.css'
 import { listarGranjas, type Granja } from '@features/granjas/api/granjas'
-import { crearProveedor, listarProveedores, type Proveedor } from '@features/proveedores/api/proveedores'
-import FormularioProveedor from '@features/proveedores/components/FormularioProveedor'
-import { useFormularioProveedor } from '@features/proveedores/hooks/useFormularioProveedor'
 import type { ActualizarInsumoPayload, CrearInsumoPayload, Insumo } from './api/insumos'
 import AcordeonInsumo from './components/AcordeonInsumo'
 import FormularioInsumo from './components/FormularioInsumo'
@@ -40,7 +36,6 @@ function InventarioPage() {
   const rol = getRol()
   const esAdministrador = rol === ROL_ADMIN
   const permisos = permisosDeInsumo(rol)
-  const permisosProveedor = permisosDeProveedor(rol)
 
   const gestion = useInventario()
   // El backend exige granja_id al crear un insumo; sin esto el alta
@@ -63,27 +58,8 @@ function InventarioPage() {
     }
   }, [permisos.crear])
 
-  // HU-58: el insumo se asocia a su proveedor. Solo quien crea insumos
-  // necesita la lista; los inactivos no se ofrecen para compras nuevas.
-  const [proveedores, setProveedores] = useState<Proveedor[]>([])
-  useEffect(() => {
-    if (!permisos.crear) return
-    let vigente = true
-    void listarProveedores()
-      .then((lista) => {
-        if (vigente) setProveedores(ordenarProveedores(lista.filter((proveedor) => proveedor.activo)))
-      })
-      .catch(() => {
-        if (vigente) setProveedores([])
-      })
-    return () => {
-      vigente = false
-    }
-  }, [permisos.crear])
-
-  // HU-58 · escenario 2: si ya existe el mismo insumo con el mismo proveedor
-  // en la granja, no se crea otro: se ofrece sumar la cantidad como una
-  // entrada, que queda en su historial.
+  // Si ya existe el mismo insumo en la granja, no se crea otro: se ofrece
+  // sumar la cantidad como una entrada, que queda en su historial.
   const { insumos, guardar: guardarEnBodega, registrarMovimiento } = gestion
   const guardarInsumo = useCallback(
     async (datos: CrearInsumoPayload | ActualizarInsumoPayload, editandoId: number | null) => {
@@ -92,25 +68,24 @@ function InventarioPage() {
         const duplicadoId = buscarInsumoDuplicado(insumos, {
           granja_id: nuevo.granja_id,
           nombre: nuevo.nombre,
-          proveedor_habitual_id: nuevo.proveedor_habitual_id ?? 0,
         })
         const existente = insumos.find((insumo) => insumo.id === duplicadoId)
         if (existente) {
           const cantidad = nuevo.stock_actual ?? 0
           if (cantidad <= 0) {
             throw new AvisoInsumo(
-              `«${existente.nombre}» ya existe con ese proveedor en esta granja. Para sumar stock, regístrale una entrada desde su tarjeta.`,
+              `«${existente.nombre}» ya existe en esta granja. Para sumar stock, regístrale una entrada desde su tarjeta.`,
             )
           }
           const sumar = await confirmarAccion({
             titulo: 'Este insumo ya está en la bodega',
             entidad: existente.nombre,
-            descripcion: `Tiene ${existente.stock_actual.toLocaleString('es-CO')} ${existente.unidad_medida} con el mismo proveedor. En lugar de duplicarlo, se sumarán ${cantidad.toLocaleString('es-CO')} ${existente.unidad_medida} como una entrada.`,
+            descripcion: `Tiene ${existente.stock_actual.toLocaleString('es-CO')} ${existente.unidad_medida} en bodega. En lugar de duplicarlo, se sumarán ${cantidad.toLocaleString('es-CO')} ${existente.unidad_medida} como una entrada.`,
             textoConfirmar: 'Sumar al existente',
             tono: 'aviso',
           })
           if (!sumar) {
-            throw new AvisoInsumo('No se guardó: ya existe un insumo con ese nombre y proveedor en esta granja.')
+            throw new AvisoInsumo('No se guardó: ya existe un insumo con ese nombre en esta granja.')
           }
           await registrarMovimiento(existente.id, {
             tipo_movimiento: 'entrada',
@@ -129,30 +104,6 @@ function InventarioPage() {
   const formulario = useFormularioInsumo(
     guardarInsumo,
     granjas.length === 1 ? granjas[0].id : 0,
-  )
-
-  // HU-58 · escenario 3: el proveedor que falta se registra sin salir del
-  // formulario y queda elegido en el insumo.
-  const { cambiar: cambiarCampoInsumo } = formulario
-  const altaProveedor = useFormularioProveedor(
-    useCallback(async (datos) => {
-      try {
-        const creado = await crearProveedor({
-          nombre: datos.nombre.trim(),
-          nit: datos.nit.trim(),
-          tipo_proveedor: datos.tipo_proveedor.trim() || undefined,
-          contacto_persona: datos.contacto_persona.trim() || undefined,
-          telefono: datos.telefono.trim() || undefined,
-          email: datos.email.trim() || undefined,
-          direccion: datos.direccion.trim() || undefined,
-        })
-        setProveedores((previos) => ordenarProveedores([...previos, creado]))
-        cambiarCampoInsumo('proveedor_habitual_id', creado.id)
-        toast.success(`Proveedor ${creado.nombre} registrado`)
-      } catch (err) {
-        throw new Error(mensajeDeError(err, 'No se pudo registrar el proveedor.'))
-      }
-    }, [cambiarCampoInsumo]),
   )
 
   const [busqueda, setBusqueda] = useState('')
@@ -339,26 +290,12 @@ function InventarioPage() {
         <FormularioInsumo
           form={formulario.form}
           granjas={granjas}
-          proveedores={proveedores}
-          onNuevoProveedor={permisosProveedor.crear ? altaProveedor.abrirCrear : undefined}
           modoEdicion={formulario.modoEdicion}
           guardando={formulario.guardando}
           error={formulario.error}
           onCambiar={formulario.cambiar}
           onGuardar={formulario.guardar}
           onCerrar={formulario.cerrar}
-        />
-      )}
-
-      {altaProveedor.abierto && (
-        <FormularioProveedor
-          form={altaProveedor.form}
-          modoEdicion={false}
-          guardando={altaProveedor.guardando}
-          error={altaProveedor.error}
-          onCambiar={altaProveedor.cambiar}
-          onGuardar={(evento) => void altaProveedor.guardar(evento)}
-          onCerrar={altaProveedor.cerrar}
         />
       )}
 
@@ -377,10 +314,6 @@ function InventarioPage() {
       )}
     </div>
   )
-}
-
-function ordenarProveedores(lista: Proveedor[]): Proveedor[] {
-  return [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es-CO'))
 }
 
 export default InventarioPage

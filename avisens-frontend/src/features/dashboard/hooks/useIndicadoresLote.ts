@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { compararConCurva, type ComparacionIndicador } from '@features/indicadores/api/indicadores'
+import { useCallback, useEffect, useState } from 'react'
+import { calcularIndicadores, compararConCurva, type ComparacionIndicador } from '@features/indicadores/api/indicadores'
 import { obtenerIndicadoresDeLote } from '../api/dashboard'
 import type { DashboardIndicador } from '../model/dashboard'
 
@@ -10,7 +10,7 @@ export function useIndicadoresLote(loteId: number | null) {
   const [comparacion, setComparacion] = useState<ComparacionIndicador | null>(null)
   const [cargando, setCargando] = useState(true)
 
-  useEffect(() => {
+  const recargar = useCallback(async () => {
     if (loteId === null) {
       setIndicadores([])
       setComparacion(null)
@@ -18,23 +18,29 @@ export function useIndicadoresLote(loteId: number | null) {
       return
     }
 
-    let vigente = true
     setCargando(true)
 
-    void obtenerIndicadoresDeLote(loteId)
-      .then((lista) => { if (vigente) setIndicadores(lista) })
-      .catch(() => { if (vigente) setIndicadores([]) })
-      .finally(() => { if (vigente) setCargando(false) })
+    // Sincroniza y calcula los indicadores del día con los datos más recientes de bitácora
+    await calcularIndicadores(loteId).catch(() => null)
 
-    // 404 solo si el lote nunca tuvo ni un indicador calculado. Sin curva
-    // sembrada, o con el ultimo dato incoherente, el backend igual responde
-    // 200 con un veredicto explicito (sin_referencia, peso_no_disponible...).
-    void compararConCurva(loteId)
-      .then((datos) => { if (vigente) setComparacion(datos) })
-      .catch(() => { if (vigente) setComparacion(null) })
-
-    return () => { vigente = false }
+    try {
+      const [lista, datosComparacion] = await Promise.all([
+        obtenerIndicadoresDeLote(loteId),
+        compararConCurva(loteId).catch(() => null),
+      ])
+      setIndicadores(lista)
+      setComparacion(datosComparacion)
+    } catch {
+      setIndicadores([])
+      setComparacion(null)
+    } finally {
+      setCargando(false)
+    }
   }, [loteId])
 
-  return { indicadores, comparacion, cargando }
+  useEffect(() => {
+    void recargar()
+  }, [recargar])
+
+  return { indicadores, comparacion, cargando, recargar }
 }
