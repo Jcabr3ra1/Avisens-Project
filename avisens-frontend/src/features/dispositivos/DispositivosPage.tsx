@@ -4,6 +4,7 @@ import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
 import PanelFirmware from '@features/firmware/components/PanelFirmware'
 import { useFirmware } from '@features/firmware/hooks/useFirmware'
 import { listarSensores, type Sensor } from '@features/sensores/api/sensores'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { IcChevronDown, IcChevronRight, IcChip, IcSearch } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import { listarDispositivos, type Dispositivo } from './api/dispositivos'
@@ -69,6 +70,11 @@ function DispositivosPage() {
     void recargar()
   }, [recargar])
 
+  useRefetchOnFocus(() => {
+    void recargar()
+    void firmware.recargar()
+  })
+
   const filas = useMemo(() => filasFlota(galpones, dispositivos), [galpones, dispositivos])
   const sensoresPorGalpon = useMemo(() => {
     const conteo = new Map<number, number>()
@@ -133,7 +139,6 @@ function DispositivosPage() {
         ultimaSenal={ultimaSenal}
         cargando={cargando}
         onElegirGranja={elegirGranja}
-        onActualizar={() => { void recargar(); void firmware.recargar() }}
       />
 
       <div className="flota-tabs" role="tablist" aria-label="Dispositivos">

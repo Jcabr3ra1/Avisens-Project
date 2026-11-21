@@ -1,15 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
 import { IcArrowRight } from '@shared/ui/icons/icons'
 import type { DashboardGranja } from '../model/dashboard'
 import type { EstadoGranja } from '../model/estadoGranja'
-import { detalleDeKpi, faseDelDia, lecturaDeSensor, posicionDelAstro, type SensorEscena } from '../model/escenaGalpon'
+import { detalleDeKpi, faseDelDia, lecturaDeSensor, type SensorEscena } from '../model/escenaGalpon'
 import type { KpiGranja } from '../model/resumenGranja'
-import lunaLowPoly from '../assets/escena/luna-low-poly.webp'
-import solLowPoly from '../assets/escena/sol-low-poly.webp'
-import EscenaGalpon from './escena/EscenaGalpon'
+import galponReal from '../assets/escena/galpon-real.webp'
 import type { ClimaVisual } from '@features/granjas/propietario/climaVisual'
-import { fondoDeGranja } from '@features/granjas/propietario/fondosGranja'
 import './HeroGranja.css'
 
 type Props = {
@@ -90,7 +86,7 @@ function useParalaje(ref: React.RefObject<HTMLElement | null>) {
 }
 
 function HeroGranja({
-  nombre, fecha, granjas, granjaId, estado, kpis, diaLote, aves, nombreGalpon, clima, sensores,
+  nombre, fecha, granjas, granjaId, estado, kpis, diaLote, nombreGalpon, sensores,
   cargando, hora, onGranjaChange, onAccion, onNavegar,
 }: Props) {
   const raiz = useRef<HTMLElement>(null)
@@ -98,11 +94,11 @@ function HeroGranja({
   useParalaje(raiz)
   const horaActual = useHoraLocal(hora)
   const fase = faseDelDia(horaActual)
-  const astro = posicionDelAstro(horaActual)
   const granja = granjas.find((item) => item.id === granjaId)
   const temperatura = sensores.find((sensor) => sensor.clase === 'temperatura' && sensor.valor !== null)
   const ambiente = temperatura ? lecturaDeSensor(temperatura) : null
   const indicadores = ORDEN_INDICADORES.flatMap((clave) => kpis.filter((kpi) => kpi.id === clave))
+  const tituloGalpon = nombreGalpon ?? granja?.nombre ?? 'Tu galpón'
 
   return (
     <section
@@ -111,23 +107,10 @@ function HeroGranja({
       data-fase={fase}
       data-resaltado={resaltado ?? undefined}
       aria-labelledby="hero-granja-titulo"
-      style={{ '--fondo': `url(${fondoDeGranja(fase, clima)})` } as CSSProperties}
     >
       <div className="hero-granja-fondo" aria-hidden="true">
-        <div className="hero-granja-paisaje" />
+        <img className="hero-granja-foto" src={galponReal} alt="" />
         <div className="hero-granja-velo" />
-        <span
-          key={`halo-${astro.tipo}`}
-          className={`hero-granja-halo hero-granja-halo--${astro.tipo}`}
-          style={{ left: `${astro.x}%`, top: `${(9 + ((astro.y - 10) / 22) * 12).toFixed(2)}%` }}
-        />
-        <img
-          key={astro.tipo}
-          className={`hero-granja-astro hero-granja-astro--${astro.tipo}`}
-          src={astro.tipo === 'sol' ? solLowPoly : lunaLowPoly}
-          alt=""
-          style={{ left: `${astro.x}%`, top: `${(9 + ((astro.y - 10) / 22) * 12).toFixed(2)}%` }}
-        />
       </div>
 
       <div className="hero-granja-controles">
@@ -180,14 +163,17 @@ function HeroGranja({
         </ul>
       </div>
 
-      <EscenaGalpon
-        nombreGalpon={nombreGalpon ?? granja?.nombre ?? 'Tu galpón'}
-        tono={estado.tono}
-        diaLote={diaLote}
-        aves={aves}
-        astro={astro}
-        fase={fase}
-      />
+      <div className="hero-granja-ficha-escena">
+        <div className="hero-granja-etiqueta-galpon">
+          <span className="hero-granja-etiqueta-punto" aria-hidden="true" />
+          <span className="hero-granja-etiqueta-nombre">{tituloGalpon}</span>
+          {ambiente ? (
+            <span className="hero-granja-etiqueta-dato">{ambiente}</span>
+          ) : diaLote !== null ? (
+            <span className="hero-granja-etiqueta-dato">Día {diaLote}</span>
+          ) : null}
+        </div>
+      </div>
     </section>
   )
 }
