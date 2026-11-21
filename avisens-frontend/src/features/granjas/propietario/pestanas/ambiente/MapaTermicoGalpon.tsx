@@ -979,7 +979,7 @@ export function MapaTermicoGalpon({
   useEffect(() => {
     luzRef.current?.(fase);
   }, [fase]);
-  const badgesRef = useRef(new Map<string, HTMLDivElement>());
+  const badgesRef = useRef(new Map<number, HTMLDivElement>());
   const ctxRef = useRef<{
     marcadores: Map<number, THREE.Mesh>;
     grupoMarcadores: THREE.Group;
