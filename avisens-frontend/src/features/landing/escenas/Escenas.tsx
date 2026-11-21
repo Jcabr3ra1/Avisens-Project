@@ -186,7 +186,7 @@ function VideoFondo({ video, velocidad = 0.65, pausado = false, id }: { video: (
   }, [velocidad, pausado])
 
   return (
-    <video id={id} ref={ref} muted loop playsInline preload="metadata" poster={video.poster} aria-hidden="true" tabIndex={-1}>
+    <video key={video.h264} id={id} ref={ref} muted loop playsInline preload="metadata" poster={video.poster} aria-hidden="true" tabIndex={-1}>
       {video.hevc && <source src={video.hevc} type='video/mp4; codecs="hvc1"' />}
       <source src={video.h264} type="video/mp4" />
     </video>
