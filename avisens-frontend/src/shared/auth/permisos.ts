@@ -146,3 +146,9 @@ export type PermisosPlan = {
 export function permisosDePlan(rol: string | null): PermisosPlan {
   return { registrar: rol === ROL_ADMIN || rol === ROL_PROPIETARIO }
 }
+
+// Cierre y liquidación del lote (HU-51).
+// Permitido al Administrador y al Propietario (dueño del galpón).
+export function puedeCerrarLote(rol: string | null): boolean {
+  return rol === ROL_ADMIN || rol === ROL_PROPIETARIO
+}

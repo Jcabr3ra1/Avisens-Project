@@ -47,7 +47,7 @@ const EVENTOS_SANITARIOS = [
   ['revision', 'Revisión'],
 ] as const
 
-function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar, onCerrar, complemento, editando = false, insumos = [] }: Props) {
+function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar, onCerrar, editando = false, insumos = [] }: Props) {
   const fechaRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -232,12 +232,11 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
           </>
         )}
 
-        {complemento}
-
         <label className="modal-campo">
           <span>Observaciones <em>(Opcional)</em></span>
           <textarea
             rows={3}
+            style={{ resize: 'none' }}
             value={form.observaciones}
             onChange={(evento) => onCambiar('observaciones', evento.target.value)}
           />

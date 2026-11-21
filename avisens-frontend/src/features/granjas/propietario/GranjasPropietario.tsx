@@ -71,13 +71,29 @@ function GranjasPropietario() {
   const [granjaId, setGranjaId] = useState<number | null>(() => enteroPositivo(parametros.get('granjaId')))
   const [galponId, setGalponId] = useState<number | null>(() => enteroPositivo(parametros.get('galpon')))
   const [pestana, setPestana] = useState<Pestana>(() => pestanaDe(parametros.get('pestana')))
-  const [vistaBitacora, setVistaBitacora] = useState<'resumen' | 'peso'>('resumen')
+  const [vistaBitacora, setVistaBitacora] = useState<'resumen' | 'peso'>(() => parametros.get('vista') === 'peso' ? 'peso' : 'resumen')
   const [enDetalle, setEnDetalle] = useState(() => parametros.get('galpon') !== null)
   const [revision, setRevision] = useState(0)
   const [datos, setDatos] = useState<DatosAbiertos>(null)
   const llegoConDestino = useRef(parametros.get('pestana') !== null || parametros.get('galpon') !== null)
 
-  const seleccionada = estructura.find((item) => item.granja.id === granjaId) ?? estructura[0] ?? null
+  useEffect(() => {
+    const pGranja = enteroPositivo(parametros.get('granjaId'))
+    if (pGranja !== null) setGranjaId(pGranja)
+    const pGalpon = enteroPositivo(parametros.get('galpon'))
+    if (pGalpon !== null) {
+      setGalponId(pGalpon)
+      setEnDetalle(true)
+    }
+    const pPestana = parametros.get('pestana')
+    if (pPestana !== null) setPestana(pestanaDe(pPestana))
+    const pVista = parametros.get('vista')
+    if (pVista === 'peso' || pVista === 'resumen') setVistaBitacora(pVista)
+  }, [parametros])
+
+  const seleccionada = estructura.find((item) => item.granja.id === granjaId)
+    ?? (galponId ? estructura.find((item) => item.galpones.some((g) => g.id === galponId)) : null)
+    ?? estructura[0] ?? null
   const clima = useClimaVisual(seleccionada?.granja.id ?? null)
   const galpones = useMemo(
     () => [...(seleccionada?.galpones ?? [])].sort((a, b) => Number(b.activo) - Number(a.activo)),

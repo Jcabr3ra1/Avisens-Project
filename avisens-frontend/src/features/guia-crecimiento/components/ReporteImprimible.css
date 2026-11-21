@@ -1,0 +1,168 @@
+/* Estilos del reporte imprimible de lote (HU-29) */
+
+.reporte-imprimible-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.rep-documento {
+  background: var(--card, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  padding: 2rem;
+  color: var(--text, #0f172a);
+}
+
+.rep-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid var(--border2, #cbd5e1);
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.rep-logo-titulo h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--dash-ink, #0f172a);
+  margin: 0 0 0.25rem 0;
+}
+
+.rep-logo-titulo p {
+  font-size: 0.85rem;
+  color: var(--text3, #64748b);
+  margin: 0;
+}
+
+.rep-meta-lote {
+  text-align: right;
+  font-size: 0.85rem;
+}
+
+.rep-codigo-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  background: var(--bg-tint, #f1f5f9);
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 4px;
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.rep-seccion-titulo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--dash-ink, #0f172a);
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  padding-bottom: 0.35rem;
+}
+
+.rep-resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.rep-tarjeta-kpi {
+  background: var(--bg-tint, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  padding: 0.85rem;
+}
+
+.rep-tarjeta-kpi dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--text3, #64748b);
+  margin-bottom: 0.25rem;
+}
+
+.rep-tarjeta-kpi dd {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--dash-ink, #0f172a);
+  margin: 0;
+}
+
+.rep-financiero-caja {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.rep-financiero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.rep-tabla-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+}
+
+.rep-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.rep-tabla th, .rep-tabla td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border, #f1f5f9);
+}
+
+.rep-tabla th {
+  background: var(--bg-tint, #f8fafc);
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text2, #475569);
+}
+
+.rep-tabla td.num, .rep-tabla th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.rep-pie {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text3, #64748b);
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .rep-impresion, .rep-impresion * {
+    visibility: visible;
+  }
+  .rep-impresion {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .modal-acciones, .rep-barra-acciones, .modal-cerrar-btn {
+    display: none !important;
+  }
+}

@@ -130,6 +130,10 @@
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
+.modal-campo textarea {
+  resize: none;
+}
+
 .modal-campo input:focus-visible,
 .modal-campo select:focus-visible,
 .modal-campo textarea:focus-visible {
