@@ -25,7 +25,7 @@ export const videos = {
   calor: video('problema-calor'),
   lluvia: video('problema-lluvia'),
   solucion: video('solucion'),
-  beneficioLote: video('beneficio-lote', false),
+  beneficioLote: video('beneficio-cria', false),
   beneficioCelular: video('beneficio-celular', false),
 }
 
