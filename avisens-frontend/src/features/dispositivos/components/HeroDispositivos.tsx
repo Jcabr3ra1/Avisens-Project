@@ -1,13 +1,12 @@
-import { lazy, Suspense, type CSSProperties } from 'react'
+import { type CSSProperties } from 'react'
 import NumeroAnimado from '@features/organizaciones/components/NumeroAnimado'
 import type { GranjaOrganizacionDetalle } from '@features/organizaciones/api/organizaciones'
-import { describirMaqueta } from '@features/organizaciones/model/maqueta'
-import { IcRefresh } from '@shared/ui/icons/icons'
 import { hace } from '@shared/utils/fechas'
+import fotoCampo from '../assets/dispositivos-campo.webp'
 import '@shared/ui/movimiento.css'
 import '@features/organizaciones/components/HeroOrganizacion.css'
 
-const EscenaOrganizacion = lazy(() => import('@features/organizaciones/components/EscenaOrganizacion'))
+const MAX_CHIPS_GRANJA = 4
 
 type Indicador = { label: string; valor: number; tono: 'verde' | 'profundo' | 'amarillo' | 'naranja' }
 
@@ -24,14 +23,15 @@ type Props = {
   ultimaSenal: string | null
   cargando: boolean
   onElegirGranja: (granjaId: number) => void
-  onActualizar: () => void
 }
 
 function HeroDispositivos({
   granjas, granjaResaltada, conectados, controladores, sinReportar, sinControlador, sensores, alDia,
-  versionPublicada, ultimaSenal, cargando, onElegirGranja, onActualizar,
+  versionPublicada, ultimaSenal, cargando, onElegirGranja,
 }: Props) {
   const todoEnLinea = controladores > 0 && conectados === controladores
+  const granjasVisibles = granjas.slice(0, MAX_CHIPS_GRANJA)
+  const granjasRestantes = Math.max(granjas.length - MAX_CHIPS_GRANJA, 0)
   const indicadores: Indicador[] = [
     { label: 'Controladores', valor: controladores, tono: 'profundo' },
     { label: 'En línea', valor: conectados, tono: 'verde' },
@@ -65,25 +65,40 @@ function HeroDispositivos({
         <p className="org-hero-subtitulo org-aparece" style={{ '--orden': 4 } as CSSProperties}>
           Los controladores ESP32 de todas las granjas: su conexión, sus sensores y el firmware que llevan.
         </p>
-        <div className="org-hero-acciones org-aparece" style={{ '--orden': 5 } as CSSProperties}>
-          <button type="button" className="adm-btn adm-btn--primario org-hero-actualizar" onClick={onActualizar} disabled={cargando}>
-            <IcRefresh size={16} aria-hidden="true" />
-            {cargando ? 'Actualizando…' : 'Actualizar'}
-          </button>
-        </div>
       </div>
 
-      <div className="org-hero-escena">
-        <Suspense fallback={<div className="org-hero-escena-cargando" aria-hidden="true" />}>
-          <EscenaOrganizacion
-            granjas={granjas}
-            semilla={7}
-            descripcion={describirMaqueta('el campo de Avisens', granjas)}
-            resaltadaId={granjaResaltada}
-            alElegirGranja={onElegirGranja}
-          />
-        </Suspense>
-        <p className="org-hero-escena-nota org-hero-escena-nota--pista">Toca una granja para ver sus galpones abajo.</p>
+      <div className="org-hero-escena org-hero-escena--foto">
+        <img
+          className="org-hero-foto"
+          src={fotoCampo}
+          alt="Galpones avícolas monitoreados con dispositivos de campo Avisens"
+          style={{ objectPosition: '56% 52%' }}
+        />
+        <p className="org-hero-escena-nota org-hero-escena-nota--foto">
+          {granjas.length === 0 ? 'Sin granjas en campo todavía' : 'Toca una granja para ver sus galpones abajo.'}
+        </p>
+        {granjasVisibles.length > 0 && (
+          <div className="org-hero-granjas" aria-label="Granjas en campo">
+            {granjasVisibles.map((granja) => {
+              const activa = granja.galpones.some((galpon) => galpon.activo)
+              return (
+                <button
+                  key={granja.id}
+                  type="button"
+                  className={`org-hero-granja-pill${granjaResaltada === granja.id ? ' is-activa' : ''}`}
+                  onClick={() => onElegirGranja(granja.id)}
+                >
+                  <span className={`org-hero-granja-punto${activa ? ' is-activa' : ''}`} aria-hidden="true" />
+                  <span>{granja.nombre}</span>
+                  <small>{granja.galpones.length}</small>
+                </button>
+              )
+            })}
+            {granjasRestantes > 0 && (
+              <span className="org-hero-granja-mas">+{granjasRestantes} más</span>
+            )}
+          </div>
+        )}
       </div>
 
       <ul className="org-hero-indicadores" aria-label="Resumen del campo">

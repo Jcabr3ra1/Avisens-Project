@@ -1,19 +1,18 @@
-import { lazy, Suspense, type CSSProperties, type ReactNode } from 'react'
-import { IcAlert, IcHome, IcLeaf, IcRefresh, IcServer, IcThermo, IcUsers } from '@shared/ui/icons/icons'
+import { type CSSProperties, type ReactNode } from 'react'
+import { IcAlert, IcHome, IcLeaf, IcServer, IcThermo, IcUsers } from '@shared/ui/icons/icons'
 import type { OrganizacionDetalle } from '../api/organizaciones'
-import { describirMaqueta, MAX_GRANJAS_MAQUETA } from '../model/maqueta'
 import { etiquetaPlan, fechaCorta } from '../model/organizacion'
+import fotoOrganizacion from '../assets/organizacion-granja.webp'
 import NumeroAnimado from './NumeroAnimado'
 import '@shared/ui/movimiento.css'
 import './HeroOrganizacion.css'
 
-const EscenaOrganizacion = lazy(() => import('./EscenaOrganizacion'))
+const MAX_CHIPS_GRANJA = 4
 
 interface Props {
   detalle: OrganizacionDetalle
   resaltadaId: number | null
   alElegirGranja: (granjaId: number) => void
-  alActualizar: () => void
   alVolver: () => void
 }
 
@@ -24,7 +23,7 @@ interface Indicador {
   tono: 'verde' | 'profundo' | 'amarillo' | 'naranja'
 }
 
-function HeroOrganizacion({ detalle, resaltadaId, alElegirGranja, alActualizar, alVolver }: Props) {
+function HeroOrganizacion({ detalle, resaltadaId, alElegirGranja, alVolver }: Props) {
   const galpones = detalle.granjas.flatMap(granja => granja.galpones)
   const indicadores: Indicador[] = [
     { label: 'Granjas', valor: detalle._count.granjas, icono: <IcLeaf size={18} />, tono: 'verde' },
@@ -39,7 +38,11 @@ function HeroOrganizacion({ detalle, resaltadaId, alElegirGranja, alActualizar, 
       tono: 'naranja',
     },
   ]
-  const granjasFuera = Math.max(detalle.granjas.length - MAX_GRANJAS_MAQUETA, 0)
+  const granjasVisibles = detalle.granjas.slice(0, MAX_CHIPS_GRANJA)
+  const granjasRestantes = Math.max(detalle.granjas.length - MAX_CHIPS_GRANJA, 0)
+  const etiquetaResumen = detalle.granjas.length === 0
+    ? 'Sin granjas registradas aún'
+    : `${detalle._count.granjas} ${detalle._count.granjas === 1 ? 'granja' : 'granjas'} · ${galpones.length} ${galpones.length === 1 ? 'galpón' : 'galpones'}`
 
   return (
     <section className="org-hero" aria-labelledby="org-hero-titulo">
@@ -66,33 +69,40 @@ function HeroOrganizacion({ detalle, resaltadaId, alElegirGranja, alActualizar, 
           Personas, granjas y galpones relacionados con la organización mediante los vínculos existentes en Avisens.
         </p>
         <div className="org-hero-acciones org-aparece" style={{ '--orden': 5 } as CSSProperties}>
-          <button type="button" className="adm-btn adm-btn--primario org-hero-actualizar" onClick={alActualizar}>
-            <IcRefresh size={16} aria-hidden="true" />
-            Actualizar
-          </button>
           <button type="button" className="adm-btn adm-btn--secundario" onClick={alVolver}>
             Volver
           </button>
         </div>
       </div>
 
-      <div className="org-hero-escena">
-        <Suspense fallback={<div className="org-hero-escena-cargando" aria-hidden="true" />}>
-          <EscenaOrganizacion
-            granjas={detalle.granjas}
-            semilla={detalle.id}
-            descripcion={describirMaqueta(detalle.nombre, detalle.granjas)}
-            resaltadaId={resaltadaId}
-            alElegirGranja={alElegirGranja}
-          />
-        </Suspense>
-        {detalle.granjas.length === 0 ? (
-          <p className="org-hero-escena-nota">La maqueta crecerá cuando la organización registre su primera granja.</p>
-        ) : (
-          <p className="org-hero-escena-nota org-hero-escena-nota--pista">
-            {granjasFuera > 0 ? `Se muestran ${MAX_GRANJAS_MAQUETA} granjas de ${detalle.granjas.length}. ` : ''}
-            Toca una granja para ver su ficha.
-          </p>
+      <div className="org-hero-escena org-hero-escena--foto">
+        <img
+          className="org-hero-foto"
+          src={fotoOrganizacion}
+          alt={`Operación avícola de ${detalle.nombre}`}
+        />
+        <p className="org-hero-escena-nota org-hero-escena-nota--foto">{etiquetaResumen}</p>
+        {granjasVisibles.length > 0 && (
+          <div className="org-hero-granjas" aria-label="Granjas de la organización">
+            {granjasVisibles.map((granja) => {
+              const activa = granja.galpones.some((galpon) => galpon.activo)
+              return (
+                <button
+                  key={granja.id}
+                  type="button"
+                  className={`org-hero-granja-pill${resaltadaId === granja.id ? ' is-activa' : ''}`}
+                  onClick={() => alElegirGranja(granja.id)}
+                >
+                  <span className={`org-hero-granja-punto${activa ? ' is-activa' : ''}`} aria-hidden="true" />
+                  <span>{granja.nombre}</span>
+                  <small>{granja.galpones.length}</small>
+                </button>
+              )
+            })}
+            {granjasRestantes > 0 && (
+              <span className="org-hero-granja-mas">+{granjasRestantes} más</span>
+            )}
+          </div>
         )}
       </div>
 

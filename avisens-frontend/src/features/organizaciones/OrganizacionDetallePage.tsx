@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { IcAlert, IcChat, IcChevronRight, IcLeaf, IcUsers } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import {
@@ -73,6 +74,7 @@ function OrganizacionDetallePage() {
   // Actualiza los conteos sin desmontar el formulario que conserva el token
   // recién generado. Ese secreto solo se muestra durante el registro actual.
   const actualizarResumen = useCallback(async () => {
+    if (!Number.isInteger(id) || id <= 0) return
     const version = secuenciaCarga.current
     try {
       const actualizado = await obtenerDetalleOrganizacion(id)
@@ -81,7 +83,7 @@ function OrganizacionDetallePage() {
       setAvisoActualizacion('')
     } catch {
       if (version !== secuenciaCarga.current) return
-      setAvisoActualizacion('El cambio se guardó, pero no se pudo actualizar el resumen. Usa Actualizar para volver a consultarlo.')
+      setAvisoActualizacion('El cambio se guardó, pero no se pudo actualizar el resumen. Recarga la página para volver a consultarlo.')
     }
   }, [id])
 
@@ -110,6 +112,8 @@ function OrganizacionDetallePage() {
     void cargar()
     return () => { secuenciaCarga.current += 1 }
   }, [cargar])
+
+  useRefetchOnFocus(actualizarResumen)
 
   const revelarGranja = useCallback((granjaId: number) => {
     if (seccionGranjasRef.current) seccionGranjasRef.current.open = true
@@ -159,7 +163,6 @@ function OrganizacionDetallePage() {
         detalle={detalle}
         resaltadaId={resaltadaId}
         alElegirGranja={revelarGranja}
-        alActualizar={() => void cargar()}
         alVolver={() => navigate('/organizaciones')}
       />
 

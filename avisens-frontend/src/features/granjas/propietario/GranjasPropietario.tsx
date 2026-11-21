@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as Tabs from '@radix-ui/react-tabs'
 import NumeroAnimado from '@features/organizaciones/components/NumeroAnimado'
 import type { Lote } from '@features/lotes/api/lotes'
-import { IcArrowRight, IcCheck, IcChevronRight, IcLeaf, IcRefresh } from '@shared/ui/icons/icons'
+import { IcArrowRight, IcCheck, IcChevronRight, IcLeaf } from '@shared/ui/icons/icons'
 import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import { getRol } from '@shared/api'
@@ -15,12 +15,9 @@ import { useEstructuraGranjas } from '../hooks/useEstructuraGranjas'
 import { useIndicadoresDeLotes } from '../hooks/useIndicadoresDeLotes'
 import { pesajesDelLote, progresoDatos, proximoPaso, type DestinoPaso, type PendienteDatos } from './explorador'
 import { useCurvaLote } from './useCurvaLote'
-import lunaLowPoly from '@features/dashboard/assets/escena/luna-low-poly.webp'
-import solLowPoly from '@features/dashboard/assets/escena/sol-low-poly.webp'
-import { useClimaVisual } from './useClimaVisual'
 import { useHoraDelDia } from '@features/dashboard/hooks/useFaseDelDia'
-import { faseDelDia, posicionDelAstro } from '@features/dashboard/model/escenaGalpon'
-import { fondoDeGranja } from './fondosGranja'
+import { faseDelDia } from '@features/dashboard/model/escenaGalpon'
+import fotoGranjaReal from './assets/ficha-granja-real.webp'
 import ListaGalpones from './ListaGalpones'
 import ResumenPestana from './pestanas/ResumenPestana'
 import LotePestana from './pestanas/LotePestana'
@@ -35,7 +32,6 @@ import '@shared/ui/movimiento.css'
 import '@features/organizaciones/components/HeroOrganizacion.css'
 import './GranjasPropietario.css'
 
-const EscenaGranja = lazy(() => import('./EscenaGranja'))
 const cargarAlertas = () => import('@features/alertas/AlertasPage')
 const AlertasPage = lazy(cargarAlertas)
 
@@ -65,7 +61,6 @@ function GranjasPropietario() {
   const navigate = useNavigate()
   const hora = useHoraDelDia()
   const fase = faseDelDia(hora)
-  const astro = posicionDelAstro(hora)
   const [parametros] = useSearchParams()
   const { estructura, lineasGeneticas, consumoPorLote, cargando, error, recargar } = useEstructuraGranjas()
   const [granjaId, setGranjaId] = useState<number | null>(() => enteroPositivo(parametros.get('granjaId')))
@@ -94,7 +89,6 @@ function GranjasPropietario() {
   const seleccionada = estructura.find((item) => item.granja.id === granjaId)
     ?? (galponId ? estructura.find((item) => item.galpones.some((g) => g.id === galponId)) : null)
     ?? estructura[0] ?? null
-  const clima = useClimaVisual(seleccionada?.granja.id ?? null)
   const galpones = useMemo(
     () => [...(seleccionada?.galpones ?? [])].sort((a, b) => Number(b.activo) - Number(a.activo)),
     [seleccionada],
@@ -207,25 +201,9 @@ function GranjasPropietario() {
       <section
         className="org-hero org-hero--granja"
         data-fase={fase}
-        data-clima={clima}
-        style={{ '--fondo': `url(${fondoDeGranja(fase, clima)})` } as CSSProperties}
         aria-labelledby="gp-hero-titulo"
       >
-        <div className="gp-hero-fondo" aria-hidden="true" />
-        <span
-          key={`halo-${astro.tipo}`}
-          className={`gp-hero-halo gp-hero-halo--${astro.tipo}`}
-          style={{ left: `${56 + ((astro.x - 44) / 42) * 34}%`, top: `${(8 + ((astro.y - 10) / 22) * 13).toFixed(2)}%` }}
-        />
-        <img
-          key={astro.tipo}
-          className={`gp-hero-astro gp-hero-astro--${astro.tipo}`}
-          src={astro.tipo === 'sol' ? solLowPoly : lunaLowPoly}
-          alt=""
-          aria-hidden="true"
-          style={{ left: `${56 + ((astro.x - 44) / 42) * 34}%`, top: `${(8 + ((astro.y - 10) / 22) * 13).toFixed(2)}%` }}
-        />
-        {clima === 'lluvia' && <div className="gp-hero-lluvia" aria-hidden="true" />}
+        <img className="gp-hero-foto" src={fotoGranjaReal} alt="" aria-hidden="true" />
         <div className="gp-hero-velo" aria-hidden="true" />
         <div className="org-hero-texto">
           <span className="adm-eyebrow org-aparece" style={{ '--orden': 0 } as CSSProperties}>
@@ -251,24 +229,21 @@ function GranjasPropietario() {
           <p className="org-hero-subtitulo org-aparece" style={{ '--orden': 4 } as CSSProperties}>
             Elige un galpón para ver su lote, su ambiente y el siguiente paso que necesita.
           </p>
-          <div className="org-hero-acciones org-aparece" style={{ '--orden': 5 } as CSSProperties}>
-            {progreso && progreso.pendientes.length > 0 ? (
+          {progreso && progreso.pendientes.length > 0 && (
+            <div className="org-hero-acciones org-aparece" style={{ '--orden': 5 } as CSSProperties}>
               <button type="button" className="adm-btn adm-btn--primario" onClick={() => abrirPendiente(progreso.pendientes[0])}>
                 Completar datos · {progreso.completos}/{progreso.total}
                 <IcArrowRight size={15} aria-hidden="true" />
               </button>
-            ) : null}
-            <button type="button" className="adm-btn adm-btn--secundario" onClick={() => void recargarTodo()} disabled={cargando}>
-              <IcRefresh size={15} aria-hidden="true" />
-              {cargando ? 'Actualizando…' : 'Actualizar'}
-            </button>
-          </div>
+            </div>
+          )}
         </div>
 
-        <div className="org-hero-escena">
-          <Suspense fallback={<div className="org-hero-escena-cargando" aria-hidden="true" />}>
-            <EscenaGranja nombre={granja.nombre} fondo={fondoDeGranja(fase, clima)} clima={clima} posicionAstro={astro.x} />
-          </Suspense>
+        <div className="org-hero-escena org-hero-escena--granja-foto">
+          <p className="org-hero-escena-nota org-hero-escena-nota--foto">
+            {galpones.length} {galpones.length === 1 ? 'galpón' : 'galpones'}
+            {ubicacion ? ` · ${ubicacion}` : ''}
+          </p>
         </div>
 
         <ul className="org-hero-indicadores" aria-label={`Resumen de ${granja.nombre}`}>

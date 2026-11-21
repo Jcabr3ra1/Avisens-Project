@@ -1,31 +1,11 @@
-/* Franja del resumen: texto y acción a la izquierda, el galpón como
-   protagonista a la derecha y los indicadores agrupados bajo el botón. La hora
-   real del día colorea el paisaje y el galpón. */
+/* Franja del resumen: texto y acción a la izquierda, fotografía real del galpón
+   como protagonista a la derecha y los indicadores agrupados bajo el botón. */
 
 .hero-granja {
   --hero-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --hero-texto: #203b32;
   --hero-texto-suave: #3d564a;
   --hero-linea: color-mix(in srgb, var(--hero-texto) 22%, transparent);
-  --cielo-alto: #cddccb;
-  --cielo-bajo: #f7f6ef;
-  --seto-lejos: #7fa088;
-  --seto: #5f8a6f;
-  --piso: #86a07f;
-  --piso-borde: #6f8f6c;
-  --sombra-color: #1d3a2e;
-  --sombra-opacidad: 0.34;
-  --tinte: transparent;
-  --tinte-opacidad: 0;
-  --filtro-galpon: saturate(0.94);
-  --interior-oscuro: 0.14;
-  --luz-bombillo: 0.2;
-  --luz-piso: 0;
-  --madera: #6b5a3c;
-  --letrero: #f7f6ef;
-  --contorno: #203b32;
-  --techo-sombra: #0d4537;
-  --led-activo: #2f9e6f;
   --lampara: #47a678;
 
   position: relative;
@@ -38,64 +18,19 @@
   border: 1px solid color-mix(in srgb, var(--hero-texto) 14%, transparent);
   border-radius: 28px;
   color: var(--hero-texto);
-  background: linear-gradient(180deg, var(--cielo-alto) 0%, var(--cielo-bajo) 80%);
+  background: #172e26;
   box-shadow: var(--shadow-md);
-}
-
-.hero-granja[data-fase='amanecer'] {
-  --cielo-alto: #f1d2a2;
-  --cielo-bajo: #faf0df;
-  --seto-lejos: #8fa57a;
-  --seto: #6e8f62;
-  --piso: #97a87a;
-  --piso-borde: #7f9a6a;
-  --sombra-opacidad: 0.3;
-  --tinte: #ffd2a8;
-  --tinte-opacidad: 0.38;
-  --luz-piso: 0.1;
-  --interior-oscuro: 0.26;
-  --luz-bombillo: 0.3;
-}
-
-.hero-granja[data-fase='tarde'] {
-  --cielo-alto: #eebd7e;
-  --cielo-bajo: #f8e7d0;
-  --seto-lejos: #81986b;
-  --seto: #647e55;
-  --piso: #8c9a6f;
-  --piso-borde: #788c5f;
-  --sombra-opacidad: 0.42;
-  --tinte: #ffb583;
-  --tinte-opacidad: 0.42;
-  --luz-piso: 0.24;
-  --interior-oscuro: 0.34;
-  --luz-bombillo: 0.45;
 }
 
 .hero-granja[data-fase='noche'] {
   --hero-texto: #f7f6ef;
   --hero-texto-suave: #cfdccf;
-  --cielo-alto: #0b231c;
-  --cielo-bajo: #173a2f;
-  --seto-lejos: #0e3629;
-  --seto: #0a2b21;
-  --piso: #0d2d24;
-  --piso-borde: #1b4a3a;
-  --sombra-color: #02100b;
-  --sombra-opacidad: 0.55;
-  --tinte: #96a58b;
-  --tinte-opacidad: 0.5;
-  --filtro-galpon: brightness(0.9) saturate(0.92) drop-shadow(0 0 1.5px rgb(255 238 200 / 0.5));
-  --interior-oscuro: 0.66;
-  --luz-bombillo: 0.7;
-  --luz-piso: 0.4;
-  --techo-sombra: #062d24;
 }
 
 .hero-granja--atencion { --lampara: #e3c565; }
 .hero-granja--critico { --lampara: #e5786b; }
 
-/* ── Paisaje ──────────────────────────────────────── */
+/* ── Fondo fotográfico ────────────────────────────────────── */
 .hero-granja-fondo {
   position: absolute;
   inset: 0;
@@ -103,78 +38,46 @@
   pointer-events: none;
 }
 
-.hero-granja-astro {
-  position: absolute;
-  display: block;
-  width: 50px;
-  filter: saturate(0.92) brightness(1.06) drop-shadow(0 0 10px rgb(255 214 130 / 0.6));
-  aspect-ratio: 1;
-  object-fit: contain;
-  translate: -50% -50%;
-  transform: translate3d(calc(var(--px, 0) * -12px), calc(var(--py, 0) * -6px), 0);
-  transition: transform 700ms var(--hero-ease);
-}
-
-.hero-granja-astro--luna {
-  width: 42px;
-  filter: drop-shadow(0 0 10px rgb(220 232 255 / 0.5));
-}
-
-.hero-granja-halo {
-  position: absolute;
-  width: min(78vw, 640px);
-  aspect-ratio: 1;
-  pointer-events: none;
-  translate: -50% -50%;
-  border-radius: 50%;
-  animation: hero-granja-astro-entra 1200ms var(--hero-ease) both;
-}
-
-.hero-granja-halo--sol {
-  background: radial-gradient(circle, rgb(255 246 205 / 0.95) 0%, rgb(255 226 150 / 0.62) 9%, rgb(255 212 125 / 0.3) 24%, rgb(255 205 120 / 0.1) 46%, transparent 68%);
-}
-
-.hero-granja-halo--luna {
-  width: min(60vw, 460px);
-  background: radial-gradient(circle, rgb(226 238 255 / 0.5) 0%, rgb(190 212 255 / 0.2) 16%, rgb(170 195 245 / 0.07) 40%, transparent 65%);
-}
-
-.hero-granja[data-fase='amanecer'] .hero-granja-halo--sol,
-.hero-granja[data-fase='tarde'] .hero-granja-halo--sol {
-  background: radial-gradient(circle, rgb(255 226 170 / 0.95) 0%, rgb(255 184 110 / 0.62) 10%, rgb(255 160 90 / 0.3) 26%, rgb(255 150 90 / 0.1) 48%, transparent 70%);
-}
-
-.hero-granja-astro--sol { animation: hero-granja-astro-entra 900ms var(--hero-ease) both, hero-granja-sol-gira 160s linear infinite; }
-
-@keyframes hero-granja-sol-gira {
-  to { rotate: 360deg; }
-}
-.hero-granja-astro--luna { animation: hero-granja-astro-entra 900ms var(--hero-ease) both; }
-
-@keyframes hero-granja-astro-entra {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.hero-granja-paisaje {
+.hero-granja-foto {
   position: absolute;
   inset: 0;
-  background: var(--fondo, none) center bottom / cover no-repeat;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 64% 58%;
+  transform: scale(1.035) translate3d(calc(var(--px, 0) * -6px), calc(var(--py, 0) * -3px), 0);
+  transition: transform 650ms var(--hero-ease), filter 400ms ease;
+}
+
+.hero-granja[data-fase='amanecer'] .hero-granja-foto,
+.hero-granja[data-fase='tarde'] .hero-granja-foto {
+  filter: saturate(1.04) contrast(1.02) sepia(0.06);
+}
+
+.hero-granja[data-fase='noche'] .hero-granja-foto {
+  filter: brightness(0.72) contrast(1.06) saturate(0.88);
 }
 
 .hero-granja-velo {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgb(247 246 239 / 0.9) 0%, rgb(247 246 239 / 0.7) 30%, rgb(247 246 239 / 0) 58%);
+  background:
+    linear-gradient(90deg, rgb(247 246 239 / 0.97) 0%, rgb(247 246 239 / 0.92) 34%, rgb(247 246 239 / 0.56) 52%, rgb(247 246 239 / 0.08) 72%, rgb(247 246 239 / 0) 100%),
+    linear-gradient(180deg, rgb(247 246 239 / 0.14) 0%, transparent 25%, transparent 72%, rgb(15 39 32 / 0.24) 100%);
 }
 
 .hero-granja[data-fase='tarde'] .hero-granja-velo,
 .hero-granja[data-fase='amanecer'] .hero-granja-velo {
-  background: linear-gradient(90deg, rgb(251 243 226 / 0.9) 0%, rgb(251 243 226 / 0.7) 30%, rgb(251 243 226 / 0) 58%);
+  background:
+    linear-gradient(90deg, rgb(250 242 228 / 0.97) 0%, rgb(250 242 228 / 0.91) 34%, rgb(250 242 228 / 0.54) 52%, rgb(250 242 228 / 0.08) 72%, rgb(250 242 228 / 0) 100%),
+    linear-gradient(180deg, rgb(250 242 228 / 0.14) 0%, transparent 25%, transparent 72%, rgb(15 39 32 / 0.24) 100%);
 }
 
 .hero-granja[data-fase='noche'] .hero-granja-velo {
-  background: linear-gradient(90deg, rgb(7 24 20 / 0.88) 0%, rgb(7 24 20 / 0.62) 32%, rgb(7 24 20 / 0) 62%);
+  background:
+    linear-gradient(90deg, rgb(11 35 28 / 0.96) 0%, rgb(11 35 28 / 0.88) 36%, rgb(11 35 28 / 0.52) 56%, rgb(11 35 28 / 0.16) 78%, rgb(11 35 28 / 0.08) 100%),
+    linear-gradient(180deg, rgb(11 35 28 / 0.2) 0%, transparent 30%, transparent 70%, rgb(7 24 20 / 0.48) 100%);
 }
 
 /* ── Texto, acción e indicadores ──────────────────────────── */
@@ -319,8 +222,7 @@
   font-weight: 500;
 }
 
-.hero-granja-selector select,
-.hero-granja-sync {
+.hero-granja-selector select {
   min-height: 34px;
   padding: 0.25rem 0.75rem;
   border: 1px solid var(--hero-linea);
@@ -338,170 +240,79 @@
   color: #203b32;
 }
 
-.hero-granja-sync {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  transition: background 160ms ease;
-}
-
-.hero-granja-sync:disabled { cursor: progress; opacity: 0.75; }
-.hero-granja-sync.is-spinning svg { animation: hero-granja-giro 900ms linear infinite; }
-@keyframes hero-granja-giro { to { transform: rotate(360deg); } }
-
 .hero-granja button:focus-visible,
 .hero-granja select:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
-/* ── Escena ───────────────────────────────────────────────── */
-.escena {
+/* ── Etiqueta del galpón sobre la foto ────────────────────── */
+.hero-granja-ficha-escena {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   grid-column: 2;
   align-self: end;
-  animation: escena-entra 900ms var(--hero-ease) both;
-}
-
-@keyframes escena-entra {
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: none; }
-}
-
-.escena-lienzo {
-  position: relative;
-  aspect-ratio: 760 / 484;
-  transform: translate3d(calc(var(--px, 0) * -5px), calc(var(--py, 0) * -2.5px), 0);
-  transition: transform 600ms var(--hero-ease);
-}
-
-.escena-capa {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.escena-suelo { overflow: visible; }
-.escena-seto { fill: var(--seto); }
-.escena-seto--lejos { fill: var(--seto-lejos); }
-.escena-piso { fill: var(--piso); }
-.escena-piso-borde { fill: var(--piso-borde); }
-.escena-sombra { fill: var(--sombra-color); opacity: var(--sombra-opacidad); }
-.escena-luz-piso { opacity: var(--luz-piso); }
-
-.escena-galpon {
-  position: absolute;
-  display: block;
-  pointer-events: none;
-  filter: var(--filtro-galpon);
-  transition: filter 400ms ease;
-}
-
-.escena-tinte {
-  position: absolute;
-  pointer-events: none;
-  background: var(--tinte);
-  opacity: var(--tinte-opacidad);
-  mix-blend-mode: multiply;
-  -webkit-mask-image: var(--forma-galpon, none);
-  mask-image: var(--forma-galpon, none);
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
-}
-
-.escena-interior {
-  position: absolute;
-  pointer-events: none;
-  background: radial-gradient(ellipse 30% 34% at 50% 49%, rgb(8 22 17 / 1), rgb(8 22 17 / 0.55) 55%, transparent 100%);
-  opacity: var(--interior-oscuro);
-  mix-blend-mode: multiply;
-  -webkit-mask-image: var(--forma-galpon, none);
-  mask-image: var(--forma-galpon, none);
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
-}
-
-.escena-bombillo {
-  position: absolute;
-  z-index: 1;
-  width: calc(var(--tam, 6) * 0.8%);
-  aspect-ratio: 1;
-  pointer-events: none;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(255 226 150 / 0.7) 0%, rgb(255 200 110 / 0.24) 32%, transparent 62%);
-  opacity: var(--luz-bombillo);
-  mix-blend-mode: screen;
-  transform: translate(-50%, -50%);
-}
-
-.escena-letrero {
-  position: absolute;
-  z-index: 3;
-  container-type: inline-size;
-  pointer-events: none;
-}
-
-.escena-letrero img {
-  display: block;
-  width: 100%;
-  height: auto;
-  filter: var(--filtro-galpon, none);
-}
-
-.escena-letrero-nombre {
-  position: absolute;
-  top: 9%;
-  right: 9%;
-  left: 9%;
-  height: 34%;
+  justify-self: end;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #203b32;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: clamp(1rem, 2.2vw, 1.5rem);
 }
 
-.escena-letrero-nombre > span {
-  max-width: 100%;
+.hero-granja-etiqueta-galpon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: min(100%, 22rem);
+  padding: 0.5rem 0.9rem;
+  border: 1px solid rgb(247 246 239 / 0.24);
+  border-radius: 999px;
+  background: rgb(15 39 32 / 0.78);
+  color: #f7f6ef;
+  box-shadow: 0 14px 32px -16px rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: border-color 220ms ease, transform 220ms var(--hero-ease);
+}
+
+.hero-granja-etiqueta-punto {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--lampara);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--lampara) 26%, transparent);
+}
+
+.hero-granja-etiqueta-nombre {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
 }
 
-.escena-pollo {
-  position: absolute;
-  z-index: 2;
-  display: block;
-  pointer-events: none;
+.hero-granja-etiqueta-dato {
+  flex: none;
+  padding: 0.14rem 0.55rem;
+  border-radius: 999px;
+  background: rgb(247 246 239 / 0.15);
+  color: var(--avisens-maize, #e3c565);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.escena-pollo canvas { display: block; width: 100%; height: 100%; }
-
-.escena-halo { opacity: 0.22; transform-box: fill-box; transform-origin: center; transition: opacity 200ms ease, transform 300ms var(--hero-ease); }
-.escena-halo--pulsa { animation: escena-pulso 2.2s ease-out infinite; }
-.escena--critico .escena-halo--pulsa { animation-duration: 1.2s; }
-
-@keyframes escena-pulso {
-  0% { transform: scale(0.7); opacity: 0.55; }
-  100% { transform: scale(2); opacity: 0; }
-}
-
-.hero-granja[data-resaltado='alertas'] .escena-halo { opacity: 0.55; transform: scale(1.6); animation: none; }
-.hero-granja[data-resaltado='aves'] .escena-galpon,
-.hero-granja[data-resaltado='galpones'] .escena-galpon {
-  filter: var(--filtro-galpon) drop-shadow(0 0 10px rgb(227 197 101 / 0.75));
+.hero-granja[data-resaltado] .hero-granja-etiqueta-galpon {
+  border-color: color-mix(in srgb, var(--avisens-maize, #e3c565) 75%, transparent);
+  transform: translateY(-2px);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .hero-granja-accion:hover { background: var(--primary-hover); }
   .hero-granja--atencion .hero-granja-accion:hover { background: color-mix(in srgb, var(--avisens-maize, #e3c565) 40%, transparent); }
   .hero-granja--critico .hero-granja-accion:hover { background: color-mix(in srgb, var(--danger) 24%, transparent); }
-  .hero-granja-sync:hover:not(:disabled),
   .hero-granja-selector select:hover { background: color-mix(in srgb, var(--hero-texto) 14%, transparent); }
   .hero-granja-indicador:hover strong { color: var(--primary); }
   .hero-granja[data-fase='noche'] .hero-granja-indicador:hover strong { color: var(--avisens-maize, #e3c565); }
@@ -537,27 +348,15 @@
   .hero-granja-titulo { max-width: 20ch; }
   .hero-granja-accion { align-self: stretch; justify-content: center; }
   .hero-granja-indicadores { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }
-  .escena { grid-column: 1; margin-top: 0.25rem; }
-  .hero-granja-astro,
-  .hero-granja-halo { display: none; }
-  .hero-granja-velo { background: linear-gradient(180deg, rgb(247 246 239 / 0.9) 0%, rgb(247 246 239 / 0.7) 46%, rgb(247 246 239 / 0) 74%); }
+  .hero-granja-ficha-escena { grid-column: 1; justify-self: stretch; min-height: 170px; padding: 1rem 1.4rem 1.25rem; }
+  .hero-granja-velo { background: linear-gradient(180deg, rgb(247 246 239 / 0.96) 0%, rgb(247 246 239 / 0.9) 56%, rgb(247 246 239 / 0.28) 76%, rgb(15 39 32 / 0.24) 100%); }
   .hero-granja[data-fase='tarde'] .hero-granja-velo,
-  .hero-granja[data-fase='amanecer'] .hero-granja-velo { background: linear-gradient(180deg, rgb(251 243 226 / 0.9) 0%, rgb(251 243 226 / 0.7) 46%, rgb(251 243 226 / 0) 74%); }
-  .hero-granja[data-fase='noche'] .hero-granja-velo { background: linear-gradient(180deg, rgb(7 24 20 / 0.88) 0%, rgb(7 24 20 / 0.66) 48%, rgb(7 24 20 / 0) 78%); }
+  .hero-granja[data-fase='amanecer'] .hero-granja-velo { background: linear-gradient(180deg, rgb(250 242 228 / 0.96) 0%, rgb(250 242 228 / 0.9) 56%, rgb(250 242 228 / 0.28) 76%, rgb(15 39 32 / 0.24) 100%); }
+  .hero-granja[data-fase='noche'] .hero-granja-velo { background: linear-gradient(180deg, rgb(11 35 28 / 0.96) 0%, rgb(11 35 28 / 0.88) 56%, rgb(11 35 28 / 0.34) 78%, rgb(7 24 20 / 0.42) 100%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .escena,
-  .hero-granja-astro,
-  .hero-granja-astro--sol,
-  .hero-granja-astro--luna,
-  .hero-granja-halo,
-  .escena-halo--pulsa,
-  .hero-granja-sync.is-spinning svg { animation: none; }
-
-  .hero-granja-astro,
-  .escena-lienzo,
-  .escena-galpon,
-  .escena-halo,
+  .hero-granja-foto,
+  .hero-granja-etiqueta-galpon,
   .hero-granja-accion { transition: none; transform: none; }
 }
