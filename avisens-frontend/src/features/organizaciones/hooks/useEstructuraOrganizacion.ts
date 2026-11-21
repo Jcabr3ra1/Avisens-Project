@@ -2,12 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
 import { listarLineasGeneticas, type LineaGenetica } from '@features/lotes/api/lineas-geneticas'
-import { listarProveedores, type Proveedor } from '@features/proveedores/api/proveedores'
 
 export function useEstructuraOrganizacion(granjaIds: number[]) {
   const [galpones, setGalpones] = useState<Galpon[]>([])
   const [lotes, setLotes] = useState<Lote[]>([])
-  const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [lineasGeneticas, setLineasGeneticas] = useState<LineaGenetica[]>([])
   const [errorLineas, setErrorLineas] = useState('')
   const [cargando, setCargando] = useState(true)
@@ -32,13 +30,10 @@ export function useEstructuraOrganizacion(granjaIds: number[]) {
   useEffect(() => { void recargar() }, [recargar])
 
   useEffect(() => {
-    void listarProveedores()
-      .then((lista) => setProveedores(lista.filter((proveedor) => proveedor.activo)))
-      .catch(() => setProveedores([]))
     void listarLineasGeneticas()
       .then((lista) => { setLineasGeneticas(lista); setErrorLineas('') })
       .catch(() => setErrorLineas('No se pudieron cargar las líneas genéticas.'))
   }, [])
 
-  return { galpones, lotes, proveedores, lineasGeneticas, errorLineas, cargando, error, recargar }
+  return { galpones, lotes, lineasGeneticas, errorLineas, cargando, error, recargar }
 }

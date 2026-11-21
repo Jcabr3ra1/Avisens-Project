@@ -22,12 +22,10 @@ export interface Lote {
     nombre: string
     granja: { id: number; nombre: string; propietario_id: number }
   }
-  proveedor: { id: number; nombre: string } | null
 }
 
 export interface CrearLotePayload {
   galpon_id: number
-  proveedor_id?: number
   linea_genetica_id?: number | null
   fecha_ingreso: string
   cantidad_inicial: number
@@ -39,8 +37,7 @@ export interface CrearLotePayload {
   fecha_salida_estimada?: string
 }
 
-export type ActualizarLotePayload = Omit<Partial<CrearLotePayload>, 'proveedor_id'> & {
-  proveedor_id?: number | null
+export type ActualizarLotePayload = Partial<CrearLotePayload> & {
   fecha_salida_real?: string
   estado?: EstadoLote
 }
@@ -90,7 +87,6 @@ export type DatosLotePayload = {
   linea_genetica_id: number
   sexo: string
   marca_alimento: string
-  proveedor_id: number
 }
 
 export async function actualizarDatosLote(id: number, payload: DatosLotePayload): Promise<Lote> {

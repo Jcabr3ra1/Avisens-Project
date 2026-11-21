@@ -94,17 +94,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="9dp"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <TextView
-            android:id="@+id/txtProveedorInsumo"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="#69746F"
-            android:textSize="11sp"
-            android:maxLines="1"
-            android:ellipsize="end" />
+        android:gravity="end|center_vertical">
 
         <TextView
             android:id="@+id/txtEstadoInsumo"

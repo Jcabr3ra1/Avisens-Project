@@ -23,7 +23,6 @@ padre de nada: solo registra quién hizo el apunte. Lo mismo con
 ```
 Organización
 ├── Personas (usuarios)
-├── Proveedores ──────────── Órdenes de compra ── Detalles
 └── Granjas
     ├── Políticas de alerta
     └── Galpones
@@ -44,7 +43,7 @@ Prospectos ─── Cotizaciones · Interacciones · Solicitudes PQRS
 ### Cuando un hijo tiene varios padres
 
 Algunas tablas tienen más de una composición: `alertas` cuelga de galpón, lote y
-sensor a la vez; `ordenes_compra` de granja, proveedor y lote. En esos casos el
+sensor a la vez. En esos casos el
 padre de navegación es **aquel por el que el usuario la busca**, no el primero de
 la lista. Si se consulta cruzando varios padres, es una **vista transversal** y sí
 lleva ítem propio.

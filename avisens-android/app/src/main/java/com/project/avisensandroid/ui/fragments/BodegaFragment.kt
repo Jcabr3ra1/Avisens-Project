@@ -13,7 +13,6 @@ import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.databinding.ItemInsumoBinding
 import com.project.avisensandroid.databinding.Po03BodegaOpBinding
 import com.project.avisensandroid.model.InsumoResponse
-import com.project.avisensandroid.model.ProveedorResponse
 import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.launch
@@ -25,7 +24,6 @@ class BodegaFragment : BaseBottomNavFragment() {
     private var _binding: Po03BodegaOpBinding? = null
     private val binding get() = _binding!!
 
-    private val proveedoresPorId = mutableMapOf<Int, ProveedorResponse>()
     private var cargando = false
     private val preferenciasStock by lazy {
         requireContext().getSharedPreferences("bodega_referencia_stock", android.content.Context.MODE_PRIVATE)
@@ -45,27 +43,9 @@ class BodegaFragment : BaseBottomNavFragment() {
 
         val activity = requireActivity() as MainActivity
         configurarBottomNav(R.id.nav_bodega)
-        val esOperario = activity.obtenerRolActual() == UserRole.OPERARIO
-
-        // El Operario solo trabaja con Insumos: no se muestra la barra de pestañas.
-        // Propietario/Admin conservan ambas pestañas y el diseño original.
-        binding.tabsBodega.visibility = if (esOperario) View.GONE else View.VISIBLE
-        binding.btnProveedores.visibility = View.VISIBLE
-        binding.btnInsumos.visibility = View.VISIBLE
-        actualizarPestanaActiva(insumosActivos = true)
-
-        binding.btnInsumos.setOnClickListener {
-            actualizarPestanaActiva(insumosActivos = true)
-        }
-
-        binding.btnProveedores.setOnClickListener {
-            if (!esOperario) {
-                activity.mostrarFragment(ProveedoresFragment())
-            }
-        }
 
         binding.btnNuevoInsumo.visibility =
-            if (activity.obtenerRolActual() == com.project.avisensandroid.model.UserRole.PROPIETARIO) {
+            if (activity.obtenerRolActual() == UserRole.PROPIETARIO) {
                 View.VISIBLE
             } else {
                 View.GONE
@@ -76,21 +56,6 @@ class BodegaFragment : BaseBottomNavFragment() {
         }
 
         // onResume realiza la carga inicial y las recargas al volver de un diálogo.
-    }
-
-
-    private fun actualizarPestanaActiva(insumosActivos: Boolean) {
-        val colorActivo = android.graphics.Color.parseColor("#2E7D5B")
-        val colorInactivo = android.graphics.Color.parseColor("#89938E")
-
-        binding.btnInsumos.setBackgroundResource(
-            if (insumosActivos) R.drawable.bg_bodega_tab_selected else android.R.color.transparent
-        )
-        binding.btnProveedores.setBackgroundResource(
-            if (!insumosActivos) R.drawable.bg_bodega_tab_selected else android.R.color.transparent
-        )
-        binding.btnInsumos.setTextColor(if (insumosActivos) colorActivo else colorInactivo)
-        binding.btnProveedores.setTextColor(if (!insumosActivos) colorActivo else colorInactivo)
     }
 
     override fun onResume() {
@@ -113,7 +78,6 @@ class BodegaFragment : BaseBottomNavFragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                cargarProveedores()
                 val insumos = cargarTodosLosInsumos()
                 mostrarInsumos(insumos)
             } catch (e: Exception) {
@@ -164,22 +128,6 @@ class BodegaFragment : BaseBottomNavFragment() {
         } while (page <= totalPages)
 
         return todos.distinctBy { it.id }
-    }
-
-    private suspend fun cargarProveedores() {
-        try {
-            val response = RetrofitClient.api.listarProveedores(page = 1, limit = 100)
-            if (response.isSuccessful) {
-                proveedoresPorId.clear()
-                response.body()?.data
-                    ?.filter { it.activo }
-                    ?.forEach { proveedor ->
-                        proveedoresPorId[proveedor.id] = proveedor
-                    }
-            }
-        } catch (_: Exception) {
-            // El nombre del proveedor es solo informativo.
-        }
     }
 
     private fun mostrarInsumos(insumos: List<InsumoResponse>) {
@@ -276,13 +224,6 @@ class BodegaFragment : BaseBottomNavFragment() {
             "Mínimo: ${formatearNumero(stockMinimo)} ${insumo.unidad_medida}"
         } else {
             "Mínimo: no configurado"
-        }
-
-        val proveedorId = insumo.proveedor_habitual_id
-        itemBinding.txtProveedorInsumo.text = when {
-            proveedorId == null -> "Sin proveedor"
-            proveedoresPorId[proveedorId] != null -> proveedoresPorId[proveedorId]!!.nombre
-            else -> "Proveedor #$proveedorId"
         }
 
         itemBinding.txtEstadoInsumo.text = if (esCritico) {

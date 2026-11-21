@@ -86,7 +86,6 @@ model Usuario {
   planes_lote_creados        PlanLote[]
   estimaciones_alimento_creadas EstimacionAlimentoPlan[]
   evidencias_alertas         EvidenciaAlerta[]
-  ordenes_compra             OrdenCompra[]
   movimientos_financieros    MovimientoFinanciero[]
   movimientos_inventario     MovimientoInventario[]
   mantenimientos             Mantenimiento[]
@@ -167,7 +166,6 @@ model Granja {
   politicas_alerta        PoliticaAlerta[]
   clima                   Clima[]
   insumos                 InventarioInsumo[]
-  ordenes_compra          OrdenCompra[]
   movimientos_financieros MovimientoFinanciero[]
 
   // El alcance por rol filtra siempre por dueño: granja.propietario_id = X.
@@ -419,30 +417,6 @@ model UmbralAmbiental {
 }
 
 // ---------------------------------------------------------------------------
-// Proveedores (entidad global: quien suministra insumos, pollitos, etc.)
-// ---------------------------------------------------------------------------
-
-model Proveedor {
-  id               Int      @id @default(autoincrement())
-  nombre           String
-  nit              String   @unique
-  tipo_proveedor   String?
-  contacto_persona String?
-  telefono         String?
-  email            String?
-  direccion        String?
-  activo           Boolean  @default(true)
-  fecha_creacion   DateTime @default(now())
-
-  insumos                 InventarioInsumo[]
-  lotes                   Lote[]
-  ordenes_compra          OrdenCompra[]
-  movimientos_financieros MovimientoFinanciero[]
-
-  @@map("proveedores")
-}
-
-// ---------------------------------------------------------------------------
 // Inventario de insumos (stock de alimento, medicamentos, vacunas…)
 // ---------------------------------------------------------------------------
 
@@ -455,22 +429,18 @@ model InventarioInsumo {
   stock_actual          Decimal   @default(0) @db.Decimal(14, 3)
   stock_minimo          Decimal   @default(0) @db.Decimal(14, 3)
   precio_unitario_cop   Decimal?  @db.Decimal(14, 2)
-  proveedor_habitual_id Int?
   ubicacion_almacen     String?
   fecha_vencimiento     DateTime? @db.Date
   activo                Boolean   @default(true)
   fecha_actualizacion   DateTime  @default(now()) @updatedAt
 
   granja                   Granja                  @relation(fields: [granja_id], references: [id])
-  proveedor_habitual       Proveedor?              @relation(fields: [proveedor_habitual_id], references: [id])
   eventos_sanitarios       EventoSanitario[]
   registros_plagas         RegistroPlaga[]
   movimientos_inventario   MovimientoInventario[]
   mantenimientos_repuestos MantenimientoRepuesto[]
-  detalles_ordenes_compra  DetalleOrdenCompra[]
 
   @@index([granja_id])
-  @@index([proveedor_habitual_id])
   @@map("inventario_insumos")
 }
 
@@ -487,7 +457,6 @@ enum EstadoLote {
 model Lote {
   id                     Int        @id @default(autoincrement())
   galpon_id              Int
-  proveedor_id           Int?
   codigo                 String     @unique
   fecha_ingreso          DateTime   @db.Date
   cantidad_inicial       Int
@@ -510,7 +479,6 @@ model Lote {
   linea_genetica_id              Int?
 
   galpon         Galpon         @relation(fields: [galpon_id], references: [id])
-  proveedor      Proveedor?     @relation(fields: [proveedor_id], references: [id], onDelete: Restrict)
   linea_genetica LineaGenetica? @relation(fields: [linea_genetica_id], references: [id], onDelete: Restrict)
   cerrado_por    Usuario?       @relation("LoteCerradoPor", fields: [cerrado_por_id], references: [id], onDelete: Restrict)
 
@@ -520,7 +488,6 @@ model Lote {
   consumos_diarios        ConsumoDiario[]
   registros_plagas        RegistroPlaga[]
   alertas                 Alerta[]
-  ordenes_compra          OrdenCompra[]
   movimientos_financieros MovimientoFinanciero[]
   movimientos_inventario  MovimientoInventario[]
   predicciones            Prediccion[]
@@ -1547,62 +1514,8 @@ model EvidenciaAlerta {
 }
 
 // ---------------------------------------------------------------------------
-// Compras y finanzas (ordenes de compra, categorias y movimientos)
+// Finanzas (categorias y movimientos)
 // ---------------------------------------------------------------------------
-enum EstadoOrdenCompra {
-  pendiente
-  en_proceso
-  entregada
-  cancelada
-}
-
-model OrdenCompra {
-  id                        Int               @id @default(autoincrement())
-  granja_id                 Int
-  proveedor_id              Int
-  lote_id                   Int?
-  codigo                    String
-  fecha_pedido              DateTime?         @db.Date
-  fecha_entrega_estimada    DateTime?         @db.Date
-  fecha_entrega_real        DateTime?         @db.Date
-  valor_total_cop           Decimal?          @db.Decimal(14, 2)
-  estado                    EstadoOrdenCompra @default(pendiente)
-  calificacion_cumplimiento Float?
-  calificacion_calidad      Float?
-  calificacion_tiempo       Float?
-  usuario_id                Int
-  fecha_registro            DateTime          @default(now())
-
-  granja    Granja               @relation(fields: [granja_id], references: [id])
-  proveedor Proveedor            @relation(fields: [proveedor_id], references: [id])
-  lote      Lote?                @relation(fields: [lote_id], references: [id])
-  usuario   Usuario              @relation(fields: [usuario_id], references: [id])
-  detalles  DetalleOrdenCompra[]
-
-  @@unique([granja_id, codigo])
-  @@index([granja_id])
-  @@index([proveedor_id])
-  @@map("ordenes_compra")
-}
-
-model DetalleOrdenCompra {
-  id                  Int     @id @default(autoincrement())
-  orden_compra_id     Int
-  insumo_id           Int
-  cantidad            Decimal @db.Decimal(14, 3)
-  cantidad_recibida   Decimal @default(0) @db.Decimal(14, 3)
-  unidad_medida       String
-  precio_unitario_cop Decimal @db.Decimal(14, 2)
-  subtotal_cop        Decimal @db.Decimal(14, 2)
-
-  orden       OrdenCompra            @relation(fields: [orden_compra_id], references: [id])
-  insumo      InventarioInsumo       @relation(fields: [insumo_id], references: [id])
-  movimientos MovimientoInventario[]
-
-  @@unique([orden_compra_id, insumo_id])
-  @@index([insumo_id])
-  @@map("detalles_ordenes_compra")
-}
 
 model CategoriaFinanciera {
   id          Int     @id @default(autoincrement())
@@ -1621,7 +1534,6 @@ model MovimientoFinanciero {
   granja_id       Int
   lote_id         Int?
   categoria_id    Int
-  proveedor_id    Int?
   tipo            String?
   valor_cop       Decimal  @db.Decimal(14, 2)
   fecha           DateTime @db.Date
@@ -1635,7 +1547,6 @@ model MovimientoFinanciero {
   granja    Granja              @relation(fields: [granja_id], references: [id])
   lote      Lote?               @relation(fields: [lote_id], references: [id])
   categoria CategoriaFinanciera @relation(fields: [categoria_id], references: [id])
-  proveedor Proveedor?          @relation(fields: [proveedor_id], references: [id])
   usuario   Usuario             @relation(fields: [usuario_id], references: [id])
 
   @@index([granja_id])
@@ -1651,29 +1562,24 @@ enum TipoMovimientoInventario {
 }
 
 model MovimientoInventario {
-  id                      Int                      @id @default(autoincrement())
-  insumo_id               Int
-  lote_id                 Int?
-  tipo_movimiento         TipoMovimientoInventario
-  cantidad                Decimal                  @db.Decimal(14, 3)
-  unidad_medida           String?
-  motivo                  String?
-  comprobante_url         String?
-  stock_resultante        Decimal?                 @db.Decimal(14, 3)
-  usuario_id              Int
-  detalle_orden_compra_id Int?
-  clave_idempotencia      String?
-  fecha_movimiento        DateTime                 @default(now())
+  id               Int                      @id @default(autoincrement())
+  insumo_id        Int
+  lote_id          Int?
+  tipo_movimiento  TipoMovimientoInventario
+  cantidad         Decimal                  @db.Decimal(14, 3)
+  unidad_medida    String?
+  motivo           String?
+  comprobante_url  String?
+  stock_resultante Decimal?                 @db.Decimal(14, 3)
+  usuario_id       Int
+  fecha_movimiento DateTime                 @default(now())
 
-  insumo               InventarioInsumo       @relation(fields: [insumo_id], references: [id])
-  lote                 Lote?                  @relation(fields: [lote_id], references: [id])
-  usuario              Usuario                @relation(fields: [usuario_id], references: [id])
-  detalle_orden_compra DetalleOrdenCompra?    @relation(fields: [detalle_orden_compra_id], references: [id])
-  repuesto_salida      MantenimientoRepuesto? @relation("RepuestoSalida")
-  repuesto_reversion   MantenimientoRepuesto? @relation("RepuestoReversion")
+  insumo             InventarioInsumo       @relation(fields: [insumo_id], references: [id])
+  lote               Lote?                  @relation(fields: [lote_id], references: [id])
+  usuario            Usuario                @relation(fields: [usuario_id], references: [id])
+  repuesto_salida    MantenimientoRepuesto? @relation("RepuestoSalida")
+  repuesto_reversion MantenimientoRepuesto? @relation("RepuestoReversion")
 
-  @@unique([detalle_orden_compra_id, clave_idempotencia], map: "mov_inv_detalle_clave_key")
-  @@index([detalle_orden_compra_id], map: "mov_inv_detalle_idx")
   @@index([insumo_id])
   @@index([lote_id])
   @@map("movimientos_inventario")

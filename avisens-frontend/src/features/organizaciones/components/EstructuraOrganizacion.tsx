@@ -252,7 +252,6 @@ function EstructuraOrganizacion({ detalle, recargarDetalle, resaltadaId, revelad
           form={formLote.form}
           modoEdicion={formLote.modoEdicion}
           galpones={estructura.galpones}
-          proveedores={estructura.proveedores}
           lineasGeneticas={estructura.lineasGeneticas}
           errorLineasGeneticas={estructura.errorLineas}
           guardando={formLote.guardando}
@@ -366,12 +365,6 @@ function FilaGalpon({
                         <dt>Línea genética</dt>
                         <dd>{lote.linea_genetica?.nombre ?? lote.raza ?? 'Sin registrar'}</dd>
                       </div>
-                      {lote.proveedor && (
-                        <div className="est-lote-dato est-lote-dato--ficha">
-                          <dt>Proveedor</dt>
-                          <dd>{lote.proveedor.nombre}</dd>
-                        </div>
-                      )}
                     </dl>
                   ) : (
                     <div className="est-sin-lote">

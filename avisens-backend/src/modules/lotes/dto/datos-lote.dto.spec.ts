@@ -10,7 +10,6 @@ const VALIDOS: Record<string, unknown> = {
   sexo: 'mixto',
   linea_genetica_id: 1,
   marca_alimento: 'italcol',
-  proveedor_id: 3,
 };
 
 async function errores(datos: Record<string, unknown>) {
@@ -50,7 +49,6 @@ describe('DatosLoteDto', () => {
   it.each([
     ['sexo', 'gallo'],
     ['linea_genetica_id', null],
-    ['proveedor_id', 0],
     ['marca_alimento', 'otra'],
   ])('valida el formato de %s', async (clave, valor) => {
     await expect(errores({ ...VALIDOS, [clave]: valor })).resolves.toEqual([

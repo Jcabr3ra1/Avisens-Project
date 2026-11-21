@@ -53,11 +53,6 @@ export class CreateMovimientoFinancieroDto {
   @IsOptional()
   lote_id?: number;
 
-  @ApiPropertyOptional({ example: 1, description: 'ID del proveedor' })
-  @IsInt()
-  @IsOptional()
-  proveedor_id?: number;
-
   @ApiPropertyOptional({
     example: 'Compra de alimento iniciacion',
     description: 'Descripcion del movimiento',

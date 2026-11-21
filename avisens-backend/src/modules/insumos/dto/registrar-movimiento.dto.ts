@@ -29,7 +29,7 @@ export class RegistrarMovimientoDto {
   @IsPositive()
   cantidad: number;
 
-  @ApiPropertyOptional({ example: 'Compra a proveedor', description: 'Por que se movio' })
+  @ApiPropertyOptional({ example: 'Compra de insumo', description: 'Por que se movio' })
   @IsString()
   @IsOptional()
   motivo?: string;

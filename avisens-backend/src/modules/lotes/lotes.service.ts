@@ -79,7 +79,6 @@ const LOTE_SELECT = {
       granja: { select: { id: true, nombre: true, propietario_id: true } },
     },
   },
-  proveedor: { select: { id: true, nombre: true } },
   linea_genetica: { select: { id: true, codigo: true, nombre: true } },
   cerrado_por: { select: { id: true, nombre_completo: true } },
 } as const;
@@ -100,15 +99,6 @@ export class LotesService {
       galpon.granja.propietario_id,
       'Solo puedes gestionar lotes de tus propios galpones',
     );
-  }
-
-  private async validarProveedor(proveedorId: number) {
-    const proveedor = await this.prisma.proveedor.findUnique({
-      where: { id: proveedorId },
-      select: { id: true },
-    });
-
-    if (!proveedor) throw new NotFoundException(`Proveedor no encontrado`);
   }
 
   /**
@@ -158,9 +148,6 @@ export class LotesService {
   async crear(dto: CreateLoteDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
     await this.verificarSinLoteActivo(dto.galpon_id);
-    if (dto.proveedor_id !== undefined && dto.proveedor_id !== null) {
-      await this.validarProveedor(dto.proveedor_id);
-    }
 
     return this.prisma.$transaction(async (transaccion) => {
       if (
@@ -176,7 +163,6 @@ export class LotesService {
       const creado = await transaccion.lote.create({
         data: {
           galpon_id: dto.galpon_id,
-          proveedor_id: dto.proveedor_id ?? null,
           codigo: `TEMP-${randomUUID()}`,
           fecha_ingreso: new Date(dto.fecha_ingreso),
           cantidad_inicial: dto.cantidad_inicial,
@@ -246,9 +232,6 @@ export class LotesService {
         'No se puede trasladar un lote a otro galpón; crea un lote nuevo para conservar la integridad histórica',
       );
     }
-    if (dto.proveedor_id !== undefined && dto.proveedor_id !== null) {
-      await this.validarProveedor(dto.proveedor_id);
-    }
     if (dto.estado === 'activo') {
       await this.verificarSinLoteActivo(actual.galpon.id, id);
     }
@@ -268,7 +251,6 @@ export class LotesService {
         where: { id },
         data: {
           galpon_id: undefined,
-          proveedor_id: dto.proveedor_id,
           fecha_ingreso: dto.fecha_ingreso
             ? new Date(dto.fecha_ingreso)
             : undefined,

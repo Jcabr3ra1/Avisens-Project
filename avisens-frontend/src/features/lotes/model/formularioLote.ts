@@ -9,7 +9,6 @@ import { fechaDeHoy } from '@shared/utils/fechas'
 
 export interface FormularioLoteDatos {
   galpon_id: number
-  proveedor_id: number | null
   linea_genetica_id: number | null
   lineaGeneticaIdOriginal: number | null
   fecha_ingreso: string
@@ -29,13 +28,9 @@ function fechaInput(fecha: string | null): string {
 
 const fechaActual = fechaDeHoy
 
-export function crearFormularioLote(
-  galponId: number,
-  proveedorId: number | null = null,
-): FormularioLoteDatos {
+export function crearFormularioLote(galponId: number): FormularioLoteDatos {
   return {
     galpon_id: galponId,
-    proveedor_id: proveedorId,
     linea_genetica_id: null,
     lineaGeneticaIdOriginal: null,
     fecha_ingreso: fechaActual(),
@@ -53,7 +48,6 @@ export function crearFormularioLote(
 export function formularioDesdeLote(lote: Lote): FormularioLoteDatos {
   return {
     galpon_id: lote.galpon.id,
-    proveedor_id: lote.proveedor?.id ?? null,
     linea_genetica_id: lote.linea_genetica?.id ?? null,
     lineaGeneticaIdOriginal: lote.linea_genetica?.id ?? null,
     fecha_ingreso: fechaInput(lote.fecha_ingreso),
@@ -75,7 +69,6 @@ function textoOpcional(valor: string): string | undefined {
 export function crearPayloadLote(form: FormularioLoteDatos): CrearLotePayload {
   return {
     galpon_id: form.galpon_id,
-    ...(form.proveedor_id === null ? {} : { proveedor_id: form.proveedor_id }),
     ...(form.linea_genetica_id === null ? {} : { linea_genetica_id: form.linea_genetica_id }),
     fecha_ingreso: form.fecha_ingreso,
     cantidad_inicial: Number(form.cantidad_inicial),
@@ -92,7 +85,6 @@ export function actualizarPayloadLote(
 ): ActualizarLotePayload {
   const payload: ActualizarLotePayload = {
     ...crearPayloadLote(form),
-    proveedor_id: form.proveedor_id,
     fecha_salida_real: form.fecha_salida_real || undefined,
     estado: form.estado,
   }

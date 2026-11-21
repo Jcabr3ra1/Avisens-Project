@@ -24,7 +24,6 @@ const lote = {
   marca_alimento: null, linea_genetica: null, costo_pollito_unitario: null, presupuesto_total_cop: null,
   fecha_salida_estimada: null, fecha_salida_real: null, estado: 'activo',
   galpon: { id: 31, nombre: 'jallergalpon', granja: { id: 1, nombre: 'el jaller', propietario_id: 56 } },
-  proveedor: null,
 } as Lote
 
 describe('qué le falta a cada nivel', () => {
@@ -32,7 +31,7 @@ describe('qué le falta a cada nivel', () => {
     expect(faltantesGranja(granja)).toEqual(['el municipio', 'la dirección'])
     expect(pendientesAdminGranja(granja)).toEqual(['las coordenadas', 'el área'])
     expect(faltantesGalpon(galpon)).toEqual(['las medidas', 'el techo', 'la orientación', 'la fecha de construcción'])
-    expect(faltantesLote(lote)).toEqual(['la línea genética', 'el sexo', 'la marca de alimento', 'el proveedor'])
+    expect(faltantesLote(lote)).toEqual(['la línea genética', 'el sexo', 'la marca de alimento'])
     expect(textoFaltantes(['el municipio', 'el área'])).toBe('Faltan el municipio y el área')
     expect(textoFaltantes(['el área'])).toBe('Falta el área')
     expect(textoFaltantes(['las medidas'])).toBe('Faltan las medidas')
@@ -65,13 +64,13 @@ describe('payloadDatosGranja', () => {
 })
 
 describe('payloadDatosLote', () => {
-  it('exige línea, sexo, marca y proveedor', () => {
-    const completo = { ...formDatosLote(lote), linea_genetica_id: '2', sexo: 'mixto', marca_alimento: 'italcol', proveedor_id: '3' }
+  it('exige línea, sexo y marca', () => {
+    const completo = { ...formDatosLote(lote), linea_genetica_id: '2', sexo: 'mixto', marca_alimento: 'italcol' }
     expect(payloadDatosLote(completo)).toEqual({
       error: null,
-      payload: { linea_genetica_id: 2, sexo: 'mixto', marca_alimento: 'italcol', proveedor_id: 3 },
+      payload: { linea_genetica_id: 2, sexo: 'mixto', marca_alimento: 'italcol' },
     })
-    expect(payloadDatosLote({ ...completo, proveedor_id: '' }).error).toMatch(/ninguno es opcional/)
+    expect(payloadDatosLote({ ...completo, marca_alimento: '' }).error).toMatch(/ninguno es opcional/)
   })
 })
 

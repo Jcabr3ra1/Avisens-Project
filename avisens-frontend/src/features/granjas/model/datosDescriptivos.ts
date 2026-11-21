@@ -9,7 +9,6 @@ export type FormDatosLote = {
   sexo: string
   linea_genetica_id: string
   marca_alimento: string
-  proveedor_id: string
 }
 
 const texto = (valor: string | number | null | undefined) => (valor === null || valor === undefined ? '' : String(valor))
@@ -54,7 +53,6 @@ export function faltantesLote(lote: Lote): string[] {
   if (!lote.linea_genetica) faltan.push('la línea genética')
   if (!lote.sexo) faltan.push('el sexo')
   if (!lote.marca_alimento) faltan.push('la marca de alimento')
-  if (!lote.proveedor) faltan.push('el proveedor')
   return faltan
 }
 
@@ -89,7 +87,6 @@ export function formDatosLote(lote: Lote): FormDatosLote {
     sexo: texto(lote.sexo),
     linea_genetica_id: texto(lote.linea_genetica?.id),
     marca_alimento: texto(lote.marca_alimento),
-    proveedor_id: texto(lote.proveedor?.id),
   }
 }
 
@@ -101,7 +98,6 @@ export function payloadDatosLote(form: FormDatosLote): Resultado<DatosLotePayloa
       linea_genetica_id: Number(form.linea_genetica_id),
       sexo: form.sexo,
       marca_alimento: form.marca_alimento,
-      proveedor_id: Number(form.proveedor_id),
     },
   }
 }

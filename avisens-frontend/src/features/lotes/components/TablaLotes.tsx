@@ -31,7 +31,9 @@ function TablaLotes({
           <strong>
             <code>{lote.codigo}</code>
           </strong>
-          <span className="tg-sub">{lote.proveedor?.nombre ?? 'Sin proveedor'}</span>
+          {lote.linea_genetica?.nombre && (
+            <span className="tg-sub">{lote.linea_genetica.nombre}</span>
+          )}
         </>
       ),
     },

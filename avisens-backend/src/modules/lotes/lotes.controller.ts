@@ -77,7 +77,7 @@ export class LotesController {
   @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({
     summary:
-      'Completar los datos descriptivos de un lote (línea genética, sexo, marca de alimento, proveedor)',
+      'Completar los datos descriptivos de un lote (línea genética, sexo, marca de alimento)',
   })
   actualizarDatos(
     @Param('id', ParseIntPipe) id: number,

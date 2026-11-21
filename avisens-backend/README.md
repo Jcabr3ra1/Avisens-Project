@@ -95,7 +95,6 @@ modules/sensores/
 | `sensores`     | Sensores ambientales de un galpón                                    |
 | `mediciones`   | Lecturas de los sensores (serie de tiempo)                           |
 | `umbrales`     | Rangos aceptables por variable/semana, versionados                   |
-| `proveedores`  | Proveedores de insumos                                               |
 | `insumos`      | Inventario de insumos (stock)                                        |
 | `ingest`       | Ingesta de lecturas desde el ESP32 (auth por token de dispositivo)   |
 | `health`       | Liveness y readiness de PostgreSQL/Redis                             |

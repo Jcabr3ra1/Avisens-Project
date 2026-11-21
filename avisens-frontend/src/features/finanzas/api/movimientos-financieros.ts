@@ -23,7 +23,6 @@ export interface MovimientoFinanciero {
   granja_id: number
   lote_id: number | null
   categoria_id: number
-  proveedor_id: number | null
   tipo: string | null
   valor_cop: number
   fecha: string
@@ -45,7 +44,6 @@ export interface CrearMovimientoFinancieroPayload {
   fecha: string
   granja_id?: number
   lote_id?: number
-  proveedor_id?: number
   descripcion?: string
   numero_factura?: string
   metodo_pago?: string
