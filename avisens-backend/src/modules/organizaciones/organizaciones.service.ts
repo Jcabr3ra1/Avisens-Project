@@ -387,9 +387,8 @@ export class OrganizacionesService {
       OR: [{ galpon }, { lote }, { sensor: { galpon } }],
     };
     const insumo = { granja };
-    const orden: Prisma.OrdenCompraWhereInput = { OR: [{ granja }, { lote }] };
     const movimientoInventario: Prisma.MovimientoInventarioWhereInput = {
-      OR: [{ insumo }, { lote }, { detalle_orden_compra: { orden } }],
+      OR: [{ insumo }, { lote }],
     };
 
     try {
@@ -486,10 +485,6 @@ export class OrganizacionesService {
           await tx.movimientoInventario.deleteMany({
             where: movimientoInventario,
           });
-          await tx.detalleOrdenCompra.deleteMany({
-            where: { OR: [{ orden }, { insumo }] },
-          });
-          await tx.ordenCompra.deleteMany({ where: orden });
 
           await tx.medicion.deleteMany({ where: { sensor: { galpon } } });
           await tx.ingestaDispositivo.deleteMany({

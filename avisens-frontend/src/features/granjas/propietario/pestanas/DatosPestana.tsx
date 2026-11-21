@@ -98,7 +98,6 @@ function DatosPestana({ granja, galpon, onEditarGranja, onEditarLote }: Props) {
           <div><dt>Línea genética</dt><dd>{lote.linea_genetica?.nombre ?? falta}</dd></div>
           <div><dt>Sexo</dt><dd>{lote.sexo ? capitalizar(lote.sexo) : falta}</dd></div>
           <div><dt>Marca de alimento</dt><dd>{lote.marca_alimento ? capitalizar(lote.marca_alimento) : falta}</dd></div>
-          <div><dt>Proveedor</dt><dd>{lote.proveedor?.nombre ?? falta}</dd></div>
         </Bloque>
       )}
     </div>

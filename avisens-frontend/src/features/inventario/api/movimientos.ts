@@ -16,7 +16,6 @@ export interface MovimientoInventario {
   // permite auditar la bodega sin recalcular toda la historia.
   stock_resultante: number | null
   usuario_id: number
-  detalle_orden_compra_id: number | null
   fecha_movimiento: string
 }
 

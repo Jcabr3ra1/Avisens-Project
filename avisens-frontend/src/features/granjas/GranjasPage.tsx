@@ -66,7 +66,6 @@ function GranjasAdministracion() {
 
   const {
     estructura,
-    proveedores,
     lineasGeneticas,
     lineasGeneticasError,
     consumoPorLote,
@@ -604,7 +603,6 @@ function GranjasAdministracion() {
           form={formularioLote.form}
           modoEdicion={formularioLote.modoEdicion}
           galpones={seleccionada.galpones.map((galpon) => galpon.origen)}
-          proveedores={proveedores}
           lineasGeneticas={lineasGeneticas}
           errorLineasGeneticas={lineasGeneticasError}
           guardando={formularioLote.guardando}

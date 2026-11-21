@@ -47,11 +47,6 @@ export class CreateInsumoDto {
   @IsOptional()
   precio_unitario_cop?: number;
 
-  @ApiPropertyOptional({ example: 1, description: 'ID del proveedor habitual' })
-  @IsInt()
-  @IsOptional()
-  proveedor_habitual_id?: number;
-
   @ApiPropertyOptional({ example: 'Bodega A' })
   @IsString()
   @IsOptional()

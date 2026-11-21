@@ -40,7 +40,6 @@ describe('InsumosService', () => {
       delete: jest.fn(),
     },
     movimientoInventario: { findMany: jest.fn(), count: jest.fn() },
-    proveedor: { findUnique: jest.fn() },
     granja: { findUnique: jest.fn() },
     lote: { findUnique: jest.fn() },
     $transaction: jest.fn(),
@@ -72,7 +71,7 @@ describe('InsumosService', () => {
   };
 
   describe('crear', () => {
-    it('crea sin consultar proveedor cuando no se indica uno habitual', async () => {
+    it('crea el insumo en la granja indicada', async () => {
       conCallback();
       tx.inventarioInsumo.create.mockResolvedValue({
         id: 1,
@@ -82,17 +81,7 @@ describe('InsumosService', () => {
 
       await service.crear(dtoCrear, ADMIN);
 
-      expect(prisma.proveedor.findUnique).not.toHaveBeenCalled();
       expect(tx.inventarioInsumo.create).toHaveBeenCalled();
-    });
-
-    it('rechaza (404) si el proveedor habitual indicado no existe', async () => {
-      prisma.proveedor.findUnique.mockResolvedValue(null);
-
-      await expect(
-        service.crear({ ...dtoCrear, proveedor_habitual_id: 7 }, ADMIN),
-      ).rejects.toThrow(NotFoundException);
-      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
     it('rechaza (404) si la granja no existe', async () => {
@@ -110,9 +99,6 @@ describe('InsumosService', () => {
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
-    // La ruta pasó a aceptar al propietario: antes era sólo del admin, y el
-    // flujo de compras se cortaba porque el detalle de una orden apunta a un
-    // insumo_id que el propietario no podía dar de alta.
     it('deja al propietario crear insumos en su propia granja', async () => {
       conCallback();
       tx.inventarioInsumo.create.mockResolvedValue({
@@ -200,16 +186,6 @@ describe('InsumosService', () => {
 
       await expect(
         service.actualizar(99, { nombre: 'X' }, ADMIN),
-      ).rejects.toThrow(NotFoundException);
-      expect(prisma.inventarioInsumo.update).not.toHaveBeenCalled();
-    });
-
-    it('rechaza (404) si el nuevo proveedor habitual no existe (no muta)', async () => {
-      prisma.inventarioInsumo.findUnique.mockResolvedValue(insumoDe(DUENO.id));
-      prisma.proveedor.findUnique.mockResolvedValue(null);
-
-      await expect(
-        service.actualizar(1, { proveedor_habitual_id: 7 }, ADMIN),
       ).rejects.toThrow(NotFoundException);
       expect(prisma.inventarioInsumo.update).not.toHaveBeenCalled();
     });

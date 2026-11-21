@@ -28,7 +28,6 @@ describe('navegación por espacios', () => {
     const spaces = navigationSpaces(visibleSections(ROL_ADMIN))
     expect(spaceForPath('/organizaciones/42', spaces)?.id).toBe('plataforma')
     expect(spaceForPath('/usuarios', spaces)?.id).toBe('plataforma')
-    expect(spaceForPath('/proveedores', spaces)?.id).toBe('plataforma')
     expect(spaceForPath('/catalogos', spaces)?.id).toBe('plataforma')
     expect(spaceForPath('/solicitudes-pqrs', spaces)?.id).toBe('plataforma')
     const espaciosPropietario = navigationSpaces(visibleSections(ROL_PROPIETARIO))
@@ -40,7 +39,7 @@ describe('navegación por espacios', () => {
 
   it('al administrador no le muestra pantallas de granja, pero conserva su acceso por ruta', () => {
     const rutas = visibleSections(ROL_ADMIN).flatMap((section) => section.items.map((item) => item.path))
-    for (const ruta of ['/bitacora', '/alertas', '/guia-crecimiento', '/inventario', '/ordenes-compra']) {
+    for (const ruta of ['/bitacora', '/alertas', '/guia-crecimiento', '/inventario']) {
       expect(rutas).not.toContain(ruta)
     }
     expect(puedeAcceder('/alertas', ROL_ADMIN)).toBe(true)
@@ -66,18 +65,17 @@ describe('navegación por espacios', () => {
     expect(tieneUnSoloDestino(gestion)).toBe(false)
   })
 
-  it('le da al operario su Bodega con inventario y proveedores, y solo a él', () => {
+  it('le da al operario su Bodega con inventario, y solo a él', () => {
     const bodega = navigationSpaces(visibleSections(ROL_OPERARIO)).find((space) => space.id === 'bodega')
     expect(bodega?.label).toBe('Bodega')
-    expect(bodega?.sections.flatMap((section) => section.items.map((item) => item.path))).toEqual(['/inventario', '/proveedores'])
-    expect(spaceForPath('/proveedores', navigationSpaces(visibleSections(ROL_OPERARIO)))?.id).toBe('bodega')
+    expect(bodega?.sections.flatMap((section) => section.items.map((item) => item.path))).toEqual(['/inventario'])
+    expect(spaceForPath('/inventario', navigationSpaces(visibleSections(ROL_OPERARIO)))?.id).toBe('bodega')
     expect(tituloDeRuta('/inventario', ROL_OPERARIO)).toBe('Inventario')
     for (const rol of [ROL_ADMIN, ROL_PROPIETARIO]) {
       expect(navigationSpaces(visibleSections(rol)).some((space) => space.id === 'bodega')).toBe(false)
     }
-    // El propietario conserva su «Bodega» en Gestión y el admin sus proveedores en Plataforma.
+    // El propietario conserva su «Bodega» en Gestión.
     expect(spaceForPath('/inventario', navigationSpaces(visibleSections(ROL_PROPIETARIO)))?.id).toBe('gestion')
-    expect(spaceForPath('/proveedores', navigationSpaces(visibleSections(ROL_ADMIN)))?.id).toBe('plataforma')
   })
 
   it('ofrece el monitoreo en Organizaciones al administrador y conserva el acceso de los otros roles', () => {

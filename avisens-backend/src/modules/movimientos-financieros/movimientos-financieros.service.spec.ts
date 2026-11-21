@@ -26,7 +26,6 @@ describe('MovimientosFinancierosService', () => {
     },
     granja: { findUnique: jest.fn() },
     categoriaFinanciera: { findUnique: jest.fn() },
-    proveedor: { findUnique: jest.fn() },
     lote: { findUnique: jest.fn(), findMany: jest.fn() },
     registroMortalidad: { groupBy: jest.fn() },
     $transaction: jest.fn(),
@@ -64,7 +63,6 @@ describe('MovimientosFinancierosService', () => {
 
     prisma.$transaction.mockResolvedValue([[], 0]);
     prisma.categoriaFinanciera.findUnique.mockResolvedValue({ id: 3 });
-    prisma.proveedor.findUnique.mockResolvedValue({ id: 7 });
     prisma.granja.findUnique.mockResolvedValue({
       id: 10,
       propietario_id: 5,
@@ -145,15 +143,6 @@ describe('MovimientosFinancierosService', () => {
       await expect(service.crear(dtoCrear, propietario)).rejects.toThrow(
         ForbiddenException,
       );
-      expect(prisma.movimientoFinanciero.create).not.toHaveBeenCalled();
-    });
-
-    it('valida el proveedor opcional antes de crear', async () => {
-      prisma.proveedor.findUnique.mockResolvedValue(null);
-
-      await expect(
-        service.crear({ ...dtoCrear, proveedor_id: 7 }, propietario),
-      ).rejects.toThrow(NotFoundException);
       expect(prisma.movimientoFinanciero.create).not.toHaveBeenCalled();
     });
   });

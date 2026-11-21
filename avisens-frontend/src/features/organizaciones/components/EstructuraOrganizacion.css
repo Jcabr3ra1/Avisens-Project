@@ -677,7 +677,7 @@
   letter-spacing: -0.01em;
 }
 
-/* Nivel 2: Ficha descriptiva secundaria (Línea genética, Proveedor) */
+/* Nivel 2: Ficha descriptiva secundaria (Línea genética) */
 .est-lote-dato--ficha {
   grid-column: span 3;
   padding-top: var(--space-2);

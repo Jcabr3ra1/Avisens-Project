@@ -117,26 +117,6 @@ export function permisosDeRegistro(rol: string | null): PermisosRegistro {
   }
 }
 
-// Proveedores: el directorio lo administra solo el administrador
-// (proveedores:gestionar). El propietario puede dar de alta al que le falta
-// cuando registra un insumo (proveedores:crear, HU-58), pero no editar ni
-// desactivar: el directorio es compartido entre organizaciones. El operario
-// lo consulta desde su Bodega para saber a quién pedir un insumo
-// (proveedores:leer).
-// Fuente: avisens-backend/src/modules/proveedores/proveedores.controller.ts y
-// avisens-backend/src/common/auth/permisos.ts
-export type PermisosProveedor = {
-  crear: boolean
-  gestionar: boolean
-}
-
-export function permisosDeProveedor(rol: string | null): PermisosProveedor {
-  return {
-    crear: rol === ROL_ADMIN || rol === ROL_PROPIETARIO,
-    gestionar: rol === ROL_ADMIN,
-  }
-}
-
 // Equipos, mantenimientos, repuestos y umbrales ambientales siguen la regla
 // operativa del propietario. Dispositivos ESP32 y sensores se administran por
 // separado y son exclusivos del administrador AVISENS.

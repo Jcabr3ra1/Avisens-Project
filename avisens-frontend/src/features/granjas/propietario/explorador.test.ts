@@ -11,7 +11,6 @@ const loteCompleto = {
   marca_alimento: 'italcol', linea_genetica: { id: 2, codigo: 'cobb_500', nombre: 'Cobb 500' },
   costo_pollito_unitario: null, presupuesto_total_cop: null, fecha_salida_estimada: null, fecha_salida_real: null,
   estado: 'activo', galpon: { id: 31, nombre: 'G', granja: { id: 1, nombre: 'el jaller', propietario_id: 56 } },
-  proveedor: { id: 1, nombre: 'Italcol S.A.' },
 } as Lote
 
 function sensor(tipo: string, valor: number | null, estado: SensorVista['estado'] = 'optimo'): SensorVista {

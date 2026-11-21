@@ -5,7 +5,6 @@ import {
   EstadoAlerta,
   EstadoDispositivo,
   EstadoLote,
-  EstadoOrdenCompra,
   EstadoProspecto,
   EstadoRecomendacion,
   EstadoSensor,
@@ -14,16 +13,12 @@ import { CreateAccionamientoEquipoDto } from '../modules/accionamientos-equipos/
 import { UpdateAccionamientoEquipoDto } from '../modules/accionamientos-equipos/dto/update-accionamientos-equipos.dto';
 import { UpdateAlertasDto } from '../modules/alertas/dto/update-alertas.dto';
 import { UpdateLoteDto } from '../modules/lotes/dto/update-lote.dto';
-import { CreateOrdenesCompraDto } from '../modules/ordenes-compra/dto/create-ordenes-compra.dto';
 import { ListarProspectosDto } from '../modules/prospectos/dto/listar-prospectos.dto';
 import { UpdateSensorDto } from '../modules/sensores/dto/update-sensor.dto';
 
 type ClaseDto<T extends object> = new () => T;
 
 const camposRequeridos = (cls: ClaseDto<object>): Record<string, unknown> => {
-  if (cls === CreateOrdenesCompraDto) {
-    return { proveedor_id: 1, codigo: 'OC-2026-001', usuario_id: 1 };
-  }
   if (cls === CreateAccionamientoEquipoDto) {
     return { equipo_id: 1 };
   }
@@ -95,25 +90,6 @@ describe('DTOs de estado sincronizados con enums de PostgreSQL', () => {
 
     it('acepta la ausencia del estado', async () => {
       const errores = await validarDto(UpdateAlertasDto, {});
-      expect(errores).toHaveLength(0);
-    });
-  });
-
-  describe('CreateOrdenesCompraDto', () => {
-    it('acepta todos los estados que el sistema puede escribir', async () => {
-      for (const estado of Object.values(EstadoOrdenCompra)) {
-        const errores = await validarDto(CreateOrdenesCompraDto, { estado });
-        expect(errores).toHaveLength(0);
-      }
-    });
-
-    it('rechaza un estado que no pertenece al enum', async () => {
-      const errores = await validarDto(CreateOrdenesCompraDto, { estado: 'inventado' });
-      expect(erroresDePropiedad(errores, 'estado')).toHaveLength(1);
-    });
-
-    it('acepta la ausencia del estado', async () => {
-      const errores = await validarDto(CreateOrdenesCompraDto, {});
       expect(errores).toHaveLength(0);
     });
   });

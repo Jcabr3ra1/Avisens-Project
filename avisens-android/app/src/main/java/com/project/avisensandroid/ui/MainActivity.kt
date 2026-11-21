@@ -1395,26 +1395,11 @@ class MainActivity : AppCompatActivity() {
         )
         binding.spinnerUnidadInsumo.adapter = adapterUnidades
 
-        val nombresProveedores = mutableListOf("Sin proveedor")
-        val idsProveedores = mutableListOf<Int?>(null)
-
-        val adapterProveedores = SpinnerAdapterEstilizado(
-            this,
-            nombresProveedores
-        )
-        binding.spinnerProveedor.adapter = adapterProveedores
-
         cargarTiposAlimentoParaInsumo(
             tiposAlimento,
             nombresTipos,
             adapterTipos,
             binding
-        )
-
-        cargarProveedoresParaInsumo(
-            nombresProveedores,
-            idsProveedores,
-            adapterProveedores
         )
 
         binding.btnCancelarInsumo.setOnClickListener {
@@ -1461,9 +1446,6 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val posicionProveedor = binding.spinnerProveedor.selectedItemPosition
-            val proveedorId = idsProveedores.getOrNull(posicionProveedor)
-
             crearInsumo(
                 dialog = dialog,
                 binding = binding,
@@ -1471,7 +1453,6 @@ class MainActivity : AppCompatActivity() {
                 categoria = "alimento",
                 cantidad = cantidad,
                 unidad = unidad,
-                proveedorId = proveedorId,
                 stockMinimo = stockMinimo
             )
         }
@@ -1547,42 +1528,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun cargarProveedoresParaInsumo(
-        nombres: MutableList<String>,
-        ids: MutableList<Int?>,
-        adapter: ArrayAdapter<String>
-    ) {
-        lifecycleScope.launch {
-            try {
-                val response = RetrofitClient.api.listarProveedores(
-                    page = 1,
-                    limit = 100
-                )
-
-                if (!response.isSuccessful) {
-                    return@launch
-                }
-
-                val data = response.body()?.data ?: emptyList()
-
-                nombres.clear()
-                ids.clear()
-                nombres.add("Sin proveedor")
-                ids.add(null)
-
-                data.filter { it.activo }.forEach {
-                    nombres.add(it.nombre)
-                    ids.add(it.id)
-                }
-
-                adapter.notifyDataSetChanged()
-
-            } catch (_: Exception) {
-                // El proveedor es opcional; el formulario puede continuar sin él.
-            }
-        }
-    }
-
     private fun crearInsumo(
         dialog: Dialog,
         binding: R03NuevoInsumoBinding,
@@ -1590,7 +1535,6 @@ class MainActivity : AppCompatActivity() {
         categoria: String,
         cantidad: Double,
         unidad: String,
-        proveedorId: Int?,
         stockMinimo: Double?
     ) {
         binding.btnAgregarInsumo.isEnabled = false
@@ -1607,7 +1551,6 @@ class MainActivity : AppCompatActivity() {
                     stock_actual = cantidad,
                     stock_minimo = stockMinimo,
                     precio_unitario_cop = null,
-                    proveedor_habitual_id = proveedorId,
                     ubicacion_almacen = null,
                     fecha_vencimiento = null
                 )
@@ -2560,8 +2503,8 @@ class MainActivity : AppCompatActivity() {
                 ids.add(null)
 
                 // Para el selector solo necesitamos id y código. Así evitamos
-                // que un campo anidado opcional de la respuesta (/galpon o
-                // /proveedor) impida deserializar los lotes.
+                // que un campo anidado opcional de la respuesta (/galpon)
+                // impida deserializar los lotes.
                 lotesDeSeleccion
                     .filter { it.codigo.isNotBlank() }
                     .distinctBy { it.id }

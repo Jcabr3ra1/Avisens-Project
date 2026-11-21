@@ -25,7 +25,6 @@ const INSUMO_SELECT = {
   stock_actual: true,
   stock_minimo: true,
   precio_unitario_cop: true,
-  proveedor_habitual_id: true,
   ubicacion_almacen: true,
   fecha_vencimiento: true,
   activo: true,
@@ -53,15 +52,6 @@ const MOVIMIENTO_SELECT = {
 export class InsumosService {
   constructor(private prisma: PrismaService) {}
 
-  private async validarProveedor(proveedorId?: number) {
-    if (proveedorId === undefined) return;
-    const proveedor = await this.prisma.proveedor.findUnique({
-      where: { id: proveedorId },
-      select: { id: true },
-    });
-    if (!proveedor) throw new NotFoundException('Proveedor no encontrado');
-  }
-
   private async validarGranja(granjaId: number, solicitante: Solicitante) {
     const granja = await this.prisma.granja.findUnique({
       where: { id: granjaId },
@@ -73,7 +63,6 @@ export class InsumosService {
 
   async crear(dto: CreateInsumoDto, solicitante: Solicitante) {
     await this.validarGranja(dto.granja_id, solicitante);
-    await this.validarProveedor(dto.proveedor_habitual_id);
 
     return this.prisma.$transaction(async (tx) => {
       const insumo = await tx.inventarioInsumo.create({
@@ -85,7 +74,6 @@ export class InsumosService {
           stock_actual: dto.stock_actual ?? 0,
           stock_minimo: dto.stock_minimo,
           precio_unitario_cop: dto.precio_unitario_cop,
-          proveedor_habitual_id: dto.proveedor_habitual_id,
           ubicacion_almacen: dto.ubicacion_almacen,
           fecha_vencimiento: dto.fecha_vencimiento
             ? new Date(dto.fecha_vencimiento)
@@ -158,7 +146,6 @@ export class InsumosService {
     solicitante: Solicitante,
   ) {
     await this.obtener(id, solicitante);
-    await this.validarProveedor(dto.proveedor_habitual_id);
     return this.prisma.inventarioInsumo.update({
       where: { id },
       data: {
@@ -167,7 +154,6 @@ export class InsumosService {
         unidad_medida: dto.unidad_medida,
         stock_minimo: dto.stock_minimo,
         precio_unitario_cop: dto.precio_unitario_cop,
-        proveedor_habitual_id: dto.proveedor_habitual_id,
         ubicacion_almacen: dto.ubicacion_almacen,
         fecha_vencimiento: dto.fecha_vencimiento
           ? new Date(dto.fecha_vencimiento)

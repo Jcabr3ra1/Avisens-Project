@@ -21,7 +21,6 @@ function insumo(parcial: Partial<Insumo>): Insumo {
     stock_actual: 100,
     stock_minimo: 50,
     precio_unitario_cop: 2000,
-    proveedor_habitual_id: null,
     ubicacion_almacen: null,
     fecha_vencimiento: null,
     activo: true,

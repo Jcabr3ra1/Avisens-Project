@@ -1,14 +1,10 @@
 import Modal from '@shared/ui/Modal/Modal'
 import type { Granja } from '@features/granjas/api/granjas'
-import type { Proveedor } from '@features/proveedores/api/proveedores'
 import type { FormularioInsumoDatos } from '../model/formularioInsumo'
 
 interface Props {
   form: FormularioInsumoDatos
   granjas: Granja[]
-  proveedores: Proveedor[]
-  // Solo quien puede dar de alta proveedores ve el acceso (HU-58, escenario 3).
-  onNuevoProveedor?: () => void
   modoEdicion: boolean
   guardando: boolean
   error: string
@@ -23,8 +19,6 @@ interface Props {
 function FormularioInsumo({
   form,
   granjas,
-  proveedores,
-  onNuevoProveedor,
   modoEdicion,
   guardando,
   error,
@@ -117,35 +111,6 @@ function FormularioInsumo({
             onChange={(evento) => onCambiar('stock_minimo', evento.target.value)}
           />
         </label>
-      </div>
-
-      <div className="modal-campo">
-        <label className="modal-campo-etiqueta" htmlFor="insumo-proveedor">
-          Proveedor <em>(opcional)</em>
-        </label>
-        <select
-          id="insumo-proveedor"
-          value={form.proveedor_habitual_id || ''}
-          onChange={(evento) => onCambiar('proveedor_habitual_id', Number(evento.target.value) || 0)}
-        >
-          <option value="">
-            {proveedores.length === 0 ? 'No hay proveedores registrados' : 'Sin proveedor'}
-          </option>
-          {proveedores.map((proveedor) => (
-            <option key={proveedor.id} value={proveedor.id}>
-              {proveedor.nombre} · NIT {proveedor.nit}
-            </option>
-          ))}
-        </select>
-        {onNuevoProveedor ? (
-          <button type="button" className="inv-enlace" onClick={onNuevoProveedor}>
-            + ¿No está en la lista? Registrar proveedor
-          </button>
-        ) : (
-          proveedores.length === 0 && (
-            <small className="modal-ayuda">Los proveedores los registra el propietario de la granja.</small>
-          )
-        )}
       </div>
 
       {!modoEdicion && (

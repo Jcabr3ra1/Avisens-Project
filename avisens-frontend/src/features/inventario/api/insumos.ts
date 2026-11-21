@@ -13,7 +13,6 @@ export interface Insumo {
   stock_actual: number
   stock_minimo: number
   precio_unitario_cop: number | null
-  proveedor_habitual_id: number | null
   ubicacion_almacen: string | null
   fecha_vencimiento: string | null
   activo: boolean
@@ -27,7 +26,6 @@ export interface CrearInsumoPayload {
   stock_actual?: number
   stock_minimo?: number
   precio_unitario_cop?: number
-  proveedor_habitual_id?: number
   ubicacion_almacen?: string
   fecha_vencimiento?: string
 }

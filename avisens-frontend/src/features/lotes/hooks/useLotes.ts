@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
-import { listarProveedores, type Proveedor } from '@features/proveedores/api/proveedores'
 import {
   activarLote,
   actualizarLote,
@@ -18,7 +17,6 @@ import { obtenerMensajeError } from '../model/errorApi'
 export function useLotes() {
   const [lotes, setLotes] = useState<Lote[]>([])
   const [galpones, setGalpones] = useState<Galpon[]>([])
-  const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [lineasGeneticas, setLineasGeneticas] = useState<LineaGenetica[]>([])
   const [lineasGeneticasError, setLineasGeneticasError] = useState('')
   const [cargando, setCargando] = useState(true)
@@ -28,14 +26,12 @@ export function useLotes() {
     setCargando(true)
     setError('')
     try {
-      const [lotesData, galponesData, proveedoresData] = await Promise.all([
+      const [lotesData, galponesData] = await Promise.all([
         listarLotes(),
         listarGalpones(),
-        listarProveedores(),
       ])
       setLotes(lotesData)
       setGalpones(galponesData)
-      setProveedores(proveedoresData.filter((proveedor) => proveedor.activo))
     } catch (errorCarga) {
       setError(obtenerMensajeError(errorCarga, 'No se pudieron cargar los lotes.'))
     } finally {
@@ -100,7 +96,6 @@ export function useLotes() {
   return {
     lotes,
     galpones,
-    proveedores,
     lineasGeneticas,
     lineasGeneticasError,
     cargando,

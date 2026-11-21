@@ -39,11 +39,8 @@ interface AuthRequest extends Request {
 export class InsumosController {
   constructor(private insumosService: InsumosService) {}
 
-  // Un insumo no es estructura productiva, es inventario: lo maneja quien
-  // opera la granja. El propietario ya podía crear la orden de compra y
-  // recibirla, pero el detalle apunta a un insumo_id que sólo el admin podía
-  // dar de alta, así que el flujo se cortaba en el primer paso. El servicio
-  // ya valida que la granja sea suya, aquí sólo se abre la puerta.
+  // Un insumo es inventario: lo maneja quien opera la granja. El servicio
+  // valida que la granja pertenezca al propietario.
   @Post()
   @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiOperation({ summary: 'Crear un insumo en una granja' })

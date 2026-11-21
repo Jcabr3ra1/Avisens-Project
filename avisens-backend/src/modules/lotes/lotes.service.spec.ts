@@ -22,7 +22,6 @@ describe('LotesService', () => {
       delete: jest.fn(),
     },
     galpon: { findUnique: jest.fn() },
-    proveedor: { findUnique: jest.fn() },
     consumoDiario: { findMany: jest.fn() },
     registroMortalidad: { findMany: jest.fn() },
     categoriaFinanciera: { findFirst: jest.fn(), create: jest.fn() },
@@ -41,7 +40,6 @@ describe('LotesService', () => {
 
   const dtoCrear = {
     galpon_id: 3,
-    proveedor_id: 7,
     fecha_ingreso: '2026-08-06',
     cantidad_inicial: 5000,
     raza: 'Ross 308',
@@ -72,7 +70,6 @@ describe('LotesService', () => {
       id: 3,
       granja: { propietario_id: 5 },
     });
-    prisma.proveedor.findUnique.mockResolvedValue({ id: 7 });
     prisma.$queryRaw.mockResolvedValue([{ id: 2, activo: true }]);
     prisma.lote.findFirst.mockResolvedValue(null);
   });
@@ -117,15 +114,6 @@ describe('LotesService', () => {
       expect(prisma.lote.create).not.toHaveBeenCalled();
     });
 
-    it('rechaza (404) si el proveedor no existe', async () => {
-      prisma.proveedor.findUnique.mockResolvedValue(null);
-
-      await expect(service.crear(dtoCrear, admin)).rejects.toThrow(
-        NotFoundException,
-      );
-      expect(prisma.lote.create).not.toHaveBeenCalled();
-    });
-
     it('rechaza (409) si el galpón ya tiene un lote activo', async () => {
       prisma.lote.findFirst.mockResolvedValue({ id: 99 });
 
@@ -133,25 +121,6 @@ describe('LotesService', () => {
         ConflictException,
       );
       expect(prisma.lote.create).not.toHaveBeenCalled();
-    });
-
-    it('crea el lote sin proveedor cuando aún no se ha definido', async () => {
-      prisma.lote.create.mockResolvedValue({ id: 26 });
-      prisma.lote.update.mockResolvedValue({
-        id: 26,
-        codigo: 'LOT-2026-000026',
-      });
-      const dtoSinProveedor = {
-        galpon_id: dtoCrear.galpon_id,
-        fecha_ingreso: dtoCrear.fecha_ingreso,
-        cantidad_inicial: dtoCrear.cantidad_inicial,
-        raza: dtoCrear.raza,
-      };
-
-      await service.crear(dtoSinProveedor, propietario);
-
-      expect(prisma.proveedor.findUnique).not.toHaveBeenCalled();
-      expect(dataDe(prisma.lote.create).proveedor_id).toBeNull();
     });
 
     it('crea el lote con la linea genetica indicada, decidido con la lectura bloqueada (FOR UPDATE) dentro de la transaccion', async () => {
@@ -273,19 +242,6 @@ describe('LotesService', () => {
         service.actualizar(1, { galpon_id: 9 }, propietario),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.lote.update).not.toHaveBeenCalled();
-    });
-
-    it('permite retirar un proveedor asignado', async () => {
-      prisma.lote.findUnique.mockResolvedValue({
-        id: 1,
-        galpon: { id: 3, granja: { propietario_id: 5 } },
-      });
-      prisma.lote.update.mockResolvedValue({ id: 1, proveedor: null });
-
-      await service.actualizar(1, { proveedor_id: null }, propietario);
-
-      expect(dataDe(prisma.lote.update).proveedor_id).toBeNull();
-      expect(prisma.proveedor.findUnique).not.toHaveBeenCalled();
     });
 
     it('rechaza (409) poner estado activo si el galpón ya tiene otro lote activo', async () => {

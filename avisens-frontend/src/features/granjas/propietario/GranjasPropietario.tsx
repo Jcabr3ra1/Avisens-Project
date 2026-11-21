@@ -68,7 +68,7 @@ function GranjasPropietario() {
   const fase = faseDelDia(hora)
   const astro = posicionDelAstro(hora)
   const [parametros] = useSearchParams()
-  const { estructura, proveedores, lineasGeneticas, consumoPorLote, cargando, error, recargar } = useEstructuraGranjas()
+  const { estructura, lineasGeneticas, consumoPorLote, cargando, error, recargar } = useEstructuraGranjas()
   const [granjaId, setGranjaId] = useState<number | null>(() => enteroPositivo(parametros.get('granjaId')))
   const [galponId, setGalponId] = useState<number | null>(() => enteroPositivo(parametros.get('galpon')))
   const [pestana, setPestana] = useState<Pestana>(() => pestanaDe(parametros.get('pestana')))
@@ -391,7 +391,6 @@ function GranjasPropietario() {
         <ModalDatosLote
           lote={datos.lote}
           lineasGeneticas={lineasGeneticas}
-          proveedores={proveedores}
           onCerrar={() => setDatos(null)}
           onGuardado={recargarTodo}
         />

@@ -10,8 +10,6 @@ export interface FormularioInsumoDatos {
   precio_unitario_cop: string
   ubicacion_almacen: string
   fecha_vencimiento: string
-  // 0 = sin proveedor. El select trabaja con números y 0 nunca es un id.
-  proveedor_habitual_id: number
 }
 
 export function crearFormularioInsumo(granjaId = 0): FormularioInsumoDatos {
@@ -25,7 +23,6 @@ export function crearFormularioInsumo(granjaId = 0): FormularioInsumoDatos {
     precio_unitario_cop: '',
     ubicacion_almacen: '',
     fecha_vencimiento: '',
-    proveedor_habitual_id: 0,
   }
 }
 
@@ -41,7 +38,6 @@ export function formularioDesdeInsumo(insumo: Insumo): FormularioInsumoDatos {
       insumo.precio_unitario_cop === null ? '' : String(insumo.precio_unitario_cop),
     ubicacion_almacen: insumo.ubicacion_almacen ?? '',
     fecha_vencimiento: insumo.fecha_vencimiento?.slice(0, 10) ?? '',
-    proveedor_habitual_id: insumo.proveedor_habitual_id ?? 0,
   }
 }
 
@@ -68,7 +64,6 @@ export function crearPayloadInsumo(form: FormularioInsumoDatos): CrearInsumoPayl
     precio_unitario_cop: numeroOpcional(form.precio_unitario_cop),
     ubicacion_almacen: textoOpcional(form.ubicacion_almacen),
     fecha_vencimiento: textoOpcional(form.fecha_vencimiento),
-    proveedor_habitual_id: form.proveedor_habitual_id > 0 ? form.proveedor_habitual_id : undefined,
   }
 }
 
@@ -97,21 +92,19 @@ export function normalizarNombreInsumo(nombre: string): string {
 }
 
 /**
- * El insumo activo de la misma granja con el mismo nombre y el mismo
- * proveedor, si existe. En ese caso no se crea otro: se ofrece sumar la
- * cantidad al existente con un movimiento de entrada, que deja rastro.
+ * El insumo activo de la misma granja con el mismo nombre, si existe.
+ * En ese caso no se crea otro: se ofrece sumar la cantidad al existente
+ * con un movimiento de entrada, que deja rastro.
  */
 export function buscarInsumoDuplicado(
-  insumos: Pick<Insumo, 'id' | 'granja_id' | 'nombre' | 'proveedor_habitual_id' | 'activo'>[],
-  form: Pick<FormularioInsumoDatos, 'granja_id' | 'nombre' | 'proveedor_habitual_id'>,
+  insumos: Pick<Insumo, 'id' | 'granja_id' | 'nombre' | 'activo'>[],
+  form: Pick<FormularioInsumoDatos, 'granja_id' | 'nombre'>,
 ): number | null {
   const nombre = normalizarNombreInsumo(form.nombre)
   if (!nombre) return null
-  const proveedor = form.proveedor_habitual_id > 0 ? form.proveedor_habitual_id : null
   const duplicado = insumos.find((insumo) =>
     insumo.activo
     && insumo.granja_id === form.granja_id
-    && (insumo.proveedor_habitual_id ?? null) === proveedor
     && normalizarNombreInsumo(insumo.nombre) === nombre,
   )
   return duplicado?.id ?? null
