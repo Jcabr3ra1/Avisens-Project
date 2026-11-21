@@ -1,10 +1,9 @@
 import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import type { Lote } from '@features/lotes/api/lotes'
 import { useBitacora } from '@features/bitacora/hooks/useBitacora'
 import FormularioRegistro from '@features/bitacora/components/FormularioRegistro'
-import AlimentoEstimadoPesaje from '@features/bitacora/components/AlimentoEstimadoPesaje'
 import {
   errorDeRegistro,
   FORMULARIO_INICIAL, formularioDesde, payloadRegistro,
@@ -73,7 +72,7 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
     ? `Sin ${fueraDeRango} ${fueraDeRango === 1 ? 'registro fuera de rango' : 'registros fuera de rango'}`
     : null
 
-  function abrir(tipo: TipoMovimiento, id: number | null = null) {
+  const abrir = useCallback((tipo: TipoMovimiento, id: number | null = null) => {
     setError('')
     if (tipo === 'consumo') {
       const actual = id === null ? undefined : datos.consumos.find((c) => c.id === id)
@@ -85,7 +84,15 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
     const actual = id === null ? undefined : lista.find((item) => item.id === id)
     setFormRegistro(actual ? formularioDesde(tipo, actual) : FORMULARIO_INICIAL)
     setRegistro({ tipo, id })
-  }
+  }, [datos, lote.id])
+
+  const yaAbiertoInicial = useRef(false)
+  useEffect(() => {
+    if (vistaInicial === 'peso' && !yaAbiertoInicial.current) {
+      yaAbiertoInicial.current = true
+      abrir('peso')
+    }
+  }, [vistaInicial, abrir])
 
   function guardarRegistro(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
@@ -254,7 +261,6 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
           onCambiar={(campo, valor) => setFormRegistro((actual) => ({ ...actual, [campo]: valor }))}
           onGuardar={guardarRegistro}
           onCerrar={() => !guardando && setRegistro(null)}
-          complemento={registro.tipo === 'peso' ? <AlimentoEstimadoPesaje loteId={lote.id} /> : undefined}
         />
       )}
 

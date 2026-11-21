@@ -8,7 +8,9 @@ interface Props {
   lotes: Lote[]
   cargando: boolean
   permisos: PermisosGestion
+  puedeCerrar?: boolean
   onVerPlan: (lote: Lote) => void
+  onCerrarLote?: (lote: Lote) => void
   onEditar: (lote: Lote) => void
   onAlternar: (lote: Lote) => void
   onEliminar: (lote: Lote) => void
@@ -18,7 +20,9 @@ function TablaLotes({
   lotes,
   cargando,
   permisos,
+  puedeCerrar = false,
   onVerPlan,
+  onCerrarLote,
   onEditar,
   onAlternar,
   onEliminar,
@@ -44,9 +48,31 @@ function TablaLotes({
     },
     {
       encabezado: 'Aves',
-      render: (lote) => <span className="tg-num">{lote.cantidad_inicial.toLocaleString()}</span>,
+      render: (lote) => (
+        <>
+          <span className="tg-num">{lote.cantidad_inicial.toLocaleString()}</span>
+          {lote.estado === 'finalizado' && lote.cantidad_aves_vendidas !== null && lote.cantidad_aves_vendidas !== undefined && (
+            <span className="tg-sub" title="Aves vendidas al cierre">
+              {lote.cantidad_aves_vendidas.toLocaleString()} vendidas
+            </span>
+          )}
+        </>
+      ),
     },
-    { encabezado: 'Estado', render: (lote) => <EstadoBadge estado={lote.estado} /> },
+    {
+      encabezado: 'Estado',
+      render: (lote) => (
+        <>
+          <EstadoBadge estado={lote.estado} />
+          {lote.estado === 'finalizado' && lote.peso_promedio_final_g && (
+            <span className="tg-sub" title="Liquidación del lote">
+              {lote.peso_promedio_final_g.toLocaleString()} g
+              {lote.fcr_final ? ` · FCR ${lote.fcr_final.toFixed(2)}` : ''}
+            </span>
+          )}
+        </>
+      ),
+    },
   ]
 
   return (
@@ -63,6 +89,20 @@ function TablaLotes({
           <button type="button" className="tg-btn" onClick={() => onVerPlan(lote)}>
             Ver plan
           </button>
+          {onCerrarLote && puedeCerrar && lote.estado === 'activo' && (
+            <button
+              type="button"
+              className="tg-btn"
+              style={{
+                borderColor: 'var(--color-aviso, #d97706)',
+                color: 'var(--color-aviso, #d97706)',
+                fontWeight: 600,
+              }}
+              onClick={() => onCerrarLote(lote)}
+            >
+              Cerrar lote
+            </button>
+          )}
           {permisos.editar && (
             <button type="button" className="tg-btn" onClick={() => onEditar(lote)}>
               Editar

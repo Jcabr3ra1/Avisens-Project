@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   antiguedadDeLectura, claseDeSensor, colorDeEdad, detalleDeKpi, escalaDelPollito, estadoDeLampara, faseDelDia,
-  lecturaDeSensor, nombreDeSensor, posicionDelAstro, rangoConfigurado, senalDeSensor, sensorActivo, sensoresDeEscena, sombraDelGalpon,
+  lecturaDeSensor, nombreConZona, nombreDeSensor, posicionDelAstro, rangoConfigurado, senalDeSensor, sensorActivo, sensoresDeEscena, sombraDelGalpon,
   type SensorEscena,
 } from './escenaGalpon'
 import type { KpiGranja } from './resumenGranja'
@@ -115,6 +115,37 @@ describe('edad del lote (usada también en la guía)', () => {
     expect(sensor.valor).toBe(28)
   })
 
+  it('con un solo sensor de la clase no habla de zonas', () => {
+    const [sensor] = sensoresDeEscena([crudo({ tipo: 'temperatura', valor: 25, unidad: '°C', estado: 'optimo' })])
+    expect(sensor.zona).toBeNull()
+    expect(sensor.otrasZonas).toEqual([])
+    expect(nombreConZona(sensor)).toBe('Temperatura')
+  })
+
+  it('muestra los dos DHT22 de un galpón: uno en la tarjeta y el otro como otra zona', () => {
+    const lista = sensoresDeEscena([
+      crudo({ id: 17, codigo: 'TEMP-G1-02', tipo: 'temperatura', valor: 21.7, unidad: '°C', estado: 'optimo' }),
+      crudo({ id: 3, codigo: 'TEMP-G1-01', tipo: 'temperatura', valor: 22.2, unidad: '°C', estado: 'optimo' }),
+      crudo({ id: 4, codigo: 'HUM-G1-01', tipo: 'humedad', valor: 77, unidad: '%', estado: 'optimo' }),
+    ])
+    expect(lista.map((s) => s.clase)).toEqual(['temperatura', 'humedad'])
+    const [temperatura, humedad] = lista
+    expect(temperatura).toMatchObject({ codigo: 'TEMP-G1-01', zona: 1, valor: 22.2 })
+    expect(temperatura.otrasZonas).toHaveLength(1)
+    expect(temperatura.otrasZonas[0]).toMatchObject({ codigo: 'TEMP-G1-02', zona: 2, valor: 21.7 })
+    expect(nombreConZona(temperatura)).toBe('Temperatura · zona 1')
+    expect(humedad.zona).toBeNull()
+  })
+
+  it('numera las zonas por código aunque la zona 1 no esté reportando', () => {
+    const [sensor] = sensoresDeEscena([
+      crudo({ id: 3, codigo: 'TEMP-G1-01', tipo: 'temperatura', valor: 22, unidad: '°C', estado: 'offline' }),
+      crudo({ id: 17, codigo: 'TEMP-G1-02', tipo: 'temperatura', valor: 21.7, unidad: '°C', estado: 'optimo' }),
+    ])
+    expect(sensor).toMatchObject({ codigo: 'TEMP-G1-02', zona: 2, valor: 21.7 })
+    expect(sensor.otrasZonas[0]).toMatchObject({ codigo: 'TEMP-G1-01', zona: 1, valor: null })
+  })
+
   it('arma el detalle de cada indicador sin inventar datos', () => {
     expect(detalleDeKpi(kpi('aves', '500'), 9, null)).toBe('Día 9 del lote · detalle')
     expect(detalleDeKpi(kpi('aves', '500'), null, null)).toBe('detalle')
@@ -127,6 +158,7 @@ describe('edad del lote (usada también en la guía)', () => {
     const base: SensorEscena = {
       id: 1, codigo: 'S-1', clase: 'temperatura', nombre: 'x', valor: 29.44, unidad: '°C', estado: 'optimo',
       etiquetaEstado: 'Óptimo', explicacion: '', ultimaLecturaTs: null, minUmbral: null, maxUmbral: null,
+      zona: null, otrasZonas: [],
     }
     expect(lecturaDeSensor(base)).toBe('29,4 °C')
     expect(lecturaDeSensor({ ...base, clase: 'co2', valor: null, unidad: 'ppm' })).toBe('Sin lectura')
@@ -175,6 +207,7 @@ describe('edad del lote (usada también en la guía)', () => {
     const base: SensorEscena = {
       id: 1, codigo: 'S-1', clase: 'temperatura', nombre: 'x', valor: 28, unidad: '°C', estado: 'optimo',
       etiquetaEstado: 'Óptimo', explicacion: '', ultimaLecturaTs: null, minUmbral: null, maxUmbral: null,
+      zona: null, otrasZonas: [],
     }
     expect(rangoConfigurado(base)).toBeNull()
     expect(rangoConfigurado({ ...base, minUmbral: 24, maxUmbral: 32 })).toBe('24 °C a 32 °C')

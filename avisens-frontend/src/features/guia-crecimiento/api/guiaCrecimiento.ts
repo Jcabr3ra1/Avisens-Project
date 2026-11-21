@@ -330,3 +330,53 @@ export async function guardarPlanAlimentoLote(
   const { data } = await api.post<PlanAlimentoGuia>(`/lotes/${loteId}/plan/alimento`, payload)
   return data
 }
+
+export type PuntoDiaComparacion = {
+  fecha: string
+  peso_promedio_g: number | null
+  mortalidad_dia_aves: number
+  mortalidad_acumulada_aves: number
+  mortalidad_acumulada_pct: number
+  alimento_dia_kg: number
+  alimento_acumulado_kg: number
+  fcr: number | null
+}
+
+export type ResumenLoteComparado = {
+  id: number
+  codigo: string
+  estado: string
+  galpon_id: number
+  galpon: string
+  granja_id: number
+  granja: string
+  fecha_ingreso: string
+  fecha_salida_real: string | null
+  cantidad_inicial: number
+  cantidad_aves_vendidas: number | null
+  peso_promedio_final_g: number | null
+  mortalidad_acumulada_final_pct: number | null
+  fcr_final: number | null
+  duracion_dias: number
+}
+
+export type RespuestaComparacionLotes = {
+  lote_1: ResumenLoteComparado
+  lote_2: ResumenLoteComparado
+  dias_totales: number
+  serie: Array<{
+    dia: number
+    lote_1: PuntoDiaComparacion | null
+    lote_2: PuntoDiaComparacion | null
+  }>
+}
+
+export async function compararLotes(
+  lote1Id: number,
+  lote2Id: number,
+): Promise<RespuestaComparacionLotes> {
+  const { data } = await api.get<RespuestaComparacionLotes>('/indicadores/comparar-lotes', {
+    params: { lote1Id, lote2Id },
+  })
+  return data
+}

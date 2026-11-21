@@ -8,6 +8,8 @@ import { useReducedMotion } from 'motion/react'
 import { listarConsumosDiarios, type ConsumoDiario } from '@features/consumos-diarios/api/consumosDiarios'
 import { listarTodasLasPaginas } from '@shared/api/paginacion'
 import { listarTodasLasMediciones, listarUltimasLecturas, type Medicion, type UltimaLecturaSensor } from '@features/sensores/api/mediciones'
+import { getRol } from '@shared/api'
+import { ROL_OPERARIO } from '@shared/auth/permisos'
 import type { Mortalidad } from '@features/bitacora/model/bitacora'
 import type { IndicadorLote, PuntoCurvaGenetica } from '../api/guiaCrecimiento'
 import type { Lote } from '@features/lotes/api/lotes'
@@ -105,10 +107,17 @@ function GraficoMetrica({ tipo, lote, indicadores, curvaGenetica, diaActual }: P
   const tieneDatos = esAmbiente ? puntosAmbiente.length > 0 : puntos.some((punto) => punto.real !== null)
   const titulo = tipo === 'consumo' ? 'Consumo diario por ave' : tipo === 'mortalidad' ? 'Mortalidad acumulada' : tipo === 'fcr' ? 'Conversión del alimento' : 'Temperatura y humedad del galpón'
   const unidad = tipo === 'consumo' ? 'g por ave' : tipo === 'mortalidad' ? '%' : 'FCR'
-  const rutaBitacora = `/bitacora?lote=${loteId}&vista=${tipo === 'consumo' ? 'consumo' : 'mortalidad'}`
+  const esOperario = getRol() === ROL_OPERARIO
+  const rutaBitacora = esOperario
+    ? `/bitacora?lote=${loteId}&vista=${tipo === 'consumo' ? 'consumo' : 'mortalidad'}`
+    : `/granjas?granjaId=${lote.galpon.granja.id}&galpon=${galponId}&pestana=bitacora&vista=${tipo === 'consumo' ? 'consumo' : 'resumen'}`
   const enlaceAccion = tipo === 'ambiente'
     ? `/granjas?granjaId=${lote.galpon.granja.id}&galpon=${galponId}&pestana=ambiente`
-    : tipo === 'fcr' ? `/bitacora?lote=${loteId}&vista=peso` : rutaBitacora
+    : tipo === 'fcr'
+      ? (esOperario
+          ? `/bitacora?lote=${loteId}&vista=peso`
+          : `/granjas?granjaId=${lote.galpon.granja.id}&galpon=${galponId}&pestana=bitacora&vista=peso`)
+      : rutaBitacora
   const textoVacio = tipo === 'consumo'
     ? 'Todavía no hay consumo registrado para comparar con el plan de alimentación.'
     : tipo === 'mortalidad'

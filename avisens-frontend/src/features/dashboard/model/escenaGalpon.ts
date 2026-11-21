@@ -60,6 +60,13 @@ export type SensorEscena = {
   ultimaLecturaTs: number | null
   minUmbral: number | null
   maxUmbral: number | null
+  // Con varios sensores de la misma clase (p. ej. dos DHT22 en zonas distintas
+  // del galpón), cada uno lleva su número de zona según el orden de su código.
+  // null cuando la clase tiene un solo sensor.
+  zona: number | null
+  // Los demás sensores de la misma clase: la escena tiene un solo puesto por
+  // clase, así que se muestran dentro de la tarjeta del principal.
+  otrasZonas: SensorEscena[]
 }
 
 type SensorCrudo = {
@@ -119,32 +126,46 @@ export function nombreDeSensor(tipo: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
 
+function aEscena(sensor: SensorCrudo, clase: ClaseSensor, zona: number | null): SensorEscena {
+  return {
+    id: sensor.id,
+    codigo: sensor.codigo,
+    clase,
+    nombre: NOMBRES[clase],
+    valor: tieneLecturaUtil(sensor.estado) ? sensor.valor : null,
+    unidad: sensor.unidad,
+    estado: sensor.estado,
+    etiquetaEstado: ETIQUETAS_ESTADO[sensor.estado],
+    explicacion: EXPLICACIONES[clase],
+    ultimaLecturaTs: sensor.ultimaLecturaTs,
+    minUmbral: sensor.minUmbral,
+    maxUmbral: sensor.maxUmbral,
+    zona,
+    otrasZonas: [],
+  }
+}
+
 export function sensoresDeEscena(sensores: SensorCrudo[]): SensorEscena[] {
-  const porClase = new Map<ClaseSensor, SensorCrudo>()
+  const porClase = new Map<ClaseSensor, SensorCrudo[]>()
   for (const sensor of sensores) {
     const clase = claseDeSensor(sensor.tipo)
     if (!clase) continue
-    const actual = porClase.get(clase)
-    if (!actual || (!tieneLecturaUtil(actual.estado) && tieneLecturaUtil(sensor.estado))) porClase.set(clase, sensor)
+    porClase.set(clase, [...(porClase.get(clase) ?? []), sensor])
   }
   return ORDEN_SENSORES.flatMap((clase) => {
-    const sensor = porClase.get(clase)
-    if (!sensor) return []
-    return [{
-      id: sensor.id,
-      codigo: sensor.codigo,
-      clase,
-      nombre: NOMBRES[clase],
-      valor: tieneLecturaUtil(sensor.estado) ? sensor.valor : null,
-      unidad: sensor.unidad,
-      estado: sensor.estado,
-      etiquetaEstado: ETIQUETAS_ESTADO[sensor.estado],
-      explicacion: EXPLICACIONES[clase],
-      ultimaLecturaTs: sensor.ultimaLecturaTs,
-      minUmbral: sensor.minUmbral,
-      maxUmbral: sensor.maxUmbral,
-    }]
+    const grupo = porClase.get(clase)
+    if (!grupo) return []
+    // Zona 1, 2… por orden de código: estable aunque un sensor deje de reportar.
+    const ordenados = [...grupo].sort((a, b) => a.codigo.localeCompare(b.codigo, 'es', { numeric: true }))
+    const conZona = ordenados.map((sensor, i) => aEscena(sensor, clase, ordenados.length > 1 ? i + 1 : null))
+    // En la tarjeta va primero el que tiene lectura; si ninguno, el de la zona 1.
+    const principal = conZona.find((sensor) => tieneLecturaUtil(sensor.estado)) ?? conZona[0]
+    return [{ ...principal, otrasZonas: conZona.filter((sensor) => sensor !== principal) }]
   })
+}
+
+export function nombreConZona(sensor: SensorEscena): string {
+  return sensor.zona === null ? sensor.nombre : `${sensor.nombre} · zona ${sensor.zona}`
 }
 
 export function detalleDeKpi(kpi: KpiGranja, diaLote: number | null, ambiente: string | null): string {

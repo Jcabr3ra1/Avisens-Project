@@ -310,3 +310,38 @@ export function liberarGalpon(raiz: Object3D) {
   texturas.forEach((textura) => textura.dispose())
   materiales.forEach((material) => material.dispose())
 }
+
+export async function cargarGalponCrudo(): Promise<Group | null> {
+  try {
+    const cargador = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
+    const gltf = await cargador.loadAsync(`${BASE}${encodeURIComponent(ARCHIVO_GALPON)}`)
+    return gltf.scene
+  } catch {
+    return null
+  }
+}
+
+/** Galpón con el mismo detalle del inicio, pero con el techo separado para poder
+ *  desvanecerlo desde la vista superior. */
+export async function cargarGalponDetallado(): Promise<{ cuerpo: Group; techo: Group } | null> {
+  try {
+    const cargador = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
+    const gltf = await cargador.loadAsync(`${BASE}${encodeURIComponent(ARCHIVO_GALPON)}`)
+    const raiz = gltf.scene
+    raiz.updateMatrixWorld(true)
+    const piezas: Mesh[] = []
+    raiz.traverse((objeto) => {
+      if (objeto instanceof Mesh && /^(techo|cielo|cumbrera)/.test(objeto.name)) piezas.push(objeto)
+    })
+    const techoCrudo = new Group()
+    piezas.forEach((pieza) => {
+      // el cielo comparte material con los muros: se clona para no volverlos transparentes
+      if (pieza.name.startsWith('cielo') && !Array.isArray(pieza.material)) pieza.material = pieza.material.clone()
+      techoCrudo.attach(pieza)
+    })
+    techoCrudo.updateMatrixWorld(true)
+    return { cuerpo: fusionarPorMaterial(raiz), techo: fusionarPorMaterial(techoCrudo) }
+  } catch {
+    return null
+  }
+}

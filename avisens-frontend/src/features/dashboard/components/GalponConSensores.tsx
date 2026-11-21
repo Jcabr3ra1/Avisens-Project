@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useFaseDelDia } from '../hooks/useFaseDelDia'
-import { lecturaDeSensor, sensorActivo, type ClaseSensor, type SensorEscena } from '../model/escenaGalpon'
+import { lecturaDeSensor, nombreConZona, sensorActivo, type ClaseSensor, type SensorEscena } from '../model/escenaGalpon'
 import type { ClimaVisual } from '@features/granjas/propietario/climaVisual'
 import { fondoDeGranja } from '@features/granjas/propietario/fondosGranja'
 import DialogoSensor, { type LadoDialogo } from './escena/DialogoSensor'
@@ -17,16 +17,33 @@ type Props = {
 }
 
 const ESCENA = { ancho: 840, alto: 420 }
-const CHIP = { ancho: 176 }
+const CHIP = { ancho: 176, anchoConZonas: 212 }
 
 type Puesto = { lado: LadoDialogo; x: number; y: number; salida: 'derecha' | 'izquierda' | 'abajo' }
 
+// x es el borde izquierdo para una tarjeta del ancho normal; las del lado
+// derecho se corren a la izquierda cuando la tarjeta es más ancha.
 const PUESTOS: Record<ClaseSensor, Puesto> = {
   temperatura: { lado: 'derecha', x: 0, y: 72, salida: 'derecha' },
   humedad: { lado: 'derecha', x: 0, y: 208, salida: 'derecha' },
   co2: { lado: 'izquierda', x: ESCENA.ancho - CHIP.ancho, y: 72, salida: 'izquierda' },
   amoniaco: { lado: 'izquierda', x: ESCENA.ancho - CHIP.ancho, y: 208, salida: 'izquierda' },
   luz: { lado: 'abajo', x: (ESCENA.ancho - CHIP.ancho) / 2, y: 6, salida: 'abajo' },
+}
+
+// Una tarjeta con varias zonas es más ancha para que cada fila
+// ("Zona 2  21,8 °C") quepa sin cortarse.
+function cajaDeTarjeta(sensor: SensorEscena): { x: number; ancho: number } {
+  const puesto = PUESTOS[sensor.clase]
+  const ancho = sensor.otrasZonas.length > 0 ? CHIP.anchoConZonas : CHIP.ancho
+  const extra = ancho - CHIP.ancho
+  const x = puesto.salida === 'izquierda' ? puesto.x - extra : puesto.salida === 'abajo' ? puesto.x - extra / 2 : puesto.x
+  return { x, ancho }
+}
+
+// Las zonas en orden (1, 2…), sin importar cuál quedó como principal.
+function zonasEnOrden(sensor: SensorEscena): SensorEscena[] {
+  return [sensor, ...sensor.otrasZonas].sort((a, b) => (a.zona ?? 0) - (b.zona ?? 0))
 }
 
 const porcentaje = (valor: number, total: number) => `${((valor / total) * 100).toFixed(3)}%`
@@ -127,12 +144,14 @@ function GalponConSensores({ nombre, sensores, aves, diaLote, clima }: Props) {
         <ul className="gsr-sensores">
           {activos.map((sensor) => {
             const puesto = PUESTOS[sensor.clase]
+            const caja = cajaDeTarjeta(sensor)
+            const conZonas = sensor.otrasZonas.length > 0
             return (
               <li
                 key={sensor.clase}
                 style={{
-                  left: porcentaje(puesto.x, ESCENA.ancho), top: porcentaje(puesto.y, ESCENA.alto),
-                  width: porcentaje(CHIP.ancho, ESCENA.ancho),
+                  left: porcentaje(caja.x, ESCENA.ancho), top: porcentaje(puesto.y, ESCENA.alto),
+                  width: porcentaje(caja.ancho, ESCENA.ancho),
                 }}
               >
                 <button
@@ -141,14 +160,21 @@ function GalponConSensores({ nombre, sensores, aves, diaLote, clima }: Props) {
                   data-clase={sensor.clase}
                   data-estado={sensor.estado}
                   onClick={(evento) => abrir(sensor, evento.currentTarget)}
-                  aria-label={`${sensor.nombre}: ${lecturaDeSensor(sensor)}. Ver señal y datos`}
+                  aria-label={`${zonasEnOrden(sensor).map((s) => `${nombreConZona(s)}: ${lecturaDeSensor(s)}`).join('; ')}. Ver señal y datos`}
                   aria-haspopup="dialog"
                   aria-expanded={abierto?.clase === sensor.clase}
                 >
                   <img src={IMAGENES_SENSOR[sensor.clase]} alt="" />
                   <span className="gsr-sensor-texto">
                     <span className="gsr-sensor-nombre">{sensor.nombre}</span>
-                    <strong className="gsr-sensor-valor">{lecturaDeSensor(sensor)}</strong>
+                    {conZonas ? zonasEnOrden(sensor).map((zona) => (
+                      <span key={zona.id} className="gsr-sensor-zona" data-estado={zona.estado}>
+                        <span>Zona {zona.zona}</span>
+                        <strong>{lecturaDeSensor(zona)}</strong>
+                      </span>
+                    )) : (
+                      <strong className="gsr-sensor-valor">{lecturaDeSensor(sensor)}</strong>
+                    )}
                   </span>
                   <span className="gsr-sensor-led" aria-hidden="true" />
                 </button>
