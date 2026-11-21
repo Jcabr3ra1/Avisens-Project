@@ -178,7 +178,7 @@ function InventarioPage() {
         titulo="Insumos"
         subtitulo={permisos.verCostos
           ? 'Stock, movimientos y reposición. Cada insumo guarda su propio historial.'
-          : 'Lo que hay en bodega. Anota cada salida que lleves a tu galpón.'}
+          : 'Lo que hay en bodega: el stock de cada insumo y su mínimo.'}
         acciones={(
           <>
             <BotonActualizar

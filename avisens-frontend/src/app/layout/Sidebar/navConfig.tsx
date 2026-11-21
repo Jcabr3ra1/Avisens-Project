@@ -252,7 +252,7 @@ export const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
-  // La bodega del operario: donde apunta lo que entra y sale en campo.
+  // La bodega del operario: consulta lo que hay en ella (stock y mínimo).
   // El propietario conserva su ítem «Bodega» en Gestión.
   {
     label: 'Bodega',
