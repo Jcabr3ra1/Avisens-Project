@@ -12,6 +12,7 @@ import { listarSensores, type Sensor } from '@features/sensores/api/sensores'
 import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
 import { listarLotes, type Lote } from '@features/lotes/api/lotes'
 import { mensajeDeError } from '@shared/utils/errores'
+import { umbralDeLaSemana } from '../model/umbralSemana'
 
 export type EstadoSensorVista = 'optimo' | 'advertencia' | 'critico' | 'sin_umbral' | 'offline' | 'lectura_no_disponible' | 'obsoleta'
 
@@ -162,9 +163,7 @@ export function construirVista(
       .map((s) => {
         const variableUmbral = normalizarVariableUmbral(s.tipo)
         const umbral = variableUmbral
-          ? umbrales.find(
-              (u) => u.galpon_id === g.id && u.variable === variableUmbral && u.semana_vida === semanaVida,
-            )
+          ? umbralDeLaSemana(umbrales, g.id, variableUmbral, semanaVida)
           : undefined
         const entrada = ultimaPorSensor.get(s.id)
         const valor = entrada?.ultima_lectura?.valor ?? null

@@ -204,9 +204,21 @@ describe('AlertasService', () => {
 
       const semanaConsultada = (): number => {
         const llamadas = prisma.umbralAmbiental.findFirst.mock
-          .calls as unknown as Array<[{ where: { semana_vida: number } }]>;
-        return llamadas[0][0].where.semana_vida;
+          .calls as unknown as Array<[{ where: { semana_vida: { lte: number } } }]>;
+        return llamadas[0][0].where.semana_vida.lte;
       };
+
+      // La configuración cubre las semanas 0 a 6. Un lote en la semana 8
+      // debe compararse con el último umbral configurado, no quedarse sin
+      // umbral y sin alertas.
+      it('pide la semana del lote o la última configurada antes de ella', async () => {
+        prepararSensorConLote(new Date('2026-08-01T00:00:00.000Z'));
+        await service.evaluarLectura(3, 25, new Date('2026-09-26T15:00:00Z'));
+        const llamadas = prisma.umbralAmbiental.findFirst.mock
+          .calls as unknown as Array<[{ where: { semana_vida: { lte: number } }; orderBy: unknown }]>;
+        expect(llamadas[0][0].where.semana_vida).toEqual({ lte: 8 });
+        expect(llamadas[0][0].orderBy).toEqual({ semana_vida: 'desc' });
+      });
 
       it('el día 1 y el día 7 caen en la semana 0', async () => {
         prepararSensorConLote(new Date('2026-08-01T00:00:00.000Z'));
