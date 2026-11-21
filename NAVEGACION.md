@@ -24,7 +24,6 @@ padre de nada: solo registra quién hizo el apunte. Lo mismo con
 Organización
 ├── Personas (usuarios)
 └── Granjas
-    ├── Políticas de alerta
     └── Galpones
         ├── Zonas
         ├── Dispositivos ─── Sensores ─── Mediciones

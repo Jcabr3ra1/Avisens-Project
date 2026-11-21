@@ -443,7 +443,6 @@ export class OrganizacionesService {
             data: { usuario_id: null },
           });
 
-          await tx.alertaCanal.deleteMany({ where: { alerta } });
           await tx.evidenciaAlerta.deleteMany({ where: { alerta } });
           await tx.accionamientoEquipo.deleteMany({
             where: { OR: [{ alerta }, { equipo: { galpon } }] },
@@ -505,7 +504,6 @@ export class OrganizacionesService {
           await tx.galpon.deleteMany({ where: galpon });
 
           await tx.inventarioInsumo.deleteMany({ where: insumo });
-          await tx.politicaAlerta.deleteMany({ where: { granja } });
           await tx.clima.deleteMany({ where: { granja } });
           await tx.granja.deleteMany({ where: granja });
 

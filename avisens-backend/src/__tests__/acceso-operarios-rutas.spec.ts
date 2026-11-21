@@ -1,7 +1,6 @@
 import { ROLES } from '../common/auth/roles';
 import { ROLES_KEY } from '../common/decorators/roles.decorator';
 import { AccionamientosEquiposController } from '../modules/accionamientos-equipos/accionamientos-equipos.controller';
-import { AlertasCanalesController } from '../modules/alertas-canales/alertas-canales.controller';
 import { AlertasController } from '../modules/alertas/alertas.controller';
 import { ConsumosDiariosController } from '../modules/consumos-diarios/consumos-diarios.controller';
 import { DispositivosController } from '../modules/dispositivos/dispositivos.controller';
@@ -136,20 +135,5 @@ describe('rutas habilitadas para Operarios', () => {
       expect(rolesDeMetodo(UsuariosController, 'desactivar')).toBeUndefined();
       expect(rolesDeClase(UsuariosController)).toContain(ROLES.PROPIETARIO);
     });
-  });
-
-  // El estado de envío lo pone quien despacha la notificación, no una
-  // persona: marcar "enviado" a mano tapaba que un aviso nunca salió.
-  describe('canales de alerta: el estado de envío no es una ruta', () => {
-    it.each(['marcarComoEnviado', 'marcarComoFallido', 'actualizarEstado'])(
-      'AlertasCanalesController ya no expone %s',
-      (metodo) => {
-        const prototipo = AlertasCanalesController.prototype as unknown as Record<
-          string,
-          unknown
-        >;
-        expect(prototipo[metodo]).toBeUndefined();
-      },
-    );
   });
 });
