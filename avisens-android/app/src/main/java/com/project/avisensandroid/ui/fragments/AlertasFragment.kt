@@ -194,12 +194,12 @@ class AlertasFragment : BaseBottomNavFragment() {
         val advertencias = (activas - criticas).coerceAtLeast(0)
 
         binding.tvBadgeActivas.text = activas.toString()
-        binding.tvBadgeActivas.visibility = if (activas > 0) View.VISIBLE else View.GONE
+        binding.tvBadgeActivas.visibility = View.GONE // Al abrir Alertas, el indicador de lectura desaparece
         val escaladas = alertas.count { it.escalado_a_id != null }
         binding.tvBadgeEscaladas.text = escaladas.toString()
-        binding.tvBadgeEscaladas.visibility = if (escaladas > 0 && esPropietario()) View.VISIBLE else View.GONE
+        binding.tvBadgeEscaladas.visibility = View.GONE // Se mantienen las alertas escaladas en su pestaña
         binding.tvBadgeHistorial.text = historial.toString()
-        binding.tvBadgeHistorial.visibility = if (historial > 0) View.VISIBLE else View.GONE
+        binding.tvBadgeHistorial.visibility = View.GONE // Historial disponible, sin indicador de no leído
         binding.tvCriticas.text = "●  $criticas críticas"
         binding.tvAdvertencias.text = "●  $advertencias advertencias"
         actualizarTextoResumen()

@@ -152,7 +152,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                             it.rol.nombre.equals(
                                 "operario",
                                 ignoreCase = true
-                            )
+                            ) && it.activo
                         }
 
                 mostrarOperarios(
@@ -334,6 +334,26 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 topMargin = dp(12)
             })
 
+            val deleteButton = com.google.android.material.button.MaterialButton(requireContext()).apply {
+                text = "Eliminar operario"
+                setAllCaps(false)
+                textSize = 12f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.parseColor("#B23A3A"))
+                minHeight = 0
+                minimumHeight = 0
+                minWidth = 0
+                minimumWidth = 0
+                cornerRadius = dp(10)
+                strokeWidth = dp(1)
+                strokeColor = android.content.res.ColorStateList.valueOf(Color.parseColor("#B23A3A"))
+                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+                setOnClickListener { confirmarEliminarOperario(usuario) }
+            }
+            card.addView(deleteButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
+                topMargin = dp(8)
+            })
+
             val params = LinearLayout.LayoutParams(-1, -2).apply {
                 bottomMargin = dp(14)
             }
@@ -361,6 +381,29 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).roundToInt()
+
+    private fun confirmarEliminarOperario(usuario: UsuarioGestionResponse) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Eliminar operario")
+            .setMessage("¿Estás seguro de que deseas eliminar a ${usuario.nombre_completo}? Su cuenta será desactivada y perderá el acceso a la aplicación.")
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Eliminar") { _, _ ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        val response = RetrofitClient.api.eliminarOperario(usuario.id)
+                        if (response.isSuccessful) {
+                            Toast.makeText(requireContext(), "Operario eliminado correctamente", Toast.LENGTH_SHORT).show()
+                            cargarOperarios()
+                        } else {
+                            Toast.makeText(requireContext(), "No se pudo eliminar el operario (código ${response.code()})", Toast.LENGTH_LONG).show()
+                        }
+                    } catch (e: Exception) {
+                        if (isAdded) Toast.makeText(requireContext(), "Error al eliminar operario: ${e.message ?: "Sin conexión"}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            .show()
+    }
 
     // ============================================================
     // CARGAR ASIGNACIONES DE UN OPERARIO

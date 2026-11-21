@@ -113,6 +113,11 @@ interface ApiService {
         @Body request: ActualizarEstadoUsuarioRequest
     ): Response<UsuarioGestionResponse>
 
+    @DELETE("v1/usuarios/{id}")
+    suspend fun eliminarOperario(
+        @Path("id") usuarioId: Int
+    ): Response<Unit>
+
     @POST("v1/usuarios/{id}/galpones")
     suspend fun asignarGalpon(
         @Path("id") usuarioId: Int,
