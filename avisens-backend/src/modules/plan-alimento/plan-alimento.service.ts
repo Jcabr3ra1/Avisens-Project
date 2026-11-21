@@ -28,6 +28,8 @@ import {
   validarDesgloseAlimento,
   VERSION_DESGLOSE_ACTUAL,
   RenglonDesglose,
+  enriquecerEtapasAlimento,
+  MARCA_ESTANDAR,
 } from './desglose-alimento';
 import { normalizarMarcaCatalogo } from '../../common/avicultura/vocabulario';
 import { CrearEstimacionAlimentoDto } from './dto/crear-estimacion-alimento.dto';
@@ -63,6 +65,7 @@ const ESTIMACION_SELECT = {
   estado_desglose: true,
   version_desglose: true,
   marca_alimento_snapshot: true,
+  marca_alimento_lote_snapshot: true,
   renglones_alimento: {
     orderBy: { orden: 'asc' },
     select: {
@@ -258,6 +261,23 @@ export class PlanAlimentoService {
       );
     }
 
+    const fechaIngreso = estimacion.plan?.fecha_ingreso_snapshot;
+    const diaActual = fechaIngreso
+      ? Math.max(1, diaDeVida(fechaIngreso))
+      : 1;
+    const renglonesMapeados = renglones.map((r) => ({
+      orden: r.orden,
+      tipo_alimento_id: r.tipoAlimentoId,
+      tipo_alimento_nombre_snapshot: r.tipoAlimentoNombreSnapshot,
+      etapa: r.etapaSnapshot,
+      dia_inicio: r.diaInicio,
+      dia_fin: r.diaFin,
+      extendido_hasta_dia_objetivo: r.extendidoHastaDiaObjetivo,
+      consumo_por_ave_g: Number(r.consumoPorAveG),
+      consumo_total_kg: Number(r.consumoTotalKg),
+    }));
+    const infoEtapas = enriquecerEtapasAlimento(renglonesMapeados, diaActual);
+
     return {
       // Solo tiene sentido cuando el estado_alimento es 'calculado': para
       // los demas estados la ausencia de desglose ya es evidente por el
@@ -272,17 +292,9 @@ export class PlanAlimentoService {
       estado: estimacion.estado_desglose,
       version: estimacion.version_desglose,
       marca_alimento_snapshot: estimacion.marca_alimento_snapshot,
-      renglones: renglones.map((r) => ({
-        orden: r.orden,
-        tipo_alimento_id: r.tipoAlimentoId,
-        tipo_alimento_nombre_snapshot: r.tipoAlimentoNombreSnapshot,
-        etapa: r.etapaSnapshot,
-        dia_inicio: r.diaInicio,
-        dia_fin: r.diaFin,
-        extendido_hasta_dia_objetivo: r.extendidoHastaDiaObjetivo,
-        consumo_por_ave_g: r.consumoPorAveG,
-        consumo_total_kg: r.consumoTotalKg,
-      })),
+      renglones: renglonesMapeados,
+      etapa_actual: infoEtapas.etapa_actual,
+      fases: infoEtapas.fases,
     };
   }
 
@@ -359,7 +371,11 @@ export class PlanAlimentoService {
           marcaAlimentoActual === null
             ? null
             : normalizarMarcaCatalogo(marcaAlimentoActual);
-        if (marcaActualNormalizada !== estimacion.marca_alimento_snapshot) {
+        const marcaOriginal =
+          estimacion.marca_alimento_snapshot === MARCA_ESTANDAR
+            ? estimacion.marca_alimento_lote_snapshot
+            : estimacion.marca_alimento_snapshot;
+        if (marcaActualNormalizada !== marcaOriginal) {
           motivos.push('marca_alimento_cambio');
         }
       }
@@ -426,6 +442,7 @@ export class PlanAlimentoService {
       curva_version_id: number | null;
     },
     diaCorte: number,
+    permitirFallbackEstandar = false,
   ) {
     if (
       plan.estado_dia !== 'calculado' ||
@@ -556,6 +573,7 @@ export class PlanAlimentoService {
       })),
       acumuladoPorAveEnDia: resultado.acumuladoPorAveEnDia,
       acumuladoTotalKgEnDia: resultado.acumuladoTotalKgEnDia,
+      permitirFallbackEstandar,
     });
 
     return {
@@ -795,6 +813,7 @@ export class PlanAlimentoService {
         lote.marca_alimento,
         plan,
         diaCorte,
+        dto.permitir_fallback_estandar ?? false,
       );
 
       await tx.estimacionAlimentoPlan.updateMany({
@@ -822,6 +841,11 @@ export class PlanAlimentoService {
             cantidad_inicial_snapshot: lote.cantidad_inicial,
             motivo: dto.motivo,
             creado_por_id: solicitante.id,
+            marca_alimento_lote_snapshot:
+              datosParaGuardar.marca_alimento_snapshot === MARCA_ESTANDAR &&
+              lote.marca_alimento !== null
+                ? normalizarMarcaCatalogo(lote.marca_alimento)
+                : null,
             ...datosParaGuardar,
             renglones_alimento: {
               create: renglones.map((r) => ({

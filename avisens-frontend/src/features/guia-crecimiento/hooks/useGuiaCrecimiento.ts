@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { obtenerLote, type Lote } from '@features/lotes/api/lotes'
+import { listarMortalidad, type Mortalidad } from '@features/bitacora/api/bitacora'
 import { diasDeVida } from '@shared/utils/fechas'
 import { mensajeDeError } from '@shared/utils/errores'
 import { crearGuardaDeSecuencia } from '@shared/utils/secuencia'
@@ -17,6 +18,7 @@ type EstadoGuia = {
   loteSeleccionado: Lote | null
   curva: CurvaGenetica | null
   indicadores: IndicadorLote[]
+  mortalidad: Mortalidad[]
   plan: PlanLoteGuia | null
   alimento: PlanAlimentoGuia | null
   cargandoLote: boolean
@@ -31,7 +33,7 @@ type EstadoGuia = {
 
 function estadoInicial(loteId: number | null): EstadoGuia {
   return {
-    loteId, loteSeleccionado: null, curva: null, indicadores: [],
+    loteId, loteSeleccionado: null, curva: null, indicadores: [], mortalidad: [],
     plan: null, alimento: null, cargandoLote: loteId !== null, cargandoDetalle: false,
     cargandoPlan: false, cargandoAlimento: false, guardando: false,
     error: '', errorPlan: '', errorAlimento: '',
@@ -59,7 +61,23 @@ export function useGuiaCrecimiento(loteId: number | null) {
     const pedido = secuenciaAlimento.current.iniciar()
     actualizar(actual, { cargandoAlimento: true, errorAlimento: '' })
     try {
-      const alimento = await getPlanAlimentoLote(actual.loteId)
+      let alimento = await getPlanAlimentoLote(actual.loteId)
+      const sinDesglose =
+        !alimento ||
+        alimento.desglose?.no_disponible ||
+        alimento.desglose?.estado === 'lote_sin_marca_alimento' ||
+        (alimento.desglose?.renglones?.length === 0 &&
+          alimento.plan?.dia_objetivo !== null)
+
+      if (sinDesglose && actual.vigente) {
+        try {
+          alimento = await guardarPlanAlimentoLote(actual.loteId, {
+            permitir_fallback_estandar: true,
+          })
+        } catch {
+          // Si no se puede generar todavía (ej. lote sin plan o permisos), permanece en null.
+        }
+      }
       if (secuenciaAlimento.current.esVigente(pedido)) actualizar(actual, { alimento })
     } catch (error) {
       if (secuenciaAlimento.current.esVigente(pedido)) {
@@ -105,13 +123,16 @@ export function useGuiaCrecimiento(loteId: number | null) {
         })
       void cargarAlimento(actual)
       void Promise.all([
-        listarCurvasGeneticas(), listarIndicadores(loteId),
-      ]).then(async ([curvas, indicadores]) => {
+        listarCurvasGeneticas(),
+        listarIndicadores(loteId),
+        listarMortalidad().catch(() => [] as Mortalidad[]),
+      ]).then(async ([curvas, indicadores, todasMortalidades]) => {
         if (!actual.vigente) return
         const resumen = curvas.find((curva) => curva.linea_genetica_id === lote.linea_genetica?.id
           && curva.sexo === (lote.sexo ?? 'mixto') && curva.vigente)
         const curva = resumen ? await obtenerCurvaGenetica(resumen.id) : null
-        actualizar(actual, { curva, indicadores })
+        const mortalidad = todasMortalidades.filter((m) => m.lote_id === loteId)
+        actualizar(actual, { curva, indicadores, mortalidad })
       }).catch((error) => {
         actualizar(actual, { error: mensajeDeError(error, 'No se pudo cargar la guía de este lote.') })
       }).finally(() => actualizar(actual, { cargandoDetalle: false }))
@@ -140,9 +161,18 @@ export function useGuiaCrecimiento(loteId: number | null) {
         : await crearPlanLote(actual.loteId, { peso_objetivo_g: pesoObjetivoG, motivo })
       if (actual.vigente && secuenciaPlan.current.esVigente(pedido)) {
         actualizar(actual, { plan })
-        // Se relee incluso si el nuevo plan no tiene día objetivo: una
-        // estimación anterior debe reflejar la nueva versión del plan.
-        await cargarAlimento(actual)
+        // Se genera o relee la estimación de alimento con fallback estándar
+        try {
+          const nuevoAlimento = await guardarPlanAlimentoLote(actual.loteId, {
+            motivo,
+            permitir_fallback_estandar: true,
+          })
+          if (actual.vigente && secuenciaAlimento.current.esVigente(secuenciaAlimento.current.iniciar())) {
+            actualizar(actual, { alimento: nuevoAlimento, cargandoAlimento: false })
+          }
+        } catch {
+          await cargarAlimento(actual)
+        }
       }
       return plan
     } catch (error) {
@@ -165,7 +195,10 @@ export function useGuiaCrecimiento(loteId: number | null) {
     const pedido = secuenciaAlimento.current.iniciar()
     actualizar(actual, { guardando: true, cargandoAlimento: true, errorAlimento: '' })
     try {
-      const alimento = await guardarPlanAlimentoLote(actual.loteId, { motivo })
+      const alimento = await guardarPlanAlimentoLote(actual.loteId, {
+        motivo,
+        permitir_fallback_estandar: true,
+      })
       if (secuenciaAlimento.current.esVigente(pedido)) actualizar(actual, { alimento })
       return alimento
     } catch (error) {

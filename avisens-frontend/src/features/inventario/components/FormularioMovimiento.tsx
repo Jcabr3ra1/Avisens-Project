@@ -6,6 +6,9 @@ import type { TipoMovimiento } from '../api/movimientos'
 
 interface Props {
   insumo: Insumo
+  // Los tipos que el rol puede registrar (permisosDeInsumo). El operario
+  // solo saca insumos para su galpón: recibe únicamente 'salida'.
+  tiposPermitidos: TipoMovimiento[]
   onRegistrar: (payload: RegistrarMovimientoPayload) => Promise<void>
   onCerrar: () => void
 }
@@ -16,8 +19,10 @@ const OPCIONES: { valor: TipoMovimiento; etiqueta: string; ayuda: string }[] = [
   { valor: 'ajuste', etiqueta: 'Ajuste', ayuda: 'Fija el stock real contado' },
 ]
 
-function FormularioMovimiento({ insumo, onRegistrar, onCerrar }: Props) {
-  const [tipo, setTipo] = useState<TipoMovimiento>('entrada')
+function FormularioMovimiento({ insumo, tiposPermitidos, onRegistrar, onCerrar }: Props) {
+  const opciones = OPCIONES.filter((opcion) => tiposPermitidos.includes(opcion.valor))
+  const soloSalida = opciones.length === 1 && opciones[0].valor === 'salida'
+  const [tipo, setTipo] = useState<TipoMovimiento>(opciones[0]?.valor ?? 'salida')
   const [cantidad, setCantidad] = useState('')
   const [motivo, setMotivo] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -53,7 +58,7 @@ function FormularioMovimiento({ insumo, onRegistrar, onCerrar }: Props) {
 
   return (
     <Modal
-      titulo="Registrar movimiento"
+      titulo={soloSalida ? 'Registrar salida' : 'Registrar movimiento'}
       subtitulo={`${insumo.nombre} · ${insumo.stock_actual.toLocaleString()} ${insumo.unidad_medida} en bodega`}
       onCerrar={onCerrar}
       acciones={
@@ -72,8 +77,8 @@ function FormularioMovimiento({ insumo, onRegistrar, onCerrar }: Props) {
         </>
       }
     >
-      <div className="inv-tipos" role="radiogroup" aria-label="Tipo de movimiento">
-        {OPCIONES.map((opcion) => (
+      {opciones.length > 1 && <div className="inv-tipos" role="radiogroup" aria-label="Tipo de movimiento">
+        {opciones.map((opcion) => (
           <button
             key={opcion.valor}
             type="button"
@@ -86,7 +91,7 @@ function FormularioMovimiento({ insumo, onRegistrar, onCerrar }: Props) {
             <span>{opcion.ayuda}</span>
           </button>
         ))}
-      </div>
+      </div>}
 
       <label className="modal-campo">
         <span>
@@ -111,7 +116,7 @@ function FormularioMovimiento({ insumo, onRegistrar, onCerrar }: Props) {
         <input
           value={motivo}
           onChange={(evento) => setMotivo(evento.target.value)}
-          placeholder="Compra a proveedor, consumo del galpón 2…"
+          placeholder={soloSalida ? 'Consumo del galpón 2, cambio de cama…' : 'Compra a proveedor, consumo del galpón 2…'}
         />
       </label>
 

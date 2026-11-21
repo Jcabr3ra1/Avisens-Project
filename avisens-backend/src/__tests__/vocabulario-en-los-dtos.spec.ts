@@ -65,7 +65,7 @@ describe('el catálogo de alimentos usa las mismas etapas', () => {
 
   // La cadena vacía es justo lo que entró por el formulario y dejó dos
   // alimentos de Solla sin etapa.
-  it.each(['', 'preiniciador', 'Engorde', 'finalizacion'])(
+  it.each(['', 'preiniciador', 'Engorde', 'postura'])(
     'rechaza la etapa %p',
     (etapa) => {
       expect(

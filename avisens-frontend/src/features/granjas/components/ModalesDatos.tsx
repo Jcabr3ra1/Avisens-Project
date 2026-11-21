@@ -10,6 +10,10 @@ import {
   formDatosGranja, formDatosLote, payloadDatosGranja, payloadDatosLote,
   type FormDatosGranja, type FormDatosLote, type Resultado,
 } from '../model/datosDescriptivos'
+import {
+  MAX_COMPLEMENTO, TIPOS_VIA_RURAL, TIPOS_VIA_URBANA, componerDireccion, descomponerDireccion, errorDireccion, esViaUrbana,
+  type PartesDireccion,
+} from '../model/direccion'
 
 type Base = { onCerrar: () => void; onGuardado: () => Promise<unknown> | void }
 
@@ -60,7 +64,7 @@ function ModalDatos<T>({ id, titulo, subtitulo, preparar, enviar, mensajeExito, 
         </>
       }
     >
-      <form id={id} onSubmit={(evento) => void guardar(evento)} noValidate>
+      <form id={id} onSubmit={(evento) => void guardar(evento)} onChange={() => { if (error) setError('') }} noValidate>
         {children}
         {error && <p className="modal-error" role="alert">{error}</p>}
       </form>
@@ -80,7 +84,17 @@ function Campo({ etiqueta, children, ayuda }: { etiqueta: string; children: Reac
 
 export function ModalDatosGranja({ granja, ...base }: Base & { granja: Granja }) {
   const [form, setForm] = useState<FormDatosGranja>(() => formDatosGranja(granja))
+  const [partes, setPartes] = useState<PartesDireccion>(() => descomponerDireccion(granja.direccion))
   const cambiar = (campo: keyof FormDatosGranja) => (valor: string) => setForm((actual) => ({ ...actual, [campo]: valor }))
+  const cambiarParte = (campo: keyof PartesDireccion) => (valor: string) => setPartes((actual) => ({ ...actual, [campo]: valor }))
+  const urbana = esViaUrbana(partes.tipoVia)
+  const vista = partes.tipoVia && partes.via.trim() ? componerDireccion(partes) : ''
+
+  function preparar() {
+    const problema = errorDireccion(partes)
+    if (problema) return { payload: null, error: problema }
+    return payloadDatosGranja({ ...form, direccion: componerDireccion(partes) })
+  }
 
   return (
     <ModalDatos
@@ -88,12 +102,48 @@ export function ModalDatosGranja({ granja, ...base }: Base & { granja: Granja })
       id="datos-granja"
       titulo={`Datos de ${granja.nombre}`}
       subtitulo="Con el municipio se trae el clima de tu zona y el equipo de Avisens sabe a dónde llegar."
-      preparar={() => payloadDatosGranja(form)}
+      preparar={preparar}
       enviar={(payload) => actualizarDatosGranja(granja.id, payload)}
       mensajeExito="Datos de la granja guardados"
     >
-      <Campo etiqueta="Dirección">
-        <input value={form.direccion} onChange={(e) => cambiar('direccion')(e.target.value)} placeholder="Vereda El Progreso, km 4" maxLength={200} />
+      <div className="modal-fila">
+        <Campo etiqueta="Tipo de vía">
+          <select value={partes.tipoVia} onChange={(e) => cambiarParte('tipoVia')(e.target.value)}>
+            <option value="">Elige…</option>
+            <optgroup label="Zona urbana">
+              {TIPOS_VIA_URBANA.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
+            </optgroup>
+            <optgroup label="Zona rural">
+              {TIPOS_VIA_RURAL.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
+            </optgroup>
+          </select>
+        </Campo>
+        <Campo etiqueta={urbana ? 'Número de vía' : partes.tipoVia === 'Kilómetro' ? 'Kilómetro' : 'Nombre'}>
+          <input
+            value={partes.via}
+            onChange={(e) => cambiarParte('via')(e.target.value)}
+            placeholder={urbana ? '10A' : partes.tipoVia === 'Kilómetro' ? '4' : 'El Progreso'}
+            maxLength={40}
+          />
+        </Campo>
+      </div>
+      {urbana && (
+        <div className="modal-fila">
+          <Campo etiqueta="# Número">
+            <input value={partes.numero} onChange={(e) => cambiarParte('numero')(e.target.value)} placeholder="5" maxLength={8} inputMode="text" />
+          </Campo>
+          <Campo etiqueta="- Placa">
+            <input value={partes.placa} onChange={(e) => cambiarParte('placa')(e.target.value)} placeholder="23" maxLength={3} inputMode="numeric" />
+          </Campo>
+        </div>
+      )}
+      <Campo etiqueta="Complemento" ayuda={vista ? `Quedará así: ${vista}` : 'Barrio, finca, sector o una referencia para llegar.'}>
+        <input
+          value={partes.complemento}
+          onChange={(e) => cambiarParte('complemento')(e.target.value)}
+          placeholder={urbana ? 'Barrio Centro' : 'Finca La Esperanza'}
+          maxLength={MAX_COMPLEMENTO}
+        />
       </Campo>
       <div className="modal-fila">
         <Campo etiqueta="Municipio">

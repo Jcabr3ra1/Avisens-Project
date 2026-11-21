@@ -244,6 +244,20 @@ export class OrdenesCompraService {
     solicitante: Solicitante,
   ) {
     const orden = await this.obtener(id, solicitante);
+
+    // HU-32: al proveedor se le califica por un pedido que ya llegó. Calificar
+    // una orden pendiente o cancelada metería en su historial una nota sobre
+    // una entrega que no ocurrió.
+    const califica =
+      dto.calificacion_cumplimiento !== undefined ||
+      dto.calificacion_calidad !== undefined ||
+      dto.calificacion_tiempo !== undefined;
+    if (califica && orden.estado !== EstadoOrdenCompra.entregada) {
+      throw new BadRequestException(
+        'Solo se puede calificar al proveedor cuando el pedido está entregado',
+      );
+    }
+
     if (
       dto.estado === EstadoOrdenCompra.en_proceso ||
       dto.estado === EstadoOrdenCompra.entregada

@@ -15,7 +15,9 @@
 .bit-selector-campos { display: grid; grid-template-columns: repeat(3, minmax(112px, 1fr)); gap: 0.6rem; }
 .bit-selector-jerarquico label { display: flex; min-width: 0; flex-direction: column; gap: 0.25rem; color: var(--text2); font-size: 0.65rem; font-weight: 800; letter-spacing: 0.035em; text-transform: uppercase; }
 .bit-selector-jerarquico select { min-width: 0; min-height: 44px; padding: 0 0.58rem; border: 1px solid var(--gr-line, var(--border)); border-radius: 8px; color: var(--dash-ink); background: var(--card); font: inherit; font-size: 0.76rem; font-weight: 700; text-transform: none; }
-.bit-selector-jerarquico select:disabled { color: var(--text3); cursor: not-allowed; }
+/* Sin opciones, el selector debe verse apagado y no invitar al clic
+   (auditoría QA 2026-10-30, HALL-04). */
+.bit-selector-jerarquico select:disabled { color: var(--text3); background: var(--bg-tint, var(--card)); opacity: 0.6; cursor: not-allowed; }
 .bit-alert { display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: 0.82rem; }
 .bit-alert button { border: 0; color: inherit; background: transparent; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
 

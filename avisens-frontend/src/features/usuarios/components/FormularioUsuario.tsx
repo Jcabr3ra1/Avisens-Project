@@ -3,12 +3,14 @@ import Modal from '@shared/ui/Modal/Modal'
 import type { CrearUsuarioPayload, RolResumen } from '@shared/api'
 import type { Organizacion } from '@features/organizaciones/api/organizaciones'
 import { IcEye, IcEyeOff } from '@shared/ui/icons/icons'
+import type { CampoValidado, ErroresUsuario } from '../model/validacionUsuario'
 
 type Props = {
   form: CrearUsuarioPayload
   modoEdicion: boolean
   guardando: boolean
   error: string
+  errores?: ErroresUsuario
   verPassword: boolean
   roles: RolResumen[]
   organizaciones: Organizacion[]
@@ -30,6 +32,7 @@ function FormularioUsuario({
   modoEdicion,
   guardando,
   error,
+  errores = {},
   verPassword,
   roles,
   organizaciones,
@@ -41,6 +44,17 @@ function FormularioUsuario({
   onCerrar,
 }: Props) {
   const nombreRef = useRef<HTMLInputElement>(null)
+  // Recuadro rojo y mensaje debajo del campo que falló (QA 17-nov).
+  const marcar = (campo: CampoValidado) => ({
+    'aria-invalid': errores[campo] ? true : undefined,
+    'aria-describedby': errores[campo] ? `usuarios-${campo}-error` : undefined,
+  })
+  const avisoDe = (campo: CampoValidado) =>
+    errores[campo] ? (
+      <small id={`usuarios-${campo}-error`} className="modal-error modal-error--campo" role="alert">
+        {errores[campo]}
+      </small>
+    ) : null
   const rolSeleccionado = roles.find((rol) => rol.id === form.rol_id)
   const solicitaOrganizacion = !modoEdicion && !rolBloqueado && rolSeleccionado?.nombre === 'Operario'
   const permiteNombreOrganizacion =
@@ -127,8 +141,12 @@ function FormularioUsuario({
               value={form.cedula}
               onChange={(evento) => onCambiar('cedula', evento.target.value)}
               inputMode="numeric"
+              maxLength={10}
+              placeholder="Solo números"
+              {...marcar('cedula')}
               required
             />
+            {avisoDe('cedula')}
           </label>
           <label className="modal-campo">
             <span>Teléfono <em>(Opcional)</em></span>
@@ -137,7 +155,10 @@ function FormularioUsuario({
               onChange={(evento) => onCambiar('telefono', evento.target.value)}
               inputMode="tel"
               autoComplete="tel"
+              placeholder="Ej.: 3001234567"
+              {...marcar('telefono')}
             />
+            {avisoDe('telefono')}
           </label>
         </div>
 
@@ -199,7 +220,10 @@ function FormularioUsuario({
             value={form.email ?? ''}
             onChange={(evento) => onCambiar('email', evento.target.value)}
             autoComplete="email"
+            placeholder="nombre@dominio.com"
+            {...marcar('email')}
           />
+          {avisoDe('email')}
         </label>
 
         {!modoEdicion && (

@@ -4,7 +4,8 @@ import { useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { ROL_ADMIN, permisosDeRegistro } from '@shared/auth/permisos'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
-import { IcDoc, IcDrop, IcHeart, IcRefresh, IcScale, IcSeed } from '@shared/ui/icons/icons'
+import { IcDoc, IcDrop, IcHeart, IcScale, IcSeed } from '@shared/ui/icons/icons'
+import BotonActualizar from '@shared/ui/BotonActualizar/BotonActualizar'
 import GestionConsumos from '@features/consumos-diarios/components/GestionConsumos'
 import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
@@ -15,6 +16,7 @@ import HistorialRegistros from './components/HistorialRegistros'
 import ResumenLote from './components/ResumenLote'
 import { useBitacora } from './hooks/useBitacora'
 import {
+  errorDeRegistro,
   FORMULARIO_INICIAL,
   formularioDesde,
   payloadRegistro,
@@ -150,6 +152,12 @@ function BitacoraPage() {
     evento.preventDefault()
     if (!modal || !loteSeleccionadoId) return
 
+    const problema = errorDeRegistro(modal, form)
+    if (problema) {
+      setErrorForm(problema)
+      return
+    }
+
     const payload = payloadRegistro(modal, form, loteSeleccionadoId)
 
     setGuardando(true)
@@ -194,12 +202,7 @@ function BitacoraPage() {
         subtitulo={esAdministrador
           ? 'Consulta y registra la actividad de los lotes activos.'
           : 'Registra y consulta el estado real de tus aves.'}
-        acciones={(
-          <button type="button" className="adm-btn adm-btn--secundario" onClick={() => void datos.recargar()}>
-            <IcRefresh size={15} aria-hidden="true" />
-            Actualizar
-          </button>
-        )}
+        acciones={<BotonActualizar onActualizar={datos.recargar} />}
       />
 
       <fieldset className="bit-selector-jerarquico adm-panel">

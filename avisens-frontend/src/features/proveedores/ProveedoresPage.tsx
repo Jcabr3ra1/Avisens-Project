@@ -9,6 +9,7 @@ import TablaProveedores from './components/TablaProveedores'
 import { useFormularioProveedor } from './hooks/useFormularioProveedor'
 import { useProveedores } from './hooks/useProveedores'
 import type { FormularioProveedor as DatosProveedor, Proveedor } from './model/proveedor'
+import { notaTiposProveedor, resumirTiposProveedor } from './model/proveedor'
 import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
 import Cargando from '@shared/ui/Estados/Cargando'
 import '@shared/ui/admin/AdminKit.css'
@@ -93,7 +94,7 @@ function ProveedoresPage() {
   const { proveedores, cargando } = gestion
   const activos = proveedores.filter((proveedor) => proveedor.activo).length
   const sinContacto = proveedores.filter((proveedor) => !proveedor.telefono && !proveedor.email).length
-  const tipos = new Set(proveedores.map((proveedor) => proveedor.tipo_proveedor).filter(Boolean)).size
+  const { tipos, sinClasificar } = resumirTiposProveedor(proveedores)
   const listo = !cargando && !gestion.error
 
   return (
@@ -122,7 +123,7 @@ function ProveedoresPage() {
       <ul className="prv-indicadores" aria-label="Resumen de proveedores">
         <Indicador etiqueta="Proveedores" valor={listo ? proveedores.length : null} nota="Registrados en total" />
         <Indicador etiqueta="Activos" valor={listo ? activos : null} nota={proveedores.length - activos === 1 ? '1 inactivo' : `${proveedores.length - activos} inactivos`} />
-        <Indicador etiqueta="Tipos" valor={listo ? tipos : null} nota="Clasificaciones distintas" />
+        <Indicador etiqueta="Tipos" valor={listo ? tipos : null} nota={notaTiposProveedor(sinClasificar)} />
         <Indicador etiqueta="Sin contacto" valor={listo ? sinContacto : null} nota="Sin teléfono ni correo" />
       </ul>
 

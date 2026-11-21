@@ -6,7 +6,12 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Max,
 } from 'class-validator';
+import {
+  AGUA_MAXIMA_L_DIA,
+  ALIMENTO_MAXIMO_KG_DIA,
+} from '../../../common/avicultura/vocabulario';
 
 export class CreateConsumoDiarioDto {
   @ApiProperty({ example: 1, description: 'ID del lote' })
@@ -28,12 +33,20 @@ export class CreateConsumoDiarioDto {
   @ApiPropertyOptional({ example: 45.5, description: 'Kg de alimento del dia' })
   @IsNumber()
   @IsPositive()
+  @Max(ALIMENTO_MAXIMO_KG_DIA, {
+    message:
+      'El alimento del día no puede superar 100.000 kg; revisa si escribiste gramos o un cero de más',
+  })
   @IsOptional()
   alimento_kg?: number;
 
   @ApiPropertyOptional({ example: 90, description: 'Litros de agua del dia' })
   @IsNumber()
   @IsPositive()
+  @Max(AGUA_MAXIMA_L_DIA, {
+    message:
+      'El agua del día no puede superar 300.000 litros; revisa si escribiste mililitros o un cero de más',
+  })
   @IsOptional()
   agua_litros?: number;
 

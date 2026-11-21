@@ -21,6 +21,7 @@ import { MovimientosFinancierosService } from './movimientos-financieros.service
 import { CreateMovimientoFinancieroDto } from './dto/create-movimiento-financiero.dto';
 import { UpdateMovimientoFinancieroDto } from './dto/update-movimiento-financiero.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { ReporteFinancieroQueryDto } from './dto/reporte-financiero-query.dto';
 
 interface AuthRequest extends Request {
   user: { id: number; email?: string | null; rol: string };
@@ -49,6 +50,16 @@ export class MovimientosFinancierosController {
   })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.movimientosService.listar(req.user, paginacion);
+  }
+
+  // Va antes de ':id': si no, Nest intenta leer «reporte» como un ID.
+  @Get('reporte')
+  @ApiOperation({
+    summary:
+      'Reporte financiero por ciclo: por lote o por periodo, con balance, margen neto y avisos de datos incompletos (HU-33)',
+  })
+  reporte(@Query() filtro: ReporteFinancieroQueryDto, @Req() req: AuthRequest) {
+    return this.movimientosService.reporte(filtro, req.user);
   }
 
   @Get(':id')

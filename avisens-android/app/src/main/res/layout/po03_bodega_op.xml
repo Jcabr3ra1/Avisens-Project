@@ -40,7 +40,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="22dp"
-                android:text="Bodega e Inventario"
+                android:text="Insumos"
                 android:textColor="@color/text_primary"
                 android:textSize="28sp"
                 android:textStyle="bold" />
@@ -49,7 +49,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
-                android:text="Stock de insumos y directorio de proveedores"
+                android:text="Control y stock de insumos"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
 
@@ -79,7 +79,7 @@
             </LinearLayout>
 
             <!-- ================================================= -->
-            <!-- SELECTOR INSUMOS / PROVEEDORES -->
+            <!-- ACCESO A PROVEEDORES (solo Propietario/Admin) -->
             <!-- ================================================= -->
 
             <LinearLayout
@@ -88,24 +88,19 @@
                 android:layout_height="42dp"
                 android:layout_marginTop="10dp"
                 android:background="@drawable/bg_bodega_tabs"
-                android:orientation="horizontal"
-                android:padding="4dp">
-
-                <!-- INSUMOS -->
+                android:padding="4dp"
+                android:orientation="horizontal">
 
                 <TextView
                     android:id="@+id/btnInsumos"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:background="@drawable/bg_bodega_tab_selected"
                     android:gravity="center"
-                    android:text="⬡ Insumos"
-                    android:textColor="@color/text_primary"
+                    android:text="▣ Insumos"
+                    android:textColor="#89938E"
                     android:textSize="13sp"
                     android:textStyle="bold" />
-
-                <!-- PROVEEDORES -->
 
                 <TextView
                     android:id="@+id/btnProveedores"

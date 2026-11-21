@@ -5,9 +5,11 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Matches,
   Max,
   Min,
 } from 'class-validator';
+import { DIRECCION_CON_TEXTO } from './datos-granja.dto';
 
 export class CreateGranjaDto {
   @ApiProperty({ example: 'Granja La Esperanza' })
@@ -16,6 +18,9 @@ export class CreateGranjaDto {
 
   @ApiPropertyOptional({ example: 'Vereda El Progreso km 4' })
   @IsString()
+  @Matches(DIRECCION_CON_TEXTO, {
+    message: 'La dirección debe indicar la vía con texto (calle, carrera, vereda…), no solo números',
+  })
   @IsOptional()
   direccion?: string;
 

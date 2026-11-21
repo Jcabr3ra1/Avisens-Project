@@ -56,9 +56,9 @@ export interface DashboardFuentes {
 }
 
 export function calcularDiaLote(fechaIngreso: string): number {
-  // Misma convención que el backend: el día de ingreso es el 0. Antes sumaba
-  // uno, así que el mismo lote salía con un día distinto según si el trabajo
-  // de indicadores ya había corrido o si se usaba este cálculo de respaldo.
+  // Misma convención que el backend y que Granjas: el día de ingreso es el 1
+  // (diasDeVida). Todas las pantallas usan esta única función, así «Edad» del
+  // Resumen, el «día N» del galpón y la tarjeta de Granjas coinciden (QA-02).
   return diasDeVida(fechaIngreso)
 }
 

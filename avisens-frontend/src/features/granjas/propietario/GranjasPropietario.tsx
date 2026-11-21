@@ -3,10 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as Tabs from '@radix-ui/react-tabs'
 import NumeroAnimado from '@features/organizaciones/components/NumeroAnimado'
 import type { Lote } from '@features/lotes/api/lotes'
-import { IcArrowRight, IcCheck, IcChevronRight, IcLeaf, IcRefresh } from '@shared/ui/icons/icons'
+import { IcArrowRight, IcBell, IcCheck, IcChevronRight, IcLeaf, IcRefresh } from '@shared/ui/icons/icons'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import { getRol } from '@shared/api'
-import { permisosOperativosDeGalpon, puedeCompletarDatos } from '@shared/auth/permisos'
+import { permisosOperativosDeGalpon, puedeCompletarDatos, ROL_PROPIETARIO } from '@shared/auth/permisos'
+import ConfiguracionAlertas from '@features/alertas/components/ConfiguracionAlertas'
 import type { Granja } from '../api/granjas'
 import EsqueletoGranjas from '../components/EsqueletoGranjas'
 import { ModalDatosGranja, ModalDatosLote } from '../components/ModalesDatos'
@@ -26,6 +27,7 @@ import LotePestana from './pestanas/LotePestana'
 import AmbientePestana from './pestanas/AmbientePestana'
 import { ActuadoresGalpon } from '@features/monitoreo/components/ActuadoresGalpon'
 import UmbralesPestana from './pestanas/UmbralesPestana'
+import EquiposDeGalpon from '@features/equipos/components/EquiposDeGalpon'
 import DatosPestana from './pestanas/DatosPestana'
 import BitacoraPestana from './pestanas/BitacoraPestana'
 import '@shared/ui/admin/AdminKit.css'
@@ -39,7 +41,7 @@ const AlertasPage = lazy(cargarAlertas)
 
 // Ambiente (sensores) y Actuadores (relés K1-K4) son el monitoreo del
 // galpón: van juntos y en ese orden.
-const PESTANAS = ['resumen', 'lote', 'bitacora', 'ambiente', 'actuadores', 'umbrales', 'alertas', 'datos'] as const
+const PESTANAS = ['resumen', 'lote', 'bitacora', 'ambiente', 'actuadores', 'equipos', 'umbrales', 'alertas', 'datos'] as const
 type Pestana = (typeof PESTANAS)[number]
 
 function pestanaDe(valor: string | null): Pestana {
@@ -73,6 +75,9 @@ function GranjasPropietario() {
   const [enDetalle, setEnDetalle] = useState(() => parametros.get('galpon') !== null)
   const [revision, setRevision] = useState(0)
   const [datos, setDatos] = useState<DatosAbiertos>(null)
+  const [configurandoAlertas, setConfigurandoAlertas] = useState(false)
+  // HU-25: los canales y tiempos de escalamiento los decide el dueño de la granja.
+  const puedeConfigurarAlertas = getRol() === ROL_PROPIETARIO
   const llegoConDestino = useRef(parametros.get('pestana') !== null || parametros.get('galpon') !== null)
 
   const seleccionada = estructura.find((item) => item.granja.id === granjaId) ?? estructura[0] ?? null
@@ -238,6 +243,12 @@ function GranjasPropietario() {
                 <IcArrowRight size={15} aria-hidden="true" />
               </button>
             ) : null}
+            {puedeConfigurarAlertas && (
+              <button type="button" className="adm-btn adm-btn--secundario" onClick={() => setConfigurandoAlertas(true)}>
+                <IcBell size={15} aria-hidden="true" />
+                Configurar alertas
+              </button>
+            )}
             <button type="button" className="adm-btn adm-btn--secundario" onClick={() => void recargarTodo()} disabled={cargando}>
               <IcRefresh size={15} aria-hidden="true" />
               {cargando ? 'Actualizando…' : 'Actualizar'}
@@ -299,6 +310,7 @@ function GranjasPropietario() {
                 <Tabs.Trigger value="bitacora" className="gp-pestana">Bitácora</Tabs.Trigger>
                 <Tabs.Trigger value="ambiente" className="gp-pestana">Ambiente</Tabs.Trigger>
                 <Tabs.Trigger value="actuadores" className="gp-pestana">Actuadores</Tabs.Trigger>
+                <Tabs.Trigger value="equipos" className="gp-pestana">Equipos</Tabs.Trigger>
                 <Tabs.Trigger value="umbrales" className="gp-pestana">Umbrales</Tabs.Trigger>
                 <Tabs.Trigger value="alertas" className="gp-pestana">
                   Alertas
@@ -334,10 +346,18 @@ function GranjasPropietario() {
                   galpon={galpon}
                   revision={revision}
                   onCompletarUbicacion={puedeCompletarDatos(getRol()) ? () => setDatos({ tipo: 'granja', granja }) : undefined}
+                  onIrABitacora={() => irA('/bitacora')}
+                  onCambioEstructura={() => { void recargarTodo() }}
                 />
               </Tabs.Content>
               <Tabs.Content value="actuadores" className="gp-contenido">
                 <ActuadoresGalpon galponId={galpon.id} sensores={galpon.sensores} onCambio={() => { void recargarTodo() }} />
+              </Tabs.Content>
+              {/* HU-37: inventario de máquinas del galpón, su estado y sus
+                  mantenimientos. Antes solo se abría desde la pantalla del
+                  administrador, donde es de solo lectura. */}
+              <Tabs.Content value="equipos" className="gp-contenido">
+                <EquiposDeGalpon key={galpon.id} galpon={galpon} />
               </Tabs.Content>
               <Tabs.Content value="umbrales" className="gp-contenido">
                 <UmbralesPestana galpon={galpon} puedeConfigurar={permisosOperativosDeGalpon(getRol()).configurar} />
@@ -360,6 +380,9 @@ function GranjasPropietario() {
         )}
       </div>
 
+      {configurandoAlertas && (
+        <ConfiguracionAlertas granja={granja} onCerrar={() => setConfigurandoAlertas(false)} />
+      )}
       {datos?.tipo === 'granja' && (
         <ModalDatosGranja granja={datos.granja} onCerrar={() => setDatos(null)} onGuardado={recargarTodo} />
       )}

@@ -44,11 +44,13 @@
 
             <Spinner
                 android:id="@+id/spinnerLote"
+                android:dropDownWidth="match_parent"
+                android:dropDownHorizontalOffset="0dp"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="@android:color/transparent"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp" android:popupBackground="@drawable/bg_spinner_dropdown"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown"
                 />
 
         </FrameLayout>

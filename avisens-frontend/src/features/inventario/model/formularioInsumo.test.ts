@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import type { Insumo } from '../api/insumos'
 import {
   actualizarPayloadInsumo,
+  buscarInsumoDuplicado,
   crearFormularioInsumo,
   crearPayloadInsumo,
   formularioDesdeInsumo,
+  normalizarNombreInsumo,
 } from './formularioInsumo'
 
 function formulario() {
@@ -65,5 +67,55 @@ describe('formularioDesdeInsumo', () => {
       stock_minimo: 0, precio_unitario_cop: null, tipo: null, ubicacion_almacen: null,
       fecha_vencimiento: '2026-12-31T00:00:00.000Z' } as Insumo
     expect(formularioDesdeInsumo(insumo).fecha_vencimiento).toBe('2026-12-31')
+  })
+})
+
+describe('proveedor del insumo (HU-58)', () => {
+  it('envía el proveedor elegido', () => {
+    expect(crearPayloadInsumo({ ...formulario(), proveedor_habitual_id: 4 }).proveedor_habitual_id).toBe(4)
+  })
+
+  it('sin proveedor no envía el campo', () => {
+    expect(crearPayloadInsumo(formulario())).not.toHaveProperty('proveedor_habitual_id', 0)
+    expect(crearPayloadInsumo(formulario()).proveedor_habitual_id).toBeUndefined()
+  })
+})
+
+describe('buscarInsumoDuplicado (HU-58, escenario 2)', () => {
+  const existente = {
+    id: 9,
+    granja_id: 7,
+    nombre: 'Alimento Iniciación',
+    proveedor_habitual_id: 4,
+    activo: true,
+  }
+
+  it('encuentra el mismo nombre y proveedor en la misma granja', () => {
+    const form = { granja_id: 7, nombre: '  alimento   iniciacion ', proveedor_habitual_id: 4 }
+    expect(buscarInsumoDuplicado([existente], form)).toBe(9)
+  })
+
+  it('con otro proveedor no es duplicado', () => {
+    expect(buscarInsumoDuplicado([existente], { granja_id: 7, nombre: 'Alimento Iniciación', proveedor_habitual_id: 5 })).toBeNull()
+  })
+
+  it('en otra granja no es duplicado', () => {
+    expect(buscarInsumoDuplicado([existente], { granja_id: 8, nombre: 'Alimento Iniciación', proveedor_habitual_id: 4 })).toBeNull()
+  })
+
+  it('ignora los insumos inactivos', () => {
+    expect(buscarInsumoDuplicado([{ ...existente, activo: false }], { granja_id: 7, nombre: 'Alimento Iniciación', proveedor_habitual_id: 4 })).toBeNull()
+  })
+
+  it('sin proveedor solo choca con otro sin proveedor', () => {
+    const sinProveedor = { ...existente, proveedor_habitual_id: null }
+    expect(buscarInsumoDuplicado([sinProveedor], { granja_id: 7, nombre: 'Alimento Iniciación', proveedor_habitual_id: 0 })).toBe(9)
+    expect(buscarInsumoDuplicado([existente], { granja_id: 7, nombre: 'Alimento Iniciación', proveedor_habitual_id: 0 })).toBeNull()
+  })
+})
+
+describe('normalizarNombreInsumo', () => {
+  it('quita tildes, mayúsculas y espacios de más', () => {
+    expect(normalizarNombreInsumo('  Vacúna   NEWCASTLE ')).toBe('vacuna newcastle')
   })
 })

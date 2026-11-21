@@ -27,7 +27,8 @@ describe('MovimientosFinancierosService', () => {
     granja: { findUnique: jest.fn() },
     categoriaFinanciera: { findUnique: jest.fn() },
     proveedor: { findUnique: jest.fn() },
-    lote: { findUnique: jest.fn() },
+    lote: { findUnique: jest.fn(), findMany: jest.fn() },
+    registroMortalidad: { groupBy: jest.fn() },
     $transaction: jest.fn(),
   };
 
@@ -377,6 +378,112 @@ describe('MovimientosFinancierosService', () => {
         service.actualizar(1, { descripcion: 'otra nota' }, propietario),
       ).resolves.toBeDefined();
       expect(prisma.categoriaFinanciera.findUnique).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reporte', () => {
+    const loteBd = {
+      id: 1,
+      codigo: 'L-001',
+      estado: 'finalizado',
+      fecha_ingreso: new Date('2026-09-01T00:00:00.000Z'),
+      fecha_salida_real: new Date('2026-10-12T00:00:00.000Z'),
+      cantidad_inicial: 100,
+      presupuesto_total_cop: null,
+      galpon: { granja: { nombre: 'Granja Norte' } },
+      pesajes: [{ peso_promedio_g: 2400, peso_objetivo_g: 2600 }],
+      planes: [{ peso_objetivo_g: '2500.00' }],
+    };
+
+    beforeEach(() => {
+      prisma.movimientoFinanciero.findMany.mockResolvedValue([
+        {
+          lote_id: 1,
+          tipo: 'egreso',
+          valor_cop: '900000.00',
+          fecha: new Date('2026-09-01T00:00:00.000Z'),
+          categoria: { id: 3, nombre: 'Compra de alimento', tipo: 'egreso' },
+        },
+        {
+          lote_id: 1,
+          tipo: 'ingreso',
+          valor_cop: '1200000.00',
+          fecha: new Date('2026-10-12T00:00:00.000Z'),
+          categoria: { id: 1, nombre: 'Venta de aves', tipo: 'ingreso' },
+        },
+      ]);
+      prisma.lote.findMany.mockResolvedValue([loteBd]);
+      prisma.registroMortalidad.groupBy.mockResolvedValue([
+        { lote_id: 1, _sum: { cantidad_aves: 10 } },
+      ]);
+    });
+
+    it('arma el reporte del ciclo de un lote propio', async () => {
+      const reporte = await service.reporte({ lote_id: 1 }, propietario);
+
+      expect(prisma.movimientoFinanciero.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { lote_id: 1 } }),
+      );
+      const [lote] = reporte.lotes;
+      expect(lote.aves_vivas).toBe(90);
+      expect(lote.costo_por_ave).toBe(10000);
+      expect(lote.margen_neto_pct).toBe(25);
+      // El plan vigente gana sobre el objetivo del último pesaje.
+      expect(lote.peso_objetivo_kg).toBe(2.5);
+      expect(auditoria.registrar).not.toHaveBeenCalled();
+    });
+
+    it('rechaza el lote de otro propietario', async () => {
+      prisma.lote.findUnique.mockResolvedValue({
+        id: 1,
+        galpon: { granja: { id: 10, propietario_id: 99 } },
+      });
+
+      await expect(
+        service.reporte({ lote_id: 1 }, propietario),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.movimientoFinanciero.findMany).not.toHaveBeenCalled();
+    });
+
+    it('acota el periodo a las granjas del propietario', async () => {
+      await service.reporte(
+        { fecha_desde: '2026-09-01', fecha_hasta: '2026-10-31' },
+        propietario,
+      );
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const llamada = prisma.movimientoFinanciero.findMany.mock.calls[0][0] as {
+        where: Record<string, unknown>;
+      };
+      expect(llamada.where).toEqual({
+        fecha: {
+          gte: new Date('2026-09-01T00:00:00.000Z'),
+          lte: new Date('2026-10-31T00:00:00.000Z'),
+        },
+        granja: { propietario_id: 5 },
+      });
+    });
+
+    it('deja rastro cuando el administrador consulta un reporte', async () => {
+      await service.reporte({ lote_id: 1 }, admin);
+      expect(auditoria.registrar).toHaveBeenCalledWith(
+        expect.objectContaining({ accion: 'consultar' }),
+      );
+    });
+
+    it.each([
+      [{}, 'Indica un lote'],
+      [{ fecha_desde: '2026-09-01' }, 'Indica un lote'],
+      [{ lote_id: 1, fecha_desde: '2026-09-01' }, 'no ambos'],
+      [{ fecha_desde: '2026-10-01', fecha_hasta: '2026-09-01' }, 'posterior'],
+      [{ fecha_desde: '2024-01-01', fecha_hasta: '2026-09-01' }, 'dos años'],
+    ])('valida el filtro %j', async (filtro, mensaje) => {
+      await expect(service.reporte(filtro, propietario)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.reporte(filtro, propietario)).rejects.toThrow(
+        mensaje,
+      );
     });
   });
 });

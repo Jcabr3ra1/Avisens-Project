@@ -156,7 +156,9 @@ export default function Sidebar({ collapsed, mobileOpen, onCloseMobile, onToggle
     setLoggingOut(true)
     await logout()
     onCloseMobile()
-    navigate('/login')
+    // replace: con «Atrás» el navegador no debe volver a la pantalla del
+    // panel después de cerrar sesión (auditoría QA 2026-10-30, CP-09).
+    navigate('/login', { replace: true })
   }
 
   function renderLink(item: NavLinkItem, nested = false) {

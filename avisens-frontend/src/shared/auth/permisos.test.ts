@@ -51,16 +51,20 @@ describe('permisosDeGestion', () => {
 })
 
 describe('permisosDeInsumo', () => {
-  it('solo el administrador administra el catálogo de insumos', () => {
+  it('el administrador administra todo el catálogo de insumos', () => {
     const admin = permisosDeInsumo(ROL_ADMIN)
     expect(admin.crear && admin.editar && admin.alternarActivo && admin.eliminar).toBe(true)
+  })
 
-    for (const rol of [ROL_PROPIETARIO, ROL_OPERARIO]) {
-      const permisos = permisosDeInsumo(rol)
-      expect(permisos.crear).toBe(false)
-      expect(permisos.editar).toBe(false)
-      expect(permisos.eliminar).toBe(false)
-    }
+  it('el propietario crea, edita y desactiva insumos, pero no los borra (HU-58)', () => {
+    const propietario = permisosDeInsumo(ROL_PROPIETARIO)
+    expect(propietario.crear && propietario.editar && propietario.alternarActivo).toBe(true)
+    expect(propietario.eliminar).toBe(false)
+  })
+
+  it('el operario no administra el catálogo', () => {
+    const operario = permisosDeInsumo(ROL_OPERARIO)
+    expect(operario.crear || operario.editar || operario.alternarActivo || operario.eliminar).toBe(false)
   })
 
   it('los tres roles registran movimientos de stock', () => {
@@ -71,6 +75,20 @@ describe('permisosDeInsumo', () => {
 
   it('sin sesión no se puede ni mover stock', () => {
     expect(permisosDeInsumo(null).registrarMovimiento).toBe(false)
+    expect(permisosDeInsumo(null).tiposMovimiento).toEqual([])
+  })
+
+  it('el operario solo registra salidas; admin y propietario, los tres tipos', () => {
+    expect(permisosDeInsumo(ROL_OPERARIO).tiposMovimiento).toEqual(['salida'])
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO]) {
+      expect(permisosDeInsumo(rol).tiposMovimiento).toEqual(['entrada', 'salida', 'ajuste'])
+    }
+  })
+
+  it('el operario no ve precios ni el valor de la bodega', () => {
+    expect(permisosDeInsumo(ROL_OPERARIO).verCostos).toBe(false)
+    expect(permisosDeInsumo(ROL_ADMIN).verCostos).toBe(true)
+    expect(permisosDeInsumo(ROL_PROPIETARIO).verCostos).toBe(true)
   })
 })
 
@@ -99,9 +117,16 @@ describe('permisosDeProveedor', () => {
     expect(permisosDeProveedor(ROL_ADMIN).gestionar).toBe(true)
   })
 
-  it('el operario y el propietario solo lo consultan', () => {
+  it('el operario y el propietario no gestionan el directorio', () => {
     expect(permisosDeProveedor(ROL_OPERARIO).gestionar).toBe(false)
     expect(permisosDeProveedor(ROL_PROPIETARIO).gestionar).toBe(false)
+  })
+
+  it('el propietario da de alta proveedores; el operario no (HU-58)', () => {
+    expect(permisosDeProveedor(ROL_ADMIN).crear).toBe(true)
+    expect(permisosDeProveedor(ROL_PROPIETARIO).crear).toBe(true)
+    expect(permisosDeProveedor(ROL_OPERARIO).crear).toBe(false)
+    expect(permisosDeProveedor(null).crear).toBe(false)
   })
 
   it('sin sesión o con un rol desconocido no se gestiona', () => {

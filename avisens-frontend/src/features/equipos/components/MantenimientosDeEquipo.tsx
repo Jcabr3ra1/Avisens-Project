@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { getRol } from '@shared/api'
 import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
+import { formatearFechaCalendario } from '@shared/utils/fechas'
 import type { Equipo } from '../api/equipos'
 import type { Mantenimiento } from '../api/mantenimientos'
 import { useMantenimientos } from '../hooks/useMantenimientos'
@@ -11,13 +12,8 @@ import {
   TIPOS_MANTENIMIENTO,
   type DatosMantenimiento,
 } from '../model/mantenimiento'
-import { numeroOpcional } from '../model/equipo'
+import { etiquetaEstadoEquipo, numeroOpcional } from '../model/equipo'
 import RepuestosDeMantenimiento from './RepuestosDeMantenimiento'
-
-function fecha(iso: string | null): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('es-CO', { dateStyle: 'medium' })
-}
 
 function MantenimientosDeEquipo({
   equipo,
@@ -93,7 +89,7 @@ function MantenimientosDeEquipo({
 
       <div className="eq-cabecera-equipo">
         <strong>{equipo.nombre}</strong>
-        <span><code>{equipo.codigo}</code> · {equipo.estado_actual}</span>
+        <span><code>{equipo.codigo}</code> · {etiquetaEstadoEquipo(equipo.estado_actual)}</span>
       </div>
 
       {error && <div className="eq-alert eq-alert--error" role="alert">{error}</div>}
@@ -178,7 +174,9 @@ function MantenimientosDeEquipo({
                   </span>
                   <span className="eq-mant-tipo">{mantenimiento.tipo ?? 'sin tipo'}</span>
                   <span className="eq-mant-fecha">
-                    {fecha(mantenimiento.fecha_programada)}
+                    {/* Columna DATE: llega como medianoche UTC y, convertida a la
+                        hora de Colombia, se mostraba un día antes. */}
+                    {formatearFechaCalendario(mantenimiento.fecha_programada)}
                   </span>
                   <span className="eq-mant-desc">{mantenimiento.descripcion ?? '—'}</span>
                   <span className="eq-mant-acciones">

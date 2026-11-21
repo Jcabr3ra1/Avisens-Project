@@ -34,11 +34,13 @@
 
         <Spinner
             android:id="@+id/spinnerTipoAlimento"
+            android:dropDownWidth="match_parent"
+            android:dropDownHorizontalOffset="0dp"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@android:color/transparent"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp" android:popupBackground="@drawable/bg_spinner_dropdown"
+            android:paddingStart="0dp"
+            android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown"
             />
     </FrameLayout>
 
@@ -59,11 +61,13 @@
 
         <Spinner
             android:id="@+id/spinnerUnidadInsumo"
+            android:dropDownWidth="match_parent"
+            android:dropDownHorizontalOffset="0dp"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@android:color/transparent"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
+            android:paddingStart="0dp"
+            android:paddingEnd="0dp"
             android:popupBackground="@drawable/bg_spinner_dropdown"
             android:spinnerMode="dropdown" />
 
@@ -128,15 +132,40 @@
 
                 <Spinner
                     android:id="@+id/spinnerProveedor"
+                    android:dropDownWidth="match_parent"
+                    android:dropDownHorizontalOffset="0dp"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:background="@android:color/transparent"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp" android:popupBackground="@drawable/bg_spinner_dropdown"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown"
                     />
             </FrameLayout>
         </LinearLayout>
     </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="5dp"
+        android:text="Stock mínimo para alerta"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="#171D1A" />
+
+    <EditText
+        android:id="@+id/edtStockMinimoInsumo"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/bg_input_verde"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:singleLine="true"
+        android:textSize="12sp"
+        android:textColor="@color/black"
+        android:hint="Ej. 100 (opcional)"
+        android:inputType="numberDecimal" />
 
     <LinearLayout
         android:layout_width="match_parent"

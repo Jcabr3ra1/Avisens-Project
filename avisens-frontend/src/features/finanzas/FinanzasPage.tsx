@@ -6,7 +6,9 @@ import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import { IcArrowUp, IcCoin, IcRefresh } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import { fechaDeHoy } from '@shared/utils/fechas'
+import { fechaCorta } from './model/movimiento'
 import FormularioMovimiento from './components/FormularioMovimiento'
+import ReporteCiclo from './components/ReporteCiclo'
 import { useMovimientosFinancieros } from './hooks/useMovimientosFinancieros'
 import {
   errorDeFormulario,
@@ -20,6 +22,7 @@ import '@shared/ui/admin/AdminKit.css'
 import './FinanzasPage.css'
 
 type FiltroTipo = 'todos' | 'ingreso' | 'egreso'
+type Vista = 'movimientos' | 'reporte'
 type TipoPresentado = Exclude<FiltroTipo, 'todos'> | 'sin-tipo'
 
 function cop(valor: number): string {
@@ -30,13 +33,6 @@ function cop(valor: number): string {
   }).format(valor)
 }
 
-function fechaCorta(fecha: string): string {
-  return new Intl.DateTimeFormat('es-CO', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(fecha))
-}
 
 function presentarTipo(tipo: MovimientoFinanciero['tipo']): {
   clase: TipoPresentado
@@ -52,6 +48,7 @@ function FinanzasPage() {
   const datos = useMovimientosFinancieros()
   const { movimientos, cargando, error } = datos
   const cargar = datos.recargar
+  const [vista, setVista] = useState<Vista>('movimientos')
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos')
   const [filtroLote, setFiltroLote] = useState('todos')
   const [form, setForm] = useState<DatosMovimiento | null>(null)
@@ -170,6 +167,19 @@ function FinanzasPage() {
         )}
       />
 
+      <div className="fin-filtro-grupo fin-vistas rc-no-imprimir" role="group" aria-label="Vista de finanzas">
+        <button type="button" className="fin-filtro-btn" aria-pressed={vista === 'movimientos'} onClick={() => setVista('movimientos')}>
+          Movimientos
+        </button>
+        <button type="button" className="fin-filtro-btn" aria-pressed={vista === 'reporte'} onClick={() => setVista('reporte')}>
+          Reporte por ciclo
+        </button>
+      </div>
+
+      {vista === 'reporte' ? (
+        <ReporteCiclo lotes={datos.lotes} granjas={datos.granjas} />
+      ) : (
+      <>
       <TarjetasResumen stats={stats} etiqueta="Resumen financiero" />
 
       {error && (
@@ -271,6 +281,8 @@ function FinanzasPage() {
           </div>
         )}
       </section>
+      </>
+      )}
 
       {form !== null && (
         <FormularioMovimiento

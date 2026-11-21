@@ -16,8 +16,6 @@ export interface Sensor {
   unidad_medida: string
   modelo: string | null
   fabricante: string | null
-  // Float en el esquema, no Decimal: llegan como número. Ubican al sensor
-  // dentro del galpón, y con eso se dibuja el plano.
   coordenada_x: number | null
   coordenada_y: number | null
   altura_metros: number | null
@@ -29,9 +27,6 @@ export interface Sensor {
   dispositivo: DispositivoResumen
 }
 
-// El sensor guarda galpon_id Y dispositivo_id; el backend valida que el
-// dispositivo pertenezca al galpón (coherencia), así que ambos son obligatorios.
-
 export interface CrearSensorPayload {
   galpon_id: number
   dispositivo_id: number
@@ -41,23 +36,18 @@ export interface CrearSensorPayload {
   unidad_medida: string
   modelo?: string
   fabricante?: string
+  coordenada_x?: number | null
+  coordenada_y?: number | null
+  altura_metros?: number | null
 }
 
 export type CrearSensorAutomaticoPayload = Omit<CrearSensorPayload, 'codigo' | 'unidad_medida'> &
   Partial<Pick<CrearSensorPayload, 'codigo' | 'unidad_medida'>>
 
-// En edición todo es opcional; `estado` permite activar/desactivar.
-
 export type ActualizarSensorPayload = Partial<CrearSensorPayload> & {
   estado?: string
-  // null borra la fecha; omitirla la deja como está.
   fecha_instalacion?: string | null
 }
-
-// ─── Registro de los relés K1-K4 de un ESP32 ───────────────────────────────
-// POST /sensores/reles (solo Administrador). Idempotente: el detalle por
-// canal dice qué se creó, qué se asoció (registro antiguo REL-K), qué ya
-// estaba y qué quedó en conflicto sin cambios.
 
 export type ResultadoCanalRele = 'creado' | 'asociado' | 'existente' | 'conflicto'
 
@@ -80,8 +70,6 @@ export interface RegistroReles {
 
 const RESULTADOS: readonly ResultadoCanalRele[] = ['creado', 'asociado', 'existente', 'conflicto']
 
-// Un 2xx con otra forma (backend anterior, proxy) no puede presentarse como
-// un registro hecho.
 function comoRegistroReles(datos: unknown): RegistroReles {
   const r = datos as Partial<RegistroReles> | null
   if (
@@ -100,10 +88,6 @@ export async function registrarReles(galponId: number, dispositivoId: number): P
   })
   return comoRegistroReles(data)
 }
-
-// Funciones del módulo `sensores` del backend (EP-08).
-// Requieren sesión: el Admin gestiona todos; el Propietario, solo los sensores
-// de galpones de sus propias granjas (el alcance se aplica en el servidor).
 
 export async function listarSensores(): Promise<Sensor[]> {
   return listarTodasLasPaginas<Sensor>('/sensores')
@@ -127,7 +111,6 @@ export async function actualizarSensor(
   return data
 }
 
-// Activar: estado → 'activo'.
 export async function activarSensor(
   id: number,
 ): Promise<{ id: number; estado: string }> {
@@ -137,7 +120,6 @@ export async function activarSensor(
   return data
 }
 
-// Desactivar: borrado suave, estado → 'inactivo' (conserva el historial).
 export async function desactivarSensor(
   id: number,
 ): Promise<{ id: number; estado: string }> {
@@ -147,7 +129,6 @@ export async function desactivarSensor(
   return data
 }
 
-// Sin historial se borra; con lecturas o alertas se retira y deja de aparecer.
 export async function eliminarSensor(
   id: number,
 ): Promise<{ id: number; eliminado: boolean; retirado: boolean }> {
