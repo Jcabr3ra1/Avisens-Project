@@ -1411,16 +1411,28 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 window.setLayout(ancho, alto)
             }
         }
-        etConfirmarPassword.setOnFocusChangeListener { campo, tieneFoco ->
-            if (tieneFoco) campo.postDelayed({
-                if (dialog.isShowing) {
-                    val posicion = IntArray(2)
-                    val posicionScroll = IntArray(2)
-                    campo.getLocationOnScreen(posicion)
-                    scrollCrear.getLocationOnScreen(posicionScroll)
-                    scrollCrear.smoothScrollBy(0, posicion[1] - posicionScroll[1] - scrollCrear.height / 2)
+        // Mantener visible el campo activo en pantallas pequenas y con teclado.
+        listOf(
+            etNombre, etCedula, etEmail, etTelefono,
+            etUsername, etPassword, etConfirmarPassword
+        ).forEach { campo ->
+            campo.setOnFocusChangeListener { vista, tieneFoco ->
+                if (tieneFoco) {
+                    vista.postDelayed({
+                        if (dialog.isShowing) {
+                            val campoRect = Rect()
+                            vista.getDrawingRect(campoRect)
+                            scrollCrear.offsetDescendantRectToMyCoords(vista, campoRect)
+                            val margen = dp(16)
+                            val destino = (campoRect.bottom - scrollCrear.height + margen)
+                                .coerceAtLeast(0)
+                            if (destino > scrollCrear.scrollY) {
+                                scrollCrear.smoothScrollTo(0, destino)
+                            }
+                        }
+                    }, 200)
                 }
-            }, 250)
+            }
         }
 
         // --------------------------------------------------------

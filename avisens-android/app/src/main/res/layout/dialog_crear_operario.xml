@@ -1,18 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_dialog_rounded"
     android:orientation="vertical">
 
+    <!-- CONTENIDO DESPLAZABLE -->
+
     <ScrollView
         android:id="@+id/scrollCrearOperario"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:fillViewport="true"
         android:clipToPadding="false"
-        android:fillViewport="false"
+        android:scrollbars="vertical"
         android:overScrollMode="never">
 
         <LinearLayout
@@ -22,7 +26,7 @@
             android:paddingStart="20dp"
             android:paddingTop="18dp"
             android:paddingEnd="20dp"
-            android:paddingBottom="24dp">
+            android:paddingBottom="36dp">
 
             <TextView
                 android:layout_width="match_parent"
@@ -30,7 +34,7 @@
                 android:text="Crear operario"
                 android:textColor="#151515"
                 android:textSize="20sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
 
             <TextView
                 android:layout_width="match_parent"
@@ -38,7 +42,9 @@
                 android:layout_marginTop="4dp"
                 android:text="Completa los datos para registrar un nuevo operario."
                 android:textColor="#7A817D"
-                android:textSize="13sp" />
+                android:textSize="13sp"/>
+
+            <!-- DATOS PERSONALES -->
 
             <TextView
                 android:layout_width="match_parent"
@@ -47,7 +53,9 @@
                 android:text="Datos personales"
                 android:textColor="#1F5C42"
                 android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
+
+            <!-- NOMBRE COMPLETO -->
 
             <TextView
                 android:layout_width="match_parent"
@@ -56,11 +64,12 @@
                 android:text="Nombre completo"
                 android:textColor="#202020"
                 android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
                 app:boxBackgroundMode="none"
@@ -69,14 +78,22 @@
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etNombreOperario"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="52dp"
+                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
                     android:hint="Ej. Juan Pérez"
                     android:inputType="textCapWords"
-                    android:maxLines="1"
-                    android:paddingHorizontal="10dp"
-                    android:textSize="14sp" />
+                    android:singleLine="true"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:textColor="#1F2924"
+                    android:textColorHint="#75847C"
+                    android:textSize="14sp"/>
+
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- CÉDULA -->
 
             <TextView
                 android:layout_width="match_parent"
@@ -85,11 +102,12 @@
                 android:text="Cédula"
                 android:textColor="#202020"
                 android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
                 app:boxBackgroundMode="none"
@@ -98,14 +116,22 @@
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etCedulaOperario"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="52dp"
+                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
                     android:hint="Ej. 1234567890"
                     android:inputType="number"
-                    android:maxLines="1"
-                    android:paddingHorizontal="10dp"
-                    android:textSize="14sp" />
+                    android:singleLine="true"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:textColor="#1F2924"
+                    android:textColorHint="#75847C"
+                    android:textSize="14sp"/>
+
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- CORREO ELECTRÓNICO -->
 
             <TextView
                 android:layout_width="match_parent"
@@ -114,11 +140,12 @@
                 android:text="Correo electrónico"
                 android:textColor="#202020"
                 android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
                 app:boxBackgroundMode="none"
@@ -127,14 +154,22 @@
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etEmailOperario"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="52dp"
+                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
                     android:hint="Ej. correo@ejemplo.com"
                     android:inputType="textEmailAddress"
-                    android:maxLines="1"
-                    android:paddingHorizontal="10dp"
-                    android:textSize="14sp" />
+                    android:singleLine="true"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:textColor="#1F2924"
+                    android:textColorHint="#75847C"
+                    android:textSize="14sp"/>
+
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- TELÉFONO -->
 
             <TextView
                 android:layout_width="match_parent"
@@ -143,11 +178,12 @@
                 android:text="Teléfono"
                 android:textColor="#202020"
                 android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
                 app:boxBackgroundMode="none"
@@ -156,21 +192,31 @@
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etTelefonoOperario"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="52dp"
+                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
                     android:hint="Ej. 3001234567"
                     android:inputType="phone"
-                    android:maxLines="1"
-                    android:paddingHorizontal="10dp"
-                    android:textSize="14sp" />
+                    android:singleLine="true"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:textColor="#1F2924"
+                    android:textColorHint="#75847C"
+                    android:textSize="14sp"/>
+
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- SEPARADOR -->
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="14dp"
-                android:background="#DDE5E0" />
+                android:background="#DDE5E0"/>
+
+            <!-- CREDENCIALES -->
 
             <TextView
                 android:layout_width="match_parent"
@@ -178,7 +224,7 @@
                 android:text="Credenciales de acceso"
                 android:textColor="#1F5C42"
                 android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
 
             <TextView
                 android:layout_width="match_parent"
@@ -186,7 +232,9 @@
                 android:layout_marginTop="4dp"
                 android:text="Datos para iniciar sesión."
                 android:textColor="#7A817D"
-                android:textSize="13sp" />
+                android:textSize="13sp"/>
+
+            <!-- NOMBRE DE USUARIO -->
 
             <TextView
                 android:layout_width="match_parent"
@@ -195,11 +243,12 @@
                 android:text="Nombre de usuario"
                 android:textColor="#202020"
                 android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
                 app:boxBackgroundMode="none"
@@ -208,14 +257,22 @@
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etUsernameOperario"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="52dp"
+                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
                     android:hint="Ej. juanperez"
                     android:inputType="textNoSuggestions"
-                    android:maxLines="1"
-                    android:paddingHorizontal="10dp"
-                    android:textSize="14sp" />
+                    android:singleLine="true"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:textColor="#1F2924"
+                    android:textColorHint="#75847C"
+                    android:textSize="14sp"/>
+
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- CONTRASEÑA -->
 
             <TextView
                 android:layout_width="match_parent"
@@ -224,11 +281,12 @@
                 android:text="Contraseña"
                 android:textColor="#202020"
                 android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
                 app:boxBackgroundMode="none"
@@ -238,14 +296,22 @@
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPasswordOperario"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="52dp"
+                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
                     android:hint="Ingresa una contraseña"
                     android:inputType="textPassword"
-                    android:maxLines="1"
-                    android:paddingHorizontal="10dp"
-                    android:textSize="14sp" />
+                    android:singleLine="true"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:textColor="#1F2924"
+                    android:textColorHint="#75847C"
+                    android:textSize="14sp"/>
+
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- CONFIRMAR CONTRASEÑA -->
 
             <TextView
                 android:layout_width="match_parent"
@@ -254,11 +320,12 @@
                 android:text="Confirmar contraseña"
                 android:textColor="#202020"
                 android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
                 app:boxBackgroundMode="none"
@@ -268,24 +335,33 @@
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etConfirmarPasswordOperario"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="52dp"
+                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
                     android:hint="Repite la contraseña"
                     android:inputType="textPassword"
                     android:imeOptions="actionDone"
-                    android:maxLines="1"
-                    android:paddingHorizontal="10dp"
-                    android:textSize="14sp" />
+                    android:singleLine="true"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:textColor="#1F2924"
+                    android:textColorHint="#75847C"
+                    android:textSize="14sp"/>
+
             </com.google.android.material.textfield.TextInputLayout>
 
         </LinearLayout>
+
     </ScrollView>
+
+    <!-- BOTONES FIJOS EN LA PARTE INFERIOR -->
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="end|center_vertical"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:paddingStart="20dp"
         android:paddingTop="8dp"
         android:paddingEnd="20dp"
@@ -293,28 +369,41 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancelarOperario"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minWidth="0dp"
+            android:minHeight="48dp"
+            android:gravity="center"
             android:text="Cancelar"
             android:textAllCaps="false"
             android:textColor="#1A1A1A"
             android:textSize="14sp"
+            android:maxLines="1"
+            android:ellipsize="end"
             app:backgroundTint="#FFFFFF"
             app:cornerRadius="10dp"
             app:strokeColor="#D9E1DD"
-            app:strokeWidth="1dp" />
+            app:strokeWidth="1dp"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCrearOperario"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:layout_marginStart="8dp"
+            android:minWidth="0dp"
+            android:minHeight="48dp"
+            android:gravity="center"
             android:text="Crear"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="14sp"
+            android:maxLines="1"
+            android:ellipsize="end"
             app:backgroundTint="#2F8B5E"
-            app:cornerRadius="10dp" />
+            app:cornerRadius="10dp"/>
+
     </LinearLayout>
 
 </LinearLayout>

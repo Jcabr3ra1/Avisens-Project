@@ -56,6 +56,25 @@ import retrofit2.http.Query
 
 interface ApiService {
 
+    @GET("v1/notificaciones")
+    suspend fun listarMisNotificaciones(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<com.project.avisensandroid.model.NotificacionResponse>>
+
+    @GET("v1/notificaciones/no-leidas")
+    suspend fun contarNotificacionesNoLeidas(): Response<com.project.avisensandroid.model.ContadorNotificacionesResponse>
+
+    @PATCH("v1/notificaciones/{id}/leer")
+    suspend fun marcarNotificacionLeida(@Path("id") id: Int): Response<com.project.avisensandroid.model.NotificacionResponse>
+
+    @PATCH("v1/notificaciones/leer-todas")
+    suspend fun marcarTodasNotificacionesLeidas(): Response<okhttp3.ResponseBody>
+
+    @DELETE("v1/notificaciones/{id}")
+    suspend fun eliminarMiNotificacion(@Path("id") id: Int): Response<okhttp3.ResponseBody>
+
+
     // =========================================================
     // AUTENTICACIÓN
     // =========================================================

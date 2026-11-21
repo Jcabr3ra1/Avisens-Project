@@ -70,10 +70,22 @@ import com.project.avisensandroid.ui.fragments.PropietarioFragment
 import com.project.avisensandroid.ui.fragments.GestionOperariosFragment
 import com.project.avisensandroid.ui.fragments.SensoresFragment
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import com.project.avisensandroid.controller.NotificacionesLocales
+import android.Manifest
+import android.os.Build
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
 import java.util.Calendar
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
+
+    private var monitoreoNotificaciones: Job? = null
+
 
     companion object {
         private const val STATE_GRANJA_ID = "state_granja_id"
@@ -451,6 +463,22 @@ class MainActivity : AppCompatActivity() {
         }
 
         SesionExpirada.registrar(alExpirarSesion)
+        if (UserSession.isLoggedIn(this)) {
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 712)
+            }
+            monitoreoNotificaciones?.cancel()
+            monitoreoNotificaciones = lifecycleScope.launch {
+                while (isActive) {
+                    try { NotificacionesLocales.revisar(applicationContext) }
+                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (_: Exception) { /* Sin red: reintentar en la siguiente vuelta. */ }
+                    delay(60_000L)
+                }
+            }
+        }
         ultimaConexionValidada = com.project.avisensandroid.controller.OfflineCache.hayInternet(this)
         if (!ultimaConexionValidada!!) reconexionPendiente = true
         try {
@@ -471,6 +499,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        monitoreoNotificaciones?.cancel()
+        monitoreoNotificaciones = null
         observandoConexion = false
         mainHandler.removeCallbacks(reconectarRunnable)
         mainHandler.removeCallbacks(actualizacionPeriodica)
