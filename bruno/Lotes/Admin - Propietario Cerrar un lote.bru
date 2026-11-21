@@ -1,0 +1,37 @@
+meta {
+  name: [Admin · Propietario] Cerrar un lote
+  type: http
+  seq: 9
+}
+
+patch {
+  url: {{baseUrl}}/v1/lotes/9/cerrar
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "fecha_salida_real": "2026-09-16",
+    "cantidad_aves_vendidas": 4850,
+    "peso_promedio_final_g": 2650,
+    "valor_venta_total_cop": 58000000,
+    "confirmar_cierre": false
+  }
+}
+
+docs {
+  Cierra un lote activo (estado = finalizado) y libera el galpón.
+  - Si hay días del ciclo sin consumo de alimento y confirmar_cierre no es true,
+    responde { cerrado: false, requiere_confirmacion: true, dias_sin_alimento, dias_sin_mortalidad }.
+  - Al confirmar, guarda los datos de venta, calcula mortalidad acumulada final y FCR definitivo,
+    y si valor_venta_total_cop > 0 crea automáticamente un ingreso en la categoría "Venta de aves".
+}

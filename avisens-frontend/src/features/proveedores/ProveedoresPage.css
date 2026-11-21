@@ -203,6 +203,60 @@
 
 .prv-tipo.is-vacio { background: var(--surface-subtle); color: var(--text-muted); }
 
+.prv-tipos-contenedor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+.prv-tipo-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: .15rem .5rem;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary-hover);
+  font-size: .72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.prv-chips-categorias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  margin-top: .35rem;
+}
+
+.prv-chip-categoria {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  min-height: 34px;
+  padding: .35rem .75rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--surface-base);
+  color: var(--text2);
+  font-size: .8rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.prv-chip-categoria:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+.prv-chip-categoria--activo {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+  font-weight: 750;
+}
+
 .prv-interruptor { position: relative; display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer; }
 .prv-interruptor input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .prv-interruptor-riel { position: relative; width: 38px; height: 22px; flex: 0 0 auto; border-radius: var(--radius-full); background: var(--border-default); transition: background var(--motion-base) var(--ease-standard); }

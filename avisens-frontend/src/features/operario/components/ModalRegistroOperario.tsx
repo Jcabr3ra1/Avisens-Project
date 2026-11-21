@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import { IcHeart, IcSeed } from '@shared/ui/icons/icons'
 import { fechaDeHoy } from '@shared/utils/fechas'
+import { AGUA_MAXIMO_LITROS, ALIMENTO_MAXIMO_KG } from '@features/consumos-diarios/model/consumoDiario'
 import type { JornadaOperario } from '../model/jornadaOperario'
 import { validarConsumo, validarFechaRegistro, validarMortalidad } from '../model/registroOperario'
 
@@ -14,7 +15,7 @@ type Props = {
   onCerrar: () => void
   onRegistrarMortalidad: (
     loteId: number,
-    registro: { fecha: string; cantidad_aves: number; causa_presuntiva?: string; disposicion?: string },
+    registro: { fecha: string; cantidad_aves: number; causa_presuntiva?: string; disposicion?: string; observaciones?: string },
   ) => Promise<void>
   onRegistrarConsumo: (
     loteId: number,
@@ -39,6 +40,7 @@ function ModalRegistroOperario({
   const [cantidadAves, setCantidadAves] = useState('')
   const [causa, setCausa] = useState('')
   const [disposicion, setDisposicion] = useState('')
+  const [observaciones, setObservaciones] = useState('')
   const [alimento, setAlimento] = useState('')
   const [agua, setAgua] = useState('')
   const [error, setError] = useState('')
@@ -68,6 +70,7 @@ function ModalRegistroOperario({
           cantidad_aves: Number(cantidadAves),
           causa_presuntiva: causa.trim() || undefined,
           disposicion: disposicion.trim() || undefined,
+          observaciones: observaciones.trim() || undefined,
         })
       } else {
         await onRegistrarConsumo(lote.id, {
@@ -145,6 +148,16 @@ function ModalRegistroOperario({
                 <option value="otro">Otro</option>
               </select>
             </label>
+            <label className="modal-campo">
+              <span>Observaciones <em>(opcional)</em></span>
+              <textarea
+                value={observaciones}
+                onChange={(evento) => setObservaciones(evento.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Ej.: estaban concentradas en la esquina norte."
+              />
+            </label>
           </>
         ) : (
           <div className="modal-fila">
@@ -154,6 +167,7 @@ function ModalRegistroOperario({
                 ref={campoRef}
                 type="number"
                 min="0.01"
+                max={ALIMENTO_MAXIMO_KG}
                 step="0.01"
                 value={alimento}
                 onChange={(evento) => setAlimento(evento.target.value)}
@@ -165,6 +179,7 @@ function ModalRegistroOperario({
               <input
                 type="number"
                 min="0.01"
+                max={AGUA_MAXIMO_LITROS}
                 step="0.01"
                 value={agua}
                 onChange={(evento) => setAgua(evento.target.value)}

@@ -6,6 +6,7 @@ import type { CategoriaFinanciera } from '../api/movimientos-financieros'
 import {
   categoriasParaTipo,
   METODOS_PAGO,
+  VALOR_MAXIMO_COP,
   type FormularioMovimiento as DatosMovimiento,
 } from '../model/movimiento'
 
@@ -23,6 +24,8 @@ type Props = {
 }
 
 const ID_FORMULARIO = 'formulario-movimiento'
+
+const formatearCop = (valor: number) => `$ ${Math.round(valor).toLocaleString('es-CO')} COP`
 
 function FormularioMovimiento({
   form, categorias, granjas, lotes, modoEdicion, guardando, error,
@@ -103,12 +106,18 @@ function FormularioMovimiento({
           <input
             type="number"
             min="1"
+            max={VALOR_MAXIMO_COP}
             step="1"
             inputMode="numeric"
             value={form.valor_cop}
             onChange={(evento) => onCambiar('valor_cop', evento.target.value)}
             required
           />
+          {Number(form.valor_cop) > 0 && (
+            <small style={{ color: 'var(--text-secondary)', fontWeight: 600, marginTop: 'var(--space-1)' }}>
+              {formatearCop(Number(form.valor_cop))}
+            </small>
+          )}
         </label>
 
         <label className="modal-campo">
@@ -167,8 +176,13 @@ function FormularioMovimiento({
           <input
             value={form.numero_factura}
             onChange={(evento) => onCambiar('numero_factura', evento.target.value)}
-            maxLength={60}
+            placeholder="Ej.: FAC-2026-001"
+            maxLength={50}
+            autoComplete="off"
           />
+          <small className="modal-ayuda" style={{ color: 'var(--text-muted)' }}>
+            Folio o comprobante físico para soporte contable.
+          </small>
         </label>
 
         <label className="modal-campo">

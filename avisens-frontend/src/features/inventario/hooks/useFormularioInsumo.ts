@@ -9,6 +9,10 @@ import {
   type FormularioInsumoDatos,
 } from '../model/formularioInsumo'
 
+// Mensaje pensado para mostrarse tal cual en el formulario (p. ej. el aviso
+// de insumo duplicado). Los errores de red siguen pasando por mensajeDeError.
+export class AvisoInsumo extends Error {}
+
 type GuardarInsumo = (
   datos: CrearInsumoPayload | ActualizarInsumoPayload,
   editandoId: number | null,
@@ -51,7 +55,9 @@ export function useFormularioInsumo(alGuardar: GuardarInsumo, granjaPorDefecto =
       await alGuardar(datos, editandoId)
       setAbierto(false)
     } catch (errorGuardado) {
-      setError(mensajeDeError(errorGuardado, 'No se pudo guardar el insumo.'))
+      setError(errorGuardado instanceof AvisoInsumo
+        ? errorGuardado.message
+        : mensajeDeError(errorGuardado, 'No se pudo guardar el insumo.'))
     } finally {
       setGuardando(false)
     }

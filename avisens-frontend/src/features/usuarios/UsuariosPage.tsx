@@ -1,7 +1,10 @@
 import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
 import { crearOrganizacion } from '@features/organizaciones/api/organizaciones'
+import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
+import { listarAsignacionesGalpon } from './api/asignacionesGalpon'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { IcPlus } from '@shared/ui/icons/icons'
 import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
 import RecuperacionesDeUsuario from '@features/recuperaciones-password/components/RecuperacionesDeUsuario'
@@ -35,6 +38,7 @@ function UsuariosPage() {
     alternarActivo,
     eliminar,
   } = useUsuarios()
+  useRefetchOnFocus(recargar)
   const catalogos = useCatalogosUsuarios(esPropietario)
   const {
     roles: rolesCatalogo,
@@ -46,6 +50,13 @@ function UsuariosPage() {
   const asignaciones = useAsignacionesGalpon()
   const filtro = useFiltroUsuarios(usuarios)
   const resumen = useResumenUsuarios(usuarios)
+  const [galpones, setGalpones] = useState<Galpon[]>([])
+
+  useEffect(() => {
+    if (esPropietario) {
+      void listarGalpones().then(setGalpones).catch(() => setGalpones([]))
+    }
+  }, [esPropietario])
 
   const guardarUsuario = useCallback(
     async (datos: CrearUsuarioPayload, editandoId: number | null) => {
@@ -59,6 +70,7 @@ function UsuariosPage() {
           email: datos.email?.trim().toLowerCase() || null,
           telefono: telefono || '',
           rol_id: datos.rol_id,
+          galpon_ids: datos.galpon_ids,
         })
         return
       }
@@ -87,6 +99,7 @@ function UsuariosPage() {
         telefono: telefono || undefined,
         organizacion_id: organizacionId,
         organizacion_nombre: rol?.nombre === 'Propietario' ? nombreOrgNueva : undefined,
+        galpon_ids: datos.galpon_ids,
       })
     },
     [actualizar, crear, recargarCatalogos, rolesCatalogo],
@@ -94,11 +107,30 @@ function UsuariosPage() {
 
   const formulario = useFormularioUsuario(guardarUsuario)
 
+  async function abrirEditarUsuario(usuario: Usuario) {
+    let galponIds = usuario.usuarios_galpones?.map((a) => a.galpon_id) ?? []
+    if (galponIds.length === 0 && esPropietario) {
+      try {
+        const asignacionesActuales = await listarAsignacionesGalpon(usuario.id)
+        galponIds = asignacionesActuales.filter((a) => a.activa).map((a) => a.galpon_id)
+      } catch {
+        // si falla, abrir con array vacío
+      }
+    }
+    formulario.abrirEditar(usuario, galponIds)
+  }
+
   async function abrirCrearUsuario(nombreRolPreseleccionado?: 'Administrador' | 'Propietario' | 'Operario') {
     const roles = rolesCatalogo.length > 0
       ? rolesCatalogo
       : await recargarCatalogos()
     if (roles.length === 0) return
+
+    if (esPropietario) {
+      const rolOperario = roles.find((r) => r.nombre === 'Operario')
+      formulario.abrirCrear(rolOperario ? rolOperario.id : 0)
+      return
+    }
 
     if (nombreRolPreseleccionado) {
       const encontrado = roles.find((r) => r.nombre === nombreRolPreseleccionado)
@@ -148,7 +180,7 @@ function UsuariosPage() {
           disabled={catalogosCargando}
         >
           <IcPlus size={17} aria-hidden="true" />
-          {esPropietario ? 'Nuevo operario' : 'Registrar persona'}
+          {esPropietario ? 'Registrar operario' : 'Registrar persona'}
         </button>
       </header>
 
@@ -193,7 +225,7 @@ function UsuariosPage() {
           rolFiltro={filtro.rolFiltro}
           onCrearPorRol={(nombreRol) => void abrirCrearUsuario(nombreRol)}
           onAlternarActivo={(usuario) => void alternarActivo(usuario)}
-          onEditar={formulario.abrirEditar}
+          onEditar={(usuario) => void abrirEditarUsuario(usuario)}
           onGestionarAsignaciones={(usuario) => void asignaciones.abrir(usuario)}
           onEliminar={confirmarEliminacion}
           onRecuperarAcceso={esAdmin ? setUsuarioRecuperaciones : undefined}
@@ -206,11 +238,14 @@ function UsuariosPage() {
           modoEdicion={formulario.modoEdicion}
           guardando={formulario.guardando}
           error={formulario.error}
+          errores={formulario.errores}
           verPassword={formulario.verPassword}
           roles={rolesCatalogo}
           organizaciones={organizaciones}
           rolBloqueado={esPropietario}
           titulo={tituloFormulario}
+          esPropietario={esPropietario}
+          galpones={galpones}
           onCambiar={formulario.cambiar}
           onAlternarPassword={formulario.alternarPassword}
           onGuardar={formulario.guardar}

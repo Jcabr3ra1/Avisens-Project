@@ -3,11 +3,13 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
-import { IcArrowUp, IcCoin, IcRefresh } from '@shared/ui/icons/icons'
+import { IcArrowUp, IcCoin } from '@shared/ui/icons/icons'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { mensajeDeError } from '@shared/utils/errores'
 import { fechaDeHoy } from '@shared/utils/fechas'
 import { fechaCorta } from './model/movimiento'
 import FormularioMovimiento from './components/FormularioMovimiento'
+import ReporteCiclo from './components/ReporteCiclo'
 import { useMovimientosFinancieros } from './hooks/useMovimientosFinancieros'
 import {
   errorDeFormulario,
@@ -21,6 +23,7 @@ import '@shared/ui/admin/AdminKit.css'
 import './FinanzasPage.css'
 
 type FiltroTipo = 'todos' | 'ingreso' | 'egreso'
+type Vista = 'movimientos' | 'reporte'
 type TipoPresentado = Exclude<FiltroTipo, 'todos'> | 'sin-tipo'
 
 function cop(valor: number): string {
@@ -46,6 +49,8 @@ function FinanzasPage() {
   const datos = useMovimientosFinancieros()
   const { movimientos, cargando, error } = datos
   const cargar = datos.recargar
+  const [vista, setVista] = useState<Vista>('movimientos')
+  useRefetchOnFocus(cargar)
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos')
   const [filtroLote, setFiltroLote] = useState('todos')
   const [form, setForm] = useState<DatosMovimiento | null>(null)
@@ -152,18 +157,25 @@ function FinanzasPage() {
         titulo="Finanzas"
         subtitulo="Consulta los ingresos y egresos reales registrados para las granjas y sus lotes."
         acciones={(
-          <>
-            <button type="button" className="adm-btn adm-btn--secundario" onClick={() => void cargar()} disabled={cargando}>
-              <IcRefresh size={16} aria-hidden="true" />
-              {cargando ? 'Actualizando…' : 'Actualizar'}
-            </button>
-            <button type="button" className="adm-btn adm-btn--primario" onClick={abrirNuevo}>
-              Nuevo movimiento
-            </button>
-          </>
+          <button type="button" className="adm-btn adm-btn--primario" onClick={abrirNuevo}>
+            Nuevo movimiento
+          </button>
         )}
       />
 
+      <div className="fin-filtro-grupo fin-vistas rc-no-imprimir" role="group" aria-label="Vista de finanzas">
+        <button type="button" className="fin-filtro-btn" aria-pressed={vista === 'movimientos'} onClick={() => setVista('movimientos')}>
+          Movimientos
+        </button>
+        <button type="button" className="fin-filtro-btn" aria-pressed={vista === 'reporte'} onClick={() => setVista('reporte')}>
+          Reporte por ciclo
+        </button>
+      </div>
+
+      {vista === 'reporte' ? (
+        <ReporteCiclo lotes={datos.lotes} granjas={datos.granjas} />
+      ) : (
+      <>
       <TarjetasResumen stats={stats} etiqueta="Resumen financiero" />
 
       {error && (
@@ -241,7 +253,14 @@ function FinanzasPage() {
                         </span>
                       </td>
                       <td><span className="fin-categoria">{movimiento.categoria.nombre}</span></td>
-                      <td className="fin-desc">{movimiento.descripcion || 'Sin descripción'}</td>
+                      <td className="fin-desc">
+                        <span>{movimiento.descripcion || 'Sin descripción'}</span>
+                        {movimiento.numero_factura && (
+                          <small style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                            Fac: {movimiento.numero_factura}
+                          </small>
+                        )}
+                      </td>
                       <td>
                         <strong>{movimiento.lote?.codigo || movimiento.granja.nombre}</strong>
                         {movimiento.lote && <span className="fin-ubicacion-secundaria">{movimiento.granja.nombre}</span>}
@@ -265,6 +284,8 @@ function FinanzasPage() {
           </div>
         )}
       </section>
+      </>
+      )}
 
       {form !== null && (
         <FormularioMovimiento

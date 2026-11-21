@@ -1,5 +1,7 @@
 import { api } from '@shared/api/client'
+import { listarTodasLasPaginas } from '@shared/api/paginacion'
 import type { PaginatedResponse } from '@shared/api/types'
+import type { ConsumoLote, EventoSanitarioLote, MortalidadLote } from '../model/resumenLoteOperario'
 
 export interface GalponOperario {
   id: number
@@ -29,6 +31,7 @@ export type RegistroMortalidadOperario = {
   cantidad_aves: number
   causa_presuntiva?: string
   disposicion?: string
+  observaciones?: string
 }
 
 export type RegistroConsumoOperario = {
@@ -49,6 +52,21 @@ export async function listarLotesOperario(): Promise<LoteOperario[]> {
     params: { page: 1, limit: 100 },
   })
   return data.data
+}
+
+// Registros de los galpones asignados: el backend ya los acota por rol. Se
+// piden todas las páginas porque los totales del lote (aves muertas) no
+// pueden salir de solo las primeras 100 filas.
+export function listarMortalidadOperario(): Promise<MortalidadLote[]> {
+  return listarTodasLasPaginas<MortalidadLote>('/registros-mortalidad')
+}
+
+export function listarConsumosOperario(): Promise<ConsumoLote[]> {
+  return listarTodasLasPaginas<ConsumoLote>('/consumos-diarios')
+}
+
+export function listarEventosSanitariosOperario(): Promise<EventoSanitarioLote[]> {
+  return listarTodasLasPaginas<EventoSanitarioLote>('/eventos-sanitarios')
 }
 
 export async function registrarMortalidadOperario(

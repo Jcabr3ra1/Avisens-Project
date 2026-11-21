@@ -2,13 +2,21 @@ import { Transform } from 'class-transformer';
 import { NombreUsuario } from '../../../common/auth/username';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsEmail,
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Min,
   MinLength,
 } from 'class-validator';
+
+// Reglas acordadas con QA (17-nov), iguales a las de la pantalla
+// (validacionUsuario.ts): cédula colombiana de 6 a 10 dígitos y teléfono de
+// al menos 10 dígitos, con «+57» opcional.
+const CEDULA_VALIDA = /^\d{6,10}$/;
+const TELEFONO_VALIDO = /^\+?\d{10,13}$/;
 
 export class CreateUsuarioDto {
   @ApiProperty({ example: 'María López' })
@@ -16,7 +24,13 @@ export class CreateUsuarioDto {
   nombre_completo: string;
 
   @ApiProperty({ example: '1098765432' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
+  @Matches(CEDULA_VALIDA, {
+    message: 'La cédula debe tener de 6 a 10 dígitos, solo números',
+  })
   cedula: string;
 
   @ApiProperty({ example: 'maria.lopez', minLength: 3, maxLength: 30 })
@@ -28,7 +42,10 @@ export class CreateUsuarioDto {
     typeof value === 'string' ? value.trim().toLowerCase() || null : value,
   )
   @IsOptional()
-  @IsEmail()
+  @IsEmail(
+    {},
+    { message: 'Escribe un correo válido, por ejemplo nombre@dominio.com' },
+  )
   email?: string | null;
 
   @ApiProperty({ example: 'contraseña123', minLength: 8 })
@@ -37,9 +54,16 @@ export class CreateUsuarioDto {
   password: string;
 
   @ApiPropertyOptional({ example: '3001234567' })
-  @IsString()
+  // Espacios, guiones y paréntesis son formato: «300 123-4567» se guarda limpio.
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.replace(/[\s\-()]/g, '') || null : value,
+  )
   @IsOptional()
-  telefono?: string;
+  @IsString()
+  @Matches(TELEFONO_VALIDO, {
+    message: 'El teléfono debe tener al menos 10 dígitos, solo números',
+  })
+  telefono?: string | null;
 
   @ApiProperty({ example: 2, description: 'ID del rol' })
   @IsInt()
@@ -65,4 +89,14 @@ export class CreateUsuarioDto {
   @MinLength(2)
   @IsOptional()
   organizacion_nombre?: string;
+
+  @ApiPropertyOptional({
+    example: [1, 2],
+    description: 'Galpones asignados al operario (obligatorio para Propietario)',
+    type: [Number],
+  })
+  @IsArray()
+  @IsInt({ each: true })
+  @IsOptional()
+  galpon_ids?: number[];
 }

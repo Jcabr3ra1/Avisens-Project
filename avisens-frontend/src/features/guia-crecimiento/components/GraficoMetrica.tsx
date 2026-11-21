@@ -125,7 +125,6 @@ function GraficoMetrica({ tipo, lote, indicadores, curvaGenetica, diaActual }: P
           <h3 id="gcm-titulo">{titulo}</h3>
           <p>{esAmbiente ? 'Lecturas registradas en este galpón durante los últimos siete días.' : `Datos registrados por día · ${unidad}`}</p>
         </div>
-        <button type="button" className="adm-btn adm-btn--secundario" onClick={cargar} disabled={fuentes.cargando}>Actualizar</button>
       </header>
       {fuentes.cargando ? (
         <p className="gcm-estado" role="status">Cargando datos de la gráfica…</p>

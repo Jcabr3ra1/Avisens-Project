@@ -29,8 +29,8 @@ export class ProveedoresController {
   constructor(private proveedoresService: ProveedoresService) {}
 
   @Post()
-  @Permisos(PERMISOS.PROVEEDORES_GESTIONAR)
-  @ApiOperation({ summary: 'Crear un proveedor (solo Admin)' })
+  @Permisos(PERMISOS.PROVEEDORES_CREAR)
+  @ApiOperation({ summary: 'Crear un proveedor (Admin y Propietario)' })
   crear(@Body() dto: CreateProveedorDto) {
     return this.proveedoresService.crear(dto);
   }

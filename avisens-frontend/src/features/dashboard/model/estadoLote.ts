@@ -21,6 +21,14 @@ export function fcrCreible(fcr: number | null | undefined): boolean {
   return typeof fcr === 'number' && Number.isFinite(fcr) && fcr > 0 && fcr <= FCR_MAXIMO_CREIBLE
 }
 
+// La conversión llega del backend como división sin redondear
+// (0.026666666666666667). Dos decimales bastan para leerla (QA 17-nov).
+const formatoFcr = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+export function formatearFcr(fcr: number): string {
+  return formatoFcr.format(fcr)
+}
+
 export const TEXTO_DATO_IMPOSIBLE = 'Dato fuera de rango'
 export const NOTA_DATO_IMPOSIBLE = 'Revisa los pesajes y consumos en la bitácora'
 
@@ -47,9 +55,9 @@ export function textoComparacionFcr(
   objetivo: number | null | undefined,
 ): string | undefined {
   if (desvio === null || desvio === undefined) return undefined
-  const meta = objetivo === null || objetivo === undefined ? '' : ` · meta ${objetivo}`
-  if (desvio > 0) return `+${desvio} sobre la curva${meta}`
-  if (desvio < 0) return `${desvio} bajo la curva${meta}`
+  const meta = objetivo === null || objetivo === undefined ? '' : ` · meta ${formatearFcr(objetivo)}`
+  if (desvio > 0) return `+${formatearFcr(desvio)} sobre la curva${meta}`
+  if (desvio < 0) return `${formatearFcr(desvio)} bajo la curva${meta}`
   return `en la curva${meta}`
 }
 

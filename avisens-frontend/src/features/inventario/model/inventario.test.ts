@@ -192,10 +192,12 @@ describe('signoDeMovimiento', () => {
 })
 
 describe('QA-06: texto de la bodega vacía por rol', () => {
-  it('el propietario no ve el texto del operario', () => {
+  // Desde HU-58 el propietario registra sus propios insumos: recibe la misma
+  // invitación que el administrador, no el texto de espera ni el del operario.
+  it('el propietario no ve el texto del operario y se le invita a registrar', () => {
     const texto = textoBodegaVacia(permisosDeInsumo(ROL_PROPIETARIO))
     expect(texto).not.toMatch(/tu galpón/)
-    expect(texto).toMatch(/entradas, salidas y ajustes/)
+    expect(texto).toMatch(/Registra el primero/)
   })
 
   it('el operario conserva su texto de salidas', () => {

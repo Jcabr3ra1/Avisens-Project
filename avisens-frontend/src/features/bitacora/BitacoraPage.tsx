@@ -6,6 +6,7 @@ import { ROL_ADMIN, permisosDeRegistro } from '@shared/auth/permisos'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcDoc, IcDrop, IcHeart, IcScale, IcSeed } from '@shared/ui/icons/icons'
 import BotonActualizar from '@shared/ui/BotonActualizar/BotonActualizar'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import GestionConsumos from '@features/consumos-diarios/components/GestionConsumos'
 import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
@@ -15,7 +16,9 @@ import FormularioRegistro from './components/FormularioRegistro'
 import HistorialRegistros from './components/HistorialRegistros'
 import ResumenLote from './components/ResumenLote'
 import { useBitacora } from './hooks/useBitacora'
+import { useInsumosDeGranja } from './hooks/useInsumosDeGranja'
 import {
+  errorDeRegistro,
   FORMULARIO_INICIAL,
   formularioDesde,
   payloadRegistro,
@@ -39,6 +42,7 @@ const ETIQUETA: Record<TipoRegistro, string> = {
 
 function BitacoraPage() {
   const datos = useBitacora()
+  useRefetchOnFocus(datos.recargar)
   const rol = getRol()
   const esAdministrador = rol === ROL_ADMIN
   const permisosRegistro = permisosDeRegistro(rol)
@@ -113,6 +117,7 @@ function BitacoraPage() {
     : (lotesDelGalpon[0]?.id ?? null)
 
   const lote = lotesDelGalpon.find((item) => item.id === loteSeleccionadoId)
+  const insumosGranja = useInsumosDeGranja(lote?.galpon.granja.id ?? null, modal === 'sanitario')
   const pesajes = useMemo(() => filtrarRegistrosPorLote(datos.pesajes, loteSeleccionadoId), [datos.pesajes, loteSeleccionadoId])
   const mortalidad = useMemo(() => filtrarRegistrosPorLote(datos.mortalidad, loteSeleccionadoId), [datos.mortalidad, loteSeleccionadoId])
   const sanitarios = useMemo(() => filtrarRegistrosPorLote(datos.sanitarios, loteSeleccionadoId), [datos.sanitarios, loteSeleccionadoId])
@@ -150,6 +155,12 @@ function BitacoraPage() {
   const guardar = (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault()
     if (!modal || !loteSeleccionadoId) return
+
+    const problema = errorDeRegistro(modal, form)
+    if (problema) {
+      setErrorForm(problema)
+      return
+    }
 
     const payload = payloadRegistro(modal, form, loteSeleccionadoId)
 
@@ -262,7 +273,13 @@ function BitacoraPage() {
             <div>
               <p className="bit-kicker">Lote activo</p>
               <h2>{lote.codigo}</h2>
-              <p>Galpón {lote.galpon.nombre} · {lote.cantidad_inicial.toLocaleString('es-CO')} aves iniciales</p>
+              <p>
+                Galpón {lote.galpon.nombre} · {resumen.avesMuertas > 0 ? (
+                  <><strong>{Math.max(0, lote.cantidad_inicial - resumen.avesMuertas).toLocaleString('es-CO')}</strong> aves vivas ({lote.cantidad_inicial.toLocaleString('es-CO')} iniciales)</>
+                ) : (
+                  <>{lote.cantidad_inicial.toLocaleString('es-CO')} aves iniciales</>
+                )}
+              </p>
             </div>
             <span role="status" aria-atomic="true">{resumen.totalRegistros} registros en este lote</span>
           </section>
@@ -329,6 +346,7 @@ function BitacoraPage() {
             setEditandoId(null)
           }}
           editando={editandoId !== null}
+          insumos={insumosGranja}
           complemento={
             modal === 'peso' && loteSeleccionadoId !== null
               ? <AlimentoEstimadoPesaje loteId={loteSeleccionadoId} />
