@@ -200,8 +200,10 @@ describe('QA-06: texto de la bodega vacía por rol', () => {
     expect(texto).toMatch(/Registra el primero/)
   })
 
-  it('el operario conserva su texto de salidas', () => {
-    expect(textoBodegaVacia(permisosDeInsumo(ROL_OPERARIO))).toMatch(/lo que saques para tu galpón/)
+  it('el operario recibe un texto de consulta, sin registrar nada', () => {
+    const texto = textoBodegaVacia(permisosDeInsumo(ROL_OPERARIO))
+    expect(texto).toMatch(/stock y su mínimo/)
+    expect(texto).not.toMatch(/Registra|anotar|saques/)
   })
 
   it('el administrador recibe la invitación a registrar el primero', () => {

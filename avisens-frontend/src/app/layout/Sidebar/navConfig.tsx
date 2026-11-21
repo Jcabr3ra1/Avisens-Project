@@ -98,8 +98,8 @@ const PERMISOS_RUTA: Record<string, string[]> = {
   // de la interfaz, que era la que estaba abierta.
   '/finanzas':                [ROL_PROPIETARIO],
   '/usuarios':                [ROL_ADMIN, ROL_PROPIETARIO],
-  // El operario solo consulta (proveedores:leer); gestionar es del admin.
-  '/proveedores':             [ROL_ADMIN, ROL_OPERARIO],
+  // El directorio lo gestiona el admin; el operario no entra (2026-11-21).
+  '/proveedores':             [ROL_ADMIN],
   '/ordenes-compra':          [ROL_ADMIN, ROL_PROPIETARIO],
   '/recuperaciones-password': [ROL_ADMIN],
   '/auditoria':               [ROL_ADMIN],
@@ -271,10 +271,10 @@ export const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
-  // La bodega del operario: lo que hay en ella y a quién se le pide. Va en su
-  // propio espacio y no en 'Administración' porque para el operario no es
-  // papeleo: es donde apunta lo que entra y sale. El propietario conserva su
-  // ítem «Bodega» en Administración; el admin, Proveedores en Plataforma.
+  // La bodega del operario: consulta lo que hay en ella. Va en su propio
+  // espacio y no en 'Administración' porque para el operario no es papeleo.
+  // El propietario conserva su ítem «Bodega» en Administración; el admin,
+  // Proveedores en Plataforma.
   {
     label: 'Bodega',
     items: [
@@ -282,12 +282,6 @@ export const NAV_SECTIONS: NavSection[] = [
         path: '/inventario',
         label: 'Inventario',
         icon: <IcBox size={16} />,
-        rolesVisibles: [ROL_OPERARIO],
-      },
-      {
-        path: '/proveedores',
-        label: 'Proveedores',
-        icon: <IcSeed size={16} />,
         rolesVisibles: [ROL_OPERARIO],
       },
     ],

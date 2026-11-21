@@ -30,9 +30,9 @@ describe('puedeAcceder', () => {
     expect(puedeAcceder('/granjas', ROL_OPERARIO)).toBe(false)
   })
 
-  it('el operario entra a la bodega y a consultar proveedores', () => {
+  it('el operario entra a la bodega pero no a proveedores', () => {
     expect(puedeAcceder('/inventario', ROL_OPERARIO)).toBe(true)
-    expect(puedeAcceder('/proveedores', ROL_OPERARIO)).toBe(true)
+    expect(puedeAcceder('/proveedores', ROL_OPERARIO)).toBe(false)
     expect(puedeAcceder('/proveedores', ROL_ADMIN)).toBe(true)
     expect(puedeAcceder('/proveedores', ROL_PROPIETARIO)).toBe(false)
   })

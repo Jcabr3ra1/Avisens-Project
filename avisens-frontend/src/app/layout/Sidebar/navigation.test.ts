@@ -66,11 +66,11 @@ describe('navegación por espacios', () => {
     expect(tieneUnSoloDestino(gestion)).toBe(false)
   })
 
-  it('le da al operario su Bodega con inventario y proveedores, y solo a él', () => {
+  it('le da al operario su Bodega solo con inventario, y solo a él', () => {
     const bodega = navigationSpaces(visibleSections(ROL_OPERARIO)).find((space) => space.id === 'bodega')
     expect(bodega?.label).toBe('Bodega')
-    expect(bodega?.sections.flatMap((section) => section.items.map((item) => item.path))).toEqual(['/inventario', '/proveedores'])
-    expect(spaceForPath('/proveedores', navigationSpaces(visibleSections(ROL_OPERARIO)))?.id).toBe('bodega')
+    expect(bodega?.sections.flatMap((section) => section.items.map((item) => item.path))).toEqual(['/inventario'])
+    expect(spaceForPath('/proveedores', navigationSpaces(visibleSections(ROL_OPERARIO)))?.id).not.toBe('bodega')
     expect(tituloDeRuta('/inventario', ROL_OPERARIO)).toBe('Inventario')
     for (const rol of [ROL_ADMIN, ROL_PROPIETARIO]) {
       expect(navigationSpaces(visibleSections(rol)).some((space) => space.id === 'bodega')).toBe(false)

@@ -104,9 +104,7 @@ function AcordeonInsumo({
               onClick={() => onRegistrarMovimiento(insumo)}
             >
               <IcPlus size={13} aria-hidden="true" />
-              {permisos.tiposMovimiento.length === 1 && permisos.tiposMovimiento[0] === 'salida'
-                ? 'Salida'
-                : 'Movimiento'}
+              Movimiento
             </button>
           )}
 

@@ -59,11 +59,12 @@ export function gestionaAlgo(permisos: PermisosGestion): boolean {
 // Fuente: avisens-backend/src/modules/insumos/insumos.controller.ts
 //
 // Auditoría QA del 2026-10-30 (HALL-01 / CP-06): el operario maneja
-// cantidades físicas, no dinero. No ve precios ni el valor de la bodega, y
-// solo registra salidas (lo que saca para su galpón); las entradas por compra
-// y los ajustes de conteo son del administrador y del propietario.
-// Ojo: el backend todavía le acepta entradas y ajustes y le devuelve el
-// precio; esto es solo la interfaz.
+// cantidades físicas, no dinero. No ve precios ni el valor de la bodega.
+// Desde el 2026-11-21 tampoco registra movimientos: consulta el stock de su
+// bodega y los movimientos (entradas, salidas y ajustes) son del
+// administrador y del propietario.
+// Ojo: el backend todavía le acepta movimientos y le devuelve el precio; esto
+// es solo la interfaz.
 export type TipoMovimientoInsumo = 'entrada' | 'salida' | 'ajuste'
 
 export type PermisosInsumo = {
@@ -81,9 +82,7 @@ export function permisosDeInsumo(rol: string | null): PermisosInsumo {
   const gestionaBodega = esAdmin || rol === ROL_PROPIETARIO
   const tiposMovimiento: TipoMovimientoInsumo[] = gestionaBodega
     ? ['entrada', 'salida', 'ajuste']
-    : rol === ROL_OPERARIO
-      ? ['salida']
-      : []
+    : []
   return {
     crear: gestionaBodega,
     editar: gestionaBodega,
@@ -121,8 +120,7 @@ export function permisosDeRegistro(rol: string | null): PermisosRegistro {
 // (proveedores:gestionar). El propietario puede dar de alta al que le falta
 // cuando registra un insumo (proveedores:crear, HU-58), pero no editar ni
 // desactivar: el directorio es compartido entre organizaciones. El operario
-// lo consulta desde su Bodega para saber a quién pedir un insumo
-// (proveedores:leer).
+// no entra al directorio (2026-11-21).
 // Fuente: avisens-backend/src/modules/proveedores/proveedores.controller.ts y
 // avisens-backend/src/common/auth/permisos.ts
 export type PermisosProveedor = {
