@@ -38,6 +38,10 @@
 // backend (ese es el puente físico↔BD; el backend resuelve codigo → sensor_id).
 #define CODIGO_SENSOR_TEMP "TEMP-G1-01"
 #define CODIGO_SENSOR_HUM  "HUM-G1-01"
+// Segundo DHT22, en otra zona del galpón. Sus códigos se registran aparte
+// en Avisens (Sensores), cada uno en su zona.
+#define CODIGO_SENSOR_TEMP_2 "TEMP-G1-02"
+#define CODIGO_SENSOR_HUM_2  "HUM-G1-02"
 // HC-SR04: distancia del sensor a la superficie del agua (cm). Más
 // distancia = menos agua.
 #define CODIGO_SENSOR_AGUA "AGUA-G1-01"
@@ -70,6 +74,10 @@
 // ─── SENSORES (pines) ────────────────────────────────────
 #define DHTPIN 4
 #define DHTTYPE DHT22
+// Segundo DHT22 (otra zona). Solo informa: el control del clima y el
+// fail-safe siguen usando el de DHTPIN. Comenta la línea si no está
+// conectado.
+#define DHT2_PIN 26
 #define MQ135_PIN 34
 #define TRIG_AGUA 13
 #define ECHO_AGUA 35
