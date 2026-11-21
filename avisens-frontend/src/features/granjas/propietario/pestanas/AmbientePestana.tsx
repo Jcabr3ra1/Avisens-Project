@@ -8,7 +8,6 @@ import type { GalponConLotes } from '../../hooks/useEstructuraGranjas'
 import { sensoresReportando } from '../explorador'
 import { useRiesgoCalor } from '../useRiesgoCalor'
 import AhoraGalpon from './ambiente/AhoraGalpon'
-import { MapaTermicoGalpon } from './ambiente/MapaTermicoGalpon'
 import PronosticoDias from './ambiente/PronosticoDias'
 import SensoresGalpon from './ambiente/SensoresGalpon'
 import './ambiente/AmbientePestana.css'
@@ -25,8 +24,6 @@ function AmbientePestana({
   galpon,
   revision,
   onCompletarUbicacion,
-  onIrABitacora,
-  onCambioEstructura,
 }: Props) {
   const [reintento, setReintento] = useState(0)
   const { riesgo, problema, cargando } = useRiesgoCalor(galpon.id, revision + reintento)
@@ -34,13 +31,6 @@ function AmbientePestana({
 
   return (
     <div className="amb">
-      <MapaTermicoGalpon
-        key={galpon.id}
-        galpon={galpon}
-        onIrABitacora={onIrABitacora}
-        onGuardado={onCambioEstructura}
-      />
-
       <AhoraGalpon
         riesgo={riesgo}
         problema={problema}

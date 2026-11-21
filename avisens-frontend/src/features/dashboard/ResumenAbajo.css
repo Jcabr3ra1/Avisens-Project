@@ -689,3 +689,9 @@
   to { opacity: 1; transform: none; }
 }
 
+
+/* Mapa térmico debajo de la escena del galpón */
+.resumen-mapa {
+  margin-top: var(--space-6, 24px);
+  min-width: 0;
+}

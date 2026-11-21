@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { lazy, Suspense, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import HeroGranja from './components/HeroGranja'
@@ -16,12 +16,19 @@ import { useDashboard } from './hooks/useDashboard'
 import { filasGalpones, itemsAtencionGranja, kpisGranja, lotesActivosDe, type ItemAtencionGranja } from './model/resumenGranja'
 import { estadoGranja } from './model/estadoGranja'
 import { sensoresDeEscena } from './model/escenaGalpon'
+import type { GalponConLotes } from '@features/granjas/hooks/useEstructuraGranjas'
 import '@shared/ui/admin/AdminKit.css'
 import '@shared/ui/admin/CentroControl.css'
 import './DashboardPage.css'
 import './ResumenGranja.css'
 import './ResumenRediseno.css'
 import './ResumenAbajo.css'
+
+const MapaTermicoGalpon = lazy(() =>
+  import('@features/granjas/propietario/pestanas/ambiente/MapaTermicoGalpon').then((modulo) => ({
+    default: modulo.MapaTermicoGalpon,
+  })),
+)
 
 function DashboardSkeleton() {
   return (
@@ -50,6 +57,19 @@ function DashboardPage() {
   // Los motores (sensores de estado encendido/apagado) no son métricas
   // ambientales: se ven en Monitoreo, no en este panel de tendencias.
   const sensoresDelGalpon = (galponMonitoreo?.sensores ?? []).filter((s) => !s.esEstado)
+  // El mapa térmico espera un galpón con su lote en curso: se arma con lo que ya trae el resumen
+  const galponMapa = useMemo(
+    () => (galponMonitoreo
+      ? ({
+          ...galponMonitoreo,
+          estadoOperativo: undefined,
+          alertasAbiertas: 0,
+          loteEnCurso: dashboard.lote ?? null,
+          lotes: dashboard.lote ? [dashboard.lote] : [],
+        } as unknown as GalponConLotes)
+      : null),
+    [galponMonitoreo, dashboard.lote],
+  )
   const { indicadores, comparacion, cargando: cargandoLote, recargar: recargarIndicadores } = useIndicadoresLote(dashboard.lote?.id ?? null)
   useRefetchOnFocus(recargarIndicadores)
   const rol = getRol()
@@ -213,6 +233,18 @@ function DashboardPage() {
           </>
         )}
       />
+      {galponMapa && (
+        <section className="resumen-mapa" aria-label="Mapa térmico del galpón">
+          <Suspense fallback={null}>
+            <MapaTermicoGalpon
+              key={galponMapa.id}
+              galpon={galponMapa}
+              onIrABitacora={() => enGranjas('bitacora')}
+              onGuardado={() => void dashboard.recargar()}
+            />
+          </Suspense>
+        </section>
+      )}
     </div>
   )
 }

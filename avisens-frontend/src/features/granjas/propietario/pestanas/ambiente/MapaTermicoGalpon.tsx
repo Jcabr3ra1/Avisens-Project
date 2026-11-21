@@ -939,6 +939,12 @@ function simularPuntos(reales: PuntoTermico[], largo: number): PuntoTermico[] {
   }));
 }
 
+/** Mantiene un sensor dentro del galpón (coordenadas en metros, centradas en 0). */
+function limitar(valor: number, total: number) {
+  const mitad = Math.max(0.5, total / 2 - 0.4);
+  return Math.max(-mitad, Math.min(mitad, valor));
+}
+
 export function MapaTermicoGalpon({
   galpon,
   onIrABitacora,
@@ -1010,8 +1016,8 @@ export function MapaTermicoGalpon({
       return {
         id: s.id,
         codigo: s.codigo,
-        x: s.x ?? col,
-        z: s.y ?? fila,
+        x: limitar(s.x ?? col, anchoInicial),
+        z: limitar(s.y ?? fila, largoInicial),
         altura: s.alturaMetros ?? 1.4,
         valor: s.valor,
         minUmbral: s.minUmbral,
@@ -1021,7 +1027,7 @@ export function MapaTermicoGalpon({
         antiguedadSegundos: s.antiguedadSegundos ?? null,
       };
     });
-  }, [galponVivo, largoInicial]);
+  }, [galponVivo, largoInicial, anchoInicial]);
 
   // Solo desarrollo: lecturas simuladas para probar el mapa de calor sin sensores
   const [simulando, setSimulando] = useState(false);
