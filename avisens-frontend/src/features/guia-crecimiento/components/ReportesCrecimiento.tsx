@@ -8,6 +8,7 @@ import { diasDeVida } from '@shared/utils/fechas'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { PlanAlimentoGuia, IndicadorLote } from '../api/guiaCrecimiento'
 import { crearCsv, type ValorCsv } from '../model/reportes'
+import ModalReporteImprimible from './ModalReporteImprimible'
 
 type Props = {
   lote: Lote
@@ -15,6 +16,7 @@ type Props = {
   curva: CurvaCrecimiento | null
   alimento: PlanAlimentoGuia | null
   cargandoAlimento: boolean
+  onAbrirComparativa?: () => void
 }
 
 const ENCABEZADOS_CRECIMIENTO = [
@@ -102,8 +104,16 @@ function filasAlimento(lote: Lote, registros: Awaited<ReturnType<typeof listarCo
   return filas
 }
 
-function ReportesCrecimiento({ lote, indicadores, curva, alimento, cargandoAlimento }: Props) {
+function ReportesCrecimiento({
+  lote,
+  indicadores,
+  curva,
+  alimento,
+  cargandoAlimento,
+  onAbrirComparativa,
+}: Props) {
   const [exportando, setExportando] = useState(false)
+  const [verReporteImprimible, setVerReporteImprimible] = useState(false)
   const crecimientoDisponible = indicadores.some((dato) => dato.estado_calculo === 'calculado' && dato.dia_vida !== null)
     || (curva?.serie.length ?? 0) > 0
 
@@ -138,16 +148,52 @@ function ReportesCrecimiento({ lote, indicadores, curva, alimento, cargandoAlime
   return (
     <section className="gdc-reportes" aria-label="Reportes del lote">
       <p className="gdc-reportes-nota">
-        Descarga un CSV con los datos del lote. El de alimentación separa los consumos registrados de las estimaciones vigentes del plan y no incluye proyecciones desactualizadas.
+        Descarga informes técnicos en PDF/impresión o CSV con los datos del lote. Evalúa el rendimiento zootécnico y compara ciclos históricos.
       </p>
       <div className="gdc-reportes-acciones">
-        <button type="button" className="adm-btn adm-btn--secundario" onClick={exportarCrecimiento} disabled={!crecimientoDisponible || exportando}>
-          Reporte de crecimiento
+        <button
+          type="button"
+          className="adm-btn adm-btn--primario"
+          onClick={() => setVerReporteImprimible(true)}
+        >
+          Reporte imprimible / PDF
         </button>
-        <button type="button" className="adm-btn adm-btn--secundario" onClick={() => void exportarAlimentacion()} disabled={exportando || cargandoAlimento}>
-          {exportando ? 'Preparando reporte…' : 'Reporte de alimentación'}
+        {onAbrirComparativa && (
+          <button
+            type="button"
+            className="adm-btn adm-btn--secundario"
+            onClick={onAbrirComparativa}
+          >
+            Comparar con otro lote
+          </button>
+        )}
+        <button
+          type="button"
+          className="adm-btn adm-btn--secundario"
+          onClick={exportarCrecimiento}
+          disabled={!crecimientoDisponible || exportando}
+        >
+          CSV Crecimiento
+        </button>
+        <button
+          type="button"
+          className="adm-btn adm-btn--secundario"
+          onClick={() => void exportarAlimentacion()}
+          disabled={exportando || cargandoAlimento}
+        >
+          {exportando ? 'Preparando reporte…' : 'CSV Alimentación'}
         </button>
       </div>
+
+      {verReporteImprimible && (
+        <ModalReporteImprimible
+          lote={lote}
+          indicadores={indicadores}
+          curva={curva}
+          alimento={alimento}
+          onCerrar={() => setVerReporteImprimible(false)}
+        />
+      )}
     </section>
   )
 }

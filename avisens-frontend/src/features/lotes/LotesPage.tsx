@@ -2,7 +2,7 @@ import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
-import { permisosDeGestion } from '@shared/auth/permisos'
+import { permisosDeGestion, puedeCerrarLote } from '@shared/auth/permisos'
 import { IcPlus } from '@shared/ui/icons/icons'
 import CabeceraAdmin, { type Miga } from '@shared/ui/admin/CabeceraAdmin'
 import '@shared/ui/admin/AdminKit.css'
@@ -10,6 +10,7 @@ import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
 import type { Lote } from './api/lotes'
 import BarraLotes from './components/BarraLotes'
 import FormularioLote from './components/FormularioLote'
+import ModalCerrarLote from './components/ModalCerrarLote'
 import PlanDeLote from './components/PlanDeLote'
 import ResumenLotes from './components/ResumenLotes'
 import TablaLotes from './components/TablaLotes'
@@ -25,7 +26,10 @@ function LotesPage() {
   const [searchParams] = useSearchParams()
   const gestion = useLotes()
   useRefetchOnFocus(gestion.recargar)
-  const permisos = permisosDeGestion(getRol())
+  const rol = getRol()
+  const permisos = permisosDeGestion(rol)
+  const puedeCerrar = puedeCerrarLote(rol)
+  const [loteACerrar, setLoteACerrar] = useState<Lote | null>(null)
   const galponParam = searchParams.get('galpon')
   const galponId = Number(galponParam)
   const tieneContextoDeGalpon = galponParam !== null && Number.isInteger(galponId)
@@ -139,12 +143,22 @@ function LotesPage() {
           lotes={filtro.visibles}
           cargando={gestion.cargando}
           permisos={permisos}
+          puedeCerrar={puedeCerrar}
           onVerPlan={setLoteConPlan}
+          onCerrarLote={setLoteACerrar}
           onEditar={formulario.abrirEditar}
           onAlternar={(lote) => void gestion.alternarActivo(lote)}
           onEliminar={confirmarEliminacion}
         />
       </section>
+
+      {loteACerrar && (
+        <ModalCerrarLote
+          lote={loteACerrar}
+          onCerrar={() => setLoteACerrar(null)}
+          onExito={() => void gestion.recargar()}
+        />
+      )}
 
       {loteConPlan && (
         <PantallaHija

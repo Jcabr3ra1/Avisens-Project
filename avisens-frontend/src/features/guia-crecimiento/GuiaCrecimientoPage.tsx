@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
-import { permisosDePlan, ROL_ADMIN, ROL_PROPIETARIO } from '@shared/auth/permisos'
+import { permisosDePlan, ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO } from '@shared/auth/permisos'
 import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import '@shared/ui/admin/AdminKit.css'
@@ -17,6 +17,7 @@ import ReglaCiclo from './components/ReglaCiclo'
 import ProyeccionFaena from './components/ProyeccionFaena'
 import ReportesCrecimiento from './components/ReportesCrecimiento'
 import ResumenAlimentacionLote from './components/ResumenAlimentacionLote'
+import ModalCompararLotes from './components/ModalCompararLotes'
 import { fraseDeCrecimiento, severidadPorDia } from './model/reglaCiclo'
 import { formatearPeso } from './model/proyeccion'
 import { obtenerEtapaDelDia, obtenerFasesCiclo } from './model/etapasAlimentacion'
@@ -45,6 +46,7 @@ function GuiaCrecimientoPage() {
   const primerDia = curva?.serie[0]?.dia ?? 1
   const diaFinal = Math.max(primerDia + 1, curva?.dia_final ?? guia.plan?.resultado.dia_objetivo ?? 42)
   const [diaElegido, setDiaElegido] = useState<number | null>(null)
+  const [abriendoComparativa, setAbriendoComparativa] = useState(false)
   useEffect(() => { setDiaElegido(null) }, [loteId, curva?.dia_actual])
   const diaSeleccionado = Math.min(diaFinal, Math.max(primerDia, diaElegido ?? Math.min(diaHoy, diaFinal)))
 
@@ -125,6 +127,10 @@ function GuiaCrecimientoPage() {
   const etapaDia = obtenerEtapaDelDia(diaSeleccionado, fases)
   const totalMuertes = guia.mortalidad.reduce((total, m) => total + m.cantidad_aves, 0)
   const avesVivas = Math.max(0, lote.cantidad_inicial - totalMuertes)
+  const esOperario = getRol() === ROL_OPERARIO
+  const rutaBitacora = esOperario
+    ? `/bitacora?lote=${lote.id}&vista=peso`
+    : `/granjas?granjaId=${lote.galpon.granja.id}&galpon=${lote.galpon.id}&pestana=bitacora&vista=peso`
 
   return (
     <div className="page-container adm-page guia-page gdc">
@@ -153,7 +159,16 @@ function GuiaCrecimientoPage() {
           </p>
         </div>
         <div className="gdc-cabecera-acciones">
-          <Link className="adm-btn adm-btn--primario" to={`/bitacora?lote=${lote.id}&vista=peso`}>
+          {puedeComparar && (
+            <button
+              type="button"
+              className="adm-btn adm-btn--secundario"
+              onClick={() => setAbriendoComparativa(true)}
+            >
+              Comparar lotes
+            </button>
+          )}
+          <Link className="adm-btn adm-btn--primario" to={rutaBitacora}>
             + Registrar pesaje
           </Link>
           <Link className="adm-btn adm-btn--secundario" to={rutaPadre}>
@@ -255,8 +270,16 @@ function GuiaCrecimientoPage() {
           curva={curva}
           alimento={guia.alimento}
           cargandoAlimento={guia.cargandoAlimento}
+          onAbrirComparativa={puedeComparar ? () => setAbriendoComparativa(true) : undefined}
         />
       </section>
+
+      {abriendoComparativa && (
+        <ModalCompararLotes
+          loteActualId={lote.id}
+          onCerrar={() => setAbriendoComparativa(false)}
+        />
+      )}
     </div>
   )
 }

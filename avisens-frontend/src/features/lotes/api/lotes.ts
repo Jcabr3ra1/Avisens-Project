@@ -16,6 +16,14 @@ export interface Lote {
   presupuesto_total_cop: number | null
   fecha_salida_estimada: string | null
   fecha_salida_real: string | null
+  cantidad_aves_vendidas?: number | null
+  peso_promedio_final_g?: number | null
+  valor_venta_total_cop?: number | null
+  precio_venta_kg_cop?: number | null
+  mortalidad_acumulada_final_pct?: number | null
+  fcr_final?: number | null
+  cerrado_por_id?: number | null
+  fecha_cierre?: string | null
   estado: EstadoLote
   galpon: {
     id: number
@@ -95,5 +103,51 @@ export type DatosLotePayload = {
 
 export async function actualizarDatosLote(id: number, payload: DatosLotePayload): Promise<Lote> {
   const { data } = await api.patch<Lote>(`/lotes/${id}/datos`, payload)
+  return data
+}
+
+export interface CerrarLotePayload {
+  fecha_salida_real: string
+  cantidad_aves_vendidas: number
+  peso_promedio_final_g: number
+  valor_venta_total_cop?: number
+  precio_venta_kg_cop?: number
+  confirmar_cierre?: boolean
+}
+
+export interface DiaFaltanteCierre {
+  dia: number
+  fecha: string
+}
+
+export type ResultadoCierreLote =
+  | {
+      cerrado: false
+      requiere_confirmacion: true
+      mensaje: string
+      dias_sin_alimento: DiaFaltanteCierre[]
+      dias_sin_mortalidad: DiaFaltanteCierre[]
+    }
+  | {
+      cerrado: true
+      requiere_confirmacion: false
+      lote: Lote
+      movimiento_financiero: unknown
+      resumen_cierre: {
+        duracion_dias: number
+        muertes_totales: number
+        mortalidad_acumulada_final_pct: number
+        alimento_total_kg: number
+        peso_total_vendido_kg: number
+        fcr_final: number | null
+        precio_venta_kg_cop: number | null
+      }
+    }
+
+export async function cerrarLote(
+  id: number,
+  payload: CerrarLotePayload,
+): Promise<ResultadoCierreLote> {
+  const { data } = await api.patch<ResultadoCierreLote>(`/lotes/${id}/cerrar`, payload)
   return data
 }

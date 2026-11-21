@@ -1,8 +1,8 @@
 import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
-import { ROL_ADMIN, permisosDeRegistro } from '@shared/auth/permisos'
+import { ROL_ADMIN, ROL_PROPIETARIO, permisosDeRegistro } from '@shared/auth/permisos'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcDoc, IcDrop, IcHeart, IcScale, IcSeed } from '@shared/ui/icons/icons'
 import BotonActualizar from '@shared/ui/BotonActualizar/BotonActualizar'
@@ -11,7 +11,6 @@ import GestionConsumos from '@features/consumos-diarios/components/GestionConsum
 import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
 import AccionesRapidasBitacora from './components/AccionesRapidasBitacora'
-import AlimentoEstimadoPesaje from './components/AlimentoEstimadoPesaje'
 import FormularioRegistro from './components/FormularioRegistro'
 import HistorialRegistros from './components/HistorialRegistros'
 import ResumenLote from './components/ResumenLote'
@@ -41,6 +40,7 @@ const ETIQUETA: Record<TipoRegistro, string> = {
 }
 
 function BitacoraPage() {
+  const navigate = useNavigate()
   const datos = useBitacora()
   useRefetchOnFocus(datos.recargar)
   const rol = getRol()
@@ -60,6 +60,21 @@ function BitacoraPage() {
   const [editandoId, setEditandoId] = useState<number | null>(null)
   const loteSolicitado = Number(parametros.get('lote'))
   const destinoAplicado = useRef(false)
+
+  // Para el Propietario, la bitácora oficial está integrada en la vista de Granjas (/granjas)
+  useEffect(() => {
+    if (rol === ROL_PROPIETARIO && datos.lotes.length > 0) {
+      const destino = Number.isSafeInteger(loteSolicitado) && loteSolicitado > 0
+        ? datos.lotes.find((item) => item.id === loteSolicitado)
+        : datos.lotes[0]
+      if (destino) {
+        navigate(
+          `/granjas?granjaId=${destino.galpon.granja.id}&galpon=${destino.galpon.id}&pestana=bitacora${vistaSolicitada ? `&vista=${vistaSolicitada}` : ''}`,
+          { replace: true }
+        )
+      }
+    }
+  }, [rol, datos.lotes, loteSolicitado, vistaSolicitada, navigate])
 
   useEffect(() => {
     if (destinoAplicado.current || !Number.isSafeInteger(loteSolicitado) || loteSolicitado <= 0) return
@@ -347,11 +362,6 @@ function BitacoraPage() {
           }}
           editando={editandoId !== null}
           insumos={insumosGranja}
-          complemento={
-            modal === 'peso' && loteSeleccionadoId !== null
-              ? <AlimentoEstimadoPesaje loteId={loteSeleccionadoId} />
-              : undefined
-          }
         />
       )}
     </div>

@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import * as Tabs from '@radix-ui/react-tabs'
 import { motion, useReducedMotion } from 'motion/react'
+import { getRol } from '@shared/api'
+import { ROL_OPERARIO } from '@shared/auth/permisos'
 import type { CurvaCrecimiento } from '@features/predicciones/api/predicciones'
 import { obtenerCurvaCrecimiento } from '@features/predicciones/api/predicciones'
 import type { Lote } from '@features/lotes/api/lotes'
@@ -47,6 +49,12 @@ function PanelCrecimiento({ loteId, puedeComparar, lote, indicadores, curvaGenet
   const referencia = curva?.referencias.genetica?.linea ?? null
   const marca = curva?.referencias.marca?.marca ?? null
   const suficiente = (curva?.modelo.puntos_usados ?? 0) >= 3
+  const esOperario = getRol() === ROL_OPERARIO
+  const rutaBitacora = lote?.galpon?.granja?.id && lote?.galpon?.id
+    ? (esOperario
+        ? `/bitacora?lote=${loteId}&vista=peso`
+        : `/granjas?granjaId=${lote.galpon.granja.id}&galpon=${lote.galpon.id}&pestana=bitacora&vista=peso`)
+    : (esOperario ? `/bitacora?lote=${loteId}&vista=peso` : '/granjas')
 
   useEffect(() => {
     if (!puedeComparar || !comparar) {
@@ -160,7 +168,7 @@ function PanelCrecimiento({ loteId, puedeComparar, lote, indicadores, curvaGenet
                 la comparación con el estándar de su raza y la fecha estimada de salida.
               </p>
               <div className="gcr-vacio-accion">
-                <Link className="adm-btn adm-btn--primario" to={`/bitacora?lote=${loteId}&vista=peso`}>
+                <Link className="adm-btn adm-btn--primario" to={rutaBitacora}>
                   + Registrar primer pesaje en Bitácora
                 </Link>
               </div>
@@ -169,7 +177,7 @@ function PanelCrecimiento({ loteId, puedeComparar, lote, indicadores, curvaGenet
             <div className="guia-error" role="alert">
               <span>{problema.mensaje}</span>
               {/bit[aá]cora/i.test(problema.mensaje) ? (
-                <Link className="adm-btn adm-btn--primario" to={`/bitacora?lote=${loteId}&vista=peso`}>Corregir en la Bitácora</Link>
+                <Link className="adm-btn adm-btn--primario" to={rutaBitacora}>Corregir en la Bitácora</Link>
               ) : (
                 <button type="button" className="adm-btn adm-btn--secundario" onClick={onReintentar}>Reintentar</button>
               )}
