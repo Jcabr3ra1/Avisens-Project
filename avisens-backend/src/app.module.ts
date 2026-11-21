@@ -31,8 +31,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClimaModule } from './modules/clima/clima.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
 import { CategoriasFinancierasModule } from './modules/categorias-financieras/categorias-financieras.module';
-import { PoliticasAlertaModule } from './modules/politicas-alertas/politicas-alerta.module';
-import { AlertasCanalesModule } from './modules/alertas-canales/alertas-canales.module';
 import { EvidenciaAlertaModule } from './modules/evidencia-alerta/evidencia-alerta.module';
 import { AccionamientosEquiposModule } from './modules/accionamientos-equipos/accionamientos-equipos.module';
 import { OrdenesActuadoresModule } from './modules/ordenes-actuadores/ordenes-actuadores.module';
@@ -129,8 +127,6 @@ import { PlanAlimentoModule } from './modules/plan-alimento/plan-alimento.module
     CategoriasFinancierasModule,
     HealthModule,
     LegalModule,
-    PoliticasAlertaModule,
-    AlertasCanalesModule,
     EvidenciaAlertaModule,
     AccionamientosEquiposModule,
     OrdenesActuadoresModule,

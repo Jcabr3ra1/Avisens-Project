@@ -163,7 +163,6 @@ model Granja {
   propietario             Usuario                @relation(fields: [propietario_id, organizacion_id], references: [id, organizacion_id])
   organizacion            Organizacion           @relation(fields: [organizacion_id], references: [id])
   galpones                Galpon[]
-  politicas_alerta        PoliticaAlerta[]
   clima                   Clima[]
   insumos                 InventarioInsumo[]
   movimientos_financieros MovimientoFinanciero[]
@@ -1421,23 +1420,6 @@ model EstadoActuador {
 // ---------------------------------------------------------------------------
 // Alertas (deteccion de condiciones fuera de umbral y su seguimiento)
 // ---------------------------------------------------------------------------
-model PoliticaAlerta {
-  id                       Int      @id @default(autoincrement())
-  granja_id                Int
-  criticidad               String
-  nivel_escalamiento       Int?
-  canal                    String?
-  tiempo_max_respuesta_seg Int?
-  verificado               Boolean  @default(false)
-  activa                   Boolean  @default(true)
-  fecha_actualizacion      DateTime @default(now()) @updatedAt
-
-  granja Granja @relation(fields: [granja_id], references: [id])
-
-  @@index([granja_id])
-  @@map("politicas_alerta")
-}
-
 enum EstadoAlerta {
   abierta
   en_proceso
@@ -1474,26 +1456,12 @@ model Alerta {
   sensor         Sensor?               @relation(fields: [sensor_id], references: [id])
   responsable    Usuario?              @relation("AlertaResponsable", fields: [responsable_id], references: [id])
   escalado_a     Usuario?              @relation("AlertaEscalado", fields: [escalado_a_id], references: [id])
-  canales        AlertaCanal[]
   evidencias     EvidenciaAlerta[]
   accionamientos AccionamientoEquipo[]
 
   @@index([galpon_id])
   @@index([lote_id])
   @@map("alertas")
-}
-
-model AlertaCanal {
-  id           Int       @id @default(autoincrement())
-  alerta_id    Int
-  canal        String?
-  estado_envio String?
-  fecha_envio  DateTime?
-
-  alerta Alerta @relation(fields: [alerta_id], references: [id])
-
-  @@index([alerta_id])
-  @@map("alertas_canales")
 }
 
 model EvidenciaAlerta {
