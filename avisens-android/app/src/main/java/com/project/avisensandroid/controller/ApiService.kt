@@ -6,6 +6,7 @@ import com.project.avisensandroid.model.GalponResponse
 import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.InsumoRequest
 import com.project.avisensandroid.model.InsumoResponse
+import com.project.avisensandroid.model.RegistrarMovimientoRequest
 import com.project.avisensandroid.model.TipoAlimentoResponse
 import com.project.avisensandroid.model.LoginRequest
 import com.project.avisensandroid.model.LoginResponse
@@ -56,6 +57,10 @@ import retrofit2.http.Query
 
 interface ApiService {
 
+    // =========================================================
+    // NOTIFICACIONES
+    // =========================================================
+
     @GET("v1/notificaciones")
     suspend fun listarMisNotificaciones(
         @Query("page") page: Int = 1,
@@ -63,17 +68,22 @@ interface ApiService {
     ): Response<PaginatedResponse<com.project.avisensandroid.model.NotificacionResponse>>
 
     @GET("v1/notificaciones/no-leidas")
-    suspend fun contarNotificacionesNoLeidas(): Response<com.project.avisensandroid.model.ContadorNotificacionesResponse>
+    suspend fun contarNotificacionesNoLeidas():
+            Response<com.project.avisensandroid.model.ContadorNotificacionesResponse>
 
     @PATCH("v1/notificaciones/{id}/leer")
-    suspend fun marcarNotificacionLeida(@Path("id") id: Int): Response<com.project.avisensandroid.model.NotificacionResponse>
+    suspend fun marcarNotificacionLeida(
+        @Path("id") id: Int
+    ): Response<com.project.avisensandroid.model.NotificacionResponse>
 
     @PATCH("v1/notificaciones/leer-todas")
-    suspend fun marcarTodasNotificacionesLeidas(): Response<okhttp3.ResponseBody>
+    suspend fun marcarTodasNotificacionesLeidas():
+            Response<okhttp3.ResponseBody>
 
     @DELETE("v1/notificaciones/{id}")
-    suspend fun eliminarMiNotificacion(@Path("id") id: Int): Response<okhttp3.ResponseBody>
-
+    suspend fun eliminarMiNotificacion(
+        @Path("id") id: Int
+    ): Response<okhttp3.ResponseBody>
 
     // =========================================================
     // AUTENTICACIÓN
@@ -84,8 +94,8 @@ interface ApiService {
         @Body request: LoginRequest
     ): Response<LoginResponse>
 
-    // La renovación automática la hace RetrofitClient con su propio cliente.
-    // El backend lee el refresh token del body, no de Authorization.
+    // La renovación automática la hace RetrofitClient
+    // con su propio cliente.
     @POST("v1/auth/refresh")
     suspend fun refreshToken(
         @Body request: RefreshTokenRequest
@@ -96,7 +106,6 @@ interface ApiService {
         @Header("Authorization") token: String
     ): Response<UserResponse>
 
-
     // =========================================================
     // ASISTENTE DE VOZ
     // =========================================================
@@ -105,7 +114,6 @@ interface ApiService {
     suspend fun interpretarComandoVoz(
         @Body request: InterpretarComandoVozRequest
     ): Response<RespuestaComandoVoz>
-
 
     // =========================================================
     // USUARIOS / GESTIÓN DE OPERARIOS
@@ -123,7 +131,8 @@ interface ApiService {
     ): Response<PaginatedResponse<UsuarioGestionResponse>>
 
     @GET("v1/usuarios/catalogos/roles")
-    suspend fun listarRolesUsuarios(): Response<List<RolCatalogoResponse>>
+    suspend fun listarRolesUsuarios():
+            Response<List<RolCatalogoResponse>>
 
     @PATCH("v1/usuarios/{id}")
     suspend fun actualizarEstadoUsuario(
@@ -155,7 +164,6 @@ interface ApiService {
         @Path("galponId") galponId: Int
     ): Response<Unit>
 
-
     // =========================================================
     // INSUMOS
     // =========================================================
@@ -171,6 +179,14 @@ interface ApiService {
         @Query("limit") limit: Int = 20
     ): Response<PaginatedResponse<InsumoResponse>>
 
+    // Registrar entrada de insumos.
+    // BodegaFragment convierte primero la cantidad
+    // a la unidad original del inventario.
+    @POST("v1/insumos/{id}/movimientos")
+    suspend fun registrarMovimientoInsumo(
+        @Path("id") insumoId: Int,
+        @Body request: RegistrarMovimientoRequest
+    ): Response<Unit>
 
     // =========================================================
     // TIPOS DE ALIMENTO
@@ -182,7 +198,6 @@ interface ApiService {
         @Query("limit") limit: Int = 100
     ): Response<PaginatedResponse<TipoAlimentoResponse>>
 
-
     // =========================================================
     // PROVEEDORES
     // =========================================================
@@ -192,7 +207,6 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20
     ): Response<PaginatedResponse<ProveedorResponse>>
-
 
     // =========================================================
     // GRANJAS
@@ -204,7 +218,6 @@ interface ApiService {
         @Query("limit") limit: Int = 100
     ): Response<PaginatedResponse<GranjaResponse>>
 
-
     // =========================================================
     // GALPONES
     // =========================================================
@@ -215,7 +228,6 @@ interface ApiService {
         @Query("limit") limit: Int = 100
     ): Response<PaginatedResponse<GalponResponse>>
 
-
     // =========================================================
     // LOTES
     // =========================================================
@@ -225,7 +237,6 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 100
     ): Response<PaginatedResponse<LoteSelectorResponse>>
-
 
     // =========================================================
     // DATOS DEL DASHBOARD DE INICIO
@@ -244,7 +255,9 @@ interface ApiService {
     ): Response<PaginatedResponse<PesajeResponse>>
 
     @POST("v1/consumos-diarios")
-    suspend fun crearConsumoDiario(@Body request: CreateConsumoDiarioRequest): Response<ConsumoDiarioResponse>
+    suspend fun crearConsumoDiario(
+        @Body request: CreateConsumoDiarioRequest
+    ): Response<ConsumoDiarioResponse>
 
     @GET("v1/consumos-diarios")
     suspend fun listarConsumosDiarios(
@@ -265,8 +278,10 @@ interface ApiService {
         @Query("limit") limit: Int = 20
     ): Response<PaginatedResponse<MedicionResponse>>
 
-    // Última medición de cada sensor vigente del galpón, con la antigüedad
-    // calculada por el servidor. Una sola petición para todo el galpón.
+    // =========================================================
+    // VARIABLES AMBIENTALES
+    // =========================================================
+
     @GET("v1/umbrales")
     suspend fun listarUmbralesAmbientales(
         @Query("galpon_id") galponId: Int,
@@ -278,6 +293,10 @@ interface ApiService {
     suspend fun listarUltimasLecturas(
         @Query("galpon_id") galponId: Int
     ): Response<UltimasLecturasResponse>
+
+    // =========================================================
+    // ALERTAS
+    // =========================================================
 
     @GET("v1/alertas/galpon/{galponId}")
     suspend fun listarAlertasDeGalpon(
@@ -303,6 +322,10 @@ interface ApiService {
         @Path("usuarioId") usuarioId: Int
     ): Response<AlertaResponse>
 
+    // =========================================================
+    // INDICADORES
+    // =========================================================
+
     @GET("v1/indicadores/{loteId}")
     suspend fun listarIndicadoresLote(
         @Path("loteId") loteId: Int
@@ -313,9 +336,8 @@ interface ApiService {
         @Path("loteId") loteId: Int
     ): Response<ComparacionIndicadorResponse>
 
-
     // =========================================================
-    // GUÍA DE PESO: plan del lote, curva genética y estimación de alimento
+    // GUÍA DE PESO
     // =========================================================
 
     @POST("v1/lotes/{id}/plan")
@@ -332,7 +354,8 @@ interface ApiService {
     @POST("v1/lotes/{id}/plan/recalcular")
     suspend fun recalcularPlanLote(
         @Path("id") loteId: Int,
-        @Body request: RecalcularPlanLoteRequest = RecalcularPlanLoteRequest()
+        @Body request: RecalcularPlanLoteRequest =
+            RecalcularPlanLoteRequest()
     ): Response<PlanLoteApiResponse>
 
     @GET("v1/curvas-geneticas")
@@ -354,9 +377,9 @@ interface ApiService {
     @POST("v1/lotes/{id}/plan/alimento")
     suspend fun crearEstimacionAlimento(
         @Path("id") loteId: Int,
-        @Body request: CrearEstimacionAlimentoRequest = CrearEstimacionAlimentoRequest()
+        @Body request: CrearEstimacionAlimentoRequest =
+            CrearEstimacionAlimentoRequest()
     ): Response<EstimacionAlimentoApiResponse>
-
 
     // =========================================================
     // REGISTROS DE MORTALIDAD
@@ -372,7 +395,6 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 100
     ): Response<PaginatedResponse<RegistroMortalidadResponse>>
-
 
     // =========================================================
     // EVENTOS SANITARIOS

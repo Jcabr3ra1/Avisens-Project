@@ -1,6 +1,14 @@
 
 package com.project.avisensandroid.ui.fragments
 
+import android.app.Dialog
+import android.text.Editable
+import android.text.TextWatcher
+import android.widget.ArrayAdapter
+import android.widget.AdapterView
+import android.view.WindowManager
+import com.project.avisensandroid.databinding.R03MovimientoInsumoBinding
+import com.project.avisensandroid.model.RegistrarMovimientoRequest
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -251,7 +259,140 @@ class BodegaFragment : BaseBottomNavFragment() {
         params.topMargin = dp(11)
         itemBinding.cardInsumo.layoutParams = params
 
+        itemBinding.btnEntradaInsumo.visibility = if (
+            (requireActivity() as MainActivity).obtenerRolActual() == UserRole.PROPIETARIO
+        ) View.VISIBLE else View.GONE
+        itemBinding.btnEntradaInsumo.setOnClickListener { mostrarDialogEntrada(insumo) }
         binding.contenedorInsumos.addView(itemBinding.root)
+    }
+
+    private fun mostrarDialogEntrada(insumo: InsumoResponse) {
+        if ((requireActivity() as MainActivity).obtenerRolActual() != UserRole.PROPIETARIO) return
+        val unidadBase = normalizarUnidad(insumo.unidad_medida)
+        if (unidadBase == null) {
+            Toast.makeText(requireContext(), "Unidad del insumo no compatible: ${insumo.unidad_medida}", Toast.LENGTH_LONG).show()
+            return
+        }
+        val dialog = Dialog(requireContext())
+        val form = R03MovimientoInsumoBinding.inflate(layoutInflater)
+        dialog.setContentView(form.root)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        form.txtNombreMovimiento.text = insumo.nombre
+        val stock = insumo.stock_actual ?: 0.0
+        form.txtStockMovimiento.text = "Stock actual: ${formatearNumero(stock)} ${insumo.unidad_medida}"
+
+        val unidades = listOf("Kg", "Gramos", "Bultos", "Toneladas")
+        form.spinnerUnidadMovimiento.adapter = ArrayAdapter(
+            requireContext(), android.R.layout.simple_spinner_dropdown_item, unidades
+        )
+        form.spinnerUnidadMovimiento.setSelection(unidades.indexOf(unidadBase).coerceAtLeast(0))
+
+        fun actualizarVistaPrevia() {
+            val seleccion = unidades[form.spinnerUnidadMovimiento.selectedItemPosition.coerceAtLeast(0)]
+            val usaBultos = seleccion == "Bultos" || unidadBase == "Bultos"
+            form.contenedorPesoBulto.visibility = if (usaBultos) View.VISIBLE else View.GONE
+            form.txtAyudaBulto.text = if (unidadBase == "Bultos") {
+                "Indica el peso de un bulto de este insumo para convertir la entrada a bultos."
+            } else {
+                "Indica cuántos kilogramos contiene cada bulto comprado."
+            }
+            val cantidad = leerDecimal(form.edtCantidadMovimiento.text.toString())
+            val peso = leerDecimal(form.edtPesoBulto.text.toString())
+            val convertido = if (cantidad != null && cantidad > 0 && cantidad.isFinite() &&
+                (!usaBultos || (peso != null && peso > 0 && peso.isFinite()))) {
+                convertirCantidad(cantidad, seleccion, unidadBase, peso)
+            } else null
+            form.txtVistaPreviaMovimiento.text = if (convertido != null && convertido.isFinite() && convertido > 0) {
+                "Entrada: ${formatearNumero(convertido)} ${insumo.unidad_medida}\n" +
+                        "Nuevo stock estimado: ${formatearNumero(stock + convertido)} ${insumo.unidad_medida}"
+            } else {
+                "Ingresa la cantidad${if (usaBultos) " y el peso por bulto" else ""} para calcular el nuevo stock."
+            }
+        }
+
+        val watcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = actualizarVistaPrevia()
+            override fun afterTextChanged(s: Editable?) = Unit
+        }
+        form.edtCantidadMovimiento.addTextChangedListener(watcher)
+        form.edtPesoBulto.addTextChangedListener(watcher)
+        form.spinnerUnidadMovimiento.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = actualizarVistaPrevia()
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+        actualizarVistaPrevia()
+        form.btnCancelarMovimiento.setOnClickListener { dialog.dismiss() }
+        form.btnGuardarMovimiento.setOnClickListener {
+            val cantidad = leerDecimal(form.edtCantidadMovimiento.text.toString())
+            if (cantidad == null || !cantidad.isFinite() || cantidad <= 0.0) {
+                form.edtCantidadMovimiento.error = "Ingresa una cantidad mayor que cero"
+                return@setOnClickListener
+            }
+            val seleccion = unidades[form.spinnerUnidadMovimiento.selectedItemPosition.coerceAtLeast(0)]
+            val usaBultos = seleccion == "Bultos" || unidadBase == "Bultos"
+            val peso = leerDecimal(form.edtPesoBulto.text.toString())
+            if (usaBultos && (peso == null || !peso.isFinite() || peso <= 0.0)) {
+                form.edtPesoBulto.error = "Indica el peso en kg de cada bulto"
+                return@setOnClickListener
+            }
+            val cantidadConvertida = convertirCantidad(cantidad, seleccion, unidadBase, peso)
+            if (cantidadConvertida == null || !cantidadConvertida.isFinite() || cantidadConvertida <= 0.0) {
+                Toast.makeText(requireContext(), "No se pudo convertir la cantidad", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+            form.btnGuardarMovimiento.isEnabled = false
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val response = RetrofitClient.api.registrarMovimientoInsumo(
+                        insumo.id, RegistrarMovimientoRequest("entrada", cantidadConvertida, null)
+                    )
+                    if (!response.isSuccessful) {
+                        throw IllegalStateException("No se pudo registrar la entrada (HTTP ${response.code()})")
+                    }
+                    if (isAdded) {
+                        Toast.makeText(requireContext(), "Entrada registrada", Toast.LENGTH_SHORT).show()
+                        dialog.dismiss()
+                        cargarDatosBodega(silenciosa = true)
+                    }
+                } catch (e: Exception) {
+                    if (isAdded) {
+                        Toast.makeText(requireContext(), e.message ?: "Error al registrar entrada", Toast.LENGTH_LONG).show()
+                        form.btnGuardarMovimiento.isEnabled = true
+                    }
+                }
+            }
+        }
+        dialog.show()
+        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.92f).toInt(), WindowManager.LayoutParams.WRAP_CONTENT)
+    }
+
+    private fun leerDecimal(texto: String): Double? = texto.trim().replace(',', '.').toDoubleOrNull()
+
+    private fun normalizarUnidad(unidad: String): String? = when (unidad.trim().lowercase(Locale.ROOT)) {
+        "kg", "kilogramo", "kilogramos" -> "Kg"
+        "g", "gr", "gramo", "gramos" -> "Gramos"
+        "bulto", "bultos" -> "Bultos"
+        "t", "ton", "tonelada", "toneladas" -> "Toneladas"
+        else -> null
+    }
+
+    private fun convertirCantidad(cantidad: Double, origen: String, destino: String, pesoBulto: Double?): Double? {
+        fun aKg(valor: Double, unidad: String): Double? = when (unidad) {
+            "Kg" -> valor
+            "Gramos" -> valor / 1000.0
+            "Toneladas" -> valor * 1000.0
+            "Bultos" -> pesoBulto?.let { valor * it }
+            else -> null
+        }
+        val kg = aKg(cantidad, origen) ?: return null
+        return when (destino) {
+            "Kg" -> kg
+            "Gramos" -> kg * 1000.0
+            "Toneladas" -> kg / 1000.0
+            "Bultos" -> pesoBulto?.let { kg / it }
+            else -> null
+        }
     }
 
     private fun formatearNumero(numero: Double): String {
