@@ -282,9 +282,11 @@ class BodegaFragment : BaseBottomNavFragment() {
         form.txtStockMovimiento.text = "Stock actual: ${formatearNumero(stock)} ${insumo.unidad_medida}"
 
         val unidades = listOf("Kg", "Gramos", "Bultos", "Toneladas")
-        form.spinnerUnidadMovimiento.adapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_spinner_dropdown_item, unidades
+        val adapter = ArrayAdapter(
+            requireContext(), R.layout.spinner_item, unidades
         )
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item)
+        form.spinnerUnidadMovimiento.adapter = adapter
         form.spinnerUnidadMovimiento.setSelection(unidades.indexOf(unidadBase).coerceAtLeast(0))
 
         fun actualizarVistaPrevia() {

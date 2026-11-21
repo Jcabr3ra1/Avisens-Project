@@ -99,7 +99,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:layout_marginTop="7dp"
-                android:background="@drawable/bg_input_verde"
+                android:background="@drawable/bg_spinner_avisens"
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
                 android:spinnerMode="dropdown" />
