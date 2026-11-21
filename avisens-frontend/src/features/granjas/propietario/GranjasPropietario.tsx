@@ -339,6 +339,8 @@ function GranjasPropietario() {
                   galpon={galpon}
                   revision={revision}
                   onCompletarUbicacion={puedeCompletarDatos(getRol()) ? () => setDatos({ tipo: 'granja', granja }) : undefined}
+                  onIrABitacora={() => irA('/bitacora')}
+                  onCambioEstructura={() => { void recargarTodo() }}
                 />
               </Tabs.Content>
               <Tabs.Content value="actuadores" className="gp-contenido">

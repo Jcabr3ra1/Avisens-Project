@@ -335,6 +335,38 @@
   white-space: nowrap;
 }
 
+/* Varias zonas del mismo tipo de sensor (p. ej. dos DHT22 en el galpón):
+   una fila por zona, con el mismo peso para cada lectura. */
+.gsr-sensor-zona {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.gsr-sensor-zona span {
+  flex: none;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.gsr-sensor-zona strong {
+  overflow: hidden;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-overflow: ellipsis;
+}
+
+.gsr-sensor-zona[data-estado='advertencia'] strong,
+.gsr-sensor-zona[data-estado='obsoleta'] strong { color: var(--warning); }
+.gsr-sensor-zona[data-estado='critico'] strong { color: var(--danger); }
+.gsr-sensor-zona[data-estado='offline'] strong,
+.gsr-sensor-zona[data-estado='lectura_no_disponible'] strong { color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; }
+
 .gsr-sensor-led {
   position: absolute;
   top: 7px;

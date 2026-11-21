@@ -75,3 +75,43 @@ export function cargarModeloGranja(): Promise<GranjaCargada | null> {
     .catch(() => null)
   return pendiente
 }
+
+export type PiezasGranja = {
+  arboles: Object3D[]
+  casa: Object3D | null
+  tanque: Object3D | null
+  bodega: Object3D | null
+}
+
+/** Piezas sueltas de la granja (sin fusionar) para decorar otros visores. */
+export async function cargarPiezasGranja(): Promise<PiezasGranja | null> {
+  try {
+    const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync(RUTA_GRANJA)
+    gltf.scene.updateMatrixWorld(true)
+    const clon = (nombre: string) => gltf.scene.getObjectByName(nombre)?.clone(true) ?? null
+    const casa = new Group()
+    for (const nombre of ['casa', 'techo_casa']) {
+      const pieza = clon(nombre)
+      if (pieza) casa.add(pieza)
+    }
+    return {
+      arboles: (gltf.scene.getObjectByName('arboles')?.children ?? []).map((arbol) => arbol.clone(true)),
+      casa: casa.children.length > 0 ? casa : null,
+      tanque: clon('tanque_agua'),
+      bodega: clon('bodega'),
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function cargarGallina(): Promise<Object3D | null> {
+  try {
+    const gltf = await new GLTFLoader()
+      .setMeshoptDecoder(MeshoptDecoder)
+      .loadAsync(`${import.meta.env.BASE_URL}modelos/gallina.glb`)
+    return gltf.scene
+  } catch {
+    return null
+  }
+}

@@ -31,6 +31,10 @@ struct CicloIngesta {
   bool incluirDht;
   float temperatura;
   float humedad;
+  // Segundo DHT22 (otra zona del galpón), si DHT2_PIN está definido.
+  bool incluirDht2;
+  float temperatura2;
+  float humedad2;
   bool incluirAgua;
   float distanciaAgua;  // cm, del HC-SR04 a la superficie del agua
   bool incluirGas;

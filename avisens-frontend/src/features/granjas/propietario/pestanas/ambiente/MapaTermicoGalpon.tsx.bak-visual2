@@ -1,0 +1,1301 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { toast } from "sonner";
+import { listarZonas, type ZonaGalpon } from "@features/galpones/api/zonas";
+import {
+  useMonitoreoAmbiental,
+  type SensorVista,
+} from "@features/monitoreo/hooks/useMonitoreoAmbiental";
+import {
+  construirTexturaTermica,
+  esSensorTermicoConFalla,
+  type PuntoTermico,
+} from "@features/monitoreo/utils/texturaTermica";
+import { getRol } from "@shared/api";
+import { permisosOperativosDeGalpon } from "@shared/auth/permisos";
+import type { GalponConLotes } from "../../../hooks/useEstructuraGranjas";
+import "./MapaTermicoGalpon.css";
+
+const ANCHO_BASE = 12; // eje X (metros)
+const LARGO_BASE = 30; // eje Z (metros)
+const ALTO_COLUMNA = 2.8;
+const ALTO_CUMBRERA = 4.4;
+const ALTO_MURETE = 0.65;
+const COTA_PISO_TERMICO = 0.05;
+
+const C = {
+  crema: 0xf5f2e8,
+  verde: 0x165b49,
+  verdeClaro: 0x1f7a62,
+  dorado: 0xe4b84b,
+  concreto: 0xd8d4c7,
+  metal: 0x9aa39d,
+  pasto: 0x87b672,
+  pastoOscuro: 0x629e4f,
+  tierra: 0xcfb188,
+  tronco: 0x7d5d3e,
+};
+
+type Vista = "superior" | "3d" | "libre";
+
+type Props = {
+  galpon: GalponConLotes;
+  onIrABitacora?: (loteId: number) => void;
+  onGuardado?: () => void;
+};
+
+function zonaPorCoordenadaZ(z: number, largo: number): string {
+  const tercio = largo / 6;
+  if (z > tercio) return "Zona 1 - Entrada";
+  if (z < -tercio) return "Zona 3 - Fondo";
+  return "Zona 2 - Centro";
+}
+
+const mat = (
+  color: number,
+  extra: THREE.MeshStandardMaterialParameters = {},
+) =>
+  new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.85,
+    metalness: 0.02,
+    ...extra,
+  });
+
+function caja(
+  w: number,
+  h: number,
+  d: number,
+  m: THREE.Material,
+  x = 0,
+  y = 0,
+  z = 0,
+) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+/**
+ * Construye el galpón 3D con orientación consistente:
+ * Eje X = Ancho (12 m), Eje Z = Largo (30 m)
+ */
+function construirGalpon() {
+  const shed = new THREE.Group();
+  const roof = new THREE.Group();
+  const roofMats: THREE.MeshStandardMaterial[] = [];
+
+  const mCrema = mat(C.crema);
+  const mVerde = mat(C.verde);
+  const mConcreto = mat(C.concreto);
+  const mMetal = mat(C.metal, { metalness: 0.35, roughness: 0.5 });
+
+  // Losa base de concreto
+  const losa = caja(
+    ANCHO_BASE + 0.6,
+    0.18,
+    LARGO_BASE + 0.6,
+    mConcreto,
+    0,
+    -0.09,
+    0,
+  );
+  losa.castShadow = false;
+  shed.add(losa);
+
+  // Muretes bajos perimetrales en crema AVISENS
+  for (const s of [-1, 1]) {
+    shed.add(
+      caja(
+        0.22,
+        ALTO_MURETE,
+        LARGO_BASE,
+        mCrema,
+        (s * ANCHO_BASE) / 2,
+        ALTO_MURETE / 2,
+        0,
+      ),
+    );
+    shed.add(
+      caja(
+        ANCHO_BASE + 0.22,
+        ALTO_MURETE,
+        0.22,
+        mCrema,
+        0,
+        ALTO_MURETE / 2,
+        (s * LARGO_BASE) / 2,
+      ),
+    );
+  }
+
+  // Cerchas y columnas estructurales (7 pórticos a lo largo del eje Z)
+  const n = 7;
+  const voladizo = 0.35;
+  const angulo = Math.atan2(
+    ALTO_CUMBRERA - ALTO_COLUMNA,
+    ANCHO_BASE / 2 + voladizo,
+  );
+  const largoCercha = Math.hypot(
+    ANCHO_BASE / 2 + voladizo,
+    ALTO_CUMBRERA - ALTO_COLUMNA,
+  );
+
+  for (let i = 0; i < n; i++) {
+    const z = -LARGO_BASE / 2 + (i * LARGO_BASE) / (n - 1);
+    for (const s of [-1, 1]) {
+      shed.add(
+        caja(
+          0.2,
+          ALTO_COLUMNA,
+          0.2,
+          mVerde,
+          (s * ANCHO_BASE) / 2,
+          ALTO_COLUMNA / 2,
+          z,
+        ),
+      );
+      const cuerda = caja(
+        largoCercha,
+        0.08,
+        0.08,
+        mVerde,
+        (s * (ANCHO_BASE / 2 + voladizo)) / 2,
+        ALTO_COLUMNA + (ALTO_CUMBRERA - ALTO_COLUMNA) / 2 - 0.08,
+        z,
+      );
+      cuerda.rotation.z = -s * angulo;
+      cuerda.castShadow = false;
+      shed.add(cuerda);
+    }
+    const tirante = caja(ANCHO_BASE, 0.08, 0.08, mVerde, 0, ALTO_COLUMNA, z);
+    tirante.castShadow = false;
+    shed.add(tirante);
+
+    const pendolon = caja(
+      0.07,
+      ALTO_CUMBRERA - ALTO_COLUMNA - 0.08,
+      0.07,
+      mVerde,
+      0,
+      ALTO_COLUMNA + (ALTO_CUMBRERA - ALTO_COLUMNA - 0.08) / 2,
+      z,
+    );
+    pendolon.castShadow = false;
+    shed.add(pendolon);
+  }
+
+  // Vigas longitudinales y cumbrera
+  for (const s of [-1, 1]) {
+    const v = caja(
+      0.12,
+      0.1,
+      LARGO_BASE,
+      mVerde,
+      (s * ANCHO_BASE) / 2,
+      ALTO_COLUMNA,
+      0,
+    );
+    v.castShadow = false;
+    shed.add(v);
+  }
+  const cumbrera = caja(
+    0.12,
+    0.1,
+    LARGO_BASE,
+    mVerde,
+    0,
+    ALTO_CUMBRERA - 0.06,
+    0,
+  );
+  cumbrera.castShadow = false;
+  shed.add(cumbrera);
+
+  // Cortinas laterales translúcidas en tono dorado AVISENS
+  const altoCortina = ALTO_COLUMNA - ALTO_MURETE;
+  const mCortina = new THREE.MeshStandardMaterial({
+    color: C.dorado,
+    transparent: true,
+    opacity: 0.34,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    roughness: 0.65,
+  });
+  for (const s of [-1, 1]) {
+    const c = new THREE.Mesh(
+      new THREE.PlaneGeometry(LARGO_BASE - 0.2, altoCortina),
+      mCortina,
+    );
+    c.rotation.y = Math.PI / 2;
+    c.position.set(
+      (s * ANCHO_BASE) / 2 + s * 0.03,
+      ALTO_MURETE + altoCortina / 2,
+      0,
+    );
+    shed.add(c);
+  }
+
+  // Malla perimetral en frentes
+  const mMalla = new THREE.MeshStandardMaterial({
+    color: 0xb7beb8,
+    transparent: true,
+    opacity: 0.2,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  for (const s of [-1, 1]) {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(ANCHO_BASE, altoCortina),
+      mMalla,
+    );
+    m.position.set(
+      0,
+      ALTO_MURETE + altoCortina / 2,
+      (s * LARGO_BASE) / 2,
+    );
+    shed.add(m);
+  }
+
+  // Líneas de comederos (platos) instanciados a lo largo de Z
+  const zsComedero: number[] = [];
+  for (let z = -12.5; z <= 12.5; z += 2.2) zsComedero.push(z);
+  const platoGeo = new THREE.CylinderGeometry(0.28, 0.22, 0.09, 16);
+  const platos = new THREE.InstancedMesh(
+    platoGeo,
+    mMetal,
+    zsComedero.length * 2,
+  );
+  const m4 = new THREE.Matrix4();
+  let k = 0;
+  for (const x of [-2.8, 2.8]) {
+    for (const z of zsComedero) {
+      m4.makeTranslation(x, 0.07, z);
+      platos.setMatrixAt(k++, m4);
+    }
+    const linea = caja(0.03, 0.03, LARGO_BASE - 2.5, mMetal, x, 1.35, 0);
+    linea.castShadow = false;
+    shed.add(linea);
+  }
+  platos.castShadow = true;
+  shed.add(platos);
+
+  // Líneas de bebederos (campanas) instanciados
+  const mAgua = mat(0xe6efec, { roughness: 0.35 });
+  const bebGeo = new THREE.CylinderGeometry(0.11, 0.16, 0.22, 14);
+  const zsBebedero: number[] = [];
+  for (let z = -12; z <= 12; z += 1.8) zsBebedero.push(z);
+  const bebederos = new THREE.InstancedMesh(
+    bebGeo,
+    mAgua,
+    zsBebedero.length * 2,
+  );
+  k = 0;
+  for (const x of [-1.0, 1.0]) {
+    for (const z of zsBebedero) {
+      m4.makeTranslation(x, 0.46, z);
+      bebederos.setMatrixAt(k++, m4);
+    }
+    const linea = caja(0.03, 0.03, LARGO_BASE - 2.5, mMetal, x, 1.65, 0);
+    linea.castShadow = false;
+    shed.add(linea);
+  }
+  bebederos.castShadow = true;
+  shed.add(bebederos);
+
+  // Techo a dos aguas verde bosque (se desvanece en vista superior)
+  const mTecho = new THREE.MeshStandardMaterial({
+    color: C.verde,
+    roughness: 0.72,
+    transparent: true,
+    opacity: 1,
+  });
+  const mCaballete = new THREE.MeshStandardMaterial({
+    color: C.verdeClaro,
+    roughness: 0.72,
+    transparent: true,
+    opacity: 1,
+  });
+  roofMats.push(mTecho, mCaballete);
+
+  for (const s of [-1, 1]) {
+    const panel = new THREE.Mesh(
+      new THREE.BoxGeometry(largoCercha + 0.25, 0.12, LARGO_BASE + 1.0),
+      mTecho,
+    );
+    panel.position.set(
+      (s * (ANCHO_BASE / 2 + voladizo)) / 2,
+      ALTO_COLUMNA + (ALTO_CUMBRERA - ALTO_COLUMNA) / 2 + 0.04,
+      0,
+    );
+    panel.rotation.z = -s * angulo;
+    panel.receiveShadow = true;
+    roof.add(panel);
+  }
+  const caballete = new THREE.Mesh(
+    new THREE.BoxGeometry(0.45, 0.14, LARGO_BASE + 1.0),
+    mCaballete,
+  );
+  caballete.position.set(0, ALTO_CUMBRERA + 0.06, 0);
+  roof.add(caballete);
+  shed.add(roof);
+
+  return { shed, roof, roofMats };
+}
+
+const VERDES = [0x7fb069, 0x6aa55a, 0x93c276, 0x5f9b57];
+
+type TipoArbol = "redondo" | "cipres" | "arbusto";
+
+/** Máscara en escala de grises (alphaMap lee el canal verde): blanco = opaco. */
+function crearMascaraRadial() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 512;
+  const g = c.getContext("2d");
+  if (g) {
+    g.fillStyle = "#000";
+    g.fillRect(0, 0, 512, 512);
+    const grad = g.createRadialGradient(256, 256, 0, 256, 256, 256);
+    grad.addColorStop(0, "rgb(255,255,255)");
+    grad.addColorStop(0.45, "rgb(255,255,255)");
+    grad.addColorStop(1, "rgb(0,0,0)");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 512, 512);
+  }
+  return new THREE.CanvasTexture(c);
+}
+
+/** Rectángulo con bordes difusos (sombra desplazada, sin filtros). */
+function crearMascaraRect() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const g = c.getContext("2d");
+  if (g) {
+    g.fillStyle = "#000";
+    g.fillRect(0, 0, 256, 256);
+    g.shadowColor = "#fff";
+    g.shadowBlur = 36;
+    g.shadowOffsetX = 2000;
+    g.fillStyle = "#fff";
+    g.fillRect(64 - 2000, 64, 128, 128);
+  }
+  return new THREE.CanvasTexture(c);
+}
+
+function crearArbol(tipo: TipoArbol, rnd: () => number) {
+  const g = new THREE.Group();
+  const verde = () =>
+    mat(
+      new THREE.Color(VERDES[Math.floor(rnd() * VERDES.length)])
+        .offsetHSL((rnd() - 0.5) * 0.03, 0, (rnd() - 0.5) * 0.06)
+        .getHex(),
+      { flatShading: true },
+    );
+
+  if (tipo === "arbusto") {
+    const s = 0.8 + rnd() * 0.6;
+    for (let i = 0; i < 3; i++) {
+      const b = new THREE.Mesh(
+        new THREE.IcosahedronGeometry((0.5 + rnd() * 0.3) * s, 1),
+        verde(),
+      );
+      b.position.set((rnd() - 0.5) * 0.9 * s, 0.3 * s, (rnd() - 0.5) * 0.9 * s);
+      b.scale.y = 0.75;
+      b.castShadow = true;
+      g.add(b);
+    }
+    return g;
+  }
+
+  const s = tipo === "cipres" ? 1.0 + rnd() * 0.7 : 1.1 + rnd() * 0.9;
+  const altoTronco = (tipo === "cipres" ? 0.8 : 1.6) * s;
+  const tronco = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.1 * s, 0.17 * s, altoTronco, 6),
+    mat(C.tronco),
+  );
+  tronco.position.y = altoTronco / 2;
+  tronco.castShadow = true;
+  g.add(tronco);
+
+  if (tipo === "cipres") {
+    for (let i = 0; i < 3; i++) {
+      const cono = new THREE.Mesh(
+        new THREE.ConeGeometry((0.95 - i * 0.24) * s, 1.8 * s, 7),
+        verde(),
+      );
+      cono.position.y = altoTronco + (0.6 + i * 1.0) * s;
+      cono.castShadow = true;
+      g.add(cono);
+    }
+  } else {
+    for (let i = 0; i < 4; i++) {
+      const f = new THREE.Mesh(
+        new THREE.IcosahedronGeometry((0.8 + rnd() * 0.4) * s, 1),
+        verde(),
+      );
+      f.position.set(
+        (rnd() - 0.5) * 1.1 * s,
+        altoTronco + (0.5 + rnd() * 0.9) * s,
+        (rnd() - 0.5) * 1.1 * s,
+      );
+      f.scale.y = 0.85;
+      f.rotation.y = rnd() * 6;
+      f.castShadow = true;
+      g.add(f);
+    }
+  }
+  g.rotation.y = rnd() * Math.PI * 2;
+  return g;
+}
+
+function construirEntorno() {
+  const env = new THREE.Group();
+  let seed = 11;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+
+  // Suelo grande que se desvanece (sin borde visible)
+  const radial = crearMascaraRadial();
+  const base = new THREE.Mesh(
+    new THREE.CircleGeometry(95, 72),
+    new THREE.MeshStandardMaterial({
+      color: C.pasto,
+      roughness: 1,
+      alphaMap: radial,
+      transparent: true,
+      depthWrite: false,
+    }),
+  );
+  base.rotation.x = -Math.PI / 2;
+  base.position.y = -0.17;
+  base.renderOrder = -3;
+  base.receiveShadow = true;
+  env.add(base);
+
+  // Parches de tono para romper la planicie
+  const tonos = [0x7aa862, 0x94bd76, 0x6f9f5a, 0x9cc47e];
+  for (let i = 0; i < 9; i++) {
+    const p = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 40),
+      new THREE.MeshStandardMaterial({
+        color: tonos[i % tonos.length],
+        roughness: 1,
+        alphaMap: radial,
+        transparent: true,
+        opacity: 0.55,
+        depthWrite: false,
+      }),
+    );
+    p.rotation.x = -Math.PI / 2;
+    p.position.set((rnd() * 2 - 1) * 45, -0.165 + i * 0.002, (rnd() * 2 - 1) * 50);
+    p.scale.set(10 + rnd() * 14, 8 + rnd() * 12, 1);
+    p.rotation.z = rnd() * Math.PI;
+    p.renderOrder = -2;
+    p.receiveShadow = true;
+    env.add(p);
+  }
+
+  // Explanada de tierra alrededor del galpón + camino de entrada (bordes suaves)
+  const rect = crearMascaraRect();
+  const matTierra = () =>
+    new THREE.MeshStandardMaterial({
+      color: C.tierra,
+      roughness: 1,
+      alphaMap: rect,
+      transparent: true,
+      depthWrite: false,
+    });
+  const explanada = new THREE.Mesh(
+    new THREE.PlaneGeometry(ANCHO_BASE + 9, LARGO_BASE + 9),
+    matTierra(),
+  );
+  explanada.rotation.x = -Math.PI / 2;
+  explanada.position.y = -0.15;
+  explanada.renderOrder = -1;
+  explanada.receiveShadow = true;
+  env.add(explanada);
+
+  const camino = new THREE.Mesh(new THREE.PlaneGeometry(5, 30), matTierra());
+  camino.rotation.x = -Math.PI / 2;
+  camino.position.set(0, -0.148, LARGO_BASE / 2 + 11);
+  camino.renderOrder = -1;
+  camino.receiveShadow = true;
+  env.add(camino);
+
+  // Matas de pasto con variación de tono y tamaño
+  const N = 260;
+  const matas = new THREE.InstancedMesh(
+    new THREE.ConeGeometry(0.1, 0.38, 5),
+    mat(0xffffff),
+    N,
+  );
+  const dummy = new THREE.Object3D();
+  const col = new THREE.Color();
+  const tonosMata = [0x629e4f, 0x78ad5e, 0x558f48];
+  let k = 0;
+  while (k < N) {
+    const x = (rnd() * 2 - 1) * 42;
+    const z = (rnd() * 2 - 1) * 48;
+    if (Math.abs(x) < ANCHO_BASE / 2 + 2 && Math.abs(z) < LARGO_BASE / 2 + 2) continue;
+    if (Math.abs(x) < 2.6 && z > 0) continue;
+    dummy.position.set(x, -0.16, z);
+    dummy.rotation.y = rnd() * Math.PI;
+    const e = 0.8 + rnd() * 0.9;
+    dummy.scale.set(e, 0.7 + rnd() * 1.1, e);
+    dummy.updateMatrix();
+    matas.setMatrixAt(k, dummy.matrix);
+    matas.setColorAt(k, col.setHex(tonosMata[k % tonosMata.length]));
+    k++;
+  }
+  env.add(matas);
+
+  // Árboles agrupados en bosquetes (mezcla de tipos y tamaños)
+  const bosquetes: [number, number, number][] = [
+    [-15, -15, 4],
+    [16, -11, 4],
+    [-17, 9, 3],
+    [18, 13, 4],
+    [-13, 27, 3],
+    [0, -32, 5],
+    [15, 31, 3],
+  ];
+  bosquetes.forEach(([cx, cz, n]) => {
+    for (let i = 0; i < n; i++) {
+      const x = cx + (rnd() - 0.5) * 9;
+      const z = cz + (rnd() - 0.5) * 9;
+      if (Math.abs(x) < 4 && z > 10) continue;
+      const r = rnd();
+      const tipo: TipoArbol = r < 0.45 ? "redondo" : r < 0.7 ? "cipres" : "arbusto";
+      const a = crearArbol(tipo, rnd);
+      a.position.set(x, -0.17, z);
+      env.add(a);
+    }
+  });
+  // Arbustos pegados a los muros laterales
+  for (let i = 0; i < 8; i++) {
+    const lado = i % 2 === 0 ? 1 : -1;
+    const a = crearArbol("arbusto", rnd);
+    a.position.set(lado * (ANCHO_BASE / 2 + 1.9 + rnd() * 0.8), -0.17, (rnd() * 2 - 1) * 13);
+    env.add(a);
+  }
+
+  return env;
+}
+
+export function MapaTermicoGalpon({
+  galpon,
+  onIrABitacora,
+  onGuardado,
+}: Props) {
+  const puedeEditar = permisosOperativosDeGalpon(getRol()).configurar;
+  const { galpones: galponesMonitoreo } = useMonitoreoAmbiental();
+
+  const galponVivo = useMemo(
+    () => galponesMonitoreo.find((g) => g.id === galpon.id) ?? null,
+    [galponesMonitoreo, galpon.id],
+  );
+
+  const anchoInicial = galponVivo?.anchoMetros ?? ANCHO_BASE;
+  const largoInicial = galponVivo?.largoMetros ?? LARGO_BASE;
+
+  const [vista, setVista] = useState<Vista>("3d");
+  const [modoEdicion, setModoEdicion] = useState(false);
+  const [zonas, setZonas] = useState<ZonaGalpon[]>([]);
+  const [dimensiones, setDimensiones] = useState({
+    ancho: anchoInicial,
+    largo: largoInicial,
+  });
+  const [puntosEditados, setPuntosEditados] = useState<PuntoTermico[]>([]);
+  const [sensorSeleccionadoId, setSensorSeleccionadoId] = useState<
+    number | null
+  >(null);
+
+  const visorRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef(null as ((f: number) => void) | null);
+  const badgesRef = useRef(new Map<string, HTMLDivElement>());
+  const ctxRef = useRef<{
+    marcadores: Map<number, THREE.Mesh>;
+    grupoMarcadores: THREE.Group;
+    planoTermico: THREE.Mesh;
+    shed: THREE.Group;
+    entorno: THREE.Group;
+    irAVista: (v: Exclude<Vista, "libre">) => void;
+    reencuadrar: () => void;
+  } | null>(null);
+
+  const modoEdicionRef = useRef(modoEdicion);
+  const dimensionesRef = useRef(dimensiones);
+  modoEdicionRef.current = modoEdicion;
+  dimensionesRef.current = dimensiones;
+
+  const puntosBase = useMemo<PuntoTermico[]>(() => {
+    const sensoresFuente: SensorVista[] = galponVivo?.sensores ?? [];
+    const sensoresTemp = sensoresFuente.filter(
+      (s) =>
+        s.variableUmbral === "temperatura" ||
+        s.tipo.toLowerCase().includes("temp"),
+    );
+    const lista = sensoresTemp.length > 0 ? sensoresTemp : sensoresFuente;
+
+    return lista.map((s, idx) => {
+      const col = idx % 2 === 0 ? -2.4 : 2.4;
+      const fila = ((idx % 3) - 1) * (largoInicial / 3);
+      return {
+        id: s.id,
+        codigo: s.codigo,
+        x: s.x ?? col,
+        z: s.y ?? fila,
+        altura: s.alturaMetros ?? 1.4,
+        valor: s.valor,
+        minUmbral: s.minUmbral,
+        maxUmbral: s.maxUmbral,
+        estado: s.estado,
+        sinCalibrar: s.sinCalibrar,
+        antiguedadSegundos: s.antiguedadSegundos ?? null,
+      };
+    });
+  }, [galponVivo, largoInicial]);
+
+  useEffect(() => {
+    if (!modoEdicion) {
+      setDimensiones({ ancho: anchoInicial, largo: largoInicial });
+      setPuntosEditados(puntosBase);
+    }
+  }, [anchoInicial, largoInicial, puntosBase, modoEdicion]);
+
+  useEffect(() => {
+    void listarZonas(galpon.id)
+      .then(setZonas)
+      .catch(() => setZonas([]));
+  }, [galpon.id]);
+
+  const puntosActivos = modoEdicion ? puntosEditados : puntosBase;
+
+  const metricas = useMemo(() => {
+    const operativos = puntosActivos.filter((p) => !esSensorTermicoConFalla(p));
+    if (operativos.length === 0) {
+      return { promedio: null, porcentajeRango: null };
+    }
+    const suma = operativos.reduce((acc, p) => acc + (p.valor ?? 0), 0);
+    const enRango = operativos.filter((p) => p.estado === "optimo").length;
+    return {
+      promedio: suma / operativos.length,
+      porcentajeRango: Math.round((enRango / operativos.length) * 100),
+    };
+  }, [puntosActivos]);
+
+  // Inicialización de escena Three.js
+  useEffect(() => {
+    const host = visorRef.current;
+    if (!host) return;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.domElement.className = "mt-canvas";
+    host.prepend(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 350);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.enablePan = false;
+    controls.minPolarAngle = 0;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+    // Iluminación cálida diurna
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xdfe9d3, 1.1));
+    const sol = new THREE.DirectionalLight(0xfff4dc, 1.45);
+    sol.position.set(16, 26, 18);
+    sol.castShadow = true;
+    sol.shadow.mapSize.set(2048, 2048);
+    const sc = sol.shadow.camera;
+    sc.left = -28;
+    sc.right = 28;
+    sc.top = 28;
+    sc.bottom = -28;
+    sc.near = 1;
+    sc.far = 80;
+    sol.shadow.bias = -0.0005;
+    scene.add(sol);
+
+    const entorno = construirEntorno();
+    scene.add(entorno);
+    const { shed, roof, roofMats } = construirGalpon();
+    scene.add(shed);
+
+    // Plano térmico sobre el piso del galpón
+    const planoTermico = new THREE.Mesh(
+      new THREE.PlaneGeometry(ANCHO_BASE - 0.3, LARGO_BASE - 0.3),
+      new THREE.MeshBasicMaterial({
+        transparent: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+      }),
+    );
+    planoTermico.rotation.x = -Math.PI / 2;
+    planoTermico.position.y = COTA_PISO_TERMICO;
+    planoTermico.renderOrder = 1;
+    scene.add(planoTermico);
+
+    const grupoMarcadores = new THREE.Group();
+    scene.add(grupoMarcadores);
+
+    const planoArrastre = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.2);
+
+    // Encuadre centrado exacto sobre el Box3 del galpón (sin la isla)
+    const target = new THREE.Vector3();
+    let distancia = 36;
+    const esf = new THREE.Spherical(36, 1.02, 0.55);
+    interface Tween {
+      from: THREE.Spherical;
+      to: THREE.Spherical;
+      t0: number;
+      dur: number;
+    }
+    let tween: Tween | null = null;
+    let iniciado = false;
+
+    const colocarCamara = () => {
+      camera.position.setFromSpherical(esf).add(target);
+      camera.lookAt(target);
+    };
+
+    const reencuadrar = () => {
+      const w = Math.max(host.clientWidth, 1);
+      const h = Math.max(host.clientHeight, 1);
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+
+      const box = new THREE.Box3().setFromObject(shed);
+      const centro = box.getCenter(new THREE.Vector3());
+      const radio = box.getSize(new THREE.Vector3()).length() / 2;
+      const vFov = THREE.MathUtils.degToRad(camera.fov);
+      const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
+      distancia = (radio / Math.sin(Math.min(vFov, hFov) / 2)) * 0.84;
+
+      target.copy(centro);
+      controls.target.copy(centro);
+      controls.minDistance = distancia * 0.35;
+      controls.maxDistance = distancia * 1.9;
+
+      const off = camera.position.clone().sub(controls.target);
+      if (off.lengthSq() > 0.0001 && tween === null) {
+        esf.setFromVector3(off);
+      }
+      esf.radius = THREE.MathUtils.clamp(
+        esf.radius,
+        distancia * 0.35,
+        distancia * 1.9,
+      );
+      if (!iniciado) {
+        esf.radius = distancia;
+        iniciado = true;
+      }
+      colocarCamara();
+    };
+
+    const irAVista = (v: Exclude<Vista, "libre">) => {
+      const off = camera.position.clone().sub(controls.target);
+      const from = new THREE.Spherical().setFromVector3(off);
+      const to =
+        v === "superior"
+          ? new THREE.Spherical(distancia * 0.96, 0.001, from.theta)
+          : new THREE.Spherical(distancia, 1.02, 0.55);
+      while (to.theta - from.theta > Math.PI) to.theta -= Math.PI * 2;
+      while (to.theta - from.theta < -Math.PI) to.theta += Math.PI * 2;
+      tween = { from, to, t0: performance.now(), dur: 650 };
+      setVista(v);
+    };
+
+    controls.addEventListener("start", () => {
+      tween = null;
+      setVista("libre");
+    });
+
+    // Arrastre de sensores sobre el plano X/Z en Modo Edición
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const puntoTmp = new THREE.Vector3();
+    let arrastrandoId: number | null = null;
+
+    const actualizarNdc = (e: PointerEvent) => {
+      const r = renderer.domElement.getBoundingClientRect();
+      ndc.set(
+        ((e.clientX - r.left) / r.width) * 2 - 1,
+        -((e.clientY - r.top) / r.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(ndc, camera);
+    };
+
+    const onDown = (e: PointerEvent) => {
+      if (!modoEdicionRef.current) return;
+      actualizarNdc(e);
+      const hit = raycaster.intersectObjects(
+        grupoMarcadores.children,
+        false,
+      )[0];
+      if (hit) {
+        const punto = hit.object.userData.punto as PuntoTermico;
+        arrastrandoId = punto.id;
+        setSensorSeleccionadoId(punto.id);
+        planoArrastre.constant = -Math.max(0.4, punto.altura);
+        controls.enabled = false;
+        renderer.domElement.setPointerCapture(e.pointerId);
+        renderer.domElement.style.cursor = "grabbing";
+      }
+    };
+
+    const onMove = (e: PointerEvent) => {
+      if (!modoEdicionRef.current) return;
+      actualizarNdc(e);
+      if (arrastrandoId !== null) {
+        if (raycaster.ray.intersectPlane(planoArrastre, puntoTmp)) {
+          const limX = dimensionesRef.current.ancho / 2 - 0.5;
+          const limZ = dimensionesRef.current.largo / 2 - 0.5;
+          const nx = Number(
+            THREE.MathUtils.clamp(puntoTmp.x, -limX, limX).toFixed(2),
+          );
+          const nz = Number(
+            THREE.MathUtils.clamp(puntoTmp.z, -limZ, limZ).toFixed(2),
+          );
+          const id = arrastrandoId;
+          setPuntosEditados((prev) =>
+            prev.map((p) => (p.id === id ? { ...p, x: nx, z: nz } : p)),
+          );
+        }
+      } else {
+        const hit = raycaster.intersectObjects(
+          grupoMarcadores.children,
+          false,
+        )[0];
+        renderer.domElement.style.cursor = hit ? "grab" : "";
+      }
+    };
+
+    const onUp = (e: PointerEvent) => {
+      if (arrastrandoId === null) return;
+      arrastrandoId = null;
+      controls.enabled = true;
+      renderer.domElement.releasePointerCapture(e.pointerId);
+      renderer.domElement.style.cursor = "";
+    };
+
+    renderer.domElement.addEventListener("pointerdown", onDown);
+    renderer.domElement.addEventListener("pointermove", onMove);
+    renderer.domElement.addEventListener("pointerup", onUp);
+
+    let raf = 0;
+    let opacidadTecho = 1;
+    const v3 = new THREE.Vector3();
+
+    zoomRef.current = (f: number) => {
+      tween = null;
+      const off = camera.position.clone().sub(controls.target);
+      const d = THREE.MathUtils.clamp(
+        off.length() * f,
+        controls.minDistance,
+        controls.maxDistance,
+      );
+      camera.position.copy(controls.target).add(off.setLength(d));
+      controls.update();
+    };
+
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+
+      if (tween) {
+        const t = Math.min((performance.now() - tween.t0) / tween.dur, 1);
+        const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        esf.radius =
+          tween.from.radius + (tween.to.radius - tween.from.radius) * e;
+        esf.phi = tween.from.phi + (tween.to.phi - tween.from.phi) * e;
+        esf.theta = tween.from.theta + (tween.to.theta - tween.from.theta) * e;
+        colocarCamara();
+        if (t >= 1) tween = null;
+      }
+
+      controls.update();
+
+      // Techo: se desvanece automáticamente al mirar desde arriba
+      const polar = controls.getPolarAngle();
+      const objetivo = THREE.MathUtils.clamp((polar - 0.35) / 0.6, 0, 1);
+      opacidadTecho += (objetivo - opacidadTecho) * 0.18;
+      roofMats.forEach((m) => {
+        m.opacity = 0.04 + opacidadTecho * 0.96;
+        m.depthWrite = opacidadTecho > 0.98;
+      });
+      roof.visible = true;
+
+      renderer.render(scene, camera);
+
+      // Posicionar badges flotantes sobre cada sensor
+      const w = renderer.domElement.clientWidth;
+      const h = renderer.domElement.clientHeight;
+      grupoMarcadores.children.forEach((m) => {
+        const punto = m.userData.punto as PuntoTermico | undefined;
+        if (!punto) return;
+        const el = badgesRef.current.get(punto.id);
+        if (!el) return;
+        v3.copy(m.position).project(camera);
+        const visible = v3.z < 1;
+        el.style.display = visible ? "" : "none";
+        if (visible) {
+          el.style.transform = `translate(${(v3.x * 0.5 + 0.5) * w}px, ${(-v3.y * 0.5 + 0.5) * h}px) translate(-50%, -135%)`;
+        }
+      });
+    };
+
+    reencuadrar();
+    tick();
+
+    const ro = new ResizeObserver(reencuadrar);
+    ro.observe(host);
+
+    ctxRef.current = {
+      marcadores: new Map(),
+      grupoMarcadores,
+      planoTermico,
+      shed,
+      entorno,
+      irAVista,
+      reencuadrar,
+    };
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      renderer.domElement.removeEventListener("pointerdown", onDown);
+      renderer.domElement.removeEventListener("pointermove", onMove);
+      renderer.domElement.removeEventListener("pointerup", onUp);
+      controls.dispose();
+      scene.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (m.geometry) m.geometry.dispose();
+        const mt = m.material as THREE.Material | THREE.Material[] | undefined;
+        if (Array.isArray(mt)) mt.forEach((x) => x.dispose());
+        else mt?.dispose();
+      });
+      const matPlano = planoTermico.material as THREE.MeshBasicMaterial;
+      matPlano.map?.dispose();
+      renderer.dispose();
+      renderer.domElement.remove();
+      ctxRef.current = null;
+    };
+  }, []);
+
+  // Actualizar dimensiones del galpón, textura IDW y esferas 3D de sensores
+  useEffect(() => {
+    const c = ctxRef.current;
+    if (!c) return;
+
+    const sx = dimensiones.ancho / ANCHO_BASE;
+    const sz = dimensiones.largo / LARGO_BASE;
+
+    c.shed.scale.set(sx, 1, sz);
+    c.entorno.scale.set(Math.max(1, sx), 1, Math.max(1, sz));
+    c.planoTermico.scale.set(sx, sz, 1);
+
+    const matPlano = c.planoTermico.material as THREE.MeshBasicMaterial;
+    matPlano.map?.dispose();
+    matPlano.map = construirTexturaTermica({
+      anchoMetros: dimensiones.ancho,
+      largoMetros: dimensiones.largo,
+      puntos: puntosActivos,
+      zonas,
+      mostrarCuadricula: modoEdicion,
+    });
+    matPlano.needsUpdate = true;
+
+    const ids = new Set(puntosActivos.map((p) => p.id));
+    c.marcadores.forEach((mesh, id) => {
+      if (!ids.has(id)) {
+        c.grupoMarcadores.remove(mesh);
+        mesh.geometry.dispose();
+        (mesh.material as THREE.Material).dispose();
+        c.marcadores.delete(id);
+      }
+    });
+
+    puntosActivos.forEach((punto) => {
+      let mesh = c.marcadores.get(punto.id);
+      if (!mesh) {
+        mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.28, 16, 12),
+          new THREE.MeshStandardMaterial({ color: C.verde, roughness: 0.35 }),
+        );
+        mesh.castShadow = true;
+        c.grupoMarcadores.add(mesh);
+        c.marcadores.set(punto.id, mesh);
+      }
+      mesh.position.set(punto.x, Math.max(0.4, punto.altura), punto.z);
+      mesh.userData.punto = punto;
+      const falla = esSensorTermicoConFalla(punto);
+      (mesh.material as THREE.MeshStandardMaterial).color.setHex(
+        falla
+          ? 0xd97706
+          : punto.id === sensorSeleccionadoId
+            ? C.dorado
+            : C.verde,
+      );
+    });
+  }, [dimensiones, puntosActivos, zonas, modoEdicion, sensorSeleccionadoId]);
+
+  const sensorSeleccionado =
+    puntosEditados.find((p) => p.id === sensorSeleccionadoId) ?? null;
+
+  function handleAplicarLocal() {
+    setModoEdicion(false);
+    onGuardado?.();
+    toast.success("Vista y calibración térmica aplicadas en el plano 3D.");
+  }
+
+  function handleCancelarEdicion() {
+    setDimensiones({ ancho: anchoInicial, largo: largoInicial });
+    setPuntosEditados(puntosBase);
+    setSensorSeleccionadoId(null);
+    setModoEdicion(false);
+  }
+
+  return (
+    <section className="mt-contenedor" aria-label="Mapa térmico 3D del galpón">
+      <div className="mt-barra">
+        <div className="mt-grupo" role="group" aria-label="Vista de cámara">
+          <button
+            type="button"
+            className={`mt-btn ${vista === "superior" ? "is-activo" : ""}`}
+            aria-pressed={vista === "superior"}
+            onClick={() => ctxRef.current?.irAVista("superior")}
+          >
+            Vista superior
+          </button>
+          <button
+            type="button"
+            className={`mt-btn ${vista === "3d" ? "is-activo" : ""}`}
+            aria-pressed={vista === "3d"}
+            onClick={() => ctxRef.current?.irAVista("3d")}
+          >
+            Vista 3D
+          </button>
+        </div>
+
+        <div className="mt-grupo" role="group" aria-label="Zoom">
+          <button
+            type="button"
+            className="mt-btn mt-btn--zoom"
+            aria-label="Acercar"
+            onClick={() => zoomRef.current?.(0.8)}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            className="mt-btn mt-btn--zoom"
+            aria-label="Alejar"
+            onClick={() => zoomRef.current?.(1.25)}
+          >
+            −
+          </button>
+        </div>
+
+        {puedeEditar && (
+          <div className="mt-grupo">
+            {!modoEdicion ? (
+              <button
+                type="button"
+                className="mt-btn mt-btn--edicion"
+                onClick={() => setModoEdicion(true)}
+              >
+                Modo edición
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="mt-btn mt-btn--edicion is-activo"
+                  onClick={handleAplicarLocal}
+                >
+                  Aplicar vista
+                </button>
+                <button
+                  type="button"
+                  className="mt-btn"
+                  onClick={handleCancelarEdicion}
+                >
+                  Cancelar
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-visor" ref={visorRef}>
+        <div className="mt-hud">
+          <div className="mt-metrica">
+            <span className="mt-metrica__valor">
+              {metricas.promedio === null
+                ? "Sin lectura"
+                : `${metricas.promedio.toFixed(1)} °C`}
+            </span>
+            <span className="mt-metrica__etiqueta">Promedio</span>
+          </div>
+          <div className="mt-metrica">
+            <span className="mt-metrica__valor">
+              {metricas.porcentajeRango === null
+                ? "—"
+                : `${metricas.porcentajeRango} %`}
+            </span>
+            <span className="mt-metrica__etiqueta">En rango</span>
+          </div>
+          <div className="mt-metrica mt-metrica--lote">
+            <span className="mt-metrica__valor">
+              {galpon.loteEnCurso
+                ? `${galpon.loteEnCurso.codigo} (${galponVivo?.diaVida ?? 1} d)`
+                : "Sin lote"}
+            </span>
+            <span className="mt-metrica__etiqueta">Lote activo</span>
+          </div>
+        </div>
+
+        {puntosActivos.map((punto) => {
+          const falla = esSensorTermicoConFalla(punto);
+          return (
+            <div
+              key={punto.id}
+              ref={(el) => {
+                if (el) badgesRef.current.set(punto.id, el);
+                else badgesRef.current.delete(punto.id);
+              }}
+              className={`mt-badge ${falla ? "mt-badge--falla" : ""}`}
+            >
+              <span className="mt-badge__nombre">{punto.codigo}</span>
+              <span className="mt-badge__valor">
+                {falla
+                  ? "Sin señal"
+                  : `${(punto.valor as number).toFixed(1)} °C`}
+              </span>
+              {falla && galpon.loteEnCurso && onIrABitacora && (
+                <button
+                  type="button"
+                  className="mt-badge__accion"
+                  onClick={() => onIrABitacora(galpon.loteEnCurso!.id)}
+                >
+                  Bitácora
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+        {modoEdicion && (
+          <div className="mt-aviso">
+            Arrastra un sensor en el plano para ajustar su ubicación.
+          </div>
+        )}
+        {puntosActivos.length === 0 && (
+          <div className="mt-aviso mt-aviso--centro">
+            Este galpón aún no tiene sensores registrados.
+          </div>
+        )}
+
+        <div className="mt-leyenda" aria-hidden="true">
+          <div className="mt-leyenda__barra" />
+          <div className="mt-leyenda__ejes">
+            <span>Frío</span>
+            <span>Óptimo</span>
+            <span>Crítico</span>
+          </div>
+        </div>
+      </div>
+
+      {puedeEditar && modoEdicion && (
+        <aside
+          className="mt-panel-edicion"
+          aria-label="Calibración visual del galpón"
+        >
+          <div className="mt-panel-grid">
+            <label className="mt-campo">
+              <span>
+                Largo (Z): <strong>{dimensiones.largo} m</strong>
+              </span>
+              <input
+                type="range"
+                min={15}
+                max={60}
+                step={1}
+                value={dimensiones.largo}
+                onChange={(e) =>
+                  setDimensiones((d) => ({
+                    ...d,
+                    largo: Number(e.target.value),
+                  }))
+                }
+              />
+            </label>
+
+            <label className="mt-campo">
+              <span>
+                Ancho (X): <strong>{dimensiones.ancho} m</strong>
+              </span>
+              <input
+                type="range"
+                min={8}
+                max={24}
+                step={0.5}
+                value={dimensiones.ancho}
+                onChange={(e) =>
+                  setDimensiones((d) => ({
+                    ...d,
+                    ancho: Number(e.target.value),
+                  }))
+                }
+              />
+            </label>
+          </div>
+
+          {sensorSeleccionado && (
+            <div className="mt-editor-sensor">
+              <span>
+                <strong>{sensorSeleccionado.codigo}</strong> ·{" "}
+                {zonaPorCoordenadaZ(sensorSeleccionado.z, dimensiones.largo)} ·
+                X: {sensorSeleccionado.x} m, Z: {sensorSeleccionado.z} m
+              </span>
+              <label className="mt-campo">
+                <span>
+                  Altura (Y):{" "}
+                  <strong>{sensorSeleccionado.altura.toFixed(1)} m</strong>
+                </span>
+                <input
+                  type="range"
+                  min={0.4}
+                  max={3.5}
+                  step={0.1}
+                  value={sensorSeleccionado.altura}
+                  onChange={(e) => {
+                    const nuevaY = Number(e.target.value);
+                    setPuntosEditados((prev) =>
+                      prev.map((p) =>
+                        p.id === sensorSeleccionado.id
+                          ? { ...p, altura: nuevaY }
+                          : p,
+                      ),
+                    );
+                  }}
+                />
+              </label>
+            </div>
+          )}
+        </aside>
+      )}
+    </section>
+  );
+}
