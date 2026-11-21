@@ -115,5 +115,5 @@ export function textoBodegaVacia(permisos: { crear: boolean; verCostos: boolean 
   if (permisos.verCostos) {
     return 'Cuando el administrador registre los insumos de tu granja aparecerán aquí. Desde entonces podrás registrar entradas, salidas y ajustes, y ver el valor de tu bodega.'
   }
-  return 'Cuando el administrador registre los insumos de la granja aparecerán aquí, y podrás anotar lo que saques para tu galpón.'
+  return 'Cuando se registren los insumos de la granja aparecerán aquí, con su stock y su mínimo.'
 }

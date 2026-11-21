@@ -53,17 +53,16 @@ export function gestionaAlgo(permisos: PermisosGestion): boolean {
 
 // Bodega: el catálogo de insumos de una granja lo administran el
 // administrador y su propietario (HU-58: el propietario da de alta lo que
-// compra). Borrar definitivo sigue siendo solo del administrador. El
-// movimiento de stock lo registran los tres roles — el operario apunta lo
-// que consume en campo y esa es la razón de ser del módulo.
+// compra). Borrar definitivo sigue siendo solo del administrador.
 // Fuente: avisens-backend/src/modules/insumos/insumos.controller.ts
 //
 // Auditoría QA del 2026-10-30 (HALL-01 / CP-06): el operario maneja
-// cantidades físicas, no dinero. No ve precios ni el valor de la bodega, y
-// solo registra salidas (lo que saca para su galpón); las entradas por compra
-// y los ajustes de conteo son del administrador y del propietario.
-// Ojo: el backend todavía le acepta entradas y ajustes y le devuelve el
-// precio; esto es solo la interfaz.
+// cantidades físicas, no dinero. No ve precios ni el valor de la bodega.
+// Desde el 2026-11-21 tampoco registra movimientos: consulta el stock de su
+// bodega y los movimientos (entradas, salidas y ajustes) son del
+// administrador y del propietario.
+// Ojo: el backend todavía le acepta movimientos y le devuelve el precio; esto
+// es solo la interfaz.
 export type TipoMovimientoInsumo = 'entrada' | 'salida' | 'ajuste'
 
 export type PermisosInsumo = {
@@ -81,9 +80,7 @@ export function permisosDeInsumo(rol: string | null): PermisosInsumo {
   const gestionaBodega = esAdmin || rol === ROL_PROPIETARIO
   const tiposMovimiento: TipoMovimientoInsumo[] = gestionaBodega
     ? ['entrada', 'salida', 'ajuste']
-    : rol === ROL_OPERARIO
-      ? ['salida']
-      : []
+    : []
   return {
     crear: gestionaBodega,
     editar: gestionaBodega,

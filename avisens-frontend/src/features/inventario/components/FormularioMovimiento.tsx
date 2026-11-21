@@ -6,8 +6,7 @@ import type { TipoMovimiento } from '../api/movimientos'
 
 interface Props {
   insumo: Insumo
-  // Los tipos que el rol puede registrar (permisosDeInsumo). El operario
-  // solo saca insumos para su galpón: recibe únicamente 'salida'.
+  // Los tipos que el rol puede registrar (permisosDeInsumo).
   tiposPermitidos: TipoMovimiento[]
   onRegistrar: (payload: RegistrarMovimientoPayload) => Promise<void>
   onCerrar: () => void

@@ -66,10 +66,11 @@ describe('permisosDeInsumo', () => {
     expect(operario.crear || operario.editar || operario.alternarActivo || operario.eliminar).toBe(false)
   })
 
-  it('los tres roles registran movimientos de stock', () => {
-    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO]) {
+  it('el administrador y el propietario registran movimientos de stock; el operario solo consulta', () => {
+    for (const rol of [ROL_ADMIN, ROL_PROPIETARIO]) {
       expect(permisosDeInsumo(rol).registrarMovimiento).toBe(true)
     }
+    expect(permisosDeInsumo(ROL_OPERARIO).registrarMovimiento).toBe(false)
   })
 
   it('sin sesión no se puede ni mover stock', () => {
@@ -77,8 +78,8 @@ describe('permisosDeInsumo', () => {
     expect(permisosDeInsumo(null).tiposMovimiento).toEqual([])
   })
 
-  it('el operario solo registra salidas; admin y propietario, los tres tipos', () => {
-    expect(permisosDeInsumo(ROL_OPERARIO).tiposMovimiento).toEqual(['salida'])
+  it('el operario no registra ningún tipo de movimiento; admin y propietario, los tres', () => {
+    expect(permisosDeInsumo(ROL_OPERARIO).tiposMovimiento).toEqual([])
     for (const rol of [ROL_ADMIN, ROL_PROPIETARIO]) {
       expect(permisosDeInsumo(rol).tiposMovimiento).toEqual(['entrada', 'salida', 'ajuste'])
     }
