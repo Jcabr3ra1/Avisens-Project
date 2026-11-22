@@ -1,12 +1,19 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { logout } from '@shared/api'
 import { mensajeDeError } from '@shared/utils/errores'
-import { IcArrowRight, IcCheck, IcSettings } from '@shared/ui/icons/icons'
+import { validarArchivoFoto } from '@shared/utils/fotos'
+import { IcArrowRight, IcCheck, IcPaperclip, IcSettings, IcTrash } from '@shared/ui/icons/icons'
 import Cargando from '@shared/ui/Estados/Cargando'
 import AvatarUsuario from '@app/layout/AvatarUsuario'
-import { cambiarPasswordPropia, obtenerPerfil } from './api/perfil'
+import {
+  cambiarPasswordPropia,
+  eliminarFotoPerfil,
+  obtenerFotoPerfil,
+  obtenerPerfil,
+  subirFotoPerfil,
+} from './api/perfil'
 import { errorDeCambio, fortaleza, type PerfilCuenta } from './model/perfil'
 import '@shared/ui/admin/AdminKit.css'
 import './PerfilPage.css'
@@ -54,6 +61,9 @@ function PerfilPage() {
   const [visible, setVisible] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+  const [urlFoto, setUrlFoto] = useState<string | null>(null)
+  const [subiendoFoto, setSubiendoFoto] = useState(false)
+  const inputFotoRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     obtenerPerfil()
@@ -61,10 +71,86 @@ function PerfilPage() {
       .catch(() => setErrorCarga('No se pudo cargar tu perfil. Intenta de nuevo.'))
   }, [])
 
+  useEffect(() => {
+    if (!perfil?.tiene_foto) {
+      setUrlFoto((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior)
+        return null
+      })
+      return
+    }
+    let vigente = true
+    void obtenerFotoPerfil()
+      .then((blob) => {
+        if (!vigente) return
+        const url = URL.createObjectURL(blob)
+        setUrlFoto((anterior) => {
+          if (anterior) URL.revokeObjectURL(anterior)
+          return url
+        })
+      })
+      .catch(() => {
+        if (vigente) setUrlFoto(null)
+      })
+    return () => {
+      vigente = false
+    }
+  }, [perfil?.tiene_foto])
+
+  useEffect(() => () => {
+    if (urlFoto) URL.revokeObjectURL(urlFoto)
+  }, [urlFoto])
+
+  async function cambiarFoto(evento: ChangeEvent<HTMLInputElement>) {
+    const archivo = evento.target.files?.[0]
+    evento.target.value = ''
+    if (!archivo) return
+    const problema = validarArchivoFoto(archivo)
+    if (problema) {
+      toast.error(problema)
+      return
+    }
+    setSubiendoFoto(true)
+    try {
+      await subirFotoPerfil(archivo)
+      const urlLocal = URL.createObjectURL(archivo)
+      setUrlFoto((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior)
+        return urlLocal
+      })
+      setPerfil((actual) => (actual ? { ...actual, tiene_foto: true } : actual))
+      window.dispatchEvent(new Event('avisens:foto-perfil-actualizada'))
+      toast.success('Foto de perfil actualizada')
+    } catch (err) {
+      toast.error(mensajeDeError(err, 'No se pudo subir la foto de perfil.'))
+    } finally {
+      setSubiendoFoto(false)
+    }
+  }
+
+  async function quitarFoto() {
+    setSubiendoFoto(true)
+    try {
+      await eliminarFotoPerfil()
+      setUrlFoto((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior)
+        return null
+      })
+      setPerfil((actual) => (actual ? { ...actual, tiene_foto: false } : actual))
+      window.dispatchEvent(new Event('avisens:foto-perfil-actualizada'))
+      toast.success('Foto de perfil eliminada')
+    } catch (err) {
+      toast.error(mensajeDeError(err, 'No se pudo eliminar la foto.'))
+    } finally {
+      setSubiendoFoto(false)
+    }
+  }
+
   const nivel = fortaleza(nueva)
-  // QA 17-nov: el Propietario solo ve sus datos y pide otra contraseña al
-  // administrador; el servidor también lo exige.
-  const puedeCambiarClave = perfil !== null && perfil.rol !== 'Propietario'
+  // Solo el Administrador cambia su propia contraseña aquí. El Propietario la
+  // solicita al administrador y el Operario al propietario de su granja.
+  const puedeCambiarClave = perfil !== null && perfil.rol === 'Administrador'
+  const esOperario = perfil?.rol === 'Operario'
 
   async function guardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
@@ -118,8 +204,43 @@ function PerfilPage() {
 
             <div className="per-perfil-cuerpo">
               <span className="per-avatar" aria-hidden="true">
-                <AvatarUsuario nombre={perfil.nombre_completo} tamano={84} />
+                {urlFoto ? (
+                  <img src={urlFoto} alt="" className="per-avatar-foto" />
+                ) : (
+                  <AvatarUsuario nombre={perfil.nombre_completo} tamano={84} />
+                )}
               </span>
+
+              <input
+                ref={inputFotoRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="per-input-oculto"
+                onChange={(e) => void cambiarFoto(e)}
+              />
+              <div className="per-foto-acciones">
+                <button
+                  type="button"
+                  className="per-foto-btn"
+                  onClick={() => inputFotoRef.current?.click()}
+                  disabled={subiendoFoto}
+                >
+                  <IcPaperclip size={13} aria-hidden="true" />
+                  {subiendoFoto ? 'Subiendo…' : urlFoto ? 'Cambiar foto' : 'Subir foto'}
+                </button>
+                {urlFoto && (
+                  <button
+                    type="button"
+                    className="per-foto-btn per-foto-btn--peligro"
+                    onClick={() => void quitarFoto()}
+                    disabled={subiendoFoto}
+                    aria-label="Quitar foto de perfil"
+                  >
+                    <IcTrash size={13} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+
               <h2 className="per-perfil-nombre">{perfil.nombre_completo}</h2>
               <p className="per-perfil-usuario">@{perfil.username}</p>
               <p className="per-perfil-org">{perfil.organizacion?.nombre ?? 'Plataforma Avisens'}</p>
@@ -280,10 +401,15 @@ function PerfilPage() {
                     <IcSettings size={16} />
                   </span>
                   <div>
-                    <strong>Credenciales administradas por soporte</strong>
+                    <strong>
+                      {esOperario
+                        ? 'Credenciales administradas por el propietario'
+                        : 'Credenciales administradas por soporte'}
+                    </strong>
                     <p>
-                      ¿Algún dato está desactualizado o necesitas cambiar tu contraseña? Solicítalo al
-                      administrador de la plataforma para actualizarlo de forma segura.
+                      {esOperario
+                        ? '¿Algún dato está desactualizado o necesitas cambiar tu contraseña? Solicítalo al propietario de tu granja para actualizarla de forma segura.'
+                        : '¿Algún dato está desactualizado o necesitas cambiar tu contraseña? Solicítalo al administrador de la plataforma para actualizarlo de forma segura.'}
                     </p>
                   </div>
                 </div>

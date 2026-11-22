@@ -10,6 +10,7 @@ export interface Galpon {
   largo_metros: number | null
   orientacion: string | null
   tipo_techo: string | null
+  foto_mime_type?: string | null
   fecha_construccion: string | null
   activo: boolean
   granja: {
@@ -82,6 +83,34 @@ export async function eliminarGalponPermanente(
 ): Promise<{ id: number; eliminado: boolean }> {
   const { data } = await api.delete<{ id: number; eliminado: boolean }>(
     `/galpones/${id}/permanente`,
+  )
+  return data
+}
+
+export async function obtenerFotoGalpon(id: number): Promise<Blob> {
+  const { data } = await api.get<Blob>(`/galpones/${id}/foto`, {
+    responseType: 'blob',
+  })
+  return data
+}
+
+export async function subirFotoGalpon(
+  id: number,
+  archivo: File,
+): Promise<{ id: number; tiene_foto: boolean }> {
+  const { data } = await api.put<{ id: number; tiene_foto: boolean }>(
+    `/galpones/${id}/foto`,
+    archivo,
+    { headers: { 'Content-Type': archivo.type } },
+  )
+  return data
+}
+
+export async function eliminarFotoGalpon(
+  id: number,
+): Promise<{ id: number; tiene_foto: boolean }> {
+  const { data } = await api.delete<{ id: number; tiene_foto: boolean }>(
+    `/galpones/${id}/foto`,
   )
   return data
 }

@@ -26,8 +26,12 @@ import { SolicitarRecuperacionDto } from './dto/solicitar-recuperacion.dto';
 import { ResolverRecuperacionDto } from './dto/resolver-recuperacion.dto';
 import { CambiarPasswordTemporalDto } from './dto/cambiar-password-temporal.dto';
 
-interface AdminRequest extends Request {
-  user: { id: number };
+interface SolicitanteRequest extends Request {
+  user: {
+    id: number;
+    rol: string;
+    organizacion_id?: number | null;
+  };
 }
 
 interface CambioRequest extends Request {
@@ -49,48 +53,63 @@ export class RecuperacionesPasswordController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(ROLES.ADMINISTRADOR)
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Listar solicitudes de recuperación (solo Admin)' })
-  listar(@Query() paginacion: PaginationQueryDto) {
-    return this.recuperaciones.listar(paginacion);
+  @ApiOperation({
+    summary:
+      'Listar solicitudes de recuperación (Admin: todas · Propietario: operarios de su organización)',
+  })
+  listar(
+    @Query() paginacion: PaginationQueryDto,
+    @Req() req: SolicitanteRequest,
+  ) {
+    return this.recuperaciones.listar(paginacion, req.user);
   }
 
   @Get('usuario/:usuarioId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(ROLES.ADMINISTRADOR)
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Listar las solicitudes de recuperación de un usuario',
   })
-  listarDeUsuario(@Param('usuarioId', ParseIntPipe) usuarioId: number) {
-    return this.recuperaciones.listarDeUsuario(usuarioId);
+  listarDeUsuario(
+    @Param('usuarioId', ParseIntPipe) usuarioId: number,
+    @Req() req: SolicitanteRequest,
+  ) {
+    return this.recuperaciones.listarDeUsuario(usuarioId, req.user);
   }
 
   @Patch(':id/aprobar')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(ROLES.ADMINISTRADOR)
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Aprobar y generar contraseña temporal' })
+  @ApiOperation({
+    summary:
+      'Aprobar y generar contraseña temporal (Admin: todas · Propietario: sus operarios)',
+  })
   aprobar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ResolverRecuperacionDto,
-    @Req() req: AdminRequest,
+    @Req() req: SolicitanteRequest,
   ) {
-    return this.recuperaciones.aprobar(id, req.user.id, dto.observacion);
+    return this.recuperaciones.aprobar(id, req.user.id, dto.observacion, req.user);
   }
 
   @Patch(':id/rechazar')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(ROLES.ADMINISTRADOR)
+  @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Rechazar una solicitud (solo Admin)' })
+  @ApiOperation({
+    summary:
+      'Rechazar una solicitud (Admin: todas · Propietario: sus operarios)',
+  })
   rechazar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ResolverRecuperacionDto,
-    @Req() req: AdminRequest,
+    @Req() req: SolicitanteRequest,
   ) {
-    return this.recuperaciones.rechazar(id, req.user.id, dto.observacion);
+    return this.recuperaciones.rechazar(id, req.user.id, dto.observacion, req.user);
   }
 
   @Post('cambiar-password')

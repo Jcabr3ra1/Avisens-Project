@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EstadoRecuperacionPassword } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -183,5 +187,53 @@ describe('RecuperacionesPasswordService', () => {
         usado: true,
       }),
     );
+  });
+
+  it('un Propietario puede aprobar la solicitud de un Operario de su organización', async () => {
+    prisma.recuperacionPassword.findUnique.mockResolvedValue({
+      id: 9,
+      usuario_id: 5,
+      estado: EstadoRecuperacionPassword.pendiente,
+      usuario: {
+        id: 5,
+        activo: true,
+        organizacion_id: 10,
+        rol: { nombre: 'Operario' },
+      },
+    });
+
+    const resultado = await service.aprobar(9, 2, 'Verificado por propietario', {
+      id: 2,
+      rol: 'Propietario',
+      organizacion_id: 10,
+    });
+
+    expect(resultado.password_temporal).toMatch(/^Av-/);
+    expect(prisma.usuario.update).toHaveBeenCalledWith({
+      where: { id: 5 },
+      data: { password_hash: 'hash-temporal' },
+    });
+  });
+
+  it('un Propietario no puede aprobar solicitudes de otra organización o de otro Propietario', async () => {
+    prisma.recuperacionPassword.findUnique.mockResolvedValue({
+      id: 10,
+      usuario_id: 6,
+      estado: EstadoRecuperacionPassword.pendiente,
+      usuario: {
+        id: 6,
+        activo: true,
+        organizacion_id: 99,
+        rol: { nombre: 'Operario' },
+      },
+    });
+
+    await expect(
+      service.aprobar(10, 2, undefined, {
+        id: 2,
+        rol: 'Propietario',
+        organizacion_id: 10,
+      }),
+    ).rejects.toThrow(ForbiddenException);
   });
 });

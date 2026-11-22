@@ -62,6 +62,7 @@ function detectarGenero(nombre?: string | null): GeneroAvatar {
 
 interface Props {
   nombre?: string | null
+  fotoUrl?: string | null
   tamano?: number
   className?: string
   style?: CSSProperties
@@ -69,9 +70,9 @@ interface Props {
 
 /**
  * Avatar de personaje utilizando la librería oficial @dicebear/personas.
- * Detecta género para perfilar peinados, accesorios y colores, con fallback para cuentas administrativas/institucionales.
+ * Si el usuario subió una fotografía real (fotoUrl), la muestra primero con fallback al avatar.
  */
-export default function AvatarUsuario({ nombre, tamano = 34, className = '', style }: Props) {
+export default function AvatarUsuario({ nombre, fotoUrl = null, tamano = 34, className = '', style }: Props) {
   const genero = detectarGenero(nombre)
 
   const dataUri = useMemo(() => {
@@ -105,7 +106,7 @@ export default function AvatarUsuario({ nombre, tamano = 34, className = '', sty
 
   return (
     <img
-      src={dataUri}
+      src={fotoUrl || dataUri}
       alt={nombre ? `Avatar de ${nombre}` : 'Avatar de usuario'}
       width={tamano}
       height={tamano}

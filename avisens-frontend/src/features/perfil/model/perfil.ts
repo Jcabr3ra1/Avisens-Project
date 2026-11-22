@@ -5,6 +5,7 @@ export type PerfilCuenta = {
   email: string | null
   telefono: string | null
   rol: string
+  tiene_foto?: boolean
   organizacion: { id: number; nombre: string } | null
   fecha_creacion: string
   fecha_ultimo_login: string | null

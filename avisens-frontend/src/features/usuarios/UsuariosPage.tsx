@@ -12,6 +12,7 @@ import RecuperacionesDeUsuario from '@features/recuperaciones-password/component
 import BarraUsuarios from './components/BarraUsuarios'
 import FormularioUsuario from './components/FormularioUsuario'
 import ModalAsignacionesGalpon from './components/ModalAsignacionesGalpon'
+import ModalRestablecerPassword from './components/ModalRestablecerPassword'
 import PanelUsuario from './components/PanelUsuario'
 import ResumenUsuarios from './components/ResumenUsuarios'
 import { useCatalogosUsuarios } from './hooks/useCatalogosUsuarios'
@@ -73,6 +74,7 @@ function UsuariosPage() {
   const esAdmin = getRol() === 'Administrador'
   const [parametros, setParametros] = useSearchParams()
   const [usuarioRecuperaciones, setUsuarioRecuperaciones] = useState<Usuario | null>(null)
+  const [usuarioRestablecer, setUsuarioRestablecer] = useState<Usuario | null>(null)
   const [panelMovilAbierto, setPanelMovilAbierto] = useState(false)
   const buscadorRef = useRef<HTMLInputElement>(null)
 
@@ -440,7 +442,12 @@ function UsuariosPage() {
             onAlternarActivo={(usuario) => void alternarActivo(usuario)}
             onEditar={(usuario) => void abrirEditarUsuario(usuario)}
             onGestionarAsignaciones={(usuario) => void asignaciones.abrir(usuario)}
-            onRecuperarAcceso={esAdmin ? setUsuarioRecuperaciones : undefined}
+            onRestablecerPassword={
+              esAdmin || esPropietario ? setUsuarioRestablecer : undefined
+            }
+            onRecuperarAcceso={
+              esAdmin || esPropietario ? setUsuarioRecuperaciones : undefined
+            }
             onEliminar={confirmarEliminacion}
           />
         )}
@@ -489,6 +496,13 @@ function UsuariosPage() {
         >
           <RecuperacionesDeUsuario usuario={usuarioRecuperaciones} />
         </PantallaHija>
+      )}
+
+      {usuarioRestablecer && (
+        <ModalRestablecerPassword
+          usuario={usuarioRestablecer}
+          onCerrar={() => setUsuarioRestablecer(null)}
+        />
       )}
     </div>
   )

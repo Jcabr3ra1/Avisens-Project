@@ -1,16 +1,19 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Post,
+  Put,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -56,18 +59,48 @@ export class AuthController {
     return this.authService.perfil(req.user.id);
   }
 
-  // QA 17-nov: el Propietario no cambia su contraseña desde Mi perfil; la
-  // recupera con la solicitud asistida (recuperaciones-password), que aprueba
-  // un administrador. Administrador y Operario la siguen cambiando aquí.
+  @Get('perfil/foto')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener la foto de perfil del usuario autenticado' })
+  async fotoPerfil(@Req() req: AccessRequest, @Res() res: Response) {
+    const { buffer, mimeType } = await this.authService.obtenerFotoPerfil(
+      req.user.id,
+    );
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(buffer);
+  }
+
+  @Put('perfil/foto')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Subir o actualizar la foto de perfil (JPG/PNG/WebP, máx. 3 MB)',
+  })
+  subirFotoPerfil(@Req() req: AccessRequest) {
+    return this.authService.actualizarFotoPerfil(req.user.id, req.body);
+  }
+
+  @Delete('perfil/foto')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Eliminar la foto de perfil propia' })
+  eliminarFotoPerfil(@Req() req: AccessRequest) {
+    return this.authService.eliminarFotoPerfil(req.user.id);
+  }
+
+  // Ni el Propietario (pide cambio al administrador) ni el Operario (pide cambio
+  // a su propietario) se cambian la contraseña a sí mismos desde Mi perfil.
   @Post('cambiar-password')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(ROLES.ADMINISTRADOR, ROLES.OPERARIO)
+  @Roles(ROLES.ADMINISTRADOR)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      'Cambiar la contraseña propia confirmando la actual (Administrador y Operario; cierra todas las sesiones)',
+      'Cambiar la contraseña propia confirmando la actual (solo Administrador; cierra todas las sesiones)',
   })
   cambiarPassword(@Body() dto: CambiarPasswordDto, @Req() req: AccessRequest) {
     return this.authService.cambiarPassword(
