@@ -1133,3 +1133,141 @@
     transition: none;
   }
 }
+
+/* ─── Evidencias fotográficas en PanelAlerta ─── */
+
+.ale-input-oculto {
+  display: none;
+}
+
+.ale-evidencias-seccion {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.ale-evidencias-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ale-evidencias-cab strong {
+  color: var(--text-primary);
+  font-size: 0.84rem;
+}
+
+.ale-btn-foto {
+  min-height: 34px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+}
+
+.ale-evidencias-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.ale-evidencia-item {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+}
+
+.ale-evidencia-thumb {
+  display: block;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--surface-base);
+}
+
+.ale-evidencia-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ale-evidencia-link,
+.ale-evidencia-cargando {
+  display: grid;
+  place-items: center;
+  min-height: 76px;
+  padding: 0.5rem;
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ale-evidencia-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.4rem 0.55rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.ale-evidencia-pie small {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ale-evidencia-borrar {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.ale-evidencia-borrar:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.ale-foto-campo {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.ale-foto-label {
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.ale-foto-label small {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.ale-foto-preview {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+}
+
+.ale-foto-preview img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}

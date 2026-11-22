@@ -23,6 +23,7 @@ type Props = {
   onAlternarActivo: (usuario: Usuario) => void
   onEditar: (usuario: Usuario) => void
   onGestionarAsignaciones: (usuario: Usuario) => void
+  onRestablecerPassword?: (usuario: Usuario) => void
   onRecuperarAcceso?: (usuario: Usuario) => void
   onEliminar: (usuario: Usuario) => void
 }
@@ -54,6 +55,7 @@ function PanelUsuario({
   onAlternarActivo,
   onEditar,
   onGestionarAsignaciones,
+  onRestablecerPassword,
   onRecuperarAcceso,
   onEliminar,
 }: Props) {
@@ -227,6 +229,17 @@ function PanelUsuario({
                 </button>
               )}
 
+              {onRestablecerPassword && usuario.activo && (
+                <button
+                  type="button"
+                  className="usr-accion-btn"
+                  onClick={() => onRestablecerPassword(usuario)}
+                >
+                  <IcRefresh size={15} aria-hidden="true" />
+                  {esOperario ? 'Cambiar contraseña' : 'Restablecer contraseña'}
+                </button>
+              )}
+
               {onRecuperarAcceso && (
                 <button
                   type="button"
@@ -234,7 +247,7 @@ function PanelUsuario({
                   onClick={() => onRecuperarAcceso(usuario)}
                 >
                   <IcRefresh size={15} aria-hidden="true" />
-                  Recuperar acceso
+                  Solicitudes de acceso
                 </button>
               )}
             </div>

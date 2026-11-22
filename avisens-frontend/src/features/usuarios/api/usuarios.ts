@@ -63,3 +63,22 @@ export async function activarUsuario(id: number): Promise<Usuario> {
   const { data } = await api.patch<Usuario>(`/usuarios/${id}/activar`)
   return data
 }
+
+export interface ResultadoRestablecerPassword {
+  usuario_id: number
+  password_temporal: string
+  expira_en: string
+  debe_cambiar_password: boolean
+  aviso: string
+}
+
+export async function restablecerPasswordUsuario(
+  id: number,
+  payload: { nueva_password?: string; observacion?: string } = {},
+): Promise<ResultadoRestablecerPassword> {
+  const { data } = await api.post<ResultadoRestablecerPassword>(
+    `/usuarios/${id}/restablecer-password`,
+    payload,
+  )
+  return data
+}

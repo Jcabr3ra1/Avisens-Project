@@ -1,14 +1,16 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoRecuperacionPassword } from '@prisma/client';
+import { EstadoRecuperacionPassword, type Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { normalizarUsername } from '../../common/auth/username';
 import { ROLES } from '../../common/auth/roles';
+import { esPropietario, type Solicitante } from '../../common/auth/acceso';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { paginate } from '../../common/pagination/paginate';
 
@@ -43,6 +45,46 @@ export class RecuperacionesPasswordService {
     },
   };
 
+  private filtroPorSolicitante(
+    solicitante?: Solicitante,
+  ): Prisma.RecuperacionPasswordWhereInput | undefined {
+    if (!solicitante || !esPropietario(solicitante)) return undefined;
+    if (!solicitante.organizacion_id) {
+      throw new ForbiddenException(
+        'Tu cuenta de propietario no tiene una organización asignada',
+      );
+    }
+    return {
+      usuario: {
+        organizacion_id: solicitante.organizacion_id,
+        rol: { nombre: ROLES.OPERARIO },
+      },
+    };
+  }
+
+  private verificarPermisoSobreUsuario(
+    usuario: {
+      organizacion_id?: number | null;
+      rol?: { nombre: string } | null;
+    },
+    solicitante?: Solicitante,
+  ) {
+    if (!solicitante || !esPropietario(solicitante)) return;
+    if (!solicitante.organizacion_id) {
+      throw new ForbiddenException(
+        'Tu cuenta de propietario no tiene una organización asignada',
+      );
+    }
+    if (
+      usuario.rol?.nombre !== ROLES.OPERARIO ||
+      usuario.organizacion_id !== solicitante.organizacion_id
+    ) {
+      throw new ForbiddenException(
+        'Solo puedes gestionar solicitudes de recuperación de operarios de tu organización',
+      );
+    }
+  }
+
   async solicitar(username: string, motivo?: string, ip?: string) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { username: normalizarUsername(username) },
@@ -50,6 +92,7 @@ export class RecuperacionesPasswordService {
         id: true,
         activo: true,
         nombre_completo: true,
+        organizacion_id: true,
         rol: { select: { nombre: true } },
       },
     });
@@ -78,18 +121,27 @@ export class RecuperacionesPasswordService {
             ip_solicitud: ip,
           },
         });
-        const administradores = await tx.usuario.findMany({
+        const condicionesDestinatario: Prisma.UsuarioWhereInput[] = [
+          { rol: { nombre: ROLES.ADMINISTRADOR } },
+        ];
+        if (usuario.rol.nombre === ROLES.OPERARIO && usuario.organizacion_id) {
+          condicionesDestinatario.push({
+            rol: { nombre: ROLES.PROPIETARIO },
+            organizacion_id: usuario.organizacion_id,
+          });
+        }
+        const destinatarios = await tx.usuario.findMany({
           where: {
             activo: true,
-            rol: { nombre: ROLES.ADMINISTRADOR },
+            OR: condicionesDestinatario,
           },
           select: { id: true },
         });
 
-        if (administradores.length > 0) {
+        if (destinatarios.length > 0) {
           await tx.notificacion.createMany({
-            data: administradores.map((administrador) => ({
-              usuario_id: administrador.id,
+            data: destinatarios.map((destinatario) => ({
+              usuario_id: destinatario.id,
               tipo: 'recuperacion_password',
               titulo: 'Solicitud de recuperación de contraseña',
               mensaje: `${usuario.nombre_completo} solicitó restablecer su contraseña.`,
@@ -109,20 +161,34 @@ export class RecuperacionesPasswordService {
     return RESPUESTA_SOLICITUD;
   }
 
-  async listar({ page, limit }: PaginationQueryDto) {
+  async listar({ page, limit }: PaginationQueryDto, solicitante?: Solicitante) {
+    const where = this.filtroPorSolicitante(solicitante);
     const [data, total] = await this.prisma.$transaction([
       this.prisma.recuperacionPassword.findMany({
+        where,
         select: this.selectSolicitud,
         orderBy: { fecha_creacion: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.prisma.recuperacionPassword.count(),
+      this.prisma.recuperacionPassword.count({ where }),
     ]);
     return paginate(data, total, page, limit);
   }
 
-  async listarDeUsuario(usuarioId: number) {
+  async listarDeUsuario(usuarioId: number, solicitante?: Solicitante) {
+    if (solicitante && esPropietario(solicitante)) {
+      const usuario = await this.prisma.usuario.findUnique({
+        where: { id: usuarioId },
+        select: {
+          id: true,
+          organizacion_id: true,
+          rol: { select: { nombre: true } },
+        },
+      });
+      if (!usuario) throw new NotFoundException('Usuario no encontrado');
+      this.verificarPermisoSobreUsuario(usuario, solicitante);
+    }
     return this.prisma.recuperacionPassword.findMany({
       where: { usuario_id: usuarioId },
       select: this.selectSolicitud,
@@ -130,12 +196,27 @@ export class RecuperacionesPasswordService {
     });
   }
 
-  async aprobar(id: number, administradorId: number, observacion?: string) {
+  async aprobar(
+    id: number,
+    administradorId: number,
+    observacion?: string,
+    solicitante?: Solicitante,
+  ) {
     const solicitud = await this.prisma.recuperacionPassword.findUnique({
       where: { id },
-      include: { usuario: { select: { id: true, activo: true } } },
+      include: {
+        usuario: {
+          select: {
+            id: true,
+            activo: true,
+            organizacion_id: true,
+            rol: { select: { nombre: true } },
+          },
+        },
+      },
     });
     if (!solicitud) throw new NotFoundException('Solicitud no encontrada');
+    this.verificarPermisoSobreUsuario(solicitud.usuario, solicitante);
     if (solicitud.estado !== EstadoRecuperacionPassword.pendiente) {
       throw new BadRequestException('La solicitud ya fue atendida');
     }
@@ -147,7 +228,11 @@ export class RecuperacionesPasswordService {
 
     const passwordTemporal = `Av-${randomBytes(9).toString('base64url')}!9`;
     const passwordHash = await bcrypt.hash(passwordTemporal, 12);
-    const expiraEn = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const esOperario = solicitud.usuario.rol?.nombre === ROLES.OPERARIO;
+    const ahora = new Date();
+    const expiraEn = esOperario
+      ? null
+      : new Date(ahora.getTime() + 24 * 60 * 60 * 1000);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.usuario.update({
@@ -158,14 +243,16 @@ export class RecuperacionesPasswordService {
         where: { usuario_id: solicitud.usuario_id },
         create: {
           usuario_id: solicitud.usuario_id,
-          debe_cambiar_password: true,
+          debe_cambiar_password: !esOperario,
           password_temporal_expira_en: expiraEn,
+          fecha_ultimo_cambio_password: esOperario ? ahora : null,
         },
         update: {
           intentos_fallidos: 0,
           bloqueado_hasta: null,
-          debe_cambiar_password: true,
+          debe_cambiar_password: !esOperario,
           password_temporal_expira_en: expiraEn,
+          ...(esOperario ? { fecha_ultimo_cambio_password: ahora } : {}),
         },
       });
       await tx.sesion.updateMany({
@@ -175,9 +262,12 @@ export class RecuperacionesPasswordService {
       await tx.recuperacionPassword.update({
         where: { id },
         data: {
-          estado: EstadoRecuperacionPassword.aprobada,
+          estado: esOperario
+            ? EstadoRecuperacionPassword.completada
+            : EstadoRecuperacionPassword.aprobada,
+          usado: esOperario,
           atendida_por_id: administradorId,
-          atendida_en: new Date(),
+          atendida_en: ahora,
           observacion: observacion?.trim() || undefined,
           expira_en: expiraEn,
         },
@@ -188,16 +278,33 @@ export class RecuperacionesPasswordService {
       id,
       password_temporal: passwordTemporal,
       expira_en: expiraEn,
-      aviso: 'Esta contraseña se muestra una sola vez.',
+      aviso: esOperario
+        ? 'Esta contraseña queda activa de inmediato para el operario. Se muestra una sola vez.'
+        : 'Esta contraseña se muestra una sola vez.',
     };
   }
 
-  async rechazar(id: number, administradorId: number, observacion?: string) {
+  async rechazar(
+    id: number,
+    administradorId: number,
+    observacion?: string,
+    solicitante?: Solicitante,
+  ) {
     const solicitud = await this.prisma.recuperacionPassword.findUnique({
       where: { id },
-      select: { id: true, estado: true },
+      select: {
+        id: true,
+        estado: true,
+        usuario: {
+          select: {
+            organizacion_id: true,
+            rol: { select: { nombre: true } },
+          },
+        },
+      },
     });
     if (!solicitud) throw new NotFoundException('Solicitud no encontrada');
+    this.verificarPermisoSobreUsuario(solicitud.usuario, solicitante);
     if (solicitud.estado !== EstadoRecuperacionPassword.pendiente) {
       throw new BadRequestException('La solicitud ya fue atendida');
     }

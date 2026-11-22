@@ -8,6 +8,7 @@ import { getAccessToken, getRol, getUsuario } from '@shared/api'
 import { usePauseOnHidden } from '@shared/hooks/usePauseOnHidden'
 import { IcChevronRight, IcSearch, IcSidebar } from '@shared/ui/icons/icons'
 import logoAvisens from '@shared/assets/logo-avisens.png'
+import { obtenerFotoPerfil } from '@features/perfil/api/perfil'
 import AvatarUsuario from './AvatarUsuario'
 import './PanelLayout.css'
 
@@ -32,7 +33,44 @@ function PanelShell({
   const panel = useRef<HTMLElement>(null)
   const searchTrigger = useRef<HTMLElement | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [urlFotoPerfil, setUrlFotoPerfil] = useState<string | null>(null)
   const usuario = getUsuario()
+  const usuarioId = usuario?.id ?? null
+
+  useEffect(() => {
+    if (!usuarioId) return
+    let vigente = true
+
+    const cargarFoto = () => {
+      void obtenerFotoPerfil()
+        .then((blob) => {
+          if (!vigente) return
+          const url = URL.createObjectURL(blob)
+          setUrlFotoPerfil((anterior) => {
+            if (anterior) URL.revokeObjectURL(anterior)
+            return url
+          })
+        })
+        .catch(() => {
+          if (!vigente) return
+          setUrlFotoPerfil((anterior) => {
+            if (anterior) URL.revokeObjectURL(anterior)
+            return null
+          })
+        })
+    }
+
+    cargarFoto()
+    window.addEventListener('avisens:foto-perfil-actualizada', cargarFoto)
+    return () => {
+      vigente = false
+      window.removeEventListener('avisens:foto-perfil-actualizada', cargarFoto)
+    }
+  }, [usuarioId])
+
+  useEffect(() => () => {
+    if (urlFotoPerfil) URL.revokeObjectURL(urlFotoPerfil)
+  }, [urlFotoPerfil])
   const sections = visibleSections(rol)
   const titulo = tituloDeRuta(pathname, rol)
   const enInicio = ['/admin', '/dashboard', '/mi-jornada'].some((ruta) => matchesPath(pathname, ruta))
@@ -144,7 +182,7 @@ function PanelShell({
               aria-label="Abrir mi perfil"
             >
               <span className="dash-header-perfil-foto" aria-hidden="true">
-                <AvatarUsuario nombre={usuario?.nombre} tamano={40} style={{ width: '100%', height: '100%' }} />
+                <AvatarUsuario nombre={usuario?.nombre} fotoUrl={urlFotoPerfil} tamano={40} style={{ width: '100%', height: '100%' }} />
               </span>
               <span className="dash-header-perfil-copy">
                 <strong>{usuario?.nombre ?? 'Usuario'}</strong>

@@ -1,5 +1,11 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
+import {
+  eliminarFotoGalpon,
+  obtenerFotoGalpon,
+  subirFotoGalpon,
+} from '@features/galpones/api/galpones'
 import type { Lote } from '@features/lotes/api/lotes'
 import {
   IcAlert,
@@ -9,9 +15,13 @@ import {
   IcEdit,
   IcEgg,
   IcGrid,
+  IcPaperclip,
   IcPin,
   IcThermo,
+  IcTrash,
 } from '@shared/ui/icons/icons'
+import { validarArchivoFoto } from '@shared/utils/fotos'
+import { mensajeDeError } from '@shared/utils/errores'
 import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { getRol } from '@shared/api'
 import { permisosOperativosDeGalpon, puedeCompletarDatos } from '@shared/auth/permisos'
@@ -190,6 +200,46 @@ function GalponDetallePropietarioPage() {
     }
   }
 
+  const [urlFotoGalpon, setUrlFotoGalpon] = useState<string | null>(null)
+  const [subiendoFoto, setSubiendoFoto] = useState(false)
+  const inputFotoGalponRef = useRef<HTMLInputElement>(null)
+  const galponActualId = galpon?.id ?? null
+
+  useEffect(() => {
+    if (!galponActualId) {
+      setUrlFotoGalpon((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior)
+        return null
+      })
+      return
+    }
+    let vigente = true
+    void obtenerFotoGalpon(galponActualId)
+      .then((blob) => {
+        if (!vigente) return
+        const url = URL.createObjectURL(blob)
+        setUrlFotoGalpon((anterior) => {
+          if (anterior) URL.revokeObjectURL(anterior)
+          return url
+        })
+      })
+      .catch(() => {
+        if (vigente) {
+          setUrlFotoGalpon((anterior) => {
+            if (anterior) URL.revokeObjectURL(anterior)
+            return null
+          })
+        }
+      })
+    return () => {
+      vigente = false
+    }
+  }, [galponActualId])
+
+  useEffect(() => () => {
+    if (urlFotoGalpon) URL.revokeObjectURL(urlFotoGalpon)
+  }, [urlFotoGalpon])
+
   function irADestino(destino: DestinoPaso) {
     if (destino.tipo === 'datos-lote') setDatos({ tipo: 'lote', lote: destino.lote })
     else if (destino.tipo === 'ruta') irA(destino.ruta)
@@ -230,6 +280,48 @@ function GalponDetallePropietarioPage() {
   const paso = proximoPaso(galpon, indicador, pesajesDelLote(curvaLote))
   const puedeEditar = puedeCompletarDatos(getRol())
   const lote = loteSeleccionado
+
+  async function cambiarFotoGalpon(evento: ChangeEvent<HTMLInputElement>) {
+    const archivo = evento.target.files?.[0]
+    evento.target.value = ''
+    if (!archivo || !galponActualId) return
+    const problema = validarArchivoFoto(archivo)
+    if (problema) {
+      toast.error(problema)
+      return
+    }
+    setSubiendoFoto(true)
+    try {
+      await subirFotoGalpon(galponActualId, archivo)
+      const urlLocal = URL.createObjectURL(archivo)
+      setUrlFotoGalpon((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior)
+        return urlLocal
+      })
+      toast.success('Fotografía del galpón actualizada')
+    } catch (err) {
+      toast.error(mensajeDeError(err, 'No se pudo subir la fotografía del galpón.'))
+    } finally {
+      setSubiendoFoto(false)
+    }
+  }
+
+  async function quitarFotoGalpon() {
+    if (!galponActualId) return
+    setSubiendoFoto(true)
+    try {
+      await eliminarFotoGalpon(galponActualId)
+      setUrlFotoGalpon((anterior) => {
+        if (anterior) URL.revokeObjectURL(anterior)
+        return null
+      })
+      toast.success('Fotografía personalizada eliminada')
+    } catch (err) {
+      toast.error(mensajeDeError(err, 'No se pudo eliminar la fotografía del galpón.'))
+    } finally {
+      setSubiendoFoto(false)
+    }
+  }
   const vivasTotal = lotesActivos.reduce((suma, item) => {
     const ind = indicadoresPorLote.get(item.id) ?? null
     return suma + avesActuales(item.cantidad_inicial, ind?.mortalidadAcumuladaPct ?? null)
@@ -255,7 +347,7 @@ function GalponDetallePropietarioPage() {
         {/* ── Columna izquierda fija: Tarjeta de perfil (estilo /organizaciones/:id) ── */}
         <aside className="gp-perfil" aria-label={`Perfil de ${galpon.nombre}`}>
           <div className="gp-perfil-portada">
-            <img src={fotoGranjaReal} alt="" aria-hidden="true" />
+            <img src={urlFotoGalpon ?? fotoGranjaReal} alt="" aria-hidden="true" />
             <div className="gp-perfil-portada-badges">
               <span className={`gp-perfil-estado gp-perfil-estado--${tarjeta.estado}`}>
                 <span className="gp-perfil-estado-punto" aria-hidden="true" />
@@ -263,6 +355,37 @@ function GalponDetallePropietarioPage() {
               </span>
               <span className="gp-perfil-codigo">{galpon.codigo}</span>
             </div>
+            {puedeEditar && (
+              <div className="gp-portada-foto-acciones">
+                <input
+                  ref={inputFotoGalponRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="gp-input-oculto"
+                  onChange={(e) => void cambiarFotoGalpon(e)}
+                />
+                <button
+                  type="button"
+                  className="gp-portada-foto-btn"
+                  onClick={() => inputFotoGalponRef.current?.click()}
+                  disabled={subiendoFoto}
+                >
+                  <IcPaperclip size={13} aria-hidden="true" />
+                  {subiendoFoto ? 'Subiendo…' : 'Cambiar foto'}
+                </button>
+                {urlFotoGalpon && (
+                  <button
+                    type="button"
+                    className="gp-portada-foto-btn gp-portada-foto-btn--borrar"
+                    onClick={() => void quitarFotoGalpon()}
+                    disabled={subiendoFoto}
+                    aria-label="Restaurar fotografía por defecto"
+                  >
+                    <IcTrash size={13} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="gp-perfil-cuerpo">

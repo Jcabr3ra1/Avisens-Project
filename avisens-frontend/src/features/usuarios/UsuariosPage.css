@@ -1012,3 +1012,132 @@
   .usr-tarjeta,
   .usr-panel { transition: none; }
 }
+
+/* ─── Modal restablecer contraseña (Admin y Propietario) ─── */
+
+.usr-reset-intro {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.usr-reset-modos {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.usr-reset-modo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.usr-reset-modo.is-activo {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.usr-reset-modo input {
+  margin-top: 0.2rem;
+  accent-color: var(--primary);
+}
+
+.usr-reset-modo span {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.usr-reset-modo strong {
+  color: var(--text-primary);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.usr-reset-modo small {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+}
+
+.usr-reset-resultado {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.usr-reset-exito {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--success) 32%, transparent);
+  border-left: 4px solid var(--success);
+  border-radius: var(--radius-lg);
+  background: var(--success-soft);
+}
+
+.usr-reset-icono {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  background: var(--success);
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.usr-reset-exito strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.usr-reset-exito p {
+  margin: 0.2rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.usr-reset-clave-caja {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+  text-align: center;
+}
+
+.usr-reset-clave-label {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.usr-reset-clave-valor {
+  padding: 0.65rem 0.85rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--primary);
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  user-select: all;
+}
+
+.usr-reset-aviso {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
