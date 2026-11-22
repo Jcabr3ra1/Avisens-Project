@@ -106,7 +106,10 @@
 }
 
 .org-hero-acciones { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: auto; padding-top: var(--space-2); }
-.org-hero-acciones .adm-btn { min-width: 132px; justify-content: center; }
+.org-hero-acciones .adm-btn { min-height: 38px; padding: .42rem .82rem; font-size: .82rem; justify-content: center; }
+.org-hero-btn-aviso:hover { border-color: color-mix(in srgb, var(--warning) 45%, transparent); background: var(--accent-soft, #fbf4dc); color: var(--warning3); }
+.org-hero-btn-peligro { color: var(--danger3); }
+.org-hero-btn-peligro:hover { border-color: color-mix(in srgb, var(--danger) 35%, transparent); background: var(--danger-soft); color: var(--danger3); }
 
 .org-hero-escena {
   position: relative;

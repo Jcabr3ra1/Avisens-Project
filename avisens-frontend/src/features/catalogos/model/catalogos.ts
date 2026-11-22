@@ -58,3 +58,59 @@ export function pesos(valor: number): string {
     style: 'currency', currency: 'COP', maximumFractionDigits: 0,
   }).format(valor)
 }
+
+export type FiltroDisponibilidad = 'todos' | 'disponibles' | 'retirados'
+
+function normalizar(texto: string): string {
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+}
+
+function coincideDisponibilidad(activo: boolean, estado: FiltroDisponibilidad): boolean {
+  if (estado === 'disponibles') return activo
+  if (estado === 'retirados') return !activo
+  return true
+}
+
+export function filtrarAlimentos<T extends {
+  nombre: string
+  marca: string | null
+  etapa: string | null
+  presentacion: string | null
+  activo: boolean
+}>(
+  lista: T[],
+  { busqueda, estado }: { busqueda: string; estado: FiltroDisponibilidad },
+): T[] {
+  const termino = normalizar(busqueda)
+  return lista.filter((item) => {
+    if (!coincideDisponibilidad(item.activo, estado)) return false
+    if (!termino) return true
+    return [
+      item.nombre,
+      item.marca ?? '',
+      item.etapa ? etiquetaEtapa(item.etapa) : '',
+      item.presentacion ?? '',
+    ].some((valor) => normalizar(valor).includes(termino))
+  })
+}
+
+export function filtrarSensores<T extends {
+  tipo_sensor: string
+  nombre: string
+  descripcion: string | null
+  activo: boolean
+}>(
+  lista: T[],
+  { busqueda, estado }: { busqueda: string; estado: FiltroDisponibilidad },
+): T[] {
+  const termino = normalizar(busqueda)
+  return lista.filter((item) => {
+    if (!coincideDisponibilidad(item.activo, estado)) return false
+    if (!termino) return true
+    return [
+      item.nombre,
+      item.tipo_sensor,
+      item.descripcion ?? '',
+    ].some((valor) => normalizar(valor).includes(termino))
+  })
+}

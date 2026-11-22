@@ -3,7 +3,7 @@ import Modal from '@shared/ui/Modal/Modal'
 import type { CrearUsuarioPayload, RolResumen } from '@shared/api'
 import type { Organizacion } from '@features/organizaciones/api/organizaciones'
 import type { Galpon } from '@features/galpones/api/galpones'
-import { IcEye, IcEyeOff } from '@shared/ui/icons/icons'
+import { IcEye, IcEyeOff, IcUserCircle } from '@shared/ui/icons/icons'
 import type { CampoValidado, ErroresUsuario } from '../model/validacionUsuario'
 
 type Props = {
@@ -91,6 +91,8 @@ function FormularioUsuario({
   return (
     <Modal
       titulo={titulo}
+      variante="lateral"
+      icono={<IcUserCircle size={20} />}
       onCerrar={onCerrar}
       acciones={
         <>
@@ -253,7 +255,7 @@ function FormularioUsuario({
           </label>
         </div>
 
-        {solicitaOrganizacion && (
+        {solicitaOrganizacion && !pideNombreOrganizacion && (
           <label className="modal-campo">
             <span>Organización donde trabajará</span>
             <select
@@ -271,6 +273,13 @@ function FormularioUsuario({
                 <option key={organizacion.id} value={organizacion.id}>{organizacion.nombre}</option>
               ))}
             </select>
+            <button
+              type="button"
+              className="usuarios-link-btn"
+              onClick={() => { setOrganizacionNueva(true); onCambiar('organizacion_id', undefined) }}
+            >
+              + Crear una organización nueva
+            </button>
           </label>
         )}
 
@@ -347,13 +356,6 @@ function FormularioUsuario({
             <select value={form.rol_id} disabled aria-label="Rol actual">
               {roles.map((rol) => <option key={rol.id} value={rol.id}>{rol.nombre}</option>)}
             </select>
-            <button
-              type="button"
-              className="usuarios-link-btn"
-              onClick={() => { setOrganizacionNueva(true); onCambiar('organizacion_id', undefined) }}
-            >
-              + Crear una organización nueva
-            </button>
           </label>
         )}
 

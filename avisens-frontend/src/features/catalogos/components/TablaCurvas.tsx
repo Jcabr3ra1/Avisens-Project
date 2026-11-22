@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
-import { IcChevronDown, IcPlus } from '@shared/ui/icons/icons'
+import { IcChevronDown, IcClose, IcEdit, IcTrash } from '@shared/ui/icons/icons'
 import type { CurvaObjetivo } from '@features/indicadores/api/curvas-objetivo'
-import MenuAcciones from '@shared/ui/MenuAcciones/MenuAcciones'
 import { capitalizar, etiquetaEtapa, gramos } from '../model/catalogos'
 
 type Props = {
@@ -10,17 +9,22 @@ type Props = {
   error: string
   puedeGestionar: boolean
   onRecargar: () => void
-  onCrear: () => void
   onEditar: (curva: CurvaObjetivo) => void
   onEliminar: (curva: CurvaObjetivo) => void
 }
 
 function TablaCurvas({
-  curvas, cargando, error, puedeGestionar,
-  onRecargar, onCrear, onEditar, onEliminar,
+  curvas,
+  cargando,
+  error,
+  puedeGestionar,
+  onRecargar,
+  onEditar,
+  onEliminar,
 }: Props) {
   const [marca, setMarca] = useState('todas')
   const [sexo, setSexo] = useState('todos')
+  const [origen, setOrigen] = useState<'todos' | 'seed' | 'manual'>('todos')
 
   const marcas = useMemo(
     () => [...new Set(curvas.map((curva) => curva.marca))].sort(),
@@ -34,14 +38,23 @@ function TablaCurvas({
   const visibles = useMemo(() => curvas.filter((curva) => (
     (marca === 'todas' || curva.marca === marca)
     && (sexo === 'todos' || curva.sexo === sexo)
-  )), [curvas, marca, sexo])
+    && (origen === 'todos' || curva.origen === origen)
+  )), [curvas, marca, sexo, origen])
+
+  const hayFiltros = marca !== 'todas' || sexo !== 'todos' || origen !== 'todos'
+
+  function limpiar() {
+    setMarca('todas')
+    setSexo('todos')
+    setOrigen('todos')
+  }
 
   return (
-    <section className="cat-panel" role="tabpanel" id="panel-curvas" aria-labelledby="tab-curvas">
+    <section className="cat-panel" aria-label="Curvas objetivo">
       <header className="cat-panel-head">
         <div>
           <h2>Curvas objetivo</h2>
-          <p>Los valores de referencia del fabricante contra los que se compara cada lote.</p>
+          <p>Valores de referencia del fabricante contra los que se compara cada lote día a día.</p>
         </div>
         <div className="cat-panel-acciones">
           <label className="cat-desplegable">
@@ -52,7 +65,7 @@ function TablaCurvas({
                 <option key={item} value={item}>{capitalizar(item)}</option>
               ))}
             </select>
-            <IcChevronDown size={17} aria-hidden="true" />
+            <IcChevronDown size={16} aria-hidden="true" />
           </label>
           <label className="cat-desplegable">
             <span className="sr-only">Filtrar por sexo</span>
@@ -62,13 +75,21 @@ function TablaCurvas({
                 <option key={item} value={item}>{capitalizar(item)}</option>
               ))}
             </select>
-            <IcChevronDown size={17} aria-hidden="true" />
+            <IcChevronDown size={16} aria-hidden="true" />
+          </label>
+          <label className="cat-desplegable">
+            <span className="sr-only">Filtrar por origen</span>
+            <select value={origen} onChange={(evento) => setOrigen(evento.target.value as 'todos' | 'seed' | 'manual')}>
+              <option value="todos">Origen: todos</option>
+              <option value="seed">Fabricante</option>
+              <option value="manual">Añadidas aquí</option>
+            </select>
+            <IcChevronDown size={16} aria-hidden="true" />
           </label>
           <span className="cat-conteo">{visibles.length} de {curvas.length}</span>
-          {puedeGestionar && (
-            <button type="button" className="cat-boton-nuevo" onClick={onCrear}>
-              <IcPlus size={16} aria-hidden="true" />
-              Nuevo punto
+          {hayFiltros && (
+            <button type="button" className="cat-filtro-limpiar" onClick={limpiar}>
+              Limpiar <IcClose size={13} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -76,7 +97,7 @@ function TablaCurvas({
 
       <p className="cat-aviso">
         <strong>Las curvas del fabricante no se editan:</strong> cada lote se compara contra ellas.
-        Las que se crean aquí sí se pueden corregir y borrar, para marcas que aún no tienen curva.
+        Las que añades aquí sí se pueden editar o eliminar.
       </p>
 
       {error && (
@@ -92,6 +113,12 @@ function TablaCurvas({
         <div className="cat-vacio">
           <h2>No hay curvas objetivo sembradas</h2>
           <p>Sin ellas, ningún lote puede compararse contra un peso de referencia.</p>
+        </div>
+      ) : visibles.length === 0 ? (
+        <div className="cat-vacio">
+          <h2>Sin coincidencias</h2>
+          <p>Ningún punto de curva coincide con los filtros actuales.</p>
+          <button type="button" className="adm-btn adm-btn--secundario" onClick={limpiar}>Limpiar filtros</button>
         </div>
       ) : (
         <div className="cat-tabla-scroll">
@@ -137,20 +164,31 @@ function TablaCurvas({
                   </td>
                   <td>
                     <span className={`cat-origen cat-origen--${curva.origen}`}>
-                      {curva.origen === 'seed' ? 'Fabricante' : 'Añadida aquí'}
+                      {curva.origen === 'seed' ? 'Fabricante' : 'Añadida'}
                     </span>
                   </td>
                   {puedeGestionar && (
                     <td>
                       {curva.origen === 'manual' ? (
                         <div className="cat-acciones">
-                          <MenuAcciones
-                            etiqueta={`Acciones del día ${curva.dia}`}
-                            acciones={[
-                              { etiqueta: 'Editar', onSeleccionar: () => onEditar(curva) },
-                              { etiqueta: 'Eliminar', onSeleccionar: () => onEliminar(curva), peligrosa: true },
-                            ]}
-                          />
+                          <button
+                            type="button"
+                            className="cat-btn-icono"
+                            onClick={() => onEditar(curva)}
+                            aria-label={`Editar punto día ${curva.dia}`}
+                            title="Editar"
+                          >
+                            <IcEdit size={14} aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="cat-btn-icono cat-btn-icono--peligro"
+                            onClick={() => onEliminar(curva)}
+                            aria-label={`Eliminar punto día ${curva.dia}`}
+                            title="Eliminar"
+                          >
+                            <IcTrash size={14} aria-hidden="true" />
+                          </button>
                         </div>
                       ) : (
                         <span className="cat-protegida">Protegida</span>

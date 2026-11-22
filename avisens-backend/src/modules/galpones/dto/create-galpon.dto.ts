@@ -57,14 +57,6 @@ export class CreateGalponDto {
   tipo_techo?: string;
 
   @ApiPropertyOptional({
-    example: 'https://.../plano.pdf',
-    description: 'URL del plano',
-  })
-  @IsString()
-  @IsOptional()
-  plano_url?: string;
-
-  @ApiPropertyOptional({
     example: '2024-03-15',
     description: 'Fecha de construcción (YYYY-MM-DD)',
   })

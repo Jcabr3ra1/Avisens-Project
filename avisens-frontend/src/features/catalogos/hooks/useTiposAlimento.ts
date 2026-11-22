@@ -17,17 +17,17 @@ export function useTiposAlimento() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
-  const recargar = useCallback(async () => {
-    setCargando(true)
+  const recargar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setCargando(true)
     setError('')
     try {
       // `false` para traer también los desactivados: esta pantalla tiene que
       // poder reactivarlos, y si no los ve no puede.
       setTipos(await listarTiposAlimento(false))
     } catch {
-      setError('No se pudieron cargar los tipos de alimento.')
+      if (!silencioso) setError('No se pudieron cargar los tipos de alimento.')
     } finally {
-      setCargando(false)
+      if (!silencioso) setCargando(false)
     }
   }, [])
 
@@ -39,14 +39,15 @@ export function useTiposAlimento() {
   ) => {
     if (editandoId === null) await crearTipoAlimento(payload)
     else await actualizarTipoAlimento(editandoId, payload)
-    await recargar()
+    await recargar(true)
+    toast.success(editandoId === null ? 'Tipo de alimento creado' : 'Tipo de alimento actualizado')
   }, [recargar])
 
   const alternar = useCallback(async (tipo: TipoAlimento) => {
     try {
       if (tipo.activo) await desactivarTipoAlimento(tipo.id)
       else await activarTipoAlimento(tipo.id)
-      await recargar()
+      await recargar(true)
       toast.success(tipo.activo ? 'Alimento retirado del catálogo' : 'Alimento disponible otra vez')
     } catch (problema) {
       toast.error(mensajeDeError(problema, 'No se pudo cambiar el estado del alimento.'))
@@ -56,7 +57,7 @@ export function useTiposAlimento() {
   const eliminar = useCallback(async (tipo: TipoAlimento) => {
     try {
       await eliminarTipoAlimentoPermanente(tipo.id)
-      await recargar()
+      await recargar(true)
       toast.success('Tipo de alimento eliminado')
     } catch (problema) {
       toast.error(mensajeDeError(

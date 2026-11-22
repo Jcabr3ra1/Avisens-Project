@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
+import { IcThermo } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import type {
   CatalogoSensor,
@@ -86,6 +87,8 @@ function FormularioSensor({ editando, onGuardar, onCerrar }: Props) {
     <Modal
       titulo={editando ? 'Editar sensor del catálogo' : 'Nuevo sensor del catálogo'}
       subtitulo="Estos son los modelos que se pueden instalar en un galpón, con su precio de referencia."
+      variante="lateral"
+      icono={<IcThermo size={20} />}
       onCerrar={onCerrar}
       acciones={
         <>

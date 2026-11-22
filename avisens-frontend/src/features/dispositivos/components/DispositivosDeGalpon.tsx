@@ -4,6 +4,7 @@ import { getRol } from '@shared/api'
 import { ROL_ADMIN } from '@shared/auth/permisos'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { Galpon } from '@features/galpones/api/galpones'
+import { IcChip, IcPlus, IcTrash } from '@shared/ui/icons/icons'
 import { useDispositivos } from '../hooks/useDispositivos'
 import {
   FORMULARIO_DISPOSITIVO_INICIAL,
@@ -19,12 +20,11 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
 }) {
   const { dispositivos, cargando, error, crear, alternar, regenerarToken, eliminar } =
     useDispositivos(galpon.id)
-  // La administración de nodos ESP32 pertenece exclusivamente al administrador.
   const puedeGestionar = getRol() === ROL_ADMIN
-  const conAcciones = puedeGestionar
   const usbDisponible = soportaProvisionUsb()
   const destinoUsb = destinoDeLaPagina()
   const [form, setForm] = useState<DatosDispositivo>(FORMULARIO_DISPOSITIVO_INICIAL)
+  const [mostrarOpcionales, setMostrarOpcionales] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
   const [errorAccion, setErrorAccion] = useState('')
@@ -62,6 +62,7 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
       const resultado = await crear(payload)
       setToken({ id: resultado.dispositivo.id, valor: resultado.token_ingesta })
       setForm(FORMULARIO_DISPOSITIVO_INICIAL)
+      setMostrarOpcionales(false)
       onCambio?.()
     } catch (err) {
       setErrorForm(mensajeDeError(err, 'No se pudo registrar el dispositivo.'))
@@ -83,13 +84,13 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
   }
 
   async function handleToken(dispositivo: Dispositivo) {
-    const confirmar = (await confirmarAccion({
+    const confirmar = await confirmarAccion({
       titulo: '¿Regenerar el token?',
       entidad: dispositivo.nombre,
       descripcion: 'El token anterior deja de servir. El ESP32 no podrá enviar mediciones hasta que lo vuelvas a vincular por USB.',
       textoConfirmar: 'Regenerar token',
       tono: 'aviso',
-    }))
+    })
     if (!confirmar) return
     setErrorAccion('')
     limpiarEstadoToken()
@@ -115,8 +116,6 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
       if (err instanceof DOMException && err.name === 'NotFoundError') {
         setErrorUsb('No se seleccionó ningún puerto USB.')
       } else if (err instanceof Error && err.message) {
-        // mensajeDeError solo interpreta errores HTTP (Axios); los del puerto
-        // USB traen su propia explicación y no deben ocultarse.
         setErrorUsb(err.message)
       } else {
         setErrorUsb('No se pudo vincular el ESP32. Revisa que esté conectado por USB.')
@@ -137,13 +136,13 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
   }
 
   async function handleEliminar(dispositivo: Dispositivo) {
-    const confirmar = (await confirmarAccion({
+    const confirmar = await confirmarAccion({
       titulo: '¿Eliminar este controlador?',
       entidad: dispositivo.nombre,
       descripcion: 'También se eliminan sus sensores. Dejará de recibir datos y su token queda anulado. Si ya envió lecturas, el historial se conserva para los reportes.',
       textoConfirmar: 'Eliminar controlador',
       tono: 'peligro',
-    }))
+    })
     if (!confirmar) return
     setErrorAccion('')
     setAvisoAccion('')
@@ -158,25 +157,8 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
     }
   }
 
-  const activos = dispositivos.filter((d) => d.activo).length
-
   return (
     <div className="dsp">
-      <div className="dsp-resumen">
-        <div className="dsp-stat">
-          <span className="dsp-stat-valor">{dispositivos.length}</span>
-          <span className="dsp-stat-label">Total</span>
-        </div>
-        <div className="dsp-stat dsp-stat--activo">
-          <span className="dsp-stat-valor">{activos}</span>
-          <span className="dsp-stat-label">Activos</span>
-        </div>
-        <div className="dsp-stat">
-          <span className="dsp-stat-valor">{dispositivos.length - activos}</span>
-          <span className="dsp-stat-label">Inactivos</span>
-        </div>
-      </div>
-
       {error && <div className="dsp-alert dsp-alert--error" role="alert">{error}</div>}
       {avisoAccion && (
         <div className="dsp-alert dsp-alert--ok" role="status">{avisoAccion}</div>
@@ -187,12 +169,10 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
 
       {token && (
         <div className="dsp-token" role="status">
-          <strong>Vincular el ESP32</strong>
+          <strong>Vincular el ESP32 (token único)</strong>
           <code>{token.valor}</code>
           <p>
-            Solo la primera vez: conecta el ESP32 a este computador por USB y pulsa
-            «Vincular ESP32». Queda guardado en su memoria; después puedes
-            desconectarlo y darle energía con cualquier cargador.
+            Conecta el ESP32 a este computador por USB y pulsa «Vincular ESP32». Queda guardado en su memoria.
             {destinoUsb === 'local'
               ? ' Desde esta página local queda vinculado a este computador.'
               : ' Desde esta página queda vinculado a producción.'}
@@ -233,116 +213,114 @@ function DispositivosDeGalpon({ galpon, onCambio }: {
       )}
 
       {puedeGestionar && (
-      <form className="dsp-card dsp-form" onSubmit={handleCrear}>
-        <h3 className="dsp-form-titulo">Registrar controlador ESP32</h3>
-        <p className="dsp-ayuda">El nombre y el código se generan automáticamente con el código del galpón y un consecutivo: ESP32-001, ESP32-002… Al registrar el controlador recibirás su token de conexión una sola vez.</p>
-        <details className="dsp-opcionales">
-          <summary>Datos técnicos opcionales</summary>
-          <div className="dsp-grid">
-          <label className="dsp-campo">
-            <span>firmware <em>(opcional)</em></span>
-            <input
-              value={form.version_firmware}
-              onChange={(e) => campo('version_firmware', e.target.value)}
-              placeholder="1.0.3"
-            />
-          </label>
-          <label className="dsp-campo">
-            <span>IP local <em>(opcional)</em></span>
-            <input
-              value={form.ip_local}
-              onChange={(e) => campo('ip_local', e.target.value)}
-              placeholder="192.168.1.40"
-            />
-          </label>
+        <form className="dsp-registro" onSubmit={handleCrear}>
+          <div className="dsp-registro-top">
+            <div>
+              <h3 className="dsp-form-titulo">Controladores ESP32</h3>
+              <p className="dsp-ayuda">El código y el token de conexión se generan solos para <strong>{galpon.codigo}</strong>.</p>
+            </div>
+            <div className="dsp-registro-acciones">
+              <button
+                type="button"
+                className="dsp-btn-enlace"
+                onClick={() => setMostrarOpcionales((prev) => !prev)}
+              >
+                {mostrarOpcionales ? 'Ocultar técnicos' : 'Datos opcionales'}
+              </button>
+              <button type="submit" className="dsp-btn dsp-btn--primary" disabled={guardando}>
+                <IcPlus size={15} aria-hidden="true" />
+                {guardando ? 'Registrando…' : 'Registrar ESP32'}
+              </button>
+            </div>
           </div>
-        </details>
 
-        {errorForm && (
-          <p className="dsp-alert dsp-alert--error" role="alert">{errorForm}</p>
-        )}
+          {mostrarOpcionales && (
+            <div className="dsp-grid">
+              <label className="dsp-campo">
+                <span>Firmware <em>(opcional)</em></span>
+                <input
+                  value={form.version_firmware}
+                  onChange={(e) => campo('version_firmware', e.target.value)}
+                  placeholder="1.0.3"
+                />
+              </label>
+              <label className="dsp-campo">
+                <span>IP local <em>(opcional)</em></span>
+                <input
+                  value={form.ip_local}
+                  onChange={(e) => campo('ip_local', e.target.value)}
+                  placeholder="192.168.1.40"
+                />
+              </label>
+            </div>
+          )}
 
-        <div className="dsp-form-acciones">
-          <button type="submit" className="dsp-btn dsp-btn--primary" disabled={guardando}>
-            {guardando ? 'Registrando…' : '+ Registrar dispositivo'}
-          </button>
-        </div>
-      </form>
+          {errorForm && (
+            <p className="dsp-alert dsp-alert--error" role="alert">{errorForm}</p>
+          )}
+        </form>
       )}
 
-      <div className="dsp-card">
-        {cargando ? (
-          <p className="dsp-empty">Cargando dispositivos…</p>
-        ) : dispositivos.length === 0 ? (
-          <div className="dsp-vacio">
-            <p className="dsp-vacio-titulo">Este galpón no tiene dispositivos.</p>
-            {puedeGestionar && (
-              <p className="dsp-vacio-sub">
-                Registra el nodo y guarda el token. Después asígnale las
-                variables que reportará desde el catálogo de sensores.
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="dsp-tabla-scroll">
-            <table className="dsp-tabla">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Código del controlador</th>
-                  <th>Firmware</th>
-                  <th>Estado</th>
-                  {conAcciones && <th aria-label="Acciones"></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {dispositivos.map((dispositivo) => (
-                  <tr key={dispositivo.id} className={dispositivo.activo ? '' : 'is-inactive'}>
-                    <td>{dispositivo.nombre}</td>
-                    <td><code>{dispositivo.codigo_topic}</code></td>
-                    <td>{dispositivo.version_firmware ?? '—'}</td>
-                    <td>
-                      <span
-                        className={`dsp-badge dsp-badge--${dispositivo.activo ? 'activo' : 'inactivo'}`}
-                      >
-                        {dispositivo.activo ? 'activo' : 'inactivo'}
-                      </span>
-                    </td>
-                    {conAcciones && (
-                    <td className="dsp-acciones">
-                      {puedeGestionar && (
-                        <>
-                          <button
-                            className="dsp-btn dsp-btn--sm"
-                            onClick={() => void handleAlternar(dispositivo)}
-                          >
-                            {dispositivo.activo ? 'Desactivar' : 'Activar'}
-                          </button>
-                          <button
-                            className="dsp-btn dsp-btn--sm"
-                            onClick={() => void handleToken(dispositivo)}
-                          >
-                            Token
-                          </button>
-                        </>
-                      )}
-                      {puedeGestionar && (
-                        <button
-                          className="dsp-btn dsp-btn--sm dsp-btn--danger"
-                          onClick={() => void handleEliminar(dispositivo)}
-                        >
-                          Eliminar
-                        </button>
-                      )}
-                    </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {cargando ? (
+        <p className="dsp-empty" role="status">Cargando controladores…</p>
+      ) : dispositivos.length === 0 ? (
+        <div className="dsp-vacio">
+          <p className="dsp-vacio-titulo">Este galpón aún no tiene controladores.</p>
+          {puedeGestionar && (
+            <p className="dsp-vacio-sub">
+              Pulsa «Registrar ESP32» arriba para crear el primer controlador y obtener su token de conexión.
+            </p>
+          )}
+        </div>
+      ) : (
+        <ul className="dsp-lista" aria-label="Controladores registrados">
+          {dispositivos.map((dispositivo) => (
+            <li key={dispositivo.id} className={`dsp-item${dispositivo.activo ? '' : ' is-inactive'}`}>
+              <div className="dsp-item-cabecera">
+                <span className="dsp-item-icono" aria-hidden="true"><IcChip size={17} /></span>
+                <div className="dsp-item-info">
+                  <strong>{dispositivo.nombre}</strong>
+                  <div className="dsp-item-meta">
+                    <code>{dispositivo.codigo_topic}</code>
+                    <span>Firmware {dispositivo.version_firmware ? `v${dispositivo.version_firmware}` : 'sin reportar'}</span>
+                  </div>
+                </div>
+                <span className={`dsp-badge dsp-badge--${dispositivo.activo ? 'activo' : 'inactivo'}`}>
+                  {dispositivo.activo ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
+
+              {puedeGestionar && (
+                <div className="dsp-item-pie">
+                  <button
+                    type="button"
+                    className="dsp-btn dsp-btn--sm"
+                    onClick={() => void handleToken(dispositivo)}
+                  >
+                    Regenerar token
+                  </button>
+                  <button
+                    type="button"
+                    className="dsp-btn dsp-btn--sm"
+                    onClick={() => void handleAlternar(dispositivo)}
+                  >
+                    {dispositivo.activo ? 'Desactivar' : 'Activar'}
+                  </button>
+                  <button
+                    type="button"
+                    className="dsp-btn dsp-btn--sm dsp-btn--danger"
+                    onClick={() => void handleEliminar(dispositivo)}
+                    aria-label={`Eliminar ${dispositivo.nombre}`}
+                  >
+                    <IcTrash size={14} aria-hidden="true" />
+                    Eliminar
+                  </button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

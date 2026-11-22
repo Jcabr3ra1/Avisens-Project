@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { capitalizar, etiquetaEtapa, gramos, rangoDeDias } from './catalogos'
+import {
+  capitalizar,
+  etiquetaEtapa,
+  filtrarAlimentos,
+  filtrarSensores,
+  gramos,
+  rangoDeDias,
+} from './catalogos'
 
 describe('rangoDeDias', () => {
   it('describe el rango completo', () => {
@@ -45,5 +52,28 @@ describe('etiquetaEtapa', () => {
     expect(etiquetaEtapa('preiniciacion')).toBe('Preiniciación')
     expect(etiquetaEtapa('Iniciacion')).toBe('Iniciación')
     expect(etiquetaEtapa('retiro')).toBe('Retiro')
+  })
+})
+
+describe('filtrarAlimentos y filtrarSensores', () => {
+  const alimentos = [
+    { id: 1, nombre: 'Preiniciación Plus', marca: 'italcol', etapa: 'preiniciacion', presentacion: 'migaja', dia_inicio: 1, dia_fin: 10, consumo_total_esperado_g: 280, activo: true },
+    { id: 2, nombre: 'Engorde Final', marca: 'solla', etapa: 'engorde', presentacion: 'peletizado', dia_inicio: 22, dia_fin: 42, consumo_total_esperado_g: 2600, activo: false },
+  ]
+  const sensores = [
+    { id: 1, tipo_sensor: 'dht22_temp', nombre: 'Temperatura ambiental', descripcion: 'Sensor DHT22', precio_unitario_cop: 45000, cobertura_m2: 100, obligatorio: true, activo: true },
+    { id: 2, tipo_sensor: 'mq135_nh3', nombre: 'Amoníaco', descripcion: 'Gas NH3', precio_unitario_cop: 80000, cobertura_m2: 150, obligatorio: false, activo: false },
+  ]
+
+  it('filtra alimentos por disponibilidad y búsqueda sin tildes', () => {
+    expect(filtrarAlimentos(alimentos, { busqueda: 'preiniciacion', estado: 'todos' }).map((a) => a.id)).toEqual([1])
+    expect(filtrarAlimentos(alimentos, { busqueda: '', estado: 'retirados' }).map((a) => a.id)).toEqual([2])
+    expect(filtrarAlimentos(alimentos, { busqueda: 'solla', estado: 'disponibles' })).toEqual([])
+  })
+
+  it('filtra sensores por disponibilidad y búsqueda en código o nombre sin tildes', () => {
+    expect(filtrarSensores(sensores, { busqueda: 'amoniaco', estado: 'todos' }).map((s) => s.id)).toEqual([2])
+    expect(filtrarSensores(sensores, { busqueda: 'dht22', estado: 'disponibles' }).map((s) => s.id)).toEqual([1])
+    expect(filtrarSensores(sensores, { busqueda: '', estado: 'retirados' }).map((s) => s.id)).toEqual([2])
   })
 })

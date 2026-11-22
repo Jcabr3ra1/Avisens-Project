@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { organizarBandeja, prioridadDe, resumirBandeja } from './bandeja'
+import { organizarBandeja, prioridadDe, resumirBandeja, siguienteProspectoId } from './bandeja'
 import type { ProspectoVista } from './prospectoVista'
 
 const AHORA = new Date('2026-10-16T10:00:00-05:00')
@@ -107,6 +107,28 @@ describe('organizarBandeja', () => {
     ], { ...base, vista: 'activos' }, AHORA)
     expect(secciones).toHaveLength(1)
     expect(secciones[0].items.map((item) => item.prospecto.id)).toEqual([2, 1])
+  })
+
+  it('cuando soloSinAsesor está activo muestra solo prospectos activos sin asesor (incluso urgentes)', () => {
+    const conUrgenteSinAsesor = [
+      ...lista,
+      prospecto({ id: 7, etapa: 'caliente', asesorId: null, puntaje: 11 }),
+    ]
+    const secciones = organizarBandeja(conUrgenteSinAsesor, { ...base, soloSinAsesor: true }, AHORA)
+    expect(secciones.flatMap((s) => s.items.map((i) => i.prospecto.id))).toEqual([7, 4])
+  })
+})
+
+describe('siguienteProspectoId', () => {
+  it('avanza, retrocede y salta al inicio o final sin desbordar', () => {
+    expect(siguienteProspectoId([10, 20, 30], 10, 'ArrowDown')).toBe(20)
+    expect(siguienteProspectoId([10, 20, 30], 30, 'ArrowDown')).toBe(30)
+    expect(siguienteProspectoId([10, 20, 30], 20, 'ArrowUp')).toBe(10)
+    expect(siguienteProspectoId([10, 20, 30], 10, 'ArrowUp')).toBe(10)
+    expect(siguienteProspectoId([10, 20, 30], 20, 'Home')).toBe(10)
+    expect(siguienteProspectoId([10, 20, 30], 10, 'End')).toBe(30)
+    expect(siguienteProspectoId([10, 20, 30], 10, 'Enter')).toBeNull()
+    expect(siguienteProspectoId([], null, 'ArrowDown')).toBeNull()
   })
 })
 

@@ -112,6 +112,7 @@ export interface FiltrosBandejaPqrs {
   texto: string
   categoria: string
   usuarioId: number | null
+  soloVencidas?: boolean
 }
 
 export interface SeccionPqrs {
@@ -129,6 +130,7 @@ function enVista(solicitud: SolicitudPqrs, vista: VistaPqrs, usuarioId: number |
 export function organizarBandeja(solicitudes: SolicitudPqrs[], filtros: FiltrosBandejaPqrs, ahora = new Date()): SeccionPqrs[] {
   const visibles = solicitudes.filter((solicitud) =>
     enVista(solicitud, filtros.vista, filtros.usuarioId, ahora)
+    && (!filtros.soloVencidas || grupoDe(solicitud, ahora) === 'vencidas')
     && (filtros.categoria === 'todas' || solicitud.categoria === filtros.categoria)
     && coincide(solicitud, filtros.texto))
 
@@ -216,4 +218,21 @@ export const RESPUESTAS_RAPIDAS: Record<string, string[]> = {
 
 export function respuestasRapidas(categoria: string): string[] {
   return [...(RESPUESTAS_RAPIDAS[categoria] ?? []), ...RESPUESTAS_GENERALES]
+}
+
+export function siguienteSolicitudId(
+  ids: number[],
+  actualId: number | null,
+  tecla: string,
+): number | null {
+  if (ids.length === 0) return null
+  if (tecla === 'Home') return ids[0]
+  if (tecla === 'End') return ids[ids.length - 1]
+  if (tecla !== 'ArrowDown' && tecla !== 'ArrowUp') return null
+  const indice = actualId === null ? -1 : ids.indexOf(actualId)
+  if (indice === -1) return ids[0]
+  const siguiente = tecla === 'ArrowDown'
+    ? Math.min(indice + 1, ids.length - 1)
+    : Math.max(indice - 1, 0)
+  return ids[siguiente]
 }

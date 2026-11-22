@@ -1,13 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import type { Galpon } from '@features/galpones/api/galpones'
 import type { Dispositivo } from '../api/dispositivos'
-import { agruparPorOrganizacion, atencionesFlota, cumpleFiltro, estadoDeConexion, filasFlota, resumenFlota } from './flota'
+import {
+  agruparPorOrganizacion,
+  atencionesFlota,
+  cumpleFiltro,
+  estadoDeConexion,
+  filasFlota,
+  resumenFlota,
+  siguienteGalponId,
+} from './flota'
 
 const ahora = Date.parse('2026-10-18T14:00:00Z')
 
 const galpon = (id: number, organizacion: string, cambios: Partial<Galpon> = {}): Galpon => ({
   id, codigo: `GAL-${id}`, nombre: `Galpón ${id}`, capacidad_aves: null, ancho_metros: null, largo_metros: null,
-  orientacion: null, tipo_techo: null, plano_url: null, fecha_construccion: null, activo: true,
+  orientacion: null, tipo_techo: null, fecha_construccion: null, activo: true,
   granja: { id: id * 10, nombre: `Granja ${id}`, propietario_id: 1, organizacion: { id: 1, nombre: organizacion } },
   ...cambios,
 })
@@ -38,11 +46,12 @@ describe('flota de controladores', () => {
     expect(filas[1].estado).toBe('sin_controlador')
   })
 
-  it('agrupa por organización y filtra por cualquier nombre o código', () => {
+  it('agrupa por organización y filtra por cualquier nombre o código sin tildes', () => {
     const filas = filasFlota([galpon(1, 'Zeta'), galpon(2, 'Alfa')], [dispositivo(1, 1, null)], ahora)
 
     expect(agruparPorOrganizacion(filas).map((grupo) => grupo.organizacion)).toEqual(['Alfa', 'Zeta'])
     expect(agruparPorOrganizacion(filas, 'esp32-001')).toHaveLength(1)
+    expect(agruparPorOrganizacion(filas, 'galpon 2')).toHaveLength(1)
     expect(agruparPorOrganizacion(filas, 'nada')).toHaveLength(0)
   })
 
@@ -69,5 +78,18 @@ describe('atención y filtros de la flota', () => {
     expect(cumpleFiltro(filas[0], 'en_linea')).toBe(true)
     expect(cumpleFiltro(filas[1], 'problemas')).toBe(true)
     expect(cumpleFiltro(filas[2], 'sin_controlador')).toBe(true)
+  })
+})
+
+describe('siguienteGalponId', () => {
+  it('mueve la selección por teclado sin desbordar', () => {
+    expect(siguienteGalponId([1, 2, 3], 1, 'ArrowDown')).toBe(2)
+    expect(siguienteGalponId([1, 2, 3], 3, 'ArrowDown')).toBe(3)
+    expect(siguienteGalponId([1, 2, 3], 2, 'ArrowUp')).toBe(1)
+    expect(siguienteGalponId([1, 2, 3], 1, 'ArrowUp')).toBe(1)
+    expect(siguienteGalponId([1, 2, 3], 2, 'Home')).toBe(1)
+    expect(siguienteGalponId([1, 2, 3], 1, 'End')).toBe(3)
+    expect(siguienteGalponId([1, 2, 3], 1, 'Enter')).toBeNull()
+    expect(siguienteGalponId([], null, 'ArrowDown')).toBeNull()
   })
 })
