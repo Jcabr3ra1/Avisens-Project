@@ -23,6 +23,7 @@ export interface DashboardLote {
   fechaIngreso: string
   cantidadInicial: number
   estado: string
+  fechaSalidaEstimada?: string | null
 }
 
 export interface DashboardAlerta {

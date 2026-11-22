@@ -30,6 +30,7 @@ interface LoteApi {
   fecha_ingreso: string
   cantidad_inicial: number
   estado: string
+  fecha_salida_estimada?: string | null
   galpon: { id: number }
 }
 
@@ -86,6 +87,7 @@ export async function cargarFuentesDashboard(): Promise<DashboardFuentes> {
     fechaIngreso: lote.fecha_ingreso,
     cantidadInicial: lote.cantidad_inicial,
     estado: lote.estado,
+    fechaSalidaEstimada: lote.fecha_salida_estimada ?? null,
   }))
 
   const alertas: DashboardAlerta[] = alertasResponse.data.data.map((alerta) => ({

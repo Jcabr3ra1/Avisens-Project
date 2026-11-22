@@ -1,0 +1,216 @@
+.bs-hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 8.25rem;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: #172e26;
+  color: #f7f6ef;
+  box-shadow: var(--shadow-md);
+}
+
+.bs-hero-foto {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 55% 62%;
+}
+
+.bs-hero[data-fase='amanecer'] .bs-hero-foto,
+.bs-hero[data-fase='tarde'] .bs-hero-foto {
+  filter: saturate(1.05) sepia(0.1);
+}
+
+.bs-hero[data-fase='noche'] .bs-hero-foto {
+  filter: brightness(0.7) saturate(0.85);
+}
+
+.bs-hero-velo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgb(11 35 28 / 0.92) 0%, rgb(11 35 28 / 0.76) 44%, rgb(11 35 28 / 0.36) 76%, rgb(11 35 28 / 0.18) 100%),
+    linear-gradient(0deg, rgb(7 24 20 / 0.55) 0%, rgb(7 24 20 / 0) 60%);
+}
+
+.bs-hero-cuerpo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.35rem 1.75rem;
+}
+
+.bs-hero-texto {
+  display: grid;
+  gap: 0.25rem;
+  max-width: 42rem;
+}
+
+.bs-hero-fecha {
+  margin: 0;
+  color: rgb(247 246 239 / 0.82);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.bs-hero-fecha time {
+  display: inline-block;
+}
+
+.bs-hero-fecha time::first-letter {
+  text-transform: uppercase;
+}
+
+.bs-hero-titulo {
+  margin: 0;
+  color: #f7f6ef;
+  font-family: Manrope, Inter, sans-serif;
+  font-size: clamp(1.45rem, 1.15rem + 1.1vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.bs-hero-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.15rem 0 0;
+  color: rgb(247 246 239 / 0.9);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.bs-hero-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.bs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.55rem;
+  padding: 0.48rem 1.05rem;
+  border: 1px solid rgb(247 246 239 / 0.34);
+  border-radius: var(--radius-full);
+  background: rgb(255 255 255 / 0.14);
+  color: #f7f6ef;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.bs-btn:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.24);
+  border-color: rgb(247 246 239 / 0.56);
+  transform: translateY(-1px);
+}
+
+.bs-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.bs-btn--primario {
+  background: #f7f6ef;
+  border-color: #f7f6ef;
+  color: #0e3d2f;
+}
+
+.bs-btn--primario:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: #ffffff;
+}
+
+.bs-btn.is-girando svg {
+  animation: bs-girar 0.9s linear infinite;
+}
+
+@keyframes bs-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.bs-selector {
+  display: grid;
+  gap: 0.2rem;
+  color: rgb(247 246 239 / 0.82);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.bs-selector select {
+  min-height: 2.55rem;
+  min-width: 11rem;
+  padding: 0 0.9rem;
+  border: 1px solid rgb(247 246 239 / 0.32);
+  border-radius: var(--radius-full);
+  background: rgb(11 35 28 / 0.55);
+  color: #f7f6ef;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.bs-selector select option {
+  background: var(--surface-base);
+  color: var(--text-primary);
+}
+
+/* Ajuste de contraste para el selector de periodo dentro del banner en Panel Admin */
+.bs-hero .cdc-periodo {
+  border-color: rgb(247 246 239 / 0.28);
+  background: rgb(11 35 28 / 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.bs-hero .cdc-periodo label {
+  color: rgb(247 246 239 / 0.85);
+}
+
+.bs-hero .cdc-periodo label.is-activo {
+  background: #f7f6ef;
+  color: #0e3d2f;
+}
+
+.bs-hero button:focus-visible,
+.bs-hero select:focus-visible {
+  outline: 2px solid #f7f6ef;
+  outline-offset: 2px;
+}
+
+@media (max-width: 639px) {
+  .bs-hero-cuerpo {
+    padding: 1.2rem 1.25rem;
+  }
+
+  .bs-hero-acciones,
+  .bs-btn,
+  .bs-selector,
+  .bs-selector select {
+    width: 100%;
+  }
+}

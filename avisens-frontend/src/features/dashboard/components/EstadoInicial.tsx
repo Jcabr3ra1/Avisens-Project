@@ -18,13 +18,13 @@ function EstadoInicial({ granjas, galpones, rol, onIrAProduccion, onRecargar }: 
     return (
       <section className="dashboard-setup" aria-labelledby="dashboard-setup-title">
         <div className="dashboard-setup__copy">
-          <p className="dashboard-section-label">Configuración pendiente</p>
-          <h1 id="dashboard-setup-title">Tu granja aún no ha sido asignada</h1>
+          <p className="dashboard-section-label">Falta un paso</p>
+          <h1 id="dashboard-setup-title">Todavía no tienes una granja en Avisens</h1>
           <p>
-            Un administrador debe registrar y asignarte una granja antes de que puedas agregar galpones y lotes.
+            Alguien del equipo de Avisens debe crear tu granja y dejarla a tu nombre. Después podrás registrar tus galpones y tus pollos.
           </p>
         </div>
-        <p className="dashboard-setup__help">Cuando la asignación esté lista, aquí verás el siguiente paso.</p>
+        <p className="dashboard-setup__help">Cuando tu granja esté lista, aquí verás qué hacer después.</p>
       </section>
     )
   }
@@ -33,12 +33,12 @@ function EstadoInicial({ granjas, galpones, rol, onIrAProduccion, onRecargar }: 
     return (
       <section className="dashboard-setup" aria-labelledby="dashboard-setup-title">
         <div className="dashboard-setup__copy">
-          <p className="dashboard-section-label">Configuración pendiente</p>
-          <h1 id="dashboard-setup-title">Tu jornada aún no tiene producción asignada</h1>
-          <p>Un administrador debe asignarte un galpón antes de que puedas registrar actividades de campo.</p>
+          <p className="dashboard-section-label">Falta un paso</p>
+          <h1 id="dashboard-setup-title">Todavía no tienes un galpón asignado</h1>
+          <p>Alguien del equipo de Avisens debe asignarte un galpón para que puedas anotar tu trabajo.</p>
         </div>
         <button className="dashboard-secondary-button" type="button" onClick={onRecargar}>
-          Actualizar información
+          Volver a mirar
         </button>
       </section>
     )
@@ -46,29 +46,29 @@ function EstadoInicial({ granjas, galpones, rol, onIrAProduccion, onRecargar }: 
 
   const pasos = [
     {
-      titulo: esAdministrador ? 'Crea una granja' : 'Granja asignada',
+      titulo: esAdministrador ? 'Crea una granja' : 'Tu granja lista',
       completo: granjas > 0,
       icono: <IcLeaf size={22} />,
     },
     { titulo: 'Agrega un galpón', completo: galpones > 0, icono: <IcGrid size={22} /> },
-    { titulo: 'Ingresa el primer lote', completo: false, icono: <IcEgg size={22} /> },
+    { titulo: 'Registra el primer lote', completo: false, icono: <IcEgg size={22} /> },
   ]
 
   const titulo = sinGranja
-    ? 'Configura la producción'
+    ? 'Vamos a preparar tu granja'
     : sinGalpon
-      ? 'Agrega el primer galpón'
-      : 'Ingresa el primer lote'
+      ? 'Agrega tu primer galpón'
+      : 'Registra tu primer lote de pollos'
   const descripcion = sinGranja
-    ? 'El administrador registra la granja y la asigna a su propietario para iniciar la producción.'
+    ? 'Avisens crea la granja y la deja a nombre de su dueño para que pueda empezar.'
     : sinGalpon
-      ? 'La granja ya está disponible. Ahora registra el galpón donde se alojarán las aves.'
-      : 'El galpón está listo. Registra un lote para iniciar el seguimiento productivo.'
+      ? 'Tu granja ya está lista. Ahora registra el galpón donde van a vivir los pollos.'
+      : 'Tu galpón está listo. Registra un lote de pollos para empezar a ver cómo van.'
   const etiquetaBoton = sinGranja && esAdministrador
     ? 'Crear granja'
     : sinGalpon
       ? 'Abrir mi granja'
-      : 'Abrir producción'
+      : 'Registrar mi lote'
 
   return (
     <section className="dashboard-setup" aria-labelledby="dashboard-setup-title">
@@ -85,7 +85,7 @@ function EstadoInicial({ granjas, galpones, rol, onIrAProduccion, onRecargar }: 
               {paso.completo ? <IcCheck size={22} /> : paso.icono}
             </span>
             <span>
-              <small>Paso {indice + 1}</small>
+              <small>Paso {indice + 1} de {pasos.length}</small>
               <strong>{paso.titulo}</strong>
             </span>
           </li>

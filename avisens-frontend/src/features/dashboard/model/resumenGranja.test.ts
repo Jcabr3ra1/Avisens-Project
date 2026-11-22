@@ -90,6 +90,30 @@ describe('itemsAtencionGranja', () => {
     expect(items[2]).toMatchObject({ etiqueta: 'Sin señal', detalle: 'Galpón sur · nunca ha reportado', cuando: null })
   })
 
+  it('cada pendiente lleva el nombre del galpón y los de sensor, su lectura en palabras simples', () => {
+    const items = itemsAtencionGranja({
+      alertas: [alerta(1, 2, 'media')],
+      galpones,
+      monitoreo,
+      ahora: Date.parse('2026-10-17T12:00:00.000Z'),
+    })
+    expect(items.find((item) => item.id === 'alerta-1')?.galponNombre).toBe('Galpón sur')
+    expect(items.find((item) => item.id === 'sensor-2')).toMatchObject({
+      galponNombre: 'Galpón norte',
+      lectura: { clase: 'temperatura', valorTexto: '33,2 °C', direccion: 'alto', sinSenal: false },
+    })
+    expect(items.find((item) => item.id === 'sensor-3')?.lectura).toMatchObject({ direccion: null, sinSenal: true })
+  })
+
+  it('un sensor por debajo del mínimo se marca como "bajo"', () => {
+    const items = itemsAtencionGranja({
+      alertas: [],
+      galpones,
+      monitoreo: [galponMonitoreo(1, [sensor(5, 'advertencia', { valor: 21 })])],
+    })
+    expect(items[0].lectura?.direccion).toBe('bajo')
+  })
+
   it('incluye riesgos de crecimiento por lote, prioriza su posición y deja abrir la guía', () => {
     const riesgo = {
       lote_id: 10,
@@ -135,6 +159,7 @@ describe('itemsAtencionGranja', () => {
       id: 'crecimiento-10-peso_por_debajo',
       tipo: 'crecimiento',
       loteId: 10,
+      regla: 'peso_por_debajo',
       galponId: 1,
       titulo: 'Peso por debajo de la curva',
       etiqueta: 'Crecimiento',
