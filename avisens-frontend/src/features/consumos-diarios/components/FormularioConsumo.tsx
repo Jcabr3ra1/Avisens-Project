@@ -41,6 +41,7 @@ function FormularioConsumo({
 
   return (
     <Modal
+      variante="lateral"
       titulo={modoEdicion ? 'Editar consumo' : 'Registrar consumo'}
       subtitulo="Registra alimento, agua o ambos."
       onCerrar={onCerrar}

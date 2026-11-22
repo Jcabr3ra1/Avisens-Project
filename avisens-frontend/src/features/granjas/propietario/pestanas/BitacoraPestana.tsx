@@ -13,7 +13,7 @@ import FormularioConsumo from '@features/consumos-diarios/components/FormularioC
 import { actualizarConsumoDiario, crearConsumoDiario, eliminarConsumoDiario } from '@features/consumos-diarios/api/consumosDiarios'
 import { listarTiposAlimento, type TipoAlimento } from '@features/consumos-diarios/api/tipos-alimento'
 import { FORMULARIO_CONSUMO_INICIAL, type FormularioConsumo as DatosConsumo } from '@features/consumos-diarios/model/consumoDiario'
-import { IcDrop, IcEdit, IcHeart, IcScale, IcSeed, IcTrash } from '@shared/ui/icons/icons'
+import { IcAlert, IcDrop, IcEdit, IcPlus, IcScale, IcSeed, IcTrash } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import { agruparPorDia, formConsumoDesde, lineaDeTiempo, payloadConsumo, totalesConsumo, type Movimiento, type TipoMovimiento } from '../bitacoraLote'
 import { pesoCreible } from '@shared/utils/rangosAvicolas'
@@ -26,7 +26,7 @@ const decimal = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
 
 const ACCIONES: { tipo: TipoMovimiento; titulo: string; detalle: string; icono: typeof IcScale }[] = [
   { tipo: 'peso', titulo: 'Pesaje', detalle: 'Peso promedio de una muestra', icono: IcScale },
-  { tipo: 'mortalidad', titulo: 'Mortalidad', detalle: 'Aves que murieron hoy', icono: IcHeart },
+  { tipo: 'mortalidad', titulo: 'Mortalidad', detalle: 'Aves que murieron hoy', icono: IcAlert },
   { tipo: 'sanitario', titulo: 'Sanidad', detalle: 'Vacunas y tratamientos', icono: IcDrop },
   { tipo: 'consumo', titulo: 'Consumo', detalle: 'Alimento y agua del día', icono: IcSeed },
 ]
@@ -154,51 +154,60 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
       .catch((fallo) => toast.error(mensajeDeError(fallo, 'No se pudo eliminar el registro.')))
   }
 
-  if (datos.cargando) return <div className="gp-curva-vacia" role="status">Cargando la bitácora…</div>
+  if (datos.cargando) return <div className="gp-card gp-curva-vacia" role="status">Cargando la bitácora…</div>
 
   return (
     <div className="gb">
-      <dl className="gp-cifras">
-        <div className="gp-cifra">
+      <dl className="gb-kpis" aria-label="Resumen de la bitácora">
+        <div>
           <dt>Último pesaje</dt>
           <dd>{!pesoUltimo ? '—' : pesoCreible(pesoUltimo.peso_promedio_g) ? `${entero.format(pesoUltimo.peso_promedio_g)} g` : 'Fuera de rango'}</dd>
-          {pesoUltimo && <dd className="gp-cifra-detalle">{new Date(`${pesoUltimo.fecha.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CO')}</dd>}
+          <small>{pesoUltimo ? new Date(`${pesoUltimo.fecha.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CO') : 'Sin pesajes'}</small>
         </div>
-        <div className="gp-cifra">
+        <div>
           <dt>Mortalidad</dt>
           <dd>{entero.format(muertas)} {muertas === 1 ? 'ave' : 'aves'}</dd>
-          <dd className="gp-cifra-detalle">{decimal.format((muertas / Math.max(lote.cantidad_inicial, 1)) * 100)} % del lote</dd>
+          <small>{decimal.format((muertas / Math.max(lote.cantidad_inicial, 1)) * 100)} % del lote</small>
         </div>
-        <div className="gp-cifra">
+        <div>
           <dt>Alimento</dt>
           <dd>{decimal.format(alimento)} kg</dd>
-          {avisoFueraDeRango && <dd className="gp-cifra-detalle">{avisoFueraDeRango}</dd>}
+          <small>{avisoFueraDeRango ?? 'Acumulado del lote'}</small>
         </div>
-        <div className="gp-cifra">
+        <div>
           <dt>Agua</dt>
           <dd>{decimal.format(agua)} L</dd>
-          {avisoFueraDeRango && <dd className="gp-cifra-detalle">{avisoFueraDeRango}</dd>}
+          <small>{avisoFueraDeRango ?? 'Acumulado del lote'}</small>
         </div>
       </dl>
 
-      <section aria-labelledby="gb-registrar">
-        <h3 id="gb-registrar" className="gb-titulo">Registrar</h3>
+      <section className="gp-card gb-bloque" aria-labelledby="gb-registrar">
+        <div className="gp-bloque-cabecera">
+          <div>
+            <span className="gp-rotulo">Nuevo apunte</span>
+            <h3 id="gb-registrar" className="gb-titulo">Registrar en la bitácora</h3>
+          </div>
+        </div>
         <div className="gb-acciones">
           {ACCIONES.map(({ tipo, titulo, detalle, icono: Icono }) => (
             <button key={tipo} type="button" className={`gb-accion gb-accion--${tipo}`} onClick={() => abrir(tipo)}>
-              <span className="gb-accion-icono" aria-hidden="true"><Icono size={20} /></span>
+              <span className="gb-accion-icono" aria-hidden="true"><Icono size={19} /></span>
               <span className="gb-accion-texto">
                 <strong>{titulo}</strong>
                 <span>{detalle}</span>
               </span>
+              <IcPlus size={15} className="gb-accion-mas" aria-hidden="true" />
             </button>
           ))}
         </div>
       </section>
 
-      <section className="gb-historial" aria-labelledby="gb-historial-titulo">
+      <section className="gp-card gb-historial" aria-labelledby="gb-historial-titulo">
         <div className="gp-bloque-cabecera">
-          <h3 id="gb-historial-titulo" className="gb-titulo">Historial del lote</h3>
+          <div>
+            <span className="gp-rotulo">Línea de tiempo</span>
+            <h3 id="gb-historial-titulo" className="gb-titulo">Historial del lote</h3>
+          </div>
           <div className="gb-filtros" role="group" aria-label="Filtrar registros">
             {FILTROS.map(({ valor, etiqueta }) => (
               <button
@@ -228,17 +237,17 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
                     const Icono = ACCIONES.find((accion) => accion.tipo === movimiento.tipo)?.icono ?? IcScale
                     return (
                       <li key={movimiento.clave} className={`gb-movimiento gb-movimiento--${movimiento.tipo}${movimiento.fueraDeRango ? ' is-fuera-de-rango' : ''}`}>
-                        <span className="gb-movimiento-icono" aria-hidden="true"><Icono size={16} /></span>
+                        <span className="gb-movimiento-icono" aria-hidden="true"><Icono size={15} /></span>
                         <span className="gb-movimiento-texto">
                           <strong>{movimiento.titulo}</strong>
                           <span>{movimiento.detalle}</span>
                         </span>
                         <span className="gb-movimiento-acciones">
                           <button type="button" onClick={() => abrir(movimiento.tipo, movimiento.id)} aria-label={`Editar ${movimiento.titulo}`}>
-                            <IcEdit size={15} aria-hidden="true" /> Editar
+                            <IcEdit size={14} aria-hidden="true" /> Editar
                           </button>
                           <button type="button" className="is-peligro" onClick={() => eliminar(movimiento)} aria-label={`Eliminar ${movimiento.titulo}`}>
-                            <IcTrash size={15} aria-hidden="true" />
+                            <IcTrash size={14} aria-hidden="true" />
                           </button>
                         </span>
                       </li>

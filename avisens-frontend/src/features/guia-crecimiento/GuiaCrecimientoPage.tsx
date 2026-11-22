@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { permisosDePlan, ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO } from '@shared/auth/permisos'
 import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
+import { IcArrowRight, IcChart, IcDoc, IcSeed } from '@shared/ui/icons/icons'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import '@shared/ui/admin/AdminKit.css'
 import { useGuiaCrecimiento } from './hooks/useGuiaCrecimiento'
@@ -27,17 +28,33 @@ import './GuiaCiclo.css'
 const MIN_PESO_OBJETIVO_G = 1000
 const MAX_PESO_OBJETIVO_G = 4200
 
+type SeccionGuia = 'curva' | 'plan' | 'reportes'
+
+function seccionDe(valor: string | null): SeccionGuia {
+  if (valor === 'plan' || valor === 'reportes') return valor
+  return 'curva'
+}
+
+const unDecimal = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
+
 function GuiaCrecimientoPage() {
-  const [parametros] = useSearchParams()
+  const [parametros, setParametros] = useSearchParams()
   const valorLote = parametros.get('lote')
   const loteId = valorLote && /^[1-9]\d*$/.test(valorLote) && Number.isSafeInteger(Number(valorLote))
     ? Number(valorLote) : null
+  const seccion = seccionDe(parametros.get('seccion'))
   const guia = useGuiaCrecimiento(loteId)
   useRefetchOnFocus(guia.recargar)
-  const permisos = permisosDePlan(getRol())
-  const puedeComparar = getRol() === ROL_ADMIN || getRol() === ROL_PROPIETARIO
+  const rol = getRol()
+  const permisos = permisosDePlan(rol)
+  const puedeComparar = rol === ROL_ADMIN || rol === ROL_PROPIETARIO
+  const esPropietario = rol === ROL_PROPIETARIO
+  const esOperario = rol === ROL_OPERARIO
   const lote = guia.loteSeleccionado
-  const rutaPadre = lote ? `/lotes?galpon=${lote.galpon.id}` : '/lotes'
+  const rutaPadre = esPropietario
+    ? (lote ? `/granjas/galpones/${lote.galpon.id}` : '/granjas')
+    : (lote ? `/lotes?galpon=${lote.galpon.id}` : '/lotes')
+  const textoVolver = esPropietario ? 'Volver al galpón' : 'Volver a lotes'
   const revisionPlan = guia.plan ? `${guia.plan.id}-${guia.plan.version}-${guia.plan.desactualizado}` : 'sin-plan'
   const proyeccion = useProyeccionLote(loteId, lote?.estado === 'activo', revisionPlan)
   const anomalias = useAnomaliasLote(loteId, lote?.estado === 'activo')
@@ -49,6 +66,13 @@ function GuiaCrecimientoPage() {
   const [abriendoComparativa, setAbriendoComparativa] = useState(false)
   useEffect(() => { setDiaElegido(null) }, [loteId, curva?.dia_actual])
   const diaSeleccionado = Math.min(diaFinal, Math.max(primerDia, diaElegido ?? Math.min(diaHoy, diaFinal)))
+
+  function cambiarSeccion(nueva: SeccionGuia) {
+    const siguientes = new URLSearchParams(parametros)
+    if (nueva === 'curva') siguientes.delete('seccion')
+    else siguientes.set('seccion', nueva)
+    setParametros(siguientes, { replace: true })
+  }
 
   async function guardarPesoObjetivo(pesoObjetivoG: number) {
     if (guia.cargandoDetalle) throw new Error('Espera a que termine de cargar la curva del lote.')
@@ -81,7 +105,13 @@ function GuiaCrecimientoPage() {
   }
   if (lote === null || lote.estado !== 'activo') {
     return (
-      <div className="page-container adm-page guia-page">
+      <div className="page-container adm-page guia-page gdc">
+        <nav className="gdc-miga" aria-label="Navegación">
+          <Link className="gdc-volver-pill" to={rutaPadre}>
+            <IcArrowRight size={15} className="gdc-volver-icono" aria-hidden="true" />
+            <span>{textoVolver}</span>
+          </Link>
+        </nav>
         <header className="guia-resumen-lote">
           <div className="guia-cabecera-fila-superior">
             <div>
@@ -91,13 +121,13 @@ function GuiaCrecimientoPage() {
                 {lote ? `${lote.galpon.nombre} · ${lote.galpon.granja.nombre}` : 'El lote solicitado no está disponible.'}
               </p>
             </div>
-            <div className="guia-cabecera-acciones">
-              <Link className="adm-btn adm-btn--secundario" to={rutaPadre}>Volver a lotes</Link>
-            </div>
           </div>
         </header>
         {guia.error ? (
-          <div className="adm-alerta" role="alert"><span>{guia.error}</span><button type="button" onClick={guia.recargar}>Reintentar</button></div>
+          <div className="adm-alerta" role="alert">
+            <span>{guia.error}</span>
+            <button type="button" onClick={guia.recargar}>Reintentar</button>
+          </div>
         ) : (
           <p className="adm-aviso">La guía de crecimiento está disponible para lotes activos.</p>
         )}
@@ -127,37 +157,44 @@ function GuiaCrecimientoPage() {
   const etapaDia = obtenerEtapaDelDia(diaSeleccionado, fases)
   const totalMuertes = guia.mortalidad.reduce((total, m) => total + m.cantidad_aves, 0)
   const avesVivas = Math.max(0, lote.cantidad_inicial - totalMuertes)
-  const esOperario = getRol() === ROL_OPERARIO
+  const mortalidadPct = lote.cantidad_inicial > 0 ? (totalMuertes / lote.cantidad_inicial) * 100 : 0
+  const ultimoPesaje = curva?.resumen.ultimo_pesaje ?? null
   const rutaBitacora = esOperario
     ? `/bitacora?lote=${lote.id}&vista=peso`
-    : `/granjas?granjaId=${lote.galpon.granja.id}&galpon=${lote.galpon.id}&pestana=bitacora&vista=peso`
+    : `/granjas/galpones/${lote.galpon.id}?pestana=bitacora&vista=peso`
 
   return (
     <div className="page-container adm-page guia-page gdc">
-      {guia.error && <div className="adm-alerta" role="alert"><span>{guia.error}</span><button type="button" onClick={guia.recargar} disabled={guia.guardando}>Reintentar</button></div>}
+      {guia.error && (
+        <div className="adm-alerta" role="alert">
+          <span>{guia.error}</span>
+          <button type="button" onClick={guia.recargar} disabled={guia.guardando}>Reintentar</button>
+        </div>
+      )}
+
+      <nav className="gdc-miga" aria-label="Navegación">
+        <Link className="gdc-volver-pill" to={rutaPadre}>
+          <IcArrowRight size={15} className="gdc-volver-icono" aria-hidden="true" />
+          <span>{textoVolver}</span>
+        </Link>
+      </nav>
 
       <header className="gdc-cabecera" aria-label="Información del lote">
         <div className="gdc-cabecera-texto">
-          <nav className="adm-migas guia-migas" aria-label="Ruta de navegación">
-            <Link className="adm-miga" to={rutaPadre}>Lotes</Link>
-            <span className="adm-miga-sep" aria-hidden="true">›</span>
-            <span className="adm-miga adm-miga--actual" aria-current="page">{lote.codigo}</span>
-          </nav>
-          <h1 className="gdc-titulo">Guía de crecimiento</h1>
+          <span className="adm-eyebrow">
+            <span className="adm-eyebrow-punto" aria-hidden="true" />
+            Lote · Seguimiento de crecimiento
+          </span>
+          <div className="gdc-titulo-fila">
+            <h1 className="gdc-titulo">Guía de crecimiento</h1>
+            <code className="gdc-codigo-pill">{lote.codigo}</code>
+          </div>
           <p className="gdc-contexto">
-            {lote.codigo} · {lote.galpon.nombre} · {lote.galpon.granja.nombre}
+            {lote.galpon.nombre} · {lote.galpon.granja.nombre}
             {lote.linea_genetica ? ` · Línea ${lote.linea_genetica.nombre}` : ''}
           </p>
-          <p className="gdc-contexto gdc-contexto--datos">
-            {totalMuertes > 0 ? (
-              <>
-                <strong>{avesVivas.toLocaleString('es-CO')}</strong> aves vivas ({lote.cantidad_inicial.toLocaleString('es-CO')} iniciales)
-              </>
-            ) : (
-              <>{lote.cantidad_inicial.toLocaleString('es-CO')} aves</>
-            )} · encasetado el {formatearFechaCalendario(lote.fecha_ingreso)}
-          </p>
         </div>
+
         <div className="gdc-cabecera-acciones">
           {puedeComparar && (
             <button
@@ -171,11 +208,39 @@ function GuiaCrecimientoPage() {
           <Link className="adm-btn adm-btn--primario" to={rutaBitacora}>
             + Registrar pesaje
           </Link>
-          <Link className="adm-btn adm-btn--secundario" to={rutaPadre}>
-            Volver a lotes
-          </Link>
         </div>
       </header>
+
+      <ul className="gdc-indicadores" aria-label="Resumen del lote">
+        <li>
+          <span>Avance del ciclo</span>
+          <strong>Día {diaHoy} / {diaFinal}</strong>
+          <small>Encasetado el {formatearFechaCalendario(lote.fecha_ingreso)}</small>
+        </li>
+        <li>
+          <span>Último peso</span>
+          <strong>{ultimoPesaje ? formatearPeso(ultimoPesaje.peso_g) : '—'}</strong>
+          <small>
+            {ultimoPesaje
+              ? `Día ${ultimoPesaje.dia} · ${diasConPesaje.length} ${diasConPesaje.length === 1 ? 'pesaje' : 'pesajes'}`
+              : 'Sin pesajes registrados'}
+          </small>
+        </li>
+        <li>
+          <span>Meta de salida</span>
+          <strong>{pesoMeta ? formatearPeso(pesoMeta) : 'Sin meta'}</strong>
+          <small>{salida ? `Estimada ${formatearFechaCalendario(salida)}` : 'Defínela en Plan de salida'}</small>
+        </li>
+        <li>
+          <span>Aves vivas</span>
+          <strong>{avesVivas.toLocaleString('es-CO')}</strong>
+          <small>
+            {totalMuertes > 0
+              ? `de ${lote.cantidad_inicial.toLocaleString('es-CO')} · ${unDecimal.format(mortalidadPct)} % mortalidad`
+              : `${lote.cantidad_inicial.toLocaleString('es-CO')} iniciales · sin mortalidad`}
+          </small>
+        </li>
+      </ul>
 
       <section className="gdc-ciclo" aria-labelledby="gdc-ciclo-titulo">
         <div className="gdc-ciclo-cabecera">
@@ -206,73 +271,116 @@ function GuiaCrecimientoPage() {
         />
       </section>
 
-      <div className="gdc-cuerpo">
-        <PanelCrecimiento
-          loteId={lote.id}
-          puedeComparar={puedeComparar}
-          lote={lote}
-          indicadores={guia.indicadores}
-          curvaGenetica={guia.curva?.puntos ?? []}
-          curva={curva}
-          diaSeleccionado={diaSeleccionado}
-          problema={proyeccion.problemaCurva}
-          cargando={proyeccion.cargandoCurva}
-          onReintentar={proyeccion.recargar}
-        />
-        <LecturaDelDia
-          curva={curva}
-          dia={diaSeleccionado}
-          referencia={referencia}
-          alertasDelDia={alertasDelCiclo.filter((alerta) => alerta.dia === diaSeleccionado)}
-          etapaDia={etapaDia}
-        />
+      <div className="gdc-tabs" role="tablist" aria-label="Secciones de la guía de crecimiento">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={seccion === 'curva'}
+          className={`gdc-tab${seccion === 'curva' ? ' is-activa' : ''}`}
+          onClick={() => cambiarSeccion('curva')}
+        >
+          <IcChart size={15} aria-hidden="true" />
+          <span>Curva y métricas</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={seccion === 'plan'}
+          className={`gdc-tab${seccion === 'plan' ? ' is-activa' : ''}`}
+          onClick={() => cambiarSeccion('plan')}
+        >
+          <IcSeed size={15} aria-hidden="true" />
+          <span>Plan de salida y alimento</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={seccion === 'reportes'}
+          className={`gdc-tab${seccion === 'reportes' ? ' is-activa' : ''}`}
+          onClick={() => cambiarSeccion('reportes')}
+        >
+          <IcDoc size={15} aria-hidden="true" />
+          <span>Reportes</span>
+        </button>
       </div>
 
-      <section className="gdc-cierre" aria-labelledby="gdc-cierre-titulo">
-        <h2 id="gdc-cierre-titulo">Cierre del lote</h2>
-        <div className="gdc-cierre-layout">
-          <div className="gdc-cierre-col-plan">
-            <MetaDelLote
-              loteId={lote.id}
-              plan={guia.plan}
-              puedeRegistrar={permisos.registrar}
-              cargando={guia.cargandoPlan}
-              error={guia.errorPlan}
-              ocupado={guia.guardando || guia.cargandoPlan || guia.cargandoDetalle}
-              minLibras={MIN_PESO_OBJETIVO_G / 453.59237}
-              onGuardar={guardarPesoObjetivo}
-              onRecalcular={() => void ejecutarAccion(() => guia.recalcularPlan())}
-              onReintentar={guia.recargar}
-            />
-            <ProyeccionFaena
-              loteId={lote.id}
-              curva={curva}
-              plan={guia.plan}
-              prediccion={proyeccion.prediccion}
-              error={proyeccion.errorPrediccion}
-              cargando={proyeccion.cargandoPrediccion}
-            />
-          </div>
-          <div className="gdc-cierre-col-alimento">
-            <ResumenAlimentacionLote
-              plan={guia.plan}
-              alimento={guia.alimento}
-              fases={fases}
-              lote={lote}
-              mortalidad={guia.mortalidad}
-              cargandoAlimento={guia.cargandoAlimento}
-            />
-          </div>
+      {seccion === 'curva' && (
+        <div className="gdc-cuerpo">
+          <PanelCrecimiento
+            loteId={lote.id}
+            puedeComparar={puedeComparar}
+            lote={lote}
+            indicadores={guia.indicadores}
+            curvaGenetica={guia.curva?.puntos ?? []}
+            curva={curva}
+            diaSeleccionado={diaSeleccionado}
+            problema={proyeccion.problemaCurva}
+            cargando={proyeccion.cargandoCurva}
+            onReintentar={proyeccion.recargar}
+          />
+          <LecturaDelDia
+            curva={curva}
+            dia={diaSeleccionado}
+            referencia={referencia}
+            alertasDelDia={alertasDelCiclo.filter((alerta) => alerta.dia === diaSeleccionado)}
+            etapaDia={etapaDia}
+          />
         </div>
-        <ReportesCrecimiento
-          lote={lote}
-          indicadores={guia.indicadores}
-          curva={curva}
-          alimento={guia.alimento}
-          cargandoAlimento={guia.cargandoAlimento}
-          onAbrirComparativa={puedeComparar ? () => setAbriendoComparativa(true) : undefined}
-        />
-      </section>
+      )}
+
+      {seccion === 'plan' && (
+        <section className="gdc-cierre" aria-label="Plan de salida y alimentación">
+          <div className="gdc-cierre-layout">
+            <div className="gdc-cierre-col-plan">
+              <MetaDelLote
+                loteId={lote.id}
+                plan={guia.plan}
+                puedeRegistrar={permisos.registrar}
+                cargando={guia.cargandoPlan}
+                error={guia.errorPlan}
+                ocupado={guia.guardando || guia.cargandoPlan || guia.cargandoDetalle}
+                minLibras={MIN_PESO_OBJETIVO_G / 453.59237}
+                onGuardar={guardarPesoObjetivo}
+                onRecalcular={() => void ejecutarAccion(() => guia.recalcularPlan())}
+                onReintentar={guia.recargar}
+              />
+              <ProyeccionFaena
+                loteId={lote.id}
+                curva={curva}
+                plan={guia.plan}
+                prediccion={proyeccion.prediccion}
+                error={proyeccion.errorPrediccion}
+                cargando={proyeccion.cargandoPrediccion}
+              />
+            </div>
+            <div className="gdc-cierre-col-alimento">
+              <ResumenAlimentacionLote
+                plan={guia.plan}
+                alimento={guia.alimento}
+                fases={fases}
+                lote={lote}
+                mortalidad={guia.mortalidad}
+                cargandoAlimento={guia.cargandoAlimento}
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {seccion === 'reportes' && (
+        <section className="gdc-reportes-wrap" aria-label="Reportes y comparativa">
+          <ReportesCrecimiento
+            lote={lote}
+            indicadores={guia.indicadores}
+            curva={curva}
+            alimento={guia.alimento}
+            cargandoAlimento={guia.cargandoAlimento}
+            onAbrirComparativa={puedeComparar ? () => setAbriendoComparativa(true) : undefined}
+          />
+        </section>
+      )}
 
       {abriendoComparativa && (
         <ModalCompararLotes

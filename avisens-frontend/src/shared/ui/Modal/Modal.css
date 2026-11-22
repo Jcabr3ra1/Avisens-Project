@@ -103,8 +103,17 @@
   margin-bottom: 0.9rem;
 }
 
+fieldset.modal-campo {
+  min-width: 0;
+  margin: 0 0 0.9rem;
+  padding: 0;
+  border: 0;
+}
+
 .modal-campo > span,
+.modal-campo > legend,
 .modal-campo > .modal-campo-etiqueta {
+  padding: 0;
   color: var(--text-secondary);
   font-size: 0.82rem;
   font-weight: 700;

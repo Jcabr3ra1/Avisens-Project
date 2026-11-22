@@ -57,6 +57,7 @@ function FormularioMovimiento({ insumo, tiposPermitidos, onRegistrar, onCerrar }
 
   return (
     <Modal
+      variante="lateral"
       titulo={soloSalida ? 'Registrar salida' : 'Registrar movimiento'}
       subtitulo={`${insumo.nombre} · ${insumo.stock_actual.toLocaleString()} ${insumo.unidad_medida} en bodega`}
       onCerrar={onCerrar}

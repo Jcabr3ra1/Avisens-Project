@@ -56,6 +56,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
 
   return (
     <Modal
+      variante="lateral"
       titulo={editando ? TITULOS_EDICION[tipo] : TITULOS[tipo]}
       onCerrar={onCerrar}
       acciones={

@@ -70,25 +70,51 @@ export function ordenarPorUrgencia(insumos: Insumo[]): Insumo[] {
   })
 }
 
-export type FiltroStock = 'todos' | 'reposicion' | 'inactivos'
+export type FiltroStock = 'todos' | 'reposicion' | 'agotados' | 'inactivos'
+
+function normalizarTexto(valor: string): string {
+  return valor
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
 
 export function filtrarInsumos(
   insumos: Insumo[],
   busqueda: string,
   filtro: FiltroStock,
 ): Insumo[] {
-  const termino = busqueda.trim().toLowerCase()
+  const termino = normalizarTexto(busqueda)
   return insumos.filter((insumo) => {
     if (filtro === 'inactivos' && insumo.activo) return false
     if (filtro !== 'inactivos' && !insumo.activo) return false
     if (filtro === 'reposicion' && estadoStock(insumo) === 'ok') return false
+    if (filtro === 'agotados' && estadoStock(insumo) !== 'agotado') return false
     if (!termino) return true
     return (
-      insumo.nombre.toLowerCase().includes(termino) ||
-      (insumo.tipo?.toLowerCase().includes(termino) ?? false) ||
-      (insumo.ubicacion_almacen?.toLowerCase().includes(termino) ?? false)
+      normalizarTexto(insumo.nombre).includes(termino) ||
+      (insumo.tipo ? normalizarTexto(insumo.tipo).includes(termino) : false) ||
+      (insumo.ubicacion_almacen ? normalizarTexto(insumo.ubicacion_almacen).includes(termino) : false)
     )
   })
+}
+
+export function siguienteInsumo(
+  insumos: Insumo[],
+  actualId: number | null,
+  tecla: string,
+): number | null {
+  if (insumos.length === 0) return null
+  if (tecla === 'Home') return insumos[0].id
+  if (tecla === 'End') return insumos[insumos.length - 1].id
+  if (tecla !== 'ArrowDown' && tecla !== 'ArrowUp') return null
+  const indice = insumos.findIndex((item) => item.id === actualId)
+  if (indice === -1) return insumos[0].id
+  const siguiente = tecla === 'ArrowDown'
+    ? Math.min(insumos.length - 1, indice + 1)
+    : Math.max(0, indice - 1)
+  return insumos[siguiente].id
 }
 
 export const ETIQUETA_MOVIMIENTO: Record<TipoMovimiento, string> = {

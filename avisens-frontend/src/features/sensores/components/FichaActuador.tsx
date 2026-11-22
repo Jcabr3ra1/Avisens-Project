@@ -107,6 +107,7 @@ function FichaActuador({ sensorId, puedeEditar, onCerrar, onGuardado }: Props) {
 
   return (
     <Modal
+      variante="lateral"
       titulo={sensor ? `Ficha del actuador · ${sensor.tipo}` : 'Ficha del actuador'}
       subtitulo={sensor ? `${sensor.galpon.nombre} · ${sensor.dispositivo.nombre}` : undefined}
       onCerrar={onCerrar}
