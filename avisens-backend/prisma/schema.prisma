@@ -566,6 +566,8 @@ model RegistroMortalidad {
   usuario_id       Int
   metodo_registro  String?
   observaciones    String?
+  foto             Bytes?
+  foto_mime_type   String?
   fecha_registro   DateTime @default(now())
 
   lote    Lote    @relation(fields: [lote_id], references: [id])

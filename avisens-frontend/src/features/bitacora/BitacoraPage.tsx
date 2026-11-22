@@ -13,7 +13,9 @@ import AccionesRapidasBitacora from './components/AccionesRapidasBitacora'
 import ActividadRecienteBitacora from './components/ActividadRecienteBitacora'
 import FormularioRegistro from './components/FormularioRegistro'
 import HistorialRegistros from './components/HistorialRegistros'
+import ModalFotoMortalidad from './components/ModalFotoMortalidad'
 import ResumenLote from './components/ResumenLote'
+import { subirFotoMortalidad } from './api/bitacora'
 import { useBitacora } from './hooks/useBitacora'
 import { useInsumosDeGranja } from './hooks/useInsumosDeGranja'
 import {
@@ -97,6 +99,8 @@ function BitacoraPage() {
   }, [datos.lotes, loteSolicitado])
 
   const [form, setForm] = useState<DatosFormulario>(FORMULARIO_INICIAL)
+  const [fotoMortalidad, setFotoMortalidad] = useState<File | null>(null)
+  const [mortalidadFotoId, setMortalidadFotoId] = useState<number | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
 
@@ -174,6 +178,7 @@ function BitacoraPage() {
 
   const abrir = (tipo: TipoRegistro) => {
     setForm(FORMULARIO_INICIAL)
+    setFotoMortalidad(null)
     setErrorForm('')
     setEditandoId(null)
     setModal(tipo)
@@ -184,6 +189,7 @@ function BitacoraPage() {
     const registro = registros.find((item) => item.id === id)
     if (!registro) return
     setForm(formularioDesde(tipo, registro))
+    setFotoMortalidad(null)
     setErrorForm('')
     setEditandoId(id)
     setModal(tipo)
@@ -205,13 +211,26 @@ function BitacoraPage() {
 
     setGuardando(true)
     setErrorForm('')
+    const tipoActual = modal
+    const archivoAdjunto = tipoActual === 'mortalidad' ? fotoMortalidad : null
     const accion = editandoId !== null
-      ? datos.actualizar(modal, editandoId, payloadRegistro(modal, form, loteSeleccionadoId))
-      : datos.crear(modal, payloadRegistro(modal, form, loteSeleccionadoId))
+      ? datos.actualizar(tipoActual, editandoId, payloadRegistro(tipoActual, form, loteSeleccionadoId))
+      : datos.crear(tipoActual, payloadRegistro(tipoActual, form, loteSeleccionadoId))
     void accion
-      .then(() => {
+      .then(async (guardado) => {
+        if (archivoAdjunto && guardado?.id) {
+          try {
+            const res = await subirFotoMortalidad(guardado.id, archivoAdjunto)
+            datos.marcarFotoMortalidad(guardado.id, res.mime_type)
+          } catch (falloFoto) {
+            toast.error(
+              mensajeDeError(falloFoto, 'El registro se guardó, pero no se pudo subir la fotografía.'),
+            )
+          }
+        }
         setModal(null)
         setEditandoId(null)
+        setFotoMortalidad(null)
       })
       .catch((error) => setErrorForm(mensajeDeError(error, 'No se pudo guardar el registro.')))
       .finally(() => setGuardando(false))
@@ -484,6 +503,7 @@ function BitacoraPage() {
                 onNuevo={() => abrir(vista)}
                 onEditar={(id) => abrirEdicion(vista, id)}
                 onEliminar={(id) => borrar(vista, id)}
+                onVerFoto={vista === 'mortalidad' ? (id) => setMortalidadFotoId(id) : undefined}
                 resaltadoId={vista === 'peso' ? pesajes.find((item) => item.peso_promedio_g > 10000)?.id ?? null : null}
               />
             )}
@@ -503,11 +523,32 @@ function BitacoraPage() {
             if (guardando) return
             setModal(null)
             setEditandoId(null)
+            setFotoMortalidad(null)
           }}
           editando={editandoId !== null}
           insumos={insumosGranja}
+          fotoMortalidad={modal === 'mortalidad' ? fotoMortalidad : null}
+          tieneFotoActual={
+            modal === 'mortalidad' && editandoId !== null
+              ? Boolean(mortalidad.find((item) => item.id === editandoId)?.foto_mime_type)
+              : false
+          }
+          onCambiarFotoMortalidad={modal === 'mortalidad' ? setFotoMortalidad : undefined}
+          onErrorFoto={modal === 'mortalidad' ? setErrorForm : undefined}
         />
       )}
+
+      {mortalidadFotoId !== null && (() => {
+        const registroFoto = mortalidad.find((item) => item.id === mortalidadFotoId)
+        if (!registroFoto) return null
+        return (
+          <ModalFotoMortalidad
+            registro={registroFoto}
+            onCerrar={() => setMortalidadFotoId(null)}
+            onActualizado={datos.marcarFotoMortalidad}
+          />
+        )
+      })()}
     </div>
   )
 }

@@ -9,6 +9,7 @@ import {
   filtroRegistrosDeLote,
   verificarAccesoLote,
 } from '../../common/auth/alcance';
+import { validarImagenBinaria } from '../../common/media/validar-imagen';
 
 const MORTALIDAD_SELECT = {
   id: true,
@@ -21,6 +22,7 @@ const MORTALIDAD_SELECT = {
   usuario_id: true,
   metodo_registro: true,
   observaciones: true,
+  foto_mime_type: true,
   fecha_registro: true,
   lote: {
     select: {
@@ -138,5 +140,41 @@ export class RegistrosMortalidadService {
 
     await this.prisma.registroMortalidad.delete({ where: { id } });
     return { id, eliminado: true };
+  }
+
+  async subirFoto(id: number, cuerpo: unknown, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+    const { buffer, mimeType, tamano } = validarImagenBinaria(cuerpo);
+    await this.prisma.registroMortalidad.update({
+      where: { id },
+      data: { foto: buffer, foto_mime_type: mimeType },
+    });
+    return { id, tiene_foto: true, mime_type: mimeType, tamano_bytes: tamano };
+  }
+
+  async obtenerFoto(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+    const registro = await this.prisma.registroMortalidad.findUnique({
+      where: { id },
+      select: { foto: true, foto_mime_type: true },
+    });
+    if (!registro?.foto || !registro.foto_mime_type) {
+      throw new NotFoundException(
+        'Este registro de mortalidad no tiene foto almacenada',
+      );
+    }
+    return {
+      buffer: Buffer.from(registro.foto),
+      mimeType: registro.foto_mime_type,
+    };
+  }
+
+  async eliminarFoto(id: number, solicitante: Solicitante) {
+    await this.obtener(id, solicitante);
+    await this.prisma.registroMortalidad.update({
+      where: { id },
+      data: { foto: null, foto_mime_type: null },
+    });
+    return { id, tiene_foto: false };
   }
 }

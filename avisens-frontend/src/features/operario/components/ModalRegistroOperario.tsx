@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import { IcAlert, IcSeed } from '@shared/ui/icons/icons'
 import { diasDeVida, fechaDeHoy } from '@shared/utils/fechas'
+import SelectorFotoMortalidad from '@features/bitacora/components/SelectorFotoMortalidad'
 import { AGUA_MAXIMO_LITROS, ALIMENTO_MAXIMO_KG } from '@features/consumos-diarios/model/consumoDiario'
 import type { JornadaOperario } from '../model/jornadaOperario'
 import { validarConsumo, validarFechaRegistro, validarMortalidad } from '../model/registroOperario'
@@ -17,6 +18,7 @@ type Props = {
   onRegistrarMortalidad: (
     loteId: number,
     registro: { fecha: string; cantidad_aves: number; causa_presuntiva?: string; disposicion?: string; observaciones?: string },
+    foto?: File | null,
   ) => Promise<void>
   onRegistrarConsumo: (
     loteId: number,
@@ -47,6 +49,7 @@ function ModalRegistroOperario({
   const [causa, setCausa] = useState('')
   const [disposicion, setDisposicion] = useState('')
   const [observaciones, setObservaciones] = useState('')
+  const [foto, setFoto] = useState<File | null>(null)
   const [alimento, setAlimento] = useState('')
   const [agua, setAgua] = useState('')
   const [error, setError] = useState('')
@@ -71,13 +74,17 @@ function ModalRegistroOperario({
 
     try {
       if (esMortalidad) {
-        await onRegistrarMortalidad(lote.id, {
-          fecha,
-          cantidad_aves: Number(cantidadAves),
-          causa_presuntiva: causa.trim() || undefined,
-          disposicion: disposicion.trim() || undefined,
-          observaciones: observaciones.trim() || undefined,
-        })
+        await onRegistrarMortalidad(
+          lote.id,
+          {
+            fecha,
+            cantidad_aves: Number(cantidadAves),
+            causa_presuntiva: causa.trim() || undefined,
+            disposicion: disposicion.trim() || undefined,
+            observaciones: observaciones.trim() || undefined,
+          },
+          foto,
+        )
       } else {
         await onRegistrarConsumo(lote.id, {
           fecha,
@@ -180,6 +187,12 @@ function ModalRegistroOperario({
                 placeholder="Ej.: estaban concentradas en la esquina norte."
               />
             </label>
+            <SelectorFotoMortalidad
+              archivo={foto}
+              deshabilitado={guardando}
+              onSeleccionar={setFoto}
+              onError={setError}
+            />
           </>
         ) : (
           <div className="modal-fila">

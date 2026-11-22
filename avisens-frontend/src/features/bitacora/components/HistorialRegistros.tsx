@@ -1,5 +1,7 @@
 import type { PermisosRegistro } from '@shared/auth/permisos'
+import { IcPaperclip } from '@shared/ui/icons/icons'
 import type { FilaRegistro } from '../model/resumenBitacora'
+import './FotoMortalidad.css'
 
 type Props = {
   titulo: string
@@ -9,6 +11,7 @@ type Props = {
   onNuevo: () => void
   onEditar: (id: number) => void
   onEliminar: (id: number) => void
+  onVerFoto?: (id: number) => void
   resaltadoId?: number | null
 }
 
@@ -24,9 +27,10 @@ function HistorialRegistros({
   onNuevo,
   onEditar,
   onEliminar,
+  onVerFoto,
   resaltadoId = null,
 }: Props) {
-  const hayAcciones = permisos.editar || permisos.eliminar
+  const hayAcciones = permisos.editar || permisos.eliminar || Boolean(onVerFoto)
 
   return (
     <section className="bit-card bit-historial" aria-labelledby="bit-historial-titulo">
@@ -73,6 +77,16 @@ function HistorialRegistros({
                   {hayAcciones && (
                     <td className="bit-col-acciones">
                       <span className="bit-fila-acciones">
+                        {onVerFoto && (
+                          <button
+                            type="button"
+                            className={`mort-foto-chip${fila.tieneFoto ? ' mort-foto-chip--activa' : ''}`}
+                            onClick={() => onVerFoto(fila.id)}
+                          >
+                            <IcPaperclip size={13} aria-hidden="true" />
+                            {fila.tieneFoto ? 'Ver foto' : 'Foto'}
+                          </button>
+                        )}
                         {permisos.editar && (
                           <button
                             type="button"

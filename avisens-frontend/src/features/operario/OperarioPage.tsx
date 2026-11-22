@@ -417,8 +417,8 @@ function OperarioPage() {
           loteInicialId={dashboard.lote?.id}
           guardando={jornada.guardando}
           onCerrar={() => setRegistroAbierto(null)}
-          onRegistrarMortalidad={async (loteId, registro) => {
-            await jornada.registrarMortalidad(loteId, registro)
+          onRegistrarMortalidad={async (loteId, registro, foto) => {
+            await jornada.registrarMortalidad(loteId, registro, foto)
             void dashboard.recargar()
             void registrosLote.recargar()
           }}

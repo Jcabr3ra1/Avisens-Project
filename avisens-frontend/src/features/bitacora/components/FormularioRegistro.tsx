@@ -9,6 +9,7 @@ import {
   type FormularioRegistro as Datos,
   type TipoRegistro,
 } from '../model/bitacora'
+import SelectorFotoMortalidad from './SelectorFotoMortalidad'
 
 type Props = {
   tipo: TipoRegistro
@@ -23,6 +24,11 @@ type Props = {
   editando?: boolean
   // Vacunas y medicamentos de bodega que se pueden indicar en un evento sanitario.
   insumos?: Insumo[]
+  // Evidencia fotográfica opcional para registros de mortalidad.
+  fotoMortalidad?: File | null
+  tieneFotoActual?: boolean
+  onCambiarFotoMortalidad?: (archivo: File | null) => void
+  onErrorFoto?: (mensaje: string) => void
 }
 
 const ID_FORMULARIO = 'formulario-registro'
@@ -47,7 +53,21 @@ const EVENTOS_SANITARIOS = [
   ['revision', 'Revisión'],
 ] as const
 
-function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar, onCerrar, editando = false, insumos = [] }: Props) {
+function FormularioRegistro({
+  tipo,
+  form,
+  guardando,
+  error,
+  onCambiar,
+  onGuardar,
+  onCerrar,
+  editando = false,
+  insumos = [],
+  fotoMortalidad = null,
+  tieneFotoActual = false,
+  onCambiarFotoMortalidad,
+  onErrorFoto,
+}: Props) {
   const fechaRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -145,6 +165,15 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
                 onChange={(evento) => onCambiar('causa_presuntiva', evento.target.value)}
               />
             </label>
+            {onCambiarFotoMortalidad && (
+              <SelectorFotoMortalidad
+                archivo={fotoMortalidad}
+                tieneFotoActual={tieneFotoActual}
+                deshabilitado={guardando}
+                onSeleccionar={onCambiarFotoMortalidad}
+                onError={onErrorFoto}
+              />
+            )}
           </>
         )}
 
