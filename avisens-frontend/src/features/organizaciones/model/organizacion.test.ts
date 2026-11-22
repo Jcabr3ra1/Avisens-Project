@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { Organizacion } from '../api/organizaciones'
-import { actividadDe, etiquetaPlan, filtrarOrganizaciones, inicialesOrganizacion, normalizarPlan, resumirOrganizaciones } from './organizacion'
+import {
+  actividadDe,
+  etiquetaPlan,
+  filtrarOrganizaciones,
+  inicialesOrganizacion,
+  normalizarPlan,
+  resumirOrganizaciones,
+  siguienteSeleccion,
+} from './organizacion'
 
 function organizacion(cambios: Partial<Organizacion> = {}): Organizacion {
   return {
@@ -64,9 +72,17 @@ describe('filtrarOrganizaciones', () => {
     expect(ids(filtrarOrganizaciones(lista, { texto: '800', estado: 'todas', orden: 'nombre-asc' }))).toEqual([3])
   })
 
-  it('filtra por estado', () => {
+  it('filtra por estado, incluyendo activas sin actividad reciente', () => {
+    const ahora = new Date('2026-10-17T12:00:00Z')
+    const conActividad = [
+      organizacion({ id: 1, nombre: 'Reciente', activa: true, ultima_actividad: '2026-10-16T12:00:00Z' }),
+      organizacion({ id: 2, nombre: 'Sin ingreso', activa: true, ultima_actividad: null }),
+      organizacion({ id: 3, nombre: 'Antigua', activa: true, ultima_actividad: '2026-10-01T12:00:00Z' }),
+      organizacion({ id: 4, nombre: 'Suspendida vieja', activa: false, ultima_actividad: null }),
+    ]
     expect(ids(filtrarOrganizaciones(lista, { texto: '', estado: 'activas', orden: 'nombre-asc' }))).toEqual([1, 3])
     expect(ids(filtrarOrganizaciones(lista, { texto: '', estado: 'suspendidas', orden: 'nombre-asc' }))).toEqual([2])
+    expect(ids(filtrarOrganizaciones(conActividad, { texto: '', estado: 'sin-actividad', orden: 'nombre-asc' }, ahora))).toEqual([3, 2])
   })
 
   it('ordena y desempata por nombre sin mutar la lista original', () => {
@@ -104,5 +120,23 @@ describe('actividadDe', () => {
 
   it('distingue a la organización donde nadie ha ingresado', () => {
     expect(actividadDe({ ultima_actividad: null }, ahora)).toEqual({ tono: 'nunca', texto: 'Nadie ha ingresado aún' })
+  })
+})
+
+describe('siguienteSeleccion', () => {
+  const ids = [10, 20, 30]
+
+  it('avanza y retrocede sin salirse de los límites', () => {
+    expect(siguienteSeleccion(ids, 10, 'ArrowDown')).toBe(20)
+    expect(siguienteSeleccion(ids, 30, 'ArrowDown')).toBe(30)
+    expect(siguienteSeleccion(ids, 20, 'ArrowUp')).toBe(10)
+    expect(siguienteSeleccion(ids, 10, 'ArrowUp')).toBe(10)
+    expect(siguienteSeleccion(ids, 20, 'Home')).toBe(10)
+    expect(siguienteSeleccion(ids, 20, 'End')).toBe(30)
+  })
+
+  it('ignora otras teclas o listas vacías', () => {
+    expect(siguienteSeleccion(ids, 10, 'Tab')).toBeNull()
+    expect(siguienteSeleccion([], 10, 'ArrowDown')).toBeNull()
   })
 })

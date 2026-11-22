@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { IcBuilding } from '@shared/ui/icons/icons'
 import Modal from '@shared/ui/Modal/Modal'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { CrearOrganizacionPayload, Organizacion } from '../api/organizaciones'
@@ -44,8 +45,10 @@ function FormularioOrganizacion({ editando, planesConocidos, onGuardar, onCerrar
 
   return (
     <Modal
-      titulo={editando ? 'Editar organización' : 'Nueva organización'}
-      subtitulo="Una organización es una empresa cliente. De ella cuelgan sus usuarios y sus granjas."
+      variante="lateral"
+      icono={<IcBuilding size={20} />}
+      titulo={editando ? 'Editar cliente' : 'Nuevo cliente'}
+      subtitulo="Actualiza los datos principales del cliente. De él dependen sus usuarios y granjas."
       onCerrar={onCerrar}
       acciones={
         <>

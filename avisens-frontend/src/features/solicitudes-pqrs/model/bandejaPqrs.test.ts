@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { enlaceTelefono, enlaceWhatsApp, organizarBandeja, plazoDe, resumirBandeja } from './bandejaPqrs'
+import { enlaceTelefono, enlaceWhatsApp, organizarBandeja, plazoDe, resumirBandeja, siguienteSolicitudId } from './bandejaPqrs'
 import type { SolicitudPqrs } from './solicitudPqrs'
 
 const AHORA = new Date('2026-10-16T12:00:00Z')
@@ -88,6 +88,25 @@ describe('organizarBandeja', () => {
     expect(resumen).toEqual(expect.objectContaining({ porAtender: 5, vencidas: 1, porVencer: 1, sinTomar: 4, resueltasSemana: 2 }))
     expect(resumen.porVista).toEqual({ atender: 5, mias: 2, resueltas: 2, todas: 7 })
     expect(resumen.respuestaPromedioHoras).toBe(15)
+  })
+
+  it('cuando soloVencidas está activo muestra únicamente solicitudes vencidas', () => {
+    const ids = organizarBandeja(lista, { ...filtros, soloVencidas: true }, AHORA)
+      .flatMap((seccion) => seccion.items.map((item) => item.id))
+    expect(ids).toEqual([2])
+  })
+})
+
+describe('siguienteSolicitudId', () => {
+  it('avanza, retrocede y salta al inicio o final sin desbordar', () => {
+    expect(siguienteSolicitudId([1, 2, 3], 1, 'ArrowDown')).toBe(2)
+    expect(siguienteSolicitudId([1, 2, 3], 3, 'ArrowDown')).toBe(3)
+    expect(siguienteSolicitudId([1, 2, 3], 2, 'ArrowUp')).toBe(1)
+    expect(siguienteSolicitudId([1, 2, 3], 1, 'ArrowUp')).toBe(1)
+    expect(siguienteSolicitudId([1, 2, 3], 2, 'Home')).toBe(1)
+    expect(siguienteSolicitudId([1, 2, 3], 1, 'End')).toBe(3)
+    expect(siguienteSolicitudId([1, 2, 3], 1, 'Tab')).toBeNull()
+    expect(siguienteSolicitudId([], null, 'ArrowDown')).toBeNull()
   })
 })
 

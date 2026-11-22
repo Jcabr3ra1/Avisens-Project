@@ -1,64 +1,85 @@
-import * as Tabs from '@radix-ui/react-tabs'
-import { IcSearch } from '@shared/ui/icons/icons'
-import type { FiltroRolUsuario } from '../hooks/useFiltroUsuarios'
-import type { ResumenDeUsuarios } from '../hooks/useResumenUsuarios'
+import type { RefObject } from 'react'
+import { IcChevronDown, IcClose, IcSearch } from '@shared/ui/icons/icons'
+import type { FiltroEstadoUsuario } from '../hooks/useFiltroUsuarios'
 
 type Props = {
+  buscadorRef: RefObject<HTMLInputElement | null>
   busqueda: string
   visibles: number
   total: number
   esPropietario: boolean
-  rolFiltro: FiltroRolUsuario
-  resumen: ResumenDeUsuarios
+  estadoFiltro: FiltroEstadoUsuario
+  hayFiltros: boolean
   onBuscar: (texto: string) => void
-  onCambiarRol: (rol: FiltroRolUsuario) => void
+  onCambiarEstado: (estado: FiltroEstadoUsuario) => void
+  onLimpiar: () => void
 }
 
 function BarraUsuarios({
+  buscadorRef,
   busqueda,
   visibles,
   total,
   esPropietario,
-  rolFiltro,
-  resumen,
+  estadoFiltro,
+  hayFiltros,
   onBuscar,
-  onCambiarRol,
+  onCambiarEstado,
+  onLimpiar,
 }: Props) {
   return (
     <div className="usuarios-toolbar">
       <label className="usuarios-search">
-        <IcSearch size={15} />
-        <span className="usuarios-sr-only">Buscar usuarios</span>
+        <IcSearch size={16} aria-hidden="true" />
+        <span className="usuarios-sr-only">Buscar personas</span>
         <input
+          ref={buscadorRef}
           type="search"
-          placeholder="Buscar por nombre, usuario, correo o cédula…"
+          placeholder="Buscar por nombre, usuario, correo, cédula u organización…"
           value={busqueda}
           onChange={(evento) => onBuscar(evento.target.value)}
+          autoComplete="off"
         />
+        {busqueda ? (
+          <button
+            type="button"
+            className="usuarios-limpiar-busqueda"
+            onClick={() => onBuscar('')}
+            aria-label="Limpiar búsqueda"
+          >
+            <IcClose size={13} aria-hidden="true" />
+          </button>
+        ) : (
+          <kbd aria-hidden="true">/</kbd>
+        )}
       </label>
 
-      {!esPropietario ? (
-        <Tabs.Root value={rolFiltro} onValueChange={(v) => onCambiarRol(v as FiltroRolUsuario)}>
-          <Tabs.List className="usuarios-tabs-list" aria-label="Filtrar personas por rol">
-            <Tabs.Trigger value="todos" className="usuarios-tab-trigger">
-              Todos <span>{resumen.total}</span>
-            </Tabs.Trigger>
-            <Tabs.Trigger value="Administrador" className="usuarios-tab-trigger">
-              Administradores <span>{resumen.administradores}</span>
-            </Tabs.Trigger>
-            <Tabs.Trigger value="Propietario" className="usuarios-tab-trigger">
-              Propietarios <span>{resumen.propietarios}</span>
-            </Tabs.Trigger>
-            <Tabs.Trigger value="Operario" className="usuarios-tab-trigger">
-              Operarios <span>{resumen.operarios}</span>
-            </Tabs.Trigger>
-          </Tabs.List>
-        </Tabs.Root>
-      ) : (
+      <div className="usuarios-toolbar-controles">
+        {!esPropietario && (
+          <label className="usuarios-desplegable">
+            <span className="usuarios-sr-only">Filtrar por estado de acceso</span>
+            <select
+              value={estadoFiltro}
+              onChange={(evento) => onCambiarEstado(evento.target.value as FiltroEstadoUsuario)}
+            >
+              <option value="todos">Estado: todos</option>
+              <option value="activos">Estado: activos</option>
+              <option value="inactivos">Estado: inactivos</option>
+            </select>
+            <IcChevronDown size={16} aria-hidden="true" />
+          </label>
+        )}
+
         <span className="usuarios-toolbar-count" aria-live="polite">
           {visibles} de {total}
         </span>
-      )}
+
+        {hayFiltros && (
+          <button type="button" className="usuarios-filtro-limpiar" onClick={onLimpiar}>
+            Limpiar <IcClose size={13} aria-hidden="true" />
+          </button>
+        )}
+      </div>
     </div>
   )
 }

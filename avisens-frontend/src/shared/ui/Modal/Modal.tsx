@@ -12,6 +12,7 @@ type Props = {
   children: ReactNode
   acciones?: ReactNode
   ancho?: 'compacto' | 'normal' | 'ancho'
+  variante?: 'centrado' | 'lateral'
   abierto?: boolean
   onSalida?: () => void
   bloqueado?: boolean
@@ -47,26 +48,44 @@ function aislarFondo(dialogo: HTMLElement | null) {
   })
 }
 
-function ContenidoModal({ titulo, subtitulo, onCerrar, children, acciones, ancho = 'normal', bloqueado = false, focoInicial, descripcionId, icono }: Props) {
+function ContenidoModal({ titulo, subtitulo, onCerrar, children, acciones, ancho = 'normal', variante = 'centrado', bloqueado = false, focoInicial, descripcionId, icono }: Props) {
   const tarjeta = useRef<HTMLDivElement>(null)
   const focoPrevio = useRef<HTMLElement | null>(obtenerFocoDeRetorno())
   const tituloId = useId()
   const reducir = useReducedMotion()
   const estilos = getComputedStyle(document.documentElement)
-  const entrada = parseFloat(estilos.getPropertyValue('--motion-dialog-enter')) / 1000 || 0.2
+  const entrada = parseFloat(estilos.getPropertyValue('--motion-dialog-enter')) / 1000 || 0.22
   const salida = parseFloat(estilos.getPropertyValue('--motion-dialog-exit')) / 1000 || 0.16
   const curva = estilos.getPropertyValue('--ease-standard').match(/[\d.]+/g)?.map(Number) as [number, number, number, number] | undefined
   const ease = curva?.length === 4 ? curva : [0.2, 0, 0, 1] as const
   const cerrar = () => { if (!bloqueado) onCerrar() }
+  const esLateral = variante === 'lateral'
 
   useEffect(() => aislarFondo(tarjeta.current), [])
   useEffect(() => { if (bloqueado) tarjeta.current?.focus() }, [bloqueado])
   useFocoAtrapado(tarjeta, true, cerrar, focoPrevio.current, focoInicial)
 
+  const inicialTarjeta = reducir
+    ? { opacity: 0 }
+    : esLateral
+      ? { opacity: 0, transform: 'translateX(36px)' }
+      : { opacity: 0, transform: 'translateY(10px) scale(0.97)' }
+  const visibleTarjeta = reducir
+    ? { opacity: 1 }
+    : esLateral
+      ? { opacity: 1, transform: 'translateX(0px)' }
+      : { opacity: 1, transform: 'translateY(0px) scale(1)' }
+  const salidaTarjeta = reducir
+    ? { opacity: 0, transition: { duration: salida, ease } }
+    : esLateral
+      ? { opacity: 0, transform: 'translateX(28px)', transition: { duration: salida, ease } }
+      : { opacity: 0, transform: 'translateY(8px) scale(0.97)', transition: { duration: salida, ease } }
+
   return (
     <motion.div
-      className="modal-velo"
+      className={`modal-velo${esLateral ? ' modal-velo--lateral' : ''}`}
       role="presentation"
+      onClick={(evento) => { if (evento.target === evento.currentTarget) cerrar() }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: salida, ease } }}
@@ -74,20 +93,20 @@ function ContenidoModal({ titulo, subtitulo, onCerrar, children, acciones, ancho
     >
       <motion.div
         ref={tarjeta}
-        className={`modal-tarjeta${ancho === 'ancho' ? ' modal-tarjeta--ancha' : ancho === 'compacto' ? ' modal-tarjeta--compacta' : ''}`}
+        className={`modal-tarjeta${esLateral ? ' modal-tarjeta--lateral' : ''}${ancho === 'ancho' ? ' modal-tarjeta--ancha' : ancho === 'compacto' ? ' modal-tarjeta--compacta' : ''}`}
         role="dialog"
         tabIndex={-1}
         aria-modal="true"
         aria-labelledby={tituloId}
         aria-describedby={descripcionId}
         aria-busy={bloqueado || undefined}
-        initial={{ opacity: 0, transform: reducir ? 'none' : 'translateY(10px) scale(0.97)' }}
-        animate={{ opacity: 1, transform: reducir ? 'none' : 'translateY(0px) scale(1)' }}
-        exit={{ opacity: 0, transform: reducir ? 'none' : 'translateY(8px) scale(0.97)', transition: { duration: salida, ease } }}
+        initial={inicialTarjeta}
+        animate={visibleTarjeta}
+        exit={salidaTarjeta}
         transition={{ duration: entrada, ease }}
       >
         <header className="modal-cabecera">
-          {icono}
+          {icono && <span className={esLateral ? 'modal-icono-caja' : undefined} aria-hidden="true">{icono}</span>}
           <div className="modal-ident">
             <h2 id={tituloId} className="modal-titulo">{titulo}</h2>
             {subtitulo && <p className="modal-sub">{subtitulo}</p>}

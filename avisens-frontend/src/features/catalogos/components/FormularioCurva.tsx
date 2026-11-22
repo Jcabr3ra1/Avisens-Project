@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
+import { IcChart } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import type {
   CrearCurvaObjetivoPayload,
@@ -99,6 +100,8 @@ function FormularioCurva({ editando, onGuardar, onCerrar }: Props) {
     <Modal
       titulo={editando ? 'Editar punto de curva' : 'Nuevo punto de curva'}
       subtitulo="Un punto es una combinación de marca, sexo y día de vida. El peso del lote se compara contra el último punto que no supere su día."
+      variante="lateral"
+      icono={<IcChart size={20} />}
       onCerrar={onCerrar}
       acciones={
         <>

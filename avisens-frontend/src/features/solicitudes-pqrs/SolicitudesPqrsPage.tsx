@@ -1,43 +1,52 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import * as Tabs from '@radix-ui/react-tabs'
 import { getUsuario } from '@shared/api'
-import { IcChevronDown, IcRefresh, IcSearch } from '@shared/ui/icons/icons'
+import { IcChevronDown, IcChevronRight, IcClose, IcSearch } from '@shared/ui/icons/icons'
+import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
 import PanelSolicitudPqrs from './components/PanelSolicitudPqrs'
 import { useSolicitudesPqrs } from './hooks/useSolicitudesPqrs'
 import {
   duracion,
+  grupoDe,
   organizarBandeja,
   plazoDe,
   resumirBandeja,
+  siguienteSolicitudId,
   type VistaPqrs,
 } from './model/bandejaPqrs'
 import { CATEGORIAS_PQRS, ETIQUETAS_ESTADO, type SolicitudPqrs } from './model/solicitudPqrs'
-import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
 import '@shared/ui/admin/AdminKit.css'
 import '@shared/ui/movimiento.css'
 import './SolicitudesPqrsPage.css'
-
-const VISTAS: Array<{ valor: VistaPqrs; etiqueta: string }> = [
-  { valor: 'atender', etiqueta: 'Por atender' },
-  { valor: 'mias', etiqueta: 'Mías' },
-  { valor: 'resueltas', etiqueta: 'Resueltas' },
-  { valor: 'todas', etiqueta: 'Todas' },
-]
 
 function iniciales(nombre: string | null | undefined): string {
   const partes = (nombre ?? '').trim().split(/\s+/).filter(Boolean)
   return partes.slice(0, 2).map((parte) => parte[0]?.toUpperCase()).join('') || '—'
 }
 
-function Indicador({ etiqueta, valor, nota, tono }: { etiqueta: string; valor: string | number | null; nota: string; tono?: 'alerta' }) {
+function IndicadorFiltro({ etiqueta, valor, nota, activo, tono, orden, onClick }: {
+  etiqueta: string
+  valor: string | number | null
+  nota: string
+  activo: boolean
+  tono?: 'peligro' | 'alerta'
+  orden: number
+  onClick: () => void
+}) {
   return (
-    <li className={`sop-indicador${tono ? ` sop-indicador--${tono}` : ''}`}>
-      <span className="sop-indicador-label">{etiqueta}</span>
-      <strong className="sop-indicador-valor">
-        {valor === null ? <span className="sop-esqueleto-num org-brilla" aria-hidden="true" /> : valor}
-      </strong>
-      <span className="sop-indicador-nota">{nota}</span>
+    <li className="sop-indicador org-aparece" style={{ '--orden': orden } as CSSProperties}>
+      <button
+        type="button"
+        className={`sop-indicador-btn${activo ? ' is-activo' : ''}${tono ? ` is-${tono}` : ''}`}
+        aria-pressed={activo}
+        onClick={onClick}
+      >
+        <span className="sop-indicador-label">{etiqueta}</span>
+        <strong className="sop-indicador-valor">
+          {valor === null ? <span className="sop-esqueleto-num org-brilla" aria-hidden="true" /> : valor}
+        </strong>
+        <span className="sop-indicador-nota">{nota}</span>
+      </button>
     </li>
   )
 }
@@ -49,15 +58,25 @@ function TarjetaSolicitud({ solicitud, seleccionada, ahora, onSeleccionar }: {
   onSeleccionar: () => void
 }) {
   const plazo = plazoDe(solicitud, ahora)
+  const grupo = grupoDe(solicitud, ahora)
   const contacto = solicitud.prospecto.nombre || solicitud.prospecto.telefono || solicitud.prospecto.email || 'Sin contacto'
+  const categoriaClase = solicitud.categoria.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
   return (
-    <li className={`sop-item${seleccionada ? ' is-seleccionada' : ''}`}>
-      <label className="sop-tarjeta">
-        <input type="radio" name="solicitud-pqrs" className="sr-only" checked={seleccionada} onChange={onSeleccionar} />
+    <li
+      className={`sop-item${seleccionada ? ' is-seleccionada' : ''}`}
+      role="option"
+      aria-selected={seleccionada}
+    >
+      <button
+        type="button"
+        className={`sop-tarjeta sop-tarjeta--${grupo}`}
+        onClick={onSeleccionar}
+      >
         <span className="sop-tarjeta-info">
           <span className="sop-tarjeta-linea">
             <span className="sop-radicado">{solicitud.radicado}</span>
-            <span className={`sop-categoria sop-categoria--${solicitud.categoria.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()}`}>{solicitud.categoria}</span>
+            <span className={`sop-categoria sop-categoria--${categoriaClase}`}>{solicitud.categoria}</span>
           </span>
           <span className="sop-tarjeta-asunto">{solicitud.asunto || 'Sin asunto'}</span>
           <span className="sop-tarjeta-contacto">{contacto}</span>
@@ -67,9 +86,10 @@ function TarjetaSolicitud({ solicitud, seleccionada, ahora, onSeleccionar }: {
           {solicitud.responsable
             ? <span className="sop-responsable-avatar" aria-hidden="true">{iniciales(solicitud.responsable.nombre_completo)}</span>
             : <span className="sop-responsable-vacio">Sin tomar</span>}
+          <IcChevronRight size={15} className="sop-tarjeta-flecha" aria-hidden="true" />
           <span className="sr-only">{solicitud.responsable ? `A cargo de ${solicitud.responsable.nombre_completo}` : 'Sin responsable'} · {ETIQUETAS_ESTADO[solicitud.estado]}</span>
         </span>
-      </label>
+      </button>
     </li>
   )
 }
@@ -79,40 +99,81 @@ function SolicitudesPqrsPage() {
   const usuarioId = getUsuario()?.id ?? null
   const [parametros, setParametros] = useSearchParams()
   const [vista, setVista] = useState<VistaPqrs>('atender')
+  const [soloVencidas, setSoloVencidas] = useState(false)
   const [texto, setTexto] = useState('')
   const [categoria, setCategoria] = useState('todas')
+  const [panelMovilAbierto, setPanelMovilAbierto] = useState(false)
   const [ahora, setAhora] = useState(() => new Date())
+  const buscadorRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const reloj = window.setInterval(() => setAhora(new Date()), 60_000)
     return () => window.clearInterval(reloj)
   }, [])
 
+  useEffect(() => {
+    function atajoBuscar(evento: globalThis.KeyboardEvent) {
+      if (evento.key !== '/' || evento.metaKey || evento.ctrlKey || evento.altKey) return
+      const activo = document.activeElement
+      if (activo instanceof HTMLInputElement || activo instanceof HTMLTextAreaElement || activo instanceof HTMLSelectElement) return
+      evento.preventDefault()
+      buscadorRef.current?.focus()
+    }
+    window.addEventListener('keydown', atajoBuscar)
+    return () => window.removeEventListener('keydown', atajoBuscar)
+  }, [])
+
   const resumen = useMemo(() => resumirBandeja(solicitudes, usuarioId, ahora), [solicitudes, usuarioId, ahora])
   const secciones = useMemo(
-    () => organizarBandeja(solicitudes, { vista, texto, categoria, usuarioId }, ahora),
-    [solicitudes, vista, texto, categoria, usuarioId, ahora],
+    () => organizarBandeja(solicitudes, { vista, texto, categoria, usuarioId, soloVencidas }, ahora),
+    [solicitudes, vista, texto, categoria, usuarioId, soloVencidas, ahora],
   )
-  const items = secciones.flatMap((seccion) => seccion.items)
+  const items = useMemo(() => secciones.flatMap((seccion) => seccion.items), [secciones])
+  const idsVisibles = useMemo(() => items.map((item) => item.id), [items])
   const idPedido = Number(parametros.get('solicitud'))
-  const seleccionada = solicitudes.find((solicitud) => solicitud.id === idPedido) ?? items[0] ?? null
+  const seleccionada = items.find((solicitud) => solicitud.id === idPedido)
+    ?? solicitudes.find((solicitud) => solicitud.id === idPedido)
+    ?? items[0]
+    ?? null
   const listo = !cargando && !error
-  const hayFiltros = texto.trim() !== '' || categoria !== 'todas'
+  const hayFiltros = texto.trim() !== '' || categoria !== 'todas' || soloVencidas || vista === 'todas'
 
-  function seleccionar(id: number) {
+  const notaResueltas = useMemo(() => {
+    if (!listo) return 'Calculando…'
+    const partes: string[] = []
+    if (resumen.aTiempoPct !== null) partes.push(`${resumen.aTiempoPct}% a tiempo`)
+    if (resumen.respuestaPromedioHoras !== null) partes.push(`prom. ${duracion(resumen.respuestaPromedioHoras * 3_600_000)}`)
+    return partes.length > 0 ? partes.join(' · ') : `${resumen.resueltasSemana} en últimos 7 días`
+  }, [listo, resumen])
+
+  function seleccionar(id: number, abrirEnMovil = false) {
     setParametros((actuales) => {
       const siguientes = new URLSearchParams(actuales)
       siguientes.set('solicitud', String(id))
       return siguientes
     }, { replace: true })
-    if (window.matchMedia('(max-width: 64rem)').matches) {
-      requestAnimationFrame(() => document.querySelector('.sop-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    if (abrirEnMovil && window.matchMedia('(max-width: 64rem)').matches) {
+      setPanelMovilAbierto(true)
     }
+  }
+
+  function elegirVista(nuevaVista: VistaPqrs, vencidas = false) {
+    setVista(nuevaVista)
+    setSoloVencidas(vencidas)
   }
 
   function limpiarFiltros() {
     setTexto('')
     setCategoria('todas')
+    setSoloVencidas(false)
+    if (vista === 'todas') setVista('atender')
+  }
+
+  function manejarTecladoLista(evento: KeyboardEvent<HTMLDivElement>) {
+    const siguienteId = siguienteSolicitudId(idsVisibles, seleccionada?.id ?? null, evento.key)
+    if (siguienteId === null) return
+    evento.preventDefault()
+    seleccionar(siguienteId, false)
   }
 
   return (
@@ -126,29 +187,41 @@ function SolicitudesPqrsPage() {
           <h1 className="sop-titulo">Solicitudes PQRS</h1>
           <p className="sop-subtitulo">Peticiones, quejas y reclamos de los clientes. Atiende primero lo que está por vencer.</p>
         </div>
-        <button type="button" className="sop-boton-cabecera" onClick={() => void recargar()} disabled={cargando}>
-          <IcRefresh size={17} aria-hidden="true" />
-          {cargando ? 'Actualizando…' : 'Actualizar'}
-        </button>
       </header>
 
-      <ul className="sop-indicadores" aria-label="Resumen de soporte">
-        <Indicador
+      <ul className="sop-indicadores" aria-label="Filtros rápidos de soporte">
+        <IndicadorFiltro
+          orden={1}
           etiqueta="Por atender"
           valor={listo ? resumen.porAtender : null}
-          nota={resumen.sinTomar === 1 ? '1 sin tomar' : `${resumen.sinTomar} sin tomar`}
+          nota={!listo ? 'Calculando…' : resumen.sinTomar === 1 ? '1 sin tomar' : `${resumen.sinTomar} sin tomar`}
+          activo={vista === 'atender' && !soloVencidas}
+          onClick={() => elegirVista('atender', false)}
         />
-        <Indicador
+        <IndicadorFiltro
+          orden={2}
           etiqueta="Vencidas"
           valor={listo ? resumen.vencidas : null}
-          nota={resumen.porVencer ? `${resumen.porVencer} por vencer` : 'Nada por vencer'}
-          tono={resumen.vencidas > 0 ? 'alerta' : undefined}
+          nota={!listo ? 'Calculando…' : resumen.porVencer ? `${resumen.porVencer} por vencer` : 'Nada por vencer'}
+          activo={vista === 'atender' && soloVencidas}
+          tono={resumen.vencidas > 0 ? 'peligro' : undefined}
+          onClick={() => elegirVista('atender', !soloVencidas)}
         />
-        <Indicador etiqueta="Resueltas · 7 días" valor={listo ? resumen.resueltasSemana : null} nota={resumen.aTiempoPct === null ? 'Sin casos con plazo' : `${resumen.aTiempoPct} % a tiempo`} />
-        <Indicador
-          etiqueta="Respuesta promedio"
-          valor={listo ? (resumen.respuestaPromedioHoras === null ? '—' : duracion(resumen.respuestaPromedioHoras * 3_600_000)) : null}
-          nota="De radicada a resuelta"
+        <IndicadorFiltro
+          orden={3}
+          etiqueta="Mías"
+          valor={listo ? resumen.porVista.mias : null}
+          nota="Casos a tu cargo"
+          activo={vista === 'mias'}
+          onClick={() => elegirVista('mias', false)}
+        />
+        <IndicadorFiltro
+          orden={4}
+          etiqueta="Resueltas"
+          valor={listo ? resumen.porVista.resueltas : null}
+          nota={notaResueltas}
+          activo={vista === 'resueltas'}
+          onClick={() => elegirVista('resueltas', false)}
         />
       </ul>
 
@@ -159,89 +232,125 @@ function SolicitudesPqrsPage() {
         </div>
       )}
 
-      <Tabs.Root value={vista} onValueChange={(valor) => setVista(valor as VistaPqrs)} className="sop-tabs">
-        {!cargando && solicitudes.length > 0 && (
-          <div className="sop-herramientas">
-            <Tabs.List className="sop-vistas" aria-label="Vista de la bandeja">
-              {VISTAS.map((opcion) => (
-                <Tabs.Trigger key={opcion.valor} value={opcion.valor} className="sop-vista">
-                  {opcion.etiqueta}
-                  <span>{resumen.porVista[opcion.valor]}</span>
-                </Tabs.Trigger>
-              ))}
-            </Tabs.List>
-            <label className="sop-buscador">
-              <span className="sr-only">Buscar solicitud</span>
-              <IcSearch size={17} aria-hidden="true" />
-              <input type="search" value={texto} onChange={(evento) => setTexto(evento.target.value)} placeholder="Buscar por radicado, nombre o asunto…" autoComplete="off" />
-            </label>
+      {!cargando && solicitudes.length > 0 && (
+        <div className="sop-herramientas org-aparece" style={{ '--orden': 2 } as CSSProperties}>
+          <label className="sop-buscador">
+            <span className="sr-only">Buscar solicitud</span>
+            <IcSearch size={16} aria-hidden="true" />
+            <input
+              ref={buscadorRef}
+              type="search"
+              value={texto}
+              onChange={(evento) => setTexto(evento.target.value)}
+              placeholder="Buscar por radicado, cliente o asunto…"
+              autoComplete="off"
+            />
+            {texto ? (
+              <button
+                type="button"
+                className="sop-limpiar-busqueda"
+                onClick={() => setTexto('')}
+                aria-label="Limpiar búsqueda"
+              >
+                <IcClose size={13} aria-hidden="true" />
+              </button>
+            ) : (
+              <kbd aria-hidden="true">/</kbd>
+            )}
+          </label>
+
+          <div className="sop-controles">
             <label className="sop-desplegable">
               <span className="sr-only">Filtrar por categoría</span>
               <select value={categoria} onChange={(evento) => setCategoria(evento.target.value)}>
                 <option value="todas">Categoría: todas</option>
                 {CATEGORIAS_PQRS.map((opcion) => <option key={opcion} value={opcion}>{opcion}</option>)}
               </select>
-              <IcChevronDown size={17} aria-hidden="true" />
+              <IcChevronDown size={16} aria-hidden="true" />
             </label>
-          </div>
-        )}
 
-        <div className="sop-cuerpo">
-          <Tabs.Content value={vista} className="sop-bandeja" forceMount>
-            {cargando ? (
-              <ul className="sop-lista" aria-hidden="true">
-                {[0, 1, 2, 3].map((indice) => <li key={indice} className="sop-tarjeta-esqueleto org-brilla" />)}
-              </ul>
-            ) : error ? null : solicitudes.length === 0 ? (
-              <EstadoVacio
-                className="sop-vacio"
-                titulo="Todavía no hay solicitudes"
-                texto="Cuando un cliente radique una petición, queja o reclamo por el chatbot, aparecerá aquí con su plazo."
-              />
-            ) : secciones.length === 0 ? (
-              <EstadoVacio
-                className="sop-vacio"
-                titulo={hayFiltros ? 'Sin coincidencias' : vista === 'atender' ? 'Bandeja al día' : 'Nada por aquí'}
-                texto={hayFiltros ? 'Ninguna solicitud coincide con la búsqueda o la categoría.' : vista === 'atender' ? 'No hay solicitudes pendientes.' : 'Esta vista no tiene solicitudes todavía.'}
-                accion={hayFiltros ? <button type="button" className="adm-btn adm-btn--secundario" onClick={limpiarFiltros}>Limpiar filtros</button> : undefined}
-              />
-            ) : (
-              <div role="radiogroup" aria-label="Solicitudes PQRS">
-                {secciones.map((seccion) => (
-                  <section key={seccion.grupo} className={`sop-seccion sop-seccion--${seccion.grupo}`} aria-labelledby={`sop-grupo-${seccion.grupo}`}>
-                    <header>
-                      <h2 id={`sop-grupo-${seccion.grupo}`}>{seccion.titulo}<span>{seccion.items.length}</span></h2>
-                      <p>{seccion.descripcion}</p>
-                    </header>
-                    <ul className="sop-lista">
-                      {seccion.items.map((solicitud) => (
-                        <TarjetaSolicitud
-                          key={solicitud.id}
-                          solicitud={solicitud}
-                          ahora={ahora}
-                          seleccionada={solicitud.id === seleccionada?.id}
-                          onSeleccionar={() => seleccionar(solicitud.id)}
-                        />
-                      ))}
-                    </ul>
-                  </section>
-                ))}
-              </div>
+            <button
+              type="button"
+              className={`sop-todas-pill${vista === 'todas' ? ' is-activo' : ''}`}
+              aria-pressed={vista === 'todas'}
+              onClick={() => elegirVista(vista === 'todas' ? 'atender' : 'todas', false)}
+            >
+              Todas
+              <span>{resumen.porVista.todas}</span>
+            </button>
+
+            {hayFiltros && (
+              <button type="button" className="sop-filtro-limpiar" onClick={limpiarFiltros}>
+                Limpiar <IcClose size={13} aria-hidden="true" />
+              </button>
             )}
-          </Tabs.Content>
+          </div>
+        </div>
+      )}
 
-          {listo && solicitudes.length > 0 && (
-            <PanelSolicitudPqrs
-              key={seleccionada?.id ?? 'vacio'}
-              solicitud={seleccionada}
-              ahora={ahora}
-              ocupada={ocupadaId !== null && ocupadaId === seleccionada?.id}
-              onTomar={tomar}
-              onResponder={responder}
+      <div className="sop-cuerpo">
+        <div className="sop-bandeja">
+          {cargando ? (
+            <ul className="sop-lista" aria-hidden="true">
+              {[0, 1, 2, 3].map((indice) => <li key={indice} className="sop-tarjeta-esqueleto org-brilla" />)}
+            </ul>
+          ) : error ? null : solicitudes.length === 0 ? (
+            <EstadoVacio
+              className="sop-vacio"
+              titulo="Todavía no hay solicitudes"
+              texto="Cuando un cliente radique una petición, queja o reclamo por el chatbot, aparecerá aquí con su plazo."
             />
+          ) : secciones.length === 0 ? (
+            <EstadoVacio
+              className="sop-vacio"
+              titulo={hayFiltros ? 'Sin coincidencias' : vista === 'atender' ? 'Bandeja al día' : 'Nada por aquí'}
+              texto={hayFiltros ? 'Ninguna solicitud coincide con la búsqueda o los filtros.' : vista === 'atender' ? 'No hay solicitudes pendientes.' : 'Esta vista no tiene solicitudes todavía.'}
+              accion={hayFiltros ? <button type="button" className="adm-btn adm-btn--secundario" onClick={limpiarFiltros}>Limpiar filtros</button> : undefined}
+            />
+          ) : (
+            <div
+              role="listbox"
+              aria-label="Solicitudes PQRS"
+              tabIndex={0}
+              className="sop-listbox"
+              onKeyDown={manejarTecladoLista}
+            >
+              {secciones.map((seccion) => (
+                <section key={seccion.grupo} className={`sop-seccion sop-seccion--${seccion.grupo}`} aria-labelledby={`sop-grupo-${seccion.grupo}`}>
+                  <header>
+                    <h2 id={`sop-grupo-${seccion.grupo}`}>{seccion.titulo}<span>{seccion.items.length}</span></h2>
+                    <p>{seccion.descripcion}</p>
+                  </header>
+                  <ul className="sop-lista">
+                    {seccion.items.map((solicitud) => (
+                      <TarjetaSolicitud
+                        key={solicitud.id}
+                        solicitud={solicitud}
+                        ahora={ahora}
+                        seleccionada={solicitud.id === seleccionada?.id}
+                        onSeleccionar={() => seleccionar(solicitud.id, true)}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
           )}
         </div>
-      </Tabs.Root>
+
+        {listo && solicitudes.length > 0 && (
+          <PanelSolicitudPqrs
+            key={seleccionada?.id ?? 'vacio'}
+            solicitud={seleccionada}
+            ahora={ahora}
+            ocupada={ocupadaId !== null && ocupadaId === seleccionada?.id}
+            abiertoMovil={panelMovilAbierto && seleccionada !== null}
+            onCerrarMovil={() => setPanelMovilAbierto(false)}
+            onTomar={tomar}
+            onResponder={responder}
+          />
+        )}
+      </div>
     </div>
   )
 }

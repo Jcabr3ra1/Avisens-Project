@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import {
   aprobarRecuperacion,
   listarRecuperaciones,
@@ -16,15 +17,15 @@ export function useRecuperacionesPassword() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
-  const cargar = useCallback(async () => {
-    setCargando(true)
+  const cargar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setCargando(true)
     setError('')
     try {
       setSolicitudes(await listarRecuperaciones())
     } catch {
-      setError('No se pudieron cargar las solicitudes. Intenta actualizar la página.')
+      if (!silencioso) setError('No se pudieron cargar las solicitudes. Intenta de nuevo.')
     } finally {
-      setCargando(false)
+      if (!silencioso) setCargando(false)
     }
   }, [])
 
@@ -32,13 +33,17 @@ export function useRecuperacionesPassword() {
     void cargar()
   }, [cargar])
 
+  useRefetchOnFocus(() => {
+    void cargar(true)
+  })
+
   const aprobar = useCallback(async (
     id: number,
     datos: ResolverRecuperacionPayload,
   ): Promise<AprobacionRecuperacion> => {
     try {
       const respuesta = await aprobarRecuperacion(id, datos)
-      await cargar()
+      await cargar(true)
       toast.success('Acceso temporal generado', {
         description: 'Muéstralo una sola vez y compártelo por un canal seguro.',
       })
@@ -57,7 +62,7 @@ export function useRecuperacionesPassword() {
   ) => {
     try {
       await rechazarRecuperacion(id, datos)
-      await cargar()
+      await cargar(true)
       toast.success('Solicitud rechazada')
     } catch {
       toast.error('No se pudo rechazar la solicitud', {

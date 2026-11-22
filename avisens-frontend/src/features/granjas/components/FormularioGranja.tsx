@@ -1,4 +1,5 @@
 import { useState, type FormEventHandler } from 'react'
+import { IcBarn } from '@shared/ui/icons/icons'
 import Modal from '@shared/ui/Modal/Modal'
 import type { CrearGranjaPayload, PropietarioGranja } from '../api/granjas'
 
@@ -45,6 +46,8 @@ function FormularioGranja({
 
   return (
     <Modal
+      variante="lateral"
+      icono={<IcBarn size={20} />}
       titulo={modoEdicion ? 'Editar granja' : 'Nueva granja'}
       subtitulo="Escribe los datos principales. Lo demás puedes completarlo cuando quieras."
       onCerrar={onCerrar}

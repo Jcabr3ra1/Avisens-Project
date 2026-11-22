@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEventHandler } from 'react'
+import { IcEgg } from '@shared/ui/icons/icons'
 import Modal from '@shared/ui/Modal/Modal'
 import type { Galpon } from '@features/galpones/api/galpones'
 import type { LineaGenetica } from '../api/lineas-geneticas'
@@ -52,6 +53,8 @@ function FormularioLote({
 
   return (
     <Modal
+      variante="lateral"
+      icono={<IcEgg size={20} />}
       titulo={modoEdicion ? 'Editar lote' : 'Nuevo lote'}
       subtitulo="El código se genera automáticamente."
       onCerrar={onCerrar}

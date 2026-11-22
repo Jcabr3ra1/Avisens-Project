@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { toast } from 'sonner'
 import Modal from '@shared/ui/Modal/Modal'
-import { Icon, IcArrowRight, IcCheck, IcRefresh } from '@shared/ui/icons/icons'
+import { Icon, IcArrowRight, IcBuilding, IcCheck, IcRefresh } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { ProspectoConvertido, ProspectoDetalle } from '../api/prospectos'
 import {
@@ -147,6 +147,8 @@ function ConversionGuiada({ prospecto, onConvertir, onCerrar }: Props) {
     return (
       <Modal
         titulo="Cliente creado"
+        variante="lateral"
+        icono={<IcCheck size={20} />}
         onCerrar={onCerrar}
         acciones={(
           <>
@@ -178,6 +180,8 @@ function ConversionGuiada({ prospecto, onConvertir, onCerrar }: Props) {
     <Modal
       titulo={primerNombre(prospecto.nombre) ? `Convierte a ${primerNombre(prospecto.nombre)} en cliente` : 'Convertir en cliente'}
       subtitulo="Crearemos su organización, su primera granja y su acceso a Avisens."
+      variante="lateral"
+      icono={<IcBuilding size={20} />}
       onCerrar={guardando ? () => undefined : onCerrar}
       acciones={(
         <div className="conv-pie">

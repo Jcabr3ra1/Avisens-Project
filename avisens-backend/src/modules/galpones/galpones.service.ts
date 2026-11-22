@@ -37,7 +37,6 @@ const GALPON_SELECT = {
   largo_metros: true,
   orientacion: true,
   tipo_techo: true,
-  plano_url: true,
   activo: true,
   fecha_construccion: true,
   granja: { select: { id: true, nombre: true, propietario_id: true } },
@@ -83,7 +82,6 @@ export class GalponesService {
           largo_metros: dto.largo_metros,
           orientacion: dto.orientacion,
           tipo_techo: dto.tipo_techo,
-          plano_url: dto.plano_url,
           fecha_construccion: dto.fecha_construccion
             ? new Date(dto.fecha_construccion)
             : undefined,
@@ -149,7 +147,6 @@ export class GalponesService {
       largo_metros: dto.largo_metros,
       orientacion: dto.orientacion,
       tipo_techo: dto.tipo_techo,
-      plano_url: dto.plano_url,
       activo: dto.activo,
       fecha_construccion: dto.fecha_construccion
         ? new Date(dto.fecha_construccion)

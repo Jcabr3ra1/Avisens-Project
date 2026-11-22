@@ -9,7 +9,6 @@ data class GalponResponse(
     val largo_metros: Double?,
     val orientacion: String?,
     val tipo_techo: String?,
-    val plano_url: String?,
     val activo: Boolean,
     val fecha_construccion: String?,
     val granja: GranjaGalponResponse

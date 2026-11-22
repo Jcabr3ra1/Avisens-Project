@@ -1,4 +1,5 @@
 import { useState, type FormEventHandler } from 'react'
+import { IcGrid } from '@shared/ui/icons/icons'
 import Modal from '@shared/ui/Modal/Modal'
 import type { Granja } from '@features/granjas/api/granjas'
 import type { FormularioGalponDatos } from '../model/formularioGalpon'
@@ -37,6 +38,8 @@ function FormularioGalpon({
 
   return (
     <Modal
+      variante="lateral"
+      icono={<IcGrid size={20} />}
       titulo={modoEdicion ? 'Editar galpón' : 'Nuevo galpón'}
       subtitulo="El código se genera automáticamente. Solo completa los datos principales."
       onCerrar={onCerrar}
@@ -181,16 +184,6 @@ function FormularioGalpon({
                 />
               </label>
             </div>
-            <label className="galpones-form-ancho">
-              <span>URL del plano <em>(Opcional)</em></span>
-              <input
-                type="url"
-                value={form.plano_url}
-                onChange={(evento) =>
-                  onCambiar('plano_url', evento.target.value)
-                }
-              />
-            </label>
           </div>
         )}
 

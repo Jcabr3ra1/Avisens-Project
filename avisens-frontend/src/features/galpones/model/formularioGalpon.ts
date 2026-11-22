@@ -8,7 +8,6 @@ export interface FormularioGalponDatos {
   largo_metros: number | ''
   orientacion: string
   tipo_techo: string
-  plano_url: string
   fecha_construccion: string
 }
 
@@ -21,7 +20,6 @@ export function crearFormularioGalpon(granjaId: number): FormularioGalponDatos {
     largo_metros: '',
     orientacion: '',
     tipo_techo: '',
-    plano_url: '',
     fecha_construccion: '',
   }
 }
@@ -35,7 +33,6 @@ export function formularioDesdeGalpon(galpon: Galpon): FormularioGalponDatos {
     largo_metros: galpon.largo_metros ?? '',
     orientacion: galpon.orientacion ?? '',
     tipo_techo: galpon.tipo_techo ?? '',
-    plano_url: galpon.plano_url ?? '',
     fecha_construccion: galpon.fecha_construccion?.slice(0, 10) ?? '',
   }
 }
@@ -55,7 +52,6 @@ export function crearPayloadGalpon(
     largo_metros: form.largo_metros || undefined,
     orientacion: textoOpcional(form.orientacion),
     tipo_techo: textoOpcional(form.tipo_techo),
-    plano_url: textoOpcional(form.plano_url),
     fecha_construccion: form.fecha_construccion || undefined,
   }
 }

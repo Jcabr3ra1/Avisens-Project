@@ -1,32 +1,75 @@
-import type { FiltroRolUsuario } from '../hooks/useFiltroUsuarios'
+import type { FiltroEstadoUsuario, FiltroRolUsuario } from '../hooks/useFiltroUsuarios'
 import type { ResumenDeUsuarios } from '../hooks/useResumenUsuarios'
 
 type Props = {
   resumen: ResumenDeUsuarios
   esPropietario: boolean
   rolActivo: FiltroRolUsuario
+  estadoActivo: FiltroEstadoUsuario
   onSeleccionarRol: (rol: FiltroRolUsuario) => void
+  onSeleccionarEstado: (estado: FiltroEstadoUsuario) => void
 }
 
 function ResumenUsuarios({
   resumen,
   esPropietario,
   rolActivo,
+  estadoActivo,
   onSeleccionarRol,
+  onSeleccionarEstado,
 }: Props) {
   if (esPropietario) {
+    const itemsPropietario: Array<{
+      id: FiltroEstadoUsuario
+      etiqueta: string
+      valor: number
+      detalle: string
+      tono: string
+    }> = [
+      {
+        id: 'todos',
+        etiqueta: 'Operarios',
+        valor: resumen.total,
+        detalle: 'Personal de tu organización',
+        tono: 'todos',
+      },
+      {
+        id: 'activos',
+        etiqueta: 'Con acceso activo',
+        valor: resumen.activos,
+        detalle: 'Habilitados para registrar en galpón',
+        tono: 'administrador',
+      },
+      {
+        id: 'inactivos',
+        etiqueta: 'Inactivos',
+        valor: resumen.inactivos,
+        detalle: 'Acceso suspendido',
+        tono: 'operario',
+      },
+    ]
+
     return (
-      <section className="usuarios-kpis usuarios-kpis--doble" aria-label="Resumen de operarios">
-        <div className="usuarios-kpi is-static">
-          <span className="usuarios-kpi-label">Operarios registrados</span>
-          <strong className="usuarios-kpi-value">{resumen.total}</strong>
-          <span className="usuarios-kpi-detail">Personal de tu organización</span>
-        </div>
-        <div className="usuarios-kpi is-static">
-          <span className="usuarios-kpi-label">Con acceso activo</span>
-          <strong className="usuarios-kpi-value">{resumen.activos}</strong>
-          <span className="usuarios-kpi-detail">Habilitados para registrar en galpón</span>
-        </div>
+      <section className="usuarios-kpis usuarios-kpis--triple" aria-label="Filtrar operarios por estado">
+        {itemsPropietario.map((item) => {
+          const activo = estadoActivo === item.id
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`usuarios-kpi usuarios-kpi--${item.tono}${activo ? ' is-active' : ''}`}
+              aria-pressed={activo}
+              onClick={() => onSeleccionarEstado(activo && item.id !== 'todos' ? 'todos' : item.id)}
+            >
+              <span className="usuarios-kpi-head">
+                <span className="usuarios-kpi-dot" aria-hidden="true" />
+                <span className="usuarios-kpi-label">{item.etiqueta}</span>
+              </span>
+              <strong className="usuarios-kpi-value">{item.valor}</strong>
+              <span className="usuarios-kpi-detail">{item.detalle}</span>
+            </button>
+          )
+        })}
       </section>
     )
   }

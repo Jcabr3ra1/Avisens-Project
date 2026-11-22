@@ -10,7 +10,6 @@ export interface Galpon {
   largo_metros: number | null
   orientacion: string | null
   tipo_techo: string | null
-  plano_url: string | null
   fecha_construccion: string | null
   activo: boolean
   granja: {
@@ -29,7 +28,6 @@ export interface CrearGalponPayload {
   largo_metros?: number
   orientacion?: string
   tipo_techo?: string
-  plano_url?: string
   fecha_construccion?: string
 }
 

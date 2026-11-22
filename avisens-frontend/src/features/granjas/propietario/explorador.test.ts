@@ -23,7 +23,7 @@ function galpon(cambios: Partial<GalponConLotes> = {}): GalponConLotes {
     anchoMetros: 12, largoMetros: 100, loteActivo: null, diaVida: 3,
     origen: {
       id: 31, codigo: 'GAL-31', nombre: 'jallergalpon', capacidad_aves: 500, ancho_metros: 12, largo_metros: 100,
-      orientacion: 'norte-sur', tipo_techo: 'zinc', plano_url: null, fecha_construccion: '2020-01-01', activo: true,
+      orientacion: 'norte-sur', tipo_techo: 'zinc', fecha_construccion: '2020-01-01', activo: true,
       granja: { id: 1, nombre: 'el jaller', propietario_id: 56 },
     },
     sensores: [sensor('Temperatura', 27.4), sensor('Humedad', 63.5)],

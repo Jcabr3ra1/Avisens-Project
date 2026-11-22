@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
+import { IcSeed } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import type {
   CrearTipoAlimentoPayload,
@@ -95,6 +96,8 @@ function FormularioTipoAlimento({ editando, onGuardar, onCerrar }: Props) {
     <Modal
       titulo={editando ? 'Editar tipo de alimento' : 'Nuevo tipo de alimento'}
       subtitulo="Solo el nombre es obligatorio. Los días de vida sirven para saber en qué etapa se usa."
+      variante="lateral"
+      icono={<IcSeed size={20} />}
       onCerrar={onCerrar}
       acciones={
         <>

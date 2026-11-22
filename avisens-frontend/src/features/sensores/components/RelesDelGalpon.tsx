@@ -1,9 +1,5 @@
 // RelesDelGalpon.tsx — Administración de los relés K1-K4 de un galpón:
 // «Registrar relés» para un ESP32 y la lista de actuadores con su ficha.
-//
-// El registro es idempotente y lo valida el backend (solo Administrador): aquí
-// solo se elige el ESP32 y se muestra, canal por canal, qué pasó. El control
-// (encender/apagar) no vive aquí: está en Monitoreo → Actuadores.
 import { useMemo, useState } from 'react'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { Dispositivo } from '@features/dispositivos/api/dispositivos'
@@ -14,9 +10,7 @@ import './RelesDelGalpon.css'
 
 type Props = {
   galponId: number
-  // Controladores activos del galpón.
   dispositivos: Dispositivo[]
-  // Sensores del galpón (cualquier estado salvo retirado).
   sensores: Sensor[]
   puedeGestionar: boolean
   onCambio: () => void
@@ -29,7 +23,6 @@ const TEXTO_RESULTADO = {
   conflicto: 'Conflicto',
 } as const
 
-// K1..K4 primero por canal y luego los antiguos sin canal.
 function ordenRele(sensor: Sensor): string {
   return `${sensor.canal ? '0' : '1'}${etiquetaRele(sensor) ?? 'K9'}${sensor.dispositivo.codigo_topic}`
 }
@@ -41,7 +34,6 @@ function RelesDelGalpon({ galponId, dispositivos, sensores, puedeGestionar, onCa
   const [error, setError] = useState('')
   const [fichaId, setFichaId] = useState<number | null>(null)
 
-  // Con un solo ESP32 activo no hace falta elegir.
   const dispositivoId = eleccion ?? (dispositivos.length === 1 ? dispositivos[0].id : null)
   const reles = useMemo(
     () => sensores.filter(esSensorRele).sort((a, b) => ordenRele(a).localeCompare(ordenRele(b))),
@@ -69,28 +61,29 @@ function RelesDelGalpon({ galponId, dispositivos, sensores, puedeGestionar, onCa
     <div className="rg">
       {puedeGestionar && (
         <div className="rg-registro">
-          <label className="cs-campo">
-            <span>ESP32</span>
-            <select
-              value={dispositivoId ?? ''}
-              onChange={(e) => { setEleccion(Number(e.target.value)); setResultado(null); setError('') }}
-              disabled={registrando || dispositivos.length === 0}
+          <div className="rg-registro-fila">
+            <label className="cs-campo">
+              <span>ESP32</span>
+              <select
+                value={dispositivoId ?? ''}
+                onChange={(e) => { setEleccion(Number(e.target.value)); setResultado(null); setError('') }}
+                disabled={registrando || dispositivos.length === 0}
+              >
+                <option value="" disabled>{dispositivos.length ? 'Elige el ESP32' : 'Sin ESP32 activo'}</option>
+                {dispositivos.map((d) => <option key={d.id} value={d.id}>{d.codigo_topic} · {d.nombre}</option>)}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="cs-boton cs-boton--principal"
+              onClick={() => void registrar()}
+              disabled={!dispositivoId || registrando}
             >
-              <option value="" disabled>{dispositivos.length ? 'Elige el ESP32' : 'Sin ESP32 activo'}</option>
-              {dispositivos.map((d) => <option key={d.id} value={d.id}>{d.codigo_topic} · {d.nombre}</option>)}
-            </select>
-          </label>
-          <button
-            type="button"
-            className="cs-boton cs-boton--principal"
-            onClick={() => void registrar()}
-            disabled={!dispositivoId || registrando}
-          >
-            {registrando ? 'Registrando…' : 'Registrar relés'}
-          </button>
+              {registrando ? 'Registrando…' : 'Registrar relés'}
+            </button>
+          </div>
           <p className="cs-nota rg-ayuda">
-            Crea los relés K1-K4 que falten para ese ESP32, identificados por su canal. Si ya existen, no se
-            duplican; los registros antiguos REL-K se asocian solo si no hay dudas y conservan su historial.
+            Crea los relés K1-K4 que falten para ese ESP32 sin duplicar los existentes. Se controlan desde la pestaña Actuadores.
           </p>
         </div>
       )}
@@ -120,45 +113,34 @@ function RelesDelGalpon({ galponId, dispositivos, sensores, puedeGestionar, onCa
       )}
 
       {reles.length === 0 ? (
-        <p className="cs-nota">Este galpón todavía no tiene relés registrados.</p>
-      ) : (
-        <div className="cs-tabla-scroll">
-          <table className="cs-tabla rg-tabla" aria-label="Actuadores del galpón">
-            <thead>
-              <tr>
-                <th>Canal</th>
-                <th>Actuador</th>
-                <th>ESP32</th>
-                <th>Código interno</th>
-                <th aria-label="Acciones" />
-              </tr>
-            </thead>
-            <tbody>
-              {reles.map((s) => (
-                <tr key={s.id} className={s.estado === 'activo' ? undefined : 'is-inactivo'}>
-                  <td>
-                    {s.canal
-                      ? <strong>{etiquetaRele(s)}</strong>
-                      : <span className="rg-sin-canal">Sin canal</span>}
-                  </td>
-                  <td>
-                    <span className="rg-actuador">
-                      <strong>{s.tipo}</strong>
-                      <small>{s.estado === 'activo' ? 'Activo' : s.estado}</small>
-                    </span>
-                  </td>
-                  <td><code className="cs-codigo">{s.dispositivo.codigo_topic}</code></td>
-                  <td><code className="cs-codigo">{s.codigo}</code></td>
-                  <td className="cs-celda-acciones">
-                    <button type="button" className="cs-accion" onClick={() => setFichaId(s.id)}>
-                      {puedeGestionar ? 'Ficha / editar' : 'Ficha'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="rg-vacio">
+          <p>Este galpón todavía no tiene relés K1-K4 registrados.</p>
         </div>
+      ) : (
+        <ul className="rg-grid" aria-label="Actuadores del galpón">
+          {reles.map((s) => (
+            <li key={s.id} className={`rg-card${s.estado === 'activo' ? '' : ' is-inactivo'}`}>
+              <div className="rg-card-top">
+                <span className={`rg-canal-pill${s.canal ? '' : ' is-alerta'}`}>
+                  {s.canal ? <strong>{etiquetaRele(s)}</strong> : <span className="rg-sin-canal">Sin canal</span>}
+                </span>
+                <span className="rg-actuador">
+                  <strong>{s.tipo}</strong>
+                  <small>{s.estado === 'activo' ? 'Activo' : s.estado}</small>
+                </span>
+              </div>
+              <div className="rg-card-codigos">
+                <code className="cs-codigo">{s.dispositivo.codigo_topic}</code>
+                <code className="cs-codigo">{s.codigo}</code>
+              </div>
+              <div className="rg-card-pie">
+                <button type="button" className="cs-accion" onClick={() => setFichaId(s.id)}>
+                  {puedeGestionar ? 'Ficha / editar' : 'Ficha'}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
 
       {fichaId !== null && (

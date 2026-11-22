@@ -112,6 +112,7 @@ export interface CriteriosBandeja {
   texto: string
   canal: FiltroCanal
   temperatura: FiltroTemperatura
+  soloSinAsesor?: boolean
 }
 
 export interface ItemBandeja {
@@ -144,7 +145,7 @@ function enVista(grupo: GrupoBandeja, vista: VistaBandeja): boolean {
 
 export function organizarBandeja(
   prospectos: ProspectoVista[],
-  { vista, texto, canal, temperatura }: CriteriosBandeja,
+  { vista, texto, canal, temperatura, soloSinAsesor = false }: CriteriosBandeja,
   ahora = new Date(),
 ): SeccionBandeja[] {
   const buscado = normalizar(texto)
@@ -152,6 +153,7 @@ export function organizarBandeja(
     .map((prospecto) => ({ prospecto, prioridad: prioridadDe(prospecto, ahora) }))
     .filter(({ prospecto, prioridad }) =>
       enVista(prioridad.grupo, vista)
+      && (!soloSinAsesor || prospecto.asesorId === null)
       && (canal === 'todos' || prospecto.canal === canal)
       && (temperatura === 'todas' || prospecto.etapa === temperatura)
       && coincide(prospecto, buscado))
@@ -210,4 +212,21 @@ export function resumirBandeja(prospectos: ProspectoVista[], ahora = new Date())
       descartados: contar('descartados'),
     },
   }
+}
+
+export function siguienteProspectoId(
+  ids: number[],
+  actualId: number | null,
+  tecla: string,
+): number | null {
+  if (ids.length === 0) return null
+  if (tecla === 'Home') return ids[0]
+  if (tecla === 'End') return ids[ids.length - 1]
+  if (tecla !== 'ArrowDown' && tecla !== 'ArrowUp') return null
+  const indice = actualId === null ? -1 : ids.indexOf(actualId)
+  if (indice === -1) return ids[0]
+  const siguiente = tecla === 'ArrowDown'
+    ? Math.min(indice + 1, ids.length - 1)
+    : Math.max(indice - 1, 0)
+  return ids[siguiente]
 }
