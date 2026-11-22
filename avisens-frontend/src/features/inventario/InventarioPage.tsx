@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent }
 import { toast } from 'sonner'
 import { getRol } from '@shared/api'
 import { permisosDeInsumo, ROL_ADMIN } from '@shared/auth/permisos'
-import { IcBox, IcClose, IcPin, IcPlus, IcSearch } from '@shared/ui/icons/icons'
+import { IcAlert, IcBox, IcCheck, IcClose, IcCoin, IcPin, IcPlus, IcSearch } from '@shared/ui/icons/icons'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import MenuAcciones, { type AccionMenu } from '@shared/ui/MenuAcciones/MenuAcciones'
 import '@shared/ui/admin/AdminKit.css'
@@ -118,8 +118,15 @@ function InventarioPage() {
   const buscadorRef = useRef<HTMLInputElement>(null)
 
   const activos = useMemo(() => gestion.insumos.filter((item) => item.activo), [gestion.insumos])
+  const inactivosCount = gestion.insumos.length - activos.length
   const resumen = useMemo(() => resumirInventario(activos), [activos])
   const porReponer = resumen.bajos + resumen.criticos + resumen.agotados
+  const conteosFiltro: Record<FiltroStock, number> = {
+    todos: activos.length,
+    reposicion: porReponer,
+    agotados: resumen.agotados,
+    inactivos: inactivosCount,
+  }
   const visibles = useMemo(
     () => ordenarPorUrgencia(filtrarInsumos(gestion.insumos, busqueda, filtro)),
     [gestion.insumos, busqueda, filtro],
@@ -241,40 +248,56 @@ function InventarioPage() {
       >
         <button
           type="button"
-          className={`inv-kpi${filtro === 'todos' ? ' is-activo' : ''}`}
+          className={`inv-kpi inv-kpi--primario${filtro === 'todos' ? ' is-activo' : ''}`}
           aria-pressed={filtro === 'todos'}
           onClick={() => setFiltro('todos')}
         >
-          <span className="inv-kpi-etiqueta">Insumos activos</span>
+          <span className="inv-kpi-cab">
+            <span className="inv-kpi-etiqueta">Insumos activos</span>
+            <span className="inv-kpi-icono" aria-hidden="true"><IcBox size={15} /></span>
+          </span>
           <strong>{resumen.total}</strong>
           <small>En catálogo</small>
         </button>
 
         <button
           type="button"
-          className={`inv-kpi${filtro === 'reposicion' ? ' is-activo' : ''}`}
+          className={`inv-kpi inv-kpi--${porReponer > 0 ? 'aviso' : 'ok'}${filtro === 'reposicion' ? ' is-activo' : ''}`}
           aria-pressed={filtro === 'reposicion'}
           onClick={() => setFiltro('reposicion')}
         >
-          <span className="inv-kpi-etiqueta">Por reponer</span>
-          <strong className={porReponer > 0 ? 'inv-kpi--aviso' : undefined}>{porReponer}</strong>
+          <span className="inv-kpi-cab">
+            <span className="inv-kpi-etiqueta">Por reponer</span>
+            <span className="inv-kpi-icono" aria-hidden="true">
+              {porReponer > 0 ? <IcAlert size={15} /> : <IcCheck size={15} />}
+            </span>
+          </span>
+          <strong>{porReponer}</strong>
           <small>{porReponer > 0 ? 'Debajo del mínimo' : 'Stock al día'}</small>
         </button>
 
         <button
           type="button"
-          className={`inv-kpi${filtro === 'agotados' ? ' is-activo' : ''}`}
+          className={`inv-kpi inv-kpi--${resumen.agotados > 0 ? 'peligro' : 'ok'}${filtro === 'agotados' ? ' is-activo' : ''}`}
           aria-pressed={filtro === 'agotados'}
           onClick={() => setFiltro('agotados')}
         >
-          <span className="inv-kpi-etiqueta">Agotados</span>
-          <strong className={resumen.agotados > 0 ? 'inv-kpi--peligro' : undefined}>{resumen.agotados}</strong>
+          <span className="inv-kpi-cab">
+            <span className="inv-kpi-etiqueta">Agotados</span>
+            <span className="inv-kpi-icono" aria-hidden="true">
+              {resumen.agotados > 0 ? <IcAlert size={15} /> : <IcCheck size={15} />}
+            </span>
+          </span>
+          <strong>{resumen.agotados}</strong>
           <small>{resumen.agotados > 0 ? 'Sin existencias' : 'Ninguno en cero'}</small>
         </button>
 
         {permisos.verCostos && (
-          <div className="inv-kpi inv-kpi--estatico">
-            <span className="inv-kpi-etiqueta">Valor en bodega</span>
+          <div className="inv-kpi inv-kpi--info inv-kpi--estatico">
+            <span className="inv-kpi-cab">
+              <span className="inv-kpi-etiqueta">Valor en bodega</span>
+              <span className="inv-kpi-icono" aria-hidden="true"><IcCoin size={15} /></span>
+            </span>
             <strong>{cop.format(resumen.valorTotalCop)}</strong>
             <small>Existencias activas</small>
           </div>
@@ -307,42 +330,45 @@ function InventarioPage() {
           )}
         </div>
       ) : (
-        <div className="inv-layout">
-          <section className="inv-panel" aria-label="Catálogo de insumos">
-            <div className="inv-herramientas">
-              <div className="inv-buscador">
-                <IcSearch size={15} aria-hidden="true" />
-                <input
-                  ref={buscadorRef}
-                  type="search"
-                  value={busqueda}
-                  onChange={(evento) => setBusqueda(evento.target.value)}
-                  placeholder="Buscar por nombre, tipo o ubicación"
-                  aria-label="Buscar insumos"
-                />
-                {!busqueda && <kbd className="inv-atajo" aria-hidden="true">/</kbd>}
-              </div>
+        <>
+          <div className="inv-pildoras" role="group" aria-label="Filtrar insumos por estado">
+            {FILTROS.map((opcion) => {
+              const activa = filtro === opcion.valor
+              return (
+                <button
+                  key={opcion.valor}
+                  type="button"
+                  className={`inv-pildora${activa ? ' is-activa' : ''}`}
+                  aria-pressed={activa}
+                  onClick={() => setFiltro(opcion.valor)}
+                >
+                  <span>{opcion.etiqueta}</span>
+                  <span className="inv-pildora-conteo">{conteosFiltro[opcion.valor]}</span>
+                </button>
+              )
+            })}
+          </div>
 
-              <div className="inv-segmentos" role="group" aria-label="Filtrar insumos">
-                {FILTROS.map((opcion) => (
-                  <button
-                    key={opcion.valor}
-                    type="button"
-                    className="inv-segmento"
-                    aria-pressed={filtro === opcion.valor}
-                    onClick={() => setFiltro(opcion.valor)}
-                  >
-                    {opcion.etiqueta}
-                  </button>
-                ))}
-              </div>
+          <div className="inv-layout">
+            <section className="inv-panel" aria-label="Catálogo de insumos">
+              <div className="inv-herramientas">
+                <div className="inv-buscador">
+                  <IcSearch size={15} aria-hidden="true" />
+                  <input
+                    ref={buscadorRef}
+                    type="search"
+                    value={busqueda}
+                    onChange={(evento) => setBusqueda(evento.target.value)}
+                    placeholder="Buscar por nombre, tipo o ubicación"
+                    aria-label="Buscar insumos"
+                  />
+                  {!busqueda && <kbd className="inv-atajo" aria-hidden="true">/</kbd>}
+                </div>
 
-              <span className="inv-conteo">
-                {visibles.length === activos.length && filtro !== 'inactivos'
-                  ? `${visibles.length}`
-                  : `${visibles.length} mostrados`}
-              </span>
-            </div>
+                <span className="inv-conteo">
+                  {visibles.length} {visibles.length === 1 ? 'insumo' : 'insumos'}
+                </span>
+              </div>
 
             {visibles.length === 0 ? (
               <div className="inv-vacio">
@@ -433,141 +459,154 @@ function InventarioPage() {
               </div>
             ) : (
               <>
-                <header className="inv-inspector-cabecera">
-                  <div className="inv-inspector-ident">
+                <header className="inv-inspector-hero">
+                  <div className="inv-inspector-hero-top">
                     <div className="inv-inspector-top">
-                      <span className="inv-rotulo">{seleccionado.tipo ?? 'Insumo'}</span>
-                      <span className={`inv-badge inv-badge--${estadoSeleccionado}`}>
-                        <span className="inv-badge-punto" aria-hidden="true" />
+                      <span className="inv-hero-pill">
+                        <span className={`inv-hero-dot inv-hero-dot--${estadoSeleccionado}`} aria-hidden="true" />
                         {ETIQUETA_STOCK[estadoSeleccionado]}
                       </span>
                       {!seleccionado.activo && (
-                        <span className="inv-badge inv-badge--agotado">Inactivo</span>
+                        <span className="inv-hero-pill">Inactivo</span>
                       )}
                     </div>
-                    <h2>{seleccionado.nombre}</h2>
+
+                    <div className="inv-inspector-controles">
+                      {accionesSeleccionado.length > 0 && (
+                        <MenuAcciones
+                          acciones={accionesSeleccionado}
+                          etiqueta={`Acciones de ${seleccionado.nombre}`}
+                        />
+                      )}
+                      <button
+                        type="button"
+                        className="inv-cerrar-movil"
+                        aria-label="Cerrar panel"
+                        onClick={() => setInspectorAbiertoMovil(false)}
+                      >
+                        <IcClose size={16} aria-hidden="true" />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="inv-inspector-controles">
-                    {accionesSeleccionado.length > 0 && (
-                      <MenuAcciones
-                        acciones={accionesSeleccionado}
-                        etiqueta={`Acciones de ${seleccionado.nombre}`}
-                      />
+                  <h2 className="inv-inspector-nombre">{seleccionado.nombre}</h2>
+
+                  <div className="inv-inspector-tags">
+                    <span className="inv-hero-tag">{seleccionado.tipo ?? 'Insumo'}</span>
+                    {seleccionado.ubicacion_almacen && (
+                      <span className="inv-hero-tag">
+                        <IcPin size={12} aria-hidden="true" />
+                        {seleccionado.ubicacion_almacen}
+                      </span>
                     )}
-                    <button
-                      type="button"
-                      className="inv-cerrar-movil"
-                      aria-label="Cerrar panel"
-                      onClick={() => setInspectorAbiertoMovil(false)}
-                    >
-                      <IcClose size={16} aria-hidden="true" />
-                    </button>
                   </div>
                 </header>
 
-                {permisos.registrarMovimiento && seleccionado.activo && (
-                  <button
-                    type="button"
-                    className="adm-btn adm-btn--primario inv-inspector-cta"
-                    onClick={() => setMovimientoDe(seleccionado)}
-                  >
-                    <IcPlus size={15} aria-hidden="true" />
-                    {soloSalida ? 'Registrar salida' : 'Registrar movimiento'}
-                  </button>
-                )}
+                <div className="inv-inspector-cuerpo">
+                  {permisos.registrarMovimiento && seleccionado.activo && (
+                    <button
+                      type="button"
+                      className="adm-btn adm-btn--primario inv-inspector-cta"
+                      onClick={() => setMovimientoDe(seleccionado)}
+                    >
+                      <IcPlus size={15} aria-hidden="true" />
+                      {soloSalida ? 'Registrar salida' : 'Registrar movimiento'}
+                    </button>
+                  )}
 
-                <div className="inv-stock-card">
-                  <div className="inv-stock-card-fila">
-                    <div>
-                      <span className="inv-rotulo">Stock disponible</span>
-                      <div className="inv-stock-grande">
-                        <strong>{seleccionado.stock_actual.toLocaleString('es-CO')}</strong>
-                        <small>{seleccionado.unidad_medida}</small>
+                  <div className="inv-stock-card">
+                    <div className="inv-stock-card-fila">
+                      <div>
+                        <span className="inv-rotulo">Stock disponible</span>
+                        <div className="inv-stock-grande">
+                          <strong>{seleccionado.stock_actual.toLocaleString('es-CO')}</strong>
+                          <small>{seleccionado.unidad_medida}</small>
+                        </div>
+                      </div>
+                      <div className="inv-stock-minimo">
+                        <span>Mínimo</span>
+                        <strong>
+                          {seleccionado.stock_minimo.toLocaleString('es-CO')} {seleccionado.unidad_medida}
+                        </strong>
                       </div>
                     </div>
-                    <div className="inv-stock-minimo">
-                      <span>Mínimo</span>
-                      <strong>
-                        {seleccionado.stock_minimo.toLocaleString('es-CO')} {seleccionado.unidad_medida}
-                      </strong>
+                    <div className="inv-barra-stock inv-barra-stock--grande" aria-hidden="true">
+                      <span
+                        className={`inv-barra-nivel inv-barra-nivel--${estadoSeleccionado}`}
+                        style={{ width: `${porcentajeDeStock(seleccionado)}%` }}
+                      />
                     </div>
                   </div>
-                  <div className="inv-barra-stock inv-barra-stock--grande" aria-hidden="true">
-                    <span
-                      className={`inv-barra-nivel inv-barra-nivel--${estadoSeleccionado}`}
-                      style={{ width: `${porcentajeDeStock(seleccionado)}%` }}
+
+                  <dl className="inv-ficha">
+                    <div>
+                      <dt>Ubicación</dt>
+                      <dd>
+                        {seleccionado.ubicacion_almacen ? (
+                          <span className="inv-ficha-con-icono">
+                            <IcPin size={13} aria-hidden="true" />
+                            {seleccionado.ubicacion_almacen}
+                          </span>
+                        ) : (
+                          <span className="inv-sin-dato">Sin definir</span>
+                        )}
+                      </dd>
+                    </div>
+
+                    <div>
+                      <dt>Vencimiento</dt>
+                      <dd>
+                        {seleccionado.fecha_vencimiento?.slice(0, 10) ?? (
+                          <span className="inv-sin-dato">No aplica</span>
+                        )}
+                      </dd>
+                    </div>
+
+                    {permisos.verCostos && (
+                      <>
+                        <div>
+                          <dt>Precio unitario</dt>
+                          <dd>
+                            {seleccionado.precio_unitario_cop === null ? (
+                              <span className="inv-sin-dato">—</span>
+                            ) : (
+                              `${cop.format(seleccionado.precio_unitario_cop)} / ${seleccionado.unidad_medida}`
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Valor en bodega</dt>
+                          <dd>
+                            {seleccionado.precio_unitario_cop === null ? (
+                              <span className="inv-sin-dato">—</span>
+                            ) : (
+                              cop.format(seleccionado.stock_actual * seleccionado.precio_unitario_cop)
+                            )}
+                          </dd>
+                        </div>
+                      </>
+                    )}
+                  </dl>
+
+                  <div className="inv-inspector-historial">
+                    <div className="inv-inspector-historial-cabecera">
+                      <span className="inv-rotulo">Movimientos</span>
+                      {movimientosSeleccionado && (
+                        <span className="inv-conteo">{movimientosSeleccionado.length}</span>
+                      )}
+                    </div>
+                    <HistorialMovimientos
+                      movimientos={movimientosSeleccionado ?? []}
+                      cargando={historial.cargando && movimientosSeleccionado === undefined}
+                      unidad={seleccionado.unidad_medida}
                     />
                   </div>
-                </div>
-
-                <dl className="inv-ficha">
-                  <div>
-                    <dt>Ubicación</dt>
-                    <dd>
-                      {seleccionado.ubicacion_almacen ? (
-                        <span className="inv-ficha-con-icono">
-                          <IcPin size={13} aria-hidden="true" />
-                          {seleccionado.ubicacion_almacen}
-                        </span>
-                      ) : (
-                        <span className="inv-sin-dato">Sin definir</span>
-                      )}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Vencimiento</dt>
-                    <dd>
-                      {seleccionado.fecha_vencimiento?.slice(0, 10) ?? (
-                        <span className="inv-sin-dato">No aplica</span>
-                      )}
-                    </dd>
-                  </div>
-
-                  {permisos.verCostos && (
-                    <>
-                      <div>
-                        <dt>Precio unitario</dt>
-                        <dd>
-                          {seleccionado.precio_unitario_cop === null ? (
-                            <span className="inv-sin-dato">—</span>
-                          ) : (
-                            `${cop.format(seleccionado.precio_unitario_cop)} / ${seleccionado.unidad_medida}`
-                          )}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Valor en bodega</dt>
-                        <dd>
-                          {seleccionado.precio_unitario_cop === null ? (
-                            <span className="inv-sin-dato">—</span>
-                          ) : (
-                            cop.format(seleccionado.stock_actual * seleccionado.precio_unitario_cop)
-                          )}
-                        </dd>
-                      </div>
-                    </>
-                  )}
-                </dl>
-
-                <div className="inv-inspector-historial">
-                  <div className="inv-inspector-historial-cabecera">
-                    <span className="inv-rotulo">Movimientos</span>
-                    {movimientosSeleccionado && (
-                      <span className="inv-conteo">{movimientosSeleccionado.length}</span>
-                    )}
-                  </div>
-                  <HistorialMovimientos
-                    movimientos={movimientosSeleccionado ?? []}
-                    cargando={historial.cargando && movimientosSeleccionado === undefined}
-                    unidad={seleccionado.unidad_medida}
-                  />
                 </div>
               </>
             )}
           </aside>
         </div>
+        </>
       )}
 
       {formulario.abierto && (

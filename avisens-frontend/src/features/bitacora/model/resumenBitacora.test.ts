@@ -3,34 +3,36 @@ import type { ConsumoDiario } from '@features/consumos-diarios/api/consumosDiari
 import type { EventoSanitario, Mortalidad, Pesaje } from './bitacora'
 import {
   calcularResumenBitacora,
+  calcularSaludCicloLote,
+  crearActividadReciente,
   crearFilasRegistro,
   filtrarRegistrosPorLote,
 } from './resumenBitacora'
 
-const pesaje = (id: number, loteId: number, peso: number): Pesaje => ({
+const pesaje = (id: number, loteId: number, peso: number, fecha = '2026-09-01'): Pesaje => ({
   id,
   lote_id: loteId,
-  fecha: '2026-09-01',
+  fecha,
   peso_promedio_g: peso,
   cantidad_aves_pesadas: null,
   peso_objetivo_g: null,
   observaciones: null,
 })
 
-const mortalidad = (id: number, loteId: number, cantidad: number): Mortalidad => ({
+const mortalidad = (id: number, loteId: number, cantidad: number, fecha = '2026-09-01'): Mortalidad => ({
   id,
   lote_id: loteId,
-  fecha: '2026-09-01',
+  fecha,
   cantidad_aves: cantidad,
   causa_presuntiva: null,
   disposicion: null,
   observaciones: null,
 })
 
-const sanitario = (id: number, loteId: number): EventoSanitario => ({
+const sanitario = (id: number, loteId: number, fecha = '2026-09-01'): EventoSanitario => ({
   id,
   lote_id: loteId,
-  fecha: '2026-09-01',
+  fecha,
   tipo: 'vacunacion',
   producto: null,
   diagnostico: null,
@@ -38,17 +40,23 @@ const sanitario = (id: number, loteId: number): EventoSanitario => ({
   observaciones: null,
 })
 
-const consumo = (id: number, loteId: number, alimento: number, agua: number): ConsumoDiario => ({
+const consumo = (
+  id: number,
+  loteId: number,
+  alimento: number,
+  agua: number,
+  fecha = '2026-09-01',
+): ConsumoDiario => ({
   id,
   lote_id: loteId,
   tipo_alimento_id: null,
   usuario_id: 1,
-  fecha: '2026-09-01',
+  fecha,
   alimento_kg: alimento,
   agua_litros: agua,
   alerta_agua_baja: false,
   metodo_registro: 'manual',
-  fecha_registro: '2026-09-01T12:00:00.000Z',
+  fecha_registro: `${fecha}T12:00:00.000Z`,
   lote: { id: loteId, codigo: `L-${loteId}` },
   tipo_alimento: null,
 })
@@ -75,6 +83,33 @@ describe('resumenBitacora', () => {
     expect(filas).toEqual([
       { id: 1, fecha: '2026-09-01', principal: '1,20 kg', detalle: 'Sin observaciones' },
       { id: 2, fecha: '2026-09-01', principal: '450 g', detalle: 'Sin observaciones' },
+    ])
+  })
+
+  it('calcula días del ciclo y supervivencia del lote', () => {
+    const salud = calcularSaludCicloLote('2026-09-01', 1000, 15, new Date('2026-09-15T12:00:00'))
+    expect(salud).toEqual({
+      diasCiclo: 15,
+      progresoCicloPct: 36,
+      avesVivas: 985,
+      supervivenciaPct: 98.5,
+      tonoSupervivencia: 'ok',
+    })
+  })
+
+  it('ordena la actividad reciente de todas las categorías por fecha descendente', () => {
+    const recientes = crearActividadReciente(
+      [pesaje(1, 10, 1200, '2026-09-02')],
+      [mortalidad(2, 10, 2, '2026-09-04')],
+      [sanitario(3, 10, '2026-09-01')],
+      [consumo(4, 10, 25, 110, '2026-09-03')],
+      3,
+    )
+
+    expect(recientes.map((evento) => evento.clave)).toEqual([
+      'mortalidad-2',
+      'consumo-4',
+      'peso-1',
     ])
   })
 })

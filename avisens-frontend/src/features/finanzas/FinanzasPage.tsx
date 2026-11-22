@@ -2,7 +2,7 @@ import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
-import { IcChart, IcCoin, IcPlus, IcSearch } from '@shared/ui/icons/icons'
+import { IcArrowDown, IcArrowUp, IcChart, IcCoin, IcDoc, IcPlus, IcSearch } from '@shared/ui/icons/icons'
 import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { mensajeDeError } from '@shared/utils/errores'
 import { fechaDeHoy } from '@shared/utils/fechas'
@@ -211,39 +211,51 @@ function FinanzasPage() {
           <div className="fin-kpis" role="group" aria-label="Resumen financiero">
             <button
               type="button"
-              className={`fin-kpi${filtroTipo === 'todos' ? ' is-activo' : ''}`}
+              className={`fin-kpi fin-kpi--primario${filtroTipo === 'todos' ? ' is-activo' : ''}`}
               aria-pressed={filtroTipo === 'todos'}
               onClick={() => setFiltroTipo('todos')}
             >
-              <span className="fin-kpi-etiqueta">Movimientos</span>
+              <span className="fin-kpi-cab">
+                <span className="fin-kpi-etiqueta">Movimientos</span>
+                <span className="fin-kpi-icono" aria-hidden="true"><IcDoc size={15} /></span>
+              </span>
               <strong>{baseAlcance.length}</strong>
               <small>{filtroLote === 'todos' ? 'En todas las granjas' : 'En el lote filtrado'}</small>
             </button>
 
             <button
               type="button"
-              className={`fin-kpi${filtroTipo === 'ingreso' ? ' is-activo' : ''}`}
+              className={`fin-kpi fin-kpi--ok${filtroTipo === 'ingreso' ? ' is-activo' : ''}`}
               aria-pressed={filtroTipo === 'ingreso'}
               onClick={() => setFiltroTipo('ingreso')}
             >
-              <span className="fin-kpi-etiqueta">Ingresos</span>
+              <span className="fin-kpi-cab">
+                <span className="fin-kpi-etiqueta">Ingresos</span>
+                <span className="fin-kpi-icono" aria-hidden="true"><IcArrowUp size={15} /></span>
+              </span>
               <strong className="fin-kpi--ok">{cop(totalIngresos)}</strong>
               <small>{conteoIngresos === 1 ? '1 registro' : `${conteoIngresos} registros`}</small>
             </button>
 
             <button
               type="button"
-              className={`fin-kpi${filtroTipo === 'egreso' ? ' is-activo' : ''}`}
+              className={`fin-kpi fin-kpi--peligro${filtroTipo === 'egreso' ? ' is-activo' : ''}`}
               aria-pressed={filtroTipo === 'egreso'}
               onClick={() => setFiltroTipo('egreso')}
             >
-              <span className="fin-kpi-etiqueta">Egresos</span>
+              <span className="fin-kpi-cab">
+                <span className="fin-kpi-etiqueta">Egresos</span>
+                <span className="fin-kpi-icono" aria-hidden="true"><IcArrowDown size={15} /></span>
+              </span>
               <strong className="fin-kpi--peligro">{cop(totalEgresos)}</strong>
               <small>{conteoEgresos === 1 ? '1 registro' : `${conteoEgresos} registros`}</small>
             </button>
 
-            <div className="fin-kpi fin-kpi--estatico">
-              <span className="fin-kpi-etiqueta">Balance</span>
+            <div className={`fin-kpi fin-kpi--${balance < 0 ? 'peligro' : balance > 0 ? 'ok' : 'info'} fin-kpi--estatico`}>
+              <span className="fin-kpi-cab">
+                <span className="fin-kpi-etiqueta">Balance</span>
+                <span className="fin-kpi-icono" aria-hidden="true"><IcCoin size={15} /></span>
+              </span>
               <strong className={balance < 0 ? 'fin-kpi--peligro' : balance > 0 ? 'fin-kpi--ok' : undefined}>
                 {cop(balance)}
               </strong>

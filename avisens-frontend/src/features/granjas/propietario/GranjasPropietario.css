@@ -149,90 +149,100 @@
   color: var(--on-primary);
 }
 
-/* ── Tira de 4 KPIs clicables (Diseño A) ────────────────────── */
+/* ── 4 KPIs elevados con borde superior de color ────────────── */
 .gp-indicadores {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--surface-base);
-  box-shadow: var(--shadow-sm);
+  align-items: stretch;
+  gap: var(--space-3);
 }
 
 .gp-indicador {
-  position: relative;
   display: flex;
   min-width: 0;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
-  gap: .22rem;
-  padding: var(--space-4) var(--space-5);
-  border: 0;
-  background: transparent;
+  justify-content: space-between;
+  gap: .35rem;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-top: 3px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
   color: inherit;
   font: inherit;
   text-align: left;
+  box-shadow: 0 6px 18px -14px color-mix(in srgb, var(--avisens-ink) 32%, transparent), var(--shadow-sm);
   cursor: pointer;
-  transition: background var(--motion-fast) var(--ease-standard);
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease, background 150ms ease;
 }
 
-.gp-indicador + .gp-indicador {
-  border-left: 1px solid var(--border-subtle);
-}
-
-.gp-indicador::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 3px;
-  background: transparent;
-  transition: background var(--motion-fast) var(--ease-standard);
-}
+.gp-indicador--primario { border-top-color: var(--primary); }
+.gp-indicador--ok { border-top-color: var(--success); }
+.gp-indicador--alerta { border-top-color: var(--danger); }
+.gp-indicador--info { border-top-color: var(--info); }
 
 .gp-indicador:hover {
-  background: var(--surface-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -16px color-mix(in srgb, var(--avisens-ink) 36%, transparent);
 }
 
 .gp-indicador.is-activo {
-  background: color-mix(in srgb, var(--primary) 5%, var(--surface-base));
-}
-
-.gp-indicador.is-activo::after {
-  background: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border-subtle));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-soft) 50%, var(--surface-base)) 0%, var(--surface-base) 100%);
 }
 
 .gp-indicador:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: -2px;
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.gp-indicador-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
 }
 
 .gp-indicador-etiqueta {
   color: var(--text-muted);
-  font-size: .7rem;
+  font-size: .68rem;
   font-weight: 750;
   letter-spacing: .06em;
   text-transform: uppercase;
 }
 
+.gp-indicador-icono {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--primary-soft);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.gp-indicador--ok .gp-indicador-icono { background: var(--success-soft); color: var(--success); }
+.gp-indicador--alerta .gp-indicador-icono { background: var(--danger-soft); color: var(--danger); }
+.gp-indicador--info .gp-indicador-icono { background: var(--info-soft); color: var(--info); }
+
 .gp-indicador-valor {
   color: var(--text-primary);
-  font-size: 1.65rem;
-  font-weight: 750;
+  font-size: 1.55rem;
+  font-weight: 800;
   letter-spacing: -.025em;
-  line-height: 1.08;
+  line-height: 1.1;
 }
 
 .gp-indicador--alerta .gp-indicador-valor {
-  color: var(--danger3);
+  color: var(--danger);
 }
 
 .gp-indicador-nota {
-  color: var(--text-secondary);
-  font-size: .76rem;
+  color: var(--text-muted);
+  font-size: .74rem;
 }
 
 /* ── Master-Detail: Galpones + Galpón seleccionado ──────────── */
@@ -1719,9 +1729,28 @@
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--surface-base);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 10px 28px -18px color-mix(in srgb, var(--avisens-ink) 28%, transparent), var(--shadow-sm);
+}
+
+.gp-inspector .gp-detalle-barra {
+  border-bottom: 0;
+  background: linear-gradient(145deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: #ffffff;
+}
+
+.gp-inspector .gp-detalle-barra svg {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.gp-inspector .gp-detalle-barra .gp-estado--barra {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.gp-inspector .gp-detalle-cerrar {
+  color: #ffffff;
 }
 
 .gp-inspector-cuerpo {

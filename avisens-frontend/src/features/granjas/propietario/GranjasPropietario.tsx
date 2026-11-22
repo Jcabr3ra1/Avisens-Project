@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Lote } from '@features/lotes/api/lotes'
 import {
+  IcAlert,
   IcArrowRight,
+  IcBarn,
   IcCheck,
   IcClose,
   IcEdit,
+  IcEgg,
   IcLeaf,
   IcPin,
   IcPointer,
@@ -273,11 +276,14 @@ function GranjasPropietario() {
       <div className="gp-indicadores" role="group" aria-label={`Resumen de ${granja.nombre}`}>
         <button
           type="button"
-          className={`gp-indicador${filtro === 'todos' ? ' is-activo' : ''}`}
+          className={`gp-indicador gp-indicador--primario${filtro === 'todos' ? ' is-activo' : ''}`}
           aria-pressed={filtro === 'todos'}
           onClick={() => setFiltro('todos')}
         >
-          <span className="gp-indicador-etiqueta">Galpones</span>
+          <span className="gp-indicador-cab">
+            <span className="gp-indicador-etiqueta">Galpones</span>
+            <span className="gp-indicador-icono" aria-hidden="true"><IcBarn size={15} /></span>
+          </span>
           <strong className="gp-indicador-valor">{resumen.total}</strong>
           <span className="gp-indicador-nota">
             {resumen.sensoresTotal > 0
@@ -288,11 +294,14 @@ function GranjasPropietario() {
 
         <button
           type="button"
-          className={`gp-indicador${filtro === 'con_lote' ? ' is-activo' : ''}`}
+          className={`gp-indicador gp-indicador--ok${filtro === 'con_lote' ? ' is-activo' : ''}`}
           aria-pressed={filtro === 'con_lote'}
           onClick={() => alternarFiltro('con_lote')}
         >
-          <span className="gp-indicador-etiqueta">Con lote activo</span>
+          <span className="gp-indicador-cab">
+            <span className="gp-indicador-etiqueta">Con lote activo</span>
+            <span className="gp-indicador-icono" aria-hidden="true"><IcEgg size={15} /></span>
+          </span>
           <strong className="gp-indicador-valor">{resumen.conLote}</strong>
           <span className="gp-indicador-nota">
             {seleccionada.avesAlojadas.toLocaleString('es-CO')} aves alojadas
@@ -301,11 +310,16 @@ function GranjasPropietario() {
 
         <button
           type="button"
-          className={`gp-indicador${resumen.conAlertas > 0 ? ' gp-indicador--alerta' : ''}${filtro === 'alertas' ? ' is-activo' : ''}`}
+          className={`gp-indicador gp-indicador--${resumen.conAlertas > 0 ? 'alerta' : 'ok'}${filtro === 'alertas' ? ' is-activo' : ''}`}
           aria-pressed={filtro === 'alertas'}
           onClick={() => alternarFiltro('alertas')}
         >
-          <span className="gp-indicador-etiqueta">Con atención / alerta</span>
+          <span className="gp-indicador-cab">
+            <span className="gp-indicador-etiqueta">Con atención / alerta</span>
+            <span className="gp-indicador-icono" aria-hidden="true">
+              {resumen.conAlertas > 0 ? <IcAlert size={15} /> : <IcCheck size={15} />}
+            </span>
+          </span>
           <strong className="gp-indicador-valor">{resumen.conAlertas}</strong>
           <span className="gp-indicador-nota">
             {seleccionada.alertasAbiertas === 0
@@ -318,11 +332,14 @@ function GranjasPropietario() {
 
         <button
           type="button"
-          className={`gp-indicador${filtro === 'disponibles' ? ' is-activo' : ''}`}
+          className={`gp-indicador gp-indicador--info${filtro === 'disponibles' ? ' is-activo' : ''}`}
           aria-pressed={filtro === 'disponibles'}
           onClick={() => alternarFiltro('disponibles')}
         >
-          <span className="gp-indicador-etiqueta">Disponibles</span>
+          <span className="gp-indicador-cab">
+            <span className="gp-indicador-etiqueta">Disponibles</span>
+            <span className="gp-indicador-icono" aria-hidden="true"><IcCheck size={15} /></span>
+          </span>
           <strong className="gp-indicador-valor">{resumen.disponibles}</strong>
           <span className="gp-indicador-nota">Sin lote en curso</span>
         </button>

@@ -1,74 +1,79 @@
-import { IcAlert, IcChevronRight, IcEgg, IcHeart, IcLeaf, IcSeed } from '@shared/ui/icons/icons'
+import { IcAlert, IcArrowRight, IcEgg, IcSeed } from '@shared/ui/icons/icons'
 import type { JornadaOperario } from '../model/jornadaOperario'
 
 type Props = {
   jornada: JornadaOperario
+  destacado?: boolean
   onRegistrarMortalidad: () => void
   onRegistrarConsumo: () => void
-  onVerAlertas: () => void
   onVerCrecimiento: () => void
 }
 
 function TarjetaJornada({
   jornada,
+  destacado = false,
   onRegistrarMortalidad,
   onRegistrarConsumo,
-  onVerAlertas,
   onVerCrecimiento,
 }: Props) {
-  const { galpon, lote, diaLote } = jornada
+  const { galpon, lote, lotesActivos, diaLote } = jornada
+  const activos = lotesActivos.length > 0 ? lotesActivos : lote ? [lote] : []
+  const avesTotal = activos.reduce((suma, item) => suma + item.cantidad_inicial, 0)
 
   return (
-    <article className="operario-galpon-card">
-      <div className="operario-galpon-head">
-        <span className="operario-galpon-icon"><IcLeaf size={20} /></span>
-        <div>
-          <p>{galpon.granja.nombre}</p>
-          <h2>{galpon.nombre}</h2>
-          <span>{galpon.codigo}</span>
+    <article className={`op-jornada-card${lote ? ' is-con-lote' : ''}${destacado ? ' is-destacada' : ''}`}>
+      <header className="op-jornada-top">
+        <div className="op-jornada-ident">
+          <span className="op-jornada-granja">{galpon.granja.nombre}</span>
+          <h3>{galpon.nombre}</h3>
         </div>
-      </div>
+        <code className="op-jornada-codigo">{galpon.codigo}</code>
+      </header>
 
       {lote ? (
-        <div className="operario-lote-activo">
-          <span className="operario-lote-icono" aria-hidden="true"><IcEgg size={18} /></span>
-          <div className="operario-lote-info">
-            <span>Lote activo</span>
-            <strong>{lote.codigo} · {lote.cantidad_inicial.toLocaleString()} aves</strong>
-          </div>
-          <span className="operario-dia-badge">
-            Día <b>{diaLote}</b>
+        <div className="op-jornada-lote">
+          <span className="op-jornada-lote-icono" aria-hidden="true">
+            <IcEgg size={15} />
           </span>
-          <button type="button" className="operario-link-crecimiento" onClick={onVerCrecimiento}>
-            Guía de peso <IcChevronRight size={14} />
+          <div className="op-jornada-lote-texto">
+            <strong>
+              {activos.length > 1 ? `${activos.length} lotes activos` : lote.codigo}
+            </strong>
+            <span>
+              {avesTotal.toLocaleString('es-CO')} aves
+              {activos.length === 1 && diaLote !== null ? ` · Día ${diaLote}` : ''}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="op-jornada-guia"
+            onClick={onVerCrecimiento}
+          >
+            Guía <IcArrowRight size={13} aria-hidden="true" />
           </button>
         </div>
       ) : (
-        <p className="operario-sin-lote">No hay un lote activo en este galpón.</p>
+        <p className="op-jornada-vacio">Sin lote activo en este galpón.</p>
       )}
 
-      <div className="operario-acciones">
+      <div className="op-jornada-acciones">
         <button
           type="button"
-          className="operario-btn operario-btn--mortalidad"
-          onClick={onRegistrarMortalidad}
-          disabled={!lote}
-        >
-          <IcHeart size={18} />
-          Registrar mortalidad
-        </button>
-        <button
-          type="button"
-          className="operario-btn operario-btn--consumo"
+          className="adm-btn adm-btn--primario op-jornada-btn"
           onClick={onRegistrarConsumo}
           disabled={!lote}
         >
-          <IcSeed size={18} />
-          Registrar consumo
+          <IcSeed size={15} aria-hidden="true" />
+          Consumo
         </button>
-        <button type="button" className="operario-link-alertas" onClick={onVerAlertas}>
-          <IcAlert size={16} />
-          Ver mis alertas
+        <button
+          type="button"
+          className="adm-btn adm-btn--secundario op-jornada-btn"
+          onClick={onRegistrarMortalidad}
+          disabled={!lote}
+        >
+          <IcAlert size={15} aria-hidden="true" />
+          Mortalidad
         </button>
       </div>
     </article>

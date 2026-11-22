@@ -4,6 +4,7 @@ import type { GalponOperario, LoteOperario } from '../api/operario'
 export type JornadaOperario = {
   galpon: GalponOperario
   lote: LoteOperario | null
+  lotesActivos: LoteOperario[]
   diaLote: number | null
 }
 
@@ -18,10 +19,14 @@ export function crearJornadasOperario(
   return galpones
     .filter((galpon) => galpon.activo)
     .map((galpon) => {
-      const lote = lotes.find((item) => item.galpon.id === galpon.id && item.estado === 'activo') ?? null
+      const lotesActivos = lotes
+        .filter((item) => item.galpon.id === galpon.id && item.estado === 'activo')
+        .sort((a, b) => new Date(b.fecha_ingreso).getTime() - new Date(a.fecha_ingreso).getTime())
+      const lote = lotesActivos[0] ?? null
       return {
         galpon,
         lote,
+        lotesActivos,
         diaLote: lote ? calcularDiaLote(lote.fecha_ingreso) : null,
       }
     })
