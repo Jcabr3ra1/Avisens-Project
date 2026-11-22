@@ -38,6 +38,25 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
     private var rolOperarioId: Int? = null
 
+    // El API no expone un estado de eliminado. Conservamos localmente
+    // los IDs eliminados desde este dispositivo para ocultarlos de la lista.
+    private val preferenciasEliminados by lazy {
+        requireContext().applicationContext.getSharedPreferences(
+            "avisens_operarios_eliminados", android.content.Context.MODE_PRIVATE
+        )
+    }
+
+    private fun idsOperariosEliminados(): Set<Int> =
+        preferenciasEliminados.getStringSet("ids", emptySet())
+            .orEmpty().mapNotNull { it.toIntOrNull() }.toSet()
+
+    private fun registrarOperarioEliminado(id: Int) {
+        val ids = preferenciasEliminados.getStringSet("ids", emptySet())
+            .orEmpty().toMutableSet()
+        ids.add(id.toString())
+        preferenciasEliminados.edit().putStringSet("ids", ids).apply()
+    }
+
     // ============================================================
     // CREAR VISTA
     // ============================================================
@@ -155,7 +174,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                             it.rol.nombre.equals(
                                 "operario",
                                 ignoreCase = true
-                            ) && it.activo
+                            ) && it.id !in idsOperariosEliminados()
                         }
 
                 mostrarOperarios(
@@ -407,6 +426,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                     val response = RetrofitClient.api.eliminarOperario(usuario.id)
                     if (!isAdded) return@launch
                     if (response.isSuccessful) {
+                        registrarOperarioEliminado(usuario.id)
                         dialog.dismiss()
                         Toast.makeText(requireContext(), "Operario eliminado correctamente", Toast.LENGTH_SHORT).show()
                         cargarOperarios()
@@ -651,16 +671,15 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 minHeight = 0
                 minimumHeight = 0
 
-                background = GradientDrawable().apply {
-                    setColor(Color.TRANSPARENT)
-                    cornerRadius = dp(10).toFloat()
-                    setStroke(
-                        dp(1),
-                        Color.parseColor(
-                            "#C94A4A"
-                        )
-                    )
-                }
+                // MaterialButton debe usar tint y stroke propios;
+                // asignar background directamente puede dejar el color azul del tema.
+                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+                strokeColor = android.content.res.ColorStateList.valueOf(Color.parseColor("#C62828"))
+                strokeWidth = dp(2)
+                cornerRadius = dp(10)
+                insetTop = 0
+                insetBottom = 0
+                setTextColor(Color.parseColor("#C62828"))
 
                 setOnClickListener {
 
@@ -989,23 +1008,66 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             (resources.displayMetrics.heightPixels * 0.82).toInt()
         )
 
+        // Ningún cambio se envía al backend hasta pulsar Guardar.
         val galponesPendientesDeQuitar = mutableSetOf<Int>()
+        val granjasPendientesDeAsignar = linkedMapOf<Int, GranjaResponse>()
+        var guardando = false
 
-        fun cargarGranjasDelDialog() {
-            container.removeAllViews()
-            cargarAsignaciones(
-                usuario.id,
-                container,
-                true,
-                onCambio = null,
-                onQuitarPendiente = { ids ->
-                    galponesPendientesDeQuitar.addAll(ids)
+        fun agregarGranjaPendiente(granja: GranjaResponse) {
+            if (granjasPendientesDeAsignar.containsKey(granja.id)) return
+            granjasPendientesDeAsignar[granja.id] = granja
+
+            val fila = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(7), 0, dp(7))
+            }
+            val nombre = TextView(requireContext()).apply {
+                text = "${granja.nombre} (pendiente de guardar)"
+                textSize = 13f
+                setTextColor(Color.parseColor("#2F8B5E"))
+            }
+            fila.addView(nombre, LinearLayout.LayoutParams(0, -2, 1f))
+            val quitar = com.google.android.material.button.MaterialButton(requireContext()).apply {
+                text = "Quitar"
+                isAllCaps = false
+                textSize = 11f
+                setTextColor(Color.parseColor("#C62828"))
+                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+                strokeColor = android.content.res.ColorStateList.valueOf(Color.parseColor("#C62828"))
+                strokeWidth = dp(2)
+                cornerRadius = dp(10)
+                insetTop = 0
+                insetBottom = 0
+                minHeight = 0
+                minimumHeight = 0
+                setOnClickListener {
+                    if (!guardando) {
+                        granjasPendientesDeAsignar.remove(granja.id)
+                        container.removeView(fila)
+                    }
                 }
-            )
-            cargarGranjasDisponiblesEnSpinner(usuario.id, spinnerGranjas)
+            }
+            fila.addView(quitar, LinearLayout.LayoutParams(dp(88), dp(40)))
+            container.addView(fila)
         }
 
-        // Al seleccionar una granja, se asigna automáticamente.
+        // Contenedor separado: la carga asíncrona de asignaciones
+        // existentes no borra las nuevas granjas pendientes.
+        val asignacionesActuales = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        container.addView(asignacionesActuales)
+        cargarAsignaciones(
+            usuario.id,
+            asignacionesActuales,
+            true,
+            onCambio = null,
+            onQuitarPendiente = { ids ->
+                galponesPendientesDeQuitar.addAll(ids)
+            }
+        )
+
         spinnerGranjas.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(
                 parent: android.widget.AdapterView<*>?,
@@ -1013,91 +1075,115 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 position: Int,
                 id: Long
             ) {
-                val granjasDisponibles = spinnerGranjas.tag as? List<GranjaResponse> ?: return
-                if (position <= 0 || position - 1 !in granjasDisponibles.indices) return
-
-                val granjaSeleccionada = granjasDisponibles[position - 1]
-
-                spinnerGranjas.isEnabled = false
-                asignarGranjaEnDialog(usuario.id, granjaSeleccionada) {
-                    cargarGranjasDelDialog()
-                    cargarOperarios()
-                }
+                if (position <= 0 || guardando) return
+                val disponibles = spinnerGranjas.tag as? List<GranjaResponse> ?: return
+                val granja = disponibles.getOrNull(position - 1) ?: return
+                agregarGranjaPendiente(granja)
+                spinnerGranjas.setSelection(0)
             }
 
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
         }
-
-        cargarGranjasDelDialog()
+        cargarGranjasDisponiblesEnSpinner(usuario.id, spinnerGranjas)
 
         btnCancelar.setOnClickListener {
-            // Como las eliminaciones están pendientes, Cancelar simplemente
-            // cierra el diálogo y no toca el backend.
-            dialog.dismiss()
+            if (!guardando) dialog.dismiss()
         }
 
         btnGuardar.setOnClickListener {
-            val nuevoEstado = switchActivo.isChecked
+            if (guardando) return@setOnClickListener
+            guardando = true
+            btnGuardar.isEnabled = false
+            btnCancelar.isEnabled = false
+            spinnerGranjas.isEnabled = false
 
+            val nuevoEstado = switchActivo.isChecked
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
-                    // ----------------------------------------------------
-                    // 1. Aplicar primero las granjas marcadas para quitar.
-                    // ----------------------------------------------------
-                    var fallosAlQuitar = 0
-
-                    galponesPendientesDeQuitar.toList().forEach { galponId ->
-                        val response = RetrofitClient.api.desasignarGalpon(
-                            usuario.id,
-                            galponId
+                    // Obtener galpones antes de modificar nada.
+                    val nuevasAsignaciones = mutableSetOf<Int>()
+                    if (granjasPendientesDeAsignar.isNotEmpty()) {
+                        val respuestaGalpones = RetrofitClient.api.listarGalpones(
+                            page = 1, limit = 100
                         )
-
-                        if (response.isSuccessful) {
-                            galponesPendientesDeQuitar.remove(galponId)
-                        } else {
-                            fallosAlQuitar++
+                        if (!respuestaGalpones.isSuccessful) {
+                            throw IllegalStateException(
+                                "No se pudieron consultar los galpones. Código: ${respuestaGalpones.code()}"
+                            )
+                        }
+                        val galpones = respuestaGalpones.body()?.data.orEmpty()
+                        granjasPendientesDeAsignar.values.forEach { granja ->
+                            val ids = galpones.filter {
+                                it.activo && it.granja.id == granja.id
+                            }.map { it.id }
+                            if (ids.isEmpty()) {
+                                throw IllegalStateException(
+                                    "La granja \"${granja.nombre}\" no tiene galpones activos."
+                                )
+                            }
+                            nuevasAsignaciones.addAll(ids)
                         }
                     }
 
-                    if (fallosAlQuitar > 0) {
-                        cargarGranjasDelDialog()
-                        mostrarError(
-                            "No se pudieron quitar $fallosAlQuitar galpón(es). Revisa las asignaciones e inténtalo nuevamente."
+                    // Guardar los cambios solicitados. El backend no ofrece
+                    // una operación transaccional para todos los galpones.
+                    galponesPendientesDeQuitar.toList().forEach { galponId ->
+                        val respuesta = RetrofitClient.api.desasignarGalpon(
+                            usuario.id, galponId
                         )
-                        return@launch
+                        if (!respuesta.isSuccessful) {
+                            throw IllegalStateException(
+                                "No se pudo quitar un galpón. Código: ${respuesta.code()}"
+                            )
+                        }
+                        galponesPendientesDeQuitar.remove(galponId)
                     }
 
-                    // ----------------------------------------------------
-                    // 2. Guardar el cambio de estado, si hubo uno.
-                    // ----------------------------------------------------
+                    nuevasAsignaciones.forEach { galponId ->
+                        val respuesta = RetrofitClient.api.asignarGalpon(
+                            usuario.id, AsignarGalponRequest(galpon_id = galponId)
+                        )
+                        if (!respuesta.isSuccessful) {
+                            throw IllegalStateException(
+                                "No se pudo asignar un galpón. Código: ${respuesta.code()}"
+                            )
+                        }
+                    }
+
                     if (nuevoEstado != usuario.activo) {
-                        val response = RetrofitClient.api.actualizarEstadoUsuario(
+                        val respuesta = RetrofitClient.api.actualizarEstadoUsuario(
                             usuario.id,
                             ActualizarEstadoUsuarioRequest(activo = nuevoEstado)
                         )
-
-                        if (!response.isSuccessful) {
-                            switchActivo.isChecked = usuario.activo
-                            mostrarError(
-                                "No se pudo actualizar el estado. Código: ${response.code()}"
+                        if (!respuesta.isSuccessful) {
+                            throw IllegalStateException(
+                                "No se pudo actualizar el estado. Código: ${respuesta.code()}"
                             )
-                            return@launch
                         }
+                    }
 
+                    if (isAdded) {
+                        dialog.dismiss()
+                        cargarOperarios()
                         Toast.makeText(
                             requireContext(),
-                            if (nuevoEstado) "Usuario activado" else "Usuario desactivado",
+                            "Cambios guardados correctamente",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
-
-                    cargarOperarios()
-                    dialog.dismiss()
-
                 } catch (e: Exception) {
-                    mostrarError(
-                        "Error al guardar los cambios: ${e.message ?: "sin detalle"}"
-                    )
+                    if (isAdded) {
+                        mostrarError(
+                            "No se pudieron guardar todos los cambios: ${e.message ?: "sin detalle"}. " +
+                                    "Si algunos se aplicaron, revisa las asignaciones antes de reintentar."
+                        )
+                        cargarOperarios()
+                    }
+                } finally {
+                    guardando = false
+                    btnGuardar.isEnabled = true
+                    btnCancelar.isEnabled = true
+                    spinnerGranjas.isEnabled = true
                 }
             }
         }
