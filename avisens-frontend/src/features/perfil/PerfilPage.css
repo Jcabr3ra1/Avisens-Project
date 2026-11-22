@@ -36,7 +36,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   background: var(--surface-base);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 10px 28px -18px color-mix(in srgb, var(--avisens-ink) 28%, transparent), var(--shadow-sm);
 }
 
 .per-perfil-banda {
@@ -169,7 +169,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   background: var(--surface-base);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 10px 26px -20px color-mix(in srgb, var(--avisens-ink) 28%, transparent), var(--shadow-sm);
 }
 
 .per-tarjeta-cabecera {

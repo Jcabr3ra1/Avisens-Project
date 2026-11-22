@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import type { DashboardAlerta, DashboardIndicador, DashboardLote } from '@features/dashboard/model/dashboard'
-import type { FilaGalpon } from '@features/dashboard/model/resumenGranja'
-import { IcChart, IcDrop, IcEgg, IcHeart, IcSeed } from '@shared/ui/icons/icons'
+import { IcAlert, IcArrowRight, IcChart, IcDrop, IcEgg, IcSeed } from '@shared/ui/icons/icons'
 import { fechaDeHoy, formatearFechaCalendario } from '@shared/utils/fechas'
 import {
   avesMuertasDelLote,
@@ -17,21 +16,18 @@ import {
 
 type Props = {
   lote: DashboardLote | null
+  diaLote: number | null
   nombreGalpon: string | null
   galponId: number | null
-  galpones: FilaGalpon[]
-  onSeleccionarGalpon: (id: number) => void
   mortalidad: MortalidadLote[]
   consumos: ConsumoLote[]
   eventos: EventoSanitarioLote[]
   alertas: DashboardAlerta[]
   indicadores: DashboardIndicador[]
-  // Mortalidad y consumos (aves y último consumo) llegan por un lado; los
-  // indicadores del lote (EPEF y salud) por otro, y se recargan al cambiar de
-  // galpón. Cada cifra espera solo lo que necesita.
   cargandoRegistros: boolean
   cargandoIndicadores: boolean
   error: boolean
+  onAbrirGuia?: (loteId: number) => void
 }
 
 type Cifra = {
@@ -47,12 +43,20 @@ type Cifra = {
 const numero = (valor: number, decimales = 0) =>
   valor.toLocaleString('es-CO', { maximumFractionDigits: decimales })
 
-// Las cifras del lote que el operario consulta cada día: las mismas que la app
-// Android le muestra en su inicio (aves vivas y muertas, último consumo,
-// calidad de crianza y salud del lote).
 function ResumenLoteOperario({
-  lote, nombreGalpon, galponId, galpones, onSeleccionarGalpon,
-  mortalidad, consumos, eventos, alertas, indicadores, cargandoRegistros, cargandoIndicadores, error,
+  lote,
+  diaLote,
+  nombreGalpon,
+  galponId,
+  mortalidad,
+  consumos,
+  eventos,
+  alertas,
+  indicadores,
+  cargandoRegistros,
+  cargandoIndicadores,
+  error,
+  onAbrirGuia,
 }: Props) {
   const cargando = cargandoRegistros
   const cargandoSalud = cargandoRegistros || cargandoIndicadores
@@ -61,7 +65,7 @@ function ResumenLoteOperario({
   const ultimo = lote ? ultimoConsumoDelLote(lote.id, consumos) : null
   const alimento = numeroOpcional(ultimo?.alimento_kg)
   const agua = numeroOpcional(ultimo?.agua_litros)
-  const fechaConsumo = ultimo ? `Registro del ${formatearFechaCalendario(ultimo.fecha)}` : 'Sin consumos registrados'
+  const fechaConsumo = ultimo ? `Del ${formatearFechaCalendario(ultimo.fecha)}` : 'Sin consumos aún'
   const epef = calidadCrianza(reciente)
   const salud = lote && galponId !== null
     ? saludDelLote({ loteId: lote.id, galponId, alertas, eventos, reciente, hoy: fechaDeHoy() })
@@ -71,29 +75,29 @@ function ResumenLoteOperario({
   const cifras: Cifra[] = lote ? [
     {
       id: 'vivas',
-      icono: <IcEgg size={18} />,
+      icono: <IcEgg size={15} />,
       etiqueta: 'Aves vivas',
       valor: cargando ? pendiente : numero(avesVivas(lote.cantidadInicial, muertas)),
-      nota: `De ${numero(lote.cantidadInicial)} al ingreso`,
+      nota: `de ${numero(lote.cantidadInicial)} al ingreso`,
     },
     {
       id: 'muertas',
-      icono: <IcHeart size={18} />,
-      etiqueta: 'Aves muertas',
+      icono: <IcAlert size={15} />,
+      etiqueta: 'Mortalidad',
       valor: cargando ? pendiente : numero(muertas),
       nota: lote.cantidadInicial > 0 ? `${numero((muertas / lote.cantidadInicial) * 100, 1)} % del lote` : undefined,
       tono: muertas > 0 && lote.cantidadInicial > 0 && muertas / lote.cantidadInicial >= 0.02 ? 'peligro' : undefined,
     },
     {
       id: 'alimento',
-      icono: <IcSeed size={18} />,
+      icono: <IcSeed size={15} />,
       etiqueta: 'Último alimento',
       valor: cargando ? pendiente : alimento === null ? '—' : `${numero(alimento, 1)} kg`,
       nota: cargando ? undefined : fechaConsumo,
     },
     {
       id: 'agua',
-      icono: <IcDrop size={18} />,
+      icono: <IcDrop size={15} />,
       etiqueta: 'Última agua',
       valor: cargando ? pendiente : agua === null ? '—' : `${numero(agua, 1)} L`,
       nota: cargando ? undefined : fechaConsumo,
@@ -102,93 +106,96 @@ function ResumenLoteOperario({
     },
     {
       id: 'epef',
-      icono: <IcChart size={18} />,
-      etiqueta: 'Calidad de crianza (EPEF)',
-      valor: cargandoIndicadores ? '…' : epef.tipo === 'valor' ? numero(epef.valor) : epef.tipo === 'fuera_de_rango' ? 'Dato fuera de rango' : '—',
+      icono: <IcChart size={15} />,
+      etiqueta: 'Calidad (EPEF)',
+      valor: cargandoIndicadores ? '…' : epef.tipo === 'valor' ? numero(epef.valor) : epef.tipo === 'fuera_de_rango' ? 'Revisar' : '—',
       nota: cargandoIndicadores ? undefined : epef.tipo === 'valor'
         ? 'Más alto es mejor'
         : epef.tipo === 'fuera_de_rango'
-          ? 'Revisa pesajes y consumos en la bitácora'
-          : 'Aún sin indicador verificado',
+          ? 'Revisa pesajes en bitácora'
+          : 'Sin indicador aún',
       tono: !cargandoIndicadores && epef.tipo === 'fuera_de_rango' ? 'aviso' : undefined,
     },
   ] : []
 
   return (
-    <section className="operario-lote-resumen" aria-labelledby="operario-lote-titulo" aria-busy={cargandoSalud}>
-      <header className="rsm-cabecera">
+    <section className="op-card" aria-labelledby="operario-lote-titulo" aria-busy={cargandoSalud}>
+      <header className="op-card-cabecera">
         <div>
-          <h2 id="operario-lote-titulo" className="rsm-titulo rsm-titulo--grande">Tu lote hoy</h2>
-          <p className="rsm-subtitulo">
-            {lote ? `${nombreGalpon ?? 'Galpón'} · ${lote.codigo}` : 'Elige un galpón para ver su lote'}
-          </p>
+          <span className="op-rotulo">Seguimiento diario</span>
+          <div className="op-card-titulo-fila">
+            <h2 id="operario-lote-titulo">
+              {lote ? `${nombreGalpon ?? 'Galpón'} · ${lote.codigo}` : (nombreGalpon ?? 'Tu lote hoy')}
+            </h2>
+            {lote && diaLote !== null && (
+              <span className="op-dia-pill">Día {diaLote}</span>
+            )}
+          </div>
         </div>
+        {lote && onAbrirGuia && (
+          <button
+            type="button"
+            className="adm-btn adm-btn--secundario"
+            onClick={() => onAbrirGuia(lote.id)}
+          >
+            Guía de peso <IcArrowRight size={14} aria-hidden="true" />
+          </button>
+        )}
       </header>
 
-      {galpones.length > 1 && (
-        <div className="rsm-galpon-pestanas" role="group" aria-label="Galpón del resumen">
-          {galpones.map((galpon) => (
-            <button
-              key={galpon.id}
-              type="button"
-              className="rsm-galpon-pestana"
-              aria-pressed={galpon.id === galponId}
-              onClick={() => onSeleccionarGalpon(galpon.id)}
-            >
-              {galpon.nombre}
-            </button>
-          ))}
-        </div>
-      )}
-
       {error && (
-        <p className="operario-lote-error" role="status">
+        <p className="op-aviso-inline" role="status">
           No se pudieron cargar todos los registros del lote. Algunas cifras pueden estar incompletas.
         </p>
       )}
 
       {!lote ? (
-        <p className="operario-sin-lote">Este galpón no tiene un lote activo.</p>
+        <div className="op-vacio-inline">
+          <IcEgg size={18} aria-hidden="true" />
+          <span>Este galpón no tiene un lote activo en este momento.</span>
+        </div>
       ) : (
         <>
-          <ul className="operario-cifras" aria-label={`Cifras del lote ${lote.codigo}`}>
+          <ul className="op-cifras" aria-label={`Cifras del lote ${lote.codigo}`}>
             {cifras.map((cifra) => (
-              <li key={cifra.id} className={`operario-cifra${cifra.tono ? ` operario-cifra--${cifra.tono}` : ''}`}>
-                <span className="operario-cifra-icono" aria-hidden="true">{cifra.icono}</span>
-                <span className="operario-cifra-etiqueta">{cifra.etiqueta}</span>
-                <strong className="operario-cifra-valor">{cifra.valor}</strong>
-                {cifra.nota && <span className="operario-cifra-nota">{cifra.nota}</span>}
-                {cifra.aviso && <span className="operario-cifra-aviso">{cifra.aviso}</span>}
+              <li key={cifra.id} className={`op-cifra${cifra.tono ? ` op-cifra--${cifra.tono}` : ''}`}>
+                <div className="op-cifra-top">
+                  <span className="op-cifra-etiqueta">{cifra.etiqueta}</span>
+                  <span className="op-cifra-icono" aria-hidden="true">{cifra.icono}</span>
+                </div>
+                <strong className="op-cifra-valor">{cifra.valor}</strong>
+                {cifra.nota && <span className="op-cifra-nota">{cifra.nota}</span>}
+                {cifra.aviso && <span className="op-cifra-aviso">{cifra.aviso}</span>}
               </li>
             ))}
-          </ul>
 
-          {salud && (
-            <div className={`operario-salud operario-salud--${cargandoSalud ? 'sin_datos' : salud.estado}`}>
-              <div className="operario-salud-cabecera">
-                <span className="operario-salud-titulo">Salud del lote</span>
-                <span className="operario-salud-estado">{cargandoSalud ? 'Calculando…' : salud.etiqueta}</span>
-              </div>
-              <div
-                className="operario-salud-barra"
-                role="meter"
-                aria-label="Salud del lote"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={cargandoSalud ? 0 : salud.progreso}
-                aria-valuetext={cargandoSalud ? 'Calculando' : salud.etiqueta}
-              >
-                <span style={{ width: `${cargandoSalud ? 0 : salud.progreso}%` }} />
-              </div>
-              <p className="operario-salud-detalle">
-                {salud.alertasActivas === 1 ? '1 alerta activa' : `${salud.alertasActivas} alertas activas`}
-                {' · '}
-                {salud.avesEnSeguimiento === 1
-                  ? '1 ave en seguimiento sanitario (7 días)'
-                  : `${numero(salud.avesEnSeguimiento)} aves en seguimiento sanitario (7 días)`}
-              </p>
-            </div>
-          )}
+            {salud && (
+              <li className={`op-cifra op-cifra--salud op-salud--${cargandoSalud ? 'sin_datos' : salud.estado}`}>
+                <div className="op-cifra-top">
+                  <span className="op-cifra-etiqueta">Salud del lote</span>
+                  <span className="op-salud-estado">{cargandoSalud ? 'Calculando…' : salud.etiqueta}</span>
+                </div>
+                <div
+                  className="op-salud-barra"
+                  role="meter"
+                  aria-label="Salud del lote"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={cargandoSalud ? 0 : salud.progreso}
+                  aria-valuetext={cargandoSalud ? 'Calculando' : salud.etiqueta}
+                >
+                  <span style={{ width: `${cargandoSalud ? 0 : salud.progreso}%` }} />
+                </div>
+                <span className="op-cifra-nota">
+                  {salud.alertasActivas === 1 ? '1 alerta' : `${salud.alertasActivas} alertas`}
+                  {' · '}
+                  {salud.avesEnSeguimiento === 1
+                    ? '1 ave en seguimiento'
+                    : `${numero(salud.avesEnSeguimiento)} en seguimiento`}
+                </span>
+              </li>
+            )}
+          </ul>
         </>
       )}
     </section>

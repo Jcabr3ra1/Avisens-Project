@@ -4,12 +4,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { ROL_ADMIN, ROL_PROPIETARIO, permisosDeRegistro } from '@shared/auth/permisos'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
-import { IcDoc, IcDrop, IcHeart, IcScale, IcSeed } from '@shared/ui/icons/icons'
+import { IcAlert, IcBarn, IcCal, IcDoc, IcDrop, IcScale, IcSeed } from '@shared/ui/icons/icons'
 import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import GestionConsumos from '@features/consumos-diarios/components/GestionConsumos'
 import { toast } from 'sonner'
 import { mensajeDeError } from '@shared/utils/errores'
 import AccionesRapidasBitacora from './components/AccionesRapidasBitacora'
+import ActividadRecienteBitacora from './components/ActividadRecienteBitacora'
 import FormularioRegistro from './components/FormularioRegistro'
 import HistorialRegistros from './components/HistorialRegistros'
 import ResumenLote from './components/ResumenLote'
@@ -25,6 +26,8 @@ import {
 } from './model/bitacora'
 import {
   calcularResumenBitacora,
+  calcularSaludCicloLote,
+  crearActividadReciente,
   crearFilasRegistro,
   filtrarRegistrosPorLote,
   type VistaBitacora,
@@ -36,6 +39,14 @@ const ETIQUETA: Record<TipoRegistro, string> = {
   peso: 'Pesajes',
   mortalidad: 'Mortalidad',
   sanitario: 'Sanidad',
+}
+
+function fechaIngresoLegible(fecha: string) {
+  return new Date(`${fecha.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CO', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 function BitacoraPage() {
@@ -69,7 +80,7 @@ function BitacoraPage() {
       if (destino) {
         navigate(
           `/granjas?granjaId=${destino.galpon.granja.id}&galpon=${destino.galpon.id}&pestana=bitacora${vistaSolicitada ? `&vista=${vistaSolicitada}` : ''}`,
-          { replace: true }
+          { replace: true },
         )
       }
     }
@@ -84,6 +95,7 @@ function BitacoraPage() {
     setGalponId(destino.galpon.id)
     setLoteId(destino.id)
   }, [datos.lotes, loteSolicitado])
+
   const [form, setForm] = useState<DatosFormulario>(FORMULARIO_INICIAL)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
@@ -136,10 +148,25 @@ function BitacoraPage() {
   const mortalidad = useMemo(() => filtrarRegistrosPorLote(datos.mortalidad, loteSeleccionadoId), [datos.mortalidad, loteSeleccionadoId])
   const sanitarios = useMemo(() => filtrarRegistrosPorLote(datos.sanitarios, loteSeleccionadoId), [datos.sanitarios, loteSeleccionadoId])
   const consumos = useMemo(() => filtrarRegistrosPorLote(datos.consumos, loteSeleccionadoId), [datos.consumos, loteSeleccionadoId])
+
   const resumen = useMemo(
     () => calcularResumenBitacora(pesajes, mortalidad, sanitarios, consumos),
     [consumos, mortalidad, pesajes, sanitarios],
   )
+
+  const saludCiclo = useMemo(
+    () =>
+      lote
+        ? calcularSaludCicloLote(lote.fecha_ingreso, lote.cantidad_inicial, resumen.avesMuertas)
+        : null,
+    [lote, resumen.avesMuertas],
+  )
+
+  const actividadReciente = useMemo(
+    () => crearActividadReciente(pesajes, mortalidad, sanitarios, consumos, 6),
+    [consumos, mortalidad, pesajes, sanitarios],
+  )
+
   const filas = useMemo(
     () => crearFilasRegistro(vista, pesajes, mortalidad, sanitarios),
     [mortalidad, pesajes, sanitarios, vista],
@@ -176,14 +203,13 @@ function BitacoraPage() {
       return
     }
 
-    const payload = payloadRegistro(modal, form, loteSeleccionadoId)
-
     setGuardando(true)
     setErrorForm('')
-    const tipo = modal
-    void (editandoId === null ? datos.crear(tipo, payload) : datos.actualizar(tipo, editandoId, payload))
+    const accion = editandoId !== null
+      ? datos.actualizar(modal, editandoId, payloadRegistro(modal, form, loteSeleccionadoId))
+      : datos.crear(modal, payloadRegistro(modal, form, loteSeleccionadoId))
+    void accion
       .then(() => {
-        if (editandoId !== null) toast.success('Registro corregido')
         setModal(null)
         setEditandoId(null)
       })
@@ -192,81 +218,57 @@ function BitacoraPage() {
   }
 
   const borrar = async (tipo: TipoRegistro, id: number) => {
-    if ((await confirmarAccion({
+    if (!(await confirmarAccion({
       titulo: '¿Eliminar este registro?',
-      descripcion: 'Esta acción no se puede deshacer.',
+      entidad: ETIQUETA[tipo],
+      descripcion: 'Esta acción eliminará el registro seleccionado de la bitácora del lote.',
       textoConfirmar: 'Eliminar registro',
       tono: 'peligro',
-    }))) {
-      void datos.eliminar(tipo, id).catch((error) => {
-        toast.error(mensajeDeError(error, 'No se pudo eliminar el registro.'))
-      })
-    }
+    }))) return
+    void datos.eliminar(tipo, id).catch((error) => {
+      toast.error(mensajeDeError(error, 'No se pudo eliminar el registro.'))
+    })
   }
 
   if (datos.cargando) {
     return (
-      <div className="page-container bit-page adm-page">
+      <div className="page-container bit-page adm-page" role="status">
         <p className="bit-vacio">Cargando bitácora…</p>
       </div>
     )
   }
 
+  const lineaGenetica = lote?.linea_genetica?.nombre || lote?.raza || null
+
   return (
     <div className={`page-container bit-page adm-page${esAdministrador ? ' bit-page--admin' : ''}`}>
       <CabeceraAdmin
-        eyebrow={esAdministrador ? 'Control de organización' : 'Control productivo'}
+        eyebrow={esAdministrador ? 'Control de organización' : 'Seguimiento de campo'}
         titulo={esAdministrador ? 'Bitácora de producción' : 'Bitácora del lote'}
         subtitulo={esAdministrador
           ? 'Consulta y registra la actividad de los lotes activos.'
-          : 'Registra y consulta el estado real de tus aves.'}
+          : 'Registra y consulta el estado diario de tus aves.'}
+        acciones={lote ? (
+          <div className="bit-cab-acciones">
+            <button
+              type="button"
+              className="adm-btn adm-btn--secundario"
+              onClick={() => abrir('mortalidad')}
+            >
+              <IcAlert size={15} aria-hidden="true" />
+              Mortalidad
+            </button>
+            <button
+              type="button"
+              className="adm-btn adm-btn--primario"
+              onClick={() => abrir('peso')}
+            >
+              <IcScale size={15} aria-hidden="true" />
+              Registrar peso
+            </button>
+          </div>
+        ) : undefined}
       />
-
-      <fieldset className="bit-selector-jerarquico adm-panel">
-        <legend>Ubicación en seguimiento</legend>
-        <div className="bit-selector-campos">
-          <label>
-              <span>Granja</span>
-              <select
-                value={granjaSeleccionadaId ?? ''}
-                disabled={!granjas.length}
-                onChange={(evento) => {
-                  setGranjaId(Number(evento.target.value))
-                  setGalponId(null)
-                  setLoteId(null)
-                }}
-              >
-                {!granjas.length && <option value="">Sin granjas con lotes activos</option>}
-                {granjas.map((granja) => <option key={granja.id} value={granja.id}>{granja.nombre}</option>)}
-              </select>
-          </label>
-          <label>
-              <span>Galpón</span>
-              <select
-                value={galponSeleccionadoId ?? ''}
-                disabled={!galpones.length}
-                onChange={(evento) => {
-                  setGalponId(Number(evento.target.value))
-                  setLoteId(null)
-                }}
-              >
-                {!galpones.length && <option value="">Sin galpones disponibles</option>}
-                {galpones.map((galpon) => <option key={galpon.id} value={galpon.id}>{galpon.nombre}</option>)}
-              </select>
-          </label>
-          <label>
-              <span>Lote activo</span>
-              <select
-                value={loteSeleccionadoId ?? ''}
-                disabled={!lotesDelGalpon.length}
-                onChange={(evento) => setLoteId(Number(evento.target.value))}
-              >
-                {!lotesDelGalpon.length && <option value="">Sin lotes activos</option>}
-                {lotesDelGalpon.map((item) => <option key={item.id} value={item.id}>{item.codigo}</option>)}
-              </select>
-          </label>
-        </div>
-      </fieldset>
 
       {datos.error && (
         <div className="bit-alert adm-alerta" role="alert">
@@ -281,68 +283,212 @@ function BitacoraPage() {
           <p>Cuando exista un lote activo, su control diario aparecerá aquí.</p>
         </section>
       ) : (
-        <>
-          <section className="bit-contexto-lote" aria-label="Lote seleccionado">
-            <div>
-              <p className="bit-kicker">Lote activo</p>
-              <h2>{lote.codigo}</h2>
-              <p>
-                Galpón {lote.galpon.nombre} · {resumen.avesMuertas > 0 ? (
-                  <><strong>{Math.max(0, lote.cantidad_inicial - resumen.avesMuertas).toLocaleString('es-CO')}</strong> aves vivas ({lote.cantidad_inicial.toLocaleString('es-CO')} iniciales)</>
-                ) : (
-                  <>{lote.cantidad_inicial.toLocaleString('es-CO')} aves iniciales</>
+        <div className="bit-expediente">
+          <aside className="bit-ficha" aria-label="Expediente del lote seleccionado">
+            <header className="bit-ficha-hero">
+              <div className="bit-ficha-hero-top">
+                <span className="bit-ficha-pill">
+                  <span className="bit-ficha-dot" aria-hidden="true" />
+                  Lote activo
+                </span>
+                {saludCiclo && (
+                  <span className="bit-ficha-dia">Día {saludCiclo.diasCiclo}</span>
                 )}
+              </div>
+              <h2 className="bit-ficha-codigo">{lote.codigo}</h2>
+              <p className="bit-ficha-ubicacion">
+                <IcBarn size={14} aria-hidden="true" />
+                <span>{lote.galpon.nombre} · {lote.galpon.granja.nombre}</span>
               </p>
+              <div className="bit-ficha-tags">
+                <span className="bit-ficha-tag">
+                  <IcCal size={12} aria-hidden="true" />
+                  Ingreso {fechaIngresoLegible(lote.fecha_ingreso)}
+                </span>
+                {lineaGenetica && (
+                  <span className="bit-ficha-tag">{lineaGenetica}</span>
+                )}
+              </div>
+            </header>
+
+            <div className="bit-ficha-cuerpo">
+              <div className="bit-ficha-bloque">
+                <span className="bit-ficha-seccion-titulo">Ubicación en seguimiento</span>
+                <div className="bit-ficha-selectores">
+                  <label className="bit-campo">
+                    <span>Granja</span>
+                    <select
+                      value={granjaSeleccionadaId ?? ''}
+                      disabled={!granjas.length}
+                      onChange={(evento) => {
+                        setGranjaId(Number(evento.target.value))
+                        setGalponId(null)
+                        setLoteId(null)
+                      }}
+                    >
+                      {!granjas.length && <option value="">Sin granjas</option>}
+                      {granjas.map((granja) => <option key={granja.id} value={granja.id}>{granja.nombre}</option>)}
+                    </select>
+                  </label>
+                  <div className="bit-ficha-par">
+                    <label className="bit-campo">
+                      <span>Galpón</span>
+                      <select
+                        value={galponSeleccionadoId ?? ''}
+                        disabled={!galpones.length}
+                        onChange={(evento) => {
+                          setGalponId(Number(evento.target.value))
+                          setLoteId(null)
+                        }}
+                      >
+                        {!galpones.length && <option value="">Sin galpones</option>}
+                        {galpones.map((galpon) => <option key={galpon.id} value={galpon.id}>{galpon.nombre}</option>)}
+                      </select>
+                    </label>
+                    <label className="bit-campo">
+                      <span>Lote</span>
+                      <select
+                        value={loteSeleccionadoId ?? ''}
+                        disabled={!lotesDelGalpon.length}
+                        onChange={(evento) => setLoteId(Number(evento.target.value))}
+                      >
+                        {!lotesDelGalpon.length && <option value="">Sin lotes</option>}
+                        {lotesDelGalpon.map((item) => <option key={item.id} value={item.id}>{item.codigo}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {saludCiclo && (
+                <div className="bit-ficha-bloque">
+                  <span className="bit-ficha-seccion-titulo">Estado del lote</span>
+
+                  <div className="bit-progreso">
+                    <div className="bit-progreso-cab">
+                      <span>Supervivencia</span>
+                      <strong className={`bit-progreso-val bit-progreso-val--${saludCiclo.tonoSupervivencia}`}>
+                        {saludCiclo.supervivenciaPct.toLocaleString('es-CO')}%
+                      </strong>
+                    </div>
+                    <div className="bit-barra" aria-hidden="true">
+                      <span
+                        className={`bit-barra-fill bit-barra-fill--${saludCiclo.tonoSupervivencia}`}
+                        style={{ width: `${saludCiclo.supervivenciaPct}%` }}
+                      />
+                    </div>
+                    <small className="bit-progreso-pie">
+                      {saludCiclo.avesVivas.toLocaleString('es-CO')} vivas de {lote.cantidad_inicial.toLocaleString('es-CO')} iniciales
+                    </small>
+                  </div>
+
+                  <div className="bit-progreso">
+                    <div className="bit-progreso-cab">
+                      <span>Avance del ciclo</span>
+                      <strong className="bit-progreso-val">Día {saludCiclo.diasCiclo} / 42</strong>
+                    </div>
+                    <div className="bit-barra" aria-hidden="true">
+                      <span
+                        className="bit-barra-fill bit-barra-fill--ciclo"
+                        style={{ width: `${saludCiclo.progresoCicloPct}%` }}
+                      />
+                    </div>
+                    <small className="bit-progreso-pie" role="status" aria-atomic="true">
+                      {resumen.totalRegistros} {resumen.totalRegistros === 1 ? 'registro' : 'registros'} en este lote
+                    </small>
+                  </div>
+                </div>
+              )}
+
+              <div className="bit-ficha-bloque">
+                <span className="bit-ficha-seccion-titulo">Registros por frente</span>
+                <div className="bit-ficha-contadores">
+                  {(
+                    [
+                      ['peso', 'Pesajes', pesajes.length],
+                      ['mortalidad', 'Mortalidad', mortalidad.length],
+                      ['sanitario', 'Sanidad', sanitarios.length],
+                      ['consumo', 'Consumos', consumos.length],
+                    ] as const
+                  ).map(([id, etiqueta, total]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`bit-mini-stat${vista === id ? ' is-activo' : ''}`}
+                      onClick={() => setVista(id)}
+                    >
+                      <span>{etiqueta}</span>
+                      <strong>{total}</strong>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <span role="status" aria-atomic="true">{resumen.totalRegistros} registros en este lote</span>
-          </section>
+          </aside>
 
-          <ResumenLote resumen={resumen} />
+          <main className="bit-main">
+            <ResumenLote resumen={resumen} vistaActiva={vista} onSeleccionarVista={setVista} />
 
-          <nav className="bit-tabs" aria-label="Secciones de la bitácora">
-            {(
-              [
-                ['resumen', 'Resumen', <IcDoc size={15} />],
-                ['peso', 'Pesajes', <IcScale size={15} />],
-                ['mortalidad', 'Mortalidad', <IcHeart size={15} />],
-                ['sanitario', 'Sanidad', <IcDrop size={15} />],
-                ['consumo', 'Consumos', <IcSeed size={15} />],
-              ] as const
-            ).map(([id, etiqueta, icono]) => (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={vista === id}
-                className={vista === id ? 'activo' : ''}
-                onClick={() => setVista(id)}
-              >
-                <span aria-hidden="true">{icono}</span>
-                {etiqueta}
-              </button>
-            ))}
-          </nav>
+            <nav className="bit-tabs" aria-label="Secciones de la bitácora">
+              {(
+                [
+                  ['resumen', 'Resumen', <IcDoc size={15} />, null],
+                  ['peso', 'Pesajes', <IcScale size={15} />, pesajes.length],
+                  ['mortalidad', 'Mortalidad', <IcAlert size={15} />, mortalidad.length],
+                  ['sanitario', 'Sanidad', <IcDrop size={15} />, sanitarios.length],
+                  ['consumo', 'Consumos', <IcSeed size={15} />, consumos.length],
+                ] as const
+              ).map(([id, etiqueta, icono, cantidad]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={vista === id}
+                  className={`bit-tab${vista === id ? ' is-activa' : ''}`}
+                  onClick={() => setVista(id)}
+                >
+                  <span className="bit-tab-icono" aria-hidden="true">{icono}</span>
+                  <span>{etiqueta}</span>
+                  {cantidad !== null && <span className="bit-tab-conteo">{cantidad}</span>}
+                </button>
+              ))}
+            </nav>
 
-          {vista === 'resumen' ? (
-            <AccionesRapidasBitacora
-              codigoLote={lote.codigo}
-              onRegistrar={abrir}
-              onRegistrarConsumo={() => setVista('consumo')}
-            />
-          ) : vista === 'consumo' ? (
-            <GestionConsumos loteFijo={loteSeleccionadoId} />
-          ) : (
-            <HistorialRegistros
-              titulo={ETIQUETA[vista]}
-              codigoLote={lote.codigo}
-              filas={filas}
-              permisos={permisosRegistro}
-              onNuevo={() => abrir(vista)}
-              onEditar={(id) => abrirEdicion(vista, id)}
-              onEliminar={(id) => borrar(vista, id)}
-              resaltadoId={vista === 'peso' ? pesajes.find((item) => item.peso_promedio_g > 10000)?.id ?? null : null}
-            />
-          )}
-        </>
+            {vista === 'resumen' ? (
+              <div className="bit-resumen-stack">
+                <AccionesRapidasBitacora
+                  codigoLote={lote.codigo}
+                  resumen={resumen}
+                  conteos={{
+                    pesajes: pesajes.length,
+                    mortalidad: mortalidad.length,
+                    sanitarios: sanitarios.length,
+                    consumos: consumos.length,
+                  }}
+                  onRegistrar={abrir}
+                  onRegistrarConsumo={() => setVista('consumo')}
+                />
+                <ActividadRecienteBitacora
+                  eventos={actividadReciente}
+                  codigoLote={lote.codigo}
+                  onVerSeccion={setVista}
+                />
+              </div>
+            ) : vista === 'consumo' ? (
+              <GestionConsumos loteFijo={loteSeleccionadoId} />
+            ) : (
+              <HistorialRegistros
+                titulo={ETIQUETA[vista]}
+                codigoLote={lote.codigo}
+                filas={filas}
+                permisos={permisosRegistro}
+                onNuevo={() => abrir(vista)}
+                onEditar={(id) => abrirEdicion(vista, id)}
+                onEliminar={(id) => borrar(vista, id)}
+                resaltadoId={vista === 'peso' ? pesajes.find((item) => item.peso_promedio_g > 10000)?.id ?? null : null}
+              />
+            )}
+          </main>
+        </div>
       )}
 
       {modal && (
