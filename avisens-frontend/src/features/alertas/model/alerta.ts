@@ -2,7 +2,7 @@ import type { Alerta as AlertaApi, EstadoAlerta } from '../api/alertas'
 
 export type { AlertaApi as Alerta, EstadoAlerta }
 
-export type FiltroEstado = EstadoAlerta | 'todas'
+export type FiltroEstado = EstadoAlerta | 'todas' | 'activas'
 export type FiltroCriticidad = 'alta' | 'media' | 'baja' | 'todas'
 
 export interface FiltrosAlertas {
@@ -34,7 +34,9 @@ export function filtrarAlertas(
   filtros: FiltrosAlertas,
 ): AlertaApi[] {
   return alertas.filter((alerta) => {
-    const coincideEstado = filtros.estado === 'todas' || alerta.estado === filtros.estado
+    const coincideEstado =
+      filtros.estado === 'todas' ||
+      (filtros.estado === 'activas' ? alerta.estado !== 'cerrada' : alerta.estado === filtros.estado)
     // El desplegable ofrece "Crítica" como 'alta', que es el techo de la
     // escala. Se compara por esCriticidadAlta y no en crudo para que los datos
     // escritos antes de unificar la escala sigan encontrándose.

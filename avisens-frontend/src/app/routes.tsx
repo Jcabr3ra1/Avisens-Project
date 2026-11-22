@@ -42,8 +42,10 @@ const PerfilPage = lazy(() => import('@features/perfil/PerfilPage'))
 const AuditoriaPage = lazy(() => import('@features/auditoria/AuditoriaPage'))
 const CatalogosPage = lazy(() => import('@features/catalogos/CatalogosPage'))
 const DispositivosPage = lazy(() => import('@features/dispositivos/DispositivosPage'))
+const DispositivoDetallePage = lazy(() => import('@features/dispositivos/DispositivoDetallePage'))
 const OrganizacionesPage = lazy(() => import('@features/organizaciones/OrganizacionesPage'))
 const OrganizacionDetallePage = lazy(() => import('@features/organizaciones/OrganizacionDetallePage'))
+const GalponDetallePropietarioPage = lazy(() => import('@features/granjas/propietario/GalponDetallePropietarioPage'))
 const RecuperarPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperarPasswordPage'))
 const CambiarPasswordPage = lazy(() => import('@features/recuperaciones-password/CambiarPasswordPage'))
 const RecuperacionesPasswordPage = lazy(() => import('@features/recuperaciones-password/RecuperacionesPasswordPage'))
@@ -113,9 +115,11 @@ function AppRoutes() {
         <Route path="/auditoria"        element={cargarPagina(<AuditoriaPage />)} />
         <Route path="/catalogos"        element={cargarPagina(<CatalogosPage />)} />
         <Route path="/dispositivos"     element={cargarPagina(<DispositivosPage />)} />
+        <Route path="/dispositivos/:id" element={cargarPagina(<DispositivoDetallePage />)} />
         <Route path="/organizaciones"   element={cargarPagina(<OrganizacionesPage />)} />
         <Route path="/organizaciones/:id" element={cargarPagina(<OrganizacionDetallePage />)} />
         <Route path="/granjas"         element={cargarPagina(<GranjasPage />)} />
+        <Route path="/granjas/galpones/:id" element={cargarPagina(<GalponDetallePropietarioPage />)} />
         <Route path="/galpones"        element={cargarPagina(<GalponesPage />)} />
         <Route path="/lotes"           element={cargarPagina(<LotesPage />)} />
         <Route path="/sensores"        element={cargarPagina(<SensoresPage />)} />

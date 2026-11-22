@@ -5,7 +5,6 @@ import { getRol } from '@shared/api'
 import { ROL_ADMIN, ROL_PROPIETARIO, permisosDeRegistro } from '@shared/auth/permisos'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import { IcDoc, IcDrop, IcHeart, IcScale, IcSeed } from '@shared/ui/icons/icons'
-import BotonActualizar from '@shared/ui/BotonActualizar/BotonActualizar'
 import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import GestionConsumos from '@features/consumos-diarios/components/GestionConsumos'
 import { toast } from 'sonner'
@@ -221,7 +220,6 @@ function BitacoraPage() {
         subtitulo={esAdministrador
           ? 'Consulta y registra la actividad de los lotes activos.'
           : 'Registra y consulta el estado real de tus aves.'}
-        acciones={<BotonActualizar onActualizar={datos.recargar} />}
       />
 
       <fieldset className="bit-selector-jerarquico adm-panel">

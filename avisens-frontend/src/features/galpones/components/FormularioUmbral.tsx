@@ -81,6 +81,7 @@ function FormularioUmbral({
 
   return (
     <Modal
+      variante="lateral"
       titulo={existente ? 'Revisar umbral' : 'Nuevo umbral'}
       subtitulo={`${variable} · ${etiquetaSemana(semana)} de vida del lote`}
       onCerrar={onCerrar}

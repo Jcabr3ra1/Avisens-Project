@@ -99,8 +99,10 @@ function EstructuraOrganizacion({ detalle, granjaActivaId, onSeleccionarGranja, 
   const galponesDeGranja = granjaActiva
     ? estructura.galpones.filter((galpon) => galpon.granja.id === granjaActiva.id)
     : []
-  const loteEnCurso = (galponId: number) =>
-    estructura.lotes.find((lote) => lote.galpon.id === galponId && lote.estado === 'activo') ?? null
+  const lotesEnCurso = (galponId: number) =>
+    estructura.lotes
+      .filter((lote) => lote.galpon.id === galponId && lote.estado === 'activo')
+      .sort((a, b) => new Date(b.fecha_ingreso).getTime() - new Date(a.fecha_ingreso).getTime())
 
   const ubicacion = granjaActiva
     ? [granjaActiva.municipio, granjaActiva.departamento].filter(Boolean).join(', ')
@@ -258,13 +260,13 @@ function EstructuraOrganizacion({ detalle, granjaActivaId, onSeleccionarGranja, 
                 const resumenGalpon = granjaActiva.galpones.find((item) => item.id === galpon.id)
                 const sensores = resumenGalpon?._count.sensores ?? 0
                 const controladores = resumenGalpon?._count.dispositivo ?? 0
-                const lote = loteEnCurso(galpon.id)
+                const lotesActivos = lotesEnCurso(galpon.id)
                 const habilitado = detalle.activa && granjaActiva.activa && galpon.activo
                 return (
                   <TarjetaGalpon
                     key={galpon.id}
                     galpon={galpon}
-                    lote={lote}
+                    lotesActivos={lotesActivos}
                     sensores={sensores}
                     controladores={controladores}
                     habilitado={habilitado}
@@ -332,7 +334,7 @@ function EstructuraOrganizacion({ detalle, granjaActivaId, onSeleccionarGranja, 
 
 function TarjetaGalpon({
   galpon,
-  lote,
+  lotesActivos,
   sensores,
   controladores,
   habilitado,
@@ -341,7 +343,7 @@ function TarjetaGalpon({
   onEditarLote,
 }: {
   galpon: Galpon
-  lote: Lote | null
+  lotesActivos: Lote[]
   sensores: number
   controladores: number
   habilitado: boolean
@@ -349,8 +351,6 @@ function TarjetaGalpon({
   onIniciarLote: () => void
   onEditarLote: (lote: Lote) => void
 }) {
-  const dia = lote ? diaDeLote(lote) : null
-
   return (
     <li className={`est-card${galpon.activo ? '' : ' is-inactiva'}`}>
       <header className="est-card-top">
@@ -370,34 +370,53 @@ function TarjetaGalpon({
       </header>
 
       <div className="est-card-lote">
-        {lote ? (
+        {lotesActivos.length > 0 ? (
           <>
-            <div className="est-card-lote-cabecera">
-              <span className="est-card-lote-badge">
-                <IcEgg size={13} aria-hidden="true" /> Lote activo · Día {dia}
-              </span>
-              <button type="button" className="est-enlace" onClick={() => onEditarLote(lote)}>
-                Editar lote
+            <div className="est-card-lotes-lista">
+              {lotesActivos.map((lote) => {
+                const dia = diaDeLote(lote)
+                return (
+                  <div key={lote.id} className="est-card-lote-item">
+                    <div className="est-card-lote-cabecera">
+                      <span className="est-card-lote-badge">
+                        <IcEgg size={13} aria-hidden="true" /> Lote activo · Día {dia}
+                      </span>
+                      <button type="button" className="est-enlace" onClick={() => onEditarLote(lote)}>
+                        Editar lote
+                      </button>
+                    </div>
+                    <dl className="est-card-lote-datos">
+                      <div>
+                        <dt>Aves</dt>
+                        <dd>{lote.cantidad_inicial.toLocaleString('es-CO')}</dd>
+                      </div>
+                      <div>
+                        <dt>Ingreso</dt>
+                        <dd>{fecha.format(new Date(lote.fecha_ingreso))}</dd>
+                      </div>
+                      <div>
+                        <dt>Línea</dt>
+                        <dd>{lote.linea_genetica?.nombre ?? lote.raza ?? 'Sin registrar'}</dd>
+                      </div>
+                      <div>
+                        <dt>Código</dt>
+                        <dd><code className="est-codigo">{lote.codigo}</code></dd>
+                      </div>
+                    </dl>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="est-card-lote-pie">
+              <button
+                type="button"
+                className="est-boton est-boton--suave"
+                onClick={onIniciarLote}
+                disabled={!habilitado}
+              >
+                <IcPlus size={14} aria-hidden="true" /> Nuevo lote
               </button>
             </div>
-            <dl className="est-card-lote-datos">
-              <div>
-                <dt>Aves</dt>
-                <dd>{lote.cantidad_inicial.toLocaleString('es-CO')}</dd>
-              </div>
-              <div>
-                <dt>Ingreso</dt>
-                <dd>{fecha.format(new Date(lote.fecha_ingreso))}</dd>
-              </div>
-              <div>
-                <dt>Línea</dt>
-                <dd>{lote.linea_genetica?.nombre ?? lote.raza ?? 'Sin registrar'}</dd>
-              </div>
-              <div>
-                <dt>Código</dt>
-                <dd><code className="est-codigo">{lote.codigo}</code></dd>
-              </div>
-            </dl>
           </>
         ) : (
           <div className="est-card-sin-lote">

@@ -399,7 +399,6 @@ function DispositivosPage() {
               cargando={cargando}
               abiertoMovil={panelMovilAbierto && seleccionada !== null}
               onCerrarMovil={() => setPanelMovilAbierto(false)}
-              onCambio={() => recargar(true)}
             />
           </div>
         </section>

@@ -31,6 +31,7 @@ function FormularioInsumo({
 
   return (
     <Modal
+      variante="lateral"
       titulo={modoEdicion ? 'Editar insumo' : 'Nuevo insumo'}
       onCerrar={onCerrar}
       acciones={

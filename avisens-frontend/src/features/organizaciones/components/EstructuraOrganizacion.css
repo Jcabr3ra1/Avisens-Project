@@ -277,6 +277,28 @@
 .est-card-lote-datos dt { color: var(--text-muted); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
 .est-card-lote-datos dd { margin: 0; color: var(--text-primary); font-size: 0.84rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.est-card-lotes-lista {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.est-card-lote-item {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.est-card-lote-item + .est-card-lote-item {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.est-card-lote-pie {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
 .est-card-sin-lote {
   display: flex;
   flex-wrap: wrap;

@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
-import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
-import { IcAlert, IcArrowUp, IcChart, IcCoin, IcDoc } from '@shared/ui/icons/icons'
+import { IcAlert, IcDoc } from '@shared/ui/icons/icons'
 import { descargarBlob } from '@shared/utils/descargas'
 import { mensajeDeError } from '@shared/utils/errores'
 import { fechaDeHoy } from '@shared/utils/fechas'
@@ -105,23 +104,6 @@ function ReporteCiclo({ lotes, granjas }: ReporteCicloProps) {
     return () => window.removeEventListener('afterprint', terminar)
   }, [imprimiendo, reporte])
 
-  const stats: Stat[] = reporte ? [
-    { label: 'Ingresos', valor: formatoCop(reporte.totales.ingresos), icono: <IcArrowUp size={18} />, tono: 'ok' },
-    { label: 'Egresos', valor: formatoCop(reporte.totales.egresos), icono: <IcArrowUp size={18} />, tono: 'peligro' },
-    {
-      label: 'Balance',
-      valor: formatoCop(reporte.totales.balance),
-      icono: <IcCoin size={18} />,
-      tono: reporte.totales.balance < 0 ? 'peligro' : 'info',
-    },
-    {
-      label: 'Margen neto',
-      valor: formatoPorcentaje(reporte.totales.margen_neto_pct),
-      icono: <IcChart size={18} />,
-      tono: reporte.totales.margen_neto_pct !== null && reporte.totales.margen_neto_pct < 0 ? 'peligro' : 'neutral',
-    },
-  ] : []
-
   const avisosIncompletos = reporte?.avisos.filter((aviso) => !esAvisoInformativo(aviso.codigo)) ?? []
   const avisosInformativos = reporte?.avisos.filter((aviso) => esAvisoInformativo(aviso.codigo)) ?? []
 
@@ -161,7 +143,32 @@ function ReporteCiclo({ lotes, granjas }: ReporteCicloProps) {
       )}
 
       <div className="rc-totales">
-        <TarjetasResumen stats={stats} etiqueta="Totales del reporte" />
+        <div className="fin-kpis" aria-label="Totales del reporte">
+          <div className="fin-kpi fin-kpi--estatico">
+            <span className="fin-kpi-etiqueta">Ingresos</span>
+            <strong className="fin-kpi--ok">{formatoCop(reporte.totales.ingresos)}</strong>
+            <small>Total en el alcance</small>
+          </div>
+          <div className="fin-kpi fin-kpi--estatico">
+            <span className="fin-kpi-etiqueta">Egresos</span>
+            <strong className="fin-kpi--peligro">{formatoCop(reporte.totales.egresos)}</strong>
+            <small>Costos y gastos</small>
+          </div>
+          <div className="fin-kpi fin-kpi--estatico">
+            <span className="fin-kpi-etiqueta">Balance</span>
+            <strong className={reporte.totales.balance < 0 ? 'fin-kpi--peligro' : 'fin-kpi--ok'}>
+              {formatoCop(reporte.totales.balance)}
+            </strong>
+            <small>{reporte.totales.balance < 0 ? 'Déficit del ciclo' : 'Resultado neto'}</small>
+          </div>
+          <div className="fin-kpi fin-kpi--estatico">
+            <span className="fin-kpi-etiqueta">Margen neto</span>
+            <strong className={reporte.totales.margen_neto_pct !== null && reporte.totales.margen_neto_pct < 0 ? 'fin-kpi--peligro' : undefined}>
+              {formatoPorcentaje(reporte.totales.margen_neto_pct)}
+            </strong>
+            <small>Sobre ingresos</small>
+          </div>
+        </div>
       </div>
 
       {reporte.lotes.length > 0 && (

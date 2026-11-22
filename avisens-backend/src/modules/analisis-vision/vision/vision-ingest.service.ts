@@ -134,6 +134,7 @@ export class VisionIngestService {
 
     const lote = await this.prisma.lote.findFirst({
       where: { galpon_id: dispositivo.galpon_id, estado: 'activo' },
+      orderBy: { fecha_ingreso: 'desc' },
       select: { id: true },
     });
     const conAlerta = seguimiento.posiblesMuertos > 0;

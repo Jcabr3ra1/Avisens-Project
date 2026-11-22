@@ -65,18 +65,22 @@ function PanelAlerta({ alerta, cerrando, onCerrar, onEscalar, onSalir }: PanelAl
 
   return (
     <Modal
+      variante="lateral"
       titulo={`${alerta.tipo} en ${alerta.galpon.nombre}`}
       subtitulo={alerta.mensaje ?? 'Se detectó una lectura fuera del rango configurado.'}
       onCerrar={onSalir}
     >
-      <span className={`ale-prioridad ale-prioridad--${alerta.criticidad}`}>{etiquetaCriticidad(alerta.criticidad)}</span>
+      <div className="ale-panel-badges">
+        <span className={`ale-prioridad ale-prioridad--${alerta.criticidad}`}>{etiquetaCriticidad(alerta.criticidad)}</span>
+        <span className={`ale-estado ale-estado--${alerta.estado}`}>{etiquetaEstado(alerta.estado)}</span>
+      </div>
       <dl className="ale-panel-datos">
-        <div><dt>Estado</dt><dd>{etiquetaEstado(alerta.estado)}</dd></div>
         <div><dt>Lectura detectada</dt><dd>{alerta.valor_detectado ?? '—'}</dd></div>
         <div><dt>Valor de referencia</dt><dd>{alerta.valor_umbral ?? '—'}</dd></div>
-        <div><dt>Sensor</dt><dd>{alerta.sensor?.codigo ?? 'Sin sensor asociado'}</dd></div>
+        <div><dt>Sensor</dt><dd>{alerta.sensor?.codigo ?? 'Sin sensor'}</dd></div>
         <div><dt>Lote</dt><dd>{alerta.lote?.codigo ?? 'Sin lote activo'}</dd></div>
         <div><dt>Responsable</dt><dd>{alerta.responsable?.nombre_completo ?? 'Sin asignar'}</dd></div>
+        <div><dt>Estado</dt><dd>{etiquetaEstado(alerta.estado)}</dd></div>
       </dl>
       {alerta.accion_correctiva && <div className="ale-accion-registrada"><strong>Acción registrada</strong><span>{alerta.accion_correctiva}</span></div>}
       {alerta.estado !== 'cerrada' && (
@@ -88,7 +92,7 @@ function PanelAlerta({ alerta, cerrando, onCerrar, onEscalar, onSalir }: PanelAl
             <label>Enlace de evidencia <small>Opcional</small>
               <input type="url" value={enlaceEvidencia} onChange={(event) => setEnlaceEvidencia(event.target.value)} placeholder="https://…" />
             </label>
-            <button type="submit" className="ale-btn ale-btn--principal" disabled={cerrando}>{cerrando ? 'Guardando…' : 'Cerrar alerta'}</button>
+            <button type="submit" className="adm-btn adm-btn--primario" disabled={cerrando}>{cerrando ? 'Guardando…' : 'Cerrar alerta'}</button>
           </form>
           {puedeEscalar && destinatarios.length > 0 && (
             <form className="ale-form-escalar" onSubmit={(event) => void guardarEscalamiento(event)}>
@@ -98,7 +102,7 @@ function PanelAlerta({ alerta, cerrando, onCerrar, onEscalar, onSalir }: PanelAl
                   {destinatarios.map((destinatario) => <option key={destinatario.id} value={destinatario.id}>{destinatario.nombre_completo}</option>)}
                 </select>
               </label>
-              <button type="submit" className="ale-btn ale-btn--secundario" disabled={cerrando || !destinatarioId}>Escalar alerta</button>
+              <button type="submit" className="adm-btn adm-btn--secundario" disabled={cerrando || !destinatarioId}>Escalar alerta</button>
             </form>
           )}
         </>

@@ -7,6 +7,7 @@ import {
   porcentajeDeStock,
   resumirInventario,
   signoDeMovimiento,
+  siguienteInsumo,
   textoBodegaVacia,
 } from './inventario'
 import { permisosDeInsumo, ROL_ADMIN, ROL_OPERARIO, ROL_PROPIETARIO } from '@shared/auth/permisos'
@@ -176,6 +177,27 @@ describe('filtrarInsumos', () => {
     const sinDatos = [insumo({ id: 9, nombre: 'Suelto', tipo: null, ubicacion_almacen: null })]
     expect(filtrarInsumos(sinDatos, 'suelto', 'todos')).toHaveLength(1)
     expect(filtrarInsumos(sinDatos, 'bodega', 'todos')).toHaveLength(0)
+  })
+
+  it('el filtro agotados muestra solo insumos activos sin stock y la búsqueda ignora tildes', () => {
+    const conAgotado = [
+      ...catalogo,
+      insumo({ id: 4, nombre: 'Vitaminas', stock_actual: 0, stock_minimo: 10 }),
+    ]
+    expect(filtrarInsumos(conAgotado, '', 'agotados').map((i) => i.id)).toEqual([4])
+    expect(filtrarInsumos(conAgotado, 'iniciacion', 'todos').map((i) => i.id)).toEqual([1])
+  })
+})
+
+describe('siguienteInsumo', () => {
+  const lista = [insumo({ id: 10 }), insumo({ id: 20 }), insumo({ id: 30 })]
+
+  it('navega con flechas, Home y End', () => {
+    expect(siguienteInsumo(lista, 10, 'ArrowDown')).toBe(20)
+    expect(siguienteInsumo(lista, 10, 'ArrowUp')).toBe(10)
+    expect(siguienteInsumo(lista, 10, 'End')).toBe(30)
+    expect(siguienteInsumo(lista, 30, 'Home')).toBe(10)
+    expect(siguienteInsumo(lista, 10, 'Enter')).toBeNull()
   })
 })
 

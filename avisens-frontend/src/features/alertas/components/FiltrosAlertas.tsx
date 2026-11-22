@@ -21,6 +21,7 @@ function FiltrosAlertas({ alertas, filtros, onCambiar, onLimpiar, etiquetaTodos 
         <span className="ale-selector">
           <select value={filtros.estado} onChange={(event) => onCambiar({ ...filtros, estado: event.target.value as Filtros['estado'] })}>
             <option value="todas">Todos</option>
+            <option value="activas">Activas (sin cerrar)</option>
             <option value="abierta">Por atender</option>
             <option value="en_proceso">En atención</option>
             <option value="cerrada">Cerradas</option>

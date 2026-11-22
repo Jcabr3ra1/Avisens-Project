@@ -228,22 +228,16 @@
 
 .flota-filtro-limpiar:hover { background: color-mix(in srgb, var(--primary) 14%, var(--surface-base)); }
 
-/* ── Master-Detail espacioso: lista fija + panel técnico amplio */
+/* ── Master-Detail ejecutivo: flota amplia + inspector compacto */
 .flota-cuerpo {
   display: grid;
-  grid-template-columns: minmax(17.5rem, 21.5rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(21rem, 24.5rem);
   align-items: start;
   gap: var(--space-5);
 }
 
 .flota-columna {
-  position: sticky;
-  top: var(--space-4);
-  max-height: calc(100dvh - var(--space-8));
   min-width: 0;
-  padding-right: 2px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .flota-listbox { display: flex; flex-direction: column; gap: var(--space-4); }
@@ -572,6 +566,288 @@
 }
 
 .flota-monitoreo .amb-sensor-valor { font-size: 1.75rem; }
+
+/* ── Nivel 1: Inspector ejecutivo compacto ─────────────────── */
+.flota-detalle--inspector {
+  position: sticky;
+  top: var(--space-4);
+}
+
+.flota-inspector-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.flota-inspector-cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+}
+
+.flota-inspector-metricas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.flota-inspector-metricas > div {
+  display: flex;
+  flex-direction: column;
+  gap: .14rem;
+  padding: .7rem .8rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+}
+
+.flota-inspector-metrica-ancha {
+  grid-column: 1 / -1;
+}
+
+.flota-inspector-metricas dt {
+  color: var(--text-muted);
+  font-size: .68rem;
+  font-weight: 750;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.flota-inspector-metricas dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.flota-inspector-aviso {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .65rem .8rem;
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  color: var(--warning-text);
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.flota-inspector-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+}
+
+.flota-inspector-rotulo {
+  color: var(--text-muted);
+  font-size: .69rem;
+  font-weight: 750;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.flota-inspector-vacio {
+  margin: 0;
+  padding: .75rem .85rem;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+  font-size: .8rem;
+  line-height: 1.45;
+}
+
+.flota-inspector-lista {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flota-inspector-lista li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: .55rem .75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+}
+
+.flota-inspector-ctrl-nombre {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: .4rem;
+  color: var(--text-primary);
+}
+
+.flota-inspector-ctrl-nombre svg {
+  flex: none;
+  color: var(--primary);
+}
+
+.flota-inspector-ctrl-nombre code {
+  overflow: hidden;
+  font-size: .76rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flota-inspector-ctrl-ver {
+  flex: none;
+  padding: .1rem .45rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: .7rem;
+  font-weight: 750;
+}
+
+.flota-inspector-pie {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.flota-inspector-cta {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ── Nivel 2: Ficha técnica completa (/dispositivos/:id) ──── */
+.flota-miga {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.flota-miga-izquierda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem;
+  font-size: .84rem;
+}
+
+.flota-miga-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .28rem .6rem .28rem .4rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.flota-miga-volver:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.flota-miga-flecha {
+  transform: rotate(180deg);
+}
+
+.flota-miga-sep {
+  color: var(--text-muted);
+}
+
+.flota-miga-padre {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.flota-miga-actual {
+  color: var(--text-primary);
+  font-weight: 750;
+}
+
+.flota-miga-cambio {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  color: var(--text-muted);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.flota-miga-cambio select {
+  max-width: 20rem;
+  min-height: 34px;
+  padding: 0 .7rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.flota-ficha-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.flota-ficha-hero-info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: .45rem;
+}
+
+.flota-ficha-titulo-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.flota-ficha-codigo {
+  padding: .15rem .5rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-tinted);
+  color: var(--text-muted);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.flota-ficha-panel {
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.flota-vistas--ficha {
+  padding: 0 var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-tinted);
+}
 
 /* ── Tablet & Móvil: detalle como Slide-Over flotante ─────── */
 @media (max-width: 64rem) {

@@ -2,14 +2,13 @@ import { useMemo, useState } from 'react'
 import { getRol } from '@shared/api'
 import { ROL_OPERARIO, ROL_PROPIETARIO } from '@shared/auth/permisos'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
-import BotonActualizar from '@shared/ui/BotonActualizar/BotonActualizar'
 import SinGalponesAsignados from '@shared/ui/Estados/SinGalponesAsignados'
 import AvisoStockBajo from './components/AvisoStockBajo'
 import BannerAlertaCritica from './components/BannerAlertaCritica'
 import FiltrosAlertas from './components/FiltrosAlertas'
 import ListaAlertas from './components/ListaAlertas'
 import PanelAlerta from './components/PanelAlerta'
-import ResumenAlertas from './components/ResumenAlertas'
+import ResumenAlertas, { type TarjetaResumenAlerta } from './components/ResumenAlertas'
 import { useAlertas } from './hooks/useAlertas'
 import { useGalponesAsignados } from './hooks/useGalponesAsignados'
 import { useStockBajo } from './hooks/useStockBajo'
@@ -63,6 +62,17 @@ function AlertasPage({ galponFijo }: Props = {}) {
     }
   }
 
+  function seleccionarResumen(tarjeta: TarjetaResumenAlerta) {
+    setFiltros((actual) => {
+      if (tarjeta === 'todas') return { ...actual, estado: 'todas', criticidad: 'todas' }
+      if (tarjeta === 'abierta') return { ...actual, estado: 'abierta', criticidad: 'todas' }
+      if (tarjeta === 'en_proceso') return { ...actual, estado: 'en_proceso', criticidad: 'todas' }
+      return { ...actual, estado: 'activas', criticidad: 'alta' }
+    })
+  }
+
+  const cerradas = alertas.filter((alerta) => alerta.estado === 'cerrada').length
+
   return (
     <div className={embebida ? 'ale-page ale-page--embebida' : 'page-container ale-page adm-page'}>
       {!embebida && (
@@ -72,12 +82,6 @@ function AlertasPage({ galponFijo }: Props = {}) {
           subtitulo={esOperario
             ? 'Revisa, atiende y deja registrada cada situación que detecten los sensores de tus galpones.'
             : 'Revisa, atiende y deja registrada cada situación detectada por los sensores.'}
-          acciones={(
-            <BotonActualizar
-              cargando={cargando}
-              onActualizar={() => Promise.all([recargar(), asignacion.recargar(), stock.recargar()])}
-            />
-          )}
         />
       )}
 
@@ -96,21 +100,51 @@ function AlertasPage({ galponFijo }: Props = {}) {
         resumen={resumen}
         cargando={cargando}
         alcance={embebida ? 'En este galpón' : esOperario ? 'En tus galpones' : undefined}
+        filtros={filtros}
+        onSeleccionar={seleccionarResumen}
       />
       {!embebida && <AvisoStockBajo insumos={stock.porReponer} />}
-      {!embebida && <FiltrosAlertas
-        alertas={alertas}
-        etiquetaTodos={esOperario ? 'Todos mis galpones' : undefined}
-        filtros={filtros}
-        onCambiar={setFiltros}
-        onLimpiar={() => setFiltros(FILTROS_INICIALES)}
-      />}
+      {!embebida ? (
+        <FiltrosAlertas
+          alertas={alertas}
+          etiquetaTodos={esOperario ? 'Todos mis galpones' : undefined}
+          filtros={filtros}
+          onCambiar={setFiltros}
+          onLimpiar={() => setFiltros(FILTROS_INICIALES)}
+        />
+      ) : alertas.length > 0 ? (
+        <div className="ale-pildoras" role="group" aria-label="Filtrar alertas del galpón">
+          {(
+            [
+              { id: 'todas', etiqueta: 'Todas', conteo: resumen.total },
+              { id: 'abierta', etiqueta: 'Por atender', conteo: resumen.abiertas },
+              { id: 'en_proceso', etiqueta: 'En atención', conteo: resumen.enProceso },
+              { id: 'cerrada', etiqueta: 'Cerradas', conteo: cerradas },
+            ] as const
+          ).map((opcion) => {
+            const activa = filtros.estado === opcion.id && filtros.criticidad === 'todas'
+            return (
+              <button
+                key={opcion.id}
+                type="button"
+                className={`ale-pildora${activa ? ' is-activa' : ''}`}
+                aria-pressed={activa}
+                onClick={() => setFiltros({ ...FILTROS_INICIALES, estado: opcion.id })}
+              >
+                <span>{opcion.etiqueta}</span>
+                <span className="ale-pildora-conteo">{opcion.conteo}</span>
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
       {cargando ? (
         <Cargando texto="Cargando alertas registradas…" />
       ) : (
         <ListaAlertas
           alertas={alertasFiltradas}
           hayAlertas={alertas.length > 0}
+          embebida={embebida}
           onLimpiarFiltros={() => setFiltros(FILTROS_INICIALES)}
           actualizandoId={actualizandoId}
           onAtender={(id) => void atender(id)}

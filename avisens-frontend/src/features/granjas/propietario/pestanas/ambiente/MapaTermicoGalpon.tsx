@@ -1531,6 +1531,31 @@ export function MapaTermicoGalpon({
 
   return (
     <section className={`mt-contenedor${termico ? "" : " mt-contenedor--sin-termico"}`} aria-label="Mapa térmico 3D del galpón">
+      <header className="mt-cabecera">
+        <div>
+          <span className="mt-eyebrow">Visualización 3D</span>
+          <h3 className="mt-titulo">Mapa térmico del galpón</h3>
+        </div>
+        <div className="mt-resumen-chips">
+          <span className="mt-chip">
+            <span>Promedio</span>
+            <strong>
+              {metricas.promedio === null
+                ? "Sin lectura"
+                : `${metricas.promedio.toFixed(1)} °C`}
+            </strong>
+          </span>
+          <span className="mt-chip">
+            <span>En rango</span>
+            <strong>
+              {metricas.porcentajeRango === null
+                ? "—"
+                : `${metricas.porcentajeRango} %`}
+            </strong>
+          </span>
+        </div>
+      </header>
+
       <div className="mt-barra">
         <div className="mt-grupo" role="group" aria-label="Vista de cámara">
           <button
@@ -1638,31 +1663,6 @@ export function MapaTermicoGalpon({
       </div>
 
       <div className="mt-visor" ref={visorRef}>
-        <div className="mt-hud">
-          <div className="mt-metrica">
-            <span className="mt-metrica__valor">
-              {metricas.promedio === null
-                ? "Sin lectura"
-                : `${metricas.promedio.toFixed(1)} °C`}
-            </span>
-            <span className="mt-metrica__etiqueta">Promedio</span>
-          </div>
-          <div className="mt-metrica">
-            <span className="mt-metrica__valor">
-              {metricas.porcentajeRango === null
-                ? "—"
-                : `${metricas.porcentajeRango} %`}
-            </span>
-            <span className="mt-metrica__etiqueta">En rango</span>
-          </div>
-          <div className="mt-metrica mt-metrica--lote">
-            <span className="mt-metrica__valor">
-              {galpon.nombre}
-            </span>
-            <span className="mt-metrica__etiqueta">{galpon.loteEnCurso ? `Lote ${galpon.loteEnCurso.codigo} · ${galponVivo?.diaVida ?? 1} d` : "Sin lote activo"}</span>
-          </div>
-        </div>
-
         {puntosActivos.map((punto) => {
           const falla = esSensorTermicoConFalla(punto);
           return (
