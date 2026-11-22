@@ -1,12 +1,14 @@
 import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { permisosDeGestion } from '@shared/auth/permisos'
 import {
+  IcAlert,
   IcArrowRight,
   IcBarn,
   IcBuilding,
+  IcCheck,
   IcChevronDown,
   IcChevronRight,
   IcClose,
@@ -76,7 +78,8 @@ function IndicadorFiltro({
   label,
   nota,
   activo,
-  alerta = false,
+  tono = 'primario',
+  icono,
   orden,
   onClick,
 }: {
@@ -84,23 +87,27 @@ function IndicadorFiltro({
   label: string
   nota: string
   activo: boolean
-  alerta?: boolean
+  tono?: 'primario' | 'ok' | 'info' | 'alerta' | 'peligro'
+  icono: ReactNode
   orden: number
   onClick: () => void
 }) {
   return (
-    <li className="org-lista-indicador org-aparece" style={{ '--orden': orden } as CSSProperties}>
+    <li className="org-aparece" style={{ '--orden': orden } as CSSProperties}>
       <button
         type="button"
-        className={`org-lista-indicador-btn${activo ? ' is-activo' : ''}${alerta ? ' is-alerta' : ''}`}
+        className={`adm-kpi adm-kpi--${tono}${activo ? ' is-activo' : ''}`}
         aria-pressed={activo}
         onClick={onClick}
       >
-        <span className="org-lista-indicador-label">{label}</span>
-        <strong className="org-lista-indicador-valor">
+        <span className="adm-kpi-cab">
+          <span className="adm-kpi-etiqueta">{label}</span>
+          <span className="adm-kpi-icono" aria-hidden="true">{icono}</span>
+        </span>
+        <strong className="adm-kpi-valor">
           {valor === null ? <span className="org-lista-indicador-esqueleto org-brilla" aria-hidden="true" /> : <NumeroAnimado valor={valor} retrasoMs={orden * 60} />}
         </strong>
-        <span className="org-lista-indicador-nota">{nota}</span>
+        <span className="adm-kpi-nota">{nota}</span>
       </button>
     </li>
   )
@@ -220,13 +227,15 @@ function OrganizacionesPage() {
         </div>
       </header>
 
-      <ul className="org-lista-indicadores" aria-label="Filtrar clientes por estado">
+      <ul className="adm-kpis" aria-label="Filtrar clientes por estado">
         <IndicadorFiltro
           orden={1}
           valor={listo ? resumen.total : null}
           label="Todos"
           nota={listo ? `${plural(resumen.granjas, 'granja', 'granjas')} · ${plural(resumen.usuarios, 'persona', 'personas')}` : 'Cargando…'}
           activo={estado === 'todas'}
+          tono="primario"
+          icono={<IcBuilding size={15} />}
           onClick={() => elegirFiltro('todas')}
         />
         <IndicadorFiltro
@@ -235,6 +244,8 @@ function OrganizacionesPage() {
           label="Activos"
           nota="Operando en plataforma"
           activo={estado === 'activas'}
+          tono="ok"
+          icono={<IcCheck size={15} />}
           onClick={() => elegirFiltro('activas')}
         />
         <IndicadorFiltro
@@ -243,7 +254,8 @@ function OrganizacionesPage() {
           label="Sin actividad"
           nota={`Más de ${DIAS_SIN_ACTIVIDAD} días sin ingreso`}
           activo={estado === 'sin-actividad'}
-          alerta={listo && resumen.sinActividad > 0}
+          tono={listo && resumen.sinActividad > 0 ? 'alerta' : 'ok'}
+          icono={listo && resumen.sinActividad > 0 ? <IcAlert size={15} /> : <IcCheck size={15} />}
           onClick={() => elegirFiltro('sin-actividad')}
         />
         <IndicadorFiltro
@@ -252,6 +264,8 @@ function OrganizacionesPage() {
           label="Suspendidos"
           nota={suspendidas === 0 ? 'Ninguno pausado' : 'Acceso pausado'}
           activo={estado === 'suspendidas'}
+          tono={suspendidas > 0 ? 'peligro' : 'info'}
+          icono={<IcStop size={15} />}
           onClick={() => elegirFiltro('suspendidas')}
         />
       </ul>

@@ -319,10 +319,12 @@
 
 .org-tab {
   display: inline-flex;
+  flex: 1 1 auto;
   min-height: 40px;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
-  padding: 0 0.9rem;
+  padding: 0 0.85rem;
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
@@ -330,6 +332,7 @@
   font: inherit;
   font-size: 0.85rem;
   font-weight: 650;
+  white-space: nowrap;
   cursor: pointer;
   transition: background var(--motion-fast) ease, color var(--motion-fast) ease;
 }

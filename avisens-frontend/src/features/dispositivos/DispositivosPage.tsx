@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
 import PanelFirmware from '@features/firmware/components/PanelFirmware'
 import { useFirmware } from '@features/firmware/hooks/useFirmware'
 import { listarSensores, type Sensor } from '@features/sensores/api/sensores'
 import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
-import { IcChevronRight, IcChip, IcClose, IcSearch } from '@shared/ui/icons/icons'
+import { IcAlert, IcBarn, IcCheck, IcChevronRight, IcChip, IcClose, IcSearch } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import { hace } from '@shared/utils/fechas'
 import { listarDispositivos, type Dispositivo } from './api/dispositivos'
@@ -34,28 +34,32 @@ const ETIQUETA: Record<EstadoGalponFlota, string> = {
 
 const PRIORIDAD: Record<EstadoGalponFlota, number> = { nunca: 0, sin_reportar: 1, conectado: 2, sin_controlador: 3 }
 
-function IndicadorFiltro({ etiqueta, valor, nota, activo, tono, orden, onClick }: {
+function IndicadorFiltro({ etiqueta, valor, nota, activo, tono = 'primario', icono, orden, onClick }: {
   etiqueta: string
   valor: number | null
   nota: string
   activo: boolean
-  tono?: 'peligro' | 'alerta'
+  tono?: 'primario' | 'ok' | 'info' | 'alerta' | 'peligro'
+  icono: ReactNode
   orden: number
   onClick: () => void
 }) {
   return (
-    <li className="flota-indicador org-aparece" style={{ '--orden': orden } as CSSProperties}>
+    <li className="org-aparece" style={{ '--orden': orden } as CSSProperties}>
       <button
         type="button"
-        className={`flota-indicador-btn${activo ? ' is-activo' : ''}${tono ? ` is-${tono}` : ''}`}
+        className={`adm-kpi adm-kpi--${tono}${activo ? ' is-activo' : ''}`}
         aria-pressed={activo}
         onClick={onClick}
       >
-        <span className="flota-indicador-label">{etiqueta}</span>
-        <strong className="flota-indicador-valor">
+        <span className="adm-kpi-cab">
+          <span className="adm-kpi-etiqueta">{etiqueta}</span>
+          <span className="adm-kpi-icono" aria-hidden="true">{icono}</span>
+        </span>
+        <strong className="adm-kpi-valor">
           {valor === null ? <span className="flota-esqueleto-num org-brilla" aria-hidden="true" /> : valor}
         </strong>
-        <span className="flota-indicador-nota">{nota}</span>
+        <span className="adm-kpi-nota">{nota}</span>
       </button>
     </li>
   )
@@ -227,13 +231,15 @@ function DispositivosPage() {
         </div>
       </header>
 
-      <ul className="flota-indicadores" aria-label="Filtros rápidos de flota">
+      <ul className="adm-kpis" aria-label="Filtros rápidos de flota">
         <IndicadorFiltro
           orden={1}
           etiqueta="Galpones"
           valor={listo ? filas.length : null}
           nota={!listo ? 'Calculando…' : `${resumen.controladores} ESP32 · ${sensoresActivos} sensores`}
           activo={pestana === 'galpones' && filtro === 'todos'}
+          tono="primario"
+          icono={<IcBarn size={15} />}
           onClick={() => elegirFiltro('todos')}
         />
         <IndicadorFiltro
@@ -242,6 +248,8 @@ function DispositivosPage() {
           valor={listo ? enLinea : null}
           nota={resumen.alDia !== null ? `${resumen.alDia} con firmware al día` : 'Reportando ahora'}
           activo={pestana === 'galpones' && filtro === 'en_linea'}
+          tono="ok"
+          icono={<IcCheck size={15} />}
           onClick={() => elegirFiltro(filtro === 'en_linea' ? 'todos' : 'en_linea')}
         />
         <IndicadorFiltro
@@ -250,7 +258,8 @@ function DispositivosPage() {
           valor={listo ? conProblemas : null}
           nota={conProblemas > 0 ? 'Sin reportar o sin señal' : 'Sin incidencias'}
           activo={pestana === 'galpones' && filtro === 'problemas'}
-          tono={conProblemas > 0 ? 'peligro' : undefined}
+          tono={conProblemas > 0 ? 'peligro' : 'ok'}
+          icono={conProblemas > 0 ? <IcAlert size={15} /> : <IcCheck size={15} />}
           onClick={() => elegirFiltro(filtro === 'problemas' ? 'todos' : 'problemas')}
         />
         <IndicadorFiltro
@@ -259,7 +268,8 @@ function DispositivosPage() {
           valor={listo ? sinControlador : null}
           nota="Listos para equipar"
           activo={pestana === 'galpones' && filtro === 'sin_controlador'}
-          tono={sinControlador > 0 ? 'alerta' : undefined}
+          tono={sinControlador > 0 ? 'alerta' : 'info'}
+          icono={<IcChip size={15} />}
           onClick={() => elegirFiltro(filtro === 'sin_controlador' ? 'todos' : 'sin_controlador')}
         />
       </ul>

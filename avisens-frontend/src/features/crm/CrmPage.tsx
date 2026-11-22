@@ -2,11 +2,15 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type Keyboard
 import { useSearchParams } from 'react-router-dom'
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from 'motion/react'
 import {
+  IcAlert,
+  IcCheck,
   IcChevronDown,
   IcChevronRight,
   IcClose,
   IcDoc,
+  IcFlame,
   IcSearch,
+  IcUsers,
 } from '@shared/ui/icons/icons'
 import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
 import { useProspectos } from './hooks/useProspectos'
@@ -65,30 +69,34 @@ function Desplegable<T extends string>({ valor, opciones, etiqueta, onCambiar }:
   )
 }
 
-function IndicadorFiltro({ valor, etiqueta, nota, activo, tono, orden, onClick, children }: {
+function IndicadorFiltro({ valor, etiqueta, nota, activo, tono = 'primario', icono, orden, onClick, children }: {
   valor: number | string | null
   etiqueta: string
   nota: string
   activo: boolean
-  tono?: 'peligro' | 'alerta'
+  tono?: 'primario' | 'ok' | 'info' | 'alerta' | 'peligro'
+  icono: ReactNode
   orden: number
   onClick: () => void
   children?: ReactNode
 }) {
   return (
-    <li className="pros-indicador org-aparece" style={{ '--orden': orden } as CSSProperties}>
+    <li className="org-aparece" style={{ '--orden': orden } as CSSProperties}>
       <button
         type="button"
-        className={`pros-indicador-btn${activo ? ' is-activo' : ''}${tono ? ` is-${tono}` : ''}`}
+        className={`adm-kpi adm-kpi--${tono}${activo ? ' is-activo' : ''}`}
         aria-pressed={activo}
         onClick={onClick}
       >
-        <span className="pros-indicador-label">{etiqueta}</span>
-        <strong className="pros-indicador-valor">
+        <span className="adm-kpi-cab">
+          <span className="adm-kpi-etiqueta">{etiqueta}</span>
+          <span className="adm-kpi-icono" aria-hidden="true">{icono}</span>
+        </span>
+        <strong className="adm-kpi-valor">
           {valor === null ? <span className="pros-esqueleto-num org-brilla" aria-hidden="true" /> : valor}
         </strong>
         {children}
-        <small className="pros-indicador-nota">{nota}</small>
+        <span className="adm-kpi-nota">{nota}</span>
       </button>
     </li>
   )
@@ -259,14 +267,15 @@ function CrmPage() {
           </button>
         </header>
 
-        <ul className="pros-indicadores" aria-label="Filtros rápidos comerciales">
+        <ul className="adm-kpis" aria-label="Filtros rápidos comerciales">
           <IndicadorFiltro
             orden={1}
             valor={listo ? resumen.paraAtender : null}
             etiqueta="Para atender"
             nota={!listo ? 'Calculando…' : resumen.vencidos > 0 ? plural(resumen.vencidos, 'vencido', 'vencidos') : 'Al día'}
             activo={vista === 'prioridad' && !soloSinAsesor}
-            tono={resumen.vencidos > 0 ? 'peligro' : undefined}
+            tono={resumen.vencidos > 0 ? 'peligro' : 'primario'}
+            icono={resumen.vencidos > 0 ? <IcAlert size={15} /> : <IcFlame size={15} />}
             onClick={() => elegirVista('prioridad', false)}
           />
           <IndicadorFiltro
@@ -275,6 +284,8 @@ function CrmPage() {
             etiqueta="Activos"
             nota={`${resumen.porTemperatura.caliente} alto · ${resumen.porTemperatura.tibio} medio · ${resumen.porTemperatura.frio} bajo`}
             activo={vista === 'activos' && !soloSinAsesor}
+            tono="info"
+            icono={<IcUsers size={15} />}
             onClick={() => elegirVista('activos', false)}
           >
             <span className={`pros-embudo${totalTemperaturas ? '' : ' is-vacio'}`} aria-hidden="true">
@@ -289,7 +300,8 @@ function CrmPage() {
             etiqueta="Sin asesor"
             nota="Esperan asignación"
             activo={soloSinAsesor && vista === 'prioridad'}
-            tono={resumen.sinAsesor > 0 ? 'alerta' : undefined}
+            tono={resumen.sinAsesor > 0 ? 'alerta' : 'ok'}
+            icono={<IcAlert size={15} />}
             onClick={() => elegirVista('prioridad', !soloSinAsesor)}
           />
           <IndicadorFiltro
@@ -298,6 +310,8 @@ function CrmPage() {
             etiqueta="Convertidos"
             nota={`${resumen.conversionPct}% de conversión`}
             activo={vista === 'convertidos'}
+            tono="ok"
+            icono={<IcCheck size={15} />}
             onClick={() => elegirVista('convertidos', false)}
           />
         </ul>

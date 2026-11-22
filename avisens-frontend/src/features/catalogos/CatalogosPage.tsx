@@ -1,6 +1,8 @@
 import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
+  IcAlert,
+  IcChart,
   IcChevronDown,
   IcClose,
   IcEdit,
@@ -37,27 +39,31 @@ import {
 import '@shared/ui/admin/AdminKit.css'
 import './CatalogosPage.css'
 
-function IndicadorFiltro({ etiqueta, valor, nota, activo, tono, onClick }: {
+function IndicadorFiltro({ etiqueta, valor, nota, activo, tono = 'primario', icono, onClick }: {
   etiqueta: string
   valor: number | null
   nota: string
   activo: boolean
-  tono?: 'alerta'
+  tono?: 'primario' | 'ok' | 'info' | 'alerta' | 'peligro'
+  icono: ReactNode
   onClick: () => void
 }) {
   return (
-    <li className="cat-indicador">
+    <li>
       <button
         type="button"
-        className={`cat-indicador-btn${activo ? ' is-activo' : ''}${tono ? ` is-${tono}` : ''}`}
+        className={`adm-kpi adm-kpi--${tono}${activo ? ' is-activo' : ''}`}
         aria-pressed={activo}
         onClick={onClick}
       >
-        <span className="cat-indicador-label">{etiqueta}</span>
-        <strong className="cat-indicador-valor">
+        <span className="adm-kpi-cab">
+          <span className="adm-kpi-etiqueta">{etiqueta}</span>
+          <span className="adm-kpi-icono" aria-hidden="true">{icono}</span>
+        </span>
+        <strong className="adm-kpi-valor">
           {valor === null ? <span className="cat-esqueleto-num org-brilla" aria-hidden="true" /> : valor}
         </strong>
-        <span className="cat-indicador-nota">{nota}</span>
+        <span className="adm-kpi-nota">{nota}</span>
       </button>
     </li>
   )
@@ -206,12 +212,14 @@ function CatalogosPage() {
         )}
       </header>
 
-      <ul className="cat-indicadores" aria-label="Cambiar de catálogo">
+      <ul className="adm-kpis" aria-label="Cambiar de catálogo">
         <IndicadorFiltro
           etiqueta="Tipos de alimento"
           valor={cargandoTodo ? null : alimentos.tipos.length}
           nota={`${alimentos.tipos.filter((tipo) => tipo.activo).length} disponibles`}
           activo={pestana === 'alimentos' && estadoFiltro !== 'retirados'}
+          tono="ok"
+          icono={<IcSeed size={15} />}
           onClick={() => elegirPestana('alimentos')}
         />
         <IndicadorFiltro
@@ -219,6 +227,8 @@ function CatalogosPage() {
           valor={cargandoTodo ? null : curvas.curvas.length}
           nota={marcasCurva === 1 ? '1 marca' : `${marcasCurva} marcas`}
           activo={pestana === 'curvas'}
+          tono="primario"
+          icono={<IcChart size={15} />}
           onClick={() => elegirPestana('curvas')}
         />
         <IndicadorFiltro
@@ -226,6 +236,8 @@ function CatalogosPage() {
           valor={cargandoTodo ? null : sensores.sensores.length}
           nota={`${sensores.sensores.filter((sensor) => sensor.obligatorio).length} obligatorios`}
           activo={pestana === 'sensores' && estadoFiltro !== 'retirados'}
+          tono="info"
+          icono={<IcThermo size={15} />}
           onClick={() => elegirPestana('sensores')}
         />
         <IndicadorFiltro
@@ -233,7 +245,8 @@ function CatalogosPage() {
           valor={cargandoTodo ? null : retirados}
           nota="Alimentos y sensores"
           activo={estadoFiltro === 'retirados' && pestana !== 'curvas'}
-          tono={retirados > 0 ? 'alerta' : undefined}
+          tono={retirados > 0 ? 'alerta' : 'info'}
+          icono={<IcAlert size={15} />}
           onClick={verRetirados}
         />
       </ul>

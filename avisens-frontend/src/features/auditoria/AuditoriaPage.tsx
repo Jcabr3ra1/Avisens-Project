@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import Modal from '@shared/ui/Modal/Modal'
-import { IcCheck, IcChevronDown, IcChevronRight, IcClose, IcDoc } from '@shared/ui/icons/icons'
+import { IcCheck, IcChevronDown, IcChevronRight, IcClock, IcClose, IcDoc, IcGrid, IcUsers } from '@shared/ui/icons/icons'
 import {
   contarFiltrosActivos,
   extraerCambios,
@@ -305,26 +305,46 @@ function AuditoriaPage() {
         </div>
       </header>
 
-      <ul className="aud-indicadores" aria-label="Resumen de auditoría">
+      <ul className="adm-kpis" aria-label="Resumen de auditoría">
         <li>
-          <span>{filtrando ? 'Eventos filtrados' : 'Eventos registrados'}</span>
-          <strong>{cargando && total === 0 ? '—' : total.toLocaleString('es-CO')}</strong>
-          <small>{filtrando ? `${filtrosActivos} ${filtrosActivos === 1 ? 'filtro activo' : 'filtros activos'}` : 'Historial completo'}</small>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">{filtrando ? 'Eventos filtrados' : 'Eventos registrados'}</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcDoc size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{cargando && total === 0 ? '—' : total.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">{filtrando ? `${filtrosActivos} ${filtrosActivos === 1 ? 'filtro activo' : 'filtros activos'}` : 'Historial completo'}</span>
+          </div>
         </li>
         <li>
-          <span>Última actividad</span>
-          <strong>{ultimaActividad ? hace(ultimaActividad) : '—'}</strong>
-          <small>{ultimaActividad ? formatearFecha(ultimaActividad) : 'Sin registros todavía'}</small>
+          <div className="adm-kpi adm-kpi--info">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Última actividad</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcClock size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor adm-kpi-valor--texto">{ultimaActividad ? hace(ultimaActividad) : '—'}</strong>
+            <span className="adm-kpi-nota">{ultimaActividad ? formatearFecha(ultimaActividad) : 'Sin registros todavía'}</span>
+          </div>
         </li>
         <li>
-          <span>Usuarios con actividad</span>
-          <strong>{opciones.usuarios.length}</strong>
-          <small>{opciones.usuarios.length === 1 ? 'Persona registrada' : 'Personas registradas'}</small>
+          <div className="adm-kpi adm-kpi--ok">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Usuarios con actividad</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcUsers size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{opciones.usuarios.length}</strong>
+            <span className="adm-kpi-nota">{opciones.usuarios.length === 1 ? 'Persona registrada' : 'Personas registradas'}</span>
+          </div>
         </li>
         <li>
-          <span>Módulos auditados</span>
-          <strong>{opciones.entidades.length}</strong>
-          <small>{opciones.acciones.length} {opciones.acciones.length === 1 ? 'tipo de acción' : 'tipos de acción'}</small>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Módulos auditados</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcGrid size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{opciones.entidades.length}</strong>
+            <span className="adm-kpi-nota">{opciones.acciones.length} {opciones.acciones.length === 1 ? 'tipo de acción' : 'tipos de acción'}</span>
+          </div>
         </li>
       </ul>
 

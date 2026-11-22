@@ -175,28 +175,48 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
 
   return (
     <div className="gb">
-      <dl className="gb-kpis" aria-label="Resumen de la bitácora">
-        <div>
-          <dt>Último pesaje</dt>
-          <dd>{!pesoUltimo ? '—' : pesoCreible(pesoUltimo.peso_promedio_g) ? `${entero.format(pesoUltimo.peso_promedio_g)} g` : 'Fuera de rango'}</dd>
-          <small>{pesoUltimo ? new Date(`${pesoUltimo.fecha.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CO') : 'Sin pesajes'}</small>
-        </div>
-        <div>
-          <dt>Mortalidad</dt>
-          <dd>{entero.format(muertas)} {muertas === 1 ? 'ave' : 'aves'}</dd>
-          <small>{decimal.format((muertas / Math.max(lote.cantidad_inicial, 1)) * 100)} % del lote</small>
-        </div>
-        <div>
-          <dt>Alimento</dt>
-          <dd>{decimal.format(alimento)} kg</dd>
-          <small>{avisoFueraDeRango ?? 'Acumulado del lote'}</small>
-        </div>
-        <div>
-          <dt>Agua</dt>
-          <dd>{decimal.format(agua)} L</dd>
-          <small>{avisoFueraDeRango ?? 'Acumulado del lote'}</small>
-        </div>
-      </dl>
+      <section className="adm-kpis" aria-label="Resumen de la bitácora">
+        <article className="adm-kpi adm-kpi--primario">
+          <span className="adm-kpi-cab">
+            <span className="adm-kpi-etiqueta">Último pesaje</span>
+            <span className="adm-kpi-icono" aria-hidden="true"><IcScale size={15} /></span>
+          </span>
+          <strong className="adm-kpi-valor">
+            {!pesoUltimo ? '—' : pesoCreible(pesoUltimo.peso_promedio_g) ? `${entero.format(pesoUltimo.peso_promedio_g)} g` : 'Fuera de rango'}
+          </strong>
+          <span className="adm-kpi-nota">
+            {pesoUltimo ? new Date(`${pesoUltimo.fecha.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CO') : 'Sin pesajes'}
+          </span>
+        </article>
+        <article className={`adm-kpi adm-kpi--${muertas > 0 ? 'peligro' : 'ok'}`}>
+          <span className="adm-kpi-cab">
+            <span className="adm-kpi-etiqueta">Mortalidad</span>
+            <span className="adm-kpi-icono" aria-hidden="true"><IcAlert size={15} /></span>
+          </span>
+          <strong className="adm-kpi-valor">
+            {entero.format(muertas)} {muertas === 1 ? 'ave' : 'aves'}
+          </strong>
+          <span className="adm-kpi-nota">
+            {decimal.format((muertas / Math.max(lote.cantidad_inicial, 1)) * 100)} % del lote
+          </span>
+        </article>
+        <article className="adm-kpi adm-kpi--ok">
+          <span className="adm-kpi-cab">
+            <span className="adm-kpi-etiqueta">Alimento</span>
+            <span className="adm-kpi-icono" aria-hidden="true"><IcSeed size={15} /></span>
+          </span>
+          <strong className="adm-kpi-valor">{decimal.format(alimento)} kg</strong>
+          <span className="adm-kpi-nota">{avisoFueraDeRango ?? 'Acumulado del lote'}</span>
+        </article>
+        <article className="adm-kpi adm-kpi--info">
+          <span className="adm-kpi-cab">
+            <span className="adm-kpi-etiqueta">Agua</span>
+            <span className="adm-kpi-icono" aria-hidden="true"><IcDrop size={15} /></span>
+          </span>
+          <strong className="adm-kpi-valor">{decimal.format(agua)} L</strong>
+          <span className="adm-kpi-nota">{avisoFueraDeRango ?? 'Acumulado del lote'}</span>
+        </article>
+      </section>
 
       <section className="gp-card gb-bloque" aria-labelledby="gb-registrar">
         <div className="gp-bloque-cabecera">
