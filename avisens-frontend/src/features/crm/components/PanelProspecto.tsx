@@ -360,7 +360,7 @@ function PanelContenido({
                           ))}
                         </div>
                         {motivo === 'otro' && (
-                          <input className="pros-motivo-otro" value={otroMotivo} onChange={(evento) => setOtroMotivo(evento.target.value)} placeholder="Cuéntalo en pocas palabras" aria-label="Otro motivo" autoFocus />
+                          <input className="pros-motivo-otro" value={otroMotivo} onChange={(evento) => setOtroMotivo(evento.target.value)} maxLength={300} placeholder="Cuéntalo en pocas palabras" aria-label="Otro motivo" autoFocus />
                         )}
                       </fieldset>
                       <p className="pros-nota">Saldrá de la bandeja activa y quedará registrado en Descartados.</p>

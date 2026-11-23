@@ -1,10 +1,10 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional } from 'class-validator';
+import { TextoSeguro } from '../../../common/validation/texto';
 
 export class ResolverRecuperacionDto {
   @ApiPropertyOptional({ example: 'Identidad verificada telefónicamente' })
-  @IsString()
-  @MaxLength(500)
   @IsOptional()
+  @TextoSeguro('La observación', 500, { multilinea: true })
   observacion?: string;
 }

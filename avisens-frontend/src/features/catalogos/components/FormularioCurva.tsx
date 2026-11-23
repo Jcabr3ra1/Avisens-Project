@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import { IcChart } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
+import { validarTextoSeguro } from '@shared/utils/validacion'
 import type {
   CrearCurvaObjetivoPayload,
   CurvaObjetivo,
@@ -58,8 +59,13 @@ function FormularioCurva({ editando, onGuardar, onCerrar }: Props) {
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     const dia = Number(form.dia)
-    if (form.dia === '' || Number.isNaN(dia) || dia < 1) {
-      setError('El día de vida debe ser un número mayor que cero.')
+    if (form.dia === '' || !Number.isInteger(dia) || dia < 1 || dia > 365) {
+      setError('El día de vida debe ser un entero entre 1 y 365.')
+      return
+    }
+    const errFuente = validarTextoSeguro(form.fuente, 'La fuente', { max: 60 })
+    if (errFuente) {
+      setError(errFuente)
       return
     }
 
@@ -75,6 +81,22 @@ function FormularioCurva({ editando, onGuardar, onCerrar }: Props) {
     const diario = numero(form.consumo_diario_g)
     const acumulado = numero(form.consumo_acumulado_g)
     const fcr = numero(form.fcr_objetivo)
+    if (peso !== null && (Number.isNaN(peso) || peso < 0 || peso > 10_000)) {
+      setError('El peso esperado debe estar entre 0 y 10.000 g.')
+      return
+    }
+    if (diario !== null && (Number.isNaN(diario) || diario < 0 || diario > 50_000)) {
+      setError('El consumo diario debe estar entre 0 y 50.000 g.')
+      return
+    }
+    if (acumulado !== null && (Number.isNaN(acumulado) || acumulado < 0 || acumulado > 50_000)) {
+      setError('El consumo acumulado debe estar entre 0 y 50.000 g.')
+      return
+    }
+    if (fcr !== null && (Number.isNaN(fcr) || fcr < 0 || fcr > 20)) {
+      setError('El FCR objetivo debe estar entre 0 y 20.')
+      return
+    }
     if (peso !== null) payload.peso_esperado_g = peso
     if (diario !== null) payload.consumo_diario_g = diario
     if (acumulado !== null) payload.consumo_acumulado_g = acumulado

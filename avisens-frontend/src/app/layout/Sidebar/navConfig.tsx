@@ -259,7 +259,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       {
         path: '/inventario',
-        label: 'Inventario',
+        label: 'Bodega',
         icon: <IcBox size={16} />,
         rolesVisibles: [ROL_OPERARIO],
       },

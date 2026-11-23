@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsPositive } from 'class-validator';
+import { TextoSeguro } from '../../../common/validation/texto';
 
 export const RESULTADOS_CIERRE = ['ganado', 'perdido'] as const;
 
@@ -19,8 +20,8 @@ export class CerrarProspectoDto {
     example: 'El precio se salía de su presupuesto',
     description: 'Por qué se perdió. Es lo que se puede analizar después.',
   })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('El motivo', 300, { multilinea: true })
   motivo?: string;
 
   @ApiPropertyOptional({

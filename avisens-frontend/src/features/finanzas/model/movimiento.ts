@@ -1,3 +1,4 @@
+import { validarCodigo, validarTextoSeguro } from '@shared/utils/validacion'
 import type {
   CategoriaFinanciera,
   CrearMovimientoFinancieroPayload,
@@ -114,6 +115,16 @@ export function errorDeFormulario(form: FormularioMovimiento): string {
     return 'Ingrese un monto razonable: el máximo por movimiento es $10.000.000.000. Revisa si sobran dígitos.'
   }
   if (!form.fecha) return 'Elige la fecha del movimiento.'
+  const errDesc = validarTextoSeguro(form.descripcion, 'La descripción', {
+    max: 300,
+    multilinea: true,
+  })
+  if (errDesc) return errDesc
+  const errFactura = validarCodigo(form.numero_factura, 'El número de factura', {
+    requerido: false,
+    max: 60,
+  })
+  if (errFactura) return errFactura
   return ''
 }
 

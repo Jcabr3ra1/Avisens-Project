@@ -100,7 +100,9 @@
   --warning: #866115;
   --warning2: #ae8429;
   --warning3: var(--warning);
+  --warning-text: var(--warning);
   --warning-soft: var(--accent-soft);
+  --warning-bg: var(--warning-soft);
   --warning-border: #d6bc70;
   --danger: #b13d3d;
   --danger2: #c85c50;

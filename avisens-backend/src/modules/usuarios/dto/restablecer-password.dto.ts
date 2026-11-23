@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { TextoSeguro } from '../../../common/validation/texto';
 
 export class RestablecerPasswordDto {
   @ApiPropertyOptional({
@@ -23,7 +24,6 @@ export class RestablecerPasswordDto {
     maxLength: 250,
   })
   @IsOptional()
-  @IsString()
-  @MaxLength(250)
+  @TextoSeguro('La observación', 250, { multilinea: true })
   observacion?: string;
 }

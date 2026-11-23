@@ -53,10 +53,10 @@ const ORDENES: Array<{ valor: OrdenOrganizaciones; etiqueta: string }> = [
 ]
 
 const ETIQUETA_FILTRO: Record<FiltroEstado, string> = {
-  todas: 'Todos',
-  activas: 'Activos',
+  todas: 'Todas',
+  activas: 'Activas',
   'sin-actividad': `Sin actividad (+${DIAS_SIN_ACTIVIDAD}d)`,
-  suspendidas: 'Suspendidos',
+  suspendidas: 'Suspendidas',
 }
 
 const TONOS_AVATAR = ['verde', 'profundo', 'amarillo', 'crema'] as const
@@ -207,10 +207,10 @@ function OrganizacionesPage() {
 
   async function alternarEstado(organizacion: Organizacion) {
     if (organizacion.activa && !(await confirmarAccion({
-      titulo: '¿Suspender este cliente?',
+      titulo: '¿Suspender esta organización?',
       entidad: organizacion.nombre,
       descripcion: 'Sus usuarios dejarán de poder entrar. La información se conserva.',
-      textoConfirmar: 'Suspender cliente',
+      textoConfirmar: 'Suspender organización',
       tono: 'aviso',
     }))) return
     void alternar(organizacion)
@@ -222,18 +222,18 @@ function OrganizacionesPage() {
         <div>
           <span className="adm-eyebrow">
             <span className="adm-eyebrow-punto" aria-hidden="true" />
-            Plataforma · Clientes
+            Plataforma · Organizaciones
           </span>
-          <h1 className="org-lista-titulo">Clientes</h1>
-          <p className="org-lista-subtitulo">Empresas activas en Avisens. Cada cliente nace al convertir un prospecto.</p>
+          <h1 className="org-lista-titulo">Organizaciones</h1>
+          <p className="org-lista-subtitulo">Empresas activas en Avisens. Cada organización nace al convertir un prospecto.</p>
         </div>
       </header>
 
-      <ul className="adm-kpis" aria-label="Filtrar clientes por estado">
+      <ul className="adm-kpis" aria-label="Filtrar organizaciones por estado">
         <IndicadorFiltro
           orden={1}
           valor={listo ? resumen.total : null}
-          label="Todos"
+          label="Todas"
           nota={listo ? `${plural(resumen.granjas, 'granja', 'granjas')} · ${plural(resumen.usuarios, 'persona', 'personas')}` : 'Cargando…'}
           activo={estado === 'todas'}
           tono="primario"
@@ -243,7 +243,7 @@ function OrganizacionesPage() {
         <IndicadorFiltro
           orden={2}
           valor={listo ? resumen.activas : null}
-          label="Activos"
+          label="Activas"
           nota="Operando en plataforma"
           activo={estado === 'activas'}
           tono="ok"

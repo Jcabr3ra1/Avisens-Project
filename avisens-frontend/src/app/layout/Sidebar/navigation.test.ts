@@ -70,7 +70,7 @@ describe('navegación por espacios', () => {
     expect(bodega?.label).toBe('Bodega')
     expect(bodega?.sections.flatMap((section) => section.items.map((item) => item.path))).toEqual(['/inventario'])
     expect(spaceForPath('/inventario', navigationSpaces(visibleSections(ROL_OPERARIO)))?.id).toBe('bodega')
-    expect(tituloDeRuta('/inventario', ROL_OPERARIO)).toBe('Inventario')
+    expect(tituloDeRuta('/inventario', ROL_OPERARIO)).toBe('Bodega')
     for (const rol of [ROL_ADMIN, ROL_PROPIETARIO]) {
       expect(navigationSpaces(visibleSections(rol)).some((space) => space.id === 'bodega')).toBe(false)
     }

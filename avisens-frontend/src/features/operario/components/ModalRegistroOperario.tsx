@@ -5,6 +5,7 @@ import { diasDeVida, fechaDeHoy } from '@shared/utils/fechas'
 import SelectorFotoMortalidad from '@features/bitacora/components/SelectorFotoMortalidad'
 import { AGUA_MAXIMO_LITROS, ALIMENTO_MAXIMO_KG } from '@features/consumos-diarios/model/consumoDiario'
 import type { JornadaOperario } from '../model/jornadaOperario'
+import { validarTextoSeguro } from '@shared/utils/validacion'
 import { validarConsumo, validarFechaRegistro, validarMortalidad } from '../model/registroOperario'
 
 type TipoRegistro = 'mortalidad' | 'consumo'
@@ -64,7 +65,10 @@ function ModalRegistroOperario({
 
     const problema = validarFechaRegistro(fecha, fechaDeHoy())
       ?? (esMortalidad
-        ? validarMortalidad(cantidadAves, lote.cantidad_inicial)
+        ? (validarMortalidad(cantidadAves, lote.cantidad_inicial)
+          ?? validarTextoSeguro(causa, 'La causa probable', { max: 150, exigirLetras: true })
+          ?? validarTextoSeguro(disposicion, 'La disposición', { max: 100 })
+          ?? validarTextoSeguro(observaciones, 'Las observaciones', { max: 500, multilinea: true }))
         : validarConsumo(alimento, agua))
     if (problema) {
       setError(problema)

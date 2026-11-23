@@ -227,7 +227,7 @@ function InventarioPage() {
     <div className="page-container inv-page adm-page">
       <CabeceraAdmin
         eyebrow={esAdministrador ? 'Control de bodega' : 'Bodega'}
-        titulo="Insumos"
+        titulo="Bodega de insumos"
         subtitulo={permisos.verCostos
           ? 'Stock, movimientos y reposición de tus granjas. Cada insumo guarda su historial.'
           : 'Lo que hay en bodega: el stock de cada insumo y su mínimo.'}

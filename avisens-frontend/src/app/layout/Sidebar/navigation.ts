@@ -20,8 +20,8 @@ export const LINK_DETAILS: Record<string, { description: string; descriptionAdmi
   '/admin': { description: 'Tu vista de la plataforma', keywords: ['inicio', 'resumen'] },
   '/dashboard': { description: 'Tu granja de un vistazo', keywords: ['inicio', 'panel'] },
   '/mi-jornada': { description: 'Tu trabajo de hoy', keywords: ['inicio', 'operario', 'registro'] },
-  '/organizaciones': { description: 'Granjas, personas y sensores', descriptionAdmin: 'Tus clientes y sus granjas', keywords: ['empresa', 'organizacion', 'granjas', 'galpones', 'lotes', 'dispositivos', 'sensores', 'monitoreo', 'temperatura', 'humedad', 'mediciones'] },
-  '/crm': { description: 'Leads del chatbot por atender', keywords: ['prospectos', 'clientes', 'leads', 'ventas', 'cotizaciones', 'conversion'] },
+  '/organizaciones': { description: 'Granjas, personas y sensores', descriptionAdmin: 'Organizaciones y sus granjas', keywords: ['empresa', 'organizacion', 'clientes', 'granjas', 'galpones', 'lotes', 'dispositivos', 'sensores', 'monitoreo', 'temperatura', 'humedad', 'mediciones'] },
+  '/crm': { description: 'Prospectos del chatbot por atender', keywords: ['prospectos', 'clientes', 'leads', 'ventas', 'cotizaciones', 'conversion'] },
   '/solicitudes-pqrs': { description: 'Peticiones, quejas y reclamos', keywords: ['pqrs', 'soporte', 'quejas', 'reclamos', 'peticiones', 'radicado'] },
   '/recuperaciones-password': { description: 'Contraseñas por restablecer', keywords: ['contraseña', 'password', 'acceso', 'recuperar', 'bloqueo'] },
   '/catalogos': { description: 'Las bases de tu operación', descriptionAdmin: 'Alimentos, curvas y sensores base', keywords: ['insumos', 'alimentos', 'catalogo'] },
@@ -83,6 +83,10 @@ export function navigationFilter(value: string, search: string, keywords: string
 
 const TITULOS_FUERA_DEL_MENU: Record<string, string> = {
   '/consumos-diarios': 'Consumos diarios',
+  '/guia-crecimiento': 'Guía de crecimiento',
+  '/galpones': 'Galpones',
+  '/lotes': 'Lotes',
+  '/sensores': 'Sensores',
   '/notificaciones': 'Notificaciones',
   '/perfil': 'Mi perfil',
 }

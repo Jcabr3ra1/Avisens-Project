@@ -81,3 +81,18 @@ def test_endpoint_exige_token_interno(monkeypatch):
         "/vision/detectar", content=jpeg(), headers={"X-ML-Token": "secreto"}
     )
     assert r.status_code == 200
+
+
+def test_endpoint_acepta_foto_mayor_a_256kb():
+    rng = np.random.default_rng(0)
+    ruido = rng.integers(0, 256, size=(600, 800, 3), dtype=np.uint8)
+    buffer = io.BytesIO()
+    Image.fromarray(ruido, mode="RGB").save(buffer, format="JPEG", quality=95)
+    foto_grande = buffer.getvalue()
+    assert len(foto_grande) > 262_144
+    r = client.post(
+        "/vision/detectar",
+        content=foto_grande,
+        headers={"Content-Type": "image/jpeg"},
+    )
+    assert r.status_code == 200

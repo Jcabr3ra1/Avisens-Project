@@ -6,7 +6,7 @@ function ResumenGalpones({ resumen }: { resumen: ResumenGalponesDatos }) {
     <ul className="adm-kpis" aria-label="Resumen de galpones">
       <li>
         <div className="adm-kpi adm-kpi--primario">
-          <span className="adm-kpi-cabecera">
+          <span className="adm-kpi-cab">
             <span className="adm-kpi-etiqueta">Galpones</span>
             <span className="adm-kpi-icono" aria-hidden="true"><IcGrid size={16} /></span>
           </span>
@@ -16,7 +16,7 @@ function ResumenGalpones({ resumen }: { resumen: ResumenGalponesDatos }) {
       </li>
       <li>
         <div className="adm-kpi adm-kpi--ok">
-          <span className="adm-kpi-cabecera">
+          <span className="adm-kpi-cab">
             <span className="adm-kpi-etiqueta">Activos</span>
             <span className="adm-kpi-icono" aria-hidden="true"><IcCheck size={16} /></span>
           </span>
@@ -26,7 +26,7 @@ function ResumenGalpones({ resumen }: { resumen: ResumenGalponesDatos }) {
       </li>
       <li>
         <div className={`adm-kpi adm-kpi--${resumen.inactivos > 0 ? 'peligro' : 'ok'}`}>
-          <span className="adm-kpi-cabecera">
+          <span className="adm-kpi-cab">
             <span className="adm-kpi-etiqueta">Inactivos</span>
             <span className="adm-kpi-icono" aria-hidden="true"><IcAlert size={16} /></span>
           </span>
@@ -36,7 +36,7 @@ function ResumenGalpones({ resumen }: { resumen: ResumenGalponesDatos }) {
       </li>
       <li>
         <div className="adm-kpi adm-kpi--info">
-          <span className="adm-kpi-cabecera">
+          <span className="adm-kpi-cab">
             <span className="adm-kpi-etiqueta">Capacidad total</span>
             <span className="adm-kpi-icono" aria-hidden="true"><IcEgg size={16} /></span>
           </span>

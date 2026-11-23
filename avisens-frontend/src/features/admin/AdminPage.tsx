@@ -133,7 +133,7 @@ function AdminPage() {
               colorSerie="var(--cdc-tono-maiz)"
               cargando={cargandoMetricas}
               cargandoSerie={cargandoMetricas}
-              accion="Abrir clientes y sus granjas"
+              accion="Abrir organizaciones y sus granjas"
               onAbrir={() => navigate('/organizaciones')}
             />
             <TarjetaKpiAdmin

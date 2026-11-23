@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { logout } from '@shared/api'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { mensajeDeError } from '@shared/utils/errores'
 import { validarArchivoFoto } from '@shared/utils/fotos'
 import { IcArrowRight, IcCheck, IcPaperclip, IcSettings, IcTrash } from '@shared/ui/icons/icons'
@@ -65,11 +66,17 @@ function PerfilPage() {
   const [subiendoFoto, setSubiendoFoto] = useState(false)
   const inputFotoRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    obtenerPerfil()
+  const cargarPerfil = useCallback(() => {
+    setErrorCarga('')
+    void obtenerPerfil()
       .then(setPerfil)
       .catch(() => setErrorCarga('No se pudo cargar tu perfil. Intenta de nuevo.'))
   }, [])
+
+  useEffect(() => {
+    cargarPerfil()
+  }, [cargarPerfil])
+  useRefetchOnFocus(cargarPerfil)
 
   useEffect(() => {
     if (!perfil?.tiene_foto) {
@@ -186,7 +193,12 @@ function PerfilPage() {
         <p className="per-subtitulo">Tus datos de acceso, actividad reciente y seguridad de la cuenta.</p>
       </header>
 
-      {errorCarga && <div className="adm-alerta" role="alert"><span>{errorCarga}</span></div>}
+      {errorCarga && (
+        <div className="adm-alerta" role="alert">
+          <span>{errorCarga}</span>
+          <button type="button" onClick={cargarPerfil}>Reintentar</button>
+        </div>
+      )}
 
       {!perfil && !errorCarga ? (
         <Cargando texto="Cargando tu perfil…" />

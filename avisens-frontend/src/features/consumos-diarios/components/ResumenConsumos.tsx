@@ -10,7 +10,7 @@ function ResumenConsumos({ consumos }: { consumos: ConsumoDiario[] }) {
     <ul className="adm-kpis adm-kpis--3" aria-label="Resumen de consumos de hoy">
       <li>
         <div className="adm-kpi adm-kpi--primario">
-          <span className="adm-kpi-cabecera">
+          <span className="adm-kpi-cab">
             <span className="adm-kpi-etiqueta">Registros hoy</span>
             <span className="adm-kpi-icono" aria-hidden="true"><IcCheck size={16} /></span>
           </span>
@@ -20,7 +20,7 @@ function ResumenConsumos({ consumos }: { consumos: ConsumoDiario[] }) {
       </li>
       <li>
         <div className="adm-kpi adm-kpi--ok">
-          <span className="adm-kpi-cabecera">
+          <span className="adm-kpi-cab">
             <span className="adm-kpi-etiqueta">Alimento hoy</span>
             <span className="adm-kpi-icono" aria-hidden="true"><IcSeed size={16} /></span>
           </span>
@@ -30,7 +30,7 @@ function ResumenConsumos({ consumos }: { consumos: ConsumoDiario[] }) {
       </li>
       <li>
         <div className="adm-kpi adm-kpi--info">
-          <span className="adm-kpi-cabecera">
+          <span className="adm-kpi-cab">
             <span className="adm-kpi-etiqueta">Agua hoy</span>
             <span className="adm-kpi-icono" aria-hidden="true"><IcDrop size={16} /></span>
           </span>

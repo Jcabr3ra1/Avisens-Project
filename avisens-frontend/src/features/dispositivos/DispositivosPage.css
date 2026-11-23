@@ -321,7 +321,7 @@
 }
 
 .flota-avatar--conectado { color: var(--success); background: color-mix(in srgb, var(--success) 14%, transparent); }
-.flota-avatar--sin_reportar { color: #a8640f; background: var(--accent-soft); }
+.flota-avatar--sin_reportar { color: var(--warning); background: var(--warning-soft); }
 .flota-avatar--nunca { color: var(--danger3); background: var(--danger-soft); }
 .flota-avatar--sin_controlador { border: 1.5px dashed var(--border-default); background: var(--surface-tinted); }
 
@@ -356,7 +356,7 @@
 
 .flota-estado-punto { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .flota-estado--conectado { background: var(--success-soft); color: var(--success); }
-.flota-estado--sin_reportar { background: var(--accent-soft); color: #a8640f; }
+.flota-estado--sin_reportar { background: var(--warning-soft); color: var(--warning); }
 .flota-estado--nunca { background: var(--danger-soft); color: var(--danger3); }
 .flota-estado--sin_controlador { color: var(--text-muted); }
 
