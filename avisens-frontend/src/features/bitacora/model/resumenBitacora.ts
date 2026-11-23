@@ -17,6 +17,7 @@ export type FilaRegistro = {
   fecha: string
   principal: string
   detalle: string
+  tieneFoto?: boolean
 }
 
 export type EventoRecienteBitacora = {
@@ -112,6 +113,7 @@ export function crearFilasRegistro(
       fecha: registro.fecha,
       principal: `${registro.cantidad_aves} aves`,
       detalle: registro.causa_presuntiva || 'Sin causa registrada',
+      tieneFoto: Boolean(registro.foto_mime_type),
     }))
   }
 

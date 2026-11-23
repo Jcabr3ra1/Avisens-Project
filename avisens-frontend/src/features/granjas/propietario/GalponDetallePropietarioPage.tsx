@@ -588,11 +588,15 @@ function GalponDetallePropietarioPage() {
             {pestana === 'resumen' && (
               <ResumenPestana
                 galpon={galpon}
+                tarjeta={tarjeta}
+                sensores={sensores}
                 indicadoresPorLote={indicadoresPorLote}
                 paso={paso}
                 onAbrirLote={(loteId) => cambiarPestana('lotes', { loteId })}
+                onAbrirBitacora={(loteId, vista) => cambiarPestana('bitacora', { loteId, vista })}
+                onAbrirAmbiente={() => cambiarPestana('ambiente', { sub: subAmbiente })}
+                onAbrirAlertas={() => cambiarPestana('alertas')}
                 onDestino={irADestino}
-                onNavegar={irA}
                 onCambioEstructura={() => { void recargarTodo() }}
               />
             )}

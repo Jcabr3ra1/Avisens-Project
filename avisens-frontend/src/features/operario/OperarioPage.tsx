@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import RiesgoCalorResumen from '@features/dashboard/components/RiesgoCalorResumen'
 import SinGalponesAsignados from '@shared/ui/Estados/SinGalponesAsignados'
+import BannerSaludo from '@shared/ui/BannerSaludo/BannerSaludo'
+import { saludoSegunHora } from '@shared/ui/BannerSaludo/saludo'
 import {
   IcAlert,
   IcArrowRight,
@@ -83,57 +85,51 @@ function OperarioPage() {
 
   return (
     <div className="page-container adm-page op-page">
-      {/* ── Cabecera ejecutiva abierta sobre el lienzo ── */}
-      <header className="op-cabecera">
-        <div className="op-cabecera-info">
-          <span className="adm-eyebrow">
-            <span className="adm-eyebrow-punto" aria-hidden="true" />
-            Mi jornada · {fecha}
-          </span>
-          <h1 className="op-titulo">Hola, {nombre}</h1>
-          <p className="op-subtitulo">
-            {inicio.estado.titulo}
-            {dashboard.granja ? ` · ${dashboard.granja.nombre}` : ''}
-          </p>
-        </div>
+      {/* ── Banner de saludo unificado con acciones de turno ── */}
+      <BannerSaludo
+        fecha={fecha}
+        contexto={dashboard.granja ? `Mi jornada · ${dashboard.granja.nombre}` : 'Mi jornada'}
+        titulo={`${saludoSegunHora()}, ${nombre}`}
+        subtitulo={inicio.estado.titulo}
+        acciones={(
+          <>
+            {dashboard.granjas.length > 1 && (
+              <label className="bs-selector">
+                <span className="sr-only">Granja</span>
+                <select
+                  value={dashboard.granjaId ?? ''}
+                  onChange={(evento) => dashboard.seleccionarGranja(Number(evento.target.value))}
+                >
+                  {dashboard.granjas.map((granja) => (
+                    <option key={granja.id} value={granja.id}>{granja.nombre}</option>
+                  ))}
+                </select>
+              </label>
+            )}
 
-        <div className="op-cabecera-acciones">
-          {dashboard.granjas.length > 1 && (
-            <label className="op-granja-selector">
-              <span className="sr-only">Granja</span>
-              <select
-                value={dashboard.granjaId ?? ''}
-                onChange={(evento) => dashboard.seleccionarGranja(Number(evento.target.value))}
-              >
-                {dashboard.granjas.map((granja) => (
-                  <option key={granja.id} value={granja.id}>{granja.nombre}</option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          {jornadaActiva?.lote && (
-            <>
-              <button
-                type="button"
-                className="adm-btn adm-btn--secundario"
-                onClick={() => setRegistroAbierto({ tipo: 'mortalidad', jornada: jornadaActiva })}
-              >
-                <IcAlert size={15} aria-hidden="true" />
-                Mortalidad
-              </button>
-              <button
-                type="button"
-                className="adm-btn adm-btn--primario"
-                onClick={() => setRegistroAbierto({ tipo: 'consumo', jornada: jornadaActiva })}
-              >
-                <IcSeed size={15} aria-hidden="true" />
-                Registrar consumo
-              </button>
-            </>
-          )}
-        </div>
-      </header>
+            {jornadaActiva?.lote && (
+              <>
+                <button
+                  type="button"
+                  className="bs-btn"
+                  onClick={() => setRegistroAbierto({ tipo: 'mortalidad', jornada: jornadaActiva })}
+                >
+                  <IcAlert size={15} aria-hidden="true" />
+                  Mortalidad
+                </button>
+                <button
+                  type="button"
+                  className="bs-btn bs-btn--primario"
+                  onClick={() => setRegistroAbierto({ tipo: 'consumo', jornada: jornadaActiva })}
+                >
+                  <IcSeed size={15} aria-hidden="true" />
+                  Registrar consumo
+                </button>
+              </>
+            )}
+          </>
+        )}
+      />
 
       {/* ── 4 KPIs elevados con borde superior de color ── */}
       <div className="op-kpis" aria-label="Resumen de tu turno">
@@ -417,8 +413,8 @@ function OperarioPage() {
           loteInicialId={dashboard.lote?.id}
           guardando={jornada.guardando}
           onCerrar={() => setRegistroAbierto(null)}
-          onRegistrarMortalidad={async (loteId, registro) => {
-            await jornada.registrarMortalidad(loteId, registro)
+          onRegistrarMortalidad={async (loteId, registro, foto) => {
+            await jornada.registrarMortalidad(loteId, registro, foto)
             void dashboard.recargar()
             void registrosLote.recargar()
           }}

@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react'
 import type { Lote } from '@features/lotes/api/lotes'
 import type { DashboardIndicador } from '@features/dashboard/model/dashboard'
 import { resumenAccesible } from '@features/guia-crecimiento/model/proyeccion'
-import { IcArrowRight, IcEgg } from '@shared/ui/icons/icons'
+import { IcAlert, IcArrowRight, IcChart, IcDrop, IcEgg, IcScale, IcSeed } from '@shared/ui/icons/icons'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import type { GalponConLotes } from '../../hooks/useEstructuraGranjas'
 import { faltantesLote, textoFaltantes } from '../../model/datosDescriptivos'
@@ -163,46 +163,64 @@ function LotesPestana({
               )}
             </header>
 
-            <dl className="gp-lote-kpis">
-              <div>
-                <dt>Aves vivas</dt>
-                <dd>{entero.format(vivas)}</dd>
-                <span className="gp-lote-kpi-sub">de {entero.format(lote.cantidad_inicial)} ingresadas</span>
-              </div>
-              <div>
-                <dt>Mortalidad</dt>
-                <dd>
+            <div className="adm-kpis adm-kpis--3" aria-label="Indicadores del lote">
+              <article className="adm-kpi adm-kpi--primario">
+                <span className="adm-kpi-cab">
+                  <span className="adm-kpi-etiqueta">Aves vivas</span>
+                  <span className="adm-kpi-icono" aria-hidden="true"><IcEgg size={15} /></span>
+                </span>
+                <strong className="adm-kpi-valor">{entero.format(vivas)}</strong>
+                <span className="adm-kpi-nota">de {entero.format(lote.cantidad_inicial)} ingresadas</span>
+              </article>
+              <article className={`adm-kpi adm-kpi--${indicador?.mortalidadAcumuladaPct != null && indicador.mortalidadAcumuladaPct >= 4 ? 'peligro' : 'ok'}`}>
+                <span className="adm-kpi-cab">
+                  <span className="adm-kpi-etiqueta">Mortalidad</span>
+                  <span className="adm-kpi-icono" aria-hidden="true"><IcAlert size={15} /></span>
+                </span>
+                <strong className="adm-kpi-valor">
                   {indicador?.mortalidadAcumuladaPct != null
                     ? `${decimal.format(indicador.mortalidadAcumuladaPct)} %`
                     : '—'}
-                </dd>
-                <span className="gp-lote-kpi-sub">Acumulada del lote</span>
-              </div>
-              <div>
-                <dt>Peso promedio</dt>
-                <dd>
+                </strong>
+                <span className="adm-kpi-nota">Acumulada del lote</span>
+              </article>
+              <article className="adm-kpi adm-kpi--primario">
+                <span className="adm-kpi-cab">
+                  <span className="adm-kpi-etiqueta">Peso promedio</span>
+                  <span className="adm-kpi-icono" aria-hidden="true"><IcScale size={15} /></span>
+                </span>
+                <strong className="adm-kpi-valor">
                   {indicador?.pesoPromedioG != null
                     ? `${entero.format(indicador.pesoPromedioG)} g`
                     : '—'}
-                </dd>
-                <span className="gp-lote-kpi-sub">Último pesaje registrado</span>
-              </div>
-              <div>
-                <dt>Conversión (FCR)</dt>
-                <dd>{indicador?.fcr != null ? indicador.fcr.toFixed(2) : '—'}</dd>
-                <span className="gp-lote-kpi-sub">Relación alimento / peso</span>
-              </div>
-              <div>
-                <dt>Alimento</dt>
-                <dd>{consumo && consumo.alimentoKg > 0 ? `${decimal.format(consumo.alimentoKg)} kg` : '—'}</dd>
-                <span className="gp-lote-kpi-sub">Consumo acumulado</span>
-              </div>
-              <div>
-                <dt>Agua</dt>
-                <dd>{consumo && consumo.aguaLitros > 0 ? `${decimal.format(consumo.aguaLitros)} L` : '—'}</dd>
-                <span className="gp-lote-kpi-sub">Consumo acumulado</span>
-              </div>
-            </dl>
+                </strong>
+                <span className="adm-kpi-nota">Último pesaje registrado</span>
+              </article>
+              <article className="adm-kpi adm-kpi--info">
+                <span className="adm-kpi-cab">
+                  <span className="adm-kpi-etiqueta">Conversión (FCR)</span>
+                  <span className="adm-kpi-icono" aria-hidden="true"><IcChart size={15} /></span>
+                </span>
+                <strong className="adm-kpi-valor">{indicador?.fcr != null ? indicador.fcr.toFixed(2) : '—'}</strong>
+                <span className="adm-kpi-nota">Relación alimento / peso</span>
+              </article>
+              <article className="adm-kpi adm-kpi--ok">
+                <span className="adm-kpi-cab">
+                  <span className="adm-kpi-etiqueta">Alimento</span>
+                  <span className="adm-kpi-icono" aria-hidden="true"><IcSeed size={15} /></span>
+                </span>
+                <strong className="adm-kpi-valor">{consumo && consumo.alimentoKg > 0 ? `${decimal.format(consumo.alimentoKg)} kg` : '—'}</strong>
+                <span className="adm-kpi-nota">Consumo acumulado</span>
+              </article>
+              <article className="adm-kpi adm-kpi--info">
+                <span className="adm-kpi-cab">
+                  <span className="adm-kpi-etiqueta">Agua</span>
+                  <span className="adm-kpi-icono" aria-hidden="true"><IcDrop size={15} /></span>
+                </span>
+                <strong className="adm-kpi-valor">{consumo && consumo.aguaLitros > 0 ? `${decimal.format(consumo.aguaLitros)} L` : '—'}</strong>
+                <span className="adm-kpi-nota">Consumo acumulado</span>
+              </article>
+            </div>
 
             <div className="gp-lote-meta">
               <div>

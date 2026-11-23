@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { IcChevronRight, IcClose, IcSearch } from '@shared/ui/icons/icons'
+import { IcAlert, IcCheck, IcChevronRight, IcClock, IcClose, IcDoc, IcSearch } from '@shared/ui/icons/icons'
 import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
 import PanelRecuperacion from './components/PanelRecuperacion'
 import { useRecuperacionesPassword } from './hooks/useRecuperacionesPassword'
@@ -26,28 +26,32 @@ function fechaCorta(valor: string): string {
   return Number.isNaN(instante.getTime()) ? '' : FECHA_CORTA.format(instante)
 }
 
-function IndicadorFiltro({ etiqueta, valor, nota, activo, tono, orden, onClick }: {
+function IndicadorFiltro({ etiqueta, valor, nota, activo, tono = 'primario', icono, orden, onClick }: {
   etiqueta: string
   valor: number | null
   nota: string
   activo: boolean
-  tono?: 'aviso'
+  tono?: 'primario' | 'ok' | 'info' | 'alerta' | 'peligro'
+  icono: ReactNode
   orden: number
   onClick: () => void
 }) {
   return (
-    <li className="rec-indicador org-aparece" style={{ '--orden': orden } as CSSProperties}>
+    <li className="org-aparece" style={{ '--orden': orden } as CSSProperties}>
       <button
         type="button"
-        className={`rec-indicador-btn${activo ? ' is-activo' : ''}${tono ? ` is-${tono}` : ''}`}
+        className={`adm-kpi adm-kpi--${tono}${activo ? ' is-activo' : ''}`}
         aria-pressed={activo}
         onClick={onClick}
       >
-        <span className="rec-indicador-label">{etiqueta}</span>
-        <strong className="rec-indicador-valor">
+        <span className="adm-kpi-cab">
+          <span className="adm-kpi-etiqueta">{etiqueta}</span>
+          <span className="adm-kpi-icono" aria-hidden="true">{icono}</span>
+        </span>
+        <strong className="adm-kpi-valor">
           {valor === null ? <span className="rec-esqueleto-num org-brilla" aria-hidden="true" /> : valor}
         </strong>
-        <span className="rec-indicador-nota">{nota}</span>
+        <span className="adm-kpi-nota">{nota}</span>
       </button>
     </li>
   )
@@ -123,14 +127,15 @@ function RecuperacionesPasswordPage() {
         </div>
       </header>
 
-      <ul className="rec-indicadores" aria-label="Filtros rápidos de recuperaciones">
+      <ul className="adm-kpis" aria-label="Filtros rápidos de recuperaciones">
         <IndicadorFiltro
           orden={1}
           etiqueta="Por revisar"
           valor={listo ? resumen.pendientes : null}
           nota={!listo ? 'Calculando…' : resumen.pendientes ? 'Esperan verificación' : 'Nada pendiente'}
           activo={vista === 'pendiente'}
-          tono={resumen.pendientes > 0 ? 'aviso' : undefined}
+          tono={resumen.pendientes > 0 ? 'alerta' : 'ok'}
+          icono={resumen.pendientes > 0 ? <IcAlert size={15} /> : <IcCheck size={15} />}
           onClick={() => setVista(vista === 'pendiente' ? 'todos' : 'pendiente')}
         />
         <IndicadorFiltro
@@ -139,6 +144,8 @@ function RecuperacionesPasswordPage() {
           valor={listo ? resumen.aprobadas : null}
           nota="Aún no cambian su clave"
           activo={vista === 'aprobada'}
+          tono="info"
+          icono={<IcClock size={15} />}
           onClick={() => setVista(vista === 'aprobada' ? 'todos' : 'aprobada')}
         />
         <IndicadorFiltro
@@ -147,6 +154,8 @@ function RecuperacionesPasswordPage() {
           valor={listo ? resumen.cerradas : null}
           nota="Completadas o rechazadas"
           activo={vista === 'cerradas'}
+          tono="ok"
+          icono={<IcCheck size={15} />}
           onClick={() => setVista(vista === 'cerradas' ? 'todos' : 'cerradas')}
         />
         <IndicadorFiltro
@@ -155,6 +164,8 @@ function RecuperacionesPasswordPage() {
           valor={listo ? resumen.total : null}
           nota="Solicitudes registradas"
           activo={vista === 'todos'}
+          tono="primario"
+          icono={<IcDoc size={15} />}
           onClick={() => setVista('todos')}
         />
       </ul>

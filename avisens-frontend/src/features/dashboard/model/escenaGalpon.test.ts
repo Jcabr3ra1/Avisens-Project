@@ -157,7 +157,7 @@ describe('edad del lote (usada también en la guía)', () => {
   it('escribe la lectura de un sensor o avisa que no reporta', () => {
     const base: SensorEscena = {
       id: 1, codigo: 'S-1', clase: 'temperatura', nombre: 'x', valor: 29.44, unidad: '°C', estado: 'optimo',
-      etiquetaEstado: 'Óptimo', explicacion: '', ultimaLecturaTs: null, minUmbral: null, maxUmbral: null,
+      etiquetaEstado: 'En rango', explicacion: '', ultimaLecturaTs: null, minUmbral: null, maxUmbral: null,
       zona: null, otrasZonas: [],
     }
     expect(lecturaDeSensor(base)).toBe('29,4 °C')
@@ -206,7 +206,7 @@ describe('edad del lote (usada también en la guía)', () => {
   it('escribe el rango configurado solo con los umbrales que existen', () => {
     const base: SensorEscena = {
       id: 1, codigo: 'S-1', clase: 'temperatura', nombre: 'x', valor: 28, unidad: '°C', estado: 'optimo',
-      etiquetaEstado: 'Óptimo', explicacion: '', ultimaLecturaTs: null, minUmbral: null, maxUmbral: null,
+      etiquetaEstado: 'En rango', explicacion: '', ultimaLecturaTs: null, minUmbral: null, maxUmbral: null,
       zona: null, otrasZonas: [],
     }
     expect(rangoConfigurado(base)).toBeNull()

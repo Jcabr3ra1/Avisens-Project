@@ -84,6 +84,20 @@ describe('resumenBitacora', () => {
       { id: 1, fecha: '2026-09-01', principal: '1,20 kg', detalle: 'Sin observaciones' },
       { id: 2, fecha: '2026-09-01', principal: '450 g', detalle: 'Sin observaciones' },
     ])
+
+    const filasMortalidad = crearFilasRegistro(
+      'mortalidad',
+      [],
+      [
+        { ...mortalidad(3, 10, 2), foto_mime_type: 'image/jpeg' },
+        { ...mortalidad(4, 10, 1), foto_mime_type: null },
+      ],
+      [],
+    )
+    expect(filasMortalidad).toEqual([
+      { id: 3, fecha: '2026-09-01', principal: '2 aves', detalle: 'Sin causa registrada', tieneFoto: true },
+      { id: 4, fecha: '2026-09-01', principal: '1 aves', detalle: 'Sin causa registrada', tieneFoto: false },
+    ])
   })
 
   it('calcula días del ciclo y supervivencia del lote', () => {

@@ -446,6 +446,163 @@ a.adm-miga:hover {
   border-color: var(--danger);
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Tarjetas KPI unificadas (patrón franja superior + ícono)
+   ───────────────────────────────────────────────────────────── */
+
+.adm-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-kpis--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.adm-kpis > li {
+  display: flex;
+  min-width: 0;
+}
+
+.adm-kpi {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-top: 3px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  box-shadow: 0 6px 18px -14px color-mix(in srgb, var(--avisens-ink) 32%, transparent), var(--shadow-sm);
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+button.adm-kpi {
+  cursor: pointer;
+}
+
+button.adm-kpi:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -16px color-mix(in srgb, var(--avisens-ink) 36%, transparent);
+}
+
+button.adm-kpi:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.adm-kpi:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.adm-kpi--primario { border-top-color: var(--primary); }
+.adm-kpi--ok { border-top-color: var(--success); }
+.adm-kpi--info { border-top-color: var(--info); }
+.adm-kpi--alerta { border-top-color: var(--warning); }
+.adm-kpi--peligro { border-top-color: var(--danger); }
+
+.adm-kpi.is-activo {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border-subtle));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-soft) 50%, var(--surface-base)) 0%, var(--surface-base) 100%);
+}
+
+.adm-kpi--peligro.is-activo {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border-subtle));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger-soft) 55%, var(--surface-base)) 0%, var(--surface-base) 100%);
+}
+
+.adm-kpi--alerta.is-activo {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border-subtle));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--warning-soft) 55%, var(--surface-base)) 0%, var(--surface-base) 100%);
+}
+
+.adm-kpi-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.adm-kpi-etiqueta {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.adm-kpi-icono {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--primary-soft);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.adm-kpi--ok .adm-kpi-icono { background: var(--success-soft); color: var(--success); }
+.adm-kpi--info .adm-kpi-icono { background: var(--info-soft); color: var(--info); }
+.adm-kpi--alerta .adm-kpi-icono { background: var(--warning-soft); color: var(--warning); }
+.adm-kpi--peligro .adm-kpi-icono { background: var(--danger-soft); color: var(--danger); }
+
+.adm-kpi-valor {
+  color: var(--text-primary);
+  font-size: 1.7rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+
+.adm-kpi-valor--texto {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.adm-kpi--peligro .adm-kpi-valor.is-tono { color: var(--danger); }
+.adm-kpi--alerta .adm-kpi-valor.is-tono { color: var(--warning3, var(--warning)); }
+.adm-kpi--ok .adm-kpi-valor.is-tono { color: var(--success); }
+.adm-kpi--primario .adm-kpi-valor.is-tono { color: var(--primary); }
+
+.adm-kpi-nota {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 64rem) {
+  .adm-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .adm-kpis--3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 34rem) {
+  .adm-kpis,
+  .adm-kpis--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Texto solo para lectores de pantalla: encabezados de columna sin título
    visible, como la de acciones. */
 .sr-only {

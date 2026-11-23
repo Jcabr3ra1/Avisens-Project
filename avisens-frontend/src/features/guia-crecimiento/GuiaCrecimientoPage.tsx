@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { permisosDePlan, ROL_ADMIN, ROL_PROPIETARIO, ROL_OPERARIO } from '@shared/auth/permisos'
 import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
-import { IcArrowRight, IcChart, IcDoc, IcSeed } from '@shared/ui/icons/icons'
+import { IcArrowRight, IcCal, IcChart, IcDoc, IcEgg, IcScale, IcSeed } from '@shared/ui/icons/icons'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
 import '@shared/ui/admin/AdminKit.css'
 import { useGuiaCrecimiento } from './hooks/useGuiaCrecimiento'
@@ -211,34 +211,54 @@ function GuiaCrecimientoPage() {
         </div>
       </header>
 
-      <ul className="gdc-indicadores" aria-label="Resumen del lote">
+      <ul className="adm-kpis" aria-label="Resumen del lote">
         <li>
-          <span>Avance del ciclo</span>
-          <strong>Día {diaHoy} / {diaFinal}</strong>
-          <small>Encasetado el {formatearFechaCalendario(lote.fecha_ingreso)}</small>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Avance del ciclo</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcCal size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor">Día {diaHoy} / {diaFinal}</strong>
+            <span className="adm-kpi-nota">Encasetado el {formatearFechaCalendario(lote.fecha_ingreso)}</span>
+          </div>
         </li>
         <li>
-          <span>Último peso</span>
-          <strong>{ultimoPesaje ? formatearPeso(ultimoPesaje.peso_g) : '—'}</strong>
-          <small>
-            {ultimoPesaje
-              ? `Día ${ultimoPesaje.dia} · ${diasConPesaje.length} ${diasConPesaje.length === 1 ? 'pesaje' : 'pesajes'}`
-              : 'Sin pesajes registrados'}
-          </small>
+          <div className="adm-kpi adm-kpi--ok">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Último peso</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcScale size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{ultimoPesaje ? formatearPeso(ultimoPesaje.peso_g) : '—'}</strong>
+            <span className="adm-kpi-nota">
+              {ultimoPesaje
+                ? `Día ${ultimoPesaje.dia} · ${diasConPesaje.length} ${diasConPesaje.length === 1 ? 'pesaje' : 'pesajes'}`
+                : 'Sin pesajes registrados'}
+            </span>
+          </div>
         </li>
         <li>
-          <span>Meta de salida</span>
-          <strong>{pesoMeta ? formatearPeso(pesoMeta) : 'Sin meta'}</strong>
-          <small>{salida ? `Estimada ${formatearFechaCalendario(salida)}` : 'Defínela en Plan de salida'}</small>
+          <div className="adm-kpi adm-kpi--info">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Meta de salida</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcChart size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{pesoMeta ? formatearPeso(pesoMeta) : 'Sin meta'}</strong>
+            <span className="adm-kpi-nota">{salida ? `Estimada ${formatearFechaCalendario(salida)}` : 'Defínela en Plan de salida'}</span>
+          </div>
         </li>
         <li>
-          <span>Aves vivas</span>
-          <strong>{avesVivas.toLocaleString('es-CO')}</strong>
-          <small>
-            {totalMuertes > 0
-              ? `de ${lote.cantidad_inicial.toLocaleString('es-CO')} · ${unDecimal.format(mortalidadPct)} % mortalidad`
-              : `${lote.cantidad_inicial.toLocaleString('es-CO')} iniciales · sin mortalidad`}
-          </small>
+          <div className={`adm-kpi adm-kpi--${mortalidadPct >= 4 ? 'peligro' : 'primario'}`}>
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Aves vivas</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcEgg size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{avesVivas.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">
+              {totalMuertes > 0
+                ? `de ${lote.cantidad_inicial.toLocaleString('es-CO')} · ${unDecimal.format(mortalidadPct)} % mortalidad`
+                : `${lote.cantidad_inicial.toLocaleString('es-CO')} iniciales · sin mortalidad`}
+            </span>
+          </div>
         </li>
       </ul>
 

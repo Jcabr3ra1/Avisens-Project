@@ -82,7 +82,7 @@ type SensorCrudo = {
 }
 
 const ETIQUETAS_ESTADO: Record<EstadoSensorVista, string> = {
-  optimo: 'Óptimo',
+  optimo: 'En rango',
   advertencia: 'Advertencia',
   critico: 'Crítico',
   sin_umbral: 'Sin umbral',

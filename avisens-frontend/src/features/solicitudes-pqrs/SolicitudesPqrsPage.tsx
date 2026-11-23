@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getUsuario } from '@shared/api'
-import { IcChevronDown, IcChevronRight, IcClose, IcSearch } from '@shared/ui/icons/icons'
+import { IcAlert, IcChat, IcCheck, IcChevronDown, IcChevronRight, IcClose, IcSearch, IcUserCircle } from '@shared/ui/icons/icons'
 import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
 import PanelSolicitudPqrs from './components/PanelSolicitudPqrs'
 import { useSolicitudesPqrs } from './hooks/useSolicitudesPqrs'
@@ -24,28 +24,32 @@ function iniciales(nombre: string | null | undefined): string {
   return partes.slice(0, 2).map((parte) => parte[0]?.toUpperCase()).join('') || '—'
 }
 
-function IndicadorFiltro({ etiqueta, valor, nota, activo, tono, orden, onClick }: {
+function IndicadorFiltro({ etiqueta, valor, nota, activo, tono = 'primario', icono, orden, onClick }: {
   etiqueta: string
   valor: string | number | null
   nota: string
   activo: boolean
-  tono?: 'peligro' | 'alerta'
+  tono?: 'primario' | 'ok' | 'info' | 'alerta' | 'peligro'
+  icono: ReactNode
   orden: number
   onClick: () => void
 }) {
   return (
-    <li className="sop-indicador org-aparece" style={{ '--orden': orden } as CSSProperties}>
+    <li className="org-aparece" style={{ '--orden': orden } as CSSProperties}>
       <button
         type="button"
-        className={`sop-indicador-btn${activo ? ' is-activo' : ''}${tono ? ` is-${tono}` : ''}`}
+        className={`adm-kpi adm-kpi--${tono}${activo ? ' is-activo' : ''}`}
         aria-pressed={activo}
         onClick={onClick}
       >
-        <span className="sop-indicador-label">{etiqueta}</span>
-        <strong className="sop-indicador-valor">
+        <span className="adm-kpi-cab">
+          <span className="adm-kpi-etiqueta">{etiqueta}</span>
+          <span className="adm-kpi-icono" aria-hidden="true">{icono}</span>
+        </span>
+        <strong className="adm-kpi-valor">
           {valor === null ? <span className="sop-esqueleto-num org-brilla" aria-hidden="true" /> : valor}
         </strong>
-        <span className="sop-indicador-nota">{nota}</span>
+        <span className="adm-kpi-nota">{nota}</span>
       </button>
     </li>
   )
@@ -189,13 +193,15 @@ function SolicitudesPqrsPage() {
         </div>
       </header>
 
-      <ul className="sop-indicadores" aria-label="Filtros rápidos de soporte">
+      <ul className="adm-kpis" aria-label="Filtros rápidos de soporte">
         <IndicadorFiltro
           orden={1}
           etiqueta="Por atender"
           valor={listo ? resumen.porAtender : null}
           nota={!listo ? 'Calculando…' : resumen.sinTomar === 1 ? '1 sin tomar' : `${resumen.sinTomar} sin tomar`}
           activo={vista === 'atender' && !soloVencidas}
+          tono="primario"
+          icono={<IcChat size={15} />}
           onClick={() => elegirVista('atender', false)}
         />
         <IndicadorFiltro
@@ -204,7 +210,8 @@ function SolicitudesPqrsPage() {
           valor={listo ? resumen.vencidas : null}
           nota={!listo ? 'Calculando…' : resumen.porVencer ? `${resumen.porVencer} por vencer` : 'Nada por vencer'}
           activo={vista === 'atender' && soloVencidas}
-          tono={resumen.vencidas > 0 ? 'peligro' : undefined}
+          tono={resumen.vencidas > 0 ? 'peligro' : 'ok'}
+          icono={resumen.vencidas > 0 ? <IcAlert size={15} /> : <IcCheck size={15} />}
           onClick={() => elegirVista('atender', !soloVencidas)}
         />
         <IndicadorFiltro
@@ -213,6 +220,8 @@ function SolicitudesPqrsPage() {
           valor={listo ? resumen.porVista.mias : null}
           nota="Casos a tu cargo"
           activo={vista === 'mias'}
+          tono="info"
+          icono={<IcUserCircle size={15} />}
           onClick={() => elegirVista('mias', false)}
         />
         <IndicadorFiltro
@@ -221,6 +230,8 @@ function SolicitudesPqrsPage() {
           valor={listo ? resumen.porVista.resueltas : null}
           nota={notaResueltas}
           activo={vista === 'resueltas'}
+          tono="ok"
+          icono={<IcCheck size={15} />}
           onClick={() => elegirVista('resueltas', false)}
         />
       </ul>

@@ -60,13 +60,16 @@ export function useBitacora() {
       const registro = await crearPesaje(datos)
       setPesajes((actuales) => [registro, ...actuales])
       if (registro?.lote_id) void calcularIndicadores(registro.lote_id).catch(() => null)
+      return registro
     } else if (tipo === 'mortalidad') {
       const registro = await crearMortalidad(datos)
       setMortalidad((actuales) => [registro, ...actuales])
       if (registro?.lote_id) void calcularIndicadores(registro.lote_id).catch(() => null)
+      return registro
     } else {
       const registro = await crearEventoSanitario(datos)
       setSanitarios((actuales) => [registro, ...actuales])
+      return registro
     }
   }
 
@@ -75,15 +78,24 @@ export function useBitacora() {
       const registro = await actualizarPesaje(id, datos)
       setPesajes((actuales) => actuales.map((item) => (item.id === id ? registro : item)))
       if (registro?.lote_id) void calcularIndicadores(registro.lote_id).catch(() => null)
+      return registro
     } else if (tipo === 'mortalidad') {
       const registro = await actualizarMortalidad(id, datos)
       setMortalidad((actuales) => actuales.map((item) => (item.id === id ? registro : item)))
       if (registro?.lote_id) void calcularIndicadores(registro.lote_id).catch(() => null)
+      return registro
     } else {
       const registro = await actualizarEventoSanitario(id, datos)
       setSanitarios((actuales) => actuales.map((item) => (item.id === id ? registro : item)))
+      return registro
     }
   }
+
+  const marcarFotoMortalidad = useCallback((id: number, mimeType: string | null) => {
+    setMortalidad((actuales) =>
+      actuales.map((item) => (item.id === id ? { ...item, foto_mime_type: mimeType } : item)),
+    )
+  }, [])
 
   const eliminar = async (tipo: TipoRegistro, id: number) => {
     if (tipo === 'peso') {
@@ -102,5 +114,5 @@ export function useBitacora() {
     }
   }
 
-  return { lotes, pesajes, mortalidad, sanitarios, consumos, cargando, error, recargar, crear, actualizar, eliminar }
+  return { lotes, pesajes, mortalidad, sanitarios, consumos, cargando, error, recargar, crear, actualizar, eliminar, marcarFotoMortalidad }
 }
