@@ -1,6 +1,7 @@
-import { useState, type FormEventHandler } from 'react'
+import { useState, type FormEvent, type FormEventHandler } from 'react'
 import { IcBarn } from '@shared/ui/icons/icons'
 import Modal from '@shared/ui/Modal/Modal'
+import { validarNombreEntidad, validarTextoSeguro } from '@shared/utils/validacion'
 import type { CrearGranjaPayload, PropietarioGranja } from '../api/granjas'
 
 interface Props {
@@ -40,9 +41,33 @@ function FormularioGranja({
   onCerrar,
 }: Props) {
   const [mostrarAdicional, setMostrarAdicional] = useState(modoEdicion)
+  const [errorValidacion, setErrorValidacion] = useState('')
   const formularioBloqueado =
     guardando ||
     (esAdministrador && (cargandoPropietarios || Boolean(errorPropietarios)))
+
+  function manejarSubmit(evento: FormEvent<HTMLFormElement>) {
+    const errNombre = validarNombreEntidad(form.nombre, 'El nombre de la granja', { max: 120 })
+    const errMunicipio = validarNombreEntidad(form.municipio ?? '', 'El municipio', { requerido: false, max: 100 })
+    const errDepto = validarNombreEntidad(form.departamento ?? '', 'El departamento', { requerido: false, max: 100 })
+    const errDir = validarTextoSeguro(form.direccion ?? '', 'La dirección', { max: 200 })
+    let errNum: string | null = null
+    if (form.latitud !== undefined && (form.latitud < -90 || form.latitud > 90)) {
+      errNum = 'La latitud debe estar entre -90 y 90.'
+    } else if (form.longitud !== undefined && (form.longitud < -180 || form.longitud > 180)) {
+      errNum = 'La longitud debe estar entre -180 y 180.'
+    } else if (form.area_total_m2 !== undefined && (form.area_total_m2 <= 0 || form.area_total_m2 > 5_000_000)) {
+      errNum = 'El área total debe ser mayor que 0 y menor a 5.000.000 m².'
+    }
+    const primero = errNombre ?? errMunicipio ?? errDepto ?? errDir ?? errNum
+    if (primero) {
+      evento.preventDefault()
+      setErrorValidacion(primero)
+      return
+    }
+    setErrorValidacion('')
+    onGuardar(evento)
+  }
 
   return (
     <Modal
@@ -78,7 +103,7 @@ function FormularioGranja({
         </>
       }
     >
-      <form id={ID_FORMULARIO} onSubmit={onGuardar}>
+      <form id={ID_FORMULARIO} onSubmit={manejarSubmit}>
         {esAdministrador && (
           <label className="modal-campo">
             <span>Propietario</span>
@@ -166,6 +191,8 @@ function FormularioGranja({
                 <span>Latitud <em>(Opcional)</em></span>
                 <input
                   type="number"
+                  min="-90"
+                  max="90"
                   step="any"
                   value={form.latitud ?? ''}
                   onChange={(evento) =>
@@ -177,6 +204,8 @@ function FormularioGranja({
                 <span>Longitud <em>(Opcional)</em></span>
                 <input
                   type="number"
+                  min="-180"
+                  max="180"
                   step="any"
                   value={form.longitud ?? ''}
                   onChange={(evento) =>
@@ -189,7 +218,8 @@ function FormularioGranja({
               <span>Área total en m² <em>(Opcional)</em></span>
               <input
                 type="number"
-                min="0"
+                min="0.01"
+                max="5000000"
                 step="any"
                 value={form.area_total_m2 ?? ''}
                 onChange={(evento) =>
@@ -200,9 +230,9 @@ function FormularioGranja({
           </div>
         )}
 
-        {(errorPropietarios || error) && (
+        {(errorValidacion || errorPropietarios || error) && (
           <p className="modal-error" role="alert">
-            {errorPropietarios || error}
+            {errorValidacion || errorPropietarios || error}
           </p>
         )}
       </form>

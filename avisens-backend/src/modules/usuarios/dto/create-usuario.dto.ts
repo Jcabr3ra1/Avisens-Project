@@ -1,5 +1,9 @@
 import { Transform } from 'class-transformer';
 import { NombreUsuario } from '../../../common/auth/username';
+import {
+  NombreEntidad,
+  NombrePersona,
+} from '../../../common/validation/texto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
@@ -8,6 +12,7 @@ import {
   IsOptional,
   IsString,
   Matches,
+  MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
@@ -20,7 +25,7 @@ const TELEFONO_VALIDO = /^\+?\d{10,13}$/;
 
 export class CreateUsuarioDto {
   @ApiProperty({ example: 'María López' })
-  @IsString()
+  @NombrePersona(120)
   nombre_completo: string;
 
   @ApiProperty({ example: '1098765432' })
@@ -51,6 +56,7 @@ export class CreateUsuarioDto {
   @ApiProperty({ example: 'contraseña123', minLength: 8 })
   @IsString()
   @MinLength(8)
+  @MaxLength(128)
   password: string;
 
   @ApiPropertyOptional({ example: '3001234567' })
@@ -85,7 +91,7 @@ export class CreateUsuarioDto {
     description:
       'Nombre de la organización que se crea junto con un nuevo Propietario.',
   })
-  @IsString()
+  @NombreEntidad('El nombre de la organización', 120, false)
   @MinLength(2)
   @IsOptional()
   organizacion_nombre?: string;

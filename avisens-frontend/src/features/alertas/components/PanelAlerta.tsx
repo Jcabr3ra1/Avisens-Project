@@ -5,6 +5,7 @@ import Modal from '@shared/ui/Modal/Modal'
 import { IcPaperclip, IcTrash } from '@shared/ui/icons/icons'
 import { validarArchivoFoto } from '@shared/utils/fotos'
 import { mensajeDeError } from '@shared/utils/errores'
+import { esUrlHttpSegura, validarTextoSeguro, validarUrlHttp } from '@shared/utils/validacion'
 import {
   crearEvidenciaAlerta,
   eliminarEvidenciaAlerta,
@@ -180,7 +181,21 @@ function PanelAlerta({ alerta, cerrando, onCerrar, onEscalar, onSalir }: PanelAl
 
   async function guardarCierre(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!accion.trim()) return
+    const errorAccion = validarTextoSeguro(accion, 'La acción correctiva', {
+      requerido: true,
+      max: 500,
+      multilinea: true,
+      exigirLetras: true,
+    })
+    if (errorAccion) {
+      toast.error(errorAccion)
+      return
+    }
+    const errorEnlace = validarUrlHttp(enlaceEvidencia)
+    if (errorEnlace) {
+      toast.error(errorEnlace)
+      return
+    }
     const cerrada = await onCerrar(alertaSeleccionada.id, accion.trim())
     if (!cerrada) return
 
@@ -271,10 +286,12 @@ function PanelAlerta({ alerta, cerrando, onCerrar, onEscalar, onSalir }: PanelAl
                     <a href={urlImg} target="_blank" rel="noreferrer" className="ale-evidencia-thumb">
                       <img src={urlImg} alt={ev.comentario || 'Fotografía de evidencia'} />
                     </a>
-                  ) : ev.archivo_url ? (
-                    <a href={ev.archivo_url} target="_blank" rel="noreferrer" className="ale-evidencia-link">
+                  ) : esUrlHttpSegura(ev.archivo_url) ? (
+                    <a href={ev.archivo_url!} target="_blank" rel="noopener noreferrer" className="ale-evidencia-link">
                       Ver enlace adjunto
                     </a>
+                  ) : ev.archivo_url ? (
+                    <span className="ale-evidencia-cargando">Enlace no válido</span>
                   ) : (
                     <span className="ale-evidencia-cargando">Cargando imagen…</span>
                   )}

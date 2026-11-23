@@ -77,6 +77,7 @@ function FormularioInsumo({
             value={form.nombre}
             onChange={(evento) => onCambiar('nombre', evento.target.value)}
             placeholder="Alimento iniciación"
+            maxLength={120}
             required
           />
         </label>
@@ -86,6 +87,7 @@ function FormularioInsumo({
             value={form.unidad_medida}
             onChange={(evento) => onCambiar('unidad_medida', evento.target.value)}
             placeholder="kg"
+            maxLength={30}
             required
           />
         </label>

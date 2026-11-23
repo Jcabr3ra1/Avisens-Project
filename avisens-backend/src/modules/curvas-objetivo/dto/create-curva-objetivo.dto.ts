@@ -1,10 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsInt, IsNumber, IsOptional, Max, Min } from 'class-validator';
 import {
   ETAPAS_ALIMENTACION,
   MARCAS_ALIMENTO,
+  PESO_MAXIMO_POLLO_G,
   SEXOS_LOTE,
 } from '../../../common/avicultura/vocabulario';
+import {
+  DIA_CICLO_MAXIMO,
+  FCR_MAXIMO,
+  TextoSeguro,
+} from '../../../common/validation/texto';
 
 export class CreateCurvaObjetivoDto {
   @ApiProperty({
@@ -24,14 +30,16 @@ export class CreateCurvaObjetivoDto {
 
   @ApiProperty({ example: 21, description: 'Dia de vida del pollo' })
   @IsInt()
+  @Min(0)
+  @Max(DIA_CICLO_MAXIMO)
   dia: number;
 
   @ApiPropertyOptional({
     example: 'italcol',
     description: 'Fuente del dato: manual de la marca, cobb500, ross308, etc.',
   })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('La fuente', 60)
   fuente?: string;
 
   @ApiPropertyOptional({
@@ -39,6 +47,8 @@ export class CreateCurvaObjetivoDto {
     description: 'Peso esperado en gramos',
   })
   @IsNumber()
+  @Min(0)
+  @Max(PESO_MAXIMO_POLLO_G)
   @IsOptional()
   peso_esperado_g?: number;
 
@@ -47,6 +57,8 @@ export class CreateCurvaObjetivoDto {
     description: 'Consumo diario esperado en gramos',
   })
   @IsNumber()
+  @Min(0)
+  @Max(50_000)
   @IsOptional()
   consumo_diario_g?: number;
 
@@ -55,6 +67,8 @@ export class CreateCurvaObjetivoDto {
     description: 'Consumo acumulado esperado en gramos',
   })
   @IsNumber()
+  @Min(0)
+  @Max(50_000)
   @IsOptional()
   consumo_acumulado_g?: number;
 
@@ -63,6 +77,8 @@ export class CreateCurvaObjetivoDto {
     description: 'FCR objetivo a esa edad',
   })
   @IsNumber()
+  @Min(0)
+  @Max(FCR_MAXIMO)
   @IsOptional()
   fcr_objetivo?: number;
 
@@ -80,6 +96,8 @@ export class CreateCurvaObjetivoDto {
     description: 'Temperatura minima ideal en grados C',
   })
   @IsNumber()
+  @Min(-20)
+  @Max(60)
   @IsOptional()
   temperatura_min?: number;
 
@@ -88,6 +106,8 @@ export class CreateCurvaObjetivoDto {
     description: 'Temperatura maxima ideal en grados C',
   })
   @IsNumber()
+  @Min(-20)
+  @Max(60)
   @IsOptional()
   temperatura_max?: number;
 }

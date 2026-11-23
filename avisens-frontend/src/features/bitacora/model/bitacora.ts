@@ -1,4 +1,5 @@
 import { fechaDeHoy } from '@shared/utils/fechas'
+import { validarTextoSeguro } from '@shared/utils/validacion'
 export type Pesaje = { id:number; lote_id:number; fecha:string; peso_promedio_g:number; cantidad_aves_pesadas:number|null; peso_objetivo_g:number|null; observaciones:string|null }
 export type Mortalidad = { id:number; lote_id:number; fecha:string; cantidad_aves:number; causa_presuntiva:string|null; disposicion:string|null; observaciones:string|null; foto_mime_type?:string|null }
 export type EventoSanitario = { id:number; lote_id:number; fecha:string; tipo:string; producto:string|null; diagnostico:string|null; cantidad_aves:number|null; observaciones:string|null; insumo_id?:number|null; dosis?:string|null; via_aplicacion?:string|null }
@@ -20,10 +21,9 @@ export const VIAS_APLICACION = [
   ['otra', 'Otra'],
 ] as const
 
-// Límites razonables con amplio margen sobre tablas genéticas (ej. aves estándar ~3-5 kg).
-// 30.000 g (30 kg) permite aves de gran tamaño pero previene valores astronómicos.
+// Alineado con el límite del backend (PESO_MAXIMO_POLLO_G = 10.000 g).
 export const PESO_MINIMO_G = 1
-export const PESO_MAXIMO_G = 30_000
+export const PESO_MAXIMO_G = 10_000
 export const AVES_MAXIMO = 100_000
 
 // Un producto o un diagnóstico siempre tiene letras («Newcastle», «Enrofloxacina 10 %»).
@@ -31,6 +31,11 @@ export const TIENE_LETRAS = /\p{L}/u
 
 export function errorDeRegistro(tipo: TipoRegistro, form: FormularioRegistro): string {
   if (!form.fecha) return 'Selecciona la fecha del registro.'
+  const errorObs = validarTextoSeguro(form.observaciones, 'Las observaciones', {
+    max: 500,
+    multilinea: true,
+  })
+  if (errorObs) return errorObs
   if (tipo === 'peso') {
     const peso = Number(form.peso_promedio_g)
     if (!form.peso_promedio_g || Number.isNaN(peso)) return 'Escribe el peso promedio en gramos.'
@@ -49,7 +54,7 @@ export function errorDeRegistro(tipo: TipoRegistro, form: FormularioRegistro): s
     }
     if (form.cantidad_aves_pesadas) {
       const cant = Number(form.cantidad_aves_pesadas)
-      if (Number.isNaN(cant) || cant < 1) return 'La cantidad de aves pesadas debe ser al menos 1.'
+      if (!Number.isInteger(cant) || cant < 1) return 'La cantidad de aves pesadas debe ser un entero de al menos 1.'
       if (cant > AVES_MAXIMO) {
         return `La cantidad de aves pesadas no puede superar ${AVES_MAXIMO.toLocaleString('es-CO')}.`
       }
@@ -57,18 +62,29 @@ export function errorDeRegistro(tipo: TipoRegistro, form: FormularioRegistro): s
   }
   if (tipo === 'mortalidad') {
     const cant = Number(form.cantidad_aves)
-    if (!form.cantidad_aves || Number.isNaN(cant) || cant < 1) return 'La cantidad de aves fallecidas debe ser al menos 1.'
+    if (!form.cantidad_aves || !Number.isInteger(cant) || cant < 1) return 'La cantidad de aves fallecidas debe ser un entero de al menos 1.'
     if (cant > AVES_MAXIMO) {
       return `La cantidad de aves fallecidas no puede superar ${AVES_MAXIMO.toLocaleString('es-CO')}.`
     }
+    const errorCausa = validarTextoSeguro(form.causa_presuntiva, 'La causa probable', {
+      max: 150,
+      exigirLetras: true,
+    })
+    if (errorCausa) return errorCausa
   }
   if (tipo === 'sanitario') {
     if (form.producto.trim() && !TIENE_LETRAS.test(form.producto)) {
       return 'Escribe el nombre del producto o vacuna, no solo números.'
     }
+    const errorProducto = validarTextoSeguro(form.producto, 'El producto o vacuna', { max: 150 })
+    if (errorProducto) return errorProducto
     if (form.diagnostico.trim() && !TIENE_LETRAS.test(form.diagnostico)) {
       return 'Escribe el diagnóstico con palabras, no solo números.'
     }
+    const errorDiagnostico = validarTextoSeguro(form.diagnostico, 'El diagnóstico', { max: 150 })
+    if (errorDiagnostico) return errorDiagnostico
+    const errorDosis = validarTextoSeguro(form.dosis, 'La dosis', { max: 80 })
+    if (errorDosis) return errorDosis
     if (form.cantidad_aves) {
       const cant = Number(form.cantidad_aves)
       if (!Number.isInteger(cant) || cant < 1) return 'Las aves tratadas deben ser un número entero de al menos 1.'

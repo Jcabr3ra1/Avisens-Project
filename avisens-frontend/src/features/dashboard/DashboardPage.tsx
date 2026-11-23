@@ -122,7 +122,7 @@ function DashboardPage() {
     if (!loteActual) return null
     const destino = seriePeso.length > 0
       ? `/guia-crecimiento?lote=${loteActual.id}`
-      : `/granjas?granjaId=${dashboard.granjaId ?? ''}&galpon=${loteActual.galponId}&pestana=bitacora&vista=peso`
+      : `/granjas/galpones/${loteActual.galponId}?pestana=bitacora&vista=peso`
     if (destino === destinoSemaforo) return null
     return {
       texto: seriePeso.length > 0 ? 'Ver guía de crecimiento' : 'Registrar pesaje',
@@ -149,9 +149,11 @@ function DashboardPage() {
       if (dashboard.galponId !== null) navigate(`/granjas/galpones/${dashboard.galponId}?pestana=lotes`)
       else navigate('/granjas')
     } else if (id === 'alertas') {
-      navigate('/alertas')
+      if (dashboard.galponId !== null) navigate(`/granjas/galpones/${dashboard.galponId}?pestana=alertas`)
+      else navigate('/alertas')
     } else {
-      navigate('/monitoreo')
+      if (dashboard.galponId !== null) navigate(`/granjas/galpones/${dashboard.galponId}?pestana=ambiente`)
+      else navigate('/monitoreo')
     }
   }
 
@@ -217,7 +219,11 @@ function DashboardPage() {
                 </span>
                 <IcArrowRight size={14} className="rp-acceso-flecha" aria-hidden="true" />
               </button>
-              <button type="button" className="rp-acceso" onClick={() => navigate('/monitoreo')}>
+              <button
+                type="button"
+                className="rp-acceso"
+                onClick={() => navigate(dashboard.galponId !== null ? `/granjas/galpones/${dashboard.galponId}?pestana=ambiente` : '/monitoreo')}
+              >
                 <span className="rp-acceso-icono rp-acceso-icono--info" aria-hidden="true"><IcThermo size={16} /></span>
                 <span className="rp-acceso-texto">
                   <strong>Monitoreo</strong>

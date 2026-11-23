@@ -5,14 +5,19 @@ import {
   IsNumber,
   IsOptional,
   IsPositive,
-  IsString,
   Max,
+  Min,
 } from 'class-validator';
 import { PESO_MAXIMO_POLLO_G } from '../../../common/avicultura/vocabulario';
+import {
+  AVES_MAXIMO_LOTE,
+  TextoSeguro,
+} from '../../../common/validation/texto';
 
 export class CreatePesajeDto {
   @ApiProperty({ example: 1, description: 'ID del lote pesado' })
   @IsInt()
+  @Min(1)
   lote_id: number;
 
   @ApiProperty({ example: '2026-08-08', description: 'Fecha del pesaje' })
@@ -34,6 +39,9 @@ export class CreatePesajeDto {
   @ApiPropertyOptional({ example: 50, description: 'Cuantas aves se pesaron' })
   @IsInt()
   @IsPositive()
+  @Max(AVES_MAXIMO_LOTE, {
+    message: `La muestra no puede superar ${AVES_MAXIMO_LOTE.toLocaleString('es-CO')} aves`,
+  })
   @IsOptional()
   cantidad_aves_pesadas?: number;
 
@@ -43,6 +51,7 @@ export class CreatePesajeDto {
   })
   @IsNumber()
   @IsPositive()
+  @Max(PESO_MAXIMO_POLLO_G)
   @IsOptional()
   peso_minimo_g?: number;
 
@@ -52,6 +61,7 @@ export class CreatePesajeDto {
   })
   @IsNumber()
   @IsPositive()
+  @Max(PESO_MAXIMO_POLLO_G)
   @IsOptional()
   peso_maximo_g?: number;
 
@@ -61,6 +71,7 @@ export class CreatePesajeDto {
   })
   @IsNumber()
   @IsPositive()
+  @Max(PESO_MAXIMO_POLLO_G)
   @IsOptional()
   peso_objetivo_g?: number;
 
@@ -68,12 +79,12 @@ export class CreatePesajeDto {
     example: 'manual',
     description: 'Cómo se registró (manual, voz)',
   })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('El método de registro', 40)
   metodo_registro?: string;
 
   @ApiPropertyOptional({ example: 'Lote parejo, buen crecimiento' })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('Las observaciones', 500, { multilinea: true })
   observaciones?: string;
 }

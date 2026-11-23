@@ -4,9 +4,15 @@ import {
   IsInt,
   IsNumber,
   IsOptional,
-  IsString,
+  Max,
   Min,
 } from 'class-validator';
+import { VALOR_MAXIMO_MOVIMIENTO_COP } from '../../../common/avicultura/vocabulario';
+import {
+  HORAS_MAXIMO,
+  TextoSeguro,
+  UrlHttpSegura,
+} from '../../../common/validation/texto';
 
 export class CreateMantenimientoDto {
   @ApiProperty({
@@ -22,7 +28,7 @@ export class CreateMantenimientoDto {
     description: 'Limpieza del contenedor del alimento',
   })
   @IsOptional()
-  @IsString()
+  @TextoSeguro('El tipo de mantenimiento', 60)
   tipo?: string;
 
   @ApiProperty({
@@ -34,10 +40,10 @@ export class CreateMantenimientoDto {
 
   @ApiPropertyOptional({
     example: 'Juan Perez (externo)',
-    description: 'Para tegnicos que no son usuarios del sistema',
+    description: 'Para técnicos que no son usuarios del sistema',
   })
   @IsOptional()
-  @IsString()
+  @TextoSeguro('El técnico responsable', 120, { exigirLetras: true })
   tecnico_responsable?: string;
 
   @ApiPropertyOptional({
@@ -54,7 +60,7 @@ export class CreateMantenimientoDto {
     description: 'Descripción del trabajo o mantenimiento realizado',
   })
   @IsOptional()
-  @IsString()
+  @TextoSeguro('La descripción', 500, { multilinea: true })
   descripcion?: string;
 
   @ApiPropertyOptional({
@@ -64,6 +70,7 @@ export class CreateMantenimientoDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(VALOR_MAXIMO_MOVIMIENTO_COP)
   costo_cop?: number;
 
   @ApiPropertyOptional({
@@ -72,7 +79,7 @@ export class CreateMantenimientoDto {
       'Estado del mantenimiento (ej. programado, en_proceso, completo, cancelado)',
   })
   @IsOptional()
-  @IsString()
+  @TextoSeguro('El estado del mantenimiento', 40)
   estado?: string;
 
   @ApiPropertyOptional({
@@ -80,7 +87,7 @@ export class CreateMantenimientoDto {
     description: 'URL de la imagen o evidencia del mantenimiento realizado',
   })
   @IsOptional()
-  @IsString()
+  @UrlHttpSegura('La URL de evidencia', 500)
   evidencia_url?: string;
 
   @ApiPropertyOptional({
@@ -88,7 +95,7 @@ export class CreateMantenimientoDto {
     description: 'Observaciones adicionales registradas por el técnico',
   })
   @IsOptional()
-  @IsString()
+  @TextoSeguro('Las observaciones', 500, { multilinea: true })
   observaciones?: string;
 
   @ApiPropertyOptional({
@@ -107,6 +114,7 @@ export class CreateMantenimientoDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(HORAS_MAXIMO)
   duracion_horas?: number;
 
   @ApiPropertyOptional({
@@ -114,7 +122,7 @@ export class CreateMantenimientoDto {
     description: 'Causa de la falla que originó el mantenimiento',
   })
   @IsOptional()
-  @IsString()
+  @TextoSeguro('La causa de la falla', 200)
   causa_falla?: string;
 
   @ApiPropertyOptional({
@@ -125,5 +133,6 @@ export class CreateMantenimientoDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Max(HORAS_MAXIMO)
   tiempo_inactivo_horas?: number;
 }

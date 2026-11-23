@@ -222,9 +222,12 @@ function FormularioUsuario({
             ref={nombreRef}
             value={form.nombre_completo}
             onChange={(evento) => onCambiar('nombre_completo', evento.target.value)}
+            maxLength={120}
             autoComplete="name"
+            {...marcar('nombre_completo')}
             required
           />
+          {avisoDe('nombre_completo')}
         </label>
 
         <div className="usuarios-campo-fila">
@@ -289,7 +292,10 @@ function FormularioUsuario({
             <input
               value={form.organizacion_nombre ?? ''}
               onChange={(evento) => onCambiar('organizacion_nombre', evento.target.value)}
+              maxLength={150}
+              {...marcar('organizacion_nombre')}
             />
+            {avisoDe('organizacion_nombre')}
           </label>
         )}
 
@@ -365,9 +371,12 @@ function FormularioUsuario({
             <input
               value={form.organizacion_nombre ?? ''}
               onChange={(evento) => onCambiar('organizacion_nombre', evento.target.value)}
+              maxLength={150}
               placeholder="Ej: Avícola La Esperanza"
+              {...marcar('organizacion_nombre')}
               required
             />
+            {avisoDe('organizacion_nombre')}
             {organizaciones.length > 0 && (
               <button
                 type="button"

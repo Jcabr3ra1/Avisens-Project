@@ -445,10 +445,10 @@ function BitacoraPage() {
             </div>
           </aside>
 
-          <main className="bit-main">
+          <div className="bit-main">
             <ResumenLote resumen={resumen} vistaActiva={vista} onSeleccionarVista={setVista} />
 
-            <nav className="bit-tabs" aria-label="Secciones de la bitácora">
+            <div className="bit-tabs" role="tablist" aria-label="Secciones de la bitácora">
               {(
                 [
                   ['resumen', 'Resumen', <IcDoc size={15} />, null],
@@ -461,7 +461,8 @@ function BitacoraPage() {
                 <button
                   key={id}
                   type="button"
-                  aria-pressed={vista === id}
+                  role="tab"
+                  aria-selected={vista === id}
                   className={`bit-tab${vista === id ? ' is-activa' : ''}`}
                   onClick={() => setVista(id)}
                 >
@@ -470,7 +471,7 @@ function BitacoraPage() {
                   {cantidad !== null && <span className="bit-tab-conteo">{cantidad}</span>}
                 </button>
               ))}
-            </nav>
+            </div>
 
             {vista === 'resumen' ? (
               <div className="bit-resumen-stack">
@@ -507,7 +508,7 @@ function BitacoraPage() {
                 resaltadoId={vista === 'peso' ? pesajes.find((item) => item.peso_promedio_g > 10000)?.id ?? null : null}
               />
             )}
-          </main>
+          </div>
         </div>
       )}
 

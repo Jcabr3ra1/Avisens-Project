@@ -1,15 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsIn, IsOptional, MinLength } from 'class-validator';
+import {
+  NitColombiano,
+  NombreEntidad,
+} from '../../../common/validation/texto';
 
 export class CreateOrganizacionDto {
   @ApiProperty({ example: 'Avícola La Esperanza' })
-  @IsString()
+  @NombreEntidad('El nombre de la organización', 120, true)
   @MinLength(2)
   nombre: string;
 
   @ApiPropertyOptional({ example: '900123456-7' })
-  @IsString()
-  @MinLength(3)
+  @NitColombiano()
   @IsOptional()
   nit?: string;
 

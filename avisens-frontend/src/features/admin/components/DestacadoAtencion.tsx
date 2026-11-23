@@ -1,4 +1,4 @@
-import IconoFigma from '@shared/ui/icons/IconoFigma'
+import { IcAlert, IcArrowRight, IcCheck } from '@shared/ui/icons/icons'
 import { hace, type ItemAtencionAdmin, type ResumenAtencionAdmin } from '../model/adminResumen'
 import { useConteo } from '../hooks/useConteo'
 
@@ -8,49 +8,88 @@ type Props = ResumenAtencionAdmin & {
   onVerBandeja: () => void
 }
 
-function DestacadoAtencion({ items, alertasCriticas, solicitudesPendientes, recuperacionesPendientes, cargando, onAbrir, onVerBandeja }: Props) {
+function DestacadoAtencion({
+  items,
+  alertasCriticas,
+  solicitudesPendientes,
+  recuperacionesPendientes,
+  cargando,
+  onAbrir,
+  onVerBandeja,
+}: Props) {
   const total = useConteo(cargando ? null : items.length)
   const prioridad = items[0]
   const alDia = !cargando && items.length === 0
+  const critico = !cargando && alertasCriticas > 0
+  const tono = alDia ? 'ok' : critico ? 'peligro' : 'atencion'
 
   return (
-    <section className={`cdc-destacado cdc-entra${alDia ? ' is-al-dia' : ''}`} aria-labelledby="cdc-destacado-titulo" aria-busy={cargando}>
-      <div className="cdc-destacado-cifra">
-        <h2 id="cdc-destacado-titulo">Pendientes de atención</h2>
-        <strong aria-live="polite">{cargando || total === null ? '–' : total}</strong>
-        <p>
-          {solicitudesPendientes} PQRS · {recuperacionesPendientes} accesos · {alertasCriticas}{' '}
-          {alertasCriticas === 1 ? 'alerta crítica' : 'alertas críticas'}
-        </p>
+    <section
+      className={`cdc-estado-barra cdc-estado-barra--${tono} cdc-entra`}
+      aria-labelledby="cdc-destacado-titulo"
+      aria-busy={cargando}
+    >
+      <div className="cdc-estado-principal">
+        <span className={`cdc-estado-icono cdc-estado-icono--${tono}`} aria-hidden="true">
+          {alDia ? <IcCheck size={18} /> : <IcAlert size={18} />}
+        </span>
+
+        <div className="cdc-estado-texto">
+          {cargando ? (
+            <>
+              <h2 id="cdc-destacado-titulo">Revisando pendientes…</h2>
+              <p>Consultando alertas críticas, solicitudes PQRS y recuperaciones de acceso.</p>
+            </>
+          ) : prioridad ? (
+            <>
+              <div className="cdc-estado-encabezado">
+                <span className="cdc-estado-etiqueta">
+                  {prioridad.etiqueta} · <time dateTime={prioridad.fecha}>{hace(prioridad.fecha)}</time>
+                </span>
+                <span className="cdc-estado-total" aria-live="polite">
+                  {total ?? items.length} {items.length === 1 ? 'pendiente' : 'pendientes'}
+                </span>
+              </div>
+              <h2 id="cdc-destacado-titulo">{prioridad.titulo}</h2>
+              <p>{prioridad.detalle}</p>
+            </>
+          ) : (
+            <>
+              <h2 id="cdc-destacado-titulo">La bandeja está al día</h2>
+              <p>No hay alertas críticas, solicitudes PQRS ni recuperaciones esperando respuesta.</p>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="cdc-destacado-caso">
-        {cargando ? (
-          <p className="cdc-destacado-espera">Consultando alertas, solicitudes y recuperaciones…</p>
-        ) : prioridad ? (
-          <>
-            <span className="cdc-destacado-meta">
-              {prioridad.etiqueta} · <time dateTime={prioridad.fecha}>{hace(prioridad.fecha)}</time>
-            </span>
-            <span className="cdc-destacado-titulo">{prioridad.titulo}</span>
-            <span className="cdc-destacado-detalle">{prioridad.detalle}</span>
-            <span className="cdc-destacado-acciones">
-              <button type="button" className="cdc-boton-maiz" onClick={() => onAbrir(prioridad)}>
-                Revisar caso <span className="cdc-boton-maiz-flecha"><IconoFigma nombre="flecha-derecha" tamano={15} /></span>
+      <div className="cdc-estado-derecha">
+        <ul className="cdc-estado-chips" aria-label="Desglose de pendientes">
+          <li className={solicitudesPendientes > 0 ? 'is-activo' : undefined}>
+            <strong>{cargando ? '—' : solicitudesPendientes}</strong>
+            <span>PQRS</span>
+          </li>
+          <li className={recuperacionesPendientes > 0 ? 'is-activo' : undefined}>
+            <strong>{cargando ? '—' : recuperacionesPendientes}</strong>
+            <span>Accesos</span>
+          </li>
+          <li className={alertasCriticas > 0 ? 'is-peligro' : undefined}>
+            <strong>{cargando ? '—' : alertasCriticas}</strong>
+            <span>{alertasCriticas === 1 ? 'Alerta crítica' : 'Alertas críticas'}</span>
+          </li>
+        </ul>
+
+        {!cargando && prioridad && (
+          <div className="cdc-estado-acciones">
+            <button type="button" className="adm-btn adm-btn--primario" onClick={() => onAbrir(prioridad)}>
+              Revisar caso
+              <IcArrowRight size={14} aria-hidden="true" />
+            </button>
+            {items.length > 1 && (
+              <button type="button" className="adm-btn adm-btn--secundario" onClick={onVerBandeja}>
+                Ver los {items.length}
               </button>
-              {items.length > 1 && (
-                <button type="button" className="cdc-boton-fantasma" onClick={onVerBandeja}>
-                  Ver los {items.length}
-                </button>
-              )}
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="cdc-destacado-ok" aria-hidden="true"><IconoFigma nombre="verificado" tamano={20} /></span>
-            <span className="cdc-destacado-titulo">La bandeja está al día</span>
-            <span className="cdc-destacado-detalle">No hay alertas, solicitudes ni recuperaciones de acceso esperando respuesta.</span>
-          </>
+            )}
+          </div>
         )}
       </div>
     </section>

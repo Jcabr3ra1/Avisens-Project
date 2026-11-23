@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import { mensajeDeError } from '@shared/utils/errores'
+import { validarTextoSeguro } from '@shared/utils/validacion'
 import type { Insumo, RegistrarMovimientoPayload } from '../api/insumos'
 import type { TipoMovimiento } from '../api/movimientos'
 
@@ -28,7 +29,11 @@ function FormularioMovimiento({ insumo, tiposPermitidos, onRegistrar, onCerrar }
   const [error, setError] = useState('')
 
   const cantidadNumero = Number(cantidad)
-  const cantidadValida = cantidad.trim() !== '' && Number.isFinite(cantidadNumero) && cantidadNumero > 0
+  const cantidadValida =
+    cantidad.trim() !== '' &&
+    Number.isFinite(cantidadNumero) &&
+    cantidadNumero > 0 &&
+    cantidadNumero <= 10_000_000
 
   // Una salida mayor que el stock dejaría la bodega en negativo; se avisa
   // antes de intentarlo en vez de esperar el error del servidor.
@@ -36,7 +41,12 @@ function FormularioMovimiento({ insumo, tiposPermitidos, onRegistrar, onCerrar }
 
   async function registrar() {
     if (!cantidadValida) {
-      setError('Ingresa una cantidad mayor que cero.')
+      setError('Ingresa una cantidad mayor que cero y menor a 10.000.000.')
+      return
+    }
+    const errorMotivo = validarTextoSeguro(motivo, 'El motivo', { max: 200 })
+    if (errorMotivo) {
+      setError(errorMotivo)
       return
     }
     setGuardando(true)

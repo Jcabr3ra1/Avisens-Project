@@ -2,7 +2,7 @@
 
 .mgr-panel { display: flex; width: min(100%, 60rem); height: 100%; flex-direction: column; background: var(--surface-page); box-shadow: var(--shadow-lg); }
 
-.mgr-cabecera { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--border-subtle); background: var(--surface-base); }
+.mgr-cabecera { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--border-subtle); background: var(--surface-base); }
 .mgr-cabecera-icono { display: grid; width: 42px; height: 42px; place-items: center; border-radius: var(--radius-md); background: var(--avisens-deep); color: var(--surface-base); }
 .mgr-cabecera h2 { margin: 0; color: var(--text-primary); font-size: 1.15rem; font-weight: 650; overflow-wrap: anywhere; }
 .mgr-cabecera p { margin: .15rem 0 0; color: var(--text-muted); font-size: .84rem; }
