@@ -9,7 +9,7 @@ import {
 import { Transform } from 'class-transformer';
 import { NombreUsuario } from '../../../common/auth/username';
 import {
-  CedulaColombiana,
+  CodigoAlfanumerico,
   NombreEntidad,
   NombrePersona,
   TelefonoColombiano,
@@ -27,7 +27,7 @@ export class ConvertirProspectoDto {
     example: '1098765432',
     description: 'La pide el asesor: el chatbot no la pregunta',
   })
-  @CedulaColombiana()
+  @CodigoAlfanumerico('La cédula', 40)
   cedula: string;
 
   @ApiProperty({ example: 'Clave123Seg', minLength: 8 })

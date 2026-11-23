@@ -19,7 +19,7 @@ export class CreateUmbralDto {
   })
   @IsInt()
   @Min(0)
-  @Max(52)
+  @Max(200)
   semana_vida: number;
 
   @ApiProperty({ example: 30.0, description: 'Valor mínimo aceptable' })

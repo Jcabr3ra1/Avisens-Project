@@ -1,14 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNumber, IsOptional, IsPositive, Max } from 'class-validator';
-import { PESO_MAXIMO_POLLO_G } from '../../../common/avicultura/vocabulario';
 import { TextoSeguro } from '../../../common/validation/texto';
 
 export class CrearPlanLoteDto {
   @ApiProperty({ example: 2500, description: 'Peso objetivo comercial (g)' })
   @IsNumber()
   @IsPositive()
-  @Max(PESO_MAXIMO_POLLO_G, {
-    message: 'El peso objetivo no puede superar 10.000 g por ave',
+  @Max(100_000, {
+    message: 'El peso objetivo no puede superar 100.000 g por ave',
   })
   peso_objetivo_g: number;
 
