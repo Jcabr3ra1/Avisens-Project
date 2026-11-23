@@ -1,8 +1,8 @@
-import { useState, type CSSProperties } from 'react'
+import { useCallback, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as Tooltip from '@radix-ui/react-tooltip'
-import { toast } from 'sonner'
 import { getUsuario } from '@shared/api'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import AdminHero from './components/AdminHero'
 import DestacadoAtencion from './components/DestacadoAtencion'
 import TarjetaKpiAdmin from './components/TarjetaKpiAdmin'
@@ -25,7 +25,6 @@ import './AdminMetricas.css'
 function AdminPage() {
   const navigate = useNavigate()
   const usuario = getUsuario()
-  const [sincronizando, setSincronizando] = useState(false)
   const [periodo, setPeriodo] = useState<PeriodoDias>(30)
   const {
     usuarios,
@@ -42,23 +41,14 @@ function AdminPage() {
   } = useAdminDatos()
   const { conectividad, cargando: cargandoConectividad, error: errorConectividad, recargar: recargarConectividad } = useConectividad()
   const { metricas, cargando: cargandoMetricas, error: errorMetricas, recargar: recargarMetricas } = useMetricasAdmin(periodo)
+  const recargarTodoAdmin = useCallback(() => {
+    void Promise.all([recargarResumen(), recargarAtencion(), recargarConectividad(), recargarMetricas()])
+  }, [recargarResumen, recargarAtencion, recargarConectividad, recargarMetricas])
+  useRefetchOnFocus(recargarTodoAdmin)
   const resumen = useResumenAdmin({ usuarios, organizaciones, prospectos, conectividad, errorConectividad, atencion })
   const fecha = new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })
   const activas = organizaciones.filter((organizacion) => organizacion.activa).length
   const sinSenal = conectividad ? conectividad.sin_reportar + conectividad.nunca : 0
-
-  async function handleSincronizar() {
-    if (sincronizando) return
-    setSincronizando(true)
-    try {
-      await Promise.all([recargarResumen(), recargarAtencion(), recargarConectividad(), recargarMetricas()])
-      toast.success('Indicadores actualizados')
-    } catch {
-      toast.error('No se pudieron sincronizar todos los indicadores')
-    } finally {
-      setSincronizando(false)
-    }
-  }
 
   const series = metricas?.series ?? []
   const anterior = metricas?.periodo_anterior
@@ -77,8 +67,6 @@ function AdminPage() {
         <AdminHero
           nombre={usuario?.nombre?.split(' ')[0] ?? 'Administrador'}
           fecha={fecha}
-          sincronizando={sincronizando}
-          onSincronizar={() => void handleSincronizar()}
           periodo={periodo}
           onCambiarPeriodo={setPeriodo}
         />
@@ -145,8 +133,8 @@ function AdminPage() {
               colorSerie="var(--cdc-tono-maiz)"
               cargando={cargandoMetricas}
               cargandoSerie={cargandoMetricas}
-              accion="Abrir lotes"
-              onAbrir={() => navigate('/lotes')}
+              accion="Abrir clientes y sus granjas"
+              onAbrir={() => navigate('/organizaciones')}
             />
             <TarjetaKpiAdmin
               id="controladores"

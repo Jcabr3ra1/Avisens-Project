@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { permisosDeGestion } from '@shared/auth/permisos'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import {
   IcAlert,
   IcArrowRight,
@@ -117,6 +118,7 @@ function OrganizacionesPage() {
   const navigate = useNavigate()
   const puedeGestionar = permisosDeGestion(getRol()).crear
   const { organizaciones, cargando, error, recargar, guardar, alternar } = useOrganizaciones()
+  useRefetchOnFocus(recargar)
   const [parametros, setParametros] = useSearchParams()
   const [texto, setTexto] = useState('')
   const [estado, setEstado] = useState<FiltroEstado>('todas')

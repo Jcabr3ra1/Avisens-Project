@@ -5,15 +5,18 @@ import {
   IsOptional,
   IsPositive,
   IsString,
-  Matches,
+  Max,
+  Min,
 } from 'class-validator';
-
-// Un producto o un diagnóstico siempre tiene letras: «77777» no dice nada (QA 17-nov).
-const TIENE_LETRAS = /\p{L}/u;
+import {
+  AVES_MAXIMO_LOTE,
+  TextoSeguro,
+} from '../../../common/validation/texto';
 
 export class CreateEventoSanitarioDto {
   @ApiProperty({ example: 1, description: 'ID del lote' })
   @IsInt()
+  @Min(1)
   lote_id: number;
 
   @ApiProperty({
@@ -22,6 +25,7 @@ export class CreateEventoSanitarioDto {
       'Tipo de evento: vacunacion | medicacion | tratamiento | diagnostico | revision',
   })
   @IsString()
+  @TextoSeguro('El tipo de evento', 40, { requerido: true })
   tipo: string;
 
   @ApiProperty({ example: '2026-08-09', description: 'Fecha del evento' })
@@ -33,6 +37,7 @@ export class CreateEventoSanitarioDto {
     description: 'ID del insumo del inventario usado (vacuna/medicamento)',
   })
   @IsInt()
+  @Min(1)
   @IsOptional()
   insumo_id?: number;
 
@@ -40,30 +45,24 @@ export class CreateEventoSanitarioDto {
     example: 'Newcastle',
     description: 'Enfermedad diagnosticada (texto libre)',
   })
-  @IsString()
-  @Matches(TIENE_LETRAS, {
-    message: 'Escribe el diagnóstico con palabras, no solo números',
-  })
   @IsOptional()
+  @TextoSeguro('El diagnóstico', 150, { exigirLetras: true })
   diagnostico?: string;
 
   @ApiPropertyOptional({
     example: 'Vacuna Newcastle La Sota',
     description: 'Producto aplicado',
   })
-  @IsString()
-  @Matches(TIENE_LETRAS, {
-    message: 'Escribe el nombre del producto o vacuna, no solo números',
-  })
   @IsOptional()
+  @TextoSeguro('El producto', 150, { exigirLetras: true })
   producto?: string;
 
   @ApiPropertyOptional({
     example: '0.5 ml por ave',
     description: 'Dosis aplicada',
   })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('La dosis', 80)
   dosis?: string;
 
   @ApiPropertyOptional({
@@ -71,8 +70,8 @@ export class CreateEventoSanitarioDto {
     description:
       'Via de aplicacion: ocular | oral | agua | subcutanea | intramuscular',
   })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('La vía de aplicación', 40)
   via_aplicacion?: string;
 
   @ApiPropertyOptional({
@@ -81,16 +80,19 @@ export class CreateEventoSanitarioDto {
   })
   @IsInt()
   @IsPositive()
+  @Max(AVES_MAXIMO_LOTE, {
+    message: `La cantidad de aves no puede superar ${AVES_MAXIMO_LOTE.toLocaleString('es-CO')}`,
+  })
   @IsOptional()
   cantidad_aves?: number;
 
   @ApiPropertyOptional({ example: 'manual', description: 'Como se registro' })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('El método de registro', 40)
   metodo_registro?: string;
 
   @ApiPropertyOptional({ example: 'Aplicada por la manana antes del alimento' })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('Las observaciones', 500, { multilinea: true })
   observaciones?: string;
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { getRol } from '@shared/api'
 import { ROL_OPERARIO, ROL_PROPIETARIO } from '@shared/auth/permisos'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import SinGalponesAsignados from '@shared/ui/Estados/SinGalponesAsignados'
 import { IcAlert, IcBarn, IcBell, IcChevronDown } from '@shared/ui/icons/icons'
@@ -37,6 +38,7 @@ type Props = {
 function AlertasPage({ galponFijo }: Props = {}) {
   const embebida = galponFijo !== undefined
   const { alertas: todas, cargando, actualizandoId, error, recargar, aceptar, cerrar, escalar } = useAlertas()
+  useRefetchOnFocus(recargar)
   // El operario solo ve sus galpones asignados: los textos hablan de «tus
   // galpones» y, si no tiene ninguno, se le dice en vez de un «Todo en orden»
   // engañoso (auditoría QA 2026-10-30, HALL-03).
@@ -289,32 +291,52 @@ function AlertasPage({ galponFijo }: Props = {}) {
                   <div className="ale-ficha-contadores">
                     <button
                       type="button"
+                      aria-pressed={filtros.criticidad === 'alta'}
                       className={`ale-mini-stat${filtros.criticidad === 'alta' ? ' is-activo' : ''}${totalCriticas > 0 ? ' is-alerta' : ''}`}
-                      onClick={() => setFiltros((actual) => ({ ...actual, estado: 'todas', criticidad: 'alta' }))}
+                      onClick={() => setFiltros((actual) => ({
+                        ...actual,
+                        estado: 'todas',
+                        criticidad: actual.criticidad === 'alta' ? 'todas' : 'alta',
+                      }))}
                     >
                       <span>Críticas</span>
                       <strong>{totalCriticas}</strong>
                     </button>
                     <button
                       type="button"
+                      aria-pressed={filtros.criticidad === 'media'}
                       className={`ale-mini-stat${filtros.criticidad === 'media' ? ' is-activo' : ''}`}
-                      onClick={() => setFiltros((actual) => ({ ...actual, estado: 'todas', criticidad: 'media' }))}
+                      onClick={() => setFiltros((actual) => ({
+                        ...actual,
+                        estado: 'todas',
+                        criticidad: actual.criticidad === 'media' ? 'todas' : 'media',
+                      }))}
                     >
                       <span>Atención</span>
                       <strong>{totalMedias}</strong>
                     </button>
                     <button
                       type="button"
+                      aria-pressed={filtros.criticidad === 'baja'}
                       className={`ale-mini-stat${filtros.criticidad === 'baja' ? ' is-activo' : ''}`}
-                      onClick={() => setFiltros((actual) => ({ ...actual, estado: 'todas', criticidad: 'baja' }))}
+                      onClick={() => setFiltros((actual) => ({
+                        ...actual,
+                        estado: 'todas',
+                        criticidad: actual.criticidad === 'baja' ? 'todas' : 'baja',
+                      }))}
                     >
                       <span>Informativas</span>
                       <strong>{totalBajas}</strong>
                     </button>
                     <button
                       type="button"
+                      aria-pressed={filtros.estado === 'cerrada' && filtros.criticidad === 'todas'}
                       className={`ale-mini-stat${filtros.estado === 'cerrada' && filtros.criticidad === 'todas' ? ' is-activo' : ''}`}
-                      onClick={() => setFiltros((actual) => ({ ...actual, estado: 'cerrada', criticidad: 'todas' }))}
+                      onClick={() => setFiltros((actual) => ({
+                        ...actual,
+                        estado: actual.estado === 'cerrada' ? 'todas' : 'cerrada',
+                        criticidad: 'todas',
+                      }))}
                     >
                       <span>Cerradas</span>
                       <strong>{cerradas}</strong>
@@ -324,7 +346,7 @@ function AlertasPage({ galponFijo }: Props = {}) {
               </div>
             </aside>
 
-            <main className="ale-main">
+            <div className="ale-main">
               <BannerAlertaCritica alertas={alertas} onAbrir={setSeleccionada} />
 
               <ResumenAlertas
@@ -351,7 +373,7 @@ function AlertasPage({ galponFijo }: Props = {}) {
                   onVerDetalle={setSeleccionada}
                 />
               )}
-            </main>
+            </div>
           </div>
         </>
       )}

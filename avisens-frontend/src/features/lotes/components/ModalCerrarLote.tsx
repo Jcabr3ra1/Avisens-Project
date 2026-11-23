@@ -60,12 +60,28 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
   }, [totalKilosVendidos, valorVentaTotal])
 
   async function ejecutarCierre(forzar = false) {
-    if (avesVendidas === '' || avesVendidas <= 0) {
-      setError('Ingresa la cantidad de aves vendidas.')
+    if (!fechaSalida) {
+      setError('Selecciona la fecha real de salida.')
       return
     }
-    if (pesoFinalGramos <= 0) {
-      setError('Ingresa un peso promedio final válido.')
+    if (
+      avesVendidas === '' ||
+      !Number.isInteger(avesVendidas) ||
+      avesVendidas < 0 ||
+      avesVendidas > lote.cantidad_inicial
+    ) {
+      setError(`Las aves vendidas deben ser un entero entre 0 y ${lote.cantidad_inicial.toLocaleString('es-CO')}.`)
+      return
+    }
+    if (pesoFinalGramos <= 0 || pesoFinalGramos > 10_000) {
+      setError('Ingresa un peso promedio final válido (hasta 10.000 g o 22 lb por ave).')
+      return
+    }
+    if (
+      valorVentaTotal !== '' &&
+      (!Number.isFinite(valorVentaTotal) || valorVentaTotal < 0 || valorVentaTotal > 10_000_000_000)
+    ) {
+      setError('El ingreso total de venta debe estar entre $0 y $10.000.000.000.')
       return
     }
 
@@ -123,7 +139,7 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
               onCerrar()
             }}
           >
-            Aceptar y actualizar
+            Aceptar
           </button>
         }
       >

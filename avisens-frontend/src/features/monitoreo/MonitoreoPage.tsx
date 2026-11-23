@@ -30,6 +30,7 @@ import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import SinGalponesAsignados from '@shared/ui/Estados/SinGalponesAsignados'
 import { getRol } from '@shared/api'
 import { ROL_OPERARIO } from '@shared/auth/permisos'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import {
   IcAlert,
   IcArrowRight,
@@ -57,6 +58,7 @@ const ETIQUETA_ESTADO: Record<EstadoSensorVista, string> = {
 
 function MonitoreoPage({ seccion = 'sensores' }: { seccion?: Seccion }) {
   const { galpones, cargando, error, avisoUltimas, recargar } = useMonitoreoAmbiental()
+  useRefetchOnFocus(recargar)
   const [searchParams] = useSearchParams()
   const granjaSolicitada = Number(searchParams.get('granjaId'))
 
@@ -288,7 +290,7 @@ function MonitoreoPage({ seccion = 'sensores' }: { seccion?: Seccion }) {
             </div>
           </aside>
 
-          <main className="mon-main">
+          <div className="mon-main">
             {enActuadores ? (
               <section className="mon-kpis" aria-label="Resumen de actuadores">
                 <article className="mon-kpi mon-kpi--primario">
@@ -507,7 +509,7 @@ function MonitoreoPage({ seccion = 'sensores' }: { seccion?: Seccion }) {
                 />
               </>
             )}
-          </main>
+          </div>
         </div>
       )}
     </div>

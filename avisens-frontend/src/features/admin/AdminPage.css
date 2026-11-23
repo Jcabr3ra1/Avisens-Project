@@ -93,169 +93,177 @@
   gap: var(--space-4);
 }
 
-.cdc-destacado {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-5);
-  padding: 1.4rem 1.5rem;
-  overflow: hidden;
-  isolation: isolate;
-  border-radius: var(--cdc-radio);
-  background: var(--avisens-deep);
-  color: var(--avisens-cream);
-  box-shadow: 0 18px 40px -18px color-mix(in srgb, var(--avisens-deep) 70%, transparent);
-}
+/* Barra limpia de estado de bandeja (reemplaza el bloque verde oscuro) */
 
-.cdc-destacado::before {
-  position: absolute;
-  inset: auto -30% -60% auto;
-  z-index: -1;
-  width: 70%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--avisens-maize) 26%, transparent), transparent);
-  content: '';
-  animation: cdc-respira 6s ease-in-out infinite alternate;
-}
-
-@keyframes cdc-respira {
-  from { transform: translate(0, 0) scale(1); opacity: 0.7; }
-  to { transform: translate(-6%, -4%) scale(1.08); opacity: 1; }
-}
-
-.cdc-destacado.is-al-dia::before {
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--avisens-sage) 30%, transparent), transparent);
-}
-
-.cdc-destacado-cifra {
-  display: grid;
-  align-content: start;
-  gap: 0.35rem;
-  min-width: 0;
-  max-width: 11rem;
-  padding-right: var(--space-5);
-  border-right: 1px solid color-mix(in srgb, var(--avisens-cream) 16%, transparent);
-}
-
-.cdc-destacado-cifra h2 {
-  margin: 0;
-  color: color-mix(in srgb, var(--avisens-cream) 82%, transparent);
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.cdc-destacado-cifra strong {
-  color: var(--avisens-maize);
-  font-size: clamp(3rem, 2.2rem + 2.2vw, 4.25rem);
-  font-weight: 760;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.05em;
-  line-height: 0.95;
-}
-
-.cdc-destacado.is-al-dia .cdc-destacado-cifra strong { color: var(--avisens-sage); }
-
-.cdc-destacado-cifra p {
-  margin: 0;
-  color: color-mix(in srgb, var(--avisens-cream) 72%, transparent);
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
-.cdc-destacado-caso {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 0.3rem;
-  min-width: 0;
-}
-
-.cdc-destacado-meta {
-  color: var(--avisens-maize);
-  font-size: 0.74rem;
-  font-weight: 750;
-  letter-spacing: 0.02em;
-}
-
-.cdc-destacado-titulo {
-  color: var(--avisens-white);
-  font-size: 1.2rem;
-  font-weight: 720;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
-  text-wrap: balance;
-}
-
-.cdc-destacado-detalle,
-.cdc-destacado-espera {
-  margin: 0;
-  color: color-mix(in srgb, var(--avisens-cream) 76%, transparent);
-  font-size: 0.86rem;
-  line-height: 1.5;
-}
-
-.cdc-destacado-ok {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  margin-bottom: 0.25rem;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--avisens-sage) 22%, transparent);
-  color: var(--avisens-sage);
-}
-
-.cdc-destacado-acciones {
+.cdc-estado-barra {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem;
-  margin-top: 0.7rem;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--success);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
 }
 
-.cdc-boton-maiz {
-  display: inline-flex;
+.cdc-estado-barra--atencion {
+  border-left-color: var(--warning);
+  background: color-mix(in srgb, var(--warning-soft) 28%, var(--surface-base));
+}
+
+.cdc-estado-barra--peligro {
+  border-left-color: var(--danger);
+  background: color-mix(in srgb, var(--danger-soft) 32%, var(--surface-base));
+}
+
+.cdc-estado-principal {
+  display: flex;
+  flex: 1 1 20rem;
   align-items: center;
-  gap: 0.7rem;
-  min-height: 44px;
-  padding: 0 0.4rem 0 1.1rem;
-  border: 0;
-  border-radius: 999px;
-  background: var(--avisens-cream);
-  color: var(--avisens-ink);
-  font: inherit;
-  font-size: 0.88rem;
-  font-weight: 750;
-  cursor: pointer;
-  transition: transform 160ms var(--cdc-ease), box-shadow 200ms ease;
+  gap: 0.9rem;
+  min-width: 0;
 }
 
-.cdc-boton-maiz-flecha {
-  display: grid;
+.cdc-estado-icono {
+  display: inline-grid;
+  flex-shrink: 0;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--avisens-maize);
-  transition: transform 220ms var(--cdc-ease);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
 }
 
-.cdc-boton-maiz:active { transform: scale(0.97); }
+.cdc-estado-icono--ok {
+  background: var(--success-soft);
+  color: var(--success);
+}
 
-.cdc-boton-fantasma {
-  min-height: 44px;
-  padding: 0 1rem;
-  border: 1px solid color-mix(in srgb, var(--avisens-cream) 30%, transparent);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--avisens-cream);
-  font: inherit;
+.cdc-estado-icono--atencion {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.cdc-estado-icono--peligro {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.cdc-estado-texto {
+  display: grid;
+  gap: 0.14rem;
+  min-width: 0;
+}
+
+.cdc-estado-encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.cdc-estado-etiqueta {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cdc-estado-total {
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--warning-soft);
+  color: var(--warning3, var(--warning));
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.cdc-estado-barra--peligro .cdc-estado-total {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.cdc-estado-texto h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.98rem;
+  font-weight: 780;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+.cdc-estado-texto p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.cdc-estado-derecha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cdc-estado-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cdc-estado-chips li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.32rem;
+  padding: 0.34rem 0.7rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.cdc-estado-chips li strong {
+  color: var(--text-primary);
   font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 160ms ease, transform 160ms var(--cdc-ease);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.cdc-estado-chips li.is-activo {
+  border-color: color-mix(in srgb, var(--warning) 35%, transparent);
+  background: var(--warning-soft);
+  color: var(--warning3, var(--warning));
+}
+
+.cdc-estado-chips li.is-activo strong {
+  color: var(--warning3, var(--warning));
+}
+
+.cdc-estado-chips li.is-peligro {
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.cdc-estado-chips li.is-peligro strong {
+  color: var(--danger);
+}
+
+.cdc-estado-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .cdc-boton-fantasma:active { transform: scale(0.97); }

@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import RiesgoCalorResumen from '@features/dashboard/components/RiesgoCalorResumen'
 import SinGalponesAsignados from '@shared/ui/Estados/SinGalponesAsignados'
 import BannerSaludo from '@shared/ui/BannerSaludo/BannerSaludo'
@@ -54,16 +55,17 @@ function OperarioPage() {
   const registrosLote = useResumenLoteOperario()
   const [registroAbierto, setRegistroAbierto] = useState<RegistroAbierto>(null)
   const { dashboard } = inicio
-  const nombre = dashboard.usuario?.nombre?.trim().split(/\s+/)[0] || 'operario'
+  const nombre = dashboard.usuario?.nombre?.trim().split(/\s+/)[0] || 'Operario'
   const fecha = capitalizar(
     new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }),
   )
 
-  function recargarTodo() {
+  const recargarTodo = useCallback(() => {
     void dashboard.recargar()
     void jornada.recargar()
     void registrosLote.recargar()
-  }
+  }, [dashboard, jornada, registrosLote])
+  useRefetchOnFocus(recargarTodo)
 
   if (dashboard.cargando && dashboard.granjas.length === 0) return <EsqueletoJornada />
 

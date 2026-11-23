@@ -7,9 +7,10 @@
 /* ─── Pestañas principales (píldoras verdes flotantes) ─── */
 
 .fin-tabs {
-  display: inline-flex;
+  display: flex;
   flex-wrap: wrap;
-  align-self: flex-start;
+  align-self: stretch;
+  width: 100%;
   gap: 0.35rem;
   padding: 0.35rem;
   border: 1px solid var(--border-subtle);
@@ -20,7 +21,9 @@
 
 .fin-tab {
   display: inline-flex;
+  flex: 1 1 0;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
   min-height: 38px;
   padding: 0.45rem 0.95rem;

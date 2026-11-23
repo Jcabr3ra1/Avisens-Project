@@ -13,6 +13,7 @@ import {
   IcUsers,
 } from '@shared/ui/icons/icons'
 import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { useProspectos } from './hooks/useProspectos'
 import { payloadDeConversion } from './model/conversion'
 import {
@@ -171,6 +172,7 @@ function CrmPage() {
     descartar,
     eliminar,
   } = useProspectos()
+  useRefetchOnFocus(recargar)
 
   const [aConvertir, setAConvertir] = useState<ProspectoDetalle | null>(null)
   const [aEliminar, setAEliminar] = useState<ProspectoVista | null>(null)

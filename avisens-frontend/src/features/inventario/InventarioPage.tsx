@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent }
 import { toast } from 'sonner'
 import { getRol } from '@shared/api'
 import { permisosDeInsumo, ROL_ADMIN } from '@shared/auth/permisos'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { IcAlert, IcBox, IcCheck, IcClose, IcCoin, IcPin, IcPlus, IcSearch } from '@shared/ui/icons/icons'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import MenuAcciones, { type AccionMenu } from '@shared/ui/MenuAcciones/MenuAcciones'
@@ -48,6 +49,7 @@ function InventarioPage() {
   const permisos = permisosDeInsumo(rol)
 
   const gestion = useInventario()
+  useRefetchOnFocus(gestion.recargar)
   const [granjas, setGranjas] = useState<Granja[]>([])
   useEffect(() => {
     if (!permisos.crear) return

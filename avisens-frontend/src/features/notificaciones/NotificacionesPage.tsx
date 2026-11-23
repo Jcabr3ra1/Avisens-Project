@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRol } from '@shared/api'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import type { Notificacion } from '@features/notificaciones/api/notificaciones'
 import { IcAlert, IcBell, IcCheck, IcClock, IcRefresh, IcUserCircle } from '@shared/ui/icons/icons'
 import { useNotificaciones } from './hooks/useNotificaciones'
@@ -47,10 +48,12 @@ function NotificacionesPage() {
     noLeidas,
     cargando,
     error,
+    cargar,
     marcarLeida,
     marcarTodas,
     eliminar,
   } = useNotificaciones()
+  useRefetchOnFocus(cargar)
 
   const [filtro, setFiltro] = useState<Filtro>('todas')
 
