@@ -44,12 +44,20 @@ async def ciclo_de_vida(_: FastAPI):
 
 app = FastAPI(title="Avisens ML", lifespan=ciclo_de_vida)
 
+# Una foto VGA en JPEG pesa ~25-40 KB; 2 MB deja margen sin aceptar cualquier cosa.
+MAX_BYTES_FOTO = 2 * 1024 * 1024
+
 
 @app.middleware("http")
 async def proteger_servicio(request: Request, call_next):
     if request.method == "POST":
+        limite = (
+            MAX_BYTES_FOTO
+            if request.url.path == "/vision/detectar"
+            else seguridad.TAMANO_MAXIMO_BYTES
+        )
         declarado = request.headers.get("content-length", "0")
-        if declarado.isdigit() and int(declarado) > seguridad.TAMANO_MAXIMO_BYTES:
+        if declarado.isdigit() and int(declarado) > limite:
             return JSONResponse(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 content={"detail": "Cuerpo demasiado grande"},
@@ -138,10 +146,6 @@ def anomalias_endpoint(peticion: PeticionAnomalias):
         [m.model_dump() for m in peticion.mortalidades],
         [p.model_dump() for p in peticion.curva_referencia],
     )
-
-
-# Una foto VGA en JPEG pesa ~25-40 KB; 2 MB deja margen sin aceptar cualquier cosa.
-MAX_BYTES_FOTO = 2 * 1024 * 1024
 
 
 @app.post("/vision/detectar", dependencies=PROTEGIDO)

@@ -160,7 +160,12 @@ function MonitoreoPage({ seccion = 'sensores' }: { seccion?: Seccion }) {
         ) : undefined}
       />
 
-      {error && <div className="mon-alert adm-alerta" role="alert">{error}</div>}
+      {error && (
+        <div className="mon-alert adm-alerta" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => void recargar()}>Reintentar</button>
+        </div>
+      )}
       {!error && avisoUltimas && <div className="mon-alert adm-aviso" role="status">{avisoUltimas}</div>}
 
       {galpones.length === 0 ? (

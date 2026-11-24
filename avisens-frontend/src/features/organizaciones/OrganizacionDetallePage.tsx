@@ -54,7 +54,7 @@ function etiquetaEstado(estado: string): string {
 function EsqueletoFicha() {
   return (
     <div className="org-expediente" role="status">
-      <span className="sr-only">Cargando el cliente…</span>
+      <span className="sr-only">Cargando la organización…</span>
       <div className="org-esqueleto-perfil org-brilla" aria-hidden="true" />
       <div className="org-esqueleto-espacio" aria-hidden="true">
         <div className="org-esqueleto-tabs org-brilla" />
@@ -102,7 +102,7 @@ function OrganizacionDetallePage() {
     setGranjaActivaId(null)
     setAvisoActualizacion('')
     if (!Number.isInteger(id) || id <= 0) {
-      setError('El identificador del cliente no es válido.')
+      setError('El identificador de la organización no es válido.')
       setCargando(false)
       return
     }
@@ -112,7 +112,7 @@ function OrganizacionDetallePage() {
       const actualizado = await obtenerDetalleOrganizacion(id)
       if (version === secuenciaCarga.current) setDetalle(actualizado)
     } catch (problema) {
-      if (version === secuenciaCarga.current) setError(mensajeDeError(problema, 'No se pudo cargar el cliente.'))
+      if (version === secuenciaCarga.current) setError(mensajeDeError(problema, 'No se pudo cargar la organización.'))
     } finally {
       if (version === secuenciaCarga.current) setCargando(false)
     }
@@ -166,10 +166,13 @@ function OrganizacionDetallePage() {
   if (error || !detalle) {
     return (
       <div className="page-container org-detalle-page adm-page">
-        <CabeceraAdmin eyebrow="Clientes" titulo="Ficha de cliente" subtitulo="No fue posible abrir esta ficha." />
-        <div className="adm-alerta" role="alert">{error || 'No se encontró el cliente.'}</div>
+        <CabeceraAdmin eyebrow="Organizaciones" titulo="Ficha de organización" subtitulo="No fue posible abrir esta ficha." />
+        <div className="adm-alerta" role="alert">
+          <span>{error || 'No se encontró la organización.'}</span>
+          <button type="button" onClick={() => void cargar()}>Reintentar</button>
+        </div>
         <button type="button" className="adm-btn adm-btn--secundario" onClick={() => navigate('/organizaciones')}>
-          Volver a clientes
+          Volver a organizaciones
         </button>
       </div>
     )
@@ -192,7 +195,7 @@ function OrganizacionDetallePage() {
       <nav className="org-detalle-miga" aria-label="Navegación">
         <Link to="/organizaciones" className="org-detalle-volver">
           <IcArrowRight size={15} className="org-detalle-volver-icono" aria-hidden="true" />
-          <span>Volver a clientes</span>
+          <span>Volver a organizaciones</span>
         </Link>
       </nav>
 
@@ -209,7 +212,7 @@ function OrganizacionDetallePage() {
         />
 
         <div className="org-espacio">
-          <div className="org-tabs" role="tablist" aria-label="Secciones del cliente">
+          <div className="org-tabs" role="tablist" aria-label="Secciones de la organización">
             <button
               type="button"
               role="tab"

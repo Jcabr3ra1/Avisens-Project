@@ -2,8 +2,10 @@ import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useState, type FormEvent } from 'react'
 import { getRol } from '@shared/api'
 import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
+import { IcPlus } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import { formatearFechaCalendario } from '@shared/utils/fechas'
+import { validarTextoSeguro } from '@shared/utils/validacion'
 import type { Equipo } from '../api/equipos'
 import type { Mantenimiento } from '../api/mantenimientos'
 import { useMantenimientos } from '../hooks/useMantenimientos'
@@ -22,10 +24,11 @@ function MantenimientosDeEquipo({
   equipo: Equipo
   onVolver: () => void
 }) {
-  const { mantenimientos, cargando, error, crear, marcarCompletado, eliminar } =
+  const { mantenimientos, cargando, error, crear, marcarCompletado, eliminar, recargar } =
     useMantenimientos(equipo.id)
   const permisos = permisosOperativosDeGalpon(getRol())
   const [form, setForm] = useState<DatosMantenimiento>(FORMULARIO_MANTENIMIENTO_INICIAL)
+  const [mostrarForm, setMostrarForm] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
   const [errorAccion, setErrorAccion] = useState('')
@@ -38,6 +41,24 @@ function MantenimientosDeEquipo({
   async function handleCrear(e: FormEvent) {
     e.preventDefault()
     setErrorForm('')
+    const errTec = validarTextoSeguro(form.tecnico_responsable, 'El técnico responsable', {
+      max: 120,
+      exigirLetras: true,
+    })
+    const errDesc = validarTextoSeguro(form.descripcion, 'La descripción', {
+      max: 500,
+      multilinea: true,
+    })
+    const costo = numeroOpcional(form.costo_cop)
+    const errCosto =
+      costo !== undefined && (costo < 0 || costo > 10_000_000_000)
+        ? 'El costo debe estar entre $0 y $10.000.000.000.'
+        : null
+    const problema = errTec ?? errDesc ?? errCosto
+    if (problema) {
+      setErrorForm(problema)
+      return
+    }
     setGuardando(true)
     try {
       await crear({
@@ -46,9 +67,10 @@ function MantenimientosDeEquipo({
         tipo: form.tipo.trim() || undefined,
         tecnico_responsable: form.tecnico_responsable.trim() || undefined,
         descripcion: form.descripcion.trim() || undefined,
-        costo_cop: numeroOpcional(form.costo_cop),
+        costo_cop: costo,
       })
       setForm(FORMULARIO_MANTENIMIENTO_INICIAL)
+      setMostrarForm(false)
     } catch (err) {
       setErrorForm(mensajeDeError(err, 'No se pudo programar el mantenimiento.'))
     } finally {
@@ -87,22 +109,39 @@ function MantenimientosDeEquipo({
         ← Equipos del galpón
       </button>
 
-      <div className="eq-cabecera-equipo">
-        <strong>{equipo.nombre}</strong>
-        <span><code>{equipo.codigo}</code> · {etiquetaEstadoEquipo(equipo.estado_actual)}</span>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
+        <div className="eq-cabecera-equipo">
+          <strong>{equipo.nombre}</strong>
+          <span><code>{equipo.codigo}</code> · {etiquetaEstadoEquipo(equipo.estado_actual)}</span>
+        </div>
+        {permisos.configurar && (
+          <button
+            type="button"
+            className="adm-btn adm-btn--primario"
+            onClick={() => { setMostrarForm((v) => !v); setErrorForm('') }}
+          >
+            <IcPlus size={15} aria-hidden="true" />
+            {mostrarForm ? 'Ocultar formulario' : 'Programar mantenimiento'}
+          </button>
+        )}
       </div>
 
-      {error && <div className="eq-alert eq-alert--error" role="alert">{error}</div>}
+      {error && (
+        <div className="adm-alerta" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => void recargar()}>Reintentar</button>
+        </div>
+      )}
       {errorAccion && (
         <div className="eq-alert eq-alert--error" role="alert">{errorAccion}</div>
       )}
 
-      {permisos.configurar && (
+      {permisos.configurar && mostrarForm && (
       <form className="eq-card eq-form" onSubmit={handleCrear}>
         <h2 className="eq-form-titulo">Programar mantenimiento</h2>
         <div className="eq-grid">
           <label className="eq-campo">
-            <span>tipo</span>
+            <span>Tipo</span>
             <select value={form.tipo} onChange={(e) => campo('tipo', e.target.value)}>
               {TIPOS_MANTENIMIENTO.map((tipo) => (
                 <option key={tipo} value={tipo}>{tipo}</option>
@@ -110,7 +149,7 @@ function MantenimientosDeEquipo({
             </select>
           </label>
           <label className="eq-campo">
-            <span>fecha programada</span>
+            <span>Fecha programada</span>
             <input
               type="date"
               value={form.fecha_programada}
@@ -119,27 +158,30 @@ function MantenimientosDeEquipo({
             />
           </label>
           <label className="eq-campo">
-            <span>técnico <em>(opcional)</em></span>
+            <span>Técnico <em>(opcional)</em></span>
             <input
               value={form.tecnico_responsable}
               onChange={(e) => campo('tecnico_responsable', e.target.value)}
+              maxLength={120}
             />
           </label>
           <label className="eq-campo">
-            <span>costo COP <em>(opcional)</em></span>
+            <span>Costo COP <em>(opcional)</em></span>
             <input
               type="number"
               min={0}
+              max={10000000000}
               value={form.costo_cop}
               onChange={(e) => campo('costo_cop', e.target.value)}
             />
           </label>
           <label className="eq-campo eq-campo--ancho">
-            <span>descripción <em>(opcional)</em></span>
+            <span>Descripción <em>(opcional)</em></span>
             <input
               value={form.descripcion}
               onChange={(e) => campo('descripcion', e.target.value)}
               placeholder="Cambio de rodamientos"
+              maxLength={500}
             />
           </label>
         </div>

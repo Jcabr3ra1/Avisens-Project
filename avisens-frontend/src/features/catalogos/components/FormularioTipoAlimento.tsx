@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import { IcSeed } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
+import { validarNombreEntidad } from '@shared/utils/validacion'
 import type {
   CrearTipoAlimentoPayload,
   TipoAlimento,
@@ -57,15 +58,31 @@ function FormularioTipoAlimento({ editando, onGuardar, onCerrar }: Props) {
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    if (!form.nombre.trim()) {
-      setError('El nombre es obligatorio.')
+    const errNombre = validarNombreEntidad(form.nombre, 'El nombre del alimento', { max: 120 })
+    if (errNombre) {
+      setError(errNombre)
       return
     }
     const inicio = form.dia_inicio === '' ? null : Number(form.dia_inicio)
     const fin = form.dia_fin === '' ? null : Number(form.dia_fin)
+    if (inicio !== null && (!Number.isInteger(inicio) || inicio < 0 || inicio > 365)) {
+      setError('El día de inicio debe ser un entero entre 0 y 365.')
+      return
+    }
+    if (fin !== null && (!Number.isInteger(fin) || fin < 0 || fin > 365)) {
+      setError('El día de fin debe ser un entero entre 0 y 365.')
+      return
+    }
     if (inicio !== null && fin !== null && inicio > fin) {
       setError('El día de inicio no puede ser posterior al de fin.')
       return
+    }
+    if (form.consumo_total_esperado_g !== '') {
+      const consumo = Number(form.consumo_total_esperado_g)
+      if (!Number.isFinite(consumo) || consumo < 0 || consumo > 50_000) {
+        setError('El consumo esperado debe estar entre 0 y 50.000 g.')
+        return
+      }
     }
 
     // Los opcionales vacíos se omiten en vez de mandarse como cadena vacía:

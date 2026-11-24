@@ -6,7 +6,7 @@ function ResumenLotes({ resumen }: { resumen: ResumenLotesDatos }) {
     <ul className="adm-kpis" aria-label="Resumen de lotes">
       <li>
         <div className="adm-kpi adm-kpi--primario">
-          <span className="adm-kpi-cabecera">
+          <span className="adm-kpi-cab">
             <span className="adm-kpi-etiqueta">Lotes</span>
             <span className="adm-kpi-icono" aria-hidden="true"><IcBox size={16} /></span>
           </span>
@@ -18,7 +18,7 @@ function ResumenLotes({ resumen }: { resumen: ResumenLotesDatos }) {
       </li>
       <li>
         <div className="adm-kpi adm-kpi--ok">
-          <span className="adm-kpi-cabecera">
+          <span className="adm-kpi-cab">
             <span className="adm-kpi-etiqueta">Activos</span>
             <span className="adm-kpi-icono" aria-hidden="true"><IcCheck size={16} /></span>
           </span>
@@ -28,7 +28,7 @@ function ResumenLotes({ resumen }: { resumen: ResumenLotesDatos }) {
       </li>
       <li>
         <div className="adm-kpi adm-kpi--alerta">
-          <span className="adm-kpi-cabecera">
+          <span className="adm-kpi-cab">
             <span className="adm-kpi-etiqueta">Finalizados</span>
             <span className="adm-kpi-icono" aria-hidden="true"><IcClock size={16} /></span>
           </span>
@@ -38,7 +38,7 @@ function ResumenLotes({ resumen }: { resumen: ResumenLotesDatos }) {
       </li>
       <li>
         <div className="adm-kpi adm-kpi--info">
-          <span className="adm-kpi-cabecera">
+          <span className="adm-kpi-cab">
             <span className="adm-kpi-etiqueta">Aves alojadas</span>
             <span className="adm-kpi-icono" aria-hidden="true"><IcEgg size={16} /></span>
           </span>

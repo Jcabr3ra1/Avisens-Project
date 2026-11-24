@@ -73,7 +73,7 @@
 /* ─── Separador de sección ───────────────────────────────────────────────── */
 .fp-divider {
   height: 1px;
-  background: color-mix(in srgb, var(--avisens-ink) 7%, transparent);
+  background: var(--border-subtle);
   margin: 1.4rem 0;
 }
 
@@ -81,8 +81,8 @@
 /* Header de tabla unificado con fondo sutil */
 .fp-thead th {
   padding: 0.8rem 1rem;
-  background: color-mix(in srgb, var(--avisens-ink) 3.2%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--avisens-ink) 8%, transparent);
+  background: var(--surface-tinted);
+  border-bottom: 1px solid var(--border-subtle);
   text-align: left;
   font-size: 0.71rem;
   font-weight: 700;
@@ -95,7 +95,7 @@
 /* ─── Filas de tabla ─────────────────────────────────────────────────────── */
 .fp-tbody td {
   padding: 0.85rem 1rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--avisens-ink) 5.5%, transparent);
+  border-bottom: 1px solid var(--border-subtle);
   color: var(--dash-ink);
   font-size: 0.88rem;
   vertical-align: middle;
@@ -108,8 +108,8 @@
   display: flex;
   gap: 0.3rem;
   margin-bottom: 1.2rem;
-  background: color-mix(in srgb, var(--avisens-ink) 3.2%, transparent);
-  border: 1px solid color-mix(in srgb, var(--avisens-ink) 7%, transparent);
+  background: var(--surface-tinted);
+  border: 1px solid var(--border-subtle);
   border-radius: 14px;
   padding: 0.35rem;
   width: fit-content;
@@ -130,7 +130,7 @@
 .fp-tab--activo {
   background: var(--surface-base);
   color: var(--dash-ink);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--avisens-ink) 8%, transparent);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ─── Badge de estado (semáforo) ─────────────────────────────────────────── */
@@ -153,7 +153,7 @@
 /* ─── Barra de progreso base ─────────────────────────────────────────────── */
 .fp-bar-wrap {
   height: 5px;
-  background: color-mix(in srgb, var(--avisens-ink) 8%, transparent);
+  background: var(--surface-subtle);
   border-radius: 999px;
   overflow: hidden;
 }

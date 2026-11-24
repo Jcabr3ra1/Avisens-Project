@@ -299,7 +299,7 @@ function GranjasAdministracion() {
       <ul className="adm-kpis" aria-label={contenidoPorRol.resumen}>
         <li>
           <div className="adm-kpi adm-kpi--primario">
-            <span className="adm-kpi-cabecera">
+            <span className="adm-kpi-cab">
               <span className="adm-kpi-etiqueta">Granjas</span>
               <span className="adm-kpi-icono" aria-hidden="true"><IcLeaf size={16} /></span>
             </span>
@@ -309,7 +309,7 @@ function GranjasAdministracion() {
         </li>
         <li>
           <div className="adm-kpi adm-kpi--primario">
-            <span className="adm-kpi-cabecera">
+            <span className="adm-kpi-cab">
               <span className="adm-kpi-etiqueta">Galpones</span>
               <span className="adm-kpi-icono" aria-hidden="true"><IcGrid size={16} /></span>
             </span>
@@ -319,7 +319,7 @@ function GranjasAdministracion() {
         </li>
         <li>
           <div className="adm-kpi adm-kpi--ok">
-            <span className="adm-kpi-cabecera">
+            <span className="adm-kpi-cab">
               <span className="adm-kpi-etiqueta">Lotes activos</span>
               <span className="adm-kpi-icono" aria-hidden="true"><IcEgg size={16} /></span>
             </span>
@@ -329,7 +329,7 @@ function GranjasAdministracion() {
         </li>
         <li>
           <div className="adm-kpi adm-kpi--info">
-            <span className="adm-kpi-cabecera">
+            <span className="adm-kpi-cab">
               <span className="adm-kpi-etiqueta">Aves alojadas</span>
               <span className="adm-kpi-icono" aria-hidden="true"><IcEgg size={16} /></span>
             </span>

@@ -1,38 +1,49 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsDateString,
   IsObject,
   IsOptional,
   IsString,
+  Matches,
+  MaxLength,
 } from 'class-validator';
+import {
+  NombreEntidad,
+  PATRON_VERSION,
+  TextoSeguro,
+} from '../../../common/validation/texto';
 
 export class CreateModeloMlDto {
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: 'prediccion-mortalidad',
     description: 'Nombre del modelo',
   })
-  @IsString()
+  @NombreEntidad('El nombre del modelo', 120)
   nombre: string;
 
   @ApiPropertyOptional({
     example: 'regresion',
     description: 'Tipo: regresion | clasificacion | clustering',
   })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('El tipo de modelo', 60)
   tipo?: string;
 
   @ApiPropertyOptional({
     example: 'Predecir mortalidad acumulada',
     description: 'Objetivo del modelo',
   })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('El objetivo del modelo', 300, { multilinea: true })
   objetivo?: string;
 
   @ApiPropertyOptional({ example: '1.0.0', description: 'Versión del modelo' })
   @IsString()
+  @MaxLength(30)
+  @Matches(PATRON_VERSION, {
+    message: 'La versión del modelo debe seguir formato semántico (ej.: 1.0.0)',
+  })
   @IsOptional()
   version?: string;
 
@@ -40,8 +51,8 @@ export class CreateModeloMlDto {
     example: 'scikit-learn',
     description: 'Framework usado',
   })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('El framework', 80)
   framework?: string;
 
   @ApiPropertyOptional({

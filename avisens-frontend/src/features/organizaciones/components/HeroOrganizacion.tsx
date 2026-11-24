@@ -47,7 +47,7 @@ function HeroOrganizacion({
       </div>
 
       <div className="org-perfil-cuerpo">
-        <span className="org-perfil-eyebrow">Cliente Avisens</span>
+        <span className="org-perfil-eyebrow">Organización Avisens</span>
         <h1 id="org-perfil-titulo" className="org-perfil-titulo">{detalle.nombre}</h1>
 
         <dl className="org-perfil-datos">
@@ -56,7 +56,7 @@ function HeroOrganizacion({
             <dd>{detalle.nit ?? 'Sin registrar'}</dd>
           </div>
           <div>
-            <dt>Cliente desde</dt>
+            <dt>Organización desde</dt>
             <dd>{fechaCorta(detalle.fecha_creacion)}</dd>
           </div>
         </dl>
@@ -115,7 +115,7 @@ function HeroOrganizacion({
             </div>
             {alEliminar && (
               <button type="button" className="org-perfil-eliminar" onClick={alEliminar}>
-                <IcTrash size={14} aria-hidden="true" /> Eliminar cliente
+                <IcTrash size={14} aria-hidden="true" /> Eliminar organización
               </button>
             )}
           </div>

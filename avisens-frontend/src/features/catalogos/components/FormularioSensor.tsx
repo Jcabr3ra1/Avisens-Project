@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import { IcThermo } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
+import { validarCodigo, validarNombreEntidad, validarTextoSeguro } from '@shared/utils/validacion'
 import type {
   CatalogoSensor,
   CrearCatalogoSensorPayload,
@@ -47,18 +48,22 @@ function FormularioSensor({ editando, onGuardar, onCerrar }: Props) {
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    if (!form.tipo_sensor.trim() || !form.nombre.trim()) {
-      setError('El tipo y el nombre son obligatorios.')
+    const errTipo = validarCodigo(form.tipo_sensor, 'El tipo de sensor', { max: 40 })
+    const errNombre = validarNombreEntidad(form.nombre, 'El nombre del sensor', { max: 120 })
+    const errDesc = validarTextoSeguro(form.descripcion, 'La descripción', { max: 500, multilinea: true })
+    const problemaTexto = errTipo ?? errNombre ?? errDesc
+    if (problemaTexto) {
+      setError(problemaTexto)
       return
     }
     const precio = Number(form.precio_unitario_cop)
-    if (form.precio_unitario_cop === '' || Number.isNaN(precio) || precio < 0) {
-      setError('El precio debe ser un número igual o mayor que cero.')
+    if (form.precio_unitario_cop === '' || Number.isNaN(precio) || precio < 0 || precio > 10_000_000_000) {
+      setError('El precio debe estar entre $0 y $10.000.000.000.')
       return
     }
     const cobertura = form.cobertura_m2 === '' ? null : Number(form.cobertura_m2)
-    if (cobertura !== null && cobertura < 0.01) {
-      setError('La cobertura debe ser al menos 0,01 m².')
+    if (cobertura !== null && (Number.isNaN(cobertura) || cobertura < 0.01 || cobertura > 5_000_000)) {
+      setError('La cobertura debe estar entre 0,01 y 5.000.000 m².')
       return
     }
 

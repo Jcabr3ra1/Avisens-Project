@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { validarTextoSeguro } from '@shared/utils/validacion'
 
 type Props = {
   enviando: boolean
@@ -13,11 +14,24 @@ function FormularioSolicitudRecuperacion({ enviando, onEnviar }: Props) {
   const enviar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setErrorLocal('')
-    if (!username.trim()) {
+    const usuario = username.trim().toLowerCase()
+    if (!usuario) {
       setErrorLocal('Escribe el usuario con el que ingresas a AVISENS.')
       return
     }
-    const enviado = await onEnviar(username, motivo)
+    if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(usuario)) {
+      setErrorLocal('El usuario debe tener entre 3 y 30 caracteres (letras sin tildes, números, punto o guion).')
+      return
+    }
+    const errMotivo = validarTextoSeguro(motivo, 'El motivo', {
+      max: 500,
+      multilinea: true,
+    })
+    if (errMotivo) {
+      setErrorLocal(errMotivo)
+      return
+    }
+    const enviado = await onEnviar(usuario, motivo.trim())
     if (enviado) {
       setUsername('')
       setMotivo('')

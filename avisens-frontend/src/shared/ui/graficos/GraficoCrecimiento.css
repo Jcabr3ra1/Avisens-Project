@@ -92,12 +92,12 @@
   height: 10px;
   border: 2px solid var(--surface-base);
   border-radius: 50%;
-  background: var(--avisens-ink);
-  box-shadow: 0 0 0 1px var(--avisens-ink);
+  background: var(--primary-hover);
+  box-shadow: 0 0 0 1px var(--primary-hover);
 }
 
 .gc-clave--proyeccion::before { border-top: 2.5px dashed var(--primary); }
-.gc-clave--estandar::before { border-top-color: var(--avisens-maize); }
+.gc-clave--estandar::before { border-top-color: var(--text-muted); }
 .gc-clave--marca::before { border-top: 2px dotted var(--border-strong); }
 .gc-clave--objetivo::before { border-top: 2px dashed var(--danger); }
 

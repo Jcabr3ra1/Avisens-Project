@@ -61,8 +61,8 @@ function FormularioOrganizacion({ editando, planesConocidos, onGuardar, onCerrar
     <Modal
       variante="lateral"
       icono={<IcBuilding size={20} />}
-      titulo={editando ? 'Editar cliente' : 'Nuevo cliente'}
-      subtitulo="Actualiza los datos principales del cliente. De él dependen sus usuarios y granjas."
+      titulo={editando ? 'Editar organización' : 'Nueva organización'}
+      subtitulo="Actualiza los datos principales de la organización. De ella dependen sus usuarios y granjas."
       onCerrar={onCerrar}
       acciones={
         <>

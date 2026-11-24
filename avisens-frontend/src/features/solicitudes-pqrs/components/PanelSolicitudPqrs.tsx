@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { validarTextoSeguro } from '@shared/utils/validacion'
 import {
   IcChat,
   IcCheck,
@@ -176,7 +178,16 @@ function PanelSolicitudPqrs({
                   className="sop-respuesta"
                   onSubmit={(evento) => {
                     evento.preventDefault()
-                    if (!respuesta.trim()) return
+                    const problema = validarTextoSeguro(respuesta, 'La respuesta', {
+                      requerido: true,
+                      max: 4000,
+                      multilinea: true,
+                      exigirLetras: true,
+                    })
+                    if (problema) {
+                      toast.error(problema)
+                      return
+                    }
                     void guardar({ estado: 'resuelta', respuesta: respuesta.trim() }, 'Solicitud resuelta.')
                   }}
                 >

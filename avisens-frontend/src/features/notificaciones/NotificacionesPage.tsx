@@ -131,7 +131,12 @@ function NotificacionesPage() {
         </div>
       )}
 
-      {error && <p className="not-aviso not-aviso--error adm-alerta" role="alert">{error}</p>}
+      {error && (
+        <div className="not-aviso not-aviso--error adm-alerta" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => void cargar()}>Reintentar</button>
+        </div>
+      )}
 
       {cargando ? (
         <Cargando texto="Cargando notificaciones…" />

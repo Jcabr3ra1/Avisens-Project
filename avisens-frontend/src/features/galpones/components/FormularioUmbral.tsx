@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import { mensajeDeError } from '@shared/utils/errores'
+import { validarTextoSeguro } from '@shared/utils/validacion'
 import {
   CRITICIDADES_UMBRAL,
   type CrearUmbralPayload,
@@ -45,8 +46,13 @@ function FormularioUmbral({
       setError('El mínimo tiene que ser menor que el máximo.')
       return
     }
-    if (!unidad.trim()) {
-      setError('Falta la unidad de medida.')
+    if (min < -50 || max > 100_000) {
+      setError('Los valores deben estar entre -50 y 100.000.')
+      return
+    }
+    const errUnidad = validarTextoSeguro(unidad, 'La unidad de medida', { requerido: true, max: 20 })
+    if (errUnidad) {
+      setError(errUnidad)
       return
     }
 

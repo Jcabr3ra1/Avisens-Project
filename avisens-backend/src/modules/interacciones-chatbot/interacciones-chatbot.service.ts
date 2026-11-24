@@ -43,7 +43,13 @@ export class InteraccionesChatbotService {
         ? {
             fecha_hora: {
               ...(desde ? { gte: new Date(desde) } : {}),
-              ...(hasta ? { lte: new Date(hasta + 'T23:59:59Z') } : {}),
+              ...(hasta
+                ? {
+                    lte: new Date(
+                      hasta.includes('T') ? hasta : `${hasta}T23:59:59Z`,
+                    ),
+                  }
+                : {}),
             },
           }
         : {}),

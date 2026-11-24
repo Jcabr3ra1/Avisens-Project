@@ -1,3 +1,4 @@
+import { validarNombreEntidad, validarTextoSeguro } from '@shared/utils/validacion'
 import type { DatosGranjaPayload, Granja } from '../api/granjas'
 import type { Galpon } from '@features/galpones/api/galpones'
 import type { DatosLotePayload, Lote } from '@features/lotes/api/lotes'
@@ -72,6 +73,11 @@ const FALTA = 'Completa todos los campos: ninguno es opcional.'
 
 export function payloadDatosGranja(form: FormDatosGranja): Resultado<DatosGranjaPayload> {
   if (Object.values(form).some((valor) => valor.trim() === '')) return { payload: null, error: FALTA }
+  const errDir = validarTextoSeguro(form.direccion, 'La dirección', { requerido: true, max: 200, exigirLetras: true })
+  const errMun = validarNombreEntidad(form.municipio, 'El municipio', { max: 100 })
+  const errDep = validarNombreEntidad(form.departamento, 'El departamento', { max: 100 })
+  const problema = errDir ?? errMun ?? errDep
+  if (problema) return { payload: null, error: problema }
   return {
     error: null,
     payload: {

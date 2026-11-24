@@ -180,7 +180,7 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
               <>
                 <div>
                   <dt>Ingreso total por venta</dt>
-                  <dd><strong style={{ color: 'var(--color-exito, #16a34a)' }}>$ {Number(valorVentaTotal).toLocaleString('es-CO')} COP</strong></dd>
+                  <dd><strong style={{ color: 'var(--success)' }}>$ {Number(valorVentaTotal).toLocaleString('es-CO')} COP</strong></dd>
                 </div>
                 <div>
                   <dt>Precio por kilo</dt>
@@ -229,7 +229,7 @@ export default function ModalCerrarLote({ lote, onCerrar, onExito }: Props) {
         )}
 
         {avisoFaltantes && (
-          <div className="adm-aviso" role="alert" style={{ marginBottom: '1rem', borderLeft: '4px solid var(--color-aviso, #d97706)' }}>
+          <div className="adm-aviso" role="alert" style={{ marginBottom: '1rem', borderLeft: '4px solid var(--warning)' }}>
             <strong>{avisoFaltantes.mensaje}</strong>
             {avisoFaltantes.diasAlimento.length > 0 && (
               <p style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
