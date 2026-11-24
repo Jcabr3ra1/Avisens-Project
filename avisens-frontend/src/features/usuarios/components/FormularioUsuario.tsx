@@ -251,6 +251,7 @@ function FormularioUsuario({
               onChange={(evento) => onCambiar('telefono', evento.target.value)}
               inputMode="tel"
               autoComplete="tel"
+              maxLength={18}
               placeholder="Ej.: 3001234567"
               {...marcar('telefono')}
             />
@@ -326,6 +327,7 @@ function FormularioUsuario({
             value={form.email ?? ''}
             onChange={(evento) => onCambiar('email', evento.target.value)}
             autoComplete="email"
+            maxLength={150}
             placeholder="nombre@dominio.com"
             {...marcar('email')}
           />
@@ -339,6 +341,7 @@ function FormularioUsuario({
               <input
                 type={verPassword ? 'text' : 'password'}
                 minLength={8}
+                maxLength={72}
                 value={form.password}
                 onChange={(evento) => onCambiar('password', evento.target.value)}
                 autoComplete="new-password"

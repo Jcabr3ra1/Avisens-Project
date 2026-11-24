@@ -114,6 +114,7 @@ function LoginForm() {
               placeholder="••••••••"
               value={password}
               onChange={e => setPassword(e.target.value)}
+              maxLength={72}
               autoComplete="current-password"
               aria-invalid={!!error || undefined}
               aria-describedby={error ? 'lf-error-msg' : undefined}

@@ -1,6 +1,9 @@
+import type { FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import type { Granja } from '@features/granjas/api/granjas'
 import type { FormularioInsumoDatos } from '../model/formularioInsumo'
+
+const ID_FORMULARIO = 'formulario-insumo'
 
 interface Props {
   form: FormularioInsumoDatos
@@ -29,20 +32,26 @@ function FormularioInsumo({
   const puedeGuardar =
     form.nombre.trim() !== '' && form.unidad_medida.trim() !== '' && form.granja_id > 0
 
+  function manejarSubmit(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault()
+    if (!guardando && puedeGuardar) onGuardar()
+  }
+
   return (
     <Modal
       variante="lateral"
       titulo={modoEdicion ? 'Editar insumo' : 'Nuevo insumo'}
       onCerrar={onCerrar}
+      bloqueado={guardando}
       acciones={
         <>
           <button type="button" className="modal-btn" onClick={onCerrar} disabled={guardando}>
             Cancelar
           </button>
           <button
-            type="button"
+            type="submit"
+            form={ID_FORMULARIO}
             className="modal-btn modal-btn--primary"
-            onClick={onGuardar}
             disabled={guardando || !puedeGuardar}
           >
             {guardando ? 'Guardando…' : modoEdicion ? 'Guardar' : 'Agregar insumo'}
@@ -50,6 +59,7 @@ function FormularioInsumo({
         </>
       }
     >
+      <form id={ID_FORMULARIO} onSubmit={manejarSubmit}>
       {!modoEdicion && (
         <label className="modal-campo">
           <span>Granja</span>
@@ -102,6 +112,7 @@ function FormularioInsumo({
             value={form.tipo}
             onChange={(evento) => onCambiar('tipo', evento.target.value)}
             placeholder="alimento, sanitario, cama…"
+            maxLength={60}
           />
         </label>
         <label className="modal-campo">
@@ -109,7 +120,9 @@ function FormularioInsumo({
           <input
             type="number"
             min="0"
+            max="10000000"
             step="0.001"
+            inputMode="decimal"
             value={form.stock_minimo}
             onChange={(evento) => onCambiar('stock_minimo', evento.target.value)}
           />
@@ -124,7 +137,9 @@ function FormularioInsumo({
           <input
             type="number"
             min="0"
+            max="10000000"
             step="0.001"
+            inputMode="decimal"
             value={form.stock_actual}
             onChange={(evento) => onCambiar('stock_actual', evento.target.value)}
           />
@@ -139,6 +154,9 @@ function FormularioInsumo({
           <input
             type="number"
             min="0"
+            max="10000000000"
+            step="1"
+            inputMode="numeric"
             value={form.precio_unitario_cop}
             onChange={(evento) => onCambiar('precio_unitario_cop', evento.target.value)}
           />
@@ -151,6 +169,7 @@ function FormularioInsumo({
             value={form.ubicacion_almacen}
             onChange={(evento) => onCambiar('ubicacion_almacen', evento.target.value)}
             placeholder="Bodega 1, estante A"
+            maxLength={120}
           />
         </label>
       </div>
@@ -171,6 +190,7 @@ function FormularioInsumo({
           {error}
         </p>
       )}
+      </form>
     </Modal>
   )
 }

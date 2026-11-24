@@ -141,6 +141,7 @@ function FormularioGranja({
             value={form.nombre}
             onChange={(evento) => onCambiar('nombre', evento.target.value)}
             placeholder="Granja La Esperanza"
+            maxLength={120}
             required
           />
         </label>
@@ -153,6 +154,7 @@ function FormularioGranja({
             value={form.municipio ?? ''}
             onChange={(evento) => onCambiar('municipio', evento.target.value)}
             placeholder="Sabaneta"
+            maxLength={100}
           />
         </label>
 
@@ -174,6 +176,7 @@ function FormularioGranja({
               <span>Dirección <em>(Opcional)</em></span>
               <input
                 value={form.direccion ?? ''}
+                maxLength={200}
                 onChange={(evento) => onCambiar('direccion', evento.target.value)}
               />
             </label>
@@ -181,6 +184,7 @@ function FormularioGranja({
               <span>Departamento <em>(Opcional)</em></span>
               <input
                 value={form.departamento ?? ''}
+                maxLength={100}
                 onChange={(evento) =>
                   onCambiar('departamento', evento.target.value)
                 }

@@ -171,6 +171,8 @@ function MantenimientosDeEquipo({
               type="number"
               min={0}
               max={10000000000}
+              step={1}
+              inputMode="numeric"
               value={form.costo_cop}
               onChange={(e) => campo('costo_cop', e.target.value)}
             />

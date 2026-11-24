@@ -103,7 +103,7 @@ export default function ModalCompararLotes({ loteActualId, onCerrar }: Props) {
   return (
     <Modal
       titulo="Comparativa histórica de lotes"
-      subtitulo="Evalúa diferencias de rendimiento y eficiencia zootécnica entre ciclos productivos (HU-29)."
+      subtitulo="Evalúa diferencias de rendimiento y eficiencia zootécnica entre ciclos productivos."
       onCerrar={onCerrar}
       ancho="ancho"
       acciones={

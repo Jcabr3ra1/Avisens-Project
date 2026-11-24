@@ -51,7 +51,7 @@ function RelesDelGalpon({ galponId, dispositivos, sensores, puedeGestionar, onCa
       setResultado(await registrarReles(galponId, dispositivoId))
       onCambio()
     } catch (problema) {
-      setError(mensajeDeError(problema, problema instanceof Error ? problema.message : 'No se pudieron registrar los relés.'))
+      setError(mensajeDeError(problema, 'No se pudieron registrar los relés.'))
     } finally {
       setRegistrando(false)
     }

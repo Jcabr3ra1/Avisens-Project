@@ -6,8 +6,12 @@ const POR_ESTADO: Record<number, string> = {
   403: 'No tienes permisos para esta acción.',
   404: 'No encontramos lo que buscabas.',
   409: 'Ese registro ya existe.',
+  422: 'Los datos enviados no se pudieron procesar.',
   429: 'Vas muy rápido. Espera un momento y vuelve a intentarlo.',
   500: 'El servidor tuvo un problema. Intenta de nuevo.',
+  502: 'El servicio no respondió a tiempo. Intenta de nuevo.',
+  503: 'El servicio está temporalmente no disponible. Intenta en unos segundos.',
+  504: 'La solicitud tardó demasiado. Intenta de nuevo.',
 }
 
 function mensajeDelCuerpo(data: unknown): string {

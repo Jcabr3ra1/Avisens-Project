@@ -106,15 +106,15 @@ function FormularioUmbral({
         <div className="modal-fila">
           <label className="modal-campo">
             <span>Mínimo</span>
-            <input type="number" step="any" value={minimo} onChange={(e) => setMinimo(e.target.value)} required autoFocus />
+            <input type="number" min="-50" max="100000" step="any" inputMode="decimal" value={minimo} onChange={(e) => setMinimo(e.target.value)} required autoFocus />
           </label>
           <label className="modal-campo">
             <span>Máximo</span>
-            <input type="number" step="any" value={maximo} onChange={(e) => setMaximo(e.target.value)} required />
+            <input type="number" min="-50" max="100000" step="any" inputMode="decimal" value={maximo} onChange={(e) => setMaximo(e.target.value)} required />
           </label>
           <label className="modal-campo">
             <span>Unidad</span>
-            <input value={unidad} onChange={(e) => setUnidad(e.target.value)} required />
+            <input value={unidad} onChange={(e) => setUnidad(e.target.value)} maxLength={20} required />
           </label>
         </div>
 

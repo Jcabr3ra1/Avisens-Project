@@ -87,6 +87,18 @@ function PanelSolicitudPqrs({
 
   async function guardar(datos: ResponderSolicitudPqrsDto, exito: string) {
     if (!solicitud) return
+    if (datos.respuesta !== undefined) {
+      const problema = validarTextoSeguro(datos.respuesta, 'La respuesta', {
+        requerido: true,
+        max: 4000,
+        multilinea: true,
+        exigirLetras: true,
+      })
+      if (problema) {
+        toast.error(problema)
+        return
+      }
+    }
     await onResponder(solicitud.id, datos, exito)
   }
 

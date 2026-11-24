@@ -47,7 +47,7 @@ export function erroresDeUsuario(
   const telefono = limpiarTelefono(form.telefono ?? '')
   if (telefono && !TELEFONO_VALIDO.test(telefono)) {
     errores.telefono = /^\+?\d+$/.test(telefono)
-      ? 'El teléfono debe tener al menos 10 dígitos.'
+      ? 'El teléfono debe tener entre 10 y 13 dígitos.'
       : 'El teléfono solo lleva números.'
   }
 

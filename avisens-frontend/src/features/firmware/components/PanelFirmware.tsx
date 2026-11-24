@@ -174,8 +174,12 @@ function PanelFirmware({ versiones, controladores, cargando, error, onSubir, onP
           <motion.div className="fw-datos" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
             <label className="fw-campo">
               <span>Versión</span>
-              <input value={version} onChange={(evento) => setVersion(evento.target.value)} aria-invalid={!versionValida} disabled={enviando} />
-              <small>Debe ser igual a <code>FIRMWARE_VERSION</code> en el código.</small>
+              <input value={version} onChange={(evento) => setVersion(evento.target.value)} maxLength={40} aria-invalid={!versionValida} disabled={enviando} />
+              <small role={!versionValida ? 'alert' : undefined}>
+                {versionValida
+                  ? <>Debe ser igual a <code>FIRMWARE_VERSION</code> en el código.</>
+                  : 'Formato requerido: X.Y.Z (por ejemplo, 1.2.0), igual a FIRMWARE_VERSION.'}
+              </small>
             </label>
             <label className="fw-campo fw-campo--ancho">
               <span>Qué cambia</span>

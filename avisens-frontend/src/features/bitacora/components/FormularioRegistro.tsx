@@ -1,5 +1,6 @@
 import { useEffect, useRef, type FormEvent, type ReactNode } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
+import { fechaDeHoy } from '@shared/utils/fechas'
 import type { Insumo } from '@features/inventario/api/insumos'
 import {
   AVES_MAXIMO,
@@ -102,6 +103,7 @@ function FormularioRegistro({
             ref={fechaRef}
             type="date"
             value={form.fecha}
+            max={fechaDeHoy()}
             onChange={(evento) => onCambiar('fecha', evento.target.value)}
             required
           />
@@ -115,6 +117,8 @@ function FormularioRegistro({
                 type="number"
                 min={PESO_MINIMO_G}
                 max={PESO_MAXIMO_G}
+                step="any"
+                inputMode="decimal"
                 value={form.peso_promedio_g}
                 onChange={(evento) => onCambiar('peso_promedio_g', evento.target.value)}
                 required
@@ -127,6 +131,8 @@ function FormularioRegistro({
                   type="number"
                   min="1"
                   max={AVES_MAXIMO}
+                  step="1"
+                  inputMode="numeric"
                   value={form.cantidad_aves_pesadas}
                   onChange={(evento) => onCambiar('cantidad_aves_pesadas', evento.target.value)}
                 />
@@ -137,6 +143,8 @@ function FormularioRegistro({
                   type="number"
                   min={PESO_MINIMO_G}
                   max={PESO_MAXIMO_G}
+                  step="any"
+                  inputMode="decimal"
                   value={form.peso_objetivo_g}
                   onChange={(evento) => onCambiar('peso_objetivo_g', evento.target.value)}
                 />
@@ -153,6 +161,8 @@ function FormularioRegistro({
                 type="number"
                 min="1"
                 max={AVES_MAXIMO}
+                step="1"
+                inputMode="numeric"
                 value={form.cantidad_aves}
                 onChange={(evento) => onCambiar('cantidad_aves', evento.target.value)}
                 required
@@ -162,6 +172,7 @@ function FormularioRegistro({
               <span>Causa probable <em>(Opcional)</em></span>
               <input
                 value={form.causa_presuntiva}
+                maxLength={200}
                 onChange={(evento) => onCambiar('causa_presuntiva', evento.target.value)}
               />
             </label>
@@ -196,6 +207,7 @@ function FormularioRegistro({
               <span>Producto o vacuna <em>(Opcional)</em></span>
               <input
                 value={form.producto}
+                maxLength={120}
                 onChange={(evento) => onCambiar('producto', evento.target.value)}
               />
             </label>
@@ -220,7 +232,7 @@ function FormularioRegistro({
                 <span>Dosis <em>(Opcional)</em></span>
                 <input
                   value={form.dosis}
-                  maxLength={100}
+                  maxLength={80}
                   placeholder="Ej.: 0,5 ml por ave"
                   onChange={(evento) => onCambiar('dosis', evento.target.value)}
                 />
@@ -255,6 +267,7 @@ function FormularioRegistro({
                 <span>Diagnóstico <em>(Opcional)</em></span>
                 <input
                   value={form.diagnostico}
+                  maxLength={200}
                   onChange={(evento) => onCambiar('diagnostico', evento.target.value)}
                 />
               </label>
@@ -267,6 +280,7 @@ function FormularioRegistro({
           <textarea
             rows={3}
             style={{ resize: 'none' }}
+            maxLength={500}
             value={form.observaciones}
             onChange={(evento) => onCambiar('observaciones', evento.target.value)}
           />

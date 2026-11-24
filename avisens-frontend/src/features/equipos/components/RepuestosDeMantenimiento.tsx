@@ -121,8 +121,10 @@ function RepuestosDeMantenimiento({ mantenimientoId }: { mantenimientoId: number
         </select>
         <input
           type="number"
-          min={1}
-          step="any"
+          min="0.001"
+          max={10000000}
+          step="0.001"
+          inputMode="decimal"
           value={cantidad}
           onChange={(e) => { claveIntento.current = null; setCantidad(e.target.value) }}
           placeholder="Cantidad"

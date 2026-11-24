@@ -4,6 +4,7 @@ import { getRol } from '@shared/api'
 import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
 import { IcCheck, IcFan, IcPlus, IcSettings } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
+import { fechaDeHoy } from '@shared/utils/fechas'
 import { validarCodigo, validarNombreEntidad, validarTextoSeguro } from '@shared/utils/validacion'
 import type { Galpon } from '@features/galpones/api/galpones'
 import type { CrearEquipoPayload, Equipo } from '../api/equipos'
@@ -265,6 +266,7 @@ function EquiposDeGalpon({ galpon }: { galpon: GalponDeEquipos }) {
             <span>Instalación <em>(opcional)</em></span>
             <input
               type="date"
+              max={fechaDeHoy()}
               value={form.fecha_instalacion}
               onChange={(e) => campo('fecha_instalacion', e.target.value)}
             />
@@ -275,6 +277,8 @@ function EquiposDeGalpon({ galpon }: { galpon: GalponDeEquipos }) {
               type="number"
               min={1}
               max={100000}
+              step={1}
+              inputMode="numeric"
               value={form.vida_util_horas}
               onChange={(e) => campo('vida_util_horas', e.target.value)}
             />
@@ -285,6 +289,8 @@ function EquiposDeGalpon({ galpon }: { galpon: GalponDeEquipos }) {
               type="number"
               min={0}
               max={10000000000}
+              step={1}
+              inputMode="numeric"
               value={form.costo_cop}
               onChange={(e) => campo('costo_cop', e.target.value)}
             />

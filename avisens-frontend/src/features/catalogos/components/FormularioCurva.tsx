@@ -156,29 +156,29 @@ function FormularioCurva({ editando, onGuardar, onCerrar }: Props) {
           </label>
           <label className="modal-campo">
             <span>Día de vida</span>
-            <input type="number" min="1" max="70" value={form.dia} onChange={(e) => cambiar('dia', e.target.value)} required />
+            <input type="number" min="1" max="365" step="1" inputMode="numeric" value={form.dia} onChange={(e) => cambiar('dia', e.target.value)} required />
           </label>
         </div>
 
         <div className="modal-fila">
           <label className="modal-campo">
             <span>Peso esperado en g <em>(Opcional)</em></span>
-            <input type="number" min="0" value={form.peso_esperado_g} onChange={(e) => cambiar('peso_esperado_g', e.target.value)} />
+            <input type="number" min="0" max="10000" step="any" inputMode="decimal" value={form.peso_esperado_g} onChange={(e) => cambiar('peso_esperado_g', e.target.value)} />
           </label>
           <label className="modal-campo">
             <span>FCR objetivo <em>(Opcional)</em></span>
-            <input type="number" min="0" step="0.01" value={form.fcr_objetivo} onChange={(e) => cambiar('fcr_objetivo', e.target.value)} />
+            <input type="number" min="0" max="20" step="0.01" inputMode="decimal" value={form.fcr_objetivo} onChange={(e) => cambiar('fcr_objetivo', e.target.value)} />
           </label>
         </div>
 
         <div className="modal-fila">
           <label className="modal-campo">
             <span>Consumo diario en g <em>(Opcional)</em></span>
-            <input type="number" min="0" value={form.consumo_diario_g} onChange={(e) => cambiar('consumo_diario_g', e.target.value)} />
+            <input type="number" min="0" max="50000" step="any" inputMode="decimal" value={form.consumo_diario_g} onChange={(e) => cambiar('consumo_diario_g', e.target.value)} />
           </label>
           <label className="modal-campo">
             <span>Consumo acumulado en g <em>(Opcional)</em></span>
-            <input type="number" min="0" value={form.consumo_acumulado_g} onChange={(e) => cambiar('consumo_acumulado_g', e.target.value)} />
+            <input type="number" min="0" max="50000" step="any" inputMode="decimal" value={form.consumo_acumulado_g} onChange={(e) => cambiar('consumo_acumulado_g', e.target.value)} />
           </label>
         </div>
 
@@ -194,7 +194,7 @@ function FormularioCurva({ editando, onGuardar, onCerrar }: Props) {
 
         <label className="modal-campo">
           <span>Fuente <em>(Opcional)</em></span>
-          <input value={form.fuente} onChange={(e) => cambiar('fuente', e.target.value)} maxLength={120} />
+          <input value={form.fuente} onChange={(e) => cambiar('fuente', e.target.value)} maxLength={60} />
           <small className="modal-ayuda">
             De dónde sale el dato. Escribirlo permite defenderlo cuando alguien
             pregunte por qué el objetivo es ese y no otro.

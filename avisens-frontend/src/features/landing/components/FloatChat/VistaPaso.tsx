@@ -72,6 +72,7 @@ function VistaPaso({ pregunta, bloque, paso, enviando, aviso, texto, onTexto, on
             value={texto}
             onChange={(evento) => onTexto(evento.target.value)}
             inputMode={pregunta.tipo === 'numero' ? 'numeric' : 'text'}
+            maxLength={300}
             disabled={enviando}
           />
           <button type="submit" className="float-paso-continuar" disabled={enviando || !texto.trim()}>
