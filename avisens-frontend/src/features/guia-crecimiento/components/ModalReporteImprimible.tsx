@@ -90,7 +90,7 @@ export default function ModalReporteImprimible({
   return (
     <Modal
       titulo="Reporte ejecutivo de crecimiento y liquidación"
-      subtitulo="Formato para exportar en PDF o imprimir con indicadores zootécnicos y financieros (HU-29)."
+      subtitulo="Formato para exportar en PDF o imprimir con indicadores zootécnicos y financieros."
       onCerrar={onCerrar}
       ancho="ancho"
       acciones={

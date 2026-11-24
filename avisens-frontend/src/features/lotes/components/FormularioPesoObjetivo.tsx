@@ -35,7 +35,7 @@ function FormularioPesoObjetivo({ pesoActualG, onEnviar, minLibras = 0, deshabil
     try {
       await onEnviar(gramos)
     } catch (fallo) {
-      setError(mensajeDeError(fallo, fallo instanceof Error ? fallo.message : 'No se pudo guardar el peso objetivo.'))
+      setError(mensajeDeError(fallo, 'No se pudo guardar el peso objetivo.'))
     } finally {
       setEnviando(false)
     }

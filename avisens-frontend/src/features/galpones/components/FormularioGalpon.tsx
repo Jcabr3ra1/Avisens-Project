@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type FormEventHandler } from 'react'
 import { IcGrid } from '@shared/ui/icons/icons'
 import Modal from '@shared/ui/Modal/Modal'
+import { fechaDeHoy } from '@shared/utils/fechas'
 import { validarNombreEntidad, validarTextoSeguro } from '@shared/utils/validacion'
 import type { Granja } from '@features/granjas/api/granjas'
 import type { FormularioGalponDatos } from '../model/formularioGalpon'
@@ -108,6 +109,7 @@ function FormularioGalpon({
             <input
               value={form.nombre}
               onChange={(evento) => onCambiar('nombre', evento.target.value)}
+              maxLength={120}
               required
             />
           </label>
@@ -118,6 +120,9 @@ function FormularioGalpon({
             <input
               type="number"
               min="1"
+              max="500000"
+              step="1"
+              inputMode="numeric"
               value={form.capacidad_aves}
               onChange={(evento) =>
                 onCambiar(
@@ -205,6 +210,7 @@ function FormularioGalpon({
                 <span>Fecha de construcción <em>(Opcional)</em></span>
                 <input
                   type="date"
+                  max={fechaDeHoy()}
                   value={form.fecha_construccion}
                   onChange={(evento) =>
                     onCambiar('fecha_construccion', evento.target.value)

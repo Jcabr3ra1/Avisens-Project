@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { clearCambioPasswordToken, getCambioPasswordToken } from '@shared/api/tokens'
+import { mensajeDeError } from '@shared/utils/errores'
 import { cambiarPasswordTemporal } from './api/recuperacionesPassword'
 import MarcoAcceso from '@shared/ui/MarcoAcceso/MarcoAcceso'
 import './RecuperacionesPassword.css'
@@ -24,6 +25,10 @@ function CambiarPasswordPage() {
       setError('La nueva contraseña debe tener al menos 8 caracteres.')
       return
     }
+    if (nuevaPassword.length > 72) {
+      setError('La nueva contraseña no puede superar 72 caracteres.')
+      return
+    }
     if (nuevaPassword !== confirmacion) {
       setError('Las contraseñas no coinciden.')
       return
@@ -39,8 +44,13 @@ function CambiarPasswordPage() {
       const respuesta = await cambiarPasswordTemporal(nuevaPassword, token)
       clearCambioPasswordToken()
       setMensaje(respuesta.mensaje)
-    } catch {
-      setError('No se pudo actualizar la contraseña. Solicita una nueva recuperación si el acceso temporal venció.')
+    } catch (fallo) {
+      setError(
+        mensajeDeError(
+          fallo,
+          'No se pudo actualizar la contraseña. Solicita una nueva recuperación si el acceso temporal venció.',
+        ),
+      )
     } finally {
       setGuardando(false)
     }
@@ -60,11 +70,11 @@ function CambiarPasswordPage() {
           <form className="rec-formulario" onSubmit={(event) => void enviar(event)} noValidate>
             <label className="rec-campo" htmlFor="nueva-password">
               <span>Nueva contraseña</span>
-              <input id="nueva-password" type="password" value={nuevaPassword} onChange={(event) => setNuevaPassword(event.target.value)} autoComplete="new-password" minLength={8} />
+              <input id="nueva-password" type="password" value={nuevaPassword} onChange={(event) => setNuevaPassword(event.target.value)} autoComplete="new-password" minLength={8} maxLength={72} />
             </label>
             <label className="rec-campo" htmlFor="confirmar-password">
               <span>Confirma la contraseña</span>
-              <input id="confirmar-password" type="password" value={confirmacion} onChange={(event) => setConfirmacion(event.target.value)} autoComplete="new-password" minLength={8} />
+              <input id="confirmar-password" type="password" value={confirmacion} onChange={(event) => setConfirmacion(event.target.value)} autoComplete="new-password" minLength={8} maxLength={72} />
             </label>
             {error && <p className="rec-aviso rec-aviso--error" role="alert">{error}</p>}
             <button className="rec-boton rec-boton--principal" type="submit" disabled={guardando} aria-busy={guardando}>

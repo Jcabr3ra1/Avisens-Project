@@ -130,7 +130,7 @@ function FormularioTipoAlimento({ editando, onGuardar, onCerrar }: Props) {
       <form id={ID_FORMULARIO} onSubmit={(evento) => void enviar(evento)}>
         <label className="modal-campo">
           <span>Nombre</span>
-          <input value={form.nombre} onChange={(e) => cambiar('nombre', e.target.value)} required autoFocus />
+          <input value={form.nombre} onChange={(e) => cambiar('nombre', e.target.value)} maxLength={120} required autoFocus />
         </label>
 
         <div className="modal-fila">
@@ -167,17 +167,17 @@ function FormularioTipoAlimento({ editando, onGuardar, onCerrar }: Props) {
         <div className="modal-fila">
           <label className="modal-campo">
             <span>Desde el día <em>(Opcional)</em></span>
-            <input type="number" min="1" max="70" value={form.dia_inicio} onChange={(e) => cambiar('dia_inicio', e.target.value)} />
+            <input type="number" min="0" max="365" step="1" inputMode="numeric" value={form.dia_inicio} onChange={(e) => cambiar('dia_inicio', e.target.value)} />
           </label>
           <label className="modal-campo">
             <span>Hasta el día <em>(Opcional)</em></span>
-            <input type="number" min="1" max="70" value={form.dia_fin} onChange={(e) => cambiar('dia_fin', e.target.value)} />
+            <input type="number" min={form.dia_inicio || '0'} max="365" step="1" inputMode="numeric" value={form.dia_fin} onChange={(e) => cambiar('dia_fin', e.target.value)} />
           </label>
         </div>
 
         <label className="modal-campo">
           <span>Consumo total esperado en gramos <em>(Opcional)</em></span>
-          <input type="number" min="0" value={form.consumo_total_esperado_g} onChange={(e) => cambiar('consumo_total_esperado_g', e.target.value)} />
+          <input type="number" min="0" max="50000" step="any" inputMode="decimal" value={form.consumo_total_esperado_g} onChange={(e) => cambiar('consumo_total_esperado_g', e.target.value)} />
         </label>
 
         {error && <p className="modal-error" role="alert">{error}</p>}

@@ -112,6 +112,7 @@ function FormularioSensor({ editando, onGuardar, onCerrar }: Props) {
           <input
             value={form.tipo_sensor}
             onChange={(e) => cambiar('tipo_sensor', e.target.value)}
+            maxLength={40}
             required
             autoFocus={editando === null}
             disabled={editando !== null}
@@ -126,7 +127,7 @@ function FormularioSensor({ editando, onGuardar, onCerrar }: Props) {
 
         <label className="modal-campo">
           <span>Nombre</span>
-          <input value={form.nombre} onChange={(e) => cambiar('nombre', e.target.value)} required />
+          <input value={form.nombre} onChange={(e) => cambiar('nombre', e.target.value)} maxLength={120} required />
         </label>
 
         <label className="modal-campo">
@@ -137,11 +138,11 @@ function FormularioSensor({ editando, onGuardar, onCerrar }: Props) {
         <div className="modal-fila">
           <label className="modal-campo">
             <span>Precio unitario en pesos</span>
-            <input type="number" min="0" step="1" value={form.precio_unitario_cop} onChange={(e) => cambiar('precio_unitario_cop', e.target.value)} required />
+            <input type="number" min="0" max="10000000000" step="1" inputMode="numeric" value={form.precio_unitario_cop} onChange={(e) => cambiar('precio_unitario_cop', e.target.value)} required />
           </label>
           <label className="modal-campo">
             <span>Cobertura en m² <em>(Opcional)</em></span>
-            <input type="number" min="0.01" step="0.01" value={form.cobertura_m2} onChange={(e) => cambiar('cobertura_m2', e.target.value)} />
+            <input type="number" min="0.01" max="5000000" step="0.01" inputMode="decimal" value={form.cobertura_m2} onChange={(e) => cambiar('cobertura_m2', e.target.value)} />
           </label>
         </div>
 

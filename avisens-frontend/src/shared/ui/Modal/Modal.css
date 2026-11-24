@@ -480,4 +480,14 @@ fieldset.modal-campo {
     max-height: 92dvh;
     border-radius: 20px 20px 0 0;
   }
+
+  .modal-tarjeta--lateral .modal-pie {
+    flex-wrap: wrap;
+    padding: 0.85rem 1rem;
+  }
+
+  .modal-tarjeta--lateral .modal-pie .modal-btn--primary {
+    min-width: 0;
+    flex: 1 1 160px;
+  }
 }

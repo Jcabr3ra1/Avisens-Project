@@ -1,5 +1,6 @@
 import { useEffect, useRef, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
+import { fechaDeHoy } from '@shared/utils/fechas'
 import type { Lote } from '@features/lotes/api/lotes'
 import type { TipoAlimento } from '@features/consumos-diarios/api/tipos-alimento'
 import {
@@ -85,6 +86,7 @@ function FormularioConsumo({
             <input
               type="date"
               value={form.fecha}
+              max={fechaDeHoy()}
               onChange={(evento) => onCambiar('fecha', evento.target.value)}
               required
             />

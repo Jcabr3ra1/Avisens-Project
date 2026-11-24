@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
+import { fechaDeHoy } from '@shared/utils/fechas'
 import type { Granja } from '@features/granjas/api/granjas'
 import type { Lote } from '@features/lotes/api/lotes'
 import type { CategoriaFinanciera } from '../api/movimientos-financieros'
@@ -126,6 +127,7 @@ function FormularioMovimiento({
           <input
             type="date"
             value={form.fecha}
+            max={fechaDeHoy()}
             onChange={(evento) => onCambiar('fecha', evento.target.value)}
             required
           />

@@ -169,7 +169,7 @@ function ModalRegistroOperario({
             </label>
             <label className="modal-campo">
               <span>Causa probable <em>(opcional)</em></span>
-              <input value={causa} onChange={(evento) => setCausa(evento.target.value)} />
+              <input value={causa} maxLength={150} onChange={(evento) => setCausa(evento.target.value)} />
             </label>
             <label className="modal-campo">
               <span>¿Qué hiciste con las aves? <em>(opcional)</em></span>

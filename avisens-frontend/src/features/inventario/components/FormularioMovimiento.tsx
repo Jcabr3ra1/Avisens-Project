@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import { mensajeDeError } from '@shared/utils/errores'
 import { validarTextoSeguro } from '@shared/utils/validacion'
 import type { Insumo, RegistrarMovimientoPayload } from '../api/insumos'
 import type { TipoMovimiento } from '../api/movimientos'
+
+const ID_FORMULARIO = 'formulario-movimiento-inventario'
 
 interface Props {
   insumo: Insumo
@@ -71,15 +73,16 @@ function FormularioMovimiento({ insumo, tiposPermitidos, onRegistrar, onCerrar }
       titulo={soloSalida ? 'Registrar salida' : 'Registrar movimiento'}
       subtitulo={`${insumo.nombre} · ${insumo.stock_actual.toLocaleString()} ${insumo.unidad_medida} en bodega`}
       onCerrar={onCerrar}
+      bloqueado={guardando}
       acciones={
         <>
           <button type="button" className="modal-btn" onClick={onCerrar} disabled={guardando}>
             Cancelar
           </button>
           <button
-            type="button"
+            type="submit"
+            form={ID_FORMULARIO}
             className="modal-btn modal-btn--primary"
-            onClick={registrar}
             disabled={guardando || !cantidadValida || excedeStock}
           >
             {guardando ? 'Registrando…' : 'Registrar'}
@@ -87,6 +90,13 @@ function FormularioMovimiento({ insumo, tiposPermitidos, onRegistrar, onCerrar }
         </>
       }
     >
+      <form
+        id={ID_FORMULARIO}
+        onSubmit={(evento: FormEvent<HTMLFormElement>) => {
+          evento.preventDefault()
+          if (!guardando && cantidadValida && !excedeStock) void registrar()
+        }}
+      >
       {opciones.length > 1 && <div className="inv-tipos" role="radiogroup" aria-label="Tipo de movimiento">
         {opciones.map((opcion) => (
           <button
@@ -111,8 +121,10 @@ function FormularioMovimiento({ insumo, tiposPermitidos, onRegistrar, onCerrar }
         </span>
         <input
           type="number"
-          min="0"
+          min="0.001"
+          max="10000000"
           step="0.001"
+          inputMode="decimal"
           value={cantidad}
           onChange={(evento) => setCantidad(evento.target.value)}
           required
@@ -127,8 +139,15 @@ function FormularioMovimiento({ insumo, tiposPermitidos, onRegistrar, onCerrar }
           value={motivo}
           onChange={(evento) => setMotivo(evento.target.value)}
           placeholder={soloSalida ? 'Consumo del galpón 2, cambio de cama…' : 'Compra de insumo, consumo del galpón 2…'}
+          maxLength={200}
         />
       </label>
+
+      {cantidad.trim() !== '' && !cantidadValida && (
+        <p className="modal-error" role="alert">
+          Ingresa una cantidad mayor que cero y menor o igual a 10.000.000.
+        </p>
+      )}
 
       {excedeStock && (
         <p className="modal-error" role="alert">
@@ -142,6 +161,7 @@ function FormularioMovimiento({ insumo, tiposPermitidos, onRegistrar, onCerrar }
           {error}
         </p>
       )}
+      </form>
     </Modal>
   )
 }

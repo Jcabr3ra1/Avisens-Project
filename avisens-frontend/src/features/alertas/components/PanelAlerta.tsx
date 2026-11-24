@@ -321,6 +321,7 @@ function PanelAlerta({ alerta, cerrando, onCerrar, onEscalar, onSalir }: PanelAl
                 value={accion}
                 onChange={(event) => setAccion(event.target.value)}
                 placeholder="Ej.: ajusté la ventilación y confirmé una lectura estable."
+                maxLength={500}
                 required
                 rows={4}
               />
