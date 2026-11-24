@@ -15,7 +15,7 @@ type Props = {
 
 function LecturaDelDia({ curva, dia, referencia, alertasDelDia, etapaDia }: Props) {
   const lectura = lecturaDelDia(curva, dia)
-  const suficiente = (curva?.modelo.puntos_usados ?? 0) >= 3
+  const suficiente = (curva?.modelo.puntos_usados ?? 0) >= 1
   const final = curva?.serie[curva.serie.length - 1]
   const llegada = curva ? textoDeLlegada(curva) : null
   const nivel = etiquetaConfianza(curva?.modelo.nivel_confianza)
@@ -79,7 +79,7 @@ function LecturaDelDia({ curva, dia, referencia, alertasDelDia, etapaDia }: Prop
       )}
 
       {curva && !suficiente && (
-        <p className="gdc-lectura-vacio">La proyección y el rango aparecen con pesajes de tres días distintos.</p>
+        <p className="gdc-lectura-vacio">La proyección y el rango aparecen con el primer pesaje registrado.</p>
       )}
 
       {alertasDelDia.length > 0 && (

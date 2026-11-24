@@ -55,11 +55,6 @@ describe('proximoPaso', () => {
     const sinIndicador = galpon()
     expect(proximoPaso(sinIndicador, null, 0)).toMatchObject({ titulo: 'Registra el primer pesaje' })
     expect(proximoPaso(sinIndicador, null, 1)).toMatchObject({
-      tono: 'atencion', titulo: 'Registra 2 pesajes más', accion: 'Ir a la bitácora',
-    })
-    expect(proximoPaso(sinIndicador, null, 1).detalle).toMatch(/días distintos/)
-    expect(proximoPaso(sinIndicador, null, 2)).toMatchObject({ titulo: 'Registra 1 pesaje más' })
-    expect(proximoPaso(sinIndicador, null, 3)).toMatchObject({
       tono: 'ok', titulo: 'Todo al día', destino: { tipo: 'ruta', ruta: '/guia-crecimiento?lote=9' },
     })
   })

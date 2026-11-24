@@ -22,6 +22,7 @@ export default function ModalCompararLotes({ loteActualId, onCerrar }: Props) {
   const [comparacion, setComparacion] = useState<RespuestaComparacionLotes | null>(null)
   const [cargandoComparacion, setCargandoComparacion] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const tieneLoteFinalizado = useMemo(() => lotes.some((l) => l.estado === 'finalizado'), [lotes])
 
   useEffect(() => {
     let activo = true
@@ -33,8 +34,10 @@ export default function ModalCompararLotes({ loteActualId, onCerrar }: Props) {
         if (datos.length > 0) {
           const primerLoteId = loteActualId ? String(loteActualId) : String(datos[0].id)
           setLote1Id((actual) => actual || primerLoteId)
-          if (datos.length > 1) {
-            const segundo = datos.find((d) => String(d.id) !== primerLoteId)
+          const hayFinalizado = datos.some((d) => d.estado === 'finalizado')
+          if (hayFinalizado) {
+            const finalizado = datos.find((d) => String(d.id) !== primerLoteId && d.estado === 'finalizado')
+            const segundo = finalizado ?? datos.find((d) => String(d.id) !== primerLoteId)
             if (segundo) setLote2Id(String(segundo.id))
           }
         }
@@ -52,7 +55,7 @@ export default function ModalCompararLotes({ loteActualId, onCerrar }: Props) {
   }, [loteActualId])
 
   useEffect(() => {
-    if (!lote1Id || !lote2Id || lote1Id === lote2Id) {
+    if (!tieneLoteFinalizado || !lote1Id || !lote2Id || lote1Id === lote2Id) {
       setComparacion(null)
       return
     }
@@ -103,7 +106,7 @@ export default function ModalCompararLotes({ loteActualId, onCerrar }: Props) {
   return (
     <Modal
       titulo="Comparativa histórica de lotes"
-      subtitulo="Evalúa diferencias de rendimiento y eficiencia zootécnica entre ciclos productivos (HU-29)."
+      subtitulo="Evalúa diferencias de rendimiento y eficiencia zootécnica entre galpones y ciclos productivos (HU-29). Requiere al menos un lote finalizado."
       onCerrar={onCerrar}
       ancho="ancho"
       acciones={
@@ -138,7 +141,7 @@ export default function ModalCompararLotes({ loteActualId, onCerrar }: Props) {
                 setLote1Id(e.target.value)
                 if (e.target.value === lote2Id) setLote2Id('')
               }}
-              disabled={cargandoLotes || cargandoComparacion}
+              disabled={cargandoLotes || cargandoComparacion || !tieneLoteFinalizado}
             >
               <option value="">Selecciona un lote…</option>
               {opcionesLote1.map((op) => (
@@ -155,7 +158,7 @@ export default function ModalCompararLotes({ loteActualId, onCerrar }: Props) {
               id="selector-lote-2"
               value={lote2Id}
               onChange={(e) => setLote2Id(e.target.value)}
-              disabled={cargandoLotes || cargandoComparacion || !lote1Id}
+              disabled={cargandoLotes || cargandoComparacion || !lote1Id || !tieneLoteFinalizado}
             >
               <option value="">Selecciona un lote…</option>
               {opcionesLote2.map((op) => (
@@ -166,6 +169,12 @@ export default function ModalCompararLotes({ loteActualId, onCerrar }: Props) {
             </select>
           </div>
         </div>
+
+        {!cargandoLotes && !tieneLoteFinalizado && (
+          <div className="adm-alerta adm-alerta--aviso" role="status" style={{ marginTop: '0.75rem' }}>
+            <span>La comparación de galpones requiere que haya al menos un lote finalizado en el sistema.</span>
+          </div>
+        )}
 
         {error && (
           <div className="adm-alerta" role="alert">

@@ -46,7 +46,7 @@ function filasCrecimiento(lote: Lote, indicadores: IndicadorLote[], curva: Curva
   const indicadorPorDia = new Map(validos.map((dato) => [dato.dia_vida!, dato]))
   const curvaPorDia = new Map(curva?.serie.map((punto) => [punto.dia, punto]) ?? [])
   const dias = [...new Set([...indicadorPorDia.keys(), ...curvaPorDia.keys()])].sort((a, b) => a - b)
-  const proyeccionDisponible = (curva?.modelo.puntos_usados ?? 0) >= 3
+  const proyeccionDisponible = (curva?.modelo.puntos_usados ?? 0) >= 1
 
   return dias.map((dia) => {
     const indicador = indicadorPorDia.get(dia)

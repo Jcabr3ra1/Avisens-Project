@@ -25,22 +25,40 @@ def _ajustar(serie, campo):
     dias = np.asarray([p["dia"] for p in serie], dtype=float)
     valores = np.asarray([p[campo] for p in serie], dtype=float)
 
-    if len(serie) < 3:
-        raise ValueError("Se requieren al menos 3 observaciones")
+    if len(serie) < 1:
+        raise ValueError("Se requiere al menos 1 observacion")
     if len(set(dias.tolist())) != len(dias):
         raise ValueError("Cada observacion debe pertenecer a un dia distinto")
     if not np.isfinite(dias).all() or not np.isfinite(valores).all():
         raise ValueError("Las observaciones deben contener valores finitos")
 
-    coeficientes = np.polyfit(dias, valores, 2)
-    modelo = np.poly1d(coeficientes)
-    ajustados = modelo(dias)
-    suma_residuos = float(np.sum((valores - ajustados) ** 2))
-    suma_total = float(np.sum((valores - np.mean(valores)) ** 2))
-    r2 = 0.0 if suma_total == 0 else 1 - suma_residuos / suma_total
-    ajuste = max(0.0, min(1.0, r2))
-    respaldo = min(1.0, len(serie) / PUNTOS_PARA_CONFIANZA_PLENA)
-    confianza = round(ajuste * respaldo, 4)
+    if len(serie) >= 3:
+        coeficientes = np.polyfit(dias, valores, 2)
+        modelo = np.poly1d(coeficientes)
+        ajustados = modelo(dias)
+        suma_residuos = float(np.sum((valores - ajustados) ** 2))
+        suma_total = float(np.sum((valores - np.mean(valores)) ** 2))
+        r2 = 0.0 if suma_total == 0 else 1 - suma_residuos / suma_total
+        ajuste = max(0.0, min(1.0, r2))
+        respaldo = min(1.0, len(serie) / PUNTOS_PARA_CONFIANZA_PLENA)
+        confianza = round(ajuste * respaldo, 4)
+    elif len(serie) == 2:
+        coeficientes = np.polyfit(dias, valores, 1)
+        modelo = np.poly1d(coeficientes)
+        r2 = 1.0
+        confianza = round(0.15, 4)
+    else:  # len(serie) == 1
+        d0, v0 = dias[0], valores[0]
+        ancla_0 = 42.0 if campo == "peso" else 0.0
+        if d0 > 0:
+            pendiente = (v0 - ancla_0) / d0
+            modelo = np.poly1d([pendiente, ancla_0])
+        else:
+            pendiente = 50.0 if campo == "peso" else 0.0
+            modelo = np.poly1d([pendiente, v0])
+        r2 = 0.0
+        confianza = round(0.05, 4)
+
     return {
         "modelo": modelo,
         "confianza": confianza,

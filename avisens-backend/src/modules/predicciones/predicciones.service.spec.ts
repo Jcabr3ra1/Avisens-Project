@@ -438,23 +438,35 @@ describe('PrediccionesService', () => {
     });
   });
 
-  it('lanza BadRequest cuando hay menos de 3 pesajes', async () => {
-    prisma.pesaje.findMany.mockResolvedValue(tresPesajes.slice(0, 2));
+  it('lanza BadRequest cuando no hay ningún pesaje', async () => {
+    prisma.pesaje.findMany.mockResolvedValue([]);
     await expect(service.predecir(1, admin)).rejects.toThrow(
       BadRequestException,
     );
   });
 
-  it('exige pesajes de al menos 3 días distintos', async () => {
+  it('permite predecir con solo un pesaje', async () => {
     prisma.pesaje.findMany.mockResolvedValue([
       { fecha: new Date('2026-07-08'), peso_promedio_g: 180 },
-      { fecha: new Date('2026-07-08'), peso_promedio_g: 200 },
-      { fecha: new Date('2026-07-15'), peso_promedio_g: 500 },
     ]);
+    mlResponde({
+      peso_proyectado_faena_g: 2600,
+      dia_faena: 42,
+      dias_al_objetivo: 38,
+      peso_objetivo_g: 2500,
+      modelo: {
+        nombre: 'crecimiento_aves',
+        version: '1.2.0',
+        framework: 'numpy',
+        tipo: 'regresion_polinomial',
+        objetivo: 'peso_faena',
+        confianza: 0.05,
+        puntos_usados: 1,
+      },
+    });
 
-    await expect(service.predecir(1, admin)).rejects.toThrow(
-      /3 días distintos/,
-    );
+    const r = await service.predecir(1, admin);
+    expect(r.pesajes_usados).toBe(1);
   });
 
   it('promedia los pesajes del mismo día antes de enviarlos al modelo', async () => {
@@ -1261,11 +1273,9 @@ describe('PrediccionesService', () => {
       ).toBe(false);
     });
 
-    it('pesaje anterior al ingreso: se excluye antes de agrupar; si quedan menos de 3 dias, sigue el 400 actual', async () => {
+    it('pesaje anterior al ingreso: se excluye antes de agrupar; si no quedan pesajes validos, lanza BadRequest', async () => {
       prisma.pesaje.findMany.mockResolvedValue([
         { fecha: new Date('2026-06-25'), peso_promedio_g: 999 },
-        { fecha: new Date('2026-07-08'), peso_promedio_g: 180 },
-        { fecha: new Date('2026-07-15'), peso_promedio_g: 500 },
       ]);
 
       await expect(service.predecir(1, admin)).rejects.toThrow(

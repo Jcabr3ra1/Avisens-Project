@@ -278,9 +278,9 @@ export class PrediccionesService {
         dia,
         peso: Number((peso.total / peso.cantidad).toFixed(2)),
       }));
-    if (pesajesParaMl.length < 3) {
+    if (pesajesParaMl.length < 1) {
       throw new BadRequestException(
-        'Se necesitan pesajes de al menos 3 días distintos para predecir',
+        'Se necesita al menos un pesaje para predecir',
       );
     }
 
@@ -876,7 +876,7 @@ export class PrediccionesService {
       typeof valor.tipo === 'string' &&
       typeof valor.objetivo === 'string' &&
       this.esNumeroFinito(valor.confianza, 0, 1) &&
-      this.esEntero(valor.puntos_usados, 3, 100)
+      this.esEntero(valor.puntos_usados, 1, 100)
     );
   }
 

@@ -38,7 +38,7 @@ export type TarjetaGalpon = {
 
 const decimal = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
 
-const PESAJES_PARA_PROYECTAR = 3
+const PESAJES_PARA_PROYECTAR = 1
 
 export function pesajesDelLote(estado: {
   curva: CurvaCrecimiento | null
@@ -92,7 +92,7 @@ export function proximoPaso(
     return {
       tono: 'atencion',
       titulo: 'Registra el primer pesaje',
-      detalle: 'Con tres pesajes en días distintos se proyecta la curva del lote hasta el día de salida.',
+      detalle: 'Con el primer pesaje se proyecta la curva del lote hasta el día de salida.',
       accion: 'Ir a la bitácora',
       destino: { tipo: 'ruta', ruta: '/bitacora' },
     }
@@ -101,8 +101,8 @@ export function proximoPaso(
     const faltan = PESAJES_PARA_PROYECTAR - pesajes
     return {
       tono: 'atencion',
-      titulo: faltan === 1 ? 'Registra 1 pesaje más' : `Registra ${faltan} pesajes más`,
-      detalle: `Tienes ${pesajes} de ${PESAJES_PARA_PROYECTAR} pesajes. Con pesajes de tres días distintos se proyecta la curva del lote hasta el día de salida.`,
+      titulo: 'Registra el primer pesaje',
+      detalle: 'Con el primer pesaje se proyecta la curva del lote hasta el día de salida.',
       accion: 'Ir a la bitácora',
       destino: { tipo: 'ruta', ruta: '/bitacora' },
     }
@@ -110,7 +110,7 @@ export function proximoPaso(
   return {
     tono: 'ok',
     titulo: 'Todo al día',
-    detalle: `Tienes ${pesajes} de ${PESAJES_PARA_PROYECTAR} pesajes. Revisa en la Guía de peso cómo va la curva frente al estándar.`,
+    detalle: 'Tienes tu pesaje registrado. Revisa en la Guía de peso cómo va la curva frente al estándar.',
     accion: 'Abrir guía de peso',
     destino: { tipo: 'ruta', ruta: `/guia-crecimiento?lote=${lote.id}` },
   }
