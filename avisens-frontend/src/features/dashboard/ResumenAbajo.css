@@ -240,7 +240,7 @@
   overflow: hidden;
   border: 1px solid var(--border-subtle);
   border-radius: 24px;
-  background: #cddccb var(--fondo, none) center bottom / cover no-repeat;
+  background: var(--surface-subtle) var(--fondo, none) center bottom / cover no-repeat;
 }
 
 .gsr-lienzo::after {
@@ -274,7 +274,7 @@
 }
 
 .gsr-linea line {
-  stroke: color-mix(in srgb, #203b32 38%, transparent);
+  stroke: color-mix(in srgb, var(--text-primary) 42%, transparent);
   stroke-dasharray: 3 4;
   stroke-linecap: round;
   stroke-width: 1.5;
@@ -283,7 +283,7 @@
 
 .gsr-linea circle {
   fill: var(--success);
-  stroke: #fff;
+  stroke: var(--surface-base);
   stroke-width: 2;
 }
 
