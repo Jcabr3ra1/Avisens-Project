@@ -1,57 +1,15 @@
-import { useEffect, useState } from 'react'
-import AsignarSensores from '@features/monitoreo/AsignarSensores'
-import { ActuadoresGalpon } from '@features/monitoreo/components/ActuadoresGalpon'
-import { tieneLecturaUtil, useMonitoreoAmbiental } from '@features/monitoreo/hooks/useMonitoreoAmbiental'
-import SensoresGalpon from '@features/granjas/propietario/pestanas/ambiente/SensoresGalpon'
-import '@fontsource-variable/oswald'
-import '@features/granjas/propietario/pestanas/ambiente/AmbientePestana.css'
-import { IcChip, IcPointer, IcRefresh, IcSidebar, IcThermo } from '@shared/ui/icons/icons'
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  IcArrowRight,
+  IcChip,
+  IcClose,
+  IcPointer,
+  IcRefresh,
+  IcSidebar,
+} from '@shared/ui/icons/icons'
 import { hace } from '@shared/utils/fechas'
 import type { EstadoGalponFlota, FilaFlota } from '../model/flota'
-
-const REFRESCO_MS = 20000
-
-type Vista = 'monitoreo' | 'actuadores' | 'configurar'
-
-const TEXTO_VISTA: Record<Vista, string> = {
-  monitoreo: 'Monitoreo en vivo',
-  actuadores: 'Actuadores',
-  configurar: 'Configurar controladores y sensores',
-}
-
-// Actuadores del galpón con sus controles y su ficha. Mismos datos en vivo
-// que el monitoreo; las órdenes se sondean aparte (useControlActuadores).
-function ActuadoresEnVivo({ galponId }: { galponId: number }) {
-  const { galpones, cargando, recargar } = useMonitoreoAmbiental()
-  const galpon = galpones.find((item) => item.id === galponId) ?? null
-  if (!galpon) {
-    return <p className="flota-detalle-nota" role="status">{cargando ? 'Cargando actuadores…' : 'Este galpón todavía no tiene datos.'}</p>
-  }
-  return <ActuadoresGalpon galponId={galponId} sensores={galpon.sensores} onCambio={() => { void recargar() }} />
-}
-
-function MonitoreoEnVivo({ galponId }: { galponId: number }) {
-  const { galpones, cargando, recargar } = useMonitoreoAmbiental()
-  const galpon = galpones.find((item) => item.id === galponId) ?? null
-
-  useEffect(() => {
-    const intervalo = window.setInterval(() => { void recargar() }, REFRESCO_MS)
-    return () => window.clearInterval(intervalo)
-  }, [recargar])
-
-  if (!galpon) {
-    return <p className="flota-detalle-nota" role="status">{cargando ? 'Cargando lecturas…' : 'Este galpón todavía no tiene lecturas.'}</p>
-  }
-  const reportando = galpon.sensores.filter((sensor) => tieneLecturaUtil(sensor.estado)).length
-  return (
-    <div className="amb flota-monitoreo">
-      <p className="flota-detalle-nota">
-        <span className="flota-vivo" aria-hidden="true" /> Se actualiza solo cada {REFRESCO_MS / 1000} segundos.
-      </p>
-      <SensoresGalpon sensores={galpon.sensores} reportando={reportando} />
-    </div>
-  )
-}
 
 const ETIQUETA: Record<EstadoGalponFlota, string> = {
   conectado: 'En línea',
@@ -60,103 +18,147 @@ const ETIQUETA: Record<EstadoGalponFlota, string> = {
   sin_controlador: 'Sin controlador',
 }
 
-function DetalleGalpon({ fila, sensores, versionPublicada, cargando, onCambio }: {
+function DetalleGalpon({
+  fila,
+  sensores,
+  versionPublicada,
+  cargando,
+  abiertoMovil,
+  onCerrarMovil,
+}: {
   fila: FilaFlota | null
   sensores: number
   versionPublicada: string | null
   cargando: boolean
-  onCambio: () => Promise<void>
+  abiertoMovil: boolean
+  onCerrarMovil: () => void
 }) {
+  const navigate = useNavigate()
   const tieneEquipo = (fila?.controladores.length ?? 0) > 0
-  const [eleccion, setEleccion] = useState<{ galponId: number; vista: Vista } | null>(null)
-  const vista: Vista = eleccion && eleccion.galponId === fila?.galpon.id
-    ? eleccion.vista
-    : tieneEquipo ? 'monitoreo' : 'configurar'
+
+  useEffect(() => {
+    if (!abiertoMovil) return
+    const alPresionarTecla = (evento: KeyboardEvent) => {
+      if (evento.key === 'Escape') onCerrarMovil()
+    }
+    window.addEventListener('keydown', alPresionarTecla)
+    return () => window.removeEventListener('keydown', alPresionarTecla)
+  }, [abiertoMovil, onCerrarMovil])
+
+  const firmwarePendiente = Boolean(
+    versionPublicada
+    && fila?.controladores.some((d) => d.version_firmware && d.version_firmware !== versionPublicada),
+  )
+
+  function abrirFicha(vista?: 'monitoreo' | 'actuadores' | 'configurar') {
+    if (!fila) return
+    const destino = vista ?? (tieneEquipo ? 'monitoreo' : 'configurar')
+    navigate(`/dispositivos/${fila.galpon.id}?vista=${destino}`)
+  }
 
   return (
-    <aside className="org-lista-panel flota-detalle" aria-label="Galpón seleccionado">
-      <div className="org-lista-panel-cabecera">
-        <IcSidebar size={16} aria-hidden="true" />
-        <span>Galpón seleccionado</span>
-      </div>
-      {fila ? (
-        <div className="flota-detalle-cuerpo" key={fila.galpon.id} aria-live="polite">
-          <div className="flota-detalle-top">
-            <span className={`flota-estado flota-estado--${fila.estado}`}>
+    <>
+      {abiertoMovil && (
+        <div
+          className="flota-panel-fondo"
+          aria-hidden="true"
+          onClick={onCerrarMovil}
+        />
+      )}
+      <aside
+        className={`flota-detalle flota-detalle--inspector${abiertoMovil ? ' is-abierto-movil' : ''}`}
+        aria-label="Galpón seleccionado"
+      >
+        <div className="flota-detalle-cabecera">
+          <IcSidebar size={15} aria-hidden="true" />
+          <span>Galpón seleccionado</span>
+          {fila && (
+            <span className={`flota-estado flota-estado--${fila.estado} flota-estado--cabecera`}>
               <span className="flota-estado-punto" aria-hidden="true" />
               {ETIQUETA[fila.estado]}
             </span>
-            {fila.ultimaConexion && <span className="flota-detalle-visto">Última señal {hace(fila.ultimaConexion)}</span>}
-          </div>
-          <h2 className="flota-detalle-nombre">{fila.galpon.nombre}</h2>
-          <p className="flota-detalle-lugar">{fila.organizacion} · {fila.granja} · {fila.galpon.codigo}</p>
+          )}
+          <button
+            type="button"
+            className="flota-detalle-cerrar"
+            onClick={onCerrarMovil}
+            aria-label="Cerrar panel del galpón"
+          >
+            <IcClose size={17} aria-hidden="true" />
+          </button>
+        </div>
 
-          <ul className="org-lista-panel-recursos flota-detalle-recursos">
-            <li>
-              <span className="org-lista-panel-icono" aria-hidden="true"><IcChip size={18} /></span>
-              <span>
-                <strong>Controladores</strong>
-                <small>
-                  {fila.controladores.length === 0
-                    ? 'Ninguno instalado'
-                    : fila.controladores.map((d) => `${d.codigo_topic.replace(/^.*-ESP32-/, 'ESP32 ')} · v${d.version_firmware ?? '?'}`).join(', ')}
-                </small>
-              </span>
-              <b>{fila.controladores.length}</b>
-            </li>
-            <li>
-              <span className="org-lista-panel-icono" aria-hidden="true"><IcThermo size={18} /></span>
-              <span><strong>Sensores activos</strong><small>Leen y envían cada pocos segundos</small></span>
-              <b>{sensores}</b>
-            </li>
-            {versionPublicada && fila.controladores.some((d) => d.version_firmware && d.version_firmware !== versionPublicada) && (
-              <li className="is-aviso">
-                <span className="org-lista-panel-icono" aria-hidden="true"><IcRefresh size={18} /></span>
-                <span><strong>Firmware pendiente</strong><small>Se instalará solo en su próxima consulta</small></span>
-                <b>v{versionPublicada}</b>
-              </li>
+        {fila ? (
+          <div className="flota-inspector-cuerpo" key={fila.galpon.id} aria-live="polite">
+            <div className="flota-inspector-cabecera">
+              <h2 className="flota-detalle-nombre">{fila.galpon.nombre}</h2>
+              <p className="flota-detalle-lugar">
+                {fila.organizacion} · {fila.granja} · <code>{fila.galpon.codigo}</code>
+              </p>
+            </div>
+
+            <dl className="flota-inspector-metricas">
+              <div>
+                <dt>Controladores</dt>
+                <dd>{fila.controladores.length}</dd>
+              </div>
+              <div>
+                <dt>Sensores activos</dt>
+                <dd>{sensores}</dd>
+              </div>
+              <div className="flota-inspector-metrica-ancha">
+                <dt>Última señal</dt>
+                <dd>{fila.ultimaConexion ? hace(fila.ultimaConexion) : 'Sin señal registrada'}</dd>
+              </div>
+            </dl>
+
+            {firmwarePendiente && versionPublicada && (
+              <div className="flota-inspector-aviso">
+                <IcRefresh size={14} aria-hidden="true" />
+                <span>Actualización disponible a firmware v{versionPublicada}</span>
+              </div>
             )}
-          </ul>
 
-          <div className="flota-vistas" role="tablist" aria-label={`Vistas de ${fila.galpon.nombre}`}>
-            {(['monitoreo', 'actuadores', 'configurar'] as const).map((id) => (
+            <div className="flota-inspector-bloque">
+              <span className="flota-inspector-rotulo">Controladores ESP32</span>
+              {fila.controladores.length === 0 ? (
+                <p className="flota-inspector-vacio">
+                  Este galpón aún no tiene controlador registrado. Abre la ficha técnica para instalar el ESP32 y sus sensores.
+                </p>
+              ) : (
+                <ul className="flota-inspector-lista">
+                  {fila.controladores.map((ctrl) => (
+                    <li key={ctrl.id}>
+                      <span className="flota-inspector-ctrl-nombre">
+                        <IcChip size={14} aria-hidden="true" />
+                        <code>{ctrl.codigo_topic}</code>
+                      </span>
+                      <span className="flota-inspector-ctrl-ver">v{ctrl.version_firmware ?? '?'}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="flota-inspector-pie">
               <button
-                key={id}
                 type="button"
-                role="tab"
-                aria-selected={vista === id}
-                className="flota-vista"
-                disabled={id !== 'configurar' && !tieneEquipo}
-                onClick={() => setEleccion({ galponId: fila.galpon.id, vista: id })}
+                className="adm-btn adm-btn--primario flota-inspector-cta"
+                onClick={() => abrirFicha()}
               >
-                {TEXTO_VISTA[id]}
+                Abrir ficha técnica
+                <IcArrowRight size={15} aria-hidden="true" />
               </button>
-            ))}
+            </div>
           </div>
-
-          <div className="flota-detalle-config">
-            {vista === 'monitoreo' ? (
-              <MonitoreoEnVivo galponId={fila.galpon.id} />
-            ) : vista === 'actuadores' ? (
-              <ActuadoresEnVivo key={fila.galpon.id} galponId={fila.galpon.id} />
-            ) : (
-              <AsignarSensores
-                key={fila.galpon.id}
-                galponId={fila.galpon.id}
-                galponCodigo={fila.galpon.codigo}
-                galponNombre={fila.galpon.nombre}
-                recargar={onCambio}
-              />
-            )}
+        ) : (
+          <div className="flota-detalle-vacio">
+            <IcPointer size={24} aria-hidden="true" />
+            <p>{cargando ? 'Cargando galpones…' : 'Elige un galpón de la lista para ver su resumen y abrir su ficha técnica.'}</p>
           </div>
-        </div>
-      ) : (
-        <div className="org-lista-panel-cuerpo org-lista-panel-cuerpo--vacio">
-          <IcPointer size={24} aria-hidden="true" />
-          <p>{cargando ? 'Cargando galpones…' : 'Elige un galpón de la lista para ver y configurar sus controladores y sensores.'}</p>
-        </div>
-      )}
-    </aside>
+        )}
+      </aside>
+    </>
   )
 }
 

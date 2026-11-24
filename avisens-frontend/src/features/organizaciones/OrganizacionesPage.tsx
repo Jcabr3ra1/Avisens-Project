@@ -3,17 +3,23 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { getRol } from '@shared/api'
 import { permisosDeGestion } from '@shared/auth/permisos'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import {
+  IcAlert,
   IcArrowRight,
   IcBarn,
   IcBuilding,
   IcCheck,
   IcChevronDown,
   IcChevronRight,
-  Icon,
+  IcClose,
+  IcEdit,
+  IcPlay,
   IcPointer,
   IcSearch,
   IcSidebar,
+  IcStop,
+  IcTrash,
   IcUsers,
 } from '@shared/ui/icons/icons'
 import type { Organizacion } from './api/organizaciones'
@@ -30,18 +36,13 @@ import {
   inicialesOrganizacion,
   normalizarPlan,
   resumirOrganizaciones,
+  siguienteSeleccion,
   type FiltroEstado,
   type OrdenOrganizaciones,
 } from './model/organizacion'
 import '@shared/ui/admin/AdminKit.css'
 import '@shared/ui/movimiento.css'
 import './OrganizacionesPage.css'
-
-const ESTADOS: Array<{ valor: FiltroEstado; etiqueta: string }> = [
-  { valor: 'todas', etiqueta: 'Estado: todas' },
-  { valor: 'activas', etiqueta: 'Estado: activas' },
-  { valor: 'suspendidas', etiqueta: 'Estado: suspendidas' },
-]
 
 const ORDENES: Array<{ valor: OrdenOrganizaciones; etiqueta: string }> = [
   { valor: 'nombre-asc', etiqueta: 'Nombre A–Z' },
@@ -51,11 +52,14 @@ const ORDENES: Array<{ valor: OrdenOrganizaciones; etiqueta: string }> = [
   { valor: 'recientes', etiqueta: 'Más recientes' },
 ]
 
-const TONOS_AVATAR = ['verde', 'profundo', 'amarillo', 'crema'] as const
-
-function Visto({ size }: { size: number }) {
-  return <Icon size={size} strokeWidth={2.4}><path d="M5 12.5l4.5 4.5L19 7.5" /></Icon>
+const ETIQUETA_FILTRO: Record<FiltroEstado, string> = {
+  todas: 'Todas',
+  activas: 'Activas',
+  'sin-actividad': `Sin actividad (+${DIAS_SIN_ACTIVIDAD}d)`,
+  suspendidas: 'Suspendidas',
 }
+
+const TONOS_AVATAR = ['verde', 'profundo', 'amarillo', 'crema'] as const
 
 function plural(cantidad: number, singular: string, varios: string): string {
   return `${cantidad} ${cantidad === 1 ? singular : varios}`
@@ -70,20 +74,42 @@ function EstadoChip({ activa }: { activa: boolean }) {
   )
 }
 
-function Indicador({ valor, label, nota, orden }: {
+function IndicadorFiltro({
+  valor,
+  label,
+  nota,
+  activo,
+  tono = 'primario',
+  icono,
+  orden,
+  onClick,
+}: {
   valor: number | null
   label: string
   nota: string
-  icono?: ReactNode
+  activo: boolean
+  tono?: 'primario' | 'ok' | 'info' | 'alerta' | 'peligro'
+  icono: ReactNode
   orden: number
+  onClick: () => void
 }) {
   return (
-    <li className="org-lista-indicador org-aparece" style={{ '--orden': orden } as CSSProperties}>
-      <span className="org-lista-indicador-label">{label}</span>
-      <strong className="org-lista-indicador-valor">
-        {valor === null ? <span className="org-lista-indicador-esqueleto org-brilla" aria-hidden="true" /> : <NumeroAnimado valor={valor} retrasoMs={orden * 60} />}
-      </strong>
-      <span className="org-lista-indicador-nota">{nota}</span>
+    <li className="org-aparece" style={{ '--orden': orden } as CSSProperties}>
+      <button
+        type="button"
+        className={`adm-kpi adm-kpi--${tono}${activo ? ' is-activo' : ''}`}
+        aria-pressed={activo}
+        onClick={onClick}
+      >
+        <span className="adm-kpi-cab">
+          <span className="adm-kpi-etiqueta">{label}</span>
+          <span className="adm-kpi-icono" aria-hidden="true">{icono}</span>
+        </span>
+        <strong className="adm-kpi-valor">
+          {valor === null ? <span className="org-lista-indicador-esqueleto org-brilla" aria-hidden="true" /> : <NumeroAnimado valor={valor} retrasoMs={orden * 60} />}
+        </strong>
+        <span className="adm-kpi-nota">{nota}</span>
+      </button>
     </li>
   )
 }
@@ -92,6 +118,7 @@ function OrganizacionesPage() {
   const navigate = useNavigate()
   const puedeGestionar = permisosDeGestion(getRol()).crear
   const { organizaciones, cargando, error, recargar, guardar, alternar } = useOrganizaciones()
+  useRefetchOnFocus(recargar)
   const [parametros, setParametros] = useSearchParams()
   const [texto, setTexto] = useState('')
   const [estado, setEstado] = useState<FiltroEstado>('todas')
@@ -99,20 +126,6 @@ function OrganizacionesPage() {
   const [aEliminar, setAEliminar] = useState<Organizacion | null>(null)
   const [formulario, setFormulario] = useState<{ abierto: boolean; editando: Organizacion | null }>({ abierto: false, editando: null })
   const buscadorRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    const alPulsar = (evento: KeyboardEvent) => {
-      const editando = evento.target instanceof HTMLElement
-        && (evento.target.matches('input, textarea, select') || evento.target.isContentEditable)
-      if (evento.key === '/' && !evento.metaKey && !evento.ctrlKey && !evento.altKey && !editando && !document.querySelector('[role="dialog"]')) {
-        evento.preventDefault()
-        buscadorRef.current?.focus()
-        buscadorRef.current?.select()
-      }
-    }
-    window.addEventListener('keydown', alPulsar)
-    return () => window.removeEventListener('keydown', alPulsar)
-  }, [])
 
   const resumen = useMemo(() => resumirOrganizaciones(organizaciones), [organizaciones])
   const visibles = useMemo(
@@ -133,6 +146,7 @@ function OrganizacionesPage() {
   const suspendidas = resumen.total - resumen.activas
   const listo = !cargando && !error
   const hayFiltros = texto.trim() !== '' || estado !== 'todas'
+  const actividadSeleccionada = seleccionada ? actividadDe(seleccionada) : null
 
   function seleccionar(id: number) {
     setParametros((actuales) => {
@@ -142,10 +156,54 @@ function OrganizacionesPage() {
     }, { replace: true })
   }
 
+  function elegirFiltro(siguiente: FiltroEstado) {
+    setEstado((actual) => (actual === siguiente && siguiente !== 'todas' ? 'todas' : siguiente))
+  }
+
   function limpiarFiltros() {
     setTexto('')
     setEstado('todas')
   }
+
+  useEffect(() => {
+    const alPulsar = (evento: KeyboardEvent) => {
+      if (evento.metaKey || evento.ctrlKey || evento.altKey) return
+      if (document.querySelector('[role="dialog"]')) return
+      const editando = evento.target instanceof HTMLElement
+        && (evento.target.matches('input, textarea, select') || evento.target.isContentEditable)
+
+      if (evento.key === '/' && !editando) {
+        evento.preventDefault()
+        buscadorRef.current?.focus()
+        buscadorRef.current?.select()
+        return
+      }
+
+      if (editando || visibles.length === 0) return
+
+      const siguienteId = siguienteSeleccion(
+        visibles.map((item) => item.id),
+        seleccionada?.id ?? null,
+        evento.key,
+      )
+      if (siguienteId !== null) {
+        evento.preventDefault()
+        setParametros((actuales) => {
+          const siguientes = new URLSearchParams(actuales)
+          siguientes.set('seleccion', String(siguienteId))
+          return siguientes
+        }, { replace: true })
+        return
+      }
+
+      if (evento.key === 'Enter' && seleccionada && !(evento.target instanceof HTMLElement && evento.target.matches('button, a'))) {
+        evento.preventDefault()
+        navigate(`/organizaciones/${seleccionada.id}`)
+      }
+    }
+    window.addEventListener('keydown', alPulsar)
+    return () => window.removeEventListener('keydown', alPulsar)
+  }, [visibles, seleccionada, navigate, setParametros])
 
   async function alternarEstado(organizacion: Organizacion) {
     if (organizacion.activa && !(await confirmarAccion({
@@ -164,49 +222,95 @@ function OrganizacionesPage() {
         <div>
           <span className="adm-eyebrow">
             <span className="adm-eyebrow-punto" aria-hidden="true" />
-            Plataforma · Clientes
+            Plataforma · Organizaciones
           </span>
           <h1 className="org-lista-titulo">Organizaciones</h1>
-          <p className="org-lista-subtitulo">Los clientes de Avisens. Cada una nace al convertir un prospecto.</p>
+          <p className="org-lista-subtitulo">Empresas activas en Avisens. Cada organización nace al convertir un prospecto.</p>
         </div>
       </header>
 
-      <ul className="org-lista-indicadores" aria-label="Resumen de organizaciones">
-        <Indicador orden={1} valor={listo ? resumen.total : null} label="Organizaciones" nota="Disponibles para acceder" icono={<IcBuilding size={18} />} />
-        <Indicador
+      <ul className="adm-kpis" aria-label="Filtrar organizaciones por estado">
+        <IndicadorFiltro
+          orden={1}
+          valor={listo ? resumen.total : null}
+          label="Todas"
+          nota={listo ? `${plural(resumen.granjas, 'granja', 'granjas')} · ${plural(resumen.usuarios, 'persona', 'personas')}` : 'Cargando…'}
+          activo={estado === 'todas'}
+          tono="primario"
+          icono={<IcBuilding size={15} />}
+          onClick={() => elegirFiltro('todas')}
+        />
+        <IndicadorFiltro
           orden={2}
           valor={listo ? resumen.activas : null}
           label="Activas"
-          nota={!listo ? 'Calculando…' : resumen.sinActividad > 0 ? `${resumen.sinActividad} sin actividad en ${DIAS_SIN_ACTIVIDAD} días` : suspendidas === 0 ? 'Todas operativas' : `${plural(suspendidas, 'suspendida', 'suspendidas')}`}
-          icono={<IcCheck size={18} />}
+          nota="Operando en plataforma"
+          activo={estado === 'activas'}
+          tono="ok"
+          icono={<IcCheck size={15} />}
+          onClick={() => elegirFiltro('activas')}
         />
-        <Indicador orden={3} valor={listo ? resumen.granjas : null} label="Granjas en total" nota="Entre tus organizaciones" icono={<IcBarn size={18} />} />
-        <Indicador orden={4} valor={listo ? resumen.usuarios : null} label="Personas en total" nota="Entre tus organizaciones" icono={<IcUsers size={18} />} />
+        <IndicadorFiltro
+          orden={3}
+          valor={listo ? resumen.sinActividad : null}
+          label="Sin actividad"
+          nota={`Más de ${DIAS_SIN_ACTIVIDAD} días sin ingreso`}
+          activo={estado === 'sin-actividad'}
+          tono={listo && resumen.sinActividad > 0 ? 'alerta' : 'ok'}
+          icono={listo && resumen.sinActividad > 0 ? <IcAlert size={15} /> : <IcCheck size={15} />}
+          onClick={() => elegirFiltro('sin-actividad')}
+        />
+        <IndicadorFiltro
+          orden={4}
+          valor={listo ? suspendidas : null}
+          label="Suspendidos"
+          nota={suspendidas === 0 ? 'Ninguno pausado' : 'Acceso pausado'}
+          activo={estado === 'suspendidas'}
+          tono={suspendidas > 0 ? 'peligro' : 'info'}
+          icono={<IcStop size={15} />}
+          onClick={() => elegirFiltro('suspendidas')}
+        />
       </ul>
 
       {(cargando || organizaciones.length > 0) && (
         <div className="org-lista-herramientas org-aparece" style={{ '--orden': 3 } as CSSProperties}>
           <label className="org-lista-buscador">
-            <span className="sr-only">Buscar organización</span>
+            <span className="sr-only">Buscar cliente</span>
             <IcSearch size={18} aria-hidden="true" />
             <input
               ref={buscadorRef}
               type="search"
               value={texto}
               onChange={(evento) => setTexto(evento.target.value)}
-              placeholder="Buscar organización por nombre o NIT…"
+              placeholder="Buscar cliente por nombre o NIT…"
               autoComplete="off"
               aria-keyshortcuts="/"
             />
-            <kbd aria-hidden="true">/</kbd>
+            {texto ? (
+              <button
+                type="button"
+                className="org-lista-limpiar-busqueda"
+                onClick={() => { setTexto(''); buscadorRef.current?.focus() }}
+                aria-label="Limpiar búsqueda"
+              >
+                <IcClose size={14} aria-hidden="true" />
+              </button>
+            ) : (
+              <kbd aria-hidden="true">/</kbd>
+            )}
           </label>
-          <label className="org-lista-desplegable">
-            <span className="sr-only">Filtrar por estado</span>
-            <select value={estado} onChange={(evento) => setEstado(evento.target.value as FiltroEstado)}>
-              {ESTADOS.map((opcion) => <option key={opcion.valor} value={opcion.valor}>{opcion.etiqueta}</option>)}
-            </select>
-            <IcChevronDown size={18} aria-hidden="true" />
-          </label>
+
+          {estado !== 'todas' && (
+            <button
+              type="button"
+              className="org-lista-filtro-activo"
+              onClick={() => setEstado('todas')}
+            >
+              <span>{ETIQUETA_FILTRO[estado]}</span>
+              <IcClose size={13} aria-hidden="true" />
+            </button>
+          )}
+
           <label className="org-lista-orden">
             <span className="org-lista-orden-texto">Ordenar por</span>
             <span className="org-lista-desplegable">
@@ -229,7 +333,7 @@ function OrganizacionesPage() {
       <div className="org-lista-cuerpo">
         <section className="org-lista-columna" aria-labelledby="org-lista-tus">
           <div className="org-lista-columna-cabecera">
-            <h2 id="org-lista-tus">Tus organizaciones</h2>
+            <h2 id="org-lista-tus">Directorio de clientes</h2>
             {listo && <span role="status">{plural(visibles.length, 'resultado', 'resultados')}</span>}
           </div>
 
@@ -240,69 +344,79 @@ function OrganizacionesPage() {
           ) : error ? null : organizaciones.length === 0 ? (
             <div className="org-lista-vacio">
               <IcBuilding size={28} aria-hidden="true" />
-              <h3>Todavía no hay organizaciones</h3>
-              <p>Cada empresa cliente es una organización. Se crea sola al convertir un prospecto en cliente.</p>
+              <h3>Todavía no hay clientes</h3>
+              <p>Cada empresa cliente nace al convertir un prospecto. Ve a Prospectos para dar de alta el primero.</p>
+              <Link to="/crm" className="adm-btn adm-btn--primario">
+                Ir a prospectos <IcArrowRight size={15} aria-hidden="true" />
+              </Link>
             </div>
           ) : visibles.length === 0 ? (
             <div className="org-lista-vacio">
               <IcSearch size={28} aria-hidden="true" />
               <h3>Sin coincidencias</h3>
-              <p>Ninguna organización coincide con la búsqueda o el estado elegido.</p>
+              <p>Ningún cliente coincide con la búsqueda o el filtro activo.</p>
               {hayFiltros && <button type="button" className="adm-btn adm-btn--secundario" onClick={limpiarFiltros}>Limpiar filtros</button>}
             </div>
           ) : (
-            <ul className="org-lista-tarjetas" role="radiogroup" aria-labelledby="org-lista-tus">
+            <ul className="org-lista-tarjetas" role="listbox" aria-labelledby="org-lista-tus">
               {visibles.map((organizacion, indice) => {
                 const activa = organizacion.id === seleccionada?.id
+                const actividad = actividadDe(organizacion)
                 return (
                   <li
                     key={organizacion.id}
-                    className={`org-lista-item org-aparece${activa ? ' is-seleccionada' : ''}`}
+                    role="option"
+                    aria-selected={activa}
+                    className={`org-lista-item org-aparece${activa ? ' is-seleccionada' : ''}${organizacion.activa ? '' : ' is-suspendida'}`}
                     style={{ '--orden': Math.min(indice, 8) + 4 } as CSSProperties}
                   >
-                    <label className="org-lista-tarjeta" onDoubleClick={() => navigate(`/organizaciones/${organizacion.id}`)}>
-                      <input
-                        type="radio"
-                        name="organizacion"
-                        className="sr-only"
-                        checked={activa}
-                        onChange={() => seleccionar(organizacion.id)}
-                      />
+                    <div
+                      className="org-lista-tarjeta org-lista-tarjeta--compacta"
+                      tabIndex={0}
+                      onClick={() => {
+                        if (window.matchMedia('(max-width: 64rem)').matches) {
+                          navigate(`/organizaciones/${organizacion.id}`)
+                        } else {
+                          seleccionar(organizacion.id)
+                        }
+                      }}
+                      onDoubleClick={() => navigate(`/organizaciones/${organizacion.id}`)}
+                      onKeyDown={(evento) => {
+                        if (evento.key === 'Enter' || evento.key === ' ') {
+                          evento.preventDefault()
+                          if (activa || window.matchMedia('(max-width: 64rem)').matches) {
+                            navigate(`/organizaciones/${organizacion.id}`)
+                          } else {
+                            seleccionar(organizacion.id)
+                          }
+                        }
+                      }}
+                    >
                       <span className={`org-lista-avatar org-lista-avatar--${TONOS_AVATAR[organizacion.id % TONOS_AVATAR.length]}`} aria-hidden="true">
                         {inicialesOrganizacion(organizacion.nombre)}
                       </span>
                       <span className="org-lista-tarjeta-info">
-                        <span className="org-lista-tarjeta-nombre">{organizacion.nombre}</span>
+                        <span className="org-lista-tarjeta-nombre-fila">
+                          <span className="org-lista-tarjeta-nombre">{organizacion.nombre}</span>
+                          {organizacion.activa && actividad.tono === 'inactiva' && (
+                            <span className="org-lista-alerta-inactiva" title={actividad.texto}>Sin actividad</span>
+                          )}
+                        </span>
                         <span className="org-lista-tarjeta-meta">
                           <span>Plan {etiquetaPlan(organizacion.plan)}</span>
                           <span aria-hidden="true">·</span>
                           <span>{organizacion.nit ? `NIT ${organizacion.nit}` : 'Sin NIT'}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>{plural(organizacion._count.granjas, 'granja', 'granjas')}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>{plural(organizacion._count.usuarios, 'persona', 'personas')}</span>
                         </span>
                       </span>
                       <span className="org-lista-tarjeta-derecha">
                         <EstadoChip activa={organizacion.activa} />
-                        <span className="org-lista-radio" aria-hidden="true"><Visto size={14} /></span>
+                        <IcChevronRight size={16} className="org-lista-tarjeta-chevron" aria-hidden="true" />
                       </span>
-                      <span className="org-lista-tarjeta-pie">
-                        <span className="org-lista-conteo-item">
-                          <IcBarn size={15} aria-hidden="true" />
-                          <span>{plural(organizacion._count.granjas, 'granja', 'granjas')}</span>
-                        </span>
-                        <span className="org-lista-conteo-item">
-                          <IcUsers size={15} aria-hidden="true" />
-                          <span>{plural(organizacion._count.usuarios, 'persona', 'personas')}</span>
-                        </span>
-                        <span className={`org-lista-actividad org-lista-actividad--${actividadDe(organizacion).tono}`}>{actividadDe(organizacion).texto}</span>
-                        <span className="org-lista-tarjeta-accion" aria-hidden="true">
-                          {activa ? <>Seleccionada <Visto size={15} /></> : <>Ver detalle <IcChevronRight size={15} /></>}
-                        </span>
-                      </span>
-                    </label>
-                    {activa && (
-                      <Link className="org-lista-acceder org-lista-acceder--movil" to={`/organizaciones/${organizacion.id}`}>
-                        Acceder a organización <IcArrowRight size={18} aria-hidden="true" />
-                      </Link>
-                    )}
+                    </div>
                   </li>
                 )
               })}
@@ -311,24 +425,29 @@ function OrganizacionesPage() {
 
           {listo && visibles.length > 0 && (
             <p className="org-lista-pista">
-              <IcPointer size={16} aria-hidden="true" />
-              Selecciona una organización para revisar sus recursos antes de acceder.
+              <kbd>/</kbd> buscar · <kbd>↑</kbd><kbd>↓</kbd> recorrer · <kbd>Enter</kbd> abrir ficha
             </p>
           )}
         </section>
 
-        <aside className="org-lista-panel" aria-label="Organización seleccionada">
+        <aside className="org-lista-panel" aria-label="Resumen del cliente seleccionado">
           <div className="org-lista-panel-cabecera">
             <IcSidebar size={16} aria-hidden="true" />
-            <span>Organización seleccionada</span>
+            <span>Resumen del cliente</span>
           </div>
-          {seleccionada ? (
+          {seleccionada && actividadSeleccionada ? (
             <div className="org-lista-panel-cuerpo" key={seleccionada.id} aria-live="polite">
               <div className="org-lista-panel-top">
                 <EstadoChip activa={seleccionada.activa} />
                 <span className="org-lista-panel-plan">Plan {etiquetaPlan(seleccionada.plan)}</span>
               </div>
               <h2 className="org-lista-panel-nombre">{seleccionada.nombre}</h2>
+
+              <div className={`org-lista-salud org-lista-salud--${actividadSeleccionada.tono}`}>
+                <span className="org-lista-salud-punto" aria-hidden="true" />
+                <span>{actividadSeleccionada.texto}</span>
+              </div>
+
               <dl className="org-lista-panel-meta">
                 <div>
                   <dt>NIT</dt>
@@ -339,35 +458,42 @@ function OrganizacionesPage() {
                   <dd>{fechaCorta(seleccionada.fecha_creacion)}</dd>
                 </div>
               </dl>
-              <h3 className="org-lista-panel-subtitulo">En este espacio</h3>
+
+              <h3 className="org-lista-panel-subtitulo">Estructura activa</h3>
               <ul className="org-lista-panel-recursos">
                 <li>
                   <span className="org-lista-panel-icono" aria-hidden="true"><IcBarn size={18} /></span>
-                  <span><strong>Granjas</strong><small>Vinculadas a esta organización</small></span>
+                  <span><strong>Granjas</strong><small>Operación avícola</small></span>
                   <b><NumeroAnimado valor={seleccionada._count.granjas} /></b>
                 </li>
                 <li>
                   <span className="org-lista-panel-icono" aria-hidden="true"><IcUsers size={18} /></span>
-                  <span><strong>Personas</strong><small>Vinculadas a esta organización</small></span>
+                  <span><strong>Personas</strong><small>Propietarios y operarios</small></span>
                   <b><NumeroAnimado valor={seleccionada._count.usuarios} /></b>
                 </li>
               </ul>
+
               <Link className="org-lista-acceder" to={`/organizaciones/${seleccionada.id}`}>
-                Acceder a organización <IcArrowRight size={18} aria-hidden="true" />
+                Abrir ficha completa <IcArrowRight size={18} aria-hidden="true" />
               </Link>
-              <p className="org-lista-panel-nota">Entrarás al espacio de esta organización.</p>
+
               {puedeGestionar && (
-                <div className="org-lista-panel-gestion">
-                  <button type="button" onClick={() => setFormulario({ abierto: true, editando: seleccionada })}>Editar datos</button>
-                  <button
-                    type="button"
-                    className={seleccionada.activa ? 'is-peligro' : ''}
-                    onClick={() => alternarEstado(seleccionada)}
-                  >
-                    {seleccionada.activa ? 'Suspender' : 'Reactivar'}
-                  </button>
-                  <button type="button" className="is-eliminar" onClick={() => setAEliminar(seleccionada)}>
-                    Eliminar
+                <div className="org-lista-panel-acciones">
+                  <div className="org-lista-panel-gestion">
+                    <button type="button" onClick={() => setFormulario({ abierto: true, editando: seleccionada })}>
+                      <IcEdit size={14} aria-hidden="true" /> Editar datos
+                    </button>
+                    <button
+                      type="button"
+                      className={seleccionada.activa ? 'is-peligro' : ''}
+                      onClick={() => alternarEstado(seleccionada)}
+                    >
+                      {seleccionada.activa ? <IcStop size={14} aria-hidden="true" /> : <IcPlay size={14} aria-hidden="true" />}
+                      {seleccionada.activa ? 'Suspender' : 'Reactivar'}
+                    </button>
+                  </div>
+                  <button type="button" className="org-lista-panel-eliminar" onClick={() => setAEliminar(seleccionada)}>
+                    <IcTrash size={14} aria-hidden="true" /> Eliminar cliente
                   </button>
                 </div>
               )}
@@ -375,7 +501,7 @@ function OrganizacionesPage() {
           ) : (
             <div className="org-lista-panel-cuerpo org-lista-panel-cuerpo--vacio">
               <IcPointer size={24} aria-hidden="true" />
-              <p>{cargando ? 'Cargando organizaciones…' : 'Elige una organización de la lista para ver sus recursos.'}</p>
+              <p>{cargando ? 'Cargando clientes…' : 'Elige un cliente del directorio para ver su resumen.'}</p>
             </div>
           )}
         </aside>
@@ -393,7 +519,7 @@ function OrganizacionesPage() {
               siguientes.delete('seleccion')
               return siguientes
             }, { replace: true })
-            void recargar()
+            void recargar(true)
           }}
         />
       )}

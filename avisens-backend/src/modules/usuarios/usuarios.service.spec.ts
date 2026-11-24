@@ -37,7 +37,8 @@ describe('UsuariosService', () => {
       findUniqueOrThrow: jest.fn(),
     },
     sesion: { updateMany: jest.fn(), deleteMany: jest.fn() },
-    seguridadCuenta: { deleteMany: jest.fn() },
+    seguridadCuenta: { deleteMany: jest.fn(), upsert: jest.fn() },
+    recuperacionPassword: { updateMany: jest.fn() },
     galpon: { findUnique: jest.fn() },
     usuarioGalpon: {
       create: jest.fn(),
@@ -968,6 +969,72 @@ describe('UsuariosService', () => {
         prisma.$transaction.mockRejectedValueOnce(vencida);
         await expect(accion()).rejects.toBe(vencida);
       });
+    });
+  });
+
+  describe('restablecerPassword', () => {
+    beforeEach(() => {
+      prisma.$transaction.mockImplementation((operacion: unknown) =>
+        typeof operacion === 'function'
+          ? (operacion as (tx: typeof prisma) => unknown)(prisma)
+          : Promise.resolve(operacion),
+      );
+      hashMock.mockResolvedValue('hash-temporal-op');
+    });
+
+    it('un Propietario puede restablecer la contraseña de un Operario de su organización', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 20,
+        activo: true,
+        organizacion_id: 10,
+        rol: { nombre: 'Operario' },
+      });
+
+      const resultado = await service.restablecerPassword(20, {}, propietario);
+
+      expect(resultado.usuario_id).toBe(20);
+      expect(resultado.debe_cambiar_password).toBe(false);
+      expect(resultado.expira_en).toBeNull();
+      expect(resultado.password_temporal).toMatch(/^Av-/);
+      expect(prisma.usuario.update).toHaveBeenCalledWith({
+        where: { id: 20 },
+        data: { password_hash: 'hash-temporal-op' },
+      });
+      expect(prisma.seguridadCuenta.upsert).toHaveBeenCalled();
+      expect(prisma.sesion.updateMany).toHaveBeenCalledWith({
+        where: { usuario_id: 20, revocada: false },
+        data: { revocada: true },
+      });
+    });
+
+    it('un Propietario NO puede restablecer la contraseña de un Operario de otra organización', async () => {
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 21,
+        activo: true,
+        organizacion_id: 99,
+        rol: { nombre: 'Operario' },
+      });
+
+      await expect(
+        service.restablecerPassword(21, {}, propietario),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.usuario.update).not.toHaveBeenCalled();
+    });
+
+    it('impide restablecer la propia contraseña o un usuario inactivo', async () => {
+      await expect(
+        service.restablecerPassword(5, {}, propietario),
+      ).rejects.toThrow(BadRequestException);
+
+      prisma.usuario.findUnique.mockResolvedValue({
+        id: 20,
+        activo: false,
+        organizacion_id: 10,
+        rol: { nombre: 'Operario' },
+      });
+      await expect(
+        service.restablecerPassword(20, {}, propietario),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

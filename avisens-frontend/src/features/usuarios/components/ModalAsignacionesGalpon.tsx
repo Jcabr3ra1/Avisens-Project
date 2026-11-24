@@ -80,8 +80,8 @@ function ModalAsignacionesGalpon({
     <Modal
       titulo={`Galpones de ${usuario.nombre_completo}`}
       subtitulo="Asigna los galpones que este operario debe atender."
+      variante="lateral"
       onCerrar={onCerrar}
-      ancho="ancho"
       bloqueado={guardando}
       focoInicial={selectorRef}
       icono={<span className="usuarios-asig-icono" aria-hidden="true"><IcBarn size={20} /></span>}

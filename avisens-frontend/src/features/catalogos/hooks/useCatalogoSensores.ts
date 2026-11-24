@@ -16,15 +16,15 @@ export function useCatalogoSensores() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
-  const recargar = useCallback(async () => {
-    setCargando(true)
+  const recargar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setCargando(true)
     setError('')
     try {
       setSensores(await listarCatalogoSensores())
     } catch {
-      setError('No se pudo cargar el catálogo de sensores.')
+      if (!silencioso) setError('No se pudo cargar el catálogo de sensores.')
     } finally {
-      setCargando(false)
+      if (!silencioso) setCargando(false)
     }
   }, [])
 
@@ -36,14 +36,15 @@ export function useCatalogoSensores() {
   ) => {
     if (editandoId === null) await crearCatalogoSensor(payload)
     else await actualizarCatalogoSensor(editandoId, payload)
-    await recargar()
+    await recargar(true)
+    toast.success(editandoId === null ? 'Sensor creado en el catálogo' : 'Sensor actualizado')
   }, [recargar])
 
   const alternar = useCallback(async (sensor: CatalogoSensor) => {
     try {
       if (sensor.activo) await desactivarCatalogoSensor(sensor.id)
       else await activarCatalogoSensor(sensor.id)
-      await recargar()
+      await recargar(true)
       toast.success(sensor.activo ? 'Sensor retirado del catálogo' : 'Sensor disponible otra vez')
     } catch (problema) {
       toast.error(mensajeDeError(problema, 'No se pudo cambiar el estado del sensor.'))

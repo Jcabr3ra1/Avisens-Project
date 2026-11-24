@@ -13,6 +13,7 @@ export type Movimiento = {
   titulo: string
   detalle: string
   fueraDeRango?: boolean
+  tieneFoto?: boolean
 }
 
 export type DiaMovimientos = { fecha: string; etiqueta: string; movimientos: Movimiento[] }
@@ -62,6 +63,7 @@ export function lineaDeTiempo(
       clave: `mortalidad-${m.id}`, tipo: 'mortalidad' as const, id: m.id, fecha: m.fecha.slice(0, 10),
       titulo: `Mortalidad · ${entero.format(m.cantidad_aves)} ${m.cantidad_aves === 1 ? 'ave' : 'aves'}`,
       detalle: m.causa_presuntiva || 'Sin causa registrada',
+      tieneFoto: Boolean(m.foto_mime_type),
     })),
     ...delLote(sanitarios).map((s) => ({
       clave: `sanitario-${s.id}`, tipo: 'sanitario' as const, id: s.id, fecha: s.fecha.slice(0, 10),

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import { mensajeDeError } from '@shared/utils/errores'
+import { validarCodigo, validarTextoSeguro } from '@shared/utils/validacion'
 import type { ActualizarSensorPayload, Sensor } from '../api/sensores'
 import type { DatosSensor } from '../model/sensor'
 
@@ -29,8 +30,14 @@ function FormularioSensor({ sensor, onGuardar, onCerrar }: Props) {
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()
-    if (!form.codigo.trim() || !form.tipo.trim() || !form.unidad_medida.trim()) {
-      setError('El código, el tipo y la unidad son obligatorios.')
+    const errCodigo = validarCodigo(form.codigo, 'El código del sensor', { max: 60 })
+    const errTipo = validarTextoSeguro(form.tipo, 'El tipo de sensor', { requerido: true, max: 40 })
+    const errUnidad = validarTextoSeguro(form.unidad_medida, 'La unidad de medida', { requerido: true, max: 20 })
+    const errModelo = validarTextoSeguro(form.modelo, 'El modelo', { max: 80 })
+    const errFab = validarTextoSeguro(form.fabricante, 'El fabricante', { max: 80 })
+    const problema = errCodigo ?? errTipo ?? errUnidad ?? errModelo ?? errFab
+    if (problema) {
+      setError(problema)
       return
     }
 

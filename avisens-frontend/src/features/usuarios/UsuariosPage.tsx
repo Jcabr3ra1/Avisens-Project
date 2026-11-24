@@ -1,33 +1,83 @@
 import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { getRol, type CrearUsuarioPayload, type Usuario } from '@shared/api'
 import { crearOrganizacion } from '@features/organizaciones/api/organizaciones'
 import { listarGalpones, type Galpon } from '@features/galpones/api/galpones'
 import { listarAsignacionesGalpon } from './api/asignacionesGalpon'
 import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
-import { IcPlus } from '@shared/ui/icons/icons'
+import { IcChevronRight, IcPlus, IcSearch, IcUsers } from '@shared/ui/icons/icons'
 import PantallaHija from '@shared/ui/PantallaHija/PantallaHija'
 import RecuperacionesDeUsuario from '@features/recuperaciones-password/components/RecuperacionesDeUsuario'
 import BarraUsuarios from './components/BarraUsuarios'
 import FormularioUsuario from './components/FormularioUsuario'
 import ModalAsignacionesGalpon from './components/ModalAsignacionesGalpon'
+import ModalRestablecerPassword from './components/ModalRestablecerPassword'
+import PanelUsuario from './components/PanelUsuario'
 import ResumenUsuarios from './components/ResumenUsuarios'
-import TablaUsuarios from './components/TablaUsuarios'
 import { useCatalogosUsuarios } from './hooks/useCatalogosUsuarios'
 import { useAsignacionesGalpon } from './hooks/useAsignacionesGalpon'
 import { useFiltroUsuarios } from './hooks/useFiltroUsuarios'
 import { useFormularioUsuario } from './hooks/useFormularioUsuario'
 import { useResumenUsuarios } from './hooks/useResumenUsuarios'
 import { useUsuarios } from './hooks/useUsuarios'
+import { siguienteUsuarioId } from './model/directorioUsuarios'
 import '@shared/ui/admin/AdminKit.css'
 import './UsuariosPage.css'
 
+type RolSeccion = {
+  rol: 'Administrador' | 'Propietario' | 'Operario'
+  titulo: string
+  subtitulo: string
+  botonCrear: string
+  tono: 'administrador' | 'propietario' | 'operario'
+}
+
+const SECCIONES_ROL: RolSeccion[] = [
+  {
+    rol: 'Administrador',
+    titulo: 'Administradores',
+    subtitulo: 'Gobierno global de la plataforma y soporte',
+    botonCrear: 'Nuevo administrador',
+    tono: 'administrador',
+  },
+  {
+    rol: 'Propietario',
+    titulo: 'Propietarios',
+    subtitulo: 'Titulares de empresas, granjas y finanzas',
+    botonCrear: 'Nuevo propietario',
+    tono: 'propietario',
+  },
+  {
+    rol: 'Operario',
+    titulo: 'Operarios',
+    subtitulo: 'Personal de campo asignado a galpones',
+    botonCrear: 'Nuevo operario',
+    tono: 'operario',
+  },
+]
+
+function iniciales(nombre: string): string {
+  return (
+    nombre
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((parte) => parte[0])
+      .join('')
+      .toUpperCase() || 'U'
+  )
+}
+
 function UsuariosPage() {
-  // Rol real: crear usuarios es una acción, no una etiqueta de navegación,
-  // así que no debe depender de la vista previa.
   const esPropietario = getRol() === 'Propietario'
   const esAdmin = getRol() === 'Administrador'
+  const [parametros, setParametros] = useSearchParams()
   const [usuarioRecuperaciones, setUsuarioRecuperaciones] = useState<Usuario | null>(null)
+  const [usuarioRestablecer, setUsuarioRestablecer] = useState<Usuario | null>(null)
+  const [panelMovilAbierto, setPanelMovilAbierto] = useState(false)
+  const buscadorRef = useRef<HTMLInputElement>(null)
+
   const {
     usuarios,
     cargando,
@@ -38,7 +88,9 @@ function UsuariosPage() {
     alternarActivo,
     eliminar,
   } = useUsuarios()
-  useRefetchOnFocus(recargar)
+
+  useRefetchOnFocus(() => { void recargar(true) })
+
   const catalogos = useCatalogosUsuarios(esPropietario)
   const {
     roles: rolesCatalogo,
@@ -57,6 +109,60 @@ function UsuariosPage() {
       void listarGalpones().then(setGalpones).catch(() => setGalpones([]))
     }
   }, [esPropietario])
+
+  useEffect(() => {
+    function atajoBuscar(evento: globalThis.KeyboardEvent) {
+      if (evento.key !== '/' || evento.metaKey || evento.ctrlKey || evento.altKey) return
+      const activo = document.activeElement
+      if (activo instanceof HTMLInputElement || activo instanceof HTMLTextAreaElement || activo instanceof HTMLSelectElement) return
+      evento.preventDefault()
+      buscadorRef.current?.focus()
+    }
+    window.addEventListener('keydown', atajoBuscar)
+    return () => window.removeEventListener('keydown', atajoBuscar)
+  }, [])
+
+  const seccionesVisibles = useMemo(() => {
+    const base = esPropietario
+      ? SECCIONES_ROL.filter((s) => s.rol === 'Operario')
+      : filtro.rolFiltro === 'todos'
+        ? SECCIONES_ROL
+        : SECCIONES_ROL.filter((s) => s.rol === filtro.rolFiltro)
+
+    return base
+      .map((seccion) => ({
+        ...seccion,
+        cuentas: filtro.visibles.filter((u) => u.rol.nombre === seccion.rol),
+      }))
+      .filter((seccion) => seccion.cuentas.length > 0 || filtro.rolFiltro === seccion.rol)
+  }, [esPropietario, filtro.rolFiltro, filtro.visibles])
+
+  const listaOrdenada = useMemo(
+    () => seccionesVisibles.flatMap((seccion) => seccion.cuentas),
+    [seccionesVisibles],
+  )
+  const idsVisibles = useMemo(() => listaOrdenada.map((u) => u.id), [listaOrdenada])
+  const idPedido = Number(parametros.get('usuario'))
+  const seleccionado = listaOrdenada.find((u) => u.id === idPedido) ?? listaOrdenada[0] ?? null
+  const hayFiltros = filtro.busqueda.trim() !== '' || filtro.estadoFiltro !== 'todos' || filtro.rolFiltro !== 'todos'
+
+  function seleccionar(id: number, abrirEnMovil = false) {
+    setParametros((actuales) => {
+      const siguientes = new URLSearchParams(actuales)
+      siguientes.set('usuario', String(id))
+      return siguientes
+    }, { replace: true })
+    if (abrirEnMovil && window.matchMedia('(max-width: 64rem)').matches) {
+      setPanelMovilAbierto(true)
+    }
+  }
+
+  function manejarTecladoLista(evento: KeyboardEvent<HTMLDivElement>) {
+    const siguienteId = siguienteUsuarioId(idsVisibles, seleccionado?.id ?? null, evento.key)
+    if (siguienteId === null) return
+    evento.preventDefault()
+    seleccionar(siguienteId, false)
+  }
 
   const guardarUsuario = useCallback(
     async (datos: CrearUsuarioPayload, editandoId: number | null) => {
@@ -79,11 +185,6 @@ function UsuariosPage() {
       const nombreOrgNueva = datos.organizacion_nombre?.trim() || undefined
       let organizacionId = datos.organizacion_id
 
-      // El backend solo auto-crea la organización cuando el rol es
-      // Propietario. Para un Operario dado de alta por el Administrador,
-      // si no eligió una organización existente sino que escribió un
-      // nombre nuevo, la creamos aquí primero y usamos su id — así el
-      // Admin no depende de que ya exista una organización de antes.
       if (rol?.nombre === 'Operario' && !organizacionId && nombreOrgNueva) {
         const nueva = await crearOrganizacion({ nombre: nombreOrgNueva })
         organizacionId = nueva.id
@@ -142,14 +243,17 @@ function UsuariosPage() {
   }
 
   async function confirmarEliminacion(usuario: Usuario) {
-    const confirmado = (await confirmarAccion({
+    const confirmado = await confirmarAccion({
       titulo: '¿Eliminar este usuario?',
       entidad: usuario.nombre_completo,
       descripcion: 'Esta acción no se puede deshacer.',
       textoConfirmar: 'Eliminar usuario',
       tono: 'peligro',
-    }))
-    if (confirmado) void eliminar(usuario.id)
+    })
+    if (confirmado) {
+      setPanelMovilAbierto(false)
+      void eliminar(usuario.id)
+    }
   }
 
   const tituloFormulario = formulario.modoEdicion
@@ -188,7 +292,9 @@ function UsuariosPage() {
         resumen={resumen}
         esPropietario={esPropietario}
         rolActivo={filtro.rolFiltro}
+        estadoActivo={filtro.estadoFiltro}
         onSeleccionarRol={filtro.setRolFiltro}
+        onSeleccionarEstado={filtro.setEstadoFiltro}
       />
 
       {(error || catalogosError) && (
@@ -203,34 +309,149 @@ function UsuariosPage() {
         </div>
       )}
 
-      <section className="usuarios-workspace" aria-label="Directorio de personas por rol">
+      {!cargando && usuarios.length > 0 && (
+        <BarraUsuarios
+          buscadorRef={buscadorRef}
+          busqueda={filtro.busqueda}
+          visibles={filtro.visibles.length}
+          total={usuarios.length}
+          esPropietario={esPropietario}
+          estadoFiltro={filtro.estadoFiltro}
+          hayFiltros={hayFiltros}
+          onBuscar={filtro.setBusqueda}
+          onCambiarEstado={filtro.setEstadoFiltro}
+          onLimpiar={filtro.limpiarFiltros}
+        />
+      )}
+
+      <div className="usr-cuerpo">
+        <div className="usr-bandeja">
+          {cargando ? (
+            <ul className="usr-lista" aria-hidden="true">
+              {[0, 1, 2, 3].map((indice) => <li key={indice} className="usr-tarjeta-esqueleto org-brilla" />)}
+            </ul>
+          ) : usuarios.length === 0 ? (
+            <div className="usuarios-vacio">
+              <IcUsers size={30} />
+              <p className="usuarios-vacio-titulo">No hay personas registradas.</p>
+              <p className="usuarios-vacio-sub">Crea la primera cuenta con el botón superior.</p>
+            </div>
+          ) : listaOrdenada.length === 0 ? (
+            <div className="usuarios-vacio">
+              <IcSearch size={26} />
+              <p className="usuarios-vacio-titulo">Sin coincidencias</p>
+              <p className="usuarios-vacio-sub">Ninguna cuenta coincide con la búsqueda o los filtros activos.</p>
+              {hayFiltros && (
+                <button type="button" className="adm-btn adm-btn--secundario" onClick={filtro.limpiarFiltros}>
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+          ) : (
+            <div
+              role="listbox"
+              aria-label="Directorio de personas"
+              tabIndex={0}
+              className="usr-listbox"
+              onKeyDown={manejarTecladoLista}
+            >
+              {seccionesVisibles.map((seccion) => (
+                <section key={seccion.rol} className="usr-seccion" aria-labelledby={`usr-grupo-${seccion.rol}`}>
+                  <header className="usr-seccion-cabecera">
+                    <div>
+                      <h2 id={`usr-grupo-${seccion.rol}`}>
+                        <span className={`usuarios-rol-dot usuarios-rol-dot--${seccion.tono}`} aria-hidden="true" />
+                        {seccion.titulo}
+                        <span className="usr-seccion-conteo">{seccion.cuentas.length}</span>
+                      </h2>
+                      <p>{seccion.subtitulo}</p>
+                    </div>
+                    {!esPropietario && (
+                      <button
+                        type="button"
+                        className="usr-seccion-agregar"
+                        onClick={() => void abrirCrearUsuario(seccion.rol)}
+                      >
+                        <IcPlus size={14} aria-hidden="true" />
+                        <span>{seccion.botonCrear}</span>
+                      </button>
+                    )}
+                  </header>
+
+                  {seccion.cuentas.length === 0 ? (
+                    <p className="usr-seccion-vacio">No hay cuentas en este grupo.</p>
+                  ) : (
+                    <ul className="usr-lista">
+                      {seccion.cuentas.map((usuario) => {
+                        const esSeleccionado = usuario.id === seleccionado?.id
+                        const rolClase = usuario.rol.nombre.toLowerCase()
+                        const secundario = [
+                          `@${usuario.username}`,
+                          usuario.organizacion?.nombre,
+                          usuario.email || usuario.telefono,
+                        ].filter(Boolean).join(' · ')
+
+                        return (
+                          <li
+                            key={usuario.id}
+                            className={`usr-item${esSeleccionado ? ' is-seleccionado' : ''}${usuario.activo ? '' : ' is-inactivo'}`}
+                            role="option"
+                            aria-selected={esSeleccionado}
+                          >
+                            <button
+                              type="button"
+                              className="usr-tarjeta"
+                              onClick={() => seleccionar(usuario.id, true)}
+                            >
+                              <span className={`usuarios-avatar usuarios-avatar--${rolClase}`} aria-hidden="true">
+                                {iniciales(usuario.nombre_completo)}
+                              </span>
+
+                              <span className="usr-tarjeta-info">
+                                <span className="usr-tarjeta-linea">
+                                  <strong className="usr-tarjeta-nombre">{usuario.nombre_completo}</strong>
+                                  <span className={`usr-estado-punto${usuario.activo ? ' is-activo' : ''}`} title={usuario.activo ? 'Activo' : 'Inactivo'}>
+                                    {usuario.activo ? 'Activo' : 'Inactivo'}
+                                  </span>
+                                </span>
+                                <span className="usr-tarjeta-meta">{secundario}</span>
+                              </span>
+
+                              <span className="usr-tarjeta-lado">
+                                <span className="usr-tarjeta-cedula">{usuario.cedula}</span>
+                                <IcChevronRight size={16} className="usr-tarjeta-flecha" aria-hidden="true" />
+                              </span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </section>
+              ))}
+            </div>
+          )}
+        </div>
+
         {!cargando && usuarios.length > 0 && (
-          <BarraUsuarios
-            busqueda={filtro.busqueda}
-            visibles={filtro.visibles.length}
-            total={usuarios.length}
-            esPropietario={esPropietario}
-            rolFiltro={filtro.rolFiltro}
-            resumen={resumen}
-            onBuscar={filtro.setBusqueda}
-            onCambiarRol={filtro.setRolFiltro}
+          <PanelUsuario
+            usuario={seleccionado}
+            esAdmin={esAdmin}
+            abiertoMovil={panelMovilAbierto && seleccionado !== null}
+            onCerrarMovil={() => setPanelMovilAbierto(false)}
+            onAlternarActivo={(usuario) => void alternarActivo(usuario)}
+            onEditar={(usuario) => void abrirEditarUsuario(usuario)}
+            onGestionarAsignaciones={(usuario) => void asignaciones.abrir(usuario)}
+            onRestablecerPassword={
+              esAdmin || esPropietario ? setUsuarioRestablecer : undefined
+            }
+            onRecuperarAcceso={
+              esAdmin || esPropietario ? setUsuarioRecuperaciones : undefined
+            }
+            onEliminar={confirmarEliminacion}
           />
         )}
-        <TablaUsuarios
-          usuarios={usuarios}
-          visibles={filtro.visibles}
-          cargando={cargando}
-          busqueda={filtro.busqueda}
-          esPropietario={esPropietario}
-          rolFiltro={filtro.rolFiltro}
-          onCrearPorRol={(nombreRol) => void abrirCrearUsuario(nombreRol)}
-          onAlternarActivo={(usuario) => void alternarActivo(usuario)}
-          onEditar={(usuario) => void abrirEditarUsuario(usuario)}
-          onGestionarAsignaciones={(usuario) => void asignaciones.abrir(usuario)}
-          onEliminar={confirmarEliminacion}
-          onRecuperarAcceso={esAdmin ? setUsuarioRecuperaciones : undefined}
-        />
-      </section>
+      </div>
 
       {formulario.abierto && (
         <FormularioUsuario
@@ -275,6 +496,13 @@ function UsuariosPage() {
         >
           <RecuperacionesDeUsuario usuario={usuarioRecuperaciones} />
         </PantallaHija>
+      )}
+
+      {usuarioRestablecer && (
+        <ModalRestablecerPassword
+          usuario={usuarioRestablecer}
+          onCerrar={() => setUsuarioRestablecer(null)}
+        />
       )}
     </div>
   )

@@ -20,6 +20,7 @@ export type GalponConLotes = GalponMonitoreoVista & {
   estadoOperativo: EstadoOperativo
   alertasAbiertas: number
   loteEnCurso: Lote | null
+  lotesEnCurso: Lote[]
   lotes: Lote[]
 }
 
@@ -112,11 +113,13 @@ export function useEstructuraGranjas() {
             (a, b) =>
               new Date(b.fecha_ingreso).getTime() - new Date(a.fecha_ingreso).getTime(),
           )
+          const activos = suyos.filter((lote) => lote.estado === 'activo')
           return {
             ...galpon,
             estadoOperativo: estadoOperativoDeGalpon(galpon.activo, galpon.sensores),
             alertasAbiertas: abiertasPorGalpon.get(galpon.id) ?? 0,
-            loteEnCurso: suyos.find((lote) => lote.estado === 'activo') ?? null,
+            loteEnCurso: activos[0] ?? null,
+            lotesEnCurso: activos,
             lotes: suyos,
           }
         })
@@ -124,9 +127,10 @@ export function useEstructuraGranjas() {
       return {
         granja,
         galpones,
-        lotesActivos: galpones.filter((galpon) => galpon.loteEnCurso !== null).length,
+        lotesActivos: galpones.reduce((total, galpon) => total + galpon.lotesEnCurso.length, 0),
         avesAlojadas: galpones.reduce(
-          (total, galpon) => total + (galpon.loteEnCurso?.cantidad_inicial ?? 0),
+          (total, galpon) =>
+            total + galpon.lotesEnCurso.reduce((suma, lote) => suma + lote.cantidad_inicial, 0),
           0,
         ),
         alertasAbiertas: galpones.reduce((total, galpon) => total + galpon.alertasAbiertas, 0),

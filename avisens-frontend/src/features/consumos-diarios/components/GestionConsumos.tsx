@@ -3,6 +3,8 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { getRol } from '@shared/api'
 import { permisosDeRegistro } from '@shared/auth/permisos'
+import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
+import { IcPlus } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import FormularioConsumo from './FormularioConsumo'
 import ResumenConsumos from './ResumenConsumos'
@@ -15,6 +17,7 @@ import {
   type CrearConsumoDiarioPayload,
   type FormularioConsumo as DatosFormularioConsumo,
 } from '../model/consumoDiario'
+import '@shared/ui/admin/AdminKit.css'
 import '../ConsumosDiariosPage.css'
 
 type Props = {
@@ -154,13 +157,19 @@ function GestionConsumos({ loteFijo = null, completo = false }: Props) {
   )
   if (completo)
     return (
-      <div className="page-container cd-page">
-        <header className="cd-cabecera">
-          <ResumenConsumos consumos={gestion.consumos} />
-          <button className="cd-primario" type="button" onClick={abrirCrear}>
-            + Registrar consumo
-          </button>
-        </header>
+      <div className="page-container adm-page cd-page">
+        <CabeceraAdmin
+          eyebrow="Producción diaria"
+          titulo="Consumos diarios"
+          subtitulo="Registra alimento y agua para seguir el bienestar de cada lote."
+          acciones={(
+            <button className="adm-btn adm-btn--primario" type="button" onClick={abrirCrear}>
+              <IcPlus size={15} aria-hidden="true" />
+              Registrar consumo
+            </button>
+          )}
+        />
+        <ResumenConsumos consumos={gestion.consumos} />
         {alertaError}
         <section className="cd-listado" aria-label="Historial de consumos">
           <div className="cd-barra">

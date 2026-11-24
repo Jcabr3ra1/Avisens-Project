@@ -78,6 +78,7 @@ export class RiesgoCalorService {
     const [lote, interior] = await Promise.all([
       this.prisma.lote.findFirst({
         where: { galpon_id: galponId, estado: 'activo' },
+        orderBy: { fecha_ingreso: 'desc' },
         select: { codigo: true, fecha_ingreso: true },
       }),
       this.lecturaInterior(galponId),

@@ -11,13 +11,15 @@ import {
 } from '@features/sensores/api/sensores'
 import { listarCatalogoSensores, type CatalogoSensor } from '@features/sensores/api/catalogoSensores'
 import { iconoSensor } from '@shared/ui/sensorIcon'
-import { IcCheck, IcChevronDown, IcPlus, IcTrash } from '@shared/ui/icons/icons'
+import { IcPlus, IcTrash } from '@shared/ui/icons/icons'
 import './MonitoreoPage.css'
 import './AsignarSensores.css'
 import ConexionDhtSensor, { OpcionesGpioDht } from './ConexionDhtSensor'
 import { esVariableDht } from './conexionDht'
 import RelesDelGalpon from '@features/sensores/components/RelesDelGalpon'
 import { esSensorRele } from '@features/sensores/model/reles'
+
+type SeccionConfig = 'controladores' | 'sensores' | 'reles'
 
 type SensorPendiente = {
   clave: number
@@ -44,7 +46,7 @@ const UNIDAD_POR_TIPO: Record<string, string> = {
 }
 
 function opcionesDeSensores(catalogo: CatalogoSensor[]): OpcionCatalogoSensor[] {
-  return catalogo.flatMap(item => {
+  return catalogo.flatMap((item) => {
     const tipo = item.tipo_sensor.trim().toLowerCase()
     if (tipo === 'nodo_esp32') return []
     if (tipo === 'temperatura_humedad') {
@@ -77,8 +79,8 @@ function AsignarSensores({
   const [dispositivos, setDispositivos] = useState<Dispositivo[]>([])
   const [sensores, setSensores] = useState<Sensor[]>([])
   const [revision, setRevision] = useState(0)
-  const [controladoresAbiertos, setControladoresAbiertos] = useState(false)
-  const [relesAbiertos, setRelesAbiertos] = useState(false)
+  const [seccionManual, setSeccionManual] = useState<SeccionConfig | null>(null)
+  const [verDesactivados, setVerDesactivados] = useState(false)
   const [pendientes, setPendientes] = useState<SensorPendiente[]>([])
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
@@ -101,14 +103,11 @@ function AsignarSensores({
     Promise.all([listarCatalogoSensores(), listarDispositivos(), listarSensores()])
       .then(([elementos, listaDispositivos, listaSensores]) => {
         if (!vigente) return
-        setCatalogo(elementos.filter(item => item.activo))
+        setCatalogo(elementos.filter((item) => item.activo))
         setDispositivos(listaDispositivos)
-        if (!listaDispositivos.some(dispositivo => dispositivo.galpon.id === galponId && dispositivo.activo)) {
-          setControladoresAbiertos(true)
-        }
-        setSensores(listaSensores.filter(sensor => sensor.galpon.id === galponId))
+        setSensores(listaSensores.filter((sensor) => sensor.galpon.id === galponId))
       })
-      .catch(problema => {
+      .catch((problema) => {
         if (!vigente) return
         setDispositivos([])
         setErrorCarga(mensajeDeError(problema, 'No se pudieron cargar el catálogo, los controladores y los sensores.'))
@@ -121,20 +120,25 @@ function AsignarSensores({
     setPendientes([])
     setMensaje('')
     setError('')
+    setSeccionManual(null)
+    setVerDesactivados(false)
   }, [galponId])
 
-  const disponibles = dispositivos.filter(dispositivo => dispositivo.galpon.id === galponId && dispositivo.activo)
+  const disponibles = dispositivos.filter((dispositivo) => dispositivo.galpon.id === galponId && dispositivo.activo)
+  const seccion: SeccionConfig = seccionManual ?? (disponibles.length > 0 ? 'sensores' : 'controladores')
+
   function actualizarControladores() {
-    setRevision(actual => actual + 1)
+    setRevision((actual) => actual + 1)
     void recargar()
   }
+
   function agregar(opcion: OpcionCatalogoSensor) {
-    setPendientes(actuales => [...actuales, {
+    setPendientes((actuales) => [...actuales, {
       clave: siguienteClave.current++,
       tipo: opcion.tipo,
       nombre: opcion.nombre,
       unidad: opcion.unidad,
-      dispositivoId: 0,
+      dispositivoId: disponibles.length === 1 ? disponibles[0].id : 0,
       canal: '',
     }])
     setMensaje('')
@@ -142,13 +146,11 @@ function AsignarSensores({
   }
 
   function editarCanal(clave: number, canal: string) {
-    setPendientes(actuales => actuales.map(item => item.clave === clave ? { ...item, canal } : item))
+    setPendientes((actuales) => actuales.map((item) => (item.clave === clave ? { ...item, canal } : item)))
   }
 
   function editar(clave: number, dispositivoId: number) {
-    setPendientes(actuales => actuales.map(item => item.clave === clave
-      ? { ...item, dispositivoId }
-      : item))
+    setPendientes((actuales) => actuales.map((item) => (item.clave === clave ? { ...item, dispositivoId } : item)))
   }
 
   async function cambiarSensor(sensor: Sensor, accion: 'activar' | 'desactivar' | 'eliminar') {
@@ -192,7 +194,7 @@ function AsignarSensores({
   }
 
   async function registrar() {
-    if (guardando || cargando || pendientes.length === 0 || pendientes.some(item => !disponibles.some(d => d.id === item.dispositivoId) || (esVariableDht(item.tipo) && !item.canal))) return
+    if (guardando || cargando || pendientes.length === 0 || pendientes.some((item) => !disponibles.some((d) => d.id === item.dispositivoId) || (esVariableDht(item.tipo) && !item.canal))) return
     setGuardando(true)
     setError('')
     setMensaje('')
@@ -213,258 +215,311 @@ function AsignarSensores({
         codigosCreados.push(creado.codigo)
       }
       setPendientes([])
-      setMensaje(`Se registraron ${creados} sensor${creados === 1 ? '' : 'es'} en ${galponNombre}. El controlador con firmware compatible consultará las conexiones automáticamente. Seriales: ${codigosCreados.join(', ')}.`)
+      setMensaje(`Se registraron ${creados} sensor${creados === 1 ? '' : 'es'} en ${galponNombre}. Seriales: ${codigosCreados.join(', ')}.`)
       await recargar()
     } catch (problema) {
-      setPendientes(actuales => actuales.filter(item => !clavesCreadas.includes(item.clave)))
+      setPendientes((actuales) => actuales.filter((item) => !clavesCreadas.includes(item.clave)))
       setError(`${creados > 0 ? `Se registraron ${creados}; ` : ''}${mensajeDeError(problema, 'No se pudo completar el registro.')}`)
       if (codigosCreados.length > 0) {
         setMensaje(`Sensores ya registrados: ${codigosCreados.join(', ')}.`)
       }
       if (creados > 0) await recargar()
     } finally {
-      if (creados > 0) setRevision(actual => actual + 1)
+      if (creados > 0) setRevision((actual) => actual + 1)
       setGuardando(false)
     }
   }
 
   function etiquetaTipo(tipo: string) {
-    return opciones.find(opcion => opcion.tipo === tipo)?.nombre ?? tipo.replace(/_/g, ' ')
+    return opciones.find((opcion) => opcion.tipo === tipo)?.nombre ?? tipo.replace(/_/g, ' ')
   }
 
   if (!puedeRegistrar) return null
 
   const reles = sensores.filter(esSensorRele)
-  // Listos = cada relé tiene canal: el firmware nuevo puede controlarlos.
-  const relesListos = reles.length > 0 && reles.every(sensor => sensor.canal)
-  const activos = sensores.filter(sensor => sensor.estado !== 'inactivo')
-  const desactivados = sensores.filter(sensor => sensor.estado === 'inactivo')
-  const conCanal = activos.filter(sensor => sensor.canal).length
-  const pasoListo = [disponibles.length > 0, activos.length > 0, activos.length > 0 && conCanal === activos.length]
+  const sensoresMedicion = sensores.filter((sensor) => !esSensorRele(sensor))
+  const activos = sensoresMedicion.filter((sensor) => sensor.estado !== 'inactivo')
+  const desactivados = sensoresMedicion.filter((sensor) => sensor.estado === 'inactivo')
 
-  function tablaSensores(lista: Sensor[], etiqueta: string) {
+  function tarjetaSensor(sensor: Sensor) {
+    const inactivo = sensor.estado === 'inactivo'
     return (
-      <div className="cs-tabla-scroll">
-        <table className="cs-tabla" aria-label={etiqueta}>
-          <thead>
-            <tr>
-              <th>Sensor</th>
-              <th>Serial</th>
-              <th>Controlador</th>
-              <th>Conexión</th>
-              <th aria-label="Acciones" />
-            </tr>
-          </thead>
-          <tbody>
-            {lista.map(sensor => (
-              <tr key={sensor.id} className={sensor.estado === 'inactivo' ? 'is-inactivo' : undefined} aria-busy={sensorOcupado === sensor.id}>
-                <td>
-                  <span className="cs-sensor">
-                    <span className="cs-opcion-icono" aria-hidden="true">{iconoSensor(sensor.tipo, 18)}</span>
-                    <span className="cs-opcion-texto">
-                      <strong>{etiquetaTipo(sensor.tipo)}</strong>
-                      <small>
-                        {sensor.unidad_medida} · <span className={`cs-sensor-estado cs-sensor-estado--${sensor.estado}`}>{sensor.estado === 'activo' ? 'Activo' : sensor.estado === 'inactivo' ? 'Inactivo' : sensor.estado}</span>
-                      </small>
-                    </span>
-                  </span>
-                </td>
-                <td><code className="cs-codigo">{sensor.codigo}</code></td>
-                <td><code className="cs-codigo">{sensor.dispositivo.codigo_topic}</code></td>
-                <td>
-                  {sensor.estado === 'inactivo' ? (
-                    <span className="cs-nota cs-nota--celda">{sensor.canal ?? 'Sin conexión'}</span>
-                  ) : esVariableDht(sensor.tipo) ? (
-                    <ConexionDhtSensor key={`${sensor.id}-${sensor.canal}`} sensor={sensor} alGuardar={() => {
-                      setMensaje(`Conexión de ${sensor.codigo} guardada. El controlador la consultará automáticamente.`)
-                      actualizarControladores()
-                    }} />
-                  ) : <span className="cs-nota cs-nota--celda">{sensor.canal ?? 'Lector por serial'}</span>}
-                </td>
-                <td className="cs-celda-acciones">
-                  <span className="cs-acciones">
-                    <button
-                      type="button"
-                      className="cs-accion"
-                      disabled={sensorOcupado !== null}
-                      onClick={() => void cambiarSensor(sensor, sensor.estado === 'inactivo' ? 'activar' : 'desactivar')}
-                    >
-                      {sensor.estado === 'inactivo' ? 'Activar' : 'Desactivar'}
-                    </button>
-                    <button
-                      type="button"
-                      className="cs-accion cs-accion--peligro"
-                      disabled={sensorOcupado !== null}
-                      onClick={() => void cambiarSensor(sensor, 'eliminar')}
-                      aria-label={`Eliminar el sensor ${sensor.codigo}`}
-                      title="Eliminar sensor"
-                    >
-                      <IcTrash size={15} aria-hidden="true" />
-                    </button>
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <li
+        key={sensor.id}
+        className={`cs-sensor-card${inactivo ? ' is-inactivo' : ''}`}
+        aria-busy={sensorOcupado === sensor.id}
+      >
+        <div className="cs-sensor-card-top">
+          <span className="cs-opcion-icono" aria-hidden="true">{iconoSensor(sensor.tipo, 18)}</span>
+          <div className="cs-sensor-card-info">
+            <div className="cs-sensor-card-linea">
+              <strong>{etiquetaTipo(sensor.tipo)}</strong>
+              <span className={`cs-sensor-estado cs-sensor-estado--${sensor.estado}`}>
+                {sensor.estado === 'activo' ? 'Activo' : inactivo ? 'Inactivo' : sensor.estado}
+              </span>
+            </div>
+            <div className="cs-sensor-card-codigos">
+              <code className="cs-codigo">{sensor.codigo}</code>
+              <code className="cs-codigo">{sensor.dispositivo.codigo_topic}</code>
+              <span className="cs-sensor-unidad">{sensor.unidad_medida}</span>
+            </div>
+          </div>
+          <div className="cs-acciones">
+            <button
+              type="button"
+              className="cs-accion"
+              disabled={sensorOcupado !== null}
+              onClick={() => void cambiarSensor(sensor, inactivo ? 'activar' : 'desactivar')}
+            >
+              {inactivo ? 'Activar' : 'Desactivar'}
+            </button>
+            <button
+              type="button"
+              className="cs-accion cs-accion--peligro"
+              disabled={sensorOcupado !== null}
+              onClick={() => void cambiarSensor(sensor, 'eliminar')}
+              aria-label={`Eliminar el sensor ${sensor.codigo}`}
+              title="Eliminar sensor"
+            >
+              <IcTrash size={15} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <div className="cs-sensor-card-conexion">
+          {inactivo ? (
+            <span className="cs-nota">Conexión: {sensor.canal ?? 'Sin asignar'}</span>
+          ) : esVariableDht(sensor.tipo) ? (
+            <ConexionDhtSensor
+              key={`${sensor.id}-${sensor.canal}`}
+              sensor={sensor}
+              alGuardar={() => {
+                setMensaje(`Conexión de ${sensor.codigo} guardada.`)
+                actualizarControladores()
+              }}
+            />
+          ) : (
+            <span className="cs-nota">Conexión: {sensor.canal ?? 'Lector por serial'}</span>
+          )}
+        </div>
+      </li>
     )
   }
 
   return (
-    <section className="cs" aria-labelledby={`cs-titulo-${galponId}`}>
-      <header className="cs-cabecera">
-        <div>
-          <h3 id={`cs-titulo-${galponId}`}>Controladores y sensores</h3>
-          <p>Conecta el ESP32 del galpón <strong>{galponCodigo}</strong> y elige qué variables medirá.</p>
-        </div>
-        <div className="cs-resumen">
-          <span className={`cs-chip${disponibles.length ? ' cs-chip--ok' : ''}`}>{disponibles.length === 1 ? '1 controlador activo' : `${disponibles.length} controladores activos`}</span>
-          <span className={`cs-chip${activos.length ? ' cs-chip--ok' : ''}`}>{activos.length === 1 ? '1 sensor activo' : `${activos.length} sensores activos`}</span>
-        </div>
-      </header>
+    <section className="cs" aria-label={`Configuración del galpón ${galponNombre}`}>
+      <div className="cs-subtabs" role="tablist" aria-label="Secciones de configuración del galpón">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={seccion === 'controladores'}
+          className={`cs-subtab${seccion === 'controladores' ? ' is-activa' : ''}`}
+          onClick={() => setSeccionManual('controladores')}
+        >
+          Controladores ESP32
+          <span>{disponibles.length}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={seccion === 'sensores'}
+          className={`cs-subtab${seccion === 'sensores' ? ' is-activa' : ''}`}
+          onClick={() => setSeccionManual('sensores')}
+        >
+          Sensores
+          <span>{activos.length}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={seccion === 'reles'}
+          className={`cs-subtab${seccion === 'reles' ? ' is-activa' : ''}`}
+          onClick={() => setSeccionManual('reles')}
+        >
+          Relés K1-K4
+          <span>{reles.length}</span>
+        </button>
+      </div>
 
-      <ol className="cs-pasos" aria-label="Pasos para conectar el galpón">
-        {['Controlador', 'Variables', 'Conexión'].map((paso, indice) => (
-          <li key={paso} className={pasoListo[indice] ? 'is-listo' : ''}>
-            <span className="cs-paso-numero" aria-hidden="true">{pasoListo[indice] ? <IcCheck size={13} /> : indice + 1}</span>
-            <span className="cs-paso-texto">
-              <small>Paso {indice + 1}</small>
-              <strong>{paso}</strong>
-            </span>
-            <span className="cs-paso-estado">{pasoListo[indice] ? 'Listo' : 'Pendiente'}</span>
-          </li>
-        ))}
-      </ol>
-
-      <details className="cs-bloque" open={controladoresAbiertos} onToggle={evento => setControladoresAbiertos(evento.currentTarget.open)}>
-        <summary className="cs-bloque-cabecera">
-          <span className="cs-paso-numero" aria-hidden="true">1</span>
-          <span className="cs-bloque-titulo">
-            <strong>Controlador ESP32</strong>
-            <small>El código y el token de conexión se generan solos para este galpón.</small>
-          </span>
-          <span className={`cs-estado${disponibles.length ? ' is-listo' : ''}`}>{disponibles.length ? 'Listo' : 'Pendiente'}</span>
-          <IcChevronDown size={16} aria-hidden="true" className="cs-flecha" />
-        </summary>
-        <div className="cs-bloque-cuerpo">
+      {seccion === 'controladores' && (
+        <div className="cs-panel">
           <DispositivosDeGalpon
             key={galponId}
             galpon={{ id: galponId, codigo: galponCodigo, nombre: galponNombre }}
             onCambio={actualizarControladores}
           />
         </div>
-      </details>
+      )}
 
-      <div className="cs-bloque">
-        <div className="cs-bloque-cabecera cs-bloque-cabecera--fija">
-          <span className="cs-paso-numero" aria-hidden="true">2</span>
-          <span className="cs-bloque-titulo">
-            <strong>Variables a medir</strong>
-            <small>Toca una variable para agregarla. Puedes agregar varias unidades.</small>
-          </span>
-        </div>
-        <div className="cs-bloque-cuerpo">
-          {cargando ? <p className="cs-nota" role="status">Cargando catálogo y controladores…</p> : errorCarga ? (
-            <div className="cs-aviso cs-aviso--error" role="alert">
-              <span>{errorCarga}</span>
-              <button type="button" className="cs-boton" onClick={() => setRevision(actual => actual + 1)}>Reintentar</button>
-            </div>
-          ) : (
-            <>
-              {disponibles.length === 0 && (
-                <p className="cs-aviso" role="status">Primero registra o activa un controlador ESP32 (paso 1). Después podrás guardar sensores.</p>
-              )}
-              {opciones.length > 0 ? (
-                <div className="cs-catalogo" role="group" aria-label="Tipos de sensores disponibles">
-                  {opciones.map(opcion => {
-                    const elegidos = pendientes.filter(item => item.tipo === opcion.tipo).length
-                    return (
-                      <button
-                        className={`cs-opcion${elegidos ? ' is-elegida' : ''}`}
-                        type="button"
-                        key={`${opcion.catalogo.id}-${opcion.tipo}`}
-                        onClick={() => agregar(opcion)}
-                        disabled={guardando}
-                        aria-label={`Agregar sensor de ${opcion.nombre}`}
-                      >
-                        <span className="cs-opcion-icono" aria-hidden="true">{iconoSensor(opcion.tipo, 22)}</span>
-                        <span className="cs-opcion-texto">
-                          <strong>{opcion.nombre}</strong>
-                          <small>{opcion.catalogo.descripcion || 'Variable ambiental del galpón'}</small>
-                        </span>
-                        <span className="cs-opcion-lado">
-                          <span className="cs-opcion-unidad">{opcion.unidad}</span>
-                          <span className="cs-opcion-mas" aria-hidden="true">{elegidos ? elegidos : <IcPlus size={14} />}</span>
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className="cs-nota">No hay tipos de sensores activos en el catálogo.</p>
-              )}
-
-              {pendientes.length > 0 && (
-                <div className="cs-pendientes">
-                  <div className="cs-pendientes-cabecera">
-                    <strong>Por registrar ({pendientes.length})</strong>
-                    <small>Elige el controlador y, para temperatura y humedad, el GPIO del DHT22. Las dos variables del mismo DHT22 comparten GPIO.</small>
-                  </div>
-                  {pendientes.map(item => (
-                    <div className="cs-pendiente" key={item.clave}>
-                      <span className="cs-opcion-icono" aria-hidden="true">{iconoSensor(item.tipo, 20)}</span>
-                      <span className="cs-opcion-texto">
-                        <strong>{item.nombre}</strong>
-                        <small>{item.unidad} · serial al guardar</small>
-                      </span>
-                      <label className="cs-campo">
-                        <span>Controlador</span>
-                        <select disabled={guardando} value={item.dispositivoId || ''} onChange={e => editar(item.clave, Number(e.target.value))} required>
-                          <option value="" disabled>{disponibles.length ? 'Elige un controlador' : 'Sin ESP32 activo'}</option>
-                          {disponibles.map(d => <option key={d.id} value={d.id}>{d.codigo_topic}</option>)}
-                        </select>
-                      </label>
-                      {esVariableDht(item.tipo) ? (
-                        <label className="cs-campo">
-                          <span>GPIO del DHT22</span>
-                          <select disabled={guardando} value={item.canal} onChange={evento => editarCanal(item.clave, evento.target.value)} required>
-                            <OpcionesGpioDht />
-                          </select>
-                        </label>
-                      ) : <span className="cs-nota cs-nota--celda">Necesita un lector compatible en el firmware.</span>}
-                      <button type="button" className="cs-boton cs-boton--quitar" disabled={guardando} onClick={() => setPendientes(actuales => actuales.filter(p => p.clave !== item.clave))} aria-label={`Quitar sensor de ${item.nombre}`}>Quitar</button>
-                    </div>
-                  ))}
-                  <div className="cs-pendientes-pie">
-                    <button type="button" className="cs-boton cs-boton--principal" disabled={guardando || pendientes.some(p => !disponibles.some(d => d.id === p.dispositivoId) || (esVariableDht(p.tipo) && !p.canal))} onClick={() => void registrar()}>
-                      {guardando ? 'Registrando…' : `Registrar ${pendientes.length} sensor${pendientes.length === 1 ? '' : 'es'}`}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+      {seccion === 'sensores' && (
+        <div className="cs-panel cs-panel--stack">
           {error && <p className="cs-aviso cs-aviso--error" role="alert">{error}</p>}
           {mensaje && <p className="cs-aviso cs-aviso--ok" role="status">{mensaje}</p>}
-        </div>
-      </div>
 
-      <details className="cs-bloque" open={relesAbiertos} onToggle={evento => setRelesAbiertos(evento.currentTarget.open)}>
-        <summary className="cs-bloque-cabecera">
-          <span className="cs-paso-numero" aria-hidden="true">K</span>
-          <span className="cs-bloque-titulo">
-            <strong>Actuadores (relés K1-K4){!cargando && !errorCarga ? ` (${reles.length})` : ''}</strong>
-            <small>Regístralos por ESP32 con un clic y edita su ficha. Se controlan desde Monitoreo → Actuadores.</small>
-          </span>
-          <span className={`cs-estado${relesListos ? ' is-listo' : ''}`}>
-            {reles.length === 0 ? 'Sin relés' : relesListos ? 'Por canal' : 'Revisar'}
-          </span>
-          <IcChevronDown size={16} aria-hidden="true" className="cs-flecha" />
-        </summary>
-        <div className="cs-bloque-cuerpo">
-          {cargando ? <p className="cs-nota" role="status">Cargando actuadores…</p> : errorCarga ? (
-            <p className="cs-aviso cs-aviso--error">La lista de actuadores no está disponible. Vuelve a cargar los datos.</p>
+          <div className="cs-seccion">
+            <header className="cs-seccion-head">
+              <div>
+                <h4>Agregar variables a medir</h4>
+                <p>Toca una variable del catálogo para agregarla al galpón.</p>
+              </div>
+            </header>
+
+            {cargando ? (
+              <p className="cs-nota" role="status">Cargando catálogo y controladores…</p>
+            ) : errorCarga ? (
+              <div className="cs-aviso cs-aviso--error" role="alert">
+                <span>{errorCarga}</span>
+                <button type="button" className="cs-boton" onClick={() => setRevision((actual) => actual + 1)}>Reintentar</button>
+              </div>
+            ) : (
+              <>
+                {disponibles.length === 0 && (
+                  <div className="cs-aviso" role="status">
+                    <span>Primero registra o activa un controlador ESP32 para poder guardar sensores.</span>
+                    <button type="button" className="cs-boton" onClick={() => setSeccionManual('controladores')}>
+                      Ir a Controladores
+                    </button>
+                  </div>
+                )}
+
+                {opciones.length > 0 ? (
+                  <div className="cs-catalogo" role="group" aria-label="Tipos de sensores disponibles">
+                    {opciones.map((opcion) => {
+                      const elegidos = pendientes.filter((item) => item.tipo === opcion.tipo).length
+                      return (
+                        <button
+                          className={`cs-opcion${elegidos ? ' is-elegida' : ''}`}
+                          type="button"
+                          key={`${opcion.catalogo.id}-${opcion.tipo}`}
+                          onClick={() => agregar(opcion)}
+                          disabled={guardando}
+                          aria-label={`Agregar sensor de ${opcion.nombre}`}
+                        >
+                          <span className="cs-opcion-icono" aria-hidden="true">{iconoSensor(opcion.tipo, 20)}</span>
+                          <span className="cs-opcion-texto">
+                            <strong>{opcion.nombre}</strong>
+                            <small>{opcion.catalogo.descripcion || 'Variable ambiental del galpón'}</small>
+                          </span>
+                          <span className="cs-opcion-lado">
+                            <span className="cs-opcion-unidad">{opcion.unidad}</span>
+                            <span className="cs-opcion-mas" aria-hidden="true">{elegidos ? elegidos : <IcPlus size={14} />}</span>
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="cs-nota">No hay tipos de sensores activos en el catálogo.</p>
+                )}
+
+                {pendientes.length > 0 && (
+                  <div className="cs-pendientes">
+                    <div className="cs-pendientes-cabecera">
+                      <strong>Por registrar ({pendientes.length})</strong>
+                      <small>Elige el controlador y, para temperatura o humedad, el GPIO del DHT22.</small>
+                    </div>
+                    {pendientes.map((item) => (
+                      <div className="cs-pendiente" key={item.clave}>
+                        <div className="cs-pendiente-top">
+                          <span className="cs-opcion-icono" aria-hidden="true">{iconoSensor(item.tipo, 18)}</span>
+                          <span className="cs-opcion-texto">
+                            <strong>{item.nombre}</strong>
+                            <small>{item.unidad} · serial automático al guardar</small>
+                          </span>
+                          <button
+                            type="button"
+                            className="cs-boton cs-boton--quitar"
+                            disabled={guardando}
+                            onClick={() => setPendientes((actuales) => actuales.filter((p) => p.clave !== item.clave))}
+                            aria-label={`Quitar sensor de ${item.nombre}`}
+                          >
+                            Quitar
+                          </button>
+                        </div>
+
+                        <div className="cs-pendiente-campos">
+                          <label className="cs-campo">
+                            <span>Controlador</span>
+                            <select disabled={guardando} value={item.dispositivoId || ''} onChange={(e) => editar(item.clave, Number(e.target.value))} required>
+                              <option value="" disabled>{disponibles.length ? 'Elige un controlador' : 'Sin ESP32 activo'}</option>
+                              {disponibles.map((d) => <option key={d.id} value={d.id}>{d.codigo_topic}</option>)}
+                            </select>
+                          </label>
+                          {esVariableDht(item.tipo) ? (
+                            <label className="cs-campo">
+                              <span>GPIO del DHT22</span>
+                              <select disabled={guardando} value={item.canal} onChange={(evento) => editarCanal(item.clave, evento.target.value)} required>
+                                <OpcionesGpioDht />
+                              </select>
+                            </label>
+                          ) : (
+                            <span className="cs-nota cs-nota--celda">Lector por serial en firmware</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <div className="cs-pendientes-pie">
+                      <button
+                        type="button"
+                        className="cs-boton cs-boton--principal"
+                        disabled={guardando || pendientes.some((p) => !disponibles.some((d) => d.id === p.dispositivoId) || (esVariableDht(p.tipo) && !p.canal))}
+                        onClick={() => void registrar()}
+                      >
+                        {guardando ? 'Registrando…' : `Registrar ${pendientes.length} sensor${pendientes.length === 1 ? '' : 'es'}`}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="cs-seccion">
+            <header className="cs-seccion-head">
+              <div>
+                <h4>Sensores registrados ({activos.length})</h4>
+                <p>Cada sensor tiene su serial. Los pines DHT22 se sincronizan solos con el ESP32.</p>
+              </div>
+              {desactivados.length > 0 && (
+                <button
+                  type="button"
+                  className="cs-btn-desactivados"
+                  onClick={() => setVerDesactivados((actual) => !actual)}
+                >
+                  {verDesactivados ? 'Ocultar desactivados' : `Ver desactivados (${desactivados.length})`}
+                </button>
+              )}
+            </header>
+
+            {cargando ? (
+              <p className="cs-nota" role="status">Cargando sensores…</p>
+            ) : errorCarga ? (
+              <p className="cs-aviso cs-aviso--error">La lista de sensores no está disponible.</p>
+            ) : activos.length === 0 ? (
+              <div className="cs-vacio">
+                <p>No hay sensores activos en este galpón. Agrega uno arriba para empezar.</p>
+              </div>
+            ) : (
+              <ul className="cs-sensores-lista" aria-label="Sensores activos">
+                {activos.map(tarjetaSensor)}
+              </ul>
+            )}
+
+            {verDesactivados && desactivados.length > 0 && (
+              <ul className="cs-sensores-lista cs-sensores-lista--desactivados" aria-label="Sensores desactivados">
+                {desactivados.map(tarjetaSensor)}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {seccion === 'reles' && (
+        <div className="cs-panel">
+          {cargando ? (
+            <p className="cs-nota" role="status">Cargando actuadores…</p>
+          ) : errorCarga ? (
+            <p className="cs-aviso cs-aviso--error">La lista de actuadores no está disponible.</p>
           ) : (
             <RelesDelGalpon
               galponId={galponId}
@@ -475,38 +530,7 @@ function AsignarSensores({
             />
           )}
         </div>
-      </details>
-
-      <details className="cs-bloque">
-        <summary className="cs-bloque-cabecera">
-          <span className="cs-paso-numero" aria-hidden="true">3</span>
-          <span className="cs-bloque-titulo">
-            <strong>Sensores registrados{!cargando && !errorCarga ? ` (${activos.length})` : ''}</strong>
-            <small>Cada sensor tiene su serial. Las conexiones DHT22 se actualizan solas cada 30 segundos.</small>
-          </span>
-          <span className={`cs-estado${pasoListo[2] ? ' is-listo' : ''}`}>{activos.length === 0 ? 'Sin sensores' : pasoListo[2] ? 'Conectados' : `${activos.length - conCanal} sin conexión`}</span>
-          <IcChevronDown size={16} aria-hidden="true" className="cs-flecha" />
-        </summary>
-        <div className="cs-bloque-cuerpo">
-          {cargando ? <p className="cs-nota" role="status">Cargando sensores…</p> : errorCarga ? <p className="cs-aviso cs-aviso--error">La lista de sensores no está disponible. Vuelve a cargar los datos.</p> : (
-            <>
-              {activos.length === 0
-                ? <p className="cs-nota">No hay sensores activos en este galpón.</p>
-                : tablaSensores(activos, 'Sensores activos')}
-              {desactivados.length > 0 && (
-                <details className="cs-desactivados">
-                  <summary>
-                    <IcChevronDown size={14} aria-hidden="true" className="cs-flecha" />
-                    Desactivados ({desactivados.length})
-                    <small>No envían lecturas al monitoreo. Actívalos de nuevo o elimínalos.</small>
-                  </summary>
-                  {tablaSensores(desactivados, 'Sensores desactivados')}
-                </details>
-              )}
-            </>
-          )}
-        </div>
-      </details>
+      )}
     </section>
   )
 }

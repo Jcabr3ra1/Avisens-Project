@@ -21,3 +21,16 @@ export const obtenerEventoSanitario = (id:number) => api.get<EventoSanitario>(`/
 export const actualizarPesaje = (id:number, datos:object) => api.patch<Pesaje>(`/pesajes/${id}`,datos).then(({data})=>data)
 export const actualizarMortalidad = (id:number, datos:object) => api.patch<Mortalidad>(`/registros-mortalidad/${id}`,datos).then(({data})=>data)
 export const actualizarEventoSanitario = (id:number, datos:object) => api.patch<EventoSanitario>(`/eventos-sanitarios/${id}`,datos).then(({data})=>data)
+
+export const obtenerFotoMortalidad = (id:number) =>
+  api.get<Blob>(`/registros-mortalidad/${id}/foto`, { responseType: 'blob' }).then(({ data }) => data)
+
+export const subirFotoMortalidad = (id:number, archivo:File) =>
+  api.put<{ id: number; tiene_foto: boolean; mime_type: string; tamano_bytes: number }>(
+    `/registros-mortalidad/${id}/foto`,
+    archivo,
+    { headers: { 'Content-Type': archivo.type } },
+  ).then(({ data }) => data)
+
+export const eliminarFotoMortalidad = (id:number) =>
+  api.delete<{ id: number; tiene_foto: boolean }>(`/registros-mortalidad/${id}/foto`).then(({ data }) => data)

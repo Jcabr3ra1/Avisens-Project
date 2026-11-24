@@ -12,6 +12,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerPorCanalGuard } from './common/guards/throttler-por-canal.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
+import { AdminMetricasModule } from './modules/admin-metricas/admin-metricas.module';
 import { SensoresModule } from './modules/sensores/sensores.module';
 import { MedicionesModule } from './modules/mediciones/mediciones.module';
 import { UmbralesModule } from './modules/umbrales/umbrales.module';
@@ -107,6 +108,7 @@ import { PlanAlimentoModule } from './modules/plan-alimento/plan-alimento.module
     GranjasModule,
     GalponesModule,
     DispositivosModule,
+    AdminMetricasModule,
     SensoresModule,
     InsumosModule,
     MedicionesModule,

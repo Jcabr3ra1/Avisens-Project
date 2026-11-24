@@ -1,4 +1,5 @@
-import { useMemo, useState, type FormEventHandler } from 'react'
+import { useMemo, useState, type FormEvent, type FormEventHandler } from 'react'
+import { IcEgg } from '@shared/ui/icons/icons'
 import Modal from '@shared/ui/Modal/Modal'
 import type { Galpon } from '@features/galpones/api/galpones'
 import type { LineaGenetica } from '../api/lineas-geneticas'
@@ -45,13 +46,49 @@ function FormularioLote({
   onCerrar,
 }: Props) {
   const [mostrarAdicional, setMostrarAdicional] = useState(modoEdicion)
+  const [errorValidacion, setErrorValidacion] = useState('')
   const opcionesLinea = useMemo(
     () => opcionesLineaGenetica(lineasGeneticas, form.linea_genetica_id),
     [lineasGeneticas, form.linea_genetica_id],
   )
 
+  function manejarSubmit(evento: FormEvent<HTMLFormElement>) {
+    let problema = ''
+    if (
+      form.cantidad_inicial === '' ||
+      !Number.isInteger(form.cantidad_inicial) ||
+      form.cantidad_inicial < 1 ||
+      form.cantidad_inicial > 500_000
+    ) {
+      problema = 'La cantidad inicial debe ser un entero entre 1 y 500.000 aves.'
+    } else if (
+      form.costo_pollito_unitario !== '' &&
+      (form.costo_pollito_unitario < 0 || form.costo_pollito_unitario > 10_000_000_000)
+    ) {
+      problema = 'El costo por pollito debe ser un valor entre $0 y $10.000.000.000.'
+    } else if (
+      form.presupuesto_total_cop !== '' &&
+      (form.presupuesto_total_cop < 0 || form.presupuesto_total_cop > 10_000_000_000)
+    ) {
+      problema = 'El presupuesto total debe ser un valor entre $0 y $10.000.000.000.'
+    } else if (form.fecha_salida_estimada && form.fecha_ingreso && form.fecha_salida_estimada < form.fecha_ingreso) {
+      problema = 'La salida estimada no puede ser anterior a la fecha de ingreso.'
+    } else if (form.fecha_salida_real && form.fecha_ingreso && form.fecha_salida_real < form.fecha_ingreso) {
+      problema = 'La salida real no puede ser anterior a la fecha de ingreso.'
+    }
+    if (problema) {
+      evento.preventDefault()
+      setErrorValidacion(problema)
+      return
+    }
+    setErrorValidacion('')
+    onGuardar(evento)
+  }
+
   return (
     <Modal
+      variante="lateral"
+      icono={<IcEgg size={20} />}
       titulo={modoEdicion ? 'Editar lote' : 'Nuevo lote'}
       subtitulo="El código se genera automáticamente."
       onCerrar={onCerrar}
@@ -71,7 +108,7 @@ function FormularioLote({
         </>
       }
     >
-      <form id={ID_FORMULARIO} onSubmit={onGuardar}>
+      <form id={ID_FORMULARIO} onSubmit={manejarSubmit}>
         <div className="modal-fila">
           <label className="modal-campo">
             <span>Galpón</span>
@@ -110,6 +147,8 @@ function FormularioLote({
             <input
               type="number"
               min="1"
+              max="500000"
+              step="1"
               value={form.cantidad_inicial}
               onChange={(evento) =>
                 onCambiar(
@@ -209,7 +248,9 @@ function FormularioLote({
                 <input
                   type="number"
                   min="0"
+                  max="10000000000"
                   step="any"
+                  inputMode="decimal"
                   value={form.costo_pollito_unitario}
                   onChange={(evento) =>
                     onCambiar(
@@ -224,7 +265,9 @@ function FormularioLote({
                 <input
                   type="number"
                   min="0"
+                  max="10000000000"
                   step="any"
+                  inputMode="decimal"
                   value={form.presupuesto_total_cop}
                   onChange={(evento) =>
                     onCambiar(
@@ -238,6 +281,7 @@ function FormularioLote({
                 <span>Salida estimada <em>(Opcional)</em></span>
                 <input
                   type="date"
+                  min={form.fecha_ingreso || undefined}
                   value={form.fecha_salida_estimada}
                   onChange={(evento) =>
                     onCambiar('fecha_salida_estimada', evento.target.value)
@@ -251,6 +295,7 @@ function FormularioLote({
                   <span>Salida real <em>(Opcional)</em></span>
                   <input
                     type="date"
+                    min={form.fecha_ingreso || undefined}
                     value={form.fecha_salida_real}
                     onChange={(evento) =>
                       onCambiar('fecha_salida_real', evento.target.value)
@@ -278,9 +323,9 @@ function FormularioLote({
           </div>
         )}
 
-        {error && (
+        {(errorValidacion || error) && (
           <p className="modal-error" role="alert">
-            {error}
+            {errorValidacion || error}
           </p>
         )}
 

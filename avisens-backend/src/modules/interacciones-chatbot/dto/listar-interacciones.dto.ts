@@ -1,9 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsDateString, IsInt, IsOptional, Min } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto';
 
 export class ListarInteraccionesDto extends PaginationQueryDto {
   @ApiPropertyOptional({ example: 1, description: 'Filtrar por prospecto' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   @IsOptional()
   prospecto_id?: number;
 

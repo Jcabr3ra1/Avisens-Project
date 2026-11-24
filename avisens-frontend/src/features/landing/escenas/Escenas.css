@@ -68,8 +68,10 @@ body:has(.esc-raiz),
 .esc-menu-esquinas { position: fixed; inset: 0 0 auto; z-index: 50; display: flex; align-items: flex-start; justify-content: space-between; padding: 1.1rem var(--margen); pointer-events: none; }
 .esc-esquinas > *,
 .esc-menu-esquinas > * { pointer-events: auto; }
-.esc-marca { display: grid; width: 54px; height: 54px; place-items: center; border: 1px solid color-mix(in srgb, var(--avisens-cream) 60%, transparent); border-radius: 16px; background: var(--avisens-cream); box-shadow: 0 14px 34px -16px color-mix(in srgb, var(--avisens-ink) 75%, transparent); text-decoration: none; }
-.esc-marca img { width: 38px; height: 38px; object-fit: contain; }
+.esc-marca { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 12px; background: transparent; text-decoration: none; transition: transform 200ms var(--suave-curva); }
+.esc-marca img { width: 46px; height: 46px; object-fit: contain; filter: brightness(0) invert(1) drop-shadow(0 4px 14px rgb(0 0 0 / 0.35)); transition: filter 320ms ease; }
+.esc-raiz[data-theme='papel'] .esc-marca img { filter: drop-shadow(0 2px 8px rgb(23 46 38 / 0.14)); }
+.esc-marca:focus-visible { outline: 2px solid var(--avisens-maize); outline-offset: 4px; }
 .esc-esquina-acciones { display: flex; align-items: center; gap: 4px; padding: 5px; border: 1px solid color-mix(in srgb, var(--avisens-cream) 16%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--avisens-ink) 76%, transparent); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--avisens-cream) 12%, transparent), 0 14px 34px -16px color-mix(in srgb, var(--avisens-ink) 75%, transparent); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); }
 .esc-acceso { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 42px; padding: 0 1rem 0 1.15rem; border: 0; border-radius: 999px; background: transparent; color: var(--avisens-cream); font-size: .875rem; font-weight: 650; letter-spacing: -.005em; line-height: 1; white-space: nowrap; text-decoration: none; transition: background-color 180ms ease, color 180ms ease; }
 .esc-acceso::after { content: ''; position: absolute; top: 50%; right: -3px; width: 1px; height: 18px; background: color-mix(in srgb, var(--avisens-cream) 18%, transparent); transform: translateY(-50%); }
@@ -82,6 +84,7 @@ body:has(.esc-raiz),
 .esc-hamburguesa span:last-child { width: 11px; }
 
 @media (hover: hover) and (pointer: fine) {
+  .esc-marca:hover { transform: scale(1.06); }
   .esc-acceso:hover { background: color-mix(in srgb, var(--avisens-cream) 10%, transparent); }
   .esc-acceso:hover .esc-acceso-icono { opacity: 1; transform: translateX(3px); }
   .esc-boton-cuadro:hover { transform: scale(1.06); }

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
   ForbiddenException,
   Logger,
@@ -15,6 +16,7 @@ import { LoginDto } from './dto/login.dto';
 import { permisosDelRol } from '../../common/auth/permisos';
 import { normalizarUsername } from '../../common/auth/username';
 import { ROLES } from '../../common/auth/roles';
+import { validarImagenBinaria } from '../../common/media/validar-imagen';
 import { MENSAJE_CUENTA_OCUPADA } from '../../common/errores/bloqueo';
 import {
   esEsperaVencida,
@@ -46,6 +48,7 @@ export class AuthService {
         nombre_completo: true,
         email: true,
         telefono: true,
+        foto_mime_type: true,
         fecha_creacion: true,
         rol: { select: { nombre: true } },
         organizacion: { select: { id: true, nombre: true } },
@@ -58,13 +61,45 @@ export class AuthService {
       },
     });
     if (!usuario) throw new UnauthorizedException();
-    const { seguridad_cuenta, rol, ...datos } = usuario;
+    const { seguridad_cuenta, rol, foto_mime_type, ...datos } = usuario;
     return {
       ...datos,
       rol: rol.nombre,
+      tiene_foto: Boolean(foto_mime_type),
       fecha_ultimo_login: seguridad_cuenta?.fecha_ultimo_login ?? null,
       fecha_ultimo_cambio_password:
         seguridad_cuenta?.fecha_ultimo_cambio_password ?? null,
+    };
+  }
+
+  async actualizarFotoPerfil(usuarioId: number, cuerpo: unknown) {
+    const { buffer, mimeType, tamano } = validarImagenBinaria(cuerpo);
+    await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { foto: buffer, foto_mime_type: mimeType },
+    });
+    return { tiene_foto: true, mime_type: mimeType, tamano_bytes: tamano };
+  }
+
+  async eliminarFotoPerfil(usuarioId: number) {
+    await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { foto: null, foto_mime_type: null },
+    });
+    return { tiene_foto: false };
+  }
+
+  async obtenerFotoPerfil(usuarioId: number) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { foto: true, foto_mime_type: true },
+    });
+    if (!usuario?.foto || !usuario.foto_mime_type) {
+      throw new NotFoundException('El usuario no tiene foto de perfil');
+    }
+    return {
+      buffer: Buffer.from(usuario.foto),
+      mimeType: usuario.foto_mime_type,
     };
   }
 

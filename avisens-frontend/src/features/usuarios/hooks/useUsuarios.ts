@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { type ActualizarUsuarioPayload, type CrearUsuarioPayload, type Usuario } from '@shared/api'
 import { actualizarUsuario, crearUsuario, eliminarUsuario, listarUsuarios } from '@features/usuarios/api/usuarios'
 import { mensajeDeError } from '@shared/utils/errores'
@@ -16,19 +17,19 @@ export function useUsuarios() {
     }
   }, [])
 
-  const cargar = useCallback(async () => {
-    setCargando(true)
+  const cargar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setCargando(true)
     setError('')
 
     try {
       const lista = await listarUsuarios()
       if (montado.current) setUsuarios(lista)
     } catch (err) {
-      if (montado.current) {
+      if (montado.current && !silencioso) {
         setError(mensajeDeError(err, 'No se pudieron cargar los usuarios.'))
       }
     } finally {
-      if (montado.current) setCargando(false)
+      if (montado.current && !silencioso) setCargando(false)
     }
   }, [])
 
@@ -39,7 +40,10 @@ export function useUsuarios() {
   const crear = useCallback(
     async (datos: CrearUsuarioPayload) => {
       const usuario = await crearUsuario(datos)
-      if (montado.current) setUsuarios((actuales) => [usuario, ...actuales])
+      if (montado.current) {
+        setUsuarios((actuales) => [usuario, ...actuales])
+        toast.success(`${usuario.nombre_completo} registrado`)
+      }
     },
     [],
   )
@@ -48,7 +52,8 @@ export function useUsuarios() {
     async (id: number, datos: ActualizarUsuarioPayload) => {
       const usuario = await actualizarUsuario(id, datos)
       if (montado.current) {
-        setUsuarios((actuales) => actuales.map((actual) => actual.id === id ? usuario : actual))
+        setUsuarios((actuales) => actuales.map((actual) => (actual.id === id ? usuario : actual)))
+        toast.success('Datos actualizados')
       }
     },
     [],
@@ -61,11 +66,16 @@ export function useUsuarios() {
         const actualizado = await actualizarUsuario(usuario.id, { activo: !usuario.activo })
         if (montado.current) {
           setUsuarios((actuales) =>
-            actuales.map((actual) => actual.id === actualizado.id ? actualizado : actual),
+            actuales.map((actual) => (actual.id === actualizado.id ? actualizado : actual)),
+          )
+          toast.success(
+            actualizado.activo
+              ? `${actualizado.nombre_completo} volvió a estar activo`
+              : `${actualizado.nombre_completo} quedó inactivo`,
           )
         }
       } catch (err) {
-        setError(mensajeDeError(err, 'No se pudo cambiar el estado del usuario.'))
+        toast.error(mensajeDeError(err, 'No se pudo cambiar el estado del usuario.'))
       }
     },
     [],
@@ -78,9 +88,10 @@ export function useUsuarios() {
         await eliminarUsuario(id)
         if (montado.current) {
           setUsuarios((actuales) => actuales.filter((usuario) => usuario.id !== id))
+          toast.success('Usuario eliminado')
         }
       } catch (err) {
-        setError(mensajeDeError(err, 'No se pudo eliminar el usuario.'))
+        toast.error(mensajeDeError(err, 'No se pudo eliminar el usuario.'))
       }
     },
     [],

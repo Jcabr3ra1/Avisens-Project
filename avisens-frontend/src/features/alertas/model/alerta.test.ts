@@ -99,6 +99,14 @@ describe('filtrarAlertas', () => {
     const visibles = filtrarAlertas([alerta('alta'), alerta('media')], filtros)
     expect(visibles).toHaveLength(2)
   })
+
+  it('filtrar por activas excluye alertas cerradas', () => {
+    const visibles = filtrarAlertas(
+      [alerta('alta', 'abierta'), alerta('alta', 'en_proceso'), alerta('alta', 'cerrada')],
+      { ...filtros, estado: 'activas', criticidad: 'alta' },
+    )
+    expect(visibles).toHaveLength(2)
+  })
 })
 
 describe('normalizarCriticidad', () => {

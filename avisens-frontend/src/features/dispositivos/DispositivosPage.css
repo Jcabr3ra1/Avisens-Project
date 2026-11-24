@@ -1,151 +1,362 @@
-.flota-page {
-  display: grid;
+.flota-page { gap: var(--space-4); }
+
+/* ── Cabecera limpia (Diseño A) ───────────────────────────── */
+.flota-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-/* Versión compacta de la ficha de Organización */
+.flota-titulo {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.5rem, 1.25rem + .8vw, 1.9rem);
+  font-weight: 750;
+  letter-spacing: -.025em;
+  line-height: 1.15;
+}
 
-.flota-page .org-hero-texto { padding: var(--space-4) var(--space-4) var(--space-3) var(--space-5); gap: var(--space-2); }
-.flota-page .org-hero-titulo { font-size: clamp(1.35rem, 1rem + 1.1vw, 1.8rem); }
-.flota-page .org-hero-chip { padding: .2rem .6rem; font-size: .74rem; }
-.flota-page .org-hero-datos { padding: var(--space-2) 0; }
-.flota-page .org-hero-subtitulo { font-size: .82rem; line-height: 1.45; }
-.flota-page .org-hero-escena { min-height: 240px; }
-.flota-page .org-hero-indicador { padding: var(--space-3) var(--space-2); }
-.flota-page .org-hero-indicador-label { font-size: .64rem; }
-.flota-page .org-hero-indicador-valor { font-size: 1.25rem; }
-.flota-page .adm-btn { min-height: 38px; padding-inline: .9rem; font-size: .84rem; }
+.flota-subtitulo { margin: .3rem 0 0; color: var(--text-secondary); font-size: .9rem; }
 
-/* Lista compacta */
-
-.flota-page .org-lista-herramientas { padding: var(--space-2) var(--space-3); }
-.flota-page .org-lista-buscador input,
-.flota-page .org-lista-desplegable select { min-height: 38px; font-size: .84rem; }
-.flota-page .org-lista-columna-cabecera h2 { font-size: .95rem; }
-.flota-page .org-lista-tarjeta { grid-template-columns: 36px minmax(0, 1fr) auto; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); }
-.flota-page .org-lista-avatar { width: 36px; height: 36px; }
-.flota-page .org-lista-tarjeta-nombre { font-size: .92rem; }
-.flota-page .org-lista-tarjeta-meta,
-.flota-page .org-lista-tarjeta-pie { font-size: .76rem; }
-.flota-page .org-lista-panel-cabecera { min-height: 40px; padding: 0 var(--space-4); }
-.flota-page .org-lista-panel-recursos li { grid-template-columns: 32px minmax(0, 1fr) auto; gap: var(--space-2); padding: .5rem .7rem; }
-.flota-page .org-lista-panel-icono { width: 32px; height: 32px; }
-
-/* Configuración compacta */
-
-.flota-detalle-config .cs-pasos li { min-height: 46px; padding: 0 var(--space-3); }
-.flota-detalle-config .cs-bloque-cabecera { min-height: 52px; padding: var(--space-2) var(--space-3); }
-.flota-detalle-config .cs-bloque-cuerpo { padding: var(--space-3); }
-.flota-detalle-config .cs-catalogo { grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); }
-.flota-detalle-config .cs-opcion { grid-template-columns: 32px minmax(0, 1fr) auto; gap: var(--space-2); min-height: 62px; padding: .55rem .7rem; }
-.flota-detalle-config .cs-opcion-icono { width: 32px; height: 32px; }
-
-/* Pestañas */
-
+/* Pestañas Galpones / Firmware en cabecera */
 .flota-tabs {
   display: inline-flex;
-  gap: 0.3rem;
-  justify-self: start;
-  padding: 0.3rem;
+  gap: .25rem;
+  padding: .25rem;
   border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  background: var(--surface-tinted);
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
 }
 
 .flota-tab {
   display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
   min-height: 34px;
-  padding: 0 0.85rem;
+  align-items: center;
+  gap: .45rem;
+  padding: 0 .85rem;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   font: inherit;
-  font-size: 0.82rem;
-  font-weight: 750;
+  font-size: .82rem;
+  font-weight: 650;
   cursor: pointer;
-  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  transition: background var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
 }
+
+.flota-tab:hover { color: var(--text-primary); }
 
 .flota-tab[aria-selected='true'] {
   background: var(--surface-base);
   color: var(--avisens-deep);
-  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border-subtle);
+  box-shadow: var(--shadow-sm);
 }
 
 .flota-tab span {
-  padding: 0.05rem 0.45rem;
+  padding: .04rem .42rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-base);
+  color: var(--text-muted);
+  font-size: .7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.flota-tab[aria-selected='true'] span {
+  background: var(--primary-soft);
+  color: var(--avisens-deep);
+}
+
+.flota-tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* ── KPIs clicables (Diseño A) ────────────────────────────── */
+.flota-indicadores {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+  list-style: none;
+}
+
+.flota-indicador { display: flex; min-width: 0; }
+.flota-indicador + .flota-indicador { border-left: 1px solid var(--border-subtle); }
+
+.flota-indicador-btn {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: .28rem;
+  padding: var(--space-4) var(--space-5);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+
+.flota-indicador-btn::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: transparent;
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+
+.flota-indicador-btn:hover { background: var(--surface-hover); }
+.flota-indicador-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.flota-indicador-btn.is-activo { background: color-mix(in srgb, var(--primary-soft) 55%, var(--surface-base)); }
+.flota-indicador-btn.is-activo::after { background: var(--primary); }
+
+.flota-indicador-btn.is-peligro .flota-indicador-valor { color: var(--danger3); }
+.flota-indicador-btn.is-peligro .flota-indicador-nota { color: var(--danger3); font-weight: 600; }
+.flota-indicador-btn.is-peligro.is-activo::after { background: var(--danger3); }
+
+.flota-indicador-btn.is-alerta .flota-indicador-valor { color: var(--warning-text); }
+.flota-indicador-btn.is-alerta.is-activo::after { background: var(--avisens-maize, #e3c565); }
+
+.flota-indicador-label { color: var(--text-muted); font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.flota-indicador-btn.is-activo .flota-indicador-label { color: var(--primary); }
+.flota-indicador-btn.is-peligro.is-activo .flota-indicador-label { color: var(--danger3); }
+.flota-indicador-valor { color: var(--text-primary); font-size: 1.85rem; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -.025em; line-height: 1.05; }
+.flota-indicador-nota { color: var(--text-secondary); font-size: .78rem; }
+.flota-esqueleto-num { display: inline-block; width: 2rem; height: 1.7rem; border-radius: var(--radius-sm); vertical-align: middle; }
+
+/* ── Barra de búsqueda ────────────────────────────────────── */
+.flota-galpones { display: grid; gap: var(--space-4); }
+
+.flota-herramientas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.flota-buscador {
+  position: relative;
+  display: flex;
+  flex: 1 1 20rem;
+  min-width: 0;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.flota-buscador > svg { position: absolute; left: .9rem; pointer-events: none; }
+
+.flota-buscador input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 3rem 0 2.55rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font-size: .88rem;
+}
+
+.flota-buscador input::placeholder { color: var(--text-disabled); }
+.flota-buscador input:hover { border-color: var(--border-strong); }
+.flota-buscador input:focus-visible { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+.flota-buscador input::-webkit-search-cancel-button { display: none; }
+
+.flota-buscador kbd {
+  position: absolute;
+  right: .65rem;
+  padding: .1rem .38rem;
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: .7rem;
+  pointer-events: none;
+}
+
+.flota-limpiar-busqueda {
+  position: absolute;
+  right: .45rem;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 0;
   border-radius: 999px;
   background: var(--surface-subtle);
-  color: var(--text-muted);
-  font-size: 0.72rem;
+  color: var(--text-secondary);
+  cursor: pointer;
 }
 
-.flota-tab:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.flota-limpiar-busqueda:hover { background: var(--border-subtle); color: var(--text-primary); }
 
-/* Lista + detalle */
+.flota-conteo { color: var(--text-muted); font-size: .8rem; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-.flota-galpones {
-  display: grid;
-  gap: var(--space-4);
+.flota-filtro-limpiar {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: .35rem;
+  padding: 0 .7rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface-base));
+  color: var(--primary);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 650;
+  cursor: pointer;
 }
 
+.flota-filtro-limpiar:hover { background: color-mix(in srgb, var(--primary) 14%, var(--surface-base)); }
+
+/* ── Master-Detail ejecutivo: flota amplia + inspector compacto */
 .flota-cuerpo {
   display: grid;
-  grid-template-columns: minmax(17rem, 0.75fr) minmax(0, 1.6fr);
+  grid-template-columns: minmax(0, 1fr) minmax(21rem, 24.5rem);
   align-items: start;
-  gap: var(--space-4);
-  scroll-margin-top: var(--space-4);
+  gap: var(--space-5);
 }
 
-.flota-grupo {
-  display: grid;
-  gap: var(--space-2);
+.flota-columna {
+  min-width: 0;
 }
 
-.flota-grupo + .flota-grupo {
-  margin-top: var(--space-3);
-}
+.flota-listbox { display: flex; flex-direction: column; gap: var(--space-4); }
+.flota-listbox:focus-visible { outline: none; }
+
+.flota-grupo { display: flex; flex-direction: column; gap: .45rem; }
 
 .flota-grupo-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
   margin: 0;
+  padding: 0 var(--space-1);
   color: var(--text-muted);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
+  font-size: .72rem;
+  font-weight: 750;
+  letter-spacing: .07em;
   text-transform: uppercase;
 }
 
-.flota-avatar { color: var(--text-muted); background: var(--surface-tinted); }
+.flota-grupo-titulo span {
+  padding: .03rem .4rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-subtle);
+  color: var(--text-secondary);
+  font-size: .68rem;
+}
+
+.flota-lista { display: flex; flex-direction: column; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+
+.flota-tarjeta {
+  position: relative;
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .55rem .75rem;
+  padding: .8rem var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-base) var(--ease-standard), background var(--motion-fast) var(--ease-standard);
+}
+
+.flota-tarjeta::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  width: 3.5px;
+  border-radius: 0 3px 3px 0;
+  background: transparent;
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+
+.flota-tarjeta--nunca::before { background: var(--danger); }
+.flota-tarjeta--sin_reportar::before { background: var(--warning); }
+.flota-tarjeta:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.flota-tarjeta:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.flota-item.is-seleccionada .flota-tarjeta {
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--border-subtle));
+  background: color-mix(in srgb, var(--primary-soft) 45%, var(--surface-base));
+  box-shadow: var(--shadow-sm);
+}
+
+.flota-item.is-seleccionada .flota-tarjeta::before { width: 4px; background: var(--primary); }
+
+.flota-avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  background: var(--surface-subtle);
+}
+
 .flota-avatar--conectado { color: var(--success); background: color-mix(in srgb, var(--success) 14%, transparent); }
-.flota-avatar--sin_reportar { color: #a8640f; background: var(--accent-soft); }
+.flota-avatar--sin_reportar { color: var(--warning); background: var(--warning-soft); }
 .flota-avatar--nunca { color: var(--danger3); background: var(--danger-soft); }
-.flota-avatar--sin_controlador { border: 1.5px dashed var(--border-default); }
+.flota-avatar--sin_controlador { border: 1.5px dashed var(--border-default); background: var(--surface-tinted); }
+
+.flota-tarjeta-info { display: grid; min-width: 0; gap: .18rem; }
+.flota-tarjeta-nombre { overflow: hidden; color: var(--text-primary); font-size: .9rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.flota-tarjeta-meta { display: flex; min-width: 0; align-items: center; gap: .35rem; color: var(--text-muted); font-size: .76rem; }
+.flota-tarjeta-meta > span:first-child,
+.flota-tarjeta-meta > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.flota-tarjeta-lado {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .35rem;
+}
+
+.flota-tarjeta-flecha { display: none; color: var(--text-muted); }
 
 .flota-estado {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  background: var(--surface-tinted);
+  gap: .36rem;
+  padding: .15rem .52rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-subtle);
   color: var(--text-secondary);
-  font-size: 0.74rem;
-  font-weight: 750;
+  font-size: .7rem;
+  font-weight: 700;
   white-space: nowrap;
 }
 
-.flota-estado-punto {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
+.flota-estado-punto { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .flota-estado--conectado { background: var(--success-soft); color: var(--success); }
-.flota-estado--sin_reportar { background: var(--accent-soft); color: #a8640f; }
+.flota-estado--sin_reportar { background: var(--warning-soft); color: var(--warning); }
 .flota-estado--nunca { background: var(--danger-soft); color: var(--danger3); }
 .flota-estado--sin_controlador { color: var(--text-muted); }
 
@@ -158,102 +369,186 @@
   70% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--success) 0%, transparent); }
 }
 
-/* Detalle del galpón */
+.flota-tarjeta-esqueleto { height: 76px; border-radius: var(--radius-lg); background: var(--surface-subtle); }
 
-.flota-page .flota-detalle {
-  position: static;
+.flota-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-7) var(--space-5);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tinted);
+  color: var(--text-muted);
+  text-align: center;
 }
 
-.flota-detalle-cuerpo {
-  display: grid;
+.flota-vacio h3 { margin: 0; color: var(--text-primary); font-size: .98rem; font-weight: 700; }
+.flota-vacio p { margin: 0; font-size: .84rem; }
+
+/* ── Espacio técnico derecho (fluye naturalmente sin encierro) */
+.flota-panel-fondo { display: none; }
+
+.flota-detalle {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.flota-detalle-cabecera {
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 44px;
+  align-items: center;
+  gap: .5rem;
+  padding: .6rem var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--primary-soft) 55%, var(--surface-base));
+  color: var(--avisens-deep);
+  font-size: .72rem;
+  font-weight: 750;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.flota-estado--cabecera { margin-left: auto; letter-spacing: normal; text-transform: none; }
+
+.flota-detalle-cerrar {
+  display: none;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.flota-detalle-cerrar:hover { background: var(--surface-base); color: var(--text-primary); }
+
+.flota-detalle-marco { display: flex; min-width: 0; flex-direction: column; }
+
+.flota-detalle-encabezado {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-5) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-base);
 }
 
 .flota-detalle-top {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
 }
 
-.flota-detalle-visto {
-  color: var(--text-muted);
-  font-size: 0.8rem;
+.flota-detalle-nombre { margin: 0; color: var(--text-primary); font-size: 1.25rem; font-weight: 750; letter-spacing: -.015em; }
+.flota-detalle-lugar { margin: .18rem 0 0; color: var(--text-muted); font-size: .82rem; }
+.flota-detalle-visto { color: var(--text-muted); font-size: .78rem; white-space: nowrap; }
+
+.flota-detalle-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
 }
 
-.flota-detalle-nombre {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+.flota-detalle-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .38rem;
+  padding: .28rem .65rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+  font-size: .78rem;
+  font-weight: 600;
 }
 
-.flota-detalle-lugar {
-  margin: -0.5rem 0 0;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-}
-
-.flota-detalle-recursos {
-  margin: 0;
-}
-
-.flota-detalle-recursos li.is-aviso {
+.flota-detalle-chip--aviso {
   border-color: color-mix(in srgb, var(--warning) 35%, transparent);
   background: var(--accent-soft);
+  color: var(--warning-text);
 }
 
-.flota-detalle-config {
-  padding-top: var(--space-1);
-}
-
-.flota-detalle-config .cs-cabecera {
-  display: none;
-}
-
+/* 3 pestañas alineadas en una sola fila limpia */
 .flota-vistas {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.3rem;
-  margin-top: var(--space-2);
-  padding: 0.3rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  background: var(--surface-tinted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0 calc(var(--space-1) * -1);
 }
 
 .flota-vista {
-  min-height: 36px;
-  padding: 0 0.7rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: .65rem .9rem;
   border: 0;
-  border-radius: 9px;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font: inherit;
-  font-size: 0.8rem;
-  font-weight: 750;
+  font-size: .84rem;
+  font-weight: 650;
   cursor: pointer;
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
-.flota-vista[aria-selected='true'] {
-  background: var(--surface-base);
-  color: var(--avisens-deep);
-  box-shadow: var(--shadow-sm), 0 0 0 1px var(--border-subtle);
+.flota-vista::after {
+  content: '';
+  position: absolute;
+  right: .5rem;
+  bottom: 0;
+  left: .5rem;
+  height: 2.5px;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+  transition: background var(--motion-fast) var(--ease-standard);
 }
 
-.flota-vista:disabled { opacity: 0.5; cursor: not-allowed; }
-.flota-vista:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.flota-vista:hover:not(:disabled) { color: var(--text-primary); }
+.flota-vista.is-activa { color: var(--avisens-deep); }
+.flota-vista.is-activa::after { background: var(--primary); }
+.flota-vista:disabled { opacity: .45; cursor: not-allowed; }
+.flota-vista:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; border-radius: var(--radius-sm); }
+
+.flota-detalle-cuerpo {
+  min-width: 0;
+  padding: var(--space-5);
+}
+
+.flota-detalle-vacio {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-5);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.flota-detalle-vacio p { max-width: 24rem; margin: 0; font-size: .86rem; }
+
+/* ── Limpieza y respiro dentro de Configurar / Monitoreo ──── */
+.flota-detalle-config { min-width: 0; }
+.flota-detalle-config .cs { gap: var(--space-4); }
 
 .flota-detalle-nota {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  margin: 0 0 var(--space-3);
+  gap: .45rem;
+  margin: 0 0 var(--space-4);
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: .8rem;
 }
 
 .flota-vivo {
@@ -264,17 +559,353 @@
   animation: flota-latido 2s ease-out infinite;
 }
 
-.flota-monitoreo .amb-sensores-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
-.flota-monitoreo .amb-sensor-valor { font-size: 1.8rem; }
+.flota-monitoreo .amb-sensores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: var(--space-3);
+}
 
-@media (max-width: 72rem) {
-  .flota-cuerpo {
-    grid-template-columns: 1fr;
+.flota-monitoreo .amb-sensor-valor { font-size: 1.75rem; }
+
+/* ── Nivel 1: Inspector ejecutivo compacto ─────────────────── */
+.flota-detalle--inspector {
+  position: sticky;
+  top: var(--space-4);
+}
+
+.flota-inspector-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.flota-inspector-cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+}
+
+.flota-inspector-metricas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.flota-inspector-metricas > div {
+  display: flex;
+  flex-direction: column;
+  gap: .14rem;
+  padding: .7rem .8rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+}
+
+.flota-inspector-metrica-ancha {
+  grid-column: 1 / -1;
+}
+
+.flota-inspector-metricas dt {
+  color: var(--text-muted);
+  font-size: .68rem;
+  font-weight: 750;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.flota-inspector-metricas dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.flota-inspector-aviso {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .65rem .8rem;
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  color: var(--warning-text);
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.flota-inspector-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+}
+
+.flota-inspector-rotulo {
+  color: var(--text-muted);
+  font-size: .69rem;
+  font-weight: 750;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.flota-inspector-vacio {
+  margin: 0;
+  padding: .75rem .85rem;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+  color: var(--text-secondary);
+  font-size: .8rem;
+  line-height: 1.45;
+}
+
+.flota-inspector-lista {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flota-inspector-lista li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: .55rem .75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+}
+
+.flota-inspector-ctrl-nombre {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: .4rem;
+  color: var(--text-primary);
+}
+
+.flota-inspector-ctrl-nombre svg {
+  flex: none;
+  color: var(--primary);
+}
+
+.flota-inspector-ctrl-nombre code {
+  overflow: hidden;
+  font-size: .76rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flota-inspector-ctrl-ver {
+  flex: none;
+  padding: .1rem .45rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: .7rem;
+  font-weight: 750;
+}
+
+.flota-inspector-pie {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.flota-inspector-cta {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ── Nivel 2: Ficha técnica completa (/dispositivos/:id) ──── */
+.flota-miga {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.flota-miga-izquierda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem;
+  font-size: .84rem;
+}
+
+.flota-miga-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .28rem .6rem .28rem .4rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.flota-miga-volver:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.flota-miga-flecha {
+  transform: rotate(180deg);
+}
+
+.flota-miga-sep {
+  color: var(--text-muted);
+}
+
+.flota-miga-padre {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.flota-miga-actual {
+  color: var(--text-primary);
+  font-weight: 750;
+}
+
+.flota-miga-cambio {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  color: var(--text-muted);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.flota-miga-cambio select {
+  max-width: 20rem;
+  min-height: 34px;
+  padding: 0 .7rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.flota-ficha-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.flota-ficha-hero-info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: .45rem;
+}
+
+.flota-ficha-titulo-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.flota-ficha-codigo {
+  padding: .15rem .5rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-tinted);
+  color: var(--text-muted);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.flota-ficha-panel {
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.flota-vistas--ficha {
+  padding: 0 var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-tinted);
+}
+
+/* ── Tablet & Móvil: detalle como Slide-Over flotante ─────── */
+@media (max-width: 64rem) {
+  .flota-cuerpo { grid-template-columns: 1fr; }
+  .flota-columna { position: static; max-height: none; overflow: visible; padding-right: 0; }
+  .flota-indicadores { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .flota-indicador:nth-child(3) { border-left: 0; }
+  .flota-indicador:nth-child(n + 3) { border-top: 1px solid var(--border-subtle); }
+  .flota-tarjeta-flecha { display: block; }
+
+  .flota-panel-fondo {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: block;
+    background: rgba(15, 23, 20, .34);
+    backdrop-filter: blur(2px);
   }
 
+  .flota-detalle {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 61;
+    width: min(38rem, 96vw);
+    max-height: 100dvh;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    box-shadow: -12px 0 36px rgba(15, 23, 20, .18);
+    transform: translateX(104%);
+    transition: transform 240ms var(--ease-standard);
+    pointer-events: none;
+  }
+
+  .flota-detalle-marco { min-height: 0; flex: 1; }
+  .flota-detalle-cuerpo { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+
+  .flota-detalle.is-abierto-movil {
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .flota-detalle-cerrar { display: grid; }
+}
+
+@media (max-width: 40rem) {
+  .flota-cabecera { flex-direction: column; align-items: stretch; }
+  .flota-tabs { width: 100%; }
+  .flota-tab { flex: 1; justify-content: center; }
+  .flota-indicador-btn { padding: var(--space-3) var(--space-4); }
+  .flota-detalle { width: 100vw; border-radius: 0; }
+  .flota-detalle-cuerpo { padding: var(--space-4); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .flota-tab { transition: none; }
-  .flota-estado--conectado .flota-estado-punto { animation: none; }
+  .flota-tab,
+  .flota-tarjeta,
+  .flota-detalle { transition: none; }
+  .flota-estado--conectado .flota-estado-punto,
+  .flota-vivo { animation: none; }
 }

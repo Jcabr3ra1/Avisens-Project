@@ -57,6 +57,8 @@ model Usuario {
   email           String?  @unique
   password_hash   String
   telefono        String?
+  foto            Bytes?
+  foto_mime_type  String?
   activo          Boolean  @default(true)
   fecha_creacion  DateTime @default(now())
 
@@ -183,7 +185,8 @@ model Galpon {
   largo_metros       Float?
   orientacion        String?
   tipo_techo         String?
-  plano_url          String?
+  foto               Bytes?
+  foto_mime_type     String?
   activo             Boolean   @default(true)
   fecha_construccion DateTime? @db.Date
 
@@ -563,6 +566,8 @@ model RegistroMortalidad {
   usuario_id       Int
   metodo_registro  String?
   observaciones    String?
+  foto             Bytes?
+  foto_mime_type   String?
   fecha_registro   DateTime @default(now())
 
   lote    Lote    @relation(fields: [lote_id], references: [id])
@@ -1469,6 +1474,8 @@ model EvidenciaAlerta {
   alerta_id      Int
   tipo_evidencia String?
   archivo_url    String?
+  imagen         Bytes?
+  mime_type      String?
   comentario     String?
   usuario_id     Int?
   tamano_bytes   Int?

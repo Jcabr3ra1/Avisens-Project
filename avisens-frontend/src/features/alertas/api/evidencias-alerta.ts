@@ -19,6 +19,7 @@ export interface EvidenciaAlerta {
   alerta_id: number
   tipo_evidencia: string | null
   archivo_url: string | null
+  mime_type?: string | null
   comentario: string | null
   usuario_id: number | null
   tamano_bytes: number | null
@@ -93,5 +94,28 @@ export async function eliminarEvidenciaAlerta(
   const { data } = await api.delete<{ id: number; eliminado: boolean }>(
     `/evidencias-alerta/${id}`,
   )
+  return data
+}
+
+export async function subirFotoEvidenciaAlerta(
+  alertaId: number,
+  archivo: File,
+  comentario?: string,
+): Promise<EvidenciaAlerta> {
+  const { data } = await api.post<EvidenciaAlerta>(
+    `/evidencias-alerta/alerta/${alertaId}/foto`,
+    archivo,
+    {
+      headers: { 'Content-Type': archivo.type },
+      params: comentario?.trim() ? { comentario: comentario.trim() } : undefined,
+    },
+  )
+  return data
+}
+
+export async function obtenerImagenEvidencia(id: number): Promise<Blob> {
+  const { data } = await api.get<Blob>(`/evidencias-alerta/${id}/imagen`, {
+    responseType: 'blob',
+  })
   return data
 }

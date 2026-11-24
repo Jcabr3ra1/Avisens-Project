@@ -13,3 +13,22 @@ export async function cambiarPasswordPropia(passwordActual: string, nuevaPasswor
   })
   return data.mensaje
 }
+
+export async function obtenerFotoPerfil(): Promise<Blob> {
+  const { data } = await api.get<Blob>('/auth/perfil/foto', {
+    responseType: 'blob',
+  })
+  return data
+}
+
+export async function subirFotoPerfil(archivo: File): Promise<{ tiene_foto: boolean }> {
+  const { data } = await api.put<{ tiene_foto: boolean }>('/auth/perfil/foto', archivo, {
+    headers: { 'Content-Type': archivo.type },
+  })
+  return data
+}
+
+export async function eliminarFotoPerfil(): Promise<{ tiene_foto: boolean }> {
+  const { data } = await api.delete<{ tiene_foto: boolean }>('/auth/perfil/foto')
+  return data
+}

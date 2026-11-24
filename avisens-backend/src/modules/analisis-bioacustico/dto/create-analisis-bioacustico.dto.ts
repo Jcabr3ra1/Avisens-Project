@@ -5,23 +5,30 @@ import {
   IsInt,
   IsNumber,
   IsOptional,
-  IsString,
-  IsUrl,
+  Max,
+  Min,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto';
+import {
+  TextoSeguro,
+  UrlHttpSegura,
+} from '../../../common/validation/texto';
 
 export class CreateAnalisisBioacusticoDto {
   @ApiProperty({ example: 1, description: 'Galpón donde se capturó el audio' })
   @IsInt()
+  @Min(1)
   galpon_id: number;
 
   @ApiPropertyOptional({ example: 1, description: 'Lote analizado' })
   @IsInt()
+  @Min(1)
   @IsOptional()
   lote_id?: number;
 
   @ApiPropertyOptional({ example: 1, description: 'Modelo ML utilizado' })
   @IsInt()
+  @Min(1)
   @IsOptional()
   modelo_id?: number;
 
@@ -31,25 +38,27 @@ export class CreateAnalisisBioacusticoDto {
   fecha_hora?: string;
 
   @ApiPropertyOptional({ example: 'nivel_estres' })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('El indicador', 60)
   indicador?: string;
 
   @ApiPropertyOptional({ example: 0.27 })
   @IsNumber()
+  @Min(-1_000_000)
+  @Max(1_000_000)
   @IsOptional()
   valor?: number;
 
   @ApiPropertyOptional({ example: 'https://storage.example/audio.wav' })
-  @IsUrl()
   @IsOptional()
+  @UrlHttpSegura('La URL del audio', 500)
   audio_url?: string;
 
   @ApiPropertyOptional({
     example: 'Patrón sonoro dentro de parámetros normales',
   })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('La interpretación', 500, { multilinea: true })
   interpretacion?: string;
 }
 

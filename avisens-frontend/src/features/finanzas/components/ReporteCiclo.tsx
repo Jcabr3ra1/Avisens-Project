@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
-import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
-import { IcAlert, IcArrowUp, IcChart, IcCoin, IcDoc } from '@shared/ui/icons/icons'
+import { IcAlert, IcArrowDown, IcArrowUp, IcChart, IcCoin, IcDoc } from '@shared/ui/icons/icons'
 import { descargarBlob } from '@shared/utils/descargas'
 import { mensajeDeError } from '@shared/utils/errores'
 import { fechaDeHoy } from '@shared/utils/fechas'
@@ -105,23 +104,6 @@ function ReporteCiclo({ lotes, granjas }: ReporteCicloProps) {
     return () => window.removeEventListener('afterprint', terminar)
   }, [imprimiendo, reporte])
 
-  const stats: Stat[] = reporte ? [
-    { label: 'Ingresos', valor: formatoCop(reporte.totales.ingresos), icono: <IcArrowUp size={18} />, tono: 'ok' },
-    { label: 'Egresos', valor: formatoCop(reporte.totales.egresos), icono: <IcArrowUp size={18} />, tono: 'peligro' },
-    {
-      label: 'Balance',
-      valor: formatoCop(reporte.totales.balance),
-      icono: <IcCoin size={18} />,
-      tono: reporte.totales.balance < 0 ? 'peligro' : 'info',
-    },
-    {
-      label: 'Margen neto',
-      valor: formatoPorcentaje(reporte.totales.margen_neto_pct),
-      icono: <IcChart size={18} />,
-      tono: reporte.totales.margen_neto_pct !== null && reporte.totales.margen_neto_pct < 0 ? 'peligro' : 'neutral',
-    },
-  ] : []
-
   const avisosIncompletos = reporte?.avisos.filter((aviso) => !esAvisoInformativo(aviso.codigo)) ?? []
   const avisosInformativos = reporte?.avisos.filter((aviso) => esAvisoInformativo(aviso.codigo)) ?? []
 
@@ -161,7 +143,44 @@ function ReporteCiclo({ lotes, granjas }: ReporteCicloProps) {
       )}
 
       <div className="rc-totales">
-        <TarjetasResumen stats={stats} etiqueta="Totales del reporte" />
+        <div className="adm-kpis" aria-label="Totales del reporte">
+          <article className="adm-kpi adm-kpi--ok">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Ingresos</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcArrowUp size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor is-tono">{formatoCop(reporte.totales.ingresos)}</strong>
+            <span className="adm-kpi-nota">Total en el alcance</span>
+          </article>
+          <article className="adm-kpi adm-kpi--peligro">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Egresos</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcArrowDown size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor is-tono">{formatoCop(reporte.totales.egresos)}</strong>
+            <span className="adm-kpi-nota">Costos y gastos</span>
+          </article>
+          <article className={`adm-kpi adm-kpi--${reporte.totales.balance < 0 ? 'peligro' : 'ok'}`}>
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Balance</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcCoin size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor is-tono">
+              {formatoCop(reporte.totales.balance)}
+            </strong>
+            <span className="adm-kpi-nota">{reporte.totales.balance < 0 ? 'Déficit del ciclo' : 'Resultado neto'}</span>
+          </article>
+          <article className={`adm-kpi adm-kpi--${reporte.totales.margen_neto_pct !== null && reporte.totales.margen_neto_pct < 0 ? 'peligro' : 'info'}`}>
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Margen neto</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcChart size={15} /></span>
+            </span>
+            <strong className={`adm-kpi-valor${reporte.totales.margen_neto_pct !== null && reporte.totales.margen_neto_pct < 0 ? ' is-tono' : ''}`}>
+              {formatoPorcentaje(reporte.totales.margen_neto_pct)}
+            </strong>
+            <span className="adm-kpi-nota">Sobre ingresos</span>
+          </article>
+        </div>
       </div>
 
       {reporte.lotes.length > 0 && (

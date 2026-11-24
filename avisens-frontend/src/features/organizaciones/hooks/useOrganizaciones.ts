@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import { mensajeDeError } from '@shared/utils/errores'
 import {
   activarOrganizacion,
@@ -16,8 +17,8 @@ export function useOrganizaciones() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
-  const recargar = useCallback(async () => {
-    setCargando(true)
+  const recargar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setCargando(true)
     setError('')
     try {
       // El servidor ya devuelve `_count` con las granjas y los usuarios de cada
@@ -26,13 +27,14 @@ export function useOrganizaciones() {
       // merced del alcance por rol de quien mire.
       setOrganizaciones(await listarOrganizaciones())
     } catch {
-      setError('No se pudieron cargar las organizaciones.')
+      if (!silencioso) setError('No se pudieron cargar las organizaciones.')
     } finally {
-      setCargando(false)
+      if (!silencioso) setCargando(false)
     }
   }, [])
 
   useEffect(() => { void recargar() }, [recargar])
+  useRefetchOnFocus(() => { void recargar(true) })
 
   const guardar = useCallback(async (
     payload: CrearOrganizacionPayload,
@@ -40,14 +42,15 @@ export function useOrganizaciones() {
   ) => {
     if (editandoId === null) await crearOrganizacion(payload)
     else await actualizarOrganizacion(editandoId, payload)
-    await recargar()
+    await recargar(true)
+    toast.success(editandoId === null ? 'Cliente creado' : 'Datos del cliente actualizados')
   }, [recargar])
 
   const alternar = useCallback(async (organizacion: Organizacion) => {
     try {
       if (organizacion.activa) await desactivarOrganizacion(organizacion.id)
       else await activarOrganizacion(organizacion.id)
-      await recargar()
+      await recargar(true)
       toast.success(
         organizacion.activa
           ? `${organizacion.nombre} queda suspendida`

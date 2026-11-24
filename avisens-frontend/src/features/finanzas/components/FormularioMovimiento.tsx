@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
+import { fechaDeHoy } from '@shared/utils/fechas'
 import type { Granja } from '@features/granjas/api/granjas'
 import type { Lote } from '@features/lotes/api/lotes'
 import type { CategoriaFinanciera } from '../api/movimientos-financieros'
@@ -40,6 +41,7 @@ function FormularioMovimiento({
 
   return (
     <Modal
+      variante="lateral"
       titulo={modoEdicion ? 'Editar movimiento' : 'Nuevo movimiento'}
       subtitulo="Registra un ingreso o un egreso de la operación. El lote es opcional."
       onCerrar={onCerrar}
@@ -114,7 +116,7 @@ function FormularioMovimiento({
             required
           />
           {Number(form.valor_cop) > 0 && (
-            <small style={{ color: 'var(--text-secondary)', fontWeight: 600, marginTop: 'var(--space-1)' }}>
+            <small className="fin-form-monto-vista">
               {formatearCop(Number(form.valor_cop))}
             </small>
           )}
@@ -125,6 +127,7 @@ function FormularioMovimiento({
           <input
             type="date"
             value={form.fecha}
+            max={fechaDeHoy()}
             onChange={(evento) => onCambiar('fecha', evento.target.value)}
             required
           />
@@ -180,7 +183,7 @@ function FormularioMovimiento({
             maxLength={50}
             autoComplete="off"
           />
-          <small className="modal-ayuda" style={{ color: 'var(--text-muted)' }}>
+          <small className="modal-ayuda">
             Folio o comprobante físico para soporte contable.
           </small>
         </label>

@@ -17,8 +17,9 @@ describe('erroresDeUsuario (QA 17-nov)', () => {
     expect(erroresDeUsuario({ ...valido, cedula: '123' }).cedula).toMatch(/de 6 a 10/)
   })
 
-  it('rechaza un teléfono de menos de 10 dígitos o con letras', () => {
-    expect(erroresDeUsuario({ ...valido, telefono: '123' }).telefono).toMatch(/al menos 10/)
+  it('rechaza un teléfono fuera de 10 a 13 dígitos o con letras', () => {
+    expect(erroresDeUsuario({ ...valido, telefono: '123' }).telefono).toMatch(/entre 10 y 13/)
+    expect(erroresDeUsuario({ ...valido, telefono: '12345678901234' }).telefono).toMatch(/entre 10 y 13/)
     expect(erroresDeUsuario({ ...valido, telefono: '300abc4567' }).telefono).toMatch(/solo lleva números/)
   })
 

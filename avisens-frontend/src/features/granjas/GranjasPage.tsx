@@ -10,10 +10,8 @@ import {
   IcLeaf,
   IcPin,
   IcPlus,
-  IcRefresh,
   IcSearch,
 } from '@shared/ui/icons/icons'
-import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
 import CabeceraAdmin from '@shared/ui/admin/CabeceraAdmin'
 import '@shared/ui/admin/AdminKit.css'
 import {
@@ -260,13 +258,6 @@ function GranjasAdministracion() {
     )
   }, [busquedaAdministrativa, estructura])
 
-  const stats: Stat[] = [
-    { label: 'Granjas', valor: totales.granjas, icono: <IcLeaf size={18} />, tono: 'neutral' },
-    { label: 'Galpones', valor: totales.galpones, icono: <IcGrid size={18} />, tono: 'neutral' },
-    { label: 'Lotes activos', valor: totales.lotesActivos, icono: <IcEgg size={18} />, tono: 'ok' },
-    { label: 'Aves alojadas', valor: totales.aves, icono: <IcEgg size={18} />, tono: 'info' },
-  ]
-
   const contenidoPorRol = esAdministrador
     ? {
         contexto: 'Control de organización',
@@ -303,26 +294,50 @@ function GranjasAdministracion() {
         eyebrow={contenidoPorRol.contexto}
         titulo={contenidoPorRol.titulo}
         subtitulo={contenidoPorRol.descripcion}
-        acciones={(
-          <button
-            type="button"
-            className="adm-btn adm-btn--secundario"
-            onClick={() => void recargarTodo()}
-            disabled={cargando}
-          >
-            <IcRefresh size={16} aria-hidden="true" />
-            {cargando ? 'Actualizando…' : 'Actualizar'}
-          </button>
-        )}
       />
 
-      {esAdministrador ? (
-        <section className="grj-resumen" aria-label={contenidoPorRol.resumen}>
-          <TarjetasResumen stats={stats} etiqueta={contenidoPorRol.resumen} />
-        </section>
-      ) : (
-        <TarjetasResumen stats={stats} etiqueta={contenidoPorRol.resumen} />
-      )}
+      <ul className="adm-kpis" aria-label={contenidoPorRol.resumen}>
+        <li>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Granjas</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcLeaf size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{totales.granjas.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Registradas en operación</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Galpones</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcGrid size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{totales.galpones.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Espacios productivos</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--ok">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Lotes activos</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcEgg size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{totales.lotesActivos.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Ciclos en curso</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--info">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Aves alojadas</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcEgg size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{totales.aves.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Población actual</span>
+          </div>
+        </li>
+      </ul>
 
       {error && (
         <div className="adm-alerta" role="alert">

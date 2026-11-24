@@ -460,7 +460,14 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
       expect(await vivas(f.op)).toBe(0);
       const final = await seguridad(f.op);
       expect(final?.intentos_fallidos).toBe(0);
-      expect(final?.debe_cambiar_password).toBe(true);
+      // Para Operario la contraseña aprobada queda activa sin autocambio.
+      expect(final?.debe_cambiar_password).toBe(false);
+      const solicitudFinal =
+        await entorno.prisma.recuperacionPassword.findUnique({
+          where: { id: s.id },
+          select: { estado: true },
+        });
+      expect(solicitudFinal?.estado).toBe('completada');
     });
 
     it('aprobada mientras el login está en la fase B: espera al login y revoca la sesión nueva', async () => {
@@ -494,7 +501,14 @@ describe('Login ↔ desactivación: intercalados sobre AuthService real por HTTP
       expect(login.status).toBe(200);
       expect(await vivas(f.op)).toBe(0);
       expect(await refrescar(login.body.refresh_token as string)).toBe(401);
-      expect((await seguridad(f.op))?.debe_cambiar_password).toBe(true);
+      // Para Operario la contraseña aprobada queda activa sin autocambio.
+      expect((await seguridad(f.op))?.debe_cambiar_password).toBe(false);
+      const solicitudFinal =
+        await entorno.prisma.recuperacionPassword.findUnique({
+          where: { id: s.id },
+          select: { estado: true },
+        });
+      expect(solicitudFinal?.estado).toBe('completada');
     });
 
     it('cambiarPassword mientras el login está en la fase B: espera y revoca la sesión nueva', async () => {

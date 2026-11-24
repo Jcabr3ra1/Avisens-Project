@@ -129,25 +129,8 @@ export class LotesService {
     }
   }
 
-  private async verificarSinLoteActivo(galponId: number, idPropio?: number) {
-    const otroActivo = await this.prisma.lote.findFirst({
-      where: {
-        galpon_id: galponId,
-        estado: 'activo',
-        ...(idPropio !== undefined ? { id: { not: idPropio } } : {}),
-      },
-      select: { id: true },
-    });
-    if (otroActivo) {
-      throw new ConflictException(
-        'Este galpón ya tiene un lote activo. Desactívalo antes de crear o activar otro.',
-      );
-    }
-  }
-
   async crear(dto: CreateLoteDto, solicitante: Solicitante) {
     await this.validarGalpon(dto.galpon_id, solicitante);
-    await this.verificarSinLoteActivo(dto.galpon_id);
 
     return this.prisma.$transaction(async (transaccion) => {
       if (
@@ -232,9 +215,6 @@ export class LotesService {
         'No se puede trasladar un lote a otro galpón; crea un lote nuevo para conservar la integridad histórica',
       );
     }
-    if (dto.estado === 'activo') {
-      await this.verificarSinLoteActivo(actual.galpon.id, id);
-    }
 
     return this.prisma.$transaction(async (transaccion) => {
       if (
@@ -283,8 +263,7 @@ export class LotesService {
   }
 
   async activar(id: number, solicitante: Solicitante) {
-    const lote = await this.obtener(id, solicitante);
-    await this.verificarSinLoteActivo(lote.galpon.id, id);
+    await this.obtener(id, solicitante);
     return this.prisma.lote.update({
       where: { id },
       data: { estado: 'activo' },

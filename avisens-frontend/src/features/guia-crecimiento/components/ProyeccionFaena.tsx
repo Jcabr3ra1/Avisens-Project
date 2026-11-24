@@ -54,11 +54,18 @@ function ProyeccionFaena({ loteId, curva, plan, prediccion, error, cargando }: P
     }
   }
 
+  const habilitado = planListo && datosSuficientes && quedanDiasSimulables
+
   return (
-    <section className="gdc-sim" aria-labelledby="gpf-titulo">
-      <div>
-        <h3 id="gpf-titulo">¿Y si faeno el día {dia}?</h3>
-        <p className="gdc-sim-ayuda">Elige un día futuro para estimar el peso y la conversión del lote.</p>
+    <section className={`gdc-sim${!habilitado ? ' is-bloqueado' : ''}`} aria-labelledby="gpf-titulo">
+      <div className="gdc-sim-cabecera">
+        <span className="gdc-sim-eyebrow">Simulador de salida</span>
+        <h3 id="gpf-titulo">
+          {habilitado ? `¿Y si saco el lote el día ${dia}?` : 'Simular fecha de salida'}
+        </h3>
+        <p className="gdc-sim-ayuda">
+          Elige un día futuro para estimar el peso, la conversión y el alimento del lote sin cambiar tu plan.
+        </p>
       </div>
       {!planListo ? (
         <p className="guia-nota">{plan?.desactualizado
@@ -71,7 +78,7 @@ function ProyeccionFaena({ loteId, curva, plan, prediccion, error, cargando }: P
       ) : (
         <>
           <div className="gpf-control">
-            <label htmlFor="gpf-dia">Día de faena: <strong>{dia}</strong></label>
+            <label htmlFor="gpf-dia">Día de salida: <strong>{dia}</strong></label>
             <input
               id="gpf-dia"
               type="range"

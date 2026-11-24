@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { TextoSeguro } from '../../../common/validation/texto';
 
 export class ResponderSolicitudPqrsDto {
   @ApiPropertyOptional({
@@ -15,9 +16,8 @@ export class ResponderSolicitudPqrsDto {
     example: 'Se contactó al prospecto y se envió la cotización por correo.',
     description: 'Respuesta registrada al cliente',
   })
-  @IsString()
-  @MaxLength(4000)
   @IsOptional()
+  @TextoSeguro('La respuesta', 4000, { multilinea: true })
   respuesta?: string;
 
   @ApiPropertyOptional({
@@ -25,6 +25,7 @@ export class ResponderSolicitudPqrsDto {
     description: 'ID del administrador que toma la solicitud',
   })
   @IsInt()
+  @Min(1)
   @IsOptional()
   responsable_id?: number;
 }

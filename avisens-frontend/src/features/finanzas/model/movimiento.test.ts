@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { CategoriaFinanciera } from '../api/movimientos-financieros'
+import type { CategoriaFinanciera, MovimientoFinanciero } from '../api/movimientos-financieros'
 import {
   categoriasParaTipo,
   errorDeFormulario,
   fechaCorta,
+  filtrarMovimientos,
   formularioDesde,
   formularioVacio,
   payloadDesdeFormulario,
@@ -109,5 +110,35 @@ describe('Finanzas: monto desproporcionado', () => {
 
   it('deja pasar los $100.000.000 reales de la prueba', () => {
     expect(errorDeFormulario(formulario({ valor_cop: '100000000' }))).toBe('')
+  })
+})
+
+describe('filtrarMovimientos', () => {
+  const lista = [
+    {
+      id: 1,
+      tipo: 'egreso',
+      descripcion: 'Compra de concentración inicial',
+      numero_factura: 'FAC-2026-001',
+      categoria: { id: 2, nombre: 'Alimento', tipo: 'egreso' },
+      granja: { id: 1, nombre: 'El Jaller' },
+      lote: { id: 9, codigo: 'LOT-2026-000009' },
+    },
+    {
+      id: 2,
+      tipo: 'ingreso',
+      descripcion: 'Venta lote completo',
+      numero_factura: null,
+      categoria: { id: 1, nombre: 'Venta de aves', tipo: 'ingreso' },
+      granja: { id: 1, nombre: 'El Jaller' },
+      lote: { id: 10, codigo: 'LOT-2026-000010' },
+    },
+  ] as unknown as MovimientoFinanciero[]
+
+  it('filtra por tipo, lote y búsqueda sin sensibilidad a tildes (incluye factura)', () => {
+    expect(filtrarMovimientos(lista, { tipo: 'ingreso', loteId: 'todos', busqueda: '' }).map((m) => m.id)).toEqual([2])
+    expect(filtrarMovimientos(lista, { tipo: 'todos', loteId: '9', busqueda: '' }).map((m) => m.id)).toEqual([1])
+    expect(filtrarMovimientos(lista, { tipo: 'todos', loteId: 'todos', busqueda: 'concentracion' }).map((m) => m.id)).toEqual([1])
+    expect(filtrarMovimientos(lista, { tipo: 'todos', loteId: 'todos', busqueda: 'fac-2026-001' }).map((m) => m.id)).toEqual([1])
   })
 })

@@ -1,5 +1,6 @@
 import { useEffect, useRef, type FormEvent, type ReactNode } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
+import { fechaDeHoy } from '@shared/utils/fechas'
 import type { Insumo } from '@features/inventario/api/insumos'
 import {
   AVES_MAXIMO,
@@ -9,6 +10,7 @@ import {
   type FormularioRegistro as Datos,
   type TipoRegistro,
 } from '../model/bitacora'
+import SelectorFotoMortalidad from './SelectorFotoMortalidad'
 
 type Props = {
   tipo: TipoRegistro
@@ -23,6 +25,11 @@ type Props = {
   editando?: boolean
   // Vacunas y medicamentos de bodega que se pueden indicar en un evento sanitario.
   insumos?: Insumo[]
+  // Evidencia fotográfica opcional para registros de mortalidad.
+  fotoMortalidad?: File | null
+  tieneFotoActual?: boolean
+  onCambiarFotoMortalidad?: (archivo: File | null) => void
+  onErrorFoto?: (mensaje: string) => void
 }
 
 const ID_FORMULARIO = 'formulario-registro'
@@ -47,7 +54,21 @@ const EVENTOS_SANITARIOS = [
   ['revision', 'Revisión'],
 ] as const
 
-function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar, onCerrar, editando = false, insumos = [] }: Props) {
+function FormularioRegistro({
+  tipo,
+  form,
+  guardando,
+  error,
+  onCambiar,
+  onGuardar,
+  onCerrar,
+  editando = false,
+  insumos = [],
+  fotoMortalidad = null,
+  tieneFotoActual = false,
+  onCambiarFotoMortalidad,
+  onErrorFoto,
+}: Props) {
   const fechaRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -56,6 +77,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
 
   return (
     <Modal
+      variante="lateral"
       titulo={editando ? TITULOS_EDICION[tipo] : TITULOS[tipo]}
       onCerrar={onCerrar}
       acciones={
@@ -81,6 +103,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
             ref={fechaRef}
             type="date"
             value={form.fecha}
+            max={fechaDeHoy()}
             onChange={(evento) => onCambiar('fecha', evento.target.value)}
             required
           />
@@ -94,6 +117,8 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
                 type="number"
                 min={PESO_MINIMO_G}
                 max={PESO_MAXIMO_G}
+                step="any"
+                inputMode="decimal"
                 value={form.peso_promedio_g}
                 onChange={(evento) => onCambiar('peso_promedio_g', evento.target.value)}
                 required
@@ -106,6 +131,8 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
                   type="number"
                   min="1"
                   max={AVES_MAXIMO}
+                  step="1"
+                  inputMode="numeric"
                   value={form.cantidad_aves_pesadas}
                   onChange={(evento) => onCambiar('cantidad_aves_pesadas', evento.target.value)}
                 />
@@ -116,6 +143,8 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
                   type="number"
                   min={PESO_MINIMO_G}
                   max={PESO_MAXIMO_G}
+                  step="any"
+                  inputMode="decimal"
                   value={form.peso_objetivo_g}
                   onChange={(evento) => onCambiar('peso_objetivo_g', evento.target.value)}
                 />
@@ -132,6 +161,8 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
                 type="number"
                 min="1"
                 max={AVES_MAXIMO}
+                step="1"
+                inputMode="numeric"
                 value={form.cantidad_aves}
                 onChange={(evento) => onCambiar('cantidad_aves', evento.target.value)}
                 required
@@ -141,9 +172,19 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
               <span>Causa probable <em>(Opcional)</em></span>
               <input
                 value={form.causa_presuntiva}
+                maxLength={200}
                 onChange={(evento) => onCambiar('causa_presuntiva', evento.target.value)}
               />
             </label>
+            {onCambiarFotoMortalidad && (
+              <SelectorFotoMortalidad
+                archivo={fotoMortalidad}
+                tieneFotoActual={tieneFotoActual}
+                deshabilitado={guardando}
+                onSeleccionar={onCambiarFotoMortalidad}
+                onError={onErrorFoto}
+              />
+            )}
           </>
         )}
 
@@ -166,6 +207,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
               <span>Producto o vacuna <em>(Opcional)</em></span>
               <input
                 value={form.producto}
+                maxLength={120}
                 onChange={(evento) => onCambiar('producto', evento.target.value)}
               />
             </label>
@@ -190,7 +232,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
                 <span>Dosis <em>(Opcional)</em></span>
                 <input
                   value={form.dosis}
-                  maxLength={100}
+                  maxLength={80}
                   placeholder="Ej.: 0,5 ml por ave"
                   onChange={(evento) => onCambiar('dosis', evento.target.value)}
                 />
@@ -225,6 +267,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
                 <span>Diagnóstico <em>(Opcional)</em></span>
                 <input
                   value={form.diagnostico}
+                  maxLength={200}
                   onChange={(evento) => onCambiar('diagnostico', evento.target.value)}
                 />
               </label>
@@ -237,6 +280,7 @@ function FormularioRegistro({ tipo, form, guardando, error, onCambiar, onGuardar
           <textarea
             rows={3}
             style={{ resize: 'none' }}
+            maxLength={500}
             value={form.observaciones}
             onChange={(evento) => onCambiar('observaciones', evento.target.value)}
           />

@@ -90,7 +90,7 @@ export default function ModalReporteImprimible({
   return (
     <Modal
       titulo="Reporte ejecutivo de crecimiento y liquidación"
-      subtitulo="Formato para exportar en PDF o imprimir con indicadores zootécnicos y financieros (HU-29)."
+      subtitulo="Formato para exportar en PDF o imprimir con indicadores zootécnicos y financieros."
       onCerrar={onCerrar}
       ancho="ancho"
       acciones={
@@ -166,36 +166,32 @@ export default function ModalReporteImprimible({
 
           {/* Resumen Financiero Preliminar */}
           <section className="rep-financiero-caja">
-            <h3 className="rep-seccion-titulo" style={{ borderColor: '#86efac' }}>
+            <h3 className="rep-seccion-titulo rep-financiero-titulo">
               2. Balance Financiero Preliminar (Carne vs. Alimento)
             </h3>
-            <div className="rep-financiero-grid">
+            <dl className="rep-financiero-grid">
               <div>
-                <dt style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 700 }}>Carne Total Producida</dt>
-                <dd style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0.25rem 0', color: '#14532d' }}>
-                  {datosCalculados.carneTotalKg.toLocaleString()} kg
-                </dd>
-                <small style={{ color: '#166534' }}>
+                <dt>Carne Total Producida</dt>
+                <dd>{datosCalculados.carneTotalKg.toLocaleString()} kg</dd>
+                <small>
                   Ingreso estimado / real: $ {datosCalculados.ingresoVentaCop.toLocaleString('es-CO')} COP
                 </small>
               </div>
               <div>
-                <dt style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 700 }}>Alimento Total Consumido</dt>
-                <dd style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0.25rem 0', color: '#14532d' }}>
-                  {datosCalculados.alimentoTotalKg.toLocaleString()} kg
-                </dd>
-                <small style={{ color: '#166534' }}>
+                <dt>Alimento Total Consumido</dt>
+                <dd>{datosCalculados.alimentoTotalKg.toLocaleString()} kg</dd>
+                <small>
                   Costo estimado alimento: $ {datosCalculados.costoEstimadoAlimentoCop.toLocaleString('es-CO')} COP
                 </small>
               </div>
               <div>
-                <dt style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 700 }}>Margen Bruto de Operación</dt>
-                <dd style={{ fontSize: '1.25rem', fontWeight: 800, margin: '0.25rem 0', color: '#15803d' }}>
+                <dt>Margen Bruto de Operación</dt>
+                <dd className="rep-financiero-margen">
                   $ {datosCalculados.margenPreliminarCop.toLocaleString('es-CO')} COP
                 </dd>
-                <small style={{ color: '#166534' }}>Diferencia directa Venta Carne - Costo Alimento</small>
+                <small>Diferencia directa Venta Carne - Costo Alimento</small>
               </div>
-            </div>
+            </dl>
           </section>
 
           {/* Tabla de evolución semanal / diaria */}

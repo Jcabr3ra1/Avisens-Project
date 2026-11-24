@@ -1,0 +1,11 @@
+ALTER TABLE "usuarios"
+  ADD COLUMN IF NOT EXISTS "foto" BYTEA,
+  ADD COLUMN IF NOT EXISTS "foto_mime_type" TEXT;
+
+ALTER TABLE "galpones"
+  ADD COLUMN IF NOT EXISTS "foto" BYTEA,
+  ADD COLUMN IF NOT EXISTS "foto_mime_type" TEXT;
+
+ALTER TABLE "evidencias_alertas"
+  ADD COLUMN IF NOT EXISTS "imagen" BYTEA,
+  ADD COLUMN IF NOT EXISTS "mime_type" TEXT;

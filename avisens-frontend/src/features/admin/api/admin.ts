@@ -1,6 +1,7 @@
 import { type Usuario } from '@shared/api'
 import { api } from '@shared/api/client'
 import type { ConectividadPlataforma } from '../model/conectividad'
+import type { MetricasAdmin, PeriodoDias } from '../model/metricas'
 import { listarUsuarios } from '@features/usuarios/api/usuarios'
 import { listarTodosLosProspectos, type Prospecto } from '@features/crm/api/prospectos'
 import { listarGranjas, type Granja } from '@features/granjas/api/granjas'
@@ -37,5 +38,10 @@ export async function cargarAtencionAdmin(): Promise<AtencionAdminData> {
 
 export async function obtenerConectividad(): Promise<ConectividadPlataforma> {
   const { data } = await api.get<ConectividadPlataforma>('/dispositivos/conectividad')
+  return data
+}
+
+export async function obtenerMetricasAdmin(dias: PeriodoDias): Promise<MetricasAdmin> {
+  const { data } = await api.get<MetricasAdmin>('/admin/metricas', { params: { dias } })
   return data
 }

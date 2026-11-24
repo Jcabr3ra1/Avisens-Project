@@ -1,0 +1,236 @@
+.mort-foto-campo {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.mort-foto-etiqueta {
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.mort-foto-etiqueta em {
+  color: var(--text-muted);
+  font-style: normal;
+  font-weight: 500;
+}
+
+.mort-foto-drop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+}
+
+.mort-foto-drop-info {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.mort-foto-drop-info strong {
+  color: var(--text-primary);
+  font-weight: 650;
+}
+
+.mort-foto-drop-info span {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.mort-foto-drop-info small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.mort-foto-preview {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+}
+
+.mort-foto-preview img {
+  width: 72px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.mort-foto-preview-meta {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.mort-foto-preview-meta strong {
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mort-foto-preview-meta small {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.mort-foto-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.7rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.mort-foto-btn:hover:not(:disabled) {
+  background: var(--surface-tinted);
+  border-color: var(--border-strong);
+}
+
+.mort-foto-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mort-foto-btn--peligro {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border-default));
+}
+
+.mort-foto-btn--peligro:hover:not(:disabled) {
+  background: var(--danger-soft);
+}
+
+.mort-foto-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.28rem 0.62rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.mort-foto-chip:hover {
+  background: var(--surface-tinted);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.mort-foto-chip--activa {
+  background: var(--primary-soft);
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  color: var(--primary);
+}
+
+.mort-foto-chip--activa:hover {
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface-base));
+  color: var(--primary);
+}
+
+/* ─── Visor de evidencia fotográfica ─── */
+
+.mort-visor {
+  display: grid;
+  gap: 1rem;
+}
+
+.mort-visor-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.9rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-tinted);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+}
+
+.mort-visor-meta strong {
+  color: var(--text-primary);
+}
+
+.mort-visor-marco {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  max-height: 440px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-tinted);
+}
+
+.mort-visor-marco img {
+  display: block;
+  width: 100%;
+  max-height: 440px;
+  object-fit: contain;
+  background: #0f172a0d;
+}
+
+.mort-visor-vacio {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  padding: 2rem 1.25rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.mort-visor-vacio strong {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.mort-visor-vacio p {
+  margin: 0;
+  font-size: 0.82rem;
+  max-width: 34ch;
+}
+
+.mort-visor-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.mort-visor-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

@@ -1,9 +1,11 @@
 import { useRef, useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
-import { IcHeart, IcSeed } from '@shared/ui/icons/icons'
-import { fechaDeHoy } from '@shared/utils/fechas'
+import { IcAlert, IcSeed } from '@shared/ui/icons/icons'
+import { diasDeVida, fechaDeHoy } from '@shared/utils/fechas'
+import SelectorFotoMortalidad from '@features/bitacora/components/SelectorFotoMortalidad'
 import { AGUA_MAXIMO_LITROS, ALIMENTO_MAXIMO_KG } from '@features/consumos-diarios/model/consumoDiario'
 import type { JornadaOperario } from '../model/jornadaOperario'
+import { validarTextoSeguro } from '@shared/utils/validacion'
 import { validarConsumo, validarFechaRegistro, validarMortalidad } from '../model/registroOperario'
 
 type TipoRegistro = 'mortalidad' | 'consumo'
@@ -11,11 +13,13 @@ type TipoRegistro = 'mortalidad' | 'consumo'
 type Props = {
   tipo: TipoRegistro
   jornada: JornadaOperario
+  loteInicialId?: number
   guardando: boolean
   onCerrar: () => void
   onRegistrarMortalidad: (
     loteId: number,
     registro: { fecha: string; cantidad_aves: number; causa_presuntiva?: string; disposicion?: string; observaciones?: string },
+    foto?: File | null,
   ) => Promise<void>
   onRegistrarConsumo: (
     loteId: number,
@@ -25,27 +29,33 @@ type Props = {
 
 const ID_FORMULARIO = 'registro-operario'
 
-// Usa el mismo Modal que el resto de la plataforma (foco atrapado, Escape,
-// animación y estilos), en vez del diálogo propio que tenía Mi jornada.
 function ModalRegistroOperario({
   tipo,
   jornada,
+  loteInicialId,
   guardando,
   onCerrar,
   onRegistrarMortalidad,
   onRegistrarConsumo,
 }: Props) {
   const campoRef = useRef<HTMLInputElement>(null)
+  const activos = jornada.lotesActivos.length > 0
+    ? jornada.lotesActivos
+    : jornada.lote ? [jornada.lote] : []
+  const [loteId, setLoteId] = useState<number>(
+    () => activos.find((item) => item.id === loteInicialId)?.id ?? activos[0]?.id ?? 0,
+  )
   const [fecha, setFecha] = useState(fechaDeHoy)
   const [cantidadAves, setCantidadAves] = useState('')
   const [causa, setCausa] = useState('')
   const [disposicion, setDisposicion] = useState('')
   const [observaciones, setObservaciones] = useState('')
+  const [foto, setFoto] = useState<File | null>(null)
   const [alimento, setAlimento] = useState('')
   const [agua, setAgua] = useState('')
   const [error, setError] = useState('')
   const esMortalidad = tipo === 'mortalidad'
-  const lote = jornada.lote
+  const lote = activos.find((item) => item.id === loteId) ?? activos[0] ?? null
 
   if (!lote) return null
 
@@ -55,7 +65,10 @@ function ModalRegistroOperario({
 
     const problema = validarFechaRegistro(fecha, fechaDeHoy())
       ?? (esMortalidad
-        ? validarMortalidad(cantidadAves, lote.cantidad_inicial)
+        ? (validarMortalidad(cantidadAves, lote.cantidad_inicial)
+          ?? validarTextoSeguro(causa, 'La causa probable', { max: 150, exigirLetras: true })
+          ?? validarTextoSeguro(disposicion, 'La disposición', { max: 100 })
+          ?? validarTextoSeguro(observaciones, 'Las observaciones', { max: 500, multilinea: true }))
         : validarConsumo(alimento, agua))
     if (problema) {
       setError(problema)
@@ -65,13 +78,17 @@ function ModalRegistroOperario({
 
     try {
       if (esMortalidad) {
-        await onRegistrarMortalidad(lote.id, {
-          fecha,
-          cantidad_aves: Number(cantidadAves),
-          causa_presuntiva: causa.trim() || undefined,
-          disposicion: disposicion.trim() || undefined,
-          observaciones: observaciones.trim() || undefined,
-        })
+        await onRegistrarMortalidad(
+          lote.id,
+          {
+            fecha,
+            cantidad_aves: Number(cantidadAves),
+            causa_presuntiva: causa.trim() || undefined,
+            disposicion: disposicion.trim() || undefined,
+            observaciones: observaciones.trim() || undefined,
+          },
+          foto,
+        )
       } else {
         await onRegistrarConsumo(lote.id, {
           fecha,
@@ -81,20 +98,19 @@ function ModalRegistroOperario({
       }
       onCerrar()
     } catch (err) {
-      // useJornadaOperario ya traduce el error del servidor y lo relanza.
       setError(err instanceof Error ? err.message : 'No fue posible guardar el registro.')
     }
   }
 
   return (
     <Modal
+      variante="lateral"
       titulo={esMortalidad ? 'Registrar mortalidad' : 'Registrar consumo'}
       subtitulo={`${jornada.galpon.nombre} · ${lote.codigo}`}
-      icono={esMortalidad ? <IcHeart size={20} /> : <IcSeed size={20} />}
+      icono={esMortalidad ? <IcAlert size={20} /> : <IcSeed size={20} />}
       onCerrar={onCerrar}
       bloqueado={guardando}
       focoInicial={campoRef}
-      ancho="compacto"
       acciones={(
         <>
           <button type="button" className="modal-btn" onClick={onCerrar} disabled={guardando}>
@@ -107,6 +123,23 @@ function ModalRegistroOperario({
       )}
     >
       <form id={ID_FORMULARIO} onSubmit={guardar} noValidate>
+        {activos.length > 1 && (
+          <label className="modal-campo">
+            <span>Lote del galpón</span>
+            <select
+              value={lote.id}
+              onChange={(evento) => setLoteId(Number(evento.target.value))}
+              disabled={guardando}
+            >
+              {activos.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.codigo} · Día {diasDeVida(item.fecha_ingreso)} ({item.cantidad_inicial.toLocaleString('es-CO')} aves)
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <label className="modal-campo">
           <span>Fecha</span>
           <input
@@ -136,7 +169,7 @@ function ModalRegistroOperario({
             </label>
             <label className="modal-campo">
               <span>Causa probable <em>(opcional)</em></span>
-              <input value={causa} onChange={(evento) => setCausa(evento.target.value)} />
+              <input value={causa} maxLength={150} onChange={(evento) => setCausa(evento.target.value)} />
             </label>
             <label className="modal-campo">
               <span>¿Qué hiciste con las aves? <em>(opcional)</em></span>
@@ -158,6 +191,12 @@ function ModalRegistroOperario({
                 placeholder="Ej.: estaban concentradas en la esquina norte."
               />
             </label>
+            <SelectorFotoMortalidad
+              archivo={foto}
+              deshabilitado={guardando}
+              onSeleccionar={setFoto}
+              onError={setError}
+            />
           </>
         ) : (
           <div className="modal-fila">

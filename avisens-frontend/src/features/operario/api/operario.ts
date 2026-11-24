@@ -1,6 +1,7 @@
 import { api } from '@shared/api/client'
 import { listarTodasLasPaginas } from '@shared/api/paginacion'
 import type { PaginatedResponse } from '@shared/api/types'
+import { subirFotoMortalidad } from '@features/bitacora/api/bitacora'
 import type { ConsumoLote, EventoSanitarioLote, MortalidadLote } from '../model/resumenLoteOperario'
 
 export interface GalponOperario {
@@ -72,12 +73,16 @@ export function listarEventosSanitariosOperario(): Promise<EventoSanitarioLote[]
 export async function registrarMortalidadOperario(
   loteId: number,
   registro: RegistroMortalidadOperario,
+  foto?: File | null,
 ): Promise<void> {
-  await api.post('/registros-mortalidad', {
+  const { data } = await api.post<{ id: number }>('/registros-mortalidad', {
     lote_id: loteId,
     ...registro,
     metodo_registro: 'manual',
   })
+  if (foto && data?.id) {
+    await subirFotoMortalidad(data.id, foto)
+  }
 }
 
 export async function registrarConsumoOperario(

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRol } from '@shared/api'
+import { useRefetchOnFocus } from '@shared/hooks/useRefetchOnFocus'
 import type { Notificacion } from '@features/notificaciones/api/notificaciones'
-import { IcAlert, IcBell, IcCheck, IcRefresh, IcUserCircle } from '@shared/ui/icons/icons'
+import { IcAlert, IcBell, IcCheck, IcClock, IcRefresh, IcUserCircle } from '@shared/ui/icons/icons'
 import { useNotificaciones } from './hooks/useNotificaciones'
 import EstadoVacio from '@shared/ui/Estados/EstadoVacio'
 import Cargando from '@shared/ui/Estados/Cargando'
@@ -47,10 +48,12 @@ function NotificacionesPage() {
     noLeidas,
     cargando,
     error,
+    cargar,
     marcarLeida,
     marcarTodas,
     eliminar,
   } = useNotificaciones()
+  useRefetchOnFocus(cargar)
 
   const [filtro, setFiltro] = useState<Filtro>('todas')
 
@@ -85,10 +88,37 @@ function NotificacionesPage() {
         </button>
       </header>
 
-      <ul className="not-indicadores" aria-label="Resumen de notificaciones">
-        <li><span>Sin leer</span><strong>{cargando ? '—' : noLeidas}</strong><small>Esperan tu revisión</small></li>
-        <li><span>Hoy</span><strong>{cargando ? '—' : notificaciones.filter((notificacion) => esHoy(notificacion.fecha_creacion)).length}</strong><small>Recibidas hoy</small></li>
-        <li><span>Total</span><strong>{cargando ? '—' : notificaciones.length}</strong><small>En tu bandeja</small></li>
+      <ul className="adm-kpis adm-kpis--3" aria-label="Resumen de notificaciones">
+        <li>
+          <div className={`adm-kpi adm-kpi--${noLeidas > 0 ? 'alerta' : 'ok'}`}>
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Sin leer</span>
+              <span className="adm-kpi-icono" aria-hidden="true">{noLeidas > 0 ? <IcBell size={15} /> : <IcCheck size={15} />}</span>
+            </span>
+            <strong className="adm-kpi-valor">{cargando ? '—' : noLeidas}</strong>
+            <span className="adm-kpi-nota">Esperan tu revisión</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--info">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Hoy</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcClock size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{cargando ? '—' : notificaciones.filter((notificacion) => esHoy(notificacion.fecha_creacion)).length}</strong>
+            <span className="adm-kpi-nota">Recibidas hoy</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Total</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcBell size={15} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{cargando ? '—' : notificaciones.length}</strong>
+            <span className="adm-kpi-nota">En tu bandeja</span>
+          </div>
+        </li>
       </ul>
 
       {!cargando && notificaciones.length > 0 && (
@@ -101,7 +131,12 @@ function NotificacionesPage() {
         </div>
       )}
 
-      {error && <p className="not-aviso not-aviso--error adm-alerta" role="alert">{error}</p>}
+      {error && (
+        <div className="not-aviso not-aviso--error adm-alerta" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => void cargar()}>Reintentar</button>
+        </div>
+      )}
 
       {cargando ? (
         <Cargando texto="Cargando notificaciones…" />

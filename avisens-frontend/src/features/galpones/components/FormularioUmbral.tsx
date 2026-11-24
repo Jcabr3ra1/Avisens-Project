@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import Modal from '@shared/ui/Modal/Modal'
 import { mensajeDeError } from '@shared/utils/errores'
+import { validarTextoSeguro } from '@shared/utils/validacion'
 import {
   CRITICIDADES_UMBRAL,
   type CrearUmbralPayload,
@@ -45,8 +46,13 @@ function FormularioUmbral({
       setError('El mínimo tiene que ser menor que el máximo.')
       return
     }
-    if (!unidad.trim()) {
-      setError('Falta la unidad de medida.')
+    if (min < -50 || max > 100_000) {
+      setError('Los valores deben estar entre -50 y 100.000.')
+      return
+    }
+    const errUnidad = validarTextoSeguro(unidad, 'La unidad de medida', { requerido: true, max: 20 })
+    if (errUnidad) {
+      setError(errUnidad)
       return
     }
 
@@ -81,6 +87,7 @@ function FormularioUmbral({
 
   return (
     <Modal
+      variante="lateral"
       titulo={existente ? 'Revisar umbral' : 'Nuevo umbral'}
       subtitulo={`${variable} · ${etiquetaSemana(semana)} de vida del lote`}
       onCerrar={onCerrar}
@@ -99,15 +106,15 @@ function FormularioUmbral({
         <div className="modal-fila">
           <label className="modal-campo">
             <span>Mínimo</span>
-            <input type="number" step="any" value={minimo} onChange={(e) => setMinimo(e.target.value)} required autoFocus />
+            <input type="number" min="-50" max="100000" step="any" inputMode="decimal" value={minimo} onChange={(e) => setMinimo(e.target.value)} required autoFocus />
           </label>
           <label className="modal-campo">
             <span>Máximo</span>
-            <input type="number" step="any" value={maximo} onChange={(e) => setMaximo(e.target.value)} required />
+            <input type="number" min="-50" max="100000" step="any" inputMode="decimal" value={maximo} onChange={(e) => setMaximo(e.target.value)} required />
           </label>
           <label className="modal-campo">
             <span>Unidad</span>
-            <input value={unidad} onChange={(e) => setUnidad(e.target.value)} required />
+            <input value={unidad} onChange={(e) => setUnidad(e.target.value)} maxLength={20} required />
           </label>
         </div>
 

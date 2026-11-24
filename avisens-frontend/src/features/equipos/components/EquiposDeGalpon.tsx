@@ -2,7 +2,10 @@ import { confirmarAccion } from '@shared/ui/ConfirmarAccion/gestorConfirmacion'
 import { useState, type FormEvent } from 'react'
 import { getRol } from '@shared/api'
 import { permisosOperativosDeGalpon } from '@shared/auth/permisos'
+import { IcCheck, IcFan, IcPlus, IcSettings } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
+import { fechaDeHoy } from '@shared/utils/fechas'
+import { validarCodigo, validarNombreEntidad, validarTextoSeguro } from '@shared/utils/validacion'
 import type { Galpon } from '@features/galpones/api/galpones'
 import type { CrearEquipoPayload, Equipo } from '../api/equipos'
 import { useEquipos } from '../hooks/useEquipos'
@@ -18,6 +21,7 @@ import {
   type DatosEquipo,
 } from '../model/equipo'
 import MantenimientosDeEquipo from './MantenimientosDeEquipo'
+import '@shared/ui/admin/AdminKit.css'
 import './EquiposDeGalpon.css'
 
 // Solo usa id, código y nombre: así lo abren tanto la pantalla de galpones
@@ -25,11 +29,12 @@ import './EquiposDeGalpon.css'
 type GalponDeEquipos = Pick<Galpon, 'id' | 'codigo' | 'nombre'>
 
 function EquiposDeGalpon({ galpon }: { galpon: GalponDeEquipos }) {
-  const { equipos, cargando, error, crear, actualizar, eliminar } = useEquipos(galpon.id)
+  const { equipos, cargando, error, crear, actualizar, eliminar, recargar } = useEquipos(galpon.id)
   // Registrar equipos, cambiar su estado o darlos de baja es operación del
   // galpón: la hace el propietario; el administrador la consulta.
   const permisos = permisosOperativosDeGalpon(getRol())
   const [form, setForm] = useState<DatosEquipo>(FORMULARIO_EQUIPO_INICIAL)
+  const [mostrarForm, setMostrarForm] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorForm, setErrorForm] = useState('')
   const [errorAccion, setErrorAccion] = useState('')
@@ -42,6 +47,25 @@ function EquiposDeGalpon({ galpon }: { galpon: GalponDeEquipos }) {
   async function handleCrear(e: FormEvent) {
     e.preventDefault()
     setErrorForm('')
+    const errCodigo = validarCodigo(form.codigo, 'El código del equipo', { max: 60 })
+    const errNombre = validarNombreEntidad(form.nombre, 'El nombre del equipo', { max: 120 })
+    const errTipo = validarTextoSeguro(form.tipo, 'El tipo de equipo', { max: 40 })
+    const errModelo = validarTextoSeguro(form.modelo, 'El modelo', { max: 80 })
+    const errFab = validarTextoSeguro(form.fabricante, 'El fabricante', { max: 80 })
+    const errSerial = validarCodigo(form.serial, 'El número de serie', { requerido: false, max: 80 })
+    const vida = numeroOpcional(form.vida_util_horas)
+    const costo = numeroOpcional(form.costo_cop)
+    const errNum =
+      vida !== undefined && (!Number.isInteger(vida) || vida < 1 || vida > 100_000)
+        ? 'La vida útil debe ser un entero entre 1 y 100.000 horas.'
+        : costo !== undefined && (costo < 0 || costo > 10_000_000_000)
+          ? 'El costo debe estar entre $0 y $10.000.000.000.'
+          : null
+    const problema = errCodigo ?? errNombre ?? errTipo ?? errModelo ?? errFab ?? errSerial ?? errNum
+    if (problema) {
+      setErrorForm(problema)
+      return
+    }
     setGuardando(true)
     try {
       const payload: CrearEquipoPayload = {
@@ -56,11 +80,12 @@ function EquiposDeGalpon({ galpon }: { galpon: GalponDeEquipos }) {
         fecha_instalacion: form.fecha_instalacion
           ? new Date(form.fecha_instalacion).toISOString()
           : undefined,
-        vida_util_horas: numeroOpcional(form.vida_util_horas),
-        costo_cop: numeroOpcional(form.costo_cop),
+        vida_util_horas: vida,
+        costo_cop: costo,
       }
       await crear(payload)
       setForm(FORMULARIO_EQUIPO_INICIAL)
+      setMostrarForm(false)
     } catch (err) {
       setErrorForm(mensajeDeError(err, 'No se pudo registrar el equipo.'))
     } finally {
@@ -109,28 +134,57 @@ function EquiposDeGalpon({ galpon }: { galpon: GalponDeEquipos }) {
 
   return (
     <div className="eq">
-      <div className="eq-resumen">
-        <div className="eq-stat">
-          <span className="eq-stat-valor">{equipos.length}</span>
-          <span className="eq-stat-label">Total</span>
-        </div>
-        <div className="eq-stat eq-stat--activo">
-          <span className="eq-stat-valor">{operativos}</span>
-          <span className="eq-stat-label">Operativos</span>
-        </div>
-        <div className="eq-stat">
-          <span className="eq-stat-valor">{actuadores}</span>
-          <span className="eq-stat-label">Con motor o relé</span>
-        </div>
-      </div>
+      <ul className="adm-kpis adm-kpis--3" aria-label="Resumen de equipos">
+        <li>
+          <div className="adm-kpi adm-kpi--primario">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Total</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcSettings size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{equipos.length.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Equipos en el galpón</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--ok">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Operativos</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcCheck size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{operativos.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">En funcionamiento normal</span>
+          </div>
+        </li>
+        <li>
+          <div className="adm-kpi adm-kpi--info">
+            <span className="adm-kpi-cab">
+              <span className="adm-kpi-etiqueta">Con motor o relé</span>
+              <span className="adm-kpi-icono" aria-hidden="true"><IcFan size={16} /></span>
+            </span>
+            <strong className="adm-kpi-valor">{actuadores.toLocaleString('es-CO')}</strong>
+            <span className="adm-kpi-nota">Equipos motorizados</span>
+          </div>
+        </li>
+      </ul>
 
       {/* Equipos es inventario, no control: sin esta nota se confunde con los
           relés K1-K4, que viven en Sensores y se accionan desde Monitoreo. */}
-      <p className="eq-nota">
-        Inventario de las máquinas del galpón para llevar mantenimientos, desgaste y costos.
-        Desde aquí no se controla nada: los relés K1-K4 se encienden y apagan en
-        Monitoreo → Actuadores.
-      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
+        <p className="eq-nota" style={{ flex: '1 1 280px', margin: 0 }}>
+          Inventario de las máquinas del galpón para llevar mantenimientos, desgaste y costos.
+          Los relés K1-K4 se controlan desde Monitoreo → Actuadores.
+        </p>
+        {permisos.configurar && (
+          <button
+            type="button"
+            className="adm-btn adm-btn--primario"
+            onClick={() => { setMostrarForm((v) => !v); setErrorForm('') }}
+          >
+            <IcPlus size={15} aria-hidden="true" />
+            {mostrarForm ? 'Ocultar formulario' : 'Registrar equipo'}
+          </button>
+        )}
+      </div>
 
       {porMantener.length > 0 && (
         <div className="eq-alert eq-alert--aviso" role="status">
@@ -145,82 +199,98 @@ function EquiposDeGalpon({ galpon }: { galpon: GalponDeEquipos }) {
         </div>
       )}
 
-      {error && <div className="eq-alert eq-alert--error" role="alert">{error}</div>}
+      {error && (
+        <div className="adm-alerta" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => void recargar()}>Reintentar</button>
+        </div>
+      )}
       {errorAccion && (
         <div className="eq-alert eq-alert--error" role="alert">{errorAccion}</div>
       )}
 
-      {permisos.configurar && (
+      {permisos.configurar && mostrarForm && (
       <form className="eq-card eq-form" onSubmit={handleCrear}>
         <h2 className="eq-form-titulo">Registrar equipo</h2>
         <div className="eq-grid">
           <label className="eq-campo">
-            <span>galpón</span>
+            <span>Galpón</span>
             <input value={`${galpon.codigo} · ${galpon.nombre}`} disabled />
           </label>
           <label className="eq-campo">
-            <span>código único</span>
+            <span>Código único</span>
             <input
               value={form.codigo}
               onChange={(e) => campo('codigo', e.target.value)}
               placeholder="COM-G1-01"
+              maxLength={60}
               required
             />
           </label>
           <label className="eq-campo">
-            <span>nombre</span>
+            <span>Nombre</span>
             <input
               value={form.nombre}
               onChange={(e) => campo('nombre', e.target.value)}
               placeholder="Comedero lineal"
+              maxLength={120}
               required
             />
           </label>
           <label className="eq-campo">
-            <span>tipo <em>(opcional)</em></span>
+            <span>Tipo <em>(opcional)</em></span>
             <input
               value={form.tipo}
               onChange={(e) => campo('tipo', e.target.value)}
-              placeholder="alimentación"
+              placeholder="Alimentación"
+              maxLength={40}
             />
           </label>
           <label className="eq-campo">
-            <span>modelo <em>(opcional)</em></span>
-            <input value={form.modelo} onChange={(e) => campo('modelo', e.target.value)} />
+            <span>Modelo <em>(opcional)</em></span>
+            <input value={form.modelo} onChange={(e) => campo('modelo', e.target.value)} maxLength={80} />
           </label>
           <label className="eq-campo">
-            <span>fabricante <em>(opcional)</em></span>
+            <span>Fabricante <em>(opcional)</em></span>
             <input
               value={form.fabricante}
               onChange={(e) => campo('fabricante', e.target.value)}
+              maxLength={80}
             />
           </label>
           <label className="eq-campo">
-            <span>serial <em>(opcional)</em></span>
-            <input value={form.serial} onChange={(e) => campo('serial', e.target.value)} />
+            <span>Serial <em>(opcional)</em></span>
+            <input value={form.serial} onChange={(e) => campo('serial', e.target.value)} maxLength={80} />
           </label>
           <label className="eq-campo">
-            <span>instalación <em>(opcional)</em></span>
+            <span>Instalación <em>(opcional)</em></span>
             <input
               type="date"
+              max={fechaDeHoy()}
               value={form.fecha_instalacion}
               onChange={(e) => campo('fecha_instalacion', e.target.value)}
             />
           </label>
           <label className="eq-campo">
-            <span>vida útil (horas) <em>(opcional)</em></span>
+            <span>Vida útil (horas) <em>(opcional)</em></span>
             <input
               type="number"
-              min={0}
+              min={1}
+              max={100000}
+              step={1}
+              inputMode="numeric"
               value={form.vida_util_horas}
               onChange={(e) => campo('vida_util_horas', e.target.value)}
             />
           </label>
           <label className="eq-campo">
-            <span>costo COP <em>(opcional)</em></span>
+            <span>Costo COP <em>(opcional)</em></span>
             <input
               type="number"
               min={0}
+              max={10000000000}
+              step={1}
+              inputMode="numeric"
               value={form.costo_cop}
               onChange={(e) => campo('costo_cop', e.target.value)}
             />

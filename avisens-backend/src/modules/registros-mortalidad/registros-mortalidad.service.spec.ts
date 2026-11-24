@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { RegistrosMortalidadService } from './registros-mortalidad.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -184,6 +188,109 @@ describe('RegistrosMortalidadService', () => {
         ForbiddenException,
       );
       expect(prisma.registroMortalidad.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('evidencia fotográfica', () => {
+    const pngValido = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+    ]);
+
+    it('subirFoto guarda los bytes y mime_type cuando el usuario tiene acceso', async () => {
+      prisma.registroMortalidad.findUnique.mockResolvedValue({
+        id: 1,
+        lote_id: 3,
+        lote: { galpon: { granja: { propietario_id: 5 } } },
+      });
+      prisma.registroMortalidad.update.mockResolvedValue({ id: 1 });
+
+      const res = await service.subirFoto(1, pngValido, propietario);
+
+      expect(res).toEqual({
+        id: 1,
+        tiene_foto: true,
+        mime_type: 'image/png',
+        tamano_bytes: pngValido.length,
+      });
+      expect(prisma.registroMortalidad.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { foto: pngValido, foto_mime_type: 'image/png' },
+      });
+    });
+
+    it('subirFoto rechaza contenido que no es imagen válida (422)', async () => {
+      prisma.registroMortalidad.findUnique.mockResolvedValue({
+        id: 1,
+        lote_id: 3,
+        lote: { galpon: { granja: { propietario_id: 5 } } },
+      });
+
+      await expect(
+        service.subirFoto(1, Buffer.from('texto plano'), propietario),
+      ).rejects.toThrow(UnprocessableEntityException);
+      expect(prisma.registroMortalidad.update).not.toHaveBeenCalled();
+    });
+
+    it('subirFoto rechaza si el registro es de un lote ajeno (403)', async () => {
+      prisma.registroMortalidad.findUnique.mockResolvedValue({
+        id: 1,
+        lote_id: 3,
+        lote: { galpon: { granja: { propietario_id: 999 } } },
+      });
+
+      await expect(
+        service.subirFoto(1, pngValido, propietario),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.registroMortalidad.update).not.toHaveBeenCalled();
+    });
+
+    it('obtenerFoto devuelve el buffer y mimeType almacenados', async () => {
+      prisma.registroMortalidad.findUnique
+        .mockResolvedValueOnce({
+          id: 1,
+          lote_id: 3,
+          lote: { galpon: { granja: { propietario_id: 5 } } },
+        })
+        .mockResolvedValueOnce({
+          foto: pngValido,
+          foto_mime_type: 'image/png',
+        });
+
+      const res = await service.obtenerFoto(1, propietario);
+
+      expect(res.mimeType).toBe('image/png');
+      expect(res.buffer.equals(pngValido)).toBe(true);
+    });
+
+    it('obtenerFoto lanza 404 cuando el registro no tiene foto', async () => {
+      prisma.registroMortalidad.findUnique
+        .mockResolvedValueOnce({
+          id: 1,
+          lote_id: 3,
+          lote: { galpon: { granja: { propietario_id: 5 } } },
+        })
+        .mockResolvedValueOnce({ foto: null, foto_mime_type: null });
+
+      await expect(service.obtenerFoto(1, propietario)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('eliminarFoto limpia los campos de foto', async () => {
+      prisma.registroMortalidad.findUnique.mockResolvedValue({
+        id: 1,
+        lote_id: 3,
+        lote: { galpon: { granja: { propietario_id: 5 } } },
+      });
+      prisma.registroMortalidad.update.mockResolvedValue({ id: 1 });
+
+      const res = await service.eliminarFoto(1, propietario);
+
+      expect(res).toEqual({ id: 1, tiene_foto: false });
+      expect(prisma.registroMortalidad.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { foto: null, foto_mime_type: null },
+      });
     });
   });
 });

@@ -10,8 +10,9 @@ const ajeno = { ...pesaje, id: 5, lote_id: 10 }
 
 describe('lineaDeTiempo', () => {
   it('une los cuatro tipos del lote, del más reciente al más antiguo', () => {
-    const movimientos = lineaDeTiempo(9, [pesaje, ajeno], [muerte], [vacuna], [consumo])
+    const movimientos = lineaDeTiempo(9, [pesaje, ajeno], [{ ...muerte, foto_mime_type: 'image/png' }], [vacuna], [consumo])
     expect(movimientos.map((m) => m.clave)).toEqual(['mortalidad-2', 'peso-1', 'consumo-4', 'sanitario-3'])
+    expect(movimientos[0]).toMatchObject({ tieneFoto: true })
     expect(movimientos[1]).toMatchObject({ titulo: 'Pesaje · 2.100 g por ave', detalle: '50 aves pesadas' })
     expect(movimientos[2]).toMatchObject({ titulo: 'Consumo · 25,5 kg de alimento', detalle: 'Preiniciador · 60 L de agua' })
     expect(movimientos[3]).toMatchObject({ titulo: 'Vacunación', detalle: 'Producto: Newcastle' })

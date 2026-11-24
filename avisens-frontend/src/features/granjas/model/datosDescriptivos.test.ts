@@ -15,7 +15,7 @@ const granja: Granja = {
 
 const galpon = {
   id: 31, codigo: 'GAL-31', nombre: 'jallergalpon', capacidad_aves: 500, ancho_metros: null, largo_metros: null,
-  orientacion: null, tipo_techo: null, plano_url: null, fecha_construccion: null, activo: true,
+  orientacion: null, tipo_techo: null, fecha_construccion: null, activo: true,
   granja: { id: 1, nombre: 'el jaller', propietario_id: 56 },
 } satisfies Galpon
 

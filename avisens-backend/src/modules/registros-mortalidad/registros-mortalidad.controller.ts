@@ -7,12 +7,14 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -51,6 +53,39 @@ export class RegistrosMortalidadController {
   })
   listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
     return this.registrosMortalidadService.listar(req.user, paginacion);
+  }
+
+  @Get(':id/foto')
+  @ApiOperation({
+    summary: 'Obtener la evidencia fotográfica almacenada de una mortalidad',
+  })
+  async foto(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+    @Res() res: Response,
+  ) {
+    const { buffer, mimeType } =
+      await this.registrosMortalidadService.obtenerFoto(id, req.user);
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.send(buffer);
+  }
+
+  @Put(':id/foto')
+  @ApiOperation({
+    summary:
+      'Subir o actualizar la evidencia fotográfica de una mortalidad (JPG/PNG/WebP, máx. 3 MB)',
+  })
+  subirFoto(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.registrosMortalidadService.subirFoto(id, req.body, req.user);
+  }
+
+  @Delete(':id/foto')
+  @ApiOperation({
+    summary: 'Eliminar la evidencia fotográfica de un registro de mortalidad',
+  })
+  eliminarFoto(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
+    return this.registrosMortalidadService.eliminarFoto(id, req.user);
   }
 
   @Get(':id')

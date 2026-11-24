@@ -5,9 +5,15 @@ import {
   IsNumber,
   IsOptional,
   IsPositive,
-  IsString,
+  Max,
   Min,
 } from 'class-validator';
+import {
+  AVES_MAXIMO_LOTE,
+  DIMENSION_MAXIMA_M,
+  NombreEntidad,
+  TextoSeguro,
+} from '../../../common/validation/texto';
 
 export class CreateGalponDto {
   @ApiProperty({
@@ -19,7 +25,7 @@ export class CreateGalponDto {
   granja_id: number;
 
   @ApiProperty({ example: 'Galpón Norte' })
-  @IsString()
+  @NombreEntidad('El nombre del galpón', 120, true)
   nombre: string;
 
   @ApiPropertyOptional({
@@ -28,18 +34,21 @@ export class CreateGalponDto {
   })
   @IsInt()
   @IsPositive()
+  @Max(AVES_MAXIMO_LOTE)
   @IsOptional()
   capacidad_aves?: number;
 
   @ApiPropertyOptional({ example: 12.5, description: 'Ancho en metros' })
   @IsNumber()
   @IsPositive()
+  @Max(DIMENSION_MAXIMA_M)
   @IsOptional()
   ancho_metros?: number;
 
   @ApiPropertyOptional({ example: 80, description: 'Largo en metros' })
   @IsNumber()
   @IsPositive()
+  @Max(DIMENSION_MAXIMA_M)
   @IsOptional()
   largo_metros?: number;
 
@@ -47,22 +56,14 @@ export class CreateGalponDto {
     example: 'norte-sur',
     description: 'Orientación del galpón',
   })
-  @IsString()
+  @TextoSeguro('La orientación', 60)
   @IsOptional()
   orientacion?: string;
 
   @ApiPropertyOptional({ example: 'zinc', description: 'Tipo de techo' })
-  @IsString()
+  @TextoSeguro('El tipo de techo', 60)
   @IsOptional()
   tipo_techo?: string;
-
-  @ApiPropertyOptional({
-    example: 'https://.../plano.pdf',
-    description: 'URL del plano',
-  })
-  @IsString()
-  @IsOptional()
-  plano_url?: string;
 
   @ApiPropertyOptional({
     example: '2024-03-15',

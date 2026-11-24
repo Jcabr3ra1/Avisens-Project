@@ -10,6 +10,7 @@ function UmbralesPestana({ galpon, puedeConfigurar }: Props) {
   return (
     <section className="gp-umbrales" aria-labelledby="gp-umbrales-titulo">
       <header className="gp-umbrales-cabecera">
+        <span className="gp-rotulo">Configuración ambiental</span>
         <h3 id="gp-umbrales-titulo">Umbrales ambientales</h3>
         <p>
           Los rangos de temperatura, humedad y luz que se esperan cada semana de vida. Con ellos se decide

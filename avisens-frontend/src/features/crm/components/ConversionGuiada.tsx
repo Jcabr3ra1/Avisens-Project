@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { toast } from 'sonner'
 import Modal from '@shared/ui/Modal/Modal'
-import { Icon, IcArrowRight, IcCheck, IcRefresh } from '@shared/ui/icons/icons'
+import { Icon, IcArrowRight, IcBuilding, IcCheck, IcRefresh } from '@shared/ui/icons/icons'
 import { mensajeDeError } from '@shared/utils/errores'
 import type { ProspectoConvertido, ProspectoDetalle } from '../api/prospectos'
 import {
@@ -110,7 +110,7 @@ function ConversionGuiada({ prospecto, onConvertir, onCerrar }: Props) {
     }
   }
 
-  function campo(nombre: keyof Datos, etiqueta: string, opciones: { ayuda?: ReactNode; opcional?: boolean; tipo?: string; autoComplete?: string; inputMode?: 'numeric' | 'tel' | 'email'; extra?: ReactNode } = {}) {
+  function campo(nombre: keyof Datos, etiqueta: string, opciones: { ayuda?: ReactNode; opcional?: boolean; tipo?: string; autoComplete?: string; inputMode?: 'numeric' | 'tel' | 'email'; maxLength?: number; extra?: ReactNode } = {}) {
     const conError = error?.campo === nombre
     const idAyuda = opciones.ayuda ? `conv-${nombre}-ayuda` : undefined
     const idError = conError ? `conv-${nombre}-error` : undefined
@@ -129,6 +129,7 @@ function ConversionGuiada({ prospecto, onConvertir, onCerrar }: Props) {
             data-lpignore="true"
             data-1p-ignore="true"
             inputMode={opciones.inputMode}
+            maxLength={opciones.maxLength}
             aria-invalid={conError}
             aria-describedby={conError ? idError : idAyuda}
             className={conError ? 'is-error' : undefined}
@@ -147,6 +148,8 @@ function ConversionGuiada({ prospecto, onConvertir, onCerrar }: Props) {
     return (
       <Modal
         titulo="Cliente creado"
+        variante="lateral"
+        icono={<IcCheck size={20} />}
         onCerrar={onCerrar}
         acciones={(
           <>
@@ -178,6 +181,8 @@ function ConversionGuiada({ prospecto, onConvertir, onCerrar }: Props) {
     <Modal
       titulo={primerNombre(prospecto.nombre) ? `Convierte a ${primerNombre(prospecto.nombre)} en cliente` : 'Convertir en cliente'}
       subtitulo="Crearemos su organización, su primera granja y su acceso a Avisens."
+      variante="lateral"
+      icono={<IcBuilding size={20} />}
       onCerrar={guardando ? () => undefined : onCerrar}
       acciones={(
         <div className="conv-pie">
@@ -227,13 +232,14 @@ function ConversionGuiada({ prospecto, onConvertir, onCerrar }: Props) {
 
             {paso.id === 'propietario' && (
               <>
-                {campo('nombre_completo', 'Nombre completo', { autoComplete: 'name' })}
+                {campo('nombre_completo', 'Nombre completo', { autoComplete: 'name', maxLength: 120 })}
                 <div className="conv-fila">
                   {campo('cedula', 'Cédula', {
                     inputMode: 'numeric',
+                    maxLength: 10,
                     ayuda: prospecto.documento ? 'La dio al radicar una PQRS: confírmala.' : 'El chatbot no la pregunta: pídesela.',
                   })}
-                  {campo('telefono', 'Teléfono', { opcional: true, inputMode: 'tel', autoComplete: 'tel' })}
+                  {campo('telefono', 'Teléfono', { opcional: true, inputMode: 'tel', autoComplete: 'tel', maxLength: 18 })}
                 </div>
               </>
             )}
@@ -242,11 +248,12 @@ function ConversionGuiada({ prospecto, onConvertir, onCerrar }: Props) {
               <>
                 {campo('organizacion_nombre', 'Organización', {
                   opcional: true,
+                  maxLength: 150,
                   ayuda: 'La empresa cliente. Si la dejas vacía, se llama como el propietario.',
                 })}
                 <div className="conv-fila">
-                  {campo('granja_nombre', 'Nombre de la granja', { ayuda: 'La finca, no la empresa. Sin ella entra a un sistema vacío.' })}
-                  {campo('granja_municipio', 'Municipio', { opcional: true })}
+                  {campo('granja_nombre', 'Nombre de la granja', { maxLength: 120, ayuda: 'La finca, no la empresa. Sin ella entra a un sistema vacío.' })}
+                  {campo('granja_municipio', 'Municipio', { opcional: true, maxLength: 100 })}
                 </div>
               </>
             )}
@@ -254,6 +261,7 @@ function ConversionGuiada({ prospecto, onConvertir, onCerrar }: Props) {
             {paso.id === 'acceso' && (
               <>
                 {campo('username', 'Usuario de acceso', {
+                  maxLength: 30,
                   ayuda: 'Lo sugerimos con su nombre. 3 a 30 caracteres: letras sin tildes, números, punto o guion.',
                   extra: (
                     <button type="button" className="conv-accion-campo" onClick={() => cambiar('username', usuarioSugerido(form.nombre_completo))} title="Sugerir a partir del nombre">
@@ -262,6 +270,7 @@ function ConversionGuiada({ prospecto, onConvertir, onCerrar }: Props) {
                   ),
                 })}
                 {campo('password', 'Contraseña inicial', {
+                  maxLength: 72,
                   ayuda: 'Sin caracteres que se confundan al dictarla. Se la entregarás al final.',
                   extra: (
                     <>

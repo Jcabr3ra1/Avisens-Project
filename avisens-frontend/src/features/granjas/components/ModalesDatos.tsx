@@ -52,6 +52,7 @@ function ModalDatos<T>({ id, titulo, subtitulo, preparar, enviar, mensajeExito, 
 
   return (
     <Modal
+      variante="lateral"
       titulo={titulo}
       subtitulo={subtitulo}
       onCerrar={onCerrar}

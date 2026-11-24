@@ -1,17 +1,53 @@
-import { IcAlert, IcCheck, IcClock, IcEgg, IcBox } from '@shared/ui/icons/icons'
-import TarjetasResumen, { type Stat } from '@shared/ui/admin/TarjetasResumen'
+import { IcBox, IcCheck, IcClock, IcEgg } from '@shared/ui/icons/icons'
 import type { ResumenLotesDatos } from '../model/loteVista'
 
 function ResumenLotes({ resumen }: { resumen: ResumenLotesDatos }) {
-  const stats: Stat[] = [
-    { label: 'Lotes', valor: resumen.total, icono: <IcBox size={18} />, tono: 'neutral' },
-    { label: 'Activos', valor: resumen.activos, icono: <IcCheck size={18} />, tono: 'ok' },
-    { label: 'Finalizados', valor: resumen.finalizados, icono: <IcClock size={18} />, tono: 'aviso' },
-    { label: 'Inactivos', valor: resumen.inactivos, icono: <IcAlert size={18} />, tono: 'peligro' },
-    { label: 'Aves alojadas', valor: resumen.avesAlojadas, icono: <IcEgg size={18} />, tono: 'info' },
-  ]
-
-  return <TarjetasResumen stats={stats} etiqueta="Resumen de lotes" />
+  return (
+    <ul className="adm-kpis" aria-label="Resumen de lotes">
+      <li>
+        <div className="adm-kpi adm-kpi--primario">
+          <span className="adm-kpi-cab">
+            <span className="adm-kpi-etiqueta">Lotes</span>
+            <span className="adm-kpi-icono" aria-hidden="true"><IcBox size={16} /></span>
+          </span>
+          <strong className="adm-kpi-valor">{resumen.total.toLocaleString('es-CO')}</strong>
+          <span className="adm-kpi-nota">
+            {resumen.inactivos > 0 ? `${resumen.inactivos} inactivos` : 'Histórico registrado'}
+          </span>
+        </div>
+      </li>
+      <li>
+        <div className="adm-kpi adm-kpi--ok">
+          <span className="adm-kpi-cab">
+            <span className="adm-kpi-etiqueta">Activos</span>
+            <span className="adm-kpi-icono" aria-hidden="true"><IcCheck size={16} /></span>
+          </span>
+          <strong className="adm-kpi-valor">{resumen.activos.toLocaleString('es-CO')}</strong>
+          <span className="adm-kpi-nota">En crianza actualmente</span>
+        </div>
+      </li>
+      <li>
+        <div className="adm-kpi adm-kpi--alerta">
+          <span className="adm-kpi-cab">
+            <span className="adm-kpi-etiqueta">Finalizados</span>
+            <span className="adm-kpi-icono" aria-hidden="true"><IcClock size={16} /></span>
+          </span>
+          <strong className="adm-kpi-valor">{resumen.finalizados.toLocaleString('es-CO')}</strong>
+          <span className="adm-kpi-nota">Ciclos cerrados</span>
+        </div>
+      </li>
+      <li>
+        <div className="adm-kpi adm-kpi--info">
+          <span className="adm-kpi-cab">
+            <span className="adm-kpi-etiqueta">Aves alojadas</span>
+            <span className="adm-kpi-icono" aria-hidden="true"><IcEgg size={16} /></span>
+          </span>
+          <strong className="adm-kpi-valor">{resumen.avesAlojadas.toLocaleString('es-CO')}</strong>
+          <span className="adm-kpi-nota">Total en lotes activos</span>
+        </div>
+      </li>
+    </ul>
+  )
 }
 
 export default ResumenLotes

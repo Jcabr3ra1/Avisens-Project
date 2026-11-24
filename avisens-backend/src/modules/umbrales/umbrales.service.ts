@@ -56,6 +56,12 @@ export class UmbralesService {
   }
 
   async crear(dto: CreateUmbralDto, solicitante: Solicitante) {
+    if (dto.valor_minimo >= dto.valor_maximo) {
+      throw new BadRequestException(
+        'El valor mínimo debe ser menor que el valor máximo.',
+      );
+    }
+
     await this.validarGalpon(dto.galpon_id, solicitante);
 
     const existente = await this.prisma.umbralAmbiental.findFirst({
@@ -120,6 +126,14 @@ export class UmbralesService {
     if (!actual.vigente) {
       throw new BadRequestException(
         'Solo puedes revisar el umbral vigente (este ya fue reemplazado o jubilado).',
+      );
+    }
+
+    const nuevoMin = Number(dto.valor_minimo ?? actual.valor_minimo);
+    const nuevoMax = Number(dto.valor_maximo ?? actual.valor_maximo);
+    if (nuevoMin >= nuevoMax) {
+      throw new BadRequestException(
+        'El valor mínimo debe ser menor que el valor máximo.',
       );
     }
 

@@ -5,23 +5,29 @@ import {
   IsInt,
   IsObject,
   IsOptional,
-  IsString,
-  IsUrl,
+  Min,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto';
+import {
+  TextoSeguro,
+  UrlHttpSegura,
+} from '../../../common/validation/texto';
 
 export class CreateAnalisisVisionDto {
   @ApiProperty({ example: 1, description: 'Galpón donde se capturó la imagen' })
   @IsInt()
+  @Min(1)
   galpon_id: number;
 
   @ApiPropertyOptional({ example: 1, description: 'Lote analizado' })
   @IsInt()
+  @Min(1)
   @IsOptional()
   lote_id?: number;
 
   @ApiPropertyOptional({ example: 1, description: 'Modelo ML utilizado' })
   @IsInt()
+  @Min(1)
   @IsOptional()
   modelo_id?: number;
 
@@ -31,8 +37,8 @@ export class CreateAnalisisVisionDto {
   fecha_hora?: string;
 
   @ApiPropertyOptional({ example: 'conteo_aves' })
-  @IsString()
   @IsOptional()
+  @TextoSeguro('El tipo de análisis', 60)
   tipo_analisis?: string;
 
   @ApiPropertyOptional({ example: { aves_detectadas: 127, confianza: 0.94 } })
@@ -41,8 +47,8 @@ export class CreateAnalisisVisionDto {
   resultado?: Record<string, unknown>;
 
   @ApiPropertyOptional({ example: 'https://storage.example/imagen.jpg' })
-  @IsUrl()
   @IsOptional()
+  @UrlHttpSegura('La URL de la imagen', 500)
   imagen_url?: string;
 }
 

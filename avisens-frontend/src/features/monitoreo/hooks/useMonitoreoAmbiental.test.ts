@@ -19,7 +19,6 @@ function galpon(parcial: Partial<Galpon> = {}): Galpon {
     largo_metros: null,
     orientacion: null,
     tipo_techo: null,
-    plano_url: null,
     fecha_construccion: null,
     activo: true,
     granja: { id: 1, nombre: 'Granja A', propietario_id: 1 },

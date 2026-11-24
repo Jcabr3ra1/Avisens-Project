@@ -54,7 +54,7 @@ export function fechaCorta(iso: string): string {
   }).format(new Date(iso))
 }
 
-export type FiltroEstado = 'todas' | 'activas' | 'suspendidas'
+export type FiltroEstado = 'todas' | 'activas' | 'sin-actividad' | 'suspendidas'
 
 export type OrdenOrganizaciones = 'nombre-asc' | 'nombre-desc' | 'granjas' | 'personas' | 'recientes'
 
@@ -74,11 +74,13 @@ const compararNombre = (a: Organizacion, b: Organizacion) =>
 export function filtrarOrganizaciones(
   organizaciones: Organizacion[],
   { texto, estado, orden }: CriteriosOrganizaciones,
+  ahora: Date = new Date(),
 ): Organizacion[] {
   const buscado = normalizarTexto(texto)
   const filtradas = organizaciones.filter((item) => {
     if (estado === 'activas' && !item.activa) return false
     if (estado === 'suspendidas' && item.activa) return false
+    if (estado === 'sin-actividad' && (!item.activa || actividadDe(item, ahora).tono === 'reciente')) return false
     if (!buscado) return true
     return normalizarTexto(item.nombre).includes(buscado) || normalizarTexto(item.nit ?? '').includes(buscado)
   })
@@ -103,4 +105,14 @@ export function inicialesOrganizacion(nombre: string): string {
   const primera = palabras[0].charAt(0)
   const ultima = palabras.length > 1 ? palabras[palabras.length - 1].charAt(0) : ''
   return (primera + ultima).toUpperCase()
+}
+
+export function siguienteSeleccion(ids: number[], actualId: number | null, tecla: string): number | null {
+  if (ids.length === 0) return null
+  const indice = actualId === null ? -1 : ids.indexOf(actualId)
+  if (tecla === 'ArrowDown') return ids[Math.min(ids.length - 1, indice < 0 ? 0 : indice + 1)]!
+  if (tecla === 'ArrowUp') return ids[Math.max(0, indice < 0 ? 0 : indice - 1)]!
+  if (tecla === 'Home') return ids[0]!
+  if (tecla === 'End') return ids[ids.length - 1]!
+  return null
 }

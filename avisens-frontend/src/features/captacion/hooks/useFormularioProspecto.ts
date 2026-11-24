@@ -1,5 +1,10 @@
 import { useState } from 'react'
 import { AxiosError } from 'axios'
+import {
+  validarNombreEntidad,
+  validarNombrePersona,
+  validarTelefonoPublico,
+} from '@shared/utils/validacion'
 import { crearProspectoWeb } from '../api/captacion'
 import { formularioInicial, type FormularioProspectoWeb } from '../model/prospectoWeb'
 
@@ -8,15 +13,15 @@ type ErroresFormulario = Partial<Record<keyof FormularioProspectoWeb, string>>
 function validar(formulario: FormularioProspectoWeb): ErroresFormulario {
   const errores: ErroresFormulario = {}
 
-  if (formulario.nombre.trim().length < 2) errores.nombre = 'Escribe tu nombre completo.'
-  if (!/^[+0-9()\s-]{7,20}$/.test(formulario.telefono.trim())) {
-    errores.telefono = 'Escribe un número de teléfono válido.'
-  }
-  if (!formulario.municipio.trim()) errores.municipio = 'Indica tu municipio.'
-  if (!formulario.tipo_produccion.trim()) {
-    errores.tipo_produccion = 'Cuéntanos qué producción manejas.'
-  }
-  if (formulario.email && !/^\S+@\S+\.\S+$/.test(formulario.email)) {
+  const errorNombre = validarNombrePersona(formulario.nombre, 'Tu nombre completo', 100)
+  if (errorNombre) errores.nombre = errorNombre
+  const errorTelefono = validarTelefonoPublico(formulario.telefono, true)
+  if (errorTelefono) errores.telefono = errorTelefono
+  const errorMunicipio = validarNombreEntidad(formulario.municipio, 'El municipio', { max: 80 })
+  if (errorMunicipio) errores.municipio = errorMunicipio
+  const errorProd = validarNombreEntidad(formulario.tipo_produccion, 'El tipo de producción', { max: 80 })
+  if (errorProd) errores.tipo_produccion = errorProd
+  if (formulario.email && !/^\S+@\S+\.\S+$/.test(formulario.email.trim())) {
     errores.email = 'Escribe un correo válido o déjalo vacío.'
   }
   if (!formulario.consentimiento_habeas_data) {

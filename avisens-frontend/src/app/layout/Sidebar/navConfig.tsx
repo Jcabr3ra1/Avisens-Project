@@ -259,7 +259,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       {
         path: '/inventario',
-        label: 'Inventario',
+        label: 'Bodega',
         icon: <IcBox size={16} />,
         rolesVisibles: [ROL_OPERARIO],
       },
@@ -289,11 +289,15 @@ export function esGrupo(item: NavItem): item is NavGroupItem {
   return 'children' in item
 }
 
+const RUTAS_DETALLE: Array<{ patron: RegExp; padre: string }> = [
+  { patron: /^\/organizaciones\/\d+$/, padre: '/organizaciones' },
+  { patron: /^\/granjas\/galpones\/\d+$/, padre: '/granjas' },
+  { patron: /^\/dispositivos\/\d+$/, padre: '/dispositivos' },
+]
+
 export function puedeAcceder(path: string, rol: string | null): boolean {
-  const permisoDetalleOrganizacion = /^\/organizaciones\/\d+$/.test(path)
-    ? PERMISOS_RUTA['/organizaciones']
-    : undefined
-  const permitidos = PERMISOS_RUTA[path] ?? permisoDetalleOrganizacion
+  const rutaPadre = RUTAS_DETALLE.find(({ patron }) => patron.test(path))?.padre
+  const permitidos = PERMISOS_RUTA[path] ?? (rutaPadre ? PERMISOS_RUTA[rutaPadre] : undefined)
   if (!permitidos) return false
   return rol !== null && permitidos.includes(rol)
 }

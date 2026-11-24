@@ -1,3 +1,9 @@
+import {
+  PATRON_CEDULA,
+  validarNombreEntidad,
+  validarNombrePersona,
+  validarTelefonoPublico,
+} from '@shared/utils/validacion'
 import type { ConvertirProspectoPayload } from '../api/prospectos'
 import type { ProspectoDetalle } from '../api/prospectos'
 
@@ -38,28 +44,59 @@ export function nombreDeOrganizacion(nombre: string | null): string {
   return limpio ? `Organización de ${limpio}` : ''
 }
 
+function cedulaLimpia(valor: string): string {
+  return valor.replace(/[\s.-]/g, '')
+}
+
 export function errorDeConversion(form: FormularioConversion): string {
   if (!form.nombre_completo.trim()) return 'El nombre del propietario es obligatorio.'
+  const errorNombre = validarNombrePersona(form.nombre_completo, 'El nombre del propietario', 120)
+  if (errorNombre) return errorNombre
   if (!form.cedula.trim()) return 'La cédula es obligatoria: pídesela al cliente.'
+  if (!PATRON_CEDULA.test(cedulaLimpia(form.cedula))) {
+    return 'La cédula debe tener entre 6 y 10 dígitos numéricos.'
+  }
   if (!form.granja_nombre.trim()) return 'El nombre de la granja es obligatorio: sin ella el cliente entra a un sistema vacío.'
   if (form.granja_nombre.trim().length < 2) return 'El nombre de la granja es demasiado corto.'
+  const errorGranja = validarNombreEntidad(form.granja_nombre, 'El nombre de la granja', { max: 120 })
+  if (errorGranja) return errorGranja
+  const errorOrg = validarNombreEntidad(form.organizacion_nombre, 'La organización', { requerido: false, max: 150 })
+  if (errorOrg) return errorOrg
+  const errorMunicipio = validarNombreEntidad(form.granja_municipio, 'El municipio', { requerido: false, max: 100 })
+  if (errorMunicipio) return errorMunicipio
+  const errorTel = validarTelefonoPublico(form.telefono)
+  if (errorTel) return errorTel
   if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(form.username.trim().toLowerCase())) return 'El usuario debe tener de 3 a 30 caracteres: letras sin tildes, números, punto, guion o guion bajo.'
   if (form.email.trim() && !correoValido(form.email)) return 'Ese correo no parece válido.'
   if (form.password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.'
+  if (form.password.length > 128) return 'La contraseña no puede superar 128 caracteres.'
   return ''
 }
 
 export function primerCampoInvalido(
   form: FormularioConversion,
 ): keyof FormularioConversion | null {
-  if (!form.nombre_completo.trim()) return 'nombre_completo'
-  if (!form.cedula.trim()) return 'cedula'
-  if (!form.granja_nombre.trim() || form.granja_nombre.trim().length < 2) {
+  if (!form.nombre_completo.trim() || validarNombrePersona(form.nombre_completo, 'El nombre del propietario', 120)) {
+    return 'nombre_completo'
+  }
+  if (!form.cedula.trim() || !PATRON_CEDULA.test(cedulaLimpia(form.cedula))) return 'cedula'
+  if (
+    !form.granja_nombre.trim() ||
+    form.granja_nombre.trim().length < 2 ||
+    validarNombreEntidad(form.granja_nombre, 'El nombre de la granja', { max: 120 })
+  ) {
     return 'granja_nombre'
   }
+  if (validarNombreEntidad(form.organizacion_nombre, 'La organización', { requerido: false, max: 150 })) {
+    return 'organizacion_nombre'
+  }
+  if (validarNombreEntidad(form.granja_municipio, 'El municipio', { requerido: false, max: 100 })) {
+    return 'granja_municipio'
+  }
+  if (validarTelefonoPublico(form.telefono)) return 'telefono'
   if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(form.username.trim().toLowerCase())) return 'username'
   if (form.email.trim() && !correoValido(form.email)) return 'email'
-  if (form.password.length < 8) return 'password'
+  if (form.password.length < 8 || form.password.length > 128) return 'password'
   return null
 }
 

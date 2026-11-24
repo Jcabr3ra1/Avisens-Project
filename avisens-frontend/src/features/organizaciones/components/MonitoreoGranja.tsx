@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { IcClose, IcEye, IcRefresh } from '@shared/ui/icons/icons'
+import { IcClose, IcEye } from '@shared/ui/icons/icons'
 import { iconoSensor } from '@shared/ui/sensorIcon'
 import { useFocoAtrapado } from '@shared/ui/Modal/useFocoAtrapado'
 import { SensorDetail } from '@features/monitoreo/SensorDetail'
@@ -62,7 +62,7 @@ function posicionEnRango(sensor: SensorVista): number | null {
 
 function MonitoreoGranja({ granjaId, granjaNombre, onCerrar }: Props) {
   const panel = useRef<HTMLDivElement>(null)
-  const { galpones, cargando, error, recargar } = useMonitoreoAmbiental()
+  const { galpones, cargando, error } = useMonitoreoAmbiental()
   const propios = useMemo(() => galpones.filter((galpon) => galpon.granjaId === granjaId), [galpones, granjaId])
   const [galponId, setGalponId] = useState<number | null>(null)
   const [sensorId, setSensorId] = useState<number | false | null>(null)
@@ -99,9 +99,6 @@ function MonitoreoGranja({ granjaId, granjaNombre, onCerrar }: Props) {
             <h2 id="mgr-titulo">Monitoreo · {granjaNombre}</h2>
             <p>Lecturas en tiempo real de sus galpones. Toca un sensor para ver su gráfica.</p>
           </div>
-          <button type="button" className="mgr-icono-boton" onClick={() => void recargar()} aria-label="Actualizar lecturas" title="Actualizar lecturas">
-            <IcRefresh size={17} />
-          </button>
           <button type="button" className="mgr-icono-boton" onClick={onCerrar} aria-label="Cerrar">
             <IcClose size={17} />
           </button>
