@@ -59,8 +59,29 @@
                 android:textSize="14sp"
                 android:textStyle="bold" />
 
+            <!-- UNIDAD DE MEDIDA -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Unidad de medida de la entrada"
+                android:textColor="#171D1A"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <Spinner
+                android:id="@+id/spinnerUnidadMovimiento"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_spinner_avisens"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:spinnerMode="dropdown" />
+
             <!-- CANTIDAD -->
             <TextView
+                android:id="@+id/txtCantidadMovimiento"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -83,26 +104,6 @@
                 android:textColor="#171D1A"
                 android:textColorHint="#68736E"
                 android:textSize="15sp" />
-
-            <!-- UNIDAD DE MEDIDA -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Unidad de medida de la entrada"
-                android:textColor="#171D1A"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <Spinner
-                android:id="@+id/spinnerUnidadMovimiento"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="7dp"
-                android:background="@drawable/bg_spinner_avisens"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:spinnerMode="dropdown" />
 
             <!-- PESO POR BULTO -->
             <LinearLayout

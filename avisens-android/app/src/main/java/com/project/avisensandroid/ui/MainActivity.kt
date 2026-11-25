@@ -1559,7 +1559,29 @@ class MainActivity : AppCompatActivity() {
             unidadesMedida
         )
         binding.spinnerUnidadInsumo.adapter = adapterUnidades
-
+        fun actualizarCamposUnidad(esBultos: Boolean) {
+            binding.txtCantidadInsumo.text = if (esBultos)
+                "Cantidad a ingresar (kg por bulto)" else "Cantidad a ingresar"
+            binding.edtCantidadInsumo.hint = if (esBultos) "Ej. 40" else "Ej. 100"
+            binding.contenedorNumeroBultos.visibility = if (esBultos) View.VISIBLE else View.GONE
+            binding.txtStockMinimoInsumo.text = if (esBultos)
+                "Stock mínimo para alerta (kg)" else "Stock mínimo para alerta"
+            binding.edtCantidadInsumo.error = null
+            if (!esBultos) {
+                binding.edtNumeroBultos.text.clear()
+                binding.edtNumeroBultos.error = null
+            }
+        }
+        binding.spinnerUnidadInsumo.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: android.widget.AdapterView<*>?,
+                                            view: View?, position: Int, id: Long) {
+                    actualizarCamposUnidad(unidadesMedida.getOrNull(position) == "Bultos")
+                }
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {
+                    actualizarCamposUnidad(false)
+                }
+            }
 
         cargarTiposAlimentoParaInsumo(
             tiposAlimento,
@@ -1580,7 +1602,9 @@ class MainActivity : AppCompatActivity() {
             val cantidadTexto = binding.edtCantidadInsumo.text.toString().trim()
             val unidadSeleccionada = binding.spinnerUnidadInsumo.selectedItemPosition
             val unidad = binding.spinnerUnidadInsumo.selectedItem?.toString()?.trim().orEmpty()
-            val cantidad = cantidadTexto.toDoubleOrNull()
+            val cantidad = cantidadTexto.replace(',', '.').toDoubleOrNull()
+            val esBultos = unidad == "Bultos"
+            val numeroBultos = binding.edtNumeroBultos.text.toString().trim().toIntOrNull()
             val minimoTexto = binding.edtStockMinimoInsumo.text.toString().trim()
                 .replace(',', '.')
             val stockMinimo = minimoTexto.takeIf { it.isNotBlank() }?.toDoubleOrNull()
@@ -1593,9 +1617,13 @@ class MainActivity : AppCompatActivity() {
                 primerError = primerError ?: binding.edtStockMinimoInsumo
             }
             if (tipoAlimento == null) faltanSelecciones.add("tipo de alimento")
-            if (cantidad == null || cantidad < 0.0) {
+            if (cantidad == null || !cantidad.isFinite() || cantidad < 0.0 || (esBultos && cantidad <= 0.0)) {
                 binding.edtCantidadInsumo.error = "Ingresa una cantidad válida"
                 primerError = primerError ?: binding.edtCantidadInsumo
+            }
+            if (esBultos && (numeroBultos == null || numeroBultos <= 0)) {
+                binding.edtNumeroBultos.error = "Ingresa un número de bultos mayor que 0"
+                primerError = primerError ?: binding.edtNumeroBultos
             }
             if (unidadSeleccionada <= 0 || unidad.isEmpty()) faltanSelecciones.add("unidad de medida")
             if (faltanSelecciones.isNotEmpty() || primerError != null) {
@@ -1609,14 +1637,19 @@ class MainActivity : AppCompatActivity() {
 
             val tipoAlimentoValidado = tipoAlimento ?: return@setOnClickListener
             val cantidadValidada = cantidad ?: return@setOnClickListener
+            val total = if (esBultos) cantidadValidada * (numeroBultos ?: return@setOnClickListener) else cantidadValidada
+            if (!total.isFinite()) {
+                binding.edtCantidadInsumo.error = "La cantidad total no es válida"
+                return@setOnClickListener
+            }
 
             crearInsumo(
                 dialog = dialog,
                 binding = binding,
                 nombre = tipoAlimentoValidado.nombre.trim(),
                 categoria = "alimento",
-                cantidad = cantidadValidada,
-                unidad = unidad,
+                cantidad = total,
+                unidad = if (esBultos) "Kg" else unidad,
                 proveedorId = null,
                 stockMinimo = stockMinimo
             )

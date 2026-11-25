@@ -87,9 +87,10 @@
             android:layout_marginEnd="6dp">
 
             <TextView
+                android:id="@+id/txtCantidadInsumo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Cantidad inicial"
+                android:text="Cantidad a ingresar"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:textColor="#171D1A"
@@ -111,7 +112,43 @@
 
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/contenedorNumeroBultos"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="11dp"
+        android:visibility="gone">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Número de bultos"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#171D1A"
+            android:layout_marginBottom="5dp" />
+        <EditText
+            android:id="@+id/edtNumeroBultos"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_input_verde"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:singleLine="true"
+            android:textSize="12sp"
+            android:textColor="@color/black"
+            android:hint="Ej. 5"
+            android:inputType="number" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="El total se guardará en kilogramos."
+            android:textSize="12sp"
+            android:textColor="#171D1A" />
+    </LinearLayout>
+
     <TextView
+        android:id="@+id/txtStockMinimoInsumo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="5dp"

@@ -291,6 +291,8 @@ class BodegaFragment : BaseBottomNavFragment() {
 
         fun actualizarVistaPrevia() {
             val seleccion = unidades[form.spinnerUnidadMovimiento.selectedItemPosition.coerceAtLeast(0)]
+            form.txtCantidadMovimiento.text = if (seleccion == "Bultos") "Número de bultos" else "Cantidad a ingresar"
+            form.edtCantidadMovimiento.hint = if (seleccion == "Bultos") "Ej. 5" else "Ej. 100"
             val usaBultos = seleccion == "Bultos" || unidadBase == "Bultos"
             form.contenedorPesoBulto.visibility = if (usaBultos) View.VISIBLE else View.GONE
             form.txtAyudaBulto.text = if (unidadBase == "Bultos") {

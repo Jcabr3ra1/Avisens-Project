@@ -9,6 +9,7 @@ import android.text.method.PasswordTransformationMethod
 import android.view.View
 import android.view.ViewTreeObserver
 import android.view.WindowManager
+import android.view.animation.DecelerateInterpolator
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -80,8 +81,47 @@ class LoginActivity : AppCompatActivity() {
                 "Tu sesión expiró. Inicia sesión nuevamente."
         }
 
+        if (savedInstanceState == null) {
+            animarEntradaLogin()
+        }
+
         binding.btnEntrar.setOnClickListener {
             hacerLogin()
+        }
+    }
+
+    // Animación de entrada escalonada, sin mover la tarjeta del login.
+    private fun animarEntradaLogin() {
+        val grupos = listOf(
+            listOf(binding.imgLogo),
+            listOf(binding.txtNombreApp),
+            listOf(binding.txtHeroTitulo),
+            listOf(binding.txtIniciarSesion),
+            listOf(binding.txtSubtitulo),
+            listOf(binding.txtCorreo, binding.etCorreo, binding.iconCorreo),
+            listOf(binding.txtContrasena, binding.etContrasena,
+                binding.iconContrasena, binding.btnTogglePassword),
+            listOf(binding.checkRecordarme),
+            listOf(binding.btnEntrar)
+        )
+
+        grupos.forEachIndexed { indice, vistas ->
+            vistas.forEach { vista ->
+                vista.alpha = 0f
+                // Encabezado: entrada de izquierda a derecha.
+                // Formulario: entrada de arriba hacia abajo.
+                val esEncabezado = indice < 3
+                vista.translationX = if (esEncabezado) -dp(48).toFloat() else 0f
+                vista.translationY = if (esEncabezado) 0f else -dp(14).toFloat()
+                vista.animate()
+                    .alpha(1f)
+                    .translationX(0f)
+                    .translationY(0f)
+                    .setStartDelay(if (esEncabezado) indice * 220L else 660L + (indice - 3) * 120L)
+                    .setDuration(if (esEncabezado) 900L else 400L)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            }
         }
     }
 
