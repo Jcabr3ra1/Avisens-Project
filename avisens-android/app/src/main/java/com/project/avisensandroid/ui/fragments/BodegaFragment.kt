@@ -24,6 +24,8 @@ import com.project.avisensandroid.model.InsumoResponse
 import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -33,6 +35,9 @@ class BodegaFragment : BaseBottomNavFragment() {
     private val binding get() = _binding!!
 
     private var cargando = false
+    private var datosMostrados = false
+    private var ultimosInsumos: List<InsumoResponse>? = null
+    private var ultimaGranja: Int? = null
     private val preferenciasStock by lazy {
         requireContext().getSharedPreferences("bodega_referencia_stock", android.content.Context.MODE_PRIVATE)
     }
@@ -88,18 +93,38 @@ class BodegaFragment : BaseBottomNavFragment() {
             if (activity.obtenerRolActual() == UserRole.PROPIETARIO)
                 View.VISIBLE else View.GONE
         cargando = true
-        if (!silenciosa) {
-            binding.progressInsumos.visibility = View.VISIBLE
-            binding.txtSinInsumos.visibility = View.GONE
-        }
+        binding.progressInsumos.visibility = View.GONE
+        if (!datosMostrados) binding.txtSinInsumos.visibility = View.GONE
         binding.txtSinInsumos.text = "No hay insumos registrados"
 
         viewLifecycleOwner.lifecycleScope.launch {
+            val indicador = launch {
+                delay(180L)
+                if (!datosMostrados && !silenciosa) _binding?.progressInsumos?.visibility = View.VISIBLE
+            }
             try {
-                val insumos = cargarTodosLosInsumos()
+                val remoto = async {
+                    try { Result.success(cargarTodosLosInsumos()) }
+                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (e: Exception) { Result.failure<List<InsumoResponse>>(e) }
+                }
+                if (!datosMostrados) {
+                    try {
+                        val locales = cargarTodosLosInsumos(RetrofitClient.apiCache)
+                        mostrarInsumos(locales)
+                        datosMostrados = true
+                        binding.progressInsumos.visibility = View.GONE
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (_: Exception) { /* Primera visita sin copia completa. */ }
+                }
+                val insumos = remoto.await().getOrThrow()
                 mostrarInsumos(insumos)
+                datosMostrados = true
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                if (!silenciosa && _binding != null && isAdded) {
+                if (!silenciosa && !datosMostrados && _binding != null && isAdded) {
                     binding.txtSinInsumos.text = "No se pudieron cargar los alimentos. ${e.message ?: "Intenta nuevamente."}"
                     binding.txtSinInsumos.visibility = View.VISIBLE
                     Toast.makeText(
@@ -109,19 +134,20 @@ class BodegaFragment : BaseBottomNavFragment() {
                     ).show()
                 }
             } finally {
+                indicador.cancel()
                 cargando = false
                 _binding?.progressInsumos?.visibility = View.GONE
             }
         }
     }
 
-    private suspend fun cargarTodosLosInsumos(): List<InsumoResponse> {
+    private suspend fun cargarTodosLosInsumos(api: com.project.avisensandroid.controller.ApiService = RetrofitClient.api): List<InsumoResponse> {
         val todos = mutableListOf<InsumoResponse>()
         var page = 1
         var totalPages = 1
 
         do {
-            val response = RetrofitClient.api.listarInsumos(
+            val response = api.listarInsumos(
                 page = page,
                 limit = 100
             )
@@ -150,10 +176,16 @@ class BodegaFragment : BaseBottomNavFragment() {
 
 
     private fun mostrarInsumos(insumos: List<InsumoResponse>) {
-        binding.contenedorInsumos.removeAllViews()
 
         val activity = requireActivity() as MainActivity
         val granjaIdSeleccionada = activity.obtenerGranjaSeleccionadaId()
+        if (ultimosInsumos == insumos && ultimaGranja == granjaIdSeleccionada) {
+            binding.txtSinInsumos.visibility = if (binding.contenedorInsumos.childCount == 0) View.VISIBLE else View.GONE
+            return
+        }
+        ultimosInsumos = insumos.toList()
+        ultimaGranja = granjaIdSeleccionada
+        binding.contenedorInsumos.removeAllViews()
 
         val disponibles = insumos.filter { it.activo }
         // Si hay selección, muestra esa granja. Si aún no existe, muestra
@@ -413,5 +445,9 @@ class BodegaFragment : BaseBottomNavFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+        ultimosInsumos = null
+        ultimaGranja = null
+        datosMostrados = false
+        cargando = false
     }
 }

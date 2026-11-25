@@ -21,7 +21,7 @@ object OfflineCache {
         val red = manager.activeNetwork ?: return false
         val capacidades = manager.getNetworkCapabilities(red) ?: return false
         return capacidades.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-            capacidades.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                capacidades.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
     private fun clave(context: Context, url: String): String? {
@@ -39,11 +39,11 @@ object OfflineCache {
             .getLong("${key}_at", 0L).takeIf { it > 0L }
     }
 
-    fun interceptor(context: Context): Interceptor = Interceptor { chain ->
+    fun interceptor(context: Context, soloCache: Boolean = false): Interceptor = Interceptor { chain ->
         val request = chain.request()
         val esConsulta = request.method == "GET" &&
-            request.url.encodedPath.startsWith("/v1/") &&
-            !request.url.encodedPath.startsWith("/v1/auth/")
+                request.url.encodedPath.startsWith("/v1/") &&
+                !request.url.encodedPath.startsWith("/v1/auth/")
         val key = if (esConsulta) clave(context, request.url.toString()) else null
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -60,6 +60,10 @@ object OfflineCache {
                 .header("X-Avisens-Cached-At", prefs.getLong("${key}_at", 0L).toString())
                 .body(contenido.toResponseBody(tipo?.toMediaTypeOrNull()))
                 .build()
+        }
+
+        if (soloCache) {
+            return@Interceptor copiaGuardada() ?: throw IOException("Sin copia local")
         }
 
         // No hacer esperar al usuario a que venza el timeout si ya sabemos que no hay red.

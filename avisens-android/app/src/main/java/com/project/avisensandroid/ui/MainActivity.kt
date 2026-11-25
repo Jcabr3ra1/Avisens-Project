@@ -542,7 +542,7 @@ class MainActivity : AppCompatActivity() {
             .commit()
     }
 
-    fun mostrarGestionOperarios() {
+    fun mostrarGestionOperarios(animar: Boolean = false) {
         if (rolActual != UserRole.PROPIETARIO) return
 
         supportFragmentManager
@@ -577,7 +577,8 @@ class MainActivity : AppCompatActivity() {
     // =========================================================
 
     fun mostrarFragment(
-        fragment: Fragment
+        fragment: Fragment,
+        animar: Boolean = false
     ) {
         if (rolActual != UserRole.OPERARIO && rolActual != UserRole.PROPIETARIO) return
 
@@ -610,23 +611,45 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun navegarDesdeBottomNav(itemId: Int) {
-        when (rolActual) {
-            UserRole.OPERARIO -> when (itemId) {
-                R.id.nav_inicio -> mostrarFragment(InicioFragment())
-                R.id.nav_sensores -> mostrarFragment(SensoresFragment())
-                R.id.nav_bodega -> mostrarFragment(BodegaFragment())
-                R.id.nav_alertas -> mostrarFragment(AlertasFragment())
-                R.id.nav_bitacora -> mostrarFragment(BitacoraFragment())
-            }
-            UserRole.PROPIETARIO -> when (itemId) {
-                R.id.nav_inicio -> mostrarFragment(InicioFragment())
-                R.id.nav_bodega -> mostrarFragment(BodegaFragment())
-                R.id.nav_alertas -> mostrarFragment(AlertasFragment())
-                R.id.nav_bitacora -> mostrarFragment(BitacoraFragment())
-                R.id.nav_usuarios -> mostrarGestionOperarios()
-            }
-            else -> Unit
+        val barra = findViewById<SlidingBottomNavigationView>(R.id.bottomNav)
+        val menu = barra.menu
+        val origen = (0 until menu.size()).firstOrNull {
+            menu.getItem(it).itemId == barra.selectedItemId
+        } ?: return
+        val destino = (0 until menu.size()).firstOrNull {
+            menu.getItem(it).itemId == itemId
+        } ?: return
+        if (origen == destino) return
+
+        val fragment = when (itemId) {
+            R.id.nav_inicio -> InicioFragment()
+            R.id.nav_sensores -> SensoresFragment()
+            R.id.nav_bodega -> BodegaFragment()
+            R.id.nav_alertas -> AlertasFragment()
+            R.id.nav_bitacora -> BitacoraFragment()
+            R.id.nav_usuarios -> GestionOperariosFragment()
+            else -> return
         }
+        val contenedor = when (rolActual) {
+            UserRole.PROPIETARIO -> R.id.propietarioFragmentContainer
+            UserRole.OPERARIO -> R.id.mainFragmentContainer
+            else -> return
+        }
+        val haciaDerecha = destino > origen
+        val haciaInsumos = itemId == R.id.nav_bodega
+        val transaccion = supportFragmentManager.beginTransaction()
+            .setCustomAnimations(
+                if (haciaInsumos) {
+                    if (haciaDerecha) R.anim.insumos_entrada_derecha else R.anim.insumos_entrada_izquierda
+                } else if (haciaDerecha) R.anim.slide_entrada_derecha else R.anim.slide_entrada_izquierda,
+                if (haciaInsumos) {
+                    if (haciaDerecha) R.anim.insumos_salida_izquierda else R.anim.insumos_salida_derecha
+                } else if (haciaDerecha) R.anim.slide_salida_izquierda else R.anim.slide_salida_derecha
+            )
+            .replace(contenedor, fragment)
+        // Mantener el comportamiento anterior de Atrás en Operarios.
+        if (itemId == R.id.nav_usuarios) transaccion.addToBackStack(null)
+        transaccion.commit()
     }
 
     // =========================================================

@@ -182,14 +182,17 @@ class InicioFragment : BaseBottomNavFragment() {
 
                 // Estructura principal: si granjas o galpones fallan, no tiene
                 // sentido continuar dibujando el selector.
-                val responseGranjas = activity.obtenerGranjas()
+                val (responseGranjas, responseGalpones) = kotlinx.coroutines.coroutineScope {
+                    val granjasDef = async { activity.obtenerGranjas() }
+                    val galponesDef = async { activity.obtenerGalpones() }
+                    granjasDef.await() to galponesDef.await()
+                }
                 if (!responseGranjas.isSuccessful) {
                     mostrarMensaje("No se pudieron cargar las granjas (${responseGranjas.code()})")
                     return@launch
                 }
                 granjas = responseGranjas.body()?.data.orEmpty().filter { it.activa }
 
-                val responseGalpones = activity.obtenerGalpones()
                 if (!responseGalpones.isSuccessful) {
                     mostrarMensaje("No se pudieron cargar los galpones (${responseGalpones.code()})")
                     return@launch

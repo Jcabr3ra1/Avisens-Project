@@ -31,6 +31,8 @@ import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.UsuarioGalponResponse
 import com.project.avisensandroid.model.UsuarioGestionResponse
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 class GestionOperariosFragment : BaseBottomNavFragment() {
 
@@ -122,8 +124,11 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 // Obtener catálogo de roles
                 // ------------------------------------------------
 
-                val rolesResponse =
-                    RetrofitClient.api.listarRolesUsuarios()
+                val (rolesResponse, response) = coroutineScope {
+                    val roles = async { RetrofitClient.api.listarRolesUsuarios() }
+                    val usuarios = async { RetrofitClient.api.listarUsuarios(page = 1, limit = 100) }
+                    roles.await() to usuarios.await()
+                }
 
                 if (rolesResponse.isSuccessful) {
 
@@ -145,11 +150,6 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 // Obtener usuarios
                 // ------------------------------------------------
 
-                val response =
-                    RetrofitClient.api.listarUsuarios(
-                        page = 1,
-                        limit = 100
-                    )
 
                 if (!response.isSuccessful) {
 

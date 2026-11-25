@@ -1,0 +1,1 @@
+<resources><style name="Theme.Avisens.Starting" parent="Theme.Avisensandroid"><item name="android:windowBackground">#E6F1EB</item><item name="android:statusBarColor">#E6F1EB</item><item name="android:navigationBarColor">#E6F1EB</item><item name="android:windowLightStatusBar">true</item></style></resources>

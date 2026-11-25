@@ -48,6 +48,8 @@ class AlertasFragment : BaseBottomNavFragment() {
     private var pestanaActual = Pestana.ACTIVAS
     private var lotesActivos: List<LoteResponse> = emptyList()
 
+    private var selectorAnimado: SelectorAnimado? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -61,23 +63,18 @@ class AlertasFragment : BaseBottomNavFragment() {
         super.onViewCreated(view, savedInstanceState)
         configurarBottomNav(R.id.nav_alertas)
         binding.tabActivas.setOnClickListener {
-            pestanaActual = Pestana.ACTIVAS
-            pintarTabs()
-            mostrarLista()
+            cambiarPestana(Pestana.ACTIVAS)
         }
 
         binding.tabHistorial.setOnClickListener {
-            pestanaActual = Pestana.HISTORIAL
-            pintarTabs()
-            mostrarLista()
+            cambiarPestana(Pestana.HISTORIAL)
         }
 
         binding.tabEscaladas.setOnClickListener {
-            pestanaActual = Pestana.ESCALADAS
-            pintarTabs()
-            mostrarLista()
+            cambiarPestana(Pestana.ESCALADAS)
         }
         binding.tabEscaladas.visibility = if (esPropietario()) View.VISIBLE else View.GONE
+        selectorAnimado = SelectorAnimado(binding.tabActivas.parent as android.view.ViewGroup, R.drawable.bg_tab_selected)
         pintarTabs()
 
         // La carga se hace en onResume, también al regresar de Inicio.
@@ -233,6 +230,15 @@ class AlertasFragment : BaseBottomNavFragment() {
         }
     }
 
+    private fun cambiarPestana(nueva: Pestana) {
+        if (nueva == pestanaActual) return
+        val direccion = if (nueva.ordinal > pestanaActual.ordinal) 1 else -1
+        pestanaActual = nueva
+        pintarTabs()
+        mostrarLista()
+        deslizarContenido(binding.tabActivas.parent as View, direccion)
+    }
+
     private fun pintarTabs() {
         if (_binding == null) return
         if (pestanaActual == Pestana.ESCALADAS && !esPropietario()) {
@@ -242,15 +248,11 @@ class AlertasFragment : BaseBottomNavFragment() {
         val mostrarContadores = pestanaActual == Pestana.ACTIVAS
         binding.tvCriticas.visibility = if (mostrarContadores) View.VISIBLE else View.GONE
         binding.tvAdvertencias.visibility = if (mostrarContadores) View.VISIBLE else View.GONE
-        binding.tabActivas.setBackgroundResource(
-            if (pestanaActual == Pestana.ACTIVAS) R.drawable.bg_tab_selected else R.drawable.bg_tabs
-        )
-        binding.tabHistorial.setBackgroundResource(
-            if (pestanaActual == Pestana.HISTORIAL) R.drawable.bg_tab_selected else R.drawable.bg_tabs
-        )
-        binding.tabEscaladas.setBackgroundResource(
-            if (pestanaActual == Pestana.ESCALADAS) R.drawable.bg_tab_selected else R.drawable.bg_tabs
-        )
+        selectorAnimado?.seleccionar(when (pestanaActual) {
+            Pestana.ACTIVAS -> binding.tabActivas
+            Pestana.HISTORIAL -> binding.tabHistorial
+            Pestana.ESCALADAS -> binding.tabEscaladas
+        })
         // El color del texto debe seguir la pestaña seleccionada, no quedar fijo en XML.
         val colorSeleccionado = Color.parseColor("#111111")
         val colorNoSeleccionado = Color.parseColor("#808A85")
@@ -953,6 +955,7 @@ class AlertasFragment : BaseBottomNavFragment() {
         (value * resources.displayMetrics.density).toInt()
 
     override fun onDestroyView() {
+        selectorAnimado = null
         super.onDestroyView()
         _binding = null
     }

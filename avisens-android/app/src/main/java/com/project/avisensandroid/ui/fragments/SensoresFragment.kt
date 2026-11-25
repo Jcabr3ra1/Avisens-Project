@@ -28,6 +28,8 @@ import com.project.avisensandroid.ui.MainActivity
 import com.project.avisensandroid.ui.views.ListaActuadores
 import com.project.avisensandroid.ui.views.SensorArcView
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -149,13 +151,15 @@ class SensoresFragment : BaseBottomNavFragment() {
         )
     }
 
-    private suspend fun cargarCatalogos() {
-        val galpones = cargarTodasLasPaginas { pagina ->
+    private suspend fun cargarCatalogos() = coroutineScope {
+        val galponesDef = async { cargarTodasLasPaginas { pagina ->
             RetrofitClient.api.listarGalpones(page = pagina, limit = 100)
-        }
-        val sensores = cargarTodasLasPaginas { pagina ->
+        } }
+        val sensoresDef = async { cargarTodasLasPaginas { pagina ->
             RetrofitClient.api.listarSensores(page = pagina, limit = 100)
-        }
+        } }
+        val galpones = galponesDef.await()
+        val sensores = sensoresDef.await()
 
         galponesDisponibles = galpones.filter { it.activo }
         sensoresActivos = sensores.filter {

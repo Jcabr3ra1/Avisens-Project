@@ -54,17 +54,14 @@ class BitacoraFragment : BaseBottomNavFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         configurarBottomNav(R.id.nav_bitacora)
+        animarPestanaBitacora(binding.tabsBitacora, 0)
 
         binding.tbnConsumo.setOnClickListener {
-            (requireActivity() as MainActivity).mostrarFragment(
-                BitacoraConsumoFragment()
-            )
+            abrirPestanaBitacora(BitacoraConsumoFragment(), 0)
         }
 
         binding.tbnEnfermo.setOnClickListener {
-            (requireActivity() as MainActivity).mostrarFragment(
-                BitacoraEnfermoFragment()
-            )
+            abrirPestanaBitacora(BitacoraEnfermoFragment(), 0)
         }
 
         binding.btnRegistrarEvento.setOnClickListener {

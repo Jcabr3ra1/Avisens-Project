@@ -41,13 +41,14 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
 
         val activity = requireActivity() as MainActivity
         configurarBottomNav(R.id.nav_bitacora)
+        animarPestanaBitacora(binding.tabsBitacora, 2)
 
         binding.btnMortalidad.setOnClickListener {
-            activity.mostrarFragment(BitacoraFragment())
+            abrirPestanaBitacora(BitacoraFragment(), 2)
         }
 
         binding.btnEnfermo.setOnClickListener {
-            activity.mostrarFragment(BitacoraEnfermoFragment())
+            abrirPestanaBitacora(BitacoraEnfermoFragment(), 2)
         }
     }
 

@@ -260,6 +260,18 @@ object RetrofitClient {
     // RETROFIT
     // =========================================================
 
+    // Consultas locales explícitas: nunca realizan una petición de red.
+    val apiCache: ApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(OkHttpClient.Builder()
+                .addInterceptor(OfflineCache.interceptor(appContext, soloCache = true))
+                .build())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ApiService::class.java)
+    }
+
     val api: ApiService by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
