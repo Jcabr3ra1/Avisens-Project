@@ -117,6 +117,7 @@ class InicioFragment : BaseBottomNavFragment() {
             binding.txtSinActuadoresInicio.visibility = View.VISIBLE
         }
 
+        activity.actualizarAvatarInicio(binding.btnPerfil)
         binding.btnPerfil.setOnClickListener {
             activity.mostrarConfiguracion()
         }

@@ -57,6 +57,25 @@ import retrofit2.http.Query
 
 interface ApiService {
 
+    @GET("v1/auth/perfil")
+    suspend fun consultarPerfil(): Response<com.google.gson.JsonObject>
+
+    @GET("v1/auth/perfil/foto")
+    suspend fun consultarFotoPerfil(): Response<okhttp3.ResponseBody>
+
+    @retrofit2.http.PUT("v1/auth/perfil/foto")
+    suspend fun subirFotoPerfil(@Body foto: okhttp3.RequestBody): Response<com.google.gson.JsonObject>
+
+    @DELETE("v1/auth/perfil/foto")
+    suspend fun eliminarFotoPerfil(): Response<com.google.gson.JsonObject>
+
+    @PATCH("v1/usuarios/{id}")
+    suspend fun editarDatosOperario(@Path("id") id: Int, @Body datos: com.google.gson.JsonObject): Response<UsuarioGestionResponse>
+
+    @POST("v1/usuarios/{id}/restablecer-password")
+    suspend fun restablecerPasswordOperario(@Path("id") id: Int, @Body datos: com.google.gson.JsonObject): Response<com.google.gson.JsonObject>
+
+
     // =========================================================
     // NOTIFICACIONES
     // =========================================================

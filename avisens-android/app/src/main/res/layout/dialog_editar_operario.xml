@@ -32,6 +32,92 @@
         android:textColor="@color/adaptive_text_78847e"
         android:textSize="12sp" />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Nombre completo"
+        android:textColor="@color/adaptive_text_183c2e"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/bg_input_verde"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/etNombreEditarOperario"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:focusable="false"
+            android:cursorVisible="false"
+            android:inputType="textPersonName"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
+            android:singleLine="true"
+            android:textColor="@color/adaptive_text_183c2e"
+            android:textSize="14sp" />
+
+        <ImageButton
+            android:id="@+id/btnHabilitarNombreOperario"
+            android:layout_width="48dp"
+            android:layout_height="match_parent"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Editar nombre completo"
+            android:padding="14dp"
+            android:src="@drawable/ic_edit"
+            app:tint="@color/adaptive_text_2f8b5e" />
+
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Teléfono"
+        android:textColor="@color/adaptive_text_183c2e"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/bg_input_verde"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/etTelefonoEditarOperario"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:focusable="false"
+            android:cursorVisible="false"
+            android:inputType="phone"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
+            android:singleLine="true"
+            android:textColor="@color/adaptive_text_183c2e"
+            android:textSize="14sp" />
+
+        <ImageButton
+            android:id="@+id/btnHabilitarTelefonoOperario"
+            android:layout_width="48dp"
+            android:layout_height="match_parent"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Editar teléfono"
+            android:padding="14dp"
+            android:src="@drawable/ic_edit"
+            app:tint="@color/adaptive_text_2f8b5e" />
+
+    </LinearLayout>
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"

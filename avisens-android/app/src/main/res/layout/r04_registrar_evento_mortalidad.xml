@@ -138,12 +138,23 @@
             android:layout_marginTop="10dp"
             android:layout_marginBottom="5dp" />
 
+        <Spinner
+            android:id="@+id/spinnerCausaPresuntiva"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_spinner_bitacora"
+            android:popupBackground="@drawable/bg_spinner_dropdown"
+            android:dropDownWidth="match_parent" />
+
         <EditText
             android:id="@+id/edtCausaPresuntiva"
+            android:visibility="gone"
+            android:maxLength="150"
+            android:layout_marginTop="6dp"
             android:layout_width="match_parent"
             android:layout_height="42dp"
             android:background="@drawable/bg_input_event"
-            android:hint="Ej: sin determinar"
+            android:hint="Especificar otra causa"
             android:textSize="12sp"
             android:textColor="@color/adaptive_text_000000"
             android:paddingStart="10dp"
@@ -333,8 +344,8 @@
                 android:insetBottom="0dp"
                 android:layout_marginEnd="3dp"
                 app:cornerRadius="9dp"
-            app:backgroundTint="@color/cancel_background"
-            app:strokeWidth="0dp" />
+                app:backgroundTint="@color/cancel_background"
+                app:strokeWidth="0dp" />
 
             <!-- GUARDAR -->
             <com.google.android.material.button.MaterialButton

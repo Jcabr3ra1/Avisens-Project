@@ -16,14 +16,8 @@ import android.view.animation.LinearInterpolator
 import androidx.appcompat.app.AppCompatActivity
 import com.project.avisensandroid.R
 import kotlin.math.min
-import kotlin.math.sin
-import kotlin.math.PI
-import kotlin.math.exp
 
 class SplashActivity : AppCompatActivity() {
-    companion object {
-        private var aperturaMostrada = false
-    }
 
     private var animator: ValueAnimator? = null
     private var navigating = false
@@ -36,17 +30,13 @@ class SplashActivity : AppCompatActivity() {
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        delegate.localNightMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
         super.onCreate(savedInstanceState)
         if (!isTaskRoot && intent.action == Intent.ACTION_MAIN &&
             intent.hasCategory(Intent.CATEGORY_LAUNCHER)) {
             finish()
             return
         }
-        if (aperturaMostrada || savedInstanceState != null) {
-            abrirLogin()
-            return
-        }
-        aperturaMostrada = true
         val scene = LandingView(this)
         setContentView(scene)
 
@@ -57,7 +47,7 @@ class SplashActivity : AppCompatActivity() {
             if (animator != null || isFinishing || isDestroyed) return
 
             handler.removeCallbacks(fallback)
-            handler.postDelayed(fallback, 2800L)
+
             animator = ValueAnimator.ofFloat(0f, 2200f).apply {
                 duration = 2200L
                 interpolator = LinearInterpolator()
@@ -88,7 +78,14 @@ class SplashActivity : AppCompatActivity() {
                 scene.post { startLanding() }
             }
         }
-        handler.postDelayed(fallback, 4000L)
+        // En arranques calientes Android puede no entregar el callback del splash.
+        scene.postDelayed({
+            if (!isDestroyed && !isFinishing) {
+                systemSplashExited = true
+                startLanding()
+            }
+        }, 350L)
+        handler.postDelayed(fallback, 8000L)
         decoder.execute {
             try {
                 for (index in 0 until 52) {
@@ -120,12 +117,17 @@ class SplashActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         resumed = true
-        if (pendingNavigation) abrirLogin() else tryStart?.invoke()
+        if (pendingNavigation) {
+            abrirLogin()
+        } else {
+            animator?.resume()
+            tryStart?.invoke()
+        }
     }
 
     override fun onPause() {
         resumed = false
-        if (!navigating) pendingNavigation = true
+        animator?.pause()
         super.onPause()
     }
 

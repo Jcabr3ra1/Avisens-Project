@@ -976,6 +976,10 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         val btnCancelar = dialogView.findViewById<View>(R.id.btnCancelarEditarOperario)
         val btnGuardar = dialogView.findViewById<View>(R.id.btnGuardarEditarOperario)
 
+        val nombreEditar = dialogView.findViewById<android.widget.EditText>(R.id.etNombreEditarOperario)
+        val telefonoEditar = dialogView.findViewById<android.widget.EditText>(R.id.etTelefonoEditarOperario)
+        nombreEditar.setText(usuario.nombre_completo)
+        telefonoEditar.setText(usuario.telefono.orEmpty())
         tvNombre.text = usuario.nombre_completo
         tvDatos.text = "${usuario.email}  •  Cédula: ${usuario.cedula}"
         switchActivo.isChecked = usuario.activo
@@ -990,6 +994,37 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             (resources.displayMetrics.widthPixels * 0.92).toInt(),
             (resources.displayMetrics.heightPixels * 0.82).toInt()
         )
+
+        fun habilitarCampo(campo: android.widget.EditText, boton: android.widget.ImageButton) {
+            val oscuro = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            val colorBloqueado = Color.parseColor(if (oscuro) "#9CA3AF" else "#757575")
+            val colorEditable = if (oscuro) Color.WHITE else Color.BLACK
+            campo.setTextColor(colorBloqueado)
+            campo.isFocusable = false
+            campo.isFocusableInTouchMode = false
+            campo.isCursorVisible = false
+            campo.showSoftInputOnFocus = false
+            boton.setOnClickListener {
+                val editar = !campo.isFocusable
+                campo.isFocusableInTouchMode = editar
+                campo.isFocusable = editar
+                campo.setTextColor(if (editar) colorEditable else colorBloqueado)
+                campo.isCursorVisible = editar
+                campo.showSoftInputOnFocus = editar
+                boton.setImageResource(if (editar) R.drawable.ic_check else R.drawable.ic_edit)
+                val teclado = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                if (editar) {
+                    campo.requestFocus()
+                    campo.setSelection(campo.text.length)
+                    campo.post { teclado.showSoftInput(campo, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT) }
+                } else {
+                    teclado.hideSoftInputFromWindow(campo.windowToken, 0)
+                    campo.clearFocus()
+                }
+            }
+        }
+        habilitarCampo(nombreEditar, dialogView.findViewById(R.id.btnHabilitarNombreOperario))
+        habilitarCampo(telefonoEditar, dialogView.findViewById(R.id.btnHabilitarTelefonoOperario))
 
         // Ningún cambio se envía al backend hasta pulsar Guardar.
         val galponesPendientesDeQuitar = mutableSetOf<Int>()
@@ -1075,6 +1110,10 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
         btnGuardar.setOnClickListener {
             if (guardando) return@setOnClickListener
+            val nombreNuevo = nombreEditar.text.toString().trim()
+            val telefonoNuevo = telefonoEditar.text.toString().trim().replace(Regex("[\\s()\\-]"), "")
+            if (nombreNuevo.isBlank() || nombreNuevo.length > 120) { nombreEditar.error = "Ingresa un nombre válido"; return@setOnClickListener }
+            if (telefonoNuevo.isNotEmpty() && !telefonoNuevo.matches(Regex("^\\+?[0-9]{10,13}$"))) { telefonoEditar.error = "Ingresa un teléfono válido"; return@setOnClickListener }
             guardando = true
             btnGuardar.isEnabled = false
             btnCancelar.isEnabled = false
@@ -1133,6 +1172,13 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                         }
                     }
 
+                    if (nombreNuevo != usuario.nombre_completo || telefonoNuevo != usuario.telefono.orEmpty()) {
+                        val datos = com.google.gson.JsonObject().apply {
+                            addProperty("nombre_completo", nombreNuevo)
+                            addProperty("telefono", telefonoNuevo)
+                        }
+                        check(RetrofitClient.api.editarDatosOperario(usuario.id, datos).isSuccessful) { "No se pudieron actualizar los datos" }
+                    }
                     if (nuevoEstado != usuario.activo) {
                         val respuesta = RetrofitClient.api.actualizarEstadoUsuario(
                             usuario.id,
@@ -1587,13 +1633,19 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 return@setOnClickListener
             }
 
-            if (cedula.isBlank()) {
+            if (!cedula.matches(Regex("^[0-9]{6,10}$"))) {
 
                 etCedula.error =
-                    "Ingresa la cédula"
+                    "La cédula debe tener entre 6 y 10 dígitos"
 
                 etCedula.requestFocus()
 
+                return@setOnClickListener
+            }
+
+            if (telefono != null && !telefono.replace(Regex("[\\s()\\-]"), "").matches(Regex("^\\+?[0-9]{10,13}$"))) {
+                etTelefono.error = "Ingresa un teléfono válido"
+                etTelefono.requestFocus()
                 return@setOnClickListener
             }
 

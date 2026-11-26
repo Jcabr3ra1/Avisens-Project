@@ -1,5 +1,7 @@
 package com.project.avisensandroid.ui
 
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import android.app.DatePickerDialog
 import android.app.Dialog
 import android.net.Uri
@@ -122,6 +124,13 @@ class MainActivity : AperturaReanudableActivity() {
     // =========================================================
     // ADAPTADOR DE SPINNER ESTILIZADO
     // =========================================================
+
+    object CausasMortalidad {
+        const val OTRA = "Otra causa"
+        val opciones = listOf("Golpe de calor", "Estrés por frío", "Enfermedad respiratoria",
+            "Enfermedad digestiva", "Deshidratación", "Aplastamiento", "Lesiones físicas",
+            "Problemas de alimentación", "Causa desconocida")
+    }
 
     class SpinnerAdapterEstilizado(
         context: android.content.Context,
@@ -1226,223 +1235,179 @@ class MainActivity : AperturaReanudableActivity() {
     // PERFIL
     // =========================================================
 
-    private fun mostrarPerfil() {
+    private var fotoInicio: android.graphics.Bitmap? = null
+    private var fotoInicioUsuario: Int? = null
+    private var versionFotoInicio = 0
 
-        perfilBinding =
-            Co03PerfilOpBinding.inflate(
-                layoutInflater
-            )
-
-        setContentView(
-            perfilBinding.root
-        )
-
-        val nombreInicial =
-            perfilBinding
-                .edtNombrePerfil
-                .text
-                .toString()
-
-        val correoInicial =
-            perfilBinding
-                .edtCorreoPerfil
-                .text
-                .toString()
-
-        val telefonoInicial =
-            perfilBinding
-                .edtTelefonoPerfil
-                .text
-                .toString()
-
-        setPerfilEditable(false)
-
-        perfilBinding
-            .btnGuardarPerfil
-            .visibility =
-            View.GONE
-
-        fun revisarCambios() {
-
-            val hayCambios =
-                perfilBinding
-                    .edtNombrePerfil
-                    .text
-                    .toString() != nombreInicial ||
-
-                        perfilBinding
-                            .edtCorreoPerfil
-                            .text
-                            .toString() != correoInicial ||
-
-                        perfilBinding
-                            .edtTelefonoPerfil
-                            .text
-                            .toString() != telefonoInicial
-
-            perfilBinding
-                .btnGuardarPerfil
-                .visibility =
-                if (hayCambios) {
-                    View.VISIBLE
-                } else {
-                    View.GONE
-                }
+    fun actualizarAvatarInicio(contenedor: android.widget.FrameLayout) {
+        val usuario = UserSession.userId(this) ?: return
+        val icono = contenedor.getChildAt(0) as? android.widget.ImageView ?: return
+        if (fotoInicioUsuario != usuario) {
+            fotoInicioUsuario = usuario
+            fotoInicio = null
+            versionFotoInicio++
         }
-
-        val textWatcher =
-            object : TextWatcher {
-
-                override fun beforeTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    count: Int,
-                    after: Int
-                ) = Unit
-
-                override fun onTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    before: Int,
-                    count: Int
-                ) {
-
-                    revisarCambios()
-                }
-
-                override fun afterTextChanged(
-                    s: Editable?
-                ) = Unit
-            }
-
-        perfilBinding
-            .edtNombrePerfil
-            .addTextChangedListener(
-                textWatcher
-            )
-
-        perfilBinding
-            .edtCorreoPerfil
-            .addTextChangedListener(
-                textWatcher
-            )
-
-        perfilBinding
-            .edtTelefonoPerfil
-            .addTextChangedListener(
-                textWatcher
-            )
-
-        perfilBinding
-            .btnCerrarPerfil
-            .setOnClickListener {
-
-                mostrarConfiguracion()
-            }
-
-        perfilBinding
-            .btnEditarNombre
-            .setOnClickListener {
-
-                perfilBinding
-                    .edtNombrePerfil
-                    .isEnabled = true
-
-                perfilBinding
-                    .edtNombrePerfil
-                    .requestFocus()
-            }
-
-        perfilBinding
-            .btnEditarCorreo
-            .setOnClickListener {
-
-                perfilBinding
-                    .edtCorreoPerfil
-                    .isEnabled = true
-
-                perfilBinding
-                    .edtCorreoPerfil
-                    .requestFocus()
-            }
-
-        perfilBinding
-            .btnEditarTelefono
-            .setOnClickListener {
-
-                perfilBinding
-                    .edtTelefonoPerfil
-                    .isEnabled = true
-
-                perfilBinding
-                    .edtTelefonoPerfil
-                    .requestFocus()
-            }
-
-        perfilBinding
-            .btnGuardarPerfil
-            .setOnClickListener {
-
-                val nombre =
-                    perfilBinding
-                        .edtNombrePerfil
-                        .text
-                        .toString()
-                        .trim()
-
-                val correo =
-                    perfilBinding
-                        .edtCorreoPerfil
-                        .text
-                        .toString()
-                        .trim()
-
-                val telefono =
-                    perfilBinding
-                        .edtTelefonoPerfil
-                        .text
-                        .toString()
-                        .trim()
-
-                var primerError: View? = null
-                if (nombre.isBlank()) {
-                    perfilBinding.edtNombrePerfil.error = "Ingresa tu nombre"
-                    primerError = primerError ?: perfilBinding.edtNombrePerfil
-                }
-                if (!Patterns.EMAIL_ADDRESS.matcher(correo).matches()) {
-                    perfilBinding.edtCorreoPerfil.error = "Ingresa un correo válido"
-                    primerError = primerError ?: perfilBinding.edtCorreoPerfil
-                }
-                if (telefono.isBlank()) {
-                    perfilBinding.edtTelefonoPerfil.error = "Ingresa tu teléfono"
-                    primerError = primerError ?: perfilBinding.edtTelefonoPerfil
-                }
-                if (primerError != null) {
-                    primerError.requestFocus()
+        fun pintar() {
+            val foto = fotoInicio
+            val medida = if (foto == null) (22 * resources.displayMetrics.density).toInt() else -1
+            icono.layoutParams = android.widget.FrameLayout.LayoutParams(medida, medida, android.view.Gravity.CENTER)
+            icono.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+            contenedor.clipToOutline = true
+            if (foto == null) icono.setImageResource(R.drawable.ic_person) else icono.setImageBitmap(foto)
+        }
+        pintar()
+        if (!OfflineCache.hayInternet(this)) return
+        val version = versionFotoInicio
+        lifecycleScope.launch {
+            try {
+                val r = RetrofitClient.api.consultarFotoPerfil()
+                val imagen = if (r.isSuccessful) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    r.body()?.use { android.graphics.BitmapFactory.decodeStream(it.byteStream()) }
                 } else {
-                    setPerfilEditable(false)
-                    perfilBinding.btnGuardarPerfil.visibility = View.GONE
-                    Toast.makeText(this, "Perfil actualizado", Toast.LENGTH_SHORT).show()
+                    r.errorBody()?.close()
+                    if (r.code() != 404) return@launch
+                    null
                 }
-
-            }
+                if (version != versionFotoInicio || UserSession.userId(this@MainActivity) != usuario) return@launch
+                fotoInicio = imagen
+                if (contenedor.isAttachedToWindow) pintar()
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { }
+        }
     }
 
-    private fun setPerfilEditable(
-        editable: Boolean
-    ) {
+    private var perfilFotoOcupada = false
+    private val elegirFotoPerfil = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null && ::perfilBinding.isInitialized && perfilBinding.root.isAttachedToWindow) {
+            val b = perfilBinding
+            operarFotoPerfil(b) {
+                val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        val salida = java.io.ByteArrayOutputStream()
+                        val buffer = ByteArray(8192)
+                        while (true) {
+                            val n = input.read(buffer)
+                            if (n < 0) break
+                            require(salida.size() + n <= 3 * 1024 * 1024) { "La foto supera 3 MB" }
+                            salida.write(buffer, 0, n)
+                        }
+                        salida.toByteArray()
+                    } ?: error("No se pudo abrir la foto")
+                }
+                val tipo = contentResolver.getType(uri)
+                require(tipo in listOf("image/jpeg", "image/png", "image/webp")) { "Selecciona JPG, PNG o WebP" }
+                val respuesta = RetrofitClient.api.subirFotoPerfil(bytes.toRequestBody(tipo!!.toMediaType()))
+                check(respuesta.isSuccessful) { "No se pudo subir la foto (${respuesta.code()})" }
+                cargarFotoPerfil(b)
+            }
+        }
+    }
 
-        perfilBinding
-            .edtNombrePerfil
-            .isEnabled = editable
+    private fun operarFotoPerfil(b: Co03PerfilOpBinding, accion: suspend () -> Unit) {
+        if (perfilFotoOcupada) return
+        if (!OfflineCache.hayInternet(this)) {
+            Toast.makeText(this, "Necesitas conexión para modificar la foto", Toast.LENGTH_SHORT).show()
+            return
+        }
+        perfilFotoOcupada = true
+        lifecycleScope.launch {
+            try { accion() }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { Toast.makeText(this@MainActivity, e.message ?: "No se pudo actualizar la foto", Toast.LENGTH_LONG).show() }
+            finally { perfilFotoOcupada = false }
+        }
+    }
 
-        perfilBinding
-            .edtCorreoPerfil
-            .isEnabled = editable
+    private suspend fun cargarFotoPerfil(b: Co03PerfilOpBinding) {
+        val respuesta = RetrofitClient.api.consultarFotoPerfil()
+        if (!b.root.isAttachedToWindow) { respuesta.body()?.close(); respuesta.errorBody()?.close(); return }
+        if (respuesta.code() == 404) {
+            fotoInicio = null
+            fotoInicioUsuario = UserSession.userId(this)
+            versionFotoInicio++
+            respuesta.errorBody()?.close()
+            b.imgFotoPerfil.visibility = View.GONE
+            b.txtInicialPerfil.visibility = View.VISIBLE
 
-        perfilBinding
-            .edtTelefonoPerfil
-            .isEnabled = editable
+            return
+        }
+        check(respuesta.isSuccessful) { "No se pudo consultar la foto" }
+        val imagen = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            respuesta.body()?.use { android.graphics.BitmapFactory.decodeStream(it.byteStream()) }
+        }
+        if (imagen != null && b.root.isAttachedToWindow) {
+            fotoInicio = imagen
+            fotoInicioUsuario = UserSession.userId(this)
+            versionFotoInicio++
+            b.imgFotoPerfil.setImageBitmap(imagen)
+            b.imgFotoPerfil.visibility = View.VISIBLE
+            b.txtInicialPerfil.visibility = View.GONE
+
+        }
+    }
+
+    private fun inicialesPerfil(nombre: String): String = nombre.trim().split(Regex("\\s+")).filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1).uppercase() }.ifBlank { "U" }
+
+    private fun mostrarPerfil() {
+        val b = Co03PerfilOpBinding.inflate(layoutInflater)
+        perfilBinding = b
+        setContentView(b.root)
+        val nombre = UserSession.name(this)
+        b.txtNombrePerfil.text = nombre
+        b.txtInicialPerfil.text = inicialesPerfil(nombre)
+        b.edtCorreoPerfil.setText(UserSession.email(this))
+        b.edtTelefonoPerfil.setText("No disponible")
+        b.btnCerrarPerfil.setOnClickListener { mostrarConfiguracion() }
+        b.btnCambiarFotoPerfil.setOnClickListener {
+            if (perfilFotoOcupada) return@setOnClickListener
+            val tieneFoto = b.imgFotoPerfil.visibility == View.VISIBLE
+            val opciones = if (tieneFoto) arrayOf("Ver foto", "Cambiar foto", "Eliminar foto") else arrayOf("Elegir foto")
+            androidx.appcompat.app.AlertDialog.Builder(this).setItems(opciones) { _, indice ->
+                when (opciones[indice]) {
+                    "Ver foto" -> {
+                        val imagen = android.widget.ImageView(this).apply {
+                            setImageDrawable(b.imgFotoPerfil.drawable)
+                            adjustViewBounds = true
+                            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                        }
+                        androidx.appcompat.app.AlertDialog.Builder(this).setView(imagen).setPositiveButton("Cerrar", null).show()
+                    }
+                    "Eliminar foto" -> androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setMessage("¿Eliminar tu foto de perfil?")
+                        .setNegativeButton("Cancelar", null)
+                        .setPositiveButton("Eliminar") { _, _ ->
+                            operarFotoPerfil(b) {
+                                val r = RetrofitClient.api.eliminarFotoPerfil()
+                                check(r.isSuccessful) { "No se pudo eliminar la foto" }
+                                fotoInicio = null
+                                fotoInicioUsuario = UserSession.userId(this@MainActivity)
+                                versionFotoInicio++
+                                b.imgFotoPerfil.visibility = View.GONE
+                                b.txtInicialPerfil.visibility = View.VISIBLE
+                            }
+                        }.show()
+                    else -> elegirFotoPerfil.launch("image/*")
+                }
+            }.show()
+        }
+        if (!OfflineCache.hayInternet(this)) return
+        lifecycleScope.launch {
+            try {
+                val r = RetrofitClient.api.consultarPerfil()
+                val datos = r.body() ?: error("No se pudo consultar el perfil")
+                if (!b.root.isAttachedToWindow) return@launch
+                fun dato(clave: String) = datos.get(clave)?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                b.txtNombrePerfil.text = dato("nombre_completo")
+                b.txtInicialPerfil.text = inicialesPerfil(dato("nombre_completo"))
+                b.edtCorreoPerfil.setText(dato("email").ifBlank { "No registrado" })
+                b.edtTelefonoPerfil.setText(dato("telefono").ifBlank { "No registrado" })
+                b.txtDetallePerfil.text = dato("rol").lowercase().replaceFirstChar { it.uppercase() }
+                b.txtUsuarioPerfil.text = dato("username").ifBlank { "No registrado" }
+                b.txtOrganizacionPerfil.text = datos.get("organizacion")?.takeIf { it.isJsonObject }?.asJsonObject?.get("nombre")?.takeUnless { it.isJsonNull }?.asString ?: "No registrada"
+                if (datos.get("tiene_foto")?.asBoolean == true && !perfilFotoOcupada) cargarFotoPerfil(b)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { if (b.root.isAttachedToWindow) Toast.makeText(this@MainActivity, "No se pudo actualizar el perfil", Toast.LENGTH_SHORT).show() }
+        }
     }
 
     // =========================================================
@@ -2022,6 +1987,15 @@ class MainActivity : AperturaReanudableActivity() {
                 dialog.dismiss()
             }
 
+        val causas = (listOf("Sin causa registrada") + CausasMortalidad.opciones + CausasMortalidad.OTRA).toMutableList()
+        binding.spinnerCausaPresuntiva.adapter = SpinnerAdapterEstilizado(this, causas)
+        binding.spinnerCausaPresuntiva.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                binding.edtCausaPresuntiva.visibility = if (causas[position] == CausasMortalidad.OTRA) View.VISIBLE else View.GONE
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+        }
+
         binding
             .btnGuardarEvento
             .setOnClickListener {
@@ -2054,15 +2028,17 @@ class MainActivity : AperturaReanudableActivity() {
                         .toString()
                         .trim()
 
-                val causa =
-                    binding
-                        .edtCausaPresuntiva
-                        .text
-                        .toString()
-                        .trim()
-                        .ifBlank {
-                            null
-                        }
+                val seleccionCausa = causas.getOrNull(binding.spinnerCausaPresuntiva.selectedItemPosition)
+                val causa = when (seleccionCausa) {
+                    null, "Sin causa registrada" -> null
+                    CausasMortalidad.OTRA -> binding.edtCausaPresuntiva.text.toString().trim()
+                    else -> seleccionCausa
+                }
+                if (seleccionCausa == CausasMortalidad.OTRA && (causa.isNullOrBlank() || causa.length > 150 || causa.none { it.isLetter() })) {
+                    binding.edtCausaPresuntiva.error = "Escribe una causa válida (máximo 150 caracteres)"
+                    binding.edtCausaPresuntiva.requestFocus()
+                    return@setOnClickListener
+                }
 
                 var primerError: View? = null
                 var faltanSelecciones = false
