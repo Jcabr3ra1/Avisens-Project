@@ -113,6 +113,14 @@
         android:textColor="@color/adaptive_text_89938e"
         android:textSize="11sp" />
 
+    <TextView
+        android:id="@+id/txtAutonomiaEstimada"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/text_primary"
+        android:textSize="11sp" />
+
     <!-- REGISTRAR ENTRADA -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnEntradaInsumo"

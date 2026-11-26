@@ -179,6 +179,13 @@ interface ApiService {
         @Query("limit") limit: Int = 20
     ): Response<PaginatedResponse<InsumoResponse>>
 
+    @GET("v1/insumos/{id}/movimientos")
+    suspend fun listarMovimientosInsumo(
+        @Path("id") insumoId: Int,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): Response<PaginatedResponse<com.project.avisensandroid.model.MovimientoAutonomiaResponse>>
+
     // Registrar entrada de insumos.
     // BodegaFragment convierte primero la cantidad
     // a la unidad original del inventario.

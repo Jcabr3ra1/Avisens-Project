@@ -123,7 +123,7 @@ class MainActivity : AperturaReanudableActivity() {
     // ADAPTADOR DE SPINNER ESTILIZADO
     // =========================================================
 
-    private class SpinnerAdapterEstilizado(
+    class SpinnerAdapterEstilizado(
         context: android.content.Context,
         items: MutableList<String>
     ) : ArrayAdapter<String>(
@@ -336,6 +336,7 @@ class MainActivity : AperturaReanudableActivity() {
                 mainHandler.removeCallbacks(reconectarRunnable)
             } else if (anterior == false || reconexionPendiente) {
                 reconexionPendiente = false
+                Hu56OfflineQueue.programar(applicationContext)
                 mainHandler.removeCallbacks(reconectarRunnable)
                 mainHandler.postDelayed(reconectarRunnable, 1200L)
             }
@@ -360,6 +361,7 @@ class MainActivity : AperturaReanudableActivity() {
             // Bodega ya tiene su propio progressInsumos para la carga inicial.
             // En reconexión se usa únicamente el indicador superior común.
             is BodegaFragment -> visible.actualizarSilenciosamente()
+            is com.project.avisensandroid.ui.fragments.BitacoraConsumoFragment -> visible.actualizarSilenciosamente()
             is BitacoraFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
             is GestionOperariosFragment -> visible.actualizarSilenciosamente()
             is AlertasFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
@@ -2107,12 +2109,14 @@ class MainActivity : AperturaReanudableActivity() {
                 lifecycleScope.launch {
 
                     if (!OfflineCache.hayInternet(this@MainActivity)) {
-                        if (fotoMortalidadTomada) {
+                        val bytesFoto = try {
+                            if (fotoMortalidadTomada) com.project.avisensandroid.controller.FotosMortalidad.preparar(checkNotNull(fotoMortalidadTemporal)) else null
+                        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
                             binding.btnGuardarEvento.isEnabled = true
-                            Toast.makeText(this@MainActivity, "Conéctate a internet para guardar el registro con su foto", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@MainActivity, "No se pudo preparar la fotografía", Toast.LENGTH_LONG).show()
                             return@launch
                         }
-                        val guardado = Hu56OfflineQueue.guardar(this@MainActivity, "mortalidad", request)
+                        val guardado = Hu56OfflineQueue.guardar(this@MainActivity, "mortalidad", request, bytesFoto)
                         binding.btnGuardarEvento.isEnabled = !guardado
                         Toast.makeText(this@MainActivity,
                             if (guardado) "Registro guardado sin conexión. Pendiente de sincronizar" else "No se pudo guardar localmente el registro",
