@@ -84,7 +84,7 @@
                     android:background="@drawable/bg_input_event"
                     android:hint="Ej: 35"
                     android:textSize="12sp"
-                    android:textColor="@color/black"
+                    android:textColor="@color/adaptive_text_000000"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
                     android:inputType="number"
@@ -116,7 +116,7 @@
                     android:background="@drawable/bg_input_event"
                     android:hint="27/08/2026"
                     android:textSize="12sp"
-                    android:textColor="@color/black"
+                    android:textColor="@color/adaptive_text_000000"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
                     android:singleLine="true"
@@ -145,7 +145,7 @@
             android:background="@drawable/bg_input_event"
             android:hint="Ej: sin determinar"
             android:textSize="12sp"
-            android:textColor="@color/black"
+            android:textColor="@color/adaptive_text_000000"
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
             android:singleLine="true" />
@@ -170,7 +170,7 @@
             android:hint="Escribe una observación..."
             android:padding="10dp"
             android:textSize="12sp"
-            android:textColor="@color/black"
+            android:textColor="@color/adaptive_text_000000"
             android:inputType="textMultiLine"
             android:overScrollMode="ifContentScrolls" />
 
@@ -192,9 +192,9 @@
             android:layout_marginTop="6dp"
             android:text="Adjuntar foto"
             android:textSize="13sp"
-            android:textColor="#7D8985"
+            android:textColor="@color/adaptive_text_7d8985"
             android:textAllCaps="false"
-            android:backgroundTint="#FFFFFF"
+            android:backgroundTint="@color/adaptive_surface_ffffff"
             android:gravity="center"
             android:minHeight="0dp"
             android:minWidth="0dp"
@@ -204,7 +204,7 @@
             app:strokeWidth="1dp"
             app:strokeColor="#E4EAE7"
             app:icon="@drawable/ic_camera_evidencia"
-            app:iconTint="#7D8985"
+            app:iconTint="@color/adaptive_text_7d8985"
             app:iconSize="26dp"
             app:iconPadding="8dp"
             app:iconGravity="textTop" />
@@ -224,7 +224,7 @@
                 android:id="@+id/imgFotoMortalidad"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="#F4F7F5"
+                android:background="@color/adaptive_surface_f4f7f5"
                 android:scaleType="centerCrop"
                 android:contentDescription="Vista previa de la fotografía"
                 android:clickable="true"
@@ -325,8 +325,7 @@
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
-                android:textColor="@color/text_primary"
-                android:backgroundTint="@color/white"
+                android:textColor="@color/cancel_text"
                 android:gravity="center"
                 android:minHeight="0dp"
                 android:minWidth="0dp"
@@ -334,8 +333,8 @@
                 android:insetBottom="0dp"
                 android:layout_marginEnd="3dp"
                 app:cornerRadius="9dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#D6DED9" />
+            app:backgroundTint="@color/cancel_background"
+            app:strokeWidth="0dp" />
 
             <!-- GUARDAR -->
             <com.google.android.material.button.MaterialButton

@@ -8,7 +8,7 @@
     <com.project.avisensandroid.ui.SlidingBottomNavigationView
         android:id="@+id/bottomNav"
         android:layout_width="0dp" android:layout_height="wrap_content"
-        android:background="@color/white"
+        android:background="@color/adaptive_surface_ffffff"
         app:itemIconTint="@color/nav_item_color" app:itemTextColor="@color/nav_item_color"
         app:labelVisibilityMode="labeled" app:menu="@menu/bottom_nav_propietario_menu"
         app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintBottom_toBottomOf="parent"/>

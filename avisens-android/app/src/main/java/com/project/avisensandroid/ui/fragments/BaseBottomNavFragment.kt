@@ -9,7 +9,7 @@ abstract class BaseBottomNavFragment : Fragment() {
 
     protected fun configurarBottomNav(itemSeleccionado: Int) {
         val activity = requireActivity() as MainActivity
-        val bottomNav = activity.findViewById<BottomNavigationView>(R.id.bottomNav)
+        val bottomNav = activity.findViewById<BottomNavigationView>(R.id.bottomNav) ?: return
         bottomNav.setOnItemSelectedListener { item ->
             if (item.itemId == itemSeleccionado) {
                 true

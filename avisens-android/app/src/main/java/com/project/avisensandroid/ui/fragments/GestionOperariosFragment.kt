@@ -1,6 +1,7 @@
 package com.project.avisensandroid.ui.fragments
 
 
+import com.project.avisensandroid.ui.ColoresAdaptativos
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
@@ -207,7 +208,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 gravity = android.view.Gravity.CENTER
                 setPadding(dp(24), dp(28), dp(24), dp(28))
                 background = GradientDrawable().apply {
-                    setColor(Color.WHITE)
+                    setColor(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"))
                     cornerRadius = dp(18).toFloat()
                     setStroke(dp(1), Color.parseColor("#DDE8E2"))
                 }
@@ -224,7 +225,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 text = "Aún no tienes operarios"
                 textSize = 16f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor("#1F5C42"))
+                setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_1f5c42))
                 gravity = android.view.Gravity.CENTER
             }
             emptyCard.addView(title, LinearLayout.LayoutParams(-1, -2))
@@ -232,7 +233,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             val message = TextView(requireContext()).apply {
                 text = "Crea un operario para comenzar a asignarle granjas."
                 textSize = 13f
-                setTextColor(Color.parseColor("#78847E"))
+                setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_78847e))
                 gravity = android.view.Gravity.CENTER
                 setPadding(0, dp(5), 0, 0)
             }
@@ -275,13 +276,13 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 text = usuario.nombre_completo
                 textSize = 17f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor("#183C2E"))
+                setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_183c2e))
                 maxLines = 2
             })
             identity.addView(TextView(requireContext()).apply {
                 text = "Operario"
                 textSize = 11f
-                setTextColor(Color.parseColor("#2F8B5E"))
+                setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_2f8b5e))
                 setPadding(0, dp(3), 0, 0)
             })
             header.addView(identity, LinearLayout.LayoutParams(0, -2, 1f))
@@ -291,10 +292,10 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 textSize = 11f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = android.view.Gravity.CENTER
-                setTextColor(Color.parseColor(if (usuario.activo) "#28744D" else "#A34A4A"))
+                setTextColor(ColoresAdaptativos.texto(requireContext(), if (usuario.activo) "#28744D" else "#A34A4A"))
                 setPadding(dp(10), dp(6), dp(10), dp(6))
                 background = GradientDrawable().apply {
-                    setColor(Color.parseColor(if (usuario.activo) "#E8F5ED" else "#FBECEC"))
+                    setColor(ColoresAdaptativos.superficie(requireContext(), if (usuario.activo) "#E8F5ED" else "#FBECEC"))
                     cornerRadius = dp(20).toFloat()
                 }
             }
@@ -311,7 +312,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             card.addView(info)
 
             card.addView(View(requireContext()).apply {
-                setBackgroundColor(Color.parseColor("#E7EEE9"))
+                setBackgroundColor(ColoresAdaptativos.superficie(requireContext(), "#E7EEE9"))
             }, LinearLayout.LayoutParams(-1, dp(1)).apply {
                 topMargin = dp(16)
                 bottomMargin = dp(12)
@@ -321,7 +322,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 text = "Granjas asignadas"
                 textSize = 14f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor("#1F5C42"))
+                setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_1f5c42))
             }
             card.addView(assignmentTitle)
 
@@ -361,7 +362,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 setAllCaps(false)
                 textSize = 12f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.parseColor("#B23A3A"))
+                setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_b23a3a))
                 minHeight = 0
                 minimumHeight = 0
                 minWidth = 0
@@ -369,7 +370,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 cornerRadius = dp(10)
                 strokeWidth = dp(1)
                 strokeColor = android.content.res.ColorStateList.valueOf(Color.parseColor("#B23A3A"))
-                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+                backgroundTintList = android.content.res.ColorStateList.valueOf(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"))
                 setOnClickListener { confirmarEliminarOperario(usuario) }
             }
             card.addView(deleteButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
@@ -387,7 +388,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         TextView(requireContext()).apply {
             text = "$icon   $value"
             textSize = 12.5f
-            setTextColor(Color.parseColor("#68756E"))
+            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_68756e))
             setPadding(0, dp(3), 0, dp(3))
             maxLines = 2
         }
@@ -480,7 +481,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                             textSize = 12f
 
                             setTextColor(
-                                Color.parseColor(
+                                ColoresAdaptativos.texto(requireContext(),
                                     "#9A9A9A"
                                 )
                             )
@@ -517,7 +518,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                             textSize = 13f
 
                             setTextColor(
-                                Color.parseColor(
+                                ColoresAdaptativos.texto(requireContext(),
                                     "#9A9A9A"
                                 )
                             )
@@ -563,7 +564,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                         textSize = 12f
 
                         setTextColor(
-                            Color.parseColor(
+                            ColoresAdaptativos.texto(requireContext(),
                                 "#9A9A9A"
                             )
                         )
@@ -620,7 +621,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 textSize = 13f
 
                 setTextColor(
-                    Color.parseColor(
+                    ColoresAdaptativos.texto(requireContext(),
                         "#4F5A55"
                     )
                 )
@@ -654,7 +655,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 typeface = Typeface.DEFAULT_BOLD
 
                 setTextColor(
-                    Color.parseColor(
+                    ColoresAdaptativos.texto(requireContext(),
                         "#C94A4A"
                     )
                 )
@@ -673,13 +674,13 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
                 // MaterialButton debe usar tint y stroke propios;
                 // asignar background directamente puede dejar el color azul del tema.
-                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+                backgroundTintList = android.content.res.ColorStateList.valueOf(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"))
                 strokeColor = android.content.res.ColorStateList.valueOf(Color.parseColor("#C62828"))
                 strokeWidth = dp(2)
                 cornerRadius = dp(10)
                 insetTop = 0
                 insetBottom = 0
-                setTextColor(Color.parseColor("#C62828"))
+                setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_c62828))
 
                 setOnClickListener {
 
@@ -899,7 +900,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(20), dp(20), dp(18))
             background = GradientDrawable().apply {
-                setColor(Color.WHITE)
+                setColor(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"))
                 cornerRadius = dp(18).toFloat()
                 setStroke(dp(1), Color.parseColor("#D8E7DE"))
             }
@@ -908,7 +909,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             TextView(context).apply {
                 text = valor
                 textSize = tamano
-                setTextColor(Color.parseColor(color))
+                setTextColor(ColoresAdaptativos.texto(requireContext(), color))
                 if (bold) setTypeface(null, Typeface.BOLD)
             }
         contenido.addView(linea("AVISENS · OPERARIOS", 10f, "#176747", true))
@@ -928,8 +929,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 this.text = etiqueta
                 isAllCaps = false
                 textSize = 13f
-                setTextColor(Color.parseColor(texto))
-                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor(fondo))
+                setTextColor(ColoresAdaptativos.texto(requireContext(), texto))
+                backgroundTintList = android.content.res.ColorStateList.valueOf(ColoresAdaptativos.superficie(requireContext(), fondo))
                 cornerRadius = dp(10)
                 minWidth = 0
                 minHeight = 0
@@ -1025,15 +1026,15 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             val nombre = TextView(requireContext()).apply {
                 text = "${granja.nombre} (pendiente de guardar)"
                 textSize = 13f
-                setTextColor(Color.parseColor("#2F8B5E"))
+                setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_2f8b5e))
             }
             fila.addView(nombre, LinearLayout.LayoutParams(0, -2, 1f))
             val quitar = com.google.android.material.button.MaterialButton(requireContext()).apply {
                 text = "Quitar"
                 isAllCaps = false
                 textSize = 11f
-                setTextColor(Color.parseColor("#C62828"))
-                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+                setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_c62828))
+                backgroundTintList = android.content.res.ColorStateList.valueOf(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"))
                 strokeColor = android.content.res.ColorStateList.valueOf(Color.parseColor("#C62828"))
                 strokeWidth = dp(2)
                 cornerRadius = dp(10)
@@ -1255,13 +1256,13 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         ) {
 
             private val colorTextoSeleccionado =
-                0xFF171D1A.toInt()
+                ColoresAdaptativos.texto(requireContext(), "#171D1A")
 
             private val colorTextoDropdown =
-                0xFF171D1A.toInt()
+                ColoresAdaptativos.texto(requireContext(), "#171D1A")
 
             private val colorFondoDropdown =
-                0xFFFFFFFF.toInt()
+                ColoresAdaptativos.superficie(requireContext(), "#FFFFFF")
 
             init {
                 setDropDownViewResource(

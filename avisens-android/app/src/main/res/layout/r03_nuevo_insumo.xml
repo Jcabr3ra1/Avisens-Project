@@ -14,7 +14,7 @@
         android:text="Nuevo alimento"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:textColor="#171D1A"
+        android:textColor="@color/adaptive_text_171d1a"
         android:layout_marginBottom="12dp" />
 
     <TextView
@@ -23,7 +23,7 @@
         android:text="Tipo de alimento"
         android:textSize="12sp"
         android:textStyle="bold"
-        android:textColor="#171D1A"
+        android:textColor="@color/adaptive_text_171d1a"
         android:layout_marginBottom="5dp" />
 
     <FrameLayout
@@ -50,7 +50,7 @@
         android:text="Unidad de medida"
         android:textSize="12sp"
         android:textStyle="bold"
-        android:textColor="#171D1A"
+        android:textColor="@color/adaptive_text_171d1a"
         android:layout_marginBottom="5dp" />
 
     <FrameLayout
@@ -93,7 +93,7 @@
                 android:text="Cantidad a ingresar"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:textColor="#171D1A"
+                android:textColor="@color/adaptive_text_171d1a"
                 android:layout_marginBottom="5dp" />
 
             <EditText
@@ -105,7 +105,7 @@
                 android:paddingEnd="12dp"
                 android:singleLine="true"
                 android:textSize="12sp"
-                android:textColor="@color/black"
+                android:textColor="@color/adaptive_text_000000"
                 android:hint="Ej. 100"
                 android:inputType="numberDecimal" />
         </LinearLayout>
@@ -125,7 +125,7 @@
             android:text="Número de bultos"
             android:textSize="12sp"
             android:textStyle="bold"
-            android:textColor="#171D1A"
+            android:textColor="@color/adaptive_text_171d1a"
             android:layout_marginBottom="5dp" />
         <EditText
             android:id="@+id/edtNumeroBultos"
@@ -136,7 +136,7 @@
             android:paddingEnd="12dp"
             android:singleLine="true"
             android:textSize="12sp"
-            android:textColor="@color/black"
+            android:textColor="@color/adaptive_text_000000"
             android:hint="Ej. 5"
             android:inputType="number" />
         <TextView
@@ -144,7 +144,7 @@
             android:layout_height="wrap_content"
             android:text="El total se guardará en kilogramos."
             android:textSize="12sp"
-            android:textColor="#171D1A" />
+            android:textColor="@color/adaptive_text_171d1a" />
     </LinearLayout>
 
     <TextView
@@ -155,7 +155,7 @@
         android:text="Stock mínimo para alerta"
         android:textSize="12sp"
         android:textStyle="bold"
-        android:textColor="#171D1A" />
+        android:textColor="@color/adaptive_text_171d1a" />
 
     <EditText
         android:id="@+id/edtStockMinimoInsumo"
@@ -167,7 +167,7 @@
         android:paddingEnd="12dp"
         android:singleLine="true"
         android:textSize="12sp"
-        android:textColor="@color/black"
+        android:textColor="@color/adaptive_text_000000"
         android:hint="Ej. 100 (opcional)"
         android:inputType="numberDecimal" />
 
@@ -185,16 +185,16 @@
             android:text="Cancelar"
             android:textSize="12sp"
             android:textStyle="bold"
-            android:textColor="#171D1A"
+            android:textColor="@color/cancel_text"
             android:textAllCaps="false"
-            android:background="@drawable/bg_boton_cancelar"
             android:layout_marginEnd="6dp"
             android:minWidth="0dp"
             android:minHeight="0dp"
-            app:backgroundTint="@null"
             app:cornerRadius="9dp"
             android:insetTop="0dp"
-            android:insetBottom="0dp" />
+            android:insetBottom="0dp"
+            app:backgroundTint="@color/cancel_background"
+            app:strokeWidth="0dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAgregarInsumo"

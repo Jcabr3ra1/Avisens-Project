@@ -1,6 +1,7 @@
 
 package com.project.avisensandroid.ui.fragments
 
+import com.project.avisensandroid.ui.ColoresAdaptativos
 import android.graphics.Color
 import android.os.Bundle
 import android.content.Context
@@ -89,8 +90,8 @@ class ProveedoresFragment : BaseBottomNavFragment() {
     }
 
     private fun actualizarPestanaActiva(insumosActivos: Boolean) {
-        val colorActivo = Color.parseColor("#2E7D5B")
-        val colorInactivo = Color.parseColor("#89938E")
+        val colorActivo = ColoresAdaptativos.texto(requireContext(), "#2E7D5B")
+        val colorInactivo = ColoresAdaptativos.texto(requireContext(), "#89938E")
 
         binding.btnInsumos.setBackgroundResource(
             if (insumosActivos) R.drawable.bg_bodega_tab_selected else android.R.color.transparent
@@ -199,7 +200,7 @@ class ProveedoresFragment : BaseBottomNavFragment() {
                 "● Activo"
 
             itemBinding.txtEstadoProveedor.setTextColor(
-                Color.parseColor("#18875A")
+                ColoresAdaptativos.texto(requireContext(), "#18875A")
             )
 
             itemBinding.txtEstadoProveedor.setBackgroundResource(
@@ -210,7 +211,7 @@ class ProveedoresFragment : BaseBottomNavFragment() {
                 "● Inactivo"
 
             itemBinding.txtEstadoProveedor.setTextColor(
-                Color.parseColor("#C93B32")
+                ColoresAdaptativos.texto(requireContext(), "#C93B32")
             )
 
             itemBinding.txtEstadoProveedor.setBackgroundResource(

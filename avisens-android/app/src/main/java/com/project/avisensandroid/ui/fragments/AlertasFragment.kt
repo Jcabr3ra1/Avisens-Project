@@ -1,5 +1,6 @@
 package com.project.avisensandroid.ui.fragments
 
+import com.project.avisensandroid.ui.ColoresAdaptativos
 import android.app.AlertDialog
 import android.app.Dialog
 import android.graphics.Color
@@ -254,8 +255,8 @@ class AlertasFragment : BaseBottomNavFragment() {
             Pestana.ESCALADAS -> binding.tabEscaladas
         })
         // El color del texto debe seguir la pestaña seleccionada, no quedar fijo en XML.
-        val colorSeleccionado = Color.parseColor("#111111")
-        val colorNoSeleccionado = Color.parseColor("#808A85")
+        val colorSeleccionado = ColoresAdaptativos.texto(requireContext(), "#111111")
+        val colorNoSeleccionado = ColoresAdaptativos.texto(requireContext(), "#808A85")
         listOf(
             binding.tabActivas to (pestanaActual == Pestana.ACTIVAS),
             binding.tabHistorial to (pestanaActual == Pestana.HISTORIAL),
@@ -531,7 +532,7 @@ class AlertasFragment : BaseBottomNavFragment() {
         if (alerta.estado.equals("cerrada", ignoreCase = true)) {
             alerta.accion_correctiva?.takeIf { it.isNotBlank() }?.let {
                 card.addView(View(requireContext()).apply {
-                    setBackgroundColor(Color.parseColor("#E5ECE7"))
+                    setBackgroundColor(ColoresAdaptativos.superficie(requireContext(), "#E5ECE7"))
                     layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)).apply {
                         topMargin = dp(12)
                         bottomMargin = dp(9)
@@ -554,8 +555,8 @@ class AlertasFragment : BaseBottomNavFragment() {
                     text = "Escalar"
                     isAllCaps = false
                     textSize = 12f
-                    setTextColor(Color.parseColor("#6D4C1D"))
-                    backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#FFF0D8"))
+                    setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_6d4c1d))
+                    backgroundTintList = android.content.res.ColorStateList.valueOf(ColoresAdaptativos.superficie(requireContext(), "#FFF0D8"))
                     cornerRadius = dp(9)
                     minWidth = 0
                     minHeight = 0
@@ -675,12 +676,12 @@ class AlertasFragment : BaseBottomNavFragment() {
         val color = if (cerrado) "#1F5C42" else "#C62828"
         return TextView(requireContext()).apply {
             text = if (cerrado) "Cerrada" else if (estado == "en_proceso") "En proceso" else "Abierta"
-            setTextColor(Color.parseColor(color))
+            setTextColor(ColoresAdaptativos.texto(requireContext(), color))
             textSize = 11f
             setTypeface(typeface, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dp(10), dp(5), dp(10), dp(5))
-            background = roundedBackground(Color.parseColor(fondo), Color.TRANSPARENT, 20)
+            background = roundedBackground(ColoresAdaptativos.superficie(requireContext(), fondo), Color.TRANSPARENT, 20)
         }
     }
 
@@ -689,7 +690,7 @@ class AlertasFragment : BaseBottomNavFragment() {
         val tarjeta = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(20), dp(20), dp(18))
-            background = roundedBackground(Color.WHITE, Color.parseColor("#D8E7DE"), 20)
+            background = roundedBackground(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"), Color.parseColor("#D8E7DE"), 20)
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -719,10 +720,10 @@ class AlertasFragment : BaseBottomNavFragment() {
             maxLines = 5
             gravity = Gravity.TOP or Gravity.START
             textSize = 14f
-            setTextColor(Color.parseColor("#183C2E"))
-            setHintTextColor(Color.parseColor("#8A9890"))
+            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_183c2e))
+            setHintTextColor(ColoresAdaptativos.texto(requireContext(), "#8A9890"))
             setPadding(dp(12), dp(12), dp(12), dp(12))
-            background = roundedBackground(Color.WHITE, Color.parseColor("#BFD6C7"), 10)
+            background = roundedBackground(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"), Color.parseColor("#BFD6C7"), 10)
         }
         tarjeta.addView(
             input,
@@ -740,10 +741,9 @@ class AlertasFragment : BaseBottomNavFragment() {
             text = "Cancelar"
             isAllCaps = false
             textSize = 13f
-            setTextColor(Color.parseColor("#176747"))
-            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
-            setStrokeColor(android.content.res.ColorStateList.valueOf(Color.parseColor("#BFD6C7")))
-            strokeWidth = dp(1)
+            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_text))
+            backgroundTintList = android.content.res.ColorStateList.valueOf(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_background))
+            strokeWidth = 0
             cornerRadius = dp(10)
             minWidth = 0
             minHeight = 0
@@ -898,7 +898,11 @@ class AlertasFragment : BaseBottomNavFragment() {
                         ejecutarEscalar(alerta.id, usuarios[which].id)
                     }
                     .setNegativeButton("Cancelar", null)
-                    .show()
+                    .show().getButton(AlertDialog.BUTTON_NEGATIVE).apply {
+                        setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_text))
+                        backgroundTintList = android.content.res.ColorStateList.valueOf(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_background))
+                        background = roundedBackground(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_background), androidx.core.content.ContextCompat.getColor(context, R.color.cancel_background), 10)
+                    }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -931,7 +935,7 @@ class AlertasFragment : BaseBottomNavFragment() {
     ): TextView = TextView(requireContext()).apply {
         text = contenido
         textSize = tamano
-        setTextColor(Color.parseColor(color))
+        setTextColor(ColoresAdaptativos.texto(requireContext(), color))
         if (negrita) setTypeface(typeface, Typeface.BOLD)
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,

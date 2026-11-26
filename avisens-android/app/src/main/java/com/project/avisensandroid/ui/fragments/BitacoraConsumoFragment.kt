@@ -1,5 +1,6 @@
 package com.project.avisensandroid.ui.fragments
 
+import com.project.avisensandroid.ui.ColoresAdaptativos
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -157,7 +158,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
                             LinearLayout.LayoutParams.MATCH_PARENT,
                             dp(1)
                         )
-                        setBackgroundColor(Color.parseColor("#EEEEEE"))
+                        setBackgroundColor(ColoresAdaptativos.superficie(requireContext(), "#EEEEEE"))
                     }
                 )
             }
@@ -197,7 +198,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
 
         val fecha = TextView(requireContext()).apply {
             text = formatearFecha(consumo.fecha)
-            setTextColor(Color.parseColor("#89938E"))
+            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_89938e))
             textSize = 10f
             setTypeface(null, Typeface.BOLD)
         }
@@ -227,7 +228,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
 
         card.addView(TextView(requireContext()).apply {
             text = detalles.joinToString(" · ")
-            setTextColor(Color.parseColor("#69746F"))
+            setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_69746f))
             textSize = 11f
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,

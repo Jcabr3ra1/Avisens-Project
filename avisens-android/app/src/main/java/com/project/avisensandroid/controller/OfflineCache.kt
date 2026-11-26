@@ -41,6 +41,12 @@ object OfflineCache {
 
     fun interceptor(context: Context, soloCache: Boolean = false): Interceptor = Interceptor { chain ->
         val request = chain.request()
+        // Las fotos son binarias: no deben pasar por la caché de texto.
+        val ruta = request.url.encodedPath
+        if (ruta.endsWith("/foto")) {
+            if (soloCache) throw IOException("Fotografía no disponible sin conexión")
+            return@Interceptor chain.proceed(request)
+        }
         val esConsulta = request.method == "GET" &&
                 request.url.encodedPath.startsWith("/v1/") &&
                 !request.url.encodedPath.startsWith("/v1/auth/")
@@ -76,6 +82,10 @@ object OfflineCache {
             if (key == null || !response.isSuccessful) return@Interceptor response
             val body = response.body ?: return@Interceptor response
             val tipo = body.contentType()
+            // Solo almacenar JSON; nunca convertir una imagen u otro binario a String.
+            if (tipo == null || (tipo.subtype != "json" && !tipo.subtype.endsWith("+json"))) {
+                return@Interceptor response
+            }
             val contenido = body.string()
             if (contenido.length <= MAX_RESPONSE_CHARS) {
                 prefs.edit()

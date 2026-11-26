@@ -390,6 +390,12 @@ interface ApiService {
         @Body request: RegistroMortalidadRequest
     ): Response<RegistroMortalidadResponse>
 
+    @retrofit2.http.PUT("v1/registros-mortalidad/{id}/foto")
+    suspend fun subirFotoMortalidad(@Path("id") id: Int, @Body foto: okhttp3.RequestBody): Response<okhttp3.ResponseBody>
+
+    @GET("v1/registros-mortalidad/{id}/foto")
+    suspend fun obtenerFotoMortalidad(@Path("id") id: Int): Response<okhttp3.ResponseBody>
+
     @GET("v1/registros-mortalidad")
     suspend fun listarRegistrosMortalidad(
         @Query("page") page: Int = 1,

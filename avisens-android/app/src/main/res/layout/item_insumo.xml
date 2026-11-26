@@ -22,7 +22,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            android:textColor="#171D1A"
+            android:textColor="@color/adaptive_text_171d1a"
             android:textSize="16sp"
             android:textStyle="bold"
             android:maxLines="2"
@@ -40,7 +40,7 @@
             android:background="@drawable/bg_stock_ok"
             android:text="Stock OK"
             android:gravity="center"
-            android:textColor="#18875A"
+            android:textColor="@color/adaptive_text_18875a"
             android:textSize="10sp"
             android:textStyle="bold"
             android:maxLines="1" />
@@ -58,7 +58,7 @@
         android:paddingTop="4dp"
         android:paddingBottom="4dp"
         android:background="@drawable/bg_bodega_tipo"
-        android:textColor="#68736E"
+        android:textColor="@color/adaptive_text_68736e"
         android:textSize="10sp"
         android:maxLines="1"
         android:ellipsize="end" />
@@ -75,7 +75,7 @@
             android:id="@+id/txtCantidadInsumo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#171D1A"
+            android:textColor="@color/adaptive_text_171d1a"
             android:textSize="30sp"
             android:textStyle="bold" />
 
@@ -85,7 +85,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="5dp"
             android:layout_marginBottom="5dp"
-            android:textColor="#89938E"
+            android:textColor="@color/adaptive_text_89938e"
             android:textSize="13sp"
             android:textStyle="bold" />
 
@@ -110,7 +110,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:textColor="#89938E"
+        android:textColor="@color/adaptive_text_89938e"
         android:textSize="11sp" />
 
     <!-- REGISTRAR ENTRADA -->

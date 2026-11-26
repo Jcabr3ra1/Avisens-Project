@@ -248,15 +248,6 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/txtSubtituloSensoresInicio"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Selecciona un galpón para ver sus últimas lecturas"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -631,14 +622,6 @@
                     android:textColor="@color/text_primary"
                     android:textSize="14sp"
                     android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Estado que envió el ESP32. No confirma que el equipo funcione. El modo automático/manual y el control remoto aún no están disponibles en el servidor."
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
 
                 <LinearLayout
                     android:id="@+id/contenedorActuadoresInicio"

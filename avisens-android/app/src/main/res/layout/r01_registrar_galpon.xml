@@ -21,7 +21,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Gestión Galpón"
-        android:textColor="#18211D"
+        android:textColor="@color/adaptive_text_18211d"
         android:textSize="20sp"
         android:textStyle="bold"
         android:layout_marginBottom="30dp" />
@@ -34,7 +34,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Nombre Galpón"
-        android:textColor="#18211D"
+        android:textColor="@color/adaptive_text_18211d"
         android:textSize="12sp"
         android:textStyle="bold"
         android:layout_marginBottom="10dp" />
@@ -47,8 +47,8 @@
         android:hint="Ej: Granja Kotlin"
         android:paddingStart="12dp"
         android:paddingEnd="12dp"
-        android:textColor="@color/black"
-        android:textColorHint="#91A09A"
+        android:textColor="@color/adaptive_text_000000"
+        android:textColorHint="@color/adaptive_text_91a09a"
         android:textSize="11sp"
         android:singleLine="true"
         android:layout_marginBottom="24dp" />
@@ -61,7 +61,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Cantidad Pollos"
-        android:textColor="#18211D"
+        android:textColor="@color/adaptive_text_18211d"
         android:textSize="12sp"
         android:textStyle="bold"
         android:layout_marginBottom="10dp" />
@@ -74,8 +74,8 @@
         android:hint="Ej: 500"
         android:paddingStart="12dp"
         android:paddingEnd="12dp"
-        android:textColor="@color/black"
-        android:textColorHint="#91A09A"
+        android:textColor="@color/adaptive_text_000000"
+        android:textColorHint="@color/adaptive_text_91a09a"
         android:textSize="11sp"
         android:inputType="number"
         android:singleLine="true"
@@ -107,7 +107,7 @@
             android:background="@android:color/transparent"
             android:paddingStart="14dp"
             android:paddingEnd="14dp"
-            android:textColor="@color/black"
+            android:textColor="@color/adaptive_text_000000"
             android:spinnerMode="dropdown" />
 
     </FrameLayout>
@@ -138,7 +138,7 @@
             android:layout_height="match_parent"
             android:background="@android:color/transparent"
             android:paddingStart="14dp"
-            android:textColor="@color/black"
+            android:textColor="@color/adaptive_text_000000"
             android:paddingEnd="14dp"
             android:spinnerMode="dropdown" />
 
@@ -167,14 +167,12 @@
             android:layout_weight="40"
             android:text="Cancelar"
             android:textAllCaps="false"
-            android:textColor="#26332E"
+            android:textColor="@color/cancel_text"
             android:textSize="13sp"
             android:textStyle="bold"
-            app:backgroundTint="@color/white"
             app:cornerRadius="10dp"
-            app:rippleColor="#E8F3ED"
-            app:strokeColor="#DDE5E0"
-            app:strokeWidth="1dp" />
+            app:backgroundTint="@color/cancel_background"
+            app:strokeWidth="0dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCrearLote"

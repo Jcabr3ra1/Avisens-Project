@@ -1,6 +1,7 @@
 
 package com.project.avisensandroid.ui.fragments
 
+import com.project.avisensandroid.ui.ColoresAdaptativos
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
@@ -269,7 +270,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
                     gravity = Gravity.CENTER
 
                     setTextColor(
-                        Color.parseColor("#66736D")
+                        androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_66736d)
                     )
 
                     setPadding(
@@ -304,7 +305,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
                     )
 
                     setTextColor(
-                        Color.parseColor("#183C2E")
+                        androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_183c2e)
                     )
 
                     setPadding(
@@ -383,7 +384,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
                 textSize = tamano
 
                 setTextColor(
-                    Color.parseColor(color)
+                    ColoresAdaptativos.texto(requireContext(), color)
                 )
 
                 if (negrita) {
@@ -494,14 +495,51 @@ class BitacoraFragment : BaseBottomNavFragment() {
             registro.observaciones
         )
 
-        // --------------------------------------------------------
-        // FUTURA FOTOGRAFÍA
-        //
-        // Cuando esté disponible la recuperación de imágenes,
-        // se mostrará debajo de las observaciones.
-        //
-        // Por ahora no agregamos un espacio vacío.
-        // --------------------------------------------------------
+        val pendiente = com.project.avisensandroid.controller.FotosMortalidad.pendiente(contexto, registro.id)
+        if (pendiente != null || !registro.foto_mime_type.isNullOrBlank()) {
+            val boton = android.widget.Button(contexto).apply {
+                text = if (pendiente != null) "Reintentar subida de foto" else "Ver fotografía"
+                setAllCaps(false)
+            }
+            tarjeta.addView(boton)
+            boton.setOnClickListener {
+                boton.isEnabled = false
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        if (pendiente != null && pendiente.exists()) {
+                            val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { pendiente.readBytes() }
+                            if (!com.project.avisensandroid.controller.FotosMortalidad.subir(contexto, registro.id, bytes)) {
+                                mostrarError("No se pudo subir la fotografía. Intenta nuevamente.")
+                                return@launch
+                            }
+                            boton.text = "Ver fotografía"
+                        }
+                        val respuesta = RetrofitClient.api.obtenerFotoMortalidad(registro.id)
+                        if (!respuesta.isSuccessful) {
+                            respuesta.errorBody()?.close()
+                            mostrarError("No se pudo consultar la fotografía (${respuesta.code()})")
+                            return@launch
+                        }
+                        val bitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            respuesta.body()?.use { android.graphics.BitmapFactory.decodeStream(it.byteStream()) }
+                        }
+                        if (bitmap == null) { mostrarError("No se pudo abrir la fotografía"); return@launch }
+                        if (_binding == null || !isAdded) return@launch
+                        val imagen = android.widget.ImageView(contexto).apply {
+                            setImageBitmap(bitmap)
+                            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                            adjustViewBounds = true
+                        }
+                        val visor = android.app.Dialog(contexto, android.R.style.Theme_Material_NoActionBar)
+                        visor.setContentView(imagen)
+                        imagen.setOnClickListener { visor.dismiss() }
+                        visor.show()
+                    } catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { mostrarError("No se pudo cargar la fotografía. Revisa tu conexión.") }
+                    finally { boton.isEnabled = true }
+                }
+            }
+        }
 
         binding.containerRegistros.addView(tarjeta)
     }

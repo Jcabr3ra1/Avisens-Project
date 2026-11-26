@@ -110,8 +110,8 @@ class MainActivity : AperturaReanudableActivity() {
     // COLORES DE SPINNER
     // =========================================================
 
-    private val spinnerTextoSeleccionado =
-        0xFF171D1A.toInt()
+    private val spinnerTextoSeleccionado get() =
+        ColoresAdaptativos.texto(this, "#171D1A")
 
     private val spinnerTextoDropdown =
         0xFFFFFFFF.toInt()
@@ -133,13 +133,13 @@ class MainActivity : AperturaReanudableActivity() {
     ) {
 
         private val colorTextoSeleccionado =
-            0xFF171D1A.toInt()
+            ColoresAdaptativos.texto(context, "#171D1A")
 
         private val colorTextoDropdown =
-            0xFF171D1A.toInt()
+            ColoresAdaptativos.texto(context, "#171D1A")
 
         private val colorFondoDropdown =
-            0xFFFFFFFF.toInt()
+            ColoresAdaptativos.superficie(context, "#FFFFFF")
 
         init {
             setDropDownViewResource(
@@ -238,7 +238,7 @@ class MainActivity : AperturaReanudableActivity() {
     // Se conserva mientras el usuario navega entre las pantallas.
     private var galponSeleccionadoId: Int? = null
 
-    // Fotografía local de mortalidad: la API actual no admite archivos adjuntos.
+    // Fotografía de mortalidad: captura y envío binario al backend.
     private var fotoMortalidadTemporal: File? = null
     private var fotoMortalidadTomada: Boolean = false
     private var fotoMortalidadVistaPrevia: android.widget.ImageView? = null
@@ -405,7 +405,7 @@ class MainActivity : AperturaReanudableActivity() {
     override fun onCreate(
         savedInstanceState: Bundle?
     ) {
-        super.onCreate(savedInstanceState)
+        super.onCreate(if (savedInstanceState?.getBoolean("configuracion_abierta") == true) null else savedInstanceState)
 
         granjaSeleccionadaId = savedInstanceState?.getInt(STATE_GRANJA_ID)?.takeIf { it != 0 }
             ?: preferenciasSeleccion().getInt(claveSeleccion("granja"), 0).takeIf { it > 0 }
@@ -419,6 +419,11 @@ class MainActivity : AperturaReanudableActivity() {
 
         if (!UserSession.isLoggedIn(this) || rolActual == null) {
             irALogin()
+            return
+        }
+
+        if (savedInstanceState?.getBoolean("configuracion_abierta") == true) {
+            mostrarConfiguracion()
             return
         }
 
@@ -511,6 +516,7 @@ class MainActivity : AperturaReanudableActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
+        outState.putBoolean("configuracion_abierta", ::configuracionBinding.isInitialized && configuracionBinding.root.isAttachedToWindow)
         outState.putInt(STATE_GRANJA_ID, granjaSeleccionadaId ?: 0)
         outState.putInt(STATE_GALPON_ID, galponSeleccionadoId ?: 0)
     }
@@ -1030,6 +1036,19 @@ class MainActivity : AperturaReanudableActivity() {
 
         if (rolActual != UserRole.OPERARIO && rolActual != UserRole.PROPIETARIO) return
 
+        // Configuración reemplaza el layout completo: retirar primero los
+        // fragments que dependen de los contenedores de navegación.
+        val manager = supportFragmentManager
+        manager.executePendingTransactions()
+        if (manager.backStackEntryCount > 0) {
+            manager.popBackStackImmediate(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        }
+        if (manager.fragments.isNotEmpty()) {
+            val transaction = manager.beginTransaction()
+            manager.fragments.forEach { transaction.remove(it) }
+            transaction.commitNow()
+        }
+
         configuracionBinding =
             Co01ConfiguracionOpBinding.inflate(
                 layoutInflater
@@ -1038,6 +1057,11 @@ class MainActivity : AperturaReanudableActivity() {
         setContentView(
             configuracionBinding.root
         )
+
+        configuracionBinding.switchModoOscuro.isChecked = AvisensApplication.oscuro(this)
+        configuracionBinding.switchModoOscuro.setOnCheckedChangeListener { _, checked ->
+            AvisensApplication.cambiar(this, checked)
+        }
 
         configuracionBinding
             .btnConfiguracionPerfil
@@ -2082,6 +2106,11 @@ class MainActivity : AperturaReanudableActivity() {
                 lifecycleScope.launch {
 
                     if (!OfflineCache.hayInternet(this@MainActivity)) {
+                        if (fotoMortalidadTomada) {
+                            binding.btnGuardarEvento.isEnabled = true
+                            Toast.makeText(this@MainActivity, "Conéctate a internet para guardar el registro con su foto", Toast.LENGTH_LONG).show()
+                            return@launch
+                        }
                         val guardado = Hu56OfflineQueue.guardar(this@MainActivity, "mortalidad", request)
                         binding.btnGuardarEvento.isEnabled = !guardado
                         Toast.makeText(this@MainActivity,
@@ -2094,6 +2123,13 @@ class MainActivity : AperturaReanudableActivity() {
                         return@launch
                     }
                     try {
+                        val foto = fotoMortalidadTemporal
+                        val bytesFoto = if (fotoMortalidadTomada && foto != null) {
+                            com.project.avisensandroid.controller.FotosMortalidad.preparar(foto)
+                        } else null
+                        dialog.setCancelable(false)
+                        dialog.setCanceledOnTouchOutside(false)
+
 
                         val response =
                             RetrofitClient.api
@@ -2103,24 +2139,16 @@ class MainActivity : AperturaReanudableActivity() {
 
                         if (response.isSuccessful) {
                             val registroId = response.body()?.id
-                            val foto = fotoMortalidadTemporal
-                            if (registroId != null && fotoMortalidadTomada && foto != null && foto.exists()) {
+                            val fotoGuardada = if (bytesFoto != null && registroId != null) {
                                 try {
-                                    val definitiva = File(foto.parentFile, "registro_${registroId}_usuario_${UserSession.userId(this@MainActivity) ?: 0}.jpg")
-                                    foto.copyTo(definitiva, overwrite = true)
-                                    getSharedPreferences("fotos_mortalidad_local", MODE_PRIVATE).edit()
-                                        .putString("registro_${registroId}_usuario_${UserSession.userId(this@MainActivity) ?: 0}", definitiva.absolutePath)
-                                        .apply()
-                                } catch (_: Exception) {
-                                    Toast.makeText(this@MainActivity, "Registro guardado, pero no se pudo conservar la fotografía", Toast.LENGTH_LONG).show()
-                                }
-                            }
-
-                            Toast.makeText(
-                                this@MainActivity,
-                                "Registro de mortalidad guardado correctamente",
-                                Toast.LENGTH_LONG
-                            ).show()
+                                    com.project.avisensandroid.controller.FotosMortalidad.subir(this@MainActivity, registroId, bytesFoto)
+                                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                                catch (_: Exception) { false }
+                            } else bytesFoto == null
+                            Toast.makeText(this@MainActivity,
+                                if (fotoGuardada) "Registro de mortalidad guardado correctamente"
+                                else "Registro guardado, pero la foto no se confirmó. Revisa el registro en Bitácora.",
+                                Toast.LENGTH_LONG).show()
 
                             dialog.dismiss()
 
@@ -2129,6 +2157,8 @@ class MainActivity : AperturaReanudableActivity() {
                             )
 
                         } else {
+                            dialog.setCancelable(true)
+                            dialog.setCanceledOnTouchOutside(true)
 
                             binding
                                 .btnGuardarEvento
@@ -2142,7 +2172,11 @@ class MainActivity : AperturaReanudableActivity() {
                             )
                         }
 
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
                     } catch (e: Exception) {
+                        dialog.setCancelable(true)
+                        dialog.setCanceledOnTouchOutside(true)
 
                         binding
                             .btnGuardarEvento

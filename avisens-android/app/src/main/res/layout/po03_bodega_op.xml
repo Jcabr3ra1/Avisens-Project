@@ -72,7 +72,7 @@
                     android:paddingStart="11dp"
                     android:paddingEnd="11dp"
                     android:text="● 0 críticos"
-                    android:textColor="#C93B32"
+                    android:textColor="@color/adaptive_text_c93b32"
                     android:textSize="12sp"
                     android:textStyle="bold" />
 

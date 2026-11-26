@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="cancel_background">#FEE2E2</color>
+    <color name="cancel_text">#B91C1C</color>
+</resources>

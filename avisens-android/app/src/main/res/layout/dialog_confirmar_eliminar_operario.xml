@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Eliminar operario"
-        android:textColor="#183C2E"
+        android:textColor="@color/adaptive_text_183c2e"
         android:textSize="20sp"
         android:textStyle="bold" />
 
@@ -21,7 +21,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:lineSpacingExtra="2dp"
-        android:textColor="#78847E"
+        android:textColor="@color/adaptive_text_78847e"
         android:textSize="14sp" />
 
     <LinearLayout
@@ -37,12 +37,11 @@
             android:layout_height="40dp"
             android:text="Cancelar"
             android:textAllCaps="false"
-            android:textColor="#171D1A"
+            android:textColor="@color/cancel_text"
             android:textSize="14sp"
-            app:backgroundTint="#FFFFFF"
             app:cornerRadius="10dp"
-            app:strokeColor="#D9E1DD"
-            app:strokeWidth="1dp" />
+            app:backgroundTint="@color/cancel_background"
+            app:strokeWidth="0dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnConfirmarEliminarOperario"

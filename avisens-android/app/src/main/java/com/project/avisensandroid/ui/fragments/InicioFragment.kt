@@ -499,9 +499,6 @@ class InicioFragment : BaseBottomNavFragment() {
                 val galpon = galpones.firstOrNull { it.id == galponId }
                 if (galpon == null || solicitudId != cargaDashboardId) return@launch
 
-                binding.txtSubtituloSensoresInicio.text =
-                    "${galpon.nombre} · ${galpon.codigo}"
-
                 val lotesDelGalpon = lotes
                     .filter { it.galpon.id == galponId && it.estado.equals("activo", true) }
                     .sortedByDescending { parseDate(it.fecha_ingreso)?.time ?: 0L }

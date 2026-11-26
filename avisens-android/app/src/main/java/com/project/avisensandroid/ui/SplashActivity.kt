@@ -146,7 +146,7 @@ class SplashActivity : AppCompatActivity() {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
 
-            canvas.drawColor(Color.rgb(230, 241, 235))
+            canvas.drawColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_splash_bg))
 
             val scale = min(
                 width / 300f,
@@ -358,7 +358,7 @@ class SplashActivity : AppCompatActivity() {
                 1f
             )
 
-            paint.color = Color.rgb(40, 92, 64)
+            paint.color = androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_splash_text)
 
             paint.typeface = Typeface.create(
                 "sans-serif",

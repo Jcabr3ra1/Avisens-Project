@@ -1,5 +1,6 @@
 package com.project.avisensandroid.ui.fragments
 
+import com.project.avisensandroid.ui.ColoresAdaptativos
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -146,7 +147,7 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
     private fun crearTarjetaCaso(caso: CasoDemo): View {
         val card = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            background = roundedBackground(Color.WHITE, Color.parseColor("#E5EAE7"), 14)
+            background = roundedBackground(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"), Color.parseColor("#E5EAE7"), 14)
             setPadding(dp(14), dp(14), dp(14), dp(14))
         }
 
@@ -172,7 +173,7 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
         card.addView(texto("Aves afectadas inicialmente: ${caso.avesIniciales}", 11f, "#78847E", false, 4))
 
         val separador = View(requireContext()).apply {
-            setBackgroundColor(Color.parseColor("#E7EEE9"))
+            setBackgroundColor(ColoresAdaptativos.superficie(requireContext(), "#E7EEE9"))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(1)
@@ -236,12 +237,12 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
 
         return TextView(requireContext()).apply {
             text = estado
-            setTextColor(Color.parseColor(textoColor))
+            setTextColor(ColoresAdaptativos.texto(requireContext(), textoColor))
             textSize = if (pequeño) 10f else 11f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dp(if (pequeño) 8 else 10), dp(5), dp(if (pequeño) 8 else 10), dp(5))
-            background = roundedBackground(Color.parseColor(fondo), Color.TRANSPARENT, 12)
+            background = roundedBackground(ColoresAdaptativos.superficie(requireContext(), fondo), Color.TRANSPARENT, 12)
         }
     }
 
@@ -255,7 +256,7 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
         return TextView(requireContext()).apply {
             text = contenido
             textSize = tamano
-            setTextColor(Color.parseColor(color))
+            setTextColor(ColoresAdaptativos.texto(requireContext(), color))
             if (negrita) setTypeface(typeface, android.graphics.Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
