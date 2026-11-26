@@ -17,6 +17,8 @@ enum class VariableSensor {
     /** DHT22, humedad relativa en %. */
     HUMEDAD,
 
+    LUMINOSIDAD,
+
     /** MQ-135, lectura ADC cruda filtrada (0-4095). No es ppm. */
     CALIDAD_AIRE,
 
@@ -76,6 +78,7 @@ object ClasificadorSensores {
         return when {
             "temperatura" in t -> VariableSensor.TEMPERATURA
             "humedad" in t -> VariableSensor.HUMEDAD
+            "luminosidad" in t || "iluminacion" in t || u == "lux" || u == "lx" -> VariableSensor.LUMINOSIDAD
             "mq135" in m || u == "adc" -> VariableSensor.CALIDAD_AIRE
             (t == "co2" || t == "dioxidodecarbono") && u == "ppm" -> VariableSensor.CO2
             (t == "amoniaco" || t == "nh3") && u == "ppm" -> VariableSensor.AMONIACO

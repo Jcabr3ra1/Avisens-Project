@@ -10,6 +10,6 @@
         android:layout_width="0dp" android:layout_height="wrap_content"
         android:background="@color/adaptive_surface_ffffff"
         app:itemIconTint="@color/nav_item_color" app:itemTextColor="@color/nav_item_color"
-        app:labelVisibilityMode="labeled" app:menu="@menu/bottom_nav_propietario_menu"
+        app:labelVisibilityMode="labeled" app:itemHorizontalTranslationEnabled="false" app:menu="@menu/bottom_nav_propietario_menu"
         app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintBottom_toBottomOf="parent"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

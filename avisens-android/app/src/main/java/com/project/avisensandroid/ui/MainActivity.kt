@@ -600,6 +600,17 @@ class MainActivity : AperturaReanudableActivity() {
             .commit()
     }
 
+    private fun actualizarTrasRegistro(destino: Fragment) {
+        val contenedor = if (rolActual == UserRole.PROPIETARIO)
+            R.id.propietarioFragmentContainer else R.id.mainFragmentContainer
+        val actual = supportFragmentManager.findFragmentById(contenedor)
+        if (actual is BodegaFragment && destino is BodegaFragment && actual.view != null) {
+            actual.actualizarSilenciosamente()
+        } else if (actual is BitacoraFragment && destino is BitacoraFragment && actual.view != null) {
+            actual.actualizarSilenciosamente()
+        } else mostrarFragment(destino)
+    }
+
     fun mostrarAsistenteVoz() {
         mostrarFragment(AsistenteVozFragment())
     }
@@ -643,16 +654,10 @@ class MainActivity : AperturaReanudableActivity() {
             UserRole.OPERARIO -> R.id.mainFragmentContainer
             else -> return
         }
-        val haciaDerecha = destino > origen
-        val haciaInsumos = itemId == R.id.nav_bodega
         val transaccion = supportFragmentManager.beginTransaction()
             .setCustomAnimations(
-                if (haciaInsumos) {
-                    if (haciaDerecha) R.anim.insumos_entrada_derecha else R.anim.insumos_entrada_izquierda
-                } else if (haciaDerecha) R.anim.slide_entrada_derecha else R.anim.slide_entrada_izquierda,
-                if (haciaInsumos) {
-                    if (haciaDerecha) R.anim.insumos_salida_izquierda else R.anim.insumos_salida_derecha
-                } else if (haciaDerecha) R.anim.slide_salida_izquierda else R.anim.slide_salida_derecha
+                if (destino > origen) R.anim.slide_entrada_derecha else R.anim.slide_entrada_izquierda,
+                if (destino > origen) R.anim.slide_salida_izquierda else R.anim.slide_salida_derecha
             )
             .replace(contenedor, fragment)
         // Mantener el comportamiento anterior de Atrás en Operarios.
@@ -1816,7 +1821,7 @@ class MainActivity : AperturaReanudableActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
                     dialog.dismiss()
-                    mostrarFragment(BodegaFragment())
+                    actualizarTrasRegistro(BodegaFragment())
                 } else {
                     binding.btnAgregarInsumo.isEnabled = true
                     val detalle = response.errorBody()?.string()?.take(250).orEmpty()
@@ -2123,7 +2128,7 @@ class MainActivity : AperturaReanudableActivity() {
                             Toast.LENGTH_LONG).show()
                         if (guardado) {
                             dialog.dismiss()
-                            mostrarFragment(BitacoraFragment())
+                            actualizarTrasRegistro(BitacoraFragment())
                         }
                         return@launch
                     }
@@ -2157,9 +2162,7 @@ class MainActivity : AperturaReanudableActivity() {
 
                             dialog.dismiss()
 
-                            mostrarFragment(
-                                BitacoraFragment()
-                            )
+                            actualizarTrasRegistro(BitacoraFragment())
 
                         } else {
                             dialog.setCancelable(true)

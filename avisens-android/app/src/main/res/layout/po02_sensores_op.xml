@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_app">
-
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scrollContent"
         android:layout_width="0dp"
@@ -17,7 +15,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent">
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -26,7 +23,6 @@
             android:paddingEnd="20dp"
             android:layout_marginTop="8dp"
             android:paddingTop="24dp">
-
             <!-- Encabezado -->
             <TextView
                 android:layout_width="wrap_content"
@@ -35,16 +31,7 @@
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:layout_marginTop="20dp"
-                android:textColor="@color/text_primary" />
-
-            <TextView
-                android:id="@+id/txtResumenSensores"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="Sensores del galpón seleccionado"
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary" />
+                android:textColor="@color/text_primary"/>
 
             <!-- Variables ambientales -->
             <TextView
@@ -54,63 +41,58 @@
                 android:text="Variables ambientales · en vivo"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary" />
-
+                android:textColor="@color/text_primary"/>
             <!-- Fila 1: Temperatura / Humedad -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:layout_marginTop="14dp">
-
                 <!-- Tarjeta Temperatura -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center"
+                    android:gravity="top|center_horizontal"
                     android:background="@drawable/bg_stat_card"
                     android:paddingTop="20dp"
                     android:paddingBottom="16dp">
-
                     <FrameLayout
                         android:layout_width="96dp"
                         android:layout_height="96dp">
-
                         <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:contentDescription=""
-                            android:src="@drawable/bg_ring_track" />
-
+                            android:src="@drawable/bg_ring_track"/>
                         <com.project.avisensandroid.ui.views.SensorArcView
                             android:id="@+id/arcTemperatura"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:contentDescription="Progreso de temperatura" />
-
+                            android:contentDescription="Progreso de temperatura"/>
                         <!-- Temperatura -->
                         <TextView
                             android:id="@+id/txtTemperatura"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
+                            android:gravity="center"
+                            android:maxLines="1"
                             android:text="—"
                             android:textSize="20sp"
                             android:textStyle="bold"
-                            android:textColor="@color/text_primary" />
-
+                            android:textColor="@color/text_primary"/>
                     </FrameLayout>
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:text="Temperatura"
                         android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
-
+                        android:textColor="@color/text_secondary"
+                        android:minLines="2"
+                        android:gravity="center"/>
                     <TextView
                         android:id="@+id/txtEstadoTemperatura"
                         android:layout_width="wrap_content"
@@ -124,60 +106,56 @@
                         android:text="Sin datos"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        android:textColor="@color/orange_badge_text" />
-
+                        android:textColor="@color/orange_badge_text"
+                        android:minLines="2"
+                        android:gravity="center"/>
                 </LinearLayout>
-
                 <View
                     android:layout_width="12dp"
-                    android:layout_height="1dp" />
-
+                    android:layout_height="1dp"/>
                 <!-- Tarjeta Humedad -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center"
+                    android:gravity="top|center_horizontal"
                     android:background="@drawable/bg_stat_card"
                     android:paddingTop="20dp"
                     android:paddingBottom="16dp">
-
                     <FrameLayout
                         android:layout_width="96dp"
                         android:layout_height="96dp">
-
                         <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:src="@drawable/bg_ring_track" />
-
+                            android:src="@drawable/bg_ring_track"/>
                         <com.project.avisensandroid.ui.views.SensorArcView
                             android:id="@+id/arcHumedad"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:contentDescription="Progreso de humedad" />
-
+                            android:contentDescription="Progreso de humedad"/>
                         <TextView
                             android:id="@+id/txtHumedad"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
+                            android:gravity="center"
+                            android:maxLines="1"
                             android:text="—"
                             android:textSize="20sp"
                             android:textStyle="bold"
-                            android:textColor="@color/text_primary" />
-
+                            android:textColor="@color/text_primary"/>
                     </FrameLayout>
-
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:text="Humedad"
                         android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
-
+                        android:textColor="@color/text_secondary"
+                        android:minLines="2"
+                        android:gravity="center"/>
                     <TextView
                         android:id="@+id/txtEstadoHumedad"
                         android:layout_width="wrap_content"
@@ -191,58 +169,52 @@
                         android:text="Sin datos"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        android:textColor="@color/badge_green_text" />
-
+                        android:textColor="@color/badge_green_text"
+                        android:minLines="2"
+                        android:gravity="center"/>
                 </LinearLayout>
-
             </LinearLayout>
-
-            <!-- Fila 2: Calidad del aire (MQ-135, ADC crudo) / Peso (HX711).
-                 El MQ-135 no se calibra a ppm: no se muestra como CO₂ ni NH₃. -->
+            <!-- Fila 2: Calidad del aire / Luminosidad -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:layout_marginTop="12dp">
-
                 <!-- Tarjeta Calidad del aire -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center"
+                    android:gravity="top|center_horizontal"
                     android:background="@drawable/bg_stat_card"
                     android:paddingTop="20dp"
                     android:paddingBottom="16dp">
-
                     <FrameLayout
                         android:layout_width="96dp"
                         android:layout_height="96dp">
-
                         <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:contentDescription=""
-                            android:src="@drawable/bg_ring_track" />
-
+                            android:src="@drawable/bg_ring_track"/>
                         <com.project.avisensandroid.ui.views.SensorArcView
                             android:id="@+id/arcCalidadAire"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:contentDescription="Lectura cruda de calidad del aire" />
-
+                            android:contentDescription="Lectura cruda de calidad del aire"/>
                         <TextView
                             android:id="@+id/txtCalidadAire"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
+                            android:gravity="center"
+                            android:maxLines="1"
                             android:text="—"
                             android:textSize="20sp"
                             android:textStyle="bold"
-                            android:textColor="@color/text_primary" />
+                            android:textColor="@color/text_primary"/>
                     </FrameLayout>
-
                     <TextView
                         android:id="@+id/txtLabelCalidadAire"
                         android:layout_width="wrap_content"
@@ -251,8 +223,8 @@
                         android:gravity="center"
                         android:text="Calidad del aire · ADC"
                         android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
-
+                        android:textColor="@color/text_secondary"
+                        android:minLines="2"/>
                     <TextView
                         android:id="@+id/txtEstadoCalidadAire"
                         android:layout_width="wrap_content"
@@ -266,63 +238,60 @@
                         android:text="Sin datos"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        android:textColor="@color/orange_badge_text" />
+                        android:textColor="@color/orange_badge_text"
+                        android:minLines="2"
+                        android:gravity="center"/>
                 </LinearLayout>
-
                 <View
                     android:layout_width="12dp"
-                    android:layout_height="1dp" />
-
+                    android:layout_height="1dp"/>
                 <!-- Tarjeta Peso de alimento -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center"
+                    android:gravity="top|center_horizontal"
                     android:background="@drawable/bg_stat_card"
                     android:paddingTop="20dp"
                     android:paddingBottom="16dp">
-
                     <FrameLayout
                         android:layout_width="96dp"
                         android:layout_height="96dp">
-
                         <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:contentDescription=""
-                            android:src="@drawable/bg_ring_track" />
-
+                            android:src="@drawable/bg_ring_track"/>
                         <com.project.avisensandroid.ui.views.SensorArcView
-                            android:id="@+id/arcPeso"
+                            android:id="@+id/arcLuminosidad"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:contentDescription="Indicador del peso de alimento" />
-
+                            android:contentDescription="Indicador de luminosidad"/>
                         <TextView
-                            android:id="@+id/txtPeso"
-                            android:layout_width="wrap_content"
+                            android:id="@+id/txtLuminosidad"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
+                            android:gravity="center"
+                            android:maxLines="1"
                             android:text="—"
                             android:textSize="20sp"
                             android:textStyle="bold"
-                            android:textColor="@color/text_primary" />
+                            android:textColor="@color/text_primary"/>
                     </FrameLayout>
-
                     <TextView
-                        android:id="@+id/txtLabelPeso"
+                        android:id="@+id/txtLabelLuminosidad"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:gravity="center"
-                        android:text="Peso de alimento"
+                        android:text="Luminosidad"
                         android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
-
+                        android:textColor="@color/text_secondary"
+                        android:minLines="2"/>
                     <TextView
-                        android:id="@+id/txtEstadoPeso"
+                        android:id="@+id/txtEstadoLuminosidad"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
@@ -334,10 +303,11 @@
                         android:text="Sin datos"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        android:textColor="@color/orange_badge_text" />
+                        android:textColor="@color/orange_badge_text"
+                        android:minLines="2"
+                        android:gravity="center"/>
                 </LinearLayout>
             </LinearLayout>
-
             <!-- Sensores de gases: solo se muestran valores ppm reales, nunca ADC. -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -350,38 +320,35 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center"
+                    android:gravity="top|center_horizontal"
                     android:background="@drawable/bg_stat_card"
                     android:paddingTop="20dp"
                     android:paddingBottom="16dp">
-
                     <FrameLayout
                         android:layout_width="96dp"
                         android:layout_height="96dp">
-
                         <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:contentDescription=""
-                            android:src="@drawable/bg_ring_track" />
-
+                            android:src="@drawable/bg_ring_track"/>
                         <com.project.avisensandroid.ui.views.SensorArcView
                             android:id="@+id/arcCo2"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:contentDescription="Concentración de CO₂ en ppm" />
-
+                            android:contentDescription="Concentración de CO₂ en ppm"/>
                         <TextView
                             android:id="@+id/txtCo2"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
+                            android:gravity="center"
+                            android:maxLines="1"
                             android:text="—"
                             android:textSize="20sp"
                             android:textStyle="bold"
-                            android:textColor="@color/text_primary" />
+                            android:textColor="@color/text_primary"/>
                     </FrameLayout>
-
                     <TextView
                         android:id="@+id/txtLabelCo2"
                         android:layout_width="wrap_content"
@@ -390,8 +357,8 @@
                         android:gravity="center"
                         android:text="CO₂ · ppm"
                         android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
-
+                        android:textColor="@color/text_secondary"
+                        android:minLines="2"/>
                     <TextView
                         android:id="@+id/txtEstadoCo2"
                         android:layout_width="wrap_content"
@@ -405,49 +372,48 @@
                         android:text="Sin datos"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        android:textColor="@color/orange_badge_text" />
+                        android:textColor="@color/orange_badge_text"
+                        android:minLines="2"
+                        android:gravity="center"/>
                 </LinearLayout>
-
-
-                <View android:layout_width="12dp" android:layout_height="1dp" />
+                <View
+                    android:layout_width="12dp"
+                    android:layout_height="1dp"/>
                 <!-- Tarjeta Calidad del aire -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center"
+                    android:gravity="top|center_horizontal"
                     android:background="@drawable/bg_stat_card"
                     android:paddingTop="20dp"
                     android:paddingBottom="16dp">
-
                     <FrameLayout
                         android:layout_width="96dp"
                         android:layout_height="96dp">
-
                         <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:contentDescription=""
-                            android:src="@drawable/bg_ring_track" />
-
+                            android:src="@drawable/bg_ring_track"/>
                         <com.project.avisensandroid.ui.views.SensorArcView
                             android:id="@+id/arcAmoniaco"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:contentDescription="Concentración de NH₃ en ppm" />
-
+                            android:contentDescription="Concentración de NH₃ en ppm"/>
                         <TextView
                             android:id="@+id/txtAmoniaco"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
+                            android:gravity="center"
+                            android:maxLines="1"
                             android:text="—"
                             android:textSize="20sp"
                             android:textStyle="bold"
-                            android:textColor="@color/text_primary" />
+                            android:textColor="@color/text_primary"/>
                     </FrameLayout>
-
                     <TextView
                         android:id="@+id/txtLabelAmoniaco"
                         android:layout_width="wrap_content"
@@ -456,8 +422,8 @@
                         android:gravity="center"
                         android:text="NH₃ · ppm"
                         android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
-
+                        android:textColor="@color/text_secondary"
+                        android:minLines="2"/>
                     <TextView
                         android:id="@+id/txtEstadoAmoniaco"
                         android:layout_width="wrap_content"
@@ -471,60 +437,120 @@
                         android:text="Sin datos"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        android:textColor="@color/orange_badge_text" />
+                        android:textColor="@color/orange_badge_text"
+                        android:minLines="2"
+                        android:gravity="center"/>
                 </LinearLayout>
-
-
             </LinearLayout>
-
-            <!-- Fila 3: Nivel de agua (HC-SR04). Solo se muestra si el galpón
-                 tiene ese sensor registrado. -->
+            <!-- Fila 3: Peso de alimento / Distancia al agua -->
             <LinearLayout
-                android:id="@+id/filaNivelAgua"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:layout_marginTop="12dp"
-                android:visibility="gone">
-
-                <!-- Tarjeta Nivel de agua -->
+                android:visibility="visible">
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center"
+                    android:gravity="top|center_horizontal"
                     android:background="@drawable/bg_stat_card"
                     android:paddingTop="20dp"
                     android:paddingBottom="16dp">
-
                     <FrameLayout
                         android:layout_width="96dp"
                         android:layout_height="96dp">
-
                         <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:contentDescription=""
-                            android:src="@drawable/bg_ring_track" />
-
+                            android:src="@drawable/bg_ring_track"/>
+                        <com.project.avisensandroid.ui.views.SensorArcView
+                            android:id="@+id/arcPeso"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:contentDescription="Indicador del peso de alimento"/>
+                        <TextView
+                            android:id="@+id/txtPeso"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:maxLines="1"
+                            android:text="—"
+                            android:textSize="20sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"/>
+                    </FrameLayout>
+                    <TextView
+                        android:id="@+id/txtLabelPeso"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:gravity="center"
+                        android:text="Peso de alimento"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary"
+                        android:minLines="2"/>
+                    <TextView
+                        android:id="@+id/txtEstadoPeso"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_badge_regular"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="4dp"
+                        android:text="Sin datos"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/orange_badge_text"
+                        android:minLines="2"
+                        android:gravity="center"/>
+                </LinearLayout>
+                <!-- Tarjeta Nivel de agua -->
+                <View
+                    android:layout_width="12dp"
+                    android:layout_height="1dp"/>
+                <!-- Espacio para conservar el ancho de media tarjeta -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="top|center_horizontal"
+                    android:background="@drawable/bg_stat_card"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="16dp"
+                    android:id="@+id/filaNivelAgua"
+                    android:visibility="visible">
+                    <FrameLayout
+                        android:layout_width="96dp"
+                        android:layout_height="96dp">
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:contentDescription=""
+                            android:src="@drawable/bg_ring_track"/>
                         <com.project.avisensandroid.ui.views.SensorArcView
                             android:id="@+id/arcNivelAgua"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:contentDescription="Indicador del nivel de agua" />
-
+                            android:contentDescription="Indicador del nivel de agua"/>
                         <TextView
                             android:id="@+id/txtNivelAgua"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
+                            android:gravity="center"
+                            android:maxLines="1"
                             android:text="—"
                             android:textSize="20sp"
                             android:textStyle="bold"
-                            android:textColor="@color/text_primary" />
+                            android:textColor="@color/text_primary"/>
                     </FrameLayout>
-
                     <TextView
                         android:id="@+id/txtLabelNivelAgua"
                         android:layout_width="wrap_content"
@@ -533,8 +559,8 @@
                         android:gravity="center"
                         android:text="Distancia al agua"
                         android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
-
+                        android:textColor="@color/text_secondary"
+                        android:minLines="2"/>
                     <TextView
                         android:id="@+id/txtEstadoNivelAgua"
                         android:layout_width="wrap_content"
@@ -548,20 +574,11 @@
                         android:text="Sin datos"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        android:textColor="@color/orange_badge_text" />
+                        android:textColor="@color/orange_badge_text"
+                        android:minLines="2"
+                        android:gravity="center"/>
                 </LinearLayout>
-
-                <View
-                    android:layout_width="12dp"
-                    android:layout_height="1dp" />
-
-                <!-- Espacio para conservar el ancho de media tarjeta -->
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
             </LinearLayout>
-
             <TextView
                 android:id="@+id/txtEstadoConexion"
                 android:layout_width="match_parent"
@@ -569,8 +586,7 @@
                 android:layout_marginTop="10dp"
                 android:text="Conectando con los sensores..."
                 android:textSize="12sp"
-                android:textColor="@color/text_secondary" />
-
+                android:textColor="@color/text_secondary"/>
             <!-- Sensores activos que no se pudieron asociar sin ambigüedad a
                  una variable: se listan para corregirlos, sin sus valores. -->
             <TextView
@@ -582,7 +598,7 @@
                 android:padding="12dp"
                 android:textSize="12sp"
                 android:textColor="@color/orange_badge_text"
-                android:visibility="gone" />
+                android:visibility="gone"/>
             <!-- Actuadores (relés K1-K4 y motores): salida que reportó el ESP32, en
                  solo lectura. El backend actual no informa el modo ni admite órdenes. -->
             <TextView
@@ -592,22 +608,13 @@
                 android:text="Actuadores · salida reportada"
                 android:textColor="@color/text_primary"
                 android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="Estado que envió el ESP32. No confirma que el equipo funcione. El modo automático/manual y el control remoto aún no están disponibles en el servidor."
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
+                android:textStyle="bold"/>
 
             <LinearLayout
                 android:id="@+id/contenedorActuadores"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
-
+                android:orientation="vertical"/>
             <TextView
                 android:id="@+id/txtSinActuadores"
                 android:layout_width="match_parent"
@@ -616,330 +623,289 @@
                 android:text="No hay actuadores registrados en este galpón."
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
-                android:visibility="gone" />
-
-            <!-- Entradas configuradas -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="26dp"
-                android:text="Entradas configuradas"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="Rangos ambientales configurados en el sistema"
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary" />
-
-            <!-- Fila Temperatura (min/max) -->
+                android:visibility="gone"/>
+            <!-- Entradas configuradas: ocultas; detalle disponible en el modal -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_stat_card"
-                android:padding="16dp"
-                android:layout_marginTop="14dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_thermometer" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:text="Temperatura"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="10dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Mín: no configurado"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Máx: no configurado"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/txtEntradaTemperaturaSensor"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Sensor: —"
-                    android:textSize="12sp"
-                    android:textColor="@color/text_secondary" />
-
-                <TextView
-                    android:id="@+id/txtEntradaTemperaturaLectura"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:text="Última lectura: —"
-                    android:textSize="12sp"
-                    android:textColor="@color/text_secondary" />
-
-            </LinearLayout>
-
-            <!-- Fila Humedad relativa (min/max) -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/bg_stat_card"
-                android:padding="16dp"
-                android:layout_marginTop="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_water_drop" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:text="Humedad relativa"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="10dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Mín: no configurado"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Máx: no configurado"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/txtEntradaHumedadSensor"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Sensor: —"
-                    android:textSize="12sp"
-                    android:textColor="@color/text_secondary" />
-
-                <TextView
-                    android:id="@+id/txtEntradaHumedadLectura"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:text="Última lectura: —"
-                    android:textSize="12sp"
-                    android:textColor="@color/text_secondary" />
-
-            </LinearLayout>
-
-            <!-- MQ-135: lectura ADC cruda, sin conversión a ppm -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/bg_stat_card"
-                android:padding="16dp"
-                android:layout_marginTop="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/arc_co2"
-                        android:contentDescription="" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:text="Calidad del aire (MQ-135, ADC crudo)"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/txtEntradaCalidadAireSensor"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="Sensor: —"
-                    android:textSize="13sp"
-                    android:textColor="@color/text_secondary" />
-
-                <TextView
-                    android:id="@+id/txtEntradaCalidadAireLectura"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:text="Última lectura: —"
-                    android:textSize="13sp"
-                    android:textColor="@color/text_secondary" />
-            </LinearLayout>
-
-            <!-- HX711: el ESP32 marca la lectura sin calibrar como sospechosa -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/bg_stat_card"
-                android:padding="16dp"
-                android:layout_marginTop="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_nav_bodega"
-                        app:tint="@color/text_secondary"
-                        android:contentDescription="" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:text="Peso de alimento (HX711)"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/txtEntradaPesoSensor"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="Sensor: —"
-                    android:textSize="13sp"
-                    android:textColor="@color/text_secondary" />
-
-                <TextView
-                    android:id="@+id/txtEntradaPesoLectura"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:text="Última lectura: —"
-                    android:textSize="13sp"
-                    android:textColor="@color/text_secondary" />
-            </LinearLayout>
-
-            <!-- HC-SR04: distancia al agua; solo si el galpón tiene este sensor -->
-            <LinearLayout
-                android:id="@+id/tarjetaEntradaNivelAgua"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/bg_stat_card"
-                android:padding="16dp"
-                android:layout_marginTop="12dp"
                 android:visibility="gone">
-
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="26dp"
+                    android:text="Entradas configuradas"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Rangos ambientales configurados en el sistema"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"/>
+                <!-- Fila Temperatura (min/max) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_water_drop"
-                        android:contentDescription="" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_stat_card"
+                    android:padding="16dp"
+                    android:layout_marginTop="14dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:text="Nivel de agua (HC-SR04)"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_thermometer"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="Temperatura"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"/>
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="10dp">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Mín: no configurado"
+                            android:textSize="13sp"
+                            android:textColor="@color/text_secondary"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Máx: no configurado"
+                            android:textSize="13sp"
+                            android:textColor="@color/text_secondary"/>
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/txtEntradaTemperaturaSensor"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Sensor: —"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/txtEntradaTemperaturaLectura"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Última lectura: —"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"/>
                 </LinearLayout>
-
-                <TextView
-                    android:id="@+id/txtEntradaNivelAguaSensor"
+                <!-- Fila Humedad relativa (min/max) -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="Sensor: —"
-                    android:textSize="13sp"
-                    android:textColor="@color/text_secondary" />
-
-                <TextView
-                    android:id="@+id/txtEntradaNivelAguaLectura"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_stat_card"
+                    android:padding="16dp"
+                    android:layout_marginTop="12dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_water_drop"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="Humedad relativa"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"/>
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="10dp">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Mín: no configurado"
+                            android:textSize="13sp"
+                            android:textColor="@color/text_secondary"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Máx: no configurado"
+                            android:textSize="13sp"
+                            android:textColor="@color/text_secondary"/>
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/txtEntradaHumedadSensor"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Sensor: —"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/txtEntradaHumedadLectura"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Última lectura: —"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"/>
+                </LinearLayout>
+                <!-- MQ-135: lectura ADC cruda, sin conversión a ppm -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:text="Última lectura: —"
-                    android:textSize="13sp"
-                    android:textColor="@color/text_secondary" />
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_stat_card"
+                    android:padding="16dp"
+                    android:layout_marginTop="12dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/arc_co2"
+                            android:contentDescription=""/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="Calidad del aire (MQ-135, ADC crudo)"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"/>
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/txtEntradaCalidadAireSensor"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="Sensor: —"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/txtEntradaCalidadAireLectura"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Última lectura: —"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary"/>
+                </LinearLayout>
+                <!-- HX711: el ESP32 marca la lectura sin calibrar como sospechosa -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_stat_card"
+                    android:padding="16dp"
+                    android:layout_marginTop="12dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_nav_bodega"
+                            app:tint="@color/text_secondary"
+                            android:contentDescription=""/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="Peso de alimento (HX711)"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"/>
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/txtEntradaPesoSensor"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="Sensor: —"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/txtEntradaPesoLectura"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Última lectura: —"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary"/>
+                </LinearLayout>
+                <!-- HC-SR04: distancia al agua; solo si el galpón tiene este sensor -->
+                <LinearLayout
+                    android:id="@+id/tarjetaEntradaNivelAgua"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_stat_card"
+                    android:padding="16dp"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_water_drop"
+                            android:contentDescription=""/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="Nivel de agua (HC-SR04)"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary"/>
+                    </LinearLayout>
+                    <TextView
+                        android:id="@+id/txtEntradaNivelAguaSensor"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="Sensor: —"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/txtEntradaNivelAguaLectura"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Última lectura: —"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary"/>
+                </LinearLayout>
             </LinearLayout>
-
         </LinearLayout>
-
     </androidx.core.widget.NestedScrollView>
-
     <!-- Barra de navegación inferior -->
 </androidx.constraintlayout.widget.ConstraintLayout>

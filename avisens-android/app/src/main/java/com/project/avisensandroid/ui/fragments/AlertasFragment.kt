@@ -43,6 +43,8 @@ import com.project.avisensandroid.controller.ApiService
 import java.util.Locale
 
 class AlertasFragment : BaseBottomNavFragment() {
+    private val entradaTarjetas = AnimacionesTarjetas()
+
 
     private var _binding: Po05AlertasOpBinding? = null
     private val binding get() = _binding!!
@@ -66,6 +68,8 @@ class AlertasFragment : BaseBottomNavFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        entradaTarjetas.reiniciar()
+        alcanceCarga = null
         configurarBottomNav(R.id.nav_alertas)
         binding.tabActivas.setOnClickListener {
             cambiarPestana(Pestana.ACTIVAS)
@@ -99,6 +103,8 @@ class AlertasFragment : BaseBottomNavFragment() {
     }
 
     private var cargaAlertas: Job? = null
+    private var listaPintada = false
+    private var ultimaPintura = 0L
     private var alcanceCarga: Pair<Int?, Int?>? = null
 
     private suspend fun consultarAlertas(api: ApiService, granjaId: Int?, galponId: Int?) = coroutineScope {
@@ -189,11 +195,19 @@ class AlertasFragment : BaseBottomNavFragment() {
             alertasStock = emptyList()
             lotesActivos = emptyList()
             alcanceCarga = alcance
+            listaPintada = false
+            entradaTarjetas.reiniciar()
             actualizarResumen()
-            mostrarLista()
+            binding.containerAlertas.removeAllViews()
         }
         cargaAlertas = viewLifecycleOwner.lifecycleScope.launch {
-            fun pintar(datos: Triple<List<AlertaResponse>, List<InsumoResponse>, List<LoteResponse>>) {
+            suspend fun pintar(datos: Triple<List<AlertaResponse>, List<InsumoResponse>, List<LoteResponse>>) {
+                if (_binding == null) return
+                if (listaPintada && alertas == datos.first && alertasStock == datos.second && lotesActivos == datos.third) return
+                if (listaPintada) {
+                    val espera = 1600L - (android.os.SystemClock.elapsedRealtime() - ultimaPintura)
+                    if (espera > 0) kotlinx.coroutines.delay(espera)
+                }
                 if (_binding == null) return
                 alertas = datos.first
                 alertasStock = datos.second
@@ -201,6 +215,8 @@ class AlertasFragment : BaseBottomNavFragment() {
                 actualizarResumen()
                 pintarTabs()
                 mostrarLista()
+                listaPintada = true
+                ultimaPintura = android.os.SystemClock.elapsedRealtime()
             }
             var cacheMostrada = false
             try {
@@ -263,9 +279,18 @@ class AlertasFragment : BaseBottomNavFragment() {
         if (nueva == pestanaActual) return
         val direccion = if (nueva.ordinal > pestanaActual.ordinal) 1 else -1
         pestanaActual = nueva
+        entradaTarjetas.reiniciar()
         pintarTabs()
         mostrarLista()
-        deslizarContenido(binding.tabActivas.parent as View, direccion)
+
+        // Desplazar solo la lista; el selector y los encabezados quedan fijos.
+        val lista = binding.containerAlertas
+        val distancia = lista.width.takeIf { it > 0 }
+            ?: lista.resources.displayMetrics.widthPixels
+        lista.animate().cancel()
+        lista.translationX = direccion * distancia.toFloat()
+        lista.animate().translationX(0f).setStartDelay(0L).setDuration(250L)
+            .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
     }
 
     private fun pintarTabs() {
@@ -311,6 +336,7 @@ class AlertasFragment : BaseBottomNavFragment() {
 
     private fun mostrarLista() {
         if (_binding == null) return
+        entradaTarjetas.comenzar()
         binding.containerAlertas.removeAllViews()
         val filtradas = when (pestanaActual) {
             Pestana.ACTIVAS -> alertas.filter { !estaCerrada(it) }
@@ -330,7 +356,9 @@ class AlertasFragment : BaseBottomNavFragment() {
         }
         if (mostrarStock) {
             alertasStock.forEach { insumo ->
-                binding.containerAlertas.addView(crearTarjetaStockBajo(insumo))
+                val tarjeta = crearTarjetaStockBajo(insumo)
+                binding.containerAlertas.addView(tarjeta)
+                entradaTarjetas.mostrar(tarjeta, "stock:${insumo.id}")
                 binding.containerAlertas.addView(View(requireContext()).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, dp(8)
@@ -355,12 +383,13 @@ class AlertasFragment : BaseBottomNavFragment() {
                 binding.containerAlertas.addView(texto(fechaActual, 13f, "#52675C", true, 18).apply {
                     setPadding(dp(4), dp(2), dp(4), dp(8))
                 })
+                entradaTarjetas.mostrar(binding.containerAlertas.getChildAt(binding.containerAlertas.childCount - 1), "fecha:${pestanaActual}:$fechaActual", true)
                 fechaAnterior = fechaActual
             }
-            binding.containerAlertas.addView(
-                if (pestanaActual == Pestana.ESCALADAS) crearTarjetaEscalada(alerta)
-                else crearTarjetaAlerta(alerta)
-            )
+            val tarjeta = if (pestanaActual == Pestana.ESCALADAS) crearTarjetaEscalada(alerta)
+            else crearTarjetaAlerta(alerta)
+            binding.containerAlertas.addView(tarjeta)
+            entradaTarjetas.mostrar(tarjeta, "alerta:${pestanaActual}:${alerta.id}")
             binding.containerAlertas.addView(View(requireContext()).apply {
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(10))
             })

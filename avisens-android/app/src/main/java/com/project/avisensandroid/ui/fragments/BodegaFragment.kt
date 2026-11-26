@@ -32,6 +32,8 @@ import java.text.NumberFormat
 import java.util.Locale
 
 class BodegaFragment : BaseBottomNavFragment() {
+    private val entradaTarjetas = AnimacionesTarjetas()
+
 
     private var _binding: Po03BodegaOpBinding? = null
     private val binding get() = _binding!!
@@ -79,6 +81,8 @@ class BodegaFragment : BaseBottomNavFragment() {
     ) {
 
         super.onViewCreated(view, savedInstanceState)
+        entradaTarjetas.reiniciar()
+        entradaTarjetas.encabezados(binding.contenedorInsumos)
 
         val activity = requireActivity() as MainActivity
 
@@ -354,6 +358,8 @@ class BodegaFragment : BaseBottomNavFragment() {
 
         textosAutonomia.clear()
 
+        entradaTarjetas.encabezados(binding.contenedorInsumos)
+        entradaTarjetas.comenzar()
         binding.contenedorInsumos.removeAllViews()
 
         val disponibles = insumos.filter {
@@ -563,6 +569,7 @@ class BodegaFragment : BaseBottomNavFragment() {
             itemBinding.root
         )
 
+        entradaTarjetas.mostrar(itemBinding.root, "insumo:${insumo.id}")
         val barra = itemBinding.progressStock
 
         barrasStock[insumo.id] = barra

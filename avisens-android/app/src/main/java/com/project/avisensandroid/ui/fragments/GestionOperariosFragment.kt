@@ -38,6 +38,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 class GestionOperariosFragment : BaseBottomNavFragment() {
+    private val entradaTarjetas = AnimacionesTarjetas()
+
 
     private lateinit var containerOperarios: LinearLayout
 
@@ -91,6 +93,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             view,
             savedInstanceState
         )
+        entradaTarjetas.reiniciar()
 
         configurarBottomNav(
             R.id.nav_usuarios
@@ -129,10 +132,11 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         cargaOperarios?.cancel()
         cargaOperarios = viewLifecycleOwner.lifecycleScope.launch {
             fun pintar(usuarios: List<UsuarioGestionResponse>) {
+                val eliminados = idsOperariosEliminados()
                 val operarios = usuarios.filter {
-                    it.rol.nombre.equals("operario", ignoreCase = true) && it.id !in idsOperariosEliminados()
+                    it.rol.nombre.equals("operario", ignoreCase = true) && it.id !in eliminados
                 }
-                if (ultimosOperarios != operarios || !silenciosa) {
+                if (ultimosOperarios != operarios) {
                     ultimosOperarios = operarios
                     mostrarOperarios(operarios)
                 }
@@ -174,6 +178,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     private fun mostrarOperarios(
         operarios: List<UsuarioGestionResponse>
     ) {
+        entradaTarjetas.encabezados(containerOperarios)
+        entradaTarjetas.comenzar()
         containerOperarios.removeAllViews()
 
         if (operarios.isEmpty()) {
@@ -214,6 +220,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             emptyCard.addView(message, LinearLayout.LayoutParams(-1, -2))
 
             containerOperarios.addView(emptyCard)
+            entradaTarjetas.mostrar(emptyCard, "operarios:vacio", true)
             return
         }
 
@@ -355,6 +362,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 bottomMargin = dp(14)
             }
             containerOperarios.addView(card, params)
+            entradaTarjetas.mostrar(card, "operario:${usuario.id}")
         }
     }
 

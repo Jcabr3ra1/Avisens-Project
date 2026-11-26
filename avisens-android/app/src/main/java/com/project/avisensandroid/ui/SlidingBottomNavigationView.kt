@@ -88,8 +88,8 @@ class SlidingBottomNavigationView @JvmOverloads constructor(
 
         // No usar la escala de la animación nativa de Material.
         while (actual !== this) {
-            x += actual.left + actual.translationX
-            y += actual.top + actual.translationY
+            x += actual.left
+            y += actual.top
 
             val padre = actual.parent as? View ?: break
 
@@ -128,7 +128,7 @@ class SlidingBottomNavigationView @JvmOverloads constructor(
             addUpdateListener { animacion ->
                 val t = animacion.animatedValue as Float
 
-                posicion = RectF(
+                (posicion ?: RectF().also { posicion = it }).set(
                     inicio.left + (fin.left - inicio.left) * t,
                     inicio.top + (fin.top - inicio.top) * t,
                     inicio.right + (fin.right - inicio.right) * t,

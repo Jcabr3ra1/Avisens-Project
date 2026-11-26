@@ -27,6 +27,8 @@ import java.util.Locale
 import java.util.TimeZone
 
 class BitacoraConsumoFragment : BaseBottomNavFragment() {
+    private val entradaTarjetas = AnimacionesTarjetas()
+
 
     private var _binding: Po08BitacoraConsumoOpBinding? = null
     private val binding get() = _binding!!
@@ -44,6 +46,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        entradaTarjetas.reiniciar()
 
         val activity = requireActivity() as MainActivity
         configurarBottomNav(R.id.nav_bitacora)
@@ -191,6 +194,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
     private fun mostrarRegistros(registros: List<ConsumoDiarioResponse>, ids: Set<Int> = emptySet()) {
         val c = requireContext()
         val contenedor = binding.containerRegistros
+        entradaTarjetas.comenzar()
         contenedor.removeAllViews()
         val pendientes = com.project.avisensandroid.controller.Hu56OfflineQueue.registros(c)
             .filter { it.optString("tipo") == "consumo" && it.optString("estado") != "SINCRONIZADO" }
@@ -216,17 +220,22 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
                 setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.adaptive_text_183c2e))
                 setPadding(dp(2), dp(16), 0, dp(10))
             })
+            entradaTarjetas.mostrar(contenedor.getChildAt(contenedor.childCount - 1), "fecha:$dia", true)
             pendientes.filter { it.second.optString("fecha").take(10) == dia }.forEach { (item, datos) ->
-                contenedor.addView(TextView(c).apply {
+                val tarjeta = TextView(c).apply {
                     text = "Lote ${datos.optInt("lote_id")}\n" + if (item.optString("estado").startsWith("REVISAR")) "Envío por confirmar; no repetir el registro" else "Pendiente de sincronización automática"
                     setTextColor(resources.getColor(R.color.text_primary, c.theme))
                     setPadding(dp(14), dp(12), dp(14), dp(12))
                     setBackgroundResource(R.drawable.bg_bitacora_card)
                     layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) }
-                })
+                }
+                contenedor.addView(tarjeta)
+                entradaTarjetas.mostrar(tarjeta, "pendiente:${item.optString("id")}")
             }
             registros.filter { it.fecha.take(10) == dia }.sortedByDescending { it.fecha_registro.orEmpty() }.forEach { consumo ->
-                contenedor.addView(crearTarjetaConsumo(consumo))
+                val tarjeta = crearTarjetaConsumo(consumo)
+                contenedor.addView(tarjeta)
+                entradaTarjetas.mostrar(tarjeta, "consumo:${consumo.id}")
             }
         }
     }

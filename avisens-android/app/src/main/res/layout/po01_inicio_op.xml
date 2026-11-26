@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -186,7 +187,6 @@
                 </HorizontalScrollView>
             </LinearLayout>
 
-
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnAbrirLia"
                 android:layout_width="match_parent"
@@ -259,7 +259,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:background="@drawable/bg_stat_card"
-                        android:gravity="center"
+                        android:gravity="top|center_horizontal"
                         android:orientation="vertical"
                         android:paddingTop="16dp"
                         android:paddingBottom="14dp">
@@ -282,9 +282,11 @@
 
                             <TextView
                                 android:id="@+id/txtTemperaturaInicio"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
+                                android:gravity="center"
+                                android:maxLines="1"
                                 android:text="—"
                                 android:textColor="@color/text_primary"
                                 android:textSize="19sp"
@@ -297,7 +299,9 @@
                             android:layout_marginTop="8dp"
                             android:text="Temperatura"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="13sp"
+                            android:minLines="2"
+                            android:gravity="center" />
 
                         <TextView
                             android:id="@+id/txtEstadoTemperaturaInicio"
@@ -312,7 +316,9 @@
                             android:text="Sin datos"
                             android:textColor="@color/badge_green_text"
                             android:textSize="11sp"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"
+                            android:minLines="2"
+                            android:gravity="center" />
                     </LinearLayout>
 
                     <View
@@ -324,7 +330,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:background="@drawable/bg_stat_card"
-                        android:gravity="center"
+                        android:gravity="top|center_horizontal"
                         android:orientation="vertical"
                         android:paddingTop="16dp"
                         android:paddingBottom="14dp">
@@ -346,9 +352,11 @@
 
                             <TextView
                                 android:id="@+id/txtHumedadInicio"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
+                                android:gravity="center"
+                                android:maxLines="1"
                                 android:text="—"
                                 android:textColor="@color/text_primary"
                                 android:textSize="19sp"
@@ -361,7 +369,9 @@
                             android:layout_marginTop="8dp"
                             android:text="Humedad"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="13sp"
+                            android:minLines="2"
+                            android:gravity="center" />
 
                         <TextView
                             android:id="@+id/txtEstadoHumedadInicio"
@@ -376,12 +386,13 @@
                             android:text="Sin datos"
                             android:textColor="@color/badge_green_text"
                             android:textSize="11sp"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"
+                            android:minLines="2"
+                            android:gravity="center" />
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Fila 2: Calidad del aire (MQ-135, ADC crudo) / Peso (HX711) para el
-                     Propietario. El MQ-135 no se calibra a ppm: no es CO₂ ni NH₃. -->
+                <!-- Fila 2: Calidad del aire / Luminosidad -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -393,7 +404,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:background="@drawable/bg_stat_card"
-                        android:gravity="center"
+                        android:gravity="top|center_horizontal"
                         android:orientation="vertical"
                         android:paddingTop="16dp"
                         android:paddingBottom="14dp">
@@ -416,9 +427,11 @@
 
                             <TextView
                                 android:id="@+id/txtCalidadAireInicio"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
+                                android:gravity="center"
+                                android:maxLines="1"
                                 android:text="—"
                                 android:textColor="@color/text_primary"
                                 android:textSize="19sp"
@@ -432,7 +445,9 @@
                             android:layout_marginTop="8dp"
                             android:text="Calidad del aire"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="13sp"
+                            android:minLines="2"
+                            android:gravity="center" />
 
                         <TextView
                             android:id="@+id/txtEstadoCalidadAireInicio"
@@ -447,7 +462,9 @@
                             android:text="Sin datos"
                             android:textColor="@color/orange_badge_text"
                             android:textSize="11sp"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"
+                            android:minLines="2"
+                            android:gravity="center" />
                     </LinearLayout>
 
                     <View
@@ -459,7 +476,85 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:background="@drawable/bg_stat_card"
-                        android:gravity="center"
+                        android:gravity="top|center_horizontal"
+                        android:orientation="vertical"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="14dp">
+
+                        <FrameLayout
+                            android:layout_width="88dp"
+                            android:layout_height="88dp">
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription=""
+                                android:src="@drawable/bg_ring_track" />
+
+                            <com.project.avisensandroid.ui.views.SensorArcView
+                                android:id="@+id/arcLuminosidadInicio"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="Indicador de luminosidad" />
+
+                            <TextView
+                                android:id="@+id/txtLuminosidadInicio"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:gravity="center"
+                                android:maxLines="1"
+                                android:text="—"
+                                android:textColor="@color/text_primary"
+                                android:textSize="19sp"
+                                android:textStyle="bold" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/txtLabelLuminosidadInicio"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Luminosidad"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp"
+                            android:minLines="2"
+                            android:gravity="center" />
+
+                        <TextView
+                            android:id="@+id/txtEstadoLuminosidadInicio"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="7dp"
+                            android:background="@drawable/bg_badge_regular"
+                            android:paddingStart="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingEnd="10dp"
+                            android:paddingBottom="4dp"
+                            android:text="Sin datos"
+                            android:textColor="@color/orange_badge_text"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:minLines="2"
+                            android:gravity="center" />
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Fila 3: Peso de alimento / Distancia al agua -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    android:visibility="visible">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_stat_card"
+                        android:gravity="top|center_horizontal"
                         android:orientation="vertical"
                         android:paddingTop="16dp"
                         android:paddingBottom="14dp">
@@ -482,9 +577,11 @@
 
                             <TextView
                                 android:id="@+id/txtPesoInicio"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
+                                android:gravity="center"
+                                android:maxLines="1"
                                 android:text="—"
                                 android:textColor="@color/text_primary"
                                 android:textSize="19sp"
@@ -498,7 +595,9 @@
                             android:layout_marginTop="8dp"
                             android:text="Peso de alimento"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="13sp"
+                            android:minLines="2"
+                            android:gravity="center" />
 
                         <TextView
                             android:id="@+id/txtEstadoPesoInicio"
@@ -513,29 +612,25 @@
                             android:text="Sin datos"
                             android:textColor="@color/orange_badge_text"
                             android:textSize="11sp"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"
+                            android:minLines="2"
+                            android:gravity="center" />
                     </LinearLayout>
-                </LinearLayout>
-
-                <!-- Fila 3: Nivel de agua (HC-SR04). Solo se muestra si el galpón
-                     tiene ese sensor registrado. -->
-                <LinearLayout
-                    android:id="@+id/filaNivelAguaInicio"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="horizontal"
-                    android:visibility="gone">
+                    <View
+                        android:layout_width="12dp"
+                        android:layout_height="1dp" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:background="@drawable/bg_stat_card"
-                        android:gravity="center"
+                        android:gravity="top|center_horizontal"
                         android:orientation="vertical"
                         android:paddingTop="16dp"
-                        android:paddingBottom="14dp">
+                        android:paddingBottom="14dp"
+                        android:id="@+id/filaNivelAguaInicio"
+                        android:visibility="visible">
 
                         <FrameLayout
                             android:layout_width="88dp"
@@ -555,9 +650,11 @@
 
                             <TextView
                                 android:id="@+id/txtNivelAguaInicio"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
+                                android:gravity="center"
+                                android:maxLines="1"
                                 android:text="—"
                                 android:textColor="@color/text_primary"
                                 android:textSize="19sp"
@@ -571,7 +668,9 @@
                             android:layout_marginTop="8dp"
                             android:text="Distancia al agua"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="13sp"
+                            android:minLines="2"
+                            android:gravity="center" />
 
                         <TextView
                             android:id="@+id/txtEstadoNivelAguaInicio"
@@ -586,22 +685,15 @@
                             android:text="Sin datos"
                             android:textColor="@color/orange_badge_text"
                             android:textSize="11sp"
-                            android:textStyle="bold" />
+                            android:textStyle="bold"
+                            android:minLines="2"
+                            android:gravity="center" />
                     </LinearLayout>
 
-
-                    <View
-                        android:layout_width="12dp"
-                        android:layout_height="1dp" />
-
-                    <View
-                        android:layout_width="0dp"
-                        android:layout_height="1dp"
-                        android:layout_weight="1" />
                 </LinearLayout>
 
                 <!-- Sensores activos que no se pudieron asociar sin ambigüedad
-                     a una variable: se listan para corregirlos, sin valores. -->
+                         a una variable: se listan para corregirlos, sin valores. -->
                 <TextView
                     android:id="@+id/txtSensoresSinIdentificarInicio"
                     android:layout_width="match_parent"
@@ -716,7 +808,6 @@
 
                 </LinearLayout>
 
-
                 <!-- ================================================= -->
                 <!-- FILA 2: AVES MUERTAS / ALERTAS -->
                 <!-- ================================================= -->
@@ -786,7 +877,6 @@
                     </LinearLayout>
 
                 </LinearLayout>
-
 
                 <!-- ================================================= -->
                 <!-- FILA 3: CALIDAD CRIANZA / RENDIMIENTO COMIDA -->
@@ -886,7 +976,6 @@
 
                 </LinearLayout>
 
-
                 <!-- ================================================= -->
                 <!-- FILA 4: ALIMENTO / AGUA -->
                 <!-- ================================================= -->
@@ -957,7 +1046,6 @@
 
                 </LinearLayout>
 
-
                 <!-- ================================================= -->
                 <!-- SALUD DEL LOTE -->
                 <!-- ================================================= -->
@@ -1003,7 +1091,6 @@
 
                     </LinearLayout>
 
-
                     <!-- BARRA DE PROGRESO -->
 
                     <LinearLayout
@@ -1028,7 +1115,6 @@
                             android:layout_weight="100" />
 
                     </LinearLayout>
-
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -1057,7 +1143,6 @@
                     </LinearLayout>
 
                 </LinearLayout>
-
 
             </LinearLayout>
 

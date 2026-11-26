@@ -296,6 +296,12 @@ interface ApiService {
         @Query("limit") limit: Int = 100
     ): Response<PaginatedResponse<UmbralAmbientalResponse>>
 
+    @POST("v1/umbrales")
+    suspend fun crearUmbralAmbiental(@Body datos: Map<String, @JvmSuppressWildcards Any>): Response<UmbralAmbientalResponse>
+
+    @PATCH("v1/umbrales/{id}/revisar")
+    suspend fun revisarUmbralAmbiental(@Path("id") id: Int, @Body datos: Map<String, @JvmSuppressWildcards Any>): Response<UmbralAmbientalResponse>
+
     @GET("v1/mediciones/ultimas")
     suspend fun listarUltimasLecturas(
         @Query("galpon_id") galponId: Int

@@ -24,7 +24,7 @@
         app:itemIconTint="@color/nav_item_color"
         app:itemTextColor="@color/nav_item_color"
         app:itemRippleColor="@android:color/transparent"
-        app:labelVisibilityMode="labeled"
+        app:labelVisibilityMode="labeled" app:itemHorizontalTranslationEnabled="false"
         app:menu="@menu/bottom_nav_menu"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

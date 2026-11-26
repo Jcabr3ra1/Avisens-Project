@@ -18,6 +18,8 @@ import com.project.avisensandroid.ui.MainActivity
 import androidx.core.os.bundleOf
 
 class BitacoraEnfermoFragment : BaseBottomNavFragment() {
+    private val entradaTarjetas = AnimacionesTarjetas()
+
 
     private var _binding: Po07BitacoraEnfermoOpBinding? = null
     private val binding get() = _binding!!
@@ -75,6 +77,7 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        entradaTarjetas.reiniciar()
 
         configurarBottomNav(R.id.nav_bitacora)
         animarPestanaBitacora(binding.tabsBitacora, 1)
@@ -119,6 +122,7 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
 
     private fun construirCasosDemo() {
         val contenedor = binding.containerRegistros
+        entradaTarjetas.comenzar()
         contenedor.removeAllViews()
         contenedor.background = null
         contenedor.setPadding(0, 0, 0, 0)
@@ -131,7 +135,9 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
         binding.tvAvesSeguimiento.text = avesSeguimiento.toString()
 
         casosDemo.forEachIndexed { index, caso ->
-            contenedor.addView(crearTarjetaCaso(caso))
+            val tarjeta = crearTarjetaCaso(caso)
+            contenedor.addView(tarjeta)
+            entradaTarjetas.mostrar(tarjeta, "caso:${caso.id}")
             if (index < casosDemo.lastIndex) {
                 val separador = View(requireContext()).apply {
                     layoutParams = LinearLayout.LayoutParams(
