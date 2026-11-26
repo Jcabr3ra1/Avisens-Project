@@ -180,28 +180,7 @@ class InicioFragment : BaseBottomNavFragment() {
             try {
                 val activity = requireActivity() as MainActivity
 
-                // Estructura principal: si granjas o galpones fallan, no tiene
-                // sentido continuar dibujando el selector.
-                val (responseGranjas, responseGalpones) = kotlinx.coroutines.coroutineScope {
-                    val granjasDef = async { activity.obtenerGranjas() }
-                    val galponesDef = async { activity.obtenerGalpones() }
-                    granjasDef.await() to galponesDef.await()
-                }
-                if (!responseGranjas.isSuccessful) {
-                    mostrarMensaje("No se pudieron cargar las granjas (${responseGranjas.code()})")
-                    return@launch
-                }
-                granjas = responseGranjas.body()?.data.orEmpty().filter { it.activa }
-
-                if (!responseGalpones.isSuccessful) {
-                    mostrarMensaje("No se pudieron cargar los galpones (${responseGalpones.code()})")
-                    return@launch
-                }
-                galpones = responseGalpones.body()?.data.orEmpty().filter { it.activo }
-
-                // El resto del dashboard se puede cargar en paralelo para que
-                // Inicio no tenga que esperar módulo por módulo.
-                supervisorScope {
+                val catalogosOk = supervisorScope {
                     val lotesDef = async { cargarTodosLotes() }
                     val mortalidadesDef = async { cargarTodasMortalidades() }
                     val eventosDef = async { cargarTodosEventosSanitarios() }
@@ -210,6 +189,27 @@ class InicioFragment : BaseBottomNavFragment() {
                     val sensoresDef =
                         if (esPropietario()) async { cargarTodosSensores() } else null
 
+                    // Estructura principal: si granjas o galpones fallan, no tiene
+                    // sentido continuar dibujando el selector.
+                    val (responseGranjas, responseGalpones) = kotlinx.coroutines.coroutineScope {
+                        val granjasDef = async { activity.obtenerGranjas() }
+                        val galponesDef = async { activity.obtenerGalpones() }
+                        granjasDef.await() to galponesDef.await()
+                    }
+                    if (!responseGranjas.isSuccessful) {
+                        mostrarMensaje("No se pudieron cargar las granjas (${responseGranjas.code()})")
+                        return@supervisorScope false
+                    }
+                    granjas = responseGranjas.body()?.data.orEmpty().filter { it.activa }
+
+                    if (!responseGalpones.isSuccessful) {
+                        mostrarMensaje("No se pudieron cargar los galpones (${responseGalpones.code()})")
+                        return@supervisorScope false
+                    }
+                    galpones = responseGalpones.body()?.data.orEmpty().filter { it.activo }
+
+                    // El resto del dashboard se puede cargar en paralelo para que
+                    // Inicio no tenga que esperar módulo por módulo.
                     lotes = lotesDef.safeAwait(emptyList())
                     mortalidades = mortalidadesDef.safeAwait(emptyList())
                     eventosSanitarios = eventosDef.safeAwait(emptyList())
@@ -226,7 +226,9 @@ class InicioFragment : BaseBottomNavFragment() {
                             emptyList()
                         }
                     } ?: emptyList()
+                    true
                 }
+                if (!catalogosOk) return@launch
 
                 configurarSpinnerGranjas()
 

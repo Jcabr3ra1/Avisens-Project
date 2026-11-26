@@ -19,6 +19,9 @@ import com.project.avisensandroid.model.ConsumoDiarioResponse
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -27,6 +30,8 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
 
     private var _binding: Po08BitacoraConsumoOpBinding? = null
     private val binding get() = _binding!!
+
+    private var cargaJob: Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -61,61 +66,35 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
     }
 
     private fun cargarConsumos() {
-        viewLifecycleOwner.lifecycleScope.launch {
+        cargaJob?.cancel()
+        cargaJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val activity = requireActivity() as MainActivity
                 val galponId = activity.obtenerGalponSeleccionadoId()
-
                 if (galponId == null) {
                     mostrarRegistros(emptyList())
                     return@launch
                 }
-
-                val idsLotes = activity.obtenerIdsLotesDeGalponSeleccionado()
-                if (idsLotes.isEmpty()) {
-                    mostrarRegistros(emptyList())
-                    return@launch
+                val (consumos, idsLotes) = coroutineScope {
+                    val lotesJob = async { activity.obtenerIdsLotesDeGalponSeleccionado() }
+                    val consumosJob = async {
+                        val datos = mutableListOf<ConsumoDiarioResponse>()
+                        var pagina = 1
+                        do {
+                            val response = RetrofitClient.api.listarConsumosDiarios(pagina, 100)
+                            check(response.isSuccessful) { "Error de consumos: ${response.code()}" }
+                            val body = checkNotNull(response.body()) { "Sin datos de consumo" }
+                            datos.addAll(body.data)
+                            val total = body.meta.totalPages.coerceAtLeast(pagina)
+                            pagina++
+                        } while (pagina <= total)
+                        datos
+                    }
+                    consumosJob.await() to lotesJob.await()
                 }
-
-                val consumos = mutableListOf<ConsumoDiarioResponse>()
-                var pagina = 1
-                var totalPaginas = 1
-
-                do {
-                    val response = RetrofitClient.api.listarConsumosDiarios(
-                        page = pagina,
-                        limit = 100
-                    )
-
-                    if (!response.isSuccessful) {
-                        Toast.makeText(
-                            requireContext(),
-                            "No se pudieron cargar los consumos. Código: ${response.code()}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        return@launch
-                    }
-
-                    val body = response.body()
-                    if (body == null) {
-                        Toast.makeText(
-                            requireContext(),
-                            "La API no devolvió registros de consumo",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        return@launch
-                    }
-
-                    consumos += body.data
-                    totalPaginas = body.meta.totalPages.coerceAtLeast(pagina)
-                    pagina++
-                } while (pagina <= totalPaginas)
-
-                val filtrados = consumos
-                    .filter { it.lote_id in idsLotes }
-                    .sortedByDescending { it.fecha }
-
-                mostrarRegistros(filtrados)
+                if (_binding != null && activity.obtenerGalponSeleccionadoId() == galponId) {
+                    mostrarRegistros(consumos.filter { it.lote_id in idsLotes }.sortedByDescending { it.fecha })
+                }
 
             } catch (e: CancellationException) {
                 throw e
@@ -262,6 +241,8 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
         (valor * resources.displayMetrics.density).toInt()
 
     override fun onDestroyView() {
+        cargaJob?.cancel()
+        cargaJob = null
         super.onDestroyView()
         _binding = null
     }

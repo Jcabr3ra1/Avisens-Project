@@ -32,6 +32,8 @@ import com.project.avisensandroid.model.GranjaResponse
 import com.project.avisensandroid.model.UsuarioGalponResponse
 import com.project.avisensandroid.model.UsuarioGestionResponse
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
@@ -108,6 +110,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             mostrarDialogCrearOperario()
         }
 
+        ultimosOperarios = null
         cargarOperarios()
     }
 
@@ -115,80 +118,51 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     // CARGAR OPERARIOS
     // ============================================================
 
-    private fun cargarOperarios() {
+    private var cargaOperarios: Job? = null
+    private var ultimosOperarios: List<UsuarioGestionResponse>? = null
 
-        viewLifecycleOwner.lifecycleScope.launch {
+    fun actualizarSilenciosamente() {
+        if (view != null && isAdded && cargaOperarios?.isActive != true) cargarOperarios(true)
+    }
 
+    private fun cargarOperarios(silenciosa: Boolean = false) {
+        cargaOperarios?.cancel()
+        cargaOperarios = viewLifecycleOwner.lifecycleScope.launch {
+            fun pintar(usuarios: List<UsuarioGestionResponse>) {
+                val operarios = usuarios.filter {
+                    it.rol.nombre.equals("operario", ignoreCase = true) && it.id !in idsOperariosEliminados()
+                }
+                if (ultimosOperarios != operarios || !silenciosa) {
+                    ultimosOperarios = operarios
+                    mostrarOperarios(operarios)
+                }
+            }
             try {
-
-                // ------------------------------------------------
-                // Obtener catálogo de roles
-                // ------------------------------------------------
-
-                val (rolesResponse, response) = coroutineScope {
-                    val roles = async { RetrofitClient.api.listarRolesUsuarios() }
-                    val usuarios = async { RetrofitClient.api.listarUsuarios(page = 1, limit = 100) }
-                    roles.await() to usuarios.await()
+                if (!silenciosa && ultimosOperarios == null) {
+                    try {
+                        val local = RetrofitClient.apiCache.listarUsuarios(page = 1, limit = 100)
+                        local.body()?.let { if (local.isSuccessful) pintar(it.data) }
+                    } catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { }
                 }
-
-                if (rolesResponse.isSuccessful) {
-
-                    rolOperarioId =
-                        rolesResponse
-                            .body()
-                            .orEmpty()
-                            .firstOrNull {
-
-                                it.nombre.equals(
-                                    "operario",
-                                    ignoreCase = true
-                                )
-                            }
-                            ?.id
+                coroutineScope {
+                    val roles = async {
+                        try {
+                            val respuesta = RetrofitClient.api.listarRolesUsuarios()
+                            if (respuesta.isSuccessful) rolOperarioId = respuesta.body().orEmpty()
+                                .firstOrNull { it.nombre.equals("operario", ignoreCase = true) }?.id
+                        } catch (e: CancellationException) { throw e }
+                        catch (_: Exception) { }
+                    }
+                    val usuarios = RetrofitClient.api.listarUsuarios(page = 1, limit = 100)
+                    if (!usuarios.isSuccessful) error("Código ${usuarios.code()}")
+                    val datos = usuarios.body()?.data ?: error("Respuesta vacía")
+                    if (!silenciosa || ultimosOperarios != datos.filter { it.rol.nombre.equals("operario", true) && it.id !in idsOperariosEliminados() } || ultimosOperarios == null) pintar(datos)
+                    roles.await()
                 }
-
-                // ------------------------------------------------
-                // Obtener usuarios
-                // ------------------------------------------------
-
-
-                if (!response.isSuccessful) {
-
-                    mostrarError(
-                        "No se pudieron cargar los usuarios. " +
-                                "Código: ${response.code()}"
-                    )
-
-                    return@launch
-                }
-
-                // ------------------------------------------------
-                // Filtrar solamente Operarios
-                // ------------------------------------------------
-
-                val operarios =
-                    response.body()
-                        ?.data
-                        .orEmpty()
-                        .filter {
-
-                            it.rol.nombre.equals(
-                                "operario",
-                                ignoreCase = true
-                            ) && it.id !in idsOperariosEliminados()
-                        }
-
-                mostrarOperarios(
-                    operarios
-                )
-
-            } catch (e: Exception) {
-
-                mostrarError(
-                    "Error al cargar operarios: " +
-                            (e.message
-                                ?: "sin detalle")
-                )
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                if (!silenciosa && ultimosOperarios == null) mostrarError("Error al cargar operarios: ${e.message ?: "sin detalle"}")
             }
         }
     }

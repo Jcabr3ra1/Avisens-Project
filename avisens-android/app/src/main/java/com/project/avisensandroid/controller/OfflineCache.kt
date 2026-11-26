@@ -29,7 +29,7 @@ object OfflineCache {
         val raw = "$usuarioId|$url"
         val hash = MessageDigest.getInstance("SHA-256")
             .digest(raw.toByteArray())
-            .joinToString("") { "%02x".format(it) }
+            .joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
         return "r_$hash"
     }
 

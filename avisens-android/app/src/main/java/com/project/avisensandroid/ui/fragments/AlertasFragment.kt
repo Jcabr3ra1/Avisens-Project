@@ -36,6 +36,10 @@ import com.project.avisensandroid.model.UserRole
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.Job
+import com.project.avisensandroid.controller.ApiService
 import java.util.Locale
 
 class AlertasFragment : BaseBottomNavFragment() {
@@ -94,100 +98,124 @@ class AlertasFragment : BaseBottomNavFragment() {
         if (_binding != null && isAdded) cargarAlertas(silenciosa = true)
     }
 
-    private fun cargarAlertas(silenciosa: Boolean = false) {
-        val mainActivity = activity as? MainActivity ?: return
-        val granjaId = mainActivity.obtenerGranjaSeleccionadaId()
-        val galponId = mainActivity.obtenerGalponSeleccionadoId()
-        if (!silenciosa) {
-            binding.tvBadgeActivas.visibility = View.GONE
-            binding.tvBadgeHistorial.visibility = View.GONE
-            binding.tvBadgeEscaladas.visibility = View.GONE
+    private var cargaAlertas: Job? = null
+    private var alcanceCarga: Pair<Int?, Int?>? = null
+
+    private suspend fun consultarAlertas(api: ApiService, granjaId: Int?, galponId: Int?) = coroutineScope {
+        val consultaAlertas = async { if (galponId != null) {
+            val todas = mutableListOf<AlertaResponse>()
+            var paginaAlertas = 1
+            var hayMasAlertas = true
+            while (hayMasAlertas) {
+                val response = api.listarAlertasDeGalpon(
+                    galponId = galponId, page = paginaAlertas, limit = 100
+                )
+                if (!response.isSuccessful) {
+                    throw IllegalStateException("Código ${response.code()}")
+                }
+                val cuerpo = response.body()
+                    ?: throw IllegalStateException("Respuesta vacía al consultar alertas")
+                todas.addAll(cuerpo.data)
+                hayMasAlertas = paginaAlertas < cuerpo.meta.totalPages
+                paginaAlertas++
+            }
+            todas
+        } else emptyList() }
+        // Los insumos pertenecen a granjas, NO a galpones. Se consultan
+        // con el filtro de acceso que ya aplica el backend por rol.
+        val consultaStock = async {
+            val stockBajo = mutableListOf<InsumoResponse>()
+            var pagina = 1
+            var continuar = true
+            while (continuar) {
+                val insumosResponse = api.listarInsumos(page = pagina, limit = 100)
+                if (!insumosResponse.isSuccessful) {
+                    throw IllegalStateException("No se pudo consultar Bodega: ${insumosResponse.code()}")
+                }
+                val cuerpo = insumosResponse.body()
+                    ?: throw IllegalStateException("Respuesta vacía al consultar Bodega")
+                stockBajo.addAll(cuerpo.data.filter { insumo ->
+                    insumo.activo &&
+                            (granjaId == null || insumo.granja_id == granjaId) &&
+                            (insumo.stock_minimo ?: 0.0) > 0.0 &&
+                            (insumo.stock_actual ?: Double.POSITIVE_INFINITY) <= (insumo.stock_minimo ?: 0.0)
+                })
+                continuar = pagina < cuerpo.meta.totalPages
+                pagina++
+            }
+            stockBajo
         }
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                if (!silenciosa) binding.tvResumenAlertas.text = "Cargando alertas del galpón seleccionado..."
-                alertas = if (galponId != null) {
-                    val todas = mutableListOf<AlertaResponse>()
-                    var paginaAlertas = 1
-                    var hayMasAlertas = true
-                    while (hayMasAlertas) {
-                        val response = RetrofitClient.api.listarAlertasDeGalpon(
-                            galponId = galponId, page = paginaAlertas, limit = 100
-                        )
-                        if (!response.isSuccessful) {
-                            throw IllegalStateException("Código ${response.code()}")
-                        }
-                        val cuerpo = response.body()
-                            ?: throw IllegalStateException("Respuesta vacía al consultar alertas")
-                        todas.addAll(cuerpo.data)
-                        hayMasAlertas = paginaAlertas < cuerpo.meta.totalPages
-                        paginaAlertas++
-                    }
-                    todas
-                } else emptyList()
-                // Los insumos pertenecen a granjas, NO a galpones. Se consultan
-                // con el filtro de acceso que ya aplica el backend por rol.
-                val stockBajo = mutableListOf<InsumoResponse>()
-                var pagina = 1
-                var continuar = true
-                while (continuar) {
-                    val insumosResponse = RetrofitClient.api.listarInsumos(page = pagina, limit = 100)
-                    if (!insumosResponse.isSuccessful) {
-                        throw IllegalStateException("No se pudo consultar Bodega: ${insumosResponse.code()}")
-                    }
-                    val cuerpo = insumosResponse.body()
-                        ?: throw IllegalStateException("Respuesta vacía al consultar Bodega")
-                    stockBajo.addAll(cuerpo.data.filter { insumo ->
-                        insumo.activo &&
-                                (granjaId == null || insumo.granja_id == granjaId) &&
-                                (insumo.stock_minimo ?: 0.0) > 0.0 &&
-                                (insumo.stock_actual ?: Double.POSITIVE_INFINITY) <= (insumo.stock_minimo ?: 0.0)
-                    })
-                    continuar = pagina < cuerpo.meta.totalPages
-                    pagina++
+        // El inventario pertenece a la granja. Consultamos los lotes
+        // exclusivamente para identificar el código real cuando no
+        // exista ambigüedad; un error aquí no oculta las alertas.
+        val consultaLotes = async { try {
+            val lotes = mutableListOf<LoteResponse>()
+            var paginaLotes = 1
+            var hayMas = true
+            while (hayMas) {
+                val respuesta = api.listarLotesCompletos(
+                    page = paginaLotes, limit = 100
+                )
+                if (!respuesta.isSuccessful) {
+                    throw IllegalStateException("No se pudieron consultar los lotes")
                 }
-                alertasStock = stockBajo
-                // El inventario pertenece a la granja. Consultamos los lotes
-                // exclusivamente para identificar el código real cuando no
-                // exista ambigüedad; un error aquí no oculta las alertas.
-                lotesActivos = try {
-                    val lotes = mutableListOf<LoteResponse>()
-                    var paginaLotes = 1
-                    var hayMas = true
-                    while (hayMas) {
-                        val respuesta = RetrofitClient.api.listarLotesCompletos(
-                            page = paginaLotes, limit = 100
-                        )
-                        if (!respuesta.isSuccessful) {
-                            throw IllegalStateException("No se pudieron consultar los lotes")
-                        }
-                        val cuerpo = respuesta.body()
-                            ?: throw IllegalStateException("Respuesta vacía de lotes")
-                        lotes.addAll(cuerpo.data.filter {
-                            it.estado.equals("activo", ignoreCase = true)
-                        })
-                        hayMas = paginaLotes < cuerpo.meta.totalPages
-                        paginaLotes++
-                    }
-                    lotes
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    emptyList()
-                }
+                val cuerpo = respuesta.body()
+                    ?: throw IllegalStateException("Respuesta vacía de lotes")
+                lotes.addAll(cuerpo.data.filter {
+                    it.estado.equals("activo", ignoreCase = true)
+                })
+                hayMas = paginaLotes < cuerpo.meta.totalPages
+                paginaLotes++
+            }
+            lotes
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyList()
+        }
+        }
+        Triple(consultaAlertas.await(), consultaStock.await(), consultaLotes.await())
+    }
+
+    private fun cargarAlertas(silenciosa: Boolean = false) {
+        val main = activity as? MainActivity ?: return
+        val granjaId = main.obtenerGranjaSeleccionadaId()
+        val galponId = main.obtenerGalponSeleccionadoId()
+        val alcance = granjaId to galponId
+        if (silenciosa && cargaAlertas?.isActive == true && alcanceCarga == alcance) return
+        cargaAlertas?.cancel()
+        if (alcanceCarga != alcance) {
+            alertas = emptyList()
+            alertasStock = emptyList()
+            lotesActivos = emptyList()
+            alcanceCarga = alcance
+            actualizarResumen()
+            mostrarLista()
+        }
+        cargaAlertas = viewLifecycleOwner.lifecycleScope.launch {
+            fun pintar(datos: Triple<List<AlertaResponse>, List<InsumoResponse>, List<LoteResponse>>) {
+                if (_binding == null) return
+                alertas = datos.first
+                alertasStock = datos.second
+                lotesActivos = datos.third
                 actualizarResumen()
                 pintarTabs()
                 mostrarLista()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                if (!silenciosa && _binding != null) {
+            }
+            var cacheMostrada = false
+            try {
+                if (!silenciosa) {
+                    try {
+                        pintar(consultarAlertas(RetrofitClient.apiCache, granjaId, galponId))
+                        cacheMostrada = true
+                    } catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { }
+                }
+                pintar(consultarAlertas(RetrofitClient.api, granjaId, galponId))
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                if (!silenciosa && !cacheMostrada && _binding != null) {
                     binding.tvResumenAlertas.text = "No se pudieron cargar las alertas"
-                    Toast.makeText(
-                        requireContext(),
-                        "Error al cargar alertas: ${e.message ?: "error desconocido"}",
-                        Toast.LENGTH_LONG
-                    ).show()
                 }
             }
         }
@@ -854,7 +882,7 @@ class AlertasFragment : BaseBottomNavFragment() {
                     pintarTabs()
                     mostrarLista()
                     // Sincronizar nuevamente con el servidor después del cierre.
-                    cargarAlertas(silenciosa = true)
+                    cargarAlertas()
                 }
                 Toast.makeText(
                     requireContext(),

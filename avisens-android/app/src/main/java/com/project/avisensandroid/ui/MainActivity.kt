@@ -361,6 +361,7 @@ class MainActivity : AperturaReanudableActivity() {
             // En reconexión se usa únicamente el indicador superior común.
             is BodegaFragment -> visible.actualizarSilenciosamente()
             is BitacoraFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
+            is GestionOperariosFragment -> visible.actualizarSilenciosamente()
             is AlertasFragment -> if (silenciosa) visible.actualizarSilenciosamente() else visible.actualizarAlRecuperarInternet()
         }
     }

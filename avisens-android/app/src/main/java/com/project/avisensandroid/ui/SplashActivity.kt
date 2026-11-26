@@ -8,6 +8,9 @@ import android.content.Intent
 import android.graphics.*
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import java.util.concurrent.Executors
 import android.view.View
 import android.view.animation.LinearInterpolator
 import androidx.appcompat.app.AppCompatActivity
@@ -18,19 +21,45 @@ import kotlin.math.PI
 import kotlin.math.exp
 
 class SplashActivity : AppCompatActivity() {
+    companion object {
+        private var aperturaMostrada = false
+    }
+
     private var animator: ValueAnimator? = null
     private var navigating = false
+    private val handler = Handler(Looper.getMainLooper())
+    private val decoder = Executors.newSingleThreadExecutor()
+    private var resumed = false
+    private var pendingNavigation = false
+    private var tryStart: (() -> Unit)? = null
+    private val fallback = Runnable { abrirLogin() }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!isTaskRoot && intent.action == Intent.ACTION_MAIN &&
+            intent.hasCategory(Intent.CATEGORY_LAUNCHER)) {
+            finish()
+            return
+        }
+        if (aperturaMostrada || savedInstanceState != null) {
+            abrirLogin()
+            return
+        }
+        aperturaMostrada = true
         val scene = LandingView(this)
         setContentView(scene)
 
+        var systemSplashExited = Build.VERSION.SDK_INT < 31
+        var framesReady = false
         fun startLanding() {
+            if (!systemSplashExited || !framesReady || !resumed || pendingNavigation) return
             if (animator != null || isFinishing || isDestroyed) return
 
-            animator = ValueAnimator.ofFloat(0f, 1600f).apply {
-                duration = 1600L
+            handler.removeCallbacks(fallback)
+            handler.postDelayed(fallback, 2800L)
+            animator = ValueAnimator.ofFloat(0f, 2200f).apply {
+                duration = 2200L
                 interpolator = LinearInterpolator()
 
                 addUpdateListener {
@@ -43,12 +72,7 @@ class SplashActivity : AppCompatActivity() {
                     }
                     override fun onAnimationEnd(animation: Animator) {
                         if (cancelled || navigating || isFinishing || isDestroyed) return
-                        navigating = true
-                        AperturaReanudableActivity.marcarAperturaInicial()
-                        startActivity(Intent(this@SplashActivity, LoginActivity::class.java))
-                        finish()
-                        @Suppress("DEPRECATION")
-                        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+                        abrirLogin()
                     }
                 })
 
@@ -56,17 +80,70 @@ class SplashActivity : AppCompatActivity() {
             }
         }
 
+        tryStart = { startLanding() }
         if (Build.VERSION.SDK_INT >= 31) {
             splashScreen.setOnExitAnimationListener { provider ->
                 provider.remove()
+                systemSplashExited = true
                 scene.post { startLanding() }
             }
-        } else {
-            scene.post { startLanding() }
+        }
+        handler.postDelayed(fallback, 4000L)
+        decoder.execute {
+            try {
+                for (index in 0 until 52) {
+                    if (Thread.currentThread().isInterrupted) throw InterruptedException()
+                    val bitmap = assets.open("splash3d/frame_%02d.webp".format(java.util.Locale.US, index)).use {
+                        requireNotNull(BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply {
+                            inSampleSize = 1
+                        }))
+                    }
+                    handler.post {
+                        if (!isFinishing && !isDestroyed && !pendingNavigation) {
+                            scene.frames[index] = bitmap
+                            if (index == 3) {
+                                framesReady = true
+                                startLanding()
+                            }
+                            scene.invalidate()
+                        } else bitmap.recycle()
+                    }
+                }
+            } catch (_: Exception) {
+                handler.post { abrirLogin() }
+            } catch (_: OutOfMemoryError) {
+                handler.post { abrirLogin() }
+            }
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        resumed = true
+        if (pendingNavigation) abrirLogin() else tryStart?.invoke()
+    }
+
+    override fun onPause() {
+        resumed = false
+        if (!navigating) pendingNavigation = true
+        super.onPause()
+    }
+
+    private fun abrirLogin() {
+        if (navigating || isFinishing || isDestroyed) return
+        if (!resumed) { pendingNavigation = true; return }
+        navigating = true
+        handler.removeCallbacks(fallback)
+        startActivity(Intent(this, LoginActivity::class.java))
+        finish()
+        @Suppress("DEPRECATION")
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
     override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        decoder.shutdownNow()
+        tryStart = null
         animator?.removeAllUpdateListeners()
         animator?.removeAllListeners()
         animator?.cancel()
@@ -75,35 +152,9 @@ class SplashActivity : AppCompatActivity() {
 
     internal class LandingView(context: Context) : View(context) {
 
-        private val body = requireNotNull(
-            context.getDrawable(R.drawable.splash_aterrizaje_cuerpo)
-        )
-
-        private val wing = requireNotNull(
-            context.getDrawable(R.drawable.splash_aterrizaje_ala)
-        )
-
-        private val head = requireNotNull(
-            context.getDrawable(R.drawable.splash_aterrizaje_cabeza)
-        )
-
-        private val nearLeg = requireNotNull(
-            context.getDrawable(R.drawable.splash_aterrizaje_pata_cercana)
-        )
-
-        private val farLeg = requireNotNull(
-            context.getDrawable(R.drawable.splash_aterrizaje_pata_lejana)
-        )
-
-        private val paint = Paint(
-            Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG
-        )
-
-        private val henBounds = Rect(0, 30, 300, 330)
-
-        private val farWing = requireNotNull(
-            context.getDrawable(R.drawable.splash_aterrizaje_ala)
-        )
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        val frames = arrayOfNulls<Bitmap>(52)
+        private val frameBounds = RectF(0f, 35f, 300f, 269.78f)
 
         var elapsed = 0f
             set(value) {
@@ -149,9 +200,9 @@ class SplashActivity : AppCompatActivity() {
             canvas.drawColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_splash_bg))
 
             val scale = min(
-                width / 300f,
+                width / 320f,
                 min(
-                    height / 360f,
+                    height / 420f,
                     420f * resources.displayMetrics.density / 300f
                 )
             )
@@ -160,197 +211,30 @@ class SplashActivity : AppCompatActivity() {
 
             canvas.translate(
                 (width - 300f * scale) / 2f,
-                (height - 360f * scale) / 2f
+                (height - 420f * scale) / 2f
             )
 
             canvas.scale(scale, scale)
 
-            val flight = (elapsed / 1100f)
-                .coerceIn(0f, 1f)
-
-            val p = bezier(
-                flight,
-                .15f,
-                .55f,
-                .35f,
-                1f
-            )
-
-            val air = 1f - p
-
-            val phase = (
-                    flight * 3.4f * 2f * PI
-                    ).toFloat()
-
-            val beat = sin(phase)
-
-            val envelope = (1f - flight)
-                .coerceIn(0f, 1f)
-
-            val settle = ((elapsed - 1100f) / 500f)
-                .coerceIn(0f, 1f)
-
-            val impact = sin(
-                settle * PI.toFloat() * 3f
-            ) * exp(-settle * 7f)
-
-            val drop = maxOf(
-                0f,
-                (height / scale - 360f) / 2f + 65f
-            )
-
-            // Sombra de la gallina.
-            paint.color = Color.argb(
-                (33f * p).toInt(),
-                70,
-                98,
-                78
-            )
-
-            val shadowWidth = 30f + 35f * p
-
-            canvas.drawOval(
-                150f - shadowWidth,
-                250f,
-                150f + shadowWidth,
-                264f,
-                paint
-            )
-
+            val loaded = frames
+            val frame = if (elapsed < 1800f) {
+                ((elapsed / 1800f) * 43f).toInt().coerceIn(0, 43)
+            } else {
+                (44 + ((elapsed - 1800f) / 400f * 8f).toInt()).coerceIn(44, 51)
+            }
+            paint.color = Color.WHITE
+            val entrance = bezier((elapsed / 850f).coerceIn(0f, 1f), .25f, .1f, .25f, 1f)
+            val topOffset = (height / scale - 420f) / 2f + frameBounds.bottom + 8f
             canvas.save()
-
-            // Descenso y desplazamiento del cuerpo.
-            canvas.translate(
-                -25f * air +
-                        sin(flight * PI.toFloat()) * 14f,
-
-                -drop * air +
-                        beat * 5f * envelope +
-                        impact * 8f
-            )
-
-            canvas.rotate(
-                -13f * air +
-                        beat * 4f * envelope +
-                        impact * 4f,
-                150f,
-                195f
-            )
-
-            canvas.scale(
-                1f + impact * .045f,
-                1f - impact * .07f,
-                150f,
-                250f
-            )
-
-            // Ala trasera.
-            canvas.save()
-
-            canvas.rotate(
-                -12f +
-                        sin(phase - .55f) * 48f * envelope,
-                151f,
-                180f
-            )
-
-            canvas.scale(
-                .86f,
-                .85f + .12f * beat * envelope,
-                151f,
-                180f
-            )
-
-            farWing.alpha = (255f * envelope).toInt()
-            farWing.bounds = henBounds
-            farWing.draw(canvas)
-
-            canvas.restore()
-
-            // Extensión de las patas antes del aterrizaje.
-            val extend = bezier(
-                ((flight - .35f) / .55f).coerceIn(0f, 1f),
-                .25f,
-                .1f,
-                .25f,
-                1f
-            )
-
-            val flex = maxOf(0f, impact) * 18f
-
-            // Pata lejana.
-            canvas.save()
-
-            canvas.rotate(
-                35f * (1f - extend) + flex,
-                160f,
-                219f
-            )
-
-            farLeg.bounds = henBounds
-            farLeg.draw(canvas)
-
-            canvas.restore()
-
-            // Pata cercana.
-            canvas.save()
-
-            canvas.rotate(
-                48f * (1f - extend) + flex,
-                119f,
-                218f
-            )
-
-            nearLeg.bounds = henBounds
-            nearLeg.draw(canvas)
-
-            canvas.restore()
-
-            // Cuerpo.
-            body.bounds = henBounds
-            body.draw(canvas)
-
-            // Movimiento independiente de la cabeza.
-            canvas.save()
-
-            canvas.rotate(
-                8f * air -
-                        beat * 5f * envelope -
-                        impact * 3f,
-                159f,
-                181f
-            )
-
-            head.bounds = henBounds
-            head.draw(canvas)
-
-            canvas.restore()
-
-            // Ala delantera.
-            canvas.save()
-
-            canvas.rotate(
-                (beat * 66f - 12f) * envelope,
-                151f,
-                181f
-            )
-
-            canvas.scale(
-                1f + .25f * envelope,
-                1f + .18f * beat * envelope,
-                151f,
-                181f
-            )
-
-            wing.bounds = henBounds
-            wing.draw(canvas)
-
-            canvas.restore()
+            canvas.translate(0f, -topOffset * (1f - entrance))
+            (frame downTo 0).firstNotNullOfOrNull { loaded[it] }?.let {
+                canvas.drawBitmap(it, null, frameBounds, paint)
+            }
             canvas.restore()
 
             // Animación del texto AVISENS.
             val reveal = bezier(
-                ((elapsed - 450f) / 1150f)
+                ((elapsed - 500f) / 1300f)
                     .coerceIn(0f, 1f),
                 .25f,
                 .1f,
@@ -384,9 +268,9 @@ class SplashActivity : AppCompatActivity() {
 
             canvas.clipRect(
                 left,
-                270f,
+                264f,
                 left + total * reveal,
-                330f
+                315f
             )
 
             var x = left
@@ -397,7 +281,7 @@ class SplashActivity : AppCompatActivity() {
                 canvas.drawText(
                     s,
                     x,
-                    310f,
+                    300f,
                     paint
                 )
 

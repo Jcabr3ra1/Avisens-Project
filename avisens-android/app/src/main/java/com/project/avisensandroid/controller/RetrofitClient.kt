@@ -1,6 +1,9 @@
 package com.project.avisensandroid.controller
 
 import android.content.Context
+import android.os.SystemClock
+import android.util.Log
+import okhttp3.Dispatcher
 import com.google.gson.Gson
 import com.project.avisensandroid.BuildConfig
 import com.project.avisensandroid.model.RefreshTokenRequest
@@ -47,11 +50,11 @@ object RetrofitClient {
         if (!BuildConfig.DEBUG) return null
 
         val conCuerpo = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.BASIC
             redactHeader("Authorization")
         }
         val soloCabeceras = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.HEADERS
+            level = HttpLoggingInterceptor.Level.BASIC
             redactHeader("Authorization")
         }
 
@@ -246,9 +249,28 @@ object RetrofitClient {
             .build()
     }
 
+    // Mide la llamada completa, incluida la lectura de JSON por OfflineCache.
+    private val rendimiento = Interceptor { chain ->
+        val inicio = SystemClock.elapsedRealtime()
+        val request = chain.request()
+        var resultado = "ERROR"
+        try {
+            chain.proceed(request).also { response ->
+                resultado = if (response.header("X-Avisens-Offline") == "true") "CACHE" else "HTTP ${response.code}"
+            }
+        } finally {
+            if (BuildConfig.DEBUG) {
+                val ms = SystemClock.elapsedRealtime() - inicio
+                Log.d("API_PERFORMANCE", "${request.method} ${request.url.encodedPath} -> $ms ms [$resultado]${if (ms > 500) " LENTA" else ""}")
+            }
+        }
+    }
+
     private val client: OkHttpClient by lazy {
         check(::appContext.isInitialized) { "RetrofitClient debe inicializarse antes de usar la API" }
         OkHttpClient.Builder()
+            .dispatcher(Dispatcher().apply { maxRequestsPerHost = 8 })
+            .addInterceptor(rendimiento)
             .addInterceptor(authInterceptor)
             .addInterceptor(OfflineCache.interceptor(appContext))
             .authenticator(tokenAuthenticator)

@@ -21,6 +21,9 @@ import com.project.avisensandroid.model.RegistroMortalidadResponse
 import com.project.avisensandroid.ui.MainActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -33,6 +36,8 @@ class BitacoraFragment : BaseBottomNavFragment() {
         get() = _binding!!
 
     private val localeEspanol = Locale("es", "ES")
+
+    private var cargaJob: Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -98,142 +103,55 @@ class BitacoraFragment : BaseBottomNavFragment() {
     private fun cargarBitacora(
         silenciosa: Boolean = false
     ) {
-        viewLifecycleOwner.lifecycleScope.launch {
+        if (silenciosa && cargaJob?.isActive == true) return
+        cargaJob?.cancel()
+        cargaJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val registros =
-                    mutableListOf<RegistroMortalidadResponse>()
-
-                var pagina = 1
-                var totalPaginas = 1
-
-                do {
-                    val response =
-                        RetrofitClient.api.listarRegistrosMortalidad(
-                            page = pagina,
-                            limit = 100
-                        )
-
-                    if (!response.isSuccessful) {
-                        if (!silenciosa) {
-                            mostrarError(
-                                "No se pudieron cargar los registros. " +
-                                        "Código: ${response.code()}"
-                            )
-                        }
-
-                        return@launch
-                    }
-
-                    val body = response.body()
-
-                    if (body == null) {
-                        if (!silenciosa) {
-                            mostrarError(
-                                "La API no devolvió registros de mortalidad"
-                            )
-                        }
-
-                        return@launch
-                    }
-
-                    registros.addAll(body.data)
-
-                    totalPaginas =
-                        body.meta.totalPages.coerceAtLeast(pagina)
-
-                    pagina++
-
-                } while (pagina <= totalPaginas)
-
                 val activity = requireActivity() as MainActivity
-
-                val galponId =
-                    activity.obtenerGalponSeleccionadoId()
-
+                val galponId = activity.obtenerGalponSeleccionadoId()
                 if (galponId == null) {
-                    if (_binding != null) {
-                        mostrarRegistros(
-                            emptyList(),
-                            emptyMap()
-                        )
-                    }
-
+                    mostrarRegistros(emptyList(), emptyMap())
                     return@launch
                 }
-
-                // Obtener los lotes relacionados con el galpón
-                // seleccionado y sus nombres reales.
-
-                val nombresGalponPorLote =
-                    mutableMapOf<Int, String>()
-
-                val idsLotesDelGalpon =
-                    mutableSetOf<Int>()
-
-                var paginaLotes = 1
-                var totalPaginasLotes = 1
-
-                do {
-                    val respuestaLotes =
-                        RetrofitClient.api.listarLotes(
-                            page = paginaLotes,
-                            limit = 100
-                        )
-
-                    if (!respuestaLotes.isSuccessful) {
-                        throw IllegalStateException(
-                            "No se pudieron consultar los lotes"
-                        )
+                val (registros, nombres) = coroutineScope {
+                    val registrosJob = async {
+                        val datos = mutableListOf<RegistroMortalidadResponse>()
+                        var pagina = 1
+                        do {
+                            val response = RetrofitClient.api.listarRegistrosMortalidad(pagina, 100)
+                            check(response.isSuccessful) { "Error de mortalidad: ${response.code()}" }
+                            val body = checkNotNull(response.body()) { "Sin datos de mortalidad" }
+                            datos.addAll(body.data)
+                            val total = body.meta.totalPages.coerceAtLeast(pagina)
+                            pagina++
+                        } while (pagina <= total)
+                        datos
                     }
-
-                    val cuerpoLotes =
-                        respuestaLotes.body()
-                            ?: throw IllegalStateException(
-                                "No se recibieron datos de lotes"
-                            )
-
-                    cuerpoLotes.data.forEach { lote ->
-                        if (lote.galpon?.id == galponId) {
-
-                            idsLotesDelGalpon.add(lote.id)
-
-                            val nombre =
-                                lote.galpon.nombre.trim()
-
-                            nombresGalponPorLote[lote.id] =
-                                nombre.ifBlank {
-                                    "Galpón $galponId"
+                    val lotesJob = async {
+                        val nombres = mutableMapOf<Int, String>()
+                        var pagina = 1
+                        do {
+                            val response = RetrofitClient.api.listarLotes(pagina, 100)
+                            check(response.isSuccessful) { "Error de lotes: ${response.code()}" }
+                            val body = checkNotNull(response.body()) { "Sin datos de lotes" }
+                            body.data.forEach { lote ->
+                                val galpon = lote.galpon
+                                if (galpon != null && galpon.id == galponId) {
+                                    nombres[lote.id] = galpon.nombre.trim().ifBlank { "Galpón $galponId" }
                                 }
-                        }
+                            }
+                            val total = body.meta.totalPages.coerceAtLeast(pagina)
+                            pagina++
+                        } while (pagina <= total)
+                        nombres
                     }
-
-                    totalPaginasLotes =
-                        cuerpoLotes.meta.totalPages
-                            .coerceAtLeast(paginaLotes)
-
-                    paginaLotes++
-
-                } while (paginaLotes <= totalPaginasLotes)
-
-                // Filtrar y ordenar por fecha del evento.
-
-                val filtrados = registros
-                    .filter {
-                        it.lote_id in idsLotesDelGalpon
-                    }
-                    .sortedWith(
-                        compareByDescending<RegistroMortalidadResponse> {
-                            it.fecha.take(10)
-                        }.thenByDescending {
-                            it.fecha_registro
-                        }
-                    )
-
-                if (_binding != null) {
-                    mostrarRegistros(
-                        filtrados,
-                        nombresGalponPorLote
-                    )
+                    registrosJob.await() to lotesJob.await()
+                }
+                val filtrados = registros.filter { it.lote_id in nombres }
+                    .sortedWith(compareByDescending<RegistroMortalidadResponse> { it.fecha.take(10) }
+                        .thenByDescending { it.fecha_registro })
+                if (_binding != null && activity.obtenerGalponSeleccionadoId() == galponId) {
+                    mostrarRegistros(filtrados, nombres)
                 }
 
             } catch (e: CancellationException) {
@@ -605,6 +523,8 @@ class BitacoraFragment : BaseBottomNavFragment() {
     // ============================================================
 
     override fun onDestroyView() {
+        cargaJob?.cancel()
+        cargaJob = null
         super.onDestroyView()
         _binding = null
     }
