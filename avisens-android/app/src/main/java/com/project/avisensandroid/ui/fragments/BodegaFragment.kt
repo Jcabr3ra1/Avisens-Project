@@ -1,6 +1,9 @@
 
 package com.project.avisensandroid.ui.fragments
 
+import android.animation.ObjectAnimator
+import android.view.animation.DecelerateInterpolator
+import android.widget.ProgressBar
 import android.app.Dialog
 import android.text.Editable
 import android.text.TextWatcher
@@ -38,6 +41,8 @@ class BodegaFragment : BaseBottomNavFragment() {
     private var datosMostrados = false
     private var ultimosInsumos: List<InsumoResponse>? = null
     private var ultimaGranja: Int? = null
+    private val barrasStock = mutableMapOf<Int, ProgressBar>()
+    private val animacionesStock = mutableMapOf<Int, ObjectAnimator>()
     private val preferenciasStock by lazy {
         requireContext().getSharedPreferences("bodega_referencia_stock", android.content.Context.MODE_PRIVATE)
     }
@@ -183,6 +188,12 @@ class BodegaFragment : BaseBottomNavFragment() {
             binding.txtSinInsumos.visibility = if (binding.contenedorInsumos.childCount == 0) View.VISIBLE else View.GONE
             return
         }
+        val anteriores = if (ultimaGranja == granjaIdSeleccionada) {
+            barrasStock.mapValues { it.value.progress }
+        } else emptyMap()
+        animacionesStock.values.forEach { it.cancel() }
+        animacionesStock.clear()
+        barrasStock.clear()
         ultimosInsumos = insumos.toList()
         ultimaGranja = granjaIdSeleccionada
         binding.contenedorInsumos.removeAllViews()
@@ -211,11 +222,11 @@ class BodegaFragment : BaseBottomNavFragment() {
         binding.txtCriticos.text = "● $cantidadCriticos críticos"
 
         activos.forEach { insumo ->
-            agregarTarjetaInsumo(insumo)
+            agregarTarjetaInsumo(insumo, anteriores[insumo.id] ?: 0)
         }
     }
 
-    private fun agregarTarjetaInsumo(insumo: InsumoResponse) {
+    private fun agregarTarjetaInsumo(insumo: InsumoResponse, progresoAnterior: Int) {
         val itemBinding = ItemInsumoBinding.inflate(
             layoutInflater,
             binding.contenedorInsumos,
@@ -249,7 +260,6 @@ class BodegaFragment : BaseBottomNavFragment() {
         // La barra debe verse siempre, incluso en insumos antiguos o agotados.
         itemBinding.progressStock.visibility = View.VISIBLE
         itemBinding.progressStock.max = 100
-        itemBinding.progressStock.progress = porcentaje
         itemBinding.progressStock.progressDrawable = ContextCompat.getDrawable(
             requireContext(),
             if (esCritico) R.drawable.progress_stock_red
@@ -296,6 +306,16 @@ class BodegaFragment : BaseBottomNavFragment() {
         ) View.VISIBLE else View.GONE
         itemBinding.btnEntradaInsumo.setOnClickListener { mostrarDialogEntrada(insumo) }
         binding.contenedorInsumos.addView(itemBinding.root)
+        val barra = itemBinding.progressStock
+        barrasStock[insumo.id] = barra
+        barra.progress = progresoAnterior
+        if (progresoAnterior != porcentaje) {
+            animacionesStock[insumo.id] = ObjectAnimator.ofInt(barra, "progress", progresoAnterior, porcentaje).apply {
+                duration = 850L
+                interpolator = DecelerateInterpolator()
+                start()
+            }
+        }
     }
 
     private fun mostrarDialogEntrada(insumo: InsumoResponse) {
@@ -443,6 +463,9 @@ class BodegaFragment : BaseBottomNavFragment() {
         (value * resources.displayMetrics.density).toInt()
 
     override fun onDestroyView() {
+        animacionesStock.values.forEach { it.cancel() }
+        animacionesStock.clear()
+        barrasStock.clear()
         super.onDestroyView()
         _binding = null
         ultimosInsumos = null

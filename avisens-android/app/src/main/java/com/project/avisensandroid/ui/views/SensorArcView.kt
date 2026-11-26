@@ -1,5 +1,7 @@
 package com.project.avisensandroid.ui.views
 
+import android.animation.ValueAnimator
+import android.view.animation.DecelerateInterpolator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -23,6 +25,8 @@ class SensorArcView @JvmOverloads constructor(
     private val density = resources.displayMetrics.density
     private val strokeWidthPx = 10f * density
     private var progressFraction: Float = 0f
+    private var targetFraction = 0f
+    private var progressAnimator: ValueAnimator? = null
 
     @ColorInt
     private var arcColor: Int = 0xFF3E8E5B.toInt()
@@ -37,11 +41,26 @@ class SensorArcView @JvmOverloads constructor(
 
     fun setProgressFraction(value: Float) {
         val normalized = value.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
-        if (progressFraction != normalized) {
-            progressFraction = normalized
-            contentDescription = "Indicador de progreso ${(normalized * 100).toInt()} por ciento"
-            invalidate()
+        if (targetFraction == normalized) return
+        targetFraction = normalized
+        contentDescription = "Indicador de progreso ${(normalized * 100).toInt()} por ciento"
+        progressAnimator?.cancel()
+        progressAnimator = ValueAnimator.ofFloat(progressFraction, normalized).apply {
+            duration = 850L
+            interpolator = DecelerateInterpolator()
+            addUpdateListener {
+                progressFraction = it.animatedValue as Float
+                invalidate()
+            }
+            start()
         }
+    }
+
+    override fun onDetachedFromWindow() {
+        progressAnimator?.cancel()
+        progressAnimator = null
+        progressFraction = targetFraction
+        super.onDetachedFromWindow()
     }
 
     fun setArcColor(@ColorInt color: Int) {

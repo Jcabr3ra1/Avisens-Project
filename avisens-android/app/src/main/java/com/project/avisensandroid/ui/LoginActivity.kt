@@ -10,7 +10,6 @@ import android.view.View
 import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
@@ -28,7 +27,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.io.IOException
 
-class LoginActivity : AppCompatActivity() {
+class LoginActivity : AperturaReanudableActivity() {
 
     private lateinit var binding: ActivityLoginBinding
 

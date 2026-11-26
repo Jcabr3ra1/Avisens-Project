@@ -27,7 +27,6 @@ import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.core.os.bundleOf
@@ -82,7 +81,7 @@ import android.content.pm.PackageManager
 import java.util.Calendar
 import java.util.Locale
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AperturaReanudableActivity() {
 
     private var monitoreoNotificaciones: Job? = null
 
@@ -1913,8 +1912,10 @@ class MainActivity : AppCompatActivity() {
                 val archivo = File.createTempFile("captura_", ".jpg", carpeta)
                 fotoMortalidadTemporal = archivo
                 val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", archivo)
+                omitirAperturaPorActividadExterna()
                 capturarFotoMortalidad.launch(uri)
             } catch (e: Exception) {
+                cancelarOmisionApertura()
                 Toast.makeText(this, "No se pudo abrir la cámara", Toast.LENGTH_LONG).show()
             }
         }
