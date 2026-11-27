@@ -611,7 +611,7 @@ class AlertasFragment : BaseBottomNavFragment() {
                 val btnEscalar = MaterialButton(requireContext()).apply {
                     text = "Escalar"
                     isAllCaps = false
-                    textSize = 12f
+                    textSize = 13f
                     setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_6d4c1d))
                     backgroundTintList = android.content.res.ColorStateList.valueOf(ColoresAdaptativos.superficie(requireContext(), "#FFF0D8"))
                     cornerRadius = dp(9)
@@ -630,7 +630,7 @@ class AlertasFragment : BaseBottomNavFragment() {
             val btnAccion = MaterialButton(requireContext()).apply {
                 text = if (confirmada) "Cerrar alerta" else "Confirmar lectura"
                 isAllCaps = false
-                textSize = 12f
+                textSize = 13f
                 setTextColor(Color.WHITE)
                 backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#10A86B"))
                 cornerRadius = dp(9)
@@ -734,7 +734,7 @@ class AlertasFragment : BaseBottomNavFragment() {
         return TextView(requireContext()).apply {
             text = if (cerrado) "Cerrada" else if (estado == "en_proceso") "En proceso" else "Abierta"
             setTextColor(ColoresAdaptativos.texto(requireContext(), color))
-            textSize = 11f
+            textSize = 12f
             setTypeface(typeface, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dp(10), dp(5), dp(10), dp(5))
@@ -776,7 +776,7 @@ class AlertasFragment : BaseBottomNavFragment() {
             minLines = 3
             maxLines = 5
             gravity = Gravity.TOP or Gravity.START
-            textSize = 14f
+            textSize = 15f
             setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_183c2e))
             setHintTextColor(ColoresAdaptativos.texto(requireContext(), "#8A9890"))
             setPadding(dp(12), dp(12), dp(12), dp(12))
@@ -797,7 +797,7 @@ class AlertasFragment : BaseBottomNavFragment() {
         val botonCancelar = MaterialButton(context).apply {
             text = "Cancelar"
             isAllCaps = false
-            textSize = 13f
+            textSize = 14f
             setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_text))
             backgroundTintList = android.content.res.ColorStateList.valueOf(androidx.core.content.ContextCompat.getColor(context, R.color.cancel_background))
             strokeWidth = 0
@@ -811,7 +811,7 @@ class AlertasFragment : BaseBottomNavFragment() {
         val botonConfirmar = MaterialButton(context).apply {
             text = "Confirmar cierre"
             isAllCaps = false
-            textSize = 13f
+            textSize = 14f
             setTextColor(Color.WHITE)
             backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#176747"))
             cornerRadius = dp(10)
@@ -991,7 +991,8 @@ class AlertasFragment : BaseBottomNavFragment() {
         marginTop: Int = 0
     ): TextView = TextView(requireContext()).apply {
         text = contenido
-        textSize = tamano
+        textSize = if (tamano < 16f) tamano + 1f else tamano
+        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
         setTextColor(ColoresAdaptativos.texto(requireContext(), color))
         if (negrita) setTypeface(typeface, Typeface.BOLD)
         layoutParams = LinearLayout.LayoutParams(

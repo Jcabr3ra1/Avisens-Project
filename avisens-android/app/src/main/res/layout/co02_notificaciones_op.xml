@@ -53,7 +53,7 @@
         android:layout_marginEnd="20dp"
         android:text="Configura las notificaciones de tu producción avícola"
         android:textColor="#718079"
-        android:textSize="14sp"
+        android:textSize="15sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/txtTituloAlertas"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -91,7 +91,7 @@
                 android:layout_marginBottom="9dp"
                 android:text="GENERAL"
                 android:textColor="#7B8983"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -118,7 +118,7 @@
                             android:layout_height="wrap_content"
                             android:text="Recibir notificaciones"
                             android:textColor="#17231F"
-                            android:textSize="15sp"
+                            android:textSize="16sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -127,7 +127,8 @@
                             android:layout_marginTop="3dp"
                             android:text="Activa o desactiva todas las notificaciones de Avisens."
                             android:textColor="#7A8781"
-                            android:textSize="12sp" />
+                            android:fontFamily="sans-serif-medium"
+                            android:textSize="13sp" />
 
                     </LinearLayout>
 
@@ -154,7 +155,7 @@
                 android:layout_marginBottom="9dp"
                 android:text="NOTIFICARME CUANDO..."
                 android:textColor="#7B8983"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <!-- TEMPERATURA -->
@@ -178,7 +179,7 @@
                         android:layout_height="wrap_content"
                         android:text="Temperatura fuera del rango"
                         android:textColor="#17231F"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -187,7 +188,8 @@
                         android:layout_marginTop="3dp"
                         android:text="Cuando la temperatura de un galpón salga del rango establecido."
                         android:textColor="#7A8781"
-                        android:textSize="12sp" />
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp" />
 
                 </LinearLayout>
 
@@ -223,7 +225,7 @@
                         android:layout_height="wrap_content"
                         android:text="Humedad fuera del rango"
                         android:textColor="#17231F"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -232,7 +234,8 @@
                         android:layout_marginTop="3dp"
                         android:text="Cuando la humedad de un galpón salga del rango establecido."
                         android:textColor="#7A8781"
-                        android:textSize="12sp" />
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp" />
 
                 </LinearLayout>
 
@@ -268,7 +271,7 @@
                         android:layout_height="wrap_content"
                         android:text="Insumos con stock bajo"
                         android:textColor="#17231F"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -277,7 +280,8 @@
                         android:layout_marginTop="3dp"
                         android:text="Cuando un insumo llegue al nivel mínimo de inventario."
                         android:textColor="#7A8781"
-                        android:textSize="12sp" />
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp" />
 
                 </LinearLayout>
 
@@ -313,7 +317,7 @@
                         android:layout_height="wrap_content"
                         android:text="Alertas críticas"
                         android:textColor="#17231F"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -322,7 +326,8 @@
                         android:layout_marginTop="3dp"
                         android:text="Recibe una notificación cuando ocurra una situación que requiera atención inmediata."
                         android:textColor="#7A8781"
-                        android:textSize="12sp" />
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp" />
 
                 </LinearLayout>
 

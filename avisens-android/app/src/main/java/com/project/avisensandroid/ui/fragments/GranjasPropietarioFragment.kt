@@ -47,7 +47,7 @@ class GranjasPropietarioFragment : Fragment() {
         granjas.forEach { granja ->
             val card = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL; setPadding(22, 20, 22, 20); setBackgroundResource(R.drawable.bg_card_simple) }
             card.addView(TextView(requireContext()).apply { text = granja.nombre; textSize = 19f })
-            card.addView(TextView(requireContext()).apply { text = "Granja #${granja.id}"; textSize = 13f })
+            card.addView(TextView(requireContext()).apply { text = "Granja #${granja.id}"; textSize = 14f })
             container.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 14 })
         }
     }

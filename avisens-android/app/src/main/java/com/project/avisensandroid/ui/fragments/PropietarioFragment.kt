@@ -58,7 +58,7 @@ class PropietarioFragment : BaseBottomNavFragment() {
         if (granjas.isEmpty()) {
             containerGranjas.addView(TextView(requireContext()).apply {
                 text = "No tienes granjas disponibles."
-                textSize = 15f
+                textSize = 16f
                 setPadding(0, 12, 0, 12)
             })
             return
@@ -77,7 +77,7 @@ class PropietarioFragment : BaseBottomNavFragment() {
             })
             card.addView(TextView(requireContext()).apply {
                 text = "Granja #${granja.id}"
-                textSize = 13f
+                textSize = 14f
                 setTextColor(resources.getColor(R.color.text_secondary, null))
             })
             containerGranjas.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 12 })

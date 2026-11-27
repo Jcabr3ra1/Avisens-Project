@@ -67,7 +67,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="SEGURIDAD DE LA CUENTA"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.06"
                 android:textColor="@color/text_secondary"
@@ -107,7 +107,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Verificación en dos pasos"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary" />
 
@@ -116,7 +116,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="Añade una capa adicional de protección"
-                        android:textSize="12sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp"
                         android:textColor="@color/text_secondary" />
 
                 </LinearLayout>
@@ -125,7 +126,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Desactivada"
-                    android:textSize="11sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_secondary"
                     android:background="@drawable/bg_security_badge"
@@ -170,7 +171,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Cambiar contraseña"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary" />
 
@@ -179,7 +180,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="Actualiza la contraseña de tu cuenta"
-                        android:textSize="12sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp"
                         android:textColor="@color/text_secondary" />
 
                 </LinearLayout>
@@ -226,7 +228,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Sesiones activas"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary" />
 
@@ -235,7 +237,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="Consulta los dispositivos con sesión iniciada"
-                        android:textSize="12sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp"
                         android:textColor="@color/text_secondary" />
 
                 </LinearLayout>
@@ -283,7 +286,7 @@
                         android:layout_height="wrap_content"
                         android:text="Cerrar sesión en todos los dispositivos"
                         android:textColor="@color/text_primary"
-                        android:textSize="15sp"
+                        android:textSize="16sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -292,7 +295,8 @@
                         android:layout_marginTop="3dp"
                         android:text="Finaliza todas las sesiones activas de tu cuenta"
                         android:textColor="@color/text_secondary"
-                        android:textSize="12sp" />
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp" />
 
                 </LinearLayout>
 

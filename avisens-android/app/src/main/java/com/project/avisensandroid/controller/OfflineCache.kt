@@ -43,13 +43,45 @@ object OfflineCache {
         val request = chain.request()
         // Las fotos son binarias: no deben pasar por la caché de texto.
         val ruta = request.url.encodedPath
+        if (ruta == "/v1/auth/perfil/foto") {
+            val key = clave(context, request.url.toString())
+            val archivo = key?.let { java.io.File(context.filesDir, "perfil_$it") }
+            fun local(): Response? {
+                val bytes = archivo?.takeIf { it.isFile }?.readBytes() ?: return null
+                return Response.Builder().request(request).protocol(Protocol.HTTP_1_1)
+                    .code(200).message("Foto local").header("X-Avisens-Offline", "true")
+                    .body(bytes.toResponseBody("application/octet-stream".toMediaTypeOrNull())).build()
+            }
+            if (soloCache || (request.method == "GET" && !hayInternet(context))) {
+                return@Interceptor local() ?: throw IOException("Sin foto local")
+            }
+            try {
+                val r = chain.proceed(request)
+                if (request.method == "GET" && r.isSuccessful && archivo != null) {
+                    val tipo = r.body?.contentType()
+                    val bytes = r.body?.bytes() ?: byteArrayOf()
+                    if (bytes.isNotEmpty() && bytes.size <= 3 * 1024 * 1024) {
+                        val atomic = android.util.AtomicFile(archivo)
+                        val out = atomic.startWrite()
+                        try { out.write(bytes); atomic.finishWrite(out) }
+                        catch (e: IOException) { atomic.failWrite(out) }
+                    }
+                    return@Interceptor r.newBuilder().body(bytes.toResponseBody(tipo)).build()
+                }
+                if ((request.method == "DELETE" && r.isSuccessful) || (request.method == "GET" && r.code == 404)) archivo?.delete()
+                return@Interceptor r
+            } catch (e: IOException) {
+                if (request.method == "GET") local()?.let { return@Interceptor it }
+                throw e
+            }
+        }
         if (ruta.endsWith("/foto")) {
             if (soloCache) throw IOException("Fotografía no disponible sin conexión")
             return@Interceptor chain.proceed(request)
         }
         val esConsulta = request.method == "GET" &&
                 request.url.encodedPath.startsWith("/v1/") &&
-                !request.url.encodedPath.startsWith("/v1/auth/")
+                (!ruta.startsWith("/v1/auth/") || ruta == "/v1/auth/perfil")
         val key = if (esConsulta) clave(context, request.url.toString()) else null
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 

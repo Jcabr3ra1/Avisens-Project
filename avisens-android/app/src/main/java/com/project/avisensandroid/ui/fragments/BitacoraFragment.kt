@@ -153,12 +153,16 @@ class BitacoraFragment : BaseBottomNavFragment() {
                 if (galponId == null) {
                     return@launch
                 }
+                for (soloCache in listOf(true, false)) {
+                    if (soloCache && registrosCargados) continue
+                    val api = if (soloCache) RetrofitClient.apiCache else RetrofitClient.api
+                    try {
                 val (registros, nombres) = coroutineScope {
                     val registrosJob = async {
                         val datos = mutableListOf<RegistroMortalidadResponse>()
                         var pagina = 1
                         do {
-                            val response = RetrofitClient.api.listarRegistrosMortalidad(pagina, 100)
+                            val response = api.listarRegistrosMortalidad(pagina, 100)
                             check(response.isSuccessful) { "Error de mortalidad: ${response.code()}" }
                             val body = checkNotNull(response.body()) { "Sin datos de mortalidad" }
                             datos.addAll(body.data)
@@ -171,7 +175,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
                         val nombres = mutableMapOf<Int, String>()
                         var pagina = 1
                         do {
-                            val response = RetrofitClient.api.listarLotes(pagina, 100)
+                            val response = api.listarLotes(pagina, 100)
                             check(response.isSuccessful) { "Error de lotes: ${response.code()}" }
                             val body = checkNotNull(response.body()) { "Sin datos de lotes" }
                             body.data.forEach { lote ->
@@ -197,7 +201,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
                     actualizarCausas()
                     aplicarFiltros()
                     val contexto = activity.applicationContext
-                    if (OfflineCache.hayInternet(contexto) && fotosJob?.isActive != true) {
+                    if (!soloCache && OfflineCache.hayInternet(contexto) && fotosJob?.isActive != true) {
                         fotosJob = viewLifecycleOwner.lifecycleScope.launch {
                             filtrados.filter { !it.foto_mime_type.isNullOrBlank() }.forEach { registro ->
                                 try { FotosMortalidad.precargar(contexto, registro.id) }
@@ -206,6 +210,10 @@ class BitacoraFragment : BaseBottomNavFragment() {
                             }
                         }
                     }
+                }
+
+                    } catch (e: CancellationException) { throw e }
+                    catch (e: Exception) { if (!soloCache && !registrosCargados) throw e }
                 }
 
             } catch (e: CancellationException) {
@@ -402,7 +410,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
             contenedor.addView(
                 TextView(requireContext()).apply {
                     text = if (registrosBase.isEmpty()) "No hay registros de mortalidad" else "No hay registros que coincidan con los filtros"
-                    textSize = 14f
+                    textSize = 15f
                     gravity = Gravity.CENTER
 
                     setTextColor(
@@ -433,7 +441,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
 
                     text = formatearFechaLarga(fecha)
 
-                    textSize = 15f
+                    textSize = 16f
 
                     setTypeface(
                         null,
@@ -524,7 +532,8 @@ class BitacoraFragment : BaseBottomNavFragment() {
         ): TextView {
             return TextView(contexto).apply {
                 text = valor
-                textSize = tamano
+                textSize = if (tamano < 16f) tamano + 1f else tamano
+                typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
 
                 setTextColor(
                     ColoresAdaptativos.texto(requireContext(), color)

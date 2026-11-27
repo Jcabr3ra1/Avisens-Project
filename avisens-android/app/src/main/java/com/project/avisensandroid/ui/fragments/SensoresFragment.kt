@@ -111,6 +111,11 @@ class SensoresFragment : BaseBottomNavFragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
+                try {
+                    cargarCatalogos(true)
+                    prepararSeleccionInicial()
+                    actualizarLecturasDelGalpon(true)
+                } catch (e: CancellationException) { throw e } catch (_: Exception) { }
                 cargarCatalogos()
                 prepararSeleccionInicial()
             } catch (cancelacion: CancellationException) {
@@ -170,12 +175,13 @@ class SensoresFragment : BaseBottomNavFragment() {
         )
     }
 
-    private suspend fun cargarCatalogos() = coroutineScope {
+    private suspend fun cargarCatalogos(soloCache: Boolean = false) = coroutineScope {
+        val api = if (soloCache) RetrofitClient.apiCache else RetrofitClient.api
         val galponesDef = async { cargarTodasLasPaginas { pagina ->
-            RetrofitClient.api.listarGalpones(page = pagina, limit = 100)
+            api.listarGalpones(page = pagina, limit = 100)
         } }
         val sensoresDef = async { cargarTodasLasPaginas { pagina ->
-            RetrofitClient.api.listarSensores(page = pagina, limit = 100)
+            api.listarSensores(page = pagina, limit = 100)
         } }
         val galpones = galponesDef.await()
         val sensores = sensoresDef.await()
@@ -324,7 +330,8 @@ class SensoresFragment : BaseBottomNavFragment() {
         binding.txtSensoresSinIdentificar.visibility = if (aviso == null) View.GONE else View.VISIBLE
     }
 
-    private suspend fun actualizarLecturasDelGalpon() = mutexLecturas.withLock {
+    private suspend fun actualizarLecturasDelGalpon(soloCache: Boolean = false) = mutexLecturas.withLock {
+        val api = if (soloCache) RetrofitClient.apiCache else RetrofitClient.api
         val galponId = galponSeleccionadoId ?: return@withLock
         val sensoresDelGalpon = sensoresMedidosDelGalpon(galponId).sortedBy { it.id }
         val sinIdentificar = sensoresSinIdentificarDelGalpon(galponId)
@@ -343,7 +350,7 @@ class SensoresFragment : BaseBottomNavFragment() {
             // La antigüedad la calcula el servidor; se cruza por sensor_id.
             val todos = sensoresDelGalpon + actuadoresDelGalpon
             val resultadosTodos = try {
-                val respuesta = RetrofitClient.api.listarUltimasLecturas(galponId)
+                val respuesta = api.listarUltimasLecturas(galponId)
                 val cuerpo = respuesta.body()
                 if (respuesta.isSuccessful && cuerpo != null && cuerpo.sensores != null) {
                     LecturasSensores.cruzar(todos, cuerpo)
@@ -366,10 +373,10 @@ class SensoresFragment : BaseBottomNavFragment() {
                 return@withLock
             }
 
-            consultarUmbralesSemanales(galponId)
+            consultarUmbralesSemanales(galponId, soloCache)
 
             alertasActivasGalpon = try {
-                val respuestaAlertas = RetrofitClient.api.listarAlertasDeGalpon(
+                val respuestaAlertas = api.listarAlertasDeGalpon(
                     galponId = galponId,
                     page = 1,
                     limit = 100
@@ -400,7 +407,7 @@ class SensoresFragment : BaseBottomNavFragment() {
                 pintarIndicador(indicador, lectura)
             }
 
-            val sinConexion = !OfflineCache.hayInternet(requireContext())
+            val sinConexion = soloCache || !OfflineCache.hayInternet(requireContext())
             val hora = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
             binding.txtEstadoConexion.text = if (sinConexion) {
                 "Sin internet · Mostrando las últimas lecturas guardadas. Los valores no son actuales."
@@ -420,12 +427,13 @@ class SensoresFragment : BaseBottomNavFragment() {
     }
 
     /** Consulta umbrales reales. Si no hay lote activo o falla la consulta, no inventa estados. */
-    private suspend fun consultarUmbralesSemanales(galponId: Int) {
+    private suspend fun consultarUmbralesSemanales(galponId: Int, soloCache: Boolean = false) {
+        val api = if (soloCache) RetrofitClient.apiCache else RetrofitClient.api
         umbralesActuales = emptyList()
         semanaActual = null
         try {
             val lotes = cargarTodasLasPaginas { pagina ->
-                RetrofitClient.api.listarLotesCompletos(page = pagina, limit = 100)
+                api.listarLotesCompletos(page = pagina, limit = 100)
             }
             val lote = lotes.filter { it.galpon.id == galponId && it.estado.equals("activo", true) }
                 .maxByOrNull { it.fecha_ingreso }
@@ -447,7 +455,7 @@ class SensoresFragment : BaseBottomNavFragment() {
             }
             semanaActual = dias / 7 // Día de ingreso = día 1; semana inicial = 0.
             umbralesActuales = cargarTodasLasPaginas { pagina ->
-                RetrofitClient.api.listarUmbralesAmbientales(galponId, page = pagina, limit = 100)
+                api.listarUmbralesAmbientales(galponId, page = pagina, limit = 100)
             }.filter { it.vigente && it.galpon_id == galponId && it.semana_vida <= (semanaActual ?: 0) }
                 .groupBy { it.variable.lowercase(Locale.ROOT) }.values.mapNotNull { grupo -> grupo.maxByOrNull { it.semana_vida } }
         } catch (e: CancellationException) {

@@ -375,11 +375,13 @@ class InicioFragment : BaseBottomNavFragment() {
         cargaInicialJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val activity = requireActivity() as MainActivity
+                for (soloCache in listOf(true, false)) {
+                    try {
                 // Primero consultar la estructura y los sensores, sin competir con historiales.
                 supervisorScope {
-                    val granjasDef = async { activity.obtenerGranjas() }
-                    val galponesDef = async { activity.obtenerGalpones() }
-                    val sensoresDef = async { if (esPropietario()) cargarTodosSensores() else emptyList() }
+                    val granjasDef = async { activity.obtenerGranjas(soloCache) }
+                    val galponesDef = async { activity.obtenerGalpones(soloCache) }
+                    val sensoresDef = async { if (esPropietario()) cargarTodosSensores(soloCache) else emptyList() }
                     val rg = granjasDef.await()
                     val rp = galponesDef.await()
                     if (!rg.isSuccessful || !rp.isSuccessful) error("No se pudo consultar la estructura")
@@ -391,6 +393,7 @@ class InicioFragment : BaseBottomNavFragment() {
                 }
                 configurarSpinnerGranjas()
                 if (granjas.isEmpty()) {
+                    if (soloCache) continue
                     granjaSeleccionada = null
                     activity.limpiarGranjaSeleccionada()
                     activity.limpiarGalponSeleccionado()
@@ -401,6 +404,10 @@ class InicioFragment : BaseBottomNavFragment() {
                 }
                 val inicial = granjas.firstOrNull { it.id == activity.obtenerGranjaSeleccionadaId() } ?: granjas.first()
                 seleccionarGranjaEnInicio(inicial)
+                    } catch (e: CancellationException) { throw e }
+                    catch (e: Exception) { if (!soloCache && granjas.isEmpty()) throw e }
+                }
+
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) {
                 mostrarMensaje("No se pudieron cargar los datos de Inicio.")
@@ -433,9 +440,9 @@ class InicioFragment : BaseBottomNavFragment() {
             RetrofitClient.api.listarConsumosDiarios(page = page, limit = 100)
         }
 
-    private suspend fun cargarTodosSensores(): List<SensorResponse> =
+    private suspend fun cargarTodosSensores(soloCache: Boolean = false): List<SensorResponse> =
         cargarPaginas { page ->
-            RetrofitClient.api.listarSensores(page = page, limit = 100)
+            (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarSensores(page = page, limit = 100)
         }
 
     private suspend fun <T> cargarPaginas(
@@ -553,7 +560,7 @@ class InicioFragment : BaseBottomNavFragment() {
             binding.containerGalpones.addView(
                 TextView(requireContext()).apply {
                     text = "No hay galpones activos"
-                    textSize = 12f
+                    textSize = 13f
                     setTextColor(Color.WHITE)
                     gravity = Gravity.CENTER_VERTICAL
                 },
@@ -607,7 +614,7 @@ class InicioFragment : BaseBottomNavFragment() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { marginStart = dp(8) }
             text = galpon.nombre
-            textSize = 13f
+            textSize = 14f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
         }

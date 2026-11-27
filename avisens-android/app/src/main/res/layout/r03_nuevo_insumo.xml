@@ -21,7 +21,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Tipo de alimento"
-        android:textSize="12sp"
+        android:textSize="13sp"
         android:textStyle="bold"
         android:textColor="@color/adaptive_text_171d1a"
         android:layout_marginBottom="5dp" />
@@ -48,7 +48,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Unidad de medida"
-        android:textSize="12sp"
+        android:textSize="13sp"
         android:textStyle="bold"
         android:textColor="@color/adaptive_text_171d1a"
         android:layout_marginBottom="5dp" />
@@ -91,7 +91,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Cantidad a ingresar"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="@color/adaptive_text_171d1a"
                 android:layout_marginBottom="5dp" />
@@ -104,7 +104,8 @@
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
                 android:singleLine="true"
-                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
+                android:textSize="13sp"
                 android:textColor="@color/adaptive_text_000000"
                 android:hint="Ej. 100"
                 android:inputType="numberDecimal" />
@@ -123,7 +124,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Número de bultos"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="@color/adaptive_text_171d1a"
             android:layout_marginBottom="5dp" />
@@ -135,7 +136,8 @@
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
             android:singleLine="true"
-            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium"
+            android:textSize="13sp"
             android:textColor="@color/adaptive_text_000000"
             android:hint="Ej. 5"
             android:inputType="number" />
@@ -143,7 +145,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="El total se guardará en kilogramos."
-            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium"
+            android:textSize="13sp"
             android:textColor="@color/adaptive_text_171d1a" />
     </LinearLayout>
 
@@ -153,7 +156,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="5dp"
         android:text="Stock mínimo para alerta"
-        android:textSize="12sp"
+        android:textSize="13sp"
         android:textStyle="bold"
         android:textColor="@color/adaptive_text_171d1a" />
 
@@ -166,7 +169,8 @@
         android:paddingStart="12dp"
         android:paddingEnd="12dp"
         android:singleLine="true"
-        android:textSize="12sp"
+        android:fontFamily="sans-serif-medium"
+        android:textSize="13sp"
         android:textColor="@color/adaptive_text_000000"
         android:hint="Ej. 100 (opcional)"
         android:inputType="numberDecimal" />
@@ -183,7 +187,7 @@
             android:layout_width="100dp"
             android:layout_height="40dp"
             android:text="Cancelar"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="@color/cancel_text"
             android:textAllCaps="false"
@@ -201,7 +205,7 @@
             android:layout_width="135dp"
             android:layout_height="40dp"
             android:text="Agregar alimento"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
             android:textAllCaps="false"

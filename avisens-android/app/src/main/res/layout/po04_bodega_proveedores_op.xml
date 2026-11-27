@@ -52,7 +52,8 @@
                 android:layout_marginTop="5dp"
                 android:text="Directorio y gestión de proveedores"
                 android:textColor="@color/text_secondary"
-                android:textSize="12sp"/>
+                android:fontFamily="sans-serif-medium"
+                android:textSize="13sp"/>
 
 
             <!-- ============================== -->
@@ -75,7 +76,7 @@
                     android:paddingEnd="11dp"
                     android:text="● 1 crítico"
                     android:textColor="#C93B32"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
                     android:textStyle="bold"/>
 
                 <TextView
@@ -89,7 +90,7 @@
                     android:paddingEnd="11dp"
                     android:text="● 1 bajo"
                     android:textColor="#B47A17"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
                     android:textStyle="bold"/>
 
             </LinearLayout>
@@ -116,7 +117,7 @@
                     android:gravity="center"
                     android:text="▣ Insumos"
                     android:textColor="#89938E"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -127,7 +128,7 @@
                     android:gravity="center"
                     android:text="♧ Proveedores"
                     android:textColor="#89938E"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
 
             </LinearLayout>

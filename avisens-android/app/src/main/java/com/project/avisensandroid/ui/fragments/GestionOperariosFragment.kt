@@ -212,7 +212,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
             val message = TextView(requireContext()).apply {
                 text = "Crea un operario para comenzar a asignarle granjas."
-                textSize = 13f
+                textSize = 14f
                 setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_78847e))
                 gravity = android.view.Gravity.CENTER
                 setPadding(0, dp(5), 0, 0)
@@ -238,7 +238,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
             val avatar = TextView(requireContext()).apply {
                 text = iniciales(usuario.nombre_completo)
-                textSize = 15f
+                textSize = 16f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = android.view.Gravity.CENTER
                 setTextColor(Color.WHITE)
@@ -262,7 +262,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             })
             identity.addView(TextView(requireContext()).apply {
                 text = "Operario"
-                textSize = 11f
+                textSize = 12f
                 setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_2f8b5e))
                 setPadding(0, dp(3), 0, 0)
             })
@@ -270,7 +270,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
             val status = TextView(requireContext()).apply {
                 text = if (usuario.activo) "Activo" else "Inactivo"
-                textSize = 11f
+                textSize = 12f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = android.view.Gravity.CENTER
                 setTextColor(ColoresAdaptativos.texto(requireContext(), if (usuario.activo) "#28744D" else "#A34A4A"))
@@ -301,7 +301,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
             val assignmentTitle = TextView(requireContext()).apply {
                 text = "Granjas asignadas"
-                textSize = 14f
+                textSize = 15f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_1f5c42))
             }
@@ -317,7 +317,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             val editButton = com.google.android.material.button.MaterialButton(requireContext()).apply {
                 text = "✎  Editar"
                 setAllCaps(false)
-                textSize = 12f
+                textSize = 13f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.WHITE)
                 minHeight = 0
@@ -341,7 +341,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             val deleteButton = com.google.android.material.button.MaterialButton(requireContext()).apply {
                 text = "Eliminar operario"
                 setAllCaps(false)
-                textSize = 12f
+                textSize = 13f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_b23a3a))
                 minHeight = 0
@@ -460,7 +460,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                                 "No se pudieron consultar " +
                                         "las asignaciones."
 
-                            textSize = 12f
+                            textSize = 13f
 
                             setTextColor(
                                 ColoresAdaptativos.texto(requireContext(),
@@ -497,7 +497,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                             text =
                                 "Sin granjas asignadas."
 
-                            textSize = 13f
+                            textSize = 14f
 
                             setTextColor(
                                 ColoresAdaptativos.texto(requireContext(),
@@ -543,7 +543,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                         text =
                             "Error al consultar asignaciones."
 
-                        textSize = 12f
+                        textSize = 13f
 
                         setTextColor(
                             ColoresAdaptativos.texto(requireContext(),
@@ -600,7 +600,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                     "${granja.nombre} " +
                             "(${galponIds.size} galpón${if (galponIds.size == 1) "" else "es"})"
 
-                textSize = 13f
+                textSize = 14f
 
                 setTextColor(
                     ColoresAdaptativos.texto(requireContext(),
@@ -633,7 +633,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                     "Quitar"
 
                 setAllCaps(false)
-                textSize = 11f
+                textSize = 12f
                 typeface = Typeface.DEFAULT_BOLD
 
                 setTextColor(
@@ -890,7 +890,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
         fun linea(valor: String, tamano: Float, color: String, bold: Boolean = false) =
             TextView(context).apply {
                 text = valor
-                textSize = tamano
+                textSize = if (tamano < 16f) tamano + 1f else tamano
                 setTextColor(ColoresAdaptativos.texto(requireContext(), color))
                 if (bold) setTypeface(null, Typeface.BOLD)
             }
@@ -910,7 +910,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             com.google.android.material.button.MaterialButton(context).apply {
                 this.text = etiqueta
                 isAllCaps = false
-                textSize = 13f
+                textSize = 14f
                 setTextColor(ColoresAdaptativos.texto(requireContext(), texto))
                 backgroundTintList = android.content.res.ColorStateList.valueOf(ColoresAdaptativos.superficie(requireContext(), fondo))
                 cornerRadius = dp(10)
@@ -1042,14 +1042,14 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             }
             val nombre = TextView(requireContext()).apply {
                 text = "${granja.nombre} (pendiente de guardar)"
-                textSize = 13f
+                textSize = 14f
                 setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_2f8b5e))
             }
             fila.addView(nombre, LinearLayout.LayoutParams(0, -2, 1f))
             val quitar = com.google.android.material.button.MaterialButton(requireContext()).apply {
                 text = "Quitar"
                 isAllCaps = false
-                textSize = 11f
+                textSize = 12f
                 setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_c62828))
                 backgroundTintList = android.content.res.ColorStateList.valueOf(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"))
                 strokeColor = android.content.res.ColorStateList.valueOf(Color.parseColor("#C62828"))
@@ -1312,7 +1312,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
 
                 if (view is TextView) {
                     view.setTextColor(colorTextoSeleccionado)
-                    view.textSize = 13f
+                    view.textSize = 14f
                     view.setPadding(8, 0, 8, 0)
                     view.gravity = Gravity.CENTER_VERTICAL
                 }
@@ -1335,7 +1335,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 if (view is TextView) {
                     view.setTextColor(colorTextoDropdown)
                     view.setBackgroundColor(colorFondoDropdown)
-                    view.textSize = 13f
+                    view.textSize = 14f
                     view.setPadding(16, 14, 16, 14)
                     view.gravity = Gravity.CENTER_VERTICAL
                 }

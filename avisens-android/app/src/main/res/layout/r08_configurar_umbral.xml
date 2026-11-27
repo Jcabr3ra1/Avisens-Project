@@ -24,21 +24,21 @@
             android:textColor="@color/text_primary"
             android:layout_marginBottom="10dp" />
 
-        <TextView android:id="@+id/txtProgresoUmbrales" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/text_primary" android:textStyle="bold" />
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Seleccionar semana" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
+        <TextView android:id="@+id/txtProgresoUmbrales" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="13sp" android:textColor="@color/text_primary" android:textStyle="bold" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Seleccionar semana" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
         <FrameLayout android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event"><Spinner android:id="@+id/spinnerUmbralExistente" android:layout_width="match_parent" android:layout_height="match_parent" android:dropDownWidth="match_parent" android:dropDownHorizontalOffset="0dp" android:paddingStart="0dp" android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown" android:background="@android:color/transparent"/></FrameLayout>
-        <TextView android:id="@+id/btnAgregarSemanaUmbral" android:layout_width="match_parent" android:layout_height="40dp" android:gravity="center" android:text="+ Agregar semana" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground" />
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Variable ambiental" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
+        <TextView android:id="@+id/btnAgregarSemanaUmbral" android:layout_width="match_parent" android:layout_height="40dp" android:gravity="center" android:text="+ Agregar semana" android:textSize="13sp" android:textStyle="bold" android:textColor="@color/text_primary" android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Variable ambiental" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
         <FrameLayout android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event"><Spinner android:id="@+id/spinnerVariableUmbral" android:layout_width="match_parent" android:layout_height="match_parent" android:dropDownWidth="match_parent" android:dropDownHorizontalOffset="0dp" android:paddingStart="0dp" android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown" android:background="@android:color/transparent"/></FrameLayout>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Semana de vida (1 = primera)" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtSemanaUmbral" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:textSize="12sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="number"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Valor mínimo" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtMinimoUmbral" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:textSize="12sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="numberDecimal|numberSigned"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Valor máximo" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtMaximoUmbral" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:textSize="12sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="numberDecimal|numberSigned"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Unidad de medida" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtUnidadUmbral" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:textSize="12sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="text"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Criticidad" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Semana de vida (1 = primera)" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
+        <EditText android:id="@+id/edtSemanaUmbral" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="number"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Valor mínimo" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
+        <EditText android:id="@+id/edtMinimoUmbral" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="numberDecimal|numberSigned"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Valor máximo" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
+        <EditText android:id="@+id/edtMaximoUmbral" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="numberDecimal|numberSigned"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Unidad de medida" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
+        <EditText android:id="@+id/edtUnidadUmbral" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="text"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Criticidad" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
         <FrameLayout android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event"><Spinner android:id="@+id/spinnerCriticidadUmbral" android:layout_width="match_parent" android:layout_height="match_parent" android:dropDownWidth="match_parent" android:dropDownHorizontalOffset="0dp" android:paddingStart="0dp" android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown" android:background="@android:color/transparent"/></FrameLayout>
         <!-- BOTONES DEL FORMULARIO -->
         <LinearLayout
@@ -55,7 +55,7 @@
                 android:layout_height="42dp"
                 android:layout_weight="1"
                 android:text="Cancelar"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
                 android:textColor="@color/cancel_text"
@@ -76,7 +76,7 @@
                 android:layout_height="42dp"
                 android:layout_weight="1"
                 android:text="Guardar umbral"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
                 android:textColor="@android:color/white"

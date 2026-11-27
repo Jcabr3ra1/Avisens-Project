@@ -156,13 +156,17 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
                     mostrarRegistros(emptyList())
                     return@launch
                 }
+                var copiaMostrada = false
+                for (soloCache in listOf(true, false)) {
+                    val api = if (soloCache) RetrofitClient.apiCache else RetrofitClient.api
+                    try {
                 val (consumos, idsLotes) = coroutineScope {
-                    val lotesJob = async { activity.obtenerIdsLotesDeGalponSeleccionado() }
+                    val lotesJob = async { activity.obtenerIdsLotesDeGalponSeleccionado(soloCache) }
                     val consumosJob = async {
                         val datos = mutableListOf<ConsumoDiarioResponse>()
                         var pagina = 1
                         do {
-                            val response = RetrofitClient.api.listarConsumosDiarios(pagina, 100)
+                            val response = api.listarConsumosDiarios(pagina, 100)
                             check(response.isSuccessful) { "Error de consumos: ${response.code()}" }
                             val body = checkNotNull(response.body()) { "Sin datos de consumo" }
                             datos.addAll(body.data)
@@ -175,6 +179,11 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
                 }
                 if (_binding != null && activity.obtenerGalponSeleccionadoId() == galponId) {
                     mostrarRegistros(consumos.filter { it.lote_id in idsLotes }, idsLotes.toSet())
+                }
+
+                        copiaMostrada = true
+                    } catch (e: CancellationException) { throw e }
+                    catch (e: Exception) { if (!soloCache && !copiaMostrada) throw e }
                 }
 
             } catch (e: CancellationException) {
@@ -207,7 +216,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
             contenedor.addView(TextView(c).apply {
                 text = "No hay registros de consumo para el galpón seleccionado"
                 setTextColor(resources.getColor(R.color.text_secondary, c.theme))
-                textSize = 14f
+                textSize = 15f
                 gravity = Gravity.CENTER
                 setPadding(dp(20), dp(40), dp(20), dp(40))
             })
@@ -215,7 +224,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
         dias.forEach { dia ->
             contenedor.addView(TextView(c).apply {
                 text = runCatching { java.time.LocalDate.parse(dia).format(java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy", Locale("es", "CO"))) }.getOrDefault(dia)
-                textSize = 15f
+                textSize = 16f
                 setTypeface(null, Typeface.BOLD)
                 setTextColor(androidx.core.content.ContextCompat.getColor(c, R.color.adaptive_text_183c2e))
                 setPadding(dp(2), dp(16), 0, dp(10))
@@ -265,7 +274,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
         val lote = TextView(requireContext()).apply {
             text = consumo.lote?.codigo ?: "Lote ${consumo.lote_id}"
             setTextColor(resources.getColor(R.color.text_primary, requireContext().theme))
-            textSize = 11f
+            textSize = 12f
             setTypeface(null, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
@@ -280,7 +289,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
         card.addView(TextView(requireContext()).apply {
             text = alimentoTexto
             setTextColor(resources.getColor(R.color.text_primary, requireContext().theme))
-            textSize = 15f
+            textSize = 16f
             setTypeface(null, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -297,7 +306,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
         card.addView(TextView(requireContext()).apply {
             text = detalles.joinToString(" · ")
             setTextColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_69746f))
-            textSize = 11f
+            textSize = 12f
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT

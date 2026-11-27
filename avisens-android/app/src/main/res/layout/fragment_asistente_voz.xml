@@ -65,7 +65,7 @@
                     android:layout_marginTop="2dp"
                     android:text="Asistente de voz de Avisens"
                     android:textColor="#B9C4C1"
-                    android:textSize="15sp" />
+                    android:textSize="16sp" />
             </LinearLayout>
         </LinearLayout>
 
@@ -205,7 +205,7 @@
                     android:layout_height="wrap_content"
                     android:text="Lo que dijiste"
                     android:textColor="@android:color/white"
-                    android:textSize="15sp"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -242,7 +242,7 @@
                     android:layout_height="wrap_content"
                     android:text="Respuesta de Lía"
                     android:textColor="@android:color/white"
-                    android:textSize="15sp"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <TextView

@@ -29,7 +29,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Lote"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
             android:layout_marginBottom="5dp" />
@@ -72,7 +72,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Cantidad de aves"
-                    android:textSize="11sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
                     android:layout_marginBottom="5dp" />
@@ -83,7 +83,8 @@
                     android:layout_height="42dp"
                     android:background="@drawable/bg_input_event"
                     android:hint="Ej: 35"
-                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textSize="13sp"
                     android:textColor="@color/adaptive_text_000000"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
@@ -104,7 +105,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Fecha"
-                    android:textSize="11sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
                     android:layout_marginBottom="5dp" />
@@ -115,7 +116,8 @@
                     android:layout_height="42dp"
                     android:background="@drawable/bg_input_event"
                     android:hint="27/08/2026"
-                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textSize="13sp"
                     android:textColor="@color/adaptive_text_000000"
                     android:paddingStart="10dp"
                     android:paddingEnd="10dp"
@@ -132,7 +134,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Causa presuntiva"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
             android:layout_marginTop="10dp"
@@ -155,7 +157,8 @@
             android:layout_height="42dp"
             android:background="@drawable/bg_input_event"
             android:hint="Especificar otra causa"
-            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium"
+            android:textSize="13sp"
             android:textColor="@color/adaptive_text_000000"
             android:paddingStart="10dp"
             android:paddingEnd="10dp"
@@ -166,7 +169,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Observaciones"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
             android:layout_marginTop="10dp"
@@ -180,7 +183,8 @@
             android:gravity="top|start"
             android:hint="Escribe una observación..."
             android:padding="10dp"
-            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium"
+            android:textSize="13sp"
             android:textColor="@color/adaptive_text_000000"
             android:inputType="textMultiLine"
             android:overScrollMode="ifContentScrolls" />
@@ -192,7 +196,7 @@
             android:layout_marginTop="12dp"
             android:text="Evidencia (opcional)"
             android:textColor="@color/text_primary"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:textStyle="bold" />
 
         <!-- RECUADRO INICIAL PARA ADJUNTAR FOTO -->
@@ -202,7 +206,7 @@
             android:layout_height="130dp"
             android:layout_marginTop="6dp"
             android:text="Adjuntar foto"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:textColor="@color/adaptive_text_7d8985"
             android:textAllCaps="false"
             android:backgroundTint="@color/adaptive_surface_ffffff"
@@ -274,7 +278,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:text="Ampliar"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@android:color/white" />
 
                 </LinearLayout>
@@ -309,7 +313,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:text="Eliminar"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="#FFB5B5" />
 
                 </LinearLayout>
@@ -333,7 +337,7 @@
                 android:layout_height="42dp"
                 android:layout_weight="1"
                 android:text="Cancelar"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
                 android:textColor="@color/cancel_text"
@@ -354,7 +358,7 @@
                 android:layout_height="42dp"
                 android:layout_weight="1"
                 android:text="Guardar registro"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
                 android:textColor="@android:color/white"

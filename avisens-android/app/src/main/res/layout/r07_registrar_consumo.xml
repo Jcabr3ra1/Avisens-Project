@@ -29,7 +29,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Lote"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
             android:layout_marginBottom="5dp" />
@@ -52,14 +52,14 @@
 
         </FrameLayout>
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Alimento de bodega" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Alimento de bodega" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
         <FrameLayout android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event"><Spinner android:id="@+id/spinnerAlimentoConsumo" android:layout_width="match_parent" android:layout_height="match_parent" android:dropDownWidth="match_parent" android:dropDownHorizontalOffset="0dp" android:paddingStart="0dp" android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown" android:background="@android:color/transparent"/></FrameLayout>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fecha" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtFechaConsumo" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:textSize="12sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:focusable="false" android:clickable="true"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Alimento (kg)" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtAlimentoConsumo" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:textSize="12sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="numberDecimal"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Agua (litros)" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtAguaConsumo" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:textSize="12sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="numberDecimal"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fecha" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
+        <EditText android:id="@+id/edtFechaConsumo" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:focusable="false" android:clickable="true"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Alimento (kg)" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
+        <EditText android:id="@+id/edtAlimentoConsumo" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="numberDecimal"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Agua (litros)" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
+        <EditText android:id="@+id/edtAguaConsumo" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="numberDecimal"/>
         <!-- BOTONES DEL FORMULARIO -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -75,7 +75,7 @@
                 android:layout_height="42dp"
                 android:layout_weight="1"
                 android:text="Cancelar"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
                 android:textColor="@color/cancel_text"
@@ -96,7 +96,7 @@
                 android:layout_height="42dp"
                 android:layout_weight="1"
                 android:text="Guardar registro"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:textStyle="bold"
                 android:textAllCaps="false"
                 android:textColor="@android:color/white"

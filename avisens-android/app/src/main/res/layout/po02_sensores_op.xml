@@ -39,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="22dp"
                 android:text="Variables ambientales · en vivo"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary"/>
             <!-- Fila 1: Temperatura / Humedad -->
@@ -89,7 +89,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:text="Temperatura"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"
                         android:minLines="2"
                         android:gravity="center"/>
@@ -104,7 +104,7 @@
                         android:paddingTop="4dp"
                         android:paddingBottom="4dp"
                         android:text="Sin datos"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold"
                         android:textColor="@color/orange_badge_text"
                         android:minLines="2"
@@ -152,7 +152,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:text="Humedad"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"
                         android:minLines="2"
                         android:gravity="center"/>
@@ -167,7 +167,7 @@
                         android:paddingTop="4dp"
                         android:paddingBottom="4dp"
                         android:text="Sin datos"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold"
                         android:textColor="@color/badge_green_text"
                         android:minLines="2"
@@ -222,7 +222,7 @@
                         android:layout_marginTop="10dp"
                         android:gravity="center"
                         android:text="Calidad del aire · ADC"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"
                         android:minLines="2"/>
                     <TextView
@@ -236,7 +236,7 @@
                         android:paddingTop="4dp"
                         android:paddingBottom="4dp"
                         android:text="Sin datos"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold"
                         android:textColor="@color/orange_badge_text"
                         android:minLines="2"
@@ -287,7 +287,7 @@
                         android:layout_marginTop="10dp"
                         android:gravity="center"
                         android:text="Luminosidad"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"
                         android:minLines="2"/>
                     <TextView
@@ -301,7 +301,7 @@
                         android:paddingTop="4dp"
                         android:paddingBottom="4dp"
                         android:text="Sin datos"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold"
                         android:textColor="@color/orange_badge_text"
                         android:minLines="2"
@@ -356,7 +356,7 @@
                         android:layout_marginTop="10dp"
                         android:gravity="center"
                         android:text="CO₂ · ppm"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"
                         android:minLines="2"/>
                     <TextView
@@ -370,7 +370,7 @@
                         android:paddingTop="4dp"
                         android:paddingBottom="4dp"
                         android:text="Sin datos"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold"
                         android:textColor="@color/orange_badge_text"
                         android:minLines="2"
@@ -421,7 +421,7 @@
                         android:layout_marginTop="10dp"
                         android:gravity="center"
                         android:text="NH₃ · ppm"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"
                         android:minLines="2"/>
                     <TextView
@@ -435,7 +435,7 @@
                         android:paddingTop="4dp"
                         android:paddingBottom="4dp"
                         android:text="Sin datos"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold"
                         android:textColor="@color/orange_badge_text"
                         android:minLines="2"
@@ -490,7 +490,7 @@
                         android:layout_marginTop="10dp"
                         android:gravity="center"
                         android:text="Peso de alimento"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"
                         android:minLines="2"/>
                     <TextView
@@ -504,7 +504,7 @@
                         android:paddingTop="4dp"
                         android:paddingBottom="4dp"
                         android:text="Sin datos"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold"
                         android:textColor="@color/orange_badge_text"
                         android:minLines="2"
@@ -558,7 +558,7 @@
                         android:layout_marginTop="10dp"
                         android:gravity="center"
                         android:text="Distancia al agua"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"
                         android:minLines="2"/>
                     <TextView
@@ -572,7 +572,7 @@
                         android:paddingTop="4dp"
                         android:paddingBottom="4dp"
                         android:text="Sin datos"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold"
                         android:textColor="@color/orange_badge_text"
                         android:minLines="2"
@@ -585,7 +585,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:text="Conectando con los sensores..."
-                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
+                android:textSize="13sp"
                 android:textColor="@color/text_secondary"/>
             <!-- Sensores activos que no se pudieron asociar sin ambigüedad a
                  una variable: se listan para corregirlos, sin sus valores. -->
@@ -596,7 +597,8 @@
                 android:layout_marginTop="10dp"
                 android:background="@drawable/bg_stat_card"
                 android:padding="12dp"
-                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
+                android:textSize="13sp"
                 android:textColor="@color/orange_badge_text"
                 android:visibility="gone"/>
             <!-- Actuadores (relés K1-K4 y motores): salida que reportó el ESP32, en
@@ -607,7 +609,7 @@
                 android:layout_marginTop="22dp"
                 android:text="Actuadores · salida reportada"
                 android:textColor="@color/text_primary"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textStyle="bold"/>
 
             <LinearLayout
@@ -622,7 +624,8 @@
                 android:layout_marginTop="8dp"
                 android:text="No hay actuadores registrados en este galpón."
                 android:textColor="@color/text_secondary"
-                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
+                android:textSize="13sp"
                 android:visibility="gone"/>
             <!-- Entradas configuradas: ocultas; detalle disponible en el modal -->
             <LinearLayout
@@ -643,7 +646,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Rangos ambientales configurados en el sistema"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:textColor="@color/text_secondary"/>
                 <!-- Fila Temperatura (min/max) -->
                 <LinearLayout
@@ -667,7 +670,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:text="Temperatura"
-                            android:textSize="14sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"/>
                     </LinearLayout>
@@ -681,13 +684,13 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Mín: no configurado"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:textColor="@color/text_secondary"/>
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Máx: no configurado"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:textColor="@color/text_secondary"/>
                     </LinearLayout>
                     <TextView
@@ -696,7 +699,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:text="Sensor: —"
-                        android:textSize="12sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp"
                         android:textColor="@color/text_secondary"/>
                     <TextView
                         android:id="@+id/txtEntradaTemperaturaLectura"
@@ -704,7 +708,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="Última lectura: —"
-                        android:textSize="12sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp"
                         android:textColor="@color/text_secondary"/>
                 </LinearLayout>
                 <!-- Fila Humedad relativa (min/max) -->
@@ -729,7 +734,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:text="Humedad relativa"
-                            android:textSize="14sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"/>
                     </LinearLayout>
@@ -743,13 +748,13 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Mín: no configurado"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:textColor="@color/text_secondary"/>
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Máx: no configurado"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:textColor="@color/text_secondary"/>
                     </LinearLayout>
                     <TextView
@@ -758,7 +763,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:text="Sensor: —"
-                        android:textSize="12sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp"
                         android:textColor="@color/text_secondary"/>
                     <TextView
                         android:id="@+id/txtEntradaHumedadLectura"
@@ -766,7 +772,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="Última lectura: —"
-                        android:textSize="12sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp"
                         android:textColor="@color/text_secondary"/>
                 </LinearLayout>
                 <!-- MQ-135: lectura ADC cruda, sin conversión a ppm -->
@@ -792,7 +799,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:text="Calidad del aire (MQ-135, ADC crudo)"
-                            android:textSize="14sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"/>
                     </LinearLayout>
@@ -802,7 +809,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:text="Sensor: —"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"/>
                     <TextView
                         android:id="@+id/txtEntradaCalidadAireLectura"
@@ -810,7 +817,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="Última lectura: —"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"/>
                 </LinearLayout>
                 <!-- HX711: el ESP32 marca la lectura sin calibrar como sospechosa -->
@@ -837,7 +844,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:text="Peso de alimento (HX711)"
-                            android:textSize="14sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"/>
                     </LinearLayout>
@@ -847,7 +854,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:text="Sensor: —"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"/>
                     <TextView
                         android:id="@+id/txtEntradaPesoLectura"
@@ -855,7 +862,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="Última lectura: —"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"/>
                 </LinearLayout>
                 <!-- HC-SR04: distancia al agua; solo si el galpón tiene este sensor -->
@@ -883,7 +890,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:text="Nivel de agua (HC-SR04)"
-                            android:textSize="14sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             android:textColor="@color/text_primary"/>
                     </LinearLayout>
@@ -893,7 +900,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:text="Sensor: —"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"/>
                     <TextView
                         android:id="@+id/txtEntradaNivelAguaLectura"
@@ -901,7 +908,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="Última lectura: —"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textColor="@color/text_secondary"/>
                 </LinearLayout>
             </LinearLayout>

@@ -438,7 +438,7 @@ class ProveedoresFragment : BaseBottomNavFragment() {
                     )
                 )
 
-                textSize = 13f
+                textSize = 14f
 
                 setPadding(
                     dp(4),

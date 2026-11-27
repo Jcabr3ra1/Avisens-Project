@@ -46,20 +46,20 @@ object ListaActuadores {
 
         fila.addView(TextView(contexto).apply {
             text = listOfNotNull(vista.nombre, vista.rele).joinToString(" · ")
-            textSize = 14f
+            textSize = 15f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(color(R.color.text_primary))
         })
         fila.addView(TextView(contexto).apply {
             text = "Código: ${vista.sensor.codigo}"
-            textSize = 12f
+            textSize = 13f
             setTextColor(color(R.color.text_secondary))
         })
 
         val (textoEstado, fondo, colorTexto) = estado(vista)
         fila.addView(TextView(contexto).apply {
             text = textoEstado
-            textSize = 12f
+            textSize = 13f
             setTypeface(typeface, Typeface.BOLD)
             setBackgroundResource(fondo)
             setTextColor(color(colorTexto))
@@ -73,7 +73,7 @@ object ListaActuadores {
         detalle(vista)?.let { linea ->
             fila.addView(TextView(contexto).apply {
                 text = linea
-                textSize = 12f
+                textSize = 13f
                 setTextColor(color(R.color.text_secondary))
                 setPadding(0, dp(4), 0, 0)
             })

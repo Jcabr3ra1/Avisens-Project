@@ -35,7 +35,7 @@
         android:layout_height="wrap_content"
         android:text="Nombre Galpón"
         android:textColor="@color/adaptive_text_18211d"
-        android:textSize="12sp"
+        android:textSize="13sp"
         android:textStyle="bold"
         android:layout_marginBottom="10dp" />
 
@@ -49,7 +49,8 @@
         android:paddingEnd="12dp"
         android:textColor="@color/adaptive_text_000000"
         android:textColorHint="@color/adaptive_text_91a09a"
-        android:textSize="11sp"
+        android:fontFamily="sans-serif-medium"
+        android:textSize="12sp"
         android:singleLine="true"
         android:layout_marginBottom="24dp" />
 
@@ -62,7 +63,7 @@
         android:layout_height="wrap_content"
         android:text="Cantidad Pollos"
         android:textColor="@color/adaptive_text_18211d"
-        android:textSize="12sp"
+        android:textSize="13sp"
         android:textStyle="bold"
         android:layout_marginBottom="10dp" />
 
@@ -76,7 +77,8 @@
         android:paddingEnd="12dp"
         android:textColor="@color/adaptive_text_000000"
         android:textColorHint="@color/adaptive_text_91a09a"
-        android:textSize="11sp"
+        android:fontFamily="sans-serif-medium"
+        android:textSize="12sp"
         android:inputType="number"
         android:singleLine="true"
         android:layout_marginBottom="24dp" />
@@ -90,7 +92,7 @@
         android:layout_height="wrap_content"
         android:text="Marca Alimento"
         android:textColor="@color/text_primary"
-        android:textSize="12sp"
+        android:textSize="13sp"
         android:textStyle="bold"
         android:layout_marginTop="18dp" />
 
@@ -121,7 +123,7 @@
         android:layout_height="wrap_content"
         android:text="Líneas"
         android:textColor="@color/text_primary"
-        android:textSize="12sp"
+        android:textSize="13sp"
         android:textStyle="bold"
         android:layout_marginTop="18dp" />
 
@@ -168,7 +170,7 @@
             android:text="Cancelar"
             android:textAllCaps="false"
             android:textColor="@color/cancel_text"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             app:cornerRadius="10dp"
             app:backgroundTint="@color/cancel_background"
@@ -182,7 +184,7 @@
             android:text="Crear Lote"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             app:backgroundTint="@null"
             android:background="@drawable/bg_boton_verde"

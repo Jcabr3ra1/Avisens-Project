@@ -61,7 +61,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/txtNombreUsuario"
@@ -89,7 +89,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="5dp"
                             android:textColor="@color/green_accent"
-                            android:textSize="12sp"
+                            android:textSize="13sp"
                             android:textStyle="bold" />
                     </LinearLayout>
                 </LinearLayout>
@@ -111,7 +111,7 @@
                     android:letterSpacing="0.08"
                     android:text="SU GRANJA"
                     android:textColor="#B7D6C6"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
 
                 <FrameLayout
@@ -159,7 +159,7 @@
                         android:letterSpacing="0.08"
                         android:text="GALPONES"
                         android:textColor="#B7D6C6"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -167,7 +167,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="#B7D6C6"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
@@ -195,7 +195,7 @@
                 android:text="Hablar con Lía"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
-                android:textSize="15sp"
+                android:textSize="16sp"
                 android:textStyle="bold"
                 app:backgroundTint="@color/green_accent"
                 app:cornerRadius="12dp"
@@ -210,7 +210,7 @@
                 android:text="Guía de peso del lote"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
-                android:textSize="15sp"
+                android:textSize="16sp"
                 android:textStyle="bold"
                 app:backgroundTint="@color/green_accent"
                 app:cornerRadius="12dp"
@@ -236,7 +236,7 @@
                         android:layout_weight="1"
                         android:text="Variables ambientales · en vivo"
                         android:textColor="@color/text_primary"
-                        android:textSize="14sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -245,7 +245,8 @@
                         android:layout_height="wrap_content"
                         android:text="— sensores"
                         android:textColor="@color/text_secondary"
-                        android:textSize="12sp" />
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -299,7 +300,7 @@
                             android:layout_marginTop="8dp"
                             android:text="Temperatura"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:minLines="2"
                             android:gravity="center" />
 
@@ -315,7 +316,7 @@
                             android:paddingBottom="4dp"
                             android:text="Sin datos"
                             android:textColor="@color/badge_green_text"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:textStyle="bold"
                             android:minLines="2"
                             android:gravity="center" />
@@ -369,7 +370,7 @@
                             android:layout_marginTop="8dp"
                             android:text="Humedad"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:minLines="2"
                             android:gravity="center" />
 
@@ -385,7 +386,7 @@
                             android:paddingBottom="4dp"
                             android:text="Sin datos"
                             android:textColor="@color/badge_green_text"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:textStyle="bold"
                             android:minLines="2"
                             android:gravity="center" />
@@ -445,7 +446,7 @@
                             android:layout_marginTop="8dp"
                             android:text="Calidad del aire"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:minLines="2"
                             android:gravity="center" />
 
@@ -461,7 +462,7 @@
                             android:paddingBottom="4dp"
                             android:text="Sin datos"
                             android:textColor="@color/orange_badge_text"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:textStyle="bold"
                             android:minLines="2"
                             android:gravity="center" />
@@ -517,7 +518,7 @@
                             android:layout_marginTop="8dp"
                             android:text="Luminosidad"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:minLines="2"
                             android:gravity="center" />
 
@@ -533,7 +534,7 @@
                             android:paddingBottom="4dp"
                             android:text="Sin datos"
                             android:textColor="@color/orange_badge_text"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:textStyle="bold"
                             android:minLines="2"
                             android:gravity="center" />
@@ -595,7 +596,7 @@
                             android:layout_marginTop="8dp"
                             android:text="Peso de alimento"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:minLines="2"
                             android:gravity="center" />
 
@@ -611,7 +612,7 @@
                             android:paddingBottom="4dp"
                             android:text="Sin datos"
                             android:textColor="@color/orange_badge_text"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:textStyle="bold"
                             android:minLines="2"
                             android:gravity="center" />
@@ -668,7 +669,7 @@
                             android:layout_marginTop="8dp"
                             android:text="Distancia al agua"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:minLines="2"
                             android:gravity="center" />
 
@@ -684,7 +685,7 @@
                             android:paddingBottom="4dp"
                             android:text="Sin datos"
                             android:textColor="@color/orange_badge_text"
-                            android:textSize="11sp"
+                            android:textSize="12sp"
                             android:textStyle="bold"
                             android:minLines="2"
                             android:gravity="center" />
@@ -702,7 +703,8 @@
                     android:background="@drawable/bg_stat_card"
                     android:padding="12dp"
                     android:textColor="@color/orange_badge_text"
-                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textSize="13sp"
                     android:visibility="gone" />
                 <!-- Actuadores (relés K1-K4 y motores): salida que reportó el ESP32, en
                      solo lectura. El backend actual no informa el modo ni admite órdenes. -->
@@ -712,7 +714,7 @@
                     android:layout_marginTop="22dp"
                     android:text="Actuadores · salida reportada"
                     android:textColor="@color/text_primary"
-                    android:textSize="14sp"
+                    android:textSize="15sp"
                     android:textStyle="bold" />
 
                 <LinearLayout
@@ -728,7 +730,8 @@
                     android:layout_marginTop="8dp"
                     android:text="No hay actuadores registrados en este galpón."
                     android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textSize="13sp"
                     android:visibility="gone" />
             </LinearLayout>
 
@@ -771,7 +774,7 @@
                             android:layout_marginTop="2dp"
                             android:text="Aves"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
@@ -802,7 +805,7 @@
                             android:layout_marginTop="2dp"
                             android:text="Día del lote"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
@@ -841,7 +844,7 @@
                             android:layout_marginTop="2dp"
                             android:text="Aves Muertas"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
@@ -872,7 +875,7 @@
                             android:layout_marginTop="2dp"
                             android:text="Alertas"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
@@ -917,7 +920,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="Calidad Crianza"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
+                                android:textSize="14sp" />
 
                             <View
                                 android:layout_width="7dp"
@@ -962,7 +965,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="Rend. Comida"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
+                                android:textSize="14sp" />
 
                             <View
                                 android:layout_width="7dp"
@@ -1009,7 +1012,7 @@
                             android:layout_marginTop="2dp"
                             android:text="Alimento"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
@@ -1040,7 +1043,7 @@
                             android:layout_marginTop="2dp"
                             android:text="Agua"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
 
                     </LinearLayout>
 
@@ -1072,7 +1075,7 @@
                             android:letterSpacing="0.05"
                             android:text="SALUD DEL LOTE"
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp"
+                            android:textSize="13sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -1086,7 +1089,7 @@
                             android:id="@+id/txtEstadoSalud"
                             android:text="Sin datos"
                             android:textColor="@color/orange_badge_text"
-                            android:textSize="12sp"
+                            android:textSize="13sp"
                             android:textStyle="bold" />
 
                     </LinearLayout>
@@ -1129,7 +1132,8 @@
                             android:id="@+id/txtSaludDetalle"
                             android:text="Sin datos suficientes"
                             android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
+                            android:fontFamily="sans-serif-medium"
+                            android:textSize="13sp" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -1137,7 +1141,7 @@
                             android:id="@+id/txtSaludScore"
                             android:text="—"
                             android:textColor="@color/text_primary"
-                            android:textSize="13sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                     </LinearLayout>

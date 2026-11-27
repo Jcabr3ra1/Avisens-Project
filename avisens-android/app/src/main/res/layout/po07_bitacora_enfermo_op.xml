@@ -44,7 +44,7 @@
                 android:layout_marginTop="4dp"
                 android:text="Control y evolución de aves enfermas"
                 android:textColor="@color/text_secondary"
-                android:textSize="13sp" />
+                android:textSize="14sp" />
 
             <LinearLayout
                 android:id="@+id/tabsBitacora"
@@ -64,7 +64,7 @@
                     android:gravity="center"
                     android:text="Mortalidad"
                     android:textColor="#89938E"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -76,7 +76,7 @@
                     android:gravity="center"
                     android:text="Enfermo"
                     android:textColor="@color/text_primary"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -87,7 +87,7 @@
                     android:gravity="center"
                     android:text="Consumo"
                     android:textColor="#89938E"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
 
             </LinearLayout>
@@ -108,7 +108,7 @@
                     android:paddingEnd="14dp"
                     android:text="+ Registrar Seguimiento"
                     android:textColor="@android:color/white"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
 
             </LinearLayout>
@@ -132,7 +132,8 @@
                         android:layout_height="wrap_content"
                         android:text="Casos activos"
                         android:textColor="@color/text_secondary"
-                        android:textSize="11sp" />
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="12sp" />
 
                     <TextView
                         android:id="@+id/tvCasosActivos"
@@ -162,7 +163,8 @@
                         android:layout_height="wrap_content"
                         android:text="Aves en seguimiento"
                         android:textColor="@color/text_secondary"
-                        android:textSize="11sp" />
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="12sp" />
 
                     <TextView
                         android:id="@+id/tvAvesSeguimiento"
@@ -182,7 +184,7 @@
                 android:layout_marginTop="18dp"
                 android:text="Casos sanitarios"
                 android:textColor="#1F5C42"
-                android:textSize="15sp"
+                android:textSize="16sp"
                 android:textStyle="bold" />
 
             <LinearLayout

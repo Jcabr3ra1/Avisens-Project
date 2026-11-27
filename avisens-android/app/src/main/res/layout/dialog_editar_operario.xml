@@ -21,7 +21,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:textColor="@color/adaptive_text_2f8b5e"
-        android:textSize="15sp"
+        android:textSize="16sp"
         android:textStyle="bold" />
 
     <TextView
@@ -30,7 +30,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:textColor="@color/adaptive_text_78847e"
-        android:textSize="12sp" />
+        android:fontFamily="sans-serif-medium"
+        android:textSize="13sp" />
 
     <TextView
         android:layout_width="match_parent"
@@ -38,7 +39,8 @@
         android:layout_marginTop="10dp"
         android:text="Nombre completo"
         android:textColor="@color/adaptive_text_183c2e"
-        android:textSize="12sp" />
+        android:fontFamily="sans-serif-medium"
+        android:textSize="13sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -61,7 +63,7 @@
             android:paddingEnd="8dp"
             android:singleLine="true"
             android:textColor="@color/adaptive_text_183c2e"
-            android:textSize="14sp" />
+            android:textSize="15sp" />
 
         <ImageButton
             android:id="@+id/btnHabilitarNombreOperario"
@@ -81,7 +83,8 @@
         android:layout_marginTop="10dp"
         android:text="Teléfono"
         android:textColor="@color/adaptive_text_183c2e"
-        android:textSize="12sp" />
+        android:fontFamily="sans-serif-medium"
+        android:textSize="13sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -104,7 +107,7 @@
             android:paddingEnd="8dp"
             android:singleLine="true"
             android:textColor="@color/adaptive_text_183c2e"
-            android:textSize="14sp" />
+            android:textSize="15sp" />
 
         <ImageButton
             android:id="@+id/btnHabilitarTelefonoOperario"
@@ -131,7 +134,7 @@
         android:layout_height="wrap_content"
         android:text="Usuario activo"
         android:textColor="@color/adaptive_text_183c2e"
-        android:textSize="14sp"
+        android:textSize="15sp"
         android:textStyle="bold"
         app:useMaterialThemeColors="true" />
 
@@ -141,7 +144,7 @@
         android:layout_marginTop="14dp"
         android:text="Granjas asignadas"
         android:textColor="@color/adaptive_text_1f5c42"
-        android:textSize="14sp"
+        android:textSize="15sp"
         android:textStyle="bold" />
 
     <ScrollView
@@ -164,7 +167,7 @@
         android:layout_marginTop="10dp"
         android:text="Asignar nueva granja"
         android:textColor="@color/adaptive_text_1f5c42"
-        android:textSize="14sp"
+        android:textSize="15sp"
         android:textStyle="bold" />
 
     <FrameLayout
@@ -199,7 +202,7 @@
             android:text="Cancelar"
             android:textAllCaps="false"
             android:textColor="@color/cancel_text"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:textStyle="bold"
             app:cornerRadius="9dp"
             android:minWidth="0dp"
@@ -217,7 +220,7 @@
             android:text="Guardar"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:textStyle="bold"
             app:backgroundTint="#2F8B5E"
             app:cornerRadius="9dp"

@@ -174,7 +174,7 @@ class MainActivity : AperturaReanudableActivity() {
                     colorTextoSeleccionado
                 )
 
-                view.textSize = 13f
+                view.textSize = 14f
 
                 view.setPadding(
                     8,
@@ -212,7 +212,7 @@ class MainActivity : AperturaReanudableActivity() {
                     colorFondoDropdown
                 )
 
-                view.textSize = 13f
+                view.textSize = 14f
 
                 view.setPadding(
                     16,
@@ -678,8 +678,8 @@ class MainActivity : AperturaReanudableActivity() {
     // API - GRANJAS
     // =========================================================
 
-    suspend fun obtenerGranjas() =
-        RetrofitClient.api.listarGranjas(
+    suspend fun obtenerGranjas(soloCache: Boolean = false) =
+        (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarGranjas(
             page = 1,
             limit = 100
         )
@@ -688,8 +688,8 @@ class MainActivity : AperturaReanudableActivity() {
     // API - GALPONES
     // =========================================================
 
-    suspend fun obtenerGalpones() =
-        RetrofitClient.api.listarGalpones(
+    suspend fun obtenerGalpones(soloCache: Boolean = false) =
+        (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarGalpones(
             page = 1,
             limit = 100
         )
@@ -765,14 +765,14 @@ class MainActivity : AperturaReanudableActivity() {
      * seleccionado. Se usa para que las bitácoras muestren únicamente los
      * registros del galpón activo.
      */
-    suspend fun obtenerIdsLotesDeGalponSeleccionado(): Set<Int> {
+    suspend fun obtenerIdsLotesDeGalponSeleccionado(soloCache: Boolean = false): Set<Int> {
         val galponId = galponSeleccionadoId ?: return emptySet()
         val todosLosLotes = mutableListOf<LoteSelectorResponse>()
         var pagina = 1
         var totalPaginas = 1
 
         do {
-            val response = RetrofitClient.api.listarLotes(
+            val response = (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarLotes(
                 page = pagina,
                 limit = 100
             )
@@ -1256,21 +1256,22 @@ class MainActivity : AperturaReanudableActivity() {
             if (foto == null) icono.setImageResource(R.drawable.ic_person) else icono.setImageBitmap(foto)
         }
         pintar()
-        if (!OfflineCache.hayInternet(this)) return
         val version = versionFotoInicio
         lifecycleScope.launch {
             try {
-                val r = RetrofitClient.api.consultarFotoPerfil()
-                val imagen = if (r.isSuccessful) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    r.body()?.use { android.graphics.BitmapFactory.decodeStream(it.byteStream()) }
-                } else {
-                    r.errorBody()?.close()
-                    if (r.code() != 404) return@launch
-                    null
+                for (api in listOf(RetrofitClient.apiCache, RetrofitClient.api)) {
+                    val r = try { api.consultarFotoPerfil() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { continue }
+                    val imagen = if (r.isSuccessful) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        r.body()?.use { android.graphics.BitmapFactory.decodeStream(it.byteStream()) }
+                    } else {
+                        r.errorBody()?.close()
+                        if (r.code() != 404) return@launch
+                        null
+                    }
+                    if (version != versionFotoInicio || UserSession.userId(this@MainActivity) != usuario) return@launch
+                    fotoInicio = imagen
+                    if (contenedor.isAttachedToWindow) pintar()
                 }
-                if (version != versionFotoInicio || UserSession.userId(this@MainActivity) != usuario) return@launch
-                fotoInicio = imagen
-                if (contenedor.isAttachedToWindow) pintar()
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (_: Exception) { }
         }
@@ -1318,8 +1319,8 @@ class MainActivity : AperturaReanudableActivity() {
         }
     }
 
-    private suspend fun cargarFotoPerfil(b: Co03PerfilOpBinding) {
-        val respuesta = RetrofitClient.api.consultarFotoPerfil()
+    private suspend fun cargarFotoPerfil(b: Co03PerfilOpBinding, soloCache: Boolean = false) {
+        val respuesta = (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).consultarFotoPerfil()
         if (!b.root.isAttachedToWindow) { respuesta.body()?.close(); respuesta.errorBody()?.close(); return }
         if (respuesta.code() == 404) {
             fotoInicio = null
@@ -1390,23 +1391,32 @@ class MainActivity : AperturaReanudableActivity() {
                 }
             }.show()
         }
-        if (!OfflineCache.hayInternet(this)) return
         lifecycleScope.launch {
-            try {
-                val r = RetrofitClient.api.consultarPerfil()
-                val datos = r.body() ?: error("No se pudo consultar el perfil")
-                if (!b.root.isAttachedToWindow) return@launch
-                fun dato(clave: String) = datos.get(clave)?.takeUnless { it.isJsonNull }?.asString.orEmpty()
-                b.txtNombrePerfil.text = dato("nombre_completo")
-                b.txtInicialPerfil.text = inicialesPerfil(dato("nombre_completo"))
-                b.edtCorreoPerfil.setText(dato("email").ifBlank { "No registrado" })
-                b.edtTelefonoPerfil.setText(dato("telefono").ifBlank { "No registrado" })
-                b.txtDetallePerfil.text = dato("rol").lowercase().replaceFirstChar { it.uppercase() }
-                b.txtUsuarioPerfil.text = dato("username").ifBlank { "No registrado" }
-                b.txtOrganizacionPerfil.text = datos.get("organizacion")?.takeIf { it.isJsonObject }?.asJsonObject?.get("nombre")?.takeUnless { it.isJsonNull }?.asString ?: "No registrada"
-                if (datos.get("tiene_foto")?.asBoolean == true && !perfilFotoOcupada) cargarFotoPerfil(b)
-            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-            catch (e: Exception) { if (b.root.isAttachedToWindow) Toast.makeText(this@MainActivity, "No se pudo actualizar el perfil", Toast.LENGTH_SHORT).show() }
+            val usuario = UserSession.userId(this@MainActivity)
+            for (soloCache in listOf(true, false)) {
+                if (!b.root.isAttachedToWindow || usuario != UserSession.userId(this@MainActivity)) break
+                if (!soloCache && !OfflineCache.hayInternet(this@MainActivity)) break
+                try {
+                    if (!perfilFotoOcupada) {
+                        try { cargarFotoPerfil(b, soloCache) }
+                        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                        catch (_: Exception) { }
+                    }
+                    val r = (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).consultarPerfil()
+                    val datos = r.body() ?: continue
+                    if (!b.root.isAttachedToWindow || usuario != UserSession.userId(this@MainActivity)) break
+                    fun dato(clave: String) = datos.get(clave)?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                    b.txtNombrePerfil.text = dato("nombre_completo")
+                    b.txtInicialPerfil.text = inicialesPerfil(dato("nombre_completo"))
+                    b.edtCorreoPerfil.setText(dato("email").ifBlank { "No registrado" })
+                    b.edtTelefonoPerfil.setText(dato("telefono").ifBlank { "No registrado" })
+                    b.txtDetallePerfil.text = dato("rol").lowercase().replaceFirstChar { it.uppercase() }
+                    b.txtUsuarioPerfil.text = dato("username").ifBlank { "No registrado" }
+                    b.txtOrganizacionPerfil.text = datos.get("organizacion")?.takeIf { it.isJsonObject }?.asJsonObject?.get("nombre")?.takeUnless { it.isJsonNull }?.asString ?: "No registrada"
+
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) { }
+            }
         }
     }
 

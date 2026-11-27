@@ -144,7 +144,7 @@
                     android:layout_height="wrap_content"
                     android:text="—  INGRESO SEGURO"
                     android:textColor="@color/adaptive_text_00695c"
-                    android:textSize="11sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.05"
                     app:layout_constraintTop_toTopOf="parent"
@@ -169,7 +169,7 @@
                     android:layout_marginTop="6dp"
                     android:text="Ingresa con tu cuenta para supervisar tu granja en tiempo real."
                     android:textColor="@color/adaptive_text_426058"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     app:layout_constraintTop_toBottomOf="@id/txtIniciarSesion"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent" />
@@ -185,7 +185,7 @@
                     android:layout_marginTop="18dp"
                     android:text="Nombre de usuario"
                     android:textColor="@color/adaptive_text_17211d"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:textStyle="bold"
                     app:layout_constraintTop_toBottomOf="@id/txtSubtitulo"
                     app:layout_constraintStart_toStartOf="parent" />
@@ -205,7 +205,7 @@
                     android:paddingEnd="12dp"
                     android:textColor="@color/adaptive_text_17211d"
                     android:textColorHint="@color/adaptive_text_4a5d55"
-                    android:textSize="14sp"
+                    android:textSize="15sp"
                     app:layout_constraintTop_toBottomOf="@id/txtCorreo"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent" />
@@ -235,7 +235,7 @@
                     android:layout_marginTop="14dp"
                     android:text="Contraseña"
                     android:textColor="@color/adaptive_text_17211d"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:textStyle="bold"
                     app:layout_constraintTop_toBottomOf="@id/etCorreo"
                     app:layout_constraintStart_toStartOf="parent" />
@@ -255,7 +255,7 @@
                     android:paddingEnd="44dp"
                     android:textColor="@color/adaptive_text_17211d"
                     android:textColorHint="@color/adaptive_text_4a5d55"
-                    android:textSize="14sp"
+                    android:textSize="15sp"
                     app:layout_constraintTop_toBottomOf="@id/txtContrasena"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent" />
@@ -302,7 +302,8 @@
                     android:buttonTint="@color/adaptive_text_00695c"
                     android:text="Recordarme"
                     android:textColor="@color/adaptive_text_4a5d55"
-                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textSize="13sp"
                     app:layout_constraintTop_toBottomOf="@id/etContrasena"
                     app:layout_constraintStart_toStartOf="parent" />
 
@@ -320,7 +321,7 @@
                     android:text="Entrar a mi granja"
                     android:textAllCaps="false"
                     android:textColor="@android:color/white"
-                    android:textSize="15sp"
+                    android:textSize="16sp"
                     android:textStyle="bold"
                     app:backgroundTint="@null"
                     app:cornerRadius="12dp"
@@ -355,7 +356,7 @@
                     android:layout_marginTop="10dp"
                     android:text=""
                     android:textColor="@color/adaptive_text_d32f2f"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:gravity="center"
                     app:layout_constraintTop_toBottomOf="@id/btnEntrar"
                     app:layout_constraintStart_toStartOf="parent"

@@ -42,7 +42,7 @@
                 android:layout_marginTop="4dp"
                 android:text="Completa los datos para registrar un nuevo operario."
                 android:textColor="@color/adaptive_text_7a817d"
-                android:textSize="13sp"/>
+                android:textSize="14sp"/>
 
             <!-- DATOS PERSONALES -->
 
@@ -52,7 +52,7 @@
                 android:layout_marginTop="14dp"
                 android:text="Datos personales"
                 android:textColor="@color/adaptive_text_1f5c42"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textStyle="bold"/>
 
             <!-- NOMBRE COMPLETO -->
@@ -63,7 +63,7 @@
                 android:layout_marginTop="10dp"
                 android:text="Nombre completo"
                 android:textColor="@color/adaptive_text_202020"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -89,7 +89,7 @@
                     android:paddingEnd="12dp"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="14sp"/>
+                    android:textSize="15sp"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -101,7 +101,7 @@
                 android:layout_marginTop="10dp"
                 android:text="Cédula"
                 android:textColor="@color/adaptive_text_202020"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -127,7 +127,7 @@
                     android:paddingEnd="12dp"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="14sp"/>
+                    android:textSize="15sp"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -139,7 +139,7 @@
                 android:layout_marginTop="10dp"
                 android:text="Correo electrónico"
                 android:textColor="@color/adaptive_text_202020"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -165,7 +165,7 @@
                     android:paddingEnd="12dp"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="14sp"/>
+                    android:textSize="15sp"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -177,7 +177,7 @@
                 android:layout_marginTop="10dp"
                 android:text="Teléfono"
                 android:textColor="@color/adaptive_text_202020"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -203,7 +203,7 @@
                     android:paddingEnd="12dp"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="14sp"/>
+                    android:textSize="15sp"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -223,7 +223,7 @@
                 android:layout_height="wrap_content"
                 android:text="Credenciales de acceso"
                 android:textColor="@color/adaptive_text_1f5c42"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:textStyle="bold"/>
 
             <TextView
@@ -232,7 +232,7 @@
                 android:layout_marginTop="4dp"
                 android:text="Datos para iniciar sesión."
                 android:textColor="@color/adaptive_text_7a817d"
-                android:textSize="13sp"/>
+                android:textSize="14sp"/>
 
             <!-- NOMBRE DE USUARIO -->
 
@@ -242,7 +242,7 @@
                 android:layout_marginTop="10dp"
                 android:text="Nombre de usuario"
                 android:textColor="@color/adaptive_text_202020"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -268,7 +268,7 @@
                     android:paddingEnd="12dp"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="14sp"/>
+                    android:textSize="15sp"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -280,7 +280,7 @@
                 android:layout_marginTop="10dp"
                 android:text="Contraseña"
                 android:textColor="@color/adaptive_text_202020"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -307,7 +307,7 @@
                     android:paddingEnd="12dp"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="14sp"/>
+                    android:textSize="15sp"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -319,7 +319,7 @@
                 android:layout_marginTop="10dp"
                 android:text="Confirmar contraseña"
                 android:textColor="@color/adaptive_text_202020"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold"/>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -347,7 +347,7 @@
                     android:paddingEnd="12dp"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="14sp"/>
+                    android:textSize="15sp"/>
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -378,7 +378,7 @@
             android:text="Cancelar"
             android:textAllCaps="false"
             android:textColor="@color/cancel_text"
-            android:textSize="14sp"
+            android:textSize="15sp"
             android:maxLines="1"
             android:ellipsize="end"
             app:cornerRadius="10dp"
@@ -397,7 +397,7 @@
             android:text="Crear"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
-            android:textSize="14sp"
+            android:textSize="15sp"
             android:maxLines="1"
             android:ellipsize="end"
             app:backgroundTint="#2F8B5E"

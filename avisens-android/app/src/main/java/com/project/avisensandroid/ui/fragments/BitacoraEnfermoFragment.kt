@@ -215,7 +215,7 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
         val boton = MaterialButton(requireContext()).apply {
             text = "Registrar seguimiento"
             isAllCaps = false
-            textSize = 12f
+            textSize = 13f
             setTextColor(Color.WHITE)
             backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#2F8B5E"))
             cornerRadius = dp(9)
@@ -261,7 +261,8 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
     ): TextView {
         return TextView(requireContext()).apply {
             text = contenido
-            textSize = tamano
+            textSize = if (tamano < 16f) tamano + 1f else tamano
+            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
             setTextColor(ColoresAdaptativos.texto(requireContext(), color))
             if (negrita) setTypeface(typeface, android.graphics.Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(

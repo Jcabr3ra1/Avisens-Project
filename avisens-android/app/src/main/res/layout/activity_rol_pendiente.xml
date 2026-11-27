@@ -48,7 +48,7 @@
             android:layout_marginTop="16dp"
             android:gravity="center"
             android:textColor="@color/text_secondary"
-            android:textSize="14sp" />
+            android:textSize="15sp" />
 
         <Button
             android:id="@+id/btnCerrarSesionRol"
