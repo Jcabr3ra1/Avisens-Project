@@ -2,10 +2,63 @@ import { fechaDeHoy } from '@shared/utils/fechas'
 import { validarTextoSeguro } from '@shared/utils/validacion'
 export type Pesaje = { id:number; lote_id:number; fecha:string; peso_promedio_g:number; cantidad_aves_pesadas:number|null; peso_objetivo_g:number|null; observaciones:string|null }
 export type Mortalidad = { id:number; lote_id:number; fecha:string; cantidad_aves:number; causa_presuntiva:string|null; disposicion:string|null; observaciones:string|null; foto_mime_type?:string|null }
-export type EventoSanitario = { id:number; lote_id:number; fecha:string; tipo:string; producto:string|null; diagnostico:string|null; cantidad_aves:number|null; observaciones:string|null; insumo_id?:number|null; dosis?:string|null; via_aplicacion?:string|null }
+export type EventoSanitario = {
+  id: number
+  lote_id: number
+  evento_padre_id?: number | null
+  estado?: 'activo' | 'finalizado' | string
+  fecha_cierre?: string | null
+  observaciones_cierre?: string | null
+  cantidad_insumo?: number | string | null
+  movimiento_inventario_id?: number | null
+  fecha: string
+  tipo: string
+  producto: string | null
+  diagnostico: string | null
+  cantidad_aves: number | null
+  observaciones: string | null
+  insumo_id?: number | null
+  dosis?: string | null
+  via_aplicacion?: string | null
+  insumo?: { id: number; nombre: string; unidad_medida?: string } | null
+  caso_padre?: { id: number; tipo: string; diagnostico: string | null; estado: string } | null
+  _count?: { seguimientos: number }
+}
 export type TipoRegistro = 'peso' | 'mortalidad' | 'sanitario'
-export type FormularioRegistro = { fecha:string; peso_promedio_g:string; cantidad_aves_pesadas:string; peso_objetivo_g:string; cantidad_aves:string; causa_presuntiva:string; tipo:string; producto:string; diagnostico:string; observaciones:string; dosis:string; via_aplicacion:string; insumo_id:string }
-export const FORMULARIO_INICIAL: FormularioRegistro = { fecha:fechaDeHoy(), peso_promedio_g:'', cantidad_aves_pesadas:'', peso_objetivo_g:'', cantidad_aves:'', causa_presuntiva:'', tipo:'vacunacion', producto:'', diagnostico:'', observaciones:'', dosis:'', via_aplicacion:'', insumo_id:'' }
+export type FormularioRegistro = {
+  fecha: string
+  peso_promedio_g: string
+  cantidad_aves_pesadas: string
+  peso_objetivo_g: string
+  cantidad_aves: string
+  causa_presuntiva: string
+  tipo: string
+  producto: string
+  diagnostico: string
+  observaciones: string
+  dosis: string
+  via_aplicacion: string
+  insumo_id: string
+  cantidad_insumo: string
+  evento_padre_id: string
+}
+export const FORMULARIO_INICIAL: FormularioRegistro = {
+  fecha: fechaDeHoy(),
+  peso_promedio_g: '',
+  cantidad_aves_pesadas: '',
+  peso_objetivo_g: '',
+  cantidad_aves: '',
+  causa_presuntiva: '',
+  tipo: 'vacunacion',
+  producto: '',
+  diagnostico: '',
+  observaciones: '',
+  dosis: '',
+  via_aplicacion: '',
+  insumo_id: '',
+  cantidad_insumo: '',
+  evento_padre_id: '',
+}
 
 // Vías de aplicación de un tratamiento. El backend guarda texto libre; estas
 // son las de su documentación (ocular, oral, agua, subcutánea, intramuscular)
@@ -92,6 +145,13 @@ export function errorDeRegistro(tipo: TipoRegistro, form: FormularioRegistro): s
         return `Las aves tratadas no pueden superar ${AVES_MAXIMO.toLocaleString('es-CO')}.`
       }
     }
+    if (form.cantidad_insumo) {
+      if (!form.insumo_id) return 'Selecciona primero el insumo de bodega a descontar.'
+      const cantInsumo = Number(form.cantidad_insumo)
+      if (!Number.isFinite(cantInsumo) || cantInsumo <= 0 || cantInsumo > 10_000_000) {
+        return 'La cantidad de insumo a descontar debe ser mayor que 0 y menor a 10.000.000.'
+      }
+    }
   }
   return ''
 }
@@ -123,10 +183,17 @@ export function formularioDesde(tipo: TipoRegistro, registro: Pesaje | Mortalida
     dosis: texto(evento.dosis),
     via_aplicacion: texto(evento.via_aplicacion),
     insumo_id: texto(evento.insumo_id),
+    cantidad_insumo: texto(evento.cantidad_insumo),
+    evento_padre_id: texto(evento.evento_padre_id),
   }
 }
 
-export function payloadRegistro(tipo: TipoRegistro, form: FormularioRegistro, loteId: number): object {
+export function payloadRegistro(
+  tipo: TipoRegistro,
+  form: FormularioRegistro,
+  loteId: number,
+  editando = false,
+): object {
   const base = {
     lote_id: loteId,
     fecha: form.fecha,
@@ -144,7 +211,7 @@ export function payloadRegistro(tipo: TipoRegistro, form: FormularioRegistro, lo
   if (tipo === 'mortalidad') {
     return { ...base, cantidad_aves: Number(form.cantidad_aves), causa_presuntiva: form.causa_presuntiva || undefined }
   }
-  return {
+  const sanitario: Record<string, unknown> = {
     ...base,
     tipo: form.tipo,
     producto: form.producto || undefined,
@@ -154,4 +221,9 @@ export function payloadRegistro(tipo: TipoRegistro, form: FormularioRegistro, lo
     via_aplicacion: form.via_aplicacion || undefined,
     insumo_id: form.insumo_id ? Number(form.insumo_id) : undefined,
   }
+  if (!editando) {
+    if (form.evento_padre_id) sanitario.evento_padre_id = Number(form.evento_padre_id)
+    if (form.insumo_id && form.cantidad_insumo) sanitario.cantidad_insumo = Number(form.cantidad_insumo)
+  }
+  return sanitario
 }

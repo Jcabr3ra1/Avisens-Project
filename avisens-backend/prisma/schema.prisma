@@ -79,6 +79,7 @@ model Usuario {
   prospectos_convertidos     Prospecto[] @relation("ProspectoConvertido")
   solicitudes_pqrs           SolicitudPqrs[]
   notificaciones             Notificacion[]
+  dispositivos_push          DispositivoPush[]
   comandos_voz               ComandoVoz[]
   accionamientos             AccionamientoEquipo[]
   ordenes_actuadores         OrdenActuador[]
@@ -582,29 +583,43 @@ model RegistroMortalidad {
 // ---------------------------------------------------------------------------
 
 model EventoSanitario {
-  id              Int      @id @default(autoincrement())
-  lote_id         Int
+  id                       Int       @id @default(autoincrement())
+  lote_id                  Int
+  // Caso sanitario principal al que pertenece este seguimiento (null = caso raíz).
+  evento_padre_id          Int?
+  // Estado del caso sanitario: activo | finalizado.
+  estado                   String    @default("activo")
+  fecha_cierre             DateTime?
+  observaciones_cierre     String?
   // Insumo del inventario (vacuna/medicamento). Opcional: un diagnostico o una
   // revision no siempre gasta un insumo.
-  insumo_id       Int?
-  tipo            String // vacunacion | medicacion | tratamiento | diagnostico | revision
-  diagnostico     String?
-  producto        String?
-  dosis           String?
-  via_aplicacion  String?
+  insumo_id                Int?
+  // Cantidad descontada automaticamente de bodega cuando se usa un insumo.
+  cantidad_insumo          Decimal?  @db.Decimal(14, 3)
+  movimiento_inventario_id Int?      @unique
+  tipo                     String // vacunacion | medicacion | tratamiento | diagnostico | revision | seguimiento
+  diagnostico              String?
+  producto                 String?
+  dosis                    String?
+  via_aplicacion           String?
   // A cuantas aves se aplico. Opcional: a veces es a todo el lote sin conteo.
-  cantidad_aves   Int?
-  fecha           DateTime @db.Date
-  usuario_id      Int
-  metodo_registro String?
-  observaciones   String?
-  fecha_registro  DateTime @default(now())
+  cantidad_aves            Int?
+  fecha                    DateTime  @db.Date
+  usuario_id               Int
+  metodo_registro          String?
+  observaciones            String?
+  fecha_registro           DateTime  @default(now())
 
-  lote    Lote              @relation(fields: [lote_id], references: [id])
-  insumo  InventarioInsumo? @relation(fields: [insumo_id], references: [id])
-  usuario Usuario           @relation(fields: [usuario_id], references: [id])
+  lote                  Lote                  @relation(fields: [lote_id], references: [id])
+  caso_padre            EventoSanitario?      @relation("SeguimientosSanitarios", fields: [evento_padre_id], references: [id])
+  seguimientos          EventoSanitario[]     @relation("SeguimientosSanitarios")
+  insumo                InventarioInsumo?     @relation(fields: [insumo_id], references: [id])
+  movimiento_inventario MovimientoInventario? @relation("EventoSanitarioSalida", fields: [movimiento_inventario_id], references: [id])
+  usuario               Usuario               @relation(fields: [usuario_id], references: [id])
 
   @@index([lote_id])
+  @@index([evento_padre_id])
+  @@index([estado])
   @@map("eventos_sanitarios")
 }
 
@@ -1554,6 +1569,7 @@ model MovimientoInventario {
   usuario            Usuario                @relation(fields: [usuario_id], references: [id])
   repuesto_salida    MantenimientoRepuesto? @relation("RepuestoSalida")
   repuesto_reversion MantenimientoRepuesto? @relation("RepuestoReversion")
+  evento_sanitario   EventoSanitario?       @relation("EventoSanitarioSalida")
 
   @@index([insumo_id])
   @@index([lote_id])
@@ -1970,4 +1986,20 @@ model Notificacion {
   @@index([usuario_id])
   @@index([leida])
   @@map("notificaciones")
+}
+
+// Dispositivos registrados para notificaciones push (FCM: Android, iOS, Web).
+model DispositivoPush {
+  id                   Int      @id @default(autoincrement())
+  usuario_id           Int
+  token                String   @unique
+  plataforma           String   @default("android") // android | ios | web
+  activo               Boolean  @default(true)
+  fecha_registro       DateTime @default(now())
+  ultima_actualizacion DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@index([usuario_id, activo])
+  @@map("dispositivos_push")
 }

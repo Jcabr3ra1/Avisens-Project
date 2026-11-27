@@ -1,0 +1,25 @@
+meta {
+  name: [Usuario] Desactivar dispositivo push FCM
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/v1/notificaciones/dispositivos
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "token": "fcm_token_dispositivo_android_1234567890"
+  }
+}

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { toast } from 'sonner'
 import type { Lote } from '@features/lotes/api/lotes'
 import { useBitacora } from '@features/bitacora/hooks/useBitacora'
+import { useInsumosDeGranja } from '@features/bitacora/hooks/useInsumosDeGranja'
 import { subirFotoMortalidad } from '@features/bitacora/api/bitacora'
 import FormularioRegistro from '@features/bitacora/components/FormularioRegistro'
 import ModalFotoMortalidad from '@features/bitacora/components/ModalFotoMortalidad'
@@ -53,6 +54,14 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
   const [tiposAlimento, setTiposAlimento] = useState<TipoAlimento[]>([])
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+  const insumosGranja = useInsumosDeGranja(lote.galpon.granja.id, registro?.tipo === 'sanitario')
+  const casosSanitariosActivos = useMemo(
+    () =>
+      datos.sanitarios.filter(
+        (item) => item.lote_id === lote.id && !item.evento_padre_id && item.estado !== 'finalizado',
+      ),
+    [datos.sanitarios, lote.id],
+  )
 
   useEffect(() => {
     listarTiposAlimento().then(setTiposAlimento).catch(() => setTiposAlimento([]))
@@ -107,7 +116,7 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
       setError(problema)
       return
     }
-    const payload = payloadRegistro(registro.tipo, formRegistro, lote.id)
+    const payload = payloadRegistro(registro.tipo, formRegistro, lote.id, registro.id !== null)
     setGuardando(true)
     setError('')
     const archivoAdjunto = registro.tipo === 'mortalidad' ? fotoMortalidad : null
@@ -153,6 +162,19 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
       })
       .catch((fallo) => setError(mensajeDeError(fallo, 'No se pudo guardar el consumo.')))
       .finally(() => setGuardando(false))
+  }
+
+  async function finalizarCaso(id: number) {
+    if (!(await confirmarAccion({
+      titulo: '¿Finalizar este caso sanitario?',
+      entidad: `Caso #${id}`,
+      descripcion: 'El caso quedará cerrado y ya no aceptará nuevos seguimientos.',
+      textoConfirmar: 'Finalizar caso',
+      tono: 'normal',
+    }))) return
+    void datos.finalizarSanitario(id)
+      .then(() => toast.success('Caso sanitario finalizado'))
+      .catch((fallo) => toast.error(mensajeDeError(fallo, 'No se pudo finalizar el caso sanitario.')))
   }
 
   async function eliminar(movimiento: Movimiento) {
@@ -280,6 +302,15 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
                           <span>{movimiento.detalle}</span>
                         </span>
                         <span className="gb-movimiento-acciones">
+                          {movimiento.tipo === 'sanitario' && casosSanitariosActivos.some((c) => c.id === movimiento.id) && (
+                            <button
+                              type="button"
+                              onClick={() => void finalizarCaso(movimiento.id)}
+                              aria-label={`Finalizar caso sanitario ${movimiento.titulo}`}
+                            >
+                              Finalizar caso
+                            </button>
+                          )}
                           {movimiento.tipo === 'mortalidad' && (
                             <button
                               type="button"
@@ -315,6 +346,8 @@ function BitacoraPestana({ lote, vistaInicial = 'resumen' }: Props) {
           guardando={guardando}
           error={error}
           editando={registro.id !== null}
+          insumos={insumosGranja}
+          casosSanitariosActivos={casosSanitariosActivos}
           onCambiar={(campo, valor) => setFormRegistro((actual) => ({ ...actual, [campo]: valor }))}
           onGuardar={guardarRegistro}
           onCerrar={() => {

@@ -151,6 +151,10 @@ function BitacoraPage() {
   const pesajes = useMemo(() => filtrarRegistrosPorLote(datos.pesajes, loteSeleccionadoId), [datos.pesajes, loteSeleccionadoId])
   const mortalidad = useMemo(() => filtrarRegistrosPorLote(datos.mortalidad, loteSeleccionadoId), [datos.mortalidad, loteSeleccionadoId])
   const sanitarios = useMemo(() => filtrarRegistrosPorLote(datos.sanitarios, loteSeleccionadoId), [datos.sanitarios, loteSeleccionadoId])
+  const casosSanitariosActivos = useMemo(
+    () => sanitarios.filter((item) => !item.evento_padre_id && item.estado !== 'finalizado'),
+    [sanitarios],
+  )
   const consumos = useMemo(() => filtrarRegistrosPorLote(datos.consumos, loteSeleccionadoId), [datos.consumos, loteSeleccionadoId])
 
   const resumen = useMemo(
@@ -214,8 +218,8 @@ function BitacoraPage() {
     const tipoActual = modal
     const archivoAdjunto = tipoActual === 'mortalidad' ? fotoMortalidad : null
     const accion = editandoId !== null
-      ? datos.actualizar(tipoActual, editandoId, payloadRegistro(tipoActual, form, loteSeleccionadoId))
-      : datos.crear(tipoActual, payloadRegistro(tipoActual, form, loteSeleccionadoId))
+      ? datos.actualizar(tipoActual, editandoId, payloadRegistro(tipoActual, form, loteSeleccionadoId, true))
+      : datos.crear(tipoActual, payloadRegistro(tipoActual, form, loteSeleccionadoId, false))
     void accion
       .then(async (guardado) => {
         if (archivoAdjunto && guardado?.id) {
@@ -234,6 +238,19 @@ function BitacoraPage() {
       })
       .catch((error) => setErrorForm(mensajeDeError(error, 'No se pudo guardar el registro.')))
       .finally(() => setGuardando(false))
+  }
+
+  const finalizarCaso = async (id: number) => {
+    if (!(await confirmarAccion({
+      titulo: '¿Finalizar este caso sanitario?',
+      entidad: `Caso #${id}`,
+      descripcion: 'El caso quedará cerrado y ya no aceptará nuevos seguimientos.',
+      textoConfirmar: 'Finalizar caso',
+      tono: 'normal',
+    }))) return
+    void datos.finalizarSanitario(id)
+      .then(() => toast.success('Caso sanitario finalizado.'))
+      .catch((error) => toast.error(mensajeDeError(error, 'No se pudo finalizar el caso sanitario.')))
   }
 
   const borrar = async (tipo: TipoRegistro, id: number) => {
@@ -505,6 +522,7 @@ function BitacoraPage() {
                 onEditar={(id) => abrirEdicion(vista, id)}
                 onEliminar={(id) => borrar(vista, id)}
                 onVerFoto={vista === 'mortalidad' ? (id) => setMortalidadFotoId(id) : undefined}
+                onFinalizar={vista === 'sanitario' ? (id) => void finalizarCaso(id) : undefined}
                 resaltadoId={vista === 'peso' ? pesajes.find((item) => item.peso_promedio_g > 10000)?.id ?? null : null}
               />
             )}
@@ -528,6 +546,7 @@ function BitacoraPage() {
           }}
           editando={editandoId !== null}
           insumos={insumosGranja}
+          casosSanitariosActivos={casosSanitariosActivos}
           fotoMortalidad={modal === 'mortalidad' ? fotoMortalidad : null}
           tieneFotoActual={
             modal === 'mortalidad' && editandoId !== null

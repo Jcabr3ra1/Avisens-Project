@@ -1,7 +1,8 @@
 // alertas.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PushService } from '../notificaciones/push.service';
 import { CreateAlertasDto } from './dto/create-alertas.dto';
 import { UpdateAlertasDto } from './dto/update-alertas.dto';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
@@ -95,7 +96,10 @@ const ALERTA_SELECT = {
 
 @Injectable()
 export class AlertasService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private push?: PushService,
+  ) {}
 
   async evaluarLectura(sensorId: number, valor: number, fecha = new Date()) {
     const sensor = await this.prisma.sensor.findUnique({
@@ -322,16 +326,30 @@ export class AlertasService {
       propietarioId,
       ...asignaciones.map(({ usuario_id }) => usuario_id),
     ]);
+    const titulo =
+      criticidad === 'alta' ? 'Alerta crítica' : 'Alerta por revisar';
     await this.prisma.notificacion.createMany({
       data: [...destinatarios].map((usuario_id) => ({
         usuario_id,
         tipo: 'alerta',
-        titulo: criticidad === 'alta' ? 'Alerta crítica' : 'Alerta por revisar',
+        titulo,
         mensaje,
         referencia_tipo: 'alerta',
         referencia_id: alertaId,
       })),
     });
+
+    if (this.push) {
+      void this.push
+        .enviarAUsuarios([...destinatarios], {
+          titulo,
+          mensaje,
+          tipo: 'alerta',
+          referencia_tipo: 'alerta',
+          referencia_id: alertaId,
+        })
+        .catch(() => undefined);
+    }
   }
 
   // ============================================================
