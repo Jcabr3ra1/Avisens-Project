@@ -20,7 +20,8 @@ import { ROLES } from '../../common/auth/roles';
 import { EventosSanitariosService } from './eventos-sanitarios.service';
 import { CreateEventoSanitarioDto } from './dto/create-evento-sanitario.dto';
 import { UpdateEventoSanitarioDto } from './dto/update-evento-sanitario.dto';
-import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
+import { FinalizarCasoSanitarioDto } from './dto/finalizar-caso-sanitario.dto';
+import { ListarEventosSanitariosDto } from './dto/listar-eventos-sanitarios.dto';
 
 interface AuthRequest extends Request {
   user: {
@@ -39,7 +40,10 @@ export class EventosSanitariosController {
   constructor(private eventosSanitariosService: EventosSanitariosService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Registrar un evento sanitario de un lote' })
+  @ApiOperation({
+    summary:
+      'Registrar un evento o seguimiento sanitario (opcionalmente descuenta medicamento de bodega)',
+  })
   crear(@Body() dto: CreateEventoSanitarioDto, @Req() req: AuthRequest) {
     return this.eventosSanitariosService.crear(dto, req.user);
   }
@@ -47,16 +51,40 @@ export class EventosSanitariosController {
   @Get()
   @ApiOperation({
     summary:
-      'Listar eventos sanitarios paginado (Admin: todos - Propietario: los de sus lotes)',
+      'Listar eventos sanitarios paginado con filtros opcionales (lote_id, estado, solo_casos)',
   })
-  listar(@Query() paginacion: PaginationQueryDto, @Req() req: AuthRequest) {
-    return this.eventosSanitariosService.listar(req.user, paginacion);
+  listar(
+    @Query() query: ListarEventosSanitariosDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.eventosSanitariosService.listar(req.user, query);
+  }
+
+  @Get(':id/seguimientos')
+  @ApiOperation({
+    summary: 'Listar todos los seguimientos asociados a un caso sanitario',
+  })
+  listarSeguimientos(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthRequest,
+  ) {
+    return this.eventosSanitariosService.listarSeguimientos(id, req.user);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un evento sanitario por ID' })
   obtener(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.eventosSanitariosService.obtener(id, req.user);
+  }
+
+  @Patch(':id/finalizar')
+  @ApiOperation({ summary: 'Finalizar un caso sanitario activo' })
+  finalizar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: FinalizarCasoSanitarioDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.eventosSanitariosService.finalizar(id, dto, req.user);
   }
 
   @Patch(':id')
@@ -75,7 +103,10 @@ export class EventosSanitariosController {
   // borrar también lo que cargó un compañero días atrás.
   @Delete(':id')
   @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO)
-  @ApiOperation({ summary: 'Eliminar un evento sanitario' })
+  @ApiOperation({
+    summary:
+      'Eliminar un evento sanitario (revierte el descuento de bodega si aplicaba)',
+  })
   eliminar(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest) {
     return this.eventosSanitariosService.eliminar(id, req.user);
   }

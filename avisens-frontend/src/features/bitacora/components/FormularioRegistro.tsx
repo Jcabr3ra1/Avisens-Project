@@ -7,6 +7,7 @@ import {
   PESO_MAXIMO_G,
   PESO_MINIMO_G,
   VIAS_APLICACION,
+  type EventoSanitario,
   type FormularioRegistro as Datos,
   type TipoRegistro,
 } from '../model/bitacora'
@@ -25,6 +26,8 @@ type Props = {
   editando?: boolean
   // Vacunas y medicamentos de bodega que se pueden indicar en un evento sanitario.
   insumos?: Insumo[]
+  // Casos sanitarios activos del lote para enlazar seguimientos.
+  casosSanitariosActivos?: EventoSanitario[]
   // Evidencia fotográfica opcional para registros de mortalidad.
   fotoMortalidad?: File | null
   tieneFotoActual?: boolean
@@ -52,6 +55,7 @@ const EVENTOS_SANITARIOS = [
   ['tratamiento', 'Tratamiento'],
   ['diagnostico', 'Diagnóstico'],
   ['revision', 'Revisión'],
+  ['seguimiento', 'Seguimiento'],
 ] as const
 
 function FormularioRegistro({
@@ -64,12 +68,14 @@ function FormularioRegistro({
   onCerrar,
   editando = false,
   insumos = [],
+  casosSanitariosActivos = [],
   fotoMortalidad = null,
   tieneFotoActual = false,
   onCambiarFotoMortalidad,
   onErrorFoto,
 }: Props) {
   const fechaRef = useRef<HTMLInputElement>(null)
+  const insumoSeleccionado = insumos.find((item) => String(item.id) === form.insumo_id)
 
   useEffect(() => {
     fechaRef.current?.focus()
@@ -203,6 +209,22 @@ function FormularioRegistro({
                 ))}
               </select>
             </label>
+            {!editando && casosSanitariosActivos.length > 0 && (
+              <label className="modal-campo">
+                <span>Seguimiento de un caso activo <em>(Opcional)</em></span>
+                <select
+                  value={form.evento_padre_id}
+                  onChange={(evento) => onCambiar('evento_padre_id', evento.target.value)}
+                >
+                  <option value="">Es un caso sanitario nuevo</option>
+                  {casosSanitariosActivos.map((caso) => (
+                    <option key={caso.id} value={String(caso.id)}>
+                      #{caso.id} · {caso.diagnostico || caso.producto || caso.tipo} ({caso.fecha.slice(0, 10)})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="modal-campo">
               <span>Producto o vacuna <em>(Opcional)</em></span>
               <input
@@ -212,20 +234,49 @@ function FormularioRegistro({
               />
             </label>
             {insumos.length > 0 && (
-              <label className="modal-campo">
-                <span>Insumo de bodega <em>(Opcional)</em></span>
-                <select
-                  value={form.insumo_id}
-                  onChange={(evento) => onCambiar('insumo_id', evento.target.value)}
-                >
-                  <option value="">No salió de bodega</option>
-                  {insumos.map((insumo) => (
-                    <option key={insumo.id} value={String(insumo.id)}>
-                      {insumo.nombre} ({insumo.stock_actual.toLocaleString('es-CO')} {insumo.unidad_medida})
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <>
+                <label className="modal-campo">
+                  <span>Insumo de bodega <em>(Opcional)</em></span>
+                  <select
+                    value={form.insumo_id}
+                    onChange={(evento) => {
+                      onCambiar('insumo_id', evento.target.value)
+                      if (!evento.target.value) onCambiar('cantidad_insumo', '')
+                    }}
+                  >
+                    <option value="">No salió de bodega</option>
+                    {insumos.map((insumo) => (
+                      <option key={insumo.id} value={String(insumo.id)}>
+                        {insumo.nombre} ({insumo.stock_actual.toLocaleString('es-CO')} {insumo.unidad_medida})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {!editando && form.insumo_id && (
+                  <label className="modal-campo">
+                    <span>
+                      Cantidad a descontar de bodega{' '}
+                      {insumoSeleccionado ? `(${insumoSeleccionado.unidad_medida})` : ''}{' '}
+                      <em>(Opcional)</em>
+                    </span>
+                    <input
+                      type="number"
+                      min="0.001"
+                      max={insumoSeleccionado ? insumoSeleccionado.stock_actual : 10000000}
+                      step="0.001"
+                      inputMode="decimal"
+                      value={form.cantidad_insumo}
+                      placeholder="Ej.: 1 o 0.5"
+                      onChange={(evento) => onCambiar('cantidad_insumo', evento.target.value)}
+                    />
+                    {insumoSeleccionado && (
+                      <small className="modal-ayuda">
+                        Disponible en bodega: {insumoSeleccionado.stock_actual.toLocaleString('es-CO')} {insumoSeleccionado.unidad_medida}. Se registra la salida automáticamente.
+                      </small>
+                    )}
+                  </label>
+                )}
+              </>
             )}
             <div className="modal-fila">
               <label className="modal-campo">

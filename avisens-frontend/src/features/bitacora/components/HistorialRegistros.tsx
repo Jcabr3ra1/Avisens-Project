@@ -12,6 +12,7 @@ type Props = {
   onEditar: (id: number) => void
   onEliminar: (id: number) => void
   onVerFoto?: (id: number) => void
+  onFinalizar?: (id: number) => void
   resaltadoId?: number | null
 }
 
@@ -28,9 +29,10 @@ function HistorialRegistros({
   onEditar,
   onEliminar,
   onVerFoto,
+  onFinalizar,
   resaltadoId = null,
 }: Props) {
-  const hayAcciones = permisos.editar || permisos.eliminar || Boolean(onVerFoto)
+  const hayAcciones = permisos.editar || permisos.eliminar || Boolean(onVerFoto) || Boolean(onFinalizar)
 
   return (
     <section className="bit-card bit-historial" aria-labelledby="bit-historial-titulo">
@@ -85,6 +87,15 @@ function HistorialRegistros({
                           >
                             <IcPaperclip size={13} aria-hidden="true" />
                             {fila.tieneFoto ? 'Ver foto' : 'Foto'}
+                          </button>
+                        )}
+                        {onFinalizar && fila.puedeFinalizar && (
+                          <button
+                            type="button"
+                            className="adm-btn-fila"
+                            onClick={() => onFinalizar(fila.id)}
+                          >
+                            Finalizar caso
                           </button>
                         )}
                         {permisos.editar && (

@@ -19,7 +19,10 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { ROLES } from '../../common/auth/roles';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto';
 import { NotificacionesService } from './notificaciones.service';
+import { PushService } from './push.service';
 import { CreateNotificacionDto } from './dto/create-notificacion.dto';
+import { RegistrarDispositivoPushDto } from './dto/registrar-dispositivo-push.dto';
+import { DesactivarDispositivoPushDto } from './dto/desactivar-dispositivo-push.dto';
 
 interface AuthRequest extends Request {
   user: { id: number; email?: string | null; rol: string };
@@ -31,7 +34,40 @@ interface AuthRequest extends Request {
 @Roles(ROLES.ADMINISTRADOR, ROLES.PROPIETARIO, ROLES.OPERARIO)
 @Controller('notificaciones')
 export class NotificacionesController {
-  constructor(private service: NotificacionesService) {}
+  constructor(
+    private service: NotificacionesService,
+    private pushService: PushService,
+  ) {}
+
+  @Post('dispositivos')
+  @ApiOperation({
+    summary: 'Registrar o actualizar el token FCM de este dispositivo',
+  })
+  registrarDispositivo(
+    @Body() dto: RegistrarDispositivoPushDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.pushService.registrarDispositivo(req.user.id, dto);
+  }
+
+  @Delete('dispositivos')
+  @ApiOperation({
+    summary: 'Desactivar el token FCM de este dispositivo (ej. al cerrar sesión)',
+  })
+  desactivarDispositivo(
+    @Body() dto: DesactivarDispositivoPushDto,
+    @Req() req: AuthRequest,
+  ) {
+    return this.pushService.desactivarDispositivo(req.user.id, dto.token);
+  }
+
+  @Get('push/estado')
+  @ApiOperation({
+    summary: 'Consultar si el envío push FCM está habilitado y cuántos dispositivos activos tengo',
+  })
+  estadoPush(@Req() req: AuthRequest) {
+    return this.pushService.estadoUsuario(req.user.id);
+  }
 
   @Post()
   @Roles(ROLES.ADMINISTRADOR)

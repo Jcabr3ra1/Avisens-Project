@@ -1,0 +1,25 @@
+meta {
+  name: [Admin · Propietario · Operario] Finalizar un caso sanitario
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/v1/eventos-sanitarios/1/finalizar
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "observaciones_cierre": "Lote recuperado tras completar el tratamiento."
+  }
+}

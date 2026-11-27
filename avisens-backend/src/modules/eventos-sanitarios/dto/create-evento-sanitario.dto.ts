@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
   IsInt,
+  IsNumber,
   IsOptional,
   IsPositive,
   IsString,
@@ -10,6 +11,7 @@ import {
 } from 'class-validator';
 import {
   AVES_MAXIMO_LOTE,
+  STOCK_MAXIMO,
   TextoSeguro,
 } from '../../../common/validation/texto';
 
@@ -19,10 +21,20 @@ export class CreateEventoSanitarioDto {
   @Min(1)
   lote_id: number;
 
+  @ApiPropertyOptional({
+    example: 10,
+    description:
+      'ID del caso sanitario principal cuando este registro es un seguimiento',
+  })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  evento_padre_id?: number;
+
   @ApiProperty({
     example: 'vacunacion',
     description:
-      'Tipo de evento: vacunacion | medicacion | tratamiento | diagnostico | revision',
+      'Tipo de evento: vacunacion | medicacion | tratamiento | diagnostico | revision | seguimiento',
   })
   @IsString()
   @TextoSeguro('El tipo de evento', 40, { requerido: true })
@@ -40,6 +52,19 @@ export class CreateEventoSanitarioDto {
   @Min(1)
   @IsOptional()
   insumo_id?: number;
+
+  @ApiPropertyOptional({
+    example: 2.5,
+    description:
+      'Cantidad del insumo a descontar automáticamente de bodega (requiere insumo_id)',
+  })
+  @IsNumber({ maxDecimalPlaces: 3 })
+  @IsPositive()
+  @Max(STOCK_MAXIMO, {
+    message: `La cantidad de insumo no puede superar ${STOCK_MAXIMO.toLocaleString('es-CO')}`,
+  })
+  @IsOptional()
+  cantidad_insumo?: number;
 
   @ApiPropertyOptional({
     example: 'Newcastle',

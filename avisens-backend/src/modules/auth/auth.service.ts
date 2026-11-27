@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
   UnauthorizedException,
   ForbiddenException,
   Logger,
@@ -24,6 +25,7 @@ import {
   transaccionConPresupuesto,
 } from '../../common/bloqueos/presupuesto-transaccion';
 import type { PresupuestoTransaccion } from '../../common/bloqueos/presupuesto-transaccion';
+import { PushService } from '../notificaciones/push.service';
 
 @Injectable()
 export class AuthService {
@@ -33,6 +35,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    @Optional() private push?: PushService,
   ) {}
 
   obtenerPermisos(rol: string) {
@@ -539,20 +542,38 @@ export class AuthService {
       if (administradores.length === 0) return;
 
       const bloqueada = intentos === 5;
+      const titulo = bloqueada
+        ? 'Cuenta bloqueada temporalmente'
+        : 'Intentos de acceso por revisar';
+      const mensaje = bloqueada
+        ? `La cuenta de ${usuario.nombre_completo} fue bloqueada durante 15 minutos tras cinco intentos fallidos. Puedes orientar a la persona para recuperar su contraseña.`
+        : `La cuenta de ${usuario.nombre_completo} acumula tres intentos de acceso fallidos. Confirma con la persona si necesita recuperar su contraseña.`;
+
       await this.prisma.notificacion.createMany({
         data: administradores.map(({ id }) => ({
           usuario_id: id,
           tipo: 'seguridad_cuenta',
-          titulo: bloqueada
-            ? 'Cuenta bloqueada temporalmente'
-            : 'Intentos de acceso por revisar',
-          mensaje: bloqueada
-            ? `La cuenta de ${usuario.nombre_completo} fue bloqueada durante 15 minutos tras cinco intentos fallidos. Puedes orientar a la persona para recuperar su contraseña.`
-            : `La cuenta de ${usuario.nombre_completo} acumula tres intentos de acceso fallidos. Confirma con la persona si necesita recuperar su contraseña.`,
+          titulo,
+          mensaje,
           referencia_tipo: 'seguridad_cuenta',
           referencia_id: usuario.id,
         })),
       });
+
+      if (this.push) {
+        void this.push
+          .enviarAUsuarios(
+            administradores.map(({ id }) => id),
+            {
+              titulo,
+              mensaje,
+              tipo: 'seguridad_cuenta',
+              referencia_tipo: 'seguridad_cuenta',
+              referencia_id: usuario.id,
+            },
+          )
+          .catch(() => undefined);
+      }
     } catch {
       this.logger.error(
         'No fue posible crear las notificaciones de seguridad de la cuenta',

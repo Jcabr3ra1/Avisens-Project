@@ -21,6 +21,10 @@ export const obtenerEventoSanitario = (id:number) => api.get<EventoSanitario>(`/
 export const actualizarPesaje = (id:number, datos:object) => api.patch<Pesaje>(`/pesajes/${id}`,datos).then(({data})=>data)
 export const actualizarMortalidad = (id:number, datos:object) => api.patch<Mortalidad>(`/registros-mortalidad/${id}`,datos).then(({data})=>data)
 export const actualizarEventoSanitario = (id:number, datos:object) => api.patch<EventoSanitario>(`/eventos-sanitarios/${id}`,datos).then(({data})=>data)
+export const finalizarCasoSanitario = (id:number, datos: { observaciones_cierre?: string; fecha_cierre?: string } = {}) =>
+  api.patch<EventoSanitario>(`/eventos-sanitarios/${id}/finalizar`, datos).then(({ data }) => data)
+export const listarSeguimientosSanitarios = (id:number) =>
+  api.get<EventoSanitario[]>(`/eventos-sanitarios/${id}/seguimientos`).then(({ data }) => data)
 
 export const obtenerFotoMortalidad = (id:number) =>
   api.get<Blob>(`/registros-mortalidad/${id}/foto`, { responseType: 'blob' }).then(({ data }) => data)

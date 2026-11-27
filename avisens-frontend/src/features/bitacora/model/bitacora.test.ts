@@ -112,9 +112,39 @@ describe('evento sanitario', () => {
     const evento: EventoSanitario = {
       id: 1, lote_id: 7, fecha: '2026-11-10T00:00:00.000Z', tipo: 'vacunacion', producto: 'Newcastle',
       diagnostico: null, cantidad_aves: 500, observaciones: null, insumo_id: 4, dosis: '1 gota', via_aplicacion: 'ocular',
+      cantidad_insumo: 2.5, evento_padre_id: 10,
     }
     expect(formularioDesde('sanitario', evento)).toMatchObject({
       fecha: '2026-11-10', cantidad_aves: '500', insumo_id: '4', dosis: '1 gota', via_aplicacion: 'ocular',
+      cantidad_insumo: '2.5', evento_padre_id: '10',
     })
+  })
+
+  it('envia evento_padre_id y cantidad_insumo al crear y los omite al editar', () => {
+    const form = {
+      ...FORMULARIO_INICIAL,
+      fecha: '2026-11-18',
+      tipo: 'seguimiento',
+      insumo_id: '2',
+      cantidad_insumo: '1.5',
+      evento_padre_id: '10',
+    }
+    expect(payloadRegistro('sanitario', form, 7, false)).toMatchObject({
+      evento_padre_id: 10,
+      cantidad_insumo: 1.5,
+      insumo_id: 2,
+    })
+    const payloadEdicion = payloadRegistro('sanitario', form, 7, true) as Record<string, unknown>
+    expect(payloadEdicion.evento_padre_id).toBeUndefined()
+    expect(payloadEdicion.cantidad_insumo).toBeUndefined()
+  })
+
+  it('exige seleccionar insumo cuando se indica cantidad_insumo', () => {
+    expect(
+      errorDeRegistro('sanitario', { ...FORMULARIO_INICIAL, fecha: '2026-11-18', cantidad_insumo: '2' }),
+    ).toMatch(/insumo de bodega/)
+    expect(
+      errorDeRegistro('sanitario', { ...FORMULARIO_INICIAL, fecha: '2026-11-18', insumo_id: '2', cantidad_insumo: '0' }),
+    ).toMatch(/mayor que 0/)
   })
 })
