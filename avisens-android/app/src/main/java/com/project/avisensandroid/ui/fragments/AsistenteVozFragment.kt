@@ -1,4 +1,3 @@
-
 package com.project.avisensandroid.ui.fragments
 
 import android.Manifest
@@ -559,8 +558,9 @@ class AsistenteVozFragment : BaseBottomNavFragment() {
     private suspend fun resolverConsultaHu11(texto: String, id: Int): String? {
         val consulta = normalizarConsulta(texto)
         val pideAlertas = listOf("alerta", "alarmas", "emergencia").any { it in consulta }
-        val pideAmbiente = listOf("como esta", "estado del galpon", "ambiente", "condiciones del galpon")
-            .any { it in consulta }
+        val pideAmbiente =
+            listOf("como esta", "estado del galpon", "ambiente", "condiciones del galpon")
+                .any { it in consulta }
         if (!pideAlertas && !pideAmbiente) return null
 
         val nombreGalpon = galpones.firstOrNull { it.id == id }?.nombre ?: "galpón seleccionado"
@@ -581,7 +581,8 @@ class AsistenteVozFragment : BaseBottomNavFragment() {
         }
 
         val respuestaLecturas = RetrofitClient.api.listarUltimasLecturas(id)
-        val lecturas = if (respuestaLecturas.isSuccessful) respuestaLecturas.body()?.sensores else null
+        val lecturas =
+            if (respuestaLecturas.isSuccessful) respuestaLecturas.body()?.sensores else null
         val tipos = listOf(
             "temperatura" to "temperatura",
             "humedad" to "humedad",
@@ -591,7 +592,9 @@ class AsistenteVozFragment : BaseBottomNavFragment() {
         val detalles = tipos.map { (clave, etiqueta) ->
             val sensor = lecturas?.firstOrNull { item ->
                 val tipo = normalizarConsulta(item.tipo.orEmpty()).replace("₂", "2")
-                tipo.contains(clave) || (clave == "co2" && (tipo.contains("dioxido") || tipo.contains("carbono")))
+                tipo.contains(clave) || (clave == "co2" && (tipo.contains("dioxido") || tipo.contains(
+                    "carbono"
+                )))
             }
             val lectura = sensor?.ultima_lectura
             if (lectura?.valor == null) {
@@ -599,7 +602,8 @@ class AsistenteVozFragment : BaseBottomNavFragment() {
             } else {
                 val unidad = sensor?.unidad_medida.orEmpty()
                 val antiguedad = lectura.antiguedad_segundos
-                val estado = if (antiguedad != null && antiguedad > 900) " (lectura de hace más de 15 minutos)" else ""
+                val estado =
+                    if (antiguedad != null && antiguedad > 900) " (lectura de hace más de 15 minutos)" else ""
                 "$etiqueta ${lectura.valor} $unidad$estado"
             }
         }
@@ -627,10 +631,13 @@ class AsistenteVozFragment : BaseBottomNavFragment() {
                 val inicio = OffsetDateTime.parse(alerta.fecha_creacion).toInstant()
                 val minutos = Duration.between(inicio, Instant.now()).toMinutes()
                 if (minutos >= 0) ", activa hace $minutos minutos" else ""
-            } catch (_: Exception) { "" }
+            } catch (_: Exception) {
+                ""
+            }
             "${alerta.criticidad}: $variable$detectado$umbral$tiempo"
         }
-        val restantes = if (ordenadas.size > 5) ". Hay ${ordenadas.size - 5} alertas adicionales" else ""
+        val restantes =
+            if (ordenadas.size > 5) ". Hay ${ordenadas.size - 5} alertas adicionales" else ""
         return "Hay ${alertas.size} alertas activas en $nombre: $descripcion$restantes."
     }
 

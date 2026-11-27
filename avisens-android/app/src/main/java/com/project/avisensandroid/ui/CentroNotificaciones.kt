@@ -38,7 +38,13 @@ class CentroNotificaciones(private val activity: MainActivity) {
     private fun contorno(color: Int, radio: Int = 18) = fondo(color, radio).apply {
         setStroke(dp(1), borde)
     }
-    private fun icono(recurso: Int, descripcion: String, color: Int = verde, accion: (() -> Unit)? = null) = ImageView(activity).apply {
+
+    private fun icono(
+        recurso: Int,
+        descripcion: String,
+        color: Int = verde,
+        accion: (() -> Unit)? = null
+    ) = ImageView(activity).apply {
         setImageResource(recurso)
         setColorFilter(color)
         contentDescription = descripcion
@@ -48,19 +54,29 @@ class CentroNotificaciones(private val activity: MainActivity) {
             setOnClickListener { accion() }
         }
     }
+
     private fun fechaLegible(fecha: String): String = try {
         val dia = java.time.LocalDate.parse(fecha)
         when (dia) {
             java.time.LocalDate.now() -> "Hoy"
             java.time.LocalDate.now().minusDays(1) -> "Ayer"
-            else -> dia.format(java.time.format.DateTimeFormatter.ofPattern("d 'de' MMMM 'de' yyyy", java.util.Locale("es", "CO")))
+            else -> dia.format(
+                java.time.format.DateTimeFormatter.ofPattern(
+                    "d 'de' MMMM 'de' yyyy",
+                    java.util.Locale("es", "CO")
+                )
+            )
         }
-    } catch (_: Exception) { fecha }
+    } catch (_: Exception) {
+        fecha
+    }
+
     private var sombra: View? = null
     private fun fondo(color: Int, radio: Int = 16) = GradientDrawable().apply {
         setColor(color)
         cornerRadius = dp(radio).toFloat()
     }
+
     private lateinit var lista: LinearLayout
     private lateinit var estado: TextView
     private fun dp(n: Int) = (n * activity.resources.displayMetrics.density).toInt()
@@ -69,6 +85,7 @@ class CentroNotificaciones(private val activity: MainActivity) {
         setTextColor(activity.getColor(R.color.text_primary))
         if (negrita) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
     }
+
     private fun boton(s: String, accion: () -> Unit) = TextView(activity).apply {
         text = s
         textSize = 13f
@@ -96,7 +113,8 @@ class CentroNotificaciones(private val activity: MainActivity) {
         if (!ancla.isAttachedToWindow) return
         raiz = activity.layoutInflater.inflate(R.layout.popup_notificaciones, null) as LinearLayout
         raiz.background = contorno(superficie, 22)
-        raiz.findViewById<TextView>(R.id.notifTitulo).setTextColor(activity.getColor(R.color.text_primary))
+        raiz.findViewById<TextView>(R.id.notifTitulo)
+            .setTextColor(activity.getColor(R.color.text_primary))
         raiz.findViewById<ImageView>(R.id.notifCerrar).apply {
             setColorFilter(verde)
             setOnClickListener { cerrar() }
@@ -127,9 +145,15 @@ class CentroNotificaciones(private val activity: MainActivity) {
         val posicion = IntArray(2)
         ancla.getLocationOnScreen(posicion)
         val ancho = minOf(dp(370), visible.width() - dp(24))
-        val alto = minOf(dp(420), (visible.bottom - posicion[1] - ancla.height - dp(180)).coerceAtLeast(dp(100)))
+        val alto = minOf(
+            dp(420),
+            (visible.bottom - posicion[1] - ancla.height - dp(180)).coerceAtLeast(dp(100))
+        )
         val scroll = raiz.findViewById<ScrollView>(R.id.notifScroll)
-        scroll.measure(View.MeasureSpec.makeMeasureSpec(ancho - dp(28), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(alto, View.MeasureSpec.AT_MOST))
+        scroll.measure(
+            View.MeasureSpec.makeMeasureSpec(ancho - dp(28), View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(alto, View.MeasureSpec.AT_MOST)
+        )
         scroll.layoutParams = scroll.layoutParams.apply { height = -2 }
         lista.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             val altura = minOf(lista.measuredHeight, alto)
@@ -196,40 +220,79 @@ class CentroNotificaciones(private val activity: MainActivity) {
             } while (pagina <= total && vigente())
             if (!vigente() || ocupado) return
             val resultado = nuevas.distinctBy { it.id }
-            if (!cargado || resultado != datos) { datos = resultado; cargado = true; pintar() }
-            estado.text = if (cache || !OfflineCache.hayInternet(activity)) "Datos guardados" else ""
+            if (!cargado || resultado != datos) {
+                datos = resultado; cargado = true; pintar()
+            }
+            estado.text =
+                if (cache || !OfflineCache.hayInternet(activity)) "Datos guardados" else ""
             estado.visibility = if (estado.text.isEmpty()) View.GONE else View.VISIBLE
-        } catch (e: CancellationException) { throw e } catch (_: Exception) {
-            if (vigente() && !cargado && !cache) { estado.visibility = View.VISIBLE; estado.text = "No se pudieron consultar las notificaciones" }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            if (vigente() && !cargado && !cache) {
+                estado.visibility = View.VISIBLE; estado.text =
+                    "No se pudieron consultar las notificaciones"
+            }
         }
     }
+
     private fun modificar(accion: suspend () -> Boolean, despues: (() -> Unit)? = null) {
         if (ocupado || !vigente()) return
-        if (!OfflineCache.hayInternet(activity)) { estado.visibility = View.VISIBLE; estado.text = "Necesitas conexión para realizar esta acción"; return }
+        if (!OfflineCache.hayInternet(activity)) {
+            estado.visibility = View.VISIBLE; estado.text =
+                "Necesitas conexión para realizar esta acción"; return
+        }
         ocupado = true
         activity.lifecycleScope.launch {
             try {
-                if (accion() && vigente()) { ocupado = false; cargar(false); despues?.invoke() }
-                else if (vigente()) { estado.visibility = View.VISIBLE; estado.text = "No se pudo completar la acción" }
-            } catch (e: CancellationException) { throw e } catch (_: Exception) { if (vigente()) { estado.visibility = View.VISIBLE; estado.text = "No se pudo completar la acción" } }
-            finally { ocupado = false }
+                if (accion() && vigente()) {
+                    ocupado = false; cargar(false); despues?.invoke()
+                } else if (vigente()) {
+                    estado.visibility = View.VISIBLE; estado.text = "No se pudo completar la acción"
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                if (vigente()) {
+                    estado.visibility = View.VISIBLE; estado.text = "No se pudo completar la acción"
+                }
+            } finally {
+                ocupado = false
+            }
         }
     }
+
     private fun pintar() {
         lista.removeAllViews()
         val visibles = datos.filter { !soloNoLeidas || !it.leida }
-        if (cargado && visibles.isEmpty()) lista.addView(texto("No tienes notificaciones en esta lista", 15f))
+        if (cargado && visibles.isEmpty()) lista.addView(
+            texto(
+                "No tienes notificaciones en esta lista",
+                15f
+            )
+        )
         var fechaAnterior: String? = null
         var indice = 0
         visibles.forEach { n ->
             val fecha = n.fecha_creacion?.take(10) ?: "Sin fecha"
             if (fecha != fechaAnterior) {
-                val encabezado = texto(fechaLegible(fecha), 13f, true).apply { setPadding(dp(4), dp(12), 0, dp(8)); setTextColor(verde) }
+                val encabezado = texto(fechaLegible(fecha), 13f, true).apply {
+                    setPadding(
+                        dp(4),
+                        dp(12),
+                        0,
+                        dp(8)
+                    ); setTextColor(verde)
+                }
                 lista.addView(encabezado)
                 animar(encabezado, "fecha:$fecha", indice++)
                 fechaAnterior = fecha
             }
-            val tarjeta = activity.layoutInflater.inflate(R.layout.item_notificacion, lista, false) as LinearLayout
+            val tarjeta = activity.layoutInflater.inflate(
+                R.layout.item_notificacion,
+                lista,
+                false
+            ) as LinearLayout
             tarjeta.background = contorno(if (n.leida) superficie else seleccionado, 16)
             val mensaje = n.mensaje.orEmpty().lowercase()
             val recurso = when {
@@ -239,7 +302,11 @@ class CentroNotificaciones(private val activity: MainActivity) {
             }
             tarjeta.findViewById<ImageView>(R.id.notifIcono).apply {
                 setImageResource(recurso)
-                setColorFilter(if ("crítica" in n.titulo.orEmpty().lowercase()) Color.parseColor("#EF7777") else verde)
+                setColorFilter(
+                    if ("crítica" in n.titulo.orEmpty()
+                            .lowercase()
+                    ) Color.parseColor("#EF7777") else verde
+                )
                 background = fondo(superficie, 14)
             }
             tarjeta.findViewById<TextView>(R.id.notifItemTitulo).text = n.titulo ?: "Avisens"
@@ -253,7 +320,11 @@ class CentroNotificaciones(private val activity: MainActivity) {
                 visibility = if (n.leida) View.GONE else View.VISIBLE
             }
             tarjeta.setOnClickListener {
-                if (n.leida) detalle(n) else modificar({ RetrofitClient.api.marcarNotificacionLeida(n.id).isSuccessful }) { detalle(n) }
+                if (n.leida) detalle(n) else modificar({
+                    RetrofitClient.api.marcarNotificacionLeida(
+                        n.id
+                    ).isSuccessful
+                }) { detalle(n) }
             }
             tarjeta.findViewById<ImageView>(R.id.notifLeer).apply {
                 setColorFilter(verde)
@@ -265,13 +336,22 @@ class CentroNotificaciones(private val activity: MainActivity) {
                 setOnClickListener {
                     AlertDialog.Builder(activity).setMessage("¿Eliminar esta notificación?")
                         .setNegativeButton("Cancelar", null)
-                        .setPositiveButton("Eliminar") { _, _ -> modificar({ RetrofitClient.api.eliminarMiNotificacion(n.id).isSuccessful }) }.show().estiloCancelar()
+                        .setPositiveButton("Eliminar") { _, _ ->
+                            modificar({
+                                RetrofitClient.api.eliminarMiNotificacion(
+                                    n.id
+                                ).isSuccessful
+                            })
+                        }.show().estiloCancelar()
                 }
             }
-            lista.addView(tarjeta, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+            lista.addView(
+                tarjeta,
+                LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
             animar(tarjeta, "notificacion:${n.id}", indice++)
         }
     }
+
     private fun detalle(n: NotificacionResponse) {
         if (n.referencia_tipo != "alerta" || n.referencia_id == null) return
         cerrar()

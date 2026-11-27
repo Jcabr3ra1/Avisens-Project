@@ -28,6 +28,16 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 
 class LoginActivity : AperturaReanudableActivity() {
+    companion object {
+        const val EXTRA_ADMIN_NO_PERMITIDO = "admin_no_permitido"
+        private const val MENSAJE_ADMIN =
+            "El acceso de administradores está disponible únicamente desde la plataforma web."
+    }
+
+    private fun rolMovilPermitido(): Boolean =
+        UserSession.role(this) == UserRole.PROPIETARIO ||
+                UserSession.role(this) == UserRole.OPERARIO
+
 
     private lateinit var binding: ActivityLoginBinding
 
@@ -57,6 +67,15 @@ class LoginActivity : AperturaReanudableActivity() {
         configurarPassword()
         configurarDesplazamientoTeclado()
 
+        val administradorGuardado = UserSession.role(this) == UserRole.ADMINISTRADOR
+        if (administradorGuardado) {
+            val refreshToken = UserSession.refreshToken(this)
+            UserSession.clear(this)
+            if (!refreshToken.isNullOrBlank()) {
+                RetrofitClient.cerrarSesionRemota(refreshToken)
+            }
+        }
+
         // Reutilizar únicamente una sesión previamente autenticada.
         if (
             !intent.getBooleanExtra(
@@ -64,7 +83,7 @@ class LoginActivity : AperturaReanudableActivity() {
                 false
             ) &&
             UserSession.isLoggedIn(this) &&
-            UserSession.role(this) != null
+            rolMovilPermitido()
         ) {
             abrirSesionGuardada()
             return
@@ -78,6 +97,10 @@ class LoginActivity : AperturaReanudableActivity() {
         ) {
             binding.txtError.text =
                 "Tu sesión expiró. Inicia sesión nuevamente."
+        }
+
+        if (administradorGuardado || intent.getBooleanExtra(EXTRA_ADMIN_NO_PERMITIDO, false)) {
+            binding.txtError.text = MENSAJE_ADMIN
         }
 
         if (savedInstanceState == null) {
@@ -410,7 +433,7 @@ class LoginActivity : AperturaReanudableActivity() {
 
             if (
                 UserSession.isLoggedIn(this) &&
-                UserSession.role(this) != null
+                rolMovilPermitido()
             ) {
 
                 abrirSesionGuardada()
@@ -474,6 +497,11 @@ class LoginActivity : AperturaReanudableActivity() {
                     ) {
 
                         is ResultadoLogin.SesionIniciada -> {
+                            if (resultado.rol == UserRole.ADMINISTRADOR) {
+                                RetrofitClient.cerrarSesionRemota(resultado.refreshToken)
+                                binding.txtError.text = MENSAJE_ADMIN
+                                return@launch
+                            }
 
                             guardarSesion(
                                 token = resultado.accessToken,

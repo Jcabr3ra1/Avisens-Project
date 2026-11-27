@@ -95,11 +95,25 @@ object ListaActuadores {
         }
         return when (vista.salida) {
             SalidaActuador.ENCENDIDA ->
-                Triple(Actuadores.textoSalida(vista), R.drawable.bg_badge_green, R.color.badge_green_text)
+                Triple(
+                    Actuadores.textoSalida(vista),
+                    R.drawable.bg_badge_green,
+                    R.color.badge_green_text
+                )
+
             SalidaActuador.APAGADA ->
-                Triple(Actuadores.textoSalida(vista), R.drawable.bg_badge_regular, R.color.text_secondary)
+                Triple(
+                    Actuadores.textoSalida(vista),
+                    R.drawable.bg_badge_regular,
+                    R.color.text_secondary
+                )
+
             SalidaActuador.VALOR_NO_RECONOCIDO, SalidaActuador.SIN_REPORTE ->
-                Triple(Actuadores.textoSalida(vista), R.drawable.bg_badge_orange, R.color.orange_badge_text)
+                Triple(
+                    Actuadores.textoSalida(vista),
+                    R.drawable.bg_badge_orange,
+                    R.color.orange_badge_text
+                )
         }
     }
 

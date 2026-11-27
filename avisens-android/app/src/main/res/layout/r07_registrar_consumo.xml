@@ -1,38 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:fillViewport="true"
-    android:background="@android:color/transparent">
+    android:background="@android:color/transparent"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_dialog_white"
         android:orientation="vertical"
-        android:padding="18dp"
-        android:background="@drawable/bg_dialog_white">
+        android:padding="18dp">
 
         <!-- TÍTULO -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
             android:text="Registrar consumo"
-            android:textSize="20sp"
-            android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginBottom="10dp" />
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
         <!-- LOTE -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="5dp"
             android:text="Lote"
-            android:textSize="12sp"
-            android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginBottom="5dp" />
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -43,71 +42,159 @@
                 android:id="@+id/spinnerLoteConsumo"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:background="@android:color/transparent"
                 android:dropDownWidth="match_parent"
                 android:dropDownHorizontalOffset="0dp"
-                android:background="@android:color/transparent"
                 android:paddingStart="0dp"
                 android:paddingEnd="0dp"
                 android:popupBackground="@drawable/bg_spinner_dropdown" />
 
         </FrameLayout>
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Alimento de bodega" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <FrameLayout android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event"><Spinner android:id="@+id/spinnerAlimentoConsumo" android:layout_width="match_parent" android:layout_height="match_parent" android:dropDownWidth="match_parent" android:dropDownHorizontalOffset="0dp" android:paddingStart="0dp" android:paddingEnd="0dp" android:popupBackground="@drawable/bg_spinner_dropdown" android:background="@android:color/transparent"/></FrameLayout>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fecha" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtFechaConsumo" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:focusable="false" android:clickable="true"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Alimento (kg)" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtAlimentoConsumo" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="numberDecimal"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Agua (litros)" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/text_primary" android:layout_marginTop="10dp" android:layout_marginBottom="5dp"/>
-        <EditText android:id="@+id/edtAguaConsumo" android:layout_width="match_parent" android:layout_height="42dp" android:background="@drawable/bg_input_event" android:fontFamily="sans-serif-medium" android:textSize="13sp" android:textColor="@color/adaptive_text_000000" android:paddingStart="10dp" android:paddingEnd="10dp" android:singleLine="true" android:inputType="numberDecimal"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:text="Alimento de bodega"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event">
+
+            <Spinner
+                android:id="@+id/spinnerAlimentoConsumo"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:dropDownWidth="match_parent"
+                android:dropDownHorizontalOffset="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:popupBackground="@drawable/bg_spinner_dropdown" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:text="Fecha"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtFechaConsumo"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event"
+            android:clickable="true"
+            android:focusable="false"
+            android:fontFamily="sans-serif-medium"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:singleLine="true"
+            android:textColor="@color/adaptive_text_000000"
+            android:textSize="13sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:text="Alimento (kg)"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtAlimentoConsumo"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event"
+            android:fontFamily="sans-serif-medium"
+            android:inputType="numberDecimal"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:singleLine="true"
+            android:textColor="@color/adaptive_text_000000"
+            android:textSize="13sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="5dp"
+            android:text="Agua (litros)"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/edtAguaConsumo"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_input_event"
+            android:fontFamily="sans-serif-medium"
+            android:inputType="numberDecimal"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:singleLine="true"
+            android:textColor="@color/adaptive_text_000000"
+            android:textSize="13sp" />
         <!-- BOTONES DEL FORMULARIO -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="42dp"
-            android:orientation="horizontal"
+            android:layout_marginTop="10dp"
             android:gravity="center"
-            android:layout_marginTop="10dp">
+            android:orientation="horizontal">
 
             <!-- CANCELAR -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnCancelarEvento"
                 android:layout_width="0dp"
                 android:layout_height="42dp"
+                android:layout_marginEnd="3dp"
                 android:layout_weight="1"
-                android:text="Cancelar"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="@color/cancel_text"
                 android:gravity="center"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:layout_marginEnd="3dp"
-                app:cornerRadius="9dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:text="Cancelar"
+                android:textAllCaps="false"
+                android:textColor="@color/cancel_text"
+                android:textSize="13sp"
+                android:textStyle="bold"
                 app:backgroundTint="@color/cancel_background"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/cancel_stroke" />
+                app:cornerRadius="9dp"
+                app:strokeColor="@color/cancel_stroke"
+                app:strokeWidth="1dp" />
 
             <!-- GUARDAR -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnGuardarEvento"
                 android:layout_width="0dp"
                 android:layout_height="42dp"
+                android:layout_marginStart="3dp"
                 android:layout_weight="1"
-                android:text="Guardar registro"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:textAllCaps="false"
-                android:textColor="@android:color/white"
                 android:backgroundTint="#2E8B57"
                 android:gravity="center"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:layout_marginStart="3dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:text="Guardar registro"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:textSize="13sp"
+                android:textStyle="bold"
                 app:cornerRadius="9dp" />
 
         </LinearLayout>

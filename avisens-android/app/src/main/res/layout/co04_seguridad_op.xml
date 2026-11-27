@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -11,16 +10,19 @@
         android:layout_height="0dp"
         android:fillViewport="true"
         android:paddingBottom="20dp"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingBottom="24dp" android:paddingStart="20dp" android:paddingEnd="20dp" android:paddingTop="24dp">
+            android:paddingStart="20dp"
+            android:paddingTop="24dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="24dp">
 
             <!-- ============================================== -->
             <!-- ENCABEZADO -->
@@ -37,21 +39,21 @@
                     android:id="@+id/btnVolver"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:padding="9dp"
-                    android:src="@drawable/ic_close"
-                    android:contentDescription="Cerrar"
                     android:clickable="true"
-                    android:focusable="true" />
+                    android:contentDescription="Cerrar"
+                    android:focusable="true"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_close" />
 
                 <!-- TITULO -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
                     android:text="Seguridad"
-                    android:textSize="24sp"
-                    android:textStyle="bold"
                     android:textColor="@color/text_primary"
-                    android:layout_marginTop="2dp" />
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
 
             </LinearLayout>
 
@@ -63,13 +65,13 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="SEGURIDAD DE LA CUENTA"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.06"
-                android:textColor="@color/text_secondary"
                 android:layout_marginTop="28dp"
-                android:layout_marginBottom="10dp" />
+                android:layout_marginBottom="10dp"
+                android:letterSpacing="0.06"
+                android:text="SEGURIDAD DE LA CUENTA"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
 
             <!-- ============================================== -->
@@ -80,57 +82,57 @@
                 android:id="@+id/btnVerificacionDosPasos"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
                 android:background="@drawable/bg_security_option"
-                android:padding="16dp"
                 android:clickable="true"
-                android:focusable="true">
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
 
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_verification"
-                    android:contentDescription="Verificación en dos pasos" />
+                    android:contentDescription="Verificación en dos pasos"
+                    android:src="@drawable/ic_verification" />
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:layout_marginStart="14dp"
+                    android:layout_weight="1"
                     android:orientation="vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Verificación en dos pasos"
+                        android:textColor="@color/text_primary"
                         android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="Añade una capa adicional de protección"
                         android:fontFamily="sans-serif-medium"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
+                        android:text="Añade una capa adicional de protección"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
 
                 </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Desactivada"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_secondary"
                     android:background="@drawable/bg_security_badge"
                     android:paddingStart="9dp"
-                    android:paddingEnd="9dp"
                     android:paddingTop="5dp"
-                    android:paddingBottom="5dp" />
+                    android:paddingEnd="9dp"
+                    android:paddingBottom="5dp"
+                    android:text="Desactivada"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
 
             </LinearLayout>
 
@@ -143,51 +145,51 @@
                 android:id="@+id/btnCambiarContrasena"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/bg_security_option"
-                android:padding="16dp"
                 android:layout_marginTop="10dp"
+                android:background="@drawable/bg_security_option"
                 android:clickable="true"
-                android:focusable="true">
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
 
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_password"
-                    android:contentDescription="Cambiar contraseña" />
+                    android:contentDescription="Cambiar contraseña"
+                    android:src="@drawable/ic_password" />
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:layout_marginStart="14dp"
+                    android:layout_weight="1"
                     android:orientation="vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Cambiar contraseña"
+                        android:textColor="@color/text_primary"
                         android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="Actualiza la contraseña de tu cuenta"
                         android:fontFamily="sans-serif-medium"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
+                        android:text="Actualiza la contraseña de tu cuenta"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
 
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="20dp"
                     android:layout_height="20dp"
-                    android:src="@drawable/ic_arrow_forward"
-                    android:contentDescription="Abrir" />
+                    android:contentDescription="Abrir"
+                    android:src="@drawable/ic_arrow_forward" />
 
             </LinearLayout>
 
@@ -200,51 +202,51 @@
                 android:id="@+id/btnSesionesActivas"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@drawable/bg_security_option"
-                android:padding="16dp"
                 android:layout_marginTop="10dp"
+                android:background="@drawable/bg_security_option"
                 android:clickable="true"
-                android:focusable="true">
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
 
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_devices"
-                    android:contentDescription="Sesiones activas" />
+                    android:contentDescription="Sesiones activas"
+                    android:src="@drawable/ic_devices" />
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:layout_marginStart="14dp"
+                    android:layout_weight="1"
                     android:orientation="vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Sesiones activas"
+                        android:textColor="@color/text_primary"
                         android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="Consulta los dispositivos con sesión iniciada"
                         android:fontFamily="sans-serif-medium"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_secondary" />
+                        android:text="Consulta los dispositivos con sesión iniciada"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
 
                 </LinearLayout>
 
                 <ImageView
                     android:layout_width="20dp"
                     android:layout_height="20dp"
-                    android:src="@drawable/ic_arrow_forward"
-                    android:contentDescription="Abrir" />
+                    android:contentDescription="Abrir"
+                    android:src="@drawable/ic_arrow_forward" />
 
             </LinearLayout>
 
@@ -290,9 +292,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
+                        android:fontFamily="sans-serif-medium"
                         android:text="Finaliza todas las sesiones activas de tu cuenta"
                         android:textColor="@color/text_secondary"
-                        android:fontFamily="sans-serif-medium"
                         android:textSize="13sp" />
 
                 </LinearLayout>

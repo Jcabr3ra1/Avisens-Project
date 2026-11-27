@@ -36,7 +36,9 @@ object NotificacionesLocales {
 
     fun programar(context: Context) {
         val solicitud = PeriodicWorkRequestBuilder<NotificacionesWorker>(15, TimeUnit.MINUTES)
-            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setConstraints(
+                Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+            )
             .build()
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             TRABAJO, ExistingPeriodicWorkPolicy.KEEP, solicitud
@@ -54,13 +56,17 @@ object NotificacionesLocales {
         if (!vigente()) return@withLock true
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(
                 context, Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED) return@withLock true
+            ) != PackageManager.PERMISSION_GRANTED
+        ) return@withLock true
         val manager = NotificationManagerCompat.from(context)
         if (!manager.areNotificationsEnabled()) return@withLock true
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        try { revisarStock(context, usuario, manager) }
-        catch (e: CancellationException) { throw e }
-        catch (_: Exception) { /* No impedir la consulta de alertas. */ }
+        try {
+            revisarStock(context, usuario, manager)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) { /* No impedir la consulta de alertas. */
+        }
         val clave = "ultimo_id_$usuario"
         val ultimo = prefs.getInt(clave, -1)
         val nuevas = mutableListOf<NotificacionResponse>()
@@ -87,9 +93,13 @@ object NotificacionesLocales {
             val esAlerta = n.referencia_tipo.equals("alerta", true)
             val criticidad = if (esAlerta && n.referencia_id != null) {
                 try {
-                    RetrofitClient.api.consultarAlertaNotificacion(n.referencia_id).body()?.criticidad
-                } catch (e: CancellationException) { throw e }
-                catch (_: Exception) { null }
+                    RetrofitClient.api.consultarAlertaNotificacion(n.referencia_id)
+                        .body()?.criticidad
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    null
+                }
             } else null
             val critica = criticidad.equals("alta", true) || criticidad.equals("critica", true) ||
                     (criticidad == null && n.titulo.orEmpty().contains("crítica", true))
@@ -100,8 +110,10 @@ object NotificacionesLocales {
                 putExtra(EXTRA_NOTIFICACION, n.id)
                 putExtra(EXTRA_ALERTA, esAlerta)
             }
-            val destino = PendingIntent.getActivity(context, n.id, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            val destino = PendingIntent.getActivity(
+                context, n.id, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
             val aviso = NotificationCompat.Builder(context, if (critica) CRITICO else NORMAL)
                 .setSmallIcon(R.drawable.ic_notifications)
                 .setContentTitle(n.titulo ?: "Avisens")
@@ -122,7 +134,11 @@ object NotificacionesLocales {
         true
     }
 
-    private suspend fun revisarStock(context: Context, usuario: Int, manager: NotificationManagerCompat) {
+    private suspend fun revisarStock(
+        context: Context,
+        usuario: Int,
+        manager: NotificationManagerCompat
+    ) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         var pagina = 1
         do {
@@ -136,12 +152,16 @@ object NotificacionesLocales {
                 val bajo = insumo.activo && minimo > 0 && actual < minimo
                 if (bajo && !prefs.getBoolean(clave, false)) {
                     crearCanales(context)
-                    val destino = PendingIntent.getActivity(context, insumo.id,
+                    val destino = PendingIntent.getActivity(
+                        context, insumo.id,
                         Intent(context, MainActivity::class.java).apply {
                             action = "com.project.avisensandroid.STOCK_${insumo.id}"
-                            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                    val mensaje = "${insumo.nombre}: $actual ${insumo.unidad_medida}. Mínimo: $minimo ${insumo.unidad_medida}."
+                            flags =
+                                Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    val mensaje =
+                        "${insumo.nombre}: $actual ${insumo.unidad_medida}. Mínimo: $minimo ${insumo.unidad_medida}."
                     val aviso = NotificationCompat.Builder(context, NORMAL)
                         .setSmallIcon(R.drawable.ic_notifications)
                         .setContentTitle("Stock bajo")
@@ -166,21 +186,28 @@ object NotificacionesLocales {
                 if (critica) NotificationManager.IMPORTANCE_HIGH else NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 enableVibration(true)
-                vibrationPattern = if (critica) longArrayOf(0, 400, 150, 400) else longArrayOf(0, 180)
-                setSound(RingtoneManager.getDefaultUri(if (critica) RingtoneManager.TYPE_ALARM else RingtoneManager.TYPE_NOTIFICATION),
-                    AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build())
+                vibrationPattern =
+                    if (critica) longArrayOf(0, 400, 150, 400) else longArrayOf(0, 180)
+                setSound(
+                    RingtoneManager.getDefaultUri(if (critica) RingtoneManager.TYPE_ALARM else RingtoneManager.TYPE_NOTIFICATION),
+                    AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build()
+                )
             }
             manager.createNotificationChannel(canal)
         }
     }
 }
 
-class NotificacionesWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+class NotificacionesWorker(context: Context, params: WorkerParameters) :
+    CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         RetrofitClient.inicializar(applicationContext)
         return try {
             if (NotificacionesLocales.revisar(applicationContext)) Result.success() else Result.retry()
-        } catch (e: CancellationException) { throw e }
-        catch (_: Exception) { Result.retry() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            Result.retry()
+        }
     }
 }

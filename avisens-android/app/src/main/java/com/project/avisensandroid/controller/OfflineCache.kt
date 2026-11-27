@@ -39,97 +39,102 @@ object OfflineCache {
             .getLong("${key}_at", 0L).takeIf { it > 0L }
     }
 
-    fun interceptor(context: Context, soloCache: Boolean = false): Interceptor = Interceptor { chain ->
-        val request = chain.request()
-        // Las fotos son binarias: no deben pasar por la caché de texto.
-        val ruta = request.url.encodedPath
-        if (ruta == "/v1/auth/perfil/foto") {
-            val key = clave(context, request.url.toString())
-            val archivo = key?.let { java.io.File(context.filesDir, "perfil_$it") }
-            fun local(): Response? {
-                val bytes = archivo?.takeIf { it.isFile }?.readBytes() ?: return null
-                return Response.Builder().request(request).protocol(Protocol.HTTP_1_1)
-                    .code(200).message("Foto local").header("X-Avisens-Offline", "true")
-                    .body(bytes.toResponseBody("application/octet-stream".toMediaTypeOrNull())).build()
-            }
-            if (soloCache || (request.method == "GET" && !hayInternet(context))) {
-                return@Interceptor local() ?: throw IOException("Sin foto local")
-            }
-            try {
-                val r = chain.proceed(request)
-                if (request.method == "GET" && r.isSuccessful && archivo != null) {
-                    val tipo = r.body?.contentType()
-                    val bytes = r.body?.bytes() ?: byteArrayOf()
-                    if (bytes.isNotEmpty() && bytes.size <= 3 * 1024 * 1024) {
-                        val atomic = android.util.AtomicFile(archivo)
-                        val out = atomic.startWrite()
-                        try { out.write(bytes); atomic.finishWrite(out) }
-                        catch (e: IOException) { atomic.failWrite(out) }
-                    }
-                    return@Interceptor r.newBuilder().body(bytes.toResponseBody(tipo)).build()
+    fun interceptor(context: Context, soloCache: Boolean = false): Interceptor =
+        Interceptor { chain ->
+            val request = chain.request()
+            // Las fotos son binarias: no deben pasar por la caché de texto.
+            val ruta = request.url.encodedPath
+            if (ruta == "/v1/auth/perfil/foto") {
+                val key = clave(context, request.url.toString())
+                val archivo = key?.let { java.io.File(context.filesDir, "perfil_$it") }
+                fun local(): Response? {
+                    val bytes = archivo?.takeIf { it.isFile }?.readBytes() ?: return null
+                    return Response.Builder().request(request).protocol(Protocol.HTTP_1_1)
+                        .code(200).message("Foto local").header("X-Avisens-Offline", "true")
+                        .body(bytes.toResponseBody("application/octet-stream".toMediaTypeOrNull()))
+                        .build()
                 }
-                if ((request.method == "DELETE" && r.isSuccessful) || (request.method == "GET" && r.code == 404)) archivo?.delete()
-                return@Interceptor r
+                if (soloCache || (request.method == "GET" && !hayInternet(context))) {
+                    return@Interceptor local() ?: throw IOException("Sin foto local")
+                }
+                try {
+                    val r = chain.proceed(request)
+                    if (request.method == "GET" && r.isSuccessful && archivo != null) {
+                        val tipo = r.body?.contentType()
+                        val bytes = r.body?.bytes() ?: byteArrayOf()
+                        if (bytes.isNotEmpty() && bytes.size <= 3 * 1024 * 1024) {
+                            val atomic = android.util.AtomicFile(archivo)
+                            val out = atomic.startWrite()
+                            try {
+                                out.write(bytes); atomic.finishWrite(out)
+                            } catch (e: IOException) {
+                                atomic.failWrite(out)
+                            }
+                        }
+                        return@Interceptor r.newBuilder().body(bytes.toResponseBody(tipo)).build()
+                    }
+                    if ((request.method == "DELETE" && r.isSuccessful) || (request.method == "GET" && r.code == 404)) archivo?.delete()
+                    return@Interceptor r
+                } catch (e: IOException) {
+                    if (request.method == "GET") local()?.let { return@Interceptor it }
+                    throw e
+                }
+            }
+            if (ruta.endsWith("/foto")) {
+                if (soloCache) throw IOException("Fotografía no disponible sin conexión")
+                return@Interceptor chain.proceed(request)
+            }
+            val esConsulta = request.method == "GET" &&
+                    request.url.encodedPath.startsWith("/v1/") &&
+                    (!ruta.startsWith("/v1/auth/") || ruta == "/v1/auth/perfil")
+            val key = if (esConsulta) clave(context, request.url.toString()) else null
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+            fun copiaGuardada(): Response? {
+                if (key == null) return null
+                val contenido = prefs.getString(key, null) ?: return null
+                val tipo = prefs.getString("${key}_type", "application/json")
+                return Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("Copia local sin conexión")
+                    .header("X-Avisens-Offline", "true")
+                    .header("X-Avisens-Cached-At", prefs.getLong("${key}_at", 0L).toString())
+                    .body(contenido.toResponseBody(tipo?.toMediaTypeOrNull()))
+                    .build()
+            }
+
+            if (soloCache) {
+                return@Interceptor copiaGuardada() ?: throw IOException("Sin copia local")
+            }
+
+            // No hacer esperar al usuario a que venza el timeout si ya sabemos que no hay red.
+            if (key != null && !hayInternet(context)) {
+                copiaGuardada()?.let { return@Interceptor it }
+            }
+
+            try {
+                val response = chain.proceed(request)
+                if (key == null || !response.isSuccessful) return@Interceptor response
+                val body = response.body ?: return@Interceptor response
+                val tipo = body.contentType()
+                // Solo almacenar JSON; nunca convertir una imagen u otro binario a String.
+                if (tipo == null || (tipo.subtype != "json" && !tipo.subtype.endsWith("+json"))) {
+                    return@Interceptor response
+                }
+                val contenido = body.string()
+                if (contenido.length <= MAX_RESPONSE_CHARS) {
+                    prefs.edit()
+                        .putString(key, contenido)
+                        .putString("${key}_type", tipo?.toString() ?: "application/json")
+                        .putLong("${key}_at", System.currentTimeMillis())
+                        .apply()
+                }
+                response.newBuilder().body(contenido.toResponseBody(tipo)).build()
             } catch (e: IOException) {
-                if (request.method == "GET") local()?.let { return@Interceptor it }
+                if (key != null) copiaGuardada()?.let { return@Interceptor it }
                 throw e
             }
         }
-        if (ruta.endsWith("/foto")) {
-            if (soloCache) throw IOException("Fotografía no disponible sin conexión")
-            return@Interceptor chain.proceed(request)
-        }
-        val esConsulta = request.method == "GET" &&
-                request.url.encodedPath.startsWith("/v1/") &&
-                (!ruta.startsWith("/v1/auth/") || ruta == "/v1/auth/perfil")
-        val key = if (esConsulta) clave(context, request.url.toString()) else null
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-
-        fun copiaGuardada(): Response? {
-            if (key == null) return null
-            val contenido = prefs.getString(key, null) ?: return null
-            val tipo = prefs.getString("${key}_type", "application/json")
-            return Response.Builder()
-                .request(request)
-                .protocol(Protocol.HTTP_1_1)
-                .code(200)
-                .message("Copia local sin conexión")
-                .header("X-Avisens-Offline", "true")
-                .header("X-Avisens-Cached-At", prefs.getLong("${key}_at", 0L).toString())
-                .body(contenido.toResponseBody(tipo?.toMediaTypeOrNull()))
-                .build()
-        }
-
-        if (soloCache) {
-            return@Interceptor copiaGuardada() ?: throw IOException("Sin copia local")
-        }
-
-        // No hacer esperar al usuario a que venza el timeout si ya sabemos que no hay red.
-        if (key != null && !hayInternet(context)) {
-            copiaGuardada()?.let { return@Interceptor it }
-        }
-
-        try {
-            val response = chain.proceed(request)
-            if (key == null || !response.isSuccessful) return@Interceptor response
-            val body = response.body ?: return@Interceptor response
-            val tipo = body.contentType()
-            // Solo almacenar JSON; nunca convertir una imagen u otro binario a String.
-            if (tipo == null || (tipo.subtype != "json" && !tipo.subtype.endsWith("+json"))) {
-                return@Interceptor response
-            }
-            val contenido = body.string()
-            if (contenido.length <= MAX_RESPONSE_CHARS) {
-                prefs.edit()
-                    .putString(key, contenido)
-                    .putString("${key}_type", tipo?.toString() ?: "application/json")
-                    .putLong("${key}_at", System.currentTimeMillis())
-                    .apply()
-            }
-            response.newBuilder().body(contenido.toResponseBody(tipo)).build()
-        } catch (e: IOException) {
-            if (key != null) copiaGuardada()?.let { return@Interceptor it }
-            throw e
-        }
-    }
 }

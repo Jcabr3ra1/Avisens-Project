@@ -218,8 +218,8 @@
                 android:textStyle="bold"
                 app:backgroundTint="@color/cancel_background"
                 app:cornerRadius="9dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/cancel_stroke" />
+                app:strokeColor="@color/cancel_stroke"
+                app:strokeWidth="1dp" />
 
             <!-- GUARDAR -->
             <com.google.android.material.button.MaterialButton

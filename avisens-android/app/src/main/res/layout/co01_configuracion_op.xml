@@ -11,7 +11,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingBottom="24dp" android:paddingStart="20dp" android:paddingEnd="20dp" android:paddingTop="24dp">
+        android:paddingStart="20dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="24dp">
 
         <!-- ========================================= -->
         <!-- CERRAR -->
@@ -112,9 +115,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Configura las alertas de tus galpones"
                     android:textColor="@color/adaptive_text_89948f"
-                    android:fontFamily="sans-serif-medium"
                     android:textSize="12sp" />
 
             </LinearLayout>
@@ -206,9 +209,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Administra tu información personal"
                     android:textColor="@color/adaptive_text_89948f"
-                    android:fontFamily="sans-serif-medium"
                     android:textSize="12sp" />
 
             </LinearLayout>
@@ -275,9 +278,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:fontFamily="sans-serif-medium"
                     android:text="Protege y administra el acceso a tu cuenta"
                     android:textColor="@color/adaptive_text_89948f"
-                    android:fontFamily="sans-serif-medium"
                     android:textSize="12sp" />
 
             </LinearLayout>
@@ -330,10 +333,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
+            android:fontFamily="sans-serif-medium"
             android:gravity="center"
             android:text="Gestión inteligente para tu producción avícola"
             android:textColor="@color/adaptive_text_a0aaa5"
-            android:fontFamily="sans-serif-medium"
             android:textSize="11sp" />
 
     </LinearLayout>

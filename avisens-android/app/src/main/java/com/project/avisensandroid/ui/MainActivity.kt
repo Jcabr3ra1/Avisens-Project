@@ -457,6 +457,11 @@ class MainActivity : AperturaReanudableActivity() {
 
         rolActual = UserSession.role(this)
 
+        if (rolActual == UserRole.ADMINISTRADOR) {
+            rechazarAdministrador()
+            return
+        }
+
         if (!UserSession.isLoggedIn(this) || rolActual == null) {
             irALogin()
             return
@@ -483,7 +488,7 @@ class MainActivity : AperturaReanudableActivity() {
             }
 
             UserRole.ADMINISTRADOR -> {
-                mostrarPantallaRolPendiente()
+                rechazarAdministrador()
             }
 
             null -> irALogin()
@@ -498,6 +503,7 @@ class MainActivity : AperturaReanudableActivity() {
 
     override fun onStart() {
         super.onStart()
+        if (isFinishing) return
 
         // Si la sesión se perdió con la app en segundo plano, nadie recibió
         // el aviso: se comprueba al volver.
@@ -598,21 +604,13 @@ class MainActivity : AperturaReanudableActivity() {
         outState.putInt(STATE_GALPON_ID, galponSeleccionadoId ?: 0)
     }
 
-    private fun mostrarPantallaRolPendiente() {
-
-        setContentView(R.layout.activity_rol_pendiente)
-
-        val txtRol = findViewById<TextView>(R.id.txtRolActual)
-        val txtMensaje = findViewById<TextView>(R.id.txtMensajeRol)
-        val btnCerrarSesion = findViewById<View>(R.id.btnCerrarSesionRol)
-
-        txtRol.text = rolActual?.displayName ?: "Usuario"
-        txtMensaje.text =
-            "La interfaz para ${rolActual?.displayName ?: "este rol"} todavía está en desarrollo.\n\nLa sesión fue autenticada correctamente y no se mostrará la interfaz de Operario."
-
-        btnCerrarSesion.setOnClickListener {
-            cerrarSesion()
+    private fun rechazarAdministrador() {
+        val refreshToken = UserSession.refreshToken(this)
+        UserSession.clear(this)
+        if (!refreshToken.isNullOrBlank()) {
+            RetrofitClient.cerrarSesionRemota(refreshToken)
         }
+        irALogin(adminNoPermitido = true)
     }
 
     fun mostrarPanelPropietario() {
@@ -882,7 +880,7 @@ class MainActivity : AperturaReanudableActivity() {
     // IR AL LOGIN
     // =========================================================
 
-    private fun irALogin(sesionExpirada: Boolean = false) {
+    private fun irALogin(sesionExpirada: Boolean = false, adminNoPermitido: Boolean = false) {
 
         if (isFinishing) return
         NotificacionesLocales.cancelar(applicationContext)
@@ -895,6 +893,7 @@ class MainActivity : AperturaReanudableActivity() {
             ).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 putExtra(SesionExpirada.EXTRA_SESION_EXPIRADA, sesionExpirada)
+                putExtra(LoginActivity.EXTRA_ADMIN_NO_PERMITIDO, adminNoPermitido)
             }
         )
 

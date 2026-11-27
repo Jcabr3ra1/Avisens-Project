@@ -8,8 +8,13 @@ import android.view.animation.DecelerateInterpolator
 internal class AnimacionesTarjetas {
     private val vistas = mutableSetOf<String>()
     private var indice = 0
-    fun reiniciar() { vistas.clear(); indice = 0 }
-    fun comenzar() { indice = 0 }
+    fun reiniciar() {
+        vistas.clear(); indice = 0
+    }
+
+    fun comenzar() {
+        indice = 0
+    }
 
     fun encabezados(contenedor: View) {
         var actual = contenedor

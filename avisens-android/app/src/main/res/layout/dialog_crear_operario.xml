@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -14,10 +13,10 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fillViewport="true"
         android:clipToPadding="false"
-        android:scrollbars="vertical"
-        android:overScrollMode="never">
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        android:scrollbars="vertical">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -34,7 +33,7 @@
                 android:text="Crear operario"
                 android:textColor="@color/adaptive_text_151515"
                 android:textSize="20sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -42,7 +41,7 @@
                 android:layout_marginTop="4dp"
                 android:text="Completa los datos para registrar un nuevo operario."
                 android:textColor="@color/adaptive_text_7a817d"
-                android:textSize="14sp"/>
+                android:textSize="14sp" />
 
             <!-- DATOS PERSONALES -->
 
@@ -53,7 +52,7 @@
                 android:text="Datos personales"
                 android:textColor="@color/adaptive_text_1f5c42"
                 android:textSize="15sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
             <!-- NOMBRE COMPLETO -->
 
@@ -64,14 +63,14 @@
                 android:text="Nombre completo"
                 android:textColor="@color/adaptive_text_202020"
                 android:textSize="14sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
+                android:minHeight="52dp"
                 app:boxBackgroundMode="none"
                 app:hintEnabled="false">
 
@@ -79,17 +78,17 @@
                     android:id="@+id/etNombreOperario"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="52dp"
-                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
+                    android:gravity="center_vertical"
                     android:hint="Ej. Juan Pérez"
                     android:inputType="textCapWords"
-                    android:singleLine="true"
+                    android:minHeight="52dp"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
+                    android:singleLine="true"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="15sp"/>
+                    android:textSize="15sp" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -102,14 +101,14 @@
                 android:text="Cédula"
                 android:textColor="@color/adaptive_text_202020"
                 android:textSize="14sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
+                android:minHeight="52dp"
                 app:boxBackgroundMode="none"
                 app:hintEnabled="false">
 
@@ -117,17 +116,17 @@
                     android:id="@+id/etCedulaOperario"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="52dp"
-                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
+                    android:gravity="center_vertical"
                     android:hint="Ej. 1234567890"
                     android:inputType="number"
-                    android:singleLine="true"
+                    android:minHeight="52dp"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
+                    android:singleLine="true"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="15sp"/>
+                    android:textSize="15sp" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -140,14 +139,14 @@
                 android:text="Correo electrónico"
                 android:textColor="@color/adaptive_text_202020"
                 android:textSize="14sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
+                android:minHeight="52dp"
                 app:boxBackgroundMode="none"
                 app:hintEnabled="false">
 
@@ -155,17 +154,17 @@
                     android:id="@+id/etEmailOperario"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="52dp"
-                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
+                    android:gravity="center_vertical"
                     android:hint="Ej. correo@ejemplo.com"
                     android:inputType="textEmailAddress"
-                    android:singleLine="true"
+                    android:minHeight="52dp"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
+                    android:singleLine="true"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="15sp"/>
+                    android:textSize="15sp" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -178,14 +177,14 @@
                 android:text="Teléfono"
                 android:textColor="@color/adaptive_text_202020"
                 android:textSize="14sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
+                android:minHeight="52dp"
                 app:boxBackgroundMode="none"
                 app:hintEnabled="false">
 
@@ -193,17 +192,17 @@
                     android:id="@+id/etTelefonoOperario"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="52dp"
-                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
+                    android:gravity="center_vertical"
                     android:hint="Ej. 3001234567"
                     android:inputType="phone"
-                    android:singleLine="true"
+                    android:minHeight="52dp"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
+                    android:singleLine="true"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="15sp"/>
+                    android:textSize="15sp" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -214,7 +213,7 @@
                 android:layout_height="1dp"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="14dp"
-                android:background="@color/adaptive_surface_dde5e0"/>
+                android:background="@color/adaptive_surface_dde5e0" />
 
             <!-- CREDENCIALES -->
 
@@ -224,7 +223,7 @@
                 android:text="Credenciales de acceso"
                 android:textColor="@color/adaptive_text_1f5c42"
                 android:textSize="15sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -232,7 +231,7 @@
                 android:layout_marginTop="4dp"
                 android:text="Datos para iniciar sesión."
                 android:textColor="@color/adaptive_text_7a817d"
-                android:textSize="14sp"/>
+                android:textSize="14sp" />
 
             <!-- NOMBRE DE USUARIO -->
 
@@ -243,14 +242,14 @@
                 android:text="Nombre de usuario"
                 android:textColor="@color/adaptive_text_202020"
                 android:textSize="14sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
+                android:minHeight="52dp"
                 app:boxBackgroundMode="none"
                 app:hintEnabled="false">
 
@@ -258,17 +257,17 @@
                     android:id="@+id/etUsernameOperario"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="52dp"
-                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
+                    android:gravity="center_vertical"
                     android:hint="Ej. juanperez"
                     android:inputType="textNoSuggestions"
-                    android:singleLine="true"
+                    android:minHeight="52dp"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
+                    android:singleLine="true"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="15sp"/>
+                    android:textSize="15sp" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -281,14 +280,14 @@
                 android:text="Contraseña"
                 android:textColor="@color/adaptive_text_202020"
                 android:textSize="14sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
+                android:minHeight="52dp"
                 app:boxBackgroundMode="none"
                 app:endIconMode="password_toggle"
                 app:hintEnabled="false">
@@ -297,17 +296,17 @@
                     android:id="@+id/etPasswordOperario"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="52dp"
-                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
+                    android:gravity="center_vertical"
                     android:hint="Ingresa una contraseña"
                     android:inputType="textPassword"
-                    android:singleLine="true"
+                    android:minHeight="52dp"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
+                    android:singleLine="true"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="15sp"/>
+                    android:textSize="15sp" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -320,14 +319,14 @@
                 android:text="Confirmar contraseña"
                 android:textColor="@color/adaptive_text_202020"
                 android:textSize="14sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="52dp"
                 android:layout_marginTop="5dp"
                 android:background="@drawable/bg_input_form"
+                android:minHeight="52dp"
                 app:boxBackgroundMode="none"
                 app:endIconMode="password_toggle"
                 app:hintEnabled="false">
@@ -336,18 +335,18 @@
                     android:id="@+id/etConfirmarPasswordOperario"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="52dp"
-                    android:gravity="center_vertical"
                     android:background="@android:color/transparent"
+                    android:gravity="center_vertical"
                     android:hint="Repite la contraseña"
-                    android:inputType="textPassword"
                     android:imeOptions="actionDone"
-                    android:singleLine="true"
+                    android:inputType="textPassword"
+                    android:minHeight="52dp"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
+                    android:singleLine="true"
                     android:textColor="@color/adaptive_text_1f2924"
                     android:textColorHint="@color/adaptive_text_75847c"
-                    android:textSize="15sp"/>
+                    android:textSize="15sp" />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -360,8 +359,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:paddingStart="20dp"
         android:paddingTop="8dp"
         android:paddingEnd="20dp"
@@ -372,38 +371,38 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
             android:minWidth="0dp"
             android:minHeight="48dp"
-            android:gravity="center"
             android:text="Cancelar"
             android:textAllCaps="false"
             android:textColor="@color/cancel_text"
-            android:textStyle="bold"
             android:textSize="15sp"
-            android:maxLines="1"
-            android:ellipsize="end"
-            app:cornerRadius="10dp"
+            android:textStyle="bold"
             app:backgroundTint="@color/cancel_background"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/cancel_stroke" />
+            app:cornerRadius="10dp"
+            app:strokeColor="@color/cancel_stroke"
+            app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCrearOperario"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
             android:minWidth="0dp"
             android:minHeight="48dp"
-            android:gravity="center"
             android:text="Crear"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="15sp"
-            android:maxLines="1"
-            android:ellipsize="end"
             app:backgroundTint="#2F8B5E"
-            app:cornerRadius="10dp"/>
+            app:cornerRadius="10dp" />
 
     </LinearLayout>
 

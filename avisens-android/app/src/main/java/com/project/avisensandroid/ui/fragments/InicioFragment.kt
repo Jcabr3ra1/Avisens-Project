@@ -59,7 +59,8 @@ class InicioFragment : BaseBottomNavFragment() {
 
     private var granjas: List<GranjaResponse> = emptyList()
     private var galpones: List<GalponResponse> = emptyList()
-    private var umbralesInicio: List<com.project.avisensandroid.model.UmbralAmbientalResponse> = emptyList()
+    private var umbralesInicio: List<com.project.avisensandroid.model.UmbralAmbientalResponse> =
+        emptyList()
     private var lotes: List<LoteResponse> = emptyList()
     private var mortalidades: List<RegistroMortalidadResponse> = emptyList()
     private var eventosSanitarios: List<EventoSanitarioResponse> = emptyList()
@@ -107,7 +108,10 @@ class InicioFragment : BaseBottomNavFragment() {
                             text = if (n > 99) "99+" else n.toString()
                             visibility = if (n > 0) View.VISIBLE else View.GONE
                         }
-                    } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                    }
                 }
                 contador(true)
                 while (isActive) {
@@ -118,12 +122,54 @@ class InicioFragment : BaseBottomNavFragment() {
         }
 
         if (esPropietario()) {
-            conectarDetalleInicio(binding.arcTemperaturaInicio, binding.txtTemperaturaInicio, binding.txtEstadoTemperaturaInicio, "Temperatura", "temperatura", "°C")
-            conectarDetalleInicio(binding.arcHumedadInicio, binding.txtHumedadInicio, binding.txtEstadoHumedadInicio, "Humedad", "humedad", "%")
-            conectarDetalleInicio(binding.arcLuminosidadInicio, binding.txtLuminosidadInicio, binding.txtEstadoLuminosidadInicio, "Luminosidad", "luminosidad", "lux")
-            conectarDetalleInicio(binding.arcCalidadAireInicio, binding.txtCalidadAireInicio, binding.txtEstadoCalidadAireInicio, "Calidad del aire", null, "")
-            conectarDetalleInicio(binding.arcPesoInicio, binding.txtPesoInicio, binding.txtEstadoPesoInicio, "Peso", null, "")
-            conectarDetalleInicio(binding.arcNivelAguaInicio, binding.txtNivelAguaInicio, binding.txtEstadoNivelAguaInicio, "Nivel de agua", null, "")
+            conectarDetalleInicio(
+                binding.arcTemperaturaInicio,
+                binding.txtTemperaturaInicio,
+                binding.txtEstadoTemperaturaInicio,
+                "Temperatura",
+                "temperatura",
+                "°C"
+            )
+            conectarDetalleInicio(
+                binding.arcHumedadInicio,
+                binding.txtHumedadInicio,
+                binding.txtEstadoHumedadInicio,
+                "Humedad",
+                "humedad",
+                "%"
+            )
+            conectarDetalleInicio(
+                binding.arcLuminosidadInicio,
+                binding.txtLuminosidadInicio,
+                binding.txtEstadoLuminosidadInicio,
+                "Luminosidad",
+                "luminosidad",
+                "lux"
+            )
+            conectarDetalleInicio(
+                binding.arcCalidadAireInicio,
+                binding.txtCalidadAireInicio,
+                binding.txtEstadoCalidadAireInicio,
+                "Calidad del aire",
+                null,
+                ""
+            )
+            conectarDetalleInicio(
+                binding.arcPesoInicio,
+                binding.txtPesoInicio,
+                binding.txtEstadoPesoInicio,
+                "Peso",
+                null,
+                ""
+            )
+            conectarDetalleInicio(
+                binding.arcNivelAguaInicio,
+                binding.txtNivelAguaInicio,
+                binding.txtEstadoNivelAguaInicio,
+                "Nivel de agua",
+                null,
+                ""
+            )
         }
 
         // Inicio es compartido entre Propietario y Operario, pero la sección
@@ -148,7 +194,8 @@ class InicioFragment : BaseBottomNavFragment() {
             activity.mostrarAsistenteVoz()
         }
 
-        binding.btnGuiaPeso.visibility = if (activity.obtenerRolActual() == UserRole.OPERARIO) View.GONE else View.VISIBLE
+        binding.btnGuiaPeso.visibility =
+            if (activity.obtenerRolActual() == UserRole.OPERARIO) View.GONE else View.VISIBLE
         binding.btnGuiaPeso.setOnClickListener { activity.mostrarGuiaPeso() }
 
         entradaAnimada = false
@@ -184,16 +231,23 @@ class InicioFragment : BaseBottomNavFragment() {
         valoresEntrada().forEach { vista ->
             val texto = vista.text.toString()
             if (texto == "—" || vista in valoresYaAnimados || vista in valoresPendientes) return@forEach
-            if (tarjetaIniciada(vista) || tarjetasEntradaInicio().none { perteneceATarjeta(vista, it) }) animarValor(vista, texto)
+            if (tarjetaIniciada(vista) || tarjetasEntradaInicio().none {
+                    perteneceATarjeta(
+                        vista,
+                        it
+                    )
+                }) animarValor(vista, texto)
             else valoresPendientes[vista] = texto
         }
     }
+
     private val arcosPendientes = mutableMapOf<SensorArcView, Float>()
     private val valoresAnimados = mutableMapOf<TextView, Pair<ValueAnimator, String>>()
     private var trabajoEntrada: kotlinx.coroutines.Job? = null
 
     private fun progresoSensorInicio(arco: SensorArcView, fraccion: Float) {
-        if (!tarjetaIniciada(arco) && trabajoEntrada?.isActive == true) arcosPendientes[arco] = fraccion
+        if (!tarjetaIniciada(arco) && trabajoEntrada?.isActive == true) arcosPendientes[arco] =
+            fraccion
         else arco.setProgressFraction(fraccion)
     }
 
@@ -213,7 +267,8 @@ class InicioFragment : BaseBottomNavFragment() {
         val destino = numero.replace(',', '.').toDoubleOrNull() ?: return
         if (!destino.isFinite()) return
         valoresYaAnimados.add(vista)
-        val decimales = numero.indexOfFirst { it == '.' || it == ',' }.let { if (it < 0) 0 else numero.length - it - 1 }
+        val decimales = numero.indexOfFirst { it == '.' || it == ',' }
+            .let { if (it < 0) 0 else numero.length - it - 1 }
         val sufijo = partes.groupValues[2]
         val formato = java.text.DecimalFormat().apply {
             isGroupingUsed = false
@@ -260,11 +315,15 @@ class InicioFragment : BaseBottomNavFragment() {
         }
         trabajoEntrada = viewLifecycleOwner.lifecycleScope.launch {
             tarjetas.forEachIndexed { indice, tarjeta ->
-                if (indice > 0) delay(320L)
+                if (_binding == null) return@launch
+                val esResumen = perteneceATarjeta(tarjeta, binding.operatorStatsContainer)
+                val anteriorEsResumen = indice > 0 &&
+                        perteneceATarjeta(tarjetas[indice - 1], binding.operatorStatsContainer)
+                if (indice > 0) delay(if (esResumen && anteriorEsResumen) 220L else 320L)
                 if (_binding == null) return@launch
                 tarjetasIniciadas.add(tarjeta)
                 tarjeta.animate().alpha(1f).translationY(0f)
-                    .setStartDelay(0L).setDuration(1000L)
+                    .setStartDelay(0L).setDuration(if (esResumen) 800L else 1000L)
                     .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
                 valoresPendientes.keys.filter { perteneceATarjeta(it, tarjeta) }.forEach { vista ->
                     valoresPendientes.remove(vista)?.let { texto ->
@@ -294,7 +353,9 @@ class InicioFragment : BaseBottomNavFragment() {
                         continue
                     }
                     val lp = hijo.layoutParams as? LinearLayout.LayoutParams
-                    if (hijo is LinearLayout && (lp?.weight ?: 0f) > 0f && hijo.background != null) {
+                    if (hijo is LinearLayout && (lp?.weight
+                            ?: 0f) > 0f && hijo.background != null
+                    ) {
                         tarjetas.add(hijo)
                     } else if (hijo is LinearLayout && hijo.background != null && hijo.id != binding.contenedorActuadoresInicio.id) {
                         tarjetas.add(hijo)
@@ -392,15 +453,21 @@ class InicioFragment : BaseBottomNavFragment() {
                         supervisorScope {
                             val granjasDef = async { activity.obtenerGranjas(soloCache) }
                             val galponesDef = async { activity.obtenerGalpones(soloCache) }
-                            val sensoresDef = async { if (esPropietario()) cargarTodosSensores(soloCache) else emptyList() }
+                            val sensoresDef =
+                                async { if (esPropietario()) cargarTodosSensores(soloCache) else emptyList() }
                             val rg = granjasDef.await()
                             val rp = galponesDef.await()
                             if (!rg.isSuccessful || !rp.isSuccessful) error("No se pudo consultar la estructura")
                             granjas = rg.body()?.data.orEmpty().filter { it.activa }
                             galpones = rp.body()?.data.orEmpty().filter { it.activo }
                             errorCargaSensores = false
-                            sensores = try { sensoresDef.await() } catch (e: CancellationException) { throw e }
-                            catch (_: Exception) { errorCargaSensores = true; emptyList() }
+                            sensores = try {
+                                sensoresDef.await()
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (_: Exception) {
+                                errorCargaSensores = true; emptyList()
+                            }
                         }
                         configurarSpinnerGranjas()
                         if (granjas.isEmpty()) {
@@ -413,14 +480,20 @@ class InicioFragment : BaseBottomNavFragment() {
                             limpiarDashboard("Sin datos")
                             return@launch
                         }
-                        val inicial = granjas.firstOrNull { it.id == activity.obtenerGranjaSeleccionadaId() } ?: granjas.first()
+                        val inicial =
+                            granjas.firstOrNull { it.id == activity.obtenerGranjaSeleccionadaId() }
+                                ?: granjas.first()
                         seleccionarGranjaEnInicio(inicial)
-                    } catch (e: CancellationException) { throw e }
-                    catch (e: Exception) { if (!soloCache && granjas.isEmpty()) throw e }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        if (!soloCache && granjas.isEmpty()) throw e
+                    }
                 }
 
-            } catch (e: CancellationException) { throw e }
-            catch (_: Exception) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
                 mostrarMensaje("No se pudieron cargar los datos de Inicio.")
             }
         }
@@ -453,7 +526,10 @@ class InicioFragment : BaseBottomNavFragment() {
 
     private suspend fun cargarTodosSensores(soloCache: Boolean = false): List<SensorResponse> =
         cargarPaginas { page ->
-            (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarSensores(page = page, limit = 100)
+            (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarSensores(
+                page = page,
+                limit = 100
+            )
         }
 
     private suspend fun <T> cargarPaginas(
@@ -522,6 +598,7 @@ class InicioFragment : BaseBottomNavFragment() {
                         seleccionarGranjaEnInicio(granjas[position])
                     }
                 }
+
                 override fun onNothingSelected(parent: AdapterView<*>?) = Unit
             }
     }
@@ -557,7 +634,10 @@ class InicioFragment : BaseBottomNavFragment() {
         cargarDashboardDelGalpon(galponSeleccionadoId!!)
     }
 
-    private fun mostrarGalponesDeGranja(granjaId: Int, idGalponGuardado: Int?): List<GalponResponse> {
+    private fun mostrarGalponesDeGranja(
+        granjaId: Int,
+        idGalponGuardado: Int?
+    ): List<GalponResponse> {
         val galponesDeGranja = galpones.filter { it.granja.id == granjaId }
 
         binding.txtCantidadGalpones.text = when (galponesDeGranja.size) {
@@ -684,7 +764,8 @@ class InicioFragment : BaseBottomNavFragment() {
                             mostrarValoresIniciales()
                         }
                     }
-                    val medicionesDef = async { if (esPropietario()) cargarUltimasMediciones(galponId) else LecturasGalpon.VACIAS }
+                    val medicionesDef =
+                        async { if (esPropietario()) cargarUltimasMediciones(galponId) else LecturasGalpon.VACIAS }
                     val lotesDef = async { cargarTodosLotes() }
                     val mediciones = medicionesDef.await()
                     if (solicitudId != cargaDashboardId || _binding == null) return@supervisorScope
@@ -693,10 +774,16 @@ class InicioFragment : BaseBottomNavFragment() {
                         mostrarValoresIniciales()
                     }
                     lotes = lotesDef.safeAwait(lotes)
-                    val loteActivo = lotes.filter { it.galpon.id == galponId && it.estado.equals("activo", true) }
+                    val loteActivo = lotes.filter {
+                        it.galpon.id == galponId && it.estado.equals(
+                            "activo",
+                            true
+                        )
+                    }
                         .maxByOrNull { parseDate(it.fecha_ingreso)?.time ?: 0L }
                     val alertasDef = async { cargarAlertasGalpon(galponId) }
-                    val umbralesDef = async { if (esPropietario()) cargarUmbralesInicio(galponId) else emptyList() }
+                    val umbralesDef =
+                        async { if (esPropietario()) cargarUmbralesInicio(galponId) else emptyList() }
                     val indicadorDef = async { loteActivo?.let { cargarUltimoIndicador(it.id) } }
                     val comparacionDef = async { loteActivo?.let { cargarComparacion(it.id) } }
                     val mortalidadesDef = async { cargarTodasMortalidades() }
@@ -715,15 +802,18 @@ class InicioFragment : BaseBottomNavFragment() {
                     val indicador = indicadorDef.safeAwait(null)
                     val comparacion = comparacionDef.safeAwait(null)
                     if (solicitudId != cargaDashboardId || _binding == null) return@supervisorScope
-                    actualizarDashboard(loteActivo,
+                    actualizarDashboard(
+                        loteActivo,
                         mortalidades.filter { it.lote_id == loteActivo?.id },
                         eventosSanitarios.filter { it.lote_id == loteActivo?.id },
                         pesajes.filter { it.lote_id == loteActivo?.id },
                         consumos.filter { it.lote_id == loteActivo?.id },
-                        alertas, indicador, comparacion, mediciones)
+                        alertas, indicador, comparacion, mediciones
+                    )
                 }
-            } catch (e: CancellationException) { throw e }
-            catch (e: Exception) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 if (solicitudId == cargaDashboardId && _binding != null) mostrarMensaje("No se pudo actualizar Inicio")
             }
         }
@@ -772,17 +862,27 @@ class InicioFragment : BaseBottomNavFragment() {
      * sola petición (GET /v1/mediciones/ultimas). La antigüedad la calcula
      * el servidor; si la consulta falla, todas quedan como error de consulta.
      */
-    private suspend fun cargarUltimasMediciones(galponId: Int, soloCache: Boolean = false): LecturasGalpon {
+    private suspend fun cargarUltimasMediciones(
+        galponId: Int,
+        soloCache: Boolean = false
+    ): LecturasGalpon {
         val actuadores = actuadoresDelGalpon(galponId)
         val todos = sensoresFisicosDelGalpon(galponId) + actuadores
         if (todos.isEmpty()) return LecturasGalpon.VACIAS
         val lecturas = try {
-            val response = (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarUltimasLecturas(galponId)
+            val response =
+                (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarUltimasLecturas(
+                    galponId
+                )
             val cuerpo = response.body()
             if (response.isSuccessful && cuerpo != null && cuerpo.sensores != null) {
                 LecturasSensores.cruzar(todos, cuerpo).map { item ->
                     val lectura = item.lectura
-                    if (soloCache && lectura != null) item.copy(lectura = lectura.copy(antiguedad_segundos = null)) else item
+                    if (soloCache && lectura != null) item.copy(
+                        lectura = lectura.copy(
+                            antiguedad_segundos = null
+                        )
+                    ) else item
                 }
             } else {
                 LecturasSensores.conError(todos)
@@ -875,12 +975,21 @@ class InicioFragment : BaseBottomNavFragment() {
         val (texto, drawable, colorTexto, progreso) = when {
             loteSinDatos(mortalidadPct, epef, alertas, eventosSanitarios) ->
                 HealthState("Sin datos", R.drawable.bg_badge_regular, R.color.orange_badge_text, 0)
+
             alertaCritica ->
                 HealthState("Crítico", R.drawable.bg_badge_red, R.color.badge_red_text, 25)
+
             alertasActivas.isNotEmpty() ->
                 HealthState("Atención", R.drawable.bg_badge_orange, R.color.orange_badge_text, 50)
+
             tieneEventoReciente ->
-                HealthState("Seguimiento", R.drawable.bg_badge_orange, R.color.orange_badge_text, 72)
+                HealthState(
+                    "Seguimiento",
+                    R.drawable.bg_badge_orange,
+                    R.color.orange_badge_text,
+                    72
+                )
+
             else ->
                 HealthState("Estable", R.drawable.bg_badge_green, R.color.badge_green_text, 100)
         }
@@ -952,23 +1061,53 @@ class InicioFragment : BaseBottomNavFragment() {
             )
         )
         binding.txtSensoresSinIdentificarInicio.text = aviso.orEmpty()
-        binding.txtSensoresSinIdentificarInicio.visibility = if (aviso == null) View.GONE else View.VISIBLE
+        binding.txtSensoresSinIdentificarInicio.visibility =
+            if (aviso == null) View.GONE else View.VISIBLE
 
-        pintarSensorInicio(VariableSensor.TEMPERATURA, mediciones, alertas,
-            binding.arcTemperaturaInicio, binding.txtTemperaturaInicio, binding.txtEstadoTemperaturaInicio)
-        pintarSensorInicio(VariableSensor.HUMEDAD, mediciones, alertas,
-            binding.arcHumedadInicio, binding.txtHumedadInicio, binding.txtEstadoHumedadInicio)
-        pintarSensorInicio(VariableSensor.CALIDAD_AIRE, mediciones, alertas,
-            binding.arcCalidadAireInicio, binding.txtCalidadAireInicio, binding.txtEstadoCalidadAireInicio,
-            binding.txtLabelCalidadAireInicio)
-        pintarSensorInicio(VariableSensor.PESO, mediciones, alertas,
+        pintarSensorInicio(
+            VariableSensor.TEMPERATURA,
+            mediciones,
+            alertas,
+            binding.arcTemperaturaInicio,
+            binding.txtTemperaturaInicio,
+            binding.txtEstadoTemperaturaInicio
+        )
+        pintarSensorInicio(
+            VariableSensor.HUMEDAD, mediciones, alertas,
+            binding.arcHumedadInicio, binding.txtHumedadInicio, binding.txtEstadoHumedadInicio
+        )
+        pintarSensorInicio(
+            VariableSensor.CALIDAD_AIRE,
+            mediciones,
+            alertas,
+            binding.arcCalidadAireInicio,
+            binding.txtCalidadAireInicio,
+            binding.txtEstadoCalidadAireInicio,
+            binding.txtLabelCalidadAireInicio
+        )
+        pintarSensorInicio(
+            VariableSensor.PESO, mediciones, alertas,
             binding.arcPesoInicio, binding.txtPesoInicio, binding.txtEstadoPesoInicio,
-            binding.txtLabelPesoInicio)
-        pintarSensorInicio(VariableSensor.LUMINOSIDAD, mediciones, alertas,
-            binding.arcLuminosidadInicio, binding.txtLuminosidadInicio, binding.txtEstadoLuminosidadInicio, binding.txtLabelLuminosidadInicio)
-        val hayNivelAgua = pintarSensorInicio(VariableSensor.NIVEL_AGUA, mediciones, alertas,
-            binding.arcNivelAguaInicio, binding.txtNivelAguaInicio, binding.txtEstadoNivelAguaInicio,
-            binding.txtLabelNivelAguaInicio)
+            binding.txtLabelPesoInicio
+        )
+        pintarSensorInicio(
+            VariableSensor.LUMINOSIDAD,
+            mediciones,
+            alertas,
+            binding.arcLuminosidadInicio,
+            binding.txtLuminosidadInicio,
+            binding.txtEstadoLuminosidadInicio,
+            binding.txtLabelLuminosidadInicio
+        )
+        val hayNivelAgua = pintarSensorInicio(
+            VariableSensor.NIVEL_AGUA,
+            mediciones,
+            alertas,
+            binding.arcNivelAguaInicio,
+            binding.txtNivelAguaInicio,
+            binding.txtEstadoNivelAguaInicio,
+            binding.txtLabelNivelAguaInicio
+        )
         // Mantener la misma estructura visual para todos los propietarios.
         // Si el galpón no tiene HC-SR04, la tarjeta muestra "No configurado"
         // en lugar de desaparecer.
@@ -982,40 +1121,87 @@ class InicioFragment : BaseBottomNavFragment() {
      * variable tiene un sensor configurado en el galpón.
      */
     private fun semanaUmbralInicio(): Int {
-        val lote = lotes.filter { it.galpon.id == galponSeleccionadoId && it.estado.equals("activo", true) }.maxByOrNull { it.fecha_ingreso }
+        val lote = lotes.filter {
+            it.galpon.id == galponSeleccionadoId && it.estado.equals(
+                "activo",
+                true
+            )
+        }.maxByOrNull { it.fecha_ingreso }
         return ((lote?.let { calcularDiaVida(it.fecha_ingreso) } ?: 1) - 1).coerceAtLeast(0) / 7
     }
 
-    private fun conectarDetalleInicio(arco: View, valor: TextView, estado: TextView, nombre: String, clave: String?, unidad: String) {
+    private fun conectarDetalleInicio(
+        arco: View,
+        valor: TextView,
+        estado: TextView,
+        nombre: String,
+        clave: String?,
+        unidad: String
+    ) {
         DetalleSensorModal.tarjeta(arco).setOnClickListener { origen ->
             finalizarValor(valor)
             val galpon = galponSeleccionadoId ?: return@setOnClickListener
-            val configurar: (() -> Unit)? = if (clave != null && esPropietario()) ({ mostrarUmbrales(clave, unidad) }) else null
-            detalleSensor.abrir(origen, nombre, valor, estado,
-                { umbralesInicio.firstOrNull { it.galpon_id == galpon && it.variable.equals(clave, true) } },
-                { semanaUmbralInicio() }, configurar)
+            val configurar: (() -> Unit)? =
+                if (clave != null && esPropietario()) ({ mostrarUmbrales(clave, unidad) }) else null
+            detalleSensor.abrir(
+                origen, nombre, valor, estado,
+                {
+                    umbralesInicio.firstOrNull {
+                        it.galpon_id == galpon && it.variable.equals(
+                            clave,
+                            true
+                        )
+                    }
+                },
+                { semanaUmbralInicio() }, configurar
+            )
         }
     }
 
     private fun mostrarUmbrales(clave: String, unidadSensor: String) {
         if (!esPropietario()) return
         val galponId = galponSeleccionadoId ?: run {
-            android.widget.Toast.makeText(requireContext(), "Selecciona un galpón", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(
+                requireContext(),
+                "Selecciona un galpón",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
             return
         }
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val lista = cargarPaginas { pagina ->
-                    RetrofitClient.api.listarUmbralesAmbientales(galponId, page = pagina, limit = 100)
+                    RetrofitClient.api.listarUmbralesAmbientales(
+                        galponId,
+                        page = pagina,
+                        limit = 100
+                    )
                 }
                 if (_binding == null || galponSeleccionadoId != galponId || !esPropietario()) return@launch
-                editarUmbral(galponId, lista.filter { it.variable.equals(clave, true) && it.vigente }, clave, unidadSensor)
-            } catch (e: CancellationException) { throw e }
-            catch (_: Exception) { if (_binding != null) android.widget.Toast.makeText(requireContext(), "No se pudieron consultar los umbrales", android.widget.Toast.LENGTH_SHORT).show() }
+                editarUmbral(
+                    galponId,
+                    lista.filter { it.variable.equals(clave, true) && it.vigente },
+                    clave,
+                    unidadSensor
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                if (_binding != null) android.widget.Toast.makeText(
+                    requireContext(),
+                    "No se pudieron consultar los umbrales",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
-    private fun editarUmbral(galponId: Int, lista: List<UmbralAmbientalResponse>, clave: String, unidadSensor: String) {
+    private fun editarUmbral(
+        galponId: Int,
+        lista: List<UmbralAmbientalResponse>,
+        clave: String,
+        unidadSensor: String
+    ) {
         if (!esPropietario()) return
         val ctx = requireContext()
         val dialogo = android.app.Dialog(ctx)
@@ -1027,6 +1213,7 @@ class InicioFragment : BaseBottomNavFragment() {
         fun adaptar(spinner: android.widget.Spinner, items: List<String>) {
             spinner.adapter = MainActivity.SpinnerAdapterEstilizado(ctx, items.toMutableList())
         }
+
         val selector = spinner(R.id.spinnerUmbralExistente)
         val variable = spinner(R.id.spinnerVariableUmbral)
         val criticidad = spinner(R.id.spinnerCriticidadUmbral)
@@ -1048,36 +1235,47 @@ class InicioFragment : BaseBottomNavFragment() {
                 val marca = if (numero == semanaActual) " · Actual" else ""
                 "Semana $numero · $estado$marca"
             }
-            adaptar(selector, opciones + if (totalSemanas < 201) listOf("+ Agregar semana") else emptyList())
+            adaptar(
+                selector,
+                opciones + if (totalSemanas < 201) listOf("+ Agregar semana") else emptyList()
+            )
             selector.setSelection((seleccion - 1).coerceIn(0, totalSemanas - 1))
         }
         adaptar(variable, listOf(clave.replaceFirstChar { it.uppercase() }))
         adaptar(criticidad, criticidades.map { it.replaceFirstChar { c -> c.uppercase() } })
         var actual: UmbralAmbientalResponse? = null
-        selector.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (position == totalSemanas && totalSemanas < 201) {
-                    totalSemanas++
-                    actualizarSemanas(totalSemanas)
-                    return
+        selector.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    if (position == totalSemanas && totalSemanas < 201) {
+                        totalSemanas++
+                        actualizarSemanas(totalSemanas)
+                        return
+                    }
+                    if (position !in 0 until totalSemanas) return
+                    actual = porSemana[position + 1]
+                    val item = actual
+                    variable.setSelection(variables.indexOf(item?.variable).coerceAtLeast(0))
+                    variable.isEnabled = false
+                    semana.isEnabled = false
+                    semana.setText((position + 1).toString())
+                    minimo.setText(item?.valor_minimo?.toString().orEmpty())
+                    maximo.setText(item?.valor_maximo?.toString().orEmpty())
+                    criticidad.setSelection(criticidades.indexOf(item?.criticidad).coerceAtLeast(0))
                 }
-                if (position !in 0 until totalSemanas) return
-                actual = porSemana[position + 1]
-                val item = actual
-                variable.setSelection(variables.indexOf(item?.variable).coerceAtLeast(0))
-                variable.isEnabled = false
-                semana.isEnabled = false
-                semana.setText((position + 1).toString())
-                minimo.setText(item?.valor_minimo?.toString().orEmpty())
-                maximo.setText(item?.valor_maximo?.toString().orEmpty())
-                criticidad.setSelection(criticidades.indexOf(item?.criticidad).coerceAtLeast(0))
             }
-        }
         actualizarSemanas(semanaActual)
         cancelar.setOnClickListener { dialogo.dismiss() }
         guardar.setOnClickListener {
-            if (!esPropietario() || galponSeleccionadoId != galponId) { dialogo.dismiss(); return@setOnClickListener }
+            if (!esPropietario() || galponSeleccionadoId != galponId) {
+                dialogo.dismiss(); return@setOnClickListener
+            }
             val min = minimo.text.toString().replace(',', '.').toDoubleOrNull()
             val max = maximo.text.toString().replace(',', '.').toDoubleOrNull()
             val sem = semana.text.toString().toIntOrNull()
@@ -1087,48 +1285,88 @@ class InicioFragment : BaseBottomNavFragment() {
                 "luminosidad" -> "lux"
                 else -> unidadSensor
             }
-            if (sem == null || sem !in 1..201) { semana.error = "Semana entre 1 y 201"; return@setOnClickListener }
-            if (min == null || !min.isFinite() || min !in -50.0..100000.0) { minimo.error = "Valor mínimo inválido"; return@setOnClickListener }
-            if (max == null || !max.isFinite() || max !in -50.0..100000.0 || max <= min) { maximo.error = "Debe ser mayor que el mínimo"; return@setOnClickListener }
+            if (sem == null || sem !in 1..201) {
+                semana.error = "Semana entre 1 y 201"; return@setOnClickListener
+            }
+            if (min == null || !min.isFinite() || min !in -50.0..100000.0) {
+                minimo.error = "Valor mínimo inválido"; return@setOnClickListener
+            }
+            if (max == null || !max.isFinite() || max !in -50.0..100000.0 || max <= min) {
+                maximo.error = "Debe ser mayor que el mínimo"; return@setOnClickListener
+            }
             val item = porSemana[sem]
-            val datos = mutableMapOf<String, Any>("valor_minimo" to min, "valor_maximo" to max, "unidad" to uni, "criticidad" to criticidades[criticidad.selectedItemPosition])
-            if (item == null) { datos["galpon_id"] = galponId; datos["variable"] = variables[variable.selectedItemPosition]; datos["semana_vida"] = sem - 1 }
+            val datos = mutableMapOf<String, Any>(
+                "valor_minimo" to min,
+                "valor_maximo" to max,
+                "unidad" to uni,
+                "criticidad" to criticidades[criticidad.selectedItemPosition]
+            )
+            if (item == null) {
+                datos["galpon_id"] = galponId; datos["variable"] =
+                    variables[variable.selectedItemPosition]; datos["semana_vida"] = sem - 1
+            }
             guardar.isEnabled = false
             selector.isEnabled = false
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
-                    val respuesta = if (item == null) RetrofitClient.api.crearUmbralAmbiental(datos) else RetrofitClient.api.revisarUmbralAmbiental(item.id, datos)
+                    val respuesta =
+                        if (item == null) RetrofitClient.api.crearUmbralAmbiental(datos) else RetrofitClient.api.revisarUmbralAmbiental(
+                            item.id,
+                            datos
+                        )
                     if (respuesta.isSuccessful) {
                         val guardado = respuesta.body()
                         if (guardado != null) {
                             porSemana[sem] = guardado
                             actualizarSemanas(sem)
-                            android.widget.Toast.makeText(ctx, "Semana $sem guardada", android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(
+                                ctx,
+                                "Semana $sem guardada",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
                         } else {
                             dialogo.dismiss()
                         }
                         cargarDashboardDelGalpon(galponId)
-                    }
-                    else minimo.error = if (respuesta.code() == 409) "Ya existe un umbral para esta semana y variable" else "No se pudo guardar (HTTP ${respuesta.code()})"
-                } catch (e: CancellationException) { throw e }
-                catch (_: Exception) { minimo.error = "No se pudo conectar con el servidor" }
-                finally { guardar.isEnabled = true; selector.isEnabled = true }
+                    } else minimo.error =
+                        if (respuesta.code() == 409) "Ya existe un umbral para esta semana y variable" else "No se pudo guardar (HTTP ${respuesta.code()})"
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    minimo.error = "No se pudo conectar con el servidor"
+                } finally {
+                    guardar.isEnabled = true; selector.isEnabled = true
+                }
             }
         }
         dialogoUmbral?.dismiss()
         dialogoUmbral = dialogo
         dialogo.show()
-        dialogo.window?.setLayout((resources.displayMetrics.widthPixels * 0.90).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+        dialogo.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.90).toInt(),
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
     }
 
     private suspend fun cargarUmbralesInicio(galponId: Int): List<com.project.avisensandroid.model.UmbralAmbientalResponse> {
-        val lote = lotes.filter { it.galpon.id == galponId && it.estado.equals("activo", true) }.maxByOrNull { it.fecha_ingreso }
+        val lote = lotes.filter { it.galpon.id == galponId && it.estado.equals("activo", true) }
+            .maxByOrNull { it.fecha_ingreso }
         val semana = ((lote?.let { calcularDiaVida(it.fecha_ingreso) } ?: 1) - 1) / 7
         return try {
-            cargarPaginas { pagina -> RetrofitClient.api.listarUmbralesAmbientales(galponId, page = pagina, limit = 100) }
+            cargarPaginas { pagina ->
+                RetrofitClient.api.listarUmbralesAmbientales(
+                    galponId,
+                    page = pagina,
+                    limit = 100
+                )
+            }
                 .filter { it.vigente && it.galpon_id == galponId && it.semana_vida <= semana }
                 .groupBy { it.variable.lowercase(Locale.ROOT) }.values.mapNotNull { grupo -> grupo.maxByOrNull { it.semana_vida } }
-        } catch (e: CancellationException) { throw e } catch (_: Exception) { emptyList() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyList()
+        }
     }
 
     private fun pintarSensorInicio(
@@ -1212,7 +1450,12 @@ class InicioFragment : BaseBottomNavFragment() {
             else -> null
         }
         if (clave != null && ultima.calidad.equals("ok", true)) {
-            val umbral = umbralesInicio.firstOrNull { it.variable.equals(clave, true) && it.galpon_id == galponSeleccionadoId }
+            val umbral = umbralesInicio.firstOrNull {
+                it.variable.equals(
+                    clave,
+                    true
+                ) && it.galpon_id == galponSeleccionadoId
+            }
             if (umbral == null) {
                 txtEstado.text = "Sin umbral configurado"
                 txtEstado.setBackgroundResource(R.drawable.bg_badge_regular)
@@ -1220,11 +1463,26 @@ class InicioFragment : BaseBottomNavFragment() {
                 arco.setArcColor(resources.getColor(R.color.ring_track, null))
             } else {
                 val dentro = valorMedido in umbral.valor_minimo..umbral.valor_maximo
-                val rango = "${formatearNumero(umbral.valor_minimo, 2)} – ${formatearNumero(umbral.valor_maximo, 2)} ${umbral.unidad}"
+                val rango = "${
+                    formatearNumero(
+                        umbral.valor_minimo,
+                        2
+                    )
+                } – ${formatearNumero(umbral.valor_maximo, 2)} ${umbral.unidad}"
                 txtEstado.text = (if (dentro) "En rango" else "Fuera de rango") + "\n" + rango
                 txtEstado.setBackgroundResource(if (dentro) R.drawable.bg_badge_green else R.drawable.bg_badge_orange)
-                txtEstado.setTextColor(resources.getColor(if (dentro) R.color.badge_green_text else R.color.orange_badge_text, null))
-                arco.setArcColor(resources.getColor(if (dentro) R.color.gauge_green else R.color.gauge_orange, null))
+                txtEstado.setTextColor(
+                    resources.getColor(
+                        if (dentro) R.color.badge_green_text else R.color.orange_badge_text,
+                        null
+                    )
+                )
+                arco.setArcColor(
+                    resources.getColor(
+                        if (dentro) R.color.gauge_green else R.color.gauge_orange,
+                        null
+                    )
+                )
             }
         }
         return true
@@ -1240,13 +1498,17 @@ class InicioFragment : BaseBottomNavFragment() {
         vista.text = texto
     }
 
-    private fun textoValorInicio(variable: VariableSensor, valor: Double): String = when (variable) {
-        VariableSensor.TEMPERATURA -> "${formatearNumero(valor, 1)}°"
-        VariableSensor.HUMEDAD -> "${formatearNumero(valor, 1)}%"
-        // El ADC del MQ-135 es un entero; la unidad va en la etiqueta.
-        VariableSensor.CALIDAD_AIRE -> formatearNumero(valor, 0)
-        VariableSensor.LUMINOSIDAD, VariableSensor.CO2, VariableSensor.AMONIACO, VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> formatearNumero(valor, 1)
-    }
+    private fun textoValorInicio(variable: VariableSensor, valor: Double): String =
+        when (variable) {
+            VariableSensor.TEMPERATURA -> "${formatearNumero(valor, 1)}°"
+            VariableSensor.HUMEDAD -> "${formatearNumero(valor, 1)}%"
+            // El ADC del MQ-135 es un entero; la unidad va en la etiqueta.
+            VariableSensor.CALIDAD_AIRE -> formatearNumero(valor, 0)
+            VariableSensor.LUMINOSIDAD, VariableSensor.CO2, VariableSensor.AMONIACO, VariableSensor.PESO, VariableSensor.NIVEL_AGUA -> formatearNumero(
+                valor,
+                1
+            )
+        }
 
     /** "dd/MM HH:mm" en la hora del teléfono; null si no hay fecha válida. */
     private fun fechaCortaInicio(valor: String?): String? =
@@ -1305,8 +1567,12 @@ class InicioFragment : BaseBottomNavFragment() {
     ): Int {
         val alerta = alertas.firstOrNull { it.sensor_id == sensorId && it.estado.esActiva() }
         return when {
-            alerta != null && (alerta.criticidad.equals("alta", true) || alerta.criticidad.equals("critica", true)) ->
+            alerta != null && (alerta.criticidad.equals(
+                "alta",
+                true
+            ) || alerta.criticidad.equals("critica", true)) ->
                 resources.getColor(R.color.gauge_red, null)
+
             alerta != null -> resources.getColor(R.color.gauge_orange, null)
             calidad.equals("ok", true) -> resources.getColor(R.color.gauge_green, null)
             calidad.equals("sospechosa", true) -> resources.getColor(R.color.gauge_orange, null)
@@ -1321,7 +1587,11 @@ class InicioFragment : BaseBottomNavFragment() {
         normal: String,
         alertaActiva: AlertaResponse? = null
     ) {
-        if (alertaActiva != null && (alertaActiva.criticidad.equals("alta", true) || alertaActiva.criticidad.equals("critica", true))) {
+        if (alertaActiva != null && (alertaActiva.criticidad.equals(
+                "alta",
+                true
+            ) || alertaActiva.criticidad.equals("critica", true))
+        ) {
             view.text = "Alerta crítica"
             view.setBackgroundResource(R.drawable.bg_badge_red)
             view.setTextColor(resources.getColor(R.color.badge_red_text, null))
@@ -1366,9 +1636,13 @@ class InicioFragment : BaseBottomNavFragment() {
         binding.txtSaludDetalle.text = "Selecciona un galpón con datos"
         binding.txtSaludScore.text = "—"
         binding.progressSaludFill.layoutParams =
-            (binding.progressSaludFill.layoutParams as LinearLayout.LayoutParams).apply { weight = 0f }
+            (binding.progressSaludFill.layoutParams as LinearLayout.LayoutParams).apply {
+                weight = 0f
+            }
         binding.progressSaludRest.layoutParams =
-            (binding.progressSaludRest.layoutParams as LinearLayout.LayoutParams).apply { weight = 100f }
+            (binding.progressSaludRest.layoutParams as LinearLayout.LayoutParams).apply {
+                weight = 100f
+            }
         binding.txtSensoresActivos.text = "0 sensores"
         binding.txtTemperaturaInicio.text = "—"
         binding.txtHumedadInicio.text = "—"

@@ -23,15 +23,18 @@ object FotosMortalidad {
         return File(context.filesDir, "fotos_mortalidad/usuario_${usuario}/registro_${id}.jpg")
     }
 
-    private suspend fun guardarCopia(context: Context, id: Int, bytes: ByteArray) = withContext(Dispatchers.IO) {
-        val archivo = copia(context, id) ?: return@withContext
-        archivo.parentFile?.mkdirs()
-        val temporal = File.createTempFile("foto_", ".tmp", archivo.parentFile)
-        try {
-            temporal.writeBytes(bytes)
-            check(temporal.renameTo(archivo)) { "No se pudo guardar la fotografía local" }
-        } finally { temporal.delete() }
-    }
+    private suspend fun guardarCopia(context: Context, id: Int, bytes: ByteArray) =
+        withContext(Dispatchers.IO) {
+            val archivo = copia(context, id) ?: return@withContext
+            archivo.parentFile?.mkdirs()
+            val temporal = File.createTempFile("foto_", ".tmp", archivo.parentFile)
+            try {
+                temporal.writeBytes(bytes)
+                check(temporal.renameTo(archivo)) { "No se pudo guardar la fotografía local" }
+            } finally {
+                temporal.delete()
+            }
+        }
 
     suspend fun obtener(context: Context, id: Int): Bitmap? = withContext(Dispatchers.IO) {
         val local = pendiente(context, id) ?: copia(context, id)?.takeIf { it.isFile }
@@ -49,7 +52,12 @@ object FotosMortalidad {
     }
 
     suspend fun precargar(context: Context, id: Int) {
-        val existe = withContext(Dispatchers.IO) { pendiente(context, id) != null || copia(context, id)?.isFile == true }
+        val existe = withContext(Dispatchers.IO) {
+            pendiente(context, id) != null || copia(
+                context,
+                id
+            )?.isFile == true
+        }
         if (!existe) obtener(context, id)?.recycle()
     }
 
@@ -59,7 +67,9 @@ object FotosMortalidad {
         require(limites.outWidth > 0 && limites.outHeight > 0)
         var muestra = 1
         while (maxOf(limites.outWidth, limites.outHeight) / muestra > 1600) muestra *= 2
-        val bitmap = BitmapFactory.decodeFile(archivo.path, BitmapFactory.Options().apply { inSampleSize = muestra })
+        val bitmap = BitmapFactory.decodeFile(
+            archivo.path,
+            BitmapFactory.Options().apply { inSampleSize = muestra })
             ?: error("Imagen no válida")
         try {
             for (calidad in listOf(90, 75, 60, 45, 30)) {
@@ -68,14 +78,20 @@ object FotosMortalidad {
                 if (salida.size() <= 3 * 1024 * 1024) return@withContext salida.toByteArray()
             }
             error("La fotografía supera 3 MB")
-        } finally { bitmap.recycle() }
+        } finally {
+            bitmap.recycle()
+        }
     }
 
     suspend fun subir(context: Context, id: Int, bytes: ByteArray): Boolean {
         val usuario = UserSession.userId(context) ?: return false
-        val archivo = File(context.filesDir, "evidencias_mortalidad/registro_${id}_usuario_${usuario}.jpg")
+        val archivo =
+            File(context.filesDir, "evidencias_mortalidad/registro_${id}_usuario_${usuario}.jpg")
         withContext(Dispatchers.IO) { archivo.parentFile?.mkdirs(); archivo.writeBytes(bytes) }
-        val respuesta = RetrofitClient.api.subirFotoMortalidad(id, bytes.toRequestBody("image/jpeg".toMediaType()))
+        val respuesta = RetrofitClient.api.subirFotoMortalidad(
+            id,
+            bytes.toRequestBody("image/jpeg".toMediaType())
+        )
         respuesta.body()?.close()
         respuesta.errorBody()?.close()
         if (respuesta.isSuccessful) {

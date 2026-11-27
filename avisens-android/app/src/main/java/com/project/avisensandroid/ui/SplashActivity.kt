@@ -33,7 +33,8 @@ class SplashActivity : AppCompatActivity() {
         delegate.localNightMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
         super.onCreate(savedInstanceState)
         if (!isTaskRoot && intent.action == Intent.ACTION_MAIN &&
-            intent.hasCategory(Intent.CATEGORY_LAUNCHER)) {
+            intent.hasCategory(Intent.CATEGORY_LAUNCHER)
+        ) {
             finish()
             return
         }
@@ -60,6 +61,7 @@ class SplashActivity : AppCompatActivity() {
                     override fun onAnimationCancel(animation: Animator) {
                         cancelled = true
                     }
+
                     override fun onAnimationEnd(animation: Animator) {
                         if (cancelled || navigating || isFinishing || isDestroyed) return
                         abrirLogin()
@@ -90,11 +92,18 @@ class SplashActivity : AppCompatActivity() {
             try {
                 for (index in 0 until 52) {
                     if (Thread.currentThread().isInterrupted) throw InterruptedException()
-                    val bitmap = assets.open("splash3d/frame_%02d.webp".format(java.util.Locale.US, index)).use {
-                        requireNotNull(BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply {
-                            inSampleSize = 1
-                        }))
-                    }
+                    val bitmap =
+                        assets.open("splash3d/frame_%02d.webp".format(java.util.Locale.US, index))
+                            .use {
+                                requireNotNull(
+                                    BitmapFactory.decodeStream(
+                                        it,
+                                        null,
+                                        BitmapFactory.Options().apply {
+                                            inSampleSize = 1
+                                        })
+                                )
+                            }
                     handler.post {
                         if (!isFinishing && !isDestroyed && !pendingNavigation) {
                             scene.frames[index] = bitmap
@@ -133,7 +142,9 @@ class SplashActivity : AppCompatActivity() {
 
     private fun abrirLogin() {
         if (navigating || isFinishing || isDestroyed) return
-        if (!resumed) { pendingNavigation = true; return }
+        if (!resumed) {
+            pendingNavigation = true; return
+        }
         navigating = true
         handler.removeCallbacks(fallback)
         startActivity(Intent(this, LoginActivity::class.java))
@@ -199,7 +210,12 @@ class SplashActivity : AppCompatActivity() {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
 
-            canvas.drawColor(androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_splash_bg))
+            canvas.drawColor(
+                androidx.core.content.ContextCompat.getColor(
+                    context,
+                    R.color.adaptive_splash_bg
+                )
+            )
 
             val scale = min(
                 width / 320f,
@@ -244,7 +260,8 @@ class SplashActivity : AppCompatActivity() {
                 1f
             )
 
-            paint.color = androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_splash_text)
+            paint.color =
+                androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_splash_text)
 
             paint.typeface = Typeface.create(
                 "sans-serif",

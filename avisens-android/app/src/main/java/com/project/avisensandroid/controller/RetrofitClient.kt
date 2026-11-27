@@ -256,12 +256,16 @@ object RetrofitClient {
         var resultado = "ERROR"
         try {
             chain.proceed(request).also { response ->
-                resultado = if (response.header("X-Avisens-Offline") == "true") "CACHE" else "HTTP ${response.code}"
+                resultado =
+                    if (response.header("X-Avisens-Offline") == "true") "CACHE" else "HTTP ${response.code}"
             }
         } finally {
             if (BuildConfig.DEBUG) {
                 val ms = SystemClock.elapsedRealtime() - inicio
-                Log.d("API_PERFORMANCE", "${request.method} ${request.url.encodedPath} -> $ms ms [$resultado]${if (ms > 500) " LENTA" else ""}")
+                Log.d(
+                    "API_PERFORMANCE",
+                    "${request.method} ${request.url.encodedPath} -> $ms ms [$resultado]${if (ms > 500) " LENTA" else ""}"
+                )
             }
         }
     }
@@ -286,9 +290,11 @@ object RetrofitClient {
     val apiCache: ApiService by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(OkHttpClient.Builder()
-                .addInterceptor(OfflineCache.interceptor(appContext, soloCache = true))
-                .build())
+            .client(
+                OkHttpClient.Builder()
+                    .addInterceptor(OfflineCache.interceptor(appContext, soloCache = true))
+                    .build()
+            )
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(ApiService::class.java)

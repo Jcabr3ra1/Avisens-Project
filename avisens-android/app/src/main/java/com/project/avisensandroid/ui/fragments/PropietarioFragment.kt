@@ -19,7 +19,11 @@ class PropietarioFragment : BaseBottomNavFragment() {
 
     private lateinit var containerGranjas: LinearLayout
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View =
         inflater.inflate(R.layout.fragment_propietario, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -80,7 +84,9 @@ class PropietarioFragment : BaseBottomNavFragment() {
                 textSize = 14f
                 setTextColor(resources.getColor(R.color.text_secondary, null))
             })
-            containerGranjas.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 12 })
+            containerGranjas.addView(
+                card,
+                LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 12 })
         }
     }
 

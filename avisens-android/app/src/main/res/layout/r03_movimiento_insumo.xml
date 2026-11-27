@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -142,8 +141,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:textColor="@color/adaptive_text_68736e"
                     android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/adaptive_text_68736e"
                     android:textSize="13sp" />
 
             </LinearLayout>
@@ -187,11 +186,11 @@
             android:text="Cancelar"
             android:textAllCaps="false"
             android:textColor="@color/cancel_text"
-            android:textStyle="bold"
             android:textSize="15sp"
+            android:textStyle="bold"
             app:backgroundTint="@color/cancel_background"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/cancel_stroke" />
+            app:strokeColor="@color/cancel_stroke"
+            app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGuardarMovimiento"

@@ -461,13 +461,13 @@ class AlertasFragment : BaseBottomNavFragment() {
         tarjeta.addView(
             texto(
                 "Escalada a: ${alerta.escalado_a?.nombre_completo?.takeIf { it.isNotBlank() } ?: "Usuario no disponible"}",
-            12f, "#111111", true, 6
-        ))
+                12f, "#111111", true, 6
+            ))
         tarjeta.addView(
             texto(
                 "Responsable que aceptó: ${alerta.responsable?.nombre_completo?.takeIf { it.isNotBlank() } ?: "Sin aceptación registrada"}",
-            12f, "#111111", false, 5
-        ))
+                12f, "#111111", false, 5
+            ))
         alerta.fecha_creacion?.takeIf { it.isNotBlank() }?.let {
             tarjeta.addView(
                 texto(

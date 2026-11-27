@@ -10,7 +10,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingBottom="28dp" android:paddingStart="20dp" android:paddingEnd="20dp" android:paddingTop="24dp">
+        android:paddingStart="20dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="28dp">
 
         <!-- CABECERA -->
         <LinearLayout
@@ -70,15 +73,15 @@
             android:id="@+id/txtEtiquetaGalponLia"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:visibility="gone"
-            android:text="Galpón" />
+            android:text="Galpón"
+            android:visibility="gone" />
 
         <Spinner
             android:id="@+id/spinnerGalponLia"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:visibility="gone"
-            android:spinnerMode="dropdown" />
+            android:spinnerMode="dropdown"
+            android:visibility="gone" />
 
         <!-- ONDA DE VOZ -->
         <ImageView
@@ -96,11 +99,11 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:gravity="center"
+            android:lineSpacingExtra="2dp"
             android:text="¿Cómo puedo ayudarte con tu granja?"
             android:textColor="@android:color/white"
             android:textSize="30sp"
-            android:textStyle="bold"
-            android:lineSpacingExtra="2dp" />
+            android:textStyle="bold" />
 
         <!-- MICRÓFONO CON HALO NEÓN -->
         <FrameLayout
@@ -125,10 +128,10 @@
                 android:layout_width="110dp"
                 android:layout_height="110dp"
                 android:layout_gravity="center"
+                android:contentDescription="Hablar con Lía"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:text=""
-                android:contentDescription="Hablar con Lía"
                 app:backgroundTint="#1FCF82"
                 app:cornerRadius="55dp"
                 app:elevation="0dp"
@@ -209,10 +212,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="2dp"
                     android:text="Aquí aparecerá lo que digas..."
                     android:textColor="#D5DCDA"
-                    android:textSize="16sp"
-                    android:lineSpacingExtra="2dp" />
+                    android:textSize="16sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -246,10 +249,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
+                    android:lineSpacingExtra="2dp"
                     android:text="La respuesta del asistente aparecerá aquí..."
                     android:textColor="#D5DCDA"
-                    android:textSize="16sp"
-                    android:lineSpacingExtra="2dp" />
+                    android:textSize="16sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

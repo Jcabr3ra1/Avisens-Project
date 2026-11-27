@@ -23,9 +23,9 @@
             android:id="@+id/notifCerrar"
             android:layout_width="44dp"
             android:layout_height="44dp"
+            android:contentDescription="Cerrar"
             android:padding="12dp"
-            android:src="@drawable/ic_close"
-            android:contentDescription="Cerrar" />
+            android:src="@drawable/ic_close" />
     </LinearLayout>
 
     <LinearLayout
@@ -37,8 +37,8 @@
             android:id="@+id/notifTodas"
             android:layout_width="0dp"
             android:layout_height="44dp"
-            android:layout_weight="1"
             android:layout_marginEnd="6dp"
+            android:layout_weight="1"
             android:gravity="center"
             android:text="Todas"
             android:textSize="14sp"

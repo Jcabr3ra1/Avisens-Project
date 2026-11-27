@@ -406,11 +406,11 @@ class GuiaPesoFragment : BaseBottomNavFragment() {
             )
             visibles.map { binding.root.findViewById<View>(it) }
                 .filter { it.visibility == View.VISIBLE }.forEach { v ->
-                animarContenidoHorizontal(
-                    v, if (indice > anterior) 1 else -1,
-                    barra.width.toFloat().takeIf { it > 0 }
-                        ?: resources.displayMetrics.widthPixels.toFloat())
-            }
+                    animarContenidoHorizontal(
+                        v, if (indice > anterior) 1 else -1,
+                        barra.width.toFloat().takeIf { it > 0 }
+                            ?: resources.displayMetrics.widthPixels.toFloat())
+                }
         }
     }
 

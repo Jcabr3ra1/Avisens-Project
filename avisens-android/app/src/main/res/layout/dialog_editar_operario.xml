@@ -3,8 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@drawable/bg_dialog_gestion_operario"
+    android:orientation="vertical"
     android:padding="20dp">
 
     <TextView
@@ -29,17 +29,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:textColor="@color/adaptive_text_78847e"
         android:fontFamily="sans-serif-medium"
+        android:textColor="@color/adaptive_text_78847e"
         android:textSize="13sp" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
+        android:fontFamily="sans-serif-medium"
         android:text="Nombre completo"
         android:textColor="@color/adaptive_text_183c2e"
-        android:fontFamily="sans-serif-medium"
         android:textSize="13sp" />
 
     <LinearLayout
@@ -56,8 +56,8 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="@android:color/transparent"
-            android:focusable="false"
             android:cursorVisible="false"
+            android:focusable="false"
             android:inputType="textPersonName"
             android:paddingStart="12dp"
             android:paddingEnd="8dp"
@@ -81,9 +81,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
+        android:fontFamily="sans-serif-medium"
         android:text="Teléfono"
         android:textColor="@color/adaptive_text_183c2e"
-        android:fontFamily="sans-serif-medium"
         android:textSize="13sp" />
 
     <LinearLayout
@@ -100,8 +100,8 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="@android:color/transparent"
-            android:focusable="false"
             android:cursorVisible="false"
+            android:focusable="false"
             android:inputType="phone"
             android:paddingStart="12dp"
             android:paddingEnd="8dp"
@@ -150,8 +150,8 @@
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
         android:layout_marginTop="6dp"
+        android:layout_weight="1"
         android:fillViewport="true">
 
         <LinearLayout
@@ -199,25 +199,29 @@
             android:id="@+id/btnCancelarEditarOperario"
             android:layout_width="100dp"
             android:layout_height="40dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
             android:text="Cancelar"
             android:textAllCaps="false"
             android:textColor="@color/cancel_text"
             android:textSize="13sp"
             android:textStyle="bold"
-            app:cornerRadius="9dp"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
             app:backgroundTint="@color/cancel_background"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/cancel_stroke" />
+            app:cornerRadius="9dp"
+            app:strokeColor="@color/cancel_stroke"
+            app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGuardarEditarOperario"
             android:layout_width="100dp"
             android:layout_height="40dp"
             android:layout_marginStart="6dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
             android:text="Guardar"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
@@ -225,11 +229,7 @@
             android:textStyle="bold"
             app:backgroundTint="#2F8B5E"
             app:cornerRadius="9dp"
-            app:rippleColor="#245F42"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp" />
+            app:rippleColor="#245F42" />
     </LinearLayout>
 
 </LinearLayout>

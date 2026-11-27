@@ -103,9 +103,22 @@ class SensoresFragment : BaseBottomNavFragment() {
             DetalleSensorModal.tarjeta(indicador.arco).setOnClickListener { origen ->
                 val galpon = galponSeleccionadoId ?: return@setOnClickListener
                 val clave = claveUmbral(indicador.variable)
-                detalleSensor.abrir(origen, nombreVariable(indicador.variable), indicador.valor, indicador.estado,
-                    { if (galponSeleccionadoId == galpon) umbralesActuales.firstOrNull { it.variable.equals(clave, true) && it.galpon_id == galpon } else null },
-                    { semanaActual }, null)
+                detalleSensor.abrir(
+                    origen,
+                    nombreVariable(indicador.variable),
+                    indicador.valor,
+                    indicador.estado,
+                    {
+                        if (galponSeleccionadoId == galpon) umbralesActuales.firstOrNull {
+                            it.variable.equals(
+                                clave,
+                                true
+                            ) && it.galpon_id == galpon
+                        } else null
+                    },
+                    { semanaActual },
+                    null
+                )
             }
         }
 
@@ -115,7 +128,10 @@ class SensoresFragment : BaseBottomNavFragment() {
                     cargarCatalogos(true)
                     prepararSeleccionInicial()
                     actualizarLecturasDelGalpon(true)
-                } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                }
                 cargarCatalogos()
                 prepararSeleccionInicial()
             } catch (cancelacion: CancellationException) {
@@ -125,7 +141,13 @@ class SensoresFragment : BaseBottomNavFragment() {
                     binding.txtEstadoConexion.text =
                         "Sin conexión. Abre Sensores con internet una vez para guardar los datos."
 
-                    indicadores().forEach { mostrarEstado(it.estado, "Error de consulta", EstadoLectura.ERROR) }
+                    indicadores().forEach {
+                        mostrarEstado(
+                            it.estado,
+                            "Error de consulta",
+                            EstadoLectura.ERROR
+                        )
+                    }
                 }
                 return@launch
             }
@@ -164,25 +186,75 @@ class SensoresFragment : BaseBottomNavFragment() {
         // El color se asigna según la calidad de la última lectura,
         // no según el tipo de variable.
         return listOf(
-            Indicador(VariableSensor.TEMPERATURA, binding.txtTemperatura, binding.txtEstadoTemperatura, binding.arcTemperatura),
-            Indicador(VariableSensor.HUMEDAD, binding.txtHumedad, binding.txtEstadoHumedad, binding.arcHumedad),
-            Indicador(VariableSensor.CALIDAD_AIRE, binding.txtCalidadAire, binding.txtEstadoCalidadAire, binding.arcCalidadAire, binding.txtLabelCalidadAire),
-            Indicador(VariableSensor.CO2, binding.txtCo2, binding.txtEstadoCo2, binding.arcCo2, binding.txtLabelCo2),
-            Indicador(VariableSensor.AMONIACO, binding.txtAmoniaco, binding.txtEstadoAmoniaco, binding.arcAmoniaco, binding.txtLabelAmoniaco),
-            Indicador(VariableSensor.PESO, binding.txtPeso, binding.txtEstadoPeso, binding.arcPeso, binding.txtLabelPeso),
-            Indicador(VariableSensor.LUMINOSIDAD, binding.txtLuminosidad, binding.txtEstadoLuminosidad, binding.arcLuminosidad, binding.txtLabelLuminosidad),
-            Indicador(VariableSensor.NIVEL_AGUA, binding.txtNivelAgua, binding.txtEstadoNivelAgua, binding.arcNivelAgua, binding.txtLabelNivelAgua)
+            Indicador(
+                VariableSensor.TEMPERATURA,
+                binding.txtTemperatura,
+                binding.txtEstadoTemperatura,
+                binding.arcTemperatura
+            ),
+            Indicador(
+                VariableSensor.HUMEDAD,
+                binding.txtHumedad,
+                binding.txtEstadoHumedad,
+                binding.arcHumedad
+            ),
+            Indicador(
+                VariableSensor.CALIDAD_AIRE,
+                binding.txtCalidadAire,
+                binding.txtEstadoCalidadAire,
+                binding.arcCalidadAire,
+                binding.txtLabelCalidadAire
+            ),
+            Indicador(
+                VariableSensor.CO2,
+                binding.txtCo2,
+                binding.txtEstadoCo2,
+                binding.arcCo2,
+                binding.txtLabelCo2
+            ),
+            Indicador(
+                VariableSensor.AMONIACO,
+                binding.txtAmoniaco,
+                binding.txtEstadoAmoniaco,
+                binding.arcAmoniaco,
+                binding.txtLabelAmoniaco
+            ),
+            Indicador(
+                VariableSensor.PESO,
+                binding.txtPeso,
+                binding.txtEstadoPeso,
+                binding.arcPeso,
+                binding.txtLabelPeso
+            ),
+            Indicador(
+                VariableSensor.LUMINOSIDAD,
+                binding.txtLuminosidad,
+                binding.txtEstadoLuminosidad,
+                binding.arcLuminosidad,
+                binding.txtLabelLuminosidad
+            ),
+            Indicador(
+                VariableSensor.NIVEL_AGUA,
+                binding.txtNivelAgua,
+                binding.txtEstadoNivelAgua,
+                binding.arcNivelAgua,
+                binding.txtLabelNivelAgua
+            )
         )
     }
 
     private suspend fun cargarCatalogos(soloCache: Boolean = false) = coroutineScope {
         val api = if (soloCache) RetrofitClient.apiCache else RetrofitClient.api
-        val galponesDef = async { cargarTodasLasPaginas { pagina ->
-            api.listarGalpones(page = pagina, limit = 100)
-        } }
-        val sensoresDef = async { cargarTodasLasPaginas { pagina ->
-            api.listarSensores(page = pagina, limit = 100)
-        } }
+        val galponesDef = async {
+            cargarTodasLasPaginas { pagina ->
+                api.listarGalpones(page = pagina, limit = 100)
+            }
+        }
+        val sensoresDef = async {
+            cargarTodasLasPaginas { pagina ->
+                api.listarSensores(page = pagina, limit = 100)
+            }
+        }
         val galpones = galponesDef.await()
         val sensores = sensoresDef.await()
 
@@ -327,104 +399,109 @@ class SensoresFragment : BaseBottomNavFragment() {
         if (_binding == null) return
         val aviso = LecturasSensores.avisoSinIdentificar(sensores)
         binding.txtSensoresSinIdentificar.text = aviso.orEmpty()
-        binding.txtSensoresSinIdentificar.visibility = if (aviso == null) View.GONE else View.VISIBLE
+        binding.txtSensoresSinIdentificar.visibility =
+            if (aviso == null) View.GONE else View.VISIBLE
     }
 
-    private suspend fun actualizarLecturasDelGalpon(soloCache: Boolean = false) = mutexLecturas.withLock {
-        val api = if (soloCache) RetrofitClient.apiCache else RetrofitClient.api
-        val galponId = galponSeleccionadoId ?: return@withLock
-        val sensoresDelGalpon = sensoresMedidosDelGalpon(galponId).sortedBy { it.id }
-        val sinIdentificar = sensoresSinIdentificarDelGalpon(galponId)
-        val actuadoresDelGalpon = Actuadores.activos(actuadoresActivos.filter { it.galpon.id == galponId })
+    private suspend fun actualizarLecturasDelGalpon(soloCache: Boolean = false) =
+        mutexLecturas.withLock {
+            val api = if (soloCache) RetrofitClient.apiCache else RetrofitClient.api
+            val galponId = galponSeleccionadoId ?: return@withLock
+            val sensoresDelGalpon = sensoresMedidosDelGalpon(galponId).sortedBy { it.id }
+            val sinIdentificar = sensoresSinIdentificarDelGalpon(galponId)
+            val actuadoresDelGalpon =
+                Actuadores.activos(actuadoresActivos.filter { it.galpon.id == galponId })
 
-        if (sensoresDelGalpon.isEmpty() && actuadoresDelGalpon.isEmpty()) {
-            if (_binding != null) {
-                pintarSinSensoresIdentificados(sinIdentificar)
-                pintarActuadores(emptyList())
-            }
-            return@withLock
-        }
-
-        try {
-            // Una sola petición para el galpón: trae sensores y actuadores.
-            // La antigüedad la calcula el servidor; se cruza por sensor_id.
-            val todos = sensoresDelGalpon + actuadoresDelGalpon
-            val resultadosTodos = try {
-                val respuesta = api.listarUltimasLecturas(galponId)
-                val cuerpo = respuesta.body()
-                if (respuesta.isSuccessful && cuerpo != null && cuerpo.sensores != null) {
-                    LecturasSensores.cruzar(todos, cuerpo)
-                } else {
-                    LecturasSensores.conError(todos)
+            if (sensoresDelGalpon.isEmpty() && actuadoresDelGalpon.isEmpty()) {
+                if (_binding != null) {
+                    pintarSinSensoresIdentificados(sinIdentificar)
+                    pintarActuadores(emptyList())
                 }
-            } catch (cancelacion: CancellationException) {
-                throw cancelacion
-            } catch (_: Exception) {
-                LecturasSensores.conError(todos)
-            }
-            if (_binding == null || galponSeleccionadoId != galponId) return@withLock
-
-            val idsActuadores = actuadoresDelGalpon.map { it.id }.toSet()
-            val resultados = resultadosTodos.filter { it.sensor.id !in idsActuadores }
-            pintarActuadores(resultadosTodos.filter { it.sensor.id in idsActuadores }.map { Actuadores.vista(it) })
-
-            if (sensoresDelGalpon.isEmpty()) {
-                pintarSinSensoresIdentificados(sinIdentificar)
                 return@withLock
             }
 
-            consultarUmbralesSemanales(galponId, soloCache)
-
-            alertasActivasGalpon = try {
-                val respuestaAlertas = api.listarAlertasDeGalpon(
-                    galponId = galponId,
-                    page = 1,
-                    limit = 100
-                )
-                if (respuestaAlertas.isSuccessful) {
-                    respuestaAlertas.body()?.data.orEmpty().filter {
-                        !it.estado.equals("cerrada", ignoreCase = true)
+            try {
+                // Una sola petición para el galpón: trae sensores y actuadores.
+                // La antigüedad la calcula el servidor; se cruza por sensor_id.
+                val todos = sensoresDelGalpon + actuadoresDelGalpon
+                val resultadosTodos = try {
+                    val respuesta = api.listarUltimasLecturas(galponId)
+                    val cuerpo = respuesta.body()
+                    if (respuesta.isSuccessful && cuerpo != null && cuerpo.sensores != null) {
+                        LecturasSensores.cruzar(todos, cuerpo)
+                    } else {
+                        LecturasSensores.conError(todos)
                     }
-                } else emptyList()
+                } catch (cancelacion: CancellationException) {
+                    throw cancelacion
+                } catch (_: Exception) {
+                    LecturasSensores.conError(todos)
+                }
+                if (_binding == null || galponSeleccionadoId != galponId) return@withLock
+
+                val idsActuadores = actuadoresDelGalpon.map { it.id }.toSet()
+                val resultados = resultadosTodos.filter { it.sensor.id !in idsActuadores }
+                pintarActuadores(resultadosTodos.filter { it.sensor.id in idsActuadores }
+                    .map { Actuadores.vista(it) })
+
+                if (sensoresDelGalpon.isEmpty()) {
+                    pintarSinSensoresIdentificados(sinIdentificar)
+                    return@withLock
+                }
+
+                consultarUmbralesSemanales(galponId, soloCache)
+
+                alertasActivasGalpon = try {
+                    val respuestaAlertas = api.listarAlertasDeGalpon(
+                        galponId = galponId,
+                        page = 1,
+                        limit = 100
+                    )
+                    if (respuestaAlertas.isSuccessful) {
+                        respuestaAlertas.body()?.data.orEmpty().filter {
+                            !it.estado.equals("cerrada", ignoreCase = true)
+                        }
+                    } else emptyList()
+                } catch (cancelacion: CancellationException) {
+                    throw cancelacion
+                } catch (_: Exception) {
+                    emptyList()
+                }
+
+                actualizarEntradasConfiguradas(resultados)
+                mostrarSinIdentificar(sinIdentificar)
+                var variablesConfiguradas = 0
+                var variablesRecientes = 0
+                indicadores().forEach { indicador ->
+                    val lectura = LecturasSensores.elegir(resultados, indicador.variable)
+                    if (lectura != null) variablesConfiguradas++
+                    if (lectura != null && !lectura.errorConsulta &&
+                        lectura.vigencia == VigenciaLectura.RECIENTE
+                    ) {
+                        variablesRecientes++
+                    }
+                    pintarIndicador(indicador, lectura)
+                }
+
+                val sinConexion = soloCache || !OfflineCache.hayInternet(requireContext())
+                val hora = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+                binding.txtEstadoConexion.text = if (sinConexion) {
+                    "Sin internet · Mostrando las últimas lecturas guardadas. Los valores no son actuales."
+                } else buildString {
+                    append("Actualizado $hora · $variablesRecientes de $variablesConfiguradas variables con lectura reciente.")
+                    if (resultadosTodos.any { it.errorConsulta }) {
+                        append(" No se pudieron consultar las lecturas; se reintentará automáticamente.")
+                    }
+                }
             } catch (cancelacion: CancellationException) {
                 throw cancelacion
-            } catch (_: Exception) {
-                emptyList()
-            }
-
-            actualizarEntradasConfiguradas(resultados)
-            mostrarSinIdentificar(sinIdentificar)
-            var variablesConfiguradas = 0
-            var variablesRecientes = 0
-            indicadores().forEach { indicador ->
-                val lectura = LecturasSensores.elegir(resultados, indicador.variable)
-                if (lectura != null) variablesConfiguradas++
-                if (lectura != null && !lectura.errorConsulta &&
-                    lectura.vigencia == VigenciaLectura.RECIENTE
-                ) {
-                    variablesRecientes++
+            } catch (e: Exception) {
+                if (_binding != null) {
+                    binding.txtEstadoConexion.text =
+                        "No fue posible actualizar las lecturas. Se reintentará automáticamente."
                 }
-                pintarIndicador(indicador, lectura)
-            }
-
-            val sinConexion = soloCache || !OfflineCache.hayInternet(requireContext())
-            val hora = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-            binding.txtEstadoConexion.text = if (sinConexion) {
-                "Sin internet · Mostrando las últimas lecturas guardadas. Los valores no son actuales."
-            } else buildString {
-                append("Actualizado $hora · $variablesRecientes de $variablesConfiguradas variables con lectura reciente.")
-                if (resultadosTodos.any { it.errorConsulta }) {
-                    append(" No se pudieron consultar las lecturas; se reintentará automáticamente.")
-                }
-            }
-        } catch (cancelacion: CancellationException) {
-            throw cancelacion
-        } catch (e: Exception) {
-            if (_binding != null) {
-                binding.txtEstadoConexion.text = "No fue posible actualizar las lecturas. Se reintentará automáticamente."
             }
         }
-    }
 
     /** Consulta umbrales reales. Si no hay lote activo o falla la consulta, no inventa estados. */
     private suspend fun consultarUmbralesSemanales(galponId: Int, soloCache: Boolean = false) {
@@ -456,7 +533,9 @@ class SensoresFragment : BaseBottomNavFragment() {
             semanaActual = dias / 7 // Día de ingreso = día 1; semana inicial = 0.
             umbralesActuales = cargarTodasLasPaginas { pagina ->
                 api.listarUmbralesAmbientales(galponId, page = pagina, limit = 100)
-            }.filter { it.vigente && it.galpon_id == galponId && it.semana_vida <= (semanaActual ?: 0) }
+            }.filter {
+                it.vigente && it.galpon_id == galponId && it.semana_vida <= (semanaActual ?: 0)
+            }
                 .groupBy { it.variable.lowercase(Locale.ROOT) }.values.mapNotNull { grupo -> grupo.maxByOrNull { it.semana_vida } }
         } catch (e: CancellationException) {
             throw e
@@ -479,7 +558,13 @@ class SensoresFragment : BaseBottomNavFragment() {
         actualizarEntradasConfiguradas(emptyList())
 
         mostrarSinIdentificar(sinIdentificar)
-        indicadores().forEach { mostrarEstado(it.estado, "No configurado", EstadoLectura.SIN_DATOS) }
+        indicadores().forEach {
+            mostrarEstado(
+                it.estado,
+                "No configurado",
+                EstadoLectura.SIN_DATOS
+            )
+        }
         binding.txtEstadoConexion.text = if (sinIdentificar.isEmpty()) {
             "No hay sensores activos en el galpón seleccionado."
         } else {
@@ -535,10 +620,17 @@ class SensoresFragment : BaseBottomNavFragment() {
                 indicador.arco.setArcColor(colorDe(R.color.gauge_green))
                 mostrarEstado(indicador.estado, "En rango", EstadoLectura.NORMAL)
             } else {
-                val critica = alertasActivasGalpon.any { it.sensor_id == sensor.id && (it.criticidad.equals("alta", true) || it.criticidad.equals("critica", true)) }
+                val critica = alertasActivasGalpon.any {
+                    it.sensor_id == sensor.id && (it.criticidad.equals(
+                        "alta",
+                        true
+                    ) || it.criticidad.equals("critica", true))
+                }
                 indicador.arco.setArcColor(colorDe(if (critica) R.color.gauge_red else R.color.gauge_orange))
-                mostrarEstado(indicador.estado, "Fuera de rango",
-                    if (critica) EstadoLectura.ERROR else EstadoLectura.ATENCION)
+                mostrarEstado(
+                    indicador.estado, "Fuera de rango",
+                    if (critica) EstadoLectura.ERROR else EstadoLectura.ATENCION
+                )
             }
             return
         }
@@ -550,7 +642,8 @@ class SensoresFragment : BaseBottomNavFragment() {
         if (!tieneEscalaVisual(indicador.variable)) {
             // SensorArcView anuncia "100 por ciento" con el arco completo; aquí
             // el arco solo indica el estado de la lectura.
-            indicador.arco.contentDescription = "Estado de la lectura de ${nombreVariable(indicador.variable).lowercase(Locale.getDefault())}"
+            indicador.arco.contentDescription =
+                "Estado de la lectura de ${nombreVariable(indicador.variable).lowercase(Locale.getDefault())}"
         }
         indicador.arco.setArcColor(colorArcoPorEstado(alertaActiva, ultima.calidad))
         indicador.valor.setTextColor(colorDe(R.color.text_primary))
@@ -559,14 +652,19 @@ class SensoresFragment : BaseBottomNavFragment() {
             alertaActiva != null && (alertaActiva.criticidad.equals("alta", true) ||
                     alertaActiva.criticidad.equals("critica", true)) ->
                 mostrarEstado(indicador.estado, "Alerta crítica", EstadoLectura.ERROR)
+
             alertaActiva != null ->
                 mostrarEstado(indicador.estado, "Fuera de rango", EstadoLectura.ATENCION)
+
             ultima.calidad.equals("ok", true) ->
                 mostrarEstado(indicador.estado, "Lectura OK", EstadoLectura.NORMAL)
+
             ClasificadorSensores.esLecturaSinCalibrar(ultima.calidad) ->
                 mostrarEstado(indicador.estado, "Sin calibrar", EstadoLectura.ATENCION)
+
             ultima.calidad.equals("error", true) ->
                 mostrarEstado(indicador.estado, "Error", EstadoLectura.ERROR)
+
             else -> mostrarEstado(indicador.estado, "Sin verificar", EstadoLectura.SIN_DATOS)
         }
     }
@@ -577,7 +675,12 @@ class SensoresFragment : BaseBottomNavFragment() {
      * largo real del valor pero sin color de estado ni de alerta, y con su
      * fecha. No es el estado actual.
      */
-    private fun pintarNoReciente(indicador: Indicador, valor: Double, fechaHora: String?, etiqueta: String) {
+    private fun pintarNoReciente(
+        indicador: Indicador,
+        valor: Double,
+        fechaHora: String?,
+        etiqueta: String
+    ) {
         indicador.valor.setTextColor(colorDe(R.color.text_secondary))
         indicador.valor.text = textoValor(indicador.variable, valor)
         indicador.arco.setProgressFraction(fraccionVisual(indicador.variable, valor))
@@ -618,6 +721,7 @@ class SensoresFragment : BaseBottomNavFragment() {
     private fun colorArcoPorEstado(alerta: AlertaResponse?, calidad: String?): Int = when {
         alerta != null && (alerta.criticidad.equals("alta", true) ||
                 alerta.criticidad.equals("critica", true)) -> colorDe(R.color.gauge_red)
+
         alerta != null -> colorDe(R.color.gauge_orange)
         calidad.equals("ok", true) -> colorDe(R.color.gauge_green)
         calidad.equals("sospechosa", true) -> colorDe(R.color.gauge_orange)
@@ -676,14 +780,17 @@ class SensoresFragment : BaseBottomNavFragment() {
                 texto.setBackgroundResource(R.drawable.bg_badge_green)
                 texto.setTextColor(colorDe(R.color.badge_green_text))
             }
+
             EstadoLectura.ATENCION -> {
                 texto.setBackgroundResource(R.drawable.bg_badge_orange)
                 texto.setTextColor(colorDe(R.color.orange_badge_text))
             }
+
             EstadoLectura.ERROR -> {
                 texto.setBackgroundResource(R.drawable.bg_badge_red)
                 texto.setTextColor(colorDe(R.color.badge_red_text))
             }
+
             EstadoLectura.SIN_DATOS -> {
                 texto.setBackgroundResource(R.drawable.bg_badge_regular)
                 texto.setTextColor(colorDe(R.color.orange_badge_text))

@@ -61,7 +61,12 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
             diagnostico = "Decaimiento",
             seguimientos = listOf(
                 SeguimientoDemo("17/09", 5, "Pendiente", "Se detectaron aves con bajo consumo."),
-                SeguimientoDemo("18/09", 0, "Finalizado", "Caso cerrado tras la recuperación de las aves.")
+                SeguimientoDemo(
+                    "18/09",
+                    0,
+                    "Finalizado",
+                    "Caso cerrado tras la recuperación de las aves."
+                )
             )
         )
     )
@@ -99,7 +104,11 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
                 if (index >= 0) {
                     casosDemo[index] = casosDemo[index].copy(
                         seguimientos = casosDemo[index].seguimientos +
-                                SeguimientoDemo(fecha, aves, estado, observacion.ifBlank { "Sin observaciones." })
+                                SeguimientoDemo(
+                                    fecha,
+                                    aves,
+                                    estado,
+                                    observacion.ifBlank { "Sin observaciones." })
                     )
                     construirCasosDemo()
                 }
@@ -128,7 +137,8 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
         contenedor.background = null
         contenedor.setPadding(0, 0, 0, 0)
 
-        val casosActivos = casosDemo.count { it.seguimientos.last().estado !in setOf("Finalizado", "Recuperadas") }
+        val casosActivos =
+            casosDemo.count { it.seguimientos.last().estado !in setOf("Finalizado", "Recuperadas") }
         val avesSeguimiento = casosDemo
             .filter { it.seguimientos.last().estado !in setOf("Finalizado", "Recuperadas") }
             .sumOf { it.seguimientos.last().aves }
@@ -154,7 +164,11 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
     private fun crearTarjetaCaso(caso: CasoDemo): View {
         val card = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            background = roundedBackground(ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"), Color.parseColor("#E5EAE7"), 14)
+            background = roundedBackground(
+                ColoresAdaptativos.superficie(requireContext(), "#FFFFFF"),
+                Color.parseColor("#E5EAE7"),
+                14
+            )
             setPadding(dp(14), dp(14), dp(14), dp(14))
         }
 
@@ -168,7 +182,14 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
 
-        tituloContenedor.addView(texto("Caso sanitario #${String.format("%03d", caso.id)}", 16f, "#183C2E", true))
+        tituloContenedor.addView(
+            texto(
+                "Caso sanitario #${String.format("%03d", caso.id)}",
+                16f,
+                "#183C2E",
+                true
+            )
+        )
         tituloContenedor.addView(texto("${caso.lote} · ${caso.galpon}", 11f, "#78847E", false, 3))
 
         val ultimo = caso.seguimientos.last()
@@ -177,7 +198,15 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
         card.addView(encabezado)
 
         card.addView(texto("Diagnóstico: ${caso.diagnostico}", 12f, "#4E5B55", false, 10))
-        card.addView(texto("Aves afectadas inicialmente: ${caso.avesIniciales}", 11f, "#78847E", false, 4))
+        card.addView(
+            texto(
+                "Aves afectadas inicialmente: ${caso.avesIniciales}",
+                11f,
+                "#78847E",
+                false,
+                4
+            )
+        )
 
         val separador = View(requireContext()).apply {
             setBackgroundColor(ColoresAdaptativos.superficie(requireContext(), "#E7EEE9"))
@@ -199,10 +228,18 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
 
             val info = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                layoutParams =
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
 
-            info.addView(texto("${seguimiento.fecha} · ${seguimiento.aves} aves", 12f, "#183C2E", true))
+            info.addView(
+                texto(
+                    "${seguimiento.fecha} · ${seguimiento.aves} aves",
+                    12f,
+                    "#183C2E",
+                    true
+                )
+            )
             info.addView(texto(seguimiento.observacion, 11f, "#78847E", false, 3))
             fila.addView(info)
             fila.addView(crearBadgeEstado(seguimiento.estado, pequeño = true))
@@ -218,7 +255,8 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
             isAllCaps = false
             textSize = 13f
             setTextColor(Color.WHITE)
-            backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#2F8B5E"))
+            backgroundTintList =
+                android.content.res.ColorStateList.valueOf(Color.parseColor("#2F8B5E"))
             cornerRadius = dp(9)
             minWidth = 0
             minHeight = 0
@@ -249,7 +287,11 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(dp(if (pequeño) 8 else 10), dp(5), dp(if (pequeño) 8 else 10), dp(5))
-            background = roundedBackground(ColoresAdaptativos.superficie(requireContext(), fondo), Color.TRANSPARENT, 12)
+            background = roundedBackground(
+                ColoresAdaptativos.superficie(requireContext(), fondo),
+                Color.TRANSPARENT,
+                12
+            )
         }
     }
 
@@ -263,7 +305,10 @@ class BitacoraEnfermoFragment : BaseBottomNavFragment() {
         return TextView(requireContext()).apply {
             text = contenido
             textSize = if (tamano < 16f) tamano + 1f else tamano
-            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+            typeface = android.graphics.Typeface.create(
+                "sans-serif-medium",
+                android.graphics.Typeface.NORMAL
+            )
             setTextColor(ColoresAdaptativos.texto(requireContext(), color))
             if (negrita) setTypeface(typeface, android.graphics.Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(

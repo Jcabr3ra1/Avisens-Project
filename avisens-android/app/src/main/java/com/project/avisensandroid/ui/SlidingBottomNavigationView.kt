@@ -1,4 +1,3 @@
-
 package com.project.avisensandroid.ui
 
 import android.animation.ValueAnimator

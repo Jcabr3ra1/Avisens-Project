@@ -1,4 +1,3 @@
-
 package com.project.avisensandroid.ui.fragments
 
 import com.project.avisensandroid.ui.ColoresAdaptativos
@@ -48,7 +47,14 @@ class BitacoraFragment : BaseBottomNavFragment() {
     private var fotosJob: Job? = null
     private var registrosBase = emptyList<RegistroMortalidadResponse>()
     private var nombresBase = emptyMap<Int, String>()
-    private val fechasFiltro = listOf("Todas las fechas", "Hoy", "Ayer", "Últimos 7 días", "Últimos 30 días", "Rango personalizado")
+    private val fechasFiltro = listOf(
+        "Todas las fechas",
+        "Hoy",
+        "Ayer",
+        "Últimos 7 días",
+        "Últimos 30 días",
+        "Rango personalizado"
+    )
     private val causasAplicadas = linkedSetOf<String>()
     private val causasPendientes = linkedSetOf<String>()
     private var fechaAplicada = 0
@@ -158,63 +164,77 @@ class BitacoraFragment : BaseBottomNavFragment() {
                     if (soloCache && registrosCargados) continue
                     val api = if (soloCache) RetrofitClient.apiCache else RetrofitClient.api
                     try {
-                val (registros, nombres) = coroutineScope {
-                    val registrosJob = async {
-                        val datos = mutableListOf<RegistroMortalidadResponse>()
-                        var pagina = 1
-                        do {
-                            val response = api.listarRegistrosMortalidad(pagina, 100)
-                            check(response.isSuccessful) { "Error de mortalidad: ${response.code()}" }
-                            val body = checkNotNull(response.body()) { "Sin datos de mortalidad" }
-                            datos.addAll(body.data)
-                            val total = body.meta.totalPages.coerceAtLeast(pagina)
-                            pagina++
-                        } while (pagina <= total)
-                        datos
-                    }
-                    val lotesJob = async {
-                        val nombres = mutableMapOf<Int, String>()
-                        var pagina = 1
-                        do {
-                            val response = api.listarLotes(pagina, 100)
-                            check(response.isSuccessful) { "Error de lotes: ${response.code()}" }
-                            val body = checkNotNull(response.body()) { "Sin datos de lotes" }
-                            body.data.forEach { lote ->
-                                val galpon = lote.galpon
-                                if (galpon != null && galpon.id == galponId) {
-                                    nombres[lote.id] = galpon.nombre.trim().ifBlank { "Galpón $galponId" }
+                        val (registros, nombres) = coroutineScope {
+                            val registrosJob = async {
+                                val datos = mutableListOf<RegistroMortalidadResponse>()
+                                var pagina = 1
+                                do {
+                                    val response = api.listarRegistrosMortalidad(pagina, 100)
+                                    check(response.isSuccessful) { "Error de mortalidad: ${response.code()}" }
+                                    val body =
+                                        checkNotNull(response.body()) { "Sin datos de mortalidad" }
+                                    datos.addAll(body.data)
+                                    val total = body.meta.totalPages.coerceAtLeast(pagina)
+                                    pagina++
+                                } while (pagina <= total)
+                                datos
+                            }
+                            val lotesJob = async {
+                                val nombres = mutableMapOf<Int, String>()
+                                var pagina = 1
+                                do {
+                                    val response = api.listarLotes(pagina, 100)
+                                    check(response.isSuccessful) { "Error de lotes: ${response.code()}" }
+                                    val body =
+                                        checkNotNull(response.body()) { "Sin datos de lotes" }
+                                    body.data.forEach { lote ->
+                                        val galpon = lote.galpon
+                                        if (galpon != null && galpon.id == galponId) {
+                                            nombres[lote.id] =
+                                                galpon.nombre.trim().ifBlank { "Galpón $galponId" }
+                                        }
+                                    }
+                                    val total = body.meta.totalPages.coerceAtLeast(pagina)
+                                    pagina++
+                                } while (pagina <= total)
+                                nombres
+                            }
+                            registrosJob.await() to lotesJob.await()
+                        }
+                        val filtrados = registros.filter { it.lote_id in nombres }
+                            .sortedWith(compareByDescending<RegistroMortalidadResponse> {
+                                it.fecha.take(
+                                    10
+                                )
+                            }
+                                .thenByDescending { it.fecha_registro })
+                        if (_binding != null && activity.obtenerGalponSeleccionadoId() == galponId) {
+                            registrosBase = filtrados
+                            nombresBase = nombres
+                            registrosCargados = true
+                            actualizarCausas()
+                            aplicarFiltros()
+                            val contexto = activity.applicationContext
+                            if (!soloCache && OfflineCache.hayInternet(contexto) && fotosJob?.isActive != true) {
+                                fotosJob = viewLifecycleOwner.lifecycleScope.launch {
+                                    filtrados.filter { !it.foto_mime_type.isNullOrBlank() }
+                                        .forEach { registro ->
+                                            try {
+                                                FotosMortalidad.precargar(contexto, registro.id)
+                                            } catch (e: CancellationException) {
+                                                throw e
+                                            } catch (_: Exception) { /* Se reintentará en la siguiente actualización. */
+                                            }
+                                        }
                                 }
                             }
-                            val total = body.meta.totalPages.coerceAtLeast(pagina)
-                            pagina++
-                        } while (pagina <= total)
-                        nombres
-                    }
-                    registrosJob.await() to lotesJob.await()
-                }
-                val filtrados = registros.filter { it.lote_id in nombres }
-                    .sortedWith(compareByDescending<RegistroMortalidadResponse> { it.fecha.take(10) }
-                        .thenByDescending { it.fecha_registro })
-                if (_binding != null && activity.obtenerGalponSeleccionadoId() == galponId) {
-                    registrosBase = filtrados
-                    nombresBase = nombres
-                    registrosCargados = true
-                    actualizarCausas()
-                    aplicarFiltros()
-                    val contexto = activity.applicationContext
-                    if (!soloCache && OfflineCache.hayInternet(contexto) && fotosJob?.isActive != true) {
-                        fotosJob = viewLifecycleOwner.lifecycleScope.launch {
-                            filtrados.filter { !it.foto_mime_type.isNullOrBlank() }.forEach { registro ->
-                                try { FotosMortalidad.precargar(contexto, registro.id) }
-                                catch (e: CancellationException) { throw e }
-                                catch (_: Exception) { /* Se reintentará en la siguiente actualización. */ }
-                            }
                         }
-                    }
-                }
 
-                    } catch (e: CancellationException) { throw e }
-                    catch (e: Exception) { if (!soloCache && !registrosCargados) throw e }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        if (!soloCache && !registrosCargados) throw e
+                    }
                 }
 
             } catch (e: CancellationException) {
@@ -232,17 +252,25 @@ class BitacoraFragment : BaseBottomNavFragment() {
     }
 
     private fun configurarFiltros() {
-        binding.spinnerFiltroFecha.adapter = MainActivity.SpinnerAdapterEstilizado(requireContext(), fechasFiltro.toMutableList())
-        binding.spinnerFiltroFecha.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val anterior = ultimaFechaSeleccionada
-                ultimaFechaSeleccionada = position
-                if (position == 5 && anterior != 5 && binding.panelFiltros.visibility == View.VISIBLE) {
-                    seleccionarRango(anterior)
+        binding.spinnerFiltroFecha.adapter =
+            MainActivity.SpinnerAdapterEstilizado(requireContext(), fechasFiltro.toMutableList())
+        binding.spinnerFiltroFecha.onItemSelectedListener =
+            object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    val anterior = ultimaFechaSeleccionada
+                    ultimaFechaSeleccionada = position
+                    if (position == 5 && anterior != 5 && binding.panelFiltros.visibility == View.VISIBLE) {
+                        seleccionarRango(anterior)
+                    }
                 }
+
+                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
             }
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-        }
         binding.edtBuscarMortalidad.doAfterTextChanged { aplicarFiltros() }
         binding.btnDesplegarCausas.setOnClickListener {
             mostrarCausas(binding.panelCausas.visibility != View.VISIBLE)
@@ -265,7 +293,11 @@ class BitacoraFragment : BaseBottomNavFragment() {
         binding.btnAplicarFiltros.setOnClickListener {
             val fecha = binding.spinnerFiltroFecha.selectedItemPosition.coerceAtLeast(0)
             if (fecha == 5 && (desde == null || hasta == null)) {
-                Toast.makeText(requireContext(), "Selecciona el rango de fechas", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    "Selecciona el rango de fechas",
+                    Toast.LENGTH_SHORT
+                ).show()
                 return@setOnClickListener
             }
             fechaAplicada = fecha
@@ -330,32 +362,45 @@ class BitacoraFragment : BaseBottomNavFragment() {
             _binding?.spinnerFiltroFecha?.setSelection(anterior)
         }
         elegirFecha(desde ?: LocalDate.now(), cancelar = ::cancelar) { inicio ->
-            elegirFecha(hasta?.takeIf { !it.isBefore(inicio) } ?: inicio, inicio, ::cancelar) { fin ->
+            elegirFecha(hasta?.takeIf { !it.isBefore(inicio) } ?: inicio,
+                inicio,
+                ::cancelar) { fin ->
                 desde = inicio
                 hasta = fin
             }
         }
     }
 
-    private fun elegirFecha(inicial: LocalDate, minimo: LocalDate? = null, cancelar: () -> Unit = {}, resultado: (LocalDate) -> Unit) {
+    private fun elegirFecha(
+        inicial: LocalDate,
+        minimo: LocalDate? = null,
+        cancelar: () -> Unit = {},
+        resultado: (LocalDate) -> Unit
+    ) {
         val dialogo = DatePickerDialog(requireContext(), { _, y, m, d ->
             if (_binding != null) resultado(LocalDate.of(y, m + 1, d))
         }, inicial.year, inicial.monthValue - 1, inicial.dayOfMonth)
-        minimo?.let { dialogo.datePicker.minDate = it.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() }
+        minimo?.let {
+            dialogo.datePicker.minDate =
+                it.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        }
         dialogo.setOnCancelListener { cancelar() }
         dialogo.show()
     }
 
     private fun mostrarCausas(visible: Boolean) {
         binding.panelCausas.visibility = if (visible) View.VISIBLE else View.GONE
-        binding.btnDesplegarCausas.text = if (visible) "Causa presuntiva ▴" else "Causa presuntiva ▾"
+        binding.btnDesplegarCausas.text =
+            if (visible) "Causa presuntiva ▴" else "Causa presuntiva ▾"
     }
 
     private fun actualizarCausas() {
         val opciones = MainActivity.CausasMortalidad.opciones
         binding.containerCausas.removeAllViews()
         opciones.forEach { causa ->
-            val cantidad = registrosBase.count { it.causa_presuntiva.orEmpty().trim().equals(causa, ignoreCase = true) }
+            val cantidad = registrosBase.count {
+                it.causa_presuntiva.orEmpty().trim().equals(causa, ignoreCase = true)
+            }
             val check = android.widget.CheckBox(requireContext()).apply {
                 text = "${causa.ifBlank { "Sin causa registrada" }} ($cantidad)"
                 setTextColor(ContextCompat.getColor(requireContext(), R.color.text_primary))
@@ -382,11 +427,25 @@ class BitacoraFragment : BaseBottomNavFragment() {
                 2 -> dia == hoy.minusDays(1)
                 3 -> dia != null && !dia.isBefore(hoy.minusDays(6)) && !dia.isAfter(hoy)
                 4 -> dia != null && !dia.isBefore(hoy.minusDays(29)) && !dia.isAfter(hoy)
-                5 -> dia != null && desdeAplicado?.let { !dia.isBefore(it) } == true && hastaAplicado?.let { !dia.isAfter(it) } == true
+                5 -> dia != null && desdeAplicado?.let { !dia.isBefore(it) } == true && hastaAplicado?.let {
+                    !dia.isAfter(
+                        it
+                    )
+                } == true
+
                 else -> true
             }
-            val coincideCausa = causasAplicadas.isEmpty() || causasAplicadas.any { r.causa_presuntiva.orEmpty().trim().equals(it, ignoreCase = true) }
-            coincideFecha && coincideCausa && (texto.isBlank() || listOf(r.fecha, r.cantidad_aves.toString(), r.causa_presuntiva.orEmpty(), r.observaciones.orEmpty(), r.lote.codigo, nombresBase[r.lote_id].orEmpty()).any { it.contains(texto, ignoreCase = true) })
+            val coincideCausa = causasAplicadas.isEmpty() || causasAplicadas.any {
+                r.causa_presuntiva.orEmpty().trim().equals(it, ignoreCase = true)
+            }
+            coincideFecha && coincideCausa && (texto.isBlank() || listOf(
+                r.fecha,
+                r.cantidad_aves.toString(),
+                r.causa_presuntiva.orEmpty(),
+                r.observaciones.orEmpty(),
+                r.lote.codigo,
+                nombresBase[r.lote_id].orEmpty()
+            ).any { it.contains(texto, ignoreCase = true) })
         }
         if (lista == ultimaLista && nombresBase == ultimosNombres) return
         ultimaLista = lista
@@ -410,12 +469,16 @@ class BitacoraFragment : BaseBottomNavFragment() {
         if (registros.isEmpty()) {
             contenedor.addView(
                 TextView(requireContext()).apply {
-                    text = if (registrosBase.isEmpty()) "No hay registros de mortalidad" else "No hay registros que coincidan con los filtros"
+                    text =
+                        if (registrosBase.isEmpty()) "No hay registros de mortalidad" else "No hay registros que coincidan con los filtros"
                     textSize = 15f
                     gravity = Gravity.CENTER
 
                     setTextColor(
-                        androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_66736d)
+                        androidx.core.content.ContextCompat.getColor(
+                            context,
+                            R.color.adaptive_text_66736d
+                        )
                     )
 
                     setPadding(
@@ -450,7 +513,10 @@ class BitacoraFragment : BaseBottomNavFragment() {
                     )
 
                     setTextColor(
-                        androidx.core.content.ContextCompat.getColor(context, R.color.adaptive_text_183c2e)
+                        androidx.core.content.ContextCompat.getColor(
+                            context,
+                            R.color.adaptive_text_183c2e
+                        )
                     )
 
                     setPadding(
@@ -519,7 +585,10 @@ class BitacoraFragment : BaseBottomNavFragment() {
         val detalles = LinearLayout(contexto).apply {
             orientation = LinearLayout.VERTICAL
         }
-        tarjeta.addView(detalles, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        tarjeta.addView(
+            detalles,
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        )
 
         // --------------------------------------------------------
         // FUNCIÓN PARA CREAR TEXTOS
@@ -534,7 +603,10 @@ class BitacoraFragment : BaseBottomNavFragment() {
             return TextView(contexto).apply {
                 text = valor
                 textSize = if (tamano < 16f) tamano + 1f else tamano
-                typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+                typeface = android.graphics.Typeface.create(
+                    "sans-serif-medium",
+                    android.graphics.Typeface.NORMAL
+                )
 
                 setTextColor(
                     ColoresAdaptativos.texto(requireContext(), color)
@@ -648,7 +720,8 @@ class BitacoraFragment : BaseBottomNavFragment() {
             registro.observaciones
         )
 
-        val pendiente = com.project.avisensandroid.controller.FotosMortalidad.pendiente(contexto, registro.id)
+        val pendiente =
+            com.project.avisensandroid.controller.FotosMortalidad.pendiente(contexto, registro.id)
         if (pendiente != null || !registro.foto_mime_type.isNullOrBlank()) {
             val miniatura = android.widget.FrameLayout(contexto).apply {
                 background = android.graphics.drawable.GradientDrawable().apply {
@@ -673,9 +746,10 @@ class BitacoraFragment : BaseBottomNavFragment() {
                 }
                 setPadding(dp(5), dp(5), dp(5), dp(5))
             }
-            miniatura.addView(ampliar, android.widget.FrameLayout.LayoutParams(
-                dp(26), dp(26), Gravity.BOTTOM or Gravity.END
-            ).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) })
+            miniatura.addView(
+                ampliar, android.widget.FrameLayout.LayoutParams(
+                    dp(26), dp(26), Gravity.BOTTOM or Gravity.END
+                ).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) })
             tarjeta.addView(miniatura, LinearLayout.LayoutParams(dp(90), dp(90)).apply {
                 marginStart = dp(12)
             })
@@ -683,15 +757,22 @@ class BitacoraFragment : BaseBottomNavFragment() {
                 try {
                     val bitmap = FotosMortalidad.obtener(contexto, registro.id)
                     if (bitmap != null) {
-                        val escala = (dp(180).toFloat() / maxOf(bitmap.width, bitmap.height)).coerceAtMost(1f)
-                        val reducida = android.graphics.Bitmap.createScaledBitmap(bitmap,
+                        val escala = (dp(180).toFloat() / maxOf(
+                            bitmap.width,
+                            bitmap.height
+                        )).coerceAtMost(1f)
+                        val reducida = android.graphics.Bitmap.createScaledBitmap(
+                            bitmap,
                             (bitmap.width * escala).toInt().coerceAtLeast(1),
-                            (bitmap.height * escala).toInt().coerceAtLeast(1), true)
+                            (bitmap.height * escala).toInt().coerceAtLeast(1), true
+                        )
                         if (reducida !== bitmap) bitmap.recycle()
                         previa.setImageBitmap(reducida)
                     }
-                } catch (e: CancellationException) { throw e }
-                catch (_: Exception) { /* Reintentar al tocar la foto. */ }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) { /* Reintentar al tocar la foto. */
+                }
             }
             miniatura.setOnClickListener {
                 miniatura.isEnabled = false
@@ -708,20 +789,31 @@ class BitacoraFragment : BaseBottomNavFragment() {
                             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
                             adjustViewBounds = true
                         }
-                        val visor = android.app.Dialog(contexto, android.R.style.Theme_Material_NoActionBar)
+                        val visor =
+                            android.app.Dialog(contexto, android.R.style.Theme_Material_NoActionBar)
                         visor.setContentView(imagen)
                         imagen.setOnClickListener { visor.dismiss() }
                         visor.show()
-                        if (pendiente != null && pendiente.exists() && OfflineCache.hayInternet(contexto)) {
+                        if (pendiente != null && pendiente.exists() && OfflineCache.hayInternet(
+                                contexto
+                            )
+                        ) {
                             try {
-                                val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { pendiente.readBytes() }
+                                val bytes =
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { pendiente.readBytes() }
                                 FotosMortalidad.subir(contexto, registro.id, bytes)
-                            } catch (e: CancellationException) { throw e }
-                            catch (_: Exception) { /* La foto local sigue disponible. */ }
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (_: Exception) { /* La foto local sigue disponible. */
+                            }
                         }
-                    } catch (e: CancellationException) { throw e }
-                    catch (_: Exception) { mostrarError("No se pudo cargar la fotografía. Revisa tu conexión.") }
-                    finally { miniatura.isEnabled = true }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        mostrarError("No se pudo cargar la fotografía. Revisa tu conexión.")
+                    } finally {
+                        miniatura.isEnabled = true
+                    }
                 }
             }
         }

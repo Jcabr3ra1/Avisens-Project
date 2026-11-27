@@ -3,11 +3,11 @@
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="44dp"
+    android:background="@android:color/black"
+    android:fontFamily="sans-serif-medium"
     android:gravity="center_vertical"
     android:paddingStart="12dp"
     android:paddingEnd="12dp"
-    android:background="@android:color/black"
+    android:singleLine="true"
     android:textColor="@android:color/white"
-    android:fontFamily="sans-serif-medium"
-    android:textSize="13sp"
-    android:singleLine="true" />
+    android:textSize="13sp" />

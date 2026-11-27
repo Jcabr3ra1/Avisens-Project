@@ -85,6 +85,7 @@ internal class SelectorAnimado(private val barra: ViewGroup, recurso: Int) : Dra
 
     override fun setAlpha(alpha: Int) {}
     override fun setColorFilter(colorFilter: ColorFilter?) {}
+
     @Deprecated("Deprecated in Java")
     override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
     override fun getPadding(padding: android.graphics.Rect): Boolean =

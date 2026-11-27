@@ -8,7 +8,10 @@
         android:layout_height="wrap_content"
         android:background="@color/bg_app"
         android:orientation="vertical"
-        android:paddingBottom="100dp" android:paddingStart="20dp" android:paddingEnd="20dp" android:paddingTop="24dp">
+        android:paddingStart="20dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="100dp">
 
         <TextView
             android:id="@+id/tituloPesajes"
