@@ -91,6 +91,7 @@ class BitacoraFragment : BaseBottomNavFragment() {
         entradaTarjetas.reiniciar()
         ultimaLista = null
         configurarFiltros()
+        animarBuscadorBitacora(binding.edtBuscarMortalidad.parent as View)
         if (registrosCargados && galponBase == (requireActivity() as MainActivity).obtenerGalponSeleccionadoId()) {
             aplicarFiltros()
         }
@@ -354,7 +355,9 @@ class BitacoraFragment : BaseBottomNavFragment() {
         }
         val cantidad = causasAplicadas.size + if (fechaAplicada != 0) 1 else 0
         grupo.visibility = if (cantidad > 0) View.VISIBLE else View.GONE
-        binding.btnFiltros.text = if (cantidad > 0) "Filtros ($cantidad) ▾" else "Filtros ▾"
+        binding.btnFiltros.contentDescription =
+            if (cantidad > 0) "Filtros ($cantidad activos)" else "Filtros"
+        binding.btnFiltros.alpha = if (cantidad > 0) 0.65f else 1f
     }
 
     private fun seleccionarRango(anterior: Int) {

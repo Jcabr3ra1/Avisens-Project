@@ -10,7 +10,8 @@ data class UsuarioGestionResponse(
     val fecha_creacion: String?,
     val organizacion_id: Int?,
     val rol: RolUsuarioResponse,
-    val organizacion: OrganizacionUsuarioResponse?
+    val organizacion: OrganizacionUsuarioResponse?,
+    val username: String? = null
 )
 
 data class RolUsuarioResponse(

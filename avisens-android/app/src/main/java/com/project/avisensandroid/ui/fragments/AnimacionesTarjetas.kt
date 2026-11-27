@@ -23,7 +23,7 @@ internal class AnimacionesTarjetas {
             val padre = actual.parent as? ViewGroup ?: break
             for (i in 0 until padre.indexOfChild(actual)) {
                 val hijo = padre.getChildAt(i)
-                if (hijo.visibility == View.VISIBLE && hijo.height != 1 && hijo.layoutParams.height != 1)
+                if (hijo.tag != "buscador_bitacora_vertical" && hijo.visibility == View.VISIBLE && hijo.height != 1 && hijo.layoutParams.height != 1)
                     mostrar(hijo, "encabezado:$nivel:$i", true)
             }
             if (padre is androidx.core.widget.NestedScrollView || padre is android.widget.ScrollView) break

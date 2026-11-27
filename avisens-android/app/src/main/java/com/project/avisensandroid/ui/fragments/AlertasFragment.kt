@@ -87,9 +87,10 @@ class AlertasFragment : BaseBottomNavFragment() {
             cambiarPestana(Pestana.ESCALADAS)
         }
         binding.tabEscaladas.visibility = if (esPropietario()) View.VISIBLE else View.GONE
+        aplicarEstiloBarra(binding.tabActivas.parent as android.view.ViewGroup)
         selectorAnimado = SelectorAnimado(
             binding.tabActivas.parent as android.view.ViewGroup,
-            R.drawable.bg_tab_selected
+            R.drawable.bg_bitacora_tab_selected
         )
         pintarTabs()
 
@@ -330,8 +331,8 @@ class AlertasFragment : BaseBottomNavFragment() {
             }
         )
         // El color del texto debe seguir la pestaña seleccionada, no quedar fijo en XML.
-        val colorSeleccionado = ColoresAdaptativos.texto(requireContext(), "#111111")
-        val colorNoSeleccionado = ColoresAdaptativos.texto(requireContext(), "#808A85")
+        val colorSeleccionado = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.tab_text_selected)
+        val colorNoSeleccionado = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.tab_text_unselected)
         listOf(
             binding.tabActivas to (pestanaActual == Pestana.ACTIVAS),
             binding.tabHistorial to (pestanaActual == Pestana.HISTORIAL),

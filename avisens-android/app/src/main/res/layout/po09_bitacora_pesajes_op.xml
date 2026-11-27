@@ -84,6 +84,7 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
+
         </LinearLayout>
 
         <TextView
@@ -119,6 +120,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:baselineAligned="false"
+                android:gravity="center_vertical"
                 android:orientation="horizontal">
 
                 <EditText
@@ -140,18 +143,17 @@
 
                 <TextView
                     android:id="@+id/filtroPeso"
-                    android:layout_width="wrap_content"
+                    android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_marginStart="8dp"
-                    android:background="@drawable/bg_bitacora_button"
-                    android:fontFamily="sans-serif"
+                    android:background="@drawable/bg_input_event"
+                    android:clickable="true"
+                    android:contentDescription="Filtros"
+                    android:drawableTop="@drawable/ic_filtro_compacto"
+                    android:focusable="true"
                     android:gravity="center"
-                    android:letterSpacing="0"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:text="Filtros ▾"
-                    android:textColor="@android:color/white"
-                    android:textStyle="bold" />
+                    android:padding="12dp" />
+
             </LinearLayout>
 
             <LinearLayout
@@ -211,6 +213,7 @@
                     android:text="Aplicar filtros"
                     android:textColor="@android:color/white"
                     android:textStyle="bold" />
+
             </LinearLayout>
 
             <TextView

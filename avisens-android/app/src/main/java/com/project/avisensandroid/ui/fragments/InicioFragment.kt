@@ -319,11 +319,11 @@ class InicioFragment : BaseBottomNavFragment() {
                 val esResumen = perteneceATarjeta(tarjeta, binding.operatorStatsContainer)
                 val anteriorEsResumen = indice > 0 &&
                         perteneceATarjeta(tarjetas[indice - 1], binding.operatorStatsContainer)
-                if (indice > 0) delay(if (esResumen && anteriorEsResumen) 220L else 320L)
+                if (indice > 0) delay(if (esResumen && anteriorEsResumen) 150L else 220L)
                 if (_binding == null) return@launch
                 tarjetasIniciadas.add(tarjeta)
                 tarjeta.animate().alpha(1f).translationY(0f)
-                    .setStartDelay(0L).setDuration(if (esResumen) 800L else 1000L)
+                    .setStartDelay(0L).setDuration(if (esResumen) 650L else 750L)
                     .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
                 valoresPendientes.keys.filter { perteneceATarjeta(it, tarjeta) }.forEach { vista ->
                     valoresPendientes.remove(vista)?.let { texto ->

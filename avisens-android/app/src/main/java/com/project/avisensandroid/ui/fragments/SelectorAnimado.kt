@@ -102,7 +102,7 @@ internal fun deslizarContenido(barra: View, direccion: Int) {
 }
 
 internal fun animarContenidoHorizontal(vista: View, direccion: Int, distancia: Float) {
-    if (vista.visibility != View.VISIBLE) return
+    if (vista.visibility != View.VISIBLE || vista.tag == "buscador_bitacora_vertical") return
     vista.animate().cancel()
     vista.translationX = direccion * distancia
     vista.animate().translationX(0f).setStartDelay(0L).setDuration(250L)
@@ -117,6 +117,15 @@ internal fun Fragment.abrirPestanaBitacora(fragment: Fragment, origen: Int) {
 internal fun Fragment.animarPestanaBitacora(barra: ViewGroup, indice: Int) {
     val origen = arguments?.getInt("origen_pestana_animada", -1) ?: -1
     arguments?.remove("origen_pestana_animada")
+    aplicarEstiloBarra(barra)
+    for (i in 0 until barra.childCount) {
+        (barra.getChildAt(i) as? android.widget.TextView)?.setTextColor(
+            androidx.core.content.ContextCompat.getColor(
+                barra.context,
+                if (i == indice) R.color.tab_text_selected else R.color.tab_text_unselected
+            )
+        )
+    }
     val selector = SelectorAnimado(barra, R.drawable.bg_bitacora_tab_selected)
     androidx.core.view.OneShotPreDrawListener.add(barra) {
         selector.seleccionar(
@@ -126,5 +135,61 @@ internal fun Fragment.animarPestanaBitacora(barra: ViewGroup, indice: Int) {
         if (origen in 0 until barra.childCount && origen != indice) {
             deslizarContenido(barra, if (indice > origen) 1 else -1)
         }
+    }
+}
+
+internal fun aplicarEstiloBarra(barra: ViewGroup) {
+    val d = barra.resources.displayMetrics.density
+    val p = (4 * d + .5f).toInt()
+    val oscuro = (barra.resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+    barra.background = android.graphics.drawable.GradientDrawable().apply {
+        cornerRadius = 14f * d
+        setColor(android.graphics.Color.parseColor(if (oscuro) "#101914" else "#E4E8E6"))
+    }
+    barra.setPadding(p, p, p, p)
+    barra.layoutParams = barra.layoutParams.apply { height = (44 * d + .5f).toInt() }
+}
+
+/** Independiente del desplazamiento horizontal y de la carga de registros. */
+internal fun animarBuscadorBitacora(fila: View) {
+    fila.tag = "buscador_bitacora_vertical"
+    fila.animate().cancel()
+    fila.visibility = View.VISIBLE
+    fila.translationX = 0f
+    fila.alpha = 1f
+    fila.translationY = 0f
+    androidx.core.view.OneShotPreDrawListener.add(fila) {
+        fila.animate().cancel()
+        fila.alpha = 0f
+        fila.translationY = 24f * fila.resources.displayMetrics.density
+        val animador = android.animation.ObjectAnimator.ofPropertyValuesHolder(
+            fila,
+            android.animation.PropertyValuesHolder.ofFloat(View.ALPHA, 0f, 1f),
+            android.animation.PropertyValuesHolder.ofFloat(
+                View.TRANSLATION_Y,
+                fila.translationY,
+                0f
+            )
+        ).apply {
+            duration = 900L
+            interpolator = DecelerateInterpolator()
+        }
+        val escucha = object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+            override fun onViewDetachedFromWindow(v: View) {
+                animador.cancel()
+            }
+        }
+        fila.addOnAttachStateChangeListener(escucha)
+        animador.addListener(object : android.animation.AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: android.animation.Animator) {
+                fila.alpha = 1f
+                fila.translationY = 0f
+                fila.removeOnAttachStateChangeListener(escucha)
+            }
+        })
+        animador.start()
     }
 }

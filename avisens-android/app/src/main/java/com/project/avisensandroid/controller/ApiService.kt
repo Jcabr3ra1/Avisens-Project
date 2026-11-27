@@ -63,6 +63,18 @@ import retrofit2.http.Query
 
 interface ApiService {
 
+    @POST("v1/recuperaciones-password/solicitudes")
+    suspend fun solicitarRecuperacion(
+        @Body solicitud: JsonObject
+    ): Response<JsonObject>
+
+    @POST("v1/recuperaciones-password/cambiar-password")
+    suspend fun cambiarPasswordTemporal(
+        @Header("Authorization") token: String,
+        @Body solicitud: JsonObject
+    ): Response<JsonObject>
+
+
     @GET("v1/predicciones/lote/{id}/curva-crecimiento")
     suspend fun curvaCrecimiento(@Path("id") id: Int): Response<JsonObject>
 
@@ -168,6 +180,15 @@ interface ApiService {
         @Path("id") id: Int,
         @Body datos: JsonObject
     ): Response<JsonObject>
+
+    @GET("v1/recuperaciones-password/usuario/{id}")
+    suspend fun solicitudesOperario(@Path("id") id: Int): Response<List<JsonObject>>
+
+    @PATCH("v1/recuperaciones-password/{id}/aprobar")
+    suspend fun aprobarRecuperacion(@Path("id") id: Int, @Body datos: JsonObject): Response<JsonObject>
+
+    @PATCH("v1/recuperaciones-password/{id}/rechazar")
+    suspend fun rechazarRecuperacion(@Path("id") id: Int, @Body datos: JsonObject): Response<JsonObject>
 
     @POST("v1/usuarios")
     suspend fun crearUsuario(

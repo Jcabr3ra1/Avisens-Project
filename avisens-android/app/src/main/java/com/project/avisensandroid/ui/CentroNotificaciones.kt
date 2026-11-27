@@ -369,6 +369,11 @@ class CentroNotificaciones(private val activity: MainActivity) {
     }
 
     private fun detalle(n: NotificacionResponse) {
+        if (n.referencia_tipo == "recuperacion_password") {
+            cerrar()
+            activity.navegarDesdeBottomNav(R.id.nav_usuarios)
+            return
+        }
         if (n.referencia_tipo != "alerta" || n.referencia_id == null) return
         cerrar()
         activity.navegarDesdeBottomNav(R.id.nav_alertas)

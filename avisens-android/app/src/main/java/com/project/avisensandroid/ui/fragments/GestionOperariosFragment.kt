@@ -115,6 +115,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             mostrarDialogCrearOperario()
         }
 
+        configurarFiltrosOperarios(view)
+        animarBuscadorBitacora(view.findViewById<View>(R.id.buscarOperarios).parent as View)
         ultimosOperarios = null
         cargarOperarios()
     }
@@ -122,6 +124,166 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
     // ============================================================
     // CARGAR OPERARIOS
     // ============================================================
+
+    private var textoFiltro = ""
+    private var estadoFiltro = 0
+    private var granjasFiltro = emptySet<Int>()
+    private var filtroJob: Job? = null
+    private val granjasPorUsuario = mutableMapOf<Int, Set<Int>>()
+    private fun configurarFiltrosOperarios(v: View) {
+        textoFiltro = ""; estadoFiltro = 0; granjasFiltro = emptySet(); granjasPorUsuario.clear()
+        val panel = v.findViewById<View>(R.id.panelOperarios)
+        val estado = v.findViewById<Spinner>(R.id.estadoOperarios)
+        estado.adapter = crearAdapterGranjas(listOf("Todos", "Activos", "Inactivos"))
+        val selectorGranjas = v.findViewById<TextView>(R.id.selectorGranjasFiltro)
+        val panelGranjas = v.findViewById<View>(R.id.panelGranjasFiltro)
+        val containerGranjas = v.findViewById<LinearLayout>(R.id.containerGranjasFiltro)
+        val quitar =
+            v.findViewById<com.google.android.material.chip.ChipGroup>(R.id.quitarOperarios)
+        val opcionesGranjas = linkedMapOf(-1 to "Sin granja asignada")
+        val granjasPendientes = linkedSetOf<Int>()
+        var granjasCargadas = false
+        fun mostrarGranjas(visible: Boolean) {
+            panelGranjas.visibility = if (visible) View.VISIBLE else View.GONE
+            selectorGranjas.text = if (visible) "Granjas asignadas ▴" else "Granjas asignadas ▾"
+        }
+
+        fun actualizarSelector() {
+            containerGranjas.removeAllViews()
+            opcionesGranjas.forEach { (id, nombre) ->
+                containerGranjas.addView(android.widget.CheckBox(requireContext()).apply {
+                    text = nombre
+                    setTextColor(
+                        androidx.core.content.ContextCompat.getColor(
+                            requireContext(),
+                            R.color.text_primary
+                        )
+                    )
+                    isChecked = id in granjasPendientes
+                    setOnCheckedChangeListener { _, marcado ->
+                        if (marcado) granjasPendientes.add(id) else granjasPendientes.remove(id)
+                    }
+                })
+            }
+        }
+        selectorGranjas.setOnClickListener {
+            mostrarGranjas(panelGranjas.visibility != View.VISIBLE)
+        }
+        actualizarSelector()
+        fun pintarChips() {
+            quitar.removeAllViews()
+            fun chip(nombre: String, eliminar: () -> Unit) {
+                quitar.addView(com.google.android.material.chip.Chip(requireContext()).apply {
+                    text = nombre
+                    isCloseIconVisible = true
+                    isCheckable = false
+                    setOnCloseIconClickListener { eliminar(); pintarChips(); filtrarOperarios() }
+                })
+            }
+            if (estadoFiltro != 0) chip(if (estadoFiltro == 1) "Activos" else "Inactivos") {
+                estadoFiltro = 0; estado.setSelection(0)
+            }
+            granjasFiltro.toList().forEach { id ->
+                val nombre = opcionesGranjas[id]
+                chip(nombre ?: "Granja $id") {
+                    granjasFiltro = granjasFiltro - id
+                    granjasPendientes.remove(id)
+                }
+            }
+            actualizarSelector()
+            quitar.visibility = if (quitar.childCount == 0) View.GONE else View.VISIBLE
+        }
+
+        v.findViewById<View>(R.id.filtrosOperarios).setOnClickListener {
+            panel.visibility = if (panel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            if (panel.visibility == View.VISIBLE) {
+                granjasPendientes.clear()
+                granjasPendientes.addAll(granjasFiltro)
+                estado.setSelection(estadoFiltro)
+                actualizarSelector()
+                mostrarGranjas(false)
+            }
+            if (panel.visibility == View.VISIBLE && !granjasCargadas) viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val r = RetrofitClient.api.listarGranjas()
+                    if (r.isSuccessful) {
+                        r.body()?.data.orEmpty()
+                            .forEach { opcionesGranjas[it.id] = it.nombre }; granjasCargadas =
+                            true; actualizarSelector()
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    Toast.makeText(
+                        requireContext(),
+                        "No se pudieron cargar las granjas",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+        v.findViewById<android.widget.EditText>(R.id.buscarOperarios)
+            .addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) = Unit
+
+                override fun afterTextChanged(s: android.text.Editable?) = Unit
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    textoFiltro = s.toString().trim(); filtrarOperarios()
+                }
+            })
+        v.findViewById<View>(R.id.aplicarOperarios).setOnClickListener {
+            estadoFiltro = estado.selectedItemPosition
+            granjasFiltro = granjasPendientes.toSet()
+            mostrarGranjas(false)
+            pintarChips()
+            panel.visibility = View.GONE; granjasPorUsuario.clear(); filtrarOperarios()
+        }
+
+    }
+
+    private fun filtrarOperarios() {
+        filtroJob?.cancel()
+        val lista = ultimosOperarios.orEmpty().filter { u ->
+            (estadoFiltro == 0 || u.activo == (estadoFiltro == 1)) &&
+                    listOf(u.nombre_completo, u.username.orEmpty(), u.cedula).any {
+                        it.contains(
+                            textoFiltro,
+                            true
+                        )
+                    }
+        }
+        if (granjasFiltro.isEmpty()) {
+            mostrarOperarios(lista); return
+        }
+        filtroJob = viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                for (u in lista) if (u.id !in granjasPorUsuario) {
+                    val r = RetrofitClient.api.listarGalponesAsignados(u.id)
+                    check(r.isSuccessful)
+                    granjasPorUsuario[u.id] =
+                        r.body()?.data.orEmpty().filter { it.activa }.map { it.galpon.granja.id }
+                            .toSet()
+                }
+                mostrarOperarios(lista.filter { u ->
+                    val g =
+                        granjasPorUsuario[u.id].orEmpty(); g.any { it in granjasFiltro } || (g.isEmpty() && -1 in granjasFiltro)
+                })
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                Toast.makeText(
+                    requireContext(),
+                    "No se pudieron verificar las granjas asignadas",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
 
     private var cargaOperarios: Job? = null
     private var ultimosOperarios: List<UsuarioGestionResponse>? = null
@@ -140,7 +302,7 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
                 }
                 if (ultimosOperarios != operarios) {
                     ultimosOperarios = operarios
-                    mostrarOperarios(operarios)
+                    filtrarOperarios()
                 }
             }
             try {
@@ -214,7 +376,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             emptyCard.addView(icon, LinearLayout.LayoutParams(-1, dp(44)))
 
             val title = TextView(requireContext()).apply {
-                text = "Aún no tienes operarios"
+                text =
+                    if (textoFiltro.isNotEmpty() || estadoFiltro != 0 || granjasFiltro.isNotEmpty()) "No hay coincidencias" else "Aún no tienes operarios"
                 textSize = 16f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(
@@ -228,7 +391,8 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             emptyCard.addView(title, LinearLayout.LayoutParams(-1, -2))
 
             val message = TextView(requireContext()).apply {
-                text = "Crea un operario para comenzar a asignarle granjas."
+                text =
+                    if (textoFiltro.isNotEmpty() || estadoFiltro != 0 || granjasFiltro.isNotEmpty()) "Prueba con otros filtros." else "Crea un operario para comenzar a asignarle granjas."
                 textSize = 14f
                 setTextColor(
                     androidx.core.content.ContextCompat.getColor(
@@ -385,6 +549,9 @@ class GestionOperariosFragment : BaseBottomNavFragment() {
             card.addView(editButton, LinearLayout.LayoutParams(-1, dp(40)).apply {
                 topMargin = dp(12)
             })
+
+            val seguridad = GestionAccesoOperario(this, usuario)
+            seguridad.agregarBotones(card)
 
             val deleteButton =
                 com.google.android.material.button.MaterialButton(requireContext()).apply {

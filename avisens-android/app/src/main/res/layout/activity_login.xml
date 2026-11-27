@@ -361,6 +361,23 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/btnEntrar" />
 
+                <TextView
+                    android:id="@+id/txtRecuperar"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:fontFamily="sans-serif"
+                    android:gravity="center"
+                    android:minHeight="44dp"
+                    android:text="¿Olvidaste tu contraseña?"
+                    android:textColor="@color/adaptive_text_00695c"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/txtError" />
+
             </androidx.constraintlayout.widget.ConstraintLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>

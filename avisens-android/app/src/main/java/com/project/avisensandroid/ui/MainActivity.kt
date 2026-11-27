@@ -21,7 +21,6 @@ import android.os.Looper
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Patterns
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -37,10 +36,6 @@ import com.project.avisensandroid.controller.Hu56OfflineQueue
 import com.project.avisensandroid.controller.OfflineCache
 import com.project.avisensandroid.controller.RetrofitClient
 import com.project.avisensandroid.controller.SesionExpirada
-import com.project.avisensandroid.databinding.Au02RecuperarContrasenaBinding
-import com.project.avisensandroid.databinding.Au03VerificarCodigoBinding
-import com.project.avisensandroid.databinding.Au04NuevaContrasenaBinding
-import com.project.avisensandroid.databinding.Au05ConfirmacionContrasenaBinding
 import com.project.avisensandroid.databinding.Co01ConfiguracionOpBinding
 import com.project.avisensandroid.databinding.Co02NotificacionesOpBinding
 import com.project.avisensandroid.databinding.Co03PerfilOpBinding
@@ -103,17 +98,14 @@ class MainActivity : AperturaReanudableActivity() {
     private lateinit var notificacionesBinding: Co02NotificacionesOpBinding
     private lateinit var seguridadBinding: Co04SeguridadOpBinding
 
-    private lateinit var recuperarBinding: Au02RecuperarContrasenaBinding
-    private lateinit var verificarBinding: Au03VerificarCodigoBinding
-    private lateinit var nuevaContrasenaBinding: Au04NuevaContrasenaBinding
-    private lateinit var confirmacionBinding: Au05ConfirmacionContrasenaBinding
 
     // =========================================================
     // COLORES DE SPINNER
     // =========================================================
 
-    private val spinnerTextoSeleccionado get() =
-        ColoresAdaptativos.texto(this, "#171D1A")
+    private val spinnerTextoSeleccionado
+        get() =
+            ColoresAdaptativos.texto(this, "#171D1A")
 
     private val spinnerTextoDropdown =
         0xFFFFFFFF.toInt()
@@ -127,9 +119,11 @@ class MainActivity : AperturaReanudableActivity() {
 
     object CausasMortalidad {
         const val OTRA = "Otra causa"
-        val opciones = listOf("Golpe de calor", "Estrés por frío", "Enfermedad respiratoria",
+        val opciones = listOf(
+            "Golpe de calor", "Estrés por frío", "Enfermedad respiratoria",
             "Enfermedad digestiva", "Deshidratación", "Aplastamiento", "Lesiones físicas",
-            "Problemas de alimentación", "Causa desconocida")
+            "Problemas de alimentación", "Causa desconocida"
+        )
     }
 
     class SpinnerAdapterEstilizado(
@@ -253,25 +247,26 @@ class MainActivity : AperturaReanudableActivity() {
     private var fotoMortalidadVistaPrevia: android.widget.ImageView? = null
     private var fotoMortalidadBotonAdjuntar: View? = null
     private var fotoMortalidadContenedorPrevia: View? = null
-    private val capturarFotoMortalidad = registerForActivityResult(ActivityResultContracts.TakePicture()) { exito ->
-        fotoMortalidadTomada = exito && fotoMortalidadTemporal?.exists() == true
-        val archivo = fotoMortalidadTemporal
-        if (fotoMortalidadTomada && archivo != null) {
-            fotoMortalidadVistaPrevia?.apply {
-                setImageURI(null)
-                setImageURI(Uri.fromFile(archivo))
-                visibility = View.VISIBLE
+    private val capturarFotoMortalidad =
+        registerForActivityResult(ActivityResultContracts.TakePicture()) { exito ->
+            fotoMortalidadTomada = exito && fotoMortalidadTemporal?.exists() == true
+            val archivo = fotoMortalidadTemporal
+            if (fotoMortalidadTomada && archivo != null) {
+                fotoMortalidadVistaPrevia?.apply {
+                    setImageURI(null)
+                    setImageURI(Uri.fromFile(archivo))
+                    visibility = View.VISIBLE
+                }
+                fotoMortalidadBotonAdjuntar?.visibility = View.GONE
+                fotoMortalidadContenedorPrevia?.visibility = View.VISIBLE
+            } else {
+                fotoMortalidadVistaPrevia?.visibility = View.GONE
+                fotoMortalidadBotonAdjuntar?.visibility = View.VISIBLE
+                fotoMortalidadContenedorPrevia?.visibility = View.GONE
+                archivo?.delete()
+                fotoMortalidadTemporal = null
             }
-            fotoMortalidadBotonAdjuntar?.visibility = View.GONE
-            fotoMortalidadContenedorPrevia?.visibility = View.VISIBLE
-        } else {
-            fotoMortalidadVistaPrevia?.visibility = View.GONE
-            fotoMortalidadBotonAdjuntar?.visibility = View.VISIBLE
-            fotoMortalidadContenedorPrevia?.visibility = View.GONE
-            archivo?.delete()
-            fotoMortalidadTemporal = null
         }
-    }
 
     // El indicador es exclusivo de la reconexión, nunca del sondeo cada 15 s.
     private var indicadorReconexion: View? = null
@@ -329,7 +324,8 @@ class MainActivity : AperturaReanudableActivity() {
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) = revisarConexion()
         override fun onLost(network: Network) = revisarConexion()
-        override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) = revisarConexion()
+        override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) =
+            revisarConexion()
     }
 
     private fun revisarConexion() {
@@ -337,7 +333,8 @@ class MainActivity : AperturaReanudableActivity() {
             if (!observandoConexion) return@post
             val red = networkManager.activeNetwork
             val caps = red?.let { networkManager.getNetworkCapabilities(it) }
-            val conectada = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+            val conectada =
+                caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
             val anterior = ultimaConexionValidada
             ultimaConexionValidada = conectada
             if (!conectada) {
@@ -361,7 +358,8 @@ class MainActivity : AperturaReanudableActivity() {
             !silenciosa && visible is SensoresFragment ||
             !silenciosa && visible is BodegaFragment ||
             !silenciosa && visible is BitacoraFragment ||
-            !silenciosa && visible is AlertasFragment) {
+            !silenciosa && visible is AlertasFragment
+        ) {
             mostrarCargaReconexion()
         }
         when (visible) {
@@ -433,7 +431,12 @@ class MainActivity : AperturaReanudableActivity() {
                         androidx.core.view.WindowInsetsCompat.Type.displayCutout()
             )
             val teclado = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
-            v.setPadding(barras.left, barras.top, barras.right, maxOf(barras.bottom, teclado.bottom))
+            v.setPadding(
+                barras.left,
+                barras.top,
+                barras.right,
+                maxOf(barras.bottom, teclado.bottom)
+            )
             // Evita que los fragments y BottomNavigationView sumen otra vez los márgenes.
             androidx.core.view.WindowInsetsCompat.CONSUMED
         }
@@ -515,22 +518,33 @@ class MainActivity : AperturaReanudableActivity() {
         SesionExpirada.registrar(alExpirarSesion)
         if (UserSession.isLoggedIn(this)) {
             if (Build.VERSION.SDK_INT >= 33 &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
             ) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 712)
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    712
+                )
             }
             NotificacionesLocales.programar(applicationContext)
             monitoreoNotificaciones?.cancel()
             monitoreoNotificaciones = lifecycleScope.launch {
                 while (isActive) {
-                    try { NotificacionesLocales.revisar(applicationContext) }
-                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                    catch (_: Exception) { /* Sin red: reintentar en la siguiente vuelta. */ }
+                    try {
+                        NotificacionesLocales.revisar(applicationContext)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (_: Exception) { /* Sin red: reintentar en la siguiente vuelta. */
+                    }
                     delay(15_000L)
                 }
             }
         }
-        ultimaConexionValidada = com.project.avisensandroid.controller.OfflineCache.hayInternet(this)
+        ultimaConexionValidada =
+            com.project.avisensandroid.controller.OfflineCache.hayInternet(this)
         if (!ultimaConexionValidada!!) reconexionPendiente = true
         try {
             networkManager.registerDefaultNetworkCallback(networkCallback)
@@ -580,8 +594,10 @@ class MainActivity : AperturaReanudableActivity() {
                 if (UserSession.userId(this@MainActivity) == usuario) {
                     RetrofitClient.api.marcarNotificacionLeida(id)
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-            catch (_: Exception) { }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -592,14 +608,20 @@ class MainActivity : AperturaReanudableActivity() {
         mainHandler.removeCallbacks(reconectarRunnable)
         mainHandler.removeCallbacks(actualizacionPeriodica)
         ocultarCargaReconexion()
-        try { networkManager.unregisterNetworkCallback(networkCallback) } catch (_: Exception) { }
+        try {
+            networkManager.unregisterNetworkCallback(networkCallback)
+        } catch (_: Exception) {
+        }
         SesionExpirada.quitar(alExpirarSesion)
         super.onStop()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putBoolean("configuracion_abierta", ::configuracionBinding.isInitialized && configuracionBinding.root.isAttachedToWindow)
+        outState.putBoolean(
+            "configuracion_abierta",
+            ::configuracionBinding.isInitialized && configuracionBinding.root.isAttachedToWindow
+        )
         outState.putInt(STATE_GRANJA_ID, granjaSeleccionadaId ?: 0)
         outState.putInt(STATE_GALPON_ID, galponSeleccionadoId ?: 0)
     }
@@ -836,10 +858,11 @@ class MainActivity : AperturaReanudableActivity() {
         var totalPaginas = 1
 
         do {
-            val response = (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarLotes(
-                page = pagina,
-                limit = 100
-            )
+            val response =
+                (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).listarLotes(
+                    page = pagina,
+                    limit = 100
+                )
 
             if (!response.isSuccessful) {
                 throw IllegalStateException(
@@ -904,213 +927,6 @@ class MainActivity : AperturaReanudableActivity() {
     // RECUPERACIÓN DE CONTRASEÑA
     // =========================================================
 
-    fun mostrarRecuperarContrasena() {
-
-        recuperarBinding =
-            Au02RecuperarContrasenaBinding.inflate(
-                layoutInflater
-            )
-
-        setContentView(
-            recuperarBinding.root
-        )
-
-        recuperarBinding
-            .btnVolver
-            .setOnClickListener {
-
-                irALogin()
-            }
-
-        recuperarBinding
-            .btnEnviarCorreo
-            .setOnClickListener {
-
-                val correo =
-                    recuperarBinding
-                        .edtCorreo
-                        .text
-                        .toString()
-                        .trim()
-
-                when {
-
-                    correo.isEmpty() -> {
-
-                        recuperarBinding
-                            .edtCorreo
-                            .error =
-                            "Ingresa tu correo electrónico"
-                    }
-
-                    !Patterns.EMAIL_ADDRESS
-                        .matcher(correo)
-                        .matches() -> {
-
-                        recuperarBinding
-                            .edtCorreo
-                            .error =
-                            "Ingresa un correo válido"
-                    }
-
-                    else -> {
-
-                        mostrarVerificarCodigo()
-                    }
-                }
-            }
-    }
-
-    private fun mostrarVerificarCodigo() {
-
-        verificarBinding =
-            Au03VerificarCodigoBinding.inflate(
-                layoutInflater
-            )
-
-        setContentView(
-            verificarBinding.root
-        )
-
-        verificarBinding
-            .btnVerificarCodigo
-            .setOnClickListener {
-
-                val codigo =
-                    verificarBinding
-                        .edtCodigo
-                        .text
-                        .toString()
-                        .trim()
-
-                when {
-
-                    codigo.isEmpty() -> {
-
-                        verificarBinding
-                            .edtCodigo
-                            .error =
-                            "Ingresa el código"
-                    }
-
-                    codigo.length != 6 ||
-                            codigo.any {
-                                !it.isDigit()
-                            } -> {
-
-                        verificarBinding
-                            .edtCodigo
-                            .error =
-                            "El código debe tener 6 dígitos"
-                    }
-
-                    else -> {
-
-                        mostrarNuevaContrasena()
-                    }
-                }
-            }
-
-        verificarBinding
-            .txtReenviarCodigo
-            .setOnClickListener {
-
-                Toast.makeText(
-                    this,
-                    "Reenvío de código pendiente de conectar con la API",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-    }
-
-    private fun mostrarNuevaContrasena() {
-
-        nuevaContrasenaBinding =
-            Au04NuevaContrasenaBinding.inflate(
-                layoutInflater
-            )
-
-        setContentView(
-            nuevaContrasenaBinding.root
-        )
-
-        nuevaContrasenaBinding
-            .btnCambiarContrasena
-            .setOnClickListener {
-
-                val nueva =
-                    nuevaContrasenaBinding
-                        .edtNuevaContrasena
-                        .text
-                        .toString()
-
-                val confirmar =
-                    nuevaContrasenaBinding
-                        .edtConfirmarContrasena
-                        .text
-                        .toString()
-
-                when {
-
-                    nueva.isEmpty() -> {
-
-                        nuevaContrasenaBinding
-                            .edtNuevaContrasena
-                            .error =
-                            "Ingresa una contraseña"
-                    }
-
-                    nueva.length < 8 -> {
-
-                        nuevaContrasenaBinding
-                            .edtNuevaContrasena
-                            .error =
-                            "Mínimo 8 caracteres"
-                    }
-
-                    confirmar.isEmpty() -> {
-
-                        nuevaContrasenaBinding
-                            .edtConfirmarContrasena
-                            .error =
-                            "Confirma tu contraseña"
-                    }
-
-                    nueva != confirmar -> {
-
-                        nuevaContrasenaBinding
-                            .edtConfirmarContrasena
-                            .error =
-                            "Las contraseñas no coinciden"
-                    }
-
-                    else -> {
-
-                        mostrarConfirmacionContrasena()
-                    }
-                }
-            }
-    }
-
-    private fun mostrarConfirmacionContrasena() {
-
-        confirmacionBinding =
-            Au05ConfirmacionContrasenaBinding.inflate(
-                layoutInflater
-            )
-
-        setContentView(
-            confirmacionBinding.root
-        )
-
-        confirmacionBinding
-            .btnVolverLogin
-            .setOnClickListener {
-
-                irALogin()
-            }
-    }
-
     // =========================================================
     // CONFIGURACIÓN
     // =========================================================
@@ -1124,7 +940,10 @@ class MainActivity : AperturaReanudableActivity() {
         val manager = supportFragmentManager
         manager.executePendingTransactions()
         if (manager.backStackEntryCount > 0) {
-            manager.popBackStackImmediate(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+            manager.popBackStackImmediate(
+                null,
+                androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE
+            )
         }
         if (manager.fragments.isNotEmpty()) {
             val transaction = manager.beginTransaction()
@@ -1320,78 +1139,112 @@ class MainActivity : AperturaReanudableActivity() {
         fun pintar() {
             val foto = fotoInicio
             val medida = if (foto == null) (22 * resources.displayMetrics.density).toInt() else -1
-            icono.layoutParams = android.widget.FrameLayout.LayoutParams(medida, medida, android.view.Gravity.CENTER)
+            icono.layoutParams =
+                android.widget.FrameLayout.LayoutParams(medida, medida, android.view.Gravity.CENTER)
             icono.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
             contenedor.clipToOutline = true
-            if (foto == null) icono.setImageResource(R.drawable.ic_person) else icono.setImageBitmap(foto)
+            if (foto == null) icono.setImageResource(R.drawable.ic_person) else icono.setImageBitmap(
+                foto
+            )
         }
         pintar()
         val version = versionFotoInicio
         lifecycleScope.launch {
             try {
                 for (api in listOf(RetrofitClient.apiCache, RetrofitClient.api)) {
-                    val r = try { api.consultarFotoPerfil() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { continue }
-                    val imagen = if (r.isSuccessful) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        r.body()?.use { android.graphics.BitmapFactory.decodeStream(it.byteStream()) }
-                    } else {
-                        r.errorBody()?.close()
-                        if (r.code() != 404) return@launch
-                        null
+                    val r = try {
+                        api.consultarFotoPerfil()
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        continue
                     }
+                    val imagen =
+                        if (r.isSuccessful) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            r.body()
+                                ?.use { android.graphics.BitmapFactory.decodeStream(it.byteStream()) }
+                        } else {
+                            r.errorBody()?.close()
+                            if (r.code() != 404) return@launch
+                            null
+                        }
                     if (version != versionFotoInicio || UserSession.userId(this@MainActivity) != usuario) return@launch
                     fotoInicio = imagen
                     if (contenedor.isAttachedToWindow) pintar()
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-            catch (_: Exception) { }
-        }
-    }
-
-    private var perfilFotoOcupada = false
-    private val elegirFotoPerfil = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null && ::perfilBinding.isInitialized && perfilBinding.root.isAttachedToWindow) {
-            val b = perfilBinding
-            operarFotoPerfil(b) {
-                val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    contentResolver.openInputStream(uri)?.use { input ->
-                        val salida = java.io.ByteArrayOutputStream()
-                        val buffer = ByteArray(8192)
-                        while (true) {
-                            val n = input.read(buffer)
-                            if (n < 0) break
-                            require(salida.size() + n <= 3 * 1024 * 1024) { "La foto supera 3 MB" }
-                            salida.write(buffer, 0, n)
-                        }
-                        salida.toByteArray()
-                    } ?: error("No se pudo abrir la foto")
-                }
-                val tipo = contentResolver.getType(uri)
-                require(tipo in listOf("image/jpeg", "image/png", "image/webp")) { "Selecciona JPG, PNG o WebP" }
-                val respuesta = RetrofitClient.api.subirFotoPerfil(bytes.toRequestBody(tipo!!.toMediaType()))
-                check(respuesta.isSuccessful) { "No se pudo subir la foto (${respuesta.code()})" }
-                cargarFotoPerfil(b)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
             }
         }
     }
 
+    private var perfilFotoOcupada = false
+    private val elegirFotoPerfil =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            if (uri != null && ::perfilBinding.isInitialized && perfilBinding.root.isAttachedToWindow) {
+                val b = perfilBinding
+                operarFotoPerfil(b) {
+                    val bytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        contentResolver.openInputStream(uri)?.use { input ->
+                            val salida = java.io.ByteArrayOutputStream()
+                            val buffer = ByteArray(8192)
+                            while (true) {
+                                val n = input.read(buffer)
+                                if (n < 0) break
+                                require(salida.size() + n <= 3 * 1024 * 1024) { "La foto supera 3 MB" }
+                                salida.write(buffer, 0, n)
+                            }
+                            salida.toByteArray()
+                        } ?: error("No se pudo abrir la foto")
+                    }
+                    val tipo = contentResolver.getType(uri)
+                    require(
+                        tipo in listOf(
+                            "image/jpeg",
+                            "image/png",
+                            "image/webp"
+                        )
+                    ) { "Selecciona JPG, PNG o WebP" }
+                    val respuesta =
+                        RetrofitClient.api.subirFotoPerfil(bytes.toRequestBody(tipo!!.toMediaType()))
+                    check(respuesta.isSuccessful) { "No se pudo subir la foto (${respuesta.code()})" }
+                    cargarFotoPerfil(b)
+                }
+            }
+        }
+
     private fun operarFotoPerfil(b: Co03PerfilOpBinding, accion: suspend () -> Unit) {
         if (perfilFotoOcupada) return
         if (!OfflineCache.hayInternet(this)) {
-            Toast.makeText(this, "Necesitas conexión para modificar la foto", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Necesitas conexión para modificar la foto", Toast.LENGTH_SHORT)
+                .show()
             return
         }
         perfilFotoOcupada = true
         lifecycleScope.launch {
-            try { accion() }
-            catch (e: kotlinx.coroutines.CancellationException) { throw e }
-            catch (e: Exception) { Toast.makeText(this@MainActivity, e.message ?: "No se pudo actualizar la foto", Toast.LENGTH_LONG).show() }
-            finally { perfilFotoOcupada = false }
+            try {
+                accion()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@MainActivity,
+                    e.message ?: "No se pudo actualizar la foto",
+                    Toast.LENGTH_LONG
+                ).show()
+            } finally {
+                perfilFotoOcupada = false
+            }
         }
     }
 
     private suspend fun cargarFotoPerfil(b: Co03PerfilOpBinding, soloCache: Boolean = false) {
-        val respuesta = (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).consultarFotoPerfil()
-        if (!b.root.isAttachedToWindow) { respuesta.body()?.close(); respuesta.errorBody()?.close(); return }
+        val respuesta =
+            (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).consultarFotoPerfil()
+        if (!b.root.isAttachedToWindow) {
+            respuesta.body()?.close(); respuesta.errorBody()?.close(); return
+        }
         if (respuesta.code() == 404) {
             fotoInicio = null
             fotoInicioUsuario = UserSession.userId(this)
@@ -1417,7 +1270,9 @@ class MainActivity : AperturaReanudableActivity() {
         }
     }
 
-    private fun inicialesPerfil(nombre: String): String = nombre.trim().split(Regex("\\s+")).filter { it.isNotBlank() }.take(2).joinToString("") { it.take(1).uppercase() }.ifBlank { "U" }
+    private fun inicialesPerfil(nombre: String): String =
+        nombre.trim().split(Regex("\\s+")).filter { it.isNotBlank() }.take(2)
+            .joinToString("") { it.take(1).uppercase() }.ifBlank { "U" }
 
     private fun mostrarPerfil() {
         val b = Co03PerfilOpBinding.inflate(layoutInflater)
@@ -1432,7 +1287,11 @@ class MainActivity : AperturaReanudableActivity() {
         b.btnCambiarFotoPerfil.setOnClickListener {
             if (perfilFotoOcupada) return@setOnClickListener
             val tieneFoto = b.imgFotoPerfil.visibility == View.VISIBLE
-            val opciones = if (tieneFoto) arrayOf("Ver foto", "Cambiar foto", "Eliminar foto") else arrayOf("Elegir foto")
+            val opciones = if (tieneFoto) arrayOf(
+                "Ver foto",
+                "Cambiar foto",
+                "Eliminar foto"
+            ) else arrayOf("Elegir foto")
             androidx.appcompat.app.AlertDialog.Builder(this).setItems(opciones) { _, indice ->
                 when (opciones[indice]) {
                     "Ver foto" -> {
@@ -1441,8 +1300,10 @@ class MainActivity : AperturaReanudableActivity() {
                             adjustViewBounds = true
                             scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
                         }
-                        androidx.appcompat.app.AlertDialog.Builder(this).setView(imagen).setPositiveButton("Cerrar", null).show()
+                        androidx.appcompat.app.AlertDialog.Builder(this).setView(imagen)
+                            .setPositiveButton("Cerrar", null).show()
                     }
+
                     "Eliminar foto" -> androidx.appcompat.app.AlertDialog.Builder(this)
                         .setMessage("¿Eliminar tu foto de perfil?")
                         .setNegativeButton("Cancelar", null)
@@ -1457,6 +1318,7 @@ class MainActivity : AperturaReanudableActivity() {
                                 b.txtInicialPerfil.visibility = View.VISIBLE
                             }
                         }.show().estiloCancelar()
+
                     else -> elegirFotoPerfil.launch("image/*")
                 }
             }.show()
@@ -1468,24 +1330,34 @@ class MainActivity : AperturaReanudableActivity() {
                 if (!soloCache && !OfflineCache.hayInternet(this@MainActivity)) break
                 try {
                     if (!perfilFotoOcupada) {
-                        try { cargarFotoPerfil(b, soloCache) }
-                        catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                        catch (_: Exception) { }
+                        try {
+                            cargarFotoPerfil(b, soloCache)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                        }
                     }
-                    val r = (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).consultarPerfil()
+                    val r =
+                        (if (soloCache) RetrofitClient.apiCache else RetrofitClient.api).consultarPerfil()
                     val datos = r.body() ?: continue
                     if (!b.root.isAttachedToWindow || usuario != UserSession.userId(this@MainActivity)) break
-                    fun dato(clave: String) = datos.get(clave)?.takeUnless { it.isJsonNull }?.asString.orEmpty()
+                    fun dato(clave: String) =
+                        datos.get(clave)?.takeUnless { it.isJsonNull }?.asString.orEmpty()
                     b.txtNombrePerfil.text = dato("nombre_completo")
                     b.txtInicialPerfil.text = inicialesPerfil(dato("nombre_completo"))
                     b.edtCorreoPerfil.setText(dato("email").ifBlank { "No registrado" })
                     b.edtTelefonoPerfil.setText(dato("telefono").ifBlank { "No registrado" })
-                    b.txtDetallePerfil.text = dato("rol").lowercase().replaceFirstChar { it.uppercase() }
+                    b.txtDetallePerfil.text =
+                        dato("rol").lowercase().replaceFirstChar { it.uppercase() }
                     b.txtUsuarioPerfil.text = dato("username").ifBlank { "No registrado" }
-                    b.txtOrganizacionPerfil.text = datos.get("organizacion")?.takeIf { it.isJsonObject }?.asJsonObject?.get("nombre")?.takeUnless { it.isJsonNull }?.asString ?: "No registrada"
+                    b.txtOrganizacionPerfil.text = datos.get("organizacion")
+                        ?.takeIf { it.isJsonObject }?.asJsonObject?.get("nombre")
+                        ?.takeUnless { it.isJsonNull }?.asString ?: "No registrada"
 
-                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                catch (_: Exception) { }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                }
             }
         }
     }
@@ -1673,10 +1545,13 @@ class MainActivity : AperturaReanudableActivity() {
         }
         binding.spinnerUnidadInsumo.onItemSelectedListener =
             object : android.widget.AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: android.widget.AdapterView<*>?,
-                                            view: View?, position: Int, id: Long) {
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: View?, position: Int, id: Long
+                ) {
                     actualizarCamposUnidad(unidadesMedida.getOrNull(position) == "Bultos")
                 }
+
                 override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {
                     actualizarCamposUnidad(false)
                 }
@@ -1711,7 +1586,8 @@ class MainActivity : AperturaReanudableActivity() {
             var primerError: View? = null
             val faltanSelecciones = mutableListOf<String>()
             if (minimoTexto.isNotBlank() &&
-                (stockMinimo == null || stockMinimo <= 0.0 || !stockMinimo.isFinite())) {
+                (stockMinimo == null || stockMinimo <= 0.0 || !stockMinimo.isFinite())
+            ) {
                 binding.edtStockMinimoInsumo.error = "Ingresa un mínimo mayor que 0"
                 primerError = primerError ?: binding.edtStockMinimoInsumo
             }
@@ -1736,7 +1612,8 @@ class MainActivity : AperturaReanudableActivity() {
 
             val tipoAlimentoValidado = tipoAlimento ?: return@setOnClickListener
             val cantidadValidada = cantidad ?: return@setOnClickListener
-            val total = if (esBultos) cantidadValidada * (numeroBultos ?: return@setOnClickListener) else cantidadValidada
+            val total = if (esBultos) cantidadValidada * (numeroBultos
+                ?: return@setOnClickListener) else cantidadValidada
             if (!total.isFinite()) {
                 binding.edtCantidadInsumo.error = "La cantidad total no es válida"
                 return@setOnClickListener
@@ -2067,14 +1944,23 @@ class MainActivity : AperturaReanudableActivity() {
                 dialog.dismiss()
             }
 
-        val causas = (listOf("Sin causa registrada") + CausasMortalidad.opciones + CausasMortalidad.OTRA).toMutableList()
+        val causas =
+            (listOf("Sin causa registrada") + CausasMortalidad.opciones + CausasMortalidad.OTRA).toMutableList()
         binding.spinnerCausaPresuntiva.adapter = SpinnerAdapterEstilizado(this, causas)
-        binding.spinnerCausaPresuntiva.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                binding.edtCausaPresuntiva.visibility = if (causas[position] == CausasMortalidad.OTRA) View.VISIBLE else View.GONE
+        binding.spinnerCausaPresuntiva.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    binding.edtCausaPresuntiva.visibility =
+                        if (causas[position] == CausasMortalidad.OTRA) View.VISIBLE else View.GONE
+                }
+
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
             }
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
-        }
 
         binding
             .btnGuardarEvento
@@ -2108,14 +1994,16 @@ class MainActivity : AperturaReanudableActivity() {
                         .toString()
                         .trim()
 
-                val seleccionCausa = causas.getOrNull(binding.spinnerCausaPresuntiva.selectedItemPosition)
+                val seleccionCausa =
+                    causas.getOrNull(binding.spinnerCausaPresuntiva.selectedItemPosition)
                 val causa = when (seleccionCausa) {
                     null, "Sin causa registrada" -> null
                     CausasMortalidad.OTRA -> binding.edtCausaPresuntiva.text.toString().trim()
                     else -> seleccionCausa
                 }
                 if (seleccionCausa == CausasMortalidad.OTRA && (causa.isNullOrBlank() || causa.length > 150 || causa.none { it.isLetter() })) {
-                    binding.edtCausaPresuntiva.error = "Escribe una causa válida (máximo 150 caracteres)"
+                    binding.edtCausaPresuntiva.error =
+                        "Escribe una causa válida (máximo 150 caracteres)"
                     binding.edtCausaPresuntiva.requestFocus()
                     return@setOnClickListener
                 }
@@ -2132,7 +2020,11 @@ class MainActivity : AperturaReanudableActivity() {
                     primerError = primerError ?: binding.edtCantidadAves
                 }
                 if (faltanSelecciones || primerError != null) {
-                    if (faltanSelecciones) Toast.makeText(this, "Selecciona un lote", Toast.LENGTH_SHORT).show()
+                    if (faltanSelecciones) Toast.makeText(
+                        this,
+                        "Selecciona un lote",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     primerError?.requestFocus()
                     return@setOnClickListener
                 }
@@ -2171,17 +2063,32 @@ class MainActivity : AperturaReanudableActivity() {
 
                     if (!OfflineCache.hayInternet(this@MainActivity)) {
                         val bytesFoto = try {
-                            if (fotoMortalidadTomada) com.project.avisensandroid.controller.FotosMortalidad.preparar(checkNotNull(fotoMortalidadTemporal)) else null
-                        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
+                            if (fotoMortalidadTomada) com.project.avisensandroid.controller.FotosMortalidad.preparar(
+                                checkNotNull(fotoMortalidadTemporal)
+                            ) else null
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
                             binding.btnGuardarEvento.isEnabled = true
-                            Toast.makeText(this@MainActivity, "No se pudo preparar la fotografía", Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                this@MainActivity,
+                                "No se pudo preparar la fotografía",
+                                Toast.LENGTH_LONG
+                            ).show()
                             return@launch
                         }
-                        val guardado = Hu56OfflineQueue.guardar(this@MainActivity, "mortalidad", request, bytesFoto)
+                        val guardado = Hu56OfflineQueue.guardar(
+                            this@MainActivity,
+                            "mortalidad",
+                            request,
+                            bytesFoto
+                        )
                         binding.btnGuardarEvento.isEnabled = !guardado
-                        Toast.makeText(this@MainActivity,
+                        Toast.makeText(
+                            this@MainActivity,
                             if (guardado) "Registro guardado sin conexión. Pendiente de sincronizar" else "No se pudo guardar localmente el registro",
-                            Toast.LENGTH_LONG).show()
+                            Toast.LENGTH_LONG
+                        ).show()
                         if (guardado) {
                             dialog.dismiss()
                             actualizarTrasRegistro(BitacoraFragment())
@@ -2207,14 +2114,23 @@ class MainActivity : AperturaReanudableActivity() {
                             val registroId = response.body()?.id
                             val fotoGuardada = if (bytesFoto != null && registroId != null) {
                                 try {
-                                    com.project.avisensandroid.controller.FotosMortalidad.subir(this@MainActivity, registroId, bytesFoto)
-                                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                                catch (_: Exception) { false }
+                                    com.project.avisensandroid.controller.FotosMortalidad.subir(
+                                        this@MainActivity,
+                                        registroId,
+                                        bytesFoto
+                                    )
+                                } catch (e: kotlinx.coroutines.CancellationException) {
+                                    throw e
+                                } catch (_: Exception) {
+                                    false
+                                }
                             } else bytesFoto == null
-                            Toast.makeText(this@MainActivity,
+                            Toast.makeText(
+                                this@MainActivity,
                                 if (fotoGuardada) "Registro de mortalidad guardado correctamente"
                                 else "Registro guardado, pero la foto no se confirmó. Revisa el registro en Bitácora.",
-                                Toast.LENGTH_LONG).show()
+                                Toast.LENGTH_LONG
+                            ).show()
 
                             dialog.dismiss()
 
@@ -2318,7 +2234,8 @@ class MainActivity : AperturaReanudableActivity() {
                 primerError = primerError ?: binding.edtCantidadAvesSeguimiento
             }
             if (lotePendiente || primerError != null) {
-                if (lotePendiente) Toast.makeText(this, "Selecciona un lote", Toast.LENGTH_SHORT).show()
+                if (lotePendiente) Toast.makeText(this, "Selecciona un lote", Toast.LENGTH_SHORT)
+                    .show()
                 primerError?.requestFocus()
                 return@setOnClickListener
             }
@@ -2546,7 +2463,8 @@ class MainActivity : AperturaReanudableActivity() {
                     primerError = primerError ?: binding.edtFechaEnfermo
                 }
                 if ((cantidad.toIntOrNull() ?: 0) <= 0) {
-                    binding.edtCantidadAvesEnfermo.error = "Ingresa una cantidad válida mayor que cero"
+                    binding.edtCantidadAvesEnfermo.error =
+                        "Ingresa una cantidad válida mayor que cero"
                     primerError = primerError ?: binding.edtCantidadAvesEnfermo
                 }
                 if (dosis.isBlank()) {
@@ -2555,7 +2473,11 @@ class MainActivity : AperturaReanudableActivity() {
                 }
                 if (seleccionesPendientes.isNotEmpty() || primerError != null) {
                     if (seleccionesPendientes.isNotEmpty()) {
-                        Toast.makeText(this, "Selecciona: ${seleccionesPendientes.joinToString(", ")}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this,
+                            "Selecciona: ${seleccionesPendientes.joinToString(", ")}",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                     primerError?.requestFocus()
                     return@setOnClickListener
@@ -2608,11 +2530,14 @@ class MainActivity : AperturaReanudableActivity() {
                 lifecycleScope.launch {
 
                     if (!OfflineCache.hayInternet(this@MainActivity)) {
-                        val guardado = Hu56OfflineQueue.guardar(this@MainActivity, "sanitario", request)
+                        val guardado =
+                            Hu56OfflineQueue.guardar(this@MainActivity, "sanitario", request)
                         binding.btnGuardarEnfermo.isEnabled = !guardado
-                        Toast.makeText(this@MainActivity,
+                        Toast.makeText(
+                            this@MainActivity,
                             if (guardado) "Registro guardado sin conexión. Pendiente de sincronizar" else "No se pudo guardar localmente el registro",
-                            Toast.LENGTH_LONG).show()
+                            Toast.LENGTH_LONG
+                        ).show()
                         if (guardado) {
                             dialog.dismiss()
                             mostrarFragment(BitacoraEnfermoFragment())
@@ -2738,9 +2663,11 @@ class MainActivity : AperturaReanudableActivity() {
                     galponIdSeleccionado != null -> {
                         todosLosLotes.filter { it.galpon?.id == galponIdSeleccionado }
                     }
+
                     granjaIdSeleccionada != null -> {
                         todosLosLotes.filter { it.galpon?.granja?.id == granjaIdSeleccionada }
                     }
+
                     else -> todosLosLotes
                 }
 

@@ -113,16 +113,16 @@
 
                 <TextView
                     android:id="@+id/btnFiltros"
-                    android:layout_width="wrap_content"
+                    android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_marginStart="8dp"
-                    android:background="@drawable/bg_bitacora_button"
+                    android:background="@drawable/bg_input_event"
                     android:gravity="center"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:text="Filtros ▾"
-                    android:textColor="@android:color/white"
-                    android:textStyle="bold" />
+                    android:drawableTop="@drawable/ic_filtro_compacto"
+                    android:padding="12dp"
+                    android:contentDescription="Filtros"
+                    android:clickable="true"
+                    android:focusable="true" />
             </LinearLayout>
 
             <LinearLayout

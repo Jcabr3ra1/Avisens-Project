@@ -78,6 +78,7 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
         aplicarFuente(view)
         configurarBottomNav(R.id.nav_bitacora)
         anim.reiniciar(); firma = ""
+        animarBuscadorBitacora(b.edtBuscarPeso.parent as View)
         animarPestanaBitacora(b.tabsBitacora, 2)
         b.tabM.setOnClickListener { abrirPestanaBitacora(BitacoraFragment(), 2) }
         b.tabE.setOnClickListener { abrirPestanaBitacora(BitacoraEnfermoFragment(), 2) }
@@ -118,7 +119,9 @@ class BitacoraPesajesFragment : BaseBottomNavFragment() {
                 filtro = b.spinnerDesvioPeso.selectedItemPosition
                 desde = inicio; hasta = fin; firma = ""; pintar()
                 b.panelFiltrosPeso.visibility = View.GONE
-                b.filtroPeso.text = if (filtro != 0 || desde != null) "Filtros •" else "Filtros ▾"
+                b.filtroPeso.contentDescription =
+                    if (filtro != 0 || desde != null) "Filtros activos" else "Filtros"
+                b.filtroPeso.alpha = if (filtro != 0 || desde != null) 0.65f else 1f
             }
             when (b.spinnerFechaPeso.selectedItemPosition) {
                 1 -> aplicar(hoy(), hoy())

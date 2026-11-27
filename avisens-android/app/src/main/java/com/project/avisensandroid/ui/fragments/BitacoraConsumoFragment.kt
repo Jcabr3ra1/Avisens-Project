@@ -27,7 +27,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 class BitacoraConsumoFragment : BaseBottomNavFragment() {
-    private val entradaTarjetas = AnimacionesTarjetas()
+    private val entradaTarjetas = AnimacionesTarjetasConsumo()
 
 
     private var _binding: Po08BitacoraConsumoOpBinding? = null
@@ -35,6 +35,56 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
 
     private var cargaJob: Job? = null
     private var primeraCarga = true
+    private var firmaRegistros: String? = null
+    private var consulta = ""
+    private var fechaFiltro = 0
+    private var ultimos = emptyList<ConsumoDiarioResponse>()
+    private var lotesUltimos = emptySet<Int>()
+    private fun coincideFecha(fecha: String): Boolean {
+        if (fechaFiltro == 0) return true
+        val hoy = java.time.LocalDate.now(java.time.ZoneId.of("America/Bogota"))
+        val dia =
+            runCatching { java.time.LocalDate.parse(fecha.take(10)) }.getOrNull() ?: return false
+        return when (fechaFiltro) {
+            1 -> dia == hoy; 2 -> dia == hoy.minusDays(1); 3 -> !dia.isBefore(hoy.minusDays(6)) && !dia.isAfter(
+                hoy
+            ); else -> !dia.isBefore(hoy.minusDays(29)) && !dia.isAfter(hoy)
+        }
+    }
+
+    private fun configurarFiltros() {
+        consulta = ""; fechaFiltro = 0; ultimos = emptyList(); lotesUltimos = emptySet()
+        binding.fechaConsumo.adapter = android.widget.ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            listOf("Todas las fechas", "Hoy", "Ayer", "Últimos 7 días", "Últimos 30 días")
+        )
+        binding.filtrosConsumo.setOnClickListener {
+            binding.panelConsumo.visibility =
+                if (binding.panelConsumo.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        }
+        binding.buscarConsumo.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) =
+                Unit
+
+            override fun afterTextChanged(s: android.text.Editable?) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                consulta = s.toString().trim(); mostrarRegistros(ultimos, lotesUltimos)
+            }
+        })
+        binding.aplicarConsumo.setOnClickListener {
+            fechaFiltro = binding.fechaConsumo.selectedItemPosition
+            binding.panelConsumo.visibility = View.GONE
+            binding.quitarConsumo.text = "Filtro de fecha ×"
+            binding.quitarConsumo.visibility = if (fechaFiltro == 0) View.GONE else View.VISIBLE
+            mostrarRegistros(ultimos, lotesUltimos)
+        }
+        binding.quitarConsumo.setOnClickListener {
+            fechaFiltro =
+                0; binding.fechaConsumo.setSelection(0); binding.quitarConsumo.visibility =
+            View.GONE; mostrarRegistros(ultimos, lotesUltimos)
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -49,6 +99,9 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
         super.onViewCreated(view, savedInstanceState)
         entradaTarjetas.reiniciar()
         primeraCarga = true
+        firmaRegistros = null
+        configurarFiltros()
+        animarBuscadorBitacora(binding.buscarConsumo.parent as View)
 
         val activity = requireActivity() as MainActivity
         configurarBottomNav(R.id.nav_bitacora)
@@ -234,7 +287,7 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
         cargaJob = viewLifecycleOwner.lifecycleScope.launch {
             // Evita reconstruir las tarjetas durante la transición del selector.
             if (primeraCarga) {
-                primeraCarga = false; kotlinx.coroutines.delay(280L)
+                primeraCarga = false; kotlinx.coroutines.delay(950L)
             }
             try {
                 val activity = requireActivity() as MainActivity
@@ -296,20 +349,38 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
     }
 
     private fun mostrarRegistros(
-        registros: List<ConsumoDiarioResponse>,
+        datosOriginales: List<ConsumoDiarioResponse>,
         ids: Set<Int> = emptySet()
     ) {
+        ultimos = datosOriginales; lotesUltimos = ids
+        val registros = datosOriginales.filter {
+            coincideFecha(it.fecha) && listOf(
+                it.fecha,
+                it.lote?.codigo.orEmpty(),
+                it.tipo_alimento?.nombre.orEmpty(),
+                it.alimento_kg.toString(),
+                it.agua_litros.toString()
+            ).any { valor -> valor.contains(consulta, true) }
+        }
         val c = requireContext()
         val contenedor = binding.containerRegistros
-        entradaTarjetas.comenzar()
-        contenedor.removeAllViews()
         val pendientes = com.project.avisensandroid.controller.Hu56OfflineQueue.registros(c)
             .filter { it.optString("tipo") == "consumo" && it.optString("estado") != "SINCRONIZADO" }
             .mapNotNull { item ->
                 val datos =
                     runCatching { org.json.JSONObject(item.getString("payload")) }.getOrNull()
-                if (datos != null && datos.optInt("lote_id") in ids) item to datos else null
+                if (datos != null && datos.optInt("lote_id") in ids && coincideFecha(
+                        datos.optString(
+                            "fecha"
+                        )
+                    ) && datos.toString().contains(consulta, true)
+                ) item to datos else null
             }
+        val firmaNueva = registros.toString() + pendientes.toString() + ids.toString()
+        if (firmaRegistros == firmaNueva) return
+        firmaRegistros = firmaNueva
+        entradaTarjetas.comenzar()
+        contenedor.removeAllViews()
         val dias = (registros.map { it.fecha.take(10) } + pendientes.map {
             it.second.optString("fecha").take(10)
         }).distinct().sortedDescending()
@@ -486,5 +557,27 @@ class BitacoraConsumoFragment : BaseBottomNavFragment() {
         cargaJob = null
         super.onDestroyView()
         _binding = null
+    }
+}
+
+/** Escalonamiento individual sin agrupar los registros al alcanzar un límite fijo. */
+private class AnimacionesTarjetasConsumo {
+    private val vistas = mutableSetOf<String>()
+    private var indice = 0
+    fun reiniciar() {
+        vistas.clear(); indice = 0
+    }
+
+    fun comenzar() {
+        indice = 0
+    }
+
+    fun mostrar(v: View, clave: String, texto: Boolean = false) {
+        if (v.visibility != View.VISIBLE || !vistas.add(clave)) return
+        v.alpha = 0f
+        v.translationY = (if (texto) 24f else 48f) * v.resources.displayMetrics.density
+        v.animate().alpha(1f).translationY(0f)
+            .setStartDelay(indice++ * 120L).setDuration(750L)
+            .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
     }
 }

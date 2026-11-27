@@ -1,4 +1,3 @@
-
 package com.project.avisensandroid.ui
 
 import android.content.Intent
@@ -107,6 +106,14 @@ class LoginActivity : AperturaReanudableActivity() {
             animarEntradaLogin()
         }
 
+        binding.txtRecuperar.setOnClickListener {
+            if (binding.btnEntrar.isEnabled) {
+                startActivity(Intent(this, RecuperacionActivity::class.java).apply {
+                    putExtra("username", binding.etCorreo.text.toString().trim())
+                })
+            }
+        }
+
         binding.btnEntrar.setOnClickListener {
             hacerLogin()
         }
@@ -121,10 +128,13 @@ class LoginActivity : AperturaReanudableActivity() {
             listOf(binding.txtIniciarSesion),
             listOf(binding.txtSubtitulo),
             listOf(binding.txtCorreo, binding.etCorreo, binding.iconCorreo),
-            listOf(binding.txtContrasena, binding.etContrasena,
-                binding.iconContrasena, binding.btnTogglePassword),
+            listOf(
+                binding.txtContrasena, binding.etContrasena,
+                binding.iconContrasena, binding.btnTogglePassword
+            ),
             listOf(binding.checkRecordarme),
-            listOf(binding.btnEntrar)
+            listOf(binding.btnEntrar),
+            listOf(binding.txtRecuperar)
         )
 
         grupos.forEachIndexed { indice, vistas ->
@@ -526,9 +536,20 @@ class LoginActivity : AperturaReanudableActivity() {
 
                         ResultadoLogin.CambioPasswordRequerido -> {
 
-                            binding.txtError.text =
-                                "Tu contraseña es temporal y debes cambiarla. " +
-                                        "Hazlo desde la web de AVÍSENS y vuelve a iniciar sesión aquí."
+                            val token = response.body()?.cambio_password_token
+                            if (token.isNullOrBlank()) {
+                                binding.txtError.text =
+                                    "No se recibió el permiso de cambio de contraseña."
+                            } else {
+                                binding.etContrasena.text?.clear()
+                                startActivity(
+                                    Intent(
+                                        this@LoginActivity,
+                                        RecuperacionActivity::class.java
+                                    ).apply {
+                                        putExtra("cambio_token", token)
+                                    })
+                            }
                         }
 
                         is ResultadoLogin.RolNoValido -> {

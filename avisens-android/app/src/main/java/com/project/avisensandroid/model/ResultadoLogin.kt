@@ -15,8 +15,8 @@ sealed class ResultadoLogin {
     /**
      * La cuenta tiene una contraseña temporal. El backend no entrega una
      * sesión, solo un cambio_password_token de 15 minutos para
-     * POST /v1/recuperaciones-password/cambiar-password. La app todavía no
-     * tiene esa pantalla, así que el token no se guarda.
+     * POST /v1/recuperaciones-password/cambiar-password. El token se utiliza únicamente en la pantalla de cambio
+     * obligatorio, sin guardarlo como sesión.
      */
     object CambioPasswordRequerido : ResultadoLogin()
 
